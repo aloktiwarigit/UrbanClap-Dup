@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if [ -n \"$CLAUDE_OVERRIDE_REASON\" ]; then echo \"{\\\"ts\\\":\\\"$(date -Iseconds)\\\",\\\"reason\\\":\\\"$CLAUDE_OVERRIDE_REASON\\\",\\\"hook\\\":\\\"bmad-gate\\\"}\" >> ~/.claude/override-log.jsonl; exit 0; fi; FILE=$(jq -r \".tool_input.file_path // empty\"); case \"$FILE\" in *\"/app/src/main/\"*) for f in docs/prd.md docs/architecture.md .bmad-readiness-passed; do [ -f \"$f\" ] || { echo \"{\\\"decision\\\":\\\"block\\\",\\\"reason\\\":\\\"BMAD gate: $f missing.\\\"}\"; exit 0; }; done;; esac'",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git push *)",
+            "command": "bash -c 'if [ -n \"$CLAUDE_OVERRIDE_REASON\" ]; then exit 0; fi; [ -f .codex-review-passed ] && [ \"$(jq -r .commit .codex-review-passed)\" = \"$(git rev-parse HEAD)\" ] || echo \"{\\\"decision\\\":\\\"block\\\",\\\"reason\\\":\\\"Run /codex-review-gate before push.\\\"}\"'",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

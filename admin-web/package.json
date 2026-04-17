@@ -1,0 +1,46 @@
+{
+  "name": "client-baseline-nextjs",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "next lint && eslint . --max-warnings 0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:a11y": "playwright test --project=a11y",
+    "storybook": "storybook dev -p 6006",
+    "storybook:build": "storybook build",
+    "lhci": "lhci autorun",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "@growthbook/growthbook-react": "^1",
+    "@sentry/nextjs": "^8",
+    "@opentelemetry/api": "^1",
+    "@opentelemetry/sdk-node": "^0.50",
+    "next": "^15",
+    "posthog-js": "^1",
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4",
+    "@lhci/cli": "^0.14",
+    "@playwright/test": "^1",
+    "@storybook/nextjs": "^8",
+    "@testing-library/react": "^16",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@vitest/coverage-v8": "^2",
+    "eslint": "^9",
+    "eslint-config-next": "^15",
+    "husky": "^9",
+    "typescript": "^5",
+    "vitest": "^2"
+  }
+}

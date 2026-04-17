@@ -1,0 +1,100 @@
+# === Environment ===
+.env
+.env.*
+!.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# === Secrets / keys ===
+*.pem
+*.key
+*.keystore
+*.jks
+*.p12
+service-account*.json
+google-services.json
+GoogleService-Info.plist
+
+# === Node / Next.js ===
+node_modules/
+.next/
+out/
+build/
+dist/
+.turbo/
+.vercel/
+.cache/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# === Android / Kotlin ===
+**/local.properties
+**/.gradle/
+**/build/
+**/captures/
+**/.idea/
+**/*.iml
+**/.externalNativeBuild/
+**/.cxx/
+**/release/
+**/app/release/
+**/app/debug/
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+venv/
+.venv/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# === IDE ===
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+.idea/
+*.swp
+*.swo
+
+# === MS Office lock files ===
+~$*.docx
+~$*.xlsx
+~$*.pptx
+
+# === BMAD / Superpowers intermediate ===
+.remember/logs/
+.remember/tmp/
+_bmad-output/implementation-artifacts/
+
+# === Codex review markers (persist in git but filter per-story) ===
+# .codex-review-passed — keep committed per-story
+# .bmad-readiness-passed — keep committed at root
+
+# === Coverage / test outputs ===
+coverage/
+.nyc_output/
+*.lcov
+playwright-report/
+test-results/
+
+# === Logs ===
+logs/
+*.log
+
+# === Storybook ===
+storybook-static/

@@ -1,0 +1,22 @@
+rules:
+  - id: no-dangerous-html
+    pattern: dangerouslySetInnerHTML={ ... }
+    message: dangerouslySetInnerHTML is an XSS risk. Document in ADR if unavoidable.
+    languages: [typescript, tsx]
+    severity: ERROR
+
+  - id: no-console-log-prod
+    pattern: console.log(...)
+    message: Use structured logger (Sentry breadcrumb / OTel span) not console.log.
+    languages: [typescript, tsx]
+    severity: WARNING
+
+  - id: no-process-env-client
+    pattern-either:
+      - pattern: process.env.$X
+    paths:
+      include: ["src/app/**", "src/components/**"]
+      exclude: ["**/*.server.*", "**/server/**"]
+    message: Do not read process.env in client components. Expose via NEXT_PUBLIC_ or server boundary.
+    languages: [typescript, tsx]
+    severity: ERROR

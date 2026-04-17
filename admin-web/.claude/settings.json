@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if [ -n \"$CLAUDE_OVERRIDE_REASON\" ]; then echo \"{\\\"ts\\\":\\\"$(date -Iseconds)\\\",\\\"reason\\\":\\\"$CLAUDE_OVERRIDE_REASON\\\",\\\"hook\\\":\\\"bmad-gate\\\"}\" >> ~/.claude/override-log.jsonl; exit 0; fi; FILE=$(jq -r \".tool_input.file_path // empty\"); case \"$FILE\" in *\"/src/\"*|*\"/app/\"*) for f in docs/prd.md docs/architecture.md .bmad-readiness-passed; do [ -f \"$f\" ] || { echo \"{\\\"decision\\\":\\\"block\\\",\\\"reason\\\":\\\"BMAD gate: $f missing. Run /new-greenfield-project or set CLAUDE_OVERRIDE_REASON.\\\"}\"; exit 0; }; done;; esac'",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git push *)",
+            "command": "bash -c 'if [ -n \"$CLAUDE_OVERRIDE_REASON\" ]; then echo \"{\\\"ts\\\":\\\"$(date -Iseconds)\\\",\\\"reason\\\":\\\"$CLAUDE_OVERRIDE_REASON\\\",\\\"hook\\\":\\\"codex-gate\\\"}\" >> ~/.claude/override-log.jsonl; exit 0; fi; if [ ! -f .codex-review-passed ]; then echo \"{\\\"decision\\\":\\\"block\\\",\\\"reason\\\":\\\"No .codex-review-passed marker. Run /codex-review-gate before push.\\\"}\"; exit 0; fi; MARKER=$(jq -r .commit .codex-review-passed 2>/dev/null); HEAD=$(git rev-parse HEAD); if [ \"$MARKER\" != \"$HEAD\" ]; then echo \"{\\\"decision\\\":\\\"block\\\",\\\"reason\\\":\\\"Codex review marker is stale (marker=$MARKER head=$HEAD). Re-run /codex-review-gate.\\\"}\"; fi'",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "if": "Bash(git commit *)",
+            "command": "bash -c 'if command -v gitleaks >/dev/null 2>&1; then gitleaks protect --staged --no-banner --exit-code 1 2>&1 | head -20 || { echo \"{\\\"decision\\\":\\\"block\\\",\\\"reason\\\":\\\"gitleaks detected potential secrets in staged diff\\\"}\"; exit 0; }; fi'",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'STATUS=\"\"; for f in docs/prd.md docs/architecture.md docs/ux-design.md docs/threat-model.md; do [ -f \"$f\" ] || STATUS=\"$STATUS missing:$f\"; done; [ -f .bmad-readiness-passed ] || STATUS=\"$STATUS missing:readiness-gate\"; if [ -n \"$STATUS\" ]; then echo \"{\\\"hookSpecificOutput\\\":{\\\"hookEventName\\\":\\\"SessionStart\\\",\\\"additionalContext\\\":\\\"BMAD state incomplete:$STATUS. Use /new-greenfield-project to scaffold or /bmad-help.\\\"}}\"; fi'",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
