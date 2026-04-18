@@ -20,10 +20,16 @@ async function fetchBuildInfo(): Promise<FooterBuildInfo> {
     const client = createApiClient({ baseUrl });
     const { data, error } = await client.GET('/v1/health');
     if (error || !data) {
+      console.warn('landing /v1/health returned error envelope — using fallback', {
+        error,
+      });
       return { version: fallbackVersion, commit: fallbackCommit, fallback: true };
     }
     return { version: data.version, commit: data.commit.slice(0, 8), fallback: false };
-  } catch {
+  } catch (err) {
+    // Log to server stdout (Functions/Next runtime → App Insights) so a real
+    // outage is distinguishable from local dev without user-facing noise.
+    console.warn('landing /v1/health fetch threw — using fallback', err);
     return { version: fallbackVersion, commit: fallbackCommit, fallback: true };
   }
 }

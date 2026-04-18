@@ -66,6 +66,10 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Gate split: this step only checks admin-web/src/api/generated/** drift.
+      # Spec drift (api/openapi.json vs api/src/schemas/**) is gated by
+      # api-ship.yml — which triggers on api/ changes, and any api change also
+      # triggers this workflow (see paths above), so both gates fire together.
       - name: generated api client is up to date
         run: |
           pnpm run openapi:client

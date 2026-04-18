@@ -16,7 +16,9 @@ pnpm dev                     # http://localhost:3000
 pnpm typecheck            # tsc --noEmit, strict
 pnpm lint                 # next lint + eslint . --max-warnings 0
 pnpm test:coverage        # Vitest + RTL, ≥80% lines/branches/functions/statements
-pnpm test:e2e             # Playwright (Chromium)
+pnpm -C ../api install    # prereq for test:e2e — the Playwright webServer boots api/
+pnpm -C ../api build      # prereq for test:e2e — func start reads dist/
+pnpm test:e2e             # Playwright (Chromium); boots api/ on :7071 + admin-web on :3000
 pnpm test:a11y            # Playwright + axe-core (WCAG 2.1 AA)
 pnpm exec lhci autorun    # Lighthouse CI budgets (Perf 0.9 / A11y 0.95 / BP 0.9 / SEO 0.9)
 ```
