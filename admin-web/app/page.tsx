@@ -2,6 +2,12 @@ import Link from 'next/link';
 import { createApiClient } from '@/api';
 import { landingCopy } from '@/content/landing';
 
+// Render on every request so the /v1/health round-trip reflects the live api/
+// server, not the build-time fallback. Without this, Next 15 prerenders the
+// page statically at build time (when api/ is unreachable), so the footer
+// would be frozen at "dev" and the e2e SHA assertion would never match.
+export const dynamic = 'force-dynamic';
+
 type FooterBuildInfo = { version: string; commit: string; fallback: boolean };
 
 async function fetchBuildInfo(): Promise<FooterBuildInfo> {
