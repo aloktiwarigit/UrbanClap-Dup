@@ -1,0 +1,89 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "homeservices-api",
+    "version": "0.1.0",
+    "description": "homeservices-mvp internal API. Generated from Zod schemas — do not hand-edit.",
+    "contact": {
+      "name": "homeservices-mvp maintainers",
+      "url": "https://github.com/aloktiwarigit/Urbanclap-dup"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:7071/api",
+      "description": "Local Azure Functions runtime"
+    }
+  ],
+  "tags": [
+    {
+      "name": "system",
+      "description": "Operational / liveness endpoints"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "commit": {
+            "type": "string",
+            "minLength": 1
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "uptimeSeconds": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "status",
+          "version",
+          "commit",
+          "timestamp",
+          "uptimeSeconds"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/v1/health": {
+      "get": {
+        "operationId": "getHealth",
+        "tags": [
+          "system"
+        ],
+        "summary": "Liveness probe",
+        "description": "Returns api/ liveness status plus build metadata. Unauthenticated. Never touches the database.",
+        "responses": {
+          "200": {
+            "description": "Service is live",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}
