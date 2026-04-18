@@ -23,10 +23,23 @@ export default defineConfig({
       testMatch: 'a11y/**/*.spec.ts',
     },
   ],
-  webServer: {
-    command: 'pnpm start',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
-  },
+  webServer: [
+    {
+      command: 'pnpm -C ../api dev',
+      url: 'http://localhost:7071/api/v1/health',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+    {
+      command: 'pnpm start',
+      url: 'http://localhost:3000',
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+      env: {
+        API_BASE_URL: 'http://localhost:7071/api',
+      },
+    },
+  ],
 });
