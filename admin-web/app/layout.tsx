@@ -10,7 +10,7 @@ const themeScript = `(function(){try{var t=localStorage.getItem('theme');var m=w
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* nosemgrep: no-dangerous-html — pre-hydration theme script must run before React; minimised IIFE; no user input. See ADR/E01-S02 brainstorm §5. */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
