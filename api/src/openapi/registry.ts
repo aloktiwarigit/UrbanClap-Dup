@@ -6,11 +6,14 @@ extendZodWithOpenApi(z);
 
 export const registry = new OpenAPIRegistry();
 
-registry.register('HealthResponse', HealthResponseSchema);
+const HealthResponse = HealthResponseSchema.openapi('HealthResponse');
+registry.register('HealthResponse', HealthResponse);
 
 registry.registerPath({
   method: 'get',
   path: '/v1/health',
+  operationId: 'getHealth',
+  tags: ['system'],
   summary: 'Liveness probe',
   description:
     'Returns api/ liveness status plus build metadata. Unauthenticated. Never touches the database.',
@@ -18,7 +21,7 @@ registry.registerPath({
     200: {
       description: 'Service is live',
       content: {
-        'application/json': { schema: HealthResponseSchema },
+        'application/json': { schema: HealthResponse },
       },
     },
   },
