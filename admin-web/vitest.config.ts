@@ -29,6 +29,7 @@ export default defineConfig({
         'src/sentry.client.config.ts',
         'src/instrumentation.ts',
         'src/instrumentation-client.ts',
+        'src/api/generated/**',
         'app/layout.tsx',
         '**/*.stories.tsx',
         '**/*.config.*',
