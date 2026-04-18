@@ -105,3 +105,15 @@ api/dist/
 api/coverage/
 api/local.settings.json
 api/.azure/
+
+# admin-web/
+admin-web/node_modules/
+admin-web/.next/
+admin-web/out/
+admin-web/coverage/
+admin-web/storybook-static/
+admin-web/playwright-report/
+admin-web/test-results/
+admin-web/.lighthouseci/
+admin-web/.env.local
+admin-web/*.tsbuildinfo
