@@ -79,6 +79,9 @@ android {
         checkDependencies = false
         abortOnError = true
         checkReleaseBuilds = false
+        // Story E01-S03 pins specific versions (AGP 8.6.0, targetSdk 35, etc.) per architecture
+        // decision. Suppress advisory "newer version available" checks to avoid false failures.
+        disable += setOf("OldTargetApi", "AndroidGradlePluginVersion", "GradleDependency")
     }
 
     testOptions {
@@ -89,7 +92,11 @@ android {
 }
 
 kotlin {
-    jvmToolchain(libs.versions.java.get().toInt())
+    jvmToolchain(
+        libs.versions.java
+            .get()
+            .toInt(),
+    )
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_17)
         allWarningsAsErrors.set(true)
@@ -131,21 +138,34 @@ kover {
         filters {
             excludes {
                 classes(
+                    // Hilt & Dagger generated code
                     "*.Hilt_*",
                     "*.*_Factory",
                     "*.*_Factory\$*",
+                    "*.*_Factory\$InstanceHolder",
                     "*.*_HiltModules*",
                     "*.*_HiltModules\$*",
                     "*.*_Impl",
                     "*.*_MembersInjector",
+                    "*.*_GeneratedInjector",
+                    "hilt_aggregated_deps.*",
+                    "dagger.hilt.*",
+                    // KSP-generated factories (pattern: ModuleName_ProvideXxxFactory)
+                    "*.*_Provide*Factory*",
+                    // Compose-generated lambdas & singletons
                     "*.ComposableSingletons*",
                     "*.ComposableSingletons\$*",
+                    // Android/Build generated
                     "*.BuildConfig",
                     "*.R",
                     "*.R\$*",
+                    // Excluded application entry-points (no unit tests possible without emulator)
                     "*.HomeservicesCustomerApplication",
                     "*.MainActivity",
+                    "*.MainActivity\$*",
                     "*.TestRunner",
+                    // Compose theme boilerplate (Color / Theme / Type) — framework wiring, not business logic
+                    "*.ui.theme.*",
                 )
             }
         }
