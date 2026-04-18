@@ -35,7 +35,12 @@
     "@axe-core/playwright": "^4",
     "@lhci/cli": "^0.14",
     "@playwright/test": "^1",
-    "@storybook/nextjs": "^8.4",
+    "@storybook/addon-a11y": "8.6.14",
+    "@storybook/addon-essentials": "8.6.14",
+    "@storybook/react": "8.6.14",
+    "@storybook/react-vite": "8.6.14",
+    "@storybook/test": "8.6.14",
+    "storybook": "8.6.14",
     "@testing-library/react": "^16",
     "@types/node": "^22",
     "@types/react": "^19",
@@ -53,6 +58,14 @@
     "tailwindcss": "^4",
     "@tailwindcss/postcss": "^4",
     "postcss": "^8",
-    "autoprefixer": "^10"
+    "autoprefixer": "^10",
+    "vite": "^5",
+    "webpack": "^5"
+  },
+  "pnpm": {
+    "overrides": {
+      "react": "^19.0.0",
+      "react-dom": "^19.0.0"
+    }
   }
 }
