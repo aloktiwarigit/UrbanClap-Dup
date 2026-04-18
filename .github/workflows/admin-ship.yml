@@ -6,11 +6,15 @@ on:
     paths:
       - 'admin-web/**'
       - '.github/workflows/admin-ship.yml'
+      - '.codex-review-passed'
+      - 'docs/reviews/**'
   push:
     branches: [main]
     paths:
       - 'admin-web/**'
       - '.github/workflows/admin-ship.yml'
+      - '.codex-review-passed'
+      - 'docs/reviews/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
