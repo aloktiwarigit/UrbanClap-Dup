@@ -1,0 +1,114 @@
+name: customer-ship
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'customer-app/**'
+      - '.github/workflows/customer-ship.yml'
+      - '.codex-review-passed'
+  push:
+    branches: [main]
+    paths:
+      - 'customer-app/**'
+      - '.github/workflows/customer-ship.yml'
+      - '.codex-review-passed'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GIT_SHA: ${{ github.sha }}
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: customer-app
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: BMAD artifacts present
+        working-directory: ${{ github.workspace }}
+        run: |
+          for f in docs/prd.md docs/architecture.md docs/ux-design.md docs/threat-model.md docs/runbook.md .bmad-readiness-passed; do
+            test -f "$f" || { echo "::error::missing $f"; exit 1; }
+          done
+
+      - name: libs.versions.toml drift check
+        working-directory: ${{ github.workspace }}
+        run: |
+          if ! diff -q customer-app/gradle/libs.versions.toml technician-app/gradle/libs.versions.toml > /dev/null; then
+            echo "::error::libs.versions.toml drifted between customer-app and technician-app"
+            diff customer-app/gradle/libs.versions.toml technician-app/gradle/libs.versions.toml
+            exit 1
+          fi
+          echo "catalog-drift check OK"
+
+      - name: ktlint
+        run: ./gradlew ktlintCheck
+
+      - name: detekt
+        run: ./gradlew detekt
+
+      - name: android lint (debug)
+        run: ./gradlew lintDebug
+
+      - name: unit tests
+        run: ./gradlew testDebugUnitTest
+
+      - name: kover coverage (≥80%)
+        run: ./gradlew koverVerify koverXmlReport
+
+      - name: paparazzi screenshot diff
+        run: ./gradlew verifyPaparazziDebug
+
+      - name: assemble debug APK
+        run: ./gradlew assembleDebug
+
+      - name: semgrep SAST
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: p/kotlin p/owasp-top-ten p/secrets
+
+      - name: codex-review marker verification
+        if: github.event_name == 'pull_request'
+        working-directory: ${{ github.workspace }}
+        run: |
+          if [ ! -f .codex-review-passed ]; then
+            echo "::error::.codex-review-passed marker missing — run /codex-review-gate before pushing"
+            exit 1
+          fi
+          MARKER_SHA=$(jq -r .commit .codex-review-passed)
+          HEAD_SHA=$(git rev-parse HEAD)
+
+          # marker SHA must be an ancestor of HEAD and nothing outside the
+          # allowed scope (.codex-review-passed or docs/reviews/**) may have
+          # changed since the marker commit
+          if ! git merge-base --is-ancestor "$MARKER_SHA" "$HEAD_SHA"; then
+            echo "::error::marker SHA $MARKER_SHA is not an ancestor of HEAD ($HEAD_SHA) — rerun /codex-review-gate"
+            exit 1
+          fi
+
+          DISALLOWED=$(git diff --name-only "$MARKER_SHA" "$HEAD_SHA" \
+            | grep -Ev '^(\.codex-review-passed|docs/reviews/)' || true)
+          if [ -n "$DISALLOWED" ]; then
+            echo "::error::files outside Codex review scope changed since marker $MARKER_SHA:"
+            echo "$DISALLOWED"
+            echo "::error::rerun /codex-review-gate to re-review the new changes"
+            exit 1
+          fi
+          echo "codex-review marker valid: reviewed=$MARKER_SHA head=$HEAD_SHA"
