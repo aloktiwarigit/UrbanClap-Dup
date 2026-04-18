@@ -30,8 +30,22 @@ const document = generator.generateDocument({
   tags: [{ name: 'system', description: 'Operational / liveness endpoints' }],
 });
 
+// Guard against silently-empty specs when a future refactor forgets to import
+// a registry module — a lie-detector that doesn't fire is worse than no test.
+const pathCount = Object.keys(document.paths ?? {}).length;
+const schemaCount = Object.keys(document.components?.schemas ?? {}).length;
+if (pathCount === 0 || schemaCount === 0) {
+  throw new Error(
+    `OpenAPI registry is empty (paths=${pathCount}, schemas=${schemaCount}). ` +
+      `Ensure src/openapi/registry.ts is imported and all route/schema ` +
+      `registrations are reachable.`,
+  );
+}
+
 const outputPath = resolve(here, '../../openapi.json');
 const json = JSON.stringify(document, null, 2) + '\n';
 writeFileSync(outputPath, json, 'utf8');
 
-console.log(`wrote ${outputPath} (${json.length} bytes)`);
+console.log(
+  `wrote ${outputPath} (${json.length} bytes, ${pathCount} paths, ${schemaCount} schemas)`,
+);

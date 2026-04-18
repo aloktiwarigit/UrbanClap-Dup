@@ -44,9 +44,12 @@ export function createApiClient(options: ApiClientOptions) {
     async onResponse({ response, request }) {
       if (response.ok) return response;
       let body: unknown = null;
+      // Broader than `application/json` so we also parse RFC 7807
+      // `application/problem+json` and other `*+json` variants as structured.
       const contentType = response.headers.get('content-type') ?? '';
+      const isJson = /\bjson\b/i.test(contentType);
       try {
-        body = contentType.includes('application/json')
+        body = isJson
           ? await response.clone().json()
           : await response.clone().text();
       } catch {

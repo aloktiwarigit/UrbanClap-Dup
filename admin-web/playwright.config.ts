@@ -4,8 +4,19 @@ import { execSync } from 'node:child_process';
 // Seed GIT_SHA for the api/ webServer so getVersionInfo() returns a real 8-char
 // hex SHA (not the "dev" fallback). CI sets GIT_SHA at job scope; locally we
 // derive it from HEAD so `pnpm test:e2e` exercises the real round-trip.
-const localGitSha =
-  process.env['GIT_SHA'] ?? execSync('git rev-parse HEAD').toString().trim();
+// Tarball installs / docker contexts without .git fall back to "dev".
+function resolveGitSha(): string {
+  const fromEnv = process.env['GIT_SHA'];
+  if (fromEnv) return fromEnv;
+  try {
+    return execSync('git rev-parse HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim();
+  } catch {
+    return 'dev';
+  }
+}
+const localGitSha = resolveGitSha();
 
 export default defineConfig({
   testDir: './tests',
@@ -32,7 +43,10 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'pnpm -C ../api dev',
+      // `start` = `func start` (no rebuild). CI pre-builds api/ in the e2e job
+      // before playwright runs; locally, developers must run `pnpm -C api build`
+      // before `pnpm test:e2e` (documented in admin-web/README.md).
+      command: 'pnpm -C ../api start',
       url: 'http://localhost:7071/api/v1/health',
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,

@@ -81,6 +81,22 @@ describe('createApiClient', () => {
     await expect(client.GET('/v1/health')).rejects.toBeInstanceOf(ApiError);
   });
 
+  it('parses application/problem+json error bodies as JSON (RFC 7807)', async () => {
+    server.use(
+      http.get(`${baseUrl}/v1/health`, () =>
+        HttpResponse.json(
+          { type: 'https://example.com/errors/boom', title: 'Boom', status: 503 },
+          { status: 503, headers: { 'content-type': 'application/problem+json' } },
+        ),
+      ),
+    );
+    const client = createApiClient({ baseUrl });
+    await expect(client.GET('/v1/health')).rejects.toMatchObject({
+      status: 503,
+      body: { type: 'https://example.com/errors/boom', title: 'Boom', status: 503 },
+    });
+  });
+
   it('works without headers option (factory default)', async () => {
     const sawAuth = vi.fn();
     server.use(
