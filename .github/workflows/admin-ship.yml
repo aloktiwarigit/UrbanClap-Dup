@@ -8,6 +8,7 @@ on:
       - '.github/workflows/admin-ship.yml'
       - '.codex-review-passed'
       - 'docs/reviews/**'
+      - 'api/openapi.json'
   push:
     branches: [main]
     paths:
@@ -15,6 +16,7 @@ on:
       - '.github/workflows/admin-ship.yml'
       - '.codex-review-passed'
       - 'docs/reviews/**'
+      - 'api/openapi.json'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -51,6 +53,14 @@ jobs:
           test -n "$(ls docs/stories/*.md 2>/dev/null)" || { echo "::error::no stories in docs/stories/"; exit 1; }
 
       - run: pnpm install --frozen-lockfile
+
+      - name: generated api client is up to date
+        run: |
+          pnpm run openapi:client
+          if ! git diff --exit-code src/api/generated/; then
+            echo "::error::admin-web/src/api/generated/ is stale — run 'pnpm -C admin-web openapi:client' and commit the result (story E01-S06)"
+            exit 1
+          fi
 
       - run: pnpm typecheck
       - run: pnpm lint
@@ -99,13 +109,14 @@ jobs:
 
   e2e-and-a11y:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     needs: quality-gate
     defaults:
       run:
         working-directory: admin-web
     env:
       NEXT_PUBLIC_GIT_SHA: ${{ github.sha }}
+      GIT_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -114,8 +125,14 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: admin-web/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
+      - name: install admin-web deps
+        run: pnpm install --frozen-lockfile
+      - name: install api deps (for playwright webServer — story E01-S06)
+        working-directory: api
+        run: pnpm install --frozen-lockfile
+      - name: build api (for func start in playwright webServer)
+        working-directory: api
+        run: pnpm build
       - name: cache playwright browsers
         uses: actions/cache@v4
         with:
