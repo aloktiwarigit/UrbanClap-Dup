@@ -84,3 +84,12 @@ Every function file must include `import '../bootstrap.js';` at the top. Do not 
 - ADR-0004: [Azure Functions Consumption](../docs/adr/0004-azure-functions-consumption.md)
 - ADR-0007: [Zero paid SaaS constraint](../docs/adr/0007-zero-paid-saas-constraint.md)
 - Brainstorm design: [`../docs/superpowers/specs/2026-04-17-e01-s01-api-skeleton-design.md`](../docs/superpowers/specs/2026-04-17-e01-s01-api-skeleton-design.md)
+
+## OpenAPI
+
+This project emits its OpenAPI 3.1 document from Zod schemas via `@asteasolutions/zod-to-openapi`.
+
+- **Generate:** `pnpm openapi:build` writes `api/openapi.json` (committed artifact).
+- **Validate:** `pnpm openapi:lint` runs `@stoplight/spectral-cli` with the `spectral:oas` ruleset.
+- **When to regenerate:** every time a Zod schema or route registration changes. CI drift-checks on every PR.
+- **Where it's consumed:** `admin-web/` syncs this file into `admin-web/src/api/generated/openapi.json` and generates a typed client from it. See ADR-0009.
