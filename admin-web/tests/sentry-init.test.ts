@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const initSpy = vi.fn();
+const { initSpy } = vi.hoisted(() => ({ initSpy: vi.fn() }));
 vi.mock('@sentry/nextjs', () => ({ init: initSpy }));
 
 describe('Sentry server config', () => {
