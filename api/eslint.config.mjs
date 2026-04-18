@@ -19,6 +19,20 @@ export default tseslint.config(
     },
     rules: {
       'import/no-unresolved': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/functions/**/*.ts'],
+    rules: {
+      '@typescript-eslint/require-await': 'off',
     },
   },
 );
