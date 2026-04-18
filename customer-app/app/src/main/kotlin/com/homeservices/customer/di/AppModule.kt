@@ -10,7 +10,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 public object AppModule {
-
     @Provides
     @Singleton
     public fun provideBuildInfoProvider(): BuildInfoProvider =

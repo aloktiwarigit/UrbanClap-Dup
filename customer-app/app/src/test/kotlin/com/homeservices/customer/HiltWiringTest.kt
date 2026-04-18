@@ -15,7 +15,6 @@ import javax.inject.Inject
 @RunWith(RobolectricTestRunner::class)
 @Config(application = HiltTestApplication::class)
 public class HiltWiringTest {
-
     @get:Rule
     public val hiltRule: HiltAndroidRule = HiltAndroidRule(this)
 

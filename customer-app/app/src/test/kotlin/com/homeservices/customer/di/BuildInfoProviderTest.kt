@@ -4,7 +4,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 public class BuildInfoProviderTest {
-
     @Test
     public fun `shortSha returns first 8 characters of a 40-char sha`() {
         val provider = BuildInfoProvider(version = "0.1.0", gitSha = "abcdef1234567890abcdef1234567890abcdef12")

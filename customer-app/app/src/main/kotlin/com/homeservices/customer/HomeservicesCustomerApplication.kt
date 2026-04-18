@@ -6,7 +6,6 @@ import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
 public class HomeservicesCustomerApplication : Application() {
-
     override fun onCreate() {
         super.onCreate()
         SentryInitializer.init(this)
