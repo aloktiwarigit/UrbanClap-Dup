@@ -22,7 +22,7 @@
 
 | Epic | Title | Stories | Dev-days est. | Sprint |
 |---|---|---:|---:|---|
-| E01 | Foundations, CI & Design System | 5 | 4 | S1 (wk 1–2) |
+| E01 | Foundations, CI & Design System | 6 | 5 | S1 (wk 1–2) |
 | E02 | Authentication & Onboarding | 4 | 3 | S1 (wk 1–2) |
 | E03 | Service Discovery + Booking Flow | 4 | 4 | S2 (wk 3–4) |
 | E04 | Trust Layer (Customer) | 3 | 3 | S2 (wk 3–4) |
@@ -32,7 +32,7 @@
 | E08 | Technician Experience (Earnings, Appeals) | 4 | 3 | S4 (wk 7–8) |
 | E09 | Owner Operations + Finance | 6 | 5 | S5 (wk 9–10) |
 | E10 | Compliance, Audit & Launch Readiness | 4 | 3 | S5 (wk 9–10) |
-| **Total** | | **44** | **~38 dev-days** | **10 weeks** |
+| **Total** | | **45** | **~39 dev-days** | **10 weeks** |
 
 **Buffer:** ~2 weeks for soft launch iteration, bug polish, and Play Store submission = **~12 weeks end-to-end**. Matches PRD §14.1 MVP phase (Months 1–3).
 
@@ -51,6 +51,7 @@
 | **E01-S03** | Wire up `customer-app/` + `technician-app/` Kotlin projects with Compose + Paparazzi + Hilt + Sentry SDK + `./gradlew build` green | NFR-M-5, NFR-O-2 | Two APKs build; Paparazzi screenshot smoke test passes; CI ship.yml green |
 | **E01-S04** | Create shared design-system Gradle module with tokens from UX §5 (color, type, space, motion, elevation, radii) + Compose theme; publish | UX §5, NFR-A-5 | Import in both Android apps; dark mode toggles correctly |
 | **E01-S05** | Create Figma library (via `figma:figma-generate-library` skill) matching design-system tokens + publish to org; wire `figma:figma-code-connect` | UX §5, §12 | Figma library reachable; token changes sync; component naming convention codified via `figma:figma-create-design-system-rules` |
+| **E01-S06** | Cross-sub-project OpenAPI client generator — produce typed TS client from `api/`'s OpenAPI spec + wire into `admin-web/` so every admin page has type-safe `api/` calls | NFR-M-5, NFR-P-2 | Inserted 2026-04-18 as a foundation enabler; **blocks E03-S01** (catalogue endpoints are the first real consumer). Scope: (a) emit OpenAPI from `api/` Zod schemas (zod-openapi or @asteasolutions/zod-to-openapi), (b) generate typed client (openapi-typescript / @hey-api/openapi-ts — OSS only, ADR-0007), (c) fetch wrapper w/ auth-header injection hook (no assumed auth scheme — E02-S04 lands auth). Native `fetch`, no axios. Acceptance: admin-web imports generated client + calls `/v1/health` with full TS inference; CI regenerates + fails on drift |
 
 ---
 
@@ -178,6 +179,7 @@
 
 ```
 E01 (all) — blocks everything
+E01-S06 (OpenAPI client)  — blocks E03-S01 (its first consumer + validates codegen end-to-end)
 
 E02-S01, S02 — block E03, E04, E06, E07, E08
 E02-S03     — blocks E05 (tech must be KYC'd before dispatch)
