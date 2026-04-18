@@ -1,8 +1,12 @@
 {
-  "name": "client-baseline-node",
-  "version": "0.0.1",
+  "name": "homeservices-api",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsup src/index.ts --format esm --dts",
