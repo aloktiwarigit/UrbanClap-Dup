@@ -1,16 +1,16 @@
-name: ship
+name: api-ship
 
 on:
   pull_request:
     branches: [main]
     paths:
       - 'api/**'
-      - '.github/workflows/ship.yml'
+      - '.github/workflows/api-ship.yml'
   push:
     branches: [main]
     paths:
       - 'api/**'
-      - '.github/workflows/ship.yml'
+      - '.github/workflows/api-ship.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
