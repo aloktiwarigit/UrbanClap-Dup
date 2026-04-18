@@ -18,7 +18,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.tests.json",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "openapi:build": "tsx src/openapi/build.ts",
+    "openapi:lint": "spectral lint openapi.json --ruleset spectral:oas --fail-severity error"
   },
   "dependencies": {
     "@azure/functions": "^4.5.0",
@@ -29,6 +31,9 @@
     "zod": "^3.23.0"
   },
   "devDependencies": {
+    "@apidevtools/swagger-parser": "^10.1.0",
+    "@asteasolutions/zod-to-openapi": "^7.3.0",
+    "@stoplight/spectral-cli": "^6.11.0",
     "@types/node": "^22",
     "@vitest/coverage-v8": "^2",
     "azure-functions-core-tools": "^4",
