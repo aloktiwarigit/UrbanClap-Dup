@@ -117,3 +117,18 @@ admin-web/test-results/
 admin-web/.lighthouseci/
 admin-web/.env.local
 admin-web/*.tsbuildinfo
+
+# customer-app/
+customer-app/.gradle/
+customer-app/build/
+customer-app/app/build/
+customer-app/app/release/
+customer-app/local.properties
+customer-app/.idea/
+customer-app/captures/
+customer-app/.cxx/
+customer-app/*.iml
+customer-app/app/*.iml
+customer-app/app/release/keystore.properties
+customer-app/keystore.jks
+customer-app/release.keystore
