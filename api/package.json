@@ -1,35 +1,45 @@
 {
-  "name": "client-baseline-node",
-  "version": "0.0.1",
+  "name": "homeservices-api",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@9.15.4",
+  "main": "dist/functions/*.js",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsup src/index.ts --format esm --dts",
-    "start": "node dist/index.js",
-    "typecheck": "tsc --noEmit",
+    "dev": "pnpm build && func start",
+    "dev:direct": "pnpm build && func start",
+    "dev:watch": "tsc --watch",
+    "build": "tsc",
+    "start": "func start",
+    "typecheck": "tsc --noEmit -p tsconfig.tests.json",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@azure/functions": "^4.5.0",
     "@growthbook/growthbook": "^1",
     "@sentry/node": "^8",
-    "@opentelemetry/api": "^1",
-    "@opentelemetry/auto-instrumentations-node": "^0.50",
     "fastify": "^5",
     "posthog-node": "^4",
-    "zod": "^3"
+    "zod": "^3.23.0"
   },
   "devDependencies": {
     "@types/node": "^22",
     "@vitest/coverage-v8": "^2",
+    "azure-functions-core-tools": "^4",
     "eslint": "^9",
+    "eslint-plugin-import": "^2",
+    "prettier": "^3",
     "supertest": "^7",
     "testcontainers": "^10",
-    "tsup": "^8",
     "tsx": "^4",
-    "typescript": "^5",
+    "typescript": "^5.6.0",
+    "typescript-eslint": "^8",
     "vitest": "^2"
   }
 }

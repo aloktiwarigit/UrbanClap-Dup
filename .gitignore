@@ -98,3 +98,10 @@ logs/
 
 # === Storybook ===
 storybook-static/
+
+# api/
+api/node_modules/
+api/dist/
+api/coverage/
+api/local.settings.json
+api/.azure/
