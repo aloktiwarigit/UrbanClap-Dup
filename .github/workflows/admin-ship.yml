@@ -125,6 +125,9 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          cache-dependency-path: |
+            admin-web/pnpm-lock.yaml
+            api/pnpm-lock.yaml
       - name: install admin-web deps
         run: pnpm install --frozen-lockfile
       - name: install api deps (for playwright webServer — story E01-S06)
