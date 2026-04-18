@@ -152,6 +152,15 @@ kover {
     }
 }
 
+// Hilt + KSP2 (K2 compiler): pass the flag that tells the Hilt KSP processor
+// that the Hilt Gradle plugin IS applied and superclass validation should be
+// skipped during the KSP pass (the plugin does the bytecode transform post-compile).
+// Without this, KSP2 fails with "Expected @AndroidEntryPoint to have a value".
+// See https://dagger.dev/hilt/gradle-setup.html#ksp
+ksp {
+    arg("dagger.hilt.android.internal.disableAndroidSuperclassValidation", "true")
+}
+
 // Paparazzi 1.3.5 picks up the correct layoutlib for the Compose BOM automatically.
 // No paparazzi {} configuration block is needed or valid.
 
