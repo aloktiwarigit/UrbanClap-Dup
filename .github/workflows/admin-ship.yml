@@ -8,7 +8,14 @@ on:
       - '.github/workflows/admin-ship.yml'
       - '.codex-review-passed'
       - 'docs/reviews/**'
+      # The e2e job boots api/ via playwright webServer, so api runtime
+      # changes must re-trigger this workflow (story E01-S06).
       - 'api/openapi.json'
+      - 'api/src/**'
+      - 'api/package.json'
+      - 'api/pnpm-lock.yaml'
+      - 'api/tsconfig.json'
+      - 'api/host.json'
   push:
     branches: [main]
     paths:
@@ -17,6 +24,11 @@ on:
       - '.codex-review-passed'
       - 'docs/reviews/**'
       - 'api/openapi.json'
+      - 'api/src/**'
+      - 'api/package.json'
+      - 'api/pnpm-lock.yaml'
+      - 'api/tsconfig.json'
+      - 'api/host.json'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
