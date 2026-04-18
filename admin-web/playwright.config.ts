@@ -54,6 +54,11 @@ export default defineConfig({
       stderr: 'pipe',
       env: {
         GIT_SHA: localGitSha,
+        // api/local.settings.json is .gitignored, so in CI `func start` prompts
+        // interactively for a worker runtime and then hangs. Pass the runtime
+        // explicitly here so the host launches non-interactively.
+        FUNCTIONS_WORKER_RUNTIME: 'node',
+        AzureWebJobsStorage: 'UseDevelopmentStorage=true',
       },
     },
     {
