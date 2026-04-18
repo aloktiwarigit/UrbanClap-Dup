@@ -15,14 +15,18 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 public class SentryInitializerTest {
-
     private lateinit var application: Application
 
     @BeforeEach
     public fun setUp() {
         application = mockk(relaxed = true)
         mockkStatic(SentryAndroid::class)
-        every { SentryAndroid.init(any<Application>(), any<io.sentry.Sentry.OptionsConfiguration<SentryAndroidOptions>>()) } returns Unit
+        every {
+            SentryAndroid.init(
+                any<Application>(),
+                any<io.sentry.Sentry.OptionsConfiguration<SentryAndroidOptions>>(),
+            )
+        } returns Unit
     }
 
     @AfterEach
@@ -35,7 +39,10 @@ public class SentryInitializerTest {
         SentryInitializer.init(application = application, dsn = "")
 
         verify(exactly = 0) {
-            SentryAndroid.init(any<Application>(), any<io.sentry.Sentry.OptionsConfiguration<SentryAndroidOptions>>())
+            SentryAndroid.init(
+                any<Application>(),
+                any<io.sentry.Sentry.OptionsConfiguration<SentryAndroidOptions>>(),
+            )
         }
     }
 
@@ -44,12 +51,15 @@ public class SentryInitializerTest {
         SentryInitializer.init(application = application, dsn = "   ")
 
         verify(exactly = 0) {
-            SentryAndroid.init(any<Application>(), any<io.sentry.Sentry.OptionsConfiguration<SentryAndroidOptions>>())
+            SentryAndroid.init(
+                any<Application>(),
+                any<io.sentry.Sentry.OptionsConfiguration<SentryAndroidOptions>>(),
+            )
         }
     }
 
     @Test
-    public fun `init calls SentryAndroid init once with tracesSampleRate 0_1 when DSN is set`() {
+    public fun `init calls Sentry once with tracesSampleRate when DSN set`() {
         val configSlot = slot<io.sentry.Sentry.OptionsConfiguration<SentryAndroidOptions>>()
         every {
             SentryAndroid.init(any<Application>(), capture(configSlot))
@@ -58,7 +68,10 @@ public class SentryInitializerTest {
         SentryInitializer.init(application = application, dsn = "https://key@o0.ingest.sentry.io/0")
 
         verify(exactly = 1) {
-            SentryAndroid.init(application, any<io.sentry.Sentry.OptionsConfiguration<SentryAndroidOptions>>())
+            SentryAndroid.init(
+                application,
+                any<io.sentry.Sentry.OptionsConfiguration<SentryAndroidOptions>>(),
+            )
         }
 
         val capturedOptions = SentryAndroidOptions()
