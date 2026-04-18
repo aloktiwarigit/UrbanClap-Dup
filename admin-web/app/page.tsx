@@ -1,9 +1,41 @@
 import Link from 'next/link';
-import { getBuildInfo } from '@/lib/build-info';
+import { createApiClient } from '@/api';
 import { landingCopy } from '@/content/landing';
 
-export default function LandingPage() {
-  const { version, sha } = getBuildInfo();
+// Render on every request so the /v1/health round-trip reflects the live api/
+// server, not the build-time fallback. Without this, Next 15 prerenders the
+// page statically at build time (when api/ is unreachable), so the footer
+// would be frozen at "dev" and the e2e SHA assertion would never match.
+export const dynamic = 'force-dynamic';
+
+type FooterBuildInfo = { version: string; commit: string; fallback: boolean };
+
+async function fetchBuildInfo(): Promise<FooterBuildInfo> {
+  const baseUrl = process.env['API_BASE_URL'] ?? 'http://localhost:7071/api';
+  const fallbackVersion = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev';
+  const rawSha = process.env['NEXT_PUBLIC_GIT_SHA'];
+  const fallbackCommit =
+    rawSha && rawSha.length >= 8 ? rawSha.slice(0, 8) : 'dev';
+  try {
+    const client = createApiClient({ baseUrl });
+    const { data, error } = await client.GET('/v1/health');
+    if (error || !data) {
+      console.warn('landing /v1/health returned error envelope — using fallback', {
+        error,
+      });
+      return { version: fallbackVersion, commit: fallbackCommit, fallback: true };
+    }
+    return { version: data.version, commit: data.commit.slice(0, 8), fallback: false };
+  } catch (err) {
+    // Log to server stdout (Functions/Next runtime → App Insights) so a real
+    // outage is distinguishable from local dev without user-facing noise.
+    console.warn('landing /v1/health fetch threw — using fallback', err);
+    return { version: fallbackVersion, commit: fallbackCommit, fallback: true };
+  }
+}
+
+export default async function LandingPage() {
+  const build = await fetchBuildInfo();
   const { brand, tagline, ctaLabel, ctaHref, footerNote } = landingCopy;
 
   return (
@@ -30,9 +62,10 @@ export default function LandingPage() {
       </section>
 
       <footer className="px-[var(--space-6)] py-[var(--space-4)] border-t border-[var(--color-border)] text-[length:var(--text-xs)] text-[var(--color-text-muted)] flex gap-[var(--space-4)]">
-        <span>v{version}</span>
-        <span>·</span>
-        <span>{sha}</span>
+        <span>
+          v{build.version} · {build.commit}
+          {build.fallback ? ' (local)' : ''}
+        </span>
         <span>·</span>
         <span>{footerNote}</span>
       </footer>

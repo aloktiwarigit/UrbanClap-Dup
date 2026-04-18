@@ -20,6 +20,14 @@ test('CTA navigates to /login stub', async ({ page }) => {
   await expect(page.getByText(/501 — Owner sign-in coming/i)).toBeVisible();
 });
 
+test('footer shows real commit sha and semver from /v1/health', async ({ page }) => {
+  await page.goto('/');
+  const footer = page.locator('footer');
+  // Successful round-trip: footer contains an 8-char hex SHA and a semver-looking string.
+  await expect(footer).toContainText(/[a-f0-9]{8}/);
+  await expect(footer).toContainText(/\d+\.\d+\.\d+/);
+});
+
 test('dark mode toggle changes computed background color', async ({ page }) => {
   await page.goto('/');
   // Read resolved backgroundColor on <html> — globals.css declares `html { background: var(--color-surface) }`.

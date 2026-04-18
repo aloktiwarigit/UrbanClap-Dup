@@ -1,0 +1,21 @@
+# Keep generated + committed spec artifacts and source files at LF line-endings
+# so Windows developers with core.autocrlf=true don't produce bogus drift
+# signals against the CI-normalized outputs (story E01-S06).
+*              text=auto eol=lf
+*.json         text eol=lf
+*.ts           text eol=lf
+*.tsx          text eol=lf
+*.mjs          text eol=lf
+*.cjs          text eol=lf
+*.js           text eol=lf
+*.yml          text eol=lf
+*.yaml         text eol=lf
+*.md           text eol=lf
+
+# Binary-ish assets: keep untouched
+*.png          binary
+*.jpg          binary
+*.jpeg         binary
+*.gif          binary
+*.ico          binary
+*.pdf          binary

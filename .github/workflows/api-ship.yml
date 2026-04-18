@@ -57,6 +57,17 @@ jobs:
         with:
           config: p/typescript p/owasp-top-ten p/nodejs p/secrets
 
+      - name: openapi spec is up to date
+        run: |
+          pnpm run openapi:build
+          if ! git diff --exit-code openapi.json; then
+            echo "::error::api/openapi.json is stale — run 'pnpm -C api openapi:build' and commit the result (story E01-S06)"
+            exit 1
+          fi
+
+      - name: openapi spec quality (spectral)
+        run: pnpm run openapi:lint
+
       - name: codex review marker (authoritative gate)
         if: github.event_name == 'pull_request'
         working-directory: ${{ github.workspace }}

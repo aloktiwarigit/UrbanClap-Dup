@@ -49,6 +49,18 @@ export default tseslint.config(
           caughtErrorsIgnorePattern: '^_',
         },
       ],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/api/src/**', '../../api/**', '../../../api/**'],
+              message:
+                'admin-web may not import from api/ at runtime. Use the generated client at src/api/generated/ via the src/api barrel. (story E01-S06)',
+            },
+          ],
+        },
+      ],
     },
   },
   {

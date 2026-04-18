@@ -76,6 +76,19 @@ Without a binding constraint, incremental dependencies creep in during per-story
 | GitHub Actions | 2000 mins/mo | sufficient |
 | Cloudflare (optional CDN, Phase 2) | free tier | sufficient |
 
+### Amendment — 2026-04-18 (story E01-S06)
+
+Added OSS build- and test-time dev dependencies for the OpenAPI codegen pipeline. All are MIT/Apache-2.0 licensed, installed from the public npm registry, and carry zero recurring cost. See ADR-0009 for the toolchain decision.
+
+| Dependency | License | Role | Paid trigger |
+|---|---|---|---|
+| `@asteasolutions/zod-to-openapi` | MIT | api/ dev — emits OpenAPI 3.1 from Zod registry | never (self-hosted codegen) |
+| `@apidevtools/swagger-parser` | MIT | api/ dev — in-test OpenAPI parse validation | never |
+| `@stoplight/spectral-cli` | Apache-2.0 | api/ dev — OpenAPI quality lint (local + CI) | never |
+| `openapi-typescript` | MIT | admin-web/ dev — generates schema.d.ts from committed spec | never |
+| `openapi-fetch` | MIT | admin-web/ runtime — ~2 KB typed fetch wrapper | never |
+| `msw` | MIT | admin-web/ dev — HTTP mocking for ApiClient tests | never |
+
 ## Alternatives considered
 
 - **Soft constraint (recommend, don't enforce)** — rejected because without enforcement, drift is inevitable over a 12-month build. Past 3-month drift destroys the economic thesis.
