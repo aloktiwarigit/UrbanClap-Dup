@@ -1,4 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
+import { execSync } from 'node:child_process';
+
+// Seed GIT_SHA for the api/ webServer so getVersionInfo() returns a real 8-char
+// hex SHA (not the "dev" fallback). CI sets GIT_SHA at job scope; locally we
+// derive it from HEAD so `pnpm test:e2e` exercises the real round-trip.
+const localGitSha =
+  process.env['GIT_SHA'] ?? execSync('git rev-parse HEAD').toString().trim();
 
 export default defineConfig({
   testDir: './tests',
@@ -31,6 +38,9 @@ export default defineConfig({
       timeout: 120_000,
       stdout: 'pipe',
       stderr: 'pipe',
+      env: {
+        GIT_SHA: localGitSha,
+      },
     },
     {
       command: 'pnpm start',
