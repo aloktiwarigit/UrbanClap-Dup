@@ -175,6 +175,8 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.jupiter.api)
     testRuntimeOnly(libs.junit.jupiter.engine)
+    // JUnit 4 vintage engine: required for Paparazzi @Rule-based tests under the JUnit 5 launcher
+    testRuntimeOnly(libs.junit.vintage.engine)
     testImplementation(libs.mockk)
     testImplementation(libs.assertj.core)
     testImplementation(libs.robolectric)
