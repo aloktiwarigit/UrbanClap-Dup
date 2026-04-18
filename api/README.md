@@ -6,7 +6,15 @@ Node 22 + TypeScript + Azure Functions Consumption backend for homeservices-mvp.
 
 ```bash
 pnpm install
-pnpm dev    # runs `func start` via the devDep binary; serves http://localhost:7071/api/v1/health
+pnpm dev    # compiles src/ → dist/ then runs `func start`; serves http://localhost:7071/api/v1/health
+```
+
+`pnpm dev` runs `pnpm build && func start` because Azure Functions loads compiled files from `dist/functions/*.js` (see `package.json` `main`). In a clean checkout `dist/` is absent, so skipping the build means Core Tools would start with zero functions discovered.
+
+For edit-reload during development, run the watcher in a second terminal:
+
+```bash
+pnpm dev:watch    # tsc --watch — recompiles on save; `func start` picks up changed files
 ```
 
 **Windows fallback:** if `azure-functions-core-tools` fails to install via npm (a known intermittent issue on Windows), install it system-wide instead:
@@ -15,7 +23,7 @@ pnpm dev    # runs `func start` via the devDep binary; serves http://localhost:7
 winget install Microsoft.AzureFunctionsCoreTools
 ```
 
-Then use `pnpm dev:direct`, which invokes the same `func start` command but expects `func` on PATH rather than in `node_modules/.bin`.
+Then use `pnpm dev:direct`, which also runs `pnpm build && func start` but expects `func` on PATH rather than in `node_modules/.bin`.
 
 ## Test
 

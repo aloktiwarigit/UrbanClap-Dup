@@ -10,8 +10,9 @@
     "pnpm": ">=9.0.0"
   },
   "scripts": {
-    "dev": "func start",
-    "dev:direct": "func start",
+    "dev": "pnpm build && func start",
+    "dev:direct": "pnpm build && func start",
+    "dev:watch": "tsc --watch",
     "build": "tsc",
     "start": "func start",
     "typecheck": "tsc --noEmit -p tsconfig.tests.json",

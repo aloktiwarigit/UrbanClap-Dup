@@ -67,8 +67,21 @@ jobs:
           fi
           MARKER_SHA=$(jq -r .commit .codex-review-passed)
           HEAD_SHA=$(git rev-parse HEAD)
-          if [ "$MARKER_SHA" != "$HEAD_SHA" ]; then
-            echo "::error::.codex-review-passed commit ($MARKER_SHA) does not match HEAD ($HEAD_SHA) — rerun /codex-review-gate"
+          # The marker records the SHA that Codex reviewed. Committing the marker itself
+          # moves HEAD forward, so a strict marker==HEAD check is a chicken-and-egg paradox
+          # (the commit that introduces the marker cannot contain its own SHA). Instead,
+          # require the marker SHA to be an ancestor of HEAD and verify that nothing
+          # outside the marker/review-log scope has changed since Codex reviewed.
+          if ! git merge-base --is-ancestor "$MARKER_SHA" "$HEAD_SHA"; then
+            echo "::error::marker SHA $MARKER_SHA is not an ancestor of HEAD ($HEAD_SHA) — rerun /codex-review-gate"
             exit 1
           fi
-          echo "codex-review marker matches HEAD $HEAD_SHA"
+          DISALLOWED=$(git diff --name-only "$MARKER_SHA" "$HEAD_SHA" \
+            | grep -Ev '^(\.codex-review-passed|docs/reviews/)' || true)
+          if [ -n "$DISALLOWED" ]; then
+            echo "::error::files outside Codex review scope changed since marker $MARKER_SHA:"
+            echo "$DISALLOWED"
+            echo "::error::rerun /codex-review-gate to re-review the new changes"
+            exit 1
+          fi
+          echo "codex-review marker valid: reviewed=$MARKER_SHA head=$HEAD_SHA"
