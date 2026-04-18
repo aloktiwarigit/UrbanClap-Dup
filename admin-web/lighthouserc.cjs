@@ -4,6 +4,10 @@ module.exports = {
       startServerCommand: 'pnpm start',
       url: ['http://localhost:3000/'],
       numberOfRuns: 3,
+      // Work around chrome-launcher EPERM on Windows temp dir cleanup
+      settings: {
+        chromeFlags: '--headless --no-sandbox --disable-dev-shm-usage',
+      },
     },
     assert: {
       assertions: {

@@ -21,7 +21,7 @@
     "test:a11y": "playwright test --project=a11y",
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build",
-    "lhci": "lhci autorun"
+    "lhci": "lhci autorun --config=lighthouserc.cjs"
   },
   "dependencies": {
     "@growthbook/growthbook-react": "^1",

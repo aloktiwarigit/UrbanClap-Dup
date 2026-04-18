@@ -13,4 +13,6 @@ coverage/
 playwright-report/
 test-results/
 .lighthouseci/
+lhr-result.json
+.lhci-tmp/
 storybook-static/
