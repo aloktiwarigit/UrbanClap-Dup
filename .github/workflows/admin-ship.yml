@@ -21,7 +21,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      GIT_SHA: ${{ github.sha }}
       NEXT_PUBLIC_GIT_SHA: ${{ github.sha }}
       NEXT_PUBLIC_APP_URL: http://localhost:3000
     defaults:
@@ -125,4 +124,4 @@ jobs:
       - name: axe-core a11y (WCAG AA)
         run: pnpm test:a11y
       - name: lighthouse CI budgets
-        run: pnpm exec lhci autorun
+        run: pnpm exec lhci autorun --config=lighthouserc.cjs
