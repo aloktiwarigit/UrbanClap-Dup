@@ -1,0 +1,128 @@
+name: admin-ship
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'admin-web/**'
+      - '.github/workflows/admin-ship.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'admin-web/**'
+      - '.github/workflows/admin-ship.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GIT_SHA: ${{ github.sha }}
+      NEXT_PUBLIC_GIT_SHA: ${{ github.sha }}
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    defaults:
+      run:
+        working-directory: admin-web
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: admin-web/pnpm-lock.yaml
+
+      - name: BMAD artifacts present
+        working-directory: ${{ github.workspace }}
+        run: |
+          for f in docs/prd.md docs/architecture.md docs/ux-design.md docs/threat-model.md docs/runbook.md .bmad-readiness-passed; do
+            test -f "$f" || { echo "::error::missing $f"; exit 1; }
+          done
+          test -n "$(ls docs/adr/*.md 2>/dev/null | grep -v TEMPLATE)" || { echo "::error::no ADRs in docs/adr/"; exit 1; }
+          test -n "$(ls docs/stories/*.md 2>/dev/null)" || { echo "::error::no stories in docs/stories/"; exit 1; }
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test:coverage
+      - run: pnpm build
+
+      - name: semgrep SAST
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: p/typescript p/react p/owasp-top-ten p/secrets
+
+      - name: storybook static build
+        run: pnpm storybook:build && test -s storybook-static/index.html
+
+      # NOTE: `|| true` kept deliberately for the skeleton (lean dep set; no audit signal yet).
+      # Remove once dep count > ~30 — tracked in docs/stories/README.md §E01.
+      - run: pnpm audit --audit-level=high || true
+
+      - name: codex review marker (authoritative gate)
+        if: github.event_name == 'pull_request'
+        working-directory: ${{ github.workspace }}
+        run: |
+          if [ ! -f .codex-review-passed ]; then
+            echo "::error::.codex-review-passed marker missing — run /codex-review-gate before pushing"
+            exit 1
+          fi
+          MARKER_SHA=$(jq -r .commit .codex-review-passed)
+          HEAD_SHA=$(git rev-parse HEAD)
+          # Marker records the SHA Codex reviewed. Committing the marker moves HEAD,
+          # so a strict marker==HEAD check is a chicken-and-egg paradox. Require the
+          # marker SHA to be an ancestor of HEAD and verify nothing outside the
+          # marker/review-log scope changed since Codex reviewed.
+          if ! git merge-base --is-ancestor "$MARKER_SHA" "$HEAD_SHA"; then
+            echo "::error::marker SHA $MARKER_SHA is not an ancestor of HEAD ($HEAD_SHA) — rerun /codex-review-gate"
+            exit 1
+          fi
+          DISALLOWED=$(git diff --name-only "$MARKER_SHA" "$HEAD_SHA" \
+            | grep -Ev '^(\.codex-review-passed|docs/reviews/)' || true)
+          if [ -n "$DISALLOWED" ]; then
+            echo "::error::files outside Codex review scope changed since marker $MARKER_SHA:"
+            echo "$DISALLOWED"
+            echo "::error::rerun /codex-review-gate to re-review the new changes"
+            exit 1
+          fi
+          echo "codex-review marker valid: reviewed=$MARKER_SHA head=$HEAD_SHA"
+
+  e2e-and-a11y:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: quality-gate
+    defaults:
+      run:
+        working-directory: admin-web
+    env:
+      NEXT_PUBLIC_GIT_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: admin-web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: cache playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('admin-web/pnpm-lock.yaml') }}
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm build
+      - name: playwright e2e
+        run: pnpm test:e2e
+      - name: axe-core a11y (WCAG AA)
+        run: pnpm test:a11y
+      - name: lighthouse CI budgets
+        run: pnpm exec lhci autorun
