@@ -1,0 +1,964 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5" />
+<meta name="theme-color" content="#0E1416" />
+<title>homeservices-mvp · Operations Observatory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<style>
+  /* =========================================================
+     Design tokens — the Operations Observatory palette
+     ========================================================= */
+  :root {
+    --ink-0:        #070a0b;   /* deepest */
+    --ink-1:        #0E1416;   /* canvas */
+    --ink-2:        #131b1e;   /* surface */
+    --ink-3:        #1a2427;   /* raised */
+    --ink-4:        #263135;   /* border / divider */
+    --ink-5:        #3d4a50;   /* hairline */
+    --fog-0:        #6b7a81;   /* tertiary text */
+    --fog-1:        #96a4ab;   /* secondary text */
+    --fog-2:        #c4d1d7;   /* primary text */
+    --fog-3:        #ebf2f5;   /* emphasis */
+
+    --teal:         #22a38f;   /* brand — success, primary accent */
+    --teal-soft:    #2fc9b1;
+    --teal-dim:     #15584e;
+    --coral:        #f07a52;   /* alerts, warnings */
+    --coral-soft:   #f4946f;
+    --ember:        #e9b44c;   /* caution */
+    --rose:         #d65d7a;   /* errors, danger, complaints */
+    --lavender:     #8b7dc3;   /* info, learning */
+
+    --grad-active:  linear-gradient(135deg, rgba(34,163,143,.24), rgba(34,163,143,0));
+    --grad-alert:   linear-gradient(135deg, rgba(240,122,82,.22), rgba(240,122,82,0));
+    --grad-offline: linear-gradient(135deg, rgba(150,164,171,.14), rgba(150,164,171,0));
+
+    --font-display: "Fraunces", "Times New Roman", serif;
+    --font-body:    "IBM Plex Sans", -apple-system, system-ui, sans-serif;
+    --font-mono:    "JetBrains Mono", ui-monospace, Menlo, monospace;
+
+    --r-sm:         6px;
+    --r-md:         10px;
+    --r-lg:         16px;
+    --r-xl:         24px;
+
+    --sh-sm:        0 1px 2px rgba(0,0,0,.35);
+    --sh-md:        0 8px 24px rgba(0,0,0,.45);
+    --sh-lg:        0 20px 60px rgba(0,0,0,.55);
+    --sh-glow:      0 0 30px rgba(34,163,143,.22);
+  }
+
+  /* =========================================================
+     Reset + base
+     ========================================================= */
+  *,*::before,*::after { box-sizing: border-box; }
+  html,body { margin:0; padding:0; }
+  html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  body {
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--fog-2);
+    background: var(--ink-1);
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+    /* subtle warm atmosphere wash */
+    background-image:
+      radial-gradient(1400px 900px at 8% -10%, rgba(34,163,143,.065), transparent 60%),
+      radial-gradient(1000px 700px at 95% 110%, rgba(240,122,82,.05), transparent 60%);
+  }
+
+  /* grain overlay — film-grain feel */
+  body::before {
+    content: "";
+    pointer-events: none;
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.035 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    mix-blend-mode: overlay;
+    opacity: .8;
+    z-index: 1;
+  }
+
+  .t-serif { font-family: var(--font-display); font-optical-sizing: auto; letter-spacing: -0.01em; }
+  .t-mono  { font-family: var(--font-mono); }
+
+  /* =========================================================
+     Layout — Responsive Grid
+     ========================================================= */
+  .app {
+    position: relative; z-index: 2;
+    display: grid;
+    grid-template-columns: 68px 1fr;
+    grid-template-rows: 64px 1fr;
+    min-height: 100vh;
+    grid-template-areas:
+      "rail  topbar"
+      "rail  main";
+  }
+
+  .rail {
+    grid-area: rail;
+    background: linear-gradient(180deg, var(--ink-2) 0%, var(--ink-1) 100%);
+    border-right: 1px solid var(--ink-4);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 18px 0;
+    gap: 6px;
+    position: sticky; top: 0; height: 100vh;
+  }
+
+  .topbar {
+    grid-area: topbar;
+    display: flex; align-items: center;
+    padding: 0 clamp(20px, 3vw, 36px);
+    background: linear-gradient(180deg, rgba(19,27,30,.95), rgba(14,20,22,.85));
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--ink-4);
+    gap: 24px;
+    position: sticky; top: 0; z-index: 20;
+  }
+
+  .main {
+    grid-area: main;
+    padding: clamp(20px, 2.5vw, 36px);
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+    grid-template-rows: auto 1fr auto;
+    gap: clamp(18px, 2vw, 28px);
+    grid-template-areas:
+      "counters  counters"
+      "map       feed"
+      "strip     strip";
+  }
+
+  @media (max-width: 1280px) {
+    .main {
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        "counters"
+        "map"
+        "feed"
+        "strip";
+    }
+  }
+
+  @media (max-width: 768px) {
+    .app {
+      grid-template-columns: 1fr;
+      grid-template-rows: 56px 1fr 56px;
+      grid-template-areas:
+        "topbar"
+        "main"
+        "rail";
+    }
+    .rail {
+      flex-direction: row; align-items: center; justify-content: space-around;
+      height: 56px; padding: 0 8px;
+      border-right: none; border-top: 1px solid var(--ink-4);
+      position: fixed; bottom: 0; left: 0; right: 0; top: auto;
+      background: var(--ink-1);
+      z-index: 30;
+    }
+    .main { padding: 16px; padding-bottom: 80px; }
+    .topbar { padding: 0 16px; gap: 12px; }
+  }
+
+  /* =========================================================
+     Rail (side nav)
+     ========================================================= */
+  .rail-logo {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--teal), var(--teal-dim));
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 20px; color: var(--ink-0);
+    box-shadow: var(--sh-glow), inset 0 1px 0 rgba(255,255,255,.18);
+    margin-bottom: 14px;
+    position: relative;
+  }
+  .rail-logo::after {
+    content: ""; position: absolute; inset: -3px; border-radius: 13px;
+    background: linear-gradient(135deg, rgba(34,163,143,.5), transparent 60%);
+    z-index: -1; filter: blur(10px);
+  }
+  .rail-item {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--fog-0);
+    cursor: pointer; position: relative;
+    transition: background 200ms cubic-bezier(.34,1.56,.64,1), color 160ms ease;
+  }
+  .rail-item:hover { background: var(--ink-3); color: var(--fog-2); }
+  .rail-item[data-active="true"] {
+    background: var(--ink-3); color: var(--teal-soft);
+    box-shadow: inset 0 0 0 1px rgba(47,201,177,.2);
+  }
+  .rail-item[data-active="true"]::before {
+    content: ""; position: absolute; left: -14px; top: 50%;
+    width: 3px; height: 22px; border-radius: 2px; background: var(--teal);
+    transform: translateY(-50%);
+    box-shadow: 0 0 10px var(--teal);
+  }
+  .rail-item svg { width: 20px; height: 20px; }
+  .rail .rail-spacer { flex: 1; }
+
+  @media (max-width: 768px) {
+    .rail-logo { display: none; }
+    .rail-item[data-active="true"]::before { display: none; }
+  }
+
+  /* =========================================================
+     Topbar
+     ========================================================= */
+  .topbar-title {
+    display: flex; flex-direction: column; line-height: 1; gap: 3px;
+  }
+  .topbar-title .eyebrow {
+    font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--fog-0); font-weight: 500;
+  }
+  .topbar-title h1 {
+    margin: 0; font-family: var(--font-display); font-weight: 500;
+    font-size: clamp(18px, 2.1vw, 24px); font-style: italic;
+    color: var(--fog-3); letter-spacing: -0.01em;
+  }
+
+  .topbar-clock {
+    margin-left: auto; display: flex; gap: 16px; align-items: center;
+  }
+  .clock {
+    font-family: var(--font-mono); font-size: 13px; color: var(--fog-1);
+    display: flex; flex-direction: column; align-items: flex-end; line-height: 1.25;
+  }
+  .clock b { color: var(--fog-3); font-weight: 500; font-variant-numeric: tabular-nums; font-size: 16px; letter-spacing: 0.04em; }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 13px 7px 10px;
+    border-radius: 999px;
+    background: rgba(34,163,143,.1);
+    border: 1px solid rgba(47,201,177,.22);
+    color: var(--teal-soft);
+    font-size: 12px; font-weight: 500;
+  }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--teal-soft);
+    box-shadow: 0 0 0 0 rgba(47,201,177, .7);
+    animation: pulse 2s cubic-bezier(.4,0,.2,1) infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(47,201,177, .7); }
+    70%  { box-shadow: 0 0 0 10px rgba(47,201,177, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(47,201,177, 0); }
+  }
+
+  .avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: linear-gradient(135deg, #e9b44c, #d65d7a);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 600; color: var(--ink-0);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.2), var(--sh-sm);
+    cursor: pointer;
+  }
+
+  @media (max-width: 560px) {
+    .clock .date { display: none; }
+    .status-pill span.label { display: none; }
+  }
+
+  /* =========================================================
+     Counters bar
+     ========================================================= */
+  .counters {
+    grid-area: counters;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: clamp(10px, 1.2vw, 18px);
+  }
+  @media (max-width: 1100px) { .counters { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 640px)  { .counters { grid-template-columns: repeat(2, 1fr); } }
+
+  .counter {
+    position: relative;
+    padding: 18px 20px 16px;
+    background: linear-gradient(180deg, var(--ink-3) 0%, var(--ink-2) 100%);
+    border: 1px solid var(--ink-4);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    transition: transform 350ms cubic-bezier(.34,1.56,.64,1), border-color 200ms ease, box-shadow 200ms ease;
+  }
+  .counter:hover { transform: translateY(-2px); border-color: var(--ink-5); box-shadow: var(--sh-md); }
+  .counter::after {
+    content: ""; position: absolute; inset: -1px auto auto -1px;
+    width: 140%; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--teal-soft), transparent);
+    opacity: .5; transform: translateX(-40%);
+  }
+  .counter[data-accent="coral"]::after { background: linear-gradient(90deg, transparent, var(--coral), transparent); }
+  .counter[data-accent="ember"]::after { background: linear-gradient(90deg, transparent, var(--ember), transparent); }
+  .counter[data-accent="rose"]::after  { background: linear-gradient(90deg, transparent, var(--rose), transparent); }
+
+  .counter-label {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--fog-0); font-weight: 500;
+  }
+  .counter-value {
+    margin-top: 10px; font-family: var(--font-display); font-weight: 500;
+    font-size: clamp(26px, 3.1vw, 38px); color: var(--fog-3);
+    letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums;
+  }
+  .counter-delta {
+    margin-top: 6px; font-family: var(--font-mono); font-size: 11px;
+    color: var(--teal-soft); font-weight: 500;
+  }
+  .counter-delta.down { color: var(--coral-soft); }
+  .counter-delta.flat { color: var(--fog-0); }
+  .counter-spark {
+    position: absolute; right: 14px; bottom: 12px;
+    width: 64px; height: 22px; opacity: .7;
+    pointer-events: none;
+  }
+
+  /* =========================================================
+     Map panel
+     ========================================================= */
+  .panel {
+    background: linear-gradient(180deg, var(--ink-3) 0%, var(--ink-2) 100%);
+    border: 1px solid var(--ink-4);
+    border-radius: var(--r-xl);
+    overflow: hidden;
+    position: relative;
+  }
+  .panel-head {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--ink-4);
+    background: linear-gradient(180deg, rgba(26,36,39,.6), transparent);
+  }
+  .panel-head h2 {
+    margin: 0; font-family: var(--font-display); font-weight: 500; font-style: italic;
+    font-size: 18px; color: var(--fog-3); letter-spacing: -0.01em;
+  }
+  .panel-head .meta {
+    margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--fog-0);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .panel-head .meta b { color: var(--fog-2); font-weight: 500; }
+
+  .map {
+    grid-area: map;
+  }
+  .map-canvas {
+    position: relative;
+    height: clamp(380px, 52vh, 620px);
+    background:
+      radial-gradient(circle at 30% 40%, rgba(34,163,143,.08), transparent 40%),
+      radial-gradient(circle at 70% 70%, rgba(240,122,82,.06), transparent 35%),
+      var(--ink-1);
+    overflow: hidden;
+  }
+
+  /* stylised grid lines (map feel without actual map) */
+  .map-canvas::before {
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(to right, rgba(150,164,171,.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(150,164,171,.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(ellipse at center, black 50%, transparent 95%);
+  }
+  .map-canvas::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(34,163,143,.12), transparent 12%),
+      radial-gradient(circle at 65% 25%, rgba(240,122,82,.10), transparent 10%),
+      radial-gradient(circle at 45% 60%, rgba(233,180,76,.10), transparent 12%),
+      radial-gradient(circle at 80% 72%, rgba(34,163,143,.10), transparent 10%);
+  }
+
+  /* stylised road streaks */
+  .road {
+    position: absolute; background: rgba(150,164,171,.06);
+    border-radius: 2px; pointer-events: none;
+  }
+  .road.r1 { left: 6%; top: 22%; width: 86%; height: 2px; transform: rotate(-4deg); }
+  .road.r2 { left: 12%; top: 62%; width: 78%; height: 2px; transform: rotate(3deg); }
+  .road.r3 { left: 38%; top: 4%; width: 3px; height: 92%; transform: rotate(2deg); }
+  .road.r4 { left: 68%; top: 10%; width: 2px; height: 80%; }
+
+  .pin {
+    position: absolute;
+    width: 36px; height: 36px;
+    display: grid; place-items: center;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    transition: transform 220ms cubic-bezier(.34,1.56,.64,1);
+  }
+  .pin:hover { transform: translate(-50%, -50%) scale(1.12); z-index: 5; }
+  .pin-core {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--teal-soft);
+    box-shadow: 0 0 0 3px rgba(47,201,177,.2), 0 0 20px rgba(47,201,177,.6);
+  }
+  .pin[data-state="active"]  .pin-core { background: var(--teal-soft); box-shadow: 0 0 0 3px rgba(47,201,177,.25), 0 0 20px rgba(47,201,177,.65); }
+  .pin[data-state="enroute"] .pin-core { background: var(--ember); box-shadow: 0 0 0 3px rgba(233,180,76,.25), 0 0 20px rgba(233,180,76,.6); }
+  .pin[data-state="idle"]    .pin-core { background: var(--fog-1); box-shadow: 0 0 0 3px rgba(150,164,171,.18); }
+  .pin[data-state="alert"]   .pin-core { background: var(--rose); box-shadow: 0 0 0 3px rgba(214,93,122,.3), 0 0 22px rgba(214,93,122,.7); }
+
+  .pin[data-state="active"]::before,
+  .pin[data-state="enroute"]::before,
+  .pin[data-state="alert"]::before {
+    content: ""; position: absolute; inset: 0;
+    border-radius: 50%; border: 1px solid currentColor;
+    opacity: .4;
+    animation: ping 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+  .pin[data-state="active"]::before  { color: var(--teal-soft); }
+  .pin[data-state="enroute"]::before { color: var(--ember); }
+  .pin[data-state="alert"]::before   { color: var(--rose); animation-duration: 1.2s; }
+
+  @keyframes ping {
+    0%   { transform: scale(.6); opacity: .5; }
+    80%  { transform: scale(2.2); opacity: 0; }
+    100% { transform: scale(2.2); opacity: 0; }
+  }
+
+  .pin-label {
+    position: absolute; top: 40px; left: 50%; transform: translateX(-50%);
+    padding: 3px 8px; border-radius: 6px;
+    font-family: var(--font-mono); font-size: 10.5px; font-weight: 500;
+    background: var(--ink-0); color: var(--fog-2);
+    border: 1px solid var(--ink-4);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .map-legend {
+    position: absolute; bottom: 16px; left: 16px;
+    display: flex; gap: 14px; flex-wrap: wrap;
+    padding: 10px 14px;
+    background: rgba(7,10,11,.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--ink-4);
+    border-radius: 999px;
+    font-family: var(--font-mono); font-size: 11px; color: var(--fog-1);
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+  /* =========================================================
+     Event Feed
+     ========================================================= */
+  .feed { grid-area: feed; display: flex; flex-direction: column; max-height: calc(clamp(380px, 52vh, 620px) + 66px); }
+  .feed-list { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 6px 0; }
+  .feed-list::-webkit-scrollbar { width: 6px; }
+  .feed-list::-webkit-scrollbar-track { background: transparent; }
+  .feed-list::-webkit-scrollbar-thumb { background: var(--ink-4); border-radius: 6px; }
+
+  .event {
+    position: relative;
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    gap: 14px;
+    align-items: start;
+    padding: 14px 20px 14px 20px;
+    border-bottom: 1px solid var(--ink-4);
+    animation: slide-in 500ms cubic-bezier(.34,1.56,.64,1) both;
+    transition: background 200ms ease;
+  }
+  .event:hover { background: var(--ink-3); }
+  .event:last-child { border-bottom: none; }
+  .event::before {
+    content: ""; position: absolute; left: 0; top: 14px; bottom: 14px;
+    width: 2px; background: transparent;
+  }
+  .event[data-kind="booking"]::before   { background: var(--teal); }
+  .event[data-kind="assigned"]::before  { background: var(--lavender); }
+  .event[data-kind="completed"]::before { background: var(--teal-soft); }
+  .event[data-kind="alert"]::before     { background: var(--rose); }
+  .event[data-kind="payout"]::before    { background: var(--ember); }
+  .event[data-kind="complaint"]::before { background: var(--coral); }
+
+  .event-dot {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--ink-3);
+    display: grid; place-items: center;
+    border: 1px solid var(--ink-4);
+    color: var(--fog-1);
+  }
+  .event-dot svg { width: 14px; height: 14px; }
+  .event[data-kind="booking"]   .event-dot { color: var(--teal-soft); }
+  .event[data-kind="completed"] .event-dot { color: var(--teal-soft); }
+  .event[data-kind="alert"]     .event-dot { color: var(--rose); }
+  .event[data-kind="payout"]    .event-dot { color: var(--ember); }
+  .event[data-kind="complaint"] .event-dot { color: var(--coral-soft); }
+  .event[data-kind="assigned"]  .event-dot { color: var(--lavender); }
+
+  .event-body { min-width: 0; }
+  .event-head {
+    display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap;
+    font-size: 12.5px;
+  }
+  .event-head b { color: var(--fog-3); font-weight: 500; }
+  .event-head .kind {
+    font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+    padding: 1px 7px; border-radius: 4px; letter-spacing: 0.04em;
+    background: rgba(150,164,171,.08); color: var(--fog-1);
+    text-transform: uppercase;
+  }
+  .event[data-kind="booking"]   .kind { background: rgba(34,163,143,.12); color: var(--teal-soft); }
+  .event[data-kind="alert"]     .kind { background: rgba(214,93,122,.14); color: var(--rose); }
+  .event[data-kind="payout"]    .kind { background: rgba(233,180,76,.14); color: var(--ember); }
+  .event[data-kind="complaint"] .kind { background: rgba(240,122,82,.14); color: var(--coral-soft); }
+
+  .event-detail {
+    color: var(--fog-1); margin-top: 4px; font-size: 12.5px;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .event-time {
+    font-family: var(--font-mono); font-size: 11px; color: var(--fog-0);
+    white-space: nowrap;
+  }
+
+  @keyframes slide-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* =========================================================
+     Strip — bottom
+     ========================================================= */
+  .strip {
+    grid-area: strip;
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: clamp(18px, 2vw, 28px);
+  }
+  @media (max-width: 900px) { .strip { grid-template-columns: 1fr; } }
+
+  .util-panel, .payout-panel { min-height: 160px; }
+  .util-chart {
+    display: flex; align-items: flex-end; gap: 3px;
+    padding: 20px; height: 140px;
+  }
+  .util-bar {
+    flex: 1; min-width: 4px; background: linear-gradient(180deg, var(--teal-soft), var(--teal-dim));
+    border-radius: 3px 3px 0 0;
+    position: relative;
+    transition: height 600ms cubic-bezier(.34,1.56,.64,1);
+  }
+  .util-bar[data-heat="high"]  { background: linear-gradient(180deg, var(--coral), var(--coral-soft)); }
+  .util-bar[data-heat="low"]   { background: linear-gradient(180deg, rgba(150,164,171,.4), rgba(150,164,171,.15)); }
+  .util-bar:hover::after {
+    content: attr(data-tip);
+    position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+    font-family: var(--font-mono); font-size: 10.5px;
+    background: var(--ink-0); color: var(--fog-3);
+    padding: 4px 8px; border-radius: 5px; white-space: nowrap;
+    border: 1px solid var(--ink-4);
+  }
+
+  .payout-body { padding: 20px; }
+  .payout-total {
+    font-family: var(--font-display); font-size: 36px; font-weight: 500;
+    font-variant-numeric: tabular-nums; color: var(--fog-3); letter-spacing: -0.02em;
+    margin: 0;
+  }
+  .payout-sub {
+    margin-top: 4px; font-size: 12px; color: var(--fog-0);
+  }
+  .payout-tech-list {
+    margin-top: 16px; display: flex; flex-direction: column; gap: 8px;
+    max-height: 120px; overflow-y: auto;
+  }
+  .payout-tech {
+    display: flex; align-items: center; gap: 10px; padding: 6px 10px;
+    background: var(--ink-1); border-radius: 8px; border: 1px solid var(--ink-4);
+  }
+  .payout-tech .initials {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--teal), var(--teal-dim));
+    display: grid; place-items: center;
+    font-weight: 600; font-size: 11px; color: var(--ink-0);
+  }
+  .payout-tech .name {
+    flex: 1; font-size: 12.5px; color: var(--fog-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .payout-tech .amt { font-family: var(--font-mono); font-size: 12.5px; color: var(--fog-3); font-variant-numeric: tabular-nums; }
+
+  .cta {
+    margin-top: 14px; width: 100%;
+    padding: 12px 16px; border-radius: 10px; border: none;
+    background: var(--teal);
+    color: var(--ink-0); font: 600 13px var(--font-body); letter-spacing: 0.02em;
+    cursor: pointer; transition: transform 180ms ease, background 180ms ease, box-shadow 220ms ease;
+    box-shadow: 0 8px 20px rgba(34,163,143,.25);
+  }
+  .cta:hover { background: var(--teal-soft); transform: translateY(-1px); }
+  .cta:active { transform: translateY(0); }
+
+  /* =========================================================
+     Misc
+     ========================================================= */
+  .tag {
+    font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.04em;
+    padding: 2px 7px; border-radius: 4px;
+    background: var(--ink-1); border: 1px solid var(--ink-4);
+    color: var(--fog-1);
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+    .pin::before { display: none; }
+    .status-dot { animation: none; }
+  }
+</style>
+</head>
+
+<body>
+<div class="app">
+
+  <!-- Rail -->
+  <aside class="rail" aria-label="Primary navigation">
+    <div class="rail-logo" aria-label="homeservices-mvp">H</div>
+    <button class="rail-item" data-active="true" title="Live Ops" aria-label="Live Ops">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l9 4-9 4-9-4 9-4z"/><path d="M3 10l9 4 9-4"/><path d="M3 14l9 4 9-4"/></svg>
+    </button>
+    <button class="rail-item" title="Orders" aria-label="Orders">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+    </button>
+    <button class="rail-item" title="Technicians" aria-label="Technicians">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a6 6 0 0 1 16 0v2"/></svg>
+    </button>
+    <button class="rail-item" title="Customers" aria-label="Customers">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a6 6 0 0 1 12 0v2"/><path d="M16 11a4 4 0 0 1 5 3.86V21"/></svg>
+    </button>
+    <button class="rail-item" title="Finance" aria-label="Finance">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M8 15l4-4 3 3 5-6"/></svg>
+    </button>
+    <button class="rail-item" title="Complaints" aria-label="Complaints">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2a10 10 0 0 0-8 16l-1 4 4-1a10 10 0 1 0 5-19z"/></svg>
+    </button>
+    <div class="rail-spacer"></div>
+    <button class="rail-item" title="Audit Log" aria-label="Audit Log">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M9 9h6M9 13h6M9 17h3"/></svg>
+    </button>
+    <button class="rail-item" title="Settings" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.1a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.1a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.1a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.36.36.84.57 1.35.57h.1a2 2 0 0 1 0 4h-.1c-.7 0-1.35.43-1.6 1.09z"/></svg>
+    </button>
+  </aside>
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-title">
+      <span class="eyebrow">Operations Observatory</span>
+      <h1>Live in <b>Bengaluru</b></h1>
+    </div>
+
+    <div class="status-pill" role="status" aria-live="polite">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span class="label">All systems normal · <span class="t-mono">47 ms</span></span>
+    </div>
+
+    <div class="topbar-clock">
+      <div class="clock">
+        <span class="date" id="today">Thu · 17 Apr 2026</span>
+        <b id="clock">07:42:13</b>
+      </div>
+      <div class="avatar" title="Alok Tiwari">AT</div>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Counters bar -->
+    <section class="counters" aria-label="Today's metrics">
+      <article class="counter" data-accent="teal">
+        <div class="counter-label">Bookings · Today</div>
+        <div class="counter-value" data-counter="47">00</div>
+        <div class="counter-delta">▲ 12 vs yesterday</div>
+        <svg class="counter-spark" viewBox="0 0 64 22" fill="none"><path d="M1 16 L10 12 L18 14 L28 7 L38 10 L48 4 L63 6" stroke="#2fc9b1" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </article>
+      <article class="counter" data-accent="teal">
+        <div class="counter-label">GMV · Today</div>
+        <div class="counter-value t-mono">₹<span data-counter="28500">0</span></div>
+        <div class="counter-delta">▲ ₹3,120</div>
+        <svg class="counter-spark" viewBox="0 0 64 22" fill="none"><path d="M1 18 L10 14 L20 15 L30 10 L40 12 L50 6 L63 4" stroke="#2fc9b1" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </article>
+      <article class="counter" data-accent="ember">
+        <div class="counter-label">Commission</div>
+        <div class="counter-value t-mono">₹<span data-counter="6412">0</span></div>
+        <div class="counter-delta">22.5% blended</div>
+        <svg class="counter-spark" viewBox="0 0 64 22" fill="none"><path d="M1 14 L12 12 L22 14 L33 8 L42 11 L52 7 L63 8" stroke="#e9b44c" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </article>
+      <article class="counter" data-accent="ember">
+        <div class="counter-label">Payouts · Pending</div>
+        <div class="counter-value t-mono">₹<span data-counter="182400">0</span></div>
+        <div class="counter-delta flat">38 techs · Monday release</div>
+      </article>
+      <article class="counter" data-accent="coral">
+        <div class="counter-label">Complaints · Open</div>
+        <div class="counter-value" data-counter="3">0</div>
+        <div class="counter-delta down">1 approaching SLA</div>
+      </article>
+      <article class="counter" data-accent="teal">
+        <div class="counter-label">Techs · On duty</div>
+        <div class="counter-value" data-counter="12">0</div>
+        <div class="counter-delta">3 on-job · 9 idle</div>
+      </article>
+    </section>
+
+    <!-- Map -->
+    <section class="panel map" aria-label="Live tech + booking map">
+      <header class="panel-head">
+        <h2>City Pulse</h2>
+        <span class="tag">Bengaluru · HSR + Koramangala</span>
+        <div class="meta">
+          <span class="status-dot" style="background:var(--teal-soft)"></span>
+          <span>Live · <b id="last-sync">2s</b> ago</span>
+        </div>
+      </header>
+      <div class="map-canvas" id="map" role="img" aria-label="Live operational map">
+        <div class="road r1"></div><div class="road r2"></div>
+        <div class="road r3"></div><div class="road r4"></div>
+
+        <!-- Pins placed by inline positioning (stylised locality) -->
+        <div class="pin" data-state="active"  style="left:22%; top:34%;"><div class="pin-core"></div><div class="pin-label">Suresh · AC · on-job</div></div>
+        <div class="pin" data-state="enroute" style="left:47%; top:28%;"><div class="pin-core"></div><div class="pin-label">Ravi · Plumbing · en-route</div></div>
+        <div class="pin" data-state="active"  style="left:65%; top:48%;"><div class="pin-core"></div><div class="pin-label">Priya · Beauty · on-job</div></div>
+        <div class="pin" data-state="idle"    style="left:34%; top:56%;"><div class="pin-core"></div></div>
+        <div class="pin" data-state="idle"    style="left:78%; top:22%;"><div class="pin-core"></div></div>
+        <div class="pin" data-state="idle"    style="left:18%; top:68%;"><div class="pin-core"></div></div>
+        <div class="pin" data-state="alert"   style="left:54%; top:74%;"><div class="pin-core"></div><div class="pin-label">Complaint · SLA 14m</div></div>
+        <div class="pin" data-state="enroute" style="left:84%; top:60%;"><div class="pin-core"></div></div>
+        <div class="pin" data-state="idle"    style="left:12%; top:48%;"><div class="pin-core"></div></div>
+        <div class="pin" data-state="idle"    style="left:58%; top:18%;"><div class="pin-core"></div></div>
+        <div class="pin" data-state="idle"    style="left:88%; top:80%;"><div class="pin-core"></div></div>
+        <div class="pin" data-state="idle"    style="left:30%; top:82%;"><div class="pin-core"></div></div>
+
+        <div class="map-legend" aria-label="Pin legend">
+          <span class="legend-item"><span class="legend-dot" style="background:var(--teal-soft)"></span>On-job</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--ember)"></span>En-route</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--fog-1)"></span>Idle</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--rose)"></span>Alert</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Feed -->
+    <section class="panel feed" aria-label="Live event feed">
+      <header class="panel-head">
+        <h2>Live Feed</h2>
+        <span class="tag">Real-time · FCM</span>
+        <div class="meta"><span class="status-dot" style="background:var(--teal-soft)"></span><span>Streaming</span></div>
+      </header>
+      <div class="feed-list" id="feed">
+        <!-- events injected by JS -->
+      </div>
+    </section>
+
+    <!-- Bottom strip: Utilization + Payouts -->
+    <section class="strip">
+
+      <article class="panel util-panel" aria-label="Tech utilization heatmap">
+        <header class="panel-head">
+          <h2>Tech Utilization · Last 24h</h2>
+          <span class="tag">Hourly · On-job minutes</span>
+          <div class="meta"><span>Peak · 18:00 · <b>94%</b></span></div>
+        </header>
+        <div class="util-chart" id="util">
+          <!-- bars generated in JS -->
+        </div>
+      </article>
+
+      <article class="panel payout-panel" aria-label="Payouts pending">
+        <header class="panel-head">
+          <h2>Weekly Payout Queue</h2>
+          <span class="tag">Monday · 10:00 IST</span>
+        </header>
+        <div class="payout-body">
+          <h3 class="payout-total t-mono">₹1,82,400</h3>
+          <p class="payout-sub">38 technicians · Razorpay Route · auto-split</p>
+          <div class="payout-tech-list" id="payout-list">
+            <!-- populated in JS -->
+          </div>
+          <button class="cta">Approve all payouts</button>
+        </div>
+      </article>
+
+    </section>
+  </main>
+</div>
+
+<script>
+/* =========================================================
+   Behaviour — clock, counters, feed streaming, util chart
+   ========================================================= */
+
+// Clock
+(function startClock(){
+  const el = document.getElementById('clock');
+  const dEl = document.getElementById('today');
+  const weekdays = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function tick(){
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    const ss = String(d.getSeconds()).padStart(2,'0');
+    el.textContent = hh+':'+mm+':'+ss;
+    dEl.textContent = weekdays[d.getDay()]+' · '+String(d.getDate()).padStart(2,'0')+' '+months[d.getMonth()]+' '+d.getFullYear();
+  }
+  tick(); setInterval(tick, 1000);
+})();
+
+// Counters — count up on load
+document.querySelectorAll('[data-counter]').forEach(el => {
+  const target = parseInt(el.dataset.counter, 10);
+  if(Number.isNaN(target)) return;
+  const duration = 1400;
+  const start = performance.now();
+  const initial = target < 1000 ? 0 : Math.floor(target * 0.6);
+  function step(now){
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    const v = Math.floor(initial + (target - initial) * eased);
+    el.textContent = v.toLocaleString('en-IN');
+    if(t < 1) requestAnimationFrame(step);
+    else el.textContent = target.toLocaleString('en-IN');
+  }
+  requestAnimationFrame(step);
+});
+
+// Live feed — seeded + auto-appending
+const feedEl = document.getElementById('feed');
+const initialEvents = [
+  { kind:'booking',   title:'New booking · AC Deep Service', detail:'Riya M · HSR Sector 2 · 09:00 slot · ₹599', time:'just now' },
+  { kind:'assigned',  title:'Suresh K assigned · AC Deep Service', detail:'ETA 12 min · 2.8 km · accepted in 6s', time:'17s' },
+  { kind:'completed', title:'Priya M · Salon at Home · ₹1,450', detail:'Koramangala · 4.9★ · tip ₹100 · before/after photos uploaded', time:'4m' },
+  { kind:'payout',    title:'Instant payout · Ravi P · ₹1,120', detail:'Razorpay Route · UTR settled · T+0', time:'9m' },
+  { kind:'booking',   title:'New booking · Deep Cleaning', detail:'Aditya J · Indiranagar · 11:30 slot · ₹1,099', time:'11m' },
+  { kind:'complaint', title:'Complaint escalated · SLA 14m', detail:'Ramesh S · Plumbing rework · Sarjapur Rd · auto-assigned to owner', time:'18m' },
+  { kind:'completed', title:'Suresh K · AC Deep Service · ₹599', detail:'HSR · 5★ · "on-time, explained everything"', time:'24m' },
+  { kind:'alert',     title:'Tech no-show · ₹500 credit auto-applied', detail:'Customer Smriti · re-dispatch in progress', time:'41m' },
+];
+
+function eventIcon(kind){
+  const paths = {
+    booking:    '<path d="M3 8h18M5 8l1 12h12l1-12" stroke="currentColor" stroke-width="1.8" fill="none"/>',
+    assigned:   '<path d="M3 12l7 7L21 5" stroke="currentColor" stroke-width="2" fill="none"/>',
+    completed:  '<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M8 12l3 3 5-6" stroke="currentColor" stroke-width="2" fill="none"/>',
+    alert:      '<path d="M12 3L2 20h20L12 3z M12 9v5 M12 17h.01" stroke="currentColor" stroke-width="1.8" fill="none"/>',
+    payout:     '<path d="M2 7h20v10H2z M2 11h20" stroke="currentColor" stroke-width="1.8" fill="none"/>',
+    complaint:  '<path d="M21 15a4 4 0 0 1-4 4H8l-5 3 1.3-4.6A4 4 0 0 1 3 15V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" stroke="currentColor" stroke-width="1.6" fill="none"/>',
+  };
+  return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(paths[kind]||'')+'</svg>';
+}
+
+function renderEvent(ev){
+  const el = document.createElement('article');
+  el.className = 'event';
+  el.setAttribute('data-kind', ev.kind);
+  el.innerHTML = `
+    <div class="event-dot" aria-hidden="true">${eventIcon(ev.kind)}</div>
+    <div class="event-body">
+      <div class="event-head">
+        <span class="kind">${ev.kind}</span>
+        <b>${ev.title}</b>
+      </div>
+      <div class="event-detail">${ev.detail}</div>
+    </div>
+    <div class="event-time">${ev.time}</div>
+  `;
+  return el;
+}
+initialEvents.forEach(ev => feedEl.appendChild(renderEvent(ev)));
+
+// Simulated live stream — prepend a new event every ~7s
+const synthEvents = [
+  { kind:'booking',   title:'New booking · Pest Control', detail:'Neha V · Whitefield · 15:00 slot · ₹799' },
+  { kind:'assigned',  title:'Ravi P accepted · Plumbing', detail:'ETA 8 min · 1.4 km · pre-accept earnings ₹412' },
+  { kind:'completed', title:'Geetha N · Deep Cleaning · ₹1,099', detail:'HSR · 4.8★ · "did the fan blades too, bless!"' },
+  { kind:'booking',   title:'New booking · Electrical', detail:'Arjun T · BTM Layout · 18:00 slot · ₹449' },
+  { kind:'payout',    title:'Next-day payout · Priya M · ₹8,120', detail:'Razorpay Route · UTR queued · T+1' },
+];
+let idx = 0;
+setInterval(() => {
+  const ev = Object.assign({ time:'just now' }, synthEvents[idx % synthEvents.length]);
+  // age existing events a bit
+  [...feedEl.querySelectorAll('.event-time')].slice(0, 30).forEach((t, i) => {
+    if(i === 0 && t.textContent === 'just now') t.textContent = '12s';
+  });
+  feedEl.prepend(renderEvent(ev));
+  idx++;
+  // cap length to keep DOM trim
+  const evs = feedEl.querySelectorAll('.event');
+  if(evs.length > 24) evs[evs.length-1].remove();
+}, 7000);
+
+// Update "last sync" counter
+let lastSync = 2;
+setInterval(() => {
+  lastSync = (lastSync + 1) % 15;
+  const el = document.getElementById('last-sync');
+  if(el) el.textContent = lastSync + 's';
+}, 1000);
+
+// Utilization chart
+const util = document.getElementById('util');
+const hours = 24;
+const pattern = [12,8,5,4,3,4,8,22,42,55,65,72,78,80,74,62,58,68,82,94,88,70,48,25];
+for(let i = 0; i < hours; i++){
+  const bar = document.createElement('div');
+  bar.className = 'util-bar';
+  const pct = pattern[i];
+  bar.style.height = '0%';
+  bar.dataset.heat = pct > 75 ? 'high' : pct < 15 ? 'low' : 'mid';
+  bar.dataset.tip = pct + '% · ' + String(i).padStart(2,'0') + ':00';
+  util.appendChild(bar);
+  // trigger height animation with stagger
+  requestAnimationFrame(() => {
+    setTimeout(() => { bar.style.height = pct + '%'; }, 60 * i);
+  });
+}
+
+// Payout list
+const payout = document.getElementById('payout-list');
+const techs = [
+  ['Suresh Kumar',   '12,400'],
+  ['Priya Menon',    '8,120'],
+  ['Ravi Pawar',     '7,850'],
+  ['Geetha Naidu',   '6,430'],
+  ['Ramesh S',       '5,920'],
+  ['Anjali Verma',   '4,780'],
+  ['Kishore Shetty', '4,230'],
+];
+techs.forEach(([name, amt]) => {
+  const row = document.createElement('div');
+  row.className = 'payout-tech';
+  const initials = name.split(' ').map(s=>s[0]).slice(0,2).join('');
+  row.innerHTML = `
+    <div class="initials">${initials}</div>
+    <div class="name">${name}</div>
+    <div class="amt">₹${amt}</div>
+  `;
+  payout.appendChild(row);
+});
+</script>
+</body>
+</html>
