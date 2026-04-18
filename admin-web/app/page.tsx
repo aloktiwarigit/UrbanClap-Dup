@@ -1,9 +1,29 @@
 import Link from 'next/link';
-import { getBuildInfo } from '@/lib/build-info';
+import { createApiClient } from '@/api';
 import { landingCopy } from '@/content/landing';
 
-export default function LandingPage() {
-  const { version, sha } = getBuildInfo();
+type FooterBuildInfo = { version: string; commit: string; fallback: boolean };
+
+async function fetchBuildInfo(): Promise<FooterBuildInfo> {
+  const baseUrl = process.env['API_BASE_URL'] ?? 'http://localhost:7071/api';
+  const fallbackVersion = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev';
+  const rawSha = process.env['NEXT_PUBLIC_GIT_SHA'];
+  const fallbackCommit =
+    rawSha && rawSha.length >= 8 ? rawSha.slice(0, 8) : 'dev';
+  try {
+    const client = createApiClient({ baseUrl });
+    const { data, error } = await client.GET('/v1/health');
+    if (error || !data) {
+      return { version: fallbackVersion, commit: fallbackCommit, fallback: true };
+    }
+    return { version: data.version, commit: data.commit.slice(0, 8), fallback: false };
+  } catch {
+    return { version: fallbackVersion, commit: fallbackCommit, fallback: true };
+  }
+}
+
+export default async function LandingPage() {
+  const build = await fetchBuildInfo();
   const { brand, tagline, ctaLabel, ctaHref, footerNote } = landingCopy;
 
   return (
@@ -30,9 +50,10 @@ export default function LandingPage() {
       </section>
 
       <footer className="px-[var(--space-6)] py-[var(--space-4)] border-t border-[var(--color-border)] text-[length:var(--text-xs)] text-[var(--color-text-muted)] flex gap-[var(--space-4)]">
-        <span>v{version}</span>
-        <span>·</span>
-        <span>{sha}</span>
+        <span>
+          v{build.version} · {build.commit}
+          {build.fallback ? ' (local)' : ''}
+        </span>
         <span>·</span>
         <span>{footerNote}</span>
       </footer>
