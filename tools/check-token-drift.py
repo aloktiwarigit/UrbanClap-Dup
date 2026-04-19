@@ -191,10 +191,11 @@ def run_checks(variables_json: Path, theme_dir: Path) -> list[str]:
             continue
 
         if json_raw is not None and kt_raw is None:
-            # JSON has the token but it's not in this Kotlin fixture.
-            # In production this shouldn't happen (Kotlin is authoritative),
-            # but we skip rather than fail to allow JSON-only token categories
-            # (e.g. typography font sizes) that have no plain-value Kotlin regex.
+            errors.append(
+                f"MISSING FROM KOTLIN: {display_name} exists in JSON "
+                f"(path: {'.'.join(json_path)}, value: {json_raw!r}) "
+                f"but was not found in Kotlin theme files — remove it from JSON or restore the constant"
+            )
             continue
 
         # Both present — compare normalised values.

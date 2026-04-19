@@ -68,7 +68,9 @@ jobs:
 
       - name: token drift tests
         working-directory: ${{ github.workspace }}
-        run: python3 -m pytest tools/tests/test_check_token_drift.py -v
+        run: |
+          pip install pytest --quiet
+          python3 -m pytest tools/tests/test_check_token_drift.py -v
 
       - name: ktlint
         run: ./gradlew ktlintCheck
