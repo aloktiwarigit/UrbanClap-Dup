@@ -23,11 +23,16 @@
     "openapi:lint": "spectral lint openapi.json --fail-severity error"
   },
   "dependencies": {
+    "@azure/cosmos": "^4.9.2",
     "@azure/functions": "^4.5.0",
     "@growthbook/growthbook": "^1",
     "@sentry/node": "^8",
     "fastify": "^5",
+    "firebase-admin": "^13.8.0",
+    "jose": "^6.2.2",
+    "otplib": "^13.4.0",
     "posthog-node": "^4",
+    "qrcode": "^1.5.4",
     "zod": "^3.23.0"
   },
   "devDependencies": {
