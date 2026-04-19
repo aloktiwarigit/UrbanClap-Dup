@@ -1,22 +1,24 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
-function SetupForm() {
+export default function SetupPage() {
   const router = useRouter();
-  const params = useSearchParams();
-  const setupToken = params.get('token') ?? '';
-
+  const [setupToken, setSetupToken] = useState('');
   const [qrUri, setQrUri] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!setupToken) { router.replace('/login'); return; }
+    const token = sessionStorage.getItem('setupToken') ?? '';
+    sessionStorage.removeItem('setupToken');
+    if (!token) { router.replace('/login'); return; }
+    setSetupToken(token);
+
     fetch('/api/v1/admin/auth/setup-totp', {
-      headers: { authorization: `Bearer ${setupToken}` },
+      headers: { authorization: `Bearer ${token}` },
       credentials: 'include',
     })
       .then((r) => r.json())
@@ -25,7 +27,7 @@ function SetupForm() {
         else router.replace('/login');
       })
       .catch(() => router.replace('/login'));
-  }, [setupToken, router]);
+  }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -99,13 +101,5 @@ function SetupForm() {
         </form>
       </div>
     </main>
-  );
-}
-
-export default function SetupPage() {
-  return (
-    <Suspense>
-      <SetupForm />
-    </Suspense>
   );
 }

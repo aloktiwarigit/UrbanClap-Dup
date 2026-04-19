@@ -33,9 +33,13 @@ export async function setupTotpGetHandler(
     return { status: 401, jsonBody: { code: 'ADMIN_NOT_FOUND' } };
   }
 
-  const secret = generateSecret();
-  const encrypted = encryptSecret(secret);
-  await updateAdminUser(adminUser.adminId, { totpSecretPending: encrypted });
+  let secret: string;
+  if (adminUser.totpSecretPending) {
+    secret = decryptSecret(adminUser.totpSecretPending);
+  } else {
+    secret = generateSecret();
+    await updateAdminUser(adminUser.adminId, { totpSecretPending: encryptSecret(secret) });
+  }
 
   const uri = generateOtpAuthUri(secret, adminUser.email);
   const qrCodeDataUri = await QRCode.toDataURL(uri);

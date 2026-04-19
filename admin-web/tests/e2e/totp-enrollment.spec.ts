@@ -37,6 +37,9 @@ test.describe('TOTP enrollment (first login)', () => {
   });
 
   test('completes enrollment and redirects to /dashboard', async ({ page }) => {
+    await page.addInitScript(() => {
+      sessionStorage.setItem('setupToken', 'mock.setup.token');
+    });
     await page.route('**/api/v1/admin/auth/setup-totp', (route) => {
       if (route.request().method() === 'GET') {
         return route.fulfill({
@@ -50,7 +53,7 @@ test.describe('TOTP enrollment (first login)', () => {
       });
     });
 
-    await page.goto('/setup?token=mock.setup.token');
+    await page.goto('/setup');
     await expect(page.getByAltText('TOTP QR code')).toBeVisible();
     await page.fill('input[inputmode="numeric"]', '123456');
     await page.click('button[type="submit"]');

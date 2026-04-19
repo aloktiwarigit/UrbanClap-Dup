@@ -26,7 +26,7 @@ export function decryptSecret(ciphertext: string): string {
   const encrypted = buf.subarray(28);
   const decipher = createDecipheriv(ALGORITHM, key, iv);
   decipher.setAuthTag(tag);
-  return decipher.update(encrypted) + decipher.final('utf8');
+  return decipher.update(encrypted).toString('utf8') + decipher.final('utf8');
 }
 
 export function generateSecret(): string {

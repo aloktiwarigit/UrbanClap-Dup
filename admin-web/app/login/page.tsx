@@ -47,7 +47,8 @@ export default function LoginPage() {
       }
 
       if (data.requiresSetup && data.setupToken) {
-        router.push(`/setup?token=${encodeURIComponent(data.setupToken)}`);
+        sessionStorage.setItem('setupToken', data.setupToken);
+        router.push('/setup');
         return;
       }
 
