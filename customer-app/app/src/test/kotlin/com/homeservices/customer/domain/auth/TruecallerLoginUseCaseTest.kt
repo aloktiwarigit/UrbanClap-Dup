@@ -20,9 +20,9 @@ public class TruecallerLoginUseCaseTest {
     }
 
     @Test
-    public fun `emits Success when SDK calls onSuccessProfileShared`(): Unit =
+    public fun `emits Success with last 4 digits when SDK calls onSuccessProfileShared`(): Unit =
         runTest {
-            val profile = mockk<TrueProfile>()
+            val profile = TrueProfile.Builder("Test", "").build().also { it.phoneNumber = "+919876540000" }
 
             useCase.simulateSdkCallback { callback ->
                 callback.onSuccessProfileShared(profile)
@@ -30,7 +30,7 @@ public class TruecallerLoginUseCaseTest {
 
             val result = useCase.resultFlow.first()
             assertThat(result).isInstanceOf(TruecallerAuthResult.Success::class.java)
-            assertThat((result as TruecallerAuthResult.Success).profile).isSameAs(profile)
+            assertThat((result as TruecallerAuthResult.Success).phoneLastFour).isEqualTo("0000")
         }
 
     @Test

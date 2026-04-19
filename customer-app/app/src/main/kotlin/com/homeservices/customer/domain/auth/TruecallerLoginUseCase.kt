@@ -24,7 +24,7 @@ public class TruecallerLoginUseCase
         internal val sdkCallback: ITrueCallback =
             object : ITrueCallback {
                 override fun onSuccessProfileShared(profile: TrueProfile) {
-                    _resultFlow.tryEmit(TruecallerAuthResult.Success(profile))
+                    _resultFlow.tryEmit(TruecallerAuthResult.Success(profile.phoneNumber.takeLast(4)))
                 }
 
                 override fun onFailureProfileShared(error: TrueError) {

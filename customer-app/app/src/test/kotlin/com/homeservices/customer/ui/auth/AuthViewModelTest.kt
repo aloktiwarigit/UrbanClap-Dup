@@ -8,7 +8,6 @@ import com.homeservices.customer.domain.auth.AuthOrchestrator
 import com.homeservices.customer.domain.auth.model.AuthResult
 import com.homeservices.customer.domain.auth.model.OtpSendResult
 import com.homeservices.customer.domain.auth.model.TruecallerAuthResult
-import com.truecaller.android.sdk.common.models.TrueProfile
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -100,14 +99,12 @@ public class AuthViewModelTest {
     public fun `Truecaller Success with AuthResult Error transitions to Error state`(): Unit =
         runTest(testDispatcher) {
             val activity = mockk<FragmentActivity>()
-            // TrueProfile.phoneNumber is a public Java field — build() then assign directly
-            val profile = TrueProfile.Builder("Test", "").build().also { it.phoneNumber = "+919876540000" }
             every { orchestrator.start(activity, activity) } returns AuthOrchestrator.StartResult.TruecallerLaunched
-            coEvery { orchestrator.completeWithTruecaller("+919876540000") } returns
+            coEvery { orchestrator.completeWithTruecaller("0000") } returns
                 AuthResult.Error.General(RuntimeException("session fail"))
 
             viewModel.initAuth(activity)
-            truecallerResultFlow.emit(TruecallerAuthResult.Success(profile))
+            truecallerResultFlow.emit(TruecallerAuthResult.Success("0000"))
 
             val state = viewModel.uiState.value
             assertThat(state).isInstanceOf(AuthUiState.Error::class.java)
@@ -326,21 +323,19 @@ public class AuthViewModelTest {
         runTest(testDispatcher) {
             // Covers the false-branch of `if (authResult is AuthResult.Error)` in handleTruecallerResult
             val activity = mockk<FragmentActivity>()
-            val profile = TrueProfile.Builder("Test", "").build().also { it.phoneNumber = "+919876540000" }
             val user = mockk<FirebaseUser>()
             every { orchestrator.start(activity, activity) } returns AuthOrchestrator.StartResult.TruecallerLaunched
-            coEvery { orchestrator.completeWithTruecaller("+919876540000") } returns AuthResult.Success(user)
+            coEvery { orchestrator.completeWithTruecaller("0000") } returns AuthResult.Success(user)
 
             viewModel.initAuth(activity)
-            truecallerResultFlow.emit(TruecallerAuthResult.Success(profile))
+            truecallerResultFlow.emit(TruecallerAuthResult.Success("0000"))
 
             assertThat(viewModel.uiState.value).isNotInstanceOf(AuthUiState.Error::class.java)
         }
 
     @Test
-    public fun `onOtpEntered handles General error with null message`(): Unit =
+    public fun `onOtpEntered handles General error shows generic message`(): Unit =
         runTest(testDispatcher) {
-            // Covers the `result.cause.message ?: "Sign-in failed"` null branch
             val activity = mockk<FragmentActivity>()
             val resendToken = mockk<PhoneAuthProvider.ForceResendingToken>()
             every {
@@ -348,14 +343,14 @@ public class AuthViewModelTest {
             } returns flowOf(OtpSendResult.CodeSent("verId", resendToken))
             every {
                 orchestrator.verifyOtp("verId", "000000")
-            } returns flowOf(AuthResult.Error.General(RuntimeException())) // null message
+            } returns flowOf(AuthResult.Error.General(RuntimeException("internal sdk error")))
 
             viewModel.onPhoneNumberSubmitted("+919876543210", activity)
             viewModel.onOtpEntered("000000")
 
             val state = viewModel.uiState.value
             assertThat(state).isInstanceOf(AuthUiState.Error::class.java)
-            assertThat((state as AuthUiState.Error).message).isEqualTo("Sign-in failed")
+            assertThat((state as AuthUiState.Error).message).isEqualTo("Sign-in failed. Please try again.")
         }
 
     @Test

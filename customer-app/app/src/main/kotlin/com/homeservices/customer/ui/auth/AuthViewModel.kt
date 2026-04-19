@@ -55,7 +55,7 @@ public class AuthViewModel
             when (result) {
                 is TruecallerAuthResult.Success -> {
                     viewModelScope.launch {
-                        val authResult = orchestrator.completeWithTruecaller(result.profile.phoneNumber)
+                        val authResult = orchestrator.completeWithTruecaller(result.phoneLastFour)
                         if (authResult is AuthResult.Error) {
                             _uiState.value =
                                 AuthUiState.Error(
@@ -149,7 +149,7 @@ public class AuthViewModel
                 is AuthResult.Error.General ->
                     _uiState.value =
                         AuthUiState.Error(
-                            result.cause.message ?: "Sign-in failed",
+                            "Sign-in failed. Please try again.",
                             retriesLeft = 0,
                         )
                 is AuthResult.Cancelled, is AuthResult.Unavailable ->

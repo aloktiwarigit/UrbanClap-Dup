@@ -1,10 +1,8 @@
 package com.homeservices.customer.domain.auth.model
 
-import com.truecaller.android.sdk.common.models.TrueProfile
-
 public sealed class TruecallerAuthResult {
     public data class Success(
-        val profile: TrueProfile,
+        val phoneLastFour: String,
     ) : TruecallerAuthResult()
 
     public data class Failure(
