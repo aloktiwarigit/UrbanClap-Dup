@@ -8,5 +8,9 @@ public class BuildInfoProvider(
     public val gitSha: String,
 ) {
     public val shortSha: String
-        get() = if (gitSha.length <= 8) gitSha else gitSha.substring(0, 8)
+        get() = if (gitSha.length <= SHORT_SHA_LENGTH) gitSha else gitSha.substring(0, SHORT_SHA_LENGTH)
+
+    private companion object {
+        const val SHORT_SHA_LENGTH: Int = 8
+    }
 }
