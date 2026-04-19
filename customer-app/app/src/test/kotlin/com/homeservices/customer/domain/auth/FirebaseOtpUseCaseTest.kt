@@ -3,6 +3,7 @@ package com.homeservices.customer.domain.auth
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.PhoneAuthCredential
@@ -46,7 +47,7 @@ public class FirebaseOtpUseCaseTest {
             val credential = mockk<PhoneAuthCredential>()
             val exception =
                 mockk<FirebaseAuthInvalidCredentialsException> {
-                    every { message } returns "ERROR_INVALID_VERIFICATION_CODE"
+                    every { errorCode } returns "ERROR_INVALID_VERIFICATION_CODE"
                 }
 
             every { firebaseAuth.signInWithCredential(credential) } returns Tasks.forException(exception)
@@ -70,10 +71,13 @@ public class FirebaseOtpUseCaseTest {
         }
 
     @Test
-    public fun `signInWithCredential emits CodeExpired when message contains SESSION_EXPIRED`(): Unit =
+    public fun `signInWithCredential emits CodeExpired when Firebase errorCode is SESSION_EXPIRED`(): Unit =
         runTest {
             val credential = mockk<PhoneAuthCredential>()
-            val exception = RuntimeException("ERROR_SESSION_EXPIRED")
+            val exception =
+                mockk<FirebaseAuthException> {
+                    every { errorCode } returns "ERROR_SESSION_EXPIRED"
+                }
 
             every { firebaseAuth.signInWithCredential(credential) } returns Tasks.forException(exception)
 
@@ -83,10 +87,13 @@ public class FirebaseOtpUseCaseTest {
         }
 
     @Test
-    public fun `signInWithCredential emits RateLimited when message contains TOO_MANY_REQUESTS`(): Unit =
+    public fun `signInWithCredential emits RateLimited when Firebase errorCode is TOO_MANY_REQUESTS`(): Unit =
         runTest {
             val credential = mockk<PhoneAuthCredential>()
-            val exception = RuntimeException("ERROR_TOO_MANY_REQUESTS")
+            val exception =
+                mockk<FirebaseAuthException> {
+                    every { errorCode } returns "ERROR_TOO_MANY_REQUESTS"
+                }
 
             every { firebaseAuth.signInWithCredential(credential) } returns Tasks.forException(exception)
 
@@ -109,13 +116,12 @@ public class FirebaseOtpUseCaseTest {
         }
 
     @Test
-    public fun `signInWithCredential emits General on FirebaseAuthInvalidCredentials with null message`(): Unit =
+    public fun `signInWithCredential emits General when FirebaseAuth errorCode is unrecognized`(): Unit =
         runTest {
-            // Covers the null-message branch: e.message?.contains(...) returns null (not true)
             val credential = mockk<PhoneAuthCredential>()
             val exception =
                 mockk<FirebaseAuthInvalidCredentialsException> {
-                    every { message } returns null // null message — falls through to General
+                    every { errorCode } returns "ERROR_UNKNOWN_CODE"
                 }
 
             every { firebaseAuth.signInWithCredential(credential) } returns Tasks.forException(exception)

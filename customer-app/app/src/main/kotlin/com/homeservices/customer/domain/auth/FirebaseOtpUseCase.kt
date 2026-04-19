@@ -3,6 +3,7 @@ package com.homeservices.customer.domain.auth
 import android.app.Activity
 import com.google.firebase.FirebaseException
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthOptions
@@ -49,7 +50,11 @@ public class FirebaseOtpUseCase
                             token: PhoneAuthProvider.ForceResendingToken,
                         ) {
                             trySend(OtpSendResult.CodeSent(verificationId, token))
-                            // channel stays open — awaiting auto-verify or user code submission
+                            // channel stays open — awaiting auto-verify or timeout
+                        }
+
+                        override fun onCodeAutoRetrievalTimeOut(verificationId: String) {
+                            close()
                         }
                     }
 
@@ -84,13 +89,15 @@ public class FirebaseOtpUseCase
                         val mapped =
                             when {
                                 e is FirebaseAuthInvalidCredentialsException &&
-                                    e.message?.contains("ERROR_INVALID_VERIFICATION_CODE") == true ->
+                                    e.errorCode == "ERROR_INVALID_VERIFICATION_CODE" ->
                                     AuthResult.Error.WrongCode
 
-                                e.message?.contains("ERROR_SESSION_EXPIRED") == true ->
+                                e is FirebaseAuthException &&
+                                    e.errorCode == "ERROR_SESSION_EXPIRED" ->
                                     AuthResult.Error.CodeExpired
 
-                                e.message?.contains("ERROR_TOO_MANY_REQUESTS") == true ->
+                                e is FirebaseAuthException &&
+                                    e.errorCode == "ERROR_TOO_MANY_REQUESTS" ->
                                     AuthResult.Error.RateLimited
 
                                 else -> AuthResult.Error.General(e)

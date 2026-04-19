@@ -9,6 +9,7 @@ import com.homeservices.customer.domain.auth.model.AuthResult
 import com.homeservices.customer.domain.auth.model.OtpSendResult
 import com.homeservices.customer.domain.auth.model.TruecallerAuthResult
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,6 +34,7 @@ public class AuthViewModel
         private var currentResendToken: PhoneAuthProvider.ForceResendingToken? = null
         private var currentPhoneNumber: String = ""
         private var otpAttempts: Int = 0
+        private var sendOtpJob: Job? = null
 
         public fun initAuth(activity: FragmentActivity) {
             // FragmentActivity IS-A Context; pass it for both the Context and FragmentActivity params
@@ -76,9 +78,10 @@ public class AuthViewModel
             activity: FragmentActivity,
             resendToken: PhoneAuthProvider.ForceResendingToken? = null,
         ) {
+            sendOtpJob?.cancel()
             currentPhoneNumber = phoneNumber
             _uiState.value = AuthUiState.OtpSending
-            viewModelScope.launch {
+            sendOtpJob = viewModelScope.launch {
                 orchestrator.sendOtp(phoneNumber, activity, resendToken).collect { result ->
                     when (result) {
                         is OtpSendResult.CodeSent -> {
