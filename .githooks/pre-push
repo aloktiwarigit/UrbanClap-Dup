@@ -8,12 +8,14 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 REMOTE="$1"
 REMOTE_URL="$2"
 
-# Collect all files changed vs the remote tracking branch (or vs empty tree on first push)
+# Collect files changed vs upstream (existing branch) or vs main base (new branch).
+# Never diff against empty tree — that triggers all smoke gates on every new branch.
 REMOTE_REF=$(git rev-parse --verify "@{u}" 2>/dev/null || echo "")
 if [ -n "$REMOTE_REF" ]; then
   CHANGED=$(git diff --name-only "$REMOTE_REF" HEAD)
 else
-  CHANGED=$(git diff --name-only "$(git hash-object -t tree /dev/null)" HEAD)
+  MERGE_BASE=$(git merge-base origin/main HEAD 2>/dev/null || git rev-parse HEAD^)
+  CHANGED=$(git diff --name-only "$MERGE_BASE" HEAD)
 fi
 
 ran_any=0

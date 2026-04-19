@@ -41,6 +41,11 @@ jobs:
       - name: build (clean-room compile check)
         run: pnpm build
 
+      - name: unit + integration tests
+        run: pnpm test
+        env:
+          NODE_ENV: test
+
       - name: openapi spec is up to date
         run: |
           pnpm run openapi:build

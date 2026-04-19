@@ -66,6 +66,9 @@ jobs:
       - name: assemble debug APK (clean-room compile check)
         run: ./gradlew assembleDebug
 
+      - name: unit tests + coverage gate
+        run: ./gradlew testDebugUnitTest koverVerify
+
       - name: paparazzi screenshot diff
         run: ./gradlew verifyPaparazziDebug
 
