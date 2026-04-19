@@ -65,8 +65,16 @@ jobs:
             exit 1
           fi
 
+      - name: typecheck + unit tests
+        run: pnpm typecheck && pnpm test
+
       - name: build (clean-room compile check)
         run: pnpm build
+
+      - name: semgrep SAST
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: p/typescript p/react p/owasp-top-ten p/secrets
 
   e2e-and-a11y:
     runs-on: ubuntu-latest

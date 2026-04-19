@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Pre-push hook — runs the appropriate smoke gate before every push.
+# Enforces: compile + lint + tests + coverage locally so CI stays lean.
+# Install once: git config core.hooksPath .githooks
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+REMOTE="$1"
+REMOTE_URL="$2"
+
+# Collect files changed vs upstream (existing branch) or vs main base (new branch).
+# Never diff against empty tree — that triggers all smoke gates on every new branch.
+REMOTE_REF=$(git rev-parse --verify "@{u}" 2>/dev/null || echo "")
+if [ -n "$REMOTE_REF" ]; then
+  CHANGED=$(git diff --name-only "$REMOTE_REF" HEAD)
+else
+  MERGE_BASE=$(git merge-base origin/main HEAD 2>/dev/null || git rev-parse HEAD^)
+  CHANGED=$(git diff --name-only "$MERGE_BASE" HEAD)
+fi
+
+ran_any=0
+
+run_gate() {
+  local script="$1"; shift
+  echo ""
+  echo ">>> $script $*"
+  bash "$REPO_ROOT/$script" "$@"
+  ran_any=1
+}
+
+# Customer app
+if echo "$CHANGED" | grep -qE '^(customer-app|design-system)/'; then
+  run_gate tools/pre-codex-smoke.sh customer-app
+fi
+
+# Technician app
+if echo "$CHANGED" | grep -qE '^technician-app/'; then
+  run_gate tools/pre-codex-smoke.sh technician-app
+fi
+
+# API
+if echo "$CHANGED" | grep -qE '^api/'; then
+  run_gate tools/pre-codex-smoke-api.sh
+fi
+
+# Admin web
+if echo "$CHANGED" | grep -qE '^admin-web/'; then
+  run_gate tools/pre-codex-smoke-web.sh
+fi
+
+# Design system (standalone Gradle module, not customer-app)
+if echo "$CHANGED" | grep -qE '^design-system/' && ! echo "$CHANGED" | grep -qE '^customer-app/'; then
+  echo ""
+  echo ">>> design-system smoke gate"
+  cd "$REPO_ROOT/design-system"
+  ./gradlew assembleRelease ktlintCheck testDebugUnitTest --quiet 2>&1 | tail -20
+  ran_any=1
+fi
+
+if [ "$ran_any" -eq 0 ]; then
+  echo "pre-push: no sub-project changes detected — skipping smoke gate"
+fi
+
+echo ""
+echo "pre-push smoke gate PASSED"

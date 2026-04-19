@@ -35,17 +35,20 @@ public class AuthViewModel
         private var currentPhoneNumber: String = ""
         private var otpAttempts: Int = 0
         private var sendOtpJob: Job? = null
+        private var truecallerJob: Job? = null
 
         public fun initAuth(activity: FragmentActivity) {
             // FragmentActivity IS-A Context; pass it for both the Context and FragmentActivity params
             when (orchestrator.start(activity, activity)) {
                 AuthOrchestrator.StartResult.TruecallerLaunched -> {
                     _uiState.value = AuthUiState.TruecallerLoading
-                    viewModelScope.launch {
-                        orchestrator.observeTruecallerResults().collect { result ->
-                            handleTruecallerResult(result)
+                    truecallerJob?.cancel()
+                    truecallerJob =
+                        viewModelScope.launch {
+                            orchestrator.observeTruecallerResults().collect { result ->
+                                handleTruecallerResult(result)
+                            }
                         }
-                    }
                 }
                 AuthOrchestrator.StartResult.FallbackToOtp -> {
                     _uiState.value = AuthUiState.OtpEntry()
