@@ -89,6 +89,35 @@ Added OSS build- and test-time dev dependencies for the OpenAPI codegen pipeline
 | `openapi-fetch` | MIT | admin-web/ runtime — ~2 KB typed fetch wrapper | never |
 | `msw` | MIT | admin-web/ dev — HTTP mocking for ApiClient tests | never |
 
+### Amendment — 2026-04-18 (story E01-S03)
+
+Added OSS build- and test-time dev dependencies for the two Android skeletons (`customer-app/` and `technician-app/`). All are Apache-2.0, MIT, or EPL-2.0 licensed; available on Maven Central or the Gradle Plugin Portal; carry zero recurring cost.
+
+| Dependency | License | Role | Paid trigger |
+|---|---|---|---|
+| `com.android.application` (AGP) 8.6.0 | Apache-2.0 | Android Gradle Plugin | never |
+| `org.jetbrains.kotlin.android` 2.0.21 | Apache-2.0 | Kotlin + K2 compiler | never |
+| `org.jetbrains.kotlin.plugin.compose` 2.0.21 | Apache-2.0 | Compose Compiler (bundled with Kotlin 2) | never |
+| `com.google.devtools.ksp` 2.0.21-1.0.28 | Apache-2.0 | KSP annotation processor — Hilt compiler | never |
+| `com.google.dagger.hilt.android` 2.52 | Apache-2.0 | DI framework | never |
+| `com.google.dagger:hilt-android-testing` 2.52 | Apache-2.0 | Hilt test infrastructure | never |
+| `androidx.compose:compose-bom` 2024.11.00 | Apache-2.0 | Compose version alignment | never |
+| `androidx.compose.material3:material3` (BOM-pinned) | Apache-2.0 | Material 3 components | never |
+| `io.sentry:sentry-android` 7.17.0 | Apache-2.0 | Error tracking (free 5k errors/mo tier) | 5× pilot scale |
+| `org.jlleitschuh.gradle.ktlint` 12.1.1 | Apache-2.0 | Kotlin formatter plugin | never |
+| `io.gitlab.arturbosch.detekt` 1.23.7 | Apache-2.0 | Kotlin static analysis | never |
+| `app.cash.paparazzi` 1.3.5 | Apache-2.0 | JVM screenshot tests | never |
+| `org.jetbrains.kotlinx.kover` 0.9.0 | Apache-2.0 | Kotlin coverage | never |
+| `de.mannodermaus.android-junit5` 1.11.2.0 | Apache-2.0 | JUnit 5 on Android | never |
+| `org.junit.jupiter:junit-jupiter` 5.11.3 | EPL-2.0 | JUnit 5 engine | never |
+| `org.junit.vintage:junit-vintage-engine` 5.11.3 | EPL-2.0 | JUnit 4 compatibility under JUnit 5 launcher (required by Paparazzi + Robolectric tests) | never |
+| `io.mockk:mockk` 1.13.13 | Apache-2.0 | Kotlin mocking | never |
+| `org.assertj:assertj-core` 3.26.3 | Apache-2.0 | Fluent assertions | never |
+| `org.robolectric:robolectric` 4.14.1 | MIT | JVM Android test runner | never |
+| `androidx.test:core` 1.6.1 | Apache-2.0 | AndroidX test surface | never |
+
+All plugins self-hosted via Gradle Plugin Portal or Maven Central; no paid tier exists for any of them. Sentry free tier (5k errors/mo) is shared with the api/ and admin-web/ stories.
+
 ## Alternatives considered
 
 - **Soft constraint (recommend, don't enforce)** — rejected because without enforcement, drift is inevitable over a 12-month build. Past 3-month drift destroys the economic thesis.

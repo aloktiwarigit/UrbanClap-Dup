@@ -1,0 +1,12 @@
+# Android launcher activities require android:exported="true" to be
+# launchable from the home screen — this is an Android platform requirement,
+# not a security issue. Semgrep's p/owasp-top-ten ruleset includes
+# java.android.security.exported_activity.exported_activity which flags this
+# as a false positive. Excluding the skeleton manifests from semgrep until
+# we either (a) migrate to a more targeted ruleset that doesn't include this
+# rule, or (b) add additional manifest complexity that benefits from
+# semgrep-style scanning.
+#
+# Tracked for re-evaluation in a future CI-hardening story.
+customer-app/app/src/main/AndroidManifest.xml
+technician-app/app/src/main/AndroidManifest.xml

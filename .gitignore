@@ -117,3 +117,33 @@ admin-web/test-results/
 admin-web/.lighthouseci/
 admin-web/.env.local
 admin-web/*.tsbuildinfo
+
+# customer-app/
+customer-app/.gradle/
+customer-app/build/
+customer-app/app/build/
+customer-app/app/release/
+customer-app/local.properties
+customer-app/.idea/
+customer-app/captures/
+customer-app/.cxx/
+customer-app/*.iml
+customer-app/app/*.iml
+customer-app/app/release/keystore.properties
+customer-app/keystore.jks
+customer-app/release.keystore
+
+# technician-app/
+technician-app/.gradle/
+technician-app/build/
+technician-app/app/build/
+technician-app/app/release/
+technician-app/local.properties
+technician-app/.idea/
+technician-app/captures/
+technician-app/.cxx/
+technician-app/*.iml
+technician-app/app/*.iml
+technician-app/app/release/keystore.properties
+technician-app/keystore.jks
+technician-app/release.keystore
