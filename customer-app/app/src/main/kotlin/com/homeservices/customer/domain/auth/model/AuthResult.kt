@@ -7,7 +7,7 @@ internal sealed class AuthResult {
     data object Cancelled : AuthResult()
     data object Unavailable : AuthResult()
 
-    sealed class Error : AuthResult() {
+    internal sealed class Error : AuthResult() {
         data class General(val cause: Throwable) : Error()
         data object RateLimited : Error()
         data object WrongCode : Error()
