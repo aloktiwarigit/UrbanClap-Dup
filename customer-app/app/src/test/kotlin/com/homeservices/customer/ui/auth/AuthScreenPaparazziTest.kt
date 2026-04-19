@@ -11,7 +11,7 @@ public class AuthScreenPaparazziTest {
     @get:Rule
     public val paparazzi: Paparazzi = Paparazzi(
         deviceConfig = DeviceConfig.PIXEL_5,
-        theme = "android:Theme.Material.Light.NoActionBar",
+        theme = "android:Theme.Material3.DayNight.NoActionBar",
     )
 
     @Test

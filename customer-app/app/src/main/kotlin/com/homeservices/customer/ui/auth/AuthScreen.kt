@@ -146,7 +146,7 @@ private fun OtpCodeContent(
     onResendRequested: () -> Unit,
 ) {
     var otp by remember { mutableStateOf("") }
-    val lastFour = phoneNumber.takeLast(4)
+    val lastFour = phoneNumber.takeLast(4).ifEmpty { "your number" }
 
     Column(
         modifier = Modifier
