@@ -43,11 +43,12 @@ public class AuthViewModel
                 AuthOrchestrator.StartResult.TruecallerLaunched -> {
                     _uiState.value = AuthUiState.TruecallerLoading
                     truecallerJob?.cancel()
-                    truecallerJob = viewModelScope.launch {
-                        orchestrator.observeTruecallerResults().collect { result ->
-                            handleTruecallerResult(result)
+                    truecallerJob =
+                        viewModelScope.launch {
+                            orchestrator.observeTruecallerResults().collect { result ->
+                                handleTruecallerResult(result)
+                            }
                         }
-                    }
                 }
                 AuthOrchestrator.StartResult.FallbackToOtp -> {
                     _uiState.value = AuthUiState.OtpEntry()
