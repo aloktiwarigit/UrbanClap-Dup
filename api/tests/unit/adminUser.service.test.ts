@@ -7,8 +7,6 @@ vi.mock('../../src/cosmos/client.js', () => ({
 
 import {
   getAdminUserById,
-  getAdminUserByEmail,
-  updateAdminUser,
   createAdminUser,
 } from '../../src/services/adminUser.service.js';
 import { getCosmosClient } from '../../src/cosmos/client.js';
