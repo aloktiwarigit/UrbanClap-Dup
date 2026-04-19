@@ -5,15 +5,23 @@ on:
     branches: [main]
     paths:
       - 'design-system/**'
-      - '.github/workflows/design-system-ship.yml'
+      - 'figma/**'
+      - 'TOKEN-SYNC.md'
       - 'tools/check-shared-versions.sh'
+      - 'tools/check-token-drift.py'
+      - 'tools/tests/**'
+      - '.github/workflows/design-system-ship.yml'
       - '.codex-review-passed'
   push:
     branches: [main]
     paths:
       - 'design-system/**'
-      - '.github/workflows/design-system-ship.yml'
+      - 'figma/**'
+      - 'TOKEN-SYNC.md'
       - 'tools/check-shared-versions.sh'
+      - 'tools/check-token-drift.py'
+      - 'tools/tests/**'
+      - '.github/workflows/design-system-ship.yml'
       - '.codex-review-passed'
 
 concurrency:
@@ -53,6 +61,14 @@ jobs:
       - name: shared toolchain versions drift check
         working-directory: ${{ github.workspace }}
         run: bash tools/check-shared-versions.sh
+
+      - name: token drift check (Kotlin design-system <-> Figma Variables JSON)
+        working-directory: ${{ github.workspace }}
+        run: python3 tools/check-token-drift.py
+
+      - name: token drift tests
+        working-directory: ${{ github.workspace }}
+        run: python3 -m pytest tools/tests/test_check_token_drift.py -v
 
       - name: ktlint
         run: ./gradlew ktlintCheck
