@@ -1,4 +1,4 @@
-export function parseCookies(cookieHeader: string): Record<string, string> {
+export function parseCookies(cookieHeader: string | undefined): Record<string, string> {
   if (!cookieHeader) return {};
   return cookieHeader
     .split(';')

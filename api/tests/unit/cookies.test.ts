@@ -21,4 +21,8 @@ describe('parseCookies', () => {
     const result = parseCookies('token=hello%3Dworld');
     expect(result['token']).toBe('hello=world');
   });
+
+  it('returns empty object for undefined', () => {
+    expect(parseCookies(undefined)).toEqual({});
+  });
 });

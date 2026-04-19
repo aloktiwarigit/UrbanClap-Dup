@@ -4,10 +4,12 @@ let _client: CosmosClient | null = null;
 
 export function getCosmosClient(): CosmosClient {
   if (!_client) {
-    _client = new CosmosClient({
-      endpoint: process.env.COSMOS_ENDPOINT!,
-      key: process.env.COSMOS_KEY!,
-    });
+    const endpoint = process.env.COSMOS_ENDPOINT;
+    const key = process.env.COSMOS_KEY;
+    if (!endpoint || !key) {
+      throw new Error('Missing required env vars: COSMOS_ENDPOINT, COSMOS_KEY');
+    }
+    _client = new CosmosClient({ endpoint, key });
   }
   return _client;
 }
