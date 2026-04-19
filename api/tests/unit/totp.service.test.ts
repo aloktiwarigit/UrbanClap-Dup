@@ -36,7 +36,7 @@ describe('totp.service', () => {
     it('accepts a currently valid token', async () => {
       const { generateSync } = await import('otplib');
       const secret = generateSecret();
-      const token = generateSync({ secret, type: 'totp' }) as string;
+      const token = generateSync({ secret, strategy: 'totp' }) as string;
       expect(verifyToken(token, secret)).toBe(true);
     });
 

@@ -30,12 +30,12 @@ export function decryptSecret(ciphertext: string): string {
 }
 
 export function generateSecret(): string {
-  return otpGenerateSecret(20);
+  return otpGenerateSecret();
 }
 
 export function generateOtpAuthUri(secret: string, email: string): string {
   return generateURI({
-    type: 'totp',
+    strategy: 'totp',
     label: email,
     secret,
     issuer: 'homeservices-admin',
@@ -44,7 +44,7 @@ export function generateOtpAuthUri(secret: string, email: string): string {
 
 export function verifyToken(token: string, secret: string): boolean {
   try {
-    const result = verifySync({ token, secret, type: 'totp' });
+    const result = verifySync({ token, secret, strategy: 'totp' });
     if (typeof result === 'boolean') return result;
     return (result as { valid: boolean }).valid;
   } catch {
