@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 public fun HomeservicesTechnicianTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
-) {
+): Unit {
     val colors = if (darkTheme) DarkColors else LightColors
 
     MaterialTheme(

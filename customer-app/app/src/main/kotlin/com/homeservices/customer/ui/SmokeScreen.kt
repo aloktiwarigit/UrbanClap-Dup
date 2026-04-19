@@ -19,7 +19,7 @@ private val ScreenPadding = 24.dp
 private val TitleSubtitleSpacing = 8.dp
 
 @Composable
-public fun SmokeScreen(buildInfo: BuildInfoProvider) {
+public fun SmokeScreen(buildInfo: BuildInfoProvider): Unit {
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
