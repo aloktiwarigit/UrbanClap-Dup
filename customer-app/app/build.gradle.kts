@@ -44,6 +44,7 @@ android {
             isMinifyEnabled = false
         }
         release {
+            // TODO(deploy-story): enable minification before Play Store submission — skeleton intentionally disabled
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
