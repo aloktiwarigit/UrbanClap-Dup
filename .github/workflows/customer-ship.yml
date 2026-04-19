@@ -1,5 +1,5 @@
 name: customer-ship
-# E02-S01: re-trigger after Paparazzi goldens
+# chore: re-trigger CI on quality-gates PR
 
 on:
   pull_request:
