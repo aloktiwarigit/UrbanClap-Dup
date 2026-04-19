@@ -53,7 +53,7 @@ describe('AdminAuthProvider', () => {
       </AdminAuthProvider>,
     );
     expect(screen.getByTestId('role').textContent).toBe('ops-manager');
-    await act(async () => {
+    await act(() => {
       screen.getByRole('button', { name: 'logout' }).click();
     });
     expect(fetchSpy).toHaveBeenCalledWith('/api/v1/admin/auth/logout', expect.objectContaining({ method: 'POST' }));
