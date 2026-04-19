@@ -1,10 +1,8 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
-
 import { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { firebaseAuth } from '@/lib/auth/firebase';
+import { getFirebaseAuth } from '@/lib/auth/firebase';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
@@ -21,7 +19,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const credential = await signInWithEmailAndPassword(firebaseAuth, email, password);
+      const credential = await signInWithEmailAndPassword(getFirebaseAuth(), email, password);
       const idToken = await credential.user.getIdToken();
 
       const res = await fetch('/api/v1/admin/auth/login', {

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import LoginPage from '../app/login/page';
 
-vi.mock('@/lib/auth/firebase', () => ({ firebaseAuth: {} }));
+vi.mock('@/lib/auth/firebase', () => ({ getFirebaseAuth: () => ({}) }));
 vi.mock('firebase/auth', () => ({ signInWithEmailAndPassword: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 
