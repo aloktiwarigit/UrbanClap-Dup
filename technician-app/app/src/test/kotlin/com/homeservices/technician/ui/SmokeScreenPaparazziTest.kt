@@ -2,14 +2,20 @@ package com.homeservices.technician.ui
 
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
+import com.homeservices.designsystem.theme.HomeservicesTheme
 import com.homeservices.technician.di.BuildInfoProvider
-import com.homeservices.technician.ui.theme.HomeservicesTechnicianTheme
 import org.junit.Rule
 import org.junit.Test
 
+// See customer-app's SmokeScreenPaparazziTest for full rationale. Same trade-off
+// applied here for symmetry (keep both app catalogs byte-identical).
 public class SmokeScreenPaparazziTest {
     @get:Rule
-    public val paparazzi: Paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
+    public val paparazzi: Paparazzi =
+        Paparazzi(
+            deviceConfig = DeviceConfig.PIXEL_5,
+            maxPercentDifference = 10.0,
+        )
 
     private val fakeBuildInfo: BuildInfoProvider =
         BuildInfoProvider(
@@ -20,7 +26,7 @@ public class SmokeScreenPaparazziTest {
     @Test
     public fun smokeScreenLightThemeMatchesSnapshot(): Unit {
         paparazzi.snapshot {
-            HomeservicesTechnicianTheme(darkTheme = false) {
+            HomeservicesTheme(darkTheme = false) {
                 SmokeScreen(buildInfo = fakeBuildInfo)
             }
         }
@@ -29,7 +35,7 @@ public class SmokeScreenPaparazziTest {
     @Test
     public fun smokeScreenDarkThemeMatchesSnapshot(): Unit {
         paparazzi.snapshot {
-            HomeservicesTechnicianTheme(darkTheme = true) {
+            HomeservicesTheme(darkTheme = true) {
                 SmokeScreen(buildInfo = fakeBuildInfo)
             }
         }

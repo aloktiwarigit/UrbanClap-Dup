@@ -3,9 +3,9 @@ package com.homeservices.technician
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import com.homeservices.designsystem.theme.HomeservicesTheme
 import com.homeservices.technician.di.BuildInfoProvider
 import com.homeservices.technician.ui.SmokeScreen
-import com.homeservices.technician.ui.theme.HomeservicesTechnicianTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -17,7 +17,7 @@ public class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            HomeservicesTechnicianTheme {
+            HomeservicesTheme {
                 SmokeScreen(buildInfo = buildInfo)
             }
         }

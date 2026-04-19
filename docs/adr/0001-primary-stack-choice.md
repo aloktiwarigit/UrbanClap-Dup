@@ -26,7 +26,7 @@ The project must ship in ~6 months end-to-end with a 25-feature MVP. Picking a s
 - Node 22 on Azure Functions Consumption has zero idle cost and free 1M execs/month.
 
 **Negative:**
-- Two Android codebases (customer, technician) duplicate some scaffolding. Mitigated by shared design-system Gradle module and shared build configurations in `buildSrc`.
+- Two Android codebases (customer, technician) duplicate some scaffolding. Mitigated by shared design-system Gradle module and shared build configurations in `buildSrc`. (Design-system module realised by E01-S04 via Gradle composite build — see [ADR-0010](0010-design-system-composite-build.md) and `docs/stories/E01-S04-design-system-module.md`.)
 - iOS will need a third codebase (SwiftUI) or KMP refactor at Phase 4. This is acknowledged debt — see AQ-1.
 - Fastify is slightly less common than Express in Indian hiring pool; mitigated because the founder + Claude Code are the dev pair, not a team.
 

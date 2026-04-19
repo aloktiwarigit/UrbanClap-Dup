@@ -443,7 +443,7 @@ Dispatcher module has zero access to `decline_history` data. Enforced by:
 
 - **No cross-package imports between sub-projects.** `customer-app/` does not import from `technician-app/` or `admin-web/` or `api/`. Communication strictly via API contracts (OpenAPI-generated types).
 - **Shared types via code generation**, not shared modules. `api/src/schemas/*.zod.ts` → OpenAPI 3.1 spec → generated TypeScript types for `admin-web/` + Kotlin types for Android apps (via OpenAPI generator).
-- **Design system shared via Gradle module** (Kotlin) + npm package (TypeScript, via Storybook + Tailwind tokens published to internal npm scope in Phase 2).
+- **Design system shared via Gradle module** (Kotlin) + npm package (TypeScript, via Storybook + Tailwind tokens published to internal npm scope in Phase 2). Kotlin half realised by E01-S04 (composite build per ADR-0010); npm-package half remains Phase 2.
 
 ### 6.2 Naming conventions (enforced by lint)
 
