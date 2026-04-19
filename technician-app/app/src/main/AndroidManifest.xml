@@ -15,8 +15,6 @@
         android:theme="@style/Theme.HomeservicesTechnician"
         android:usesCleartextTraffic="false">
 
-        <!-- nosemgrep: java.android.security.exported_activity.exported_activity -->
-        <!-- Launcher activity must be exported to be launchable from the home screen. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
