@@ -73,7 +73,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: record Paparazzi snapshots
-        run: ./gradlew ${{ inputs.gradle_task }}
+        env:
+          GRADLE_TASK: ${{ inputs.gradle_task }}
+        run: ./gradlew "$GRADLE_TASK"
 
       - name: upload recorded snapshots
         uses: actions/upload-artifact@v4
