@@ -39,6 +39,6 @@ internal fun AppNavigation(
         modifier = modifier,
     ) {
         authGraph(navController, activity)
-        mainGraph(navController)
+        mainGraph()
     }
 }
