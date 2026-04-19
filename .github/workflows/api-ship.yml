@@ -77,7 +77,11 @@ jobs:
             exit 1
           fi
           MARKER_SHA=$(jq -r .commit .codex-review-passed)
-          HEAD_SHA=$(git rev-parse HEAD)
+          # On pull_request events, actions/checkout@v4 checks out the synthetic
+          # merge commit, which would make `git rev-parse HEAD` include main-branch
+          # changes since the marker was created. Use the PR head SHA instead so
+          # the scope-diff only compares against the PR's own commits.
+          HEAD_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
           # The marker records the SHA that Codex reviewed. Committing the marker itself
           # moves HEAD forward, so a strict marker==HEAD check is a chicken-and-egg paradox
           # (the commit that introduces the marker cannot contain its own SHA). Instead,
