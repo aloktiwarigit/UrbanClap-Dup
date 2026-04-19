@@ -8,7 +8,6 @@ vi.mock('../../src/cosmos/client.js', () => ({
 import {
   createAdminSession,
   touchAndGetSession,
-  deleteSession,
 } from '../../src/services/adminSession.service.js';
 import { getCosmosClient } from '../../src/cosmos/client.js';
 

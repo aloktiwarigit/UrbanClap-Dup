@@ -1,4 +1,4 @@
-import { generateSecret as otpGenerateSecret, generateSync, verifySync, generateURI } from 'otplib';
+import { generateSecret as otpGenerateSecret, verifySync, generateURI } from 'otplib';
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 
 const ALGORITHM = 'aes-256-gcm';
