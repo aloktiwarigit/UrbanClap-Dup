@@ -68,7 +68,7 @@ export default function LoginPage() {
   return (
     <main className="min-h-[100dvh] flex items-center justify-center p-[var(--space-6)] bg-[var(--color-surface)]">
       <form
-        onSubmit={handleSubmit}
+        onSubmit={(e) => void handleSubmit(e)}
         className="w-full max-w-[24rem] flex flex-col gap-[var(--space-4)]"
         aria-label="Admin sign-in"
       >

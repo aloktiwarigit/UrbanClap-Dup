@@ -76,7 +76,7 @@ export default function SetupPage() {
 
         {error && <p role="alert" className="text-sm text-[var(--color-error)]">{error}</p>}
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-[var(--space-3)]">
+        <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-[var(--space-3)]">
           <label className="flex flex-col gap-1 text-sm text-[var(--color-text-muted)]">
             6-digit code from your app
             <input
