@@ -118,6 +118,16 @@ Added OSS build- and test-time dev dependencies for the two Android skeletons (`
 
 All plugins self-hosted via Gradle Plugin Portal or Maven Central; no paid tier exists for any of them. Sentry free tier (5k errors/mo) is shared with the api/ and admin-web/ stories.
 
+### Amendment — 2026-04-19 (story E01-S04)
+
+Added the shared `design-system/` Gradle library module consumed via composite build (see ADR-0010). The module re-uses the E01-S03 Android dev-dependency set (Kotlin, AGP, Compose BOM, Material 3, Paparazzi, Kover, Detekt, ktlint, JUnit 5, AssertJ, Robolectric, androidx-test-core) — those remain approved and are not re-listed. One new dependency:
+
+| Dependency | License | Role | Paid trigger |
+|---|---|---|---|
+| Geist Sans Variable TTF (Vercel) | OFL-1.1 | Primary Latin typeface bundled in `design-system/src/main/res/font/geist_sans_variable.ttf` (~170 KB variable font covering weights 400/500/600/700 via the `wght` axis) | never (one-time bundled binary; Noto Devanagari/Tamil/Bengali deferred to i18n story) |
+
+OFL-1.1 license text committed at `design-system/LICENSES/OFL-1.1.txt`; attribution + reserved-font-name "Geist" + SHA-256 of the bundled file at `design-system/NOTICE.md`. No recurring cost, no service dependency.
+
 ## Alternatives considered
 
 - **Soft constraint (recommend, don't enforce)** — rejected because without enforcement, drift is inevitable over a 12-month build. Past 3-month drift destroys the economic thesis.
