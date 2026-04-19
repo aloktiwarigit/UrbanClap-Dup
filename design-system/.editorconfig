@@ -1,0 +1,8 @@
+# Kotlin style rules for design-system module
+
+root = true
+
+[*.kt]
+# Allow PascalCase function names for @Composable theme functions
+# (Material 3 / Compose convention: MaterialTheme, HomeservicesTheme, etc.)
+ktlint_function_naming_ignore_when_annotated_with = Composable
