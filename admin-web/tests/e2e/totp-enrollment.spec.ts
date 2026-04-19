@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { makeAccessJwt } from './helpers/make-token';
 
 test.describe('TOTP enrollment (first login)', () => {
   test('redirects to /setup after first login and shows QR code', async ({ page }) => {
@@ -51,6 +52,7 @@ test.describe('TOTP enrollment (first login)', () => {
   });
 
   test('completes enrollment and redirects to /dashboard', async ({ page }) => {
+    const token = await makeAccessJwt('u1', 'super-admin');
     await page.addInitScript(() => {
       sessionStorage.setItem('setupToken', 'mock.setup.token');
     });
@@ -64,6 +66,7 @@ test.describe('TOTP enrollment (first login)', () => {
       return route.fulfill({
         status: 200, contentType: 'application/json',
         body: JSON.stringify({ adminId: 'u1' }),
+        headers: { 'set-cookie': `hs_access=${token}; Path=/; HttpOnly` },
       });
     });
 

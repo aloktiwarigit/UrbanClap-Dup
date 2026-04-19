@@ -13,11 +13,11 @@ test('landing page renders brand + tagline + CTA + footer build-info', async ({ 
   await expect(page.locator('footer')).toContainText('v');
 });
 
-test('CTA navigates to /login stub', async ({ page }) => {
+test('CTA navigates to /login', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('link', { name: /sign in to admin/i }).click();
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByText(/501 — Owner sign-in coming/i)).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /sign in/i })).toBeVisible();
 });
 
 test('footer shows real commit sha and semver from /v1/health', async ({ page }) => {

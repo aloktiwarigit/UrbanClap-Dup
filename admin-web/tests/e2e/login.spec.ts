@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { makeAccessJwt } from './helpers/make-token';
 
 test.describe('Login flow', () => {
   test.beforeEach(async ({ page }) => {
+    const token = await makeAccessJwt('u1', 'super-admin');
     await page.route('**/identitytoolkit.googleapis.com/**', (route) =>
       route.fulfill({
         status: 200,
@@ -21,7 +23,7 @@ test.describe('Login flow', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ adminId: 'u1', role: 'super-admin', email: 'a@b.com' }),
-        headers: { 'set-cookie': 'hs_access=mock-jwt; Path=/; HttpOnly' },
+        headers: { 'set-cookie': `hs_access=${token}; Path=/; HttpOnly` },
       }),
     );
   });
