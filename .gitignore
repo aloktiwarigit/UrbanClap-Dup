@@ -76,6 +76,9 @@ ehthumbs.db
 ~$*.xlsx
 ~$*.pptx
 
+# === Git worktrees ===
+.worktrees/
+
 # === BMAD / Superpowers intermediate ===
 .remember/logs/
 .remember/tmp/
