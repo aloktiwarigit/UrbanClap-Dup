@@ -1,0 +1,40 @@
+import { test, expect } from '@playwright/test';
+
+test.describe('Login flow', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route('**/api/v1/admin/auth/login', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ adminId: 'u1', role: 'super-admin', email: 'a@b.com' }),
+        headers: { 'set-cookie': 'hs_access=mock-jwt; Path=/; HttpOnly' },
+      }),
+    );
+  });
+
+  test('successful login redirects to /dashboard', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'admin@test.com');
+    await page.fill('input[type="password"]', 'password');
+    await page.fill('input[inputmode="numeric"]', '123456');
+    await page.click('button[type="submit"]');
+    await expect(page).toHaveURL(/\/dashboard/);
+  });
+
+  test('wrong TOTP shows inline error', async ({ page }) => {
+    await page.route('**/api/v1/admin/auth/login', (route) =>
+      route.fulfill({
+        status: 422,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 'TOTP_INVALID' }),
+      }),
+    );
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'admin@test.com');
+    await page.fill('input[type="password"]', 'password');
+    await page.fill('input[inputmode="numeric"]', '000000');
+    await page.click('button[type="submit"]');
+    await expect(page.getByRole('alert')).toContainText('Invalid authenticator code');
+    await expect(page).toHaveURL(/\/login/);
+  });
+});
