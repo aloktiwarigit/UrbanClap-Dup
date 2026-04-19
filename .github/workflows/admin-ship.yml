@@ -113,7 +113,18 @@ jobs:
             echo "::error::marker SHA $MARKER_SHA is not an ancestor of HEAD ($HEAD_SHA) — rerun /codex-review-gate"
             exit 1
           fi
-          DISALLOWED=$(git diff --name-only "$MARKER_SHA" "$HEAD_SHA" \
+          # GitHub PR CI checks out a synthetic merge commit (HEAD = merge of branch
+          # into main). Files committed to main after this branch was cut appear in the
+          # MARKER_SHA..HEAD diff even though they're not part of this PR. Use HEAD^1
+          # (the branch tip = first parent of the merge commit) so we only diff against
+          # our PR's own commits. On a direct push HEAD^2 doesn't exist, so fall back
+          # to HEAD itself.
+          if git cat-file -e HEAD^2 2>/dev/null; then
+            BRANCH_TIP=$(git rev-parse HEAD^1)
+          else
+            BRANCH_TIP=$HEAD_SHA
+          fi
+          DISALLOWED=$(git diff --name-only "$MARKER_SHA" "$BRANCH_TIP" \
             | grep -Ev '^(\.codex-review-passed|docs/reviews/)' || true)
           if [ -n "$DISALLOWED" ]; then
             echo "::error::files outside Codex review scope changed since marker $MARKER_SHA:"
@@ -121,7 +132,7 @@ jobs:
             echo "::error::rerun /codex-review-gate to re-review the new changes"
             exit 1
           fi
-          echo "codex-review marker valid: reviewed=$MARKER_SHA head=$HEAD_SHA"
+          echo "codex-review marker valid: reviewed=$MARKER_SHA branch-tip=$BRANCH_TIP"
 
   e2e-and-a11y:
     runs-on: ubuntu-latest
