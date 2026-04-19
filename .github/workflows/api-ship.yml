@@ -52,3 +52,8 @@ jobs:
       - name: openapi spec quality (spectral — contract lint)
         run: pnpm run openapi:lint
 
+      - name: semgrep SAST
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: p/typescript p/owasp-top-ten p/nodejs p/secrets
+

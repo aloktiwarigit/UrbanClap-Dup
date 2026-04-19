@@ -69,3 +69,8 @@ jobs:
       - name: paparazzi screenshot diff
         run: ./gradlew verifyPaparazziDebug
 
+      - name: semgrep SAST
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: p/kotlin p/owasp-top-ten p/secrets
+
