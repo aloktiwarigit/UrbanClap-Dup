@@ -5,7 +5,7 @@ import { requireAdmin } from '../../middleware/requireAdmin.js';
 import { getAdminUserById } from '../../services/adminUser.service.js';
 import type { AdminContext } from '../../types/admin.js';
 
-async function adminMeHandler(
+export async function adminMeHandler(
   _req: HttpRequest,
   _ctx: InvocationContext,
   admin: AdminContext,
