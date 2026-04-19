@@ -18,7 +18,7 @@ public class SmokeScreenPaparazziTest {
         )
 
     @Test
-    public fun smokeScreen_lightTheme_matchesSnapshot() {
+    public fun smokeScreen_lightTheme_matchesSnapshot(): Unit {
         paparazzi.snapshot {
             HomeservicesCustomerTheme(darkTheme = false) {
                 SmokeScreen(buildInfo = fakeBuildInfo)
@@ -27,7 +27,7 @@ public class SmokeScreenPaparazziTest {
     }
 
     @Test
-    public fun smokeScreen_darkTheme_matchesSnapshot() {
+    public fun smokeScreen_darkTheme_matchesSnapshot(): Unit {
         paparazzi.snapshot {
             HomeservicesCustomerTheme(darkTheme = true) {
                 SmokeScreen(buildInfo = fakeBuildInfo)

@@ -10,7 +10,7 @@ public object SentryInitializer {
     public fun init(
         application: Application,
         dsn: String = BuildConfig.SENTRY_DSN,
-    ) {
+    ): Unit {
         if (dsn.isBlank()) return
         SentryAndroid.init(application) { options ->
             options.dsn = dsn

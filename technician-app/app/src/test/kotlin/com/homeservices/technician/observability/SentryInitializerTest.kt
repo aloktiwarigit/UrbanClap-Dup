@@ -18,7 +18,7 @@ public class SentryInitializerTest {
     private lateinit var application: Application
 
     @BeforeEach
-    public fun setUp() {
+    public fun setUp(): Unit {
         application = mockk(relaxed = true)
         mockkStatic(SentryAndroid::class)
         every {
@@ -30,12 +30,12 @@ public class SentryInitializerTest {
     }
 
     @AfterEach
-    public fun tearDown() {
+    public fun tearDown(): Unit {
         unmockkStatic(SentryAndroid::class)
     }
 
     @Test
-    public fun `init does nothing when DSN is blank`() {
+    public fun `init does nothing when DSN is blank`(): Unit {
         SentryInitializer.init(application = application, dsn = "")
 
         verify(exactly = 0) {
@@ -47,7 +47,7 @@ public class SentryInitializerTest {
     }
 
     @Test
-    public fun `init does nothing when DSN is whitespace`() {
+    public fun `init does nothing when DSN is whitespace`(): Unit {
         SentryInitializer.init(application = application, dsn = "   ")
 
         verify(exactly = 0) {
@@ -59,7 +59,7 @@ public class SentryInitializerTest {
     }
 
     @Test
-    public fun `init calls Sentry once with tracesSampleRate when DSN set`() {
+    public fun `init calls Sentry once with tracesSampleRate when DSN set`(): Unit {
         val configSlot = slot<io.sentry.Sentry.OptionsConfiguration<SentryAndroidOptions>>()
         every {
             SentryAndroid.init(any<Application>(), capture(configSlot))

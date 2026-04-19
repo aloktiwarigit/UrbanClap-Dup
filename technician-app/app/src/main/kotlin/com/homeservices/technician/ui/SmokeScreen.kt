@@ -15,6 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.homeservices.technician.di.BuildInfoProvider
 
+private val ScreenPadding = 24.dp
+private val TitleSubtitleSpacing = 8.dp
+
 @Composable
 public fun SmokeScreen(buildInfo: BuildInfoProvider) {
     Surface(
@@ -25,7 +28,7 @@ public fun SmokeScreen(buildInfo: BuildInfoProvider) {
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(24.dp),
+                    .padding(ScreenPadding),
             horizontalAlignment = Alignment.Start,
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
@@ -35,7 +38,7 @@ public fun SmokeScreen(buildInfo: BuildInfoProvider) {
                     style = MaterialTheme.typography.displayLarge,
                     color = MaterialTheme.colorScheme.primary,
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(TitleSubtitleSpacing))
                 Text(
                     text = "skeleton — ready for development",
                     style = MaterialTheme.typography.bodyLarge,

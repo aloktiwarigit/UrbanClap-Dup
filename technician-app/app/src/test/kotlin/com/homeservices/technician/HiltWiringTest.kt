@@ -22,7 +22,7 @@ public class HiltWiringTest {
     public lateinit var buildInfoProvider: BuildInfoProvider
 
     @org.junit.Test
-    public fun hiltGraphResolvesBuildInfoProvider() {
+    public fun hiltGraphResolvesBuildInfoProvider(): Unit {
         hiltRule.inject()
         assertThat(buildInfoProvider).isNotNull
         assertThat(buildInfoProvider.version).isNotBlank
