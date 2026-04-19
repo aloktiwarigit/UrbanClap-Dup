@@ -10,6 +10,7 @@ import { requireAdmin } from '../../src/middleware/requireAdmin.js';
 import { signAccessToken } from '../../src/services/jwt.service.js';
 import { touchAndGetSession } from '../../src/services/adminSession.service.js';
 import { HttpRequest } from '@azure/functions';
+import type { HttpResponseInit } from '@azure/functions';
 
 function makeReq(cookieHeader?: string): HttpRequest {
   return new HttpRequest({
@@ -30,14 +31,14 @@ describe('requireAdmin', () => {
 
   it('returns 401 when no hs_access cookie', async () => {
     const wrapped = requireAdmin(['super-admin'])(handler);
-    const res = await wrapped(makeReq(), fakeCtx);
+    const res = await wrapped(makeReq(), fakeCtx) as HttpResponseInit;
     expect(res.status).toBe(401);
     expect((res.jsonBody as any).code).toBe('UNAUTHENTICATED');
   });
 
   it('returns 401 for an invalid JWT', async () => {
     const wrapped = requireAdmin(['super-admin'])(handler);
-    const res = await wrapped(makeReq('hs_access=not.a.valid.jwt'), fakeCtx);
+    const res = await wrapped(makeReq('hs_access=not.a.valid.jwt'), fakeCtx) as HttpResponseInit;
     expect(res.status).toBe(401);
     expect((res.jsonBody as any).code).toBe('TOKEN_INVALID');
   });
@@ -46,7 +47,7 @@ describe('requireAdmin', () => {
     vi.mocked(touchAndGetSession).mockResolvedValue(null);
     const token = await signAccessToken({ sub: 'u1', role: 'super-admin', sessionId: 's1' });
     const wrapped = requireAdmin(['super-admin'])(handler);
-    const res = await wrapped(makeReq(`hs_access=${token}`), fakeCtx);
+    const res = await wrapped(makeReq(`hs_access=${token}`), fakeCtx) as HttpResponseInit;
     expect(res.status).toBe(401);
     expect((res.jsonBody as any).code).toBe('SESSION_EXPIRED');
   });
@@ -55,7 +56,7 @@ describe('requireAdmin', () => {
     vi.mocked(touchAndGetSession).mockResolvedValue({ sessionId: 's1' } as any);
     const token = await signAccessToken({ sub: 'u1', role: 'finance', sessionId: 's1' });
     const wrapped = requireAdmin(['super-admin', 'ops-manager'])(handler);
-    const res = await wrapped(makeReq(`hs_access=${token}`), fakeCtx);
+    const res = await wrapped(makeReq(`hs_access=${token}`), fakeCtx) as HttpResponseInit;
     expect(res.status).toBe(403);
     expect((res.jsonBody as any).code).toBe('FORBIDDEN');
   });

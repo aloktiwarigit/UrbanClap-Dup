@@ -128,7 +128,7 @@ function makeSetupReq(method: 'GET' | 'POST', setupToken: string, body?: unknown
       authorization: `Bearer ${setupToken}`,
       ...(body ? { 'content-type': 'application/json' } : {}),
     },
-    body: body ? { string: JSON.stringify(body) } : undefined,
+    ...(body ? { body: { string: JSON.stringify(body) } } : {}),
   });
 }
 

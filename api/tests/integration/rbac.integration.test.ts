@@ -18,6 +18,7 @@ import { signAccessToken } from '../../src/services/jwt.service.js';
 import { touchAndGetSession } from '../../src/services/adminSession.service.js';
 import type { AdminRole } from '../../src/types/admin.js';
 import { HttpRequest } from '@azure/functions';
+import type { HttpResponseInit } from '@azure/functions';
 
 const fakeCtx = {} as any;
 const fakeHandler = vi.fn().mockResolvedValue({ status: 200, jsonBody: {} });
@@ -31,7 +32,7 @@ async function callWithRole(role: AdminRole, allowedRoles: AdminRole[]) {
     headers: { cookie: `hs_access=${token}` },
   });
   const wrapped = requireAdmin(allowedRoles)(fakeHandler);
-  return wrapped(req, fakeCtx);
+  return wrapped(req, fakeCtx) as Promise<HttpResponseInit>;
 }
 
 describe('RBAC role matrix', () => {

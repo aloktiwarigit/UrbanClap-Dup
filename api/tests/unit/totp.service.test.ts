@@ -21,7 +21,7 @@ describe('totp.service', () => {
     it('throws on a tampered ciphertext (GCM auth tag check)', () => {
       const enc = encryptSecret('secret');
       const buf = Buffer.from(enc, 'base64');
-      buf[30] ^= 0xff; // corrupt a ciphertext byte
+      buf.writeUInt8((buf[30] ?? 0) ^ 0xff, 30); // corrupt a ciphertext byte
       expect(() => decryptSecret(buf.toString('base64'))).toThrow();
     });
   });

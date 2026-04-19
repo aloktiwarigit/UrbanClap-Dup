@@ -22,6 +22,7 @@ import { writeAuditEntry } from '../../src/middleware/auditLog.js';
 import { signAccessToken } from '../../src/services/jwt.service.js';
 import { requireAdmin } from '../../src/middleware/requireAdmin.js';
 import { HttpRequest } from '@azure/functions';
+import type { HttpResponseInit } from '@azure/functions';
 
 const fakeCtx = {} as any;
 
@@ -108,7 +109,7 @@ describe('GET /v1/admin/me', () => {
 
   it('returns 401 when hs_access cookie is missing', async () => {
     const req = new HttpRequest({ url: 'http://localhost/', method: 'GET' });
-    const res = await wrappedMe(req, fakeCtx);
+    const res = await wrappedMe(req, fakeCtx) as HttpResponseInit;
     expect(res.status).toBe(401);
     expect((res.jsonBody as any).code).toBe('UNAUTHENTICATED');
   });
@@ -122,7 +123,7 @@ describe('GET /v1/admin/me', () => {
     const res = await wrappedMe(
       makeReqWithCookies({ hs_access: token }),
       fakeCtx,
-    );
+    ) as HttpResponseInit;
     expect(res.status).toBe(404);
     expect((res.jsonBody as any).code).toBe('ADMIN_NOT_FOUND');
   });
@@ -138,7 +139,7 @@ describe('GET /v1/admin/me', () => {
     const res = await wrappedMe(
       makeReqWithCookies({ hs_access: token }),
       fakeCtx,
-    );
+    ) as HttpResponseInit;
     expect(res.status).toBe(200);
     expect((res.jsonBody as any).adminId).toBe('u1');
     expect((res.jsonBody as any).email).toBe('admin@example.com');
