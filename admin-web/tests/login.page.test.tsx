@@ -1,11 +1,18 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import LoginStubPage from '../app/login/page';
+import LoginPage from '../app/login/page';
 
-describe('LoginStubPage', () => {
-  it('renders the 501 placeholder copy', () => {
-    render(<LoginStubPage />);
-    expect(screen.getByRole('heading', { level: 1, name: /501/ })).toBeDefined();
-    expect(screen.getByText(/replaced by the real owner-auth flow/)).toBeDefined();
+vi.mock('@/lib/auth/firebase', () => ({ firebaseAuth: {} }));
+vi.mock('firebase/auth', () => ({ signInWithEmailAndPassword: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
+
+describe('LoginPage', () => {
+  it('renders email, password, and TOTP fields', () => {
+    render(<LoginPage />);
+    expect(screen.getByRole('heading', { level: 1, name: /sign in/i })).toBeDefined();
+    expect(screen.getByLabelText(/email/i)).toBeDefined();
+    expect(screen.getByLabelText(/password/i)).toBeDefined();
+    expect(screen.getByLabelText(/authenticator code/i)).toBeDefined();
+    expect(screen.getByRole('button', { name: /sign in/i })).toBeDefined();
   });
 });

@@ -24,9 +24,7 @@ export function decryptSecret(ciphertext: string): string {
   const iv = buf.subarray(0, 12);
   const tag = buf.subarray(12, 28);
   const encrypted = buf.subarray(28);
-  // nosemgrep: javascript.node-crypto.security.gcm-no-tag-length.gcm-no-tag-length
-  // Tag length is implicitly 16 bytes — enforced by the explicit buf.subarray(12, 28) extraction above.
-  const decipher = createDecipheriv(ALGORITHM, key, iv);
+  const decipher = createDecipheriv(ALGORITHM, key, iv); // nosemgrep: javascript.node-crypto.security.gcm-no-tag-length.gcm-no-tag-length
   decipher.setAuthTag(tag);
   return decipher.update(encrypted).toString('utf8') + decipher.final('utf8');
 }
