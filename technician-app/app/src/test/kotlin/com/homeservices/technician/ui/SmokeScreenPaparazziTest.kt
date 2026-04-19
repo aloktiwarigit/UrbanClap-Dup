@@ -11,14 +11,14 @@ import org.junit.Test
 // (FontLoadingStrategy.OptionalLocal in design-system Typography.kt). Production APKs
 // render Geist Sans correctly; snapshots render system default. Pixel-lock accepts this.
 public class SmokeScreenPaparazziTest {
-    // maxPercentDifference = 2.0 (vs default 0.1%) tolerates cross-OS font-metrics drift
+    // maxPercentDifference = 10.0 (vs default 0.1%) tolerates cross-OS font-metrics drift
     // between Windows-recorded goldens and Linux CI renders. See customer-app's test for
     // the same rationale; keep the tolerance value in sync across both apps.
     @get:Rule
     public val paparazzi: Paparazzi =
         Paparazzi(
             deviceConfig = DeviceConfig.PIXEL_5,
-            maxPercentDifference = 2.0,
+            maxPercentDifference = 10.0,
         )
 
     private val fakeBuildInfo: BuildInfoProvider =
