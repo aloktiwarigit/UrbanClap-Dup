@@ -15,6 +15,9 @@
 *.p12
 service-account*.json
 google-services.json
+# Stub placeholder files with no real credentials are tracked; real files are excluded by the rule above
+!customer-app/app/google-services.json
+!technician-app/app/google-services.json
 GoogleService-Info.plist
 
 # === Node / Next.js ===

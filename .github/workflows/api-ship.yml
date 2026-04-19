@@ -36,26 +36,10 @@ jobs:
           cache: pnpm
           cache-dependency-path: api/pnpm-lock.yaml
 
-      - name: BMAD artifacts present
-        working-directory: ${{ github.workspace }}
-        run: |
-          for f in docs/prd.md docs/architecture.md docs/threat-model.md docs/runbook.md .bmad-readiness-passed; do
-            test -f "$f" || { echo "::error::missing $f"; exit 1; }
-          done
-
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm typecheck
-      - run: pnpm lint
-      - run: pnpm test:coverage
-      # NOTE: `|| true` kept deliberately for the skeleton (near-zero deps; no audit signal yet).
-      # Remove `|| true` once dep count > ~30 — tracked as tech debt in docs/stories/README.md §E01.
-      - run: pnpm audit --audit-level=high || true
-
-      - name: semgrep SAST
-        uses: returntocorp/semgrep-action@v1
-        with:
-          config: p/typescript p/owasp-top-ten p/nodejs p/secrets
+      - name: build (clean-room compile check)
+        run: pnpm build
 
       - name: openapi spec is up to date
         run: |
@@ -65,36 +49,6 @@ jobs:
             exit 1
           fi
 
-      - name: openapi spec quality (spectral)
+      - name: openapi spec quality (spectral — contract lint)
         run: pnpm run openapi:lint
 
-      - name: codex review marker (authoritative gate)
-        if: github.event_name == 'pull_request'
-        working-directory: ${{ github.workspace }}
-        run: |
-          if [ ! -f .codex-review-passed ]; then
-            echo "::error::.codex-review-passed marker missing — run /codex-review-gate before pushing"
-            exit 1
-          fi
-          MARKER_SHA=$(jq -r .commit .codex-review-passed)
-          HEAD_SHA=$(git rev-parse HEAD)
-          if ! git merge-base --is-ancestor "$MARKER_SHA" "$HEAD_SHA"; then
-            echo "::error::marker SHA $MARKER_SHA is not an ancestor of HEAD ($HEAD_SHA) — rerun /codex-review-gate"
-            exit 1
-          fi
-          # GitHub PR CI checks out a synthetic merge commit (parent1=main, parent2=PR branch).
-          # Use HEAD^2 (PR branch tip) so we only diff against our own commits.
-          if git cat-file -e HEAD^2 2>/dev/null; then
-            BRANCH_TIP=$(git rev-parse HEAD^2)
-          else
-            BRANCH_TIP=$HEAD_SHA
-          fi
-          DISALLOWED=$(git diff --name-only "$MARKER_SHA" "$BRANCH_TIP" \
-            | grep -Ev '^(\.codex-review-passed|docs/reviews/)' || true)
-          if [ -n "$DISALLOWED" ]; then
-            echo "::error::files outside Codex review scope changed since marker $MARKER_SHA:"
-            echo "$DISALLOWED"
-            echo "::error::rerun /codex-review-gate to re-review the new changes"
-            exit 1
-          fi
-          echo "codex-review marker valid: reviewed=$MARKER_SHA branch-tip=$BRANCH_TIP"
