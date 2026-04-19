@@ -81,7 +81,8 @@ android {
         checkReleaseBuilds = false
         // Story E01-S03 pins specific versions (AGP 8.6.0, targetSdk 35, etc.) per architecture
         // decision. Suppress advisory "newer version available" checks to avoid false failures.
-        disable += setOf("OldTargetApi", "AndroidGradlePluginVersion", "GradleDependency")
+        // LintError suppresses internal lint FIR crash (AGP 8.6.0 + K2 known issue on unit-test supertype resolution)
+        disable += setOf("OldTargetApi", "AndroidGradlePluginVersion", "GradleDependency", "LintError")
     }
 
     testOptions {
@@ -214,5 +215,6 @@ dependencies {
     kspTest(libs.hilt.compiler)
 
     androidTestImplementation(libs.hilt.testing)
+    androidTestImplementation(libs.androidx.test.runner)
     kspAndroidTest(libs.hilt.compiler)
 }

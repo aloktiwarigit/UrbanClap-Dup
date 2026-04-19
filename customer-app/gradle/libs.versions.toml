@@ -31,6 +31,7 @@ mockk = "1.13.13"
 assertj = "3.26.3"
 robolectric = "4.14.1"
 androidxTestCore = "1.6.1"
+androidxTestRunner = "1.6.2"
 
 [libraries]
 # AndroidX
@@ -64,6 +65,7 @@ mockk-android = { module = "io.mockk:mockk-android", version.ref = "mockk" }
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTestCore" }
+androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTestRunner" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
