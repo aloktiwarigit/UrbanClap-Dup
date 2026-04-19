@@ -38,29 +38,49 @@ Per-sub-project hooks in `.claude/settings.json` enforce this. Root also enforce
 
 ## Model routing (within Claude Max)
 
-Per `~/.claude/CLAUDE.md` directive:
+**Mandatory self-selection rules live in `~/.claude/CLAUDE.md` → "Model routing … MANDATORY self-selection".** Every session announces its tier on turn 1 and offers a downgrade prompt when the task fits Sonnet/Haiku. Do not silently stay on Opus.
 
-- **Opus 4.7 (1M ctx)** — planning, architecture, adversarial review (~15% of work): BMAD Phase 2 (PRD), Phase 4 (architecture), Phase 4.5 adversarial review, Codex review synthesis
-- **Sonnet 4.6** — bulk execution, parallel subagents (~70% of work): BMAD Phase 3 (UX), 4.5 stub-filling (threat model, runbook), Phase 5 (epics/stories — parallel per epic), per-story implementation
-- **Haiku 4.5** — codemod fanouts (~15% of work): renames, mechanical refactors, lint-fix passes
+Project-specific trigger map (overrides the generic tiers only where noted):
 
-Dispatch subagents in parallel whenever tasks are independent (e.g. 3 epics being decomposed into stories simultaneously).
+- **Opus 4.7 (1M ctx)** — BMAD Phase 2 (PRD), Phase 4 (architecture + cross-cutting ADRs), Phase 4.5 adversarial review, Codex review synthesis, plans for high-blast-radius stories (auth, payments, dispatch, Cosmos schema changes)
+- **Sonnet 4.6 (default)** — per-story implementation, TDD cycles, BMAD Phase 3 (UX), 4.5 stub-filling, Phase 5 (epics/stories — parallel per epic), routine debugging
+- **Haiku 4.5** — codemod fanouts: renames, mechanical refactors, lint-fix passes, doc-index updates, Paparazzi golden re-records driven by a mechanical rule
+
+Dispatch subagents in parallel whenever tasks are independent (e.g. 3 epics being decomposed into stories simultaneously). Subagents inherit the parent's model unless the dispatch explicitly picks a cheaper tier — prefer `model: "sonnet"` or `"haiku"` on the Agent call when the subtask is mechanical.
 
 ## Per-story execution (mandatory flow)
 
-For each story in `docs/stories/`:
+### Story ceremony tiers — scale effort to blast radius
+
+Before invoking any planning skill, classify the story into one of three tiers. The flow below is the FOUNDATION tier; feature + codemod tiers compress heavily.
+
+| Tier | When | Ceremony | Typical session count |
+|---|---|---|---|
+| **Foundation** | E01-* stories, migrations, architectural refactors, new module introductions, security-sensitive work | Full: brainstorm → plan (≤13 tasks, B1–Bn disaster fixes OK) → execute → verify → Codex → CI | 3 sessions (brainstorm, plan, execute) |
+| **Feature** | E02+ user-facing stories, new screens, new endpoints built on existing foundation | Lean: brainstorm-embedded-in-plan (≤5 tasks, no B-slots unless a real gotcha appears mid-execution) → execute → verify → Codex → CI | 1–2 sessions |
+| **Codemod / mechanical** | Renames, import reorgs, lint-fix sweeps, doc-index updates | Skip brainstorm; skip spec. One-shot plan in the execute session (≤3 tasks). | 1 session |
+
+**TDD + Codex + CI are non-negotiable across ALL tiers.** Ceremony compression means fewer planning documents, not fewer quality gates.
+
+See `~/.claude/projects/.../memory/feedback_story_ceremony_tiers.md` for the rule; see `feedback_lean_review_stack.md` for why Claude-only review layers are optional.
+
+### Foundation-tier flow
+
+For each foundation-tier story in `docs/stories/`:
 
 1. **Fresh session** → `/superpowers:brainstorming` (explore design before code)
 2. `/superpowers:writing-plans` → commit `plans/<story-id>.md`
 3. **Fresh session** (context quarantine) → `/superpowers:executing-plans`
 4. TDD: tests first in `tests/` before implementation in `src/` / `app/src/`
 5. `/superpowers:verification-before-completion` before claiming done
-6. **5-layer review gate before push:**
-   1. `/code-review` (cheap lint)
-   2. `/security-review`
-   3. `/codex-review-gate` — **OpenAI Codex CLI is the authoritative cross-model review gate** (writes `.codex-review-passed`); never merge without this marker
-   4. `/bmad-code-review` (Blind Hunter + Edge Case Hunter + Acceptance Auditor)
-   5. `/superpowers:requesting-code-review`
+6. **Review gate before push — Codex + CI only (lean stack, 2026-04-19):**
+   - `/codex-review-gate` — **OpenAI Codex CLI is the authoritative cross-model review gate** (writes `.codex-review-passed` marker keyed to HEAD SHA). Never merge without it.
+   - CI runs ktlint, detekt, Android Lint, Semgrep, Paparazzi, Kover ≥80% — the real quality bar.
+   - **Optional Claude-only layers** (`/code-review`, `/security-review`, `/bmad-code-review`, `/superpowers:requesting-code-review`) — invoke ONLY on specific triggers:
+     - `/security-review` on auth/payment/dispatch/crypto/PII stories
+     - `/bmad-code-review` as Codex fallback if CLI unavailable (record in `.codex-review-passed-manual`)
+     - `/code-review` + `/superpowers:requesting-code-review` redundant with Codex + CI; skip by default
+   - Rationale: Claude-reviewing-Claude is echo chamber without independent signal. See `~/.claude/projects/.../memory/feedback_lean_review_stack.md`.
 7. Only then `git push`. **CI is the real gate — local hooks are fast feedback only.**
 
 ## Zero-cost infra (the binding architectural constraint)
@@ -104,7 +124,7 @@ Every sub-project's template includes:
 ## Code review policy
 
 - **Codex CLI is authoritative.** Claude Code writes code, OpenAI Codex reviews it. Deliberate model diversity for adversarial review (per `~/.claude/memory/feedback_cross_model_review.md`).
-- Claude-only review layers (`/code-review`, `/bmad-code-review`) are supplementary; Codex is the gating check.
+- Claude-only review layers (`/code-review`, `/security-review`, `/bmad-code-review`, `/superpowers:requesting-code-review`) are OPTIONAL and skipped by default (see Per-story execution §6). Codex + CI are the only mandatory gates.
 
 ## Forbidden
 
