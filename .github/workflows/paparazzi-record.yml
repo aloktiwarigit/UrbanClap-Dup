@@ -1,7 +1,7 @@
 name: paparazzi-record
 
-# Manually-triggered workflow that runs ./gradlew :<module>:recordPaparazziDebug on the
-# Linux CI runner and uploads the recorded snapshots/ directory as an artifact.
+# Manually-triggered workflow that runs `recordPaparazziDebug` on the Linux CI runner
+# and uploads the recorded snapshots/ directory as an artifact.
 #
 # Why: Paparazzi renders via layoutlib which is host-OS-sensitive for text antialiasing.
 # Windows-recorded goldens DIVERGE from Linux CI renders by ~3-5% — well above Paparazzi's
@@ -9,34 +9,43 @@ name: paparazzi-record
 # produces flaky CI runs or forces loose maxPercentDifference overrides.
 #
 # Usage:
-#   gh workflow run paparazzi-record.yml -f module=app -f working_directory=customer-app
-#   (or via GitHub UI: Actions → paparazzi-record → Run workflow)
+#   gh workflow run paparazzi-record.yml \
+#     -f gradle_root=customer-app \
+#     -f gradle_task=:app:recordPaparazziDebug \
+#     -f snapshot_dir=customer-app/app/src/test/snapshots
 #
 # After the run completes:
-#   1. Download the "<module>-paparazzi-snapshots" artifact from the Actions tab.
-#   2. Unzip into `<working_directory>/<module>/src/test/snapshots/images/` (replacing existing).
+#   1. Download the "paparazzi-snapshots" artifact from the Actions tab.
+#   2. Unzip into the `snapshot_dir` (replacing existing PNGs).
 #   3. Commit the new goldens.
 #   4. Push — next `verifyPaparazziDebug` run passes at the strict 0.1% default.
 #
-# Valid (module, working_directory) pairs in this repo:
-#   - (app, customer-app)    — customer-app SmokeScreen etc.
-#   - (app, technician-app)  — technician-app SmokeScreen etc.
-#   - (design-system, .)     — design-system TokenGallery (single-module composite)
+# Valid input triples in this repo:
+#
+#   | gradle_root     | gradle_task                  | snapshot_dir                                    |
+#   |-----------------|------------------------------|-------------------------------------------------|
+#   | customer-app    | :app:recordPaparazziDebug    | customer-app/app/src/test/snapshots             |
+#   | technician-app  | :app:recordPaparazziDebug    | technician-app/app/src/test/snapshots           |
+#   | design-system   | :recordPaparazziDebug        | design-system/src/test/snapshots                |
 
 on:
   workflow_dispatch:
     inputs:
-      module:
-        description: 'Gradle module to record (e.g. "app", "design-system")'
-        required: true
-        default: 'app'
-      working_directory:
-        description: 'Gradle root directory (e.g. "customer-app", "technician-app", or "." for root)'
+      gradle_root:
+        description: 'Gradle root directory (e.g. "customer-app", "technician-app", "design-system")'
         required: true
         default: 'customer-app'
+      gradle_task:
+        description: 'Task path to run (e.g. ":app:recordPaparazziDebug" for app modules, ":recordPaparazziDebug" for standalone roots)'
+        required: true
+        default: ':app:recordPaparazziDebug'
+      snapshot_dir:
+        description: 'Path (from repo root) to the snapshots dir to upload as artifact'
+        required: true
+        default: 'customer-app/app/src/test/snapshots'
 
 concurrency:
-  group: ${{ github.workflow }}-${{ inputs.working_directory }}-${{ inputs.module }}
+  group: ${{ github.workflow }}-${{ inputs.gradle_root }}-${{ inputs.gradle_task }}
   cancel-in-progress: false
 
 jobs:
@@ -45,7 +54,7 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: ${{ inputs.working_directory }}
+        working-directory: ${{ inputs.gradle_root }}
 
     steps:
       - uses: actions/checkout@v4
@@ -60,13 +69,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: record Paparazzi snapshots
-        run: ./gradlew :${{ inputs.module }}:recordPaparazziDebug
+        run: ./gradlew ${{ inputs.gradle_task }}
 
       - name: upload recorded snapshots
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ inputs.module }}-paparazzi-snapshots
-          path: |
-            ${{ inputs.working_directory }}/${{ inputs.module }}/src/test/snapshots/**
+          name: paparazzi-snapshots
+          path: ${{ inputs.snapshot_dir }}/**
           if-no-files-found: error
           retention-days: 7
