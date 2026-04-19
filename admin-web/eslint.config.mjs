@@ -70,6 +70,7 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/require-await': 'off',
+      '@typescript-eslint/await-thenable': 'off',
     },
   },
 );
