@@ -15,6 +15,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 public class MainActivity : FragmentActivity() {
     @Inject public lateinit var buildInfo: BuildInfoProvider
+
     @Inject public lateinit var sessionManager: SessionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,11 +35,18 @@ public class MainActivity : FragmentActivity() {
      * @Suppress DEPRECATION because the SDK has not yet migrated to ActivityResultContracts.
      */
     @Suppress("DEPRECATION")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+    override fun onActivityResult(
+        requestCode: Int,
+        resultCode: Int,
+        data: Intent?,
+    ) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == TruecallerSDK.SHARE_PROFILE_REQUEST_CODE) {
             TruecallerSDK.getInstance().onActivityResultObtained(
-                this, requestCode, resultCode, data,
+                this,
+                requestCode,
+                resultCode,
+                data,
             )
         }
     }

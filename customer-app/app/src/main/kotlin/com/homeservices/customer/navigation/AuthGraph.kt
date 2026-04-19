@@ -12,7 +12,12 @@ import androidx.navigation.navigation
 import com.homeservices.customer.ui.auth.AuthScreen
 import com.homeservices.customer.ui.auth.AuthViewModel
 
-internal fun NavGraphBuilder.authGraph(navController: NavController, activity: FragmentActivity) {
+// navController will be used in E02-S02 when navigating to HomeGraph on successful auth
+@Suppress("UnusedParameter")
+internal fun NavGraphBuilder.authGraph(
+    navController: NavController,
+    activity: FragmentActivity,
+) {
     navigation(startDestination = "auth_screen", route = "auth") {
         composable("auth_screen") {
             val viewModel: AuthViewModel = hiltViewModel()

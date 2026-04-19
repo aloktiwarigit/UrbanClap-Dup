@@ -22,14 +22,16 @@ internal fun AppNavigation(
 
     LaunchedEffect(authState) {
         when (authState) {
-            is AuthState.Authenticated -> navController.navigate("main") {
-                popUpTo("auth") { inclusive = true }
-                launchSingleTop = true
-            }
-            is AuthState.Unauthenticated -> navController.navigate("auth") {
-                popUpTo("main") { inclusive = true }
-                launchSingleTop = true
-            }
+            is AuthState.Authenticated ->
+                navController.navigate("main") {
+                    popUpTo("auth") { inclusive = true }
+                    launchSingleTop = true
+                }
+            is AuthState.Unauthenticated ->
+                navController.navigate("auth") {
+                    popUpTo("main") { inclusive = true }
+                    launchSingleTop = true
+                }
         }
     }
 

@@ -17,81 +17,95 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-public class FirebaseOtpUseCase @Inject constructor(
-    private val firebaseAuth: FirebaseAuth,
-) {
-    public fun sendOtp(
-        phoneNumber: String,
-        activity: Activity,
-        resendToken: PhoneAuthProvider.ForceResendingToken? = null,
-    ): Flow<OtpSendResult> = callbackFlow {
-        val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
-            override fun onVerificationCompleted(credential: PhoneAuthCredential) {
-                trySend(OtpSendResult.AutoVerified(credential))
-                close()
-            }
-
-            override fun onVerificationFailed(e: FirebaseException) {
-                trySend(OtpSendResult.Error(e))
-                close()
-            }
-
-            override fun onCodeSent(
-                verificationId: String,
-                token: PhoneAuthProvider.ForceResendingToken,
-            ) {
-                trySend(OtpSendResult.CodeSent(verificationId, token))
-                // channel stays open — awaiting auto-verify or user code submission
-            }
+public class FirebaseOtpUseCase
+    @Inject
+    constructor(
+        private val firebaseAuth: FirebaseAuth,
+    ) {
+        private companion object {
+            const val OTP_TIMEOUT_SECONDS = 60L
         }
 
-        val optionsBuilder = PhoneAuthOptions.newBuilder(firebaseAuth)
-            .setPhoneNumber(phoneNumber)
-            .setTimeout(60L, TimeUnit.SECONDS)
-            .setActivity(activity)
-            .setCallbacks(callbacks)
+        public fun sendOtp(
+            phoneNumber: String,
+            activity: Activity,
+            resendToken: PhoneAuthProvider.ForceResendingToken? = null,
+        ): Flow<OtpSendResult> =
+            callbackFlow {
+                val callbacks =
+                    object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+                        override fun onVerificationCompleted(credential: PhoneAuthCredential) {
+                            trySend(OtpSendResult.AutoVerified(credential))
+                            close()
+                        }
 
-        resendToken?.let { optionsBuilder.setForceResendingToken(it) }
+                        override fun onVerificationFailed(e: FirebaseException) {
+                            trySend(OtpSendResult.Error(e))
+                            close()
+                        }
 
-        PhoneAuthProvider.verifyPhoneNumber(optionsBuilder.build())
-        awaitClose()
-    }
-
-    public fun signInWithCredential(credential: PhoneAuthCredential): Flow<AuthResult> =
-        callbackFlow {
-            val executor = java.util.concurrent.Executor { it.run() }
-            firebaseAuth.signInWithCredential(credential)
-                .addOnSuccessListener(executor) { result ->
-                    val user = result.user
-                    if (user != null) {
-                        trySend(AuthResult.Success(user))
-                    } else {
-                        trySend(AuthResult.Error.General(IllegalStateException("null user after sign-in")))
+                        override fun onCodeSent(
+                            verificationId: String,
+                            token: PhoneAuthProvider.ForceResendingToken,
+                        ) {
+                            trySend(OtpSendResult.CodeSent(verificationId, token))
+                            // channel stays open — awaiting auto-verify or user code submission
+                        }
                     }
-                    close()
-                }
-                .addOnFailureListener(executor) { e ->
-                    val mapped = when {
-                        e is FirebaseAuthInvalidCredentialsException &&
-                            e.message?.contains("ERROR_INVALID_VERIFICATION_CODE") == true ->
-                            AuthResult.Error.WrongCode
 
-                        e.message?.contains("ERROR_SESSION_EXPIRED") == true ->
-                            AuthResult.Error.CodeExpired
+                val optionsBuilder =
+                    PhoneAuthOptions
+                        .newBuilder(firebaseAuth)
+                        .setPhoneNumber(phoneNumber)
+                        .setTimeout(OTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                        .setActivity(activity)
+                        .setCallbacks(callbacks)
 
-                        e.message?.contains("ERROR_TOO_MANY_REQUESTS") == true ->
-                            AuthResult.Error.RateLimited
+                resendToken?.let { optionsBuilder.setForceResendingToken(it) }
 
-                        else -> AuthResult.Error.General(e)
+                PhoneAuthProvider.verifyPhoneNumber(optionsBuilder.build())
+                awaitClose()
+            }
+
+        public fun signInWithCredential(credential: PhoneAuthCredential): Flow<AuthResult> =
+            callbackFlow {
+                val executor = java.util.concurrent.Executor { it.run() }
+                firebaseAuth
+                    .signInWithCredential(credential)
+                    .addOnSuccessListener(executor) { result ->
+                        val user = result.user
+                        if (user != null) {
+                            trySend(AuthResult.Success(user))
+                        } else {
+                            trySend(AuthResult.Error.General(IllegalStateException("null user after sign-in")))
+                        }
+                        close()
+                    }.addOnFailureListener(executor) { e ->
+                        val mapped =
+                            when {
+                                e is FirebaseAuthInvalidCredentialsException &&
+                                    e.message?.contains("ERROR_INVALID_VERIFICATION_CODE") == true ->
+                                    AuthResult.Error.WrongCode
+
+                                e.message?.contains("ERROR_SESSION_EXPIRED") == true ->
+                                    AuthResult.Error.CodeExpired
+
+                                e.message?.contains("ERROR_TOO_MANY_REQUESTS") == true ->
+                                    AuthResult.Error.RateLimited
+
+                                else -> AuthResult.Error.General(e)
+                            }
+                        trySend(mapped)
+                        close()
                     }
-                    trySend(mapped)
-                    close()
-                }
-            awaitClose()
+                awaitClose()
+            }
+
+        public fun verifyOtp(
+            verificationId: String,
+            code: String,
+        ): Flow<AuthResult> {
+            val credential = PhoneAuthProvider.getCredential(verificationId, code)
+            return signInWithCredential(credential)
         }
-
-    public fun verifyOtp(verificationId: String, code: String): Flow<AuthResult> {
-        val credential = PhoneAuthProvider.getCredential(verificationId, code)
-        return signInWithCredential(credential)
     }
-}

@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
-import com.homeservices.customer.domain.auth.model.BiometricResult
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -13,7 +12,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 public class BiometricGateUseCaseTest {
-
     private lateinit var context: Context
     private lateinit var biometricManager: BiometricManager
     private lateinit var useCase: BiometricGateUseCase

@@ -9,7 +9,11 @@ public sealed class OtpSendResult {
         val resendToken: PhoneAuthProvider.ForceResendingToken,
     ) : OtpSendResult()
 
-    public data class AutoVerified(val credential: PhoneAuthCredential) : OtpSendResult()
+    public data class AutoVerified(
+        val credential: PhoneAuthCredential,
+    ) : OtpSendResult()
 
-    public data class Error(val cause: Throwable) : OtpSendResult()
+    public data class Error(
+        val cause: Throwable,
+    ) : OtpSendResult()
 }

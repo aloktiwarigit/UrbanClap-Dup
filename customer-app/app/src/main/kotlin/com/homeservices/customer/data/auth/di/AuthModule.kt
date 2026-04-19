@@ -15,7 +15,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 public object AuthModule {
-
     @Provides
     @Singleton
     public fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
@@ -23,7 +22,9 @@ public object AuthModule {
     @Provides
     @Singleton
     @AuthPrefs
-    public fun provideAuthPrefs(@ApplicationContext context: Context): SharedPreferences {
+    public fun provideAuthPrefs(
+        @ApplicationContext context: Context,
+    ): SharedPreferences {
         val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
         return EncryptedSharedPreferences.create(
             "auth_session",

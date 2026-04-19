@@ -12,7 +12,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 public class TruecallerLoginUseCaseTest {
-
     private lateinit var useCase: TruecallerLoginUseCase
 
     @BeforeEach
@@ -21,40 +20,44 @@ public class TruecallerLoginUseCaseTest {
     }
 
     @Test
-    public fun `emits Success when SDK calls onSuccessProfileShared`(): Unit = runTest {
-        val profile = mockk<TrueProfile>()
+    public fun `emits Success when SDK calls onSuccessProfileShared`(): Unit =
+        runTest {
+            val profile = mockk<TrueProfile>()
 
-        useCase.simulateSdkCallback { callback ->
-            callback.onSuccessProfileShared(profile)
+            useCase.simulateSdkCallback { callback ->
+                callback.onSuccessProfileShared(profile)
+            }
+
+            val result = useCase.resultFlow.first()
+            assertThat(result).isInstanceOf(TruecallerAuthResult.Success::class.java)
+            assertThat((result as TruecallerAuthResult.Success).profile).isSameAs(profile)
         }
-
-        val result = useCase.resultFlow.first()
-        assertThat(result).isInstanceOf(TruecallerAuthResult.Success::class.java)
-        assertThat((result as TruecallerAuthResult.Success).profile).isSameAs(profile)
-    }
 
     @Test
-    public fun `emits Cancelled when SDK calls onVerificationRequired`(): Unit = runTest {
-        useCase.simulateSdkCallback { callback ->
-            callback.onVerificationRequired(null)
-        }
+    public fun `emits Cancelled when SDK calls onVerificationRequired`(): Unit =
+        runTest {
+            useCase.simulateSdkCallback { callback ->
+                callback.onVerificationRequired(null)
+            }
 
-        val result = useCase.resultFlow.first()
-        assertThat(result).isEqualTo(TruecallerAuthResult.Cancelled)
-    }
+            val result = useCase.resultFlow.first()
+            assertThat(result).isEqualTo(TruecallerAuthResult.Cancelled)
+        }
 
     @Test
-    public fun `emits Failure with errorType when SDK calls onFailureProfileShared`(): Unit = runTest {
-        val trueError = mockk<TrueError> {
-            every { errorType } returns 404
-        }
+    public fun `emits Failure with errorType when SDK calls onFailureProfileShared`(): Unit =
+        runTest {
+            val trueError =
+                mockk<TrueError> {
+                    every { errorType } returns 404
+                }
 
-        useCase.simulateSdkCallback { callback ->
-            callback.onFailureProfileShared(trueError)
-        }
+            useCase.simulateSdkCallback { callback ->
+                callback.onFailureProfileShared(trueError)
+            }
 
-        val result = useCase.resultFlow.first()
-        assertThat(result).isInstanceOf(TruecallerAuthResult.Failure::class.java)
-        assertThat((result as TruecallerAuthResult.Failure).errorType).isEqualTo(404)
-    }
+            val result = useCase.resultFlow.first()
+            assertThat(result).isInstanceOf(TruecallerAuthResult.Failure::class.java)
+            assertThat((result as TruecallerAuthResult.Failure).errorType).isEqualTo(404)
+        }
 }
