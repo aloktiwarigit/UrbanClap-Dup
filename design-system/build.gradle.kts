@@ -51,6 +51,9 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
+            // Required for JUnit 5 (Jupiter) test discovery under the Android AGP test runner.
+            // Without this, @Test-annotated functions are silently ignored (0 tests found).
+            all { it.useJUnitPlatform() }
         }
     }
 }
