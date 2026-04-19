@@ -93,6 +93,7 @@ private fun PhoneEntryContent(
     onPhoneSubmitted: (String) -> Unit,
 ) {
     var phone by remember { mutableStateOf(initialPhone) }
+    val isValidPhone = phone.trim().matches(Regex("""^\+[1-9]\d{9,14}$"""))
 
     Column(
         modifier =
@@ -134,7 +135,7 @@ private fun PhoneEntryContent(
         Spacer(modifier = Modifier.height(24.dp))
         Button(
             onClick = { onPhoneSubmitted(phone.trim()) },
-            enabled = phone.isNotBlank(),
+            enabled = isValidPhone,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Get OTP")
