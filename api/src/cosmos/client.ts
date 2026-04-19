@@ -1,4 +1,4 @@
-import { CosmosClient } from '@azure/cosmos';
+import { CosmosClient, type Container } from '@azure/cosmos';
 
 let _client: CosmosClient | null = null;
 
@@ -15,3 +15,16 @@ export function getCosmosClient(): CosmosClient {
 }
 
 export const DB_NAME = process.env.COSMOS_DATABASE ?? 'homeservices';
+
+export function getCatalogueContainers(): { categories: Container; services: Container } {
+  const db = getCosmosClient().database(DB_NAME);
+  return {
+    categories: db.container('service_categories'),
+    services: db.container('services'),
+  };
+}
+
+/** Inject a mock CosmosClient in tests. */
+export function _setCosmosClientForTest(mock: CosmosClient): void {
+  _client = mock;
+}
