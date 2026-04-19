@@ -18,7 +18,7 @@ import javax.inject.Singleton
 public class TruecallerLoginUseCase @Inject constructor() {
 
     private val _resultFlow = MutableSharedFlow<TruecallerAuthResult>(replay = 1)
-    internal val resultFlow: SharedFlow<TruecallerAuthResult> = _resultFlow.asSharedFlow()
+    public val resultFlow: SharedFlow<TruecallerAuthResult> = _resultFlow.asSharedFlow()
 
     internal val sdkCallback: ITrueCallback = object : ITrueCallback {
         override fun onSuccessProfileShared(profile: TrueProfile) {

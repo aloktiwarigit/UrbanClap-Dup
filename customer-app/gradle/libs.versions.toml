@@ -36,6 +36,7 @@ kover = "0.9.0"
 androidJunit5 = "1.11.2.0"
 
 # Test
+coroutines = "1.8.1"
 coroutinesTest = "1.8.1"
 junit5 = "5.11.3"
 mockk = "1.13.13"
@@ -90,6 +91,7 @@ assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTestCore" }
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTestRunner" }
+kotlinx-coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutinesTest" }
 
 [plugins]

@@ -2,15 +2,15 @@ package com.homeservices.customer.domain.auth.model
 
 import com.google.firebase.auth.FirebaseUser
 
-internal sealed class AuthResult {
-    data class Success(val user: FirebaseUser) : AuthResult()
-    data object Cancelled : AuthResult()
-    data object Unavailable : AuthResult()
+public sealed class AuthResult {
+    public data class Success(val user: FirebaseUser) : AuthResult()
+    public data object Cancelled : AuthResult()
+    public data object Unavailable : AuthResult()
 
-    internal sealed class Error : AuthResult() {
-        data class General(val cause: Throwable) : Error()
-        data object RateLimited : Error()
-        data object WrongCode : Error()
-        data object CodeExpired : Error()
+    public sealed class Error : AuthResult() {
+        public data class General(val cause: Throwable) : Error()
+        public data object RateLimited : Error()
+        public data object WrongCode : Error()
+        public data object CodeExpired : Error()
     }
 }

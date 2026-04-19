@@ -209,6 +209,9 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth.ktx)
 
+    // Coroutines — play-services extensions (.await() on Task<T>)
+    implementation(libs.kotlinx.coroutines.play.services)
+
     // Auth SDKs
     implementation(libs.truecaller.sdk)
     implementation(libs.androidx.security.crypto)

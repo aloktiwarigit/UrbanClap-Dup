@@ -12,16 +12,15 @@ import com.homeservices.customer.domain.auth.model.OtpSendResult
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 public class FirebaseOtpUseCase @Inject constructor(
     private val firebaseAuth: FirebaseAuth,
-    /** Executor for Firebase task callbacks. Defaults to direct (inline) execution. */
-    private val callbackExecutor: Executor = Executor { it.run() },
 ) {
-    internal fun sendOtp(
+    public fun sendOtp(
         phoneNumber: String,
         activity: Activity,
         resendToken: PhoneAuthProvider.ForceResendingToken? = null,
@@ -58,10 +57,11 @@ public class FirebaseOtpUseCase @Inject constructor(
         awaitClose()
     }
 
-    internal fun signInWithCredential(credential: PhoneAuthCredential): Flow<AuthResult> =
+    public fun signInWithCredential(credential: PhoneAuthCredential): Flow<AuthResult> =
         callbackFlow {
+            val executor = java.util.concurrent.Executor { it.run() }
             firebaseAuth.signInWithCredential(credential)
-                .addOnSuccessListener(callbackExecutor) { result ->
+                .addOnSuccessListener(executor) { result ->
                     val user = result.user
                     if (user != null) {
                         trySend(AuthResult.Success(user))
@@ -70,7 +70,7 @@ public class FirebaseOtpUseCase @Inject constructor(
                     }
                     close()
                 }
-                .addOnFailureListener(callbackExecutor) { e ->
+                .addOnFailureListener(executor) { e ->
                     val mapped = when {
                         e is FirebaseAuthInvalidCredentialsException &&
                             e.message?.contains("ERROR_INVALID_VERIFICATION_CODE") == true ->
@@ -90,7 +90,7 @@ public class FirebaseOtpUseCase @Inject constructor(
             awaitClose()
         }
 
-    internal fun verifyOtp(verificationId: String, code: String): Flow<AuthResult> {
+    public fun verifyOtp(verificationId: String, code: String): Flow<AuthResult> {
         val credential = PhoneAuthProvider.getCredential(verificationId, code)
         return signInWithCredential(credential)
     }
