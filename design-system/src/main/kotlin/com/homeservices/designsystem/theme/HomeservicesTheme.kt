@@ -2,23 +2,10 @@ package com.homeservices.designsystem.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-
-/**
- * Pure dark-mode-selection helpers extracted from [HomeservicesTheme] so the
- * `if (darkTheme)` branches are unit-testable under Kover (Composable function
- * bodies run under Paparazzi's layoutlib classloader which Kover does not
- * instrument; see plan B10). The Composable wrapper delegates to these.
- */
-internal fun selectColorScheme(darkTheme: Boolean): ColorScheme =
-    if (darkTheme) HomeservicesDarkColorScheme else HomeservicesLightColorScheme
-
-internal fun selectExtendedColors(darkTheme: Boolean): HomeservicesExtendedColors =
-    if (darkTheme) HomeservicesExtendedColorsDark else HomeservicesExtendedColorsLight
 
 /**
  * Canonical Compose theme wrapper for the homeservices-mvp Android apps.

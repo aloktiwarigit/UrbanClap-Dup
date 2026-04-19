@@ -135,17 +135,20 @@ kover {
             rule {
                 minBound(80, kotlinx.kover.gradle.plugin.dsl.CoverageUnit.LINE)
                 minBound(80, kotlinx.kover.gradle.plugin.dsl.CoverageUnit.INSTRUCTION)
-                // BRANCH threshold intentionally omitted for this module.
-                // The Compose compiler inserts synthetic branches into @Composable function
-                // bodies (recomposition-tracking conditionals) that Kover counts but cannot
-                // cover via plain JUnit tests — HomeservicesTheme shows 10 such branches, of
-                // which only the 4 real if(darkTheme) branches are reachable via the extracted
-                // selectColorScheme / selectExtendedColors helpers (tested in ThemeSelectorsTest).
-                // The remaining synthetic branches can only be exercised via Paparazzi under
-                // layoutlib, which Kover does not instrument (plan B10). LINE + INSTRUCTION
-                // gates remain at 80% and are honest signals for this module.
+                // BRANCH threshold intentionally omitted for this module — see comment
+                // below the rule. (Kover 0.9's `reports.filters.excludes` does not reach
+                // verify rules, so we can't carve HomeservicesThemeKt's Compose-compiler
+                // synthetic branches out of the branch count. LINE + INSTRUCTION gates
+                // are honest signals; BRANCH on @Composable-heavy modules is noise.)
             }
         }
+        // Compose compiler inserts ~10 synthetic recomposition-tracking conditional branches
+        // into every @Composable function body. These branches are counted by Kover but can
+        // only be exercised under Paparazzi's layoutlib classloader, which Kover does not
+        // instrument (plan B10). The real dark-mode-selection branches from HomeservicesTheme
+        // are extracted into theme/ThemeSelectors.kt (`selectColorScheme` + `selectExtendedColors`)
+        // and covered by ThemeSelectorsTest — verifiable in Kover because the file compiles
+        // into its own `ThemeSelectorsKt` class which is NOT in the exclusion list below.
     }
 }
 
