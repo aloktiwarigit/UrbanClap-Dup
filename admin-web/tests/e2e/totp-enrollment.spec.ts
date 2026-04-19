@@ -1,14 +1,15 @@
 import { test, expect } from '@playwright/test';
-import { makeAccessJwt } from './helpers/make-token';
+import { makeAccessJwt, makeFakeFirebaseIdToken } from './helpers/make-token';
 
 test.describe('TOTP enrollment (first login)', () => {
   test('redirects to /setup after first login and shows QR code', async ({ page }) => {
+    const firebaseIdToken = await makeFakeFirebaseIdToken('uid123', 'admin@test.com');
     await page.route('**/identitytoolkit.googleapis.com/**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          idToken: 'mock-firebase-id-token',
+          idToken: firebaseIdToken,
           email: 'admin@test.com',
           refreshToken: 'mock-refresh',
           expiresIn: '3600',

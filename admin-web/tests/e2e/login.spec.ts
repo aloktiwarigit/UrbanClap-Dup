@@ -1,15 +1,16 @@
 import { test, expect } from '@playwright/test';
-import { makeAccessJwt } from './helpers/make-token';
+import { makeAccessJwt, makeFakeFirebaseIdToken } from './helpers/make-token';
 
 test.describe('Login flow', () => {
   test.beforeEach(async ({ page }) => {
-    const token = await makeAccessJwt('u1', 'super-admin');
+    const cookieToken = await makeAccessJwt('u1', 'super-admin');
+    const firebaseIdToken = await makeFakeFirebaseIdToken('uid123', 'admin@test.com');
     await page.route('**/identitytoolkit.googleapis.com/**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          idToken: 'mock-firebase-id-token',
+          idToken: firebaseIdToken,
           email: 'admin@test.com',
           refreshToken: 'mock-refresh',
           expiresIn: '3600',
@@ -23,7 +24,7 @@ test.describe('Login flow', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ adminId: 'u1', role: 'super-admin', email: 'a@b.com' }),
-        headers: { 'set-cookie': `hs_access=${token}; Path=/; HttpOnly` },
+        headers: { 'set-cookie': `hs_access=${cookieToken}; Path=/; HttpOnly` },
       }),
     );
   });
@@ -50,7 +51,7 @@ test.describe('Login flow', () => {
     await page.fill('input[type="password"]', 'password');
     await page.fill('input[inputmode="numeric"]', '000000');
     await page.click('button[type="submit"]');
-    await expect(page.getByRole('alert')).toContainText('Invalid authenticator code');
+    await expect(page.locator('p[role="alert"]')).toContainText('Invalid authenticator code');
     await expect(page).toHaveURL(/\/login/);
   });
 });
