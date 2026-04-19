@@ -81,33 +81,34 @@ public class AuthViewModel
             sendOtpJob?.cancel()
             currentPhoneNumber = phoneNumber
             _uiState.value = AuthUiState.OtpSending
-            sendOtpJob = viewModelScope.launch {
-                orchestrator.sendOtp(phoneNumber, activity, resendToken).collect { result ->
-                    when (result) {
-                        is OtpSendResult.CodeSent -> {
-                            currentVerificationId = result.verificationId
-                            currentResendToken = result.resendToken
-                            _uiState.value =
-                                AuthUiState.OtpEntry(
-                                    phoneNumber = phoneNumber,
-                                    verificationId = result.verificationId,
-                                )
-                        }
-                        is OtpSendResult.AutoVerified -> {
-                            orchestrator.signInWithCredential(result.credential).collect { authResult ->
-                                handleFirebaseAuthResult(authResult)
+            sendOtpJob =
+                viewModelScope.launch {
+                    orchestrator.sendOtp(phoneNumber, activity, resendToken).collect { result ->
+                        when (result) {
+                            is OtpSendResult.CodeSent -> {
+                                currentVerificationId = result.verificationId
+                                currentResendToken = result.resendToken
+                                _uiState.value =
+                                    AuthUiState.OtpEntry(
+                                        phoneNumber = phoneNumber,
+                                        verificationId = result.verificationId,
+                                    )
                             }
-                        }
-                        is OtpSendResult.Error -> {
-                            _uiState.value =
-                                AuthUiState.Error(
-                                    message = "Failed to send OTP. Check your number and connection.",
-                                    retriesLeft = MAX_OTP_RETRIES,
-                                )
+                            is OtpSendResult.AutoVerified -> {
+                                orchestrator.signInWithCredential(result.credential).collect { authResult ->
+                                    handleFirebaseAuthResult(authResult)
+                                }
+                            }
+                            is OtpSendResult.Error -> {
+                                _uiState.value =
+                                    AuthUiState.Error(
+                                        message = "Failed to send OTP. Check your number and connection.",
+                                        retriesLeft = MAX_OTP_RETRIES,
+                                    )
+                            }
                         }
                     }
                 }
-            }
         }
 
         public fun onOtpEntered(code: String) {
