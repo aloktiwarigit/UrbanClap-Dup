@@ -11,22 +11,23 @@ name: paparazzi-record
 # Usage:
 #   gh workflow run paparazzi-record.yml \
 #     -f gradle_root=customer-app \
-#     -f gradle_task=:app:recordPaparazziDebug \
-#     -f snapshot_dir=customer-app/app/src/test/snapshots
+#     -f gradle_task=:app:recordPaparazziDebug
 #
 # After the run completes:
-#   1. Download the "paparazzi-snapshots" artifact from the Actions tab.
-#   2. Unzip into the `snapshot_dir` (replacing existing PNGs).
+#   1. Download the `paparazzi-snapshots-<gradle_root>` artifact from the Actions tab.
+#   2. The artifact preserves the on-disk layout starting from the repo root, so unzip
+#      it AT the repo root — files land directly at `<gradle_root>/.../src/test/snapshots/**`
+#      replacing any existing PNGs.
 #   3. Commit the new goldens.
 #   4. Push — next `verifyPaparazziDebug` run passes at the strict 0.1% default.
 #
-# Valid input triples in this repo:
+# Valid input pairs in this repo:
 #
-#   | gradle_root     | gradle_task                  | snapshot_dir                                    |
-#   |-----------------|------------------------------|-------------------------------------------------|
-#   | customer-app    | :app:recordPaparazziDebug    | customer-app/app/src/test/snapshots             |
-#   | technician-app  | :app:recordPaparazziDebug    | technician-app/app/src/test/snapshots           |
-#   | design-system   | :recordPaparazziDebug        | design-system/src/test/snapshots                |
+#   | gradle_root     | gradle_task                  |
+#   |-----------------|------------------------------|
+#   | customer-app    | :app:recordPaparazziDebug    |
+#   | technician-app  | :app:recordPaparazziDebug    |
+#   | design-system   | :recordPaparazziDebug        |
 
 on:
   workflow_dispatch:
@@ -39,10 +40,10 @@ on:
         description: 'Task path to run (e.g. ":app:recordPaparazziDebug" for app modules, ":recordPaparazziDebug" for standalone roots)'
         required: true
         default: ':app:recordPaparazziDebug'
-      snapshot_dir:
-        description: 'Path (from repo root) to the snapshots dir to upload as artifact'
-        required: true
-        default: 'customer-app/app/src/test/snapshots'
+      # `snapshot_dir` is intentionally NOT a user input — computed automatically from
+      # gradle_root by globbing **/src/test/snapshots/** scoped to that root. This prevents
+      # mismatched-triple bugs where a user could select gradle_root=design-system but leave
+      # snapshot_dir at the customer-app default and upload stale snapshots.
 
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.gradle_root }}-${{ inputs.gradle_task }}
@@ -74,7 +75,9 @@ jobs:
       - name: upload recorded snapshots
         uses: actions/upload-artifact@v4
         with:
-          name: paparazzi-snapshots
-          path: ${{ inputs.snapshot_dir }}/**
+          name: paparazzi-snapshots-${{ inputs.gradle_root }}
+          # Scoped to gradle_root to guarantee the artifact matches the task that just ran —
+          # prevents mismatched-triple bugs (e.g. record design-system, upload customer-app).
+          path: ${{ inputs.gradle_root }}/**/src/test/snapshots/**
           if-no-files-found: error
           retention-days: 7
