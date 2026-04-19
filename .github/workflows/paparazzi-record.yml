@@ -15,9 +15,12 @@ name: paparazzi-record
 #
 # After the run completes:
 #   1. Download the `paparazzi-snapshots-<gradle_root>` artifact from the Actions tab.
-#   2. The artifact preserves the on-disk layout starting from the repo root, so unzip
-#      it AT the repo root — files land directly at `<gradle_root>/.../src/test/snapshots/**`
-#      replacing any existing PNGs.
+#   2. UNZIP INSIDE the selected `gradle_root` directory. `actions/upload-artifact@v4`
+#      strips the common non-wildcard prefix from the archive, so artifact entries are
+#      relative to `<gradle_root>/`. Unzipping at repo root would create
+#      `app/src/test/snapshots/...` at the wrong place; unzip inside `customer-app/`
+#      (or `technician-app/`, or `design-system/`) so files land at the correct path.
+#      Example: `cd customer-app && unzip ~/Downloads/paparazzi-snapshots-customer-app.zip`.
 #   3. Commit the new goldens.
 #   4. Push — next `verifyPaparazziDebug` run passes at the strict 0.1% default.
 #
