@@ -11,6 +11,7 @@ plugins {
     alias(libs.plugins.paparazzi)
     alias(libs.plugins.kover)
     alias(libs.plugins.android.junit5)
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -203,6 +204,16 @@ dependencies {
 
     implementation(libs.sentry.android)
 
+    // Firebase (BOM manages all Firebase library versions)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth.ktx)
+
+    // Auth SDKs
+    implementation(libs.truecaller.sdk)
+    implementation(libs.androidx.security.crypto)
+    implementation(libs.androidx.biometric)
+    implementation(libs.androidx.navigation.compose)
+
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.jupiter.api)
     testRuntimeOnly(libs.junit.jupiter.engine)
@@ -213,6 +224,7 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.hilt.testing)
+    testImplementation(libs.kotlinx.coroutines.test)
     kspTest(libs.hilt.compiler)
 
     androidTestImplementation(libs.hilt.testing)
