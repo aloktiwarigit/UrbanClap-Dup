@@ -1,3 +1,5 @@
+@file:Suppress("MatchingDeclarationName")
+
 package com.homeservices.designsystem.theme
 
 import androidx.compose.runtime.ProvidableCompositionLocal

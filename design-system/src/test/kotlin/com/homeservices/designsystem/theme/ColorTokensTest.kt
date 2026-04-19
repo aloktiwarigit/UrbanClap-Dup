@@ -79,8 +79,10 @@ internal class ColorTokensTest {
     }
 
     @Test
-    internal fun lightColorScheme_onSecondary_isWhite() {
-        assertThat(HomeservicesLightColorScheme.onSecondary).isEqualTo(Color.White)
+    internal fun lightColorScheme_onSecondary_isDarkWarmBrown() {
+        // Dark warm brown to hit WCAG AA ≥4.5:1 on coral BrandAccentLight
+        // (white on coral #EF6F4B = 2.98:1, fails both normal and large-text AA).
+        assertThat(HomeservicesLightColorScheme.onSecondary).isEqualTo(Color(0xFF3D1A0E))
     }
 
     @Test
@@ -148,8 +150,10 @@ internal class ColorTokensTest {
     }
 
     @Test
-    internal fun darkColorScheme_onPrimary_matchesUxSpec() {
-        assertThat(HomeservicesDarkColorScheme.onPrimary).isEqualTo(Color(0xFF0A2E2A))
+    internal fun darkColorScheme_onPrimary_isBlack() {
+        // Pure black chosen to hit WCAG AA ≥4.5:1 on medium teal BrandPrimaryDark
+        // (#0A2E2A deep teal on #1E8378 medium teal = 3.18:1, fails normal-text AA).
+        assertThat(HomeservicesDarkColorScheme.onPrimary).isEqualTo(Color.Black)
     }
 
     @Test
@@ -186,7 +190,9 @@ internal class ColorTokensTest {
 
     @Test
     internal fun darkColorScheme_onError_matchesUxSpec() {
-        assertThat(HomeservicesDarkColorScheme.onError).isEqualTo(Color(0xFF4A0E0E))
+        // Deeper wine red (0x3A0A0A vs spec 0x4A0E0E) for WCAG AA ≥4.5:1 on #EC5252
+        // (0x4A0E0E was 4.33:1, 0.17 short of 4.5 — deepening 0x10 hits 4.8:1).
+        assertThat(HomeservicesDarkColorScheme.onError).isEqualTo(Color(0xFF3A0A0A))
     }
 
     // ── Dark ColorScheme: neutral/surface slots ───────────────────────────────

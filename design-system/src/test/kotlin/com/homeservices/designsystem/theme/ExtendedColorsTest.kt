@@ -31,7 +31,7 @@ internal class ExtendedColorsTest {
     }
 
     @Test
-    internal fun extendedLight_brandPrimaryHover_matchesBrandPrimaryHoverLight() {
+    internal fun extendedLight_brandPrimaryHover_matchesSpec() {
         assertThat(HomeservicesExtendedColorsLight.brandPrimaryHover).isEqualTo(Color(0xFF0A3D37))
     }
 
@@ -53,7 +53,7 @@ internal class ExtendedColorsTest {
     }
 
     @Test
-    internal fun extendedDark_brandPrimaryHover_matchesBrandPrimaryHoverDark() {
+    internal fun extendedDark_brandPrimaryHover_matchesSpec() {
         assertThat(HomeservicesExtendedColorsDark.brandPrimaryHover).isEqualTo(Color(0xFF2BA08F))
     }
 

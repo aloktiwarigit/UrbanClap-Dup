@@ -112,11 +112,11 @@ public object HomeservicesColors {
  * Material 3 light colour scheme for Homeservices, derived from UX §5.1.
  *
  * Slot mapping summary:
- * - primary / onPrimary          — brand teal / white
- * - primaryContainer             — light teal tint (#CFEBELITE5)
- * - secondary / onSecondary      — coral accent / white
+ * - primary / onPrimary          — brand teal / white (≥9:1 AA)
+ * - primaryContainer             — light teal tint (#CFEBE5)
+ * - secondary / onSecondary      — coral accent / dark warm brown (≥5:1 AA — white fails on coral)
  * - tertiary                     — info blue
- * - error / onError              — danger red / white
+ * - error / onError              — danger red / white (≥4.5:1 AA)
  * - background / onBackground    — Neutral-0 / Neutral-900
  * - surface / onSurface          — Neutral-50 / Neutral-900
  * - surfaceVariant / onSurfaceVariant — Neutral-100 / Neutral-500 (large-text per NFR-A-5)
@@ -129,7 +129,7 @@ public val HomeservicesLightColorScheme: ColorScheme =
         primaryContainer = Color(0xFFCFEBE5),
         onPrimaryContainer = BrandPrimaryLight,
         secondary = BrandAccentLight,
-        onSecondary = Color.White,
+        onSecondary = Color(0xFF3D1A0E),
         tertiary = SemanticInfoLight,
         error = SemanticDangerLight,
         onError = Color.White,
@@ -147,11 +147,11 @@ public val HomeservicesLightColorScheme: ColorScheme =
  * Material 3 dark colour scheme for Homeservices, derived from UX §5.1.
  *
  * Slot mapping summary:
- * - primary / onPrimary          — brand teal dark / deep teal (#0A2E2A)
+ * - primary / onPrimary          — brand teal dark / pure black (≥8:1 AA — deep teal on medium teal is ~3:1)
  * - primaryContainer             — brand teal dark (reused as container)
- * - secondary / onSecondary      — coral accent dark / deep coral (#4A1B0E)
+ * - secondary / onSecondary      — coral accent dark / deep coral (≥5:1 AA)
  * - tertiary                     — info blue dark
- * - error / onError              — danger red dark / deep red (#4A0E0E)
+ * - error / onError              — danger red dark / deeper wine red (≥4.5:1 AA)
  * - background / onBackground    — Neutral-0-dark / Neutral-900-dark
  * - surface / onSurface          — Neutral-50-dark / Neutral-900-dark
  * - surfaceVariant / onSurfaceVariant — Neutral-100-dark / Neutral-500-dark (large-text per NFR-A-5)
@@ -160,14 +160,14 @@ public val HomeservicesLightColorScheme: ColorScheme =
 public val HomeservicesDarkColorScheme: ColorScheme =
     darkColorScheme(
         primary = BrandPrimaryDark,
-        onPrimary = Color(0xFF0A2E2A),
+        onPrimary = Color.Black,
         primaryContainer = BrandPrimaryDark,
         onPrimaryContainer = Color.White,
         secondary = BrandAccentDark,
         onSecondary = Color(0xFF4A1B0E),
         tertiary = SemanticInfoDark,
         error = SemanticDangerDark,
-        onError = Color(0xFF4A0E0E),
+        onError = Color(0xFF3A0A0A),
         background = Neutral0Dark,
         onBackground = Neutral900Dark,
         surface = Neutral50Dark,
