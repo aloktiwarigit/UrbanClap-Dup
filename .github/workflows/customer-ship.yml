@@ -5,13 +5,17 @@ on:
     branches: [main]
     paths:
       - 'customer-app/**'
+      - 'design-system/**'
       - '.github/workflows/customer-ship.yml'
+      - 'tools/check-shared-versions.sh'
       - '.codex-review-passed'
   push:
     branches: [main]
     paths:
       - 'customer-app/**'
+      - 'design-system/**'
       - '.github/workflows/customer-ship.yml'
+      - 'tools/check-shared-versions.sh'
       - '.codex-review-passed'
 
 concurrency:
@@ -48,7 +52,16 @@ jobs:
             test -f "$f" || { echo "::error::missing $f"; exit 1; }
           done
 
-      - name: libs.versions.toml drift check
+      - name: shared toolchain versions drift check
+        working-directory: ${{ github.workspace }}
+        run: bash tools/check-shared-versions.sh
+
+      # Catalog drift check covers the two APP catalogs only.
+      # design-system/gradle/libs.versions.toml is intentionally divergent
+      # (no Hilt/Sentry/Activity/Lifecycle in the design-system module).
+      # Shared toolchain versions (Kotlin, AGP, Compose BOM, Paparazzi, Kover, Detekt, ktlint)
+      # are gated separately by tools/check-shared-versions.sh above.
+      - name: app-catalog byte-identity drift check
         working-directory: ${{ github.workspace }}
         run: |
           if ! diff -q customer-app/gradle/libs.versions.toml technician-app/gradle/libs.versions.toml > /dev/null; then
@@ -56,7 +69,7 @@ jobs:
             diff customer-app/gradle/libs.versions.toml technician-app/gradle/libs.versions.toml
             exit 1
           fi
-          echo "catalog-drift check OK"
+          echo "app-catalog drift check OK"
 
       - name: ktlint
         run: ./gradlew ktlintCheck

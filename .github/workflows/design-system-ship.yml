@@ -1,20 +1,18 @@
-name: technician-ship
+name: design-system-ship
 
 on:
   pull_request:
     branches: [main]
     paths:
-      - 'technician-app/**'
       - 'design-system/**'
-      - '.github/workflows/technician-ship.yml'
+      - '.github/workflows/design-system-ship.yml'
       - 'tools/check-shared-versions.sh'
       - '.codex-review-passed'
   push:
     branches: [main]
     paths:
-      - 'technician-app/**'
       - 'design-system/**'
-      - '.github/workflows/technician-ship.yml'
+      - '.github/workflows/design-system-ship.yml'
       - 'tools/check-shared-versions.sh'
       - '.codex-review-passed'
 
@@ -31,7 +29,7 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: technician-app
+        working-directory: design-system
 
     steps:
       - uses: actions/checkout@v4
@@ -56,21 +54,6 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: bash tools/check-shared-versions.sh
 
-      # Catalog drift check covers the two APP catalogs only.
-      # design-system/gradle/libs.versions.toml is intentionally divergent
-      # (no Hilt/Sentry/Activity/Lifecycle in the design-system module).
-      # Shared toolchain versions (Kotlin, AGP, Compose BOM, Paparazzi, Kover, Detekt, ktlint)
-      # are gated separately by tools/check-shared-versions.sh above.
-      - name: app-catalog byte-identity drift check
-        working-directory: ${{ github.workspace }}
-        run: |
-          if ! diff -q technician-app/gradle/libs.versions.toml customer-app/gradle/libs.versions.toml > /dev/null; then
-            echo "::error::libs.versions.toml drifted between technician-app and customer-app"
-            diff technician-app/gradle/libs.versions.toml customer-app/gradle/libs.versions.toml
-            exit 1
-          fi
-          echo "app-catalog drift check OK"
-
       - name: ktlint
         run: ./gradlew ktlintCheck
 
@@ -89,8 +72,8 @@ jobs:
       - name: paparazzi screenshot diff
         run: ./gradlew verifyPaparazziDebug
 
-      - name: assemble debug APK
-        run: ./gradlew assembleDebug
+      - name: assemble release AAR
+        run: ./gradlew assembleRelease
 
       - name: semgrep SAST
         uses: returntocorp/semgrep-action@v1
@@ -106,15 +89,8 @@ jobs:
             exit 1
           fi
           MARKER_SHA=$(jq -r .commit .codex-review-passed)
-          # On pull_request events, actions/checkout@v4 checks out the synthetic
-          # merge commit, which would make `git rev-parse HEAD` include main-branch
-          # changes since the marker was created. Use the PR head SHA instead so
-          # the scope-diff only compares against the PR's own commits.
           HEAD_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
 
-          # marker SHA must be an ancestor of HEAD and nothing outside the
-          # allowed scope (.codex-review-passed or docs/reviews/**) may have
-          # changed since the marker commit
           if ! git merge-base --is-ancestor "$MARKER_SHA" "$HEAD_SHA"; then
             echo "::error::marker SHA $MARKER_SHA is not an ancestor of HEAD ($HEAD_SHA) — rerun /codex-review-gate"
             exit 1
