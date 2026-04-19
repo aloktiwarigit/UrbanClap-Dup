@@ -77,6 +77,10 @@ public class SentryInitializerTest {
         val capturedOptions = SentryAndroidOptions()
         configSlot.captured.configure(capturedOptions)
         assertThat(capturedOptions.dsn).isEqualTo("https://key@o0.ingest.sentry.io/0")
-        assertThat(capturedOptions.tracesSampleRate).isEqualTo(0.1)
+        assertThat(capturedOptions.tracesSampleRate).isEqualTo(EXPECTED_TRACES_SAMPLE_RATE)
+    }
+
+    private companion object {
+        const val EXPECTED_TRACES_SAMPLE_RATE: Double = 0.1
     }
 }
