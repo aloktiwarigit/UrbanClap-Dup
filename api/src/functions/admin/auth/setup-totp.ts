@@ -32,6 +32,9 @@ export async function setupTotpGetHandler(
   if (!adminUser || adminUser.deactivatedAt) {
     return { status: 401, jsonBody: { code: 'ADMIN_NOT_FOUND' } };
   }
+  if (adminUser.totpEnrolled) {
+    return { status: 409, jsonBody: { code: 'ALREADY_ENROLLED' } };
+  }
 
   let secret: string;
   if (adminUser.totpSecretPending) {
@@ -67,7 +70,13 @@ export async function setupTotpPostHandler(
   }
 
   const adminUser = await getAdminUserById(setupPayload.sub);
-  if (!adminUser || !adminUser.totpSecretPending || adminUser.deactivatedAt) {
+  if (!adminUser || adminUser.deactivatedAt) {
+    return { status: 401, jsonBody: { code: 'ADMIN_NOT_FOUND' } };
+  }
+  if (adminUser.totpEnrolled) {
+    return { status: 409, jsonBody: { code: 'ALREADY_ENROLLED' } };
+  }
+  if (!adminUser.totpSecretPending) {
     return { status: 409, jsonBody: { code: 'SETUP_NOT_INITIATED' } };
   }
 
