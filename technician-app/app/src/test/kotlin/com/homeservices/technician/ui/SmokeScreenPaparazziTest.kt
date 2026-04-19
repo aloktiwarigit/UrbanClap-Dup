@@ -2,11 +2,14 @@ package com.homeservices.technician.ui
 
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
+import com.homeservices.designsystem.theme.HomeservicesTheme
 import com.homeservices.technician.di.BuildInfoProvider
-import com.homeservices.technician.ui.theme.HomeservicesTechnicianTheme
 import org.junit.Rule
 import org.junit.Test
 
+// Paparazzi falls back to FontFamily.Default for variable-font TTFs under Robolectric
+// (FontLoadingStrategy.OptionalLocal in design-system Typography.kt). Production APKs
+// render Geist Sans correctly; snapshots render system default. Pixel-lock accepts this.
 public class SmokeScreenPaparazziTest {
     @get:Rule
     public val paparazzi: Paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
@@ -20,7 +23,7 @@ public class SmokeScreenPaparazziTest {
     @Test
     public fun smokeScreenLightThemeMatchesSnapshot(): Unit {
         paparazzi.snapshot {
-            HomeservicesTechnicianTheme(darkTheme = false) {
+            HomeservicesTheme(darkTheme = false) {
                 SmokeScreen(buildInfo = fakeBuildInfo)
             }
         }
@@ -29,7 +32,7 @@ public class SmokeScreenPaparazziTest {
     @Test
     public fun smokeScreenDarkThemeMatchesSnapshot(): Unit {
         paparazzi.snapshot {
-            HomeservicesTechnicianTheme(darkTheme = true) {
+            HomeservicesTheme(darkTheme = true) {
                 SmokeScreen(buildInfo = fakeBuildInfo)
             }
         }
