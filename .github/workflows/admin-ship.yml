@@ -114,13 +114,11 @@ jobs:
             exit 1
           fi
           # GitHub PR CI checks out a synthetic merge commit (HEAD = merge of branch
-          # into main). Files committed to main after this branch was cut appear in the
-          # MARKER_SHA..HEAD diff even though they're not part of this PR. Use HEAD^1
-          # (the branch tip = first parent of the merge commit) so we only diff against
-          # our PR's own commits. On a direct push HEAD^2 doesn't exist, so fall back
-          # to HEAD itself.
+          # into main). In this merge commit parent1=base-branch(main), parent2=PR-branch.
+          # Use HEAD^2 (the PR branch tip) so we only diff against our own commits.
+          # On a direct push to main there is no merge commit, so fall back to HEAD.
           if git cat-file -e HEAD^2 2>/dev/null; then
-            BRANCH_TIP=$(git rev-parse HEAD^1)
+            BRANCH_TIP=$(git rev-parse HEAD^2)
           else
             BRANCH_TIP=$HEAD_SHA
           fi
