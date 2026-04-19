@@ -5,6 +5,7 @@ import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontLoadingStrategy
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
@@ -29,24 +30,28 @@ public val HomeservicesFontFamily: FontFamily =
             resId = R.font.geist_sans_variable,
             weight = FontWeight.Normal,
             style = FontStyle.Normal,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
             variationSettings = FontVariation.Settings(FontVariation.weight(400)),
         ),
         Font(
             resId = R.font.geist_sans_variable,
             weight = FontWeight.Medium,
             style = FontStyle.Normal,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
             variationSettings = FontVariation.Settings(FontVariation.weight(500)),
         ),
         Font(
             resId = R.font.geist_sans_variable,
             weight = FontWeight.SemiBold,
             style = FontStyle.Normal,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
             variationSettings = FontVariation.Settings(FontVariation.weight(600)),
         ),
         Font(
             resId = R.font.geist_sans_variable,
             weight = FontWeight.Bold,
             style = FontStyle.Normal,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
             variationSettings = FontVariation.Settings(FontVariation.weight(700)),
         ),
     )
