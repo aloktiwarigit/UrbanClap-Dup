@@ -1,0 +1,88 @@
+name: paparazzi-record
+
+# Manually-triggered workflow that runs `recordPaparazziDebug` on the Linux CI runner
+# and uploads the recorded snapshots/ directory as an artifact.
+#
+# Why: Paparazzi renders via layoutlib which is host-OS-sensitive for text antialiasing.
+# Windows-recorded goldens DIVERGE from Linux CI renders by ~3-5% — well above Paparazzi's
+# default 0.1% threshold. Recording on CI is the correct source of goldens; local recording
+# produces flaky CI runs or forces loose maxPercentDifference overrides.
+#
+# Usage:
+#   gh workflow run paparazzi-record.yml \
+#     -f gradle_root=customer-app \
+#     -f gradle_task=:app:recordPaparazziDebug
+#
+# After the run completes:
+#   1. Download the `paparazzi-snapshots-<gradle_root>` artifact from the Actions tab.
+#   2. UNZIP INSIDE the selected `gradle_root` directory. `actions/upload-artifact@v4`
+#      strips the common non-wildcard prefix from the archive, so artifact entries are
+#      relative to `<gradle_root>/`. Unzipping at repo root would create
+#      `app/src/test/snapshots/...` at the wrong place; unzip inside `customer-app/`
+#      (or `technician-app/`, or `design-system/`) so files land at the correct path.
+#      Example: `cd customer-app && unzip ~/Downloads/paparazzi-snapshots-customer-app.zip`.
+#   3. Commit the new goldens.
+#   4. Push — next `verifyPaparazziDebug` run passes at the strict 0.1% default.
+#
+# Valid input pairs in this repo:
+#
+#   | gradle_root     | gradle_task                  |
+#   |-----------------|------------------------------|
+#   | customer-app    | :app:recordPaparazziDebug    |
+#   | technician-app  | :app:recordPaparazziDebug    |
+#   | design-system   | :recordPaparazziDebug        |
+
+on:
+  workflow_dispatch:
+    inputs:
+      gradle_root:
+        description: 'Gradle root directory (e.g. "customer-app", "technician-app", "design-system")'
+        required: true
+        default: 'customer-app'
+      gradle_task:
+        description: 'Task path to run (e.g. ":app:recordPaparazziDebug" for app modules, ":recordPaparazziDebug" for standalone roots)'
+        required: true
+        default: ':app:recordPaparazziDebug'
+      # `snapshot_dir` is intentionally NOT a user input — computed automatically from
+      # gradle_root by globbing **/src/test/snapshots/** scoped to that root. This prevents
+      # mismatched-triple bugs where a user could select gradle_root=design-system but leave
+      # snapshot_dir at the customer-app default and upload stale snapshots.
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.gradle_root }}-${{ inputs.gradle_task }}
+  cancel-in-progress: false
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: ${{ inputs.gradle_root }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: record Paparazzi snapshots
+        env:
+          GRADLE_TASK: ${{ inputs.gradle_task }}
+        run: ./gradlew "$GRADLE_TASK"
+
+      - name: upload recorded snapshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: paparazzi-snapshots-${{ inputs.gradle_root }}
+          # Scoped to gradle_root to guarantee the artifact matches the task that just ran —
+          # prevents mismatched-triple bugs (e.g. record design-system, upload customer-app).
+          path: ${{ inputs.gradle_root }}/**/src/test/snapshots/**
+          if-no-files-found: error
+          retention-days: 7
