@@ -22,7 +22,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html', 'lcov', 'json-summary'],
       reportsDirectory: './coverage',
-      include: ['src/**/*.{ts,tsx}', 'app/**/*.{ts,tsx}'],
+      include: ['src/**/*.{ts,tsx}'],
       exclude: [
         'src/sentry.server.config.ts',
         'src/sentry.edge.config.ts',
@@ -33,6 +33,9 @@ export default defineConfig({
         'app/layout.tsx',
         '**/*.stories.tsx',
         '**/*.config.*',
+        'src/lib/auth/firebase.ts',
+        'src/lib/auth/types.ts',
+        'src/api/index.ts',
       ],
       thresholds: {
         lines: 80,

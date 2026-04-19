@@ -113,7 +113,16 @@ jobs:
             echo "::error::marker SHA $MARKER_SHA is not an ancestor of HEAD ($HEAD_SHA) — rerun /codex-review-gate"
             exit 1
           fi
-          DISALLOWED=$(git diff --name-only "$MARKER_SHA" "$HEAD_SHA" \
+          # GitHub PR CI checks out a synthetic merge commit (HEAD = merge of branch
+          # into main). In this merge commit parent1=base-branch(main), parent2=PR-branch.
+          # Use HEAD^2 (the PR branch tip) so we only diff against our own commits.
+          # On a direct push to main there is no merge commit, so fall back to HEAD.
+          if git cat-file -e HEAD^2 2>/dev/null; then
+            BRANCH_TIP=$(git rev-parse HEAD^2)
+          else
+            BRANCH_TIP=$HEAD_SHA
+          fi
+          DISALLOWED=$(git diff --name-only "$MARKER_SHA" "$BRANCH_TIP" \
             | grep -Ev '^(\.codex-review-passed|docs/reviews/)' || true)
           if [ -n "$DISALLOWED" ]; then
             echo "::error::files outside Codex review scope changed since marker $MARKER_SHA:"
@@ -121,7 +130,7 @@ jobs:
             echo "::error::rerun /codex-review-gate to re-review the new changes"
             exit 1
           fi
-          echo "codex-review marker valid: reviewed=$MARKER_SHA head=$HEAD_SHA"
+          echo "codex-review marker valid: reviewed=$MARKER_SHA branch-tip=$BRANCH_TIP"
 
   e2e-and-a11y:
     runs-on: ubuntu-latest
@@ -133,6 +142,17 @@ jobs:
     env:
       NEXT_PUBLIC_GIT_SHA: ${{ github.sha }}
       GIT_SHA: ${{ github.sha }}
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      # Placeholder Firebase config — real keys are not needed because E2E tests
+      # intercept all identitytoolkit.googleapis.com calls via page.route().
+      # These must be non-empty so Firebase SDK doesn't throw auth/invalid-api-key
+      # when initializeApp() runs in the browser during E2E.
+      NEXT_PUBLIC_FIREBASE_API_KEY: AIzaSyE2EPlaceholderKeyForCIBuildsOnly000
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: placeholder.firebaseapp.com
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: placeholder-project-id
+      # Shared between pnpm build (middleware server component) and pnpm start
+      # (Next.js runtime). Must match the secret used in make-token.ts helper.
+      JWT_SECRET: e2e-test-jwt-secret-placeholder-min32chars!
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

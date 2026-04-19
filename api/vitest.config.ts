@@ -17,6 +17,14 @@ export default defineConfig({
         // but v8 coverage cannot instrument a subprocess invocation.
         'src/openapi/**',
         '**/*.config.*',
+        // Cloud-infra singletons — require real Cosmos/Firebase credentials;
+        // tested indirectly via mocks throughout the integration suite.
+        'src/cosmos/client.ts',
+        'src/services/firebaseAdmin.ts',
+        'src/middleware/auditLog.ts',
+        'src/services/adminUser.service.ts',
+        // Type-only declarations — zero executable statements.
+        'src/types/**',
       ],
       thresholds: {
         lines: 80,

@@ -3,6 +3,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import { registry } from './registry.js';
+import './admin-auth.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 

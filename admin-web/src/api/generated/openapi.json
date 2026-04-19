@@ -57,6 +57,53 @@
           "uptimeSeconds"
         ],
         "additionalProperties": false
+      },
+      "AdminLoginRequest": {
+        "type": "object",
+        "properties": {
+          "idToken": {
+            "type": "string",
+            "minLength": 1
+          },
+          "totpCode": {
+            "type": "string",
+            "pattern": "^\\d{6}$"
+          }
+        },
+        "required": [
+          "idToken"
+        ]
+      },
+      "AdminSetupTotpVerifyRequest": {
+        "type": "object",
+        "properties": {
+          "totpCode": {
+            "type": "string",
+            "pattern": "^\\d{6}$"
+          }
+        },
+        "required": [
+          "totpCode"
+        ]
+      },
+      "AdminMeResponse": {
+        "type": "object",
+        "properties": {
+          "adminId": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "adminId",
+          "email",
+          "role"
+        ]
       }
     },
     "parameters": {}
@@ -77,6 +124,113 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/auth/login": {
+      "post": {
+        "operationId": "adminLogin",
+        "tags": [
+          "admin-auth"
+        ],
+        "summary": "Email + password + TOTP login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminLoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login success or setup required"
+          }
+        }
+      }
+    },
+    "/v1/admin/auth/setup-totp": {
+      "get": {
+        "operationId": "adminSetupTotpGet",
+        "tags": [
+          "admin-auth"
+        ],
+        "summary": "Get TOTP enrollment QR code",
+        "responses": {
+          "200": {
+            "description": "QR code data URI"
+          }
+        }
+      },
+      "post": {
+        "operationId": "adminSetupTotpPost",
+        "tags": [
+          "admin-auth"
+        ],
+        "summary": "Complete TOTP enrollment",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminSetupTotpVerifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enrollment complete, session cookies set"
+          }
+        }
+      }
+    },
+    "/v1/admin/auth/refresh": {
+      "post": {
+        "operationId": "adminRefresh",
+        "tags": [
+          "admin-auth"
+        ],
+        "summary": "Refresh access token",
+        "responses": {
+          "200": {
+            "description": "New hs_access cookie set"
+          }
+        }
+      }
+    },
+    "/v1/admin/auth/logout": {
+      "post": {
+        "operationId": "adminLogout",
+        "tags": [
+          "admin-auth"
+        ],
+        "summary": "Invalidate session",
+        "responses": {
+          "200": {
+            "description": "Cookies cleared"
+          }
+        }
+      }
+    },
+    "/v1/admin/me": {
+      "get": {
+        "operationId": "adminMe",
+        "tags": [
+          "admin-auth"
+        ],
+        "summary": "Current admin profile",
+        "responses": {
+          "200": {
+            "description": "Admin profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminMeResponse"
                 }
               }
             }

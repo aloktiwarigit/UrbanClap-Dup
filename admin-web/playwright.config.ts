@@ -68,6 +68,9 @@ export default defineConfig({
       timeout: 60_000,
       env: {
         API_BASE_URL: 'http://localhost:7071/api',
+        // JWT_SECRET must match the secret used in tests/e2e/helpers/make-token.ts
+        // so that mock cookies generated in tests pass middleware verification.
+        JWT_SECRET: process.env['JWT_SECRET'] ?? 'e2e-test-jwt-secret-placeholder-min32chars!',
       },
     },
   ],

@@ -40,18 +40,40 @@ export function createApiClient(options: ApiClientOptions) {
     },
   };
 
+  let isRefreshing = false;
+
   const errorMiddleware: Middleware = {
     async onResponse({ response, request }) {
       if (response.ok) return response;
+
+      if (
+        response.status === 401 &&
+        !isRefreshing &&
+        !request.url.includes('/auth/refresh') &&
+        !request.url.includes('/auth/login')
+      ) {
+        isRefreshing = true;
+        try {
+          const refreshRes = await fetch('/api/v1/admin/auth/refresh', {
+            method: 'POST',
+            credentials: 'include',
+          });
+          if (refreshRes.ok) {
+            const retried = await fetch(request.clone());
+            if (retried.ok) return retried;
+          }
+        } catch {
+          // Refresh failed — fall through to throw ApiError
+        } finally {
+          isRefreshing = false;
+        }
+      }
+
       let body: unknown = null;
-      // Broader than `application/json` so we also parse RFC 7807
-      // `application/problem+json` and other `*+json` variants as structured.
       const contentType = response.headers.get('content-type') ?? '';
       const isJson = /\bjson\b/i.test(contentType);
       try {
-        body = isJson
-          ? await response.clone().json()
-          : await response.clone().text();
+        body = isJson ? await response.clone().json() : await response.clone().text();
       } catch {
         body = null;
       }

@@ -78,16 +78,18 @@ jobs:
           fi
           MARKER_SHA=$(jq -r .commit .codex-review-passed)
           HEAD_SHA=$(git rev-parse HEAD)
-          # The marker records the SHA that Codex reviewed. Committing the marker itself
-          # moves HEAD forward, so a strict marker==HEAD check is a chicken-and-egg paradox
-          # (the commit that introduces the marker cannot contain its own SHA). Instead,
-          # require the marker SHA to be an ancestor of HEAD and verify that nothing
-          # outside the marker/review-log scope has changed since Codex reviewed.
           if ! git merge-base --is-ancestor "$MARKER_SHA" "$HEAD_SHA"; then
             echo "::error::marker SHA $MARKER_SHA is not an ancestor of HEAD ($HEAD_SHA) — rerun /codex-review-gate"
             exit 1
           fi
-          DISALLOWED=$(git diff --name-only "$MARKER_SHA" "$HEAD_SHA" \
+          # GitHub PR CI checks out a synthetic merge commit (parent1=main, parent2=PR branch).
+          # Use HEAD^2 (PR branch tip) so we only diff against our own commits.
+          if git cat-file -e HEAD^2 2>/dev/null; then
+            BRANCH_TIP=$(git rev-parse HEAD^2)
+          else
+            BRANCH_TIP=$HEAD_SHA
+          fi
+          DISALLOWED=$(git diff --name-only "$MARKER_SHA" "$BRANCH_TIP" \
             | grep -Ev '^(\.codex-review-passed|docs/reviews/)' || true)
           if [ -n "$DISALLOWED" ]; then
             echo "::error::files outside Codex review scope changed since marker $MARKER_SHA:"
@@ -95,4 +97,4 @@ jobs:
             echo "::error::rerun /codex-review-gate to re-review the new changes"
             exit 1
           fi
-          echo "codex-review marker valid: reviewed=$MARKER_SHA head=$HEAD_SHA"
+          echo "codex-review marker valid: reviewed=$MARKER_SHA branch-tip=$BRANCH_TIP"
