@@ -1,3 +1,5 @@
+includeBuild("../design-system")
+
 pluginManagement {
     repositories {
         gradlePluginPortal()

@@ -195,6 +195,7 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     debugImplementation(libs.compose.ui.tooling)
     implementation(libs.compose.material3)
+    implementation("com.homeservices:design-system")
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
