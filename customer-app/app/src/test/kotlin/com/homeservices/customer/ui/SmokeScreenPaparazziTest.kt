@@ -13,16 +13,8 @@ import org.junit.Test
 // Pixel-lock baseline accepts this fallback; a future story tightens Paparazzi variable-font
 // support (likely via FontLoadingStrategy.OptionalLocal in design-system Typography.kt).
 public class SmokeScreenPaparazziTest {
-    // maxPercentDifference = 10.0 (vs default 0.1%) tolerates cross-OS font-metrics drift
-    // between Windows-recorded goldens and Linux CI renders. Design-system's TokenGallery
-    // (mostly boxes + small labels) stays under the default 0.1% threshold; SmokeScreen's
-    // displayLarge 48sp text accumulates antialiasing diffs above that, hence the bump.
     @get:Rule
-    public val paparazzi: Paparazzi =
-        Paparazzi(
-            deviceConfig = DeviceConfig.PIXEL_5,
-            maxPercentDifference = 10.0,
-        )
+    public val paparazzi: Paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
 
     private val fakeBuildInfo: BuildInfoProvider =
         BuildInfoProvider(
