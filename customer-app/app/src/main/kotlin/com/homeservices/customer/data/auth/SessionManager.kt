@@ -1,6 +1,7 @@
 package com.homeservices.customer.data.auth
 
 import android.content.SharedPreferences
+import com.homeservices.customer.data.auth.di.AuthPrefs
 import com.homeservices.customer.domain.auth.model.AuthState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,7 +14,7 @@ import javax.inject.Singleton
 
 @Singleton
 public class SessionManager @Inject constructor(
-    private val prefs: SharedPreferences,
+    @AuthPrefs private val prefs: SharedPreferences,
 ) {
     private companion object {
         const val KEY_UID = "uid"
