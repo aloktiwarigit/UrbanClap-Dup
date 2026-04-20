@@ -87,6 +87,15 @@ jobs:
     env:
       NEXT_PUBLIC_GIT_SHA: ${{ github.sha }}
       GIT_SHA: ${{ github.sha }}
+      # Dummy Firebase config for e2e — Firebase SDK throws auth/invalid-api-key
+      # before making any network request when apiKey is empty, which prevents
+      # Playwright's page.route('**/identitytoolkit.googleapis.com/**') from firing.
+      # These values are not real credentials; all Firebase calls are intercepted
+      # by Playwright route mocks in tests/e2e/. Must be at job level (not step
+      # level) because Next.js bakes NEXT_PUBLIC_* at pnpm build time.
+      NEXT_PUBLIC_FIREBASE_API_KEY: "test-api-key-for-e2e-placeholder"
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: "test-project-e2e.firebaseapp.com"
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: "test-project-e2e"
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
