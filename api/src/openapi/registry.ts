@@ -9,6 +9,18 @@ import {
   TechLocationSchema,
   TechLocationsResponseSchema,
 } from '../schemas/dashboard.js';
+import {
+  ServiceCategorySchema,
+  CreateCategoryBodySchema,
+  UpdateCategoryBodySchema,
+} from '../schemas/service-category.js';
+import {
+  ServiceDetailSchema,
+  ServiceCardSchema,
+  CreateServiceBodySchema,
+  UpdateServiceBodySchema,
+  ServiceSchema,
+} from '../schemas/service.js';
 
 extendZodWithOpenApi(z);
 
@@ -34,6 +46,8 @@ registry.registerPath({
     },
   },
 });
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
 
 // Dashboard schemas
 registry.register('DashboardSummary', DashboardSummarySchema);
@@ -86,4 +100,96 @@ registry.registerPath({
     403: { description: 'Forbidden' },
     502: { description: 'Upstream Cosmos error' },
   },
+});
+
+// ── Public catalogue ──────────────────────────────────────────────────────────
+
+const ServiceCardResponse = ServiceCardSchema.openapi('ServiceCard');
+const ServiceDetailResponse = ServiceDetailSchema.openapi('ServiceDetail');
+const CategoryWithServicesSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  heroImageUrl: z.string(),
+  sortOrder: z.number(),
+  services: z.array(ServiceCardResponse),
+}).openapi('CategoryWithServices');
+
+registry.register('ServiceCard', ServiceCardResponse);
+registry.register('ServiceDetail', ServiceDetailResponse);
+registry.register('CategoryWithServices', CategoryWithServicesSchema);
+
+registry.registerPath({
+  method: 'get', path: '/v1/categories', operationId: 'getCategories',
+  tags: ['catalogue'], summary: 'List active categories with nested services (home screen)',
+  responses: {
+    200: { description: 'Active categories with card-shape services', content: { 'application/json': { schema: z.object({ categories: z.array(CategoryWithServicesSchema) }) } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get', path: '/v1/services/{id}', operationId: 'getServiceById',
+  tags: ['catalogue'], summary: 'Full service detail',
+  parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+  responses: {
+    200: { description: 'Service detail', content: { 'application/json': { schema: ServiceDetailResponse } } },
+    404: { description: 'Service not found' },
+  },
+});
+
+// ── Admin catalogue ───────────────────────────────────────────────────────────
+
+const AdminServiceCategory = ServiceCategorySchema.openapi('AdminServiceCategory');
+const AdminService = ServiceSchema.openapi('AdminService');
+registry.register('AdminServiceCategory', AdminServiceCategory);
+registry.register('AdminService', AdminService);
+
+registry.registerPath({
+  method: 'post', path: '/v1/admin/catalogue/categories', operationId: 'adminCreateCategory',
+  tags: ['admin-catalogue'], summary: 'Create a service category',
+  request: { body: { content: { 'application/json': { schema: CreateCategoryBodySchema } } } },
+  responses: { 201: { description: 'Created', content: { 'application/json': { schema: AdminServiceCategory } } }, 400: { description: 'Validation error' }, 409: { description: 'Duplicate id' } },
+});
+
+registry.registerPath({
+  method: 'put', path: '/v1/admin/catalogue/categories/{id}', operationId: 'adminUpdateCategory',
+  tags: ['admin-catalogue'], summary: 'Update a service category',
+  parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+  request: { body: { content: { 'application/json': { schema: UpdateCategoryBodySchema } } } },
+  responses: { 200: { description: 'Updated', content: { 'application/json': { schema: AdminServiceCategory } } }, 404: { description: 'Not found' } },
+});
+
+registry.registerPath({
+  method: 'patch', path: '/v1/admin/catalogue/categories/{id}/toggle', operationId: 'adminToggleCategory',
+  tags: ['admin-catalogue'], summary: 'Toggle category active state',
+  parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+  responses: { 200: { description: 'Toggled', content: { 'application/json': { schema: AdminServiceCategory } } }, 404: { description: 'Not found' } },
+});
+
+registry.registerPath({
+  method: 'get', path: '/v1/admin/catalogue/services', operationId: 'adminListServices',
+  tags: ['admin-catalogue'], summary: 'List services (admin, includes inactive)',
+  parameters: [{ name: 'categoryId', in: 'query', required: false, schema: { type: 'string' } }],
+  responses: { 200: { description: 'Services list', content: { 'application/json': { schema: z.object({ services: z.array(AdminService) }) } } } },
+});
+
+registry.registerPath({
+  method: 'post', path: '/v1/admin/catalogue/services', operationId: 'adminCreateService',
+  tags: ['admin-catalogue'], summary: 'Create a service',
+  request: { body: { content: { 'application/json': { schema: CreateServiceBodySchema } } } },
+  responses: { 201: { description: 'Created', content: { 'application/json': { schema: AdminService } } }, 400: { description: 'Validation error' }, 409: { description: 'Duplicate id' } },
+});
+
+registry.registerPath({
+  method: 'put', path: '/v1/admin/catalogue/services/{id}', operationId: 'adminUpdateService',
+  tags: ['admin-catalogue'], summary: 'Update a service',
+  parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+  request: { body: { content: { 'application/json': { schema: UpdateServiceBodySchema } } } },
+  responses: { 200: { description: 'Updated', content: { 'application/json': { schema: AdminService } } }, 404: { description: 'Not found' } },
+});
+
+registry.registerPath({
+  method: 'patch', path: '/v1/admin/catalogue/services/{id}/toggle', operationId: 'adminToggleService',
+  tags: ['admin-catalogue'], summary: 'Toggle service active state',
+  parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+  responses: { 200: { description: 'Toggled', content: { 'application/json': { schema: AdminService } } }, 404: { description: 'Not found' } },
 });

@@ -237,6 +237,429 @@
           "techs"
         ]
       },
+      "ServiceCard": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z0-9-]+$",
+            "example": "ac-deep-clean"
+          },
+          "categoryId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "shortDescription": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "heroImageUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "basePrice": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Price in paise (₹599 = 59900)"
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "categoryId",
+          "name",
+          "shortDescription",
+          "heroImageUrl",
+          "basePrice",
+          "durationMinutes"
+        ]
+      },
+      "ServiceDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z0-9-]+$",
+            "example": "ac-deep-clean"
+          },
+          "categoryId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "shortDescription": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "heroImageUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "basePrice": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Price in paise (₹599 = 59900)"
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "includes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "faq": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "question": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "answer": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "question",
+                "answer"
+              ]
+            }
+          },
+          "addOns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "price": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "triggerCondition": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "price",
+                "triggerCondition"
+              ]
+            }
+          },
+          "photoStages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "required": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "label",
+                "required"
+              ]
+            }
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "categoryId",
+          "name",
+          "shortDescription",
+          "heroImageUrl",
+          "basePrice",
+          "durationMinutes",
+          "includes",
+          "faq",
+          "addOns",
+          "photoStages",
+          "isActive"
+        ]
+      },
+      "CategoryWithServices": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "heroImageUrl": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "number"
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServiceCard"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "heroImageUrl",
+          "sortOrder",
+          "services"
+        ]
+      },
+      "AdminServiceCategory": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z0-9-]+$",
+            "example": "ac-repair"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "example": "AC Repair"
+          },
+          "heroImageUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "sortOrder": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "updatedBy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "heroImageUrl",
+          "sortOrder",
+          "isActive",
+          "updatedBy",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "AdminService": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z0-9-]+$",
+            "example": "ac-deep-clean"
+          },
+          "categoryId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "shortDescription": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "heroImageUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "basePrice": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Price in paise (₹599 = 59900)"
+          },
+          "commissionBps": {
+            "type": "integer",
+            "minimum": 1500,
+            "maximum": 3500,
+            "description": "Commission in basis points (2250 = 22.5%)"
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "includes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "faq": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "question": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "answer": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "question",
+                "answer"
+              ]
+            }
+          },
+          "addOns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "price": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "triggerCondition": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "price",
+                "triggerCondition"
+              ]
+            }
+          },
+          "photoStages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "required": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "label",
+                "required"
+              ]
+            }
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "updatedBy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "categoryId",
+          "name",
+          "shortDescription",
+          "heroImageUrl",
+          "basePrice",
+          "commissionBps",
+          "durationMinutes",
+          "includes",
+          "faq",
+          "addOns",
+          "photoStages",
+          "isActive",
+          "updatedBy",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
       "AdminLoginRequest": {
         "type": "object",
         "properties": {
@@ -411,6 +834,651 @@
           },
           "502": {
             "description": "Upstream Cosmos error"
+          }
+        }
+      }
+    },
+    "/v1/categories": {
+      "get": {
+        "operationId": "getCategories",
+        "tags": [
+          "catalogue"
+        ],
+        "summary": "List active categories with nested services (home screen)",
+        "responses": {
+          "200": {
+            "description": "Active categories with card-shape services",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "categories": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CategoryWithServices"
+                      }
+                    }
+                  },
+                  "required": [
+                    "categories"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/services/{id}": {
+      "get": {
+        "operationId": "getServiceById",
+        "tags": [
+          "catalogue"
+        ],
+        "summary": "Full service detail",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Service not found"
+          }
+        }
+      }
+    },
+    "/v1/admin/catalogue/categories": {
+      "post": {
+        "operationId": "adminCreateCategory",
+        "tags": [
+          "admin-catalogue"
+        ],
+        "summary": "Create a service category",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^[a-z0-9-]+$",
+                    "example": "ac-repair"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "example": "AC Repair"
+                  },
+                  "heroImageUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "sortOrder": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "heroImageUrl",
+                  "sortOrder"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminServiceCategory"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "409": {
+            "description": "Duplicate id"
+          }
+        }
+      }
+    },
+    "/v1/admin/catalogue/categories/{id}": {
+      "put": {
+        "operationId": "adminUpdateCategory",
+        "tags": [
+          "admin-catalogue"
+        ],
+        "summary": "Update a service category",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "example": "AC Repair"
+                  },
+                  "heroImageUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "sortOrder": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "name",
+                  "heroImageUrl",
+                  "sortOrder"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminServiceCategory"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/v1/admin/catalogue/categories/{id}/toggle": {
+      "patch": {
+        "operationId": "adminToggleCategory",
+        "tags": [
+          "admin-catalogue"
+        ],
+        "summary": "Toggle category active state",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Toggled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminServiceCategory"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/v1/admin/catalogue/services": {
+      "get": {
+        "operationId": "adminListServices",
+        "tags": [
+          "admin-catalogue"
+        ],
+        "summary": "List services (admin, includes inactive)",
+        "parameters": [
+          {
+            "name": "categoryId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Services list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "services": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AdminService"
+                      }
+                    }
+                  },
+                  "required": [
+                    "services"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "adminCreateService",
+        "tags": [
+          "admin-catalogue"
+        ],
+        "summary": "Create a service",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^[a-z0-9-]+$",
+                    "example": "ac-deep-clean"
+                  },
+                  "categoryId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "shortDescription": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "heroImageUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "basePrice": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Price in paise (₹599 = 59900)"
+                  },
+                  "commissionBps": {
+                    "type": "integer",
+                    "minimum": 1500,
+                    "maximum": 3500,
+                    "description": "Commission in basis points (2250 = 22.5%)"
+                  },
+                  "durationMinutes": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "includes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "faq": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "question": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "answer": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "question",
+                        "answer"
+                      ]
+                    }
+                  },
+                  "addOns": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "price": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "triggerCondition": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "price",
+                        "triggerCondition"
+                      ]
+                    }
+                  },
+                  "photoStages": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "label": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "required": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "label",
+                        "required"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "id",
+                  "categoryId",
+                  "name",
+                  "shortDescription",
+                  "heroImageUrl",
+                  "basePrice",
+                  "commissionBps",
+                  "durationMinutes",
+                  "includes",
+                  "faq",
+                  "addOns",
+                  "photoStages"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminService"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "409": {
+            "description": "Duplicate id"
+          }
+        }
+      }
+    },
+    "/v1/admin/catalogue/services/{id}": {
+      "put": {
+        "operationId": "adminUpdateService",
+        "tags": [
+          "admin-catalogue"
+        ],
+        "summary": "Update a service",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "shortDescription": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "heroImageUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "basePrice": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Price in paise (₹599 = 59900)"
+                  },
+                  "commissionBps": {
+                    "type": "integer",
+                    "minimum": 1500,
+                    "maximum": 3500,
+                    "description": "Commission in basis points (2250 = 22.5%)"
+                  },
+                  "durationMinutes": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "includes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "faq": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "question": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "answer": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "question",
+                        "answer"
+                      ]
+                    }
+                  },
+                  "addOns": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "price": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "triggerCondition": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "price",
+                        "triggerCondition"
+                      ]
+                    }
+                  },
+                  "photoStages": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "label": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "required": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "label",
+                        "required"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "name",
+                  "shortDescription",
+                  "heroImageUrl",
+                  "basePrice",
+                  "commissionBps",
+                  "durationMinutes",
+                  "includes",
+                  "faq",
+                  "addOns",
+                  "photoStages"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminService"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/v1/admin/catalogue/services/{id}/toggle": {
+      "patch": {
+        "operationId": "adminToggleService",
+        "tags": [
+          "admin-catalogue"
+        ],
+        "summary": "Toggle service active state",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Toggled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminService"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
           }
         }
       }

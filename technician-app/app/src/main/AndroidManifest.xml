@@ -3,6 +3,11 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Required for Truecaller SDK to detect whether Truecaller is installed -->
+    <queries>
+        <package android:name="com.truecaller" />
+    </queries>
+
     <application
         android:name=".HomeservicesTechnicianApplication"
         android:allowBackup="false"
