@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { HttpRequest } from '@azure/functions';
+import { HttpRequest, type HttpResponseInit } from '@azure/functions';
 
 vi.mock('../../src/services/firebaseAdmin.js', () => ({
   verifyFirebaseIdToken: vi.fn().mockImplementation(async (token: string) => {
@@ -21,19 +21,19 @@ const ctx = {} as never;
 
 describe('requireCustomer', () => {
   it('returns 401 when Authorization header absent', async () => {
-    const res = await requireCustomer(async (_r, _c, c) => ({ status: 200, jsonBody: { id: c.customerId } }))(req(), ctx);
+    const res = await requireCustomer(async (_r, _c, c) => ({ status: 200, jsonBody: { id: c.customerId } }))(req(), ctx) as HttpResponseInit;
     expect(res.status).toBe(401);
     expect((res.jsonBody as { code: string }).code).toBe('UNAUTHENTICATED');
   });
 
   it('returns 401 when token invalid', async () => {
-    const res = await requireCustomer(async (_r, _c, c) => ({ status: 200, jsonBody: { id: c.customerId } }))(req('Bearer bad'), ctx);
+    const res = await requireCustomer(async (_r, _c, c) => ({ status: 200, jsonBody: { id: c.customerId } }))(req('Bearer bad'), ctx) as HttpResponseInit;
     expect(res.status).toBe(401);
     expect((res.jsonBody as { code: string }).code).toBe('TOKEN_INVALID');
   });
 
   it('passes customerId to handler on valid token', async () => {
-    const res = await requireCustomer(async (_r, _c, c) => ({ status: 200, jsonBody: { id: c.customerId } }))(req('Bearer valid-token'), ctx);
+    const res = await requireCustomer(async (_r, _c, c) => ({ status: 200, jsonBody: { id: c.customerId } }))(req('Bearer valid-token'), ctx) as HttpResponseInit;
     expect(res.status).toBe(200);
     expect((res.jsonBody as { id: string }).id).toBe('cust-uid-1');
   });
