@@ -29,6 +29,9 @@ internal class BookingViewModel
 
         private var pendingBookingId: String? = null
 
+        public var pendingServiceId: String = ""
+        public var pendingCategoryId: String = ""
+
         init {
             viewModelScope.launch {
                 razorpayPayment.resultFlow().collect { result ->
