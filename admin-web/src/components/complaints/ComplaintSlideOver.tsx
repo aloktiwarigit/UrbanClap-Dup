@@ -1,3 +1,5 @@
+'use client';
+
 import { useState } from 'react';
 import type { Complaint, ComplaintStatus, ComplaintResolutionCategory } from '@/types/complaint';
 
@@ -61,9 +63,14 @@ export function ComplaintSlideOver({
   return (
     <>
       <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} aria-hidden="true" />
-      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-xl z-50 overflow-y-auto">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="complaint-slide-over-title"
+        className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-xl z-50 overflow-y-auto"
+      >
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="font-semibold text-gray-800">
+          <h2 id="complaint-slide-over-title" className="font-semibold text-gray-800">
             Complaint {complaint.id.slice(0, 8)}
           </h2>
           <button

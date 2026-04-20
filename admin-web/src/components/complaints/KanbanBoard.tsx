@@ -9,11 +9,13 @@ import { ComplaintSlideOver } from './ComplaintSlideOver';
 interface KanbanBoardProps {
   complaints: Complaint[];
   onStatusChange: (id: string, status: ComplaintStatus) => void;
+  onAddNote: (id: string, note: string) => void;
+  onReassign: (id: string, adminId: string) => void;
 }
 
 const COLUMNS: ComplaintStatus[] = ['NEW', 'INVESTIGATING', 'RESOLVED'];
 
-export function KanbanBoard({ complaints, onStatusChange }: KanbanBoardProps) {
+export function KanbanBoard({ complaints, onStatusChange, onAddNote, onReassign }: KanbanBoardProps) {
   const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
 
   const handleDragEnd = (result: DropResult) => {
@@ -30,9 +32,9 @@ export function KanbanBoard({ complaints, onStatusChange }: KanbanBoardProps) {
     setSelectedComplaint((prev) => prev ? { ...prev, status } : null);
   };
 
-  const handleAddNote = (_note: string) => {
-    // note add handled in ComplaintsClient via patchComplaint
-    // optimistic close for now
+  const handleAddNote = (note: string) => {
+    if (!selectedComplaint) return;
+    onAddNote(selectedComplaint.id, note);
   };
 
   const handleResolve = (category: ComplaintResolutionCategory) => {
@@ -43,8 +45,9 @@ export function KanbanBoard({ complaints, onStatusChange }: KanbanBoardProps) {
     );
   };
 
-  const handleReassign = (_adminId: string) => {
-    // reassign handled in ComplaintsClient
+  const handleReassign = (adminId: string) => {
+    if (!selectedComplaint) return;
+    onReassign(selectedComplaint.id, adminId);
   };
 
   return (

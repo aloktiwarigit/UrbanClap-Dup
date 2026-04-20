@@ -38,14 +38,14 @@ const complaints: Complaint[] = [
 
 describe('KanbanBoard', () => {
   it('renders 3 columns with headers NEW, INVESTIGATING, RESOLVED', () => {
-    render(<KanbanBoard complaints={complaints} onStatusChange={vi.fn()} />);
+    render(<KanbanBoard complaints={complaints} onStatusChange={vi.fn()} onAddNote={vi.fn()} onReassign={vi.fn()} />);
     expect(screen.getByText('NEW')).toBeDefined();
     expect(screen.getByText('INVESTIGATING')).toBeDefined();
     expect(screen.getByText('RESOLVED')).toBeDefined();
   });
 
   it('renders complaint cards in correct columns based on status', () => {
-    render(<KanbanBoard complaints={complaints} onStatusChange={vi.fn()} />);
+    render(<KanbanBoard complaints={complaints} onStatusChange={vi.fn()} onAddNote={vi.fn()} onReassign={vi.fn()} />);
     // c1 and c4 are NEW, c2 is INVESTIGATING, c3 is RESOLVED
     // We can check by customer id presence
     const allCardButtons = screen.getAllByRole('button');
@@ -54,7 +54,7 @@ describe('KanbanBoard', () => {
   });
 
   it('clicking a card opens the slide-over for that complaint', () => {
-    render(<KanbanBoard complaints={[makeComplaint('c1', 'NEW')]} onStatusChange={vi.fn()} />);
+    render(<KanbanBoard complaints={[makeComplaint('c1', 'NEW')]} onStatusChange={vi.fn()} onAddNote={vi.fn()} onReassign={vi.fn()} />);
     const cardButton = screen.getByRole('button');
     fireEvent.click(cardButton);
     // SlideOver should appear — it renders the complaint description in a <p>

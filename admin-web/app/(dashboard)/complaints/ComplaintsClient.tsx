@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { createApiClient } from '@/api/client';
 import { patchComplaint } from '@/api/complaints';
 import { KanbanBoard } from '@/components/complaints/KanbanBoard';
@@ -19,20 +19,62 @@ export function ComplaintsClient({ initialComplaints }: ComplaintsClientProps) {
   const [complaints, setComplaints] = useState<Complaint[]>(initialComplaints);
   const [error, setError] = useState<string | null>(null);
 
+  const apiClient = useMemo(() => getClientApiClient(), []);
+
   const handleStatusChange = useCallback(async (id: string, status: ComplaintStatus) => {
-    // Optimistic update
-    setComplaints((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, status } : c)),
-    );
+    let snapshot: Complaint[] = [];
+    setComplaints((prev) => {
+      snapshot = prev;
+      return prev.map((c) => (c.id === id ? { ...c, status, updatedAt: new Date().toISOString() } : c));
+    });
     try {
-      const client = getClientApiClient();
-      await patchComplaint(client, id, { status });
+      await patchComplaint(apiClient, id, { status });
     } catch (err) {
+      setComplaints(snapshot);
       setError(String(err));
-      // Revert on failure
-      setComplaints(initialComplaints);
     }
-  }, [initialComplaints]);
+  }, [apiClient]);
+
+  const handleAddNote = useCallback(async (id: string, note: string) => {
+    let snapshot: Complaint[] = [];
+    setComplaints((prev) => {
+      snapshot = prev;
+      return prev.map((c) =>
+        c.id === id
+          ? {
+              ...c,
+              internalNotes: [
+                ...c.internalNotes,
+                { note, adminId: 'me', createdAt: new Date().toISOString() },
+              ],
+              updatedAt: new Date().toISOString(),
+            }
+          : c,
+      );
+    });
+    try {
+      await patchComplaint(apiClient, id, { note });
+    } catch (err) {
+      setComplaints(snapshot);
+      setError(String(err));
+    }
+  }, [apiClient]);
+
+  const handleReassign = useCallback(async (id: string, assigneeAdminId: string) => {
+    let snapshot: Complaint[] = [];
+    setComplaints((prev) => {
+      snapshot = prev;
+      return prev.map((c) =>
+        c.id === id ? { ...c, assigneeAdminId, updatedAt: new Date().toISOString() } : c,
+      );
+    });
+    try {
+      await patchComplaint(apiClient, id, { assigneeAdminId });
+    } catch (err) {
+      setComplaints(snapshot);
+      setError(String(err));
+    }
+  }, [apiClient]);
 
   return (
     <div className="p-6">
@@ -47,9 +89,9 @@ export function ComplaintsClient({ initialComplaints }: ComplaintsClientProps) {
 
       <KanbanBoard
         complaints={complaints}
-        onStatusChange={(id, status) => {
-          void handleStatusChange(id, status);
-        }}
+        onStatusChange={(id, status) => { void handleStatusChange(id, status); }}
+        onAddNote={(id, note) => { void handleAddNote(id, note); }}
+        onReassign={(id, adminId) => { void handleReassign(id, adminId); }}
       />
     </div>
   );
