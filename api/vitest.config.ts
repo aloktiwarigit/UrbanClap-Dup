@@ -21,7 +21,6 @@ export default defineConfig({
         // tested indirectly via mocks throughout the integration suite.
         'src/cosmos/client.ts',
         'src/services/firebaseAdmin.ts',
-        'src/middleware/auditLog.ts',
         'src/services/adminUser.service.ts',
         // Type-only declarations — zero executable statements.
         'src/types/**',

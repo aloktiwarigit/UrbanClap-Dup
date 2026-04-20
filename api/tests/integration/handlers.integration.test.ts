@@ -9,8 +9,8 @@ vi.mock('../../src/services/adminSession.service.js', () => ({
 vi.mock('../../src/services/adminUser.service.js', () => ({
   getAdminUserById: vi.fn(),
 }));
-vi.mock('../../src/middleware/auditLog.js', () => ({
-  writeAuditEntry: vi.fn(),
+vi.mock('../../src/services/auditLog.service.js', () => ({
+  auditLog: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { adminRefreshHandler } from '../../src/functions/admin/auth/refresh.js';
@@ -18,7 +18,7 @@ import { adminLogoutHandler } from '../../src/functions/admin/auth/logout.js';
 import { adminMeHandler } from '../../src/functions/admin/me.js';
 import { touchAndGetSession, deleteSession } from '../../src/services/adminSession.service.js';
 import { getAdminUserById } from '../../src/services/adminUser.service.js';
-import { writeAuditEntry } from '../../src/middleware/auditLog.js';
+import { auditLog } from '../../src/services/auditLog.service.js';
 import { signAccessToken } from '../../src/services/jwt.service.js';
 import { requireAdmin } from '../../src/middleware/requireAdmin.js';
 import { HttpRequest } from '@azure/functions';
@@ -90,7 +90,6 @@ describe('POST /v1/admin/auth/logout', () => {
 
   it('calls deleteSession and writes audit log when valid token present', async () => {
     vi.mocked(deleteSession).mockResolvedValue(undefined);
-    vi.mocked(writeAuditEntry).mockResolvedValue(undefined);
     const token = await signAccessToken({ sub: 'u1', role: 'super-admin', sessionId: 's1' });
     const res = await adminLogoutHandler(
       makeReqWithCookies({ hs_access: token }),
@@ -98,8 +97,13 @@ describe('POST /v1/admin/auth/logout', () => {
     );
     expect(res.status).toBe(200);
     expect(deleteSession).toHaveBeenCalledWith('s1');
-    expect(writeAuditEntry).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'LOGOUT', adminId: 'u1' }),
+    expect(auditLog).toHaveBeenCalledWith(
+      expect.objectContaining({ adminId: 'u1' }),
+      'admin.logout',
+      'admin_session',
+      's1',
+      expect.any(Object),
+      expect.any(Object),
     );
   });
 });

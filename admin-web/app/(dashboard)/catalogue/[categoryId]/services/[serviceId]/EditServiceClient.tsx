@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import type { Route } from 'next';
 import { ServiceForm } from '@/components/catalogue/ServiceForm';
 import type { components, operations } from '@/api/generated/schema';
 
@@ -34,11 +35,11 @@ export function EditServiceClient({ categoryId, service }: EditServiceClientProp
       const text = await res.text().catch(() => 'Unknown error');
       throw new Error(`Failed to update service: ${res.status} ${text}`);
     }
-    router.push(`/catalogue/${categoryId}`);
+    router.push(`/catalogue/${categoryId}` as Route);
   }
 
   function handleCancel() {
-    router.push(`/catalogue/${categoryId}`);
+    router.push(`/catalogue/${categoryId}` as Route);
   }
 
   return (

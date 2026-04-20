@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "packageManager": "pnpm@9.15.4",
-  "main": "dist/functions/*.js",
+  "main": "dist/functions/**/*.js",
   "engines": {
     "node": ">=22.0.0",
     "pnpm": ">=9.0.0"
@@ -21,6 +21,7 @@
     "test:coverage": "vitest run --coverage",
     "openapi:build": "tsx src/openapi/build.ts",
     "openapi:lint": "spectral lint openapi.json --fail-severity error",
+    "seed:technicians": "npx tsx scripts/seed-technicians.ts",
     "seed:catalogue": "tsx src/cosmos/seeds/catalogue.ts"
   },
   "dependencies": {
@@ -35,6 +36,7 @@
     "otplib": "^13.4.0",
     "posthog-node": "^4",
     "qrcode": "^1.5.4",
+    "razorpay": "^2.9.6",
     "zod": "^3.23.0"
   },
   "devDependencies": {
