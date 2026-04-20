@@ -203,6 +203,11 @@ kover {
                     "*.TruecallerLoginUseCase",
                     // SentryInitializer wraps Android SDK initialisation — no JVM unit test path
                     "*.SentryInitializer",
+                    // KycApiService is an internal Retrofit interface — its methods are invoked by
+                    // the Retrofit runtime (not unit-testable). KycRepositoryImpl covers all
+                    // reachable branches via mockk in KycRepositoryImplTest.
+                    "*.KycApiService",
+                    "*.KycApiService\$*",
                 )
             }
         }
