@@ -24,6 +24,143 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List active categories with nested services (home screen) */
+        get: operations["getCategories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/services/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Full service detail */
+        get: operations["getServiceById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/catalogue/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a service category */
+        post: operations["adminCreateCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/catalogue/categories/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update a service category */
+        put: operations["adminUpdateCategory"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/catalogue/categories/{id}/toggle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Toggle category active state */
+        patch: operations["adminToggleCategory"];
+        trace?: never;
+    };
+    "/v1/admin/catalogue/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List services (admin, includes inactive) */
+        get: operations["adminListServices"];
+        put?: never;
+        /** Create a service */
+        post: operations["adminCreateService"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/catalogue/services/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update a service */
+        put: operations["adminUpdateService"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/catalogue/services/{id}/toggle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Toggle service active state */
+        patch: operations["adminToggleService"];
+        trace?: never;
+    };
     "/v1/admin/auth/login": {
         parameters: {
             query?: never;
@@ -123,6 +260,105 @@ export interface components {
             timestamp: string;
             uptimeSeconds: number;
         };
+        ServiceCard: {
+            /** @example ac-deep-clean */
+            id: string;
+            categoryId: string;
+            name: string;
+            shortDescription: string;
+            /** Format: uri */
+            heroImageUrl: string;
+            /** @description Price in paise (₹599 = 59900) */
+            basePrice: number;
+            durationMinutes: number;
+        };
+        ServiceDetail: {
+            /** @example ac-deep-clean */
+            id: string;
+            categoryId: string;
+            name: string;
+            shortDescription: string;
+            /** Format: uri */
+            heroImageUrl: string;
+            /** @description Price in paise (₹599 = 59900) */
+            basePrice: number;
+            durationMinutes: number;
+            includes: string[];
+            faq: {
+                question: string;
+                answer: string;
+            }[];
+            addOns: {
+                id: string;
+                name: string;
+                price: number;
+                triggerCondition: string;
+            }[];
+            photoStages: {
+                id: string;
+                label: string;
+                required: boolean;
+            }[];
+            isActive: boolean;
+        };
+        CategoryWithServices: {
+            id: string;
+            name: string;
+            heroImageUrl: string;
+            sortOrder: number;
+            services: components["schemas"]["ServiceCard"][];
+        };
+        AdminServiceCategory: {
+            /** @example ac-repair */
+            id: string;
+            /** @example AC Repair */
+            name: string;
+            /** Format: uri */
+            heroImageUrl: string;
+            sortOrder: number;
+            isActive: boolean;
+            updatedBy: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        AdminService: {
+            /** @example ac-deep-clean */
+            id: string;
+            categoryId: string;
+            name: string;
+            shortDescription: string;
+            /** Format: uri */
+            heroImageUrl: string;
+            /** @description Price in paise (₹599 = 59900) */
+            basePrice: number;
+            /** @description Commission in basis points (2250 = 22.5%) */
+            commissionBps: number;
+            durationMinutes: number;
+            includes: string[];
+            faq: {
+                question: string;
+                answer: string;
+            }[];
+            addOns: {
+                id: string;
+                name: string;
+                price: number;
+                triggerCondition: string;
+            }[];
+            photoStages: {
+                id: string;
+                label: string;
+                required: boolean;
+            }[];
+            isActive: boolean;
+            updatedBy: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         AdminLoginRequest: {
             idToken: string;
             totpCode?: string;
@@ -161,6 +397,350 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
                 };
+            };
+        };
+    };
+    getCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active categories with card-shape services */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        categories: components["schemas"]["CategoryWithServices"][];
+                    };
+                };
+            };
+        };
+    };
+    getServiceById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceDetail"];
+                };
+            };
+            /** @description Service not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminCreateCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @example ac-repair */
+                    id: string;
+                    /** @example AC Repair */
+                    name: string;
+                    /** Format: uri */
+                    heroImageUrl: string;
+                    sortOrder: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminServiceCategory"];
+                };
+            };
+            /** @description Validation error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Duplicate id */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminUpdateCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @example AC Repair */
+                    name: string;
+                    /** Format: uri */
+                    heroImageUrl: string;
+                    sortOrder: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminServiceCategory"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminToggleCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Toggled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminServiceCategory"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminListServices: {
+        parameters: {
+            query?: {
+                categoryId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Services list */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        services: components["schemas"]["AdminService"][];
+                    };
+                };
+            };
+        };
+    };
+    adminCreateService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @example ac-deep-clean */
+                    id: string;
+                    categoryId: string;
+                    name: string;
+                    shortDescription: string;
+                    /** Format: uri */
+                    heroImageUrl: string;
+                    /** @description Price in paise (₹599 = 59900) */
+                    basePrice: number;
+                    /** @description Commission in basis points (2250 = 22.5%) */
+                    commissionBps: number;
+                    durationMinutes: number;
+                    includes: string[];
+                    faq: {
+                        question: string;
+                        answer: string;
+                    }[];
+                    addOns: {
+                        id: string;
+                        name: string;
+                        price: number;
+                        triggerCondition: string;
+                    }[];
+                    photoStages: {
+                        id: string;
+                        label: string;
+                        required: boolean;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminService"];
+                };
+            };
+            /** @description Validation error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Duplicate id */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminUpdateService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    name: string;
+                    shortDescription: string;
+                    /** Format: uri */
+                    heroImageUrl: string;
+                    /** @description Price in paise (₹599 = 59900) */
+                    basePrice: number;
+                    /** @description Commission in basis points (2250 = 22.5%) */
+                    commissionBps: number;
+                    durationMinutes: number;
+                    includes: string[];
+                    faq: {
+                        question: string;
+                        answer: string;
+                    }[];
+                    addOns: {
+                        id: string;
+                        name: string;
+                        price: number;
+                        triggerCondition: string;
+                    }[];
+                    photoStages: {
+                        id: string;
+                        label: string;
+                        required: boolean;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminService"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminToggleService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Toggled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminService"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
