@@ -37,6 +37,11 @@ android {
             "GIT_SHA",
             "\"${System.getenv("GIT_SHA") ?: "dev"}\"",
         )
+        buildConfigField(
+            "String",
+            "API_BASE_URL",
+            "\"${System.getenv("API_BASE_URL") ?: "http://10.0.2.2:7071"}\"",
+        )
     }
 
     buildTypes {
@@ -180,8 +185,9 @@ kover {
                     "*.ui.theme.*",
                     // Compose navigation graphs — NavHost lambdas are framework wiring, not unit-testable
                     "*.navigation.*",
-                    // Hilt DI module — @Provides methods are framework wiring
+                    // Hilt DI modules — @Provides methods are framework wiring
                     "*.data.auth.di.*",
+                    "*.data.catalogue.di.*",
                     // Stub home screen — placeholder Compose composable, no logic
                     "*.ui.home.*",
                     // BiometricGateUseCase.requestAuth requires FragmentActivity + BiometricPrompt
@@ -246,6 +252,15 @@ dependencies {
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.navigation.compose)
 
+    // Networking / serialisation / image loading
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.moshi)
+    implementation(libs.okhttp.core)
+    implementation(libs.okhttp.logging)
+    implementation(libs.moshi.kotlin)
+    ksp(libs.moshi.kotlin.codegen)
+    implementation(libs.coil.compose)
+
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.jupiter.api)
     testRuntimeOnly(libs.junit.jupiter.engine)
@@ -253,6 +268,7 @@ dependencies {
     testRuntimeOnly(libs.junit.vintage.engine)
     testImplementation(libs.mockk)
     testImplementation(libs.assertj.core)
+    testImplementation(libs.google.truth)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.hilt.testing)
