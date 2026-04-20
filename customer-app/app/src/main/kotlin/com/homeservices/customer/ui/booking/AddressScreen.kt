@@ -50,10 +50,11 @@ internal fun AddressScreen(
         },
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(16.dp),
         ) {
             OutlinedTextField(
                 value = addressText,
@@ -71,9 +72,10 @@ internal fun AddressScreen(
                     }
                 },
                 enabled = addressText.isNotBlank(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
             ) {
                 Text(stringResource(R.string.address_next))
             }

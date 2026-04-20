@@ -28,9 +28,10 @@ internal fun BookingConfirmedScreen(
     onBackToHome: () -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -61,9 +62,10 @@ internal fun BookingConfirmedScreen(
         Spacer(Modifier.height(40.dp))
         Button(
             onClick = onBackToHome,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
         ) {
             Text(stringResource(R.string.booking_confirmed_home))
         }

@@ -51,11 +51,12 @@ internal fun BookingSummaryScreen(
             val state = uiState as BookingUiState.AwaitingPayment
             val checkout = Checkout()
             checkout.setKeyID(BuildConfig.RAZORPAY_KEY_ID)
-            val options = JSONObject().apply {
-                put("order_id", state.razorpayOrderId)
-                put("amount", state.amount)
-                put("currency", "INR")
-            }
+            val options =
+                JSONObject().apply {
+                    put("order_id", state.razorpayOrderId)
+                    put("amount", state.amount)
+                    put("currency", "INR")
+                }
             checkout.open(activity, options)
         }
         if (uiState is BookingUiState.BookingConfirmed) {
@@ -95,10 +96,11 @@ internal fun BookingSummaryContent(
         modifier = modifier,
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(16.dp),
         ) {
             when (val state = uiState) {
                 is BookingUiState.Ready -> {
@@ -124,9 +126,10 @@ internal fun BookingSummaryContent(
                     Spacer(Modifier.weight(1f))
                     Button(
                         onClick = onPayNow,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
                     ) {
                         Text(stringResource(R.string.booking_summary_pay_now))
                     }

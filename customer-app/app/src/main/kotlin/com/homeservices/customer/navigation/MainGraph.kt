@@ -62,14 +62,16 @@ internal fun NavGraphBuilder.mainGraph(navController: NavController) {
     ) {
         composable(
             route = BookingRoutes.SLOT_PICKER,
-            arguments = listOf(
-                navArgument("serviceId") { type = NavType.StringType },
-                navArgument("categoryId") { type = NavType.StringType },
-            ),
+            arguments =
+                listOf(
+                    navArgument("serviceId") { type = NavType.StringType },
+                    navArgument("categoryId") { type = NavType.StringType },
+                ),
         ) { backStackEntry ->
-            val bookingEntry = remember(backStackEntry) {
-                navController.getBackStackEntry(BookingRoutes.BOOKING_GRAPH)
-            }
+            val bookingEntry =
+                remember(backStackEntry) {
+                    navController.getBackStackEntry(BookingRoutes.BOOKING_GRAPH)
+                }
             val vm: BookingViewModel = hiltViewModel(bookingEntry)
             val serviceId = backStackEntry.arguments?.getString("serviceId") ?: ""
             val categoryId = backStackEntry.arguments?.getString("categoryId") ?: ""
@@ -85,15 +87,17 @@ internal fun NavGraphBuilder.mainGraph(navController: NavController) {
         }
 
         composable(BookingRoutes.ADDRESS) { backStackEntry ->
-            val bookingEntry = remember(backStackEntry) {
-                navController.getBackStackEntry(BookingRoutes.BOOKING_GRAPH)
-            }
+            val bookingEntry =
+                remember(backStackEntry) {
+                    navController.getBackStackEntry(BookingRoutes.BOOKING_GRAPH)
+                }
             val vm: BookingViewModel = hiltViewModel(bookingEntry)
             AddressScreen(
                 onAddressConfirmed = { addressText, lat, lng ->
                     val state = vm.uiState.value
-                    val slot = (state as? com.homeservices.customer.ui.booking.BookingUiState.Ready)?.slot
-                        ?: return@AddressScreen
+                    val slot =
+                        (state as? com.homeservices.customer.ui.booking.BookingUiState.Ready)?.slot
+                            ?: return@AddressScreen
                     vm.setSlotAndAddress(slot, addressText, lat, lng)
                     navController.navigate(BookingRoutes.SUMMARY)
                 },
@@ -102,9 +106,10 @@ internal fun NavGraphBuilder.mainGraph(navController: NavController) {
         }
 
         composable(BookingRoutes.SUMMARY) { backStackEntry ->
-            val bookingEntry = remember(backStackEntry) {
-                navController.getBackStackEntry(BookingRoutes.BOOKING_GRAPH)
-            }
+            val bookingEntry =
+                remember(backStackEntry) {
+                    navController.getBackStackEntry(BookingRoutes.BOOKING_GRAPH)
+                }
             val vm: BookingViewModel = hiltViewModel(bookingEntry)
             BookingSummaryScreen(
                 viewModel = vm,

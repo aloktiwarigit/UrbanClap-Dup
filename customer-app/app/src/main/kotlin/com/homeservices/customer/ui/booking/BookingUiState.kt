@@ -22,7 +22,11 @@ public sealed class BookingUiState {
 
     public object ConfirmingPayment : BookingUiState()
 
-    public data class BookingConfirmed(val bookingId: String) : BookingUiState()
+    public data class BookingConfirmed(
+        val bookingId: String,
+    ) : BookingUiState()
 
-    public data class Error(val message: String) : BookingUiState()
+    public data class Error(
+        val message: String,
+    ) : BookingUiState()
 }

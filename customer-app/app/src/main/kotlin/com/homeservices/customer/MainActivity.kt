@@ -17,7 +17,9 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
-public class MainActivity : FragmentActivity(), PaymentResultWithDataListener {
+public class MainActivity :
+    FragmentActivity(),
+    PaymentResultWithDataListener {
     @Inject public lateinit var buildInfo: BuildInfoProvider
 
     @Inject public lateinit var sessionManager: SessionManager
@@ -36,7 +38,10 @@ public class MainActivity : FragmentActivity(), PaymentResultWithDataListener {
         }
     }
 
-    override fun onPaymentSuccess(razorpayPaymentId: String, paymentData: PaymentData?) {
+    override fun onPaymentSuccess(
+        razorpayPaymentId: String,
+        paymentData: PaymentData?,
+    ) {
         paymentResultBus.post(
             PaymentResult.Success(
                 paymentId = razorpayPaymentId,
@@ -46,7 +51,11 @@ public class MainActivity : FragmentActivity(), PaymentResultWithDataListener {
         )
     }
 
-    override fun onPaymentError(code: Int, description: String?, paymentData: PaymentData?) {
+    override fun onPaymentError(
+        code: Int,
+        description: String?,
+        paymentData: PaymentData?,
+    ) {
         paymentResultBus.post(
             PaymentResult.Failure(
                 code = code,

@@ -7,6 +7,10 @@ internal object BookingRoutes {
     const val SUMMARY = "booking/summary"
     const val CONFIRMED = "booking/confirmed/{bookingId}"
 
-    fun slotPicker(serviceId: String, categoryId: String) = "booking/slot/$serviceId/$categoryId"
+    fun slotPicker(
+        serviceId: String,
+        categoryId: String,
+    ) = "booking/slot/$serviceId/$categoryId"
+
     fun confirmedRoute(bookingId: String) = "booking/confirmed/$bookingId"
 }

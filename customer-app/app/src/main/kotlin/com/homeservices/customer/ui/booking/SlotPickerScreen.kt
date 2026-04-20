@@ -36,14 +36,15 @@ import java.time.format.DateTimeFormatter
 private val DATE_DISPLAY = DateTimeFormatter.ofPattern("EEE, d MMM")
 private val DATE_ISO = DateTimeFormatter.ISO_LOCAL_DATE
 
-private val TIME_WINDOWS = listOf(
-    "08:00-10:00",
-    "10:00-12:00",
-    "12:00-14:00",
-    "14:00-16:00",
-    "16:00-18:00",
-    "18:00-20:00",
-)
+private val TIME_WINDOWS =
+    listOf(
+        "08:00-10:00",
+        "10:00-12:00",
+        "12:00-14:00",
+        "14:00-16:00",
+        "16:00-18:00",
+        "18:00-20:00",
+    )
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -73,10 +74,11 @@ internal fun SlotPickerScreen(
         },
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(16.dp),
         ) {
             Text(text = "Select Date", style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(8.dp))

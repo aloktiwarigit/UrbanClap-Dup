@@ -15,24 +15,26 @@ public class RazorpayPaymentUseCaseTest {
     private val sut = RazorpayPaymentUseCase(bus)
 
     @Test
-    public fun `resultFlow emits Success when bus posts success`(): Unit = runTest {
-        val deferred = CompletableDeferred<PaymentResult>()
-        backgroundScope.launch { deferred.complete(sut.resultFlow().first()) }
-        yield()
-        bus.post(PaymentResult.Success(paymentId = "pay_1", orderId = "order_1", signature = "sig_1"))
-        val result = deferred.await()
-        assertThat(result).isInstanceOf(PaymentResult.Success::class.java)
-        assertThat((result as PaymentResult.Success).paymentId).isEqualTo("pay_1")
-    }
+    public fun `resultFlow emits Success when bus posts success`(): Unit =
+        runTest {
+            val deferred = CompletableDeferred<PaymentResult>()
+            backgroundScope.launch { deferred.complete(sut.resultFlow().first()) }
+            yield()
+            bus.post(PaymentResult.Success(paymentId = "pay_1", orderId = "order_1", signature = "sig_1"))
+            val result = deferred.await()
+            assertThat(result).isInstanceOf(PaymentResult.Success::class.java)
+            assertThat((result as PaymentResult.Success).paymentId).isEqualTo("pay_1")
+        }
 
     @Test
-    public fun `resultFlow emits Failure when bus posts failure`(): Unit = runTest {
-        val deferred = CompletableDeferred<PaymentResult>()
-        backgroundScope.launch { deferred.complete(sut.resultFlow().first()) }
-        yield()
-        bus.post(PaymentResult.Failure(code = 2, description = "cancelled"))
-        val result = deferred.await()
-        assertThat(result).isInstanceOf(PaymentResult.Failure::class.java)
-        assertThat((result as PaymentResult.Failure).code).isEqualTo(2)
-    }
+    public fun `resultFlow emits Failure when bus posts failure`(): Unit =
+        runTest {
+            val deferred = CompletableDeferred<PaymentResult>()
+            backgroundScope.launch { deferred.complete(sut.resultFlow().first()) }
+            yield()
+            bus.post(PaymentResult.Failure(code = 2, description = "cancelled"))
+            val result = deferred.await()
+            assertThat(result).isInstanceOf(PaymentResult.Failure::class.java)
+            assertThat((result as PaymentResult.Failure).code).isEqualTo(2)
+        }
 }

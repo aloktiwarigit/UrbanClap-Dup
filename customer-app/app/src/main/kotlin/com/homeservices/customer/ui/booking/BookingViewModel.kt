@@ -50,33 +50,41 @@ internal class BookingViewModel
             _uiState.value = BookingUiState.Ready(slot, addressText, lat, lng)
         }
 
-        public fun startPayment(serviceId: String, categoryId: String) {
+        public fun startPayment(
+            serviceId: String,
+            categoryId: String,
+        ) {
             val state = _uiState.value as? BookingUiState.Ready ?: return
             viewModelScope.launch {
                 _uiState.value = BookingUiState.CreatingBooking
-                val request = BookingRequest(
-                    serviceId = serviceId,
-                    categoryId = categoryId,
-                    slot = state.slot,
-                    addressText = state.addressText,
-                    addressLat = state.lat,
-                    addressLng = state.lng,
-                )
+                val request =
+                    BookingRequest(
+                        serviceId = serviceId,
+                        categoryId = categoryId,
+                        slot = state.slot,
+                        addressText = state.addressText,
+                        addressLat = state.lat,
+                        addressLng = state.lng,
+                    )
                 createBooking(request).first().fold(
                     onSuccess = { result ->
                         pendingBookingId = result.bookingId
-                        _uiState.value = BookingUiState.AwaitingPayment(
-                            bookingId = result.bookingId,
-                            razorpayOrderId = result.razorpayOrderId,
-                            amount = result.amount,
-                        )
+                        _uiState.value =
+                            BookingUiState.AwaitingPayment(
+                                bookingId = result.bookingId,
+                                razorpayOrderId = result.razorpayOrderId,
+                                amount = result.amount,
+                            )
                     },
                     onFailure = { _uiState.value = BookingUiState.Error(it.message ?: "Booking failed") },
                 )
             }
         }
 
-        private suspend fun handlePaymentResult(result: PaymentResult, bookingId: String) {
+        private suspend fun handlePaymentResult(
+            result: PaymentResult,
+            bookingId: String,
+        ) {
             when (result) {
                 is PaymentResult.Success -> {
                     _uiState.value = BookingUiState.ConfirmingPayment
