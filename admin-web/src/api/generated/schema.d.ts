@@ -212,6 +212,58 @@ export interface paths {
         patch: operations["adminToggleService"];
         trace?: never;
     };
+    "/v1/admin/complaints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List complaints with optional filters */
+        get: operations["adminListComplaints"];
+        put?: never;
+        /** File a new complaint */
+        post: operations["adminCreateComplaint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/complaints/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update complaint status, assignee, resolution, or add a note */
+        patch: operations["adminPatchComplaint"];
+        trace?: never;
+    };
+    "/v1/admin/complaints/repeat-offenders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Technicians with 3+ resolved complaints in the rolling window */
+        get: operations["adminGetRepeatOffenders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/auth/login": {
         parameters: {
             query?: never;
@@ -451,6 +503,76 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        InternalNote: {
+            adminId: string;
+            note: string;
+            createdAt: string;
+        };
+        AdminComplaintDoc: {
+            id: string;
+            orderId: string;
+            customerId: string;
+            technicianId: string;
+            description: string;
+            /** @enum {string} */
+            status: "NEW" | "INVESTIGATING" | "RESOLVED";
+            assigneeAdminId?: string;
+            /** @enum {string} */
+            resolutionCategory?: "TECHNICIAN_MISCONDUCT" | "SERVICE_QUALITY" | "BILLING_DISPUTE" | "LATE_ARRIVAL" | "NO_SHOW" | "OTHER";
+            /** @default [] */
+            internalNotes: components["schemas"]["InternalNote"][];
+            slaDeadlineAt: string;
+            /** @default false */
+            escalated: boolean;
+            createdAt: string;
+            updatedAt: string;
+        };
+        CreateComplaintBody: {
+            orderId: string;
+            customerId: string;
+            technicianId: string;
+            description: string;
+        };
+        PatchComplaintBody: {
+            /** @enum {string} */
+            status?: "NEW" | "INVESTIGATING" | "RESOLVED";
+            assigneeAdminId?: string;
+            /** @enum {string} */
+            resolutionCategory?: "TECHNICIAN_MISCONDUCT" | "SERVICE_QUALITY" | "BILLING_DISPUTE" | "LATE_ARRIVAL" | "NO_SHOW" | "OTHER";
+            note?: string;
+        };
+        ComplaintListResponse: {
+            items: {
+                id: string;
+                orderId: string;
+                customerId: string;
+                technicianId: string;
+                description: string;
+                /** @enum {string} */
+                status: "NEW" | "INVESTIGATING" | "RESOLVED";
+                assigneeAdminId?: string;
+                /** @enum {string} */
+                resolutionCategory?: "TECHNICIAN_MISCONDUCT" | "SERVICE_QUALITY" | "BILLING_DISPUTE" | "LATE_ARRIVAL" | "NO_SHOW" | "OTHER";
+                /** @default [] */
+                internalNotes: components["schemas"]["InternalNote"][];
+                slaDeadlineAt: string;
+                /** @default false */
+                escalated: boolean;
+                createdAt: string;
+                updatedAt: string;
+            }[];
+            total: number;
+            page: number;
+            pageSize: number;
+            totalPages: number;
+        };
+        RepeatOffender: {
+            technicianId: string;
+            count: number;
+        };
+        RepeatOffendersResponse: {
+            offenders: components["schemas"]["RepeatOffender"][];
         };
         AdminLoginRequest: {
             idToken: string;
@@ -953,6 +1075,180 @@ export interface operations {
             };
             /** @description Not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminListComplaints: {
+        parameters: {
+            query?: {
+                status?: string;
+                assigneeAdminId?: string;
+                dateFrom?: string;
+                dateTo?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated complaints list */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComplaintListResponse"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminCreateComplaint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CreateComplaintBody"];
+            };
+        };
+        responses: {
+            /** @description Complaint created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminComplaintDoc"];
+                };
+            };
+            /** @description Validation error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminPatchComplaint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchComplaintBody"];
+            };
+        };
+        responses: {
+            /** @description Updated complaint */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminComplaintDoc"];
+                };
+            };
+            /** @description Validation error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Complaint not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminGetRepeatOffenders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Repeat offenders list */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepeatOffendersResponse"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

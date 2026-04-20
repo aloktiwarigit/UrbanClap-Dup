@@ -660,6 +660,284 @@
         ],
         "additionalProperties": false
       },
+      "InternalNote": {
+        "type": "object",
+        "properties": {
+          "adminId": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "adminId",
+          "note",
+          "createdAt"
+        ]
+      },
+      "AdminComplaintDoc": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "technicianId": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "NEW",
+              "INVESTIGATING",
+              "RESOLVED"
+            ]
+          },
+          "assigneeAdminId": {
+            "type": "string"
+          },
+          "resolutionCategory": {
+            "type": "string",
+            "enum": [
+              "TECHNICIAN_MISCONDUCT",
+              "SERVICE_QUALITY",
+              "BILLING_DISPUTE",
+              "LATE_ARRIVAL",
+              "NO_SHOW",
+              "OTHER"
+            ]
+          },
+          "internalNotes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InternalNote"
+            },
+            "default": []
+          },
+          "slaDeadlineAt": {
+            "type": "string"
+          },
+          "escalated": {
+            "type": "boolean",
+            "default": false
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "orderId",
+          "customerId",
+          "technicianId",
+          "description",
+          "status",
+          "slaDeadlineAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateComplaintBody": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "technicianId": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "orderId",
+          "customerId",
+          "technicianId",
+          "description"
+        ]
+      },
+      "PatchComplaintBody": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "NEW",
+              "INVESTIGATING",
+              "RESOLVED"
+            ]
+          },
+          "assigneeAdminId": {
+            "type": "string"
+          },
+          "resolutionCategory": {
+            "type": "string",
+            "enum": [
+              "TECHNICIAN_MISCONDUCT",
+              "SERVICE_QUALITY",
+              "BILLING_DISPUTE",
+              "LATE_ARRIVAL",
+              "NO_SHOW",
+              "OTHER"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        }
+      },
+      "ComplaintListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "orderId": {
+                  "type": "string"
+                },
+                "customerId": {
+                  "type": "string"
+                },
+                "technicianId": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "NEW",
+                    "INVESTIGATING",
+                    "RESOLVED"
+                  ]
+                },
+                "assigneeAdminId": {
+                  "type": "string"
+                },
+                "resolutionCategory": {
+                  "type": "string",
+                  "enum": [
+                    "TECHNICIAN_MISCONDUCT",
+                    "SERVICE_QUALITY",
+                    "BILLING_DISPUTE",
+                    "LATE_ARRIVAL",
+                    "NO_SHOW",
+                    "OTHER"
+                  ]
+                },
+                "internalNotes": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InternalNote"
+                  },
+                  "default": []
+                },
+                "slaDeadlineAt": {
+                  "type": "string"
+                },
+                "escalated": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "orderId",
+                "customerId",
+                "technicianId",
+                "description",
+                "status",
+                "slaDeadlineAt",
+                "createdAt",
+                "updatedAt"
+              ]
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "totalPages": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize",
+          "totalPages"
+        ]
+      },
+      "RepeatOffender": {
+        "type": "object",
+        "properties": {
+          "technicianId": {
+            "type": "string"
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "technicianId",
+          "count"
+        ]
+      },
+      "RepeatOffendersResponse": {
+        "type": "object",
+        "properties": {
+          "offenders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RepeatOffender"
+            }
+          }
+        },
+        "required": [
+          "offenders"
+        ]
+      },
       "AdminLoginRequest": {
         "type": "object",
         "properties": {
@@ -1479,6 +1757,221 @@
           },
           "404": {
             "description": "Not found"
+          }
+        }
+      }
+    },
+    "/v1/admin/complaints": {
+      "get": {
+        "operationId": "adminListComplaints",
+        "tags": [
+          "complaints"
+        ],
+        "summary": "List complaints with optional filters",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assigneeAdminId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateFrom",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateTo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated complaints list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      },
+      "post": {
+        "operationId": "adminCreateComplaint",
+        "tags": [
+          "complaints"
+        ],
+        "summary": "File a new complaint",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateComplaintBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Complaint created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminComplaintDoc"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/v1/admin/complaints/{id}": {
+      "patch": {
+        "operationId": "adminPatchComplaint",
+        "tags": [
+          "complaints"
+        ],
+        "summary": "Update complaint status, assignee, resolution, or add a note",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchComplaintBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated complaint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminComplaintDoc"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Complaint not found"
+          }
+        }
+      }
+    },
+    "/v1/admin/complaints/repeat-offenders": {
+      "get": {
+        "operationId": "adminGetRepeatOffenders",
+        "tags": [
+          "complaints"
+        ],
+        "summary": "Technicians with 3+ resolved complaints in the rolling window",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Repeat offenders list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepeatOffendersResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
           }
         }
       }
