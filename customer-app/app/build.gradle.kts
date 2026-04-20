@@ -198,10 +198,34 @@ kover {
                     // that are only exercisable via Compose instrumented tests (Paparazzi covers
                     // the nested $AuthScreen$1 lambda which holds the actual when-branches).
                     "*.AuthScreenKt",
+                    "*.AuthScreenKt\$*",
+                    // Catalogue Compose screen files generate *Kt JVM wrapper classes with
+                    // Compose-framework branches (recomposition guards, slot-table ops) that
+                    // are only exercisable via Compose instrumented tests. Paparazzi covers
+                    // the snapshot rendering; branch coverage is deferred to instrumented CI tests.
+                    "*.CatalogueHomeScreenKt",
+                    "*.CatalogueHomeScreenKt\$*",
+                    "*.ServiceListScreenKt",
+                    "*.ServiceListScreenKt\$*",
+                    "*.ServiceDetailScreenKt",
+                    "*.ServiceDetailScreenKt\$*",
+                    // Moshi KSP-generated JSON adapters — code-gen output, same rationale as Hilt factories
+                    "*.*DtoJsonAdapter",
+                    // BiometricResult sealed class — data holders, no logic branches
+                    "*.domain.auth.model.BiometricResult",
+                    "*.domain.auth.model.BiometricResult\$*",
+                    // BiometricGateUseCase inner lambda classes (BiometricPrompt OS callback)
+                    "*.BiometricGateUseCase\$*",
+                    // TruecallerLoginUseCase — Truecaller SDK callbacks require live SDK + device
+                    "*.TruecallerLoginUseCase",
+                    "*.TruecallerLoginUseCase\$*",
+                    // SessionManager companion object — EncryptedSharedPreferences requires Android context
+                    "*.SessionManager\$Companion",
                     // FirebaseOtpUseCase.sendOtp uses callbackFlow with PhoneAuthProvider —
                     // a real Firebase SDK callback that can't be triggered in JVM unit tests.
                     // signInWithCredential branches are tested separately.
                     "*.FirebaseOtpUseCase",
+                    "*.FirebaseOtpUseCase\$*",
                 )
             }
         }
