@@ -192,6 +192,11 @@ kover {
                     // that are only exercisable via Compose instrumented tests (Paparazzi covers
                     // the nested lambda which holds the actual when-branches).
                     "*.AuthScreenKt",
+                    // KycScreen and sub-composables generate *Kt JVM wrapper classes with
+                    // Compose-framework branches (recomposition guards, slot-table ops) only
+                    // exercisable via Compose instrumented tests. Paparazzi covers rendering paths.
+                    "*.KycScreenKt",
+                    "*.KycScreenKt\$*",
                     // FirebaseOtpUseCase.sendOtp uses callbackFlow with PhoneAuthProvider —
                     // a real Firebase SDK callback that can't be triggered in JVM unit tests.
                     // signInWithCredential branches are tested separately.
