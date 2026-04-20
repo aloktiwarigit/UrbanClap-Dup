@@ -6,6 +6,8 @@ import { AuditLogFilters } from './AuditLogFilters';
 import { EMPTY_FILTERS } from '@/types/audit-log';
 import type { AuditLogListResponse, AuditLogFiltersState } from '@/types/audit-log';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
+
 export function AuditLogClient() {
   const [filters, setFilters] = useState<AuditLogFiltersState>(EMPTY_FILTERS);
   const [data, setData] = useState<AuditLogListResponse | null>(null);
@@ -27,7 +29,7 @@ export function AuditLogClient() {
         if (filters.dateTo) params.set('dateTo', new Date(filters.dateTo).toISOString());
         if (continuationToken) params.set('continuationToken', continuationToken);
 
-        const res = await fetch(`/api/v1/admin/audit-log?${params.toString()}`, {
+        const res = await fetch(`${API_BASE}/api/v1/admin/audit-log?${params.toString()}`, {
           credentials: 'include',
         });
         if (!res.ok) {
