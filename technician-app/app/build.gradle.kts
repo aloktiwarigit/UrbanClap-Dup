@@ -252,6 +252,14 @@ dependencies {
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.navigation.compose)
 
+    // KYC networking + serialization
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.moshi)
+    implementation(libs.okhttp.logging)
+    implementation(libs.moshi.kotlin)
+    implementation(libs.androidx.browser)
+    implementation(libs.firebase.storage)
+
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.jupiter.api)
     testRuntimeOnly(libs.junit.jupiter.engine)
