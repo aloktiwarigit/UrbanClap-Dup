@@ -1,4 +1,4 @@
-import type { CosmosClient } from '@azure/cosmos';
+import type { CosmosClient, SqlParameter } from '@azure/cosmos';
 import { getCosmosClient, DB_NAME } from './client.js';
 import { OrderSchema, type Order, type OrderListQuery, type OrderListResponse } from '../schemas/order.js';
 
@@ -6,11 +6,9 @@ function getContainer(client: CosmosClient) {
   return client.database(DB_NAME).container('bookings');
 }
 
-interface CosmosParam { name: string; value: unknown; }
-
-function buildWhereClause(filters: OrderListQuery): { where: string; params: CosmosParam[] } {
+function buildWhereClause(filters: OrderListQuery): { where: string; params: SqlParameter[] } {
   const conditions: string[] = [];
-  const params: CosmosParam[] = [];
+  const params: SqlParameter[] = [];
 
   if (filters.status?.length) {
     const placeholders = filters.status.map((_, i) => `@status${i}`).join(', ');

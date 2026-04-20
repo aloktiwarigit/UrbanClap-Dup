@@ -35,7 +35,7 @@ describe('ServiceCategorySchema', () => {
 
 describe('CreateCategoryBodySchema', () => {
   it('does not require isActive, updatedBy, createdAt, updatedAt', () => {
-    const { isActive, updatedBy, createdAt, updatedAt, ...body } = validCategory;
+    const { isActive: _isActive, updatedBy: _updatedBy, createdAt: _createdAt, updatedAt: _updatedAt, ...body } = validCategory;
     expect(() => CreateCategoryBodySchema.parse(body)).not.toThrow();
   });
 

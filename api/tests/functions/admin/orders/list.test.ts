@@ -33,7 +33,7 @@ describe('adminListOrdersHandler', () => {
       items: [], total: 0, page: 1, pageSize: 50, totalPages: 0,
     });
     await adminListOrdersHandler(makeReq({ status: 'ASSIGNED,COMPLETED' }), mockCtx, mockAdmin);
-    const calledWith = (queryOrders as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const calledWith = (queryOrders as ReturnType<typeof vi.fn>).mock.calls[0]![0]!;
     expect(calledWith.status).toEqual(['ASSIGNED', 'COMPLETED']);
   });
 

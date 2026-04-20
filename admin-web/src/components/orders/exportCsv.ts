@@ -5,8 +5,8 @@ const HEADERS = [
   'Technician Name','Status','City','Scheduled At','Amount (INR)','Created At',
 ];
 
-function escape(val: unknown): string {
-  const s = String(val ?? '');
+function escape(val: string | number | null | undefined): string {
+  const s = val == null ? '' : String(val);
   if (s.includes(',') || s.includes('"') || s.includes('\n')) {
     return `"${s.replace(/"/g, '""')}"`;
   }

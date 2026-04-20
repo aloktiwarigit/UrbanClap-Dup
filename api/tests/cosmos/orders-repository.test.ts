@@ -38,7 +38,7 @@ describe('queryOrders', () => {
     const result = await queryOrders({ page: 1, pageSize: 50 });
     expect(result.total).toBe(1);
     expect(result.items).toHaveLength(1);
-    expect(result.items[0].id).toBe('ord_1');
+    expect(result.items[0]!.id).toBe('ord_1');
   });
 
   it('includes status filter in query when provided', async () => {
@@ -49,7 +49,7 @@ describe('queryOrders', () => {
       database: () => ({ container: () => ({ items: { query: querySpy } }) }),
     });
     await queryOrders({ status: ['ASSIGNED'], page: 1, pageSize: 50 });
-    const queryText: string = querySpy.mock.calls[0][0].query;
+    const queryText: string = querySpy.mock.calls[0]![0]!.query;
     expect(queryText).toContain('c.status IN');
   });
 });
