@@ -34,6 +34,9 @@ okhttp = "4.12.0"
 moshi = "1.15.1"
 coil = "2.7.0"
 
+# KYC-specific (Custom Tabs for DigiLocker redirect)
+androidxBrowser = "1.8.0"
+
 # Test assertions
 googleTruth = "1.4.4"
 
@@ -66,6 +69,7 @@ androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycleViewmodelCompose" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "androidxNavigationCompose" }
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "androidxSecurityCrypto" }
+androidx-browser = { module = "androidx.browser:browser", version.ref = "androidxBrowser" }
 
 # Compose (BOM-pinned — no version)
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
@@ -80,9 +84,10 @@ hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.re
 hilt-testing = { module = "com.google.dagger:hilt-android-testing", version.ref = "hilt" }
 androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 
-# Firebase (BOM-pinned — firebase-auth-ktx has no explicit version)
+# Firebase (BOM-pinned — firebase-auth-ktx / firebase-storage have no explicit version)
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 firebase-auth-ktx = { module = "com.google.firebase:firebase-auth-ktx" }
+firebase-storage = { module = "com.google.firebase:firebase-storage" }
 
 # Observability
 sentry-android = { module = "io.sentry:sentry-android", version.ref = "sentry" }

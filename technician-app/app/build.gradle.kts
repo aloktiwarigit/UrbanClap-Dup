@@ -192,6 +192,11 @@ kover {
                     // that are only exercisable via Compose instrumented tests (Paparazzi covers
                     // the nested lambda which holds the actual when-branches).
                     "*.AuthScreenKt",
+                    // KycScreen and sub-composables generate *Kt JVM wrapper classes with
+                    // Compose-framework branches (recomposition guards, slot-table ops) only
+                    // exercisable via Compose instrumented tests. Paparazzi covers rendering paths.
+                    "*.KycScreenKt",
+                    "*.KycScreenKt\$*",
                     // FirebaseOtpUseCase.sendOtp uses callbackFlow with PhoneAuthProvider —
                     // a real Firebase SDK callback that can't be triggered in JVM unit tests.
                     // signInWithCredential branches are tested separately.
@@ -203,6 +208,11 @@ kover {
                     "*.TruecallerLoginUseCase",
                     // SentryInitializer wraps Android SDK initialisation — no JVM unit test path
                     "*.SentryInitializer",
+                    // KycApiService is an internal Retrofit interface — its methods are invoked by
+                    // the Retrofit runtime (not unit-testable). KycRepositoryImpl covers all
+                    // reachable branches via mockk in KycRepositoryImplTest.
+                    "*.KycApiService",
+                    "*.KycApiService\$*",
                 )
             }
         }
@@ -251,6 +261,14 @@ dependencies {
     implementation(libs.androidx.security.crypto)
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.navigation.compose)
+
+    // KYC networking + serialization
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.moshi)
+    implementation(libs.okhttp.logging)
+    implementation(libs.moshi.kotlin)
+    implementation(libs.androidx.browser)
+    implementation(libs.firebase.storage)
 
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.jupiter.api)

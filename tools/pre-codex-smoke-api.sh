@@ -12,7 +12,7 @@ echo "=== Pre-Codex Smoke Gate: api ==="
 echo "[1/3] typecheck — catches missing types, broken imports, type errors..."
 pnpm typecheck 2>&1 | tail -20
 
-echo "[2/3] eslint --max-warnings 0 — no warnings allowed..."
+echo "[2/3] lint — ESLint 0 warnings..."
 pnpm lint 2>&1 | tail -20
 
 echo "[3/3] vitest run — all unit tests must be green..."
