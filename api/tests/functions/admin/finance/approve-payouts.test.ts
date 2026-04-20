@@ -87,6 +87,18 @@ describe('adminApprovePayoutsHandler', () => {
     expect(writeLedgerEntry).not.toHaveBeenCalled();
   });
 
+  it('skips transfer and records failure when netPayable is zero', async () => {
+    const zeroEntry = { ...sampleEntry, netPayable: 0 };
+    const zeroQueue = { ...sampleQueue, entries: [zeroEntry] };
+    vi.mocked(getWeekSnapshot).mockResolvedValue(zeroQueue);
+    vi.mocked(getLedgerTransfer).mockResolvedValue(null);
+    const res = await adminApprovePayoutsHandler(req, {} as any, superAdminCtx);
+    expect(res.status).toBe(200);
+    expect((res.jsonBody as any).failed).toBe(1);
+    expect((res.jsonBody as any).errors[0].reason).toContain('netPayable');
+    expect(writeLedgerEntry).not.toHaveBeenCalled();
+  });
+
   it('records failure when Razorpay transfer throws', async () => {
     vi.mocked(getWeekSnapshot).mockResolvedValue(sampleQueue);
     vi.mocked(getLedgerTransfer).mockResolvedValue(null);

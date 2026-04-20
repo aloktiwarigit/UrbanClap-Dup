@@ -44,6 +44,12 @@ export const adminApprovePayoutsHandler: AdminHttpHandler = async (
       continue;
     }
 
+    if (entry.netPayable <= 0) {
+      failed += 1;
+      errors.push({ technicianId: entry.technicianId, reason: 'netPayable must be positive' });
+      continue;
+    }
+
     const accountId = await getTechnicianLinkedAccount(entry.technicianId);
     if (!accountId) {
       failed += 1;
@@ -56,6 +62,7 @@ export const adminApprovePayoutsHandler: AdminHttpHandler = async (
         accountId,
         amount: entry.netPayable,
         notes: { weekStart, technicianId: entry.technicianId, technicianName: entry.technicianName },
+        idempotencyKey: `${entry.technicianId}-${weekStart}`,
       });
       await writeLedgerEntry({
         technicianId: entry.technicianId,

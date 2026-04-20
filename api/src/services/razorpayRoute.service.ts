@@ -4,6 +4,7 @@ export interface RazorpayTransferInput {
   accountId: string;
   amount: number;
   notes: Record<string, string>;
+  idempotencyKey?: string;
 }
 
 export interface RazorpayTransferResult {
@@ -26,13 +27,15 @@ export class RazorpayRouteService implements IRazorpayRouteService {
   }
 
   async transfer(input: RazorpayTransferInput): Promise<RazorpayTransferResult> {
-    const result = await (this.client.transfers.create as (params: unknown) => Promise<{ id: string }>)({
-      account: input.accountId,
-      amount: input.amount,
-      currency: 'INR',
-      on_hold: 0,
-      notes: input.notes,
-    });
+    const result = await (this.client.transfers.create as (
+      params: unknown,
+      opts?: unknown,
+    ) => Promise<{ id: string }>)(
+      { account: input.accountId, amount: input.amount, currency: 'INR', on_hold: 0, notes: input.notes },
+      input.idempotencyKey
+        ? { headers: { 'X-Razorpay-Idempotency-Key': input.idempotencyKey } }
+        : undefined,
+    );
     return { transferId: result.id };
   }
 }
