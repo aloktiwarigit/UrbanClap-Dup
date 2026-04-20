@@ -134,6 +134,12 @@ export function OrdersClient() {
         <OrderSlideOver
           order={selectedOrder}
           onClose={() => setSelectedOrder(null)}
+          onOrderUpdated={updated => {
+            setSelectedOrder(updated);
+            setData(prev => prev
+              ? { ...prev, items: prev.items.map(o => o.id === updated.id ? updated : o) }
+              : prev);
+          }}
         />
       )}
     </div>

@@ -143,7 +143,7 @@ export async function refundOrderHandler(
     partitionKey: new Date().toISOString().slice(0, 7),
   });
 
-  return { status: 200, jsonBody: order };
+  return { status: 202, jsonBody: { status: 'REFUND_INITIATED', order } };
 }
 
 app.http('adminRefundOrder', {

@@ -150,7 +150,7 @@ describe('completeOrderHandler', () => {
 describe('refundOrderHandler', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('returns 200 with order on happy path (stub)', async () => {
+  it('returns 202 with REFUND_INITIATED on happy path (stub)', async () => {
     (getOrderById as ReturnType<typeof vi.fn>).mockResolvedValue(sampleOrder);
     (appendAuditEntry as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
@@ -159,8 +159,8 @@ describe('refundOrderHandler', () => {
       mockCtx,
       mockAdmin,
     );
-    expect(res.status).toBe(200);
-    expect((res.jsonBody as typeof sampleOrder).id).toBe('ord_1');
+    expect(res.status).toBe(202);
+    expect((res.jsonBody as { status: string }).status).toBe('REFUND_INITIATED');
   });
 
   it('returns 422 when reason is too short', async () => {

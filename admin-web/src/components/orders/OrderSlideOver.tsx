@@ -4,7 +4,7 @@ import type { Order } from '@/types/order';
 import { StatusBadge } from './StatusBadge';
 import { OverridePanel } from './OverridePanel';
 
-interface OrderSlideOverProps { order: Order; onClose: () => void; }
+interface OrderSlideOverProps { order: Order; onClose: () => void; onOrderUpdated?: (updated: Order) => void; }
 
 type Toast = { message: string; type: 'success' | 'error' };
 
@@ -17,7 +17,7 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
 }
 
-export function OrderSlideOver({ order, onClose }: OrderSlideOverProps) {
+export function OrderSlideOver({ order, onClose, onOrderUpdated }: OrderSlideOverProps) {
   const [currentOrder, setCurrentOrder] = useState<Order>(order);
   const [toast, setToast] = useState<Toast | null>(null);
 
@@ -50,6 +50,7 @@ export function OrderSlideOver({ order, onClose }: OrderSlideOverProps) {
             onActionComplete={updated => {
               setCurrentOrder(updated);
               setToast({ message: 'Action completed successfully.', type: 'success' });
+              onOrderUpdated?.(updated);
             }}
             onError={message => setToast({ message, type: 'error' })}
           />
