@@ -45,8 +45,9 @@ describe('bookingRepo.getByPaymentOrderId', () => {
     await bookingRepo.getByPaymentOrderId('order_abc123');
 
     expect(mockQuery).toHaveBeenCalledOnce();
-    const queryArg: { query: string; parameters: Array<{ name: string; value: string }> } =
-      mockQuery.mock.calls[0]![0]!;
+    const queryArg = (mockQuery.mock.calls as unknown[][])[0]![0] as {
+      query: string; parameters: Array<{ name: string; value: string }>;
+    };
     expect(queryArg.query).toContain('c.paymentOrderId = @orderId');
     expect(queryArg.parameters).toEqual([{ name: '@orderId', value: 'order_abc123' }]);
   });

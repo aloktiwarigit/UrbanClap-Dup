@@ -45,8 +45,9 @@ describe('bookingRepo.getStaleSearching', () => {
     await bookingRepo.getStaleSearching(cutoff);
 
     expect(mockQuery).toHaveBeenCalledOnce();
-    const queryArg: { query: string; parameters: Array<{ name: string; value: string }> } =
-      mockQuery.mock.calls[0]![0]!;
+    const queryArg = (mockQuery.mock.calls as unknown[][])[0]![0] as {
+      query: string; parameters: Array<{ name: string; value: string }>;
+    };
     expect(queryArg.query).toContain("c.status = 'SEARCHING'");
     expect(queryArg.query).toContain('c.createdAt < @cutoff');
     expect(queryArg.parameters).toEqual([{ name: '@cutoff', value: cutoff }]);

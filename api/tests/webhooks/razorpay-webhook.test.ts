@@ -69,8 +69,10 @@ describe('POST /v1/webhooks/razorpay', () => {
     const res = await razorpayWebhookHandler(req, mockCtx) as HttpResponseInit;
     expect(res.status).toBe(200);
     expect((res.jsonBody as { received: boolean }).received).toBe(true);
-    expect(bookingRepo.markPaid).toHaveBeenCalledWith('bk-1', 'pay_123');
-    expect(dispatcherService.triggerDispatch).toHaveBeenCalledWith('bk-1');
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(vi.mocked(bookingRepo.markPaid)).toHaveBeenCalledWith('bk-1', 'pay_123');
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(vi.mocked(dispatcherService.triggerDispatch)).toHaveBeenCalledWith('bk-1');
   });
 
   it('idempotency — second call on PAID booking returns 200, markPaid not called', async () => {
@@ -89,7 +91,8 @@ describe('POST /v1/webhooks/razorpay', () => {
 
     const res = await razorpayWebhookHandler(req, mockCtx) as HttpResponseInit;
     expect(res.status).toBe(200);
-    expect(bookingRepo.markPaid).not.toHaveBeenCalled();
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(vi.mocked(bookingRepo.markPaid)).not.toHaveBeenCalled();
   });
 });
 
