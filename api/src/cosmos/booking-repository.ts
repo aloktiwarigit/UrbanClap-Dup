@@ -37,6 +37,16 @@ export const bookingRepo = {
     const { resource } = await getBookingsContainer().item(id, id).replace<BookingDoc>(updated);
     return resource!;
   },
+
+  async getByPaymentOrderId(orderId: string): Promise<BookingDoc | null> {
+    const { resources } = await getBookingsContainer()
+      .items.query<BookingDoc>({
+        query: 'SELECT * FROM c WHERE c.paymentOrderId = @orderId',
+        parameters: [{ name: '@orderId', value: orderId }],
+      })
+      .fetchAll();
+    return resources[0] ?? null;
+  },
 };
 
 export async function updateBookingFields(
