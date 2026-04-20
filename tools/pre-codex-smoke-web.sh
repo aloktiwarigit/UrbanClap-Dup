@@ -9,11 +9,11 @@ cd "$REPO_ROOT/admin-web"
 
 echo "=== Pre-Codex Smoke Gate: admin-web ==="
 
-echo "[1/3] tsc --noEmit — catches broken imports, type errors..."
-pnpm tsc --noEmit 2>&1 | tail -20
+echo "[1/3] typecheck — catches broken imports, type errors..."
+pnpm typecheck 2>&1 | tail -20
 
-echo "[2/3] eslint --max-warnings 0..."
-pnpm eslint . --max-warnings 0 2>&1 | tail -20
+echo "[2/3] lint — ESLint + Next.js lint, 0 warnings..."
+pnpm lint 2>&1 | tail -20
 
 echo "[3/3] jest / vitest run — all tests must be green..."
 pnpm test 2>&1 | tail -30

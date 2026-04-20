@@ -11,15 +11,7 @@ import {
   toggleServiceHandler,
 } from '../src/functions/catalogue-admin.js';
 
-const NOW = '2026-04-19T00:00:00.000Z';
 const mockAdmin: AdminContext = { adminId: 'dev-user', role: 'super-admin', sessionId: 'test-session' };
-const _mockCat = { id: 'plumbing', name: 'Plumbing', heroImageUrl: 'https://example.com/p.jpg', sortOrder: 3, isActive: true, updatedBy: 'dev-user', createdAt: NOW, updatedAt: NOW };
-const _mockSvc = {
-  id: 'leak-fix', categoryId: 'plumbing', name: 'Leak Fix', shortDescription: 'Fast.',
-  heroImageUrl: 'https://example.com/l.jpg', basePrice: 39900, commissionBps: 2250,
-  durationMinutes: 60, includes: [], faq: [], addOns: [], photoStages: [],
-  isActive: true, updatedBy: 'dev-user', createdAt: NOW, updatedAt: NOW,
-};
 
 vi.mock('../src/cosmos/catalogue-repository.js', () => {
   const NOW = '2026-04-19T00:00:00.000Z';
@@ -56,10 +48,7 @@ vi.mock('../src/middleware/requireAdmin.js', () => ({
 }));
 
 function makeReq(url: string, body?: unknown, params: Record<string, string> = {}, method = 'POST') {
-  const init = body
-    ? { url, method, body: { string: JSON.stringify(body) } }
-    : { url, method };
-  const req = new HttpRequest(init);
+  const req = new HttpRequest({ url, method, ...(body ? { body: { string: JSON.stringify(body) } } : {}) });
   Object.assign(req, { params });
   return req;
 }
