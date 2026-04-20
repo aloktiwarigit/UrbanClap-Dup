@@ -15,8 +15,11 @@ import { signAccessToken } from '../../../../src/services/jwt.service.js';
 import { touchAndGetSession } from '../../../../src/services/adminSession.service.js';
 import { queryAuditLog } from '../../../../src/cosmos/audit-log-repository.js';
 import { HttpRequest } from '@azure/functions';
+import type { HttpResponseInit } from '@azure/functions';
 
 const fakeCtx = {} as any;
+const callHandler = (req: HttpRequest): Promise<HttpResponseInit> =>
+  adminAuditLogListHandler(req, fakeCtx) as Promise<HttpResponseInit>;
 
 function makeReq(cookieHeader?: string, searchParams?: Record<string, string>): HttpRequest {
   const url = new URL('http://localhost/api/v1/admin/audit-log');
@@ -50,7 +53,7 @@ describe('GET /v1/admin/audit-log', () => {
   });
 
   it('returns 401 when no cookie present', async () => {
-    const res = await adminAuditLogListHandler(makeReq(), fakeCtx);
+    const res = await callHandler(makeReq());
     expect(res.status).toBe(401);
     expect((res.jsonBody as any).code).toBe('UNAUTHENTICATED');
   });
@@ -58,7 +61,7 @@ describe('GET /v1/admin/audit-log', () => {
   it('returns 403 when role is ops-manager (not super-admin)', async () => {
     vi.mocked(touchAndGetSession).mockResolvedValue({ sessionId: 's1' } as any);
     const token = await signAccessToken({ sub: 'u1', role: 'ops-manager', sessionId: 's1' });
-    const res = await adminAuditLogListHandler(makeReq(`hs_access=${token}`), fakeCtx);
+    const res = await callHandler(makeReq(`hs_access=${token}`));
     expect(res.status).toBe(403);
     expect((res.jsonBody as any).code).toBe('FORBIDDEN');
   });
@@ -66,7 +69,7 @@ describe('GET /v1/admin/audit-log', () => {
   it('returns 200 with entries for super-admin', async () => {
     vi.mocked(touchAndGetSession).mockResolvedValue({ sessionId: 's1' } as any);
     const token = await signAccessToken({ sub: 'u1', role: 'super-admin', sessionId: 's1' });
-    const res = await adminAuditLogListHandler(makeReq(`hs_access=${token}`), fakeCtx);
+    const res = await callHandler(makeReq(`hs_access=${token}`));
     expect(res.status).toBe(200);
     const body = res.jsonBody as { entries: unknown[] };
     expect(body.entries).toHaveLength(1);
@@ -75,10 +78,7 @@ describe('GET /v1/admin/audit-log', () => {
   it('returns 400 when pageSize is invalid', async () => {
     vi.mocked(touchAndGetSession).mockResolvedValue({ sessionId: 's1' } as any);
     const token = await signAccessToken({ sub: 'u1', role: 'super-admin', sessionId: 's1' });
-    const res = await adminAuditLogListHandler(
-      makeReq(`hs_access=${token}`, { pageSize: '999' }),
-      fakeCtx,
-    );
+    const res = await callHandler(makeReq(`hs_access=${token}`, { pageSize: '999' }));
     expect(res.status).toBe(400);
     expect((res.jsonBody as any).code).toBe('VALIDATION_ERROR');
   });
@@ -86,13 +86,12 @@ describe('GET /v1/admin/audit-log', () => {
   it('passes filter params to queryAuditLog', async () => {
     vi.mocked(touchAndGetSession).mockResolvedValue({ sessionId: 's1' } as any);
     const token = await signAccessToken({ sub: 'u1', role: 'super-admin', sessionId: 's1' });
-    await adminAuditLogListHandler(
+    await callHandler(
       makeReq(`hs_access=${token}`, {
         adminId: 'admin-1',
         action: 'admin.login',
         resourceType: 'admin_session',
       }),
-      fakeCtx,
     );
     expect(queryAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -110,7 +109,7 @@ describe('GET /v1/admin/audit-log', () => {
       continuationToken: 'next-tok',
     });
     const token = await signAccessToken({ sub: 'u1', role: 'super-admin', sessionId: 's1' });
-    const res = await adminAuditLogListHandler(makeReq(`hs_access=${token}`), fakeCtx);
+    const res = await callHandler(makeReq(`hs_access=${token}`));
     expect((res.jsonBody as any).continuationToken).toBe('next-tok');
   });
 });

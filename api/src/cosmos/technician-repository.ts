@@ -69,7 +69,7 @@ export async function getTechniciansWithinRadius(
             AND c.isOnline = true
             AND c.isAvailable = true`,
     parameters: [
-      { name: '@polygon', value: polygon },
+      { name: '@polygon', value: polygon as unknown as string },
       { name: '@serviceId', value: serviceId },
     ],
   };
