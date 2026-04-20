@@ -17,7 +17,6 @@ import { feedHandler } from '../../../../src/functions/admin/dashboard/feed.js';
 import { getCosmosClient } from '../../../../src/cosmos/client.js';
 import { touchAndGetSession } from '../../../../src/services/adminSession.service.js';
 import { requireAdmin } from '../../../../src/middleware/requireAdmin.js';
-import { signAccessToken } from '../../../../src/services/jwt.service.js';
 import { HttpRequest } from '@azure/functions';
 import type { InvocationContext, HttpResponseInit } from '@azure/functions';
 import { BookingEventsResponseSchema } from '../../../../src/schemas/dashboard.js';
