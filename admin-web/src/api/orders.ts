@@ -1,4 +1,14 @@
-import type { Order, OrderListResponse, OrdersQueryParams } from '@/types/order';
+import type {
+  Order,
+  OrderListResponse,
+  OrdersQueryParams,
+  ReassignRequest,
+  CompleteRequest,
+  RefundRequest,
+  WaiveFeeRequest,
+  EscalateRequest,
+  NoteRequest,
+} from '@/types/order';
 
 function buildSearchParams(params: OrdersQueryParams): URLSearchParams {
   const sp = new URLSearchParams();
@@ -36,4 +46,70 @@ export async function fetchAllOrdersForExport(params: OrdersQueryParams): Promis
     page++;
   } while (page <= totalPages);
   return allOrders;
+}
+
+export async function reassignOrder(id: string, body: ReassignRequest): Promise<Order> {
+  const res = await fetch(`${BASE}/api/v1/admin/orders/${id}/reassign`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`reassignOrder failed: ${res.status}`);
+  return res.json() as Promise<Order>;
+}
+
+export async function completeOrder(id: string, body: CompleteRequest): Promise<Order> {
+  const res = await fetch(`${BASE}/api/v1/admin/orders/${id}/complete`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`completeOrder failed: ${res.status}`);
+  return res.json() as Promise<Order>;
+}
+
+export async function refundOrder(id: string, body: RefundRequest): Promise<Order> {
+  const res = await fetch(`${BASE}/api/v1/admin/orders/${id}/refund`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`refundOrder failed: ${res.status}`);
+  return res.json() as Promise<Order>;
+}
+
+export async function waiveFeeOrder(id: string, body: WaiveFeeRequest): Promise<Order> {
+  const res = await fetch(`${BASE}/api/v1/admin/orders/${id}/waive-fee`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`waiveFeeOrder failed: ${res.status}`);
+  return res.json() as Promise<Order>;
+}
+
+export async function escalateOrder(id: string, body: EscalateRequest): Promise<Order> {
+  const res = await fetch(`${BASE}/api/v1/admin/orders/${id}/escalate`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`escalateOrder failed: ${res.status}`);
+  return res.json() as Promise<Order>;
+}
+
+export async function addOrderNote(id: string, body: NoteRequest): Promise<Order> {
+  const res = await fetch(`${BASE}/api/v1/admin/orders/${id}/note`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`addOrderNote failed: ${res.status}`);
+  return res.json() as Promise<Order>;
 }
