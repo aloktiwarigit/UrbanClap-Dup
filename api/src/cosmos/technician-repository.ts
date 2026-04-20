@@ -14,7 +14,7 @@ interface TechnicianDoc {
 
 export async function upsertKycStatus(
   technicianId: string,
-  patch: Partial<TechnicianKyc> & { kycStatus: KycStatus },
+  patch: Partial<TechnicianKyc> & { kycStatus: KycStatus }
 ): Promise<void> {
   const client = getCosmosClient();
   const container = client.database(DB_NAME).container(CONTAINER);
@@ -36,7 +36,7 @@ export async function upsertKycStatus(
 }
 
 export async function getKycByTechnicianId(
-  technicianId: string,
+  technicianId: string
 ): Promise<TechnicianKyc | null> {
   const client = getCosmosClient();
   const container = client.database(DB_NAME).container(CONTAINER);

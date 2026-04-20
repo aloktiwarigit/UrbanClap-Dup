@@ -3,6 +3,11 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Required for Truecaller SDK to detect whether Truecaller is installed -->
+    <queries>
+        <package android:name="com.truecaller" />
+    </queries>
+
     <application
         android:name=".HomeservicesTechnicianApplication"
         android:allowBackup="false"
@@ -22,6 +27,15 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="homeservices"
+                    android:host="kyc"
+                    android:pathPrefix="/aadhaar-callback" />
             </intent-filter>
         </activity>
     </application>

@@ -21,9 +21,11 @@
     "test:coverage": "vitest run --coverage",
     "openapi:build": "tsx src/openapi/build.ts",
     "openapi:lint": "spectral lint openapi.json --fail-severity error",
-    "seed:technicians": "npx tsx scripts/seed-technicians.ts"
+    "seed:technicians": "npx tsx scripts/seed-technicians.ts",
+    "seed:catalogue": "tsx src/cosmos/seeds/catalogue.ts"
   },
   "dependencies": {
+    "@azure/ai-form-recognizer": "^5.1.0",
     "@azure/cosmos": "^4.9.2",
     "@azure/functions": "^4.5.0",
     "@growthbook/growthbook": "^1",
