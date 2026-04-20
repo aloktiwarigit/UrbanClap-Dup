@@ -42,6 +42,17 @@ android {
             "API_BASE_URL",
             "\"${System.getenv("API_BASE_URL") ?: "http://10.0.2.2:7071"}\"",
         )
+        buildConfigField(
+            "String",
+            "RAZORPAY_KEY_ID",
+            "\"${System.getenv("RAZORPAY_KEY_ID") ?: ""}\"",
+        )
+        buildConfigField(
+            "String",
+            "MAPS_API_KEY",
+            "\"${System.getenv("MAPS_API_KEY") ?: ""}\"",
+        )
+        manifestPlaceholders["MAPS_API_KEY"] = System.getenv("MAPS_API_KEY") ?: ""
     }
 
     buildTypes {
@@ -284,6 +295,11 @@ dependencies {
     implementation(libs.moshi.kotlin)
     ksp(libs.moshi.kotlin.codegen)
     implementation(libs.coil.compose)
+
+    // Payments + Maps
+    implementation(libs.razorpay.checkout)
+    implementation(libs.google.places)
+    implementation(libs.play.services.maps)
 
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.jupiter.api)

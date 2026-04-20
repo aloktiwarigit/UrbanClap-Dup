@@ -24,6 +24,10 @@ export function getCatalogueContainers(): { categories: Container; services: Con
   };
 }
 
+export function getBookingsContainer(): Container {
+  return getCosmosClient().database(DB_NAME).container('bookings');
+}
+
 /** Inject a mock CosmosClient in tests. */
 export function _setCosmosClientForTest(mock: CosmosClient): void {
   _client = mock;
