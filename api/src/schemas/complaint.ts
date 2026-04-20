@@ -34,7 +34,7 @@ export const ComplaintDocSchema = z.object({
   escalated: z.boolean().default(false),
   createdAt: z.string(),
   updatedAt: z.string(),
-}).openapi('ComplaintDoc');
+});
 
 export const CreateComplaintBodySchema = z.object({
   orderId: z.string(),

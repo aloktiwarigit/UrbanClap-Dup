@@ -92,7 +92,7 @@ export async function queryComplaints(params: ComplaintListQuery): Promise<Compl
 export async function getOverdueComplaints(): Promise<ComplaintDoc[]> {
   const now = new Date().toISOString();
   const query: SqlQuerySpec = {
-    query: `SELECT * FROM c WHERE c.slaDeadlineAt < @now AND c.status != @resolved AND c.escalated != true`,
+    query: `SELECT * FROM c WHERE c.slaDeadlineAt < @now AND c.status != @resolved AND c.escalated != true`, // != true catches both false and absent (pre-schema-default) documents
     parameters: [
       { name: '@now', value: now },
       { name: '@resolved', value: 'RESOLVED' },
@@ -109,6 +109,7 @@ export async function getOverdueComplaints(): Promise<ComplaintDoc[]> {
 export async function getRepeatOffenders(
   sinceIso: string,
 ): Promise<Array<{ technicianId: string; count: number }>> {
+  // Full scan bounded by sinceIso; revisit partition key strategy when container > pilot scale
   const query: SqlQuerySpec = {
     query: `SELECT * FROM c WHERE c.status = @resolved AND c.createdAt >= @since`,
     parameters: [
