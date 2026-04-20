@@ -29,7 +29,7 @@ export function pointInsidePolygon(
   lng: number,
   poly: BoundingBoxPolygon,
 ): boolean {
-  const ring = poly.coordinates[0]!;
+  const ring = poly.coordinates[0];
   let inside = false;
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
     const [xi, yi] = ring[i]!;
