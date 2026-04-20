@@ -1,5 +1,26 @@
 @import "tailwindcss";
 
+/* Dashboard design tokens — E09-S01 */
+:root {
+  --ink-0: #070a0b; --ink-1: #0E1416; --ink-2: #131b1e;
+  --ink-3: #1a2427; --ink-4: #263135; --ink-5: #3d4a50;
+  --fog-0: #6b7a81; --fog-1: #96a4ab; --fog-2: #c4d1d7; --fog-3: #ebf2f5;
+  --teal: #22a38f; --teal-soft: #2fc9b1; --teal-dim: #15584e;
+  --coral: #f07a52; --coral-soft: #f4946f;
+  --ember: #e9b44c; --rose: #d65d7a; --lavender: #8b7dc3;
+  --font-display: "Fraunces", "Times New Roman", serif;
+  --font-body: "IBM Plex Sans", -apple-system, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 @theme {
   /* color — brand + neutrals + semantic */
   --color-brand: #4f46e5;

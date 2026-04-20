@@ -56,7 +56,10 @@ vi.mock('../src/middleware/requireAdmin.js', () => ({
 }));
 
 function makeReq(url: string, body?: unknown, params: Record<string, string> = {}, method = 'POST') {
-  const req = new HttpRequest({ url, method, body: body ? { string: JSON.stringify(body) } : undefined });
+  const init = body
+    ? { url, method, body: { string: JSON.stringify(body) } }
+    : { url, method };
+  const req = new HttpRequest(init);
   Object.assign(req, { params });
   return req;
 }
