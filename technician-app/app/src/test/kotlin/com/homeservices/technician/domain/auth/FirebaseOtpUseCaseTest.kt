@@ -42,9 +42,9 @@ public class FirebaseOtpUseCaseTest {
                 launch {
                     try {
                         useCase.sendOtp("+919999999999", mockk(relaxed = true)).collect { }
-                    } catch (_: Exception) {
-                        // Expected: Firebase SDK cannot run in unit tests without Robolectric.
-                        // The awaitClose {} block ensures no hang even if verifyPhoneNumber throws.
+                    } catch (_: Throwable) {
+                        // Expected: Firebase SDK (UnsatisfiedLinkError / RuntimeException) cannot run
+                        // in unit tests without Robolectric. The awaitClose {} block ensures no hang.
                     }
                 }
             advanceTimeBy(100)
