@@ -77,4 +77,14 @@ describe('adminCreateComplaintHandler', () => {
     );
     expect(res.status).toBe(400);
   });
+
+  it('calls appendAuditEntry with COMPLAINT_CREATED on successful create', async () => {
+    (createComplaint as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (appendAuditEntry as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    await adminCreateComplaintHandler(makeReq(validBody), mockCtx, mockAdmin);
+    expect(appendAuditEntry).toHaveBeenCalledOnce();
+    const auditCall = (appendAuditEntry as ReturnType<typeof vi.fn>).mock.calls[0]![0]!;
+    expect(auditCall.action).toBe('COMPLAINT_CREATED');
+    expect(auditCall.adminId).toBe('admin_1');
+  });
 });

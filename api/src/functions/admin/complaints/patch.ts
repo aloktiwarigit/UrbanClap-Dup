@@ -45,7 +45,7 @@ export async function adminPatchComplaintHandler(
   }
   if (parsed.data.note !== undefined) {
     updated.internalNotes = [
-      ...existing.internalNotes,
+      ...(existing.internalNotes ?? []),
       { adminId: admin.adminId, note: parsed.data.note, createdAt: now },
     ];
   }
