@@ -14,7 +14,10 @@ public data class CreateBookingRequestDto(
 )
 
 @JsonClass(generateAdapter = true)
-public data class LatLngDto(val lat: Double, val lng: Double)
+public data class LatLngDto(
+    val lat: Double,
+    val lng: Double,
+)
 
 @JsonClass(generateAdapter = true)
 public data class CreateBookingResponseDto(
@@ -33,4 +36,7 @@ public data class ConfirmBookingRequestDto(
 )
 
 @JsonClass(generateAdapter = true)
-public data class ConfirmBookingResponseDto(val bookingId: String, val status: String)
+public data class ConfirmBookingResponseDto(
+    val bookingId: String,
+    val status: String,
+)

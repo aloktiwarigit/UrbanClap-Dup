@@ -27,35 +27,38 @@ public annotation class AuthOkHttpClient
 @Module
 @InstallIn(SingletonComponent::class)
 public abstract class BookingModule {
-
     @Binds
     internal abstract fun bindBookingRepository(impl: BookingRepositoryImpl): BookingRepository
 
     public companion object {
-
         @Provides
         @Singleton
         @AuthOkHttpClient
         public fun provideAuthOkHttpClient(): OkHttpClient =
-            OkHttpClient.Builder()
+            OkHttpClient
+                .Builder()
                 .addInterceptor { chain ->
-                    val token = runBlocking {
-                        FirebaseAuth.getInstance().currentUser
-                            ?.getIdToken(false)
-                            ?.await()
-                            ?.token
-                    }
+                    val token =
+                        runBlocking {
+                            FirebaseAuth
+                                .getInstance()
+                                .currentUser
+                                ?.getIdToken(false)
+                                ?.await()
+                                ?.token
+                        }
                     val req =
                         if (token != null) {
-                            chain.request().newBuilder()
+                            chain
+                                .request()
+                                .newBuilder()
                                 .header("Authorization", "Bearer $token")
                                 .build()
                         } else {
                             chain.request()
                         }
                     chain.proceed(req)
-                }
-                .addInterceptor(
+                }.addInterceptor(
                     HttpLoggingInterceptor().apply {
                         level =
                             if (BuildConfig.DEBUG) {
@@ -64,8 +67,7 @@ public abstract class BookingModule {
                                 HttpLoggingInterceptor.Level.NONE
                             }
                     },
-                )
-                .build()
+                ).build()
 
         @Provides
         @Singleton
@@ -73,7 +75,8 @@ public abstract class BookingModule {
             @AuthOkHttpClient client: OkHttpClient,
             moshi: Moshi,
         ): BookingApiService =
-            Retrofit.Builder()
+            Retrofit
+                .Builder()
                 .baseUrl(BuildConfig.API_BASE_URL + "/")
                 .addConverterFactory(MoshiConverterFactory.create(moshi))
                 .client(client)

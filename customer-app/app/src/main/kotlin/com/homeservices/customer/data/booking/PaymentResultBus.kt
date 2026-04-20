@@ -8,11 +8,13 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-public class PaymentResultBus @Inject constructor() {
-    private val _results = MutableSharedFlow<PaymentResult>(extraBufferCapacity = 1)
-    public val results: SharedFlow<PaymentResult> = _results.asSharedFlow()
+public class PaymentResultBus
+    @Inject
+    constructor() {
+        private val _results = MutableSharedFlow<PaymentResult>(extraBufferCapacity = 1)
+        public val results: SharedFlow<PaymentResult> = _results.asSharedFlow()
 
-    public fun post(result: PaymentResult) {
-        _results.tryEmit(result)
+        public fun post(result: PaymentResult) {
+            _results.tryEmit(result)
+        }
     }
-}

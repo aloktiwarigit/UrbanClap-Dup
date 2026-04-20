@@ -10,7 +10,9 @@ import retrofit2.http.Path
 
 public interface BookingApiService {
     @POST("v1/bookings")
-    public suspend fun createBooking(@Body body: CreateBookingRequestDto): CreateBookingResponseDto
+    public suspend fun createBooking(
+        @Body body: CreateBookingRequestDto,
+    ): CreateBookingResponseDto
 
     @POST("v1/bookings/{id}/confirm")
     public suspend fun confirmBooking(
