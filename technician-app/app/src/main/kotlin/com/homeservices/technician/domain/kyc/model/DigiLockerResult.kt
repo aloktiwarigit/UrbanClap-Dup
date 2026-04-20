@@ -7,7 +7,11 @@ public sealed class DigiLockerResult {
 
     public data object UserCancelled : DigiLockerResult()
 
-    public data class NetworkError(public val cause: Throwable) : DigiLockerResult()
+    public data class NetworkError(
+        public val cause: Throwable,
+    ) : DigiLockerResult()
 
-    public data class ApiError(public val message: String) : DigiLockerResult()
+    public data class ApiError(
+        public val message: String,
+    ) : DigiLockerResult()
 }

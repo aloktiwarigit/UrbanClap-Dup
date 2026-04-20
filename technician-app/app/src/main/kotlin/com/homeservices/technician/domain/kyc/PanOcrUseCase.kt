@@ -7,17 +7,24 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 
-public class PanOcrUseCase @Inject constructor(
-    private val repository: KycRepository,
-    private val uploader: FirebaseStorageUploader,
-) {
-    public operator fun invoke(
-        imageUri: Uri,
-        technicianId: String,
-    ): Flow<PanOcrResult> = flow {
-        val storagePath = "technicians/$technicianId/pan_${System.currentTimeMillis()}.jpg"
-        val uploadedPath = runCatching { uploader.upload(imageUri, storagePath) }
-            .getOrElse { emit(PanOcrResult.UploadError(it)); return@flow }
-        emit(repository.submitPanOcr(uploadedPath))
+public class PanOcrUseCase
+    @Inject
+    constructor(
+        private val repository: KycRepository,
+        private val uploader: FirebaseStorageUploader,
+    ) {
+        public operator fun invoke(
+            imageUri: Uri,
+            technicianId: String,
+        ): Flow<PanOcrResult> =
+            flow {
+                val storagePath = "technicians/$technicianId/pan_${System.currentTimeMillis()}.jpg"
+                val uploadedPath =
+                    runCatching { uploader.upload(imageUri, storagePath) }
+                        .getOrElse {
+                            emit(PanOcrResult.UploadError(it))
+                            return@flow
+                        }
+                emit(repository.submitPanOcr(uploadedPath))
+            }
     }
-}

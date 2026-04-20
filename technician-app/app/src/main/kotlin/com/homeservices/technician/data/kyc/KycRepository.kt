@@ -10,9 +10,7 @@ public interface KycRepository {
         redirectUri: String,
     ): DigiLockerResult
 
-    public suspend fun submitPanOcr(
-        firebaseStoragePath: String,
-    ): PanOcrResult
+    public suspend fun submitPanOcr(firebaseStoragePath: String): PanOcrResult
 
     public suspend fun getKycStatus(): KycState
 }
