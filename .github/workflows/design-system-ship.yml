@@ -28,6 +28,7 @@ concurrency:
 
 env:
   GIT_SHA: ${{ github.sha }}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   quality-gate:
