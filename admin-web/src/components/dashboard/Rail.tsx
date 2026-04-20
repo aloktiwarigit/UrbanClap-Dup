@@ -2,22 +2,23 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import type { Route } from 'next';
 
 interface NavItem {
   label: string;
-  href: string;
+  href: Route;
   icon: string; // text icon / emoji shorthand
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Live Ops', href: '/dashboard', icon: '⬡' },
-  { label: 'Orders', href: '/dashboard/orders', icon: '◈' },
-  { label: 'Technicians', href: '/dashboard/technicians', icon: '◉' },
-  { label: 'Customers', href: '/dashboard/customers', icon: '◎' },
-  { label: 'Finance', href: '/dashboard/finance', icon: '◆' },
-  { label: 'Complaints', href: '/dashboard/complaints', icon: '◇' },
-  { label: 'Audit Log', href: '/dashboard/audit', icon: '⊕' },
-  { label: 'Settings', href: '/dashboard/settings', icon: '⊗' },
+  { label: 'Live Ops', href: '/dashboard' as Route, icon: '⬡' },
+  { label: 'Orders', href: '/dashboard/orders' as Route, icon: '◈' },
+  { label: 'Technicians', href: '/dashboard/technicians' as Route, icon: '◉' },
+  { label: 'Customers', href: '/dashboard/customers' as Route, icon: '◎' },
+  { label: 'Finance', href: '/dashboard/finance' as Route, icon: '◆' },
+  { label: 'Complaints', href: '/dashboard/complaints' as Route, icon: '◇' },
+  { label: 'Audit Log', href: '/dashboard/audit' as Route, icon: '⊕' },
+  { label: 'Settings', href: '/dashboard/settings' as Route, icon: '⊗' },
 ];
 
 export function Rail() {
