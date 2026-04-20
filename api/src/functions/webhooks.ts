@@ -6,7 +6,9 @@ import { bookingRepo } from '../cosmos/booking-repository.js';
 import { dispatcherService } from '../services/dispatcher.service.js';
 
 export const razorpayWebhookHandler: HttpHandler = async (req, _ctx) => {
-  const secret = process.env['RAZORPAY_WEBHOOK_SECRET'] ?? '';
+  const secret = process.env['RAZORPAY_WEBHOOK_SECRET'];
+  if (!secret) return { status: 500, jsonBody: { code: 'CONFIGURATION_ERROR' } };
+
   const signature = req.headers.get('x-razorpay-signature') ?? '';
 
   const rawBody = await req.text();

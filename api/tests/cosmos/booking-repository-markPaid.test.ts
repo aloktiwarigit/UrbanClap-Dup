@@ -48,9 +48,24 @@ describe('bookingRepo.markPaid', () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  it('returns null when status is not SEARCHING (e.g. PENDING_PAYMENT)', async () => {
+  it('transitions PENDING_PAYMENT → PAID (webhook-before-client-confirm race)', async () => {
     const pendingDoc: BookingDoc = { ...baseDoc, status: 'PENDING_PAYMENT' };
+    const updatedDoc: BookingDoc = { ...pendingDoc, status: 'PAID', paymentId: 'pay_new' };
     mockRead.mockResolvedValue({ resource: pendingDoc });
+    mockReplace.mockResolvedValue({ resource: updatedDoc });
+
+    const result = await bookingRepo.markPaid('bk-paid-test', 'pay_new');
+
+    expect(mockReplace).toHaveBeenCalledOnce();
+    const replaceArg = (mockReplace.mock.calls as unknown[][])[0]![0] as BookingDoc;
+    expect(replaceArg.status).toBe('PAID');
+    expect(replaceArg.paymentId).toBe('pay_new');
+    expect(result).toEqual(updatedDoc);
+  });
+
+  it('returns null when status is an in-progress state (e.g. ASSIGNED)', async () => {
+    const assignedDoc: BookingDoc = { ...baseDoc, status: 'ASSIGNED' };
+    mockRead.mockResolvedValue({ resource: assignedDoc });
 
     const result = await bookingRepo.markPaid('bk-paid-test', 'pay_xyz');
 
@@ -67,7 +82,7 @@ describe('bookingRepo.markPaid', () => {
     const result = await bookingRepo.markPaid('bk-paid-test', 'pay_new');
 
     expect(mockReplace).toHaveBeenCalledOnce();
-    const replaceArg: BookingDoc = mockReplace.mock.calls[0]![0]!;
+    const replaceArg = (mockReplace.mock.calls as unknown[][])[0]![0] as BookingDoc;
     expect(replaceArg.status).toBe('PAID');
     expect(replaceArg.paymentId).toBe('pay_new');
     expect(result).toEqual(updatedDoc);

@@ -40,6 +40,16 @@ beforeEach(() => {
 });
 
 describe('POST /v1/webhooks/razorpay', () => {
+  it('returns 500 when RAZORPAY_WEBHOOK_SECRET is not configured', async () => {
+    vi.stubEnv('RAZORPAY_WEBHOOK_SECRET', undefined as unknown as string);
+    const body = JSON.stringify({ event: 'payment.captured' });
+    const req = makeWebhookReq(body, 'any');
+    const res = await razorpayWebhookHandler(req, mockCtx) as HttpResponseInit;
+    expect(res.status).toBe(500);
+    expect((res.jsonBody as { code: string }).code).toBe('CONFIGURATION_ERROR');
+    vi.stubEnv('RAZORPAY_WEBHOOK_SECRET', 'webhook_secret');
+  });
+
   it('returns 400 on bad signature', async () => {
     const body = JSON.stringify({ event: 'payment.captured', payload: { payment: { entity: { id: 'pay_123', order_id: 'order_456' } } } });
     const req = makeWebhookReq(body, 'bad_signature');
