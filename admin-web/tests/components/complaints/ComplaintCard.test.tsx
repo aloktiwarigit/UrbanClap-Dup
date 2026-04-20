@@ -5,22 +5,20 @@ import type { Complaint } from '../../../src/types/complaint';
 
 function makeComplaint(overrides?: Partial<Complaint>): Complaint {
   const future = new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(); // 5h from now
-  return {
+  const base: Complaint = {
     id: 'comp_001',
     orderId: 'ord_abc123',
     customerId: 'cust_xyz789',
     technicianId: 'tech_001',
     description: 'Technician arrived 2 hours late',
     status: 'NEW',
-    assigneeAdminId: undefined,
-    resolutionCategory: undefined,
     internalNotes: [],
     slaDeadlineAt: future,
     escalated: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    ...overrides,
   };
+  return { ...base, ...overrides };
 }
 
 describe('ComplaintCard', () => {

@@ -4,7 +4,7 @@ import { ComplaintSlideOver } from '../../../src/components/complaints/Complaint
 import type { Complaint } from '../../../src/types/complaint';
 
 function makeComplaint(overrides?: Partial<Complaint>): Complaint {
-  return {
+  const base: Complaint = {
     id: 'comp_001',
     orderId: 'ord_abc123',
     customerId: 'cust_xyz789',
@@ -12,7 +12,6 @@ function makeComplaint(overrides?: Partial<Complaint>): Complaint {
     description: 'Technician arrived 2 hours late and was rude',
     status: 'INVESTIGATING',
     assigneeAdminId: 'admin_007',
-    resolutionCategory: undefined,
     internalNotes: [
       { adminId: 'admin_007', note: 'Contacted technician', createdAt: new Date().toISOString() },
     ],
@@ -20,8 +19,8 @@ function makeComplaint(overrides?: Partial<Complaint>): Complaint {
     escalated: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    ...overrides,
   };
+  return { ...base, ...overrides };
 }
 
 describe('ComplaintSlideOver', () => {
@@ -50,7 +49,9 @@ describe('ComplaintSlideOver', () => {
         onReassign={vi.fn()}
       />,
     );
-    expect(screen.getByText(/admin_007/)).toBeDefined();
+    // assigneeAdminId appears in the input and the label below it
+    const elements = screen.getAllByText(/admin_007/);
+    expect(elements.length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders existing internal notes', () => {
