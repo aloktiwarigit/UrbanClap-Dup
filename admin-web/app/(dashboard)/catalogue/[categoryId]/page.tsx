@@ -58,7 +58,7 @@ export default async function CategoryDetailPage({ params }: PageProps) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <Link
-            href="/catalogue"
+            href={"/catalogue" as Route}
             style={{ fontSize: 'var(--text-sm)', color: 'var(--color-brand)', textDecoration: 'underline' }}
           >
             &larr; All Categories

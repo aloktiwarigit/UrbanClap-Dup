@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import type { Route } from 'next';
 import type { Order, OrderListResponse, OrdersQueryParams } from '@/types/order';
 import { fetchOrders, fetchAllOrdersForExport } from '@/api/orders';
 import { OrdersTable } from './OrdersTable';
@@ -69,7 +70,7 @@ export function OrdersClient() {
           sp.set(k, String(v));
         }
       });
-      startTransition(() => { router.replace(`/orders?${sp}`); });
+      startTransition(() => { router.replace(`/orders?${sp}` as Route); });
     },
     [filters, router],
   );

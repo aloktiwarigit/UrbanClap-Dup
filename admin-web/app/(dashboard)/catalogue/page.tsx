@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { cookies } from 'next/headers';
 import Link from 'next/link';
+import type { Route } from 'next';
 import type { components } from '@/api/generated/schema';
 import { CatalogueCategoryList } from './CatalogueCategoryList';
 
@@ -30,7 +31,7 @@ export default async function CataloguePage() {
           Service Catalogue
         </h1>
         <Link
-          href="/catalogue/new"
+          href={"/catalogue/new" as Route}
           style={{
             padding: 'var(--space-2) var(--space-4)',
             fontSize: 'var(--text-sm)',
