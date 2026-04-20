@@ -1,7 +1,7 @@
 import { getCosmosClient, DB_NAME } from './client.js';
 import { AuditLogEntrySchema } from '../schemas/audit-log.js';
 import type { AuditLogDoc, AuditLogEntry, AuditLogQuery } from '../schemas/audit-log.js';
-import type { SqlParameter } from '@azure/cosmos';
+import type { SqlParameter, SqlQuerySpec } from '@azure/cosmos';
 
 const CONTAINER = 'audit_log';
 
@@ -47,7 +47,7 @@ export async function queryAuditLog(
     .database(DB_NAME)
     .container(CONTAINER)
     .items.query<Record<string, unknown>>(
-      { query, parameters },
+      { query, parameters } as SqlQuerySpec,
       {
         maxItemCount: params.pageSize,
         ...(params.continuationToken !== undefined && {
