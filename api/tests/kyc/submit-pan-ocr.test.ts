@@ -39,7 +39,7 @@ describe('POST /v1/kyc/pan-ocr', () => {
 
     const res = await handler(req, ctx);
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = res.jsonBody as { kycStatus: string; panNumber: string };
     expect(body.kycStatus).toBe('PAN_DONE');
     expect(body.panNumber).toBe('ABCDE1234F');
   });
@@ -59,7 +59,7 @@ describe('POST /v1/kyc/pan-ocr', () => {
     const ctx = new InvocationContext();
 
     const res = await handler(req, ctx);
-    const body = await res.json();
+    const body = res.jsonBody as { kycStatus: string; panNumber: null };
     expect(body.kycStatus).toBe('MANUAL_REVIEW');
     expect(body.panNumber).toBeNull();
   });
