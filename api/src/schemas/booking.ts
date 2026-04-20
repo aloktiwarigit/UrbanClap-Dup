@@ -23,6 +23,9 @@ export const BookingDocSchema = z.object({
   paymentSignature: z.string().nullable(),
   amount: z.number().int().positive(),
   createdAt: z.string(),
+  feesWaived: z.boolean().optional(),
+  escalated: z.boolean().optional(),
+  internalNotes: z.array(z.string()).optional(),
 });
 
 export const CreateBookingRequestSchema = z.object({
