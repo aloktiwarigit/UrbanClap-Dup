@@ -51,7 +51,7 @@ describe('RazorpayRouteService', () => {
     const createMock = vi.fn().mockResolvedValue({ id: 'trf_idem' });
     vi.mocked(Razorpay).mockImplementation(() => ({
       transfers: { create: createMock },
-    }) as any);
+    }) as unknown as InstanceType<typeof Razorpay>);
     const svc = new RazorpayRouteService();
     await svc.transfer({ accountId: 'acc_1', amount: 100, notes: {}, idempotencyKey: 'tech-1-2026-04-14' });
     expect(createMock).toHaveBeenCalledWith(

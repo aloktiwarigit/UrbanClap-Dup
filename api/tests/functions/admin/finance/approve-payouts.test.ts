@@ -22,7 +22,7 @@ vi.mock('../../../../src/services/razorpayRoute.service.js', () => ({
 import { HttpRequest } from '@azure/functions';
 import { adminApprovePayoutsHandler } from '../../../../src/functions/admin/finance/approve-payouts.js';
 import {
-  getPayoutQueue, getWeekSnapshot, getLedgerTransfer, writeLedgerEntry, getTechnicianLinkedAccount,
+  getWeekSnapshot, getLedgerTransfer, writeLedgerEntry, getTechnicianLinkedAccount,
 } from '../../../../src/cosmos/finance-repository.js';
 import { RazorpayRouteService } from '../../../../src/services/razorpayRoute.service.js';
 import { auditLog } from '../../../../src/services/auditLog.service.js';
@@ -67,7 +67,7 @@ describe('adminApprovePayoutsHandler', () => {
     vi.mocked(getTechnicianLinkedAccount).mockResolvedValue('rpacc_test123');
     vi.mocked(RazorpayRouteService).mockImplementation(() => ({
       transfer: vi.fn().mockResolvedValue({ transferId: 'trf_new123' }),
-    }) as any);
+    }) as unknown as RazorpayRouteService);
     const res = await adminApprovePayoutsHandler(req, {} as any, superAdminCtx);
     expect(res.status).toBe(200);
     expect((res.jsonBody as any).approved).toBe(1);
@@ -105,7 +105,7 @@ describe('adminApprovePayoutsHandler', () => {
     vi.mocked(getTechnicianLinkedAccount).mockResolvedValue('rpacc_test123');
     vi.mocked(RazorpayRouteService).mockImplementation(() => ({
       transfer: vi.fn().mockRejectedValue(new Error('Razorpay API error')),
-    }) as any);
+    }) as unknown as RazorpayRouteService);
     const res = await adminApprovePayoutsHandler(req, {} as any, superAdminCtx);
     expect(res.status).toBe(200);
     expect((res.jsonBody as any).failed).toBe(1);
