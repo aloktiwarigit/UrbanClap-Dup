@@ -16,4 +16,20 @@
     <string name="book_now_disabled_desc">Booking coming soon</string>
     <string name="service_price_label">Price</string>
     <string name="service_detail_back_desc">Back</string>
+
+    <!-- Booking flow -->
+    <string name="slot_picker_title">Choose Date &amp; Time</string>
+    <string name="slot_picker_next">Next</string>
+    <string name="address_screen_title">Your Address</string>
+    <string name="address_hint">Enter your full address</string>
+    <string name="address_next">Next</string>
+    <string name="booking_summary_title">Booking Summary</string>
+    <string name="booking_summary_slot_label">Slot</string>
+    <string name="booking_summary_address_label">Address</string>
+    <string name="booking_summary_pay_now">Pay Now</string>
+    <string name="booking_confirmed_title">Booking Confirmed!</string>
+    <string name="booking_confirmed_body">Your booking has been confirmed. A technician will be assigned shortly.</string>
+    <string name="booking_confirmed_id_label">Booking ID: %s</string>
+    <string name="booking_confirmed_home">Back to Home</string>
+    <string name="booking_error_retry">Retry</string>
 </resources>
