@@ -18,8 +18,12 @@ export const adminFinanceSummaryHandler: AdminHttpHandler = async (
   if (!parsed.success) {
     return { status: 400, jsonBody: { code: 'VALIDATION_ERROR', issues: parsed.error.issues } };
   }
-  const summary = await getDailyPnL(parsed.data.from, parsed.data.to);
-  return { status: 200, jsonBody: summary };
+  try {
+    const summary = await getDailyPnL(parsed.data.from, parsed.data.to);
+    return { status: 200, jsonBody: summary };
+  } catch {
+    return { status: 502, jsonBody: { code: 'UPSTREAM_ERROR' } };
+  }
 };
 
 app.http('adminFinanceSummary', {

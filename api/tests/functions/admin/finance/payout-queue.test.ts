@@ -35,4 +35,11 @@ describe('adminPayoutQueueHandler', () => {
     expect(res.status).toBe(200);
     expect(getPayoutQueue).toHaveBeenCalledOnce();
   });
+
+  it('returns 502 when repository throws', async () => {
+    vi.mocked(getWeekSnapshot).mockRejectedValue(new Error('cosmos timeout'));
+    const res = await adminPayoutQueueHandler(req, {} as any, ctx);
+    expect(res.status).toBe(502);
+    expect((res.jsonBody as any).code).toBe('UPSTREAM_ERROR');
+  });
 });

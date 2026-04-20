@@ -25,10 +25,14 @@ export const adminPayoutQueueHandler: AdminHttpHandler = async (
   _admin: AdminContext,
 ): Promise<HttpResponseInit> => {
   const { weekStart, weekEnd } = currentWeekBounds();
-  const snapshot = await getWeekSnapshot(weekStart);
-  if (snapshot) return { status: 200, jsonBody: snapshot };
-  const queue = await getPayoutQueue(weekStart, weekEnd);
-  return { status: 200, jsonBody: queue };
+  try {
+    const snapshot = await getWeekSnapshot(weekStart);
+    if (snapshot) return { status: 200, jsonBody: snapshot };
+    const queue = await getPayoutQueue(weekStart, weekEnd);
+    return { status: 200, jsonBody: queue };
+  } catch {
+    return { status: 502, jsonBody: { code: 'UPSTREAM_ERROR' } };
+  }
 };
 
 app.http('adminPayoutQueue', {

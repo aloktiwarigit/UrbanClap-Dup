@@ -46,4 +46,16 @@ describe('adminFinanceSummaryHandler', () => {
     expect(res.status).toBe(200);
     expect(getDailyPnL).toHaveBeenCalledWith('2026-04-01', '2026-04-30');
   });
+
+  it('returns 502 when getDailyPnL throws', async () => {
+    vi.mocked(touchAndGetSession).mockResolvedValue({ sessionId: 's1' } as any);
+    vi.mocked(getDailyPnL).mockRejectedValue(new Error('cosmos timeout'));
+    const req = new HttpRequest({ url: 'http://localhost/api/v1/admin/finance/summary?from=2026-04-01&to=2026-04-30', method: 'GET' });
+    const res = await adminFinanceSummaryHandler(
+      req, {} as any,
+      { adminId: 'a1', role: 'finance', sessionId: 's1' },
+    );
+    expect(res.status).toBe(502);
+    expect((res.jsonBody as any).code).toBe('UPSTREAM_ERROR');
+  });
 });
