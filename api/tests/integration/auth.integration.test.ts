@@ -13,8 +13,8 @@ vi.mock('../../src/services/adminUser.service.js', () => ({
 vi.mock('../../src/services/adminSession.service.js', () => ({
   createAdminSession: vi.fn(),
 }));
-vi.mock('../../src/middleware/auditLog.js', () => ({
-  writeAuditEntry: vi.fn(),
+vi.mock('../../src/services/auditLog.service.js', () => ({
+  auditLog: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { adminLoginHandler } from '../../src/functions/admin/auth/login.js';

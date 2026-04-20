@@ -1,6 +1,7 @@
 import { getCosmosClient, DB_NAME } from './client.js';
 import { AuditLogEntrySchema } from '../schemas/audit-log.js';
 import type { AuditLogDoc, AuditLogEntry, AuditLogQuery } from '../schemas/audit-log.js';
+import type { SqlParameter } from '@azure/cosmos';
 
 const CONTAINER = 'audit_log';
 
@@ -12,7 +13,7 @@ export async function queryAuditLog(
   params: AuditLogQuery,
 ): Promise<{ entries: AuditLogEntry[]; continuationToken?: string }> {
   const conditions: string[] = [];
-  const parameters: { name: string; value: unknown }[] = [];
+  const parameters: SqlParameter[] = [];
 
   if (params.adminId !== undefined) {
     conditions.push('c.adminId = @adminId');

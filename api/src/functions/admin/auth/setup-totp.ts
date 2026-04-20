@@ -12,7 +12,7 @@ import {
   verifyToken,
 } from '../../../services/totp.service.js';
 import { createAdminSession } from '../../../services/adminSession.service.js';
-import { writeAuditEntry } from '../../../middleware/auditLog.js';
+import { auditLog } from '../../../services/auditLog.service.js';
 import QRCode from 'qrcode';
 
 async function extractSetupPayload(req: HttpRequest) {
@@ -98,15 +98,15 @@ export async function setupTotpPostHandler(
     sessionId: session.sessionId,
   });
 
-  const ip = req.headers.get('x-forwarded-for') ?? 'unknown';
-  await writeAuditEntry({
-    adminId: adminUser.adminId,
-    role: adminUser.role,
-    action: 'TOTP_SETUP',
-    entityType: 'admin_user',
-    entityId: adminUser.adminId,
-    ip,
-  });
+  const ip = req.headers.get('x-forwarded-for') ?? undefined;
+  void auditLog(
+    { adminId: adminUser.adminId, role: adminUser.role, sessionId: session.sessionId },
+    'admin.totp_setup',
+    'admin_user',
+    adminUser.adminId,
+    { adminId: adminUser.adminId },
+    { ...(ip !== undefined && { ip }) },
+  );
 
   const cookies: Cookie[] = [
     { name: 'hs_access', value: accessToken, httpOnly: true, secure: true, sameSite: 'Strict', path: '/', maxAge: 900 },
