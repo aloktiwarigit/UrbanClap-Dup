@@ -4,8 +4,8 @@ import { HttpRequest, type HttpResponseInit } from '@azure/functions';
 vi.stubEnv('RAZORPAY_KEY_SECRET', 'rzp_secret');
 
 vi.mock('../../src/middleware/requireCustomer.js', () => ({
-  requireCustomer: (handler: Function) => (req: HttpRequest, ctx: unknown) =>
-    handler(req, ctx, { customerId: 'cust-1' }),
+  requireCustomer: (handler: (req: HttpRequest, ctx: unknown, claims: { customerId: string }) => Promise<unknown>) =>
+    (req: HttpRequest, ctx: unknown) => handler(req, ctx, { customerId: 'cust-1' }),
 }));
 
 vi.mock('../../src/cosmos/booking-repository.js', () => ({

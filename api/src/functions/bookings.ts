@@ -1,4 +1,4 @@
-import type { HttpRequest, InvocationContext, HttpResponseInit, HttpHandler } from '@azure/functions';
+import type { HttpHandler } from '@azure/functions';
 import { app } from '@azure/functions';
 import { requireCustomer, type CustomerHttpHandler } from '../middleware/requireCustomer.js';
 import { CreateBookingRequestSchema, ConfirmBookingRequestSchema } from '../schemas/booking.js';

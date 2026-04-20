@@ -15,7 +15,7 @@ function getRazorpay(): Razorpay {
 
 export async function createRazorpayOrder(opts: { amount: number; currency: string; receipt: string }) {
   const order = await getRazorpay().orders.create(opts);
-  return { id: order.id as string, amount: order.amount as number, currency: order.currency as string };
+  return { id: order.id, amount: order.amount, currency: order.currency };
 }
 
 export function verifyPaymentSignature(opts: {
