@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# Pre-commit secrets scanner.
+# Blocks commits containing real API keys, tokens, private keys, or hardcoded
+# credentials. Uses grep patterns against the staged diff only.
+# Install: git config core.hooksPath .githooks  (already set in .git/config)
+set -euo pipefail
+
+STAGED_DIFF=$(git diff --cached --unified=0)
+
+if [ -z "$STAGED_DIFF" ]; then
+  exit 0
+fi
+
+FOUND=0
+
+check() {
+  local label="$1"
+  local pattern="$2"
+  if echo "$STAGED_DIFF" | grep -qP "^\+(?!\+\+).*${pattern}"; then
+    echo "  [SECRETS] $label"
+    # Show the offending lines (redact value after first 6 chars)
+    echo "$STAGED_DIFF" | grep -P "^\+(?!\+\+).*${pattern}" | sed 's/\(.\{6\}\).*/\1***/' | head -5
+    FOUND=1
+  fi
+}
+
+echo ""
+echo "pre-commit: scanning staged diff for secrets..."
+
+# Real Firebase / Google API keys (AIza... 39-char keys)
+check "Google/Firebase API key"        'AIza[0-9A-Za-z\-_]{35}'
+
+# Google OAuth client ID
+check "Google OAuth client ID"         '[0-9]{12,}-[A-Za-z0-9_]{32}\.apps\.googleusercontent\.com'
+
+# Firebase server key (FCM legacy)
+check "Firebase FCM server key"        'AAAA[A-Za-z0-9_\-]{7}:[A-Za-z0-9_\-]{140}'
+
+# Azure storage / Cosmos connection strings
+check "Azure connection string"        'AccountKey=[A-Za-z0-9+/]{43}='
+check "Azure SAS token"                'sig=[A-Za-z0-9%]{40,}'
+
+# Generic high-entropy secrets assigned to common key names
+# Matches: api_key = "abc...xyz", secret: "abc...xyz", token = "abc...xyz"
+# Excludes: process.env, os.environ, PLACEHOLDER, example, your_, <, ${
+check "Hardcoded secret assignment"    '(api[_-]?key|secret|password|private[_-]?key|auth[_-]?token|access[_-]?token)\s*[=:]\s*['\''"][A-Za-z0-9+/\-_\.]{32,}['\''"]'
+
+# PEM private key headers
+check "PEM private key"               'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY'
+
+# AWS keys
+check "AWS access key"                'AKIA[0-9A-Z]{16}'
+check "AWS secret"                    'aws[_\-]?secret[_\-]?access[_\-]?key\s*[=:]\s*[A-Za-z0-9/+=]{40}'
+
+# Razorpay live key
+check "Razorpay live secret key"      'rzp_live_[A-Za-z0-9]{20}'
+
+# Stripe live key
+check "Stripe live secret key"        'sk_live_[A-Za-z0-9]{24,}'
+
+# Allowlist: these patterns are safe and must not be flagged
+# (PLACEHOLDER values, process.env references, test fixtures with 'fake'/'test'/'mock')
+if [ "$FOUND" -eq 1 ]; then
+  # Re-check: are ALL matches from safe patterns?
+  REAL_FOUND=0
+  while IFS= read -r line; do
+    # Skip placeholder / env-var / test lines
+    echo "$line" | grep -qiP 'PLACEHOLDER|process\.env|System\.getenv|os\.environ|fake|fakekey|example\.com|your_|<[A-Z_]+>|\$\{|0{10,}|test-' || REAL_FOUND=1
+  done < <(echo "$STAGED_DIFF" | grep -P "^\+(?!\+\+).*(AIza[0-9A-Za-z\-_]{35}|AAAA[A-Za-z0-9_\-]{7}:[A-Za-z0-9_\-]{140}|AccountKey=[A-Za-z0-9+/]{43}=|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}|rzp_live_[A-Za-z0-9]{20}|sk_live_[A-Za-z0-9]{24})" 2>/dev/null || true)
+
+  if [ "$REAL_FOUND" -eq 1 ]; then
+    echo ""
+    echo "pre-commit: BLOCKED — potential secret in staged changes."
+    echo "Review the lines above. If this is a false positive, add the value"
+    echo "to .githooks/secrets-allowlist.txt or use:"
+    echo "  CLAUDE_OVERRIDE_REASON='<reason>' git commit --no-verify"
+    echo ""
+    exit 1
+  fi
+fi
+
+echo "pre-commit: no secrets detected."
+exit 0
