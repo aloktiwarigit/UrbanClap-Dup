@@ -24,6 +24,7 @@
     "seed:catalogue": "tsx src/cosmos/seeds/catalogue.ts"
   },
   "dependencies": {
+    "@azure/ai-form-recognizer": "^5.1.0",
     "@azure/cosmos": "^4.9.2",
     "@azure/functions": "^4.5.0",
     "@growthbook/growthbook": "^1",
