@@ -47,6 +47,22 @@ export const bookingRepo = {
       .fetchAll();
     return resources[0] ?? null;
   },
+
+  async markPaid(id: string, paymentId: string): Promise<BookingDoc | null> {
+    const existing = await this.getById(id);
+    if (!existing || existing.status !== 'SEARCHING') return null;
+    const updated: BookingDoc = { ...existing, status: 'PAID', paymentId };
+    const { resource } = await getBookingsContainer().item(id, id).replace<BookingDoc>(updated);
+    return resource!;
+  },
+
+  async getStaleSearching(olderThanIso: string): Promise<BookingDoc[]> {
+    const { resources } = await getBookingsContainer().items.query<BookingDoc>({
+      query: "SELECT * FROM c WHERE c.status = 'SEARCHING' AND c.createdAt < @cutoff",
+      parameters: [{ name: '@cutoff', value: olderThanIso }],
+    }).fetchAll();
+    return resources;
+  },
 };
 
 export async function updateBookingFields(
