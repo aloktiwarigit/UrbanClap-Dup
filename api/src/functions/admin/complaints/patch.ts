@@ -68,6 +68,22 @@ export async function adminPatchComplaintHandler(
     });
   }
 
+  if (parsed.data.assigneeAdminId !== undefined && parsed.data.assigneeAdminId !== existing.assigneeAdminId) {
+    await appendAuditEntry({
+      id: randomUUID(),
+      adminId: admin.adminId,
+      role: admin.role,
+      action: 'COMPLAINT_ASSIGNED',
+      resourceType: 'complaint',
+      resourceId: updated.id,
+      payload: { from: existing.assigneeAdminId ?? null, to: parsed.data.assigneeAdminId },
+      ip: req.headers.get('x-forwarded-for') ?? '',
+      userAgent: '',
+      timestamp: now,
+      partitionKey: now.slice(0, 7),
+    });
+  }
+
   return { status: 200, jsonBody: updated };
 }
 

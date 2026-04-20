@@ -109,4 +109,20 @@ describe('adminPatchComplaintHandler', () => {
     );
     expect(res.status).toBe(400);
   });
+
+  it('calls appendAuditEntry with COMPLAINT_ASSIGNED on assigneeAdminId-only patch', async () => {
+    (getComplaint as ReturnType<typeof vi.fn>).mockResolvedValue({ ...existingComplaint });
+    (replaceComplaint as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (appendAuditEntry as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    const res = await adminPatchComplaintHandler(
+      makeReq({ assigneeAdminId: 'admin_2' }),
+      mockCtx,
+      mockAdmin,
+    );
+    expect(res.status).toBe(200);
+    expect(appendAuditEntry).toHaveBeenCalledOnce();
+    const auditCall = (appendAuditEntry as ReturnType<typeof vi.fn>).mock.calls[0]![0]!;
+    expect(auditCall.action).toBe('COMPLAINT_ASSIGNED');
+    expect(auditCall.payload).toMatchObject({ from: null, to: 'admin_2' });
+  });
 });

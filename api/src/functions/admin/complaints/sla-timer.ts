@@ -4,6 +4,9 @@ import { getOverdueComplaints, replaceComplaint } from '../../../cosmos/complain
 import { appendAuditEntry } from '../../../cosmos/audit-log-repository.js';
 import { randomUUID } from 'crypto';
 
+const SYSTEM_ACTOR_ID = 'system';
+const SYSTEM_ACTOR_ROLE = 'super-admin' as const;
+
 export async function slaBreachTimerHandler(
   _timer: Timer,
   ctx: InvocationContext,
@@ -22,8 +25,8 @@ export async function slaBreachTimerHandler(
       await replaceComplaint(updated);
       await appendAuditEntry({
         id: randomUUID(),
-        adminId: 'system',
-        role: 'super-admin',
+        adminId: SYSTEM_ACTOR_ID,
+        role: SYSTEM_ACTOR_ROLE,
         action: 'SLA_BREACH',
         resourceType: 'complaint',
         resourceId: complaint.id,
