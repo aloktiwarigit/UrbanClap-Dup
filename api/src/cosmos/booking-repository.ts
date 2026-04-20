@@ -38,3 +38,14 @@ export const bookingRepo = {
     return resource!;
   },
 };
+
+export async function updateBookingFields(
+  id: string,
+  fields: Partial<BookingDoc>,
+): Promise<BookingDoc | null> {
+  const existing = await bookingRepo.getById(id);
+  if (!existing) return null;
+  const updated: BookingDoc = { ...existing, ...fields };
+  const { resource } = await getBookingsContainer().item(id, id).replace<BookingDoc>(updated);
+  return resource ?? null;
+}
