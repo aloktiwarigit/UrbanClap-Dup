@@ -32,7 +32,9 @@ export const bookingRepo = {
     paymentSignature: string,
   ): Promise<BookingDoc | null> {
     const existing = await this.getById(id);
-    if (!existing || existing.status !== 'PENDING_PAYMENT') return null;
+    if (!existing) return null;
+    if (existing.status === 'PAID') return existing; // webhook already processed — idempotent success
+    if (existing.status !== 'PENDING_PAYMENT') return null;
     const updated: BookingDoc = { ...existing, status: 'SEARCHING', paymentId, paymentSignature };
     const { resource } = await getBookingsContainer().item(id, id).replace<BookingDoc>(updated);
     return resource!;

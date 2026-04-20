@@ -98,3 +98,17 @@ describe('bookingRepo.markPaid', () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 });
+
+describe('bookingRepo.confirmPayment — PAID idempotency', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns the existing PAID booking when webhook already processed it', async () => {
+    const paidDoc: BookingDoc = { ...baseDoc, status: 'PAID', paymentId: 'pay_webhook' };
+    mockRead.mockResolvedValue({ resource: paidDoc });
+
+    const result = await bookingRepo.confirmPayment(paidDoc.id, 'pay_client', 'sig_client');
+
+    expect(result).toEqual(paidDoc);
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+});
