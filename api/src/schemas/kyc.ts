@@ -18,7 +18,7 @@ export const TechnicianKycSchema = z.object({
 
 export const SubmitAadhaarRequestSchema = z.object({
   technicianId: z.string().min(1),
-  authCode: z.string().min(1),
+  authCode: z.string(),
   redirectUri: z.string().url(),
 });
 
