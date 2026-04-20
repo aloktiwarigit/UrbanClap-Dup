@@ -1,0 +1,17 @@
+{
+  "_comment": "Apply via: container.replace({ id: 'technicians', partitionKey: { paths: ['/technicianId'] }, indexingPolicy: <this object> }) or Azure Portal → Data Explorer → technicians → Scale & Settings → Indexing Policy",
+  "indexingMode": "consistent",
+  "automatic": true,
+  "includedPaths": [
+    { "path": "/*" }
+  ],
+  "excludedPaths": [
+    { "path": "/\"_etag\"/?" }
+  ],
+  "spatialIndexes": [
+    {
+      "path": "/location/*",
+      "types": ["Point"]
+    }
+  ]
+}
