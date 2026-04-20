@@ -9,15 +9,13 @@ import {
 import { RazorpayRouteService } from '../../../services/razorpayRoute.service.js';
 import { auditLog } from '../../../services/auditLog.service.js';
 
-function currentWeekBounds(): { weekStart: string; weekEnd: string } {
-  const now = new Date();
-  const dayOfWeek = now.getUTCDay() || 7;
-  const monday = new Date(now);
-  monday.setUTCHours(0, 0, 0, 0);
-  monday.setUTCDate(monday.getUTCDate() - (dayOfWeek - 1));
-  const sunday = new Date(monday);
-  sunday.setUTCDate(sunday.getUTCDate() + 6);
-  return { weekStart: monday.toISOString().slice(0, 10), weekEnd: sunday.toISOString().slice(0, 10) };
+function priorWeekBounds(): { weekStart: string; weekEnd: string } {
+  const weekEnd = new Date();
+  weekEnd.setUTCHours(0, 0, 0, 0);
+  weekEnd.setUTCDate(weekEnd.getUTCDate() - 1);
+  const weekStart = new Date(weekEnd);
+  weekStart.setUTCDate(weekStart.getUTCDate() - 6);
+  return { weekStart: weekStart.toISOString().slice(0, 10), weekEnd: weekEnd.toISOString().slice(0, 10) };
 }
 
 export const adminApprovePayoutsHandler: AdminHttpHandler = async (
@@ -29,7 +27,7 @@ export const adminApprovePayoutsHandler: AdminHttpHandler = async (
     return { status: 403, jsonBody: { code: 'FORBIDDEN', requiredRoles: ['super-admin'] } };
   }
 
-  const { weekStart, weekEnd } = currentWeekBounds();
+  const { weekStart, weekEnd } = priorWeekBounds();
   const queue = (await getWeekSnapshot(weekStart)) ?? (await getPayoutQueue(weekStart, weekEnd));
 
   const razorpay = new RazorpayRouteService();

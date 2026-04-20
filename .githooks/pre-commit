@@ -66,7 +66,7 @@ if [ "$FOUND" -eq 1 ]; then
   while IFS= read -r line; do
     # Skip placeholder / env-var / test lines
     echo "$line" | grep -qiP 'PLACEHOLDER|process\.env|System\.getenv|os\.environ|fake|fakekey|example\.com|your_|<[A-Z_]+>|\$\{|0{10,}|test-' || REAL_FOUND=1
-  done < <(echo "$STAGED_DIFF" | grep -P "^\+(?!\+\+).*(AIza[0-9A-Za-z\-_]{35}|AAAA[A-Za-z0-9_\-]{7}:[A-Za-z0-9_\-]{140}|AccountKey=[A-Za-z0-9+/]{43}=|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}|rzp_live_[A-Za-z0-9]{20}|sk_live_[A-Za-z0-9]{24})" 2>/dev/null || true)
+  done < <(echo "$STAGED_DIFF" | grep -P "^\+(?!\+\+).*(AIza[0-9A-Za-z\-_]{35}|[0-9]{12,}-[A-Za-z0-9_]{32}\.apps\.googleusercontent\.com|AAAA[A-Za-z0-9_\-]{7}:[A-Za-z0-9_\-]{140}|AccountKey=[A-Za-z0-9+/]{43}=|sig=[A-Za-z0-9%]{40,}|(api[_-]?key|secret|password|private[_-]?key|auth[_-]?token|access[_-]?token)\s*[=:]\s*[\"'][A-Za-z0-9+/\-_\.]{32,}[\"']|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}|aws[_\-]?secret[_\-]?access[_\-]?key\s*[=:]\s*[A-Za-z0-9/+=]{40}|rzp_live_[A-Za-z0-9]{20}|sk_live_[A-Za-z0-9]{24,})" 2>/dev/null || true)
 
   if [ "$REAL_FOUND" -eq 1 ]; then
     echo ""
