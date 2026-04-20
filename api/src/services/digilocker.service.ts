@@ -40,7 +40,7 @@ export async function exchangeCodeForAadhaar(
 
   // Extract last 4 digits from UID attribute — NEVER store the full number
   const uidMatch = xmlText.match(/uid="(\d{12})"/);
-  if (!uidMatch) return null;
-  const last4 = uidMatch[1].slice(-4);
-  return { maskedNumber: `XXXX-XXXX-${last4}` };
+  const uid = uidMatch?.[1];
+  if (!uid) return null;
+  return { maskedNumber: `XXXX-XXXX-${uid.slice(-4)}` };
 }

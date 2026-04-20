@@ -1,30 +1,30 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { HttpRequest, InvocationContext } from '@azure/functions';
 
-vi.mock('../../src/cosmos/technician-repository', () => ({
+vi.mock('../../src/cosmos/technician-repository.js', () => ({
   upsertKycStatus: vi.fn(),
 }));
-vi.mock('../../src/middleware/verifyTechnicianToken', () => ({
+vi.mock('../../src/middleware/verifyTechnicianToken.js', () => ({
   verifyTechnicianToken: vi.fn(),
 }));
-vi.mock('../../src/services/digilocker.service', () => ({
+vi.mock('../../src/services/digilocker.service.js', () => ({
   exchangeCodeForAadhaar: vi.fn(),
 }));
 
 describe('POST /v1/kyc/aadhaar', () => {
-  let handler: typeof import('../../src/functions/kyc/submit-aadhaar').submitAadhaar;
+  let handler: typeof import('../../src/functions/kyc/submit-aadhaar.js').submitAadhaar;
 
   beforeEach(async () => {
     vi.clearAllMocks();
     vi.resetModules();
-    const mod = await import('../../src/functions/kyc/submit-aadhaar');
+    const mod = await import('../../src/functions/kyc/submit-aadhaar.js');
     handler = mod.submitAadhaar;
   });
 
   it('returns 200 with masked number on successful DigiLocker exchange', async () => {
-    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken');
-    const { exchangeCodeForAadhaar } = await import('../../src/services/digilocker.service');
-    const { upsertKycStatus } = await import('../../src/cosmos/technician-repository');
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { exchangeCodeForAadhaar } = await import('../../src/services/digilocker.service.js');
+    const { upsertKycStatus } = await import('../../src/cosmos/technician-repository.js');
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
     vi.mocked(exchangeCodeForAadhaar).mockResolvedValue({ maskedNumber: 'XXXX-XXXX-1234' });
     vi.mocked(upsertKycStatus).mockResolvedValue(undefined);
@@ -45,8 +45,8 @@ describe('POST /v1/kyc/aadhaar', () => {
   });
 
   it('returns 200 with PENDING_MANUAL when DigiLocker returns null', async () => {
-    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken');
-    const { exchangeCodeForAadhaar } = await import('../../src/services/digilocker.service');
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { exchangeCodeForAadhaar } = await import('../../src/services/digilocker.service.js');
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
     vi.mocked(exchangeCodeForAadhaar).mockResolvedValue(null);
 
@@ -64,7 +64,7 @@ describe('POST /v1/kyc/aadhaar', () => {
   });
 
   it('returns 401 on invalid token', async () => {
-    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken');
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     vi.mocked(verifyTechnicianToken).mockRejectedValue(new Error('bad token'));
 
     const req = new HttpRequest({

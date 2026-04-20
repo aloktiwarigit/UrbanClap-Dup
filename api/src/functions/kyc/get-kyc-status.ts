@@ -4,7 +4,7 @@ import { getKycByTechnicianId } from '../../cosmos/technician-repository.js';
 
 export async function getKycStatus(
   req: HttpRequest,
-  ctx: InvocationContext
+  _ctx: InvocationContext
 ): Promise<HttpResponseInit> {
   try {
     await verifyTechnicianToken(req);

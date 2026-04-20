@@ -18,7 +18,7 @@ export async function extractPanFromStoragePath(
   const client = new DocumentAnalysisClient(endpoint, new AzureKeyCredential(key));
 
   try {
-    const poller = await client.beginAnalyzeDocument('prebuilt-idDocument', downloadUrl);
+    const poller = await client.beginAnalyzeDocumentFromUrl('prebuilt-idDocument', downloadUrl);
     const result = await poller.pollUntilDone();
     const docNumber = result.documents?.[0]?.fields?.['DocumentNumber']?.content;
     if (docNumber) {

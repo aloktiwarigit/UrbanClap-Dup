@@ -6,7 +6,7 @@ import { SubmitPanOcrRequestSchema } from '../../schemas/kyc.js';
 
 export async function submitPanOcr(
   req: HttpRequest,
-  ctx: InvocationContext
+  _ctx: InvocationContext
 ): Promise<HttpResponseInit> {
   try {
     await verifyTechnicianToken(req);

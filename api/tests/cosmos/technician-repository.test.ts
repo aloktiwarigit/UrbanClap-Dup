@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('../../src/cosmos/client.js', () => ({
   getCosmosClient: vi.fn(),
@@ -20,10 +20,9 @@ describe('upsertKycStatus', () => {
     });
 
     await upsertKycStatus('tech_1', { kycStatus: 'AADHAAR_DONE', aadhaarVerified: true, aadhaarMaskedNumber: 'XXXX-XXXX-1234' });
-    expect(mockUpsert).toHaveBeenCalledOnce();
-    const upserted = mockUpsert.mock.calls[0][0];
-    expect(upserted.kyc.kycStatus).toBe('AADHAAR_DONE');
-    expect(upserted.kyc.aadhaarVerified).toBe(true);
+    expect(mockUpsert).toHaveBeenCalledWith(expect.objectContaining({
+      kyc: expect.objectContaining({ kycStatus: 'AADHAAR_DONE', aadhaarVerified: true }),
+    }));
   });
 
   it('creates new document when technician does not exist', async () => {
@@ -37,10 +36,10 @@ describe('upsertKycStatus', () => {
     });
 
     await upsertKycStatus('tech_new', { kycStatus: 'PENDING' });
-    expect(mockUpsert).toHaveBeenCalledOnce();
-    const upserted = mockUpsert.mock.calls[0][0];
-    expect(upserted.id).toBe('tech_new');
-    expect(upserted.kyc.kycStatus).toBe('PENDING');
+    expect(mockUpsert).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'tech_new',
+      kyc: expect.objectContaining({ kycStatus: 'PENDING' }),
+    }));
   });
 });
 

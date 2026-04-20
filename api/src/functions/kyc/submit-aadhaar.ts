@@ -6,7 +6,7 @@ import { SubmitAadhaarRequestSchema } from '../../schemas/kyc.js';
 
 export async function submitAadhaar(
   req: HttpRequest,
-  ctx: InvocationContext
+  _ctx: InvocationContext
 ): Promise<HttpResponseInit> {
   try {
     await verifyTechnicianToken(req);
