@@ -11,30 +11,31 @@ import org.junit.runners.JUnit4
 
 @RunWith(JUnit4::class)
 public class CatalogueHomeScreenTest {
-  @get:Rule
-  public val paparazzi: Paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
+    @get:Rule
+    public val paparazzi: Paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
 
-  @Ignore("Record goldens on CI only — see docs/patterns/paparazzi-cross-os-goldens.md")
-  @Test
-  public fun `catalogue home loading state`(): Unit {
-    paparazzi.snapshot {
-      CatalogueHomeContent(
-        uiState = CatalogueHomeUiState.Loading,
-        onCategoryClick = {},
-      )
+    @Ignore("Record goldens on CI only — see docs/patterns/paparazzi-cross-os-goldens.md")
+    @Test
+    public fun `catalogue home loading state`(): Unit {
+        paparazzi.snapshot {
+            CatalogueHomeContent(
+                uiState = CatalogueHomeUiState.Loading,
+                onCategoryClick = {},
+            )
+        }
     }
-  }
 
-  @Ignore("Record goldens on CI only — see docs/patterns/paparazzi-cross-os-goldens.md")
-  @Test
-  public fun `catalogue home success state`(): Unit {
-    paparazzi.snapshot {
-      CatalogueHomeContent(
-        uiState = CatalogueHomeUiState.Success(
-          listOf(Category("1", "Plumbing", "https://example.com/img.jpg", 5))
-        ),
-        onCategoryClick = {},
-      )
+    @Ignore("Record goldens on CI only — see docs/patterns/paparazzi-cross-os-goldens.md")
+    @Test
+    public fun `catalogue home success state`(): Unit {
+        paparazzi.snapshot {
+            CatalogueHomeContent(
+                uiState =
+                    CatalogueHomeUiState.Success(
+                        listOf(Category("1", "Plumbing", "https://example.com/img.jpg", 5)),
+                    ),
+                onCategoryClick = {},
+            )
+        }
     }
-  }
 }

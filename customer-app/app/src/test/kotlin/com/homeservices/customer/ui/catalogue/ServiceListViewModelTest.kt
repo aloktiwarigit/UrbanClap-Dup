@@ -1,10 +1,10 @@
 package com.homeservices.customer.ui.catalogue
 
 import androidx.lifecycle.SavedStateHandle
+import com.google.common.truth.Truth.assertThat
 import com.homeservices.customer.domain.catalogue.GetServicesForCategoryUseCase
 import com.homeservices.customer.domain.catalogue.model.AddOn
 import com.homeservices.customer.domain.catalogue.model.Service
-import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -34,23 +34,33 @@ public class ServiceListViewModelTest {
     }
 
     @Test
-    public fun `loads services for given categoryId`(): Unit = runTest(dispatcher) {
-        val service = Service(
-            "svc1", "cat1", "Pipe fix", "desc", 50000, 60, "url",
-            listOf("Labour"), emptyList<AddOn>(),
-        )
-        every { useCase("cat1") } returns flowOf(Result.success(listOf(service)))
-        val handle = SavedStateHandle(mapOf("categoryId" to "cat1"))
-        val vm = ServiceListViewModel(handle, useCase)
-        assertThat(vm.uiState.value).isInstanceOf(ServiceListUiState.Success::class.java)
-        assertThat((vm.uiState.value as ServiceListUiState.Success).services).hasSize(1)
-    }
+    public fun `loads services for given categoryId`(): Unit =
+        runTest(dispatcher) {
+            val service =
+                Service(
+                    "svc1",
+                    "cat1",
+                    "Pipe fix",
+                    "desc",
+                    50000,
+                    60,
+                    "url",
+                    listOf("Labour"),
+                    emptyList<AddOn>(),
+                )
+            every { useCase("cat1") } returns flowOf(Result.success(listOf(service)))
+            val handle = SavedStateHandle(mapOf("categoryId" to "cat1"))
+            val vm = ServiceListViewModel(handle, useCase)
+            assertThat(vm.uiState.value).isInstanceOf(ServiceListUiState.Success::class.java)
+            assertThat((vm.uiState.value as ServiceListUiState.Success).services).hasSize(1)
+        }
 
     @Test
-    public fun `emits Error on failure`(): Unit = runTest(dispatcher) {
-        every { useCase("cat1") } returns flowOf(Result.failure(RuntimeException("err")))
-        val handle = SavedStateHandle(mapOf("categoryId" to "cat1"))
-        val vm = ServiceListViewModel(handle, useCase)
-        assertThat(vm.uiState.value).isInstanceOf(ServiceListUiState.Error::class.java)
-    }
+    public fun `emits Error on failure`(): Unit =
+        runTest(dispatcher) {
+            every { useCase("cat1") } returns flowOf(Result.failure(RuntimeException("err")))
+            val handle = SavedStateHandle(mapOf("categoryId" to "cat1"))
+            val vm = ServiceListViewModel(handle, useCase)
+            assertThat(vm.uiState.value).isInstanceOf(ServiceListUiState.Error::class.java)
+        }
 }

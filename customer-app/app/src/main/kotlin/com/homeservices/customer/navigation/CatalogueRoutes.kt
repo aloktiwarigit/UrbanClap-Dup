@@ -6,5 +6,6 @@ internal object CatalogueRoutes {
     const val SERVICE_DETAIL = "service_detail/{serviceId}"
 
     fun serviceList(categoryId: String) = "service_list/$categoryId"
+
     fun serviceDetail(serviceId: String) = "service_detail/$serviceId"
 }

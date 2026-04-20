@@ -11,8 +11,12 @@ public interface CatalogueApiService {
     public suspend fun getCategories(): List<CategoryDto>
 
     @GET("v1/services/{id}")
-    public suspend fun getServiceDetail(@Path("id") id: String): ServiceDto
+    public suspend fun getServiceDetail(
+        @Path("id") id: String,
+    ): ServiceDto
 
     @GET("v1/services")
-    public suspend fun getServicesForCategory(@Query("categoryId") categoryId: String): List<ServiceDto>
+    public suspend fun getServicesForCategory(
+        @Query("categoryId") categoryId: String,
+    ): List<ServiceDto>
 }

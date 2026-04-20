@@ -11,21 +11,23 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-internal class CatalogueHomeViewModel @Inject constructor(
-    private val getCategories: GetCategoriesUseCase,
-) : ViewModel() {
+internal class CatalogueHomeViewModel
+    @Inject
+    constructor(
+        private val getCategories: GetCategoriesUseCase,
+    ) : ViewModel() {
+        private val _uiState = MutableStateFlow<CatalogueHomeUiState>(CatalogueHomeUiState.Loading)
+        public val uiState: StateFlow<CatalogueHomeUiState> = _uiState.asStateFlow()
 
-    private val _uiState = MutableStateFlow<CatalogueHomeUiState>(CatalogueHomeUiState.Loading)
-    public val uiState: StateFlow<CatalogueHomeUiState> = _uiState.asStateFlow()
-
-    init {
-        viewModelScope.launch {
-            getCategories().collect { result ->
-                _uiState.value = result.fold(
-                    onSuccess = { CatalogueHomeUiState.Success(it) },
-                    onFailure = { CatalogueHomeUiState.Error(it.message ?: "Unknown error") },
-                )
+        init {
+            viewModelScope.launch {
+                getCategories().collect { result ->
+                    _uiState.value =
+                        result.fold(
+                            onSuccess = { CatalogueHomeUiState.Success(it) },
+                            onFailure = { CatalogueHomeUiState.Error(it.message ?: "Unknown error") },
+                        )
+                }
             }
         }
     }
-}

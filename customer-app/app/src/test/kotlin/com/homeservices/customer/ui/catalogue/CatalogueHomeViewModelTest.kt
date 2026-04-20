@@ -1,8 +1,8 @@
 package com.homeservices.customer.ui.catalogue
 
+import com.google.common.truth.Truth.assertThat
 import com.homeservices.customer.domain.catalogue.GetCategoriesUseCase
 import com.homeservices.customer.domain.catalogue.model.Category
-import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -26,9 +26,10 @@ public class CatalogueHomeViewModelTest {
     @Before
     public fun setUp(): Unit {
         Dispatchers.setMain(dispatcher)
-        every { useCase() } returns flowOf(
-            Result.success(listOf(Category("1", "Plumbing", "https://cdn.example.com/plumbing.jpg", 3))),
-        )
+        every { useCase() } returns
+            flowOf(
+                Result.success(listOf(Category("1", "Plumbing", "https://cdn.example.com/plumbing.jpg", 3))),
+            )
         sut = CatalogueHomeViewModel(useCase)
     }
 
@@ -38,16 +39,18 @@ public class CatalogueHomeViewModelTest {
     }
 
     @Test
-    public fun `uiState emits Success with categories`(): Unit = runTest(dispatcher) {
-        val state = sut.uiState.value
-        assertThat(state).isInstanceOf(CatalogueHomeUiState.Success::class.java)
-        assertThat((state as CatalogueHomeUiState.Success).categories).hasSize(1)
-    }
+    public fun `uiState emits Success with categories`(): Unit =
+        runTest(dispatcher) {
+            val state = sut.uiState.value
+            assertThat(state).isInstanceOf(CatalogueHomeUiState.Success::class.java)
+            assertThat((state as CatalogueHomeUiState.Success).categories).hasSize(1)
+        }
 
     @Test
-    public fun `uiState emits Error on failure`(): Unit = runTest(dispatcher) {
-        every { useCase() } returns flowOf(Result.failure(IOException("net err")))
-        sut = CatalogueHomeViewModel(useCase)
-        assertThat(sut.uiState.value).isInstanceOf(CatalogueHomeUiState.Error::class.java)
-    }
+    public fun `uiState emits Error on failure`(): Unit =
+        runTest(dispatcher) {
+            every { useCase() } returns flowOf(Result.failure(IOException("net err")))
+            sut = CatalogueHomeViewModel(useCase)
+            assertThat(sut.uiState.value).isInstanceOf(CatalogueHomeUiState.Error::class.java)
+        }
 }

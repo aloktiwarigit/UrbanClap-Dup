@@ -12,24 +12,31 @@ import org.junit.runners.JUnit4
 
 @RunWith(JUnit4::class)
 public class ServiceDetailScreenTest {
-  @get:Rule
-  public val paparazzi: Paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
+    @get:Rule
+    public val paparazzi: Paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
 
-  @Ignore("Record goldens on CI only — see docs/patterns/paparazzi-cross-os-goldens.md")
-  @Test
-  public fun `service detail success state`(): Unit {
-    paparazzi.snapshot {
-      ServiceDetailContent(
-        uiState = ServiceDetailUiState.Success(sampleService()),
-        onBookNow = {},
-        onBack = {},
-      )
+    @Ignore("Record goldens on CI only — see docs/patterns/paparazzi-cross-os-goldens.md")
+    @Test
+    public fun `service detail success state`(): Unit {
+        paparazzi.snapshot {
+            ServiceDetailContent(
+                uiState = ServiceDetailUiState.Success(sampleService()),
+                onBookNow = {},
+                onBack = {},
+            )
+        }
     }
-  }
 
-  private fun sampleService() = Service(
-    id = "s1", categoryId = "c1", name = "Pipe Fix", description = "Full fix",
-    basePrice = 50000, durationMinutes = 60, imageUrl = "https://example.com/img.jpg",
-    includes = listOf("Tools", "Labour"), addOns = listOf(AddOn("Extra pipe", 10000)),
-  )
+    private fun sampleService() =
+        Service(
+            id = "s1",
+            categoryId = "c1",
+            name = "Pipe Fix",
+            description = "Full fix",
+            basePrice = 50000,
+            durationMinutes = 60,
+            imageUrl = "https://example.com/img.jpg",
+            includes = listOf("Tools", "Labour"),
+            addOns = listOf(AddOn("Extra pipe", 10000)),
+        )
 }

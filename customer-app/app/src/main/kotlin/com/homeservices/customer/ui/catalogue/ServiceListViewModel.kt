@@ -12,24 +12,26 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-internal class ServiceListViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
-    private val getServices: GetServicesForCategoryUseCase,
-) : ViewModel() {
+internal class ServiceListViewModel
+    @Inject
+    constructor(
+        savedStateHandle: SavedStateHandle,
+        private val getServices: GetServicesForCategoryUseCase,
+    ) : ViewModel() {
+        private val categoryId: String = checkNotNull(savedStateHandle["categoryId"])
 
-    private val categoryId: String = checkNotNull(savedStateHandle["categoryId"])
+        private val _uiState = MutableStateFlow<ServiceListUiState>(ServiceListUiState.Loading)
+        public val uiState: StateFlow<ServiceListUiState> = _uiState.asStateFlow()
 
-    private val _uiState = MutableStateFlow<ServiceListUiState>(ServiceListUiState.Loading)
-    public val uiState: StateFlow<ServiceListUiState> = _uiState.asStateFlow()
-
-    init {
-        viewModelScope.launch {
-            getServices(categoryId).collect { result ->
-                _uiState.value = result.fold(
-                    onSuccess = { ServiceListUiState.Success(it) },
-                    onFailure = { ServiceListUiState.Error(it.message ?: "Unknown error") },
-                )
+        init {
+            viewModelScope.launch {
+                getServices(categoryId).collect { result ->
+                    _uiState.value =
+                        result.fold(
+                            onSuccess = { ServiceListUiState.Success(it) },
+                            onFailure = { ServiceListUiState.Error(it.message ?: "Unknown error") },
+                        )
+                }
             }
         }
     }
-}

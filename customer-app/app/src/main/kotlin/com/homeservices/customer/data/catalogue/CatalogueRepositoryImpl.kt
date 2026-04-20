@@ -8,19 +8,23 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 
-internal class CatalogueRepositoryImpl @Inject constructor(
-    private val api: CatalogueApiService,
-) : CatalogueRepository {
+internal class CatalogueRepositoryImpl
+    @Inject
+    constructor(
+        private val api: CatalogueApiService,
+    ) : CatalogueRepository {
+        override fun getCategories(): Flow<Result<List<Category>>> =
+            flow {
+                emit(runCatching { api.getCategories().map { it.toDomain() } })
+            }
 
-    override fun getCategories(): Flow<Result<List<Category>>> = flow {
-        emit(runCatching { api.getCategories().map { it.toDomain() } })
-    }
+        override fun getServicesForCategory(categoryId: String): Flow<Result<List<Service>>> =
+            flow {
+                emit(runCatching { api.getServicesForCategory(categoryId).map { it.toDomain() } })
+            }
 
-    override fun getServicesForCategory(categoryId: String): Flow<Result<List<Service>>> = flow {
-        emit(runCatching { api.getServicesForCategory(categoryId).map { it.toDomain() } })
+        override fun getServiceDetail(serviceId: String): Flow<Result<Service>> =
+            flow {
+                emit(runCatching { api.getServiceDetail(serviceId).toDomain() })
+            }
     }
-
-    override fun getServiceDetail(serviceId: String): Flow<Result<Service>> = flow {
-        emit(runCatching { api.getServiceDetail(serviceId).toDomain() })
-    }
-}

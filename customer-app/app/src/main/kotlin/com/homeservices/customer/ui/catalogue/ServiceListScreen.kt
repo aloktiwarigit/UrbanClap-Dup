@@ -37,97 +37,100 @@ import com.homeservices.customer.domain.catalogue.model.Service
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ServiceListScreen(
-  viewModel: ServiceListViewModel,
-  onServiceClick: (String) -> Unit,
-  onBack: () -> Unit,
+    viewModel: ServiceListViewModel,
+    onServiceClick: (String) -> Unit,
+    onBack: () -> Unit,
 ) {
-  val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-  Scaffold(
-    topBar = {
-      TopAppBar(
-        title = { Text(stringResource(R.string.service_list_title)) },
-        navigationIcon = {
-          IconButton(onClick = onBack) {
-            Icon(
-              imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-              contentDescription = stringResource(R.string.service_detail_back_desc),
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.service_list_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.service_detail_back_desc),
+                        )
+                    }
+                },
             )
-          }
         },
-      )
+    ) { innerPadding ->
+        ServiceListContent(
+            uiState = uiState,
+            onServiceClick = onServiceClick,
+            modifier = Modifier.padding(innerPadding),
+        )
     }
-  ) { innerPadding ->
-    ServiceListContent(
-      uiState = uiState,
-      onServiceClick = onServiceClick,
-      modifier = Modifier.padding(innerPadding),
-    )
-  }
 }
 
 @Composable
 internal fun ServiceListContent(
-  uiState: ServiceListUiState,
-  onServiceClick: (String) -> Unit,
-  modifier: Modifier = Modifier,
+    uiState: ServiceListUiState,
+    onServiceClick: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-  when (uiState) {
-    is ServiceListUiState.Loading -> {
-      Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator()
-      }
-    }
-    is ServiceListUiState.Error -> {
-      Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(
-          text = stringResource(R.string.catalogue_error),
-          color = MaterialTheme.colorScheme.onSurface,
-        )
-      }
-    }
-    is ServiceListUiState.Success -> {
-      LazyColumn(modifier = modifier.fillMaxSize().padding(8.dp)) {
-        items(uiState.services) { service ->
-          ServiceCard(service = service, onClick = { onServiceClick(service.id) })
+    when (uiState) {
+        is ServiceListUiState.Loading -> {
+            Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
         }
-      }
+        is ServiceListUiState.Error -> {
+            Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = stringResource(R.string.catalogue_error),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+        is ServiceListUiState.Success -> {
+            LazyColumn(modifier = modifier.fillMaxSize().padding(8.dp)) {
+                items(uiState.services) { service ->
+                    ServiceCard(service = service, onClick = { onServiceClick(service.id) })
+                }
+            }
+        }
     }
-  }
 }
 
 @Composable
-private fun ServiceCard(service: Service, onClick: () -> Unit) {
-  Card(
-    onClick = onClick,
-    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-  ) {
-    Column {
-      AsyncImage(
-        model = service.imageUrl,
-        contentDescription = stringResource(R.string.service_image_desc, service.name),
-        modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
-        contentScale = ContentScale.Crop,
-      )
-      Column(modifier = Modifier.padding(12.dp)) {
-        Text(text = service.name, style = MaterialTheme.typography.titleMedium)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Text(
-            text = "₹${service.basePrice / 100}",
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold,
-          )
-          Spacer(modifier = Modifier.weight(1f))
-          Text(
-            text = stringResource(R.string.service_duration_label, service.durationMinutes),
-            style = MaterialTheme.typography.bodySmall,
-          )
+private fun ServiceCard(
+    service: Service,
+    onClick: () -> Unit,
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+    ) {
+        Column {
+            AsyncImage(
+                model = service.imageUrl,
+                contentDescription = stringResource(R.string.service_image_desc, service.name),
+                modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
+                contentScale = ContentScale.Crop,
+            )
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(text = service.name, style = MaterialTheme.typography.titleMedium)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "₹${service.basePrice / 100}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        text = stringResource(R.string.service_duration_label, service.durationMinutes),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.service_rating_placeholder),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
-        Text(
-          text = stringResource(R.string.service_rating_placeholder),
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-      }
     }
-  }
 }

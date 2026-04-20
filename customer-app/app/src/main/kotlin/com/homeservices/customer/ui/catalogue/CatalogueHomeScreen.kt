@@ -27,64 +27,67 @@ import com.homeservices.customer.domain.catalogue.model.Category
 
 @Composable
 internal fun CatalogueHomeScreen(
-  viewModel: CatalogueHomeViewModel,
-  onCategoryClick: (String) -> Unit,
+    viewModel: CatalogueHomeViewModel,
+    onCategoryClick: (String) -> Unit,
 ) {
-  val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-  CatalogueHomeContent(uiState = uiState, onCategoryClick = onCategoryClick)
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    CatalogueHomeContent(uiState = uiState, onCategoryClick = onCategoryClick)
 }
 
 @Composable
 internal fun CatalogueHomeContent(
-  uiState: CatalogueHomeUiState,
-  onCategoryClick: (String) -> Unit,
+    uiState: CatalogueHomeUiState,
+    onCategoryClick: (String) -> Unit,
 ) {
-  when (uiState) {
-    is CatalogueHomeUiState.Loading -> {
-      Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator()
-      }
-    }
-    is CatalogueHomeUiState.Error -> {
-      Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(
-          text = stringResource(R.string.catalogue_error),
-          color = MaterialTheme.colorScheme.onSurface,
-        )
-      }
-    }
-    is CatalogueHomeUiState.Success -> {
-      LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
-        modifier = Modifier.fillMaxSize().padding(8.dp),
-      ) {
-        items(uiState.categories) { category ->
-          CategoryCard(category = category, onClick = { onCategoryClick(category.id) })
+    when (uiState) {
+        is CatalogueHomeUiState.Loading -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
         }
-      }
+        is CatalogueHomeUiState.Error -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = stringResource(R.string.catalogue_error),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+        is CatalogueHomeUiState.Success -> {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier.fillMaxSize().padding(8.dp),
+            ) {
+                items(uiState.categories) { category ->
+                    CategoryCard(category = category, onClick = { onCategoryClick(category.id) })
+                }
+            }
+        }
     }
-  }
 }
 
 @Composable
-private fun CategoryCard(category: Category, onClick: () -> Unit) {
-  Card(
-    onClick = onClick,
-    modifier = Modifier.padding(4.dp),
-  ) {
-    Column {
-      AsyncImage(
-        model = category.imageUrl,
-        contentDescription = stringResource(R.string.category_image_desc, category.name),
-        modifier = Modifier.aspectRatio(1f).fillMaxWidth(),
-        contentScale = ContentScale.Crop,
-      )
-      Text(
-        text = category.name,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.padding(8.dp),
-      )
+private fun CategoryCard(
+    category: Category,
+    onClick: () -> Unit,
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.padding(4.dp),
+    ) {
+        Column {
+            AsyncImage(
+                model = category.imageUrl,
+                contentDescription = stringResource(R.string.category_image_desc, category.name),
+                modifier = Modifier.aspectRatio(1f).fillMaxWidth(),
+                contentScale = ContentScale.Crop,
+            )
+            Text(
+                text = category.name,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(8.dp),
+            )
+        }
     }
-  }
 }

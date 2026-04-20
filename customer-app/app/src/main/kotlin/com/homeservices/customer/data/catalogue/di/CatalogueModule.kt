@@ -20,33 +20,42 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 public abstract class CatalogueModule {
-
     @Binds
-    internal abstract fun bindCatalogueRepository(
-        impl: CatalogueRepositoryImpl,
-    ): CatalogueRepository
+    internal abstract fun bindCatalogueRepository(impl: CatalogueRepositoryImpl): CatalogueRepository
 
     public companion object {
+        @Provides
+        @Singleton
+        public fun provideMoshi(): Moshi =
+            Moshi
+                .Builder()
+                .addLast(KotlinJsonAdapterFactory())
+                .build()
 
         @Provides
         @Singleton
-        public fun provideMoshi(): Moshi = Moshi.Builder()
-            .addLast(KotlinJsonAdapterFactory())
-            .build()
+        public fun provideOkHttpClient(): OkHttpClient =
+            OkHttpClient
+                .Builder()
+                .addInterceptor(
+                    HttpLoggingInterceptor().apply {
+                        level =
+                            if (BuildConfig.DEBUG) {
+                                HttpLoggingInterceptor.Level.BODY
+                            } else {
+                                HttpLoggingInterceptor.Level.NONE
+                            }
+                    },
+                ).build()
 
         @Provides
         @Singleton
-        public fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
-            .addInterceptor(HttpLoggingInterceptor().apply {
-                level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
-                        else HttpLoggingInterceptor.Level.NONE
-            })
-            .build()
-
-        @Provides
-        @Singleton
-        public fun provideCatalogueApiService(moshi: Moshi, client: OkHttpClient): CatalogueApiService =
-            Retrofit.Builder()
+        public fun provideCatalogueApiService(
+            moshi: Moshi,
+            client: OkHttpClient,
+        ): CatalogueApiService =
+            Retrofit
+                .Builder()
                 .baseUrl(BuildConfig.API_BASE_URL + "/")
                 .addConverterFactory(MoshiConverterFactory.create(moshi))
                 .client(client)

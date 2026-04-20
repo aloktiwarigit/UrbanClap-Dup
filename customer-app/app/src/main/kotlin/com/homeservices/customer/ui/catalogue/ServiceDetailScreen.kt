@@ -42,158 +42,160 @@ import com.homeservices.customer.domain.catalogue.model.Service
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ServiceDetailScreen(
-  viewModel: ServiceDetailViewModel,
-  onBookNow: () -> Unit,
-  onBack: () -> Unit,
+    viewModel: ServiceDetailViewModel,
+    onBookNow: () -> Unit,
+    onBack: () -> Unit,
 ) {
-  val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-  Scaffold(
-    topBar = {
-      TopAppBar(
-        title = {},
-        navigationIcon = {
-          IconButton(onClick = onBack) {
-            Icon(
-              imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-              contentDescription = stringResource(R.string.service_detail_back_desc),
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {},
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.service_detail_back_desc),
+                        )
+                    }
+                },
             )
-          }
         },
-      )
+    ) { innerPadding ->
+        ServiceDetailContent(
+            uiState = uiState,
+            onBookNow = onBookNow,
+            onBack = onBack,
+            modifier = Modifier.padding(innerPadding),
+        )
     }
-  ) { innerPadding ->
-    ServiceDetailContent(
-      uiState = uiState,
-      onBookNow = onBookNow,
-      onBack = onBack,
-      modifier = Modifier.padding(innerPadding),
-    )
-  }
 }
 
 @Composable
 internal fun ServiceDetailContent(
-  uiState: ServiceDetailUiState,
-  onBookNow: () -> Unit,
-  onBack: () -> Unit,
-  modifier: Modifier = Modifier,
+    uiState: ServiceDetailUiState,
+    onBookNow: () -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-  when (uiState) {
-    is ServiceDetailUiState.Loading -> {
-      Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator()
-      }
+    when (uiState) {
+        is ServiceDetailUiState.Loading -> {
+            Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+        is ServiceDetailUiState.Error -> {
+            Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = stringResource(R.string.catalogue_error),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+        is ServiceDetailUiState.Success -> {
+            ServiceDetailBody(
+                service = uiState.service,
+                onBookNow = onBookNow,
+                modifier = modifier,
+            )
+        }
     }
-    is ServiceDetailUiState.Error -> {
-      Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(
-          text = stringResource(R.string.catalogue_error),
-          color = MaterialTheme.colorScheme.onSurface,
-        )
-      }
-    }
-    is ServiceDetailUiState.Success -> {
-      ServiceDetailBody(
-        service = uiState.service,
-        onBookNow = onBookNow,
-        modifier = modifier,
-      )
-    }
-  }
 }
 
 @Composable
 private fun ServiceDetailBody(
-  service: Service,
-  onBookNow: () -> Unit,
-  modifier: Modifier = Modifier,
+    service: Service,
+    onBookNow: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-  val bookNowDisabledDesc = stringResource(R.string.book_now_disabled_desc)
-  Column(
-    modifier = modifier
-      .fillMaxSize()
-      .verticalScroll(rememberScrollState()),
-  ) {
-    AsyncImage(
-      model = service.imageUrl,
-      contentDescription = service.name,
-      modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
-      contentScale = ContentScale.Crop,
-    )
-    Column(modifier = Modifier.padding(16.dp)) {
-      Text(text = service.name, style = MaterialTheme.typography.headlineMedium)
-      Spacer(Modifier.height(4.dp))
-      Text(
-        text = "₹${service.basePrice / 100}",
-        style = MaterialTheme.typography.headlineSmall,
-        fontWeight = FontWeight.Bold,
-      )
-      Spacer(Modifier.height(8.dp))
-      Text(text = service.description, style = MaterialTheme.typography.bodyMedium)
-      Spacer(Modifier.height(16.dp))
-
-      // Includes
-      Text(
-        text = stringResource(R.string.includes_label),
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.SemiBold,
-      )
-      service.includes.forEach { item ->
-        Text(text = "• $item", style = MaterialTheme.typography.bodyMedium)
-      }
-      Spacer(Modifier.height(16.dp))
-
-      // Add-ons
-      if (service.addOns.isNotEmpty()) {
-        Text(
-          text = stringResource(R.string.addons_label),
-          style = MaterialTheme.typography.titleSmall,
-          fontWeight = FontWeight.SemiBold,
+    val bookNowDisabledDesc = stringResource(R.string.book_now_disabled_desc)
+    Column(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+    ) {
+        AsyncImage(
+            model = service.imageUrl,
+            contentDescription = service.name,
+            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
+            contentScale = ContentScale.Crop,
         )
-        service.addOns.forEach { addOn ->
-          Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-            Text(text = addOn.name, style = MaterialTheme.typography.bodyMedium)
-            Spacer(Modifier.weight(1f))
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = service.name, style = MaterialTheme.typography.headlineMedium)
+            Spacer(Modifier.height(4.dp))
             Text(
-              text = "+₹${addOn.price / 100}",
-              style = MaterialTheme.typography.bodyMedium,
-              fontWeight = FontWeight.Medium,
+                text = "₹${service.basePrice / 100}",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
             )
-          }
-        }
-        Spacer(Modifier.height(16.dp))
-      }
+            Spacer(Modifier.height(8.dp))
+            Text(text = service.description, style = MaterialTheme.typography.bodyMedium)
+            Spacer(Modifier.height(16.dp))
 
-      // Trust Dossier stub
-      Card(modifier = Modifier.fillMaxWidth()) {
-        Row(
-          modifier = Modifier.padding(12.dp),
-          verticalAlignment = Alignment.CenterVertically,
-        ) {
-          Icon(
-            imageVector = Icons.Default.Lock,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-          )
-          Spacer(modifier = Modifier.padding(4.dp))
-          Text(
-            text = stringResource(R.string.trust_dossier_stub),
-            style = MaterialTheme.typography.bodyMedium,
-          )
-        }
-      }
-      Spacer(Modifier.height(16.dp))
+            // Includes
+            Text(
+                text = stringResource(R.string.includes_label),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            service.includes.forEach { item ->
+                Text(text = "• $item", style = MaterialTheme.typography.bodyMedium)
+            }
+            Spacer(Modifier.height(16.dp))
 
-      // Book Now CTA — disabled (booking in E03-S03)
-      Button(
-        onClick = onBookNow,
-        enabled = false,
-        modifier = Modifier
-          .fillMaxWidth()
-          .semantics { contentDescription = bookNowDisabledDesc },
-      ) {
-        Text(stringResource(R.string.book_now))
-      }
+            // Add-ons
+            if (service.addOns.isNotEmpty()) {
+                Text(
+                    text = stringResource(R.string.addons_label),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                service.addOns.forEach { addOn ->
+                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                        Text(text = addOn.name, style = MaterialTheme.typography.bodyMedium)
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            text = "+₹${addOn.price / 100}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+            }
+
+            // Trust Dossier stub
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(modifier = Modifier.padding(4.dp))
+                    Text(
+                        text = stringResource(R.string.trust_dossier_stub),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+
+            // Book Now CTA — disabled (booking in E03-S03)
+            Button(
+                onClick = onBookNow,
+                enabled = false,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .semantics { contentDescription = bookNowDisabledDesc },
+            ) {
+                Text(stringResource(R.string.book_now))
+            }
+        }
     }
-  }
 }
