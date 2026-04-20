@@ -21,6 +21,13 @@ import {
   UpdateServiceBodySchema,
   ServiceSchema,
 } from '../schemas/service.js';
+import {
+  ComplaintDocSchema,
+  CreateComplaintBodySchema,
+  PatchComplaintBodySchema,
+  ComplaintListResponseSchema,
+  RepeatOffendersResponseSchema,
+} from '../schemas/complaint.js';
 
 extendZodWithOpenApi(z);
 
@@ -192,4 +199,71 @@ registry.registerPath({
   tags: ['admin-catalogue'], summary: 'Toggle service active state',
   parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
   responses: { 200: { description: 'Toggled', content: { 'application/json': { schema: AdminService } } }, 404: { description: 'Not found' } },
+});
+
+// ── Complaints ─────────────────────────────────────────────────────────────────
+
+const AdminComplaintDoc = ComplaintDocSchema.openapi('AdminComplaintDoc');
+registry.register('AdminComplaintDoc', AdminComplaintDoc);
+registry.register('CreateComplaintBody', CreateComplaintBodySchema);
+registry.register('PatchComplaintBody', PatchComplaintBodySchema);
+registry.register('ComplaintListResponse', ComplaintListResponseSchema);
+registry.register('RepeatOffendersResponse', RepeatOffendersResponseSchema);
+
+registry.registerPath({
+  method: 'get', path: '/v1/admin/complaints', operationId: 'adminListComplaints',
+  tags: ['complaints'], summary: 'List complaints with optional filters',
+  security: [{ cookieAuth: [] }],
+  parameters: [
+    { name: 'status', in: 'query', required: false, schema: { type: 'string' } },
+    { name: 'assigneeAdminId', in: 'query', required: false, schema: { type: 'string' } },
+    { name: 'dateFrom', in: 'query', required: false, schema: { type: 'string' } },
+    { name: 'dateTo', in: 'query', required: false, schema: { type: 'string' } },
+    { name: 'page', in: 'query', required: false, schema: { type: 'integer', default: 1 } },
+    { name: 'pageSize', in: 'query', required: false, schema: { type: 'integer', default: 50 } },
+  ],
+  responses: {
+    200: { description: 'Paginated complaints list', content: { 'application/json': { schema: ComplaintListResponseSchema } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+  },
+});
+
+registry.registerPath({
+  method: 'post', path: '/v1/admin/complaints', operationId: 'adminCreateComplaint',
+  tags: ['complaints'], summary: 'File a new complaint',
+  security: [{ cookieAuth: [] }],
+  request: { body: { content: { 'application/json': { schema: CreateComplaintBodySchema } } } },
+  responses: {
+    201: { description: 'Complaint created', content: { 'application/json': { schema: AdminComplaintDoc } } },
+    400: { description: 'Validation error' },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+  },
+});
+
+registry.registerPath({
+  method: 'patch', path: '/v1/admin/complaints/{id}', operationId: 'adminPatchComplaint',
+  tags: ['complaints'], summary: 'Update complaint status, assignee, resolution, or add a note',
+  security: [{ cookieAuth: [] }],
+  parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+  request: { body: { content: { 'application/json': { schema: PatchComplaintBodySchema } } } },
+  responses: {
+    200: { description: 'Updated complaint', content: { 'application/json': { schema: AdminComplaintDoc } } },
+    400: { description: 'Validation error' },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+    404: { description: 'Complaint not found' },
+  },
+});
+
+registry.registerPath({
+  method: 'get', path: '/v1/admin/complaints/repeat-offenders', operationId: 'adminGetRepeatOffenders',
+  tags: ['complaints'], summary: 'Technicians with 3+ resolved complaints in the rolling window',
+  security: [{ cookieAuth: [] }],
+  responses: {
+    200: { description: 'Repeat offenders list', content: { 'application/json': { schema: RepeatOffendersResponseSchema } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+  },
 });

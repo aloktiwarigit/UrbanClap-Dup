@@ -1,0 +1,134 @@
+import { getCosmosClient, DB_NAME } from './client.js';
+import { ComplaintDocSchema, ComplaintListResponseSchema } from '../schemas/complaint.js';
+import type { ComplaintDoc, ComplaintListQuery, ComplaintListResponse } from '../schemas/complaint.js';
+import type { SqlParameter, SqlQuerySpec } from '@azure/cosmos';
+
+const CONTAINER = 'complaints';
+
+export async function createComplaint(doc: ComplaintDoc): Promise<void> {
+  await getCosmosClient().database(DB_NAME).container(CONTAINER).items.create(doc);
+}
+
+export async function getComplaint(id: string): Promise<ComplaintDoc | null> {
+  const { resource } = await getCosmosClient()
+    .database(DB_NAME)
+    .container(CONTAINER)
+    .item(id, id)
+    .read<Record<string, unknown>>();
+  if (resource === undefined) return null;
+  return ComplaintDocSchema.parse(resource);
+}
+
+export async function replaceComplaint(doc: ComplaintDoc): Promise<void> {
+  await getCosmosClient()
+    .database(DB_NAME)
+    .container(CONTAINER)
+    .item(doc.id, doc.id)
+    .replace(doc);
+}
+
+export async function queryComplaints(params: ComplaintListQuery): Promise<ComplaintListResponse> {
+  const conditions: string[] = [];
+  const parameters: SqlParameter[] = [];
+
+  if (params.status !== undefined && params.status.length > 0) {
+    const placeholders = params.status.map((_, i) => `@status${i}`).join(', ');
+    conditions.push(`c.status IN (${placeholders})`);
+    params.status.forEach((s, i) => {
+      parameters.push({ name: `@status${i}`, value: s });
+    });
+  }
+  if (params.assigneeAdminId !== undefined) {
+    conditions.push('c.assigneeAdminId = @assigneeAdminId');
+    parameters.push({ name: '@assigneeAdminId', value: params.assigneeAdminId });
+  }
+  if (params.dateFrom !== undefined) {
+    conditions.push('c.createdAt >= @dateFrom');
+    parameters.push({ name: '@dateFrom', value: params.dateFrom });
+  }
+  if (params.dateTo !== undefined) {
+    conditions.push('c.createdAt <= @dateTo');
+    parameters.push({ name: '@dateTo', value: params.dateTo });
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const offset = (params.page - 1) * params.pageSize;
+
+  const countQuery: SqlQuerySpec = {
+    query: `SELECT VALUE COUNT(1) FROM c ${where}`,
+    parameters,
+  };
+
+  const dataQuery: SqlQuerySpec = {
+    query: `SELECT * FROM c ${where} ORDER BY c.createdAt DESC OFFSET ${offset} LIMIT ${params.pageSize}`,
+    parameters,
+  };
+
+  const [countResult, dataResult] = await Promise.all([
+    getCosmosClient()
+      .database(DB_NAME)
+      .container(CONTAINER)
+      .items.query<number>(countQuery)
+      .fetchAll(),
+    getCosmosClient()
+      .database(DB_NAME)
+      .container(CONTAINER)
+      .items.query<Record<string, unknown>>(dataQuery)
+      .fetchAll(),
+  ]);
+
+  const total = countResult.resources[0] ?? 0;
+  const items = dataResult.resources.map(r => ComplaintDocSchema.parse(r));
+
+  return ComplaintListResponseSchema.parse({
+    items,
+    total,
+    page: params.page,
+    pageSize: params.pageSize,
+    totalPages: Math.ceil(total / params.pageSize),
+  });
+}
+
+export async function getOverdueComplaints(): Promise<ComplaintDoc[]> {
+  const now = new Date().toISOString();
+  const query: SqlQuerySpec = {
+    query: `SELECT * FROM c WHERE c.slaDeadlineAt < @now AND c.status != @resolved AND c.escalated != true`,
+    parameters: [
+      { name: '@now', value: now },
+      { name: '@resolved', value: 'RESOLVED' },
+    ],
+  };
+  const { resources } = await getCosmosClient()
+    .database(DB_NAME)
+    .container(CONTAINER)
+    .items.query<Record<string, unknown>>(query)
+    .fetchAll();
+  return resources.map(r => ComplaintDocSchema.parse(r));
+}
+
+export async function getRepeatOffenders(
+  sinceIso: string,
+): Promise<Array<{ technicianId: string; count: number }>> {
+  const query: SqlQuerySpec = {
+    query: `SELECT * FROM c WHERE c.status = @resolved AND c.createdAt >= @since`,
+    parameters: [
+      { name: '@resolved', value: 'RESOLVED' },
+      { name: '@since', value: sinceIso },
+    ],
+  };
+  const { resources } = await getCosmosClient()
+    .database(DB_NAME)
+    .container(CONTAINER)
+    .items.query<Record<string, unknown>>(query)
+    .fetchAll();
+
+  const counts = new Map<string, number>();
+  for (const r of resources) {
+    const doc = ComplaintDocSchema.parse(r);
+    counts.set(doc.technicianId, (counts.get(doc.technicianId) ?? 0) + 1);
+  }
+
+  return Array.from(counts.entries())
+    .filter(([, count]) => count >= 3)
+    .map(([technicianId, count]) => ({ technicianId, count }));
+}
