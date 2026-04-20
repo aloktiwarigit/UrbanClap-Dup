@@ -24,6 +24,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/dashboard/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Today's live operations KPI counters */
+        get: operations["adminGetDashboardSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/dashboard/feed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recent 50 booking events, newest first */
+        get: operations["adminGetDashboardFeed"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/dashboard/tech-locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Active technician map pin positions */
+        get: operations["adminGetTechLocations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/auth/login": {
         parameters: {
             query?: never;
@@ -123,6 +174,48 @@ export interface components {
             timestamp: string;
             uptimeSeconds: number;
         };
+        DashboardSummary: {
+            bookingsToday: number;
+            gmvToday: number;
+            commissionToday: number;
+            payoutsPending: number;
+            complaintsOpen: number;
+            techsOnDuty: number;
+        };
+        DashboardSummaryResponse: {
+            summary: components["schemas"]["DashboardSummary"];
+        };
+        BookingEvent: {
+            id: string;
+            bookingId: string;
+            status: string;
+            customerId: string;
+            technicianId?: string;
+            serviceId: string;
+            amount: number;
+            createdAt: string;
+            /** @enum {string} */
+            kind: "booking" | "assigned" | "completed" | "alert" | "payout" | "complaint";
+            title: string;
+            detail?: string;
+        };
+        BookingEventsResponse: {
+            events: components["schemas"]["BookingEvent"][];
+            total: number;
+        };
+        TechLocation: {
+            technicianId: string;
+            name?: string;
+            serviceType?: string;
+            lat: number;
+            lng: number;
+            /** @enum {string} */
+            state: "active" | "enroute" | "idle" | "alert";
+            updatedAt: string;
+        };
+        TechLocationsResponse: {
+            techs: components["schemas"]["TechLocation"][];
+        };
         AdminLoginRequest: {
             idToken: string;
             totpCode?: string;
@@ -161,6 +254,129 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
                 };
+            };
+        };
+    };
+    adminGetDashboardSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dashboard summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardSummaryResponse"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Upstream Cosmos error */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminGetDashboardFeed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Booking events feed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingEventsResponse"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Upstream Cosmos error */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminGetTechLocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tech locations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TechLocationsResponse"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Upstream Cosmos error */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

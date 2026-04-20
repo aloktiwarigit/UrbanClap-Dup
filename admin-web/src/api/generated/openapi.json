@@ -58,6 +58,185 @@
         ],
         "additionalProperties": false
       },
+      "DashboardSummary": {
+        "type": "object",
+        "properties": {
+          "bookingsToday": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "gmvToday": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "commissionToday": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "payoutsPending": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "complaintsOpen": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "techsOnDuty": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "bookingsToday",
+          "gmvToday",
+          "commissionToday",
+          "payoutsPending",
+          "complaintsOpen",
+          "techsOnDuty"
+        ],
+        "additionalProperties": false
+      },
+      "DashboardSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "summary": {
+            "$ref": "#/components/schemas/DashboardSummary"
+          }
+        },
+        "required": [
+          "summary"
+        ]
+      },
+      "BookingEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "bookingId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "technicianId": {
+            "type": "string"
+          },
+          "serviceId": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "booking",
+              "assigned",
+              "completed",
+              "alert",
+              "payout",
+              "complaint"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "bookingId",
+          "status",
+          "customerId",
+          "serviceId",
+          "amount",
+          "createdAt",
+          "kind",
+          "title"
+        ]
+      },
+      "BookingEventsResponse": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookingEvent"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "events",
+          "total"
+        ]
+      },
+      "TechLocation": {
+        "type": "object",
+        "properties": {
+          "technicianId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "serviceType": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "active",
+              "enroute",
+              "idle",
+              "alert"
+            ]
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "technicianId",
+          "lat",
+          "lng",
+          "state",
+          "updatedAt"
+        ]
+      },
+      "TechLocationsResponse": {
+        "type": "object",
+        "properties": {
+          "techs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TechLocation"
+            }
+          }
+        },
+        "required": [
+          "techs"
+        ]
+      },
       "AdminLoginRequest": {
         "type": "object",
         "properties": {
@@ -127,6 +306,111 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/v1/admin/dashboard/summary": {
+      "get": {
+        "operationId": "adminGetDashboardSummary",
+        "tags": [
+          "dashboard"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Today's live operations KPI counters",
+        "responses": {
+          "200": {
+            "description": "Dashboard summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardSummaryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "502": {
+            "description": "Upstream Cosmos error"
+          }
+        }
+      }
+    },
+    "/v1/admin/dashboard/feed": {
+      "get": {
+        "operationId": "adminGetDashboardFeed",
+        "tags": [
+          "dashboard"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Recent 50 booking events, newest first",
+        "responses": {
+          "200": {
+            "description": "Booking events feed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingEventsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "502": {
+            "description": "Upstream Cosmos error"
+          }
+        }
+      }
+    },
+    "/v1/admin/dashboard/tech-locations": {
+      "get": {
+        "operationId": "adminGetTechLocations",
+        "tags": [
+          "dashboard"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Active technician map pin positions",
+        "responses": {
+          "200": {
+            "description": "Tech locations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TechLocationsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "502": {
+            "description": "Upstream Cosmos error"
           }
         }
       }
