@@ -809,86 +809,83 @@
           }
         }
       },
-      "ComplaintDoc": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "orderId": {
-            "type": "string"
-          },
-          "customerId": {
-            "type": "string"
-          },
-          "technicianId": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "NEW",
-              "INVESTIGATING",
-              "RESOLVED"
-            ]
-          },
-          "assigneeAdminId": {
-            "type": "string"
-          },
-          "resolutionCategory": {
-            "type": "string",
-            "enum": [
-              "TECHNICIAN_MISCONDUCT",
-              "SERVICE_QUALITY",
-              "BILLING_DISPUTE",
-              "LATE_ARRIVAL",
-              "NO_SHOW",
-              "OTHER"
-            ]
-          },
-          "internalNotes": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/InternalNote"
-            },
-            "default": []
-          },
-          "slaDeadlineAt": {
-            "type": "string"
-          },
-          "escalated": {
-            "type": "boolean",
-            "default": false
-          },
-          "createdAt": {
-            "type": "string"
-          },
-          "updatedAt": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "orderId",
-          "customerId",
-          "technicianId",
-          "description",
-          "status",
-          "slaDeadlineAt",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
       "ComplaintListResponse": {
         "type": "object",
         "properties": {
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ComplaintDoc"
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "orderId": {
+                  "type": "string"
+                },
+                "customerId": {
+                  "type": "string"
+                },
+                "technicianId": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "NEW",
+                    "INVESTIGATING",
+                    "RESOLVED"
+                  ]
+                },
+                "assigneeAdminId": {
+                  "type": "string"
+                },
+                "resolutionCategory": {
+                  "type": "string",
+                  "enum": [
+                    "TECHNICIAN_MISCONDUCT",
+                    "SERVICE_QUALITY",
+                    "BILLING_DISPUTE",
+                    "LATE_ARRIVAL",
+                    "NO_SHOW",
+                    "OTHER"
+                  ]
+                },
+                "internalNotes": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InternalNote"
+                  },
+                  "default": []
+                },
+                "slaDeadlineAt": {
+                  "type": "string"
+                },
+                "escalated": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "orderId",
+                "customerId",
+                "technicianId",
+                "description",
+                "status",
+                "slaDeadlineAt",
+                "createdAt",
+                "updatedAt"
+              ]
             }
           },
           "total": {
