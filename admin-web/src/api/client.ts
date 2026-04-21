@@ -24,6 +24,7 @@ export type HeadersProvider = () =>
 export interface ApiClientOptions {
   baseUrl: string;
   headers?: HeadersProvider;
+  disableRefresh?: boolean;
 }
 
 export function createApiClient(options: ApiClientOptions) {
@@ -47,6 +48,7 @@ export function createApiClient(options: ApiClientOptions) {
       if (response.ok) return response;
 
       if (
+        !options.disableRefresh &&
         response.status === 401 &&
         !isRefreshing &&
         !request.url.includes('/auth/refresh') &&
