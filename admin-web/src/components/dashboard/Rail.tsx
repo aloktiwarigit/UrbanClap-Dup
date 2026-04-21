@@ -117,7 +117,7 @@ export function Rail() {
         }}
         className="rail-mobile"
       >
-        {NAV_ITEMS.slice(0, 5).map((item) => {
+        {NAV_ITEMS.slice(0, 6).map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link

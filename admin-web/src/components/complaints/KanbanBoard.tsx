@@ -26,6 +26,8 @@ export function KanbanBoard({ complaints, onStatusChange, onAddNote, onReassign,
     const targetStatus = result.destination.droppableId as ComplaintStatus;
     const sourceStatus = result.source.droppableId as ComplaintStatus;
     if (targetStatus === sourceStatus) return;
+    // Resolved complaints are immutable — drag out is a no-op.
+    if (sourceStatus === 'RESOLVED') return;
     // Dragging to RESOLVED requires a resolution category — open the slide-over resolve section.
     if (targetStatus === 'RESOLVED') {
       setSelectedComplaintId(result.draggableId);
