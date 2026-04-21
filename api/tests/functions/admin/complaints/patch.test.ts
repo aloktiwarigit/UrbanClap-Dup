@@ -48,7 +48,7 @@ describe('adminPatchComplaintHandler', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('returns 200 on valid status transition', async () => {
-    (getComplaint as ReturnType<typeof vi.fn>).mockResolvedValue({ ...existingComplaint });
+    (getComplaint as ReturnType<typeof vi.fn>).mockResolvedValue({ doc: existingComplaint, etag: '"etag_1"' });
     (replaceComplaint as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     (appendAuditEntry as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     const res = await adminPatchComplaintHandler(
@@ -61,7 +61,7 @@ describe('adminPatchComplaintHandler', () => {
   });
 
   it('appends note to internalNotes when note provided', async () => {
-    (getComplaint as ReturnType<typeof vi.fn>).mockResolvedValue({ ...existingComplaint });
+    (getComplaint as ReturnType<typeof vi.fn>).mockResolvedValue({ doc: existingComplaint, etag: '"etag_1"' });
     (replaceComplaint as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     (appendAuditEntry as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     const res = await adminPatchComplaintHandler(
@@ -77,7 +77,7 @@ describe('adminPatchComplaintHandler', () => {
   });
 
   it('calls appendAuditEntry with COMPLAINT_STATUS_CHANGED on status change', async () => {
-    (getComplaint as ReturnType<typeof vi.fn>).mockResolvedValue({ ...existingComplaint });
+    (getComplaint as ReturnType<typeof vi.fn>).mockResolvedValue({ doc: existingComplaint, etag: '"etag_1"' });
     (replaceComplaint as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     (appendAuditEntry as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     await adminPatchComplaintHandler(
@@ -92,7 +92,7 @@ describe('adminPatchComplaintHandler', () => {
   });
 
   it('returns 400 when resolving without a resolutionCategory', async () => {
-    (getComplaint as ReturnType<typeof vi.fn>).mockResolvedValue({ ...existingComplaint });
+    (getComplaint as ReturnType<typeof vi.fn>).mockResolvedValue({ doc: existingComplaint, etag: '"etag_1"' });
     const res = await adminPatchComplaintHandler(
       makeReq({ status: 'RESOLVED' }),
       mockCtx,
@@ -100,6 +100,19 @@ describe('adminPatchComplaintHandler', () => {
     );
     expect(res.status).toBe(400);
     expect((res.jsonBody as Record<string, unknown>)['code']).toBe('RESOLUTION_CATEGORY_REQUIRED');
+  });
+
+  it('returns 409 when Cosmos ETag conflicts (concurrent update)', async () => {
+    (getComplaint as ReturnType<typeof vi.fn>).mockResolvedValue({ doc: existingComplaint, etag: '"etag_1"' });
+    const conflictErr = Object.assign(new Error('Precondition Failed'), { code: 412 });
+    (replaceComplaint as ReturnType<typeof vi.fn>).mockRejectedValue(conflictErr);
+    const res = await adminPatchComplaintHandler(
+      makeReq({ status: 'INVESTIGATING' }),
+      mockCtx,
+      mockAdmin,
+    );
+    expect(res.status).toBe(409);
+    expect((res.jsonBody as Record<string, unknown>)['code']).toBe('CONFLICT');
   });
 
   it('returns 404 when complaint not found', async () => {
@@ -122,7 +135,7 @@ describe('adminPatchComplaintHandler', () => {
   });
 
   it('calls appendAuditEntry with COMPLAINT_ASSIGNED on assigneeAdminId-only patch', async () => {
-    (getComplaint as ReturnType<typeof vi.fn>).mockResolvedValue({ ...existingComplaint });
+    (getComplaint as ReturnType<typeof vi.fn>).mockResolvedValue({ doc: existingComplaint, etag: '"etag_1"' });
     (replaceComplaint as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     (appendAuditEntry as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     const res = await adminPatchComplaintHandler(

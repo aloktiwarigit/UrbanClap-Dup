@@ -24,10 +24,11 @@ export async function adminPatchComplaintHandler(
     return { status: 400, jsonBody: { code: 'VALIDATION_ERROR', issues: parsed.error.issues } };
   }
 
-  const existing = await getComplaint(id);
-  if (!existing) {
+  const result = await getComplaint(id);
+  if (!result) {
     return { status: 404, jsonBody: { code: 'COMPLAINT_NOT_FOUND' } };
   }
+  const { doc: existing, etag } = result;
 
   const now = new Date().toISOString();
   const oldStatus = existing.status;
@@ -56,7 +57,14 @@ export async function adminPatchComplaintHandler(
     ];
   }
 
-  await replaceComplaint(updated);
+  try {
+    await replaceComplaint(updated, etag);
+  } catch (err: unknown) {
+    if (typeof err === 'object' && err !== null && 'code' in err && err.code === 412) {
+      return { status: 409, jsonBody: { code: 'CONFLICT' } };
+    }
+    throw err;
+  }
 
   if (parsed.data.status !== undefined && parsed.data.status !== oldStatus) {
     await appendAuditEntry({

@@ -49,7 +49,10 @@ export async function summaryHandler(
       })
       .fetchAll()
       .then((r) => (r.resources[0] as number | undefined) ?? 0)
-      .catch(() => 0);
+      .catch((err: unknown) => {
+        if (typeof err === 'object' && err !== null && 'code' in err && err.code === 404) return 0;
+        throw err;
+      });
 
     const commissionRate = parseFloat(process.env['COMMISSION_RATE'] ?? '0.225');
     const gmvToday: number = (gmvResult.resources[0] as number | undefined) ?? 0;

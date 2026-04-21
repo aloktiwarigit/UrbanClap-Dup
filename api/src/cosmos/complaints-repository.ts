@@ -9,22 +9,23 @@ export async function createComplaint(doc: ComplaintDoc): Promise<void> {
   await getCosmosClient().database(DB_NAME).container(CONTAINER).items.create(doc);
 }
 
-export async function getComplaint(id: string): Promise<ComplaintDoc | null> {
-  const { resource } = await getCosmosClient()
+export async function getComplaint(id: string): Promise<{ doc: ComplaintDoc; etag: string } | null> {
+  const response = await getCosmosClient()
     .database(DB_NAME)
     .container(CONTAINER)
     .item(id, id)
     .read<Record<string, unknown>>();
-  if (resource === undefined) return null;
-  return ComplaintDocSchema.parse(resource);
+  if (response.resource === undefined) return null;
+  return { doc: ComplaintDocSchema.parse(response.resource), etag: response.etag ?? '' };
 }
 
-export async function replaceComplaint(doc: ComplaintDoc): Promise<void> {
+export async function replaceComplaint(doc: ComplaintDoc, etag?: string): Promise<void> {
+  const options = etag ? { accessCondition: { type: 'IfMatch' as const, condition: etag } } : {};
   await getCosmosClient()
     .database(DB_NAME)
     .container(CONTAINER)
     .item(doc.id, doc.id)
-    .replace(doc);
+    .replace(doc, options);
 }
 
 export async function queryComplaints(params: ComplaintListQuery): Promise<ComplaintListResponse> {
