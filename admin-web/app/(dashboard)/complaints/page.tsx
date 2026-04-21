@@ -13,6 +13,7 @@ export default async function ComplaintsPage() {
 
   let activeItems: Complaint[] = [];
   let recentResolved: Complaint[] = [];
+  let apiTotal = 0;
   try {
     // Two separate queries so long-running active complaints (>30d) are never hidden
     // by all-time RESOLVED volume consuming the 200-slot page limit.
@@ -26,6 +27,7 @@ export default async function ComplaintsPage() {
     ]);
     activeItems = activeData.items;
     recentResolved = resolvedData.items;
+    apiTotal = activeData.total + resolvedData.total;
   } catch (err) {
     if (err instanceof ApiError && err.status === 403) redirect('/dashboard');
     throw err;
@@ -33,5 +35,5 @@ export default async function ComplaintsPage() {
 
   const allComplaints = [...activeItems, ...recentResolved];
 
-  return <ComplaintsClient initialComplaints={allComplaints} totalComplaints={allComplaints.length} />;
+  return <ComplaintsClient initialComplaints={allComplaints} totalComplaints={apiTotal} />;
 }

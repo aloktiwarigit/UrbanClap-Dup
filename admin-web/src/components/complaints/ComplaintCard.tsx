@@ -22,7 +22,10 @@ function formatSlaCountdown(slaDeadlineAt: string): { label: string; urgent: boo
 }
 
 export function ComplaintCard({ complaint, onClick }: ComplaintCardProps) {
-  const { label: slaLabel, urgent } = formatSlaCountdown(complaint.slaDeadlineAt);
+  const isResolved = complaint.status === 'RESOLVED';
+  const { label: slaLabel, urgent } = isResolved
+    ? { label: 'Resolved', urgent: false }
+    : formatSlaCountdown(complaint.slaDeadlineAt);
 
   return (
     <button
