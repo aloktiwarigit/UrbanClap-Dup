@@ -55,11 +55,13 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
     try {
       const updated = await patchComplaintClient(id, { note });
       // Merge: take server-confirmed notes, then append any optimistic notes added
-      // after this request was dispatched (notes at indices >= server list length).
+      // after this request was dispatched (notes at indices > prevNotes.length).
+      // Using dispatch-time prevNotes.length (not updated.internalNotes.length) to
+      // stay correct when out-of-order resolution shifts server note counts.
       setComplaints((prev) =>
         prev.map((x) => {
           if (x.id !== id) return x;
-          const newerOptimistic = x.internalNotes.slice(updated.internalNotes.length);
+          const newerOptimistic = x.internalNotes.slice(prevNotes!.length + 1);
           return { ...x, internalNotes: [...updated.internalNotes, ...newerOptimistic] };
         }),
       );
@@ -98,6 +100,9 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
     } catch (err) {
       setComplaints((prev) => prev.map((x) => {
         if (x.id !== id) return x;
+        // Only roll back if the assignee hasn't been updated by a later successful mutation.
+        // Normalise undefined (absent field) to null so the comparison is unambiguous.
+        if ((x.assigneeAdminId ?? null) !== assigneeAdminId) return x;
         const { assigneeAdminId: _a, ...base } = x;
         return prevAssignee !== undefined ? { ...base, assigneeAdminId: prevAssignee } : base;
       }));
