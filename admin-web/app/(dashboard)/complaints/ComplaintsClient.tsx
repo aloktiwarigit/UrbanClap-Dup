@@ -127,11 +127,11 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
       await patchComplaintClient(id, { status: 'RESOLVED', resolutionCategory });
     } catch (err) {
       if (prevStatus !== undefined) {
-        // Only roll back if status is still 'RESOLVED' (what we optimistically set) —
-        // a later successful mutation may have already changed it.
+        // Only roll back if both status and resolutionCategory still match what we
+        // optimistically set — a later successful mutation may have already changed either.
         setComplaints((prev) =>
           prev.map((x) => {
-            if (x.id !== id || x.status !== 'RESOLVED') return x;
+            if (x.id !== id || x.status !== 'RESOLVED' || x.resolutionCategory !== resolutionCategory) return x;
             const { resolutionCategory: _r, ...base } = x;
             return prevCategory !== undefined
               ? { ...base, status: prevStatus!, resolutionCategory: prevCategory }
