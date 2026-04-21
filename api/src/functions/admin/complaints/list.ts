@@ -13,7 +13,7 @@ export async function adminListComplaintsHandler(
 ): Promise<HttpResponseInit> {
   const raw: Record<string, string> = {};
   const paramKeys = [
-    'status', 'assigneeAdminId', 'dateFrom', 'dateTo', 'page', 'pageSize',
+    'status', 'assigneeAdminId', 'dateFrom', 'dateTo', 'resolvedSince', 'page', 'pageSize',
   ];
   for (const key of paramKeys) {
     const val = req.query.get(key);

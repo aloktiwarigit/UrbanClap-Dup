@@ -64,8 +64,9 @@ export async function queryComplaints(params: ComplaintListQuery): Promise<Compl
     parameters,
   };
 
+  const orderBy = params.resolvedSince !== undefined ? 'c.resolvedAt DESC' : 'c.createdAt DESC';
   const dataQuery: SqlQuerySpec = {
-    query: `SELECT * FROM c ${where} ORDER BY c.createdAt DESC OFFSET ${offset} LIMIT ${params.pageSize}`,
+    query: `SELECT * FROM c ${where} ORDER BY ${orderBy} OFFSET ${offset} LIMIT ${params.pageSize}`,
     parameters,
   };
 
