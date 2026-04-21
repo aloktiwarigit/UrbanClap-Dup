@@ -30,8 +30,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -43,7 +41,7 @@ import com.homeservices.customer.domain.catalogue.model.Service
 @Composable
 internal fun ServiceDetailScreen(
     viewModel: ServiceDetailViewModel,
-    onBookNow: () -> Unit,
+    onBookNow: (serviceId: String, categoryId: String) -> Unit,
     onBack: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -65,7 +63,6 @@ internal fun ServiceDetailScreen(
         ServiceDetailContent(
             uiState = uiState,
             onBookNow = onBookNow,
-            onBack = onBack,
             modifier = Modifier.padding(innerPadding),
         )
     }
@@ -74,8 +71,7 @@ internal fun ServiceDetailScreen(
 @Composable
 internal fun ServiceDetailContent(
     uiState: ServiceDetailUiState,
-    onBookNow: () -> Unit,
-    onBack: () -> Unit,
+    onBookNow: (serviceId: String, categoryId: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (uiState) {
@@ -95,7 +91,7 @@ internal fun ServiceDetailContent(
         is ServiceDetailUiState.Success -> {
             ServiceDetailBody(
                 service = uiState.service,
-                onBookNow = onBookNow,
+                onBookNow = { onBookNow(uiState.service.id, uiState.service.categoryId) },
                 modifier = modifier,
             )
         }
@@ -108,7 +104,6 @@ private fun ServiceDetailBody(
     onBookNow: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val bookNowDisabledDesc = stringResource(R.string.book_now_disabled_desc)
     Column(
         modifier =
             modifier
@@ -185,14 +180,9 @@ private fun ServiceDetailBody(
             }
             Spacer(Modifier.height(16.dp))
 
-            // Book Now CTA — disabled (booking in E03-S03)
             Button(
                 onClick = onBookNow,
-                enabled = false,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .semantics { contentDescription = bookNowDisabledDesc },
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.book_now))
             }

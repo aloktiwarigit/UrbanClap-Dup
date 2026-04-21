@@ -21,8 +21,7 @@ public class ServiceDetailScreenTest {
         paparazzi.snapshot {
             ServiceDetailContent(
                 uiState = ServiceDetailUiState.Success(sampleService()),
-                onBookNow = {},
-                onBack = {},
+                onBookNow = { _, _ -> },
             )
         }
     }

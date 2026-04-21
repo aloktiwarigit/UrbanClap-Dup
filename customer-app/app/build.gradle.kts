@@ -220,6 +220,18 @@ kover {
                     "*.ServiceListScreenKt\$*",
                     "*.ServiceDetailScreenKt",
                     "*.ServiceDetailScreenKt\$*",
+                    // Booking flow Compose screen files — same rationale as catalogue screens above
+                    "*.SlotPickerScreenKt",
+                    "*.SlotPickerScreenKt\$*",
+                    "*.AddressScreenKt",
+                    "*.AddressScreenKt\$*",
+                    "*.BookingSummaryScreenKt",
+                    "*.BookingSummaryScreenKt\$*",
+                    "*.BookingConfirmedScreenKt",
+                    "*.BookingConfirmedScreenKt\$*",
+                    // BookingUiState sealed class — data holders, no logic branches
+                    "*.BookingUiState",
+                    "*.BookingUiState\$*",
                     // Moshi KSP-generated JSON adapters — code-gen output, same rationale as Hilt factories
                     "*.*DtoJsonAdapter",
                     // BiometricResult sealed class — data holders, no logic branches
