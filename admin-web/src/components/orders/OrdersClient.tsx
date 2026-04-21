@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Route } from 'next';
 import type { Order, OrderListResponse, OrdersQueryParams } from '@/types/order';
 import { fetchOrders, fetchAllOrdersForExport } from '@/api/orders';
 import { OrdersTable } from './OrdersTable';
@@ -70,7 +69,7 @@ export function OrdersClient() {
           sp.set(k, String(v));
         }
       });
-      startTransition(() => { router.replace(`/orders?${sp}` as Route); });
+      startTransition(() => { router.replace(`/orders?${sp}`); });
     },
     [filters, router],
   );
@@ -134,6 +133,12 @@ export function OrdersClient() {
         <OrderSlideOver
           order={selectedOrder}
           onClose={() => setSelectedOrder(null)}
+          onOrderUpdated={updated => {
+            setSelectedOrder(updated);
+            setData(prev => prev
+              ? { ...prev, items: prev.items.map(o => o.id === updated.id ? updated : o) }
+              : prev);
+          }}
         />
       )}
     </div>

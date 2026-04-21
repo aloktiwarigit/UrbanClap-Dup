@@ -18,6 +18,9 @@ export interface Order {
   amount: number;
   createdAt: string;
   _ts?: number;
+  feesWaived?: boolean;
+  escalated?: boolean;
+  internalNotes?: string[];
 }
 
 export interface OrderListResponse {
@@ -27,6 +30,13 @@ export interface OrderListResponse {
   pageSize: number;
   totalPages: number;
 }
+
+export interface ReassignRequest { technicianId: string; reason: string; }
+export interface CompleteRequest { reason: string; }
+export interface RefundRequest { reason: string; amountPaise?: number; }
+export interface WaiveFeeRequest { reason: string; }
+export interface EscalateRequest { reason: string; priority: 'HIGH' | 'CRITICAL'; }
+export interface NoteRequest { note: string; }
 
 export interface OrdersQueryParams {
   status?: string;

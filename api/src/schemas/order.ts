@@ -24,6 +24,9 @@ export const OrderSchema = z.object({
   amount: z.number().nonnegative(),
   createdAt: z.string(),
   _ts: z.number().optional(),
+  feesWaived: z.boolean().optional(),
+  escalated: z.boolean().optional(),
+  internalNotes: z.array(z.string()).optional(),
 });
 
 export const OrderListQuerySchema = z.object({

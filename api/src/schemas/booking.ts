@@ -22,7 +22,11 @@ export const BookingDocSchema = z.object({
   paymentId: z.string().nullable(),
   paymentSignature: z.string().nullable(),
   amount: z.number().int().positive(),
+  technicianId: z.string().optional(),
   createdAt: z.string(),
+  feesWaived: z.boolean().optional(),
+  escalated: z.boolean().optional(),
+  internalNotes: z.array(z.string()).optional(),
 });
 
 export const CreateBookingRequestSchema = z.object({

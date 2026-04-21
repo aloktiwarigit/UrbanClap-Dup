@@ -1,6 +1,18 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { OrderSlideOver } from '../src/components/orders/OrderSlideOver';
+
+vi.mock('../src/api/orders', () => ({
+  reassignOrder: vi.fn(),
+  completeOrder: vi.fn(),
+  refundOrder: vi.fn(),
+  waiveFeeOrder: vi.fn(),
+  escalateOrder: vi.fn(),
+  addOrderNote: vi.fn(),
+  fetchOrders: vi.fn(),
+  fetchOrderById: vi.fn(),
+  fetchAllOrdersForExport: vi.fn(),
+}));
 import type { Order } from '../src/types/order';
 
 const order: Order = {
