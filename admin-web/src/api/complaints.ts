@@ -1,4 +1,4 @@
-import type { ApiClient } from './client';
+import { createApiClient, type ApiClient } from './client';
 import type {
   Complaint,
   ComplaintListResponse,
@@ -10,18 +10,20 @@ import type {
 // In production the env var is empty so paths resolve through the Next.js /api proxy.
 const CLIENT_BASE = process.env['NEXT_PUBLIC_API_BASE_URL'] ?? '';
 
+// Lazy singleton — created on first mutation call, reused for 401-refresh support.
+let _browserClient: ApiClient | undefined;
+function getBrowserClient(): ApiClient {
+  if (_browserClient === undefined) {
+    _browserClient = createApiClient({ baseUrl: CLIENT_BASE, credentials: 'include' });
+  }
+  return _browserClient;
+}
+
 export async function patchComplaintClient(
   id: string,
   body: PatchComplaintParams,
 ): Promise<Complaint> {
-  const res = await fetch(`${CLIENT_BASE}/api/v1/admin/complaints/${id}`, {
-    method: 'PATCH',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`patchComplaintClient failed: ${res.status}`);
-  return res.json() as Promise<Complaint>;
+  return patchComplaint(getBrowserClient(), id, body);
 }
 
 export interface ListComplaintsParams {

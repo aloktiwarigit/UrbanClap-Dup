@@ -47,6 +47,10 @@ export async function adminPatchComplaintHandler(
     updated.status = parsed.data.status;
     if (parsed.data.status === 'RESOLVED' && oldStatus !== 'RESOLVED') {
       updated.resolvedAt = now;
+    } else if (parsed.data.status !== 'RESOLVED' && oldStatus === 'RESOLVED') {
+      // Reopen: clear stale resolution fields so the category guard works correctly next time.
+      delete updated.resolvedAt;
+      delete updated.resolutionCategory;
     }
   }
   if (parsed.data.assigneeAdminId !== undefined) {
