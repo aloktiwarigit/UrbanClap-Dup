@@ -49,7 +49,7 @@ export default async function ComplaintsPage() {
     recentResolved = resolvedData.items;
     apiTotal = activeData.total + resolvedData.total;
   } catch (err) {
-    if (err instanceof ApiError && err.status === 403) redirect('/dashboard');
+    if (err instanceof ApiError && (err.status === 401 || err.status === 403)) redirect('/dashboard');
     throw err;
   }
 

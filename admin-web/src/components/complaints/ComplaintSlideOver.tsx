@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Complaint, ComplaintStatus, ComplaintResolutionCategory } from '@/types/complaint';
 
 interface ComplaintSlideOverProps {
@@ -43,6 +43,10 @@ export function ComplaintSlideOver({
   const [noteText, setNoteText] = useState('');
   const [resolutionCategory, setResolutionCategory] = useState<ComplaintResolutionCategory>('OTHER');
   const [reassignInput, setReassignInput] = useState(complaint.assigneeAdminId ?? '');
+
+  useEffect(() => {
+    setReassignInput(complaint.assigneeAdminId ?? '');
+  }, [complaint.assigneeAdminId]);
 
   const handleAddNote = () => {
     if (noteText.trim()) {
