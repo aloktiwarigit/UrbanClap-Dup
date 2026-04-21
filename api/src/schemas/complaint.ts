@@ -59,9 +59,9 @@ export const ComplaintListQuerySchema = z.object({
     s ? s.split(',').map(x => x.trim()).filter(Boolean) : undefined
   ).pipe(z.array(ComplaintStatusEnum).optional()),
   assigneeAdminId: z.string().optional(),
-  dateFrom: z.string().optional(),
-  dateTo: z.string().optional(),
-  resolvedSince: z.string().optional(),
+  dateFrom: z.string().datetime({ offset: true }).optional(),
+  dateTo: z.string().datetime({ offset: true }).optional(),
+  resolvedSince: z.string().datetime({ offset: true }).optional(),
   sortDir: z.enum(['asc', 'desc']).optional(),
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().default(50).transform(v => Math.min(v, 200)),

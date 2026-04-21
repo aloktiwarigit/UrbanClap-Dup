@@ -42,7 +42,14 @@ export async function adminCreateComplaintHandler(
     updatedAt: now.toISOString(),
   };
 
-  await createComplaint(doc);
+  try {
+    await createComplaint(doc);
+  } catch (err: unknown) {
+    if (typeof err === 'object' && err !== null && 'code' in err && (err as { code: number }).code === 404) {
+      return { status: 503, jsonBody: { code: 'CONTAINER_NOT_PROVISIONED' } };
+    }
+    throw err;
+  }
 
   // Fire-and-forget: audit write must not fail the response after the complaint is committed.
   appendAuditEntry({
