@@ -22,7 +22,8 @@
     "openapi:build": "tsx src/openapi/build.ts",
     "openapi:lint": "spectral lint openapi.json --fail-severity error",
     "seed:technicians": "npx tsx scripts/seed-technicians.ts",
-    "seed:catalogue": "tsx src/cosmos/seeds/catalogue.ts"
+    "seed:catalogue": "tsx src/cosmos/seeds/catalogue.ts",
+    "seed:complaints": "tsx src/cosmos/seeds/complaints.ts"
   },
   "dependencies": {
     "@azure/ai-form-recognizer": "^5.1.0",

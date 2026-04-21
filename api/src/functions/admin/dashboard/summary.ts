@@ -34,7 +34,7 @@ export async function summaryHandler(
       db
         .container('complaints')
         .items.query({
-          query: 'SELECT VALUE COUNT(1) FROM c WHERE c.status = "open"',
+          query: 'SELECT VALUE COUNT(1) FROM c WHERE c.status IN ("NEW", "INVESTIGATING")',
           parameters: [],
         })
         .fetchAll(),
