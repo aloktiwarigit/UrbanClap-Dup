@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { patchComplaintClient } from '@/api/complaints';
 import { KanbanBoard } from '@/components/complaints/KanbanBoard';
 import type { Complaint, ComplaintResolutionCategory, ComplaintStatus } from '@/types/complaint';
@@ -13,9 +13,16 @@ interface ComplaintsClientProps {
 export function ComplaintsClient({ initialComplaints, totalComplaints }: ComplaintsClientProps) {
   const [complaints, setComplaints] = useState<Complaint[]>(initialComplaints);
   const [error, setError] = useState<string | null>(null);
+  // Per-mutation generation counters keyed by `${complaintId}:${field}`.
+  // Prevents a failed older mutation from rolling back a newer successful one,
+  // including the case where two identical values are sent concurrently.
+  const mutGenRef = useRef<Map<string, number>>(new Map());
 
   const handleStatusChange = useCallback(async (id: string, status: ComplaintStatus) => {
     let prevStatus: ComplaintStatus | undefined;
+    const gk = `${id}:status`;
+    const gen = (mutGenRef.current.get(gk) ?? 0) + 1;
+    mutGenRef.current.set(gk, gen);
     setComplaints((prev) => {
       const c = prev.find((x) => x.id === id);
       prevStatus = c?.status;
@@ -24,8 +31,8 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
     try {
       await patchComplaintClient(id, { status });
     } catch (err) {
+      if (mutGenRef.current.get(gk) !== gen) { setError(String(err)); return; }
       if (prevStatus !== undefined) {
-        // Only roll back if the status hasn't been updated by a later successful mutation.
         setComplaints((prev) =>
           prev.map((x) => (x.id === id && x.status === status ? { ...x, status: prevStatus! } : x)),
         );
@@ -86,6 +93,9 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
 
   const handleReassign = useCallback(async (id: string, assigneeAdminId: string | null) => {
     let prevAssignee: string | undefined;
+    const gk = `${id}:assignee`;
+    const gen = (mutGenRef.current.get(gk) ?? 0) + 1;
+    mutGenRef.current.set(gk, gen);
     setComplaints((prev) => {
       const c = prev.find((x) => x.id === id);
       prevAssignee = c?.assigneeAdminId;
@@ -98,11 +108,9 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
     try {
       await patchComplaintClient(id, { assigneeAdminId });
     } catch (err) {
+      if (mutGenRef.current.get(gk) !== gen) { setError(String(err)); return; }
       setComplaints((prev) => prev.map((x) => {
         if (x.id !== id) return x;
-        // Only roll back if the assignee hasn't been updated by a later successful mutation.
-        // Normalise undefined (absent field) to null so the comparison is unambiguous.
-        if ((x.assigneeAdminId ?? null) !== assigneeAdminId) return x;
         const { assigneeAdminId: _a, ...base } = x;
         return prevAssignee !== undefined ? { ...base, assigneeAdminId: prevAssignee } : base;
       }));
@@ -113,6 +121,9 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
   const handleResolve = useCallback(async (id: string, resolutionCategory: ComplaintResolutionCategory) => {
     let prevStatus: ComplaintStatus | undefined;
     let prevCategory: ComplaintResolutionCategory | undefined;
+    const gk = `${id}:resolve`;
+    const gen = (mutGenRef.current.get(gk) ?? 0) + 1;
+    mutGenRef.current.set(gk, gen);
     setComplaints((prev) => {
       const c = prev.find((x) => x.id === id);
       prevStatus = c?.status;
@@ -126,12 +137,11 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
     try {
       await patchComplaintClient(id, { status: 'RESOLVED', resolutionCategory });
     } catch (err) {
+      if (mutGenRef.current.get(gk) !== gen) { setError(String(err)); return; }
       if (prevStatus !== undefined) {
-        // Only roll back if both status and resolutionCategory still match what we
-        // optimistically set — a later successful mutation may have already changed either.
         setComplaints((prev) =>
           prev.map((x) => {
-            if (x.id !== id || x.status !== 'RESOLVED' || x.resolutionCategory !== resolutionCategory) return x;
+            if (x.id !== id) return x;
             const { resolutionCategory: _r, ...base } = x;
             return prevCategory !== undefined
               ? { ...base, status: prevStatus!, resolutionCategory: prevCategory }

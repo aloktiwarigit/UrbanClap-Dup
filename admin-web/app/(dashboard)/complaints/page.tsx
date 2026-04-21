@@ -49,6 +49,11 @@ export default async function ComplaintsPage() {
     apiTotal = activeData.total + resolvedData.total;
   } catch (err) {
     if (err instanceof ApiError && (err.status === 401 || err.status === 403)) redirect('/dashboard');
+    // 404 means the complaints container hasn't been provisioned yet (fresh/staging
+    // deployment) — treat as empty rather than crashing the page.
+    if (err instanceof ApiError && err.status === 404) {
+      return <ComplaintsClient initialComplaints={[]} totalComplaints={0} />;
+    }
     throw err;
   }
 
