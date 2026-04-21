@@ -32,6 +32,7 @@ export const ComplaintDocSchema = z.object({
   internalNotes: z.array(InternalNoteSchema).default([]),
   slaDeadlineAt: z.string(),
   escalated: z.boolean().default(false),
+  resolvedAt: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

@@ -36,6 +36,9 @@ export async function adminPatchComplaintHandler(
 
   if (parsed.data.status !== undefined) {
     updated.status = parsed.data.status;
+    if (parsed.data.status === 'RESOLVED' && oldStatus !== 'RESOLVED') {
+      updated.resolvedAt = now;
+    }
   }
   if (parsed.data.assigneeAdminId !== undefined) {
     updated.assigneeAdminId = parsed.data.assigneeAdminId;

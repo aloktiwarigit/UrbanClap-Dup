@@ -9,8 +9,9 @@ export async function getServerApiClient() {
 
   return createApiClient({
     baseUrl,
+    // requireAdmin middleware reads hs_access from the Cookie header, not Authorization
     headers: () => ({
-      Authorization: `Bearer ${token}`,
+      Cookie: `hs_access=${token}`,
     }),
   });
 }
