@@ -21,7 +21,7 @@ export default async function ComplaintsPage() {
       listComplaints(client, { status: 'NEW,INVESTIGATING', pageSize: 200 }),
       listComplaints(client, {
         status: 'RESOLVED',
-        dateFrom: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        resolvedSince: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
         pageSize: 50,
       }),
     ]);

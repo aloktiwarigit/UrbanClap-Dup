@@ -51,6 +51,10 @@ export async function queryComplaints(params: ComplaintListQuery): Promise<Compl
     conditions.push('c.createdAt <= @dateTo');
     parameters.push({ name: '@dateTo', value: params.dateTo });
   }
+  if (params.resolvedSince !== undefined) {
+    conditions.push('c.resolvedAt >= @resolvedSince');
+    parameters.push({ name: '@resolvedSince', value: params.resolvedSince });
+  }
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
   const offset = (params.page - 1) * params.pageSize;

@@ -29,6 +29,7 @@ export interface ListComplaintsParams {
   assigneeAdminId?: string;
   dateFrom?: string;
   dateTo?: string;
+  resolvedSince?: string;
   page?: number;
   pageSize?: number;
 }

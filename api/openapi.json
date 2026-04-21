@@ -733,6 +733,9 @@
             "type": "boolean",
             "default": false
           },
+          "resolvedAt": {
+            "type": "string"
+          },
           "createdAt": {
             "type": "string"
           },
@@ -867,6 +870,9 @@
                 "escalated": {
                   "type": "boolean",
                   "default": false
+                },
+                "resolvedAt": {
+                  "type": "string"
                 },
                 "createdAt": {
                   "type": "string"

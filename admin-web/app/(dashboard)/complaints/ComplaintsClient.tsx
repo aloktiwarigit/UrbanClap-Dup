@@ -51,8 +51,9 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
     });
     try {
       const updated = await patchComplaintClient(id, { note });
-      // Replace optimistic entry with server response (correct adminId + server timestamp)
-      setComplaints((prev) => prev.map((x) => (x.id === id ? updated : x)));
+      // Merge only internalNotes from the server response so concurrent field changes
+      // (status, assignee) made while the request was in-flight are not overwritten.
+      setComplaints((prev) => prev.map((x) => (x.id === id ? { ...x, internalNotes: updated.internalNotes } : x)));
     } catch (err) {
       if (prevNotes !== undefined) {
         setComplaints((prev) => prev.map((x) => (x.id === id ? { ...x, internalNotes: prevNotes! } : x)));
