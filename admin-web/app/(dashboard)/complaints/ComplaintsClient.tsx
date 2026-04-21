@@ -15,83 +15,99 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
   const [error, setError] = useState<string | null>(null);
 
   const handleStatusChange = useCallback(async (id: string, status: ComplaintStatus) => {
-    let original: Complaint | undefined;
+    let prevStatus: ComplaintStatus | undefined;
     setComplaints((prev) => {
-      original = prev.find((c) => c.id === id);
-      return prev.map((c) => (c.id === id ? { ...c, status, updatedAt: new Date().toISOString() } : c));
+      const c = prev.find((x) => x.id === id);
+      prevStatus = c?.status;
+      return prev.map((x) => (x.id === id ? { ...x, status, updatedAt: new Date().toISOString() } : x));
     });
     try {
       await patchComplaintClient(id, { status });
     } catch (err) {
-      if (original) {
-        setComplaints((prev) => prev.map((c) => (c.id === id ? original! : c)));
+      if (prevStatus !== undefined) {
+        setComplaints((prev) => prev.map((x) => (x.id === id ? { ...x, status: prevStatus! } : x)));
       }
       setError(String(err));
     }
   }, []);
 
   const handleAddNote = useCallback(async (id: string, note: string) => {
-    let original: Complaint | undefined;
+    let prevNotes: Complaint['internalNotes'] | undefined;
     setComplaints((prev) => {
-      original = prev.find((c) => c.id === id);
-      return prev.map((c) =>
-        c.id === id
+      const c = prev.find((x) => x.id === id);
+      prevNotes = c?.internalNotes;
+      return prev.map((x) =>
+        x.id === id
           ? {
-              ...c,
+              ...x,
               internalNotes: [
-                ...c.internalNotes,
+                ...x.internalNotes,
                 { note, adminId: 'me', createdAt: new Date().toISOString() },
               ],
               updatedAt: new Date().toISOString(),
             }
-          : c,
+          : x,
       );
     });
     try {
       const updated = await patchComplaintClient(id, { note });
       // Replace optimistic entry with server response (correct adminId + server timestamp)
-      setComplaints((prev) => prev.map((c) => (c.id === id ? updated : c)));
+      setComplaints((prev) => prev.map((x) => (x.id === id ? updated : x)));
     } catch (err) {
-      if (original) {
-        setComplaints((prev) => prev.map((c) => (c.id === id ? original! : c)));
+      if (prevNotes !== undefined) {
+        setComplaints((prev) => prev.map((x) => (x.id === id ? { ...x, internalNotes: prevNotes! } : x)));
       }
       setError(String(err));
     }
   }, []);
 
   const handleReassign = useCallback(async (id: string, assigneeAdminId: string) => {
-    let original: Complaint | undefined;
+    let prevAssignee: string | undefined;
     setComplaints((prev) => {
-      original = prev.find((c) => c.id === id);
-      return prev.map((c) =>
-        c.id === id ? { ...c, assigneeAdminId, updatedAt: new Date().toISOString() } : c,
+      const c = prev.find((x) => x.id === id);
+      prevAssignee = c?.assigneeAdminId;
+      return prev.map((x) =>
+        x.id === id ? { ...x, assigneeAdminId, updatedAt: new Date().toISOString() } : x,
       );
     });
     try {
       await patchComplaintClient(id, { assigneeAdminId });
     } catch (err) {
-      if (original) {
-        setComplaints((prev) => prev.map((c) => (c.id === id ? original! : c)));
-      }
+      setComplaints((prev) => prev.map((x) => {
+        if (x.id !== id) return x;
+        const { assigneeAdminId: _a, ...base } = x;
+        return prevAssignee !== undefined ? { ...base, assigneeAdminId: prevAssignee } : base;
+      }));
       setError(String(err));
     }
   }, []);
 
   const handleResolve = useCallback(async (id: string, resolutionCategory: ComplaintResolutionCategory) => {
-    let original: Complaint | undefined;
+    let prevStatus: ComplaintStatus | undefined;
+    let prevCategory: ComplaintResolutionCategory | undefined;
     setComplaints((prev) => {
-      original = prev.find((c) => c.id === id);
-      return prev.map((c) =>
-        c.id === id
-          ? { ...c, status: 'RESOLVED', resolutionCategory, updatedAt: new Date().toISOString() }
-          : c,
+      const c = prev.find((x) => x.id === id);
+      prevStatus = c?.status;
+      prevCategory = c?.resolutionCategory;
+      return prev.map((x) =>
+        x.id === id
+          ? { ...x, status: 'RESOLVED', resolutionCategory, updatedAt: new Date().toISOString() }
+          : x,
       );
     });
     try {
       await patchComplaintClient(id, { status: 'RESOLVED', resolutionCategory });
     } catch (err) {
-      if (original) {
-        setComplaints((prev) => prev.map((c) => (c.id === id ? original! : c)));
+      if (prevStatus !== undefined) {
+        setComplaints((prev) =>
+          prev.map((x) => {
+            if (x.id !== id) return x;
+            const { resolutionCategory: _r, ...base } = x;
+            return prevCategory !== undefined
+              ? { ...base, status: prevStatus!, resolutionCategory: prevCategory }
+              : { ...base, status: prevStatus! };
+          }),
+        );
       }
       setError(String(err));
     }
