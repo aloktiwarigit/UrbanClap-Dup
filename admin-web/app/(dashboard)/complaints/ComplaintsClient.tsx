@@ -25,7 +25,10 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
       await patchComplaintClient(id, { status });
     } catch (err) {
       if (prevStatus !== undefined) {
-        setComplaints((prev) => prev.map((x) => (x.id === id ? { ...x, status: prevStatus! } : x)));
+        // Only roll back if the status hasn't been updated by a later successful mutation.
+        setComplaints((prev) =>
+          prev.map((x) => (x.id === id && x.status === status ? { ...x, status: prevStatus! } : x)),
+        );
       }
       setError(String(err));
     }
@@ -62,7 +65,18 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
       );
     } catch (err) {
       if (prevNotes !== undefined) {
-        setComplaints((prev) => prev.map((x) => (x.id === id ? { ...x, internalNotes: prevNotes! } : x)));
+        // Remove only the failed optimistic note (at prevNotes.length) — preserve any
+        // notes confirmed by a later successful request that resolved first.
+        setComplaints((prev) =>
+          prev.map((x) => {
+            if (x.id !== id) return x;
+            const notes = [
+              ...x.internalNotes.slice(0, prevNotes!.length),
+              ...x.internalNotes.slice(prevNotes!.length + 1),
+            ];
+            return { ...x, internalNotes: notes };
+          }),
+        );
       }
       setError(String(err));
     }
