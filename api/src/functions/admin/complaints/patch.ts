@@ -96,7 +96,7 @@ export async function adminPatchComplaintHandler(
     }).catch((err: unknown) => ctx.error('audit COMPLAINT_STATUS_CHANGED failed', err));
   }
 
-  if (parsed.data.assigneeAdminId !== undefined && parsed.data.assigneeAdminId !== existing.assigneeAdminId) {
+  if (parsed.data.assigneeAdminId !== undefined && (parsed.data.assigneeAdminId ?? null) !== (existing.assigneeAdminId ?? null)) {
     appendAuditEntry({
       id: randomUUID(),
       adminId: admin.adminId,

@@ -10,7 +10,6 @@ import { ComplaintsClient } from './ComplaintsClient';
 export const metadata: Metadata = { title: 'Complaints — Homeservices Admin' };
 
 const PAGE_SIZE = 100;
-const MAX_ITEMS = 500;
 
 async function fetchAllPages(
   client: ApiClient,
@@ -19,7 +18,7 @@ async function fetchAllPages(
   const items: Complaint[] = [];
   let page = 1;
   let total = Infinity;
-  while (items.length < total && items.length < MAX_ITEMS) {
+  while (items.length < total) {
     const data = await listComplaints(client, { ...baseParams, page, pageSize: PAGE_SIZE });
     items.push(...data.items);
     total = data.total;
