@@ -93,16 +93,20 @@ export function ComplaintSlideOver({
           {/* Status */}
           <section>
             <h3 className="text-xs text-gray-500 font-medium mb-1">Status</h3>
-            <select
-              aria-label="Status"
-              value={complaint.status}
-              onChange={(e) => onStatusChange(e.target.value as ComplaintStatus)}
-              className="border rounded px-2 py-1 text-sm w-full"
-            >
-              {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
+            {complaint.status === 'RESOLVED' ? (
+              <p className="text-sm text-gray-700 font-medium">RESOLVED</p>
+            ) : (
+              <select
+                aria-label="Status"
+                value={complaint.status}
+                onChange={(e) => onStatusChange(e.target.value as ComplaintStatus)}
+                className="border rounded px-2 py-1 text-sm w-full"
+              >
+                {STATUS_OPTIONS.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            )}
           </section>
 
           {/* Assignee */}

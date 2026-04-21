@@ -81,7 +81,7 @@ describe('adminPatchComplaintHandler', () => {
     (replaceComplaint as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     (appendAuditEntry as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     await adminPatchComplaintHandler(
-      makeReq({ status: 'RESOLVED' }),
+      makeReq({ status: 'RESOLVED', resolutionCategory: 'OTHER' }),
       mockCtx,
       mockAdmin,
     );
@@ -89,6 +89,17 @@ describe('adminPatchComplaintHandler', () => {
     const auditCall = (appendAuditEntry as ReturnType<typeof vi.fn>).mock.calls[0]![0]!;
     expect(auditCall.action).toBe('COMPLAINT_STATUS_CHANGED');
     expect(auditCall.payload).toMatchObject({ from: 'NEW', to: 'RESOLVED' });
+  });
+
+  it('returns 400 when resolving without a resolutionCategory', async () => {
+    (getComplaint as ReturnType<typeof vi.fn>).mockResolvedValue({ ...existingComplaint });
+    const res = await adminPatchComplaintHandler(
+      makeReq({ status: 'RESOLVED' }),
+      mockCtx,
+      mockAdmin,
+    );
+    expect(res.status).toBe(400);
+    expect((res.jsonBody as Record<string, unknown>)['code']).toBe('RESOLUTION_CATEGORY_REQUIRED');
   });
 
   it('returns 404 when complaint not found', async () => {

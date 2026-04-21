@@ -35,6 +35,9 @@ export async function adminPatchComplaintHandler(
   const updated = { ...existing, updatedAt: now };
 
   if (parsed.data.status !== undefined) {
+    if (parsed.data.status === 'RESOLVED' && !parsed.data.resolutionCategory && !existing.resolutionCategory) {
+      return { status: 400, jsonBody: { code: 'RESOLUTION_CATEGORY_REQUIRED' } };
+    }
     updated.status = parsed.data.status;
     if (parsed.data.status === 'RESOLVED' && oldStatus !== 'RESOLVED') {
       updated.resolvedAt = now;
