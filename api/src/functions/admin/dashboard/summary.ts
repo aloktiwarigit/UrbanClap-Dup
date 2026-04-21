@@ -16,7 +16,7 @@ export async function summaryHandler(
     today.setHours(0, 0, 0, 0);
     const todayIso = today.toISOString();
 
-    const [bookingsResult, gmvResult, complaintsResult, techsResult] = await Promise.all([
+    const [bookingsResult, gmvResult, techsResult] = await Promise.all([
       db
         .container('bookings')
         .items.query({
@@ -32,13 +32,6 @@ export async function summaryHandler(
         })
         .fetchAll(),
       db
-        .container('complaints')
-        .items.query({
-          query: 'SELECT VALUE COUNT(1) FROM c WHERE c.status IN ("NEW", "INVESTIGATING")',
-          parameters: [],
-        })
-        .fetchAll(),
-      db
         .container('technicians')
         .items.query({
           query: 'SELECT VALUE COUNT(1) FROM c WHERE c.isOnDuty = true',
@@ -47,6 +40,17 @@ export async function summaryHandler(
         .fetchAll(),
     ]);
 
+    // Isolated so a missing complaints container (pre-seed) returns 0 instead of breaking the dashboard.
+    const complaintsOpen = await db
+      .container('complaints')
+      .items.query({
+        query: 'SELECT VALUE COUNT(1) FROM c WHERE c.status IN ("NEW", "INVESTIGATING")',
+        parameters: [],
+      })
+      .fetchAll()
+      .then((r) => (r.resources[0] as number | undefined) ?? 0)
+      .catch(() => 0);
+
     const commissionRate = parseFloat(process.env['COMMISSION_RATE'] ?? '0.225');
     const gmvToday: number = (gmvResult.resources[0] as number | undefined) ?? 0;
     const summary = {
@@ -54,7 +58,7 @@ export async function summaryHandler(
       gmvToday,
       commissionToday: Math.round(gmvToday * commissionRate),
       payoutsPending: 0,
-      complaintsOpen: (complaintsResult.resources[0] as number | undefined) ?? 0,
+      complaintsOpen,
       techsOnDuty: (techsResult.resources[0] as number | undefined) ?? 0,
     };
 
