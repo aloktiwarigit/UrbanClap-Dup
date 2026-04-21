@@ -52,8 +52,8 @@ export const PatchComplaintBodySchema = z.object({
 
 export const ComplaintListQuerySchema = z.object({
   status: z.string().optional().transform(s =>
-    s ? s.split(',').map(x => x.trim()).filter(Boolean) as z.infer<typeof ComplaintStatusEnum>[] : undefined
-  ),
+    s ? s.split(',').map(x => x.trim()).filter(Boolean) : undefined
+  ).pipe(z.array(ComplaintStatusEnum).optional()),
   assigneeAdminId: z.string().optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
