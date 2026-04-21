@@ -12,7 +12,6 @@ export default async function ComplaintsPage() {
   const client = await getServerApiClient();
 
   let activeItems: Complaint[] = [];
-  let activeTotal = 0;
   let recentResolved: Complaint[] = [];
   try {
     // Two separate queries so long-running active complaints (>30d) are never hidden
@@ -26,7 +25,6 @@ export default async function ComplaintsPage() {
       }),
     ]);
     activeItems = activeData.items;
-    activeTotal = activeData.total;
     recentResolved = resolvedData.items;
   } catch (err) {
     if (err instanceof ApiError && err.status === 403) redirect('/dashboard');
@@ -34,7 +32,6 @@ export default async function ComplaintsPage() {
   }
 
   const allComplaints = [...activeItems, ...recentResolved];
-  const totalComplaints = activeTotal;
 
-  return <ComplaintsClient initialComplaints={allComplaints} totalComplaints={totalComplaints} />;
+  return <ComplaintsClient initialComplaints={allComplaints} totalComplaints={allComplaints.length} />;
 }

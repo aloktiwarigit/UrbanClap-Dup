@@ -18,7 +18,12 @@ export async function adminPatchComplaintHandler(
     return { status: 400, jsonBody: { code: 'MISSING_ID' } };
   }
 
-  const body: unknown = await req.json();
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return { status: 400, jsonBody: { code: 'INVALID_JSON' } };
+  }
   const parsed = PatchComplaintBodySchema.safeParse(body);
   if (!parsed.success) {
     return { status: 400, jsonBody: { code: 'VALIDATION_ERROR', issues: parsed.error.issues } };

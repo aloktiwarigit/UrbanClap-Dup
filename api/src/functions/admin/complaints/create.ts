@@ -14,7 +14,12 @@ export async function adminCreateComplaintHandler(
   _ctx: InvocationContext,
   admin: AdminContext,
 ): Promise<HttpResponseInit> {
-  const body: unknown = await req.json();
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return { status: 400, jsonBody: { code: 'INVALID_JSON' } };
+  }
   const parsed = CreateComplaintBodySchema.safeParse(body);
   if (!parsed.success) {
     return { status: 400, jsonBody: { code: 'VALIDATION_ERROR', issues: parsed.error.issues } };
