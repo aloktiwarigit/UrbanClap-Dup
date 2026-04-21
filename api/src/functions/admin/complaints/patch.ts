@@ -10,7 +10,7 @@ import { randomUUID } from 'crypto';
 
 export async function adminPatchComplaintHandler(
   req: HttpRequest,
-  _ctx: InvocationContext,
+  ctx: InvocationContext,
   admin: AdminContext,
 ): Promise<HttpResponseInit> {
   const id = req.params['id'];
@@ -75,8 +75,9 @@ export async function adminPatchComplaintHandler(
     throw err;
   }
 
+  // Fire-and-forget: audit writes must not fail the response after the complaint is committed.
   if (parsed.data.status !== undefined && parsed.data.status !== oldStatus) {
-    await appendAuditEntry({
+    appendAuditEntry({
       id: randomUUID(),
       adminId: admin.adminId,
       role: admin.role,
@@ -88,11 +89,11 @@ export async function adminPatchComplaintHandler(
       userAgent: '',
       timestamp: now,
       partitionKey: now.slice(0, 7),
-    });
+    }).catch((err: unknown) => ctx.error('audit COMPLAINT_STATUS_CHANGED failed', err));
   }
 
   if (parsed.data.assigneeAdminId !== undefined && parsed.data.assigneeAdminId !== existing.assigneeAdminId) {
-    await appendAuditEntry({
+    appendAuditEntry({
       id: randomUUID(),
       adminId: admin.adminId,
       role: admin.role,
@@ -104,7 +105,7 @@ export async function adminPatchComplaintHandler(
       userAgent: '',
       timestamp: now,
       partitionKey: now.slice(0, 7),
-    });
+    }).catch((err: unknown) => ctx.error('audit COMPLAINT_ASSIGNED failed', err));
   }
 
   return { status: 200, jsonBody: updated };

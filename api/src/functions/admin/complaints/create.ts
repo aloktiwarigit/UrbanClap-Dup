@@ -11,7 +11,7 @@ import { randomUUID } from 'crypto';
 
 export async function adminCreateComplaintHandler(
   req: HttpRequest,
-  _ctx: InvocationContext,
+  ctx: InvocationContext,
   admin: AdminContext,
 ): Promise<HttpResponseInit> {
   let body: unknown;
@@ -44,7 +44,8 @@ export async function adminCreateComplaintHandler(
 
   await createComplaint(doc);
 
-  await appendAuditEntry({
+  // Fire-and-forget: audit write must not fail the response after the complaint is committed.
+  appendAuditEntry({
     id: randomUUID(),
     adminId: admin.adminId,
     role: admin.role,
@@ -56,7 +57,7 @@ export async function adminCreateComplaintHandler(
     userAgent: '',
     timestamp: now.toISOString(),
     partitionKey: now.toISOString().slice(0, 7),
-  });
+  }).catch((err: unknown) => ctx.error('audit COMPLAINT_CREATED failed', err));
 
   return { status: 201, jsonBody: doc };
 }
