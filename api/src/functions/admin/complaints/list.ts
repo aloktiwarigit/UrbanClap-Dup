@@ -25,8 +25,18 @@ export async function adminListComplaintsHandler(
     return { status: 400, jsonBody: { code: 'VALIDATION_ERROR', issues: parsed.error.issues } };
   }
 
-  const result = await queryComplaints(parsed.data);
-  return { status: 200, jsonBody: result };
+  try {
+    const result = await queryComplaints(parsed.data);
+    return { status: 200, jsonBody: result };
+  } catch (err: unknown) {
+    // Cosmos 404 means the complaints container hasn't been provisioned yet.
+    // Return an empty board rather than crashing the page on fresh deployments.
+    if (typeof err === 'object' && err !== null && 'statusCode' in err &&
+        (err as { statusCode: number }).statusCode === 404) {
+      return { status: 200, jsonBody: { items: [], total: 0 } };
+    }
+    throw err;
+  }
 }
 
 app.http('adminListComplaints', {

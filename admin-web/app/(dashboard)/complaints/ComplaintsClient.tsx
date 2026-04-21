@@ -121,7 +121,7 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
   const handleResolve = useCallback(async (id: string, resolutionCategory: ComplaintResolutionCategory) => {
     let prevStatus: ComplaintStatus | undefined;
     let prevCategory: ComplaintResolutionCategory | undefined;
-    const gk = `${id}:resolve`;
+    const gk = `${id}:status`; // shares key with handleStatusChange — both mutate status
     const gen = (mutGenRef.current.get(gk) ?? 0) + 1;
     mutGenRef.current.set(gk, gen);
     setComplaints((prev) => {
