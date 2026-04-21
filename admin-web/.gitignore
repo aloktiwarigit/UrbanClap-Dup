@@ -16,3 +16,4 @@ test-results/
 lhr-result.json
 .lhci-tmp/
 storybook-static/
+next-env.d.ts

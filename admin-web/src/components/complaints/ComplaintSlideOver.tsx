@@ -21,7 +21,8 @@ const RESOLUTION_CATEGORIES: ComplaintResolutionCategory[] = [
   'OTHER',
 ];
 
-const STATUS_OPTIONS: ComplaintStatus[] = ['NEW', 'INVESTIGATING', 'RESOLVED'];
+// RESOLVED is excluded — use the resolve section below to supply the required resolutionCategory.
+const STATUS_OPTIONS: ComplaintStatus[] = ['NEW', 'INVESTIGATING'];
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString('en-IN', {

@@ -111,7 +111,8 @@ export async function getRepeatOffenders(
 ): Promise<Array<{ technicianId: string; count: number }>> {
   // Full scan bounded by sinceIso; revisit partition key strategy when container > pilot scale
   const query: SqlQuerySpec = {
-    query: `SELECT * FROM c WHERE c.status = @resolved AND c.createdAt >= @since`,
+    // Filter by updatedAt (proxy for resolution time — schema has no resolvedAt field)
+    query: `SELECT * FROM c WHERE c.status = @resolved AND c.updatedAt >= @since`,
     parameters: [
       { name: '@resolved', value: 'RESOLVED' },
       { name: '@since', value: sinceIso },

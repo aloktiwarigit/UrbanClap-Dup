@@ -45,7 +45,9 @@ export function ComplaintsClient({ initialComplaints }: ComplaintsClientProps) {
       );
     });
     try {
-      await patchComplaintClient(id, { note });
+      const updated = await patchComplaintClient(id, { note });
+      // Replace optimistic entry with server response (correct adminId + server timestamp)
+      setComplaints((prev) => prev.map((c) => (c.id === id ? updated : c)));
     } catch (err) {
       setComplaints(snapshot);
       setError(String(err));
