@@ -83,6 +83,7 @@ export default async function CategoryDetailPage({ params }: PageProps) {
           </p>
         </div>
         <Link
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
           href={`/catalogue/${categoryId}/edit` as Route<`/catalogue/${string}/edit`>}
           style={{
             padding: 'var(--space-2) var(--space-4)',

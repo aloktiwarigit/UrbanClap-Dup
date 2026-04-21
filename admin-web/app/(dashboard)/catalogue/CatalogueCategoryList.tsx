@@ -39,6 +39,7 @@ export function CatalogueCategoryList({ categories: initial }: CatalogueCategory
         <div key={category.id} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           <CategoryCard category={category} onToggle={handleToggle} />
           <Link
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
             href={`/catalogue/${category.id}` as Route<`/catalogue/${string}`>}
             style={{
               fontSize: 'var(--text-sm)',

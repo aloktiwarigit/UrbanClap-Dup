@@ -10,6 +10,7 @@ interface NavItem {
   icon: string; // text icon / emoji shorthand
 }
 
+/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 const NAV_ITEMS: NavItem[] = [
   { label: 'Live Ops', href: '/dashboard' as Route, icon: '⬡' },
   { label: 'Orders', href: '/dashboard/orders' as Route, icon: '◈' },
@@ -20,6 +21,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Audit Log', href: '/dashboard/audit' as Route, icon: '⊕' },
   { label: 'Settings', href: '/dashboard/settings' as Route, icon: '⊗' },
 ];
+/* eslint-enable @typescript-eslint/no-unnecessary-type-assertion */
 
 export function Rail() {
   const pathname = usePathname();
