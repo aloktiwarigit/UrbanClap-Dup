@@ -1,5 +1,4 @@
 import type { ApiClient } from './client';
-import type { components } from './generated/schema';
 import type {
   Complaint,
   ComplaintListResponse,
@@ -40,7 +39,7 @@ export async function listComplaints(
   if (error !== undefined || data === undefined) {
     throw new Error('listComplaints: request failed');
   }
-  return data as unknown as ComplaintListResponse;
+  return data;
 }
 
 export async function createComplaint(
@@ -48,12 +47,12 @@ export async function createComplaint(
   body: CreateComplaintParams,
 ): Promise<Complaint> {
   const { data, error } = await client.POST('/v1/admin/complaints', {
-    body: body as unknown as components['schemas']['CreateComplaintBody'],
+    body: body,
   });
   if (error !== undefined || data === undefined) {
     throw new Error('createComplaint: request failed');
   }
-  return data as unknown as Complaint;
+  return data;
 }
 
 export async function patchComplaint(
@@ -63,12 +62,12 @@ export async function patchComplaint(
 ): Promise<Complaint> {
   const { data, error } = await client.PATCH('/v1/admin/complaints/{id}', {
     params: { path: { id } },
-    body: body as unknown as components['schemas']['PatchComplaintBody'],
+    body: body,
   });
   if (error !== undefined || data === undefined) {
     throw new Error('patchComplaint: request failed');
   }
-  return data as unknown as Complaint;
+  return data;
 }
 
 export async function getRepeatOffenders(
@@ -80,5 +79,5 @@ export async function getRepeatOffenders(
   if (error !== undefined || data === undefined) {
     throw new Error('getRepeatOffenders: request failed');
   }
-  return (data as unknown as { offenders: RepeatOffender[] }).offenders;
+  return (data).offenders;
 }

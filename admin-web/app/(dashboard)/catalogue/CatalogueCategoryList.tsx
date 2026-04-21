@@ -2,8 +2,6 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
-import type { Route } from 'next';
-
 import { CategoryCard } from '@/components/catalogue/CategoryCard';
 import type { components } from '@/api/generated/schema';
 import { toggleCategoryAction } from './actions';
@@ -39,8 +37,7 @@ export function CatalogueCategoryList({ categories: initial }: CatalogueCategory
         <div key={category.id} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           <CategoryCard category={category} onToggle={handleToggle} />
           <Link
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-            href={`/catalogue/${category.id}` as Route<`/catalogue/${string}`>}
+            href={`/catalogue/${category.id}`}
             style={{
               fontSize: 'var(--text-sm)',
               color: 'var(--color-brand)',
