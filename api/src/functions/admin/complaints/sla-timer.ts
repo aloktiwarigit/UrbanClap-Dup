@@ -31,7 +31,7 @@ export async function slaBreachTimerHandler(
         }
         throw err;
       }
-      await appendAuditEntry({
+      appendAuditEntry({
         id: randomUUID(),
         adminId: SYSTEM_ACTOR_ID,
         role: SYSTEM_ACTOR_ROLE,
@@ -43,7 +43,7 @@ export async function slaBreachTimerHandler(
         userAgent: '',
         timestamp: now,
         partitionKey: now.slice(0, 7),
-      });
+      }).catch((err: unknown) => ctx.error(`audit SLA_BREACH failed for ${complaint.id}`, err));
     }),
   );
 

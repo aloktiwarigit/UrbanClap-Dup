@@ -219,6 +219,7 @@ registry.registerPath({
     { name: 'assigneeAdminId', in: 'query', required: false, schema: { type: 'string' } },
     { name: 'dateFrom', in: 'query', required: false, schema: { type: 'string' } },
     { name: 'dateTo', in: 'query', required: false, schema: { type: 'string' } },
+    { name: 'resolvedSince', in: 'query', required: false, schema: { type: 'string' } },
     { name: 'page', in: 'query', required: false, schema: { type: 'integer', default: 1 } },
     { name: 'pageSize', in: 'query', required: false, schema: { type: 'integer', default: 50 } },
   ],
