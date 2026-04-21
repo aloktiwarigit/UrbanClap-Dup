@@ -30,7 +30,23 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
       return prev.map((x) => (x.id === id ? { ...x, status, updatedAt: new Date().toISOString() } : x));
     });
     try {
-      await patchComplaintClient(id, { status, ...(prevStatus !== undefined ? { expectedStatus: prevStatus } : {}) });
+      for (let attempt = 0; attempt < 4; attempt++) {
+        try {
+          // First attempt guards with expectedStatus; on STATUS_CONFLICT retry we
+          // skip it so the operator's latest intent force-overwrites the concurrent change.
+          await patchComplaintClient(id, {
+            status,
+            ...(attempt === 0 && prevStatus !== undefined ? { expectedStatus: prevStatus } : {}),
+          });
+          break; // success
+        } catch (err) {
+          if (err instanceof ApiError && err.status === 409 && attempt < 3) {
+            if (mutGenRef.current.get(gk) !== gen) { setError(String(err)); return; }
+            continue; // retry without expectedStatus
+          }
+          throw err; // non-retryable or retries exhausted → outer catch
+        }
+      }
     } catch (err) {
       if (mutGenRef.current.get(gk) !== gen) { setError(String(err)); return; }
       if (prevStatus !== undefined) {
@@ -148,7 +164,22 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
       );
     });
     try {
-      await patchComplaintClient(id, { status: 'RESOLVED', resolutionCategory, ...(prevStatus !== undefined ? { expectedStatus: prevStatus } : {}) });
+      for (let attempt = 0; attempt < 4; attempt++) {
+        try {
+          await patchComplaintClient(id, {
+            status: 'RESOLVED',
+            resolutionCategory,
+            ...(attempt === 0 && prevStatus !== undefined ? { expectedStatus: prevStatus } : {}),
+          });
+          break; // success
+        } catch (err) {
+          if (err instanceof ApiError && err.status === 409 && attempt < 3) {
+            if (mutGenRef.current.get(gk) !== gen) { setError(String(err)); return; }
+            continue; // retry without expectedStatus
+          }
+          throw err; // non-retryable or retries exhausted → outer catch
+        }
+      }
     } catch (err) {
       if (mutGenRef.current.get(gk) !== gen) { setError(String(err)); return; }
       if (prevStatus !== undefined) {

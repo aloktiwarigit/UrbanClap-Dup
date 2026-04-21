@@ -33,7 +33,7 @@ export async function adminListComplaintsHandler(
     // Return an empty board rather than crashing the page on fresh deployments.
     if (typeof err === 'object' && err !== null && 'code' in err &&
         (err as { code: number }).code === 404) {
-      return { status: 200, jsonBody: { items: [], total: 0 } };
+      return { status: 200, jsonBody: { items: [], total: 0, page: parsed.data.page, pageSize: parsed.data.pageSize, totalPages: 0 } };
     }
     throw err;
   }
