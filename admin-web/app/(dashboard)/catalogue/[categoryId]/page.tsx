@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import type { Route } from 'next';
+
 import type { components } from '@/api/generated/schema';
 
 type AdminServiceCategory = components['schemas']['AdminServiceCategory'];
@@ -82,7 +82,7 @@ export default async function CategoryDetailPage({ params }: PageProps) {
           </p>
         </div>
         <Link
-          href={`/catalogue/${categoryId}/edit` as Route}
+          href={`/catalogue/${categoryId}/edit`}
           style={{
             padding: 'var(--space-2) var(--space-4)',
             fontSize: 'var(--text-sm)',
@@ -102,7 +102,7 @@ export default async function CategoryDetailPage({ params }: PageProps) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
           <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 600, margin: 0 }}>Services</h2>
           <Link
-            href={`/catalogue/${categoryId}/services/new` as Route}
+            href={`/catalogue/${categoryId}/services/new`}
             style={{
               padding: 'var(--space-2) var(--space-4)',
               fontSize: 'var(--text-sm)',
@@ -144,7 +144,7 @@ export default async function CategoryDetailPage({ params }: PageProps) {
                   </p>
                 </div>
                 <Link
-                  href={`/catalogue/${categoryId}/services/${service.id}` as Route}
+                  href={`/catalogue/${categoryId}/services/${service.id}`}
                   style={{
                     fontSize: 'var(--text-sm)',
                     color: 'var(--color-brand)',
