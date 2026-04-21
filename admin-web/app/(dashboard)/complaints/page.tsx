@@ -53,7 +53,14 @@ export default async function ComplaintsPage() {
     throw err;
   }
 
-  const allComplaints = [...activeItems, ...recentResolved];
+  // Deduplicate by id — a complaint can appear in both queries if its status
+  // flips to RESOLVED while the Promise.all is in flight.
+  const seen = new Set<string>();
+  const allComplaints = [...activeItems, ...recentResolved].filter((c) => {
+    if (seen.has(c.id)) return false;
+    seen.add(c.id);
+    return true;
+  });
 
   return <ComplaintsClient initialComplaints={allComplaints} totalComplaints={apiTotal} />;
 }

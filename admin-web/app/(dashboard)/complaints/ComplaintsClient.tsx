@@ -51,9 +51,15 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
     });
     try {
       const updated = await patchComplaintClient(id, { note });
-      // Merge only internalNotes from the server response so concurrent field changes
-      // (status, assignee) made while the request was in-flight are not overwritten.
-      setComplaints((prev) => prev.map((x) => (x.id === id ? { ...x, internalNotes: updated.internalNotes } : x)));
+      // Merge: take server-confirmed notes, then append any optimistic notes added
+      // after this request was dispatched (notes at indices >= server list length).
+      setComplaints((prev) =>
+        prev.map((x) => {
+          if (x.id !== id) return x;
+          const newerOptimistic = x.internalNotes.slice(updated.internalNotes.length);
+          return { ...x, internalNotes: [...updated.internalNotes, ...newerOptimistic] };
+        }),
+      );
     } catch (err) {
       if (prevNotes !== undefined) {
         setComplaints((prev) => prev.map((x) => (x.id === id ? { ...x, internalNotes: prevNotes! } : x)));

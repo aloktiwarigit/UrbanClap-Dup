@@ -56,7 +56,7 @@ export async function adminPatchComplaintHandler(
   if (parsed.data.assigneeAdminId !== undefined) {
     updated.assigneeAdminId = parsed.data.assigneeAdminId;
   }
-  if (parsed.data.resolutionCategory !== undefined) {
+  if (parsed.data.resolutionCategory !== undefined && updated.status === 'RESOLVED') {
     updated.resolutionCategory = parsed.data.resolutionCategory;
   }
   if (parsed.data.note !== undefined) {
