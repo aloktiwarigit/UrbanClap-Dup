@@ -60,6 +60,7 @@ export const ComplaintListQuerySchema = z.object({
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
   resolvedSince: z.string().optional(),
+  sortDir: z.enum(['asc', 'desc']).optional(),
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().default(50).transform(v => Math.min(v, 200)),
 });

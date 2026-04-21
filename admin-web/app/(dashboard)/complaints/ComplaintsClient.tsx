@@ -68,14 +68,16 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
     }
   }, []);
 
-  const handleReassign = useCallback(async (id: string, assigneeAdminId: string) => {
+  const handleReassign = useCallback(async (id: string, assigneeAdminId: string | null) => {
     let prevAssignee: string | undefined;
     setComplaints((prev) => {
       const c = prev.find((x) => x.id === id);
       prevAssignee = c?.assigneeAdminId;
-      return prev.map((x) =>
-        x.id === id ? { ...x, assigneeAdminId, updatedAt: new Date().toISOString() } : x,
-      );
+      return prev.map((x) => {
+        if (x.id !== id) return x;
+        const { assigneeAdminId: _a, ...base } = x;
+        return assigneeAdminId !== null ? { ...base, assigneeAdminId, updatedAt: new Date().toISOString() } : { ...base, updatedAt: new Date().toISOString() };
+      });
     });
     try {
       await patchComplaintClient(id, { assigneeAdminId });

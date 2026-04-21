@@ -220,6 +220,7 @@ registry.registerPath({
     { name: 'dateFrom', in: 'query', required: false, schema: { type: 'string' } },
     { name: 'dateTo', in: 'query', required: false, schema: { type: 'string' } },
     { name: 'resolvedSince', in: 'query', required: false, schema: { type: 'string' } },
+    { name: 'sortDir', in: 'query', required: false, schema: { type: 'string', enum: ['asc', 'desc'] } },
     { name: 'page', in: 'query', required: false, schema: { type: 'integer', default: 1 } },
     { name: 'pageSize', in: 'query', required: false, schema: { type: 'integer', default: 50 } },
   ],

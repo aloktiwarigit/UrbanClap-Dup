@@ -32,6 +32,7 @@ export interface ListComplaintsParams {
   dateFrom?: string;
   dateTo?: string;
   resolvedSince?: string;
+  sortDir?: 'asc' | 'desc';
   page?: number;
   pageSize?: number;
 }
@@ -45,7 +46,7 @@ export interface CreateComplaintParams {
 
 export interface PatchComplaintParams {
   status?: 'NEW' | 'INVESTIGATING' | 'RESOLVED';
-  assigneeAdminId?: string;
+  assigneeAdminId?: string | null; // null = clear the assignee
   resolutionCategory?: ComplaintResolutionCategory;
   note?: string;
 }

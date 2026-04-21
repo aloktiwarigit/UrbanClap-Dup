@@ -39,7 +39,7 @@ export default async function ComplaintsPage() {
     // Two separate queries so long-running active complaints (>30d) are never hidden
     // by all-time RESOLVED volume consuming the page limit.
     const [activeData, resolvedData] = await Promise.all([
-      fetchAllPages(client, { status: 'NEW,INVESTIGATING' }),
+      fetchAllPages(client, { status: 'NEW,INVESTIGATING', sortDir: 'asc' }),
       fetchAllPages(client, {
         status: 'RESOLVED',
         resolvedSince: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),

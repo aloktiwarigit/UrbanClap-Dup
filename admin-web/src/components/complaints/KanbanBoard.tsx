@@ -10,7 +10,7 @@ interface KanbanBoardProps {
   complaints: Complaint[];
   onStatusChange: (id: string, status: ComplaintStatus) => void;
   onAddNote: (id: string, note: string) => void;
-  onReassign: (id: string, adminId: string) => void;
+  onReassign: (id: string, adminId: string | null) => void;
   onResolve: (id: string, resolutionCategory: ComplaintResolutionCategory) => void;
 }
 
@@ -58,7 +58,7 @@ export function KanbanBoard({ complaints, onStatusChange, onAddNote, onReassign,
     onResolve(selectedComplaintId, category);
   };
 
-  const handleReassign = (adminId: string) => {
+  const handleReassign = (adminId: string | null) => {
     if (!selectedComplaintId) return;
     onReassign(selectedComplaintId, adminId);
   };

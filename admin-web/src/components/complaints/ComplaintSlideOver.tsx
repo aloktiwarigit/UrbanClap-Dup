@@ -9,7 +9,7 @@ interface ComplaintSlideOverProps {
   onStatusChange: (status: ComplaintStatus) => void;
   onAddNote: (note: string) => void;
   onResolve: (category: ComplaintResolutionCategory) => void;
-  onReassign: (adminId: string) => void;
+  onReassign: (adminId: string | null) => void;
 }
 
 const RESOLUTION_CATEGORIES: ComplaintResolutionCategory[] = [
@@ -60,9 +60,8 @@ export function ComplaintSlideOver({
   };
 
   const handleReassign = () => {
-    if (reassignInput.trim()) {
-      onReassign(reassignInput.trim());
-    }
+    const trimmed = reassignInput.trim();
+    onReassign(trimmed !== '' ? trimmed : null);
   };
 
   return (

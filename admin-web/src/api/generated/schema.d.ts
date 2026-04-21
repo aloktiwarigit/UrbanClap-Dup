@@ -1092,6 +1092,7 @@ export interface operations {
                 dateFrom?: string;
                 dateTo?: string;
                 resolvedSince?: string;
+                sortDir?: "asc" | "desc";
                 page?: number;
                 pageSize?: number;
             };
