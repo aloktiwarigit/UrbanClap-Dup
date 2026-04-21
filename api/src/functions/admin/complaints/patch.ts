@@ -54,7 +54,11 @@ export async function adminPatchComplaintHandler(
     }
   }
   if (parsed.data.assigneeAdminId !== undefined) {
-    updated.assigneeAdminId = parsed.data.assigneeAdminId;
+    if (parsed.data.assigneeAdminId === null) {
+      delete updated.assigneeAdminId;
+    } else {
+      updated.assigneeAdminId = parsed.data.assigneeAdminId;
+    }
   }
   if (parsed.data.resolutionCategory !== undefined && updated.status === 'RESOLVED') {
     updated.resolutionCategory = parsed.data.resolutionCategory;

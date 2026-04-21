@@ -1,10 +1,8 @@
-'use client';
-
-import { useState, useEffect } from 'react';
 import type { Complaint } from '@/types/complaint';
 
 interface ComplaintCardProps {
   complaint: Complaint;
+  tick?: number; // shared board-level tick drives SLA recomputation
   onClick: () => void;
 }
 
@@ -24,15 +22,8 @@ function formatSlaCountdown(slaDeadlineAt: string): { label: string; urgent: boo
   return { label, urgent: msRemaining < TWO_HOURS_MS };
 }
 
-export function ComplaintCard({ complaint, onClick }: ComplaintCardProps) {
+export function ComplaintCard({ complaint, tick: _tick, onClick }: ComplaintCardProps) {
   const isResolved = complaint.status === 'RESOLVED';
-  const [, setTick] = useState(0);
-
-  useEffect(() => {
-    if (isResolved) return;
-    const id = setInterval(() => setTick((t) => t + 1), 60_000);
-    return () => clearInterval(id);
-  }, [isResolved]);
 
   const { label: slaLabel, urgent } = isResolved
     ? { label: 'Resolved', urgent: false }

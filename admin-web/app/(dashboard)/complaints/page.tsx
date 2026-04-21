@@ -61,6 +61,8 @@ export default async function ComplaintsPage() {
     seen.add(c.id);
     return true;
   });
+  // Subtract duplicates from the total so the header count stays consistent.
+  const dedupedTotal = apiTotal - (activeItems.length + recentResolved.length - allComplaints.length);
 
-  return <ComplaintsClient initialComplaints={allComplaints} totalComplaints={apiTotal} />;
+  return <ComplaintsClient initialComplaints={allComplaints} totalComplaints={dedupedTotal} />;
 }

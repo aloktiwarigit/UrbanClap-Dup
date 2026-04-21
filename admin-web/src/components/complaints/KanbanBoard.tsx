@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import type { Complaint, ComplaintStatus, ComplaintResolutionCategory } from '@/types/complaint';
 import { ComplaintCard } from './ComplaintCard';
@@ -20,6 +20,13 @@ export function KanbanBoard({ complaints, onStatusChange, onAddNote, onReassign,
   // Store the ID only — derive the full object from props so slide-over always reflects current state.
   const [selectedComplaintId, setSelectedComplaintId] = useState<string | null>(null);
   const selectedComplaint = complaints.find((c) => c.id === selectedComplaintId) ?? null;
+
+  // Single shared tick drives SLA countdown across all cards — avoids O(n) intervals.
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -91,6 +98,7 @@ export function KanbanBoard({ complaints, onStatusChange, onAddNote, onReassign,
                             >
                               <ComplaintCard
                                 complaint={complaint}
+                                tick={tick}
                                 onClick={() => setSelectedComplaintId(complaint.id)}
                               />
                             </div>

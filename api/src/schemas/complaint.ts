@@ -46,7 +46,8 @@ export const CreateComplaintBodySchema = z.object({
 
 export const PatchComplaintBodySchema = z.object({
   status: ComplaintStatusEnum.optional(),
-  assigneeAdminId: z.string().optional(),
+  // null = clear the assignee; undefined = leave unchanged; string = set to value
+  assigneeAdminId: z.string().nullable().optional(),
   resolutionCategory: ComplaintResolutionCategoryEnum.optional(),
   note: z.string().min(1).max(2000).optional(),
 }).openapi('PatchComplaintBody');

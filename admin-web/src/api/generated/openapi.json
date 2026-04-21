@@ -792,7 +792,10 @@
             ]
           },
           "assigneeAdminId": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "resolutionCategory": {
             "type": "string",
