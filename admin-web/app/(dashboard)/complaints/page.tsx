@@ -7,7 +7,8 @@ export const metadata: Metadata = { title: 'Complaints — Homeservices Admin' }
 
 export default async function ComplaintsPage() {
   const client = await getServerApiClient();
-  // TODO: scope to unresolved only or add server-side pagination once complaint volume exceeds pilot scale
+  // pageSize capped at 200 by the API schema; at pilot scale (≤200 open complaints)
+  // this loads the full inbox. Add cursor pagination here when volume grows beyond 200.
   const data = await listComplaints(client, { pageSize: 200 });
-  return <ComplaintsClient initialComplaints={data.items} />;
+  return <ComplaintsClient initialComplaints={data.items} totalComplaints={data.total} />;
 }

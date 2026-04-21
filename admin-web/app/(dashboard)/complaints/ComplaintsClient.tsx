@@ -7,9 +7,10 @@ import type { Complaint, ComplaintResolutionCategory, ComplaintStatus } from '@/
 
 interface ComplaintsClientProps {
   initialComplaints: Complaint[];
+  totalComplaints: number;
 }
 
-export function ComplaintsClient({ initialComplaints }: ComplaintsClientProps) {
+export function ComplaintsClient({ initialComplaints, totalComplaints }: ComplaintsClientProps) {
   const [complaints, setComplaints] = useState<Complaint[]>(initialComplaints);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,7 +101,11 @@ export function ComplaintsClient({ initialComplaints }: ComplaintsClientProps) {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Complaints</h1>
-        <span className="text-sm text-gray-500">{complaints.length} total</span>
+        <span className="text-sm text-gray-500">
+          {totalComplaints > complaints.length
+            ? `${complaints.length} of ${totalComplaints} loaded`
+            : `${totalComplaints} total`}
+        </span>
       </div>
 
       {error && (

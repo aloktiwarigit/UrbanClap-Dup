@@ -16,6 +16,7 @@ const containers = [
   { id: 'admin_sessions', partitionKey: '/sessionId',    ttl: 28800 },
   { id: 'audit_log',      partitionKey: '/partitionKey', ttl: undefined },
   { id: 'health',         partitionKey: '/id',           ttl: undefined },
+  { id: 'complaints',     partitionKey: '/id',           ttl: undefined },
 ] as const;
 
 async function main() {
