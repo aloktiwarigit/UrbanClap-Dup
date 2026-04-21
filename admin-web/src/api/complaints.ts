@@ -6,9 +6,9 @@ import type {
   RepeatOffender,
 } from '../types/complaint';
 
-// Client-side base URL — follows the same pattern as orders.ts / finance.ts.
-// In production the env var is empty so paths resolve through the Next.js /api proxy.
-const CLIENT_BASE = process.env['NEXT_PUBLIC_API_BASE_URL'] ?? '';
+// Client-side base URL. When NEXT_PUBLIC_API_BASE_URL is unset the app proxies
+// backend calls through /api, so the openapi client's /v1/... paths resolve as /api/v1/...
+const CLIENT_BASE = process.env['NEXT_PUBLIC_API_BASE_URL'] ?? '/api';
 
 // Lazy singleton — created on first mutation call, reused for 401-refresh support.
 let _browserClient: ApiClient | undefined;

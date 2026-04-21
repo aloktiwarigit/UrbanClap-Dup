@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import type { Complaint } from '@/types/complaint';
 
 interface ComplaintCardProps {
@@ -23,6 +26,14 @@ function formatSlaCountdown(slaDeadlineAt: string): { label: string; urgent: boo
 
 export function ComplaintCard({ complaint, onClick }: ComplaintCardProps) {
   const isResolved = complaint.status === 'RESOLVED';
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    if (isResolved) return;
+    const id = setInterval(() => setTick((t) => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, [isResolved]);
+
   const { label: slaLabel, urgent } = isResolved
     ? { label: 'Resolved', urgent: false }
     : formatSlaCountdown(complaint.slaDeadlineAt);
