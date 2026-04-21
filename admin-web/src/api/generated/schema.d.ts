@@ -538,6 +538,8 @@ export interface components {
         PatchComplaintBody: {
             /** @enum {string} */
             status?: "NEW" | "INVESTIGATING" | "RESOLVED";
+            /** @enum {string} */
+            expectedStatus?: "NEW" | "INVESTIGATING" | "RESOLVED";
             assigneeAdminId?: string | null;
             /** @enum {string} */
             resolutionCategory?: "TECHNICIAN_MISCONDUCT" | "SERVICE_QUALITY" | "BILLING_DISPUTE" | "LATE_ARRIVAL" | "NO_SHOW" | "OTHER";

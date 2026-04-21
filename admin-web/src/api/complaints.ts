@@ -46,6 +46,7 @@ export interface CreateComplaintParams {
 
 export interface PatchComplaintParams {
   status?: 'NEW' | 'INVESTIGATING' | 'RESOLVED';
+  expectedStatus?: 'NEW' | 'INVESTIGATING' | 'RESOLVED';
   assigneeAdminId?: string | null; // null = clear the assignee
   resolutionCategory?: ComplaintResolutionCategory;
   note?: string;

@@ -791,6 +791,14 @@
               "RESOLVED"
             ]
           },
+          "expectedStatus": {
+            "type": "string",
+            "enum": [
+              "NEW",
+              "INVESTIGATING",
+              "RESOLVED"
+            ]
+          },
           "assigneeAdminId": {
             "type": [
               "string",

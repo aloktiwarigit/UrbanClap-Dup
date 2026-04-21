@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { patchComplaintClient } from '@/api/complaints';
+import { ApiError } from '@/api/client';
 import { KanbanBoard } from '@/components/complaints/KanbanBoard';
 import type { Complaint, ComplaintResolutionCategory, ComplaintStatus } from '@/types/complaint';
 
@@ -29,7 +30,7 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
       return prev.map((x) => (x.id === id ? { ...x, status, updatedAt: new Date().toISOString() } : x));
     });
     try {
-      await patchComplaintClient(id, { status });
+      await patchComplaintClient(id, { status, ...(prevStatus !== undefined ? { expectedStatus: prevStatus } : {}) });
     } catch (err) {
       if (mutGenRef.current.get(gk) !== gen) { setError(String(err)); return; }
       if (prevStatus !== undefined) {
@@ -61,16 +62,28 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
       );
     });
     try {
-      const updated = await patchComplaintClient(id, { note });
+      // Note append is commutative — retry up to 3 times on ETag 409 conflicts.
+      let updated: Complaint | undefined;
+      for (let attempt = 0; attempt < 4; attempt++) {
+        try {
+          updated = await patchComplaintClient(id, { note });
+          break;
+        } catch (err) {
+          if (err instanceof ApiError && err.status === 409 && attempt < 3) continue;
+          throw err;
+        }
+      }
+      if (updated === undefined) throw new Error('patchComplaintClient: unexpected undefined');
+      const confirmedUpdate = updated; // const for TypeScript to narrow inside callback
       // Merge: take server-confirmed notes, then append any optimistic notes added
       // after this request was dispatched (notes at indices > prevNotes.length).
-      // Using dispatch-time prevNotes.length (not updated.internalNotes.length) to
+      // Using dispatch-time prevNotes.length (not confirmedUpdate.internalNotes.length) to
       // stay correct when out-of-order resolution shifts server note counts.
       setComplaints((prev) =>
         prev.map((x) => {
           if (x.id !== id) return x;
           const newerOptimistic = x.internalNotes.slice(prevNotes!.length + 1);
-          return { ...x, internalNotes: [...updated.internalNotes, ...newerOptimistic] };
+          return { ...x, internalNotes: [...confirmedUpdate.internalNotes, ...newerOptimistic] };
         }),
       );
     } catch (err) {
@@ -135,7 +148,7 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
       );
     });
     try {
-      await patchComplaintClient(id, { status: 'RESOLVED', resolutionCategory });
+      await patchComplaintClient(id, { status: 'RESOLVED', resolutionCategory, ...(prevStatus !== undefined ? { expectedStatus: prevStatus } : {}) });
     } catch (err) {
       if (mutGenRef.current.get(gk) !== gen) { setError(String(err)); return; }
       if (prevStatus !== undefined) {

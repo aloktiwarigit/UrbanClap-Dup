@@ -46,6 +46,8 @@ export const CreateComplaintBodySchema = z.object({
 
 export const PatchComplaintBodySchema = z.object({
   status: ComplaintStatusEnum.optional(),
+  // Client sends the status it observed before dispatching; server rejects if it has changed.
+  expectedStatus: ComplaintStatusEnum.optional(),
   // null = clear the assignee; undefined = leave unchanged; string = set to value
   assigneeAdminId: z.string().nullable().optional(),
   resolutionCategory: ComplaintResolutionCategoryEnum.optional(),

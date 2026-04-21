@@ -35,6 +35,10 @@ export async function adminPatchComplaintHandler(
   }
   const { doc: existing, etag } = result;
 
+  if (parsed.data.expectedStatus !== undefined && existing.status !== parsed.data.expectedStatus) {
+    return { status: 409, jsonBody: { code: 'STATUS_CONFLICT' } };
+  }
+
   const now = new Date().toISOString();
   const oldStatus = existing.status;
 
