@@ -53,13 +53,13 @@ export default async function ComplaintsPage() {
   }
 
   // Deduplicate by id — a complaint can appear in both queries if its status
-  // flips to RESOLVED while the Promise.all is in flight.
-  const seen = new Set<string>();
-  const allComplaints = [...activeItems, ...recentResolved].filter((c) => {
-    if (seen.has(c.id)) return false;
-    seen.add(c.id);
-    return true;
-  });
+  // flips to RESOLVED while the Promise.all is in flight. Prefer the resolved
+  // copy (from recentResolved) because it carries the newer status.
+  const resolvedById = new Map(recentResolved.map((c) => [c.id, c]));
+  const allComplaints = [
+    ...activeItems.map((c) => resolvedById.get(c.id) ?? c),
+    ...recentResolved.filter((c) => !activeItems.some((a) => a.id === c.id)),
+  ];
   // Subtract duplicates from the total so the header count stays consistent.
   const dedupedTotal = apiTotal - (activeItems.length + recentResolved.length - allComplaints.length);
 

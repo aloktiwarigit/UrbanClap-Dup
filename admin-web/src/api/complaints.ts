@@ -59,6 +59,7 @@ export async function listComplaints(
     params: { query: params ?? {} },
   });
   if (error !== undefined || data === undefined) {
+    if ((error as unknown) instanceof Error) throw error as unknown as Error;
     throw new Error('listComplaints: request failed');
   }
   return data;
@@ -72,6 +73,7 @@ export async function createComplaint(
     body: body,
   });
   if (error !== undefined || data === undefined) {
+    if ((error as unknown) instanceof Error) throw error as unknown as Error;
     throw new Error('createComplaint: request failed');
   }
   return data;
@@ -87,6 +89,7 @@ export async function patchComplaint(
     body: body,
   });
   if (error !== undefined || data === undefined) {
+    if ((error as unknown) instanceof Error) throw error as unknown as Error;
     throw new Error('patchComplaint: request failed');
   }
   return data;
@@ -99,6 +102,7 @@ export async function getRepeatOffenders(
     '/v1/admin/complaints/repeat-offenders',
   );
   if (error !== undefined || data === undefined) {
+    if ((error as unknown) instanceof Error) throw error as unknown as Error;
     throw new Error('getRepeatOffenders: request failed');
   }
   return (data).offenders;
