@@ -20,9 +20,9 @@ export async function slaBreachTimerHandler(
   const now = new Date().toISOString();
 
   await Promise.all(
-    overdue.map(async (complaint) => {
+    overdue.map(async ({ doc: complaint, etag }) => {
       const updated = { ...complaint, escalated: true, updatedAt: now };
-      await replaceComplaint(updated);
+      await replaceComplaint(updated, etag);
       await appendAuditEntry({
         id: randomUUID(),
         adminId: SYSTEM_ACTOR_ID,

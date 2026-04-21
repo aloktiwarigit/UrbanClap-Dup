@@ -2,11 +2,10 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import type { Route } from 'next';
 
 interface NavItem {
   label: string;
-  href: Route;
+  href: string;
   icon: string; // text icon / emoji shorthand
 }
 

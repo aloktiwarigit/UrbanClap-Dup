@@ -90,7 +90,7 @@ export async function queryComplaints(params: ComplaintListQuery): Promise<Compl
   });
 }
 
-export async function getOverdueComplaints(): Promise<ComplaintDoc[]> {
+export async function getOverdueComplaints(): Promise<Array<{ doc: ComplaintDoc; etag: string }>> {
   const now = new Date().toISOString();
   const query: SqlQuerySpec = {
     query: `SELECT * FROM c WHERE c.slaDeadlineAt < @now AND c.status != @resolved AND c.escalated != true`, // != true catches both false and absent (pre-schema-default) documents
@@ -104,7 +104,10 @@ export async function getOverdueComplaints(): Promise<ComplaintDoc[]> {
     .container(CONTAINER)
     .items.query<Record<string, unknown>>(query)
     .fetchAll();
-  return resources.map(r => ComplaintDocSchema.parse(r));
+  return resources.map(r => ({
+    doc: ComplaintDocSchema.parse(r),
+    etag: typeof r['_etag'] === 'string' ? r['_etag'] : '',
+  }));
 }
 
 export async function getRepeatOffenders(

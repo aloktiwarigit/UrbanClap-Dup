@@ -38,20 +38,23 @@ const overdueComplaint = {
 describe('slaBreachTimerHandler', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('sets escalated=true on each overdue complaint and calls replaceComplaint', async () => {
-    (getOverdueComplaints as ReturnType<typeof vi.fn>).mockResolvedValue([{ ...overdueComplaint }]);
+  it('sets escalated=true on each overdue complaint and calls replaceComplaint with etag', async () => {
+    (getOverdueComplaints as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { doc: overdueComplaint, etag: '"etag_1"' },
+    ]);
     (replaceComplaint as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     (appendAuditEntry as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     await slaBreachTimerHandler({} as never, mockCtx);
     expect(replaceComplaint).toHaveBeenCalledOnce();
-    const replacedDoc = (replaceComplaint as ReturnType<typeof vi.fn>).mock.calls[0]![0]!;
+    const [replacedDoc, passedEtag] = (replaceComplaint as ReturnType<typeof vi.fn>).mock.calls[0]!;
     expect(replacedDoc.escalated).toBe(true);
+    expect(passedEtag).toBe('"etag_1"');
   });
 
   it('calls appendAuditEntry with SLA_BREACH for each breach', async () => {
     (getOverdueComplaints as ReturnType<typeof vi.fn>).mockResolvedValue([
-      { ...overdueComplaint },
-      { ...overdueComplaint, id: 'complaint_overdue_2' },
+      { doc: overdueComplaint, etag: '"etag_1"' },
+      { doc: { ...overdueComplaint, id: 'complaint_overdue_2' }, etag: '"etag_2"' },
     ]);
     (replaceComplaint as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     (appendAuditEntry as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
