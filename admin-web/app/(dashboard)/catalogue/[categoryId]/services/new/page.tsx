@@ -1,7 +1,6 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import type { Route } from 'next';
 import { ServiceForm } from '@/components/catalogue/ServiceForm';
 import type { operations } from '@/api/generated/schema';
 
@@ -31,11 +30,11 @@ export default function NewServicePage() {
       const text = await res.text().catch(() => 'Unknown error');
       throw new Error(`Failed to create service: ${res.status} ${text}`);
     }
-    router.push(`/catalogue/${categoryId}` as Route);
+    router.push(`/catalogue/${categoryId}`);
   }
 
   function handleCancel() {
-    router.push(`/catalogue/${categoryId}` as Route);
+    router.push(`/catalogue/${categoryId}`);
   }
 
   return (
