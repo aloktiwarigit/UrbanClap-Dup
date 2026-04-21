@@ -26,6 +26,11 @@ export function KanbanBoard({ complaints, onStatusChange, onAddNote, onReassign,
     const targetStatus = result.destination.droppableId as ComplaintStatus;
     const sourceStatus = result.source.droppableId as ComplaintStatus;
     if (targetStatus === sourceStatus) return;
+    // Dragging to RESOLVED requires a resolution category — open the slide-over resolve section.
+    if (targetStatus === 'RESOLVED') {
+      setSelectedComplaintId(result.draggableId);
+      return;
+    }
     onStatusChange(result.draggableId, targetStatus);
   };
 
@@ -102,6 +107,7 @@ export function KanbanBoard({ complaints, onStatusChange, onAddNote, onReassign,
 
       {selectedComplaint && (
         <ComplaintSlideOver
+          key={selectedComplaint.id}
           complaint={selectedComplaint}
           onClose={() => setSelectedComplaintId(null)}
           onStatusChange={handleStatusChange}

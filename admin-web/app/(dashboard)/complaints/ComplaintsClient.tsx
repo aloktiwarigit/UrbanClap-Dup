@@ -14,23 +14,25 @@ export function ComplaintsClient({ initialComplaints }: ComplaintsClientProps) {
   const [error, setError] = useState<string | null>(null);
 
   const handleStatusChange = useCallback(async (id: string, status: ComplaintStatus) => {
-    let snapshot: Complaint[] = [];
+    let original: Complaint | undefined;
     setComplaints((prev) => {
-      snapshot = prev;
+      original = prev.find((c) => c.id === id);
       return prev.map((c) => (c.id === id ? { ...c, status, updatedAt: new Date().toISOString() } : c));
     });
     try {
       await patchComplaintClient(id, { status });
     } catch (err) {
-      setComplaints(snapshot);
+      if (original) {
+        setComplaints((prev) => prev.map((c) => (c.id === id ? original! : c)));
+      }
       setError(String(err));
     }
   }, []);
 
   const handleAddNote = useCallback(async (id: string, note: string) => {
-    let snapshot: Complaint[] = [];
+    let original: Complaint | undefined;
     setComplaints((prev) => {
-      snapshot = prev;
+      original = prev.find((c) => c.id === id);
       return prev.map((c) =>
         c.id === id
           ? {
@@ -49,15 +51,17 @@ export function ComplaintsClient({ initialComplaints }: ComplaintsClientProps) {
       // Replace optimistic entry with server response (correct adminId + server timestamp)
       setComplaints((prev) => prev.map((c) => (c.id === id ? updated : c)));
     } catch (err) {
-      setComplaints(snapshot);
+      if (original) {
+        setComplaints((prev) => prev.map((c) => (c.id === id ? original! : c)));
+      }
       setError(String(err));
     }
   }, []);
 
   const handleReassign = useCallback(async (id: string, assigneeAdminId: string) => {
-    let snapshot: Complaint[] = [];
+    let original: Complaint | undefined;
     setComplaints((prev) => {
-      snapshot = prev;
+      original = prev.find((c) => c.id === id);
       return prev.map((c) =>
         c.id === id ? { ...c, assigneeAdminId, updatedAt: new Date().toISOString() } : c,
       );
@@ -65,15 +69,17 @@ export function ComplaintsClient({ initialComplaints }: ComplaintsClientProps) {
     try {
       await patchComplaintClient(id, { assigneeAdminId });
     } catch (err) {
-      setComplaints(snapshot);
+      if (original) {
+        setComplaints((prev) => prev.map((c) => (c.id === id ? original! : c)));
+      }
       setError(String(err));
     }
   }, []);
 
   const handleResolve = useCallback(async (id: string, resolutionCategory: ComplaintResolutionCategory) => {
-    let snapshot: Complaint[] = [];
+    let original: Complaint | undefined;
     setComplaints((prev) => {
-      snapshot = prev;
+      original = prev.find((c) => c.id === id);
       return prev.map((c) =>
         c.id === id
           ? { ...c, status: 'RESOLVED', resolutionCategory, updatedAt: new Date().toISOString() }
@@ -83,7 +89,9 @@ export function ComplaintsClient({ initialComplaints }: ComplaintsClientProps) {
     try {
       await patchComplaintClient(id, { status: 'RESOLVED', resolutionCategory });
     } catch (err) {
-      setComplaints(snapshot);
+      if (original) {
+        setComplaints((prev) => prev.map((c) => (c.id === id ? original! : c)));
+      }
       setError(String(err));
     }
   }, []);

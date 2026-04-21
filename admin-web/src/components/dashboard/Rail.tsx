@@ -17,7 +17,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Technicians', href: '/dashboard/technicians', icon: '◉' },
   { label: 'Customers', href: '/dashboard/customers', icon: '◎' },
   { label: 'Finance', href: '/dashboard/finance', icon: '◆' },
-  { label: 'Complaints', href: '/dashboard/complaints', icon: '◇' },
+  { label: 'Complaints', href: '/complaints', icon: '◇' },
   { label: 'Audit Log', href: '/dashboard/audit', icon: '⊕' },
   { label: 'Settings', href: '/dashboard/settings', icon: '⊗' },
 ];
