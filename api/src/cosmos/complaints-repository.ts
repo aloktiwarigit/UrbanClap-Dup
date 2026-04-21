@@ -52,7 +52,8 @@ export async function queryComplaints(params: ComplaintListQuery): Promise<Compl
     parameters.push({ name: '@dateTo', value: params.dateTo });
   }
   if (params.resolvedSince !== undefined) {
-    conditions.push('c.resolvedAt >= @resolvedSince');
+    // Include items without resolvedAt (active complaints) alongside recently-resolved ones.
+    conditions.push('(NOT IS_DEFINED(c.resolvedAt) OR c.resolvedAt >= @resolvedSince)');
     parameters.push({ name: '@resolvedSince', value: params.resolvedSince });
   }
 
@@ -65,7 +66,9 @@ export async function queryComplaints(params: ComplaintListQuery): Promise<Compl
   };
 
   const dir = (params.sortDir ?? 'desc').toUpperCase();
-  const orderBy = params.resolvedSince !== undefined ? `c.resolvedAt ${dir}` : `c.createdAt ${dir}`;
+  // Only sort by resolvedAt when querying resolved-only; mixed/all-status queries use createdAt.
+  const resolvedOnly = params.status?.length === 1 && params.status[0] === 'RESOLVED';
+  const orderBy = resolvedOnly && params.resolvedSince !== undefined ? `c.resolvedAt ${dir}` : `c.createdAt ${dir}`;
   const dataQuery: SqlQuerySpec = {
     query: `SELECT * FROM c ${where} ORDER BY ${orderBy} OFFSET ${offset} LIMIT ${params.pageSize}`,
     parameters,

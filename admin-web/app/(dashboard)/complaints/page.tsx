@@ -31,22 +31,20 @@ async function fetchAllPages(
 export default async function ComplaintsPage() {
   const client = await getServerApiClient();
 
-  let activeItems: Complaint[] = [];
-  let recentResolved: Complaint[] = [];
-  let apiTotal = 0;
+  let allComplaints: Complaint[] = [];
+  let total = 0;
   try {
-    // Two separate queries so long-running active complaints (>30d) are never hidden
-    // by all-time RESOLVED volume consuming the page limit.
-    const [activeData, resolvedData] = await Promise.all([
-      fetchAllPages(client, { status: 'NEW,INVESTIGATING', sortDir: 'asc' }),
-      fetchAllPages(client, {
-        status: 'RESOLVED',
-        resolvedSince: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-      }),
-    ]);
-    activeItems = activeData.items;
-    recentResolved = resolvedData.items;
-    apiTotal = activeData.total + resolvedData.total;
+    // Single query: active complaints are always included; resolved complaints are
+    // bounded to the last 30 days to cap volume. The API applies resolvedSince as
+    // "(NOT IS_DEFINED(resolvedAt) OR resolvedAt >= X)" so active items are never
+    // excluded. One snapshot avoids the dual-query race where a status flip between
+    // requests causes a complaint to be absent from both result sets.
+    const data = await fetchAllPages(client, {
+      resolvedSince: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      sortDir: 'asc',
+    });
+    allComplaints = data.items;
+    total = data.total;
   } catch (err) {
     if (err instanceof ApiError && (err.status === 401 || err.status === 403)) redirect('/dashboard');
     // 404 means the complaints container hasn't been provisioned yet (fresh/staging
@@ -57,20 +55,5 @@ export default async function ComplaintsPage() {
     throw err;
   }
 
-  // Deduplicate by id — a complaint can appear in both queries if its status
-  // flips while the Promise.all is in flight (resolve or reopen). Prefer the
-  // copy with the later updatedAt so both races are handled symmetrically.
-  const resolvedById = new Map(recentResolved.map((c) => [c.id, c]));
-  const allComplaints = [
-    ...activeItems.map((c) => {
-      const resolved = resolvedById.get(c.id);
-      if (!resolved) return c;
-      return resolved.updatedAt >= c.updatedAt ? resolved : c;
-    }),
-    ...recentResolved.filter((c) => !activeItems.some((a) => a.id === c.id)),
-  ];
-  // Subtract duplicates from the total so the header count stays consistent.
-  const dedupedTotal = apiTotal - (activeItems.length + recentResolved.length - allComplaints.length);
-
-  return <ComplaintsClient initialComplaints={allComplaints} totalComplaints={dedupedTotal} />;
+  return <ComplaintsClient initialComplaints={allComplaints} totalComplaints={total} />;
 }
