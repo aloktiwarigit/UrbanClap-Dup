@@ -13,7 +13,15 @@ export async function adminRepeatOffendersHandler(
   const sinceDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const sinceIso = sinceDate.toISOString();
 
-  const offenders = await getRepeatOffenders(sinceIso);
+  let offenders: Awaited<ReturnType<typeof getRepeatOffenders>>;
+  try {
+    offenders = await getRepeatOffenders(sinceIso);
+  } catch (err: unknown) {
+    if (typeof err === 'object' && err !== null && 'code' in err && (err as { code: number }).code === 404) {
+      return { status: 200, jsonBody: { offenders: [] } };
+    }
+    throw err;
+  }
   return { status: 200, jsonBody: { offenders } };
 }
 

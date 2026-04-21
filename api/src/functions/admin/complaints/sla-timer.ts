@@ -11,7 +11,16 @@ export async function slaBreachTimerHandler(
   _timer: Timer,
   ctx: InvocationContext,
 ): Promise<void> {
-  const overdue = await getOverdueComplaints();
+  let overdue: Awaited<ReturnType<typeof getOverdueComplaints>>;
+  try {
+    overdue = await getOverdueComplaints();
+  } catch (err: unknown) {
+    if (typeof err === 'object' && err !== null && 'code' in err && (err as { code: number }).code === 404) {
+      ctx.log('slaBreachTimer: complaints container not yet provisioned — skipping');
+      return;
+    }
+    throw err;
+  }
   if (overdue.length === 0) {
     ctx.log('slaBreachTimer: no overdue complaints');
     return;
