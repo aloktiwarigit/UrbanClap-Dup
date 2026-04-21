@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import type { Route } from 'next';
 
 import type { components } from '@/api/generated/schema';
 
@@ -82,7 +83,7 @@ export default async function CategoryDetailPage({ params }: PageProps) {
           </p>
         </div>
         <Link
-          href={`/catalogue/${categoryId}/edit`}
+          href={`/catalogue/${categoryId}/edit` as Route<`/catalogue/${string}/edit`>}
           style={{
             padding: 'var(--space-2) var(--space-4)',
             fontSize: 'var(--text-sm)',
