@@ -11,12 +11,15 @@ interface KanbanBoardProps {
   onStatusChange: (id: string, status: ComplaintStatus) => void;
   onAddNote: (id: string, note: string) => void;
   onReassign: (id: string, adminId: string) => void;
+  onResolve: (id: string, resolutionCategory: ComplaintResolutionCategory) => void;
 }
 
 const COLUMNS: ComplaintStatus[] = ['NEW', 'INVESTIGATING', 'RESOLVED'];
 
-export function KanbanBoard({ complaints, onStatusChange, onAddNote, onReassign }: KanbanBoardProps) {
-  const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
+export function KanbanBoard({ complaints, onStatusChange, onAddNote, onReassign, onResolve }: KanbanBoardProps) {
+  // Store the ID only — derive the full object from props so slide-over always reflects current state.
+  const [selectedComplaintId, setSelectedComplaintId] = useState<string | null>(null);
+  const selectedComplaint = complaints.find((c) => c.id === selectedComplaintId) ?? null;
 
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -27,27 +30,23 @@ export function KanbanBoard({ complaints, onStatusChange, onAddNote, onReassign 
   };
 
   const handleStatusChange = (status: ComplaintStatus) => {
-    if (!selectedComplaint) return;
-    onStatusChange(selectedComplaint.id, status);
-    setSelectedComplaint((prev) => prev ? { ...prev, status } : null);
+    if (!selectedComplaintId) return;
+    onStatusChange(selectedComplaintId, status);
   };
 
   const handleAddNote = (note: string) => {
-    if (!selectedComplaint) return;
-    onAddNote(selectedComplaint.id, note);
+    if (!selectedComplaintId) return;
+    onAddNote(selectedComplaintId, note);
   };
 
   const handleResolve = (category: ComplaintResolutionCategory) => {
-    if (!selectedComplaint) return;
-    onStatusChange(selectedComplaint.id, 'RESOLVED');
-    setSelectedComplaint((prev) =>
-      prev ? { ...prev, status: 'RESOLVED', resolutionCategory: category } : null,
-    );
+    if (!selectedComplaintId) return;
+    onResolve(selectedComplaintId, category);
   };
 
   const handleReassign = (adminId: string) => {
-    if (!selectedComplaint) return;
-    onReassign(selectedComplaint.id, adminId);
+    if (!selectedComplaintId) return;
+    onReassign(selectedComplaintId, adminId);
   };
 
   return (
@@ -85,7 +84,7 @@ export function KanbanBoard({ complaints, onStatusChange, onAddNote, onReassign 
                             >
                               <ComplaintCard
                                 complaint={complaint}
-                                onClick={() => setSelectedComplaint(complaint)}
+                                onClick={() => setSelectedComplaintId(complaint.id)}
                               />
                             </div>
                           )}
@@ -104,7 +103,7 @@ export function KanbanBoard({ complaints, onStatusChange, onAddNote, onReassign 
       {selectedComplaint && (
         <ComplaintSlideOver
           complaint={selectedComplaint}
-          onClose={() => setSelectedComplaint(null)}
+          onClose={() => setSelectedComplaintId(null)}
           onStatusChange={handleStatusChange}
           onAddNote={handleAddNote}
           onResolve={handleResolve}
