@@ -36,17 +36,18 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
 
   const handleAddNote = useCallback(async (id: string, note: string) => {
     let prevNotes: Complaint['internalNotes'] | undefined;
+    // Keep a reference to the exact optimistic object so rollback can find it by identity,
+    // even after concurrent requests shift other items in the array.
+    let optimisticNote: Complaint['internalNotes'][number] | undefined;
     setComplaints((prev) => {
       const c = prev.find((x) => x.id === id);
       prevNotes = c?.internalNotes;
+      optimisticNote = { note, adminId: 'me', createdAt: new Date().toISOString() };
       return prev.map((x) =>
         x.id === id
           ? {
               ...x,
-              internalNotes: [
-                ...x.internalNotes,
-                { note, adminId: 'me', createdAt: new Date().toISOString() },
-              ],
+              internalNotes: [...x.internalNotes, optimisticNote!],
               updatedAt: new Date().toISOString(),
             }
           : x,
@@ -66,20 +67,19 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
         }),
       );
     } catch (err) {
-      if (prevNotes !== undefined) {
-        // Remove only the failed optimistic note (at prevNotes.length) — preserve any
-        // notes confirmed by a later successful request that resolved first.
-        setComplaints((prev) =>
-          prev.map((x) => {
-            if (x.id !== id) return x;
-            const notes = [
-              ...x.internalNotes.slice(0, prevNotes!.length),
-              ...x.internalNotes.slice(prevNotes!.length + 1),
-            ];
-            return { ...x, internalNotes: notes };
-          }),
-        );
-      }
+      // Remove the failed note by object identity — safe when concurrent requests
+      // have already replaced other array positions with server-confirmed objects.
+      setComplaints((prev) =>
+        prev.map((x) => {
+          if (x.id !== id) return x;
+          const idx = x.internalNotes.indexOf(optimisticNote!);
+          if (idx === -1) return x; // Already replaced by a server-confirmed note
+          return {
+            ...x,
+            internalNotes: [...x.internalNotes.slice(0, idx), ...x.internalNotes.slice(idx + 1)],
+          };
+        }),
+      );
       setError(String(err));
     }
   }, []);
