@@ -65,6 +65,22 @@ describe('slaBreachTimerHandler', () => {
     expect(auditCalls[1]![0]!.action).toBe('SLA_BREACH');
   });
 
+  it('skips a conflicting complaint and continues the sweep', async () => {
+    const conflictErr = Object.assign(new Error('Precondition Failed'), { code: 412 });
+    (getOverdueComplaints as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { doc: overdueComplaint, etag: '"etag_1"' },
+      { doc: { ...overdueComplaint, id: 'complaint_overdue_2' }, etag: '"etag_2"' },
+    ]);
+    (replaceComplaint as ReturnType<typeof vi.fn>)
+      .mockRejectedValueOnce(conflictErr)
+      .mockResolvedValueOnce(undefined);
+    (appendAuditEntry as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    await slaBreachTimerHandler({} as never, mockCtx);
+    expect(replaceComplaint).toHaveBeenCalledTimes(2);
+    // First complaint conflicted — no audit entry for it; second succeeded — one entry
+    expect(appendAuditEntry).toHaveBeenCalledOnce();
+  });
+
   it('does nothing when no overdue complaints', async () => {
     (getOverdueComplaints as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     await slaBreachTimerHandler({} as never, mockCtx);

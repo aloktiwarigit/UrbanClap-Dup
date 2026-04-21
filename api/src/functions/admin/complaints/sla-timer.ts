@@ -22,7 +22,15 @@ export async function slaBreachTimerHandler(
   await Promise.all(
     overdue.map(async ({ doc: complaint, etag }) => {
       const updated = { ...complaint, escalated: true, updatedAt: now };
-      await replaceComplaint(updated, etag);
+      try {
+        await replaceComplaint(updated, etag);
+      } catch (err: unknown) {
+        if (typeof err === 'object' && err !== null && 'code' in err && err.code === 412) {
+          ctx.log(`slaBreachTimer: skipping ${complaint.id} — concurrent update in progress`);
+          return;
+        }
+        throw err;
+      }
       await appendAuditEntry({
         id: randomUUID(),
         adminId: SYSTEM_ACTOR_ID,
