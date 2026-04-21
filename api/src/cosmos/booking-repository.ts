@@ -32,10 +32,38 @@ export const bookingRepo = {
     paymentSignature: string,
   ): Promise<BookingDoc | null> {
     const existing = await this.getById(id);
-    if (!existing || existing.status !== 'PENDING_PAYMENT') return null;
+    if (!existing) return null;
+    if (existing.status === 'PAID') return existing; // webhook already processed — idempotent success
+    if (existing.status !== 'PENDING_PAYMENT') return null;
     const updated: BookingDoc = { ...existing, status: 'SEARCHING', paymentId, paymentSignature };
     const { resource } = await getBookingsContainer().item(id, id).replace<BookingDoc>(updated);
     return resource!;
+  },
+
+  async getByPaymentOrderId(orderId: string): Promise<BookingDoc | null> {
+    const { resources } = await getBookingsContainer()
+      .items.query<BookingDoc>({
+        query: 'SELECT * FROM c WHERE c.paymentOrderId = @orderId',
+        parameters: [{ name: '@orderId', value: orderId }],
+      })
+      .fetchAll();
+    return resources[0] ?? null;
+  },
+
+  async markPaid(id: string, paymentId: string): Promise<BookingDoc | null> {
+    const existing = await this.getById(id);
+    if (!existing || (existing.status !== 'SEARCHING' && existing.status !== 'PENDING_PAYMENT')) return null;
+    const updated: BookingDoc = { ...existing, status: 'PAID', paymentId };
+    const { resource } = await getBookingsContainer().item(id, id).replace<BookingDoc>(updated);
+    return resource!;
+  },
+
+  async getStaleSearching(olderThanIso: string): Promise<BookingDoc[]> {
+    const { resources } = await getBookingsContainer().items.query<BookingDoc>({
+      query: "SELECT * FROM c WHERE c.status = 'SEARCHING' AND c.createdAt < @cutoff",
+      parameters: [{ name: '@cutoff', value: olderThanIso }],
+    }).fetchAll();
+    return resources;
   },
 };
 
