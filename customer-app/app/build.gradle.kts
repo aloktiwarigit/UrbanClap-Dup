@@ -213,6 +213,7 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.hilt.testing)
+    testImplementation(libs.kotlinx.coroutines.test)
     kspTest(libs.hilt.compiler)
 
     androidTestImplementation(libs.hilt.testing)
