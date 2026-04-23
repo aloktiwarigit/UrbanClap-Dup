@@ -8,11 +8,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 
-internal class TechnicianProfileRepositoryImpl @Inject constructor(
-    private val api: TechnicianProfileApiService,
-) : TechnicianProfileRepository {
-    override fun getProfile(technicianId: String): Flow<Result<TechnicianProfile>> =
-        flow {
-            emit(runCatching { api.getProfile(technicianId).toDomain() })
-        }
-}
+internal class TechnicianProfileRepositoryImpl
+    @Inject
+    constructor(
+        private val api: TechnicianProfileApiService,
+    ) : TechnicianProfileRepository {
+        override fun getProfile(technicianId: String): Flow<Result<TechnicianProfile>> =
+            flow {
+                emit(runCatching { api.getProfile(technicianId).toDomain() })
+            }
+    }

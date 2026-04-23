@@ -56,17 +56,18 @@ public class TrustDossierViewModelTest {
             assertThat(vm.uiState.value).isInstanceOf(TrustDossierUiState.Error::class.java)
         }
 
-    private fun sampleProfile() = TechnicianProfile(
-        id = "tech-1",
-        displayName = "Ramesh Kumar",
-        photoUrl = null,
-        verifiedAadhaar = true,
-        verifiedPoliceCheck = true,
-        trainingInstitution = "HomeSkills Academy",
-        certifications = listOf("Plumbing L2"),
-        languages = listOf("Hindi", "English"),
-        yearsInService = 5,
-        totalJobsCompleted = 312,
-        lastReviews = emptyList(),
-    )
+    private fun sampleProfile() =
+        TechnicianProfile(
+            id = "tech-1",
+            displayName = "Ramesh Kumar",
+            photoUrl = null,
+            verifiedAadhaar = true,
+            verifiedPoliceCheck = true,
+            trainingInstitution = "HomeSkills Academy",
+            certifications = listOf("Plumbing L2"),
+            languages = listOf("Hindi", "English"),
+            yearsInService = 5,
+            totalJobsCompleted = 312,
+            lastReviews = emptyList(),
+        )
 }

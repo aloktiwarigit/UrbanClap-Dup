@@ -35,17 +35,18 @@ public class TechnicianProfileRepositoryImplTest {
             assertThat(result.isFailure).isTrue()
         }
 
-    private fun sampleDto() = TechnicianProfileDto(
-        id = "tech-1",
-        displayName = "Ramesh Kumar",
-        photoUrl = null,
-        verifiedAadhaar = true,
-        verifiedPoliceCheck = false,
-        trainingInstitution = null,
-        certifications = listOf("Plumbing L2"),
-        languages = listOf("Hindi"),
-        yearsInService = 3,
-        totalJobsCompleted = 100,
-        lastReviews = emptyList(),
-    )
+    private fun sampleDto() =
+        TechnicianProfileDto(
+            id = "tech-1",
+            displayName = "Ramesh Kumar",
+            photoUrl = null,
+            verifiedAadhaar = true,
+            verifiedPoliceCheck = false,
+            trainingInstitution = null,
+            certifications = listOf("Plumbing L2"),
+            languages = listOf("Hindi"),
+            yearsInService = 3,
+            totalJobsCompleted = 100,
+            lastReviews = emptyList(),
+        )
 }

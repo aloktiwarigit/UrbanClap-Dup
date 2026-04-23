@@ -19,9 +19,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 public abstract class TechnicianProfileModule {
     @Binds
-    internal abstract fun bindTechnicianProfileRepository(
-        impl: TechnicianProfileRepositoryImpl,
-    ): TechnicianProfileRepository
+    internal abstract fun bindTechnicianProfileRepository(impl: TechnicianProfileRepositoryImpl): TechnicianProfileRepository
 
     public companion object {
         @Provides

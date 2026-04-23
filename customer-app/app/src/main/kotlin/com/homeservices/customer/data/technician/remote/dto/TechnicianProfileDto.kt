@@ -27,16 +27,17 @@ public data class TechnicianProfileDto(
     @Json(name = "lastReviews") val lastReviews: List<TechnicianReviewDto>,
 )
 
-public fun TechnicianProfileDto.toDomain(): TechnicianProfile = TechnicianProfile(
-    id = id,
-    displayName = displayName,
-    photoUrl = photoUrl,
-    verifiedAadhaar = verifiedAadhaar,
-    verifiedPoliceCheck = verifiedPoliceCheck,
-    trainingInstitution = trainingInstitution,
-    certifications = certifications,
-    languages = languages,
-    yearsInService = yearsInService,
-    totalJobsCompleted = totalJobsCompleted,
-    lastReviews = lastReviews.map { TechnicianReview(it.rating, it.text, it.date) },
-)
+public fun TechnicianProfileDto.toDomain(): TechnicianProfile =
+    TechnicianProfile(
+        id = id,
+        displayName = displayName,
+        photoUrl = photoUrl,
+        verifiedAadhaar = verifiedAadhaar,
+        verifiedPoliceCheck = verifiedPoliceCheck,
+        trainingInstitution = trainingInstitution,
+        certifications = certifications,
+        languages = languages,
+        yearsInService = yearsInService,
+        totalJobsCompleted = totalJobsCompleted,
+        lastReviews = lastReviews.map { TechnicianReview(it.rating, it.text, it.date) },
+    )

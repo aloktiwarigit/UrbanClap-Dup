@@ -13,10 +13,11 @@ import org.junit.runners.JUnit4
 @RunWith(JUnit4::class)
 public class TrustDossierCardPaparazziTest {
     @get:Rule
-    public val paparazzi: Paparazzi = Paparazzi(
-        deviceConfig = DeviceConfig.PIXEL_5,
-        theme = "android:Theme.Material3.DayNight.NoActionBar",
-    )
+    public val paparazzi: Paparazzi =
+        Paparazzi(
+            deviceConfig = DeviceConfig.PIXEL_5,
+            theme = "android:Theme.Material3.DayNight.NoActionBar",
+        )
 
     @Ignore("Record goldens on CI only — see docs/patterns/paparazzi-cross-os-goldens.md")
     @Test
@@ -58,17 +59,18 @@ public class TrustDossierCardPaparazziTest {
         }
     }
 
-    private fun sampleProfile() = TechnicianProfile(
-        id = "tech-1",
-        displayName = "Ramesh Kumar",
-        photoUrl = null,
-        verifiedAadhaar = true,
-        verifiedPoliceCheck = true,
-        trainingInstitution = "HomeSkills Academy",
-        certifications = listOf("Plumbing L2", "Electrical Safety"),
-        languages = listOf("Hindi", "English"),
-        yearsInService = 5,
-        totalJobsCompleted = 312,
-        lastReviews = emptyList(),
-    )
+    private fun sampleProfile() =
+        TechnicianProfile(
+            id = "tech-1",
+            displayName = "Ramesh Kumar",
+            photoUrl = null,
+            verifiedAadhaar = true,
+            verifiedPoliceCheck = true,
+            trainingInstitution = "HomeSkills Academy",
+            certifications = listOf("Plumbing L2", "Electrical Safety"),
+            languages = listOf("Hindi", "English"),
+            yearsInService = 5,
+            totalJobsCompleted = 312,
+            lastReviews = emptyList(),
+        )
 }

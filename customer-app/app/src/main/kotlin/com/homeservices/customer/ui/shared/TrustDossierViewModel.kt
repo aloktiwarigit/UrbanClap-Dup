@@ -11,21 +11,24 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-internal class TrustDossierViewModel @Inject constructor(
-    private val getProfile: GetTechnicianProfileUseCase,
-) : ViewModel() {
-    private val _uiState = MutableStateFlow<TrustDossierUiState>(TrustDossierUiState.Unavailable)
-    public val uiState: StateFlow<TrustDossierUiState> = _uiState.asStateFlow()
+internal class TrustDossierViewModel
+    @Inject
+    constructor(
+        private val getProfile: GetTechnicianProfileUseCase,
+    ) : ViewModel() {
+        private val _uiState = MutableStateFlow<TrustDossierUiState>(TrustDossierUiState.Unavailable)
+        public val uiState: StateFlow<TrustDossierUiState> = _uiState.asStateFlow()
 
-    public fun loadProfile(technicianId: String) {
-        viewModelScope.launch {
-            _uiState.value = TrustDossierUiState.Loading
-            getProfile(technicianId).collect { result ->
-                _uiState.value = result.fold(
-                    onSuccess = { TrustDossierUiState.Loaded(it) },
-                    onFailure = { TrustDossierUiState.Error(it.message ?: "Unknown error") },
-                )
+        public fun loadProfile(technicianId: String) {
+            viewModelScope.launch {
+                _uiState.value = TrustDossierUiState.Loading
+                getProfile(technicianId).collect { result ->
+                    _uiState.value =
+                        result.fold(
+                            onSuccess = { TrustDossierUiState.Loaded(it) },
+                            onFailure = { TrustDossierUiState.Error(it.message ?: "Unknown error") },
+                        )
+                }
             }
         }
     }
-}

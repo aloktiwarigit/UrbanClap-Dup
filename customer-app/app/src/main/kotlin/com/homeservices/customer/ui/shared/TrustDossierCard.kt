@@ -77,8 +77,12 @@ private fun UnavailableContent(compact: Boolean) {
         Spacer(Modifier.width(8.dp))
         Column {
             Text(
-                text = if (compact) stringResource(R.string.trust_dossier_stub)
-                       else stringResource(R.string.trust_dossier_assigning),
+                text =
+                    if (compact) {
+                        stringResource(R.string.trust_dossier_stub)
+                    } else {
+                        stringResource(R.string.trust_dossier_assigning)
+                    },
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
             )
@@ -127,7 +131,10 @@ private fun ExpandedContent(profile: TechnicianProfile) {
             Column {
                 Text(profile.displayName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(
-                    text = "${stringResource(R.string.trust_dossier_jobs, profile.totalJobsCompleted)} · ${stringResource(R.string.trust_dossier_years, profile.yearsInService)}",
+                    text = "${stringResource(
+                        R.string.trust_dossier_jobs,
+                        profile.totalJobsCompleted,
+                    )} · ${stringResource(R.string.trust_dossier_years, profile.yearsInService)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
