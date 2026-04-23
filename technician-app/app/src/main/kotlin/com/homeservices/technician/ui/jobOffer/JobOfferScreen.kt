@@ -1,5 +1,6 @@
 package com.homeservices.technician.ui.jobOffer
 
+import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import androidx.compose.animation.core.animateFloatAsState
@@ -25,11 +26,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.getSystemService
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.homeservices.technician.R
 import com.homeservices.technician.domain.jobOffer.model.JobOffer
 
 @Composable
@@ -43,12 +46,14 @@ internal fun JobOfferScreen(
     LaunchedEffect(uiState) {
         val state = uiState
         if (state is JobOfferUiState.Offering && state.remainingSeconds in 1..5) {
-            try {
-                @Suppress("DEPRECATION")
-                val vibrator = context.getSystemService<Vibrator>()
-                vibrator?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
-            } catch (_: Exception) {
-                // Haptic not available on emulator/test — guard silently
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                try {
+                    val vibrator = context.getSystemService<Vibrator>()
+                    @Suppress("DEPRECATION")
+                    vibrator?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
+                } catch (_: Exception) {
+                    // Haptic not available on emulator/test — guard silently
+                }
             }
         }
     }
@@ -82,9 +87,15 @@ internal fun JobOfferScreenContent(
                     onDecline = onDecline,
                 )
             }
-            is JobOfferUiState.Accepted -> JobOfferResultContent(message = "Offer Accepted!", isSuccess = true)
-            is JobOfferUiState.Declined -> JobOfferResultContent(message = "Offer Declined", isSuccess = false)
-            is JobOfferUiState.Expired -> JobOfferResultContent(message = "Offer Expired", isSuccess = false)
+            is JobOfferUiState.Accepted -> JobOfferResultContent(
+                message = stringResource(R.string.job_offer_accepted), isSuccess = true
+            )
+            is JobOfferUiState.Declined -> JobOfferResultContent(
+                message = stringResource(R.string.job_offer_declined), isSuccess = false
+            )
+            is JobOfferUiState.Expired -> JobOfferResultContent(
+                message = stringResource(R.string.job_offer_expired), isSuccess = false
+            )
         }
     }
 }

@@ -94,6 +94,17 @@ public class JobOfferViewModelTest {
         }
 
     @Test
+    public fun `accept transitions to Expired when use case reports booking already taken`(): Unit =
+        runTest {
+            offerFlow.emit(aJobOffer(expiresAtMs = System.currentTimeMillis() + 30_000L))
+            coEvery { acceptUseCase(any()) } returns JobOfferResult.Expired("booking-123")
+
+            viewModel.accept()
+
+            assertThat(viewModel.uiState.value).isEqualTo(JobOfferUiState.Expired)
+        }
+
+    @Test
     public fun `decline transitions to Declined state`(): Unit =
         runTest {
             val offer = aJobOffer()
@@ -130,9 +141,8 @@ public class JobOfferViewModelTest {
             advanceTimeBy(5_000L)
 
             val laterState = viewModel.uiState.value
-            if (laterState is JobOfferUiState.Offering) {
-                assertThat(laterState.remainingSeconds).isLessThan(initialSeconds)
-            }
-            // If state transitioned away, that's also acceptable — offer may have expired.
+            assertThat(laterState).isInstanceOf(JobOfferUiState.Offering::class.java)
+            val offeringState = laterState as JobOfferUiState.Offering
+            assertThat(offeringState.remainingSeconds).isLessThan(initialSeconds)
         }
 }
