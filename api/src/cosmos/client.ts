@@ -40,3 +40,7 @@ export function getBookingEventsContainer(): Container {
 export function _setCosmosClientForTest(mock: CosmosClient): void {
   _client = mock;
 }
+
+export function getSscLeviesContainer(): Container {
+  return getCosmosClient().database(DB_NAME).container('ssc_levies');
+}
