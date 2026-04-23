@@ -36,6 +36,11 @@ android {
             "GIT_SHA",
             "\"${System.getenv("GIT_SHA") ?: "dev"}\"",
         )
+        buildConfigField(
+            "String",
+            "API_BASE_URL",
+            "\"${System.getenv("API_BASE_URL") ?: "https://homeservices-api.azurewebsites.net"}\"",
+        )
     }
 
     buildTypes {
@@ -202,6 +207,12 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
 
     implementation(libs.sentry.android)
+
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.moshi)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging)
+    implementation(libs.moshi.kotlin)
 
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.jupiter.api)
