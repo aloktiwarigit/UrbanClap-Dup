@@ -249,6 +249,17 @@ kover {
                     // signInWithCredential branches are tested separately.
                     "*.FirebaseOtpUseCase",
                     "*.FirebaseOtpUseCase\$*",
+                    // TrustDossierCard — Compose UI composables, same rationale as other screen *Kt classes
+                    "*.TrustDossierCardKt",
+                    "*.TrustDossierCardKt\$*",
+                    // TrustDossierUiState — sealed class data holders, no logic branches
+                    "*.TrustDossierUiState",
+                    "*.TrustDossierUiState\$*",
+                    // TechnicianProfileModule — Hilt @Provides wiring, same rationale as other DI modules
+                    "*.data.technician.di.*",
+                    // TechnicianProfileDto Moshi adapter — code-gen output
+                    "*.TechnicianProfileDtoJsonAdapter",
+                    "*.TechnicianReviewDtoJsonAdapter",
                 )
             }
         }
