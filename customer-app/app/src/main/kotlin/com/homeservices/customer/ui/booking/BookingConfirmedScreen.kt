@@ -21,6 +21,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.homeservices.customer.R
+import com.homeservices.customer.ui.shared.TrustDossierCard
+import com.homeservices.customer.ui.shared.TrustDossierUiState
 
 @Composable
 internal fun BookingConfirmedScreen(
@@ -59,7 +61,13 @@ internal fun BookingConfirmedScreen(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(Modifier.height(40.dp))
+        Spacer(Modifier.height(24.dp))
+        TrustDossierCard(
+            uiState = TrustDossierUiState.Unavailable,
+            compact = false,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(24.dp))
         Button(
             onClick = onBackToHome,
             modifier =
