@@ -1,4 +1,4 @@
-﻿[versions]
+[versions]
 # Toolchain
 kotlin = "2.0.21"
 ksp = "2.0.21-1.0.28"
@@ -40,7 +40,7 @@ androidxTestRunner = "1.6.2"
 kotlinxCoroutines = "1.9.0"
 
 [libraries]
-# Design system (Gradle composite-build substitution â€” version is nominal, ignored)
+# Design system (Gradle composite-build substitution -- version is nominal, ignored)
 homeservices-design-system = { module = "com.homeservices:design-system", version = "0.1.0" }
 
 # AndroidX
@@ -48,7 +48,7 @@ androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx"
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodelCompose" }
 
-# Compose (BOM-pinned â€” no version)
+# Compose (BOM-pinned -- no version)
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
 compose-ui = { module = "androidx.compose.ui:ui" }
 compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
@@ -70,11 +70,6 @@ moshi-kotlin = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "mosh
 
 # Observability
 sentry-android = { module = "io.sentry:sentry-android", version.ref = "sentry" }
-
-# Networking
-retrofit = "2.11.0"
-okhttp = "4.12.0"
-moshi = "1.15.1"
 
 # Test
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit5" }
