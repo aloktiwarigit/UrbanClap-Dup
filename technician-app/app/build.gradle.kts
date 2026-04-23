@@ -226,6 +226,17 @@ kover {
                     // by the Retrofit runtime (not unit-testable)
                     "*.JobOfferApiService",
                     "*.JobOfferApiService\$*",
+                    // ActiveJob Hilt DI module — @Provides methods are framework wiring
+                    "*.data.activeJob.di.*",
+                    // Room database singleton — no unit-testable logic
+                    "*.ActiveJobDatabase",
+                    "*.ActiveJobDatabase\$*",
+                    // ConnectivityObserver uses Android OS-level callbacks
+                    "*.ConnectivityObserver",
+                    "*.ConnectivityObserver\$*",
+                    // ActiveJobScreen generates Compose *Kt wrapper classes
+                    "*.ActiveJobScreenKt",
+                    "*.ActiveJobScreenKt\$*",
                 )
             }
         }
@@ -258,6 +269,9 @@ dependencies {
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 
     implementation(libs.sentry.android)

@@ -55,6 +55,7 @@ androidJunit5 = "1.11.2.0"
 # Test
 coroutines = "1.8.1"
 coroutinesTest = "1.8.1"
+room = "2.6.1"
 junit5 = "5.11.3"
 mockk = "1.13.13"
 assertj = "3.26.3"
@@ -128,6 +129,9 @@ androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTes
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTestRunner" }
 kotlinx-coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutinesTest" }
+room-runtime  = { module = "androidx.room:room-runtime",  version.ref = "room" }
+room-ktx      = { module = "androidx.room:room-ktx",      version.ref = "room" }
+room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 google-truth = { module = "com.google.truth:truth", version.ref = "googleTruth" }
 
 [plugins]
