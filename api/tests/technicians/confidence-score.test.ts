@@ -1,17 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../../src/middleware/requireCustomer.js', () => ({
+vi.mock('../../src/middleware/requireCustomer.js', () => ({
   requireCustomer: (handler: any) => handler,
 }));
-vi.mock('../../../src/cosmos/client.js', () => ({
+vi.mock('../../src/cosmos/client.js', () => ({
   getCosmosClient: vi.fn(),
   DB_NAME: 'homeservices',
 }));
 
-import { getConfidenceScoreHandler } from '../../../src/functions/technicians.js';
-import { getCosmosClient } from '../../../src/cosmos/client.js';
+import { getConfidenceScoreHandler } from '../../src/functions/technicians.js';
+import { getCosmosClient } from '../../src/cosmos/client.js';
 import type { HttpRequest, InvocationContext } from '@azure/functions';
-import type { CustomerContext } from '../../../src/types/customer.js';
+import type { CustomerContext } from '../../src/types/customer.js';
 
 function makeRequest(techId: string, lat = '12.97', lng = '77.59'): HttpRequest {
   return {
