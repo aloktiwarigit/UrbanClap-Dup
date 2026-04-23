@@ -21,13 +21,15 @@ export async function sscLevyTimerHandler(
   context: InvocationContext,
 ): Promise<void> {
   try {
-    // Derive the prior quarter from the timer's last scheduled occurrence (not wall clock)
-    // so late Azure Function replays after downtime use the original trigger date rather
-    // than whichever date the retry happens to run on.
-    const scheduledAt = timer.scheduleStatus?.last
-      ? new Date(timer.scheduleStatus.last)
+    // Use scheduleStatus.next as the anchor: it is the NEXT scheduled occurrence after
+    // the current trigger, so getPriorQuarter(next) correctly identifies the quarter that
+    // just ended. On the Jul 1 firing, next=Oct 1 → Q3; on Jan 1, next=Apr 1 → Q4.
+    // This also handles late replays correctly (next is still Oct 1 regardless of when
+    // the missed Jul 1 run is retried).
+    const anchorDate = timer.scheduleStatus?.next
+      ? new Date(timer.scheduleStatus.next)
       : new Date();
-    const quarter = getPriorQuarter(scheduledAt);
+    const quarter = getPriorQuarter(anchorDate);
 
     const existing = await sscLevyRepo.getLevyByQuarter(quarter);
     if (existing) {

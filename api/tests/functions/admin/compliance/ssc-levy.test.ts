@@ -50,14 +50,14 @@ import { calculateQuarterlyGmv } from '../../../../src/services/ssc-levy.service
 import { createTransfer } from '../../../../src/services/razorpay.service.js';
 import { auditLog } from '../../../../src/services/auditLog.service.js';
 
-// scheduleStatus.last = Apr 1 so getPriorQuarter() returns Q1 deterministically in all tests
+// scheduleStatus.next = Apr 1 → getPriorQuarter(Apr 1) = Q1, matching sampleLevy.quarter
 const mockTimer: Timer = {
   isPastDue: false,
   schedule: { adjustForDST: false },
   scheduleStatus: {
-    last: '2026-04-01T00:00:00.000Z',
-    next: '2026-07-01T00:00:00.000Z',
-    lastUpdated: '2026-04-01T00:00:00.000Z',
+    last: '2026-01-01T00:00:00.000Z',
+    next: '2026-04-01T00:00:00.000Z',
+    lastUpdated: '2026-01-01T00:00:00.000Z',
   },
 };
 const mockCtx = { log: vi.fn(), error: vi.fn() } as unknown as InvocationContext;
@@ -117,8 +117,9 @@ describe('sscLevyTimerHandler', () => {
     expect(vi.mocked(sendOwnerEmail)).toHaveBeenCalledOnce();
   });
 
-  it('derives quarter from timer.scheduleStatus.last (not wall clock)', async () => {
-    // Timer fired on Jul 1 — should compute Q2 regardless of current wall time
+  it('derives quarter from timer.scheduleStatus.next (not wall clock)', async () => {
+    // Timer fired on Jul 1: next=Oct 1, so getPriorQuarter(Oct 1) = Q3
+    // This correctly identifies the Q3 (Jul-Sep) period that just ended.
     const julTimer: Timer = {
       ...mockTimer,
       scheduleStatus: {
@@ -129,12 +130,12 @@ describe('sscLevyTimerHandler', () => {
     };
     vi.mocked(sscLevyRepo.getLevyByQuarter).mockResolvedValue(null);
     vi.mocked(calculateQuarterlyGmv).mockResolvedValue(5_000_000);
-    vi.mocked(sscLevyRepo.createLevy).mockResolvedValue({ ...sampleLevy, quarter: '2026-Q2', id: '2026-Q2' });
+    vi.mocked(sscLevyRepo.createLevy).mockResolvedValue({ ...sampleLevy, quarter: '2026-Q3', id: '2026-Q3' });
 
     await sscLevyTimerHandler(julTimer, mockCtx);
 
     const created = vi.mocked(sscLevyRepo.createLevy).mock.calls[0]![0]!;
-    expect(created.quarter).toBe('2026-Q2');
+    expect(created.quarter).toBe('2026-Q3');
   });
 
   it('treats Cosmos 409 on createLevy as idempotent success (no throw)', async () => {

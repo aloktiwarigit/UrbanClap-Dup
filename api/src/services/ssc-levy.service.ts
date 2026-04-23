@@ -38,10 +38,13 @@ export async function calculateQuarterlyGmv(fromIso: string, toIso: string): Pro
     .database(DB_NAME)
     .container('bookings')
     .items.query<number>({
+      // Use completedAt (realized revenue) consistent with finance queryCompletedBookings.
+      // Jobs that are booked in one quarter and completed in another are attributed to
+      // the quarter in which the work was actually delivered.
       query: `SELECT VALUE SUM(c.amount) FROM c
-              WHERE (c.status = 'PAID' OR c.status = 'COMPLETED')
-                AND c.createdAt >= @from
-                AND c.createdAt <= @to`,
+              WHERE c.status = 'COMPLETED'
+                AND c.completedAt >= @from
+                AND c.completedAt <= @to`,
       parameters: [
         { name: '@from', value: fromIso },
         { name: '@to', value: toIso },
