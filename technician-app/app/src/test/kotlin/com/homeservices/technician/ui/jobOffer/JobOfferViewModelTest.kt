@@ -90,7 +90,9 @@ public class JobOfferViewModelTest {
 
             viewModel.accept()
 
-            assertThat(viewModel.uiState.value).isEqualTo(JobOfferUiState.Accepted)
+            assertThat(viewModel.uiState.value).isInstanceOf(JobOfferUiState.Accepted::class.java)
+            val accepted = viewModel.uiState.value as JobOfferUiState.Accepted
+            assertThat(accepted.bookingId).isEqualTo(offer.bookingId)
         }
 
     @Test

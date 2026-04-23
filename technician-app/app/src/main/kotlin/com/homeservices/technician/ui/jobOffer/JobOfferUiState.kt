@@ -10,7 +10,7 @@ public sealed class JobOfferUiState {
         val remainingSeconds: Int,
     ) : JobOfferUiState()
 
-    public data object Accepted : JobOfferUiState()
+    public data class Accepted(val bookingId: String) : JobOfferUiState()
 
     public data object Declined : JobOfferUiState()
 
