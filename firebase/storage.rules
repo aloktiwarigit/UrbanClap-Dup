@@ -1,0 +1,19 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // KYC documents — each user owns their own subtree
+    match /kyc/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == userId;
+    }
+
+    // Job site photos — any authenticated technician may write;
+    // booking ownership validated by POST /photos API endpoint
+    match /bookings/{bookingId}/photos/{stage}/{file} {
+      allow write: if request.auth != null
+                   && request.resource.size <= 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+      allow read: if request.auth != null;
+    }
+  }
+}
