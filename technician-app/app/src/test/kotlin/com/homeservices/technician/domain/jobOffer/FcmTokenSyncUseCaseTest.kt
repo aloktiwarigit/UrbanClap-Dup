@@ -12,7 +12,6 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
-import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import retrofit2.Response
@@ -58,7 +57,6 @@ public class FcmTokenSyncUseCaseTest {
             stubFirebaseToken("id-token-xyz")
             coEvery { api.syncFcmToken(any(), any()) } throws IOException("Network unavailable")
 
-            assertThatCode { runTest { useCase.invokeWithFcmToken("fcm-device-token") } }
-                .doesNotThrowAnyException()
+            useCase.invokeWithFcmToken("fcm-device-token") // IOException is swallowed — no throw
         }
 }
