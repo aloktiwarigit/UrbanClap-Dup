@@ -13,7 +13,8 @@ public class AcceptJobOfferUseCase @Inject constructor(
     private val firebaseAuth: FirebaseAuth,
 ) {
     public suspend operator fun invoke(bookingId: String): JobOfferResult {
-        val token = firebaseAuth.currentUser?.getIdToken(false)?.await()?.token.orEmpty()
+        val token = firebaseAuth.currentUser?.getIdToken(false)?.await()?.token
+            ?: throw IllegalStateException("No authenticated user for job offer acceptance")
         val response = api.acceptOffer("Bearer $token", bookingId)
         return when {
             response.isSuccessful -> JobOfferResult.Accepted(bookingId)

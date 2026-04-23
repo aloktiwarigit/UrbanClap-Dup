@@ -3,15 +3,26 @@ package com.homeservices.technician.data.fcm
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.homeservices.technician.data.jobOffer.JobOfferEventBus
+import com.homeservices.technician.domain.jobOffer.FcmTokenSyncUseCase
 import com.homeservices.technician.domain.jobOffer.model.JobOffer
 import dagger.hilt.android.AndroidEntryPoint
 import java.time.Instant
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 public class HomeservicesFcmService : FirebaseMessagingService() {
     @Inject
     public lateinit var eventBus: JobOfferEventBus
+
+    @Inject
+    public lateinit var fcmTokenSyncUseCase: FcmTokenSyncUseCase
+
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onMessageReceived(message: RemoteMessage): Unit {
         val data = message.data
@@ -22,8 +33,14 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
     }
 
     override fun onNewToken(token: String): Unit {
-        // Token refresh — FcmTokenSyncUseCase is called by the auth flow after login.
-        // On token refresh the next app launch will re-sync via SaveSessionUseCase.
+        serviceScope.launch {
+            fcmTokenSyncUseCase.invokeWithFcmToken(token)
+        }
+    }
+
+    public override fun onDestroy(): Unit {
+        super.onDestroy()
+        serviceScope.cancel()
     }
 
     private fun parseJobOffer(data: Map<String, String>): JobOffer? =

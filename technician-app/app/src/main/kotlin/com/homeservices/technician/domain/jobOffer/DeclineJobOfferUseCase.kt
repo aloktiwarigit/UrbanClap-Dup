@@ -4,6 +4,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.homeservices.technician.data.jobOffer.JobOfferApiService
 import com.homeservices.technician.domain.jobOffer.model.JobOfferResult
 import kotlinx.coroutines.tasks.await
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,7 +22,7 @@ public class DeclineJobOfferUseCase @Inject constructor(
             api.declineOffer("Bearer $token", bookingId)
             // Response code is intentionally ignored — user intention to decline is the source of truth
             JobOfferResult.Declined(bookingId)
-        } catch (_: Exception) {
+        } catch (_: IOException) {
             // Network error on decline — user intention is known; return Declined anyway
             JobOfferResult.Declined(bookingId)
         }

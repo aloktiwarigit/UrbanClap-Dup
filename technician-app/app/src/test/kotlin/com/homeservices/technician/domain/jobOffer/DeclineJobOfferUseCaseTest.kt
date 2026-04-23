@@ -14,6 +14,7 @@ import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import okhttp3.ResponseBody.Companion.toResponseBody
 import retrofit2.Response
 import java.io.IOException
 
@@ -57,7 +58,7 @@ public class DeclineJobOfferUseCaseTest {
         runTest {
             stubFirebaseToken("test-id-token")
             coEvery { api.declineOffer("Bearer test-id-token", "booking-http-err") } returns
-                Response.error(503, okhttp3.ResponseBody.create(null, ""))
+                Response.error(503, "".toResponseBody(null))
 
             val result = useCase("booking-http-err")
 

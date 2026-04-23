@@ -15,6 +15,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import okhttp3.ResponseBody.Companion.toResponseBody
 import retrofit2.Response
 import java.io.IOException
 
@@ -56,7 +57,7 @@ public class AcceptJobOfferUseCaseTest {
         runTest {
             stubFirebaseToken("test-id-token")
             coEvery { api.acceptOffer("Bearer test-id-token", "booking-expired") } returns
-                Response.error(410, okhttp3.ResponseBody.create(null, ""))
+                Response.error(410, "".toResponseBody(null))
 
             val result = useCase("booking-expired")
 
@@ -68,7 +69,7 @@ public class AcceptJobOfferUseCaseTest {
         runTest {
             stubFirebaseToken("test-id-token")
             coEvery { api.acceptOffer("Bearer test-id-token", "booking-500") } returns
-                Response.error(500, okhttp3.ResponseBody.create(null, ""))
+                Response.error(500, "".toResponseBody(null))
 
             assertThrows<RuntimeException> { useCase("booking-500") }
         }
