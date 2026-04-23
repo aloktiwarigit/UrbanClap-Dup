@@ -77,7 +77,7 @@ describe('sscLevyTimerHandler', () => {
 
     expect(sscLevyRepo.getLevyByQuarter).toHaveBeenCalledOnce();
     expect(sscLevyRepo.createLevy).toHaveBeenCalledOnce();
-    const created = vi.mocked(sscLevyRepo.createLevy).mock.calls[0][0];
+    const created = vi.mocked(sscLevyRepo.createLevy).mock.calls[0]![0]!
     expect(created.status).toBe('PENDING_APPROVAL');
     expect(created.levyRate).toBe(0.01);
     expect(created.levyAmount).toBe(100_000);
@@ -149,12 +149,12 @@ describe('approveSscLevyHandler', () => {
 
     expect(res.status).toBe(200);
     expect(createTransfer).toHaveBeenCalledOnce();
-    const transferCall = vi.mocked(createTransfer).mock.calls[0][0];
+    const transferCall = vi.mocked(createTransfer).mock.calls[0]![0]!
     expect(transferCall.accountId).toBe('fa_test_ssc');
     expect(transferCall.amount).toBe(100_000);
     // handler calls updateLevy twice: first APPROVED, then TRANSFERRED
     expect(sscLevyRepo.updateLevy).toHaveBeenCalledTimes(2);
-    const secondUpdate = vi.mocked(sscLevyRepo.updateLevy).mock.calls[1][2];
+    const secondUpdate = vi.mocked(sscLevyRepo.updateLevy).mock.calls[1]![2]!
     expect(secondUpdate.status).toBe('TRANSFERRED');
     expect(secondUpdate.razorpayTransferId).toBe('trf_ssc_test123');
     expect(auditLog).toHaveBeenCalledOnce();
@@ -169,7 +169,7 @@ describe('approveSscLevyHandler', () => {
 
     expect(res.status).toBe(502);
     expect(sscLevyRepo.updateLevy).toHaveBeenCalledTimes(2);
-    const failUpdate = vi.mocked(sscLevyRepo.updateLevy).mock.calls[1][2];
+    const failUpdate = vi.mocked(sscLevyRepo.updateLevy).mock.calls[1]![2]!
     expect(failUpdate.status).toBe('FAILED');
   });
 });
