@@ -97,7 +97,7 @@ private fun JobOfferContent(
     onDecline: () -> Unit,
     modifier: Modifier = Modifier,
 ): Unit {
-    val isLastFiveSeconds = remainingSeconds in 0..4
+    val isLastFiveSeconds = remainingSeconds <= 5
     val countdownColor = if (isLastFiveSeconds) {
         MaterialTheme.colorScheme.error
     } else {

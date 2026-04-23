@@ -34,6 +34,7 @@ internal class JobOfferViewModel @Inject constructor(
                 val remainingMs = offer.expiresAtMs - System.currentTimeMillis()
                 if (remainingMs <= 0) {
                     _uiState.value = JobOfferUiState.Expired
+                    scheduleReset(2_000L)
                     return@collect
                 }
                 val initialSeconds = (remainingMs / 1000).toInt().coerceAtLeast(0)
@@ -52,6 +53,7 @@ internal class JobOfferViewModel @Inject constructor(
                     }
                     if (_uiState.value is JobOfferUiState.Offering) {
                         _uiState.value = JobOfferUiState.Expired
+                        scheduleReset(2_000L)
                     }
                 }
             }
@@ -72,6 +74,7 @@ internal class JobOfferViewModel @Inject constructor(
                 is JobOfferResult.Expired -> JobOfferUiState.Expired
                 is JobOfferResult.Declined -> JobOfferUiState.Declined
             }
+            scheduleReset(2_000L)
         }
     }
 
@@ -81,6 +84,14 @@ internal class JobOfferViewModel @Inject constructor(
         viewModelScope.launch {
             declineUseCase(current.offer.bookingId)
             _uiState.value = JobOfferUiState.Declined
+            scheduleReset(2_000L)
+        }
+    }
+
+    private fun scheduleReset(delayMs: Long): Unit {
+        viewModelScope.launch {
+            delay(delayMs)
+            _uiState.value = JobOfferUiState.Idle
         }
     }
 }
