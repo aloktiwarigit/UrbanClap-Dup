@@ -22,23 +22,23 @@ import org.junit.jupiter.api.Test
 import retrofit2.Response
 
 public class ActiveJobRepositoryImplTest {
-
     private lateinit var api: ActiveJobApiService
     private lateinit var dao: ActiveJobDao
     private lateinit var firebaseAuth: FirebaseAuth
     private lateinit var repo: ActiveJobRepositoryImpl
 
-    private fun aResponse(status: String = "ASSIGNED") = ActiveJobResponse(
-        id = "bk-1",
-        customerId = "c-1",
-        serviceId = "svc-1",
-        serviceName = "AC Repair",
-        addressText = "12 Main St",
-        addressLatLng = LatLngDto(lat = 12.9, lng = 77.6),
-        status = status,
-        slotDate = "2026-05-01",
-        slotWindow = "10:00-12:00",
-    )
+    private fun aResponse(status: String = "ASSIGNED") =
+        ActiveJobResponse(
+            id = "bk-1",
+            customerId = "c-1",
+            serviceId = "svc-1",
+            serviceName = "AC Repair",
+            addressText = "12 Main St",
+            addressLatLng = LatLngDto(lat = 12.9, lng = 77.6),
+            status = status,
+            slotDate = "2026-05-01",
+            slotWindow = "10:00-12:00",
+        )
 
     @BeforeEach
     public fun setUp() {
@@ -57,72 +57,80 @@ public class ActiveJobRepositoryImplTest {
     }
 
     @Test
-    public fun `transitionStatus success path — does NOT write PendingTransitionEntity`(): Unit = runTest {
-        coEvery { api.transitionStatus(any(), any(), any()) } returns Response.success(aResponse("EN_ROUTE"))
+    public fun `transitionStatus success path — does NOT write PendingTransitionEntity`(): Unit =
+        runTest {
+            coEvery { api.transitionStatus(any(), any(), any()) } returns Response.success(aResponse("EN_ROUTE"))
 
-        val result = repo.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE)
+            val result = repo.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE)
 
-        assertThat(result.isSuccess).isTrue()
-        coVerify(exactly = 0) { dao.insert(any()) }
-    }
-
-    @Test
-    public fun `transitionStatus network failure — writes PendingTransitionEntity to Room`(): Unit = runTest {
-        coEvery { api.transitionStatus(any(), any(), any()) } throws RuntimeException("network error")
-
-        val result = repo.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE)
-
-        assertThat(result.isFailure).isTrue()
-        coVerify(exactly = 1) { dao.insert(match { it.bookingId == "bk-1" && it.targetStatus == "EN_ROUTE" }) }
-    }
+            assertThat(result.isSuccess).isTrue()
+            coVerify(exactly = 0) { dao.insert(any()) }
+        }
 
     @Test
-    public fun `syncPendingTransitions retries queued entries in createdAt order`(): Unit = runTest {
-        val entries = listOf(
-            PendingTransitionEntity("id-1", "bk-1", "EN_ROUTE", createdAt = 1000L),
-            PendingTransitionEntity("id-2", "bk-1", "REACHED", createdAt = 2000L),
-        )
-        coEvery { dao.getPending() } returns entries
-        coEvery { api.transitionStatus(any(), any(), any()) } returns Response.success(aResponse("EN_ROUTE"))
+    public fun `transitionStatus network failure — writes PendingTransitionEntity to Room`(): Unit =
+        runTest {
+            coEvery { api.transitionStatus(any(), any(), any()) } throws RuntimeException("network error")
 
-        repo.syncPendingTransitions()
+            val result = repo.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE)
 
-        val deleted = mutableListOf<String>()
-        coVerify(exactly = 2) { dao.delete(capture(deleted)) }
-        assertThat(deleted).containsExactly("id-1", "id-2")
-    }
+            assertThat(result.isFailure).isTrue()
+            coVerify(exactly = 1) { dao.insert(match { it.bookingId == "bk-1" && it.targetStatus == "EN_ROUTE" }) }
+        }
 
     @Test
-    public fun `syncPendingTransitions deletes entry on 409 — stale transition`(): Unit = runTest {
-        val entry = PendingTransitionEntity("id-1", "bk-1", "IN_PROGRESS", createdAt = 1000L)
-        coEvery { dao.getPending() } returns listOf(entry)
-        coEvery { api.transitionStatus(any(), any(), any()) } returns
-            Response.error(409, "".toResponseBody(null))
+    public fun `syncPendingTransitions retries queued entries in createdAt order`(): Unit =
+        runTest {
+            val entries =
+                listOf(
+                    PendingTransitionEntity("id-1", "bk-1", "EN_ROUTE", createdAt = 1000L),
+                    PendingTransitionEntity("id-2", "bk-1", "REACHED", createdAt = 2000L),
+                )
+            coEvery { dao.getPending() } returns entries
+            coEvery { api.transitionStatus(any(), any(), any()) } returns Response.success(aResponse("EN_ROUTE"))
 
-        repo.syncPendingTransitions()
+            repo.syncPendingTransitions()
 
-        coVerify(exactly = 1) { dao.delete("id-1") }
-    }
-
-    @Test
-    public fun `hasPendingTransitions emits false when queue is empty`(): Unit = runTest {
-        every { dao.getPendingFlow() } returns flowOf(emptyList())
-        val repo2 = ActiveJobRepositoryImpl(api, dao, firebaseAuth)
-
-        val hasPending = repo2.hasPendingTransitions.first()
-
-        assertThat(hasPending).isFalse()
-    }
+            val deleted = mutableListOf<String>()
+            coVerify(exactly = 2) { dao.delete(capture(deleted)) }
+            assertThat(deleted).containsExactly("id-1", "id-2")
+        }
 
     @Test
-    public fun `hasPendingTransitions emits true when queue has entries`(): Unit = runTest {
-        every { dao.getPendingFlow() } returns flowOf(
-            listOf(PendingTransitionEntity("id-1", "bk-1", "EN_ROUTE", 1000L)),
-        )
-        val repo2 = ActiveJobRepositoryImpl(api, dao, firebaseAuth)
+    public fun `syncPendingTransitions deletes entry on 409 — stale transition`(): Unit =
+        runTest {
+            val entry = PendingTransitionEntity("id-1", "bk-1", "IN_PROGRESS", createdAt = 1000L)
+            coEvery { dao.getPending() } returns listOf(entry)
+            coEvery { api.transitionStatus(any(), any(), any()) } returns
+                Response.error(409, "".toResponseBody(null))
 
-        val hasPending = repo2.hasPendingTransitions.first()
+            repo.syncPendingTransitions()
 
-        assertThat(hasPending).isTrue()
-    }
+            coVerify(exactly = 1) { dao.delete("id-1") }
+        }
+
+    @Test
+    public fun `hasPendingTransitions emits false when queue is empty`(): Unit =
+        runTest {
+            every { dao.getPendingFlow() } returns flowOf(emptyList())
+            val repo2 = ActiveJobRepositoryImpl(api, dao, firebaseAuth)
+
+            val hasPending = repo2.hasPendingTransitions.first()
+
+            assertThat(hasPending).isFalse()
+        }
+
+    @Test
+    public fun `hasPendingTransitions emits true when queue has entries`(): Unit =
+        runTest {
+            every { dao.getPendingFlow() } returns
+                flowOf(
+                    listOf(PendingTransitionEntity("id-1", "bk-1", "EN_ROUTE", 1000L)),
+                )
+            val repo2 = ActiveJobRepositoryImpl(api, dao, firebaseAuth)
+
+            val hasPending = repo2.hasPendingTransitions.first()
+
+            assertThat(hasPending).isTrue()
+        }
 }

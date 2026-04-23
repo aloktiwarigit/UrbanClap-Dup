@@ -21,7 +21,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.homeservices.technician.domain.activeJob.model.ActiveJob
 import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
 
 @Composable
@@ -140,19 +139,29 @@ private fun ActiveJobContent(
         val ctaAction: () -> Unit
         when (state.availableAction) {
             ActiveJobAction.START_TRIP -> {
-                ctaLabel = "Start Trip"; ctaEnabled = true; ctaAction = onStartTrip
+                ctaLabel = "Start Trip"
+                ctaEnabled = true
+                ctaAction = onStartTrip
             }
             ActiveJobAction.MARK_ARRIVED -> {
-                ctaLabel = "I've Arrived"; ctaEnabled = true; ctaAction = onMarkReached
+                ctaLabel = "I've Arrived"
+                ctaEnabled = true
+                ctaAction = onMarkReached
             }
             ActiveJobAction.START_WORK -> {
-                ctaLabel = "Start Work"; ctaEnabled = true; ctaAction = onStartWork
+                ctaLabel = "Start Work"
+                ctaEnabled = true
+                ctaAction = onStartWork
             }
             ActiveJobAction.COMPLETE_JOB -> {
-                ctaLabel = "Complete Job"; ctaEnabled = false; ctaAction = onCompleteJob
+                ctaLabel = "Complete Job"
+                ctaEnabled = false
+                ctaAction = onCompleteJob
             }
             ActiveJobAction.NONE -> {
-                ctaLabel = "Done"; ctaEnabled = false; ctaAction = {}
+                ctaLabel = "Done"
+                ctaEnabled = false
+                ctaAction = {}
             }
         }
         Button(

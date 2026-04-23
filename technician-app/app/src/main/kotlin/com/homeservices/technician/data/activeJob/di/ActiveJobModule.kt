@@ -22,7 +22,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 public abstract class ActiveJobModule {
-
     @Binds
     @Singleton
     public abstract fun bindActiveJobRepository(impl: ActiveJobRepositoryImpl): ActiveJobRepository

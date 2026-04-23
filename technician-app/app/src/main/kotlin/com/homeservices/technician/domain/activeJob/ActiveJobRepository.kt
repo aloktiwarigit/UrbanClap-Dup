@@ -6,7 +6,13 @@ import kotlinx.coroutines.flow.Flow
 
 public interface ActiveJobRepository {
     public fun getActiveJob(bookingId: String): Flow<ActiveJob>
+
     public val hasPendingTransitions: Flow<Boolean>
-    public suspend fun transitionStatus(bookingId: String, targetStatus: ActiveJobStatus): Result<ActiveJob>
+
+    public suspend fun transitionStatus(
+        bookingId: String,
+        targetStatus: ActiveJobStatus,
+    ): Result<ActiveJob>
+
     public suspend fun syncPendingTransitions()
 }

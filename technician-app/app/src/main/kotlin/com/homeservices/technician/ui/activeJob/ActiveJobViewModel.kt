@@ -33,7 +33,6 @@ internal class ActiveJobViewModel
         private val completeJobUseCase: CompleteJobUseCase,
         private val connectivityObserver: ConnectivityObserver,
     ) : ViewModel() {
-
         private val bookingId: String = checkNotNull(savedStateHandle["bookingId"])
 
         private val _uiState = MutableStateFlow<ActiveJobUiState>(ActiveJobUiState.Loading)

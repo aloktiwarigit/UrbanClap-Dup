@@ -21,5 +21,7 @@ public sealed class ActiveJobUiState {
 
     public data object Completed : ActiveJobUiState()
 
-    public data class Error(val message: String) : ActiveJobUiState()
+    public data class Error(
+        val message: String,
+    ) : ActiveJobUiState()
 }

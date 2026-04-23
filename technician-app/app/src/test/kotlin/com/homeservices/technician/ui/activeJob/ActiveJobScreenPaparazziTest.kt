@@ -9,21 +9,21 @@ import org.junit.Rule
 import org.junit.Test
 
 public class ActiveJobScreenPaparazziTest {
-
     @get:Rule
     public val paparazzi: Paparazzi = Paparazzi()
 
-    private fun aJob(status: ActiveJobStatus) = ActiveJob(
-        bookingId = "bk-1",
-        customerId = "c-1",
-        serviceId = "svc-1",
-        serviceName = "AC Repair",
-        addressText = "12 Main Street, Bengaluru",
-        addressLatLng = LatLng(12.9, 77.6),
-        status = status,
-        slotDate = "2026-05-01",
-        slotWindow = "10:00-12:00",
-    )
+    private fun aJob(status: ActiveJobStatus) =
+        ActiveJob(
+            bookingId = "bk-1",
+            customerId = "c-1",
+            serviceId = "svc-1",
+            serviceName = "AC Repair",
+            addressText = "12 Main Street, Bengaluru",
+            addressLatLng = LatLng(12.9, 77.6),
+            status = status,
+            slotDate = "2026-05-01",
+            slotWindow = "10:00-12:00",
+        )
 
     @Ignore("Record on CI Linux via paparazzi-record.yml workflow_dispatch")
     @Test

@@ -34,6 +34,11 @@ internal data class ActiveJobResponse(
     val slotWindow: String,
 )
 
-internal data class LatLngDto(val lat: Double, val lng: Double)
+internal data class LatLngDto(
+    val lat: Double,
+    val lng: Double,
+)
 
-internal data class TransitionRequest(val targetStatus: String)
+internal data class TransitionRequest(
+    val targetStatus: String,
+)

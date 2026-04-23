@@ -24,7 +24,6 @@ public class ActiveJobRepositoryImpl
         private val dao: ActiveJobDao,
         private val firebaseAuth: FirebaseAuth,
     ) : ActiveJobRepository {
-
         override fun getActiveJob(bookingId: String): Flow<ActiveJob> =
             flow {
                 while (true) {

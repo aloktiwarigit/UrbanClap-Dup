@@ -33,7 +33,6 @@ import org.junit.jupiter.api.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 public class ActiveJobViewModelTest {
-
     private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var repository: ActiveJobRepository
     private lateinit var startTripUseCase: StartTripUseCase
@@ -43,17 +42,18 @@ public class ActiveJobViewModelTest {
     private lateinit var connectivityObserver: ConnectivityObserver
     private lateinit var viewModel: ActiveJobViewModel
 
-    private fun aJob(status: ActiveJobStatus = ActiveJobStatus.ASSIGNED) = ActiveJob(
-        bookingId = "bk-1",
-        customerId = "c-1",
-        serviceId = "svc-1",
-        serviceName = "AC Repair",
-        addressText = "12 Main St",
-        addressLatLng = LatLng(12.9, 77.6),
-        status = status,
-        slotDate = "2026-05-01",
-        slotWindow = "10:00-12:00",
-    )
+    private fun aJob(status: ActiveJobStatus = ActiveJobStatus.ASSIGNED) =
+        ActiveJob(
+            bookingId = "bk-1",
+            customerId = "c-1",
+            serviceId = "svc-1",
+            serviceName = "AC Repair",
+            addressText = "12 Main St",
+            addressLatLng = LatLng(12.9, 77.6),
+            status = status,
+            slotDate = "2026-05-01",
+            slotWindow = "10:00-12:00",
+        )
 
     @BeforeEach
     public fun setUp() {
@@ -68,15 +68,16 @@ public class ActiveJobViewModelTest {
         every { repository.getActiveJob("bk-1") } returns flowOf(aJob())
         every { repository.hasPendingTransitions } returns flowOf(false)
         val savedStateHandle = SavedStateHandle(mapOf("bookingId" to "bk-1"))
-        viewModel = ActiveJobViewModel(
-            savedStateHandle,
-            repository,
-            startTripUseCase,
-            markReachedUseCase,
-            startWorkUseCase,
-            completeJobUseCase,
-            connectivityObserver,
-        )
+        viewModel =
+            ActiveJobViewModel(
+                savedStateHandle,
+                repository,
+                startTripUseCase,
+                markReachedUseCase,
+                startWorkUseCase,
+                completeJobUseCase,
+                connectivityObserver,
+            )
     }
 
     @AfterEach
@@ -85,66 +86,71 @@ public class ActiveJobViewModelTest {
     }
 
     @Test
-    public fun `initial state collects job and shows Active with START_TRIP action`(): Unit = runTest {
-        val state = viewModel.uiState.value
-        assertThat(state).isInstanceOf(ActiveJobUiState.Active::class.java)
-        val active = state as ActiveJobUiState.Active
-        assertThat(active.availableAction).isEqualTo(ActiveJobAction.START_TRIP)
-    }
+    public fun `initial state collects job and shows Active with START_TRIP action`(): Unit =
+        runTest {
+            val state = viewModel.uiState.value
+            assertThat(state).isInstanceOf(ActiveJobUiState.Active::class.java)
+            val active = state as ActiveJobUiState.Active
+            assertThat(active.availableAction).isEqualTo(ActiveJobAction.START_TRIP)
+        }
 
     @Test
-    public fun `startTrip success — emits Maps NavigationEvent`(): Unit = runTest(testDispatcher) {
-        coEvery { startTripUseCase("bk-1") } returns
-            Pair(
-                Result.success(aJob(ActiveJobStatus.EN_ROUTE)),
-                NavigationEvent.Maps("google.navigation:q=12.9,77.6"),
-            )
+    public fun `startTrip success — emits Maps NavigationEvent`(): Unit =
+        runTest(testDispatcher) {
+            coEvery { startTripUseCase("bk-1") } returns
+                Pair(
+                    Result.success(aJob(ActiveJobStatus.EN_ROUTE)),
+                    NavigationEvent.Maps("google.navigation:q=12.9,77.6"),
+                )
 
-        val events = mutableListOf<NavigationEvent>()
-        val job = launch { viewModel.navigationEvents.collect { events.add(it) } }
+            val events = mutableListOf<NavigationEvent>()
+            val job = launch { viewModel.navigationEvents.collect { events.add(it) } }
 
-        viewModel.startTrip()
-        advanceUntilIdle()
-        job.cancel()
+            viewModel.startTrip()
+            advanceUntilIdle()
+            job.cancel()
 
-        assertThat(events).hasSize(1)
-        assertThat(events[0]).isEqualTo(NavigationEvent.Maps("google.navigation:q=12.9,77.6"))
-    }
-
-    @Test
-    public fun `startTrip failure — does NOT emit NavigationEvent`(): Unit = runTest(testDispatcher) {
-        coEvery { startTripUseCase("bk-1") } returns
-            Pair(Result.failure(RuntimeException("offline")), null)
-
-        val events = mutableListOf<NavigationEvent>()
-        val job = launch { viewModel.navigationEvents.collect { events.add(it) } }
-
-        viewModel.startTrip()
-        advanceUntilIdle()
-        job.cancel()
-
-        assertThat(events).isEmpty()
-    }
+            assertThat(events).hasSize(1)
+            assertThat(events[0]).isEqualTo(NavigationEvent.Maps("google.navigation:q=12.9,77.6"))
+        }
 
     @Test
-    public fun `connectivity reconnect triggers syncPendingTransitions`(): Unit = runTest {
-        val connectFlow = MutableStateFlow(false)
-        every { connectivityObserver.isConnected } returns connectFlow
-        val savedStateHandle = SavedStateHandle(mapOf("bookingId" to "bk-1"))
-        val vm = ActiveJobViewModel(
-            savedStateHandle,
-            repository,
-            startTripUseCase,
-            markReachedUseCase,
-            startWorkUseCase,
-            completeJobUseCase,
-            connectivityObserver,
-        )
+    public fun `startTrip failure — does NOT emit NavigationEvent`(): Unit =
+        runTest(testDispatcher) {
+            coEvery { startTripUseCase("bk-1") } returns
+                Pair(Result.failure(RuntimeException("offline")), null)
 
-        connectFlow.value = true
+            val events = mutableListOf<NavigationEvent>()
+            val job = launch { viewModel.navigationEvents.collect { events.add(it) } }
 
-        coVerify(atLeast = 1) { repository.syncPendingTransitions() }
-        @Suppress("UNUSED_EXPRESSION")
-        vm
-    }
+            viewModel.startTrip()
+            advanceUntilIdle()
+            job.cancel()
+
+            assertThat(events).isEmpty()
+        }
+
+    @Test
+    public fun `connectivity reconnect triggers syncPendingTransitions`(): Unit =
+        runTest {
+            val connectFlow = MutableStateFlow(false)
+            every { connectivityObserver.isConnected } returns connectFlow
+            val savedStateHandle = SavedStateHandle(mapOf("bookingId" to "bk-1"))
+            val vm =
+                ActiveJobViewModel(
+                    savedStateHandle,
+                    repository,
+                    startTripUseCase,
+                    markReachedUseCase,
+                    startWorkUseCase,
+                    completeJobUseCase,
+                    connectivityObserver,
+                )
+
+            connectFlow.value = true
+
+            coVerify(atLeast = 1) { repository.syncPendingTransitions() }
+            @Suppress("UNUSED_EXPRESSION")
+            vm
+        }
 }
