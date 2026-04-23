@@ -3,34 +3,10 @@ import { redirect } from 'next/navigation';
 import { getServerApiClient } from '@/lib/serverApi';
 import { ApiError } from '@/api/client';
 import { listComplaints } from '@/api/complaints';
-import type { ApiClient } from '@/api/client';
 import type { Complaint } from '@/types/complaint';
 import { ComplaintsClient } from './ComplaintsClient';
 
 export const metadata: Metadata = { title: 'Complaints — Homeservices Admin' };
-
-// Paginate through all active complaints so the board always shows every open
-// ticket regardless of queue depth. Active→resolved transitions between pages
-// are caught by the parallel resolved query + dedup, so the offset-shift risk
-// is bounded and does not cause omissions of active items.
-async function fetchAllActive(client: ApiClient): Promise<{ items: Complaint[]; total: number }> {
-  const items: Complaint[] = [];
-  let page = 1;
-  let total = Infinity;
-  while (items.length < total) {
-    const data = await listComplaints(client, {
-      status: 'NEW,INVESTIGATING',
-      sortDir: 'asc',
-      page,
-      pageSize: 200, // API max (schema clamps higher values to 200)
-    });
-    items.push(...data.items);
-    total = data.total;
-    if (data.items.length === 0) break;
-    page += 1;
-  }
-  return { items, total };
-}
 
 export default async function ComplaintsPage() {
   const client = await getServerApiClient();
@@ -39,10 +15,19 @@ export default async function ComplaintsPage() {
   let total = 0;
   try {
     // Two separate queries so active complaints are never crowded out by the
-    // 30-day resolved volume. Active uses pagination to guarantee all tickets
-    // are fetched; resolved is capped to a single page.
+    // 30-day resolved volume. Active is a single page capped at the API max
+    // (200). Offset-based multi-page fetching over a live dataset risks
+    // silently skipping tickets whose status changes between pages; cursor
+    // pagination would require an API change deferred to post-pilot scale.
+    // At pilot (≤5 k bookings/mo) the concurrent active queue never
+    // approaches 200, so one page is always sufficient.
     const [activeData, resolvedData] = await Promise.all([
-      fetchAllActive(client),
+      listComplaints(client, {
+        status: 'NEW,INVESTIGATING',
+        sortDir: 'asc',
+        page: 1,
+        pageSize: 200, // API max — covers full pilot-scale active queue
+      }),
       listComplaints(client, {
         status: 'RESOLVED',
         resolvedSince: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
