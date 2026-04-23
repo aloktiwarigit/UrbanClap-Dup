@@ -5,16 +5,33 @@ import com.homeservices.customer.domain.technician.GetTechnicianProfileUseCase
 import com.homeservices.customer.domain.technician.model.TechnicianProfile
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 public class TrustDossierViewModelTest {
+    private val dispatcher = UnconfinedTestDispatcher()
     private val useCase: GetTechnicianProfileUseCase = mockk()
-    private val vm = TrustDossierViewModel(useCase)
+    private lateinit var vm: TrustDossierViewModel
+
+    @Before
+    public fun setUp(): Unit {
+        Dispatchers.setMain(dispatcher)
+        vm = TrustDossierViewModel(useCase)
+    }
+
+    @After
+    public fun tearDown(): Unit {
+        Dispatchers.resetMain()
+    }
 
     @Test
     public fun `initial state is Unavailable`(): Unit =
@@ -24,7 +41,7 @@ public class TrustDossierViewModelTest {
 
     @Test
     public fun `loadProfile emits Loaded on success`(): Unit =
-        runTest(UnconfinedTestDispatcher()) {
+        runTest(dispatcher) {
             val profile = sampleProfile()
             every { useCase("tech-1") } returns flowOf(Result.success(profile))
             vm.loadProfile("tech-1")
@@ -33,7 +50,7 @@ public class TrustDossierViewModelTest {
 
     @Test
     public fun `loadProfile emits Error on failure`(): Unit =
-        runTest(UnconfinedTestDispatcher()) {
+        runTest(dispatcher) {
             every { useCase("tech-1") } returns flowOf(Result.failure(RuntimeException("fail")))
             vm.loadProfile("tech-1")
             assertThat(vm.uiState.value).isInstanceOf(TrustDossierUiState.Error::class.java)
