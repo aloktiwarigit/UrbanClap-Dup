@@ -39,7 +39,9 @@ export const dispatcherService = {
     }
 
     const { lat, lng } = booking.addressLatLng;
-    const candidates = await getTechniciansWithinRadius(lat, lng, DISPATCH_RADIUS_KM, booking.serviceId);
+    // Cosmos uses a bounding-box (square) query; filter to the actual circle radius
+    const candidates = (await getTechniciansWithinRadius(lat, lng, DISPATCH_RADIUS_KM, booking.serviceId))
+      .filter((t) => haversine(lat, lng, t.location.coordinates[1], t.location.coordinates[0]) <= DISPATCH_RADIUS_KM);
 
     if (candidates.length === 0) {
       console.log(`DISPATCH_NO_TECHS bookingId=${bookingId}`);
@@ -61,6 +63,8 @@ export const dispatcherService = {
     };
 
     await getDispatchAttemptsContainer().items.create(attempt);
+    // Transition to SEARCHING so the stale-booking reconciler can find stuck dispatches
+    await updateBookingFields(bookingId, { status: 'SEARCHING' });
 
     const messaging = getMessaging();
     await Promise.allSettled(

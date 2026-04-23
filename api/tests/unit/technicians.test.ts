@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
-vi.mock('firebase-admin/auth', () => ({
-  getAuth: vi.fn(),
+vi.mock('../../src/services/firebaseAdmin.js', () => ({
+  verifyFirebaseIdToken: vi.fn(),
 }));
 
 vi.mock('../../src/cosmos/technician-repository.js', () => ({
@@ -19,7 +19,7 @@ vi.mock('../../src/cosmos/client.js', () => ({
 // ── Imports ───────────────────────────────────────────────────────────────────
 
 import { patchFcmTokenHandler } from '../../src/functions/technicians.js';
-import { getAuth } from 'firebase-admin/auth';
+import { verifyFirebaseIdToken } from '../../src/services/firebaseAdmin.js';
 import { getCosmosClient } from '../../src/cosmos/client.js';
 import type { HttpRequest } from '@azure/functions';
 
@@ -67,9 +67,7 @@ describe('PATCH /v1/technicians/fcm-token', () => {
   });
 
   it('returns 401 when Firebase token is invalid', async () => {
-    vi.mocked(getAuth).mockReturnValue({
-      verifyIdToken: vi.fn().mockRejectedValue(new Error('Token expired')),
-    } as any);
+    vi.mocked(verifyFirebaseIdToken).mockRejectedValue(new Error('Token expired'));
 
     const req = makeRequest({ fcmToken: 'tok-abc' }, 'Bearer bad-token');
     const res = await patchFcmTokenHandler(req, {} as any);
@@ -77,9 +75,7 @@ describe('PATCH /v1/technicians/fcm-token', () => {
   });
 
   it('returns 400 when fcmToken is missing from body', async () => {
-    vi.mocked(getAuth).mockReturnValue({
-      verifyIdToken: vi.fn().mockResolvedValue({ uid: 'tech-uid-1' }),
-    } as any);
+    vi.mocked(verifyFirebaseIdToken).mockResolvedValue({ uid: 'tech-uid-1' } as any);
 
     const req = makeRequest({}, 'Bearer valid-token');
     const res = await patchFcmTokenHandler(req, {} as any);
@@ -87,9 +83,7 @@ describe('PATCH /v1/technicians/fcm-token', () => {
   });
 
   it('returns 200 and upserts fcmToken on the technician document', async () => {
-    vi.mocked(getAuth).mockReturnValue({
-      verifyIdToken: vi.fn().mockResolvedValue({ uid: 'tech-uid-1' }),
-    } as any);
+    vi.mocked(verifyFirebaseIdToken).mockResolvedValue({ uid: 'tech-uid-1' } as any);
 
     const existing = {
       id: 'tech-uid-1',

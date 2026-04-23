@@ -119,6 +119,7 @@ describe('dispatcherService.triggerDispatch', () => {
     messaging = makeMessaging();
     vi.mocked(getDispatchAttemptsContainer).mockReturnValue(dispatchContainer as any);
     vi.mocked(getMessaging).mockReturnValue(messaging as any);
+    vi.mocked(updateBookingFields).mockResolvedValue(null);
   });
 
   it('skips when booking status is not PAID', async () => {
@@ -218,12 +219,43 @@ describe('dispatcherService.triggerDispatch', () => {
   it('queries technicians using booking lat/lng and serviceId', async () => {
     vi.mocked(bookingRepo.getById).mockResolvedValue(BASE_BOOKING);
     vi.mocked(getTechniciansWithinRadius).mockResolvedValue([]);
-    vi.mocked(updateBookingFields).mockResolvedValue(null);
 
     await dispatcherService.triggerDispatch('bk-1');
 
     expect(getTechniciansWithinRadius).toHaveBeenCalledWith(
       12.9716, 77.5946, 10, 'svc-plumbing',
     );
+  });
+
+  it('filters out bounding-box corner techs beyond the actual radius', async () => {
+    // A tech at +0.09 lat AND +0.09 lng offset is ~14 km away (diagonal > 10 km)
+    const cornerTech: TechnicianProfile = {
+      id: 'corner',
+      technicianId: 'corner',
+      location: { type: 'Point', coordinates: [77.5946 + 0.09, 12.9716 + 0.09] },
+      skills: ['svc-plumbing'],
+      availabilityWindows: [],
+      isOnline: true,
+      isAvailable: true,
+      kycStatus: 'APPROVED',
+      fcmToken: 'fcm-corner',
+    };
+    vi.mocked(bookingRepo.getById).mockResolvedValue(BASE_BOOKING);
+    vi.mocked(getTechniciansWithinRadius).mockResolvedValue([cornerTech]);
+
+    await dispatcherService.triggerDispatch('bk-1');
+
+    // Corner tech is >10km away — dispatch should treat it as no techs available
+    expect(updateBookingFields).toHaveBeenCalledWith('bk-1', { status: 'UNFULFILLED' });
+    expect(dispatchContainer.items.create).not.toHaveBeenCalled();
+  });
+
+  it('transitions booking to SEARCHING after successful dispatch', async () => {
+    vi.mocked(bookingRepo.getById).mockResolvedValue(BASE_BOOKING);
+    vi.mocked(getTechniciansWithinRadius).mockResolvedValue([makeTech('t1', 0.05)]);
+
+    await dispatcherService.triggerDispatch('bk-1');
+
+    expect(updateBookingFields).toHaveBeenCalledWith('bk-1', { status: 'SEARCHING' });
   });
 });
