@@ -181,6 +181,8 @@ kover {
                     "*.navigation.*",
                     // Hilt DI module — @Provides methods are framework wiring
                     "*.data.auth.di.*",
+                    // Hilt DI module for job offer feature — @Provides methods are framework wiring
+                    "*.data.jobOffer.di.*",
                     // Stub onboarding screen — placeholder Compose composable, no logic
                     "*.ui.onboarding.*",
                     // BiometricGateUseCase.requestAuth requires FragmentActivity + BiometricPrompt
@@ -213,6 +215,17 @@ kover {
                     // reachable branches via mockk in KycRepositoryImplTest.
                     "*.KycApiService",
                     "*.KycApiService\$*",
+                    // HomeservicesFcmService — @AndroidEntryPoint service with field injection;
+                    // onMessageReceived requires a live FCM connection, not unit-testable
+                    "*.HomeservicesFcmService",
+                    "*.HomeservicesFcmService\$*",
+                    // JobOfferScreen composable file generates *Kt JVM wrapper with framework branches
+                    "*.JobOfferScreenKt",
+                    "*.JobOfferScreenKt\$*",
+                    // JobOfferApiService is an internal Retrofit interface — its methods are invoked
+                    // by the Retrofit runtime (not unit-testable)
+                    "*.JobOfferApiService",
+                    "*.JobOfferApiService\$*",
                 )
             }
         }
@@ -252,6 +265,7 @@ dependencies {
     // Firebase (BOM manages all Firebase library versions)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth.ktx)
+    implementation(libs.firebase.messaging)
 
     // Coroutines — play-services extensions (.await() on Task<T>)
     implementation(libs.kotlinx.coroutines.play.services)
