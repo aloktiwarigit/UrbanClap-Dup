@@ -20,36 +20,46 @@ export async function sscLevyTimerHandler(
   _timer: Timer,
   context: InvocationContext,
 ): Promise<void> {
-  const quarter = getPriorQuarter();
-  const existing = await sscLevyRepo.getLevyByQuarter(quarter);
-  if (existing) {
-    context.log(`SSC_LEVY_SKIP quarter=${quarter} status=${existing.status}`);
-    return;
+  try {
+    const quarter = getPriorQuarter();
+    const existing = await sscLevyRepo.getLevyByQuarter(quarter);
+    if (existing) {
+      context.log(`SSC_LEVY_SKIP quarter=${quarter} status=${existing.status}`);
+      return;
+    }
+
+    const { fromIso, toIso } = quarterBounds(quarter);
+    const gmv = await calculateQuarterlyGmv(fromIso, toIso);
+    const levyAmount = computeLevyAmount(gmv);
+
+    const levy = await sscLevyRepo.createLevy({
+      quarter,
+      gmv,
+      levyRate: 0.01,
+      levyAmount,
+      status: 'PENDING_APPROVAL',
+    });
+
+    context.log(`SSC_LEVY_CREATED id=${levy.id} quarter=${quarter} gmv=${gmv} levyAmount=${levyAmount}`);
+
+    const notifResults = await Promise.allSettled([
+      sendOwnerFcmNotification(levy),
+      sendOwnerEmail(levy),
+    ]);
+    for (const r of notifResults) {
+      if (r.status === 'rejected') {
+        context.error(`SSC_LEVY_NOTIFICATION_FAILED levyId=${levy.id}`, r.reason);
+      }
+    }
+  } catch (err: unknown) {
+    context.error(`SSC_LEVY_TIMER_FAILED`, err);
+    throw err;
   }
-
-  const { fromIso, toIso } = quarterBounds(quarter);
-  const gmv = await calculateQuarterlyGmv(fromIso, toIso);
-  const levyAmount = computeLevyAmount(gmv);
-
-  const levy = await sscLevyRepo.createLevy({
-    quarter,
-    gmv,
-    levyRate: 0.01,
-    levyAmount,
-    status: 'PENDING_APPROVAL',
-  });
-
-  context.log(`SSC_LEVY_CREATED id=${levy.id} quarter=${quarter} gmv=${gmv} levyAmount=${levyAmount}`);
-
-  await Promise.allSettled([
-    sendOwnerFcmNotification(levy),
-    sendOwnerEmail(levy),
-  ]);
 }
 
 export const approveSscLevyHandler: AdminHttpHandler = async (
   req: HttpRequest,
-  _ctx: InvocationContext,
+  ctx: InvocationContext,
   admin: AdminContext,
 ): Promise<HttpResponseInit> => {
   if (admin.role !== 'super-admin') {
@@ -60,17 +70,17 @@ export const approveSscLevyHandler: AdminHttpHandler = async (
   const levy = await sscLevyRepo.getLevyById(levyId);
   if (!levy) return { status: 404, jsonBody: { code: 'LEVY_NOT_FOUND' } };
 
-  if (levy.status !== 'PENDING_APPROVAL') {
+  if (levy.status !== 'PENDING_APPROVAL' && levy.status !== 'FAILED') {
     return { status: 409, jsonBody: { code: 'INVALID_STATUS', currentStatus: levy.status } };
   }
-
-  const approvedAt = new Date().toISOString();
-  await sscLevyRepo.updateLevy(levy.id, levy.quarter, { status: 'APPROVED', approvedAt });
 
   const fundAccountId = process.env['SSC_FUND_ACCOUNT_ID'];
   if (!fundAccountId) {
     return { status: 500, jsonBody: { code: 'CONFIGURATION_ERROR', message: 'SSC_FUND_ACCOUNT_ID not set' } };
   }
+
+  const approvedAt = new Date().toISOString();
+  await sscLevyRepo.updateLevy(levy.id, levy.quarter, { status: 'APPROVED', approvedAt });
 
   try {
     const { transferId } = await createTransfer({
@@ -101,7 +111,11 @@ export const approveSscLevyHandler: AdminHttpHandler = async (
       jsonBody: { levyId: levy.id, quarter: levy.quarter, transferId, status: 'TRANSFERRED' },
     };
   } catch (err: unknown) {
-    await sscLevyRepo.updateLevy(levy.id, levy.quarter, { status: 'FAILED' });
+    try {
+      await sscLevyRepo.updateLevy(levy.id, levy.quarter, { status: 'FAILED' });
+    } catch (updateErr: unknown) {
+      ctx.error(`SSC_LEVY_STATUS_UPDATE_FAILED levyId=${levy.id}`, updateErr);
+    }
     return {
       status: 502,
       jsonBody: {

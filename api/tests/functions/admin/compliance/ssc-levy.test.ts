@@ -140,6 +140,20 @@ describe('approveSscLevyHandler', () => {
     expect(res.status).toBe(409);
   });
 
+  it('allows re-approval (retry) when levy is in FAILED state', async () => {
+    const failedLevy = { ...sampleLevy, status: 'FAILED' as const };
+    vi.mocked(sscLevyRepo.getLevyById).mockResolvedValue(failedLevy);
+    vi.mocked(sscLevyRepo.updateLevy).mockResolvedValue({ ...failedLevy, status: 'APPROVED' });
+    vi.mocked(createTransfer).mockResolvedValue({ transferId: 'trf_retry_ok' });
+
+    const res = await approveSscLevyHandler(makeReq(sampleLevy.id), mockCtx, superAdminCtx);
+
+    expect(res.status).toBe(200);
+    expect(createTransfer).toHaveBeenCalledOnce();
+    const secondUpdate = vi.mocked(sscLevyRepo.updateLevy).mock.calls[1]![2]!;
+    expect(secondUpdate.status).toBe('TRANSFERRED');
+  });
+
   it('sets TRANSFERRED status and returns 200 on successful approval', async () => {
     vi.mocked(sscLevyRepo.getLevyById).mockResolvedValue(sampleLevy);
     vi.mocked(sscLevyRepo.updateLevy).mockResolvedValue({ ...sampleLevy, status: 'APPROVED' });
