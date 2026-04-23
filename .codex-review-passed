@@ -1,1 +1,1 @@
-{"timestamp":"2026-04-20T19:44:21-04:00","commit":"9f5742922c76ca25b37a79f114d1a6109697e2ad","reviewer":"codex","pushbacks":["P1-1: PENDING_PAYMENT->PAID dispatch still triggered directly","P1-2: fire-and-forget per spec for fast Razorpay ACK","P2: searchStartedAt field out of scope"]}
+{"timestamp":"2026-04-23T14:13:22-04:00","commit":"fdff5ceac8f808f43f6770d1bca7705be8ca3904","reviewer":"codex","findings_resolved":["P1-bounding-box-filter","P1-firebase-cold-start","P2-searching-transition"]}

@@ -28,6 +28,14 @@ export function getBookingsContainer(): Container {
   return getCosmosClient().database(DB_NAME).container('bookings');
 }
 
+export function getDispatchAttemptsContainer(): Container {
+  return getCosmosClient().database(DB_NAME).container('dispatch_attempts');
+}
+
+export function getBookingEventsContainer(): Container {
+  return getCosmosClient().database(DB_NAME).container('booking_events');
+}
+
 /** Inject a mock CosmosClient in tests. */
 export function _setCosmosClientForTest(mock: CosmosClient): void {
   _client = mock;

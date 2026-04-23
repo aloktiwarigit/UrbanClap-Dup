@@ -22,6 +22,8 @@ export const TechnicianProfileSchema = z.object({
   isOnline: z.boolean(),
   isAvailable: z.boolean(),
   kycStatus: TechnicianKycStatusSchema,
+  fcmToken: z.string().optional(),
+  rating: z.number().min(0).max(5).optional(),
   updatedAt: z.string().datetime().optional(),
 });
 

@@ -79,9 +79,7 @@ describe('POST /v1/webhooks/razorpay', () => {
     const res = await razorpayWebhookHandler(req, mockCtx) as HttpResponseInit;
     expect(res.status).toBe(200);
     expect((res.jsonBody as { received: boolean }).received).toBe(true);
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(vi.mocked(bookingRepo.markPaid)).toHaveBeenCalledWith('bk-1', 'pay_123');
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(vi.mocked(dispatcherService.triggerDispatch)).toHaveBeenCalledWith('bk-1');
   });
 
@@ -101,7 +99,6 @@ describe('POST /v1/webhooks/razorpay', () => {
 
     const res = await razorpayWebhookHandler(req, mockCtx) as HttpResponseInit;
     expect(res.status).toBe(200);
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(vi.mocked(bookingRepo.markPaid)).not.toHaveBeenCalled();
   });
 });

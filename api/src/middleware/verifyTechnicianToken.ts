@@ -1,5 +1,5 @@
 import { HttpRequest } from '@azure/functions';
-import { getAuth } from 'firebase-admin/auth';
+import { verifyFirebaseIdToken } from '../services/firebaseAdmin.js';
 
 export async function verifyTechnicianToken(
   req: HttpRequest
@@ -7,6 +7,6 @@ export async function verifyTechnicianToken(
   const authorization = req.headers.get('Authorization') ?? '';
   const token = authorization.replace('Bearer ', '');
   if (!token) throw new Error('No token');
-  const decoded = await getAuth().verifyIdToken(token);
+  const decoded = await verifyFirebaseIdToken(token);
   return { uid: decoded.uid };
 }
