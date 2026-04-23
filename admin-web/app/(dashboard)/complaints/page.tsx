@@ -23,7 +23,7 @@ export default async function ComplaintsPage() {
     // plus recently-resolved ones via the NOT IS_DEFINED guard in the repository.
     const data = await listComplaints(client, {
       resolvedSince: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-      sortDir: 'asc',
+      sortDir: 'desc',
       page: 1,
       pageSize: PAGE_SIZE,
     });

@@ -41,14 +41,14 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
           break; // success
         } catch (err) {
           if (err instanceof ApiError && err.status === 409 && attempt < 3) {
-            if (mutGenRef.current.get(gk) !== gen) { setError(String(err)); return; }
+            if (mutGenRef.current.get(gk) !== gen) return;
             continue; // retry without expectedStatus
           }
           throw err; // non-retryable or retries exhausted → outer catch
         }
       }
     } catch (err) {
-      if (mutGenRef.current.get(gk) !== gen) { setError(String(err)); return; }
+      if (mutGenRef.current.get(gk) !== gen) return;
       if (prevStatus !== undefined) {
         setComplaints((prev) =>
           prev.map((x) => (x.id === id && x.status === status ? { ...x, status: prevStatus! } : x)),
@@ -141,14 +141,14 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
           break; // success
         } catch (err) {
           if (err instanceof ApiError && err.status === 409 && attempt < 3) {
-            if (mutGenRef.current.get(gk) !== gen) { setError(String(err)); return; }
+            if (mutGenRef.current.get(gk) !== gen) return;
             continue; // ETag conflict — retry
           }
           throw err;
         }
       }
     } catch (err) {
-      if (mutGenRef.current.get(gk) !== gen) { setError(String(err)); return; }
+      if (mutGenRef.current.get(gk) !== gen) return;
       setComplaints((prev) => prev.map((x) => {
         if (x.id !== id) return x;
         const { assigneeAdminId: _a, ...base } = x;
@@ -185,14 +185,14 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
           break; // success
         } catch (err) {
           if (err instanceof ApiError && err.status === 409 && attempt < 3) {
-            if (mutGenRef.current.get(gk) !== gen) { setError(String(err)); return; }
+            if (mutGenRef.current.get(gk) !== gen) return;
             continue; // retry without expectedStatus
           }
           throw err; // non-retryable or retries exhausted → outer catch
         }
       }
     } catch (err) {
-      if (mutGenRef.current.get(gk) !== gen) { setError(String(err)); return; }
+      if (mutGenRef.current.get(gk) !== gen) return;
       if (prevStatus !== undefined) {
         setComplaints((prev) =>
           prev.map((x) => {
