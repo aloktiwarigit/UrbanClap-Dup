@@ -12,7 +12,7 @@ import javax.inject.Singleton
 // NEVER fed back to ranking. Decline counts MUST NEVER appear in any UI label,
 // sort order, or analytics event.
 @Singleton
-public class DeclineJobOfferUseCase @Inject constructor(
+public class DeclineJobOfferUseCase @Inject internal constructor(
     private val api: JobOfferApiService,
     private val firebaseAuth: FirebaseAuth,
 ) {

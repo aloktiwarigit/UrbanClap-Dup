@@ -10,7 +10,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-public class FcmTokenSyncUseCase @Inject constructor(
+public class FcmTokenSyncUseCase @Inject internal constructor(
     private val api: JobOfferApiService,
     private val firebaseAuth: FirebaseAuth,
 ) {

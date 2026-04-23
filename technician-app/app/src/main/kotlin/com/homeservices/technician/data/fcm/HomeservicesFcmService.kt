@@ -43,8 +43,8 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
         serviceScope.cancel()
     }
 
-    private fun parseJobOffer(data: Map<String, String>): JobOffer? =
-        try {
+    private fun parseJobOffer(data: Map<String, String>): JobOffer? {
+        return try {
             val expiresAtMs = Instant.parse(data["expiresAt"] ?: return null).toEpochMilli()
             JobOffer(
                 bookingId = data["bookingId"] ?: return null,
@@ -60,4 +60,5 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
         } catch (_: Exception) {
             null
         }
+    }
 }

@@ -8,7 +8,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-public class AcceptJobOfferUseCase @Inject constructor(
+public class AcceptJobOfferUseCase @Inject internal constructor(
     private val api: JobOfferApiService,
     private val firebaseAuth: FirebaseAuth,
 ) {
