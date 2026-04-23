@@ -153,4 +153,62 @@ public class ActiveJobViewModelTest {
             @Suppress("UNUSED_EXPRESSION")
             vm
         }
+
+    @Test
+    public fun `markReached delegates to markReachedUseCase`(): Unit =
+        runTest {
+            viewModel.markReached()
+            coVerify(exactly = 1) { markReachedUseCase("bk-1") }
+        }
+
+    @Test
+    public fun `startWork delegates to startWorkUseCase`(): Unit =
+        runTest {
+            viewModel.startWork()
+            coVerify(exactly = 1) { startWorkUseCase("bk-1") }
+        }
+
+    @Test
+    public fun `completeJob delegates to completeJobUseCase`(): Unit =
+        runTest {
+            viewModel.completeJob()
+            coVerify(exactly = 1) { completeJobUseCase("bk-1") }
+        }
+
+    @Test
+    public fun `hasPendingTransitions update is a no-op when state is Loading`(): Unit =
+        runTest {
+            every { repository.getActiveJob("bk-1") } returns emptyFlow()
+            every { repository.hasPendingTransitions } returns flowOf(true)
+            val savedStateHandle = SavedStateHandle(mapOf("bookingId" to "bk-1"))
+            val vm =
+                ActiveJobViewModel(
+                    savedStateHandle,
+                    repository,
+                    startTripUseCase,
+                    markReachedUseCase,
+                    startWorkUseCase,
+                    completeJobUseCase,
+                    connectivityObserver,
+                )
+            assertThat(vm.uiState.value).isEqualTo(ActiveJobUiState.Loading)
+        }
+
+    @Test
+    public fun `COMPLETED job status transitions uiState to Completed`(): Unit =
+        runTest {
+            every { repository.getActiveJob("bk-1") } returns flowOf(aJob(ActiveJobStatus.COMPLETED))
+            val savedStateHandle = SavedStateHandle(mapOf("bookingId" to "bk-1"))
+            val vm =
+                ActiveJobViewModel(
+                    savedStateHandle,
+                    repository,
+                    startTripUseCase,
+                    markReachedUseCase,
+                    startWorkUseCase,
+                    completeJobUseCase,
+                    connectivityObserver,
+                )
+            assertThat(vm.uiState.value).isEqualTo(ActiveJobUiState.Completed)
+        }
 }

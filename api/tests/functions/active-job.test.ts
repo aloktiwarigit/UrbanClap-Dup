@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { HttpRequest, InvocationContext } from '@azure/functions';
+import { HttpRequest, InvocationContext, type HttpResponseInit } from '@azure/functions';
 
 vi.mock('../../src/middleware/verifyTechnicianToken.js', () => ({
   verifyTechnicianToken: vi.fn(),
@@ -33,13 +33,22 @@ const aService = () => ({
   categoryId: 'cat-1', createdAt: '', updatedAt: '', updatedBy: '',
 });
 
-function makeReq(bookingId: string, method = 'GET', body?: unknown): HttpRequest {
-  const url = `http://localhost/api/v1/technicians/active-job/${bookingId}`;
+function makeGetReq(bookingId: string): HttpRequest {
   const req = new HttpRequest({
-    url,
-    method: method as 'GET' | 'PATCH',
+    url: `http://localhost/api/v1/technicians/active-job/${bookingId}`,
+    method: 'GET',
     headers: { authorization: 'Bearer test-token' },
-    body: body ? { string: JSON.stringify(body) } : undefined,
+  });
+  Object.assign(req, { params: { bookingId } });
+  return req;
+}
+
+function makePatchReq(bookingId: string, body: unknown): HttpRequest {
+  const req = new HttpRequest({
+    url: `http://localhost/api/v1/technicians/active-job/${bookingId}/transition`,
+    method: 'PATCH',
+    headers: { authorization: 'Bearer test-token' },
+    body: { string: JSON.stringify(body) },
   });
   Object.assign(req, { params: { bookingId } });
   return req;
@@ -64,7 +73,7 @@ describe('GET /v1/technicians/active-job/:bookingId', () => {
     (bookingRepo.getById as MockFn).mockResolvedValue(aBooking());
     (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue(aService());
 
-    const res = await getActiveJobHandler(makeReq('bk-1'), new InvocationContext());
+    const res = await getActiveJobHandler(makeGetReq('bk-1'), new InvocationContext()) as HttpResponseInit;
 
     expect(res.status).toBe(200);
     const body = res.jsonBody as Record<string, unknown>;
@@ -79,7 +88,7 @@ describe('GET /v1/technicians/active-job/:bookingId', () => {
     (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-99' });
     (bookingRepo.getById as MockFn).mockResolvedValue(aBooking());
 
-    const res = await getActiveJobHandler(makeReq('bk-1'), new InvocationContext());
+    const res = await getActiveJobHandler(makeGetReq('bk-1'), new InvocationContext()) as HttpResponseInit;
 
     expect(res.status).toBe(403);
     expect((res.jsonBody as { code: string }).code).toBe('FORBIDDEN');
@@ -92,7 +101,7 @@ describe('GET /v1/technicians/active-job/:bookingId', () => {
     (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
     (bookingRepo.getById as MockFn).mockResolvedValue(null);
 
-    const res = await getActiveJobHandler(makeReq('bk-1'), new InvocationContext());
+    const res = await getActiveJobHandler(makeGetReq('bk-1'), new InvocationContext()) as HttpResponseInit;
 
     expect(res.status).toBe(404);
   });
@@ -118,8 +127,7 @@ describe('PATCH /v1/technicians/active-job/:bookingId/transition', () => {
     (updateBookingFields as MockFn).mockResolvedValue(aBooking('EN_ROUTE'));
     (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue(aService());
 
-    const req = makeReq('bk-1', 'PATCH', { targetStatus: 'EN_ROUTE' });
-    const res = await transitionHandler(req, new InvocationContext());
+    const res = await transitionHandler(makePatchReq('bk-1', { targetStatus: 'EN_ROUTE' }), new InvocationContext()) as HttpResponseInit;
 
     expect(res.status).toBe(200);
     expect((res.jsonBody as { status: string }).status).toBe('EN_ROUTE');
@@ -132,8 +140,7 @@ describe('PATCH /v1/technicians/active-job/:bookingId/transition', () => {
     (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
     (bookingRepo.getById as MockFn).mockResolvedValue(aBooking('ASSIGNED'));
 
-    const req = makeReq('bk-1', 'PATCH', { targetStatus: 'IN_PROGRESS' });
-    const res = await transitionHandler(req, new InvocationContext());
+    const res = await transitionHandler(makePatchReq('bk-1', { targetStatus: 'IN_PROGRESS' }), new InvocationContext()) as HttpResponseInit;
 
     expect(res.status).toBe(409);
     expect((res.jsonBody as { code: string }).code).toBe('ILLEGAL_TRANSITION');
@@ -146,8 +153,7 @@ describe('PATCH /v1/technicians/active-job/:bookingId/transition', () => {
     (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-99' });
     (bookingRepo.getById as MockFn).mockResolvedValue(aBooking('ASSIGNED'));
 
-    const req = makeReq('bk-1', 'PATCH', { targetStatus: 'EN_ROUTE' });
-    const res = await transitionHandler(req, new InvocationContext());
+    const res = await transitionHandler(makePatchReq('bk-1', { targetStatus: 'EN_ROUTE' }), new InvocationContext()) as HttpResponseInit;
 
     expect(res.status).toBe(403);
   });
@@ -163,8 +169,7 @@ describe('PATCH /v1/technicians/active-job/:bookingId/transition', () => {
     (updateBookingFields as MockFn).mockResolvedValue(aBooking('REACHED'));
     (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue(aService());
 
-    const req = makeReq('bk-1', 'PATCH', { targetStatus: 'REACHED' });
-    await transitionHandler(req, new InvocationContext());
+    await transitionHandler(makePatchReq('bk-1', { targetStatus: 'REACHED' }), new InvocationContext());
 
     const appendCalls = (bookingEventRepo.append as MockFn).mock.calls;
     expect(appendCalls).toHaveLength(1);

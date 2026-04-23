@@ -133,4 +133,61 @@ public class ActiveJobRepositoryImplTest {
 
             assertThat(hasPending).isTrue()
         }
+
+    @Test
+    public fun `transitionStatus HTTP error (non-exception) — returns failure without Room write`(): Unit =
+        runTest {
+            coEvery { api.transitionStatus(any(), any(), any()) } returns
+                Response.error(400, "".toResponseBody(null))
+
+            val result = repo.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE)
+
+            assertThat(result.isFailure).isTrue()
+            coVerify(exactly = 0) { dao.insert(any()) }
+        }
+
+    @Test
+    public fun `transitionStatus no authenticated user — returns failure`(): Unit =
+        runTest {
+            every { firebaseAuth.currentUser } returns null
+
+            val result = repo.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE)
+
+            assertThat(result.isFailure).isTrue()
+        }
+
+    @Test
+    public fun `syncPendingTransitions no authenticated user — skips without processing`(): Unit =
+        runTest {
+            every { firebaseAuth.currentUser } returns null
+
+            repo.syncPendingTransitions()
+
+            coVerify(exactly = 0) { api.transitionStatus(any(), any(), any()) }
+        }
+
+    @Test
+    public fun `syncPendingTransitions API failure — leaves entry in queue`(): Unit =
+        runTest {
+            val entry = PendingTransitionEntity("id-1", "bk-1", "EN_ROUTE", createdAt = 1000L)
+            coEvery { dao.getPending() } returns listOf(entry)
+            coEvery { api.transitionStatus(any(), any(), any()) } throws RuntimeException("network")
+
+            repo.syncPendingTransitions()
+
+            coVerify(exactly = 0) { dao.delete(any()) }
+        }
+
+    @Test
+    public fun `syncPendingTransitions 500 error — does NOT delete entry`(): Unit =
+        runTest {
+            val entry = PendingTransitionEntity("id-1", "bk-1", "EN_ROUTE", createdAt = 1000L)
+            coEvery { dao.getPending() } returns listOf(entry)
+            coEvery { api.transitionStatus(any(), any(), any()) } returns
+                Response.error(500, "".toResponseBody(null))
+
+            repo.syncPendingTransitions()
+
+            coVerify(exactly = 0) { dao.delete(any()) }
+        }
 }
