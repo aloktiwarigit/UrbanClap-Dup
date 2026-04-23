@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import type { Route } from 'next';
 
 interface NavItem {
   label: string;
@@ -70,7 +71,7 @@ export function Rail() {
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={item.href as Route}
               aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
               title={item.label}
@@ -119,7 +120,7 @@ export function Rail() {
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={item.href as Route}
               aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
               title={item.label}
