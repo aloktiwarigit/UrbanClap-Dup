@@ -1,13 +1,18 @@
-import { randomUUID } from 'node:crypto';
 import { getSscLeviesContainer } from './client.js';
 import type { SscLevyDoc } from '../schemas/ssc-levy.js';
 
 export const sscLevyRepo = {
+  /**
+   * Create a new levy document using the quarter string as the deterministic
+   * Cosmos document id. This makes creation idempotent at the DB level: a
+   * second `items.create()` for the same quarter returns a 409 Conflict,
+   * preventing duplicate levy records even under at-least-once timer replay.
+   */
   async createLevy(
     doc: Omit<SscLevyDoc, 'id' | 'createdAt'>,
   ): Promise<SscLevyDoc> {
     const full: SscLevyDoc = {
-      id: randomUUID(),
+      id: doc.quarter,           // deterministic — quarter is unique per period
       createdAt: new Date().toISOString(),
       ...doc,
     };
@@ -16,23 +21,19 @@ export const sscLevyRepo = {
   },
 
   async getLevyByQuarter(quarter: string): Promise<SscLevyDoc | null> {
-    const { resources } = await getSscLeviesContainer()
-      .items.query<SscLevyDoc>({
-        query: 'SELECT TOP 1 * FROM c WHERE c.quarter = @quarter',
-        parameters: [{ name: '@quarter', value: quarter }],
-      })
-      .fetchAll();
-    return resources[0] ?? null;
+    // Point read: id === quarter === partition key — O(1) RU cost
+    const { resource } = await getSscLeviesContainer()
+      .item(quarter, quarter)
+      .read<SscLevyDoc>();
+    return resource ?? null;
   },
 
   async getLevyById(id: string): Promise<SscLevyDoc | null> {
-    const { resources } = await getSscLeviesContainer()
-      .items.query<SscLevyDoc>({
-        query: 'SELECT TOP 1 * FROM c WHERE c.id = @id',
-        parameters: [{ name: '@id', value: id }],
-      })
-      .fetchAll();
-    return resources[0] ?? null;
+    // id is the quarter string, so partition key === id
+    const { resource } = await getSscLeviesContainer()
+      .item(id, id)
+      .read<SscLevyDoc>();
+    return resource ?? null;
   },
 
   async updateLevy(

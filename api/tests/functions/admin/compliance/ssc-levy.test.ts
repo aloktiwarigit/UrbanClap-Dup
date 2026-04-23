@@ -56,7 +56,7 @@ const superAdminCtx = { adminId: 'admin-1', role: 'super-admin' as const, sessio
 const opsCtx = { adminId: 'admin-2', role: 'ops-manager' as const, sessionId: 's1' };
 
 const sampleLevy = {
-  id: '550e8400-e29b-41d4-a716-446655440000',
+  id: '2026-Q1',   // deterministic: id === quarter (repo uses quarter as Cosmos doc id)
   quarter: '2026-Q1',
   gmv: 10_000_000,       // ₹1,00,000 in paise
   levyRate: 0.01 as const,
@@ -185,5 +185,26 @@ describe('approveSscLevyHandler', () => {
     expect(sscLevyRepo.updateLevy).toHaveBeenCalledTimes(2);
     const failUpdate = vi.mocked(sscLevyRepo.updateLevy).mock.calls[1]![2]!
     expect(failUpdate.status).toBe('FAILED');
+  });
+
+  it('returns 500 (not 502) and does NOT mark FAILED when transfer succeeds but DB write fails', async () => {
+    // Transfer succeeded — money moved — but the subsequent Cosmos updateLevy throws.
+    // The handler must NOT overwrite status to FAILED (that would be a ledger lie).
+    vi.mocked(sscLevyRepo.getLevyById).mockResolvedValue(sampleLevy);
+    vi.mocked(sscLevyRepo.updateLevy)
+      .mockResolvedValueOnce({ ...sampleLevy, status: 'APPROVED' })   // first call: APPROVED write OK
+      .mockRejectedValueOnce(new Error('Cosmos write timeout'));        // second call: TRANSFERRED write fails
+    vi.mocked(createTransfer).mockResolvedValue({ transferId: 'trf_ok_but_db_fails' });
+
+    const res = await approveSscLevyHandler(makeReq(sampleLevy.id), mockCtx, superAdminCtx);
+
+    expect(res.status).toBe(500);
+    const body = res.jsonBody as Record<string, unknown>;
+    expect(body['code']).toBe('POST_TRANSFER_RECORD_FAILED');
+    expect(body['transferId']).toBe('trf_ok_but_db_fails');
+    // Critically: updateLevy was NOT called a third time to write FAILED
+    expect(sscLevyRepo.updateLevy).toHaveBeenCalledTimes(2);
+    const lastUpdate = vi.mocked(sscLevyRepo.updateLevy).mock.calls[1]![2]!;
+    expect(lastUpdate.status).toBe('TRANSFERRED'); // the failed attempt was TRANSFERRED, not FAILED
   });
 });

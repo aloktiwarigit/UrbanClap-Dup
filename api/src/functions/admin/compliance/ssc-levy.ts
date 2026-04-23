@@ -82,14 +82,37 @@ export const approveSscLevyHandler: AdminHttpHandler = async (
   const approvedAt = new Date().toISOString();
   await sscLevyRepo.updateLevy(levy.id, levy.quarter, { status: 'APPROVED', approvedAt });
 
+  // Phase 1: initiate Razorpay transfer. Only mark FAILED if the transfer
+  // itself did not succeed — post-transfer DB/audit errors must NOT overwrite
+  // the status to FAILED (money already moved; that would be a lie on the ledger).
+  let transferId: string;
   try {
-    const { transferId } = await createTransfer({
+    const result = await createTransfer({
       accountId: fundAccountId,
       amount: levy.levyAmount,
       notes: { quarter: levy.quarter, levyId: levy.id, initiatedBy: admin.adminId },
       idempotencyKey: `ssc-levy-${levy.id}`,
     });
+    transferId = result.transferId;
+  } catch (err: unknown) {
+    // Transfer did not happen — safe to mark FAILED so a retry is possible.
+    try {
+      await sscLevyRepo.updateLevy(levy.id, levy.quarter, { status: 'FAILED' });
+    } catch (updateErr: unknown) {
+      ctx.error(`SSC_LEVY_STATUS_UPDATE_FAILED levyId=${levy.id}`, updateErr);
+    }
+    return {
+      status: 502,
+      jsonBody: {
+        code: 'TRANSFER_FAILED',
+        message: err instanceof Error ? err.message : 'transfer failed',
+      },
+    };
+  }
 
+  // Phase 2: persist the transfer result. Errors here are internal failures —
+  // money has already moved so we must NOT mark FAILED. Log and return 500.
+  try {
     const transferredAt = new Date().toISOString();
     await sscLevyRepo.updateLevy(levy.id, levy.quarter, {
       status: 'TRANSFERRED',
@@ -105,25 +128,23 @@ export const approveSscLevyHandler: AdminHttpHandler = async (
       { quarter: levy.quarter, levyAmount: levy.levyAmount, razorpayTransferId: transferId },
       { ip: req.headers.get('x-forwarded-for') ?? 'unknown' },
     );
-
-    return {
-      status: 200,
-      jsonBody: { levyId: levy.id, quarter: levy.quarter, transferId, status: 'TRANSFERRED' },
-    };
   } catch (err: unknown) {
-    try {
-      await sscLevyRepo.updateLevy(levy.id, levy.quarter, { status: 'FAILED' });
-    } catch (updateErr: unknown) {
-      ctx.error(`SSC_LEVY_STATUS_UPDATE_FAILED levyId=${levy.id}`, updateErr);
-    }
+    // Transfer succeeded but we failed to record it — operator must reconcile.
+    ctx.error(`SSC_LEVY_POST_TRANSFER_RECORD_FAILED levyId=${levy.id} transferId=${transferId}`, err);
     return {
-      status: 502,
+      status: 500,
       jsonBody: {
-        code: 'TRANSFER_FAILED',
-        message: err instanceof Error ? err.message : 'transfer failed',
+        code: 'POST_TRANSFER_RECORD_FAILED',
+        message: 'Transfer succeeded but state recording failed — reconcile manually',
+        transferId,
       },
     };
   }
+
+  return {
+    status: 200,
+    jsonBody: { levyId: levy.id, quarter: levy.quarter, transferId, status: 'TRANSFERRED' },
+  };
 };
 
 app.timer('sscLevyQuarterly', {
