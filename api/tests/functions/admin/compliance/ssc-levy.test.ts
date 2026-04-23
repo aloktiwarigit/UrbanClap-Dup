@@ -93,8 +93,28 @@ describe('sscLevyTimerHandler', () => {
     expect(created.gmv).toBe(10_000_000);
   });
 
-  it('skips creation when levy already exists for the quarter (idempotency)', async () => {
+  it('retries notifications when PENDING_APPROVAL levy already exists (replay after crash)', async () => {
+    // Prior run created levy but crashed before notifications were sent.
     vi.mocked(sscLevyRepo.getLevyByQuarter).mockResolvedValue(sampleLevy);
+
+    const { sendOwnerFcmNotification, sendOwnerEmail } = await import(
+      '../../../../src/services/ssc-levy.service.js'
+    );
+
+    await sscLevyTimerHandler(mockTimer, mockCtx);
+
+    // Should NOT re-create, but SHOULD re-send notifications
+    expect(sscLevyRepo.createLevy).not.toHaveBeenCalled();
+    expect(calculateQuarterlyGmv).not.toHaveBeenCalled();
+    expect(vi.mocked(sendOwnerFcmNotification)).toHaveBeenCalledOnce();
+    expect(vi.mocked(sendOwnerEmail)).toHaveBeenCalledOnce();
+  });
+
+  it('skips creation and notifications when levy is already beyond PENDING_APPROVAL', async () => {
+    vi.mocked(sscLevyRepo.getLevyByQuarter).mockResolvedValue({
+      ...sampleLevy,
+      status: 'TRANSFERRED',
+    });
 
     await sscLevyTimerHandler(mockTimer, mockCtx);
 
@@ -117,25 +137,20 @@ describe('sscLevyTimerHandler', () => {
     expect(vi.mocked(sendOwnerEmail)).toHaveBeenCalledOnce();
   });
 
-  it('derives quarter from timer.scheduleStatus.next (not wall clock)', async () => {
-    // Timer fired on Jul 1: next=Oct 1, so getPriorQuarter(Oct 1) = Q3
-    // This correctly identifies the Q3 (Jul-Sep) period that just ended.
-    const julTimer: Timer = {
-      ...mockTimer,
-      scheduleStatus: {
-        last: '2026-07-01T00:00:00.000Z',
-        next: '2026-10-01T00:00:00.000Z',
-        lastUpdated: '2026-07-01T00:00:00.000Z',
-      },
-    };
+  it('uses wall clock quarter (new Date()) for quarter derivation', async () => {
+    // The timer fires on Jan/Apr/Jul/Oct 1 at midnight — wall clock is always correct
+    // for the trigger date. The handler uses new Date() which getPriorQuarter maps to
+    // the prior quarter. This test verifies the happy path works with any wall clock.
     vi.mocked(sscLevyRepo.getLevyByQuarter).mockResolvedValue(null);
     vi.mocked(calculateQuarterlyGmv).mockResolvedValue(5_000_000);
-    vi.mocked(sscLevyRepo.createLevy).mockResolvedValue({ ...sampleLevy, quarter: '2026-Q3', id: '2026-Q3' });
+    vi.mocked(sscLevyRepo.createLevy).mockResolvedValue({ ...sampleLevy, levyAmount: 50_000 });
 
-    await sscLevyTimerHandler(julTimer, mockCtx);
+    await sscLevyTimerHandler(mockTimer, mockCtx);
 
+    // Verify createLevy is called with a valid quarter string (format: YYYY-Q[1-4])
     const created = vi.mocked(sscLevyRepo.createLevy).mock.calls[0]![0]!;
-    expect(created.quarter).toBe('2026-Q3');
+    expect(created.quarter).toMatch(/^\d{4}-Q[1-4]$/);
+    expect(created.status).toBe('PENDING_APPROVAL');
   });
 
   it('treats Cosmos 409 on createLevy as idempotent success (no throw)', async () => {

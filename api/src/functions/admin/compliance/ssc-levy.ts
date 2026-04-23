@@ -21,19 +21,32 @@ export async function sscLevyTimerHandler(
   context: InvocationContext,
 ): Promise<void> {
   try {
-    // Use scheduleStatus.next as the anchor: it is the NEXT scheduled occurrence after
-    // the current trigger, so getPriorQuarter(next) correctly identifies the quarter that
-    // just ended. On the Jul 1 firing, next=Oct 1 → Q3; on Jan 1, next=Apr 1 → Q4.
-    // This also handles late replays correctly (next is still Oct 1 regardless of when
-    // the missed Jul 1 run is retried).
-    const anchorDate = timer.scheduleStatus?.next
-      ? new Date(timer.scheduleStatus.next)
-      : new Date();
-    const quarter = getPriorQuarter(anchorDate);
+    // Use wall clock to derive the quarter: the timer fires on Jan/Apr/Jul/Oct 1 at midnight,
+    // so new Date() at trigger time correctly identifies the first day of the new quarter,
+    // and getPriorQuarter(now) returns the quarter that just ended.
+    // For late replays (timer.isPastDue === true) the original trigger month is still the
+    // same calendar month as long as Azure recovers within the quarter — the practical
+    // failure window (90+ days of continuous downtime) is implausible on Azure Consumption.
+    const quarter = getPriorQuarter(new Date());
 
+    // If an existing PENDING_APPROVAL levy is found, notifications may not have been
+    // delivered on a prior crashed run. Re-attempt them (fire-and-forget; idempotent).
     const existing = await sscLevyRepo.getLevyByQuarter(quarter);
     if (existing) {
-      context.log(`SSC_LEVY_SKIP quarter=${quarter} status=${existing.status}`);
+      if (existing.status === 'PENDING_APPROVAL') {
+        context.log(`SSC_LEVY_NOTIFY_RETRY quarter=${quarter} levyId=${existing.id}`);
+        const notifResults = await Promise.allSettled([
+          sendOwnerFcmNotification(existing),
+          sendOwnerEmail(existing),
+        ]);
+        for (const r of notifResults) {
+          if (r.status === 'rejected') {
+            context.error(`SSC_LEVY_NOTIFICATION_FAILED levyId=${existing.id}`, r.reason);
+          }
+        }
+      } else {
+        context.log(`SSC_LEVY_SKIP quarter=${quarter} status=${existing.status}`);
+      }
       return;
     }
 
@@ -51,8 +64,8 @@ export async function sscLevyTimerHandler(
         status: 'PENDING_APPROVAL',
       });
     } catch (createErr: unknown) {
-      // Cosmos 409 Conflict = concurrent/replayed invocation already created the doc.
-      // Treat as idempotent success — no need to send notifications again.
+      // Cosmos 409 Conflict = concurrent invocation already created the doc.
+      // Treat as idempotent success — the other invocation will send notifications.
       const cosmosErr = createErr as { code?: number };
       if (cosmosErr?.code === 409) {
         context.log(`SSC_LEVY_SKIP_CONFLICT quarter=${quarter} (concurrent creation)`);
