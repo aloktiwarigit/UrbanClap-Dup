@@ -43,6 +43,15 @@ internal fun AppNavigation(
         }
     }
 
+    LaunchedEffect(jobOfferState) {
+        if (jobOfferState is JobOfferUiState.Accepted) {
+            val bookingId = (jobOfferState as JobOfferUiState.Accepted).bookingId
+            navController.navigate("activeJob/$bookingId") {
+                launchSingleTop = true
+            }
+        }
+    }
+
     Box(modifier = modifier) {
         NavHost(
             navController = navController,
@@ -50,8 +59,9 @@ internal fun AppNavigation(
         ) {
             authGraph(navController, activity)
             onboardingGraph(navController)
+            homeGraph(navController)
         }
-        if (jobOfferState !is JobOfferUiState.Idle) {
+        if (jobOfferState !is JobOfferUiState.Idle && jobOfferState !is JobOfferUiState.Accepted) {
             JobOfferScreen(
                 modifier = Modifier.fillMaxSize(),
                 viewModel = jobOfferViewModel,
