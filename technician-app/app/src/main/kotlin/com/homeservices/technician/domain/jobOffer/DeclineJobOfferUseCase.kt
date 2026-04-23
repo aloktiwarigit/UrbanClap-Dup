@@ -12,19 +12,26 @@ import javax.inject.Singleton
 // NEVER fed back to ranking. Decline counts MUST NEVER appear in any UI label,
 // sort order, or analytics event.
 @Singleton
-public class DeclineJobOfferUseCase @Inject internal constructor(
-    private val api: JobOfferApiService,
-    private val firebaseAuth: FirebaseAuth,
-) {
-    public suspend operator fun invoke(bookingId: String): JobOfferResult {
-        val token = firebaseAuth.currentUser?.getIdToken(false)?.await()?.token.orEmpty()
-        return try {
-            api.declineOffer("Bearer $token", bookingId)
-            // Response code is intentionally ignored — user intention to decline is the source of truth
-            JobOfferResult.Declined(bookingId)
-        } catch (_: IOException) {
-            // Network error on decline — user intention is known; return Declined anyway
-            JobOfferResult.Declined(bookingId)
+public class DeclineJobOfferUseCase
+    @Inject
+    internal constructor(
+        private val api: JobOfferApiService,
+        private val firebaseAuth: FirebaseAuth,
+    ) {
+        public suspend operator fun invoke(bookingId: String): JobOfferResult {
+            val token =
+                firebaseAuth.currentUser
+                    ?.getIdToken(false)
+                    ?.await()
+                    ?.token
+                    .orEmpty()
+            return try {
+                api.declineOffer("Bearer $token", bookingId)
+                // Response code is intentionally ignored — user intention to decline is the source of truth
+                JobOfferResult.Declined(bookingId)
+            } catch (_: IOException) {
+                // Network error on decline — user intention is known; return Declined anyway
+                JobOfferResult.Declined(bookingId)
+            }
         }
     }
-}

@@ -10,30 +10,37 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-public class FcmTokenSyncUseCase @Inject internal constructor(
-    private val api: JobOfferApiService,
-    private val firebaseAuth: FirebaseAuth,
-) {
-    /** Called from app startup / login flow. Fetches the FCM token internally. */
-    public suspend operator fun invoke(): Unit {
-        try {
-            val fcmToken = FirebaseMessaging.getInstance().token.await()
-            invokeWithFcmToken(fcmToken)
-        } catch (_: IOException) {
-            // Token sync is best-effort; failures are non-fatal
+public class FcmTokenSyncUseCase
+    @Inject
+    internal constructor(
+        private val api: JobOfferApiService,
+        private val firebaseAuth: FirebaseAuth,
+    ) {
+        /** Called from app startup / login flow. Fetches the FCM token internally. */
+        public suspend operator fun invoke(): Unit {
+            try {
+                val fcmToken = FirebaseMessaging.getInstance().token.await()
+                invokeWithFcmToken(fcmToken)
+            } catch (_: IOException) {
+                // Token sync is best-effort; failures are non-fatal
+            }
         }
-    }
 
-    /**
-     * Testable entry point — accepts a pre-fetched FCM token.
-     * Unit tests use this overload to avoid static FirebaseMessaging access.
-     */
-    public suspend fun invokeWithFcmToken(fcmToken: String): Unit {
-        try {
-            val idToken = firebaseAuth.currentUser?.getIdToken(false)?.await()?.token.orEmpty()
-            api.syncFcmToken("Bearer $idToken", FcmTokenRequest(fcmToken))
-        } catch (_: IOException) {
-            // Token sync is best-effort; failures are non-fatal
+        /**
+         * Testable entry point — accepts a pre-fetched FCM token.
+         * Unit tests use this overload to avoid static FirebaseMessaging access.
+         */
+        public suspend fun invokeWithFcmToken(fcmToken: String): Unit {
+            try {
+                val idToken =
+                    firebaseAuth.currentUser
+                        ?.getIdToken(false)
+                        ?.await()
+                        ?.token
+                        .orEmpty()
+                api.syncFcmToken("Bearer $idToken", FcmTokenRequest(fcmToken))
+            } catch (_: IOException) {
+                // Token sync is best-effort; failures are non-fatal
+            }
         }
     }
-}

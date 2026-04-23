@@ -87,15 +87,21 @@ internal fun JobOfferScreenContent(
                     onDecline = onDecline,
                 )
             }
-            is JobOfferUiState.Accepted -> JobOfferResultContent(
-                message = stringResource(R.string.job_offer_accepted), isSuccess = true
-            )
-            is JobOfferUiState.Declined -> JobOfferResultContent(
-                message = stringResource(R.string.job_offer_declined), isSuccess = false
-            )
-            is JobOfferUiState.Expired -> JobOfferResultContent(
-                message = stringResource(R.string.job_offer_expired), isSuccess = false
-            )
+            is JobOfferUiState.Accepted ->
+                JobOfferResultContent(
+                    message = stringResource(R.string.job_offer_accepted),
+                    isSuccess = true,
+                )
+            is JobOfferUiState.Declined ->
+                JobOfferResultContent(
+                    message = stringResource(R.string.job_offer_declined),
+                    isSuccess = false,
+                )
+            is JobOfferUiState.Expired ->
+                JobOfferResultContent(
+                    message = stringResource(R.string.job_offer_expired),
+                    isSuccess = false,
+                )
         }
     }
 }
@@ -109,20 +115,22 @@ private fun JobOfferContent(
     modifier: Modifier = Modifier,
 ): Unit {
     val isLastFiveSeconds = remainingSeconds <= 5
-    val countdownColor = if (isLastFiveSeconds) {
-        MaterialTheme.colorScheme.error
-    } else {
-        MaterialTheme.colorScheme.primary
-    }
+    val countdownColor =
+        if (isLastFiveSeconds) {
+            MaterialTheme.colorScheme.error
+        } else {
+            MaterialTheme.colorScheme.primary
+        }
     val progress by animateFloatAsState(
         targetValue = (remainingSeconds / 30f).coerceIn(0f, 1f),
         label = "countdown",
     )
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(24.dp),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .padding(24.dp),
         verticalArrangement = Arrangement.SpaceBetween,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -184,20 +192,23 @@ private fun JobOfferContent(
         ) {
             Button(
                 onClick = onAccept,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF2E7D32),
-                ),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF2E7D32),
+                    ),
             ) {
                 Text("Accept", style = MaterialTheme.typography.titleMedium)
             }
             OutlinedButton(
                 onClick = onDecline,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
             ) {
                 Text("Decline", style = MaterialTheme.typography.titleMedium)
             }
@@ -218,11 +229,12 @@ private fun JobOfferResultContent(
         Text(
             text = message,
             style = MaterialTheme.typography.headlineSmall,
-            color = if (isSuccess) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
+            color =
+                if (isSuccess) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
             textAlign = TextAlign.Center,
         )
     }

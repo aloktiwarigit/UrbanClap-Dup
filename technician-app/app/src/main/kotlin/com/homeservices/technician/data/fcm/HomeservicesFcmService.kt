@@ -6,13 +6,13 @@ import com.homeservices.technician.data.jobOffer.JobOfferEventBus
 import com.homeservices.technician.domain.jobOffer.FcmTokenSyncUseCase
 import com.homeservices.technician.domain.jobOffer.model.JobOffer
 import dagger.hilt.android.AndroidEntryPoint
-import java.time.Instant
-import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import java.time.Instant
+import javax.inject.Inject
 
 @AndroidEntryPoint
 public class HomeservicesFcmService : FirebaseMessagingService() {

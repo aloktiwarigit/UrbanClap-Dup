@@ -26,4 +26,6 @@ internal interface JobOfferApiService {
     ): Response<Unit>
 }
 
-internal data class FcmTokenRequest(val fcmToken: String)
+internal data class FcmTokenRequest(
+    val fcmToken: String,
+)
