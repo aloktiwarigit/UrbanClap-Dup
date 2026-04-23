@@ -27,6 +27,7 @@ export const BookingDocSchema = z.object({
   feesWaived: z.boolean().optional(),
   escalated: z.boolean().optional(),
   internalNotes: z.array(z.string()).optional(),
+  photos: z.record(z.string(), z.array(z.string())).optional(),
 });
 
 export const CreateBookingRequestSchema = z.object({

@@ -65,6 +65,24 @@ export const bookingRepo = {
     }).fetchAll();
     return resources;
   },
+
+  async addPhoto(
+    bookingId: string,
+    stage: string,
+    photoUrl: string,
+  ): Promise<BookingDoc | null> {
+    const existing = await this.getById(bookingId);
+    if (!existing) return null;
+    const stagePhotos = existing.photos?.[stage] ?? [];
+    const updated: BookingDoc = {
+      ...existing,
+      photos: { ...existing.photos, [stage]: [...stagePhotos, photoUrl] },
+    };
+    const { resource } = await getBookingsContainer()
+      .item(bookingId, bookingId)
+      .replace<BookingDoc>(updated);
+    return resource ?? null;
+  },
 };
 
 export async function updateBookingFields(
