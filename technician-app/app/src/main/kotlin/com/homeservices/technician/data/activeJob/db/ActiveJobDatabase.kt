@@ -9,5 +9,5 @@ import androidx.room.RoomDatabase
     exportSchema = false,
 )
 public abstract class ActiveJobDatabase : RoomDatabase() {
-    public abstract fun activeJobDao(): ActiveJobDao
+    internal abstract fun activeJobDao(): ActiveJobDao
 }
