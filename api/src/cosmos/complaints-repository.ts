@@ -66,9 +66,16 @@ export async function queryComplaints(params: ComplaintListQuery): Promise<Compl
   };
 
   const dir = (params.sortDir ?? 'desc').toUpperCase();
-  // Only sort by resolvedAt when querying resolved-only; mixed/all-status queries use createdAt.
   const resolvedOnly = params.status?.length === 1 && params.status[0] === 'RESOLVED';
-  const orderBy = resolvedOnly && params.resolvedSince !== undefined ? `c.resolvedAt ${dir}` : `c.createdAt ${dir}`;
+  // resolved-only: sort by resolvedAt so newest resolutions come first.
+  // mixed/all with resolvedSince: sort by updatedAt so recently resolved old complaints
+  //   surface near the top rather than being buried by old active items.
+  // everything else: sort by createdAt.
+  const orderBy = resolvedOnly && params.resolvedSince !== undefined
+    ? `c.resolvedAt ${dir}`
+    : params.resolvedSince !== undefined
+      ? `c.updatedAt ${dir}`
+      : `c.createdAt ${dir}`;
   const dataQuery: SqlQuerySpec = {
     query: `SELECT * FROM c ${where} ORDER BY ${orderBy} OFFSET ${offset} LIMIT ${params.pageSize}`,
     parameters,
@@ -102,7 +109,7 @@ export async function queryComplaints(params: ComplaintListQuery): Promise<Compl
 export async function getOverdueComplaints(): Promise<Array<{ doc: ComplaintDoc; etag: string }>> {
   const now = new Date().toISOString();
   const query: SqlQuerySpec = {
-    query: `SELECT * FROM c WHERE c.slaDeadlineAt < @now AND c.status != @resolved AND c.escalated != true`, // != true catches both false and absent (pre-schema-default) documents
+    query: `SELECT * FROM c WHERE c.slaDeadlineAt < @now AND c.status != @resolved AND (c.escalated != true OR NOT IS_DEFINED(c.escalated))`,
     parameters: [
       { name: '@now', value: now },
       { name: '@resolved', value: 'RESOLVED' },
