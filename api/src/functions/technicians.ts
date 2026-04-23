@@ -52,7 +52,11 @@ export const getTechnicianProfileHandler: HttpHandler = async (req, _ctx: Invoca
   const { resource } = await container.item(id, id).read<Record<string, unknown>>();
   if (!resource) return { status: 404, jsonBody: { code: 'NOT_FOUND' } };
 
-  const parsed = TechnicianDossierSchema.safeParse({ ...resource, id });
+  const parsed = TechnicianDossierSchema.safeParse({
+    ...resource,
+    id,
+    displayName: resource['displayName'] ?? resource['name'] ?? undefined,
+  });
   if (!parsed.success) return { status: 404, jsonBody: { code: 'NOT_FOUND' } };
 
   return {
