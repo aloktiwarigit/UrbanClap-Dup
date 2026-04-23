@@ -21,13 +21,17 @@ export async function sscLevyTimerHandler(
   context: InvocationContext,
 ): Promise<void> {
   try {
-    // Use wall clock to derive the quarter: the timer fires on Jan/Apr/Jul/Oct 1 at midnight,
-    // so new Date() at trigger time correctly identifies the first day of the new quarter,
-    // and getPriorQuarter(now) returns the quarter that just ended.
-    // For late replays (timer.isPastDue === true) the original trigger month is still the
-    // same calendar month as long as Azure recovers within the quarter — the practical
-    // failure window (90+ days of continuous downtime) is implausible on Azure Consumption.
-    const quarter = getPriorQuarter(new Date());
+    // Derive the levy quarter:
+    // - Normal execution: wall clock is on the trigger date (Jan/Apr/Jul/Oct 1 midnight),
+    //   so new Date() correctly identifies the first day of the new quarter.
+    // - Past-due execution (timer.isPastDue === true): Azure is catching up a missed run;
+    //   the wall clock may be in a different month. Use scheduleStatus.last (the originally
+    //   scheduled occurrence) to anchor to the correct trigger date instead.
+    const anchorDate =
+      timer.isPastDue && timer.scheduleStatus?.last
+        ? new Date(timer.scheduleStatus.last)
+        : new Date();
+    const quarter = getPriorQuarter(anchorDate);
 
     // If an existing PENDING_APPROVAL levy is found, notifications may not have been
     // delivered on a prior crashed run. Re-attempt them (fire-and-forget; idempotent).
@@ -65,10 +69,23 @@ export async function sscLevyTimerHandler(
       });
     } catch (createErr: unknown) {
       // Cosmos 409 Conflict = concurrent invocation already created the doc.
-      // Treat as idempotent success — the other invocation will send notifications.
+      // We can't assume the winner sent notifications (it may have crashed), so read
+      // the existing doc and retry notifications if it's still PENDING_APPROVAL.
       const cosmosErr = createErr as { code?: number };
       if (cosmosErr?.code === 409) {
-        context.log(`SSC_LEVY_SKIP_CONFLICT quarter=${quarter} (concurrent creation)`);
+        context.log(`SSC_LEVY_SKIP_CONFLICT quarter=${quarter} (concurrent creation) — retrying notifications`);
+        const created = await sscLevyRepo.getLevyByQuarter(quarter);
+        if (created?.status === 'PENDING_APPROVAL') {
+          const notifResults = await Promise.allSettled([
+            sendOwnerFcmNotification(created),
+            sendOwnerEmail(created),
+          ]);
+          for (const r of notifResults) {
+            if (r.status === 'rejected') {
+              context.error(`SSC_LEVY_NOTIFICATION_FAILED levyId=${created.id}`, r.reason);
+            }
+          }
+        }
         return;
       }
       throw createErr;

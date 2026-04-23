@@ -153,15 +153,51 @@ describe('sscLevyTimerHandler', () => {
     expect(created.status).toBe('PENDING_APPROVAL');
   });
 
-  it('treats Cosmos 409 on createLevy as idempotent success (no throw)', async () => {
-    vi.mocked(sscLevyRepo.getLevyByQuarter).mockResolvedValue(null);
+  it('treats Cosmos 409 on createLevy as idempotent and retries notifications if PENDING_APPROVAL', async () => {
+    // First getLevyByQuarter = null (read-before-create), then 409 on create,
+    // then getLevyByQuarter read in the 409 handler returns PENDING_APPROVAL.
+    vi.mocked(sscLevyRepo.getLevyByQuarter)
+      .mockResolvedValueOnce(null)             // initial check: no levy yet
+      .mockResolvedValueOnce(sampleLevy);      // post-409: winner created it
+
     vi.mocked(calculateQuarterlyGmv).mockResolvedValue(10_000_000);
     const conflict = Object.assign(new Error('Conflict'), { code: 409 });
     vi.mocked(sscLevyRepo.createLevy).mockRejectedValue(conflict);
 
-    // Should not throw — 409 is idempotent
+    const { sendOwnerFcmNotification, sendOwnerEmail } = await import(
+      '../../../../src/services/ssc-levy.service.js'
+    );
+
     await expect(sscLevyTimerHandler(mockTimer, mockCtx)).resolves.toBeUndefined();
     expect(mockCtx.log).toHaveBeenCalledWith(expect.stringContaining('SSC_LEVY_SKIP_CONFLICT'));
+    // Notifications should be retried in case winner crashed after create
+    expect(vi.mocked(sendOwnerFcmNotification)).toHaveBeenCalledOnce();
+    expect(vi.mocked(sendOwnerEmail)).toHaveBeenCalledOnce();
+  });
+
+  it('uses scheduleStatus.last anchor when isPastDue (late replay after downtime)', async () => {
+    // Simulate an Apr 1 run being replayed in July (isPastDue=true).
+    // scheduleStatus.last = Jan 1 (previous occurrence before the Apr 1 trigger).
+    // Wait — for isPastDue on the Apr 1 trigger replayed in July:
+    // scheduleStatus.last would be Apr 1 (the missed scheduled occurrence itself).
+    // getPriorQuarter('2026-04-01') = Q1, which is correct.
+    const pastDueTimer: Timer = {
+      isPastDue: true,
+      schedule: { adjustForDST: false },
+      scheduleStatus: {
+        last: '2026-04-01T00:00:00.000Z',  // the missed Apr 1 occurrence
+        next: '2026-07-01T00:00:00.000Z',
+        lastUpdated: '2026-04-01T00:00:00.000Z',
+      },
+    };
+    vi.mocked(sscLevyRepo.getLevyByQuarter).mockResolvedValue(null);
+    vi.mocked(calculateQuarterlyGmv).mockResolvedValue(10_000_000);
+    vi.mocked(sscLevyRepo.createLevy).mockResolvedValue({ ...sampleLevy, quarter: '2026-Q1', id: '2026-Q1' });
+
+    await sscLevyTimerHandler(pastDueTimer, mockCtx);
+
+    const created = vi.mocked(sscLevyRepo.createLevy).mock.calls[0]![0]!;
+    expect(created.quarter).toBe('2026-Q1');
   });
 });
 
