@@ -8,7 +8,7 @@ export const ConfidenceScoreQuerySchema = z.object({
 export const ConfidenceScoreResponseSchema = z.object({
   onTimePercent: z.number().min(0).max(100),
   areaRating: z.number().min(0).max(5).nullable(),
-  nearestEtaMinutes: z.number().nullable(),
+  nearestEtaMinutes: z.number().min(0).nullable(),
   dataPointCount: z.number().int().nonnegative(),
   isLimitedData: z.boolean(),
 });
