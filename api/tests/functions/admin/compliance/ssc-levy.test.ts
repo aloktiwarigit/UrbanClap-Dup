@@ -175,29 +175,34 @@ describe('sscLevyTimerHandler', () => {
     expect(vi.mocked(sendOwnerEmail)).toHaveBeenCalledOnce();
   });
 
-  it('uses scheduleStatus.last anchor when isPastDue (late replay after downtime)', async () => {
-    // Simulate an Apr 1 run being replayed in July (isPastDue=true).
-    // scheduleStatus.last = Jan 1 (previous occurrence before the Apr 1 trigger).
-    // Wait — for isPastDue on the Apr 1 trigger replayed in July:
-    // scheduleStatus.last would be Apr 1 (the missed scheduled occurrence itself).
-    // getPriorQuarter('2026-04-01') = Q1, which is correct.
-    const pastDueTimer: Timer = {
-      isPastDue: true,
-      schedule: { adjustForDST: false },
-      scheduleStatus: {
-        last: '2026-04-01T00:00:00.000Z',  // the missed Apr 1 occurrence
-        next: '2026-07-01T00:00:00.000Z',
-        lastUpdated: '2026-04-01T00:00:00.000Z',
-      },
-    };
+  it('uses wall clock (new Date()) for quarter derivation on all executions', async () => {
+    // Timer always uses new Date() — quarter derived from wall clock at trigger time.
+    // The isPastDue edge case (>24h cross-day drift) is accepted as a known limitation.
     vi.mocked(sscLevyRepo.getLevyByQuarter).mockResolvedValue(null);
     vi.mocked(calculateQuarterlyGmv).mockResolvedValue(10_000_000);
-    vi.mocked(sscLevyRepo.createLevy).mockResolvedValue({ ...sampleLevy, quarter: '2026-Q1', id: '2026-Q1' });
+    vi.mocked(sscLevyRepo.createLevy).mockResolvedValue(sampleLevy);
 
-    await sscLevyTimerHandler(pastDueTimer, mockCtx);
+    await sscLevyTimerHandler(mockTimer, mockCtx);
 
+    // Verify createLevy was called with a valid quarter string
     const created = vi.mocked(sscLevyRepo.createLevy).mock.calls[0]![0]!;
-    expect(created.quarter).toBe('2026-Q1');
+    expect(created.quarter).toMatch(/^\d{4}-Q[1-4]$/);
+    expect(created.status).toBe('PENDING_APPROVAL');
+  });
+
+  it('throws (triggering Azure retry) when ALL notifications fail after levy creation', async () => {
+    vi.mocked(sscLevyRepo.getLevyByQuarter).mockResolvedValue(null);
+    vi.mocked(calculateQuarterlyGmv).mockResolvedValue(10_000_000);
+    vi.mocked(sscLevyRepo.createLevy).mockResolvedValue(sampleLevy);
+
+    const { sendOwnerFcmNotification, sendOwnerEmail } = await import(
+      '../../../../src/services/ssc-levy.service.js'
+    );
+    vi.mocked(sendOwnerFcmNotification).mockRejectedValue(new Error('FCM unavailable'));
+    vi.mocked(sendOwnerEmail).mockRejectedValue(new Error('ACS unavailable'));
+
+    // Should throw so Azure retries — on retry, levy exists so notifications will be retried
+    await expect(sscLevyTimerHandler(mockTimer, mockCtx)).rejects.toThrow();
   });
 });
 

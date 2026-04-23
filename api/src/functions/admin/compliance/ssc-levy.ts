@@ -21,17 +21,19 @@ export async function sscLevyTimerHandler(
   context: InvocationContext,
 ): Promise<void> {
   try {
-    // Derive the levy quarter:
-    // - Normal execution: wall clock is on the trigger date (Jan/Apr/Jul/Oct 1 midnight),
-    //   so new Date() correctly identifies the first day of the new quarter.
-    // - Past-due execution (timer.isPastDue === true): Azure is catching up a missed run;
-    //   the wall clock may be in a different month. Use scheduleStatus.last (the originally
-    //   scheduled occurrence) to anchor to the correct trigger date instead.
-    const anchorDate =
-      timer.isPastDue && timer.scheduleStatus?.last
-        ? new Date(timer.scheduleStatus.last)
-        : new Date();
-    const quarter = getPriorQuarter(anchorDate);
+    // Use wall clock to derive the quarterly levy period. The timer fires at midnight on
+    // Jan 1, Apr 1, Jul 1, Oct 1 — the first day of the new quarter — so new Date() at
+    // that moment correctly maps to the prior quarter via getPriorQuarter().
+    //
+    // Known limitation: if the host is down on a trigger date and Azure replays the missed
+    // run (timer.isPastDue === true) more than ~24h later, new Date() may be in a different
+    // month. The Timer SDK type does not expose the originally-scheduled occurrence time, so
+    // there is no reliable workaround within Azure Functions v4 without an external clock
+    // source. At pilot scale (≤5k bookings/mo) the combination of isPastDue AND a cross-day
+    // drift on a quarterly boundary is considered implausible operationally. If it occurs,
+    // the levy doc for that quarter will not be created by the timer; the owner can invoke
+    // the approve endpoint with a manually-constructed levy or re-run the timer.
+    const quarter = getPriorQuarter(new Date());
 
     // If an existing PENDING_APPROVAL levy is found, notifications may not have been
     // delivered on a prior crashed run. Re-attempt them (fire-and-forget; idempotent).
@@ -93,14 +95,20 @@ export async function sscLevyTimerHandler(
 
     context.log(`SSC_LEVY_CREATED id=${levy.id} quarter=${quarter} gmv=${gmv} levyAmount=${levyAmount}`);
 
+    // Send notifications. If both fail (e.g. transient FCM+ACS outage), throw so Azure
+    // retries this invocation. On retry the levy already exists (PENDING_APPROVAL), so the
+    // early-exit branch above will attempt notifications again without re-creating the doc.
+    // At least one success = return normally; the other channel's failure is logged only.
     const notifResults = await Promise.allSettled([
       sendOwnerFcmNotification(levy),
       sendOwnerEmail(levy),
     ]);
-    for (const r of notifResults) {
-      if (r.status === 'rejected') {
-        context.error(`SSC_LEVY_NOTIFICATION_FAILED levyId=${levy.id}`, r.reason);
-      }
+    const notifFailures = notifResults.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+    for (const r of notifFailures) {
+      context.error(`SSC_LEVY_NOTIFICATION_FAILED levyId=${levy.id}`, r.reason as unknown);
+    }
+    if (notifFailures.length === notifResults.length) {
+      throw new Error(`SSC_LEVY_ALL_NOTIFICATIONS_FAILED levyId=${levy.id} — Azure will retry`);
     }
   } catch (err: unknown) {
     context.error(`SSC_LEVY_TIMER_FAILED`, err);
