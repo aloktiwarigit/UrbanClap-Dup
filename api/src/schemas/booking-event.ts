@@ -6,6 +6,7 @@ export const BookingEventDocSchema = z.object({
   event: z.string(),
   technicianId: z.string().optional(),
   adminId: z.string().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   ts: z.string().datetime(),
 });
 

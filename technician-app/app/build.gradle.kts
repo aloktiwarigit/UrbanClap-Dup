@@ -226,6 +226,32 @@ kover {
                     // by the Retrofit runtime (not unit-testable)
                     "*.JobOfferApiService",
                     "*.JobOfferApiService\$*",
+                    // ActiveJob Hilt DI module — @Provides methods are framework wiring
+                    "*.data.activeJob.di.*",
+                    // Room database singleton — no unit-testable logic
+                    "*.ActiveJobDatabase",
+                    "*.ActiveJobDatabase\$*",
+                    // ConnectivityObserver uses Android OS-level callbacks
+                    "*.ConnectivityObserver",
+                    "*.ConnectivityObserver\$*",
+                    // ActiveJobScreen generates Compose *Kt wrapper classes
+                    "*.ActiveJobScreenKt",
+                    "*.ActiveJobScreenKt\$*",
+                    // Room KSP-generated DAO/DB implementations contain anonymous Runnable/Callable
+                    // inner classes that execute on Room's executor threads — not unit-testable
+                    // without a real Android instrumented test environment.
+                    "*.ActiveJobDatabase_Impl",
+                    "*.ActiveJobDatabase_Impl\$*",
+                    "*.ActiveJobDao_Impl",
+                    "*.ActiveJobDao_Impl\$*",
+                    // ActiveJobRepositoryImpl.getActiveJob() is a polling flow (while(true) + delay)
+                    // that calls Firebase token + Retrofit. Repository is mocked in all consumer
+                    // tests; the flow lambda itself requires a real network stack to exercise.
+                    "*.ActiveJobRepositoryImpl\$getActiveJob\$1",
+                    // ActiveJobApiService is an internal Retrofit interface — methods invoked by
+                    // the Retrofit runtime, not unit-testable directly.
+                    "*.ActiveJobApiService",
+                    "*.ActiveJobApiService\$*",
                 )
             }
         }
@@ -258,6 +284,9 @@ dependencies {
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 
     implementation(libs.sentry.android)

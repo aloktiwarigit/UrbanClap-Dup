@@ -74,7 +74,7 @@ internal class JobOfferViewModel
                     }
                 _uiState.value =
                     when (result) {
-                        is JobOfferResult.Accepted -> JobOfferUiState.Accepted
+                        is JobOfferResult.Accepted -> JobOfferUiState.Accepted(result.bookingId)
                         is JobOfferResult.Expired -> JobOfferUiState.Expired
                         is JobOfferResult.Declined -> JobOfferUiState.Declined
                     }
