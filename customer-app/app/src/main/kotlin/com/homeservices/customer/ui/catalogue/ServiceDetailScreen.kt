@@ -13,9 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -36,6 +34,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.catalogue.model.Service
+import com.homeservices.customer.ui.shared.TrustDossierCard
+import com.homeservices.customer.ui.shared.TrustDossierUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -160,24 +160,11 @@ private fun ServiceDetailBody(
                 Spacer(Modifier.height(16.dp))
             }
 
-            // Trust Dossier stub
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                    Spacer(modifier = Modifier.padding(4.dp))
-                    Text(
-                        text = stringResource(R.string.trust_dossier_stub),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-            }
+            TrustDossierCard(
+                uiState = TrustDossierUiState.Unavailable,
+                compact = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
             Spacer(Modifier.height(16.dp))
 
             Button(
