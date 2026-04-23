@@ -17,11 +17,18 @@ import {
 } from '../../../services/ssc-levy.service.js';
 
 export async function sscLevyTimerHandler(
-  _timer: Timer,
+  timer: Timer,
   context: InvocationContext,
 ): Promise<void> {
   try {
-    const quarter = getPriorQuarter();
+    // Derive the prior quarter from the timer's last scheduled occurrence (not wall clock)
+    // so late Azure Function replays after downtime use the original trigger date rather
+    // than whichever date the retry happens to run on.
+    const scheduledAt = timer.scheduleStatus?.last
+      ? new Date(timer.scheduleStatus.last)
+      : new Date();
+    const quarter = getPriorQuarter(scheduledAt);
+
     const existing = await sscLevyRepo.getLevyByQuarter(quarter);
     if (existing) {
       context.log(`SSC_LEVY_SKIP quarter=${quarter} status=${existing.status}`);
@@ -32,13 +39,25 @@ export async function sscLevyTimerHandler(
     const gmv = await calculateQuarterlyGmv(fromIso, toIso);
     const levyAmount = computeLevyAmount(gmv);
 
-    const levy = await sscLevyRepo.createLevy({
-      quarter,
-      gmv,
-      levyRate: 0.01,
-      levyAmount,
-      status: 'PENDING_APPROVAL',
-    });
+    let levy: Awaited<ReturnType<typeof sscLevyRepo.createLevy>>;
+    try {
+      levy = await sscLevyRepo.createLevy({
+        quarter,
+        gmv,
+        levyRate: 0.01,
+        levyAmount,
+        status: 'PENDING_APPROVAL',
+      });
+    } catch (createErr: unknown) {
+      // Cosmos 409 Conflict = concurrent/replayed invocation already created the doc.
+      // Treat as idempotent success — no need to send notifications again.
+      const cosmosErr = createErr as { code?: number };
+      if (cosmosErr?.code === 409) {
+        context.log(`SSC_LEVY_SKIP_CONFLICT quarter=${quarter} (concurrent creation)`);
+        return;
+      }
+      throw createErr;
+    }
 
     context.log(`SSC_LEVY_CREATED id=${levy.id} quarter=${quarter} gmv=${gmv} levyAmount=${levyAmount}`);
 
@@ -70,7 +89,13 @@ export const approveSscLevyHandler: AdminHttpHandler = async (
   const levy = await sscLevyRepo.getLevyById(levyId);
   if (!levy) return { status: 404, jsonBody: { code: 'LEVY_NOT_FOUND' } };
 
-  if (levy.status !== 'PENDING_APPROVAL' && levy.status !== 'FAILED') {
+  // APPROVED is also retryable: it means a previous run wrote APPROVED then crashed
+  // before createTransfer() completed. The Razorpay idempotencyKey prevents double-charging.
+  if (
+    levy.status !== 'PENDING_APPROVAL' &&
+    levy.status !== 'FAILED' &&
+    levy.status !== 'APPROVED'
+  ) {
     return { status: 409, jsonBody: { code: 'INVALID_STATUS', currentStatus: levy.status } };
   }
 

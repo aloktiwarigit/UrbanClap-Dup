@@ -50,7 +50,16 @@ import { calculateQuarterlyGmv } from '../../../../src/services/ssc-levy.service
 import { createTransfer } from '../../../../src/services/razorpay.service.js';
 import { auditLog } from '../../../../src/services/auditLog.service.js';
 
-const mockTimer = {} as Timer;
+// scheduleStatus.last = Apr 1 so getPriorQuarter() returns Q1 deterministically in all tests
+const mockTimer: Timer = {
+  isPastDue: false,
+  schedule: { adjustForDST: false },
+  scheduleStatus: {
+    last: '2026-04-01T00:00:00.000Z',
+    next: '2026-07-01T00:00:00.000Z',
+    lastUpdated: '2026-04-01T00:00:00.000Z',
+  },
+};
 const mockCtx = { log: vi.fn(), error: vi.fn() } as unknown as InvocationContext;
 const superAdminCtx = { adminId: 'admin-1', role: 'super-admin' as const, sessionId: 's1' };
 const opsCtx = { adminId: 'admin-2', role: 'ops-manager' as const, sessionId: 's1' };
@@ -107,6 +116,37 @@ describe('sscLevyTimerHandler', () => {
     expect(vi.mocked(sendOwnerFcmNotification)).toHaveBeenCalledOnce();
     expect(vi.mocked(sendOwnerEmail)).toHaveBeenCalledOnce();
   });
+
+  it('derives quarter from timer.scheduleStatus.last (not wall clock)', async () => {
+    // Timer fired on Jul 1 — should compute Q2 regardless of current wall time
+    const julTimer: Timer = {
+      ...mockTimer,
+      scheduleStatus: {
+        last: '2026-07-01T00:00:00.000Z',
+        next: '2026-10-01T00:00:00.000Z',
+        lastUpdated: '2026-07-01T00:00:00.000Z',
+      },
+    };
+    vi.mocked(sscLevyRepo.getLevyByQuarter).mockResolvedValue(null);
+    vi.mocked(calculateQuarterlyGmv).mockResolvedValue(5_000_000);
+    vi.mocked(sscLevyRepo.createLevy).mockResolvedValue({ ...sampleLevy, quarter: '2026-Q2', id: '2026-Q2' });
+
+    await sscLevyTimerHandler(julTimer, mockCtx);
+
+    const created = vi.mocked(sscLevyRepo.createLevy).mock.calls[0]![0]!;
+    expect(created.quarter).toBe('2026-Q2');
+  });
+
+  it('treats Cosmos 409 on createLevy as idempotent success (no throw)', async () => {
+    vi.mocked(sscLevyRepo.getLevyByQuarter).mockResolvedValue(null);
+    vi.mocked(calculateQuarterlyGmv).mockResolvedValue(10_000_000);
+    const conflict = Object.assign(new Error('Conflict'), { code: 409 });
+    vi.mocked(sscLevyRepo.createLevy).mockRejectedValue(conflict);
+
+    // Should not throw — 409 is idempotent
+    await expect(sscLevyTimerHandler(mockTimer, mockCtx)).resolves.toBeUndefined();
+    expect(mockCtx.log).toHaveBeenCalledWith(expect.stringContaining('SSC_LEVY_SKIP_CONFLICT'));
+  });
 });
 
 describe('approveSscLevyHandler', () => {
@@ -152,6 +192,21 @@ describe('approveSscLevyHandler', () => {
     expect(createTransfer).toHaveBeenCalledOnce();
     const secondUpdate = vi.mocked(sscLevyRepo.updateLevy).mock.calls[1]![2]!;
     expect(secondUpdate.status).toBe('TRANSFERRED');
+  });
+
+  it('allows re-approval (retry) when levy is stuck in APPROVED (crashed mid-flight)', async () => {
+    // APPROVED = previous run wrote APPROVED then crashed before createTransfer().
+    // The idempotencyKey prevents double-charging; the gate must allow the retry.
+    const approvedLevy = { ...sampleLevy, status: 'APPROVED' as const, approvedAt: '2026-04-01T01:00:00.000Z' };
+    vi.mocked(sscLevyRepo.getLevyById).mockResolvedValue(approvedLevy);
+    vi.mocked(sscLevyRepo.updateLevy).mockResolvedValue({ ...approvedLevy, status: 'TRANSFERRED' });
+    vi.mocked(createTransfer).mockResolvedValue({ transferId: 'trf_resume_ok' });
+
+    const res = await approveSscLevyHandler(makeReq(sampleLevy.id), mockCtx, superAdminCtx);
+
+    expect(res.status).toBe(200);
+    const body = res.jsonBody as Record<string, unknown>;
+    expect(body['status']).toBe('TRANSFERRED');
   });
 
   it('sets TRANSFERRED status and returns 200 on successful approval', async () => {
