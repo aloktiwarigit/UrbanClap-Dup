@@ -31,7 +31,7 @@ public class JobOfferScreenPaparazziTest {
 
     @Test
     @Ignore("goldens recorded on CI — see docs/patterns/paparazzi-cross-os-goldens.md")
-    public fun JobOfferScreen_offerArrived_lightTheme(): Unit {
+    public fun jobOfferScreen_offerArrived_lightTheme(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
                 JobOfferScreenContent(
@@ -45,7 +45,7 @@ public class JobOfferScreenPaparazziTest {
 
     @Test
     @Ignore("goldens recorded on CI — see docs/patterns/paparazzi-cross-os-goldens.md")
-    public fun JobOfferScreen_offerArrived_darkTheme(): Unit {
+    public fun jobOfferScreen_offerArrived_darkTheme(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = true) {
                 JobOfferScreenContent(
@@ -59,7 +59,7 @@ public class JobOfferScreenPaparazziTest {
 
     @Test
     @Ignore("goldens recorded on CI — see docs/patterns/paparazzi-cross-os-goldens.md")
-    public fun JobOfferScreen_lastFiveSeconds(): Unit {
+    public fun jobOfferScreen_lastFiveSeconds(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
                 JobOfferScreenContent(
@@ -73,7 +73,7 @@ public class JobOfferScreenPaparazziTest {
 
     @Test
     @Ignore("goldens recorded on CI — see docs/patterns/paparazzi-cross-os-goldens.md")
-    public fun JobOfferScreen_expired(): Unit {
+    public fun jobOfferScreen_expired(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
                 JobOfferScreenContent(

@@ -10,13 +10,13 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import retrofit2.Response
 import java.io.IOException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runTest
 
 @OptIn(ExperimentalCoroutinesApi::class)
 public class FcmTokenSyncUseCaseTest {
@@ -33,9 +33,7 @@ public class FcmTokenSyncUseCaseTest {
 
     private fun stubFirebaseToken(idToken: String): Unit {
         val tokenResult = mockk<GetTokenResult> { every { this@mockk.token } returns idToken }
-        val user = mockk<FirebaseUser> {
-            every { getIdToken(false) } returns Tasks.forResult(tokenResult)
-        }
+        val user = mockk<FirebaseUser> { every { getIdToken(false) } returns Tasks.forResult(tokenResult) }
         every { firebaseAuth.currentUser } returns user
     }
 

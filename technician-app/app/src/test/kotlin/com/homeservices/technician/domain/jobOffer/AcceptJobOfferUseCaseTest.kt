@@ -9,15 +9,15 @@ import com.homeservices.technician.domain.jobOffer.model.JobOfferResult
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.runTest
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import okhttp3.ResponseBody.Companion.toResponseBody
 import retrofit2.Response
 import java.io.IOException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runTest
 
 @OptIn(ExperimentalCoroutinesApi::class)
 public class AcceptJobOfferUseCaseTest {
@@ -34,9 +34,7 @@ public class AcceptJobOfferUseCaseTest {
 
     private fun stubFirebaseToken(token: String): Unit {
         val tokenResult = mockk<GetTokenResult> { every { this@mockk.token } returns token }
-        val user = mockk<FirebaseUser> {
-            every { getIdToken(false) } returns Tasks.forResult(tokenResult)
-        }
+        val user = mockk<FirebaseUser> { every { getIdToken(false) } returns Tasks.forResult(tokenResult) }
         every { firebaseAuth.currentUser } returns user
     }
 
