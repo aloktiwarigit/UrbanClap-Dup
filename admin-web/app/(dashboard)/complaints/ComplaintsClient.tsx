@@ -135,7 +135,18 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
       });
     });
     try {
-      await patchComplaintClient(id, { assigneeAdminId });
+      for (let attempt = 0; attempt < 4; attempt++) {
+        try {
+          await patchComplaintClient(id, { assigneeAdminId });
+          break; // success
+        } catch (err) {
+          if (err instanceof ApiError && err.status === 409 && attempt < 3) {
+            if (mutGenRef.current.get(gk) !== gen) { setError(String(err)); return; }
+            continue; // ETag conflict — retry
+          }
+          throw err;
+        }
+      }
     } catch (err) {
       if (mutGenRef.current.get(gk) !== gen) { setError(String(err)); return; }
       setComplaints((prev) => prev.map((x) => {

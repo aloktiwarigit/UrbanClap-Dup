@@ -2,31 +2,16 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getServerApiClient } from '@/lib/serverApi';
 import { ApiError } from '@/api/client';
-import { listComplaints, type ListComplaintsParams } from '@/api/complaints';
-import type { ApiClient } from '@/api/client';
+import { listComplaints } from '@/api/complaints';
 import type { Complaint } from '@/types/complaint';
 import { ComplaintsClient } from './ComplaintsClient';
 
 export const metadata: Metadata = { title: 'Complaints — Homeservices Admin' };
 
+// Single-page cap: a single consistent snapshot avoids the offset-shift race
+// where complaints inserted or status-changed between paginated reads can cause
+// duplicates or omissions. The board already shows "X of Y loaded" when total > PAGE_SIZE.
 const PAGE_SIZE = 100;
-
-async function fetchAllPages(
-  client: ApiClient,
-  baseParams: Omit<ListComplaintsParams, 'page' | 'pageSize'>,
-): Promise<{ items: Complaint[]; total: number }> {
-  const items: Complaint[] = [];
-  let page = 1;
-  let total = Infinity;
-  while (items.length < total) {
-    const data = await listComplaints(client, { ...baseParams, page, pageSize: PAGE_SIZE });
-    items.push(...data.items);
-    total = data.total;
-    if (data.items.length === 0) break;
-    page += 1;
-  }
-  return { items, total };
-}
 
 export default async function ComplaintsPage() {
   const client = await getServerApiClient();
@@ -34,14 +19,13 @@ export default async function ComplaintsPage() {
   let allComplaints: Complaint[] = [];
   let total = 0;
   try {
-    // Single query: active complaints are always included; resolved complaints are
-    // bounded to the last 30 days to cap volume. The API applies resolvedSince as
-    // "(NOT IS_DEFINED(resolvedAt) OR resolvedAt >= X)" so active items are never
-    // excluded. One snapshot avoids the dual-query race where a status flip between
-    // requests causes a complaint to be absent from both result sets.
-    const data = await fetchAllPages(client, {
+    // Single snapshot: resolvedSince includes active complaints (no resolvedAt)
+    // plus recently-resolved ones via the NOT IS_DEFINED guard in the repository.
+    const data = await listComplaints(client, {
       resolvedSince: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
       sortDir: 'asc',
+      page: 1,
+      pageSize: PAGE_SIZE,
     });
     allComplaints = data.items;
     total = data.total;
