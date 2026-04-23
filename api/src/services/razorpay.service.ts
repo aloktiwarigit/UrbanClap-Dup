@@ -30,3 +30,28 @@ export function verifyPaymentSignature(opts: {
     .digest('hex');
   return expected === opts.razorpaySignature;
 }
+
+export async function createTransfer(opts: {
+  accountId: string;
+  amount: number;
+  currency?: string;
+  notes?: Record<string, string>;
+  idempotencyKey?: string;
+}): Promise<{ transferId: string }> {
+  const result = await (getRazorpay().transfers.create as (
+    params: unknown,
+    callOpts?: unknown,
+  ) => Promise<{ id: string }>)(
+    {
+      account: opts.accountId,
+      amount: opts.amount,
+      currency: opts.currency ?? 'INR',
+      on_hold: 0,
+      ...(opts.notes && { notes: opts.notes }),
+    },
+    opts.idempotencyKey
+      ? { headers: { 'X-Razorpay-Idempotency-Key': opts.idempotencyKey } }
+      : undefined,
+  );
+  return { transferId: result.id };
+}
