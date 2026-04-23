@@ -9,8 +9,7 @@ export async function adminGetOrderHandler(
   _ctx: InvocationContext,
   _admin: AdminContext,
 ): Promise<HttpResponseInit> {
-
-  const id = (req.params as Record<string, string | undefined>)['id'];
+  const id = req.params['id'];
   if (!id) {
     return { status: 400, jsonBody: { code: 'MISSING_ID' } };
   }

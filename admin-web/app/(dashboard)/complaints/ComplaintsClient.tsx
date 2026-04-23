@@ -1,0 +1,239 @@
+'use client';
+
+import { useState, useCallback, useRef } from 'react';
+import { patchComplaintClient } from '@/api/complaints';
+import { ApiError } from '@/api/client';
+import { KanbanBoard } from '@/components/complaints/KanbanBoard';
+import type { Complaint, ComplaintResolutionCategory, ComplaintStatus } from '@/types/complaint';
+
+interface ComplaintsClientProps {
+  initialComplaints: Complaint[];
+  totalComplaints: number;
+}
+
+export function ComplaintsClient({ initialComplaints, totalComplaints }: ComplaintsClientProps) {
+  const [complaints, setComplaints] = useState<Complaint[]>(initialComplaints);
+  const [error, setError] = useState<string | null>(null);
+  // Always reflects the latest complaints state — updated on every render so
+  // handlers can read current values synchronously before queuing optimistic updates.
+  const complaintsRef = useRef(complaints);
+  complaintsRef.current = complaints;
+  // Per-mutation generation counters keyed by `${complaintId}:${field}`.
+  // Prevents a failed older mutation from rolling back a newer successful one,
+  // including the case where two identical values are sent concurrently.
+  const mutGenRef = useRef<Map<string, number>>(new Map());
+
+  const handleStatusChange = useCallback(async (id: string, status: ComplaintStatus) => {
+    // Read synchronously before queuing the optimistic update so prevStatus is
+    // always the server-confirmed value even under React's concurrent scheduling.
+    const prevStatus = complaintsRef.current.find((x) => x.id === id)?.status;
+    const gk = `${id}:status`;
+    const gen = (mutGenRef.current.get(gk) ?? 0) + 1;
+    mutGenRef.current.set(gk, gen);
+    setComplaints((prev) =>
+      prev.map((x) => (x.id === id ? { ...x, status, updatedAt: new Date().toISOString() } : x))
+    );
+    try {
+      for (let attempt = 0; attempt < 4; attempt++) {
+        try {
+          // First attempt guards with expectedStatus; on STATUS_CONFLICT retry we
+          // skip it so the operator's latest intent force-overwrites the concurrent change.
+          await patchComplaintClient(id, {
+            status,
+            ...(attempt === 0 && prevStatus !== undefined ? { expectedStatus: prevStatus } : {}),
+          });
+          break; // success
+        } catch (err) {
+          if (err instanceof ApiError && err.status === 409 && attempt < 3) {
+            if (mutGenRef.current.get(gk) !== gen) return;
+            continue; // retry without expectedStatus
+          }
+          throw err; // non-retryable or retries exhausted → outer catch
+        }
+      }
+    } catch (err) {
+      if (mutGenRef.current.get(gk) !== gen) return;
+      if (prevStatus !== undefined) {
+        setComplaints((prev) =>
+          prev.map((x) => (x.id === id && x.status === status ? { ...x, status: prevStatus } : x)),
+        );
+      }
+      setError(String(err));
+    }
+  }, []);
+
+  const handleAddNote = useCallback(async (id: string, note: string) => {
+    // Read synchronously before queueing the optimistic update so prevNotes and
+    // optimisticNote are guaranteed non-undefined when the async code runs.
+    const complaint = complaintsRef.current.find((x) => x.id === id);
+    const prevNotes: Complaint['internalNotes'] = complaint?.internalNotes ?? [];
+    // Keep a reference to the exact optimistic object so rollback can find it by
+    // identity, even after concurrent requests shift other items in the array.
+    const optimisticNote: Complaint['internalNotes'][number] = {
+      note,
+      adminId: 'me',
+      createdAt: new Date().toISOString(),
+    };
+    setComplaints((prev) =>
+      prev.map((x) =>
+        x.id === id
+          ? { ...x, internalNotes: [...x.internalNotes, optimisticNote], updatedAt: new Date().toISOString() }
+          : x,
+      ),
+    );
+    try {
+      // Note append is commutative — retry up to 3 times on ETag 409 conflicts.
+      let updated: Complaint | undefined;
+      for (let attempt = 0; attempt < 4; attempt++) {
+        try {
+          updated = await patchComplaintClient(id, { note });
+          break;
+        } catch (err) {
+          if (err instanceof ApiError && err.status === 409 && attempt < 3) continue;
+          throw err;
+        }
+      }
+      if (updated === undefined) throw new Error('patchComplaintClient: unexpected undefined');
+      const confirmedUpdate = updated; // const for TypeScript to narrow inside callback
+      // Merge: take server-confirmed notes, then append any optimistic notes added
+      // after this request was dispatched (notes at indices > prevNotes.length).
+      // Using dispatch-time prevNotes.length (not confirmedUpdate.internalNotes.length) to
+      // stay correct when out-of-order resolution shifts server note counts.
+      setComplaints((prev) =>
+        prev.map((x) => {
+          if (x.id !== id) return x;
+          const newerOptimistic = x.internalNotes.slice(prevNotes.length + 1);
+          return { ...x, internalNotes: [...confirmedUpdate.internalNotes, ...newerOptimistic] };
+        }),
+      );
+    } catch (err) {
+      // Remove the failed note by object identity — safe when concurrent requests
+      // have already replaced other array positions with server-confirmed objects.
+      setComplaints((prev) =>
+        prev.map((x) => {
+          if (x.id !== id) return x;
+          const idx = x.internalNotes.indexOf(optimisticNote);
+          if (idx === -1) return x; // Already replaced by a server-confirmed note
+          return {
+            ...x,
+            internalNotes: [...x.internalNotes.slice(0, idx), ...x.internalNotes.slice(idx + 1)],
+          };
+        }),
+      );
+      setError(String(err));
+    }
+  }, []);
+
+  const handleReassign = useCallback(async (id: string, assigneeAdminId: string | null) => {
+    const prevAssignee = complaintsRef.current.find((x) => x.id === id)?.assigneeAdminId;
+    const gk = `${id}:assignee`;
+    const gen = (mutGenRef.current.get(gk) ?? 0) + 1;
+    mutGenRef.current.set(gk, gen);
+    setComplaints((prev) =>
+      prev.map((x) => {
+        if (x.id !== id) return x;
+        const { assigneeAdminId: _a, ...base } = x;
+        return assigneeAdminId !== null
+          ? { ...base, assigneeAdminId, updatedAt: new Date().toISOString() }
+          : { ...base, updatedAt: new Date().toISOString() };
+      }),
+    );
+    try {
+      for (let attempt = 0; attempt < 4; attempt++) {
+        try {
+          await patchComplaintClient(id, { assigneeAdminId });
+          break; // success
+        } catch (err) {
+          if (err instanceof ApiError && err.status === 409 && attempt < 3) {
+            if (mutGenRef.current.get(gk) !== gen) return;
+            continue; // ETag conflict — retry
+          }
+          throw err;
+        }
+      }
+    } catch (err) {
+      if (mutGenRef.current.get(gk) !== gen) return;
+      setComplaints((prev) =>
+        prev.map((x) => {
+          if (x.id !== id) return x;
+          const { assigneeAdminId: _a, ...base } = x;
+          return prevAssignee !== undefined ? { ...base, assigneeAdminId: prevAssignee } : base;
+        }),
+      );
+      setError(String(err));
+    }
+  }, []);
+
+  const handleResolve = useCallback(async (id: string, resolutionCategory: ComplaintResolutionCategory) => {
+    const complaint = complaintsRef.current.find((x) => x.id === id);
+    const prevStatus = complaint?.status;
+    const prevCategory = complaint?.resolutionCategory;
+    const gk = `${id}:status`; // shares key with handleStatusChange — both mutate status
+    const gen = (mutGenRef.current.get(gk) ?? 0) + 1;
+    mutGenRef.current.set(gk, gen);
+    setComplaints((prev) =>
+      prev.map((x) =>
+        x.id === id
+          ? { ...x, status: 'RESOLVED', resolutionCategory, updatedAt: new Date().toISOString() }
+          : x,
+      ),
+    );
+    try {
+      for (let attempt = 0; attempt < 4; attempt++) {
+        try {
+          await patchComplaintClient(id, {
+            status: 'RESOLVED',
+            resolutionCategory,
+            ...(attempt === 0 && prevStatus !== undefined ? { expectedStatus: prevStatus } : {}),
+          });
+          break; // success
+        } catch (err) {
+          if (err instanceof ApiError && err.status === 409 && attempt < 3) {
+            if (mutGenRef.current.get(gk) !== gen) return;
+            continue; // retry without expectedStatus
+          }
+          throw err; // non-retryable or retries exhausted → outer catch
+        }
+      }
+    } catch (err) {
+      if (mutGenRef.current.get(gk) !== gen) return;
+      if (prevStatus !== undefined) {
+        setComplaints((prev) =>
+          prev.map((x) => {
+            if (x.id !== id) return x;
+            const { resolutionCategory: _r, ...base } = x;
+            return prevCategory !== undefined
+              ? { ...base, status: prevStatus, resolutionCategory: prevCategory }
+              : { ...base, status: prevStatus };
+          }),
+        );
+      }
+      setError(String(err));
+    }
+  }, []);
+
+  return (
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-semibold">Complaints</h1>
+        <span className="text-sm text-gray-500">
+          {totalComplaints > complaints.length
+            ? `${complaints.length} of ${totalComplaints} loaded`
+            : `${totalComplaints} total`}
+        </span>
+      </div>
+
+      {error && (
+        <p className="text-red-600 my-4 text-sm">{error}</p>
+      )}
+
+      <KanbanBoard
+        complaints={complaints}
+        onStatusChange={(id, status) => { void handleStatusChange(id, status); }}
+        onAddNote={(id, note) => { void handleAddNote(id, note); }}
+        onReassign={(id, adminId) => { void handleReassign(id, adminId); }}
+        onResolve={(id, category) => { void handleResolve(id, category); }}
+      />
+    </div>
+  );
+}

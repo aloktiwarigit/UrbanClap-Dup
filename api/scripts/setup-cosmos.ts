@@ -30,6 +30,20 @@ async function main() {
     });
     console.log(`Container '${c.id}' ready.`);
   }
+
+  // Complaints container needs a custom indexing policy to exclude note bodies
+  // (reduces RU/write cost at scale) — must match src/cosmos/seeds/complaints.ts.
+  await database.containers.createIfNotExists({
+    id: 'complaints',
+    partitionKey: { paths: ['/id'] },
+    defaultTtl: -1,
+    indexingPolicy: {
+      indexingMode: 'consistent',
+      includedPaths: [{ path: '/*' }],
+      excludedPaths: [{ path: '/internalNotes/*' }],
+    },
+  });
+  console.log(`Container 'complaints' ready.`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
