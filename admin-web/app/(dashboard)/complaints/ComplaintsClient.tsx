@@ -14,21 +14,25 @@ interface ComplaintsClientProps {
 export function ComplaintsClient({ initialComplaints, totalComplaints }: ComplaintsClientProps) {
   const [complaints, setComplaints] = useState<Complaint[]>(initialComplaints);
   const [error, setError] = useState<string | null>(null);
+  // Always reflects the latest complaints state — updated on every render so
+  // handlers can read current values synchronously before queuing optimistic updates.
+  const complaintsRef = useRef(complaints);
+  complaintsRef.current = complaints;
   // Per-mutation generation counters keyed by `${complaintId}:${field}`.
   // Prevents a failed older mutation from rolling back a newer successful one,
   // including the case where two identical values are sent concurrently.
   const mutGenRef = useRef<Map<string, number>>(new Map());
 
   const handleStatusChange = useCallback(async (id: string, status: ComplaintStatus) => {
-    let prevStatus: ComplaintStatus | undefined;
+    // Read synchronously before queuing the optimistic update so prevStatus is
+    // always the server-confirmed value even under React's concurrent scheduling.
+    const prevStatus = complaintsRef.current.find((x) => x.id === id)?.status;
     const gk = `${id}:status`;
     const gen = (mutGenRef.current.get(gk) ?? 0) + 1;
     mutGenRef.current.set(gk, gen);
-    setComplaints((prev) => {
-      const c = prev.find((x) => x.id === id);
-      prevStatus = c?.status;
-      return prev.map((x) => (x.id === id ? { ...x, status, updatedAt: new Date().toISOString() } : x));
-    });
+    setComplaints((prev) =>
+      prev.map((x) => (x.id === id ? { ...x, status, updatedAt: new Date().toISOString() } : x))
+    );
     try {
       for (let attempt = 0; attempt < 4; attempt++) {
         try {
@@ -51,7 +55,7 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
       if (mutGenRef.current.get(gk) !== gen) return;
       if (prevStatus !== undefined) {
         setComplaints((prev) =>
-          prev.map((x) => (x.id === id && x.status === status ? { ...x, status: prevStatus! } : x)),
+          prev.map((x) => (x.id === id && x.status === status ? { ...x, status: prevStatus } : x)),
         );
       }
       setError(String(err));
@@ -59,24 +63,24 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
   }, []);
 
   const handleAddNote = useCallback(async (id: string, note: string) => {
-    let prevNotes: Complaint['internalNotes'] | undefined;
-    // Keep a reference to the exact optimistic object so rollback can find it by identity,
-    // even after concurrent requests shift other items in the array.
-    let optimisticNote: Complaint['internalNotes'][number] | undefined;
-    setComplaints((prev) => {
-      const c = prev.find((x) => x.id === id);
-      prevNotes = c?.internalNotes;
-      optimisticNote = { note, adminId: 'me', createdAt: new Date().toISOString() };
-      return prev.map((x) =>
+    // Read synchronously before queueing the optimistic update so prevNotes and
+    // optimisticNote are guaranteed non-undefined when the async code runs.
+    const complaint = complaintsRef.current.find((x) => x.id === id);
+    const prevNotes: Complaint['internalNotes'] = complaint?.internalNotes ?? [];
+    // Keep a reference to the exact optimistic object so rollback can find it by
+    // identity, even after concurrent requests shift other items in the array.
+    const optimisticNote: Complaint['internalNotes'][number] = {
+      note,
+      adminId: 'me',
+      createdAt: new Date().toISOString(),
+    };
+    setComplaints((prev) =>
+      prev.map((x) =>
         x.id === id
-          ? {
-              ...x,
-              internalNotes: [...x.internalNotes, optimisticNote!],
-              updatedAt: new Date().toISOString(),
-            }
+          ? { ...x, internalNotes: [...x.internalNotes, optimisticNote], updatedAt: new Date().toISOString() }
           : x,
-      );
-    });
+      ),
+    );
     try {
       // Note append is commutative — retry up to 3 times on ETag 409 conflicts.
       let updated: Complaint | undefined;
@@ -98,7 +102,7 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
       setComplaints((prev) =>
         prev.map((x) => {
           if (x.id !== id) return x;
-          const newerOptimistic = x.internalNotes.slice(prevNotes!.length + 1);
+          const newerOptimistic = x.internalNotes.slice(prevNotes.length + 1);
           return { ...x, internalNotes: [...confirmedUpdate.internalNotes, ...newerOptimistic] };
         }),
       );
@@ -108,7 +112,7 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
       setComplaints((prev) =>
         prev.map((x) => {
           if (x.id !== id) return x;
-          const idx = x.internalNotes.indexOf(optimisticNote!);
+          const idx = x.internalNotes.indexOf(optimisticNote);
           if (idx === -1) return x; // Already replaced by a server-confirmed note
           return {
             ...x,
@@ -121,19 +125,19 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
   }, []);
 
   const handleReassign = useCallback(async (id: string, assigneeAdminId: string | null) => {
-    let prevAssignee: string | undefined;
+    const prevAssignee = complaintsRef.current.find((x) => x.id === id)?.assigneeAdminId;
     const gk = `${id}:assignee`;
     const gen = (mutGenRef.current.get(gk) ?? 0) + 1;
     mutGenRef.current.set(gk, gen);
-    setComplaints((prev) => {
-      const c = prev.find((x) => x.id === id);
-      prevAssignee = c?.assigneeAdminId;
-      return prev.map((x) => {
+    setComplaints((prev) =>
+      prev.map((x) => {
         if (x.id !== id) return x;
         const { assigneeAdminId: _a, ...base } = x;
-        return assigneeAdminId !== null ? { ...base, assigneeAdminId, updatedAt: new Date().toISOString() } : { ...base, updatedAt: new Date().toISOString() };
-      });
-    });
+        return assigneeAdminId !== null
+          ? { ...base, assigneeAdminId, updatedAt: new Date().toISOString() }
+          : { ...base, updatedAt: new Date().toISOString() };
+      }),
+    );
     try {
       for (let attempt = 0; attempt < 4; attempt++) {
         try {
@@ -149,31 +153,31 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
       }
     } catch (err) {
       if (mutGenRef.current.get(gk) !== gen) return;
-      setComplaints((prev) => prev.map((x) => {
-        if (x.id !== id) return x;
-        const { assigneeAdminId: _a, ...base } = x;
-        return prevAssignee !== undefined ? { ...base, assigneeAdminId: prevAssignee } : base;
-      }));
+      setComplaints((prev) =>
+        prev.map((x) => {
+          if (x.id !== id) return x;
+          const { assigneeAdminId: _a, ...base } = x;
+          return prevAssignee !== undefined ? { ...base, assigneeAdminId: prevAssignee } : base;
+        }),
+      );
       setError(String(err));
     }
   }, []);
 
   const handleResolve = useCallback(async (id: string, resolutionCategory: ComplaintResolutionCategory) => {
-    let prevStatus: ComplaintStatus | undefined;
-    let prevCategory: ComplaintResolutionCategory | undefined;
+    const complaint = complaintsRef.current.find((x) => x.id === id);
+    const prevStatus = complaint?.status;
+    const prevCategory = complaint?.resolutionCategory;
     const gk = `${id}:status`; // shares key with handleStatusChange — both mutate status
     const gen = (mutGenRef.current.get(gk) ?? 0) + 1;
     mutGenRef.current.set(gk, gen);
-    setComplaints((prev) => {
-      const c = prev.find((x) => x.id === id);
-      prevStatus = c?.status;
-      prevCategory = c?.resolutionCategory;
-      return prev.map((x) =>
+    setComplaints((prev) =>
+      prev.map((x) =>
         x.id === id
           ? { ...x, status: 'RESOLVED', resolutionCategory, updatedAt: new Date().toISOString() }
           : x,
-      );
-    });
+      ),
+    );
     try {
       for (let attempt = 0; attempt < 4; attempt++) {
         try {
@@ -199,8 +203,8 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
             if (x.id !== id) return x;
             const { resolutionCategory: _r, ...base } = x;
             return prevCategory !== undefined
-              ? { ...base, status: prevStatus!, resolutionCategory: prevCategory }
-              : { ...base, status: prevStatus! };
+              ? { ...base, status: prevStatus, resolutionCategory: prevCategory }
+              : { ...base, status: prevStatus };
           }),
         );
       }
