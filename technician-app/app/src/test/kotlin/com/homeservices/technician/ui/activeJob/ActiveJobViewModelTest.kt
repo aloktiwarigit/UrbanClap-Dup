@@ -220,6 +220,15 @@ public class ActiveJobViewModelTest {
         }
 
     @Test
+    public fun `onPhotoConfirmed is no-op when pendingPhotoStage is null`(): Unit =
+        runTest {
+            // pendingPhotoStage is null by default — onPhotoConfirmed should return early
+            viewModel.onPhotoConfirmed("/cache/p.jpg")
+            val state = viewModel.uiState.value as ActiveJobUiState.Active
+            assertThat(state.photoUploadInProgress).isFalse()
+        }
+
+    @Test
     public fun `onTransitionRequested sets pendingPhotoStage`(): Unit =
         runTest {
             viewModel.onTransitionRequested("EN_ROUTE")
@@ -270,5 +279,75 @@ public class ActiveJobViewModelTest {
             assertThat(state.photoUploadInProgress).isFalse()
             assertThat(state.photoUploadError).isEqualTo("Network timeout")
             assertThat(state.pendingPhotoStage).isEqualTo("REACHED")
+        }
+
+    @Test
+    public fun `onPhotoConfirmed EN_ROUTE fires startTrip and emits navigation event`(): Unit =
+        runTest(testDispatcher) {
+            coEvery { uploadJobPhotoUseCase.execute("bk-1", "EN_ROUTE", "/cache/p.jpg") } returns
+                Result.success("https://storage/photo.jpg")
+            coEvery { startTripUseCase("bk-1") } returns
+                Pair(
+                    Result.success(aJob(ActiveJobStatus.EN_ROUTE)),
+                    NavigationEvent.Maps("google.navigation:q=12.9,77.6"),
+                )
+
+            val events = mutableListOf<NavigationEvent>()
+            val job = launch { viewModel.navigationEvents.collect { events.add(it) } }
+
+            viewModel.onTransitionRequested("EN_ROUTE")
+            viewModel.onPhotoConfirmed("/cache/p.jpg")
+            advanceUntilIdle()
+            job.cancel()
+
+            assertThat(events).hasSize(1)
+            assertThat(events[0]).isEqualTo(NavigationEvent.Maps("google.navigation:q=12.9,77.6"))
+            coVerify(exactly = 1) { startTripUseCase("bk-1") }
+        }
+
+    @Test
+    public fun `onPhotoConfirmed REACHED fires markReachedUseCase`(): Unit =
+        runTest(testDispatcher) {
+            coEvery { uploadJobPhotoUseCase.execute("bk-1", "REACHED", "/cache/p.jpg") } returns
+                Result.success("https://storage/photo.jpg")
+            coEvery { markReachedUseCase("bk-1") } returns Result.success(aJob(ActiveJobStatus.REACHED))
+
+            viewModel.onTransitionRequested("REACHED")
+            viewModel.onPhotoConfirmed("/cache/p.jpg")
+            advanceUntilIdle()
+
+            coVerify(exactly = 1) { markReachedUseCase("bk-1") }
+        }
+
+    @Test
+    public fun `onPhotoConfirmed COMPLETED fires completeJobUseCase`(): Unit =
+        runTest(testDispatcher) {
+            coEvery { uploadJobPhotoUseCase.execute("bk-1", "COMPLETED", "/cache/p.jpg") } returns
+                Result.success("https://storage/photo.jpg")
+            coEvery { completeJobUseCase("bk-1") } returns Result.success(aJob(ActiveJobStatus.COMPLETED))
+
+            viewModel.onTransitionRequested("COMPLETED")
+            viewModel.onPhotoConfirmed("/cache/p.jpg")
+            advanceUntilIdle()
+
+            coVerify(exactly = 1) { completeJobUseCase("bk-1") }
+        }
+
+    @Test
+    public fun `onPhotoConfirmed EN_ROUTE with null navEvent — no navigation emitted`(): Unit =
+        runTest(testDispatcher) {
+            coEvery { uploadJobPhotoUseCase.execute("bk-1", "EN_ROUTE", "/cache/p.jpg") } returns
+                Result.success("https://storage/photo.jpg")
+            coEvery { startTripUseCase("bk-1") } returns Pair(Result.success(aJob(ActiveJobStatus.EN_ROUTE)), null)
+
+            val events = mutableListOf<NavigationEvent>()
+            val job = launch { viewModel.navigationEvents.collect { events.add(it) } }
+
+            viewModel.onTransitionRequested("EN_ROUTE")
+            viewModel.onPhotoConfirmed("/cache/p.jpg")
+            advanceUntilIdle()
+            job.cancel()
+
+            assertThat(events).isEmpty()
         }
 }
