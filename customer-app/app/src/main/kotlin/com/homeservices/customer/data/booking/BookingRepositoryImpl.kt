@@ -1,11 +1,15 @@
 package com.homeservices.customer.data.booking
 
 import com.homeservices.customer.data.booking.remote.BookingApiService
+import com.homeservices.customer.data.booking.remote.dto.AddOnDecisionDto
+import com.homeservices.customer.data.booking.remote.dto.ApproveFinalPriceRequestDto
 import com.homeservices.customer.data.booking.remote.dto.ConfirmBookingRequestDto
 import com.homeservices.customer.data.booking.remote.dto.CreateBookingRequestDto
 import com.homeservices.customer.data.booking.remote.dto.LatLngDto
+import com.homeservices.customer.domain.booking.model.AddOnDecision
 import com.homeservices.customer.domain.booking.model.BookingRequest
 import com.homeservices.customer.domain.booking.model.BookingResult
+import com.homeservices.customer.domain.booking.model.PendingAddOn
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
@@ -55,4 +59,19 @@ internal class BookingRepositoryImpl
                     },
                 )
             }
+
+        override fun getBooking(bookingId: String): Flow<Result<List<PendingAddOn>>> = flow {
+            emit(runCatching { api.getBooking(bookingId).pendingAddOns.map { it.toDomain() } })
+        }
+
+        override fun approveFinalPrice(bookingId: String, decisions: List<AddOnDecision>): Flow<Result<Int>> = flow {
+            emit(
+                runCatching {
+                    api.approveFinalPrice(
+                        bookingId,
+                        ApproveFinalPriceRequestDto(decisions.map { AddOnDecisionDto(it.name, it.approved) }),
+                    ).finalAmount ?: 0
+                },
+            )
+        }
     }

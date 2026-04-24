@@ -269,6 +269,15 @@ kover {
                     // ConfidenceScoreRepositoryImpl — thin Retrofit wrapper, integration-tested via API layer
                     "*.ConfidenceScoreRepositoryImpl",
                     "*.ConfidenceScoreRepositoryImpl\$*",
+                    // PriceApprovalScreen — Compose UI, same rationale as other *Kt screen classes
+                    "*.PriceApprovalScreenKt",
+                    "*.PriceApprovalScreenKt\$*",
+                    // PriceApprovalUiState sealed class — data holders, no logic branches
+                    "*.PriceApprovalUiState",
+                    "*.PriceApprovalUiState\$*",
+                    // CustomerFirebaseMessagingService — Android OS entry-point, not unit-testable
+                    "*.CustomerFirebaseMessagingService",
+                    "*.CustomerFirebaseMessagingService\$*",
                 )
             }
         }
@@ -309,6 +318,7 @@ dependencies {
     // Firebase (BOM manages all Firebase library versions)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth.ktx)
+    implementation(libs.firebase.messaging)
 
     // Coroutines — play-services extensions (.await() on Task<T>)
     implementation(libs.kotlinx.coroutines.play.services)

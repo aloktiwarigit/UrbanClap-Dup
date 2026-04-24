@@ -40,3 +40,31 @@ public data class ConfirmBookingResponseDto(
     val bookingId: String,
     val status: String,
 )
+
+@JsonClass(generateAdapter = true)
+public data class PendingAddOnDto(
+    val name: String,
+    val price: Int,
+    val triggerDescription: String,
+) {
+    public fun toDomain(): com.homeservices.customer.domain.booking.model.PendingAddOn =
+        com.homeservices.customer.domain.booking.model.PendingAddOn(name, price, triggerDescription)
+}
+
+@JsonClass(generateAdapter = true)
+public data class GetBookingResponseDto(
+    val bookingId: String,
+    val status: String,
+    val amount: Int,
+    val finalAmount: Int?,
+    val pendingAddOns: List<PendingAddOnDto>,
+)
+
+@JsonClass(generateAdapter = true)
+public data class AddOnDecisionDto(val name: String, val approved: Boolean)
+
+@JsonClass(generateAdapter = true)
+public data class ApproveFinalPriceRequestDto(val decisions: List<AddOnDecisionDto>)
+
+@JsonClass(generateAdapter = true)
+public data class ApproveFinalPriceResponseDto(val bookingId: String, val status: String, val finalAmount: Int?)
