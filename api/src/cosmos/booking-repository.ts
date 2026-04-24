@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { getBookingsContainer } from './client.js';
 import type { BookingDoc, CreateBookingRequest } from '../schemas/booking.js';
+import type { PendingAddOn, AddOnDecision } from '../schemas/addon-approval.js';
 
 function now() { return new Date().toISOString(); }
 
@@ -64,6 +65,35 @@ export const bookingRepo = {
       parameters: [{ name: '@cutoff', value: olderThanIso }],
     }).fetchAll();
     return resources;
+  },
+
+  async requestAddOn(id: string, addOn: PendingAddOn): Promise<BookingDoc | null> {
+    const existing = await this.getById(id);
+    if (!existing || existing.status !== 'IN_PROGRESS') return null;
+    const updated: BookingDoc = {
+      ...existing,
+      status: 'AWAITING_PRICE_APPROVAL',
+      pendingAddOns: [...(existing.pendingAddOns ?? []), addOn],
+    };
+    const { resource } = await getBookingsContainer().item(id, id).replace<BookingDoc>(updated);
+    return resource!;
+  },
+
+  async applyAddOnDecisions(id: string, customerId: string, decisions: AddOnDecision[]): Promise<BookingDoc | null> {
+    const existing = await this.getById(id);
+    if (!existing || existing.customerId !== customerId) return null;
+    if (existing.status !== 'AWAITING_PRICE_APPROVAL') return null;
+    const pending = existing.pendingAddOns ?? [];
+    const approved = pending.filter(a => decisions.find(d => d.name === a.name && d.approved));
+    const updated: BookingDoc = {
+      ...existing,
+      status: 'IN_PROGRESS',
+      pendingAddOns: [],
+      approvedAddOns: [...(existing.approvedAddOns ?? []), ...approved],
+      finalAmount: (existing.finalAmount ?? existing.amount) + approved.reduce((s, a) => s + a.price, 0),
+    };
+    const { resource } = await getBookingsContainer().item(id, id).replace<BookingDoc>(updated);
+    return resource!;
   },
 
   async addPhoto(

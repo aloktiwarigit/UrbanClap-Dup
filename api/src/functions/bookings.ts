@@ -2,9 +2,12 @@ import type { HttpHandler } from '@azure/functions';
 import { app } from '@azure/functions';
 import { requireCustomer, type CustomerHttpHandler } from '../middleware/requireCustomer.js';
 import { CreateBookingRequestSchema, ConfirmBookingRequestSchema } from '../schemas/booking.js';
+import { RequestAddOnBodySchema, ApproveAddOnsBodySchema } from '../schemas/addon-approval.js';
 import { bookingRepo } from '../cosmos/booking-repository.js';
 import { createRazorpayOrder, verifyPaymentSignature } from '../services/razorpay.service.js';
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
+import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
+import { sendPriceApprovalPush } from '../services/fcm.service.js';
 
 const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
   const body = await req.json().catch(() => null);
@@ -49,5 +52,59 @@ const confirmHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
 export const createBookingHandler: HttpHandler = requireCustomer(createHandler);
 export const confirmBookingHandler: HttpHandler = requireCustomer(confirmHandler);
 
+const getBookingInner: CustomerHttpHandler = async (req, _ctx, customer) => {
+  const id = (req as unknown as { params: { id: string } }).params.id;
+  const booking = await bookingRepo.getById(id);
+  if (!booking) return { status: 404, jsonBody: { code: 'BOOKING_NOT_FOUND' } };
+  if (booking.customerId !== customer.customerId) return { status: 403, jsonBody: { code: 'FORBIDDEN' } };
+  return {
+    status: 200,
+    jsonBody: {
+      bookingId: booking.id, status: booking.status, amount: booking.amount,
+      finalAmount: booking.finalAmount ?? null,
+      pendingAddOns: booking.pendingAddOns ?? [],
+      approvedAddOns: booking.approvedAddOns ?? [],
+    },
+  };
+};
+export const getBookingHandler: HttpHandler = requireCustomer(getBookingInner);
+
+export const requestAddonHandler: HttpHandler = async (req, _ctx) => {
+  let uid: string;
+  try { ({ uid } = await verifyTechnicianToken(req)); }
+  catch { return { status: 401, jsonBody: { code: 'UNAUTHORIZED' } }; }
+  const id = (req as unknown as { params: { id: string } }).params.id;
+  const booking = await bookingRepo.getById(id);
+  if (!booking) return { status: 404, jsonBody: { code: 'BOOKING_NOT_FOUND' } };
+  if (booking.technicianId !== uid) return { status: 403, jsonBody: { code: 'FORBIDDEN' } };
+  const body = await req.json().catch(() => null);
+  const parsed = RequestAddOnBodySchema.safeParse(body);
+  if (!parsed.success) return { status: 422, jsonBody: { code: 'VALIDATION_ERROR', issues: parsed.error.issues } };
+  const updated = await bookingRepo.requestAddOn(id, parsed.data);
+  if (!updated) return { status: 409, jsonBody: { code: 'BOOKING_NOT_IN_PROGRESS' } };
+
+  try {
+    await sendPriceApprovalPush(booking.customerId, id);
+  } catch (err) {
+    console.error('[requestAddon] FCM push failed — booking is AWAITING_PRICE_APPROVAL but customer was not notified', { bookingId: id, err });
+  }
+
+  return { status: 200, jsonBody: { bookingId: updated.id, status: updated.status } };
+};
+
+const approveFinalPriceInner: CustomerHttpHandler = async (req, _ctx, customer) => {
+  const id = (req as unknown as { params: { id: string } }).params.id;
+  const body = await req.json().catch(() => null);
+  const parsed = ApproveAddOnsBodySchema.safeParse(body);
+  if (!parsed.success) return { status: 422, jsonBody: { code: 'VALIDATION_ERROR', issues: parsed.error.issues } };
+  const updated = await bookingRepo.applyAddOnDecisions(id, customer.customerId, parsed.data.decisions);
+  if (!updated) return { status: 409, jsonBody: { code: 'BOOKING_NOT_AWAITING_APPROVAL' } };
+  return { status: 200, jsonBody: { bookingId: updated.id, status: updated.status, finalAmount: updated.finalAmount } };
+};
+export const approveFinalPriceHandler: HttpHandler = requireCustomer(approveFinalPriceInner);
+
 app.http('createBooking', { route: 'v1/bookings', methods: ['POST'], handler: createBookingHandler });
 app.http('confirmBooking', { route: 'v1/bookings/{id}/confirm', methods: ['POST'], handler: confirmBookingHandler });
+app.http('getBooking', { route: 'v1/bookings/{id}', methods: ['GET'], handler: getBookingHandler });
+app.http('requestAddon', { route: 'v1/bookings/{id}/request-addon', methods: ['POST'], handler: requestAddonHandler });
+app.http('approveFinalPrice', { route: 'v1/bookings/{id}/approve-final-price', methods: ['POST'], handler: approveFinalPriceHandler });

@@ -13,4 +13,8 @@ internal object BookingRoutes {
     ) = "booking/slot/$serviceId/$categoryId"
 
     fun confirmedRoute(bookingId: String) = "booking/confirmed/$bookingId"
+
+    const val PRICE_APPROVAL = "booking/price-approval/{bookingId}"
+
+    fun priceApprovalRoute(bookingId: String) = "booking/price-approval/$bookingId"
 }

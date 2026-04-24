@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.fragment.app.FragmentActivity
 import com.homeservices.customer.data.auth.SessionManager
 import com.homeservices.customer.data.booking.PaymentResultBus
+import com.homeservices.customer.data.booking.PriceApprovalEventBus
 import com.homeservices.customer.di.BuildInfoProvider
 import com.homeservices.customer.domain.booking.model.PaymentResult
 import com.homeservices.customer.navigation.AppNavigation
@@ -26,6 +27,8 @@ public class MainActivity :
 
     @Inject public lateinit var paymentResultBus: PaymentResultBus
 
+    @Inject public lateinit var priceApprovalEventBus: PriceApprovalEventBus
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -33,6 +36,7 @@ public class MainActivity :
                 AppNavigation(
                     sessionManager = sessionManager,
                     activity = this,
+                    priceApprovalEventBus = priceApprovalEventBus,
                 )
             }
         }

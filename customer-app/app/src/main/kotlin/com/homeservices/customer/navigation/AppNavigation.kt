@@ -9,29 +9,44 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import com.homeservices.customer.data.auth.SessionManager
+import com.homeservices.customer.data.booking.PriceApprovalEventBus
 import com.homeservices.customer.domain.auth.model.AuthState
 
 @Composable
 internal fun AppNavigation(
     sessionManager: SessionManager,
     activity: FragmentActivity,
+    priceApprovalEventBus: PriceApprovalEventBus,
     modifier: Modifier = Modifier,
 ) {
     val navController = rememberNavController()
     val authState by sessionManager.authState.collectAsStateWithLifecycle()
 
     LaunchedEffect(authState) {
-        when (authState) {
-            is AuthState.Authenticated ->
+        val currentAuth = authState
+        when (currentAuth) {
+            is AuthState.Authenticated -> {
                 navController.navigate("main") {
                     popUpTo("auth") { inclusive = true }
                     launchSingleTop = true
                 }
+                com.google.firebase.messaging.FirebaseMessaging
+                    .getInstance()
+                    .subscribeToTopic("customer_${currentAuth.uid}")
+            }
             is AuthState.Unauthenticated ->
                 navController.navigate("auth") {
                     popUpTo("main") { inclusive = true }
                     launchSingleTop = true
                 }
+        }
+    }
+
+    LaunchedEffect(priceApprovalEventBus) {
+        priceApprovalEventBus.events.collect { bookingId ->
+            navController.navigate(BookingRoutes.priceApprovalRoute(bookingId)) {
+                launchSingleTop = true
+            }
         }
     }
 
