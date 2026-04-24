@@ -37,6 +37,7 @@ internal fun ActiveJobScreen(
         onTransitionRequested = viewModel::onTransitionRequested,
         onPhotoCancelled = viewModel::onPhotoCancelled,
         onPhotoConfirmed = viewModel::onPhotoConfirmed,
+        onPhotoRetake = viewModel::onPhotoRetake,
         modifier = modifier,
     )
 }
@@ -47,6 +48,7 @@ internal fun ActiveJobScreenContent(
     onTransitionRequested: (stage: String) -> Unit,
     onPhotoCancelled: () -> Unit,
     onPhotoConfirmed: (filePath: String) -> Unit,
+    onPhotoRetake: () -> Unit,
     modifier: Modifier = Modifier,
 ): Unit {
     Surface(
@@ -98,6 +100,7 @@ internal fun ActiveJobScreenContent(
                         isUploading = uiState.photoUploadInProgress,
                         uploadError = uiState.photoUploadError,
                         onRetry = { lastCapturedPath?.let(onPhotoConfirmed) },
+                        onRetake = onPhotoRetake,
                     )
                 }
             }

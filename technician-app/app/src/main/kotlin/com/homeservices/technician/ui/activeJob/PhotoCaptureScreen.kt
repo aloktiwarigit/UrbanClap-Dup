@@ -58,6 +58,7 @@ internal fun PhotoCaptureScreen(
     isUploading: Boolean,
     uploadError: String?,
     onRetry: () -> Unit,
+    onRetake: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -82,7 +83,14 @@ internal fun PhotoCaptureScreen(
     var noCameraAvailable by remember { mutableStateOf(false) }
     val imageCapture = remember { ImageCapture.Builder().build() }
     val executor = remember { Executors.newSingleThreadExecutor() }
-    DisposableEffect(Unit) { onDispose { executor.shutdown() } }
+    // Held so onDispose can unbind CameraX use cases and release the camera resource.
+    var cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
+    DisposableEffect(Unit) {
+        onDispose {
+            executor.shutdown()
+            cameraProvider?.unbindAll()
+        }
+    }
 
     Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
         if (!hasCameraPermission) {
@@ -113,6 +121,7 @@ internal fun PhotoCaptureScreen(
                         ProcessCameraProvider.getInstance(ctx).addListener(
                             {
                                 val provider = ProcessCameraProvider.getInstance(ctx).get()
+                                cameraProvider = provider
                                 if (!provider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA)) {
                                     noCameraAvailable = true
                                     return@addListener
@@ -191,7 +200,10 @@ internal fun PhotoCaptureScreen(
                 ) {
                     Text("Upload failed: $uploadError", color = MaterialTheme.colorScheme.error)
                     Button(onClick = onRetry) { Text("Retry Upload") }
-                    TextButton(onClick = { capturedPath = null }) {
+                    TextButton(onClick = {
+                        capturedPath = null
+                        onRetake()
+                    }) {
                         Text("Retake Photo", color = Color.White)
                     }
                 }
