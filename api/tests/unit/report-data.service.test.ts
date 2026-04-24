@@ -12,7 +12,6 @@ vi.mock('../../src/cosmos/catalogue-repository.js', () => ({
 import { assembleReportData } from '../../src/services/report-data.service.js';
 import { getTechnicianForReport } from '../../src/cosmos/technician-repository.js';
 import { catalogueRepo } from '../../src/cosmos/catalogue-repository.js';
-import { getAuth } from 'firebase-admin/auth';
 
 const baseBooking = {
   id: 'bk-1', customerId: 'cust-1', technicianId: 'tech-1',
