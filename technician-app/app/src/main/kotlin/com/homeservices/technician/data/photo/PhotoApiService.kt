@@ -17,5 +17,5 @@ internal interface PhotoApiService {
 
 internal data class RecordPhotoBody(
     val stage: String,
-    val photoUrl: String,
+    val storagePath: String,
 )

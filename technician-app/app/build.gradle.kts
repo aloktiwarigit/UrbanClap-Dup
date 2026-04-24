@@ -252,11 +252,13 @@ kover {
                     // the Retrofit runtime, not unit-testable directly.
                     "*.ActiveJobApiService",
                     "*.ActiveJobApiService\$*",
-                    // onPhotoConfirmed viewModelScope.launch lambda — the ?: return@launch guards
-                    // are race-condition branches hit only when state changes mid-coroutine execution,
-                    // which is not reproducible in JVM unit tests with UnconfinedTestDispatcher.
+                    // onPhotoConfirmed / fireTransition viewModelScope.launch lambdas —
+                    // the ?: return@launch guards and else-branch are race-condition / unreachable paths
+                    // that are not exercisable in JVM unit tests with UnconfinedTestDispatcher.
                     "*.ActiveJobViewModel\$onPhotoConfirmed\$1",
                     "*.ActiveJobViewModel\$onPhotoConfirmed\$1\$*",
+                    "*.ActiveJobViewModel\$fireTransition\$1",
+                    "*.ActiveJobViewModel\$fireTransition\$1\$*",
                     // PhotoCaptureScreen generates Compose *Kt wrapper classes
                     "*.PhotoCaptureScreenKt",
                     "*.PhotoCaptureScreenKt\$*",

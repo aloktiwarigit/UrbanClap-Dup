@@ -58,6 +58,7 @@ internal class ActiveJobViewModel
                                 // an in-progress photo capture or upload is not interrupted.
                                 hasPendingTransitions = current?.hasPendingTransitions ?: false,
                                 pendingPhotoStage = current?.pendingPhotoStage,
+                                uploadedStoragePath = current?.uploadedStoragePath,
                                 photoUploadInProgress = current?.photoUploadInProgress ?: false,
                                 photoUploadError = current?.photoUploadError,
                             )
@@ -125,27 +126,58 @@ internal class ActiveJobViewModel
         public fun onPhotoConfirmed(localFilePath: String) {
             val current = _uiState.value as? ActiveJobUiState.Active ?: return
             val stage = current.pendingPhotoStage ?: return
+            // If photo already uploaded (e.g. retrying after transition failure), skip re-upload.
+            if (current.uploadedStoragePath != null) {
+                fireTransition(stage)
+                return
+            }
             _uiState.value = current.copy(photoUploadInProgress = true, photoUploadError = null)
             viewModelScope.launch {
-                val result = uploadJobPhotoUseCase.execute(bookingId, stage, localFilePath)
-                if (result.isSuccess) {
+                val uploadResult = uploadJobPhotoUseCase.execute(bookingId, stage, localFilePath)
+                if (uploadResult.isSuccess) {
+                    val storagePath = uploadResult.getOrThrow()
                     val s = _uiState.value as? ActiveJobUiState.Active ?: return@launch
-                    _uiState.value = s.copy(pendingPhotoStage = null, photoUploadInProgress = false)
-                    when (stage) {
-                        "EN_ROUTE" -> {
-                            val (r, navEvent) = startTripUseCase(bookingId)
-                            if (r.isSuccess && navEvent != null) _navigationEvents.emit(navEvent)
-                        }
-                        "REACHED" -> markReachedUseCase(bookingId)
-                        "IN_PROGRESS" -> startWorkUseCase(bookingId)
-                        "COMPLETED" -> completeJobUseCase(bookingId)
-                    }
+                    _uiState.value = s.copy(photoUploadInProgress = false, uploadedStoragePath = storagePath)
+                    fireTransition(stage)
                 } else {
                     val s = _uiState.value as? ActiveJobUiState.Active ?: return@launch
                     _uiState.value =
                         s.copy(
                             photoUploadInProgress = false,
-                            photoUploadError = result.exceptionOrNull()?.message ?: "Upload failed",
+                            photoUploadError = uploadResult.exceptionOrNull()?.message ?: "Upload failed",
+                        )
+                }
+            }
+        }
+
+        private fun fireTransition(stage: String) {
+            viewModelScope.launch {
+                val transitionResult =
+                    when (stage) {
+                        "EN_ROUTE" -> {
+                            val (r, navEvent) = startTripUseCase(bookingId)
+                            if (r.isSuccess && navEvent != null) _navigationEvents.emit(navEvent)
+                            r
+                        }
+                        "REACHED" -> markReachedUseCase(bookingId)
+                        "IN_PROGRESS" -> startWorkUseCase(bookingId)
+                        "COMPLETED" -> completeJobUseCase(bookingId)
+                        else -> return@launch
+                    }
+                val s = _uiState.value as? ActiveJobUiState.Active ?: return@launch
+                if (transitionResult.isSuccess) {
+                    _uiState.value =
+                        s.copy(
+                            pendingPhotoStage = null,
+                            uploadedStoragePath = null,
+                            photoUploadError = null,
+                        )
+                } else {
+                    // Transition failed — keep stage + uploadedStoragePath so user can retry
+                    // without re-uploading the photo.
+                    _uiState.value =
+                        s.copy(
+                            photoUploadError = transitionResult.exceptionOrNull()?.message ?: "Transition failed — tap Retry",
                         )
                 }
             }

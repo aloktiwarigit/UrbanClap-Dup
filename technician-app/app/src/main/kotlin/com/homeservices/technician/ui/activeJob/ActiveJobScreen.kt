@@ -144,13 +144,14 @@ private fun ActiveJobContent(
             )
         }
 
-        val (ctaLabel, ctaEnabled, ctaTargetStage) = when (state.availableAction) {
-            ActiveJobAction.START_TRIP -> Triple("Start Trip", true, "EN_ROUTE")
-            ActiveJobAction.MARK_ARRIVED -> Triple("I've Arrived", true, "REACHED")
-            ActiveJobAction.START_WORK -> Triple("Start Work", true, "IN_PROGRESS")
-            ActiveJobAction.COMPLETE_JOB -> Triple("Complete Job", true, "COMPLETED")
-            ActiveJobAction.NONE -> Triple("Done", false, "")
-        }
+        val (ctaLabel, ctaEnabled, ctaTargetStage) =
+            when (state.availableAction) {
+                ActiveJobAction.START_TRIP -> Triple("Start Trip", true, "EN_ROUTE")
+                ActiveJobAction.MARK_ARRIVED -> Triple("I've Arrived", true, "REACHED")
+                ActiveJobAction.START_WORK -> Triple("Start Work", true, "IN_PROGRESS")
+                ActiveJobAction.COMPLETE_JOB -> Triple("Complete Job", true, "COMPLETED")
+                ActiveJobAction.NONE -> Triple("Done", false, "")
+            }
         Button(
             onClick = { if (ctaTargetStage.isNotEmpty()) onTransitionRequested(ctaTargetStage) },
             enabled = ctaEnabled,
