@@ -12,6 +12,8 @@ import com.homeservices.customer.ui.booking.AddressScreen
 import com.homeservices.customer.ui.booking.BookingConfirmedScreen
 import com.homeservices.customer.ui.booking.BookingSummaryScreen
 import com.homeservices.customer.ui.booking.BookingViewModel
+import com.homeservices.customer.ui.booking.PriceApprovalScreen
+import com.homeservices.customer.ui.booking.PriceApprovalViewModel
 import com.homeservices.customer.ui.booking.SlotPickerScreen
 import com.homeservices.customer.ui.catalogue.CatalogueHomeScreen
 import com.homeservices.customer.ui.catalogue.CatalogueHomeViewModel
@@ -142,6 +144,18 @@ internal fun NavGraphBuilder.mainGraph(navController: NavController) {
                 onBackToHome = {
                     navController.popBackStack(CatalogueRoutes.HOME, inclusive = false)
                 },
+            )
+        }
+
+        composable(
+            route = BookingRoutes.PRICE_APPROVAL,
+            arguments = listOf(navArgument("bookingId") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val vm: PriceApprovalViewModel = hiltViewModel()
+            PriceApprovalScreen(
+                viewModel = vm,
+                bookingId = backStackEntry.arguments?.getString("bookingId") ?: "",
+                onApprovalComplete = { navController.popBackStack() },
             )
         }
     }
