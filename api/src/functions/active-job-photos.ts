@@ -51,8 +51,17 @@ export const activeJobPhotosHandler = async (
     return { status: 403, jsonBody: { error: 'Forbidden' } };
   }
 
-  const updated = await bookingRepo.addPhoto(bookingId, stage, photoUrl);
-  return { status: 200, jsonBody: { ok: true, photos: updated?.photos } };
+  try {
+    const updated = await bookingRepo.addPhoto(bookingId, stage, photoUrl);
+    return { status: 200, jsonBody: { ok: true, photos: updated?.photos } };
+  } catch (err: unknown) {
+    // Cosmos ETag conflict — another request updated the document between our read and write.
+    // Return 409 so the client can retry immediately.
+    if (typeof err === 'object' && err !== null && 'code' in err && (err as { code: number }).code === 412) {
+      return { status: 409, jsonBody: { error: 'Conflict — please retry' } };
+    }
+    throw err;
+  }
 };
 
 app.http('activeJobPhotos', {
