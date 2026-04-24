@@ -1,8 +1,11 @@
 import { z } from 'zod';
-import { type HttpHandler, type InvocationContext, app } from '@azure/functions';
+import { type HttpHandler, type HttpRequest, type HttpResponseInit, type InvocationContext, app } from '@azure/functions';
 import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
+import { requireCustomer } from '../middleware/requireCustomer.js';
 import { getCosmosClient, DB_NAME } from '../cosmos/client.js';
 import { TechnicianDossierSchema } from '../schemas/technician-dossier.js';
+import { ConfidenceScoreQuerySchema } from '../schemas/confidence-score.js';
+import type { CustomerContext } from '../types/customer.js';
 import '../bootstrap.js';
 
 const PatchFcmTokenBodySchema = z.object({
@@ -74,10 +77,6 @@ app.http('getTechnicianProfile', {
 });
 
 // ── Confidence Score ──────────────────────────────────────────────────────────
-import { type HttpRequest, type HttpResponseInit } from '@azure/functions';
-import { requireCustomer } from '../middleware/requireCustomer.js';
-import type { CustomerContext } from '../types/customer.js';
-import { ConfidenceScoreQuerySchema } from '../schemas/confidence-score.js';
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
