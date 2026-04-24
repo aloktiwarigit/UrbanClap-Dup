@@ -52,36 +52,108 @@ Dispatch subagents in parallel whenever tasks are independent (e.g. 3 epics bein
 
 ### Story ceremony tiers — scale effort to blast radius
 
-Before invoking any planning skill, classify the story into one of three tiers. The flow below is the FOUNDATION tier; feature + codemod tiers compress heavily.
+Before invoking any planning skill, classify the story into one of three tiers.
 
-| Tier | When | Ceremony | Typical session count |
+| Tier | When | Ceremony | Target wall-clock |
 |---|---|---|---|
-| **Foundation** | E01-* stories, migrations, architectural refactors, new module introductions, security-sensitive work | Full: brainstorm → plan (≤13 tasks, B1–Bn disaster fixes OK) → execute → verify → Codex → CI | 3 sessions (brainstorm, plan, execute) |
-| **Feature** | E02+ user-facing stories, new screens, new endpoints built on existing foundation | Lean: brainstorm-embedded-in-plan (≤5 tasks, no B-slots unless a real gotcha appears mid-execution) → execute → verify → Codex → CI | 1–2 sessions |
-| **Codemod / mechanical** | Renames, import reorgs, lint-fix sweeps, doc-index updates | Skip brainstorm; skip spec. One-shot plan in the execute session (≤3 tasks). | 1 session |
+| **Foundation** | E01-* stories, migrations, architectural refactors, new module introductions, auth/security-sensitive work | Brainstorm → plan (4-6 work streams, parallel agent dispatch) → execute → smoke gate → Codex + /security-review (parallel) + CI | 3.5–4.5h |
+| **Feature** | E02+ user-facing stories, new screens, endpoints built on existing foundation | Plan (brainstorm embedded, ≤800 lines) → execute (same session, default) → smoke gate → Codex + CI | 1.5–2.5h |
+| **Codemod / mechanical** | Renames, lint sweeps, doc-index updates, libs sync | No brainstorm, no plan doc. One-shot Haiku execution. | 30–45min |
 
-**TDD + Codex + CI are non-negotiable across ALL tiers.** Ceremony compression means fewer planning documents, not fewer quality gates.
+**TDD + smoke gate + Codex + CI are non-negotiable across ALL tiers.**
 
-See `~/.claude/projects/.../memory/feedback_story_ceremony_tiers.md` for the rule; see `feedback_lean_review_stack.md` for why Claude-only review layers are optional.
+### Work-stream structure (Foundation + Feature plans)
+
+Plans use work streams instead of micro-tasks. Streams run in dependency order; independent streams dispatch as parallel agents.
+
+```
+WS-A: Domain models + data layer
+      [customer-app or technician-app: sealed classes, SessionManager, Room/Prefs, ProGuard rules]
+      Runs first. WS-B depends on WS-A types.
+
+WS-B: Use cases + orchestrator  (parallel per use case — each is independent)
+      [TruecallerUseCase, FirebaseOtpUseCase, BiometricGateUseCase, etc. — fan out to subagents]
+      TDD: test file first, then implementation. Runs after WS-A models are committed.
+
+WS-C: Hilt DI module + security gates  (parallel with WS-D after WS-B)
+      [AuthModule, @Binds/@Provides, ProGuard keep rules, AndroidManifest entries]
+      Runs parallel with WS-D.
+
+WS-D: Compose UI + ViewModel + Navigation + Paparazzi  (parallel with WS-C)
+      [ViewModel → Screen → AppNavigation → MainActivity integration → Paparazzi test stubs]
+      Runs parallel with WS-C. Paparazzi goldens recorded on CI only (see docs/patterns/paparazzi-cross-os-goldens.md).
+
+WS-E: Pre-Codex smoke gate → review
+      bash tools/pre-codex-smoke.sh <customer-app|technician-app>
+      Runs after WS-B/C/D complete. Non-zero exit = stop and fix before Codex.
+      Then: codex review --base main AND /security-review (auth/payment/dispatch stories) simultaneously.
+```
+
+For API (`api/`) stories: WS-A = Cosmos schema + Zod types, WS-B = repo + service + controller, WS-C = Semgrep rules + auth middleware, WS-D = (skip), WS-E = `bash tools/pre-codex-smoke-api.sh`.
+For web (`admin-web/`) stories: WS-A = API types, WS-B = Next.js API routes, WS-C = auth guards, WS-D = React components + Storybook, WS-E = `bash tools/pre-codex-smoke-web.sh`.
+
+### Story size gate (mandatory at plan-write time)
+
+After drafting a plan, check its line count before committing:
+
+```bash
+wc -l plans/E##-S##*.md
+# Feature tier: >500 lines → warning; >800 lines → split required
+# Foundation tier: >1200 lines → warning; >1500 lines → split required
+```
+
+**Split rule:** If any 3 of the following are true, split by layer:
+- New files > 20
+- All 4 Android layers touched (domain + data + UI + nav)
+- ≥2 external SDK integrations
+- ≥10 test files required
+
+**Split pattern:** Story A = WS-A + WS-B (domain + data); Story B = WS-C + WS-D (DI + UI), depends on A.
 
 ### Foundation-tier flow
 
 For each foundation-tier story in `docs/stories/`:
 
-1. **Fresh session** → `/superpowers:brainstorming` (explore design before code)
-2. `/superpowers:writing-plans` → commit `plans/<story-id>.md`
-3. **Fresh session** (context quarantine) → `/superpowers:executing-plans`
-4. TDD: tests first in `tests/` before implementation in `src/` / `app/src/`
-5. `/superpowers:verification-before-completion` before claiming done
-6. **Review gate before push — Codex + CI only (lean stack, 2026-04-19):**
-   - `/codex-review-gate` — **OpenAI Codex CLI is the authoritative cross-model review gate** (writes `.codex-review-passed` marker keyed to HEAD SHA). Never merge without it.
-   - CI runs ktlint, detekt, Android Lint, Semgrep, Paparazzi, Kover ≥80% — the real quality bar.
-   - **Optional Claude-only layers** (`/code-review`, `/security-review`, `/bmad-code-review`, `/superpowers:requesting-code-review`) — invoke ONLY on specific triggers:
-     - `/security-review` on auth/payment/dispatch/crypto/PII stories
-     - `/bmad-code-review` as Codex fallback if CLI unavailable (record in `.codex-review-passed-manual`)
-     - `/code-review` + `/superpowers:requesting-code-review` redundant with Codex + CI; skip by default
-   - Rationale: Claude-reviewing-Claude is echo chamber without independent signal. See `~/.claude/projects/.../memory/feedback_lean_review_stack.md`.
-7. Only then `git push`. **CI is the real gate — local hooks are fast feedback only.**
+1. Fresh session → `/superpowers:brainstorming` (explore design before code)
+2. `/superpowers:writing-plans` → commit `plans/<story-id>.md` using work-stream structure above. Auth/RLS/money/crypto: fresh session for context quarantine; all other Foundation stories: same session permitted.
+3. `/superpowers:executing-plans` → dispatch parallel agents per work stream using `superpowers:dispatching-parallel-agents`. Fan out WS-B use cases to separate Sonnet subagents (each owns one use case + its test file).
+4. TDD per work stream: test file committed before implementation file. Work-stream TDD completion IS verification — no separate verify step.
+5. **Pre-Codex smoke gate (mandatory):**
+   ```bash
+   bash tools/pre-codex-smoke.sh <customer-app|technician-app>
+   # Non-zero exit = stop and fix before invoking /codex-review-gate
+   ```
+6. **Review gate — local only (no CI ceremony):**
+   - `codex review --base main` → `.codex-review-passed` (local, before push)
+   - `/security-review` (auth/payment/dispatch/PII trigger) — local, parallel with Codex
+   - Drop `/code-review`, `/bmad-code-review`, `/superpowers:requesting-code-review` — echo-chamber
+7. `git push` → PR auto-merges on CI green (no approval gate — solo project).
+   **CI is lint + tests + Semgrep only.** BMAD gate and Codex marker check removed from CI — enforced locally.
+
+### Feature-tier flow (lean)
+
+1. `/superpowers:writing-plans` (brainstorm embedded; plan ≤800 lines; reference `docs/patterns/` for known gotchas)
+2. `/superpowers:executing-plans` in same session. Fan out independent use cases as subagents if ≥3.
+3. Pre-Codex smoke gate (same script as Foundation).
+4. Codex review → CI. `/security-review` only on auth/payment trigger.
+
+### Android story invariants (all tiers)
+
+- **libs.versions.toml sync:** First task of every `technician-app` story = copy `customer-app/gradle/libs.versions.toml` to `technician-app/gradle/libs.versions.toml`. Prevents post-Codex drift.
+- **Paparazzi goldens:** Never record on Windows. Delete before push; trigger `paparazzi-record.yml` workflow_dispatch on CI. See `docs/patterns/paparazzi-cross-os-goldens.md`.
+- **Known gotchas:** Every Android plan's opening section cites the relevant `docs/patterns/` files for Firebase, Hilt, Paparazzi, and explicit-API traps.
+
+### Pattern library
+
+`docs/patterns/` contains hard-won solutions from previous stories. Read before writing any plan that touches these areas:
+
+| Pattern file | Read before... |
+|---|---|
+| `paparazzi-cross-os-goldens.md` | Any story adding or changing Compose screens |
+| `firebase-callbackflow-lifecycle.md` | Any story with Firebase Auth, FCM, or async SDK callbacks |
+| `firebase-errorcode-mapping.md` | Any story handling Firebase or payment error codes |
+| `hilt-module-android-test-scope.md` | Any story introducing new Hilt-injected classes |
+| `kotlin-explicit-api-public-modifier.md` | Any story adding new public Kotlin files |
 
 ## Zero-cost infra (the binding architectural constraint)
 

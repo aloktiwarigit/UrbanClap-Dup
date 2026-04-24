@@ -52,6 +52,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ inputs.gradle_root }}-${{ inputs.gradle_task }}
   cancel-in-progress: false
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   record:
     runs-on: ubuntu-latest

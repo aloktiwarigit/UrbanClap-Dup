@@ -1,47 +1,41 @@
-export interface RouteTransferInput {
+import Razorpay from 'razorpay';
+
+export interface RazorpayTransferInput {
   accountId: string;
   amount: number;
   notes: Record<string, string>;
-  idempotencyKey: string;
+  idempotencyKey?: string;
 }
 
-export interface RouteTransferResult {
+export interface RazorpayTransferResult {
   transferId: string;
 }
 
-export class RazorpayRouteService {
-  private readonly keyId: string;
-  private readonly keySecret: string;
-  private readonly baseUrl = 'https://api.razorpay.com/v1';
+export interface IRazorpayRouteService {
+  transfer(input: RazorpayTransferInput): Promise<RazorpayTransferResult>;
+}
+
+export class RazorpayRouteService implements IRazorpayRouteService {
+  private readonly client: Razorpay;
 
   constructor() {
-    this.keyId = process.env['RAZORPAY_KEY_ID'] ?? '';
-    this.keySecret = process.env['RAZORPAY_KEY_SECRET'] ?? '';
+    const keyId = process.env['RAZORPAY_KEY_ID'];
+    const keySecret = process.env['RAZORPAY_KEY_SECRET'];
+    if (!keyId) throw new Error('Missing env var: RAZORPAY_KEY_ID');
+    if (!keySecret) throw new Error('Missing env var: RAZORPAY_KEY_SECRET');
+    this.client = new Razorpay({ key_id: keyId, key_secret: keySecret });
   }
 
-  async transfer(input: RouteTransferInput): Promise<RouteTransferResult> {
-    const credentials = Buffer.from(`${this.keyId}:${this.keySecret}`).toString('base64');
-    const response = await fetch(`${this.baseUrl}/transfers`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Basic ${credentials}`,
-        'X-Razorpay-Idempotency-Key': input.idempotencyKey,
-      },
-      body: JSON.stringify({
-        account: input.accountId,
-        amount: input.amount,
-        currency: 'INR',
-        notes: input.notes,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`Razorpay transfer failed: ${response.status} ${errorBody}`);
-    }
-
-    const data = (await response.json()) as { id: string };
-    return { transferId: data.id };
+  async transfer(input: RazorpayTransferInput): Promise<RazorpayTransferResult> {
+    const result = await (this.client.transfers.create as (
+      params: unknown,
+      opts?: unknown,
+    ) => Promise<{ id: string }>)(
+      { account: input.accountId, amount: input.amount, currency: 'INR', on_hold: 0, notes: input.notes },
+      input.idempotencyKey
+        ? { headers: { 'X-Razorpay-Idempotency-Key': input.idempotencyKey } }
+        : undefined,
+    );
+    return { transferId: result.id };
   }
 }

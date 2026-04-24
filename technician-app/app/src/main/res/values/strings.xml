@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">homeservices technician</string>
+    <string name="job_offer_accepted">Offer Accepted!</string>
+    <string name="job_offer_declined">Offer Declined</string>
+    <string name="job_offer_expired">Offer Expired</string>
 </resources>

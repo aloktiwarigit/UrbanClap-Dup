@@ -6,6 +6,12 @@ config:
   validation: true
 
 style:
+  MaxLineLength:
+    active: true
+    maxLineLength: 140
+    excludePackageStatements: true
+    excludeImportStatements: true
+    excludeCommentStatements: false
   MagicNumber:
     active: true
     ignoreNumbers: ['-1', '0', '1', '2']
@@ -48,3 +54,5 @@ naming:
   FunctionMaxLength:
     active: true
     maximumFunctionNameLength: 60
+    # Backtick test names routinely exceed 60 chars — suppress in test sources
+    excludes: ['**/test/**', '**/androidTest/**']
