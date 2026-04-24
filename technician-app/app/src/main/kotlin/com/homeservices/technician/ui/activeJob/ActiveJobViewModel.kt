@@ -112,7 +112,16 @@ internal class ActiveJobViewModel
             _uiState.value = current.copy(pendingPhotoStage = null, photoUploadError = null)
         }
 
-        /** User confirmed the captured photo — upload it then fire the stage transition. */
+        /**
+         * User confirmed the captured photo — upload it then fire the stage transition.
+         *
+         * Design note (FR-5.4): photo upload is intentionally a hard prerequisite for every
+         * stage transition. If the upload fails (device offline, quota exceeded, etc.) the
+         * transition is blocked and the technician must retry. This deliberately diverges
+         * from the pre-E06-S02 offline queue because evidence photos cannot be deferred —
+         * a transition without a timestamped photo would break audit integrity.
+         * Offline technicians should reconnect before marking job progress.
+         */
         public fun onPhotoConfirmed(localFilePath: String) {
             val current = _uiState.value as? ActiveJobUiState.Active ?: return
             val stage = current.pendingPhotoStage ?: return

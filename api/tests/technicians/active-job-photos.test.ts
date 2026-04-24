@@ -22,7 +22,7 @@ const PHOTO_URL = 'https://storage.googleapis.com/bucket/bookings/booking-123/ph
 const BASE_BOOKING = {
   id: BOOKING_ID,
   technicianId: TECH_UID,
-  status: 'REACHED' as const,
+  status: 'EN_ROUTE' as const, // EN_ROUTE → valid photo stage is 'REACHED'
   photos: {},
   customerId: 'cust-1',
   serviceId: 'svc-1',
@@ -107,6 +107,16 @@ describe('POST /v1/technicians/active-job/:bookingId/photos', () => {
   it('returns 400 when photoUrl is missing', async () => {
     const res = await activeJobPhotosHandler(makeRequest({ stage: 'REACHED' }), CTX);
     expect(res.status).toBe(400);
+  });
+
+  it('returns 409 when stage does not match next expected transition', async () => {
+    // Booking is ASSIGNED — only EN_ROUTE stage is valid; posting COMPLETED should be rejected
+    vi.mocked(bookingRepo.getById).mockResolvedValue({ ...BASE_BOOKING, status: 'ASSIGNED' });
+    const res = await activeJobPhotosHandler(
+      makeRequest({ stage: 'COMPLETED', photoUrl: PHOTO_URL }),
+      CTX,
+    );
+    expect(res.status).toBe(409);
   });
 
   it('returns 409 on ETag conflict (concurrent upload retry)', async () => {
