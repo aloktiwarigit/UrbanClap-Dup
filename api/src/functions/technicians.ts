@@ -126,5 +126,6 @@ export const getConfidenceScoreHandler = async (
 app.http('getConfidenceScore', {
   route: 'v1/technicians/{id}/confidence-score',
   methods: ['GET'],
+  authLevel: 'anonymous', // Firebase bearer token auth via requireCustomer middleware
   handler: requireCustomer(getConfidenceScoreHandler),
 });

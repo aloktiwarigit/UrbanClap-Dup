@@ -39,7 +39,7 @@ android {
         buildConfigField(
             "String",
             "API_BASE_URL",
-            "\"${System.getenv("API_BASE_URL") ?: "https://homeservices-api.azurewebsites.net"}\"",
+            "\"${System.getenv("API_BASE_URL") ?: "https://homeservices-api.azurewebsites.net/api"}\"",
         )
     }
 
@@ -194,6 +194,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

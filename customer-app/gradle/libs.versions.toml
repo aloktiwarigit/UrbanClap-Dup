@@ -9,6 +9,7 @@ java = "21"
 coreKtx = "1.15.0"
 activityCompose = "1.9.3"
 lifecycleViewmodelCompose = "2.8.7"
+lifecycleRuntimeCompose = "2.8.7"
 composeBom = "2024.11.00"
 hiltNavigationCompose = "1.2.0"
 
@@ -47,6 +48,7 @@ homeservices-design-system = { module = "com.homeservices:design-system", versio
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodelCompose" }
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycleRuntimeCompose" }
 
 # Compose (BOM-pinned -- no version)
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
