@@ -52,7 +52,8 @@ export const getConfidenceScoreHandler = async (
   const { lat, lng } = queryResult.data;
 
   const db = getCosmosClient().database(DB_NAME);
-  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  // Filter by slot date (when job happened) not createdAt (when booked) — avoids excluding advance-booked recent jobs.
+  const sinceDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
   const { resources: bookings } = await db
     .container('bookings')
@@ -61,29 +62,32 @@ export const getConfidenceScoreHandler = async (
               FROM c
               WHERE c.technicianId = @techId
                 AND c.status IN ('COMPLETED', 'PAID')
-                AND c.createdAt >= @since`,
+                AND c.slotDate >= @sinceDate`,
       parameters: [
         { name: '@techId', value: technicianId },
-        { name: '@since', value: since },
+        { name: '@sinceDate', value: sinceDate },
       ],
     })
     .fetchAll();
 
   let onTimeCount = 0;
+  let timedBookings = 0;
   for (const b of bookings) {
-    if (!b.startedAt) { onTimeCount++; continue; }
+    if (!b.startedAt) continue; // exclude: no start-time data
     const [hh, mm] = (b.slotWindow.split('-')[0] ?? '').split(':').map(Number);
     const slotStart = new Date(`${b.slotDate}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00.000Z`);
     if (new Date(b.startedAt).getTime() - slotStart.getTime() <= LATE_MS) onTimeCount++;
+    timedBookings++;
   }
-  const onTimePercent = bookings.length > 0 ? Math.round((onTimeCount / bookings.length) * 100) : 0;
+  const onTimePercent = timedBookings > 0 ? Math.round((onTimeCount / timedBookings) * 100) : 0;
 
   const { resource: techDoc } = await db
     .container('technicians')
     .item(technicianId, technicianId)
-    .read<{ id: string; location?: { type: string; coordinates: [number, number] }; rating?: number }>();
+    .read<{ id: string; location?: { type: string; coordinates: [number, number] } }>();
 
-  const areaRating = techDoc?.rating ?? null;
+  // areaRating: null until per-booking ratings are collected; tech global rating intentionally excluded.
+  const areaRating: number | null = null;
 
   let nearestEtaMinutes: number | null = null;
   const hasCustomerLocation = lat !== 0.0 || lng !== 0.0;
