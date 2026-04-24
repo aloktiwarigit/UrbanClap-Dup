@@ -260,6 +260,15 @@ kover {
                     // TechnicianProfileDto Moshi adapter — code-gen output
                     "*.TechnicianProfileDtoJsonAdapter",
                     "*.TechnicianReviewDtoJsonAdapter",
+                    // ConfidenceScoreRow — Compose composable, same rationale as other *Kt screen classes
+                    "*.ConfidenceScoreRowKt",
+                    "*.ConfidenceScoreRowKt\$*",
+                    // ConfidenceScoreUiState sealed class — data holders, no logic branches
+                    "*.ConfidenceScoreUiState",
+                    "*.ConfidenceScoreUiState\$*",
+                    // ConfidenceScoreRepositoryImpl — thin Retrofit wrapper, integration-tested via API layer
+                    "*.ConfidenceScoreRepositoryImpl",
+                    "*.ConfidenceScoreRepositoryImpl\$*",
                 )
             }
         }
