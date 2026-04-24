@@ -104,13 +104,26 @@ internal class ActiveJobViewModel
         /** Intercepts a CTA tap — shows PhotoCaptureScreen before firing the transition. */
         public fun onTransitionRequested(targetStage: String) {
             val current = _uiState.value as? ActiveJobUiState.Active ?: return
-            _uiState.value = current.copy(pendingPhotoStage = targetStage, photoUploadError = null)
+            // Clear any previously uploaded path from a failed transition so the technician
+            // must take a fresh photo for each new stage attempt (FR-5.4 compliance).
+            _uiState.value =
+                current.copy(
+                    pendingPhotoStage = targetStage,
+                    uploadedStoragePath = null,
+                    photoUploadError = null,
+                )
         }
 
         /** User cancelled out of the photo capture screen without taking a photo. */
         public fun onPhotoCancelled() {
             val current = _uiState.value as? ActiveJobUiState.Active ?: return
-            _uiState.value = current.copy(pendingPhotoStage = null, photoUploadError = null)
+            // Also clear uploaded path — the technician must restart the capture flow.
+            _uiState.value =
+                current.copy(
+                    pendingPhotoStage = null,
+                    uploadedStoragePath = null,
+                    photoUploadError = null,
+                )
         }
 
         /**
