@@ -60,7 +60,7 @@ internal class BookingRepositoryImpl
                 )
             }
 
-        override fun getBooking(bookingId: String): Flow<Result<List<PendingAddOn>>> = flow {
+        override fun getPendingAddOns(bookingId: String): Flow<Result<List<PendingAddOn>>> = flow {
             emit(runCatching { api.getBooking(bookingId).pendingAddOns.map { it.toDomain() } })
         }
 
@@ -70,7 +70,7 @@ internal class BookingRepositoryImpl
                     api.approveFinalPrice(
                         bookingId,
                         ApproveFinalPriceRequestDto(decisions.map { AddOnDecisionDto(it.name, it.approved) }),
-                    ).finalAmount ?: 0
+                    ).finalAmount ?: error("finalAmount missing in approve-final-price response")
                 },
             )
         }

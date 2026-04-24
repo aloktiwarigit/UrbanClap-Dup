@@ -7,5 +7,5 @@ import javax.inject.Inject
 
 public class GetPendingAddOnsUseCase @Inject constructor(private val repo: BookingRepository) {
     public operator fun invoke(bookingId: String): Flow<Result<List<PendingAddOn>>> =
-        repo.getBooking(bookingId)
+        repo.getPendingAddOns(bookingId)
 }

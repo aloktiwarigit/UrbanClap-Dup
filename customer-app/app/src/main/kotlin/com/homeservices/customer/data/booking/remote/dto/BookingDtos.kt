@@ -1,6 +1,7 @@
 package com.homeservices.customer.data.booking.remote.dto
 
 import com.homeservices.customer.domain.booking.model.BookingResult
+import com.homeservices.customer.domain.booking.model.PendingAddOn
 import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
@@ -47,8 +48,7 @@ public data class PendingAddOnDto(
     val price: Int,
     val triggerDescription: String,
 ) {
-    public fun toDomain(): com.homeservices.customer.domain.booking.model.PendingAddOn =
-        com.homeservices.customer.domain.booking.model.PendingAddOn(name, price, triggerDescription)
+    public fun toDomain(): PendingAddOn = PendingAddOn(name, price, triggerDescription)
 }
 
 @JsonClass(generateAdapter = true)

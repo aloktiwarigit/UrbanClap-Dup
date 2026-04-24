@@ -17,13 +17,14 @@ public class GetPendingAddOnsUseCaseTest {
     @Test
     public fun `invoke returns add-ons on success`(): Unit = runTest {
         val addOns = listOf(PendingAddOn("Gas refill", 120000, "Low pressure"))
-        every { repo.getBooking("bk-1") } returns flowOf(Result.success(addOns))
+        every { repo.getPendingAddOns("bk-1") } returns flowOf(Result.success(addOns))
         assertThat(sut("bk-1").first().getOrThrow()).isEqualTo(addOns)
+        io.mockk.verify(exactly = 1) { repo.getPendingAddOns("bk-1") }
     }
 
     @Test
     public fun `invoke propagates failure`(): Unit = runTest {
-        every { repo.getBooking(any()) } returns flowOf(Result.failure(RuntimeException("not found")))
+        every { repo.getPendingAddOns(any()) } returns flowOf(Result.failure(RuntimeException("not found")))
         assertThat(sut("bk-1").first().isFailure).isTrue()
     }
 }

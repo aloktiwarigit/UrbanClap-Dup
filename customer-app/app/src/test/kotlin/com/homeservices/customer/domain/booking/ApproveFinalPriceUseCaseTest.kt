@@ -19,6 +19,7 @@ public class ApproveFinalPriceUseCaseTest {
     public fun `invoke returns finalAmount on success`(): Unit = runTest {
         every { repo.approveFinalPrice("bk-1", decisions) } returns flowOf(Result.success(179900))
         assertThat(sut("bk-1", decisions).first().getOrThrow()).isEqualTo(179900)
+        io.mockk.verify(exactly = 1) { repo.approveFinalPrice("bk-1", decisions) }
     }
 
     @Test
