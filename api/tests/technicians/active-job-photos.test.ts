@@ -111,6 +111,15 @@ describe('POST /v1/technicians/active-job/:bookingId/photos', () => {
     expect(res.status).toBe(400);
   });
 
+  it('returns 403 when storagePath booking ID differs from route booking ID', async () => {
+    const crossBookingPath = `bookings/OTHER-BOOKING/photos/${TECH_UID}/REACHED/1234567890.jpg`;
+    const res = await activeJobPhotosHandler(
+      makeRequest({ stage: 'REACHED', storagePath: crossBookingPath }),
+      CTX,
+    );
+    expect(res.status).toBe(403);
+  });
+
   it('returns 403 when storagePath UID does not match caller', async () => {
     const wrongUidPath = `bookings/${BOOKING_ID}/photos/other-uid/REACHED/1234567890.jpg`;
     const res = await activeJobPhotosHandler(

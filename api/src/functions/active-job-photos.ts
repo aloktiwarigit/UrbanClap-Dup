@@ -18,8 +18,9 @@ const VALID_PHOTO_STAGE: Partial<Record<string, string>> = {
   IN_PROGRESS: 'COMPLETED',
 };
 
-// Storage path pattern: bookings/{bookingId}/photos/{uid}/{stage}/{timestamp}.jpg
-const STORAGE_PATH_RE = /^bookings\/[^/]+\/photos\/([^/]+)\/([^/]+)\/\d+\.jpg$/;
+// Storage path pattern: bookings/{bookingId}/photos/{technicianUid}/{stage}/{timestamp}.jpg
+// Group 1 = bookingId, Group 2 = technicianUid, Group 3 = stage
+const STORAGE_PATH_RE = /^bookings\/([^/]+)\/photos\/([^/]+)\/([^/]+)\/\d+\.jpg$/;
 
 const RecordPhotoBodySchema = z.object({
   stage: z.enum(PHOTO_STAGES),
@@ -56,12 +57,13 @@ export const activeJobPhotosHandler = async (
 
   const { stage, storagePath } = parseResult.data;
 
-  // Validate that the path belongs to this technician and the declared stage.
+  // Validate that the path belongs to this booking, this technician, and the declared stage.
   const match = STORAGE_PATH_RE.exec(storagePath);
-  const pathUid = match?.[1];
-  const pathStage = match?.[2];
-  if (pathUid !== uid || pathStage !== stage) {
-    return { status: 403, jsonBody: { error: 'Storage path does not match caller or stage' } };
+  const pathBookingId = match?.[1];
+  const pathUid = match?.[2];
+  const pathStage = match?.[3];
+  if (pathBookingId !== bookingId || pathUid !== uid || pathStage !== stage) {
+    return { status: 403, jsonBody: { error: 'Storage path does not match booking, caller, or stage' } };
   }
 
   const booking = await bookingRepo.getById(bookingId);
