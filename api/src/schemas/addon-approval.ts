@@ -13,4 +13,4 @@ export const ApproveAddOnsBodySchema = z.object({
 });
 
 export type PendingAddOn = z.infer<typeof PendingAddOnSchema>;
-export type AddOnDecision = { name: string; approved: boolean };
+export type AddOnDecision = z.infer<typeof ApproveAddOnsBodySchema>['decisions'][number];

@@ -53,6 +53,11 @@ describe('GET /v1/bookings/{id}', () => {
     const res: any = await getBookingHandler(req('GET', 'bk-1', ''), {} as any);
     expect(res.status).toBe(403);
   });
+  it('returns 404 when booking not found', async () => {
+    (bookingRepo.getById as MockFn).mockResolvedValue(null);
+    const res: any = await getBookingHandler(req('GET', 'bk-1', ''), {} as any);
+    expect(res.status).toBe(404);
+  });
 });
 
 describe('POST /v1/bookings/{id}/request-addon', () => {
@@ -74,6 +79,11 @@ describe('POST /v1/bookings/{id}/request-addon', () => {
     (bookingRepo.requestAddOn as MockFn).mockResolvedValue(null);
     const res: any = await requestAddonHandler(req('POST', 'bk-1', '/request-addon', body), {} as any);
     expect(res.status).toBe(409);
+  });
+  it('returns 404 when booking not found', async () => {
+    (bookingRepo.getById as MockFn).mockResolvedValue(null);
+    const res: any = await requestAddonHandler(req('POST', 'bk-1', '/request-addon', body), {} as any);
+    expect(res.status).toBe(404);
   });
 });
 

@@ -82,7 +82,13 @@ export const requestAddonHandler: HttpHandler = async (req, _ctx) => {
   if (!parsed.success) return { status: 422, jsonBody: { code: 'VALIDATION_ERROR', issues: parsed.error.issues } };
   const updated = await bookingRepo.requestAddOn(id, parsed.data);
   if (!updated) return { status: 409, jsonBody: { code: 'BOOKING_NOT_IN_PROGRESS' } };
-  await sendPriceApprovalPush(booking.customerId, id);
+
+  try {
+    await sendPriceApprovalPush(booking.customerId, id);
+  } catch (err) {
+    console.error('[requestAddon] FCM push failed — booking is AWAITING_PRICE_APPROVAL but customer was not notified', { bookingId: id, err });
+  }
+
   return { status: 200, jsonBody: { bookingId: updated.id, status: updated.status } };
 };
 
