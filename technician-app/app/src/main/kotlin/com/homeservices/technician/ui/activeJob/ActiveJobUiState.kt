@@ -17,6 +17,10 @@ public sealed class ActiveJobUiState {
         val job: ActiveJob,
         val availableAction: ActiveJobAction,
         val hasPendingTransitions: Boolean = false,
+        val pendingPhotoStage: String? = null,
+        val uploadedStoragePath: String? = null, // non-null = photo already uploaded; skip re-upload on retry
+        val photoUploadInProgress: Boolean = false,
+        val photoUploadError: String? = null,
     ) : ActiveJobUiState()
 
     public data object Completed : ActiveJobUiState()

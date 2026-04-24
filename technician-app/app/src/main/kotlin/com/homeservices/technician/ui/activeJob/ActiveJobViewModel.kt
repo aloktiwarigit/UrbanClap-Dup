@@ -11,6 +11,7 @@ import com.homeservices.technician.domain.activeJob.StartTripUseCase
 import com.homeservices.technician.domain.activeJob.StartWorkUseCase
 import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
 import com.homeservices.technician.domain.activeJob.model.NavigationEvent
+import com.homeservices.technician.domain.photo.UploadJobPhotoUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +33,7 @@ internal class ActiveJobViewModel
         private val startWorkUseCase: StartWorkUseCase,
         private val completeJobUseCase: CompleteJobUseCase,
         private val connectivityObserver: ConnectivityObserver,
+        private val uploadJobPhotoUseCase: UploadJobPhotoUseCase,
     ) : ViewModel() {
         private val bookingId: String = checkNotNull(savedStateHandle["bookingId"])
 
@@ -44,8 +46,7 @@ internal class ActiveJobViewModel
         init {
             viewModelScope.launch {
                 repository.getActiveJob(bookingId).collect { job ->
-                    val hasPending =
-                        (_uiState.value as? ActiveJobUiState.Active)?.hasPendingTransitions ?: false
+                    val current = _uiState.value as? ActiveJobUiState.Active
                     _uiState.value =
                         if (job.status == ActiveJobStatus.COMPLETED) {
                             ActiveJobUiState.Completed
@@ -53,7 +54,13 @@ internal class ActiveJobViewModel
                             ActiveJobUiState.Active(
                                 job = job,
                                 availableAction = job.status.toAction(),
-                                hasPendingTransitions = hasPending,
+                                // Preserve transient UI state across polling refreshes so that
+                                // an in-progress photo capture or upload is not interrupted.
+                                hasPendingTransitions = current?.hasPendingTransitions ?: false,
+                                pendingPhotoStage = current?.pendingPhotoStage,
+                                uploadedStoragePath = current?.uploadedStoragePath,
+                                photoUploadInProgress = current?.photoUploadInProgress ?: false,
+                                photoUploadError = current?.photoUploadError,
                             )
                         }
                 }
@@ -92,6 +99,111 @@ internal class ActiveJobViewModel
 
         public fun completeJob(): Unit {
             viewModelScope.launch { completeJobUseCase(bookingId) }
+        }
+
+        /** Intercepts a CTA tap — shows PhotoCaptureScreen before firing the transition. */
+        public fun onTransitionRequested(targetStage: String) {
+            val current = _uiState.value as? ActiveJobUiState.Active ?: return
+            // Clear any previously uploaded path from a failed transition so the technician
+            // must take a fresh photo for each new stage attempt (FR-5.4 compliance).
+            _uiState.value =
+                current.copy(
+                    pendingPhotoStage = targetStage,
+                    uploadedStoragePath = null,
+                    photoUploadError = null,
+                )
+        }
+
+        /** User cancelled out of the photo capture screen without taking a photo. */
+        public fun onPhotoCancelled() {
+            val current = _uiState.value as? ActiveJobUiState.Active ?: return
+            // Also clear uploaded path — the technician must restart the capture flow.
+            _uiState.value =
+                current.copy(
+                    pendingPhotoStage = null,
+                    uploadedStoragePath = null,
+                    photoUploadError = null,
+                )
+        }
+
+        /** User tapped Retake after an upload error — clear the error so the fresh capture gets a clean slate. */
+        public fun onPhotoRetake() {
+            val current = _uiState.value as? ActiveJobUiState.Active ?: return
+            _uiState.value = current.copy(photoUploadError = null)
+        }
+
+        /**
+         * User confirmed the captured photo — upload it then fire the stage transition.
+         *
+         * Design note (FR-5.4): photo upload is intentionally a hard prerequisite for every
+         * stage transition. If the upload fails (device offline, quota exceeded, etc.) the
+         * transition is blocked and the technician must retry. This deliberately diverges
+         * from the pre-E06-S02 offline queue because evidence photos cannot be deferred —
+         * a transition without a timestamped photo would break audit integrity.
+         * Offline technicians should reconnect before marking job progress.
+         */
+        public fun onPhotoConfirmed(localFilePath: String) {
+            val current = _uiState.value as? ActiveJobUiState.Active ?: return
+            val stage = current.pendingPhotoStage ?: return
+            // If photo already uploaded (e.g. retrying after transition failure), skip re-upload.
+            if (current.uploadedStoragePath != null) {
+                fireTransition(stage)
+                return
+            }
+            _uiState.value = current.copy(photoUploadInProgress = true, photoUploadError = null)
+            viewModelScope.launch {
+                val uploadResult = uploadJobPhotoUseCase.execute(bookingId, stage, localFilePath)
+                if (uploadResult.isSuccess) {
+                    val storagePath = uploadResult.getOrThrow()
+                    val s = _uiState.value as? ActiveJobUiState.Active ?: return@launch
+                    // Keep photoUploadInProgress = true until fireTransition completes so the
+                    // Confirm button stays disabled and duplicate transitions are prevented.
+                    _uiState.value = s.copy(uploadedStoragePath = storagePath)
+                    fireTransition(stage)
+                } else {
+                    val s = _uiState.value as? ActiveJobUiState.Active ?: return@launch
+                    _uiState.value =
+                        s.copy(
+                            photoUploadInProgress = false,
+                            photoUploadError = uploadResult.exceptionOrNull()?.message ?: "Upload failed",
+                        )
+                }
+            }
+        }
+
+        private fun fireTransition(stage: String) {
+            viewModelScope.launch {
+                val transitionResult =
+                    when (stage) {
+                        "EN_ROUTE" -> {
+                            val (r, navEvent) = startTripUseCase(bookingId)
+                            if (r.isSuccess && navEvent != null) _navigationEvents.emit(navEvent)
+                            r
+                        }
+                        "REACHED" -> markReachedUseCase(bookingId)
+                        "IN_PROGRESS" -> startWorkUseCase(bookingId)
+                        "COMPLETED" -> completeJobUseCase(bookingId)
+                        else -> return@launch
+                    }
+                val s = _uiState.value as? ActiveJobUiState.Active ?: return@launch
+                if (transitionResult.isSuccess) {
+                    _uiState.value =
+                        s.copy(
+                            pendingPhotoStage = null,
+                            uploadedStoragePath = null,
+                            photoUploadInProgress = false,
+                            photoUploadError = null,
+                        )
+                } else {
+                    // Transition failed — keep stage + uploadedStoragePath so user can retry
+                    // without re-uploading the photo.
+                    _uiState.value =
+                        s.copy(
+                            photoUploadInProgress = false,
+                            photoUploadError = transitionResult.exceptionOrNull()?.message ?: "Transition failed — tap Retry",
+                        )
+                }
+            }
         }
 
         private fun ActiveJobStatus.toAction(): ActiveJobAction =

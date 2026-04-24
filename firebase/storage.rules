@@ -1,0 +1,27 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // KYC documents — each user owns their own subtree
+    match /kyc/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == userId;
+    }
+
+    // Job site photos — technician UID is embedded in the path so rules can
+    // enforce ownership without a Cosmos DB lookup.
+    // Path: bookings/{bookingId}/photos/{technicianUid}/{stage}/{file}
+    //
+    // Reads: restricted to the uploading technician. Admin and customer reads
+    // are served through the API using the Firebase Admin SDK (which bypasses
+    // Storage rules) to generate short-lived signed URLs — keeping PII off
+    // publicly-guessable paths.
+    match /bookings/{bookingId}/photos/{technicianUid}/{stage}/{file} {
+      allow write: if request.auth != null
+                   && request.auth.uid == technicianUid
+                   && request.resource.size <= 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+      allow read: if request.auth != null
+                  && request.auth.uid == technicianUid;
+    }
+  }
+}

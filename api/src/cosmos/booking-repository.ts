@@ -65,6 +65,28 @@ export const bookingRepo = {
     }).fetchAll();
     return resources;
   },
+
+  async addPhoto(
+    bookingId: string,
+    stage: string,
+    photoUrl: string,
+  ): Promise<BookingDoc | null> {
+    const { resource: existing, etag } = await getBookingsContainer()
+      .item(bookingId, bookingId)
+      .read<BookingDoc>();
+    if (!existing) return null;
+    const stagePhotos = existing.photos?.[stage] ?? [];
+    const updated: BookingDoc = {
+      ...existing,
+      photos: { ...existing.photos, [stage]: [...stagePhotos, photoUrl] },
+    };
+    // Use ETag optimistic concurrency so concurrent uploads for the same
+    // booking/stage don't silently drop each other's photo URL.
+    const { resource } = await getBookingsContainer()
+      .item(bookingId, bookingId)
+      .replace<BookingDoc>(updated, { accessCondition: { type: 'IfMatch', condition: etag ?? '' } });
+    return resource ?? null;
+  },
 };
 
 export async function updateBookingFields(

@@ -252,6 +252,21 @@ kover {
                     // the Retrofit runtime, not unit-testable directly.
                     "*.ActiveJobApiService",
                     "*.ActiveJobApiService\$*",
+                    // onPhotoConfirmed / fireTransition viewModelScope.launch lambdas —
+                    // the ?: return@launch guards and else-branch are race-condition / unreachable paths
+                    // that are not exercisable in JVM unit tests with UnconfinedTestDispatcher.
+                    "*.ActiveJobViewModel\$onPhotoConfirmed\$1",
+                    "*.ActiveJobViewModel\$onPhotoConfirmed\$1\$*",
+                    "*.ActiveJobViewModel\$fireTransition\$1",
+                    "*.ActiveJobViewModel\$fireTransition\$1\$*",
+                    // PhotoCaptureScreen generates Compose *Kt wrapper classes
+                    "*.PhotoCaptureScreenKt",
+                    "*.PhotoCaptureScreenKt\$*",
+                    // JobPhotoRepositoryImpl wraps Firebase Storage + HTTP — requires live services
+                    "*.JobPhotoRepositoryImpl",
+                    "*.JobPhotoRepositoryImpl\$*",
+                    // Photo DI module — @Provides methods are framework wiring
+                    "*.data.photo.di.*",
                 )
             }
         }
@@ -312,6 +327,12 @@ dependencies {
     implementation(libs.moshi.kotlin)
     implementation(libs.androidx.browser)
     implementation(libs.firebase.storage)
+
+    // CameraX — on-device photo capture for job stage evidence (E06-S02)
+    implementation(libs.camera.core)
+    implementation(libs.camera.camera2)
+    implementation(libs.camera.lifecycle)
+    implementation(libs.camera.view)
 
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.jupiter.api)

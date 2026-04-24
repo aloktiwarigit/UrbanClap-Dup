@@ -63,6 +63,9 @@ robolectric = "4.14.1"
 androidxTestCore = "1.6.1"
 androidxTestRunner = "1.6.2"
 
+# Camera
+camerax = "1.4.0"
+
 [libraries]
 # Design system (Gradle composite-build substitution — version is nominal, ignored)
 homeservices-design-system = { module = "com.homeservices:design-system", version = "0.1.0" }
@@ -133,6 +136,10 @@ room-runtime  = { module = "androidx.room:room-runtime",  version.ref = "room" }
 room-ktx      = { module = "androidx.room:room-ktx",      version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 google-truth = { module = "com.google.truth:truth", version.ref = "googleTruth" }
+camera-core      = { module = "androidx.camera:camera-core",      version.ref = "camerax" }
+camera-camera2   = { module = "androidx.camera:camera-camera2",   version.ref = "camerax" }
+camera-lifecycle = { module = "androidx.camera:camera-lifecycle",  version.ref = "camerax" }
+camera-view      = { module = "androidx.camera:camera-view",       version.ref = "camerax" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
