@@ -10,6 +10,15 @@ import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
 
 const PHOTO_STAGES = ['EN_ROUTE', 'REACHED', 'IN_PROGRESS', 'COMPLETED'] as const;
 
+// Each booking status maps to exactly one valid photo stage: the next transition target.
+// Prevents backfilling evidence photos for stages that haven't occurred yet.
+const VALID_PHOTO_STAGE: Partial<Record<string, string>> = {
+  ASSIGNED: 'EN_ROUTE',
+  EN_ROUTE: 'REACHED',
+  REACHED: 'IN_PROGRESS',
+  IN_PROGRESS: 'COMPLETED',
+};
+
 const RecordPhotoBodySchema = z.object({
   stage: z.enum(PHOTO_STAGES),
   photoUrl: z.string().url(),
@@ -49,6 +58,15 @@ export const activeJobPhotosHandler = async (
   }
   if (booking.technicianId !== uid) {
     return { status: 403, jsonBody: { error: 'Forbidden' } };
+  }
+
+  // Validate that the stage being photographed matches the next expected transition.
+  const expectedStage = VALID_PHOTO_STAGE[booking.status];
+  if (!expectedStage || stage !== expectedStage) {
+    return {
+      status: 409,
+      jsonBody: { error: `Photo stage '${stage}' is not valid for booking in status '${booking.status}'` },
+    };
   }
 
   try {
