@@ -7,6 +7,6 @@
     "ACS_CONNECTION_STRING": "<azure-communication-services-connection-string>",
     "ACS_SENDER_ADDRESS": "DoNotReply@<domain>.azurecomm.net",
     "SSC_OWNER_EMAIL": "<owner-email@example.com>",
-    "COSMOS_CONNECTION_STRING": "AccountEndpoint=<COSMOS_ENDPOINT>;AccountKey=<COSMOS_KEY>;"
+    "COSMOS_CONNECTION_STRING": "<azure-cosmos-db-connection-string>"
   }
 }

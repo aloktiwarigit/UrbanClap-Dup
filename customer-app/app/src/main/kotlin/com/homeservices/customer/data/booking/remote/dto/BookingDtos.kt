@@ -61,19 +61,10 @@ public data class GetBookingResponseDto(
 )
 
 @JsonClass(generateAdapter = true)
-public data class AddOnDecisionDto(
-    val name: String,
-    val approved: Boolean,
-)
+public data class AddOnDecisionDto(val name: String, val approved: Boolean)
 
 @JsonClass(generateAdapter = true)
-public data class ApproveFinalPriceRequestDto(
-    val decisions: List<AddOnDecisionDto>,
-)
+public data class ApproveFinalPriceRequestDto(val decisions: List<AddOnDecisionDto>)
 
 @JsonClass(generateAdapter = true)
-public data class ApproveFinalPriceResponseDto(
-    val bookingId: String,
-    val status: String,
-    val finalAmount: Int?,
-)
+public data class ApproveFinalPriceResponseDto(val bookingId: String, val status: String, val finalAmount: Int?)

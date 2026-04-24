@@ -26,9 +26,9 @@ export async function sendOwnerRouteAlert(payload: {
   failed: number;
 }): Promise<void> {
   await getFirebaseAdmin().messaging().send({
-    topic: 'owner_ops_alerts',
+    topic: 'owner_alerts',
     data: {
-      type: 'ROUTE_TRANSFER_MISMATCH',
+      type: 'RECON_MISMATCH_ALERT',
       stalePending: String(payload.stalePending),
       failed: String(payload.failed),
     },

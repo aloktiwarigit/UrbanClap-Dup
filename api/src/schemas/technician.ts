@@ -24,8 +24,8 @@ export const TechnicianProfileSchema = z.object({
   kycStatus: TechnicianKycStatusSchema,
   fcmToken: z.string().optional(),
   rating: z.number().min(0).max(5).optional(),
+  completedJobCount: z.number().int().min(0).optional(),
   updatedAt: z.string().datetime().optional(),
-  completedJobCount: z.number().int().nonnegative().optional(),
 });
 
 export type GeoPoint = z.infer<typeof GeoPointSchema>;

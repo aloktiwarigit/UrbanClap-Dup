@@ -18,8 +18,5 @@ public interface BookingRepository {
 
     public fun getPendingAddOns(bookingId: String): Flow<Result<List<PendingAddOn>>>
 
-    public fun approveFinalPrice(
-        bookingId: String,
-        decisions: List<AddOnDecision>,
-    ): Flow<Result<Int>>
+    public fun approveFinalPrice(bookingId: String, decisions: List<AddOnDecision>): Flow<Result<Int>>
 }

@@ -20,18 +20,9 @@ export default defineConfig({
         // Cloud-infra singletons — require real Cosmos/Firebase credentials;
         // tested indirectly via mocks throughout the integration suite.
         'src/cosmos/client.ts',
-        'src/cosmos/wallet-ledger-repository.ts',
-        'src/cosmos/technician-repository.ts',
-        'src/cosmos/audit-log-repository.ts',
         'src/services/firebaseAdmin.ts',
         'src/services/fcm.service.ts',
-        'src/services/razorpayRoute.service.ts',
-        'src/middleware/auditLog.ts',
         'src/services/adminUser.service.ts',
-        // Zod schema files — type declarations with no branching logic.
-        'src/schemas/audit-log.ts',
-        'src/schemas/technician.ts',
-        'src/schemas/wallet-ledger.ts',
         // Type-only declarations — zero executable statements.
         'src/types/**',
       ],
