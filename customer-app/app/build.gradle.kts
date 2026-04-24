@@ -373,6 +373,7 @@ dependencies {
     implementation(libs.razorpay.checkout)
     implementation(libs.google.places)
     implementation(libs.play.services.maps)
+    implementation(libs.maps.compose)
 
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.jupiter.api)
