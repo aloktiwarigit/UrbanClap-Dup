@@ -220,6 +220,24 @@ public class ActiveJobViewModelTest {
         }
 
     @Test
+    public fun `onPhotoConfirmed shows transition error when upload succeeds but transition fails`(): Unit =
+        runTest(testDispatcher) {
+            coEvery { uploadJobPhotoUseCase.execute("bk-1", "IN_PROGRESS", "/cache/p.jpg") } returns
+                Result.success("bookings/bk-1/photos/uid/IN_PROGRESS/123.jpg")
+            coEvery { startWorkUseCase("bk-1") } returns Result.failure(RuntimeException("API 500"))
+
+            viewModel.onTransitionRequested("IN_PROGRESS")
+            viewModel.onPhotoConfirmed("/cache/p.jpg")
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value as ActiveJobUiState.Active
+            // Photo is uploaded — pendingPhotoStage and uploadedStoragePath remain so user can retry
+            assertThat(state.pendingPhotoStage).isEqualTo("IN_PROGRESS")
+            assertThat(state.uploadedStoragePath).isNotNull()
+            assertThat(state.photoUploadError).contains("API 500")
+        }
+
+    @Test
     public fun `photo state preserved when polling refresh emits a new job`(): Unit =
         runTest {
             val jobFlow = MutableStateFlow(aJob(ActiveJobStatus.REACHED))
@@ -243,6 +261,42 @@ public class ActiveJobViewModelTest {
 
             val state = vm.uiState.value as ActiveJobUiState.Active
             assertThat(state.pendingPhotoStage).isEqualTo("REACHED")
+        }
+
+    @Test
+    public fun `onPhotoConfirmed skips upload and fires transition when photo already uploaded`(): Unit =
+        runTest(testDispatcher) {
+            // Simulate state where photo is uploaded but transition hasn't fired yet
+            coEvery { startWorkUseCase("bk-1") } returns Result.success(aJob(ActiveJobStatus.IN_PROGRESS))
+
+            // Pre-set the uploadedStoragePath in state
+            viewModel.onTransitionRequested("IN_PROGRESS")
+            val activeState = viewModel.uiState.value as ActiveJobUiState.Active
+            // Manually inject uploadedStoragePath (mimics prior upload success)
+            every { repository.getActiveJob("bk-1") } returns flowOf(activeState.job)
+            // Rebuild VM with pre-set uploaded path via state update
+            viewModel.uiState.value.let { } // ensure state is current
+
+            // Force state to have uploadedStoragePath set
+            val stateWithPath =
+                (viewModel.uiState.value as? ActiveJobUiState.Active)
+                    ?.copy(uploadedStoragePath = "bookings/bk-1/photos/uid/IN_PROGRESS/123.jpg") ?: return@runTest
+            // Use reflection-free approach: directly call onPhotoConfirmed while state has path
+            // The simplest way is to trigger an upload success first, then check retry path
+            coEvery { uploadJobPhotoUseCase.execute("bk-1", "IN_PROGRESS", "/cache/p.jpg") } returns
+                Result.success("bookings/bk-1/photos/uid/IN_PROGRESS/123.jpg")
+            coEvery { startWorkUseCase("bk-1") } returns Result.failure(RuntimeException("timeout"))
+
+            viewModel.onPhotoConfirmed("/cache/p.jpg")
+            advanceUntilIdle()
+
+            // uploadedStoragePath is now set; call again to exercise the skip-upload path
+            coEvery { startWorkUseCase("bk-1") } returns Result.success(aJob(ActiveJobStatus.IN_PROGRESS))
+            viewModel.onPhotoConfirmed("/cache/p.jpg")
+            advanceUntilIdle()
+
+            // Upload use case should only have been called once (second call skipped it)
+            coVerify(exactly = 1) { uploadJobPhotoUseCase.execute(any(), any(), any()) }
         }
 
     @Test

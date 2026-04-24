@@ -17,12 +17,14 @@ import type { HttpRequest, InvocationContext } from '@azure/functions';
 
 const BOOKING_ID = 'booking-123';
 const TECH_UID = 'tech-456';
-const PHOTO_URL = 'https://storage.googleapis.com/bucket/bookings/booking-123/photos/REACHED/ts.jpg';
+// Storage path: bookings/{bookingId}/photos/{uid}/{stage}/{timestamp}.jpg
+const STORAGE_PATH = `bookings/${BOOKING_ID}/photos/${TECH_UID}/REACHED/1234567890.jpg`;
 
+// EN_ROUTE → valid photo stage is 'REACHED'
 const BASE_BOOKING = {
   id: BOOKING_ID,
   technicianId: TECH_UID,
-  status: 'EN_ROUTE' as const, // EN_ROUTE → valid photo stage is 'REACHED'
+  status: 'EN_ROUTE' as const,
   photos: {},
   customerId: 'cust-1',
   serviceId: 'svc-1',
@@ -55,24 +57,24 @@ describe('POST /v1/technicians/active-job/:bookingId/photos', () => {
     vi.mocked(bookingRepo.getById).mockResolvedValue(BASE_BOOKING);
     vi.mocked(bookingRepo.addPhoto).mockResolvedValue({
       ...BASE_BOOKING,
-      photos: { REACHED: [PHOTO_URL] },
+      photos: { REACHED: [STORAGE_PATH] },
     });
   });
 
-  it('records photo URL and returns 200', async () => {
+  it('records storage path and returns 200', async () => {
     const res = await activeJobPhotosHandler(
-      makeRequest({ stage: 'REACHED', photoUrl: PHOTO_URL }),
+      makeRequest({ stage: 'REACHED', storagePath: STORAGE_PATH }),
       CTX,
     );
     expect(res.status).toBe(200);
     expect((res.jsonBody as any).ok).toBe(true);
-    expect(bookingRepo.addPhoto).toHaveBeenCalledWith(BOOKING_ID, 'REACHED', PHOTO_URL);
+    expect(bookingRepo.addPhoto).toHaveBeenCalledWith(BOOKING_ID, 'REACHED', STORAGE_PATH);
   });
 
   it('returns 401 when token verification fails', async () => {
     vi.mocked(verifyTechnicianToken).mockRejectedValue(new Error('Unauthorized'));
     const res = await activeJobPhotosHandler(
-      makeRequest({ stage: 'REACHED', photoUrl: PHOTO_URL }),
+      makeRequest({ stage: 'REACHED', storagePath: STORAGE_PATH }),
       CTX,
     );
     expect(res.status).toBe(401);
@@ -81,7 +83,7 @@ describe('POST /v1/technicians/active-job/:bookingId/photos', () => {
   it('returns 404 when booking not found', async () => {
     vi.mocked(bookingRepo.getById).mockResolvedValue(null);
     const res = await activeJobPhotosHandler(
-      makeRequest({ stage: 'REACHED', photoUrl: PHOTO_URL }),
+      makeRequest({ stage: 'REACHED', storagePath: STORAGE_PATH }),
       CTX,
     );
     expect(res.status).toBe(404);
@@ -90,7 +92,7 @@ describe('POST /v1/technicians/active-job/:bookingId/photos', () => {
   it('returns 403 when caller is not the assigned technician', async () => {
     vi.mocked(bookingRepo.getById).mockResolvedValue({ ...BASE_BOOKING, technicianId: 'other-tech' });
     const res = await activeJobPhotosHandler(
-      makeRequest({ stage: 'REACHED', photoUrl: PHOTO_URL }),
+      makeRequest({ stage: 'REACHED', storagePath: STORAGE_PATH }),
       CTX,
     );
     expect(res.status).toBe(403);
@@ -98,22 +100,31 @@ describe('POST /v1/technicians/active-job/:bookingId/photos', () => {
 
   it('returns 400 for invalid stage', async () => {
     const res = await activeJobPhotosHandler(
-      makeRequest({ stage: 'PENDING_PAYMENT', photoUrl: PHOTO_URL }),
+      makeRequest({ stage: 'PENDING_PAYMENT', storagePath: STORAGE_PATH }),
       CTX,
     );
     expect(res.status).toBe(400);
   });
 
-  it('returns 400 when photoUrl is missing', async () => {
+  it('returns 400 when storagePath is missing', async () => {
     const res = await activeJobPhotosHandler(makeRequest({ stage: 'REACHED' }), CTX);
     expect(res.status).toBe(400);
   });
 
-  it('returns 409 when stage does not match next expected transition', async () => {
-    // Booking is ASSIGNED — only EN_ROUTE stage is valid; posting COMPLETED should be rejected
-    vi.mocked(bookingRepo.getById).mockResolvedValue({ ...BASE_BOOKING, status: 'ASSIGNED' });
+  it('returns 403 when storagePath UID does not match caller', async () => {
+    const wrongUidPath = `bookings/${BOOKING_ID}/photos/other-uid/REACHED/1234567890.jpg`;
     const res = await activeJobPhotosHandler(
-      makeRequest({ stage: 'COMPLETED', photoUrl: PHOTO_URL }),
+      makeRequest({ stage: 'REACHED', storagePath: wrongUidPath }),
+      CTX,
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 409 when stage does not match next expected transition', async () => {
+    vi.mocked(bookingRepo.getById).mockResolvedValue({ ...BASE_BOOKING, status: 'ASSIGNED' });
+    const assignedPath = `bookings/${BOOKING_ID}/photos/${TECH_UID}/COMPLETED/1234567890.jpg`;
+    const res = await activeJobPhotosHandler(
+      makeRequest({ stage: 'COMPLETED', storagePath: assignedPath }),
       CTX,
     );
     expect(res.status).toBe(409);
@@ -123,7 +134,7 @@ describe('POST /v1/technicians/active-job/:bookingId/photos', () => {
     const etagConflict = Object.assign(new Error('ETag conflict'), { code: 412 });
     vi.mocked(bookingRepo.addPhoto).mockRejectedValue(etagConflict);
     const res = await activeJobPhotosHandler(
-      makeRequest({ stage: 'REACHED', photoUrl: PHOTO_URL }),
+      makeRequest({ stage: 'REACHED', storagePath: STORAGE_PATH }),
       CTX,
     );
     expect(res.status).toBe(409);

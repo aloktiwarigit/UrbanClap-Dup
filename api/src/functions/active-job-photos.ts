@@ -11,7 +11,6 @@ import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
 const PHOTO_STAGES = ['EN_ROUTE', 'REACHED', 'IN_PROGRESS', 'COMPLETED'] as const;
 
 // Each booking status maps to exactly one valid photo stage: the next transition target.
-// Prevents backfilling evidence photos for stages that haven't occurred yet.
 const VALID_PHOTO_STAGE: Partial<Record<string, string>> = {
   ASSIGNED: 'EN_ROUTE',
   EN_ROUTE: 'REACHED',
@@ -19,9 +18,14 @@ const VALID_PHOTO_STAGE: Partial<Record<string, string>> = {
   IN_PROGRESS: 'COMPLETED',
 };
 
+// Storage path pattern: bookings/{bookingId}/photos/{uid}/{stage}/{timestamp}.jpg
+const STORAGE_PATH_RE = /^bookings\/[^/]+\/photos\/([^/]+)\/([^/]+)\/\d+\.jpg$/;
+
 const RecordPhotoBodySchema = z.object({
   stage: z.enum(PHOTO_STAGES),
-  photoUrl: z.string().url(),
+  // storagePath: the Firebase Storage object path (not a download URL).
+  // Validated against STORAGE_PATH_RE to prevent foreign objects being attached.
+  storagePath: z.string().regex(STORAGE_PATH_RE),
 });
 
 export const activeJobPhotosHandler = async (
@@ -50,7 +54,15 @@ export const activeJobPhotosHandler = async (
     };
   }
 
-  const { stage, photoUrl } = parseResult.data;
+  const { stage, storagePath } = parseResult.data;
+
+  // Validate that the path belongs to this technician and the declared stage.
+  const match = STORAGE_PATH_RE.exec(storagePath);
+  const pathUid = match?.[1];
+  const pathStage = match?.[2];
+  if (pathUid !== uid || pathStage !== stage) {
+    return { status: 403, jsonBody: { error: 'Storage path does not match caller or stage' } };
+  }
 
   const booking = await bookingRepo.getById(bookingId);
   if (!booking) {
@@ -60,7 +72,7 @@ export const activeJobPhotosHandler = async (
     return { status: 403, jsonBody: { error: 'Forbidden' } };
   }
 
-  // Validate that the stage being photographed matches the next expected transition.
+  // Validate that the stage matches the next expected transition.
   const expectedStage = VALID_PHOTO_STAGE[booking.status];
   if (!expectedStage || stage !== expectedStage) {
     return {
@@ -70,11 +82,10 @@ export const activeJobPhotosHandler = async (
   }
 
   try {
-    const updated = await bookingRepo.addPhoto(bookingId, stage, photoUrl);
+    const updated = await bookingRepo.addPhoto(bookingId, stage, storagePath);
     return { status: 200, jsonBody: { ok: true, photos: updated?.photos } };
   } catch (err: unknown) {
     // Cosmos ETag conflict — another request updated the document between our read and write.
-    // Return 409 so the client can retry immediately.
     if (typeof err === 'object' && err !== null && 'code' in err && (err as { code: number }).code === 412) {
       return { status: 409, jsonBody: { error: 'Conflict — please retry' } };
     }

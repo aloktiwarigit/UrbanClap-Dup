@@ -17,12 +17,9 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 public abstract class PhotoModule {
-
     @Binds
     @Singleton
-    internal abstract fun bindJobPhotoRepository(
-        impl: JobPhotoRepositoryImpl,
-    ): JobPhotoRepository
+    internal abstract fun bindJobPhotoRepository(impl: JobPhotoRepositoryImpl): JobPhotoRepository
 
     public companion object {
         // FirebaseAuth already provided by AuthModule
@@ -31,18 +28,18 @@ public abstract class PhotoModule {
         @Provides
         @Singleton
         internal fun providePhotoApiService(): PhotoApiService =
-            Retrofit.Builder()
+            Retrofit
+                .Builder()
                 .baseUrl("https://homeservices-api.azurewebsites.net/api/")
                 .client(
-                    OkHttpClient.Builder()
+                    OkHttpClient
+                        .Builder()
                         .addInterceptor(
                             HttpLoggingInterceptor().apply {
                                 level = HttpLoggingInterceptor.Level.BODY
-                            }
-                        )
-                        .build()
-                )
-                .addConverterFactory(MoshiConverterFactory.create())
+                            },
+                        ).build(),
+                ).addConverterFactory(MoshiConverterFactory.create())
                 .build()
                 .create(PhotoApiService::class.java)
     }
