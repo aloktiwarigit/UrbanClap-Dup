@@ -86,7 +86,8 @@ export const getConfidenceScoreHandler = async (
   const areaRating = techDoc?.rating ?? null;
 
   let nearestEtaMinutes: number | null = null;
-  if (techDoc?.location?.coordinates) {
+  const hasCustomerLocation = lat !== 0.0 || lng !== 0.0;
+  if (hasCustomerLocation && techDoc?.location?.coordinates) {
     const [techLng, techLat] = techDoc.location.coordinates;
     nearestEtaMinutes = Math.round((haversineKm(lat, lng, techLat, techLng) / AVG_SPEED_KMH) * 60);
   }

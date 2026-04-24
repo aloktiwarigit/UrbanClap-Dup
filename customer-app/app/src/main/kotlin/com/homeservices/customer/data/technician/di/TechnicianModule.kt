@@ -35,6 +35,12 @@ public abstract class TechnicianModule {
         @Singleton
         public fun provideMoshi(): Moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
 
+        // Known limitation (E04-S02): this client has no Firebase auth interceptor because
+        // customer auth (FirebaseAuth) is not wired into this branch yet (branches from main
+        // at E02-S04, predating E02-S01 customer auth). The `requireCustomer` middleware will
+        // return 401 until the Firebase ID-token interceptor is added when customer auth merges.
+        // Fix: replace this client with one that mirrors BookingModule's @AuthOkHttpClient
+        // (reads FirebaseAuth.getInstance().currentUser?.getIdToken(false)?.await()?.token).
         @Provides
         @Singleton
         @TechnicianHttpClient

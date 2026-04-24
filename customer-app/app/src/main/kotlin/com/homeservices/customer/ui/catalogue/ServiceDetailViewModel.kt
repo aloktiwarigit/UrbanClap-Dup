@@ -31,6 +31,9 @@ internal class ServiceDetailViewModel @Inject constructor(
         _uiState.value = ServiceDetailUiState.Success(serviceId)
         if (technicianId != null) {
             viewModelScope.launch {
+                // (0.0, 0.0) sentinel: API returns nearestEtaMinutes=null for these coords rather
+                // than a nonsensical Gulf-of-Guinea ETA. Wire in a LocationRepository here when
+                // customer GPS is available (follow-up story after customer auth merges).
                 getConfidenceScore(technicianId, 0.0, 0.0).collect { result ->
                     _confidenceScoreState.value = result.fold(
                         onSuccess = { score ->

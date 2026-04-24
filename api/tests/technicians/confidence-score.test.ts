@@ -86,4 +86,10 @@ describe('GET /v1/technicians/:id/confidence-score', () => {
     const res = await getConfidenceScoreHandler(makeRequest('tech-1'), {} as InvocationContext, CUSTOMER);
     expect((res.jsonBody as any).areaRating).toBe(4.5);
   });
+
+  it('returns nearestEtaMinutes=null when customer lat/lng are (0,0) sentinel', async () => {
+    const req = makeRequest('tech-1', '0', '0');
+    const res = await getConfidenceScoreHandler(req, {} as InvocationContext, CUSTOMER);
+    expect((res.jsonBody as any).nearestEtaMinutes).toBeNull();
+  });
 });
