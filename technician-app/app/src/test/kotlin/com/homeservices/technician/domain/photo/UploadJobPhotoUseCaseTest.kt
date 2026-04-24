@@ -15,7 +15,7 @@ public class UploadJobPhotoUseCaseTest {
     private val remoteUrl = "https://storage.googleapis.com/bucket/bookings/b1/photos/REACHED/ts.jpg"
 
     @Test
-    public fun `execute uploads then records URL on success`() = runTest {
+    public fun `execute uploads then records URL on success`(): Unit = runTest {
         coEvery { repository.uploadPhoto("b1", "REACHED", "/cache/photo.jpg") } returns
             Result.success(remoteUrl)
         coEvery { repository.recordPhotoUrl("b1", "REACHED", remoteUrl) } returns
@@ -29,7 +29,7 @@ public class UploadJobPhotoUseCaseTest {
     }
 
     @Test
-    public fun `execute returns failure and skips recordPhotoUrl if upload fails`() = runTest {
+    public fun `execute returns failure and skips recordPhotoUrl if upload fails`(): Unit = runTest {
         val error = RuntimeException("Storage quota exceeded")
         coEvery { repository.uploadPhoto(any(), any(), any()) } returns Result.failure(error)
 
@@ -41,7 +41,7 @@ public class UploadJobPhotoUseCaseTest {
     }
 
     @Test
-    public fun `execute returns failure when recordPhotoUrl fails`() = runTest {
+    public fun `execute returns failure when recordPhotoUrl fails`(): Unit = runTest {
         val recordError = RuntimeException("API 500")
         coEvery { repository.uploadPhoto(any(), any(), any()) } returns Result.success(remoteUrl)
         coEvery { repository.recordPhotoUrl(any(), any(), any()) } returns

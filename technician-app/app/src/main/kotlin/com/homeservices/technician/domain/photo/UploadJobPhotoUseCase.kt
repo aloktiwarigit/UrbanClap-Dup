@@ -1,6 +1,8 @@
 package com.homeservices.technician.domain.photo
 
-public class UploadJobPhotoUseCase(
+import javax.inject.Inject
+
+public class UploadJobPhotoUseCase @Inject constructor(
     private val repository: JobPhotoRepository,
 ) {
     /** Upload [localFilePath] and record the resulting URL. Returns the remote URL on success. */

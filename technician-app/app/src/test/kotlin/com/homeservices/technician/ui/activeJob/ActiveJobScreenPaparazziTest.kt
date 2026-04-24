@@ -30,15 +30,10 @@ public class ActiveJobScreenPaparazziTest {
     public fun activeJobScreen_enRoute(): Unit {
         paparazzi.snapshot {
             ActiveJobScreenContent(
-                uiState =
-                    ActiveJobUiState.Active(
-                        aJob(ActiveJobStatus.EN_ROUTE),
-                        ActiveJobAction.MARK_ARRIVED,
-                    ),
-                onStartTrip = {},
-                onMarkReached = {},
-                onStartWork = {},
-                onCompleteJob = {},
+                uiState = ActiveJobUiState.Active(aJob(ActiveJobStatus.EN_ROUTE), ActiveJobAction.MARK_ARRIVED),
+                onTransitionRequested = {},
+                onPhotoCancelled = {},
+                onPhotoConfirmed = {},
             )
         }
     }
@@ -48,15 +43,10 @@ public class ActiveJobScreenPaparazziTest {
     public fun activeJobScreen_reached(): Unit {
         paparazzi.snapshot {
             ActiveJobScreenContent(
-                uiState =
-                    ActiveJobUiState.Active(
-                        aJob(ActiveJobStatus.REACHED),
-                        ActiveJobAction.START_WORK,
-                    ),
-                onStartTrip = {},
-                onMarkReached = {},
-                onStartWork = {},
-                onCompleteJob = {},
+                uiState = ActiveJobUiState.Active(aJob(ActiveJobStatus.REACHED), ActiveJobAction.START_WORK),
+                onTransitionRequested = {},
+                onPhotoCancelled = {},
+                onPhotoConfirmed = {},
             )
         }
     }
@@ -66,15 +56,10 @@ public class ActiveJobScreenPaparazziTest {
     public fun activeJobScreen_inProgress(): Unit {
         paparazzi.snapshot {
             ActiveJobScreenContent(
-                uiState =
-                    ActiveJobUiState.Active(
-                        aJob(ActiveJobStatus.IN_PROGRESS),
-                        ActiveJobAction.COMPLETE_JOB,
-                    ),
-                onStartTrip = {},
-                onMarkReached = {},
-                onStartWork = {},
-                onCompleteJob = {},
+                uiState = ActiveJobUiState.Active(aJob(ActiveJobStatus.IN_PROGRESS), ActiveJobAction.COMPLETE_JOB),
+                onTransitionRequested = {},
+                onPhotoCancelled = {},
+                onPhotoConfirmed = {},
             )
         }
     }
