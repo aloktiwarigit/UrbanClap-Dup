@@ -46,7 +46,9 @@ export async function generateAndSendReport(
       downloadPhotoSets(booking.photos ?? {}),
     ]);
     const pdfBuffer = await generateServiceReportPdf(reportData, photoSets);
-    await uploadBufferToStorage(reportPath, pdfBuffer, 'application/pdf');
+    // Email first: if ACS fails, no file is written to Storage so the next change-feed
+    // retry will re-attempt both steps. Uploading first would cause the existence-check
+    // guard to short-circuit all future retries, silently dropping the email.
     if (reportData.customer.email) {
       await sendServiceReportEmail({
         to: reportData.customer.email,
@@ -55,6 +57,7 @@ export async function generateAndSendReport(
         pdfBuffer,
       });
     }
+    await uploadBufferToStorage(reportPath, pdfBuffer, 'application/pdf');
     ctx.log(`report generated for ${booking.id}`);
   } catch (err: unknown) {
     Sentry.captureException(err);

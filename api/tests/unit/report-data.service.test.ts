@@ -79,4 +79,12 @@ describe('assembleReportData', () => {
     const report = await assembleReportData(baseBooking);
     expect(report.nextServiceRecommendation).toContain('3 months');
   });
+
+  it('degrades gracefully when Firebase Auth user record is missing', async () => {
+    mockGetUser.mockRejectedValue(Object.assign(new Error('user-not-found'), { code: 'auth/user-not-found' }));
+    const report = await assembleReportData(baseBooking);
+    expect(report.customer.email).toBe('');
+    expect(report.customer.displayName).toBe('Valued Customer');
+    expect(report.bookingId).toBe('bk-1');
+  });
 });

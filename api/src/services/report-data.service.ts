@@ -21,7 +21,9 @@ export async function assembleReportData(booking: BookingDoc): Promise<ReportDat
   const [tech, service, userRecord] = await Promise.all([
     getTechnicianForReport(booking.technicianId!),
     catalogueRepo.getServiceByIdCrossPartition(booking.serviceId),
-    getAuth().getUser(booking.customerId),
+    // Wrap getUser so a deleted or not-yet-provisioned Auth record degrades gracefully
+    // rather than aborting the entire report assembly via Promise.all rejection.
+    getAuth().getUser(booking.customerId).catch(() => null),
   ]);
 
   return {
@@ -38,8 +40,8 @@ export async function assembleReportData(booking: BookingDoc): Promise<ReportDat
       rating: tech?.rating ?? 0,
     },
     customer: {
-      email: userRecord.email ?? '',
-      displayName: userRecord.displayName ?? 'Valued Customer',
+      email: userRecord?.email ?? '',
+      displayName: userRecord?.displayName ?? 'Valued Customer',
     },
     priceBreakdown: {
       baseAmount: booking.amount,

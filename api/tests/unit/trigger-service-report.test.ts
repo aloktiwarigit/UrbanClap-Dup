@@ -59,15 +59,28 @@ describe('generateAndSendReport', () => {
     expect(assembleReportData).not.toHaveBeenCalled();
   });
 
-  it('generates PDF, uploads to Storage, and sends email on success', async () => {
+  it('generates PDF, sends email, then uploads to Storage (email-first ordering)', async () => {
+    const callOrder: string[] = [];
+    vi.mocked(sendServiceReportEmail).mockImplementation(async () => { callOrder.push('email'); });
+    vi.mocked(uploadBufferToStorage).mockImplementation(async () => { callOrder.push('upload'); });
+
     await generateAndSendReport(completed, ctx);
+
     expect(generateServiceReportPdf).toHaveBeenCalled();
-    expect(uploadBufferToStorage).toHaveBeenCalledWith(
-      'reports/bk-1/service-report.pdf', expect.any(Buffer), 'application/pdf',
-    );
     expect(sendServiceReportEmail).toHaveBeenCalledWith(
       expect.objectContaining({ to: 'p@example.com', bookingId: 'bk-1' }),
     );
+    expect(uploadBufferToStorage).toHaveBeenCalledWith(
+      'reports/bk-1/service-report.pdf', expect.any(Buffer), 'application/pdf',
+    );
+    // Email must precede upload so an ACS failure leaves no Storage file, enabling retry
+    expect(callOrder).toEqual(['email', 'upload']);
+  });
+
+  it('does not upload to Storage when email send fails (retry safety)', async () => {
+    vi.mocked(sendServiceReportEmail).mockRejectedValue(new Error('ACS transient error'));
+    await expect(generateAndSendReport(completed, ctx)).resolves.toBeUndefined();
+    expect(uploadBufferToStorage).not.toHaveBeenCalled();
   });
 
   it('skips email when customer.email is empty', async () => {
