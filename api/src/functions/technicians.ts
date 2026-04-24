@@ -81,10 +81,19 @@ export const getConfidenceScoreHandler = async (
   }
   const onTimePercent = timedBookings > 0 ? Math.round((onTimeCount / timedBookings) * 100) : 0;
 
-  const { resource: techDoc } = await db
-    .container('technicians')
-    .item(technicianId, technicianId)
-    .read<{ id: string; location?: { type: string; coordinates: [number, number] } }>();
+  let techDoc: { id: string; location?: { type: string; coordinates: [number, number] } } | undefined;
+  try {
+    const result = await db
+      .container('technicians')
+      .item(technicianId, technicianId)
+      .read<{ id: string; location?: { type: string; coordinates: [number, number] } }>();
+    techDoc = result.resource;
+  } catch {
+    return { status: 404, jsonBody: { code: 'TECHNICIAN_NOT_FOUND' } };
+  }
+  if (!techDoc) {
+    return { status: 404, jsonBody: { code: 'TECHNICIAN_NOT_FOUND' } };
+  }
 
   // areaRating: null until per-booking ratings are collected; tech global rating intentionally excluded.
   const areaRating: number | null = null;

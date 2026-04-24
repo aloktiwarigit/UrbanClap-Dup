@@ -82,6 +82,12 @@ describe('GET /v1/technicians/:id/confidence-score', () => {
     expect((res.jsonBody as any).nearestEtaMinutes).toBeNull();
   });
 
+  it('returns 404 when technician does not exist', async () => {
+    techsContainer.item.mockReturnValue({ read: vi.fn().mockResolvedValue({ resource: undefined }) });
+    const res = await getConfidenceScoreHandler(makeRequest('unknown-tech'), {} as InvocationContext, CUSTOMER);
+    expect(res.status).toBe(404);
+  });
+
   it('returns areaRating=null (no per-booking ratings collected yet)', async () => {
     const res = await getConfidenceScoreHandler(makeRequest('tech-1'), {} as InvocationContext, CUSTOMER);
     expect((res.jsonBody as any).areaRating).toBeNull();
