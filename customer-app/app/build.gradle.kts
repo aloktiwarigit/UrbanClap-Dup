@@ -295,6 +295,20 @@ kover {
                     // which is only observable in a running coroutine collector (integration-level)
                     "*.PriceApprovalEventBus",
                     "*.PriceApprovalEventBus\$*",
+                    // LiveTracking Compose screen — same rationale as other *Kt screen classes
+                    "*.LiveTrackingScreenKt",
+                    "*.LiveTrackingScreenKt\$*",
+                    // LiveTrackingUiState sealed class — data holders, no logic branches
+                    "*.LiveTrackingUiState",
+                    "*.LiveTrackingUiState\$*",
+                    // TrackingEventBus — MutableSharedFlow wrapper, same rationale as PriceApprovalEventBus
+                    "*.TrackingEventBus",
+                    "*.TrackingEventBus\$*",
+                    // TrackingRepositoryImpl — scan over SharedFlow, same rationale as BookingRepositoryImpl
+                    "*.TrackingRepositoryImpl",
+                    "*.TrackingRepositoryImpl\$*",
+                    // data.tracking.di — Hilt @Binds wiring, same rationale as other DI modules
+                    "*.data.tracking.di.*",
                 )
             }
         }
@@ -359,6 +373,7 @@ dependencies {
     implementation(libs.razorpay.checkout)
     implementation(libs.google.places)
     implementation(libs.play.services.maps)
+    implementation(libs.maps.compose)
 
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.jupiter.api)

@@ -38,6 +38,7 @@ coil = "2.7.0"
 razorpay       = "1.6.40"
 googlePlaces   = "3.5.0"
 playServicesMaps = "19.0.0"
+mapsCompose           = "4.3.3"
 
 # KYC-specific (Custom Tabs for DigiLocker redirect)
 androidxBrowser = "1.8.0"
@@ -118,6 +119,7 @@ coil-compose         = { module = "io.coil-kt:coil-compose",                    
 razorpay-checkout  = { module = "com.razorpay:checkout",                                  version.ref = "razorpay" }
 google-places      = { module = "com.google.android.libraries.places:places",            version.ref = "googlePlaces" }
 play-services-maps = { module = "com.google.android.gms:play-services-maps",             version.ref = "playServicesMaps" }
+maps-compose          = { module = "com.google.maps.android:maps-compose",              version.ref = "mapsCompose" }
 
 # Test
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit5" }

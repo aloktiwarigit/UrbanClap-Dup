@@ -34,11 +34,19 @@ internal fun AppNavigation(
                     .getInstance()
                     .subscribeToTopic("customer_${currentAuth.uid}")
             }
-            is AuthState.Unauthenticated ->
+            is AuthState.Unauthenticated -> {
+                // Unsubscribe from all customer topics before navigating to auth.
+                // We can't know the previous uid here, so we rely on the fact that
+                // Unauthenticated state is only reached after the auth flow clears the session.
+                // The safest approach: delete the FCM token so no topics persist.
+                com.google.firebase.messaging.FirebaseMessaging
+                    .getInstance()
+                    .deleteToken()
                 navController.navigate("auth") {
                     popUpTo("main") { inclusive = true }
                     launchSingleTop = true
                 }
+            }
         }
     }
 

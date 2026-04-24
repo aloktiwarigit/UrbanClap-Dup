@@ -28,6 +28,7 @@ import com.homeservices.customer.ui.shared.TrustDossierUiState
 internal fun BookingConfirmedScreen(
     bookingId: String,
     onBackToHome: () -> Unit,
+    onTrackBooking: (bookingId: String) -> Unit = {},
 ) {
     Column(
         modifier =
@@ -68,6 +69,16 @@ internal fun BookingConfirmedScreen(
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(24.dp))
+        Button(
+            onClick = { onTrackBooking(bookingId) },
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+        ) {
+            Text("Track your service")
+        }
+        Spacer(Modifier.height(8.dp))
         Button(
             onClick = onBackToHome,
             modifier =
