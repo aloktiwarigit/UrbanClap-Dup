@@ -21,6 +21,8 @@ import com.homeservices.customer.ui.catalogue.ServiceDetailScreen
 import com.homeservices.customer.ui.catalogue.ServiceDetailViewModel
 import com.homeservices.customer.ui.catalogue.ServiceListScreen
 import com.homeservices.customer.ui.catalogue.ServiceListViewModel
+import com.homeservices.customer.ui.tracking.LiveTrackingScreen
+import com.homeservices.customer.ui.tracking.LiveTrackingViewModel
 
 internal fun NavGraphBuilder.mainGraph(navController: NavController) {
     navigation(startDestination = CatalogueRoutes.HOME, route = "main") {
@@ -144,6 +146,9 @@ internal fun NavGraphBuilder.mainGraph(navController: NavController) {
                 onBackToHome = {
                     navController.popBackStack(CatalogueRoutes.HOME, inclusive = false)
                 },
+                onTrackBooking = { id ->
+                    navController.navigate(BookingRoutes.liveTrackingRoute(id))
+                },
             )
         }
 
@@ -156,6 +161,17 @@ internal fun NavGraphBuilder.mainGraph(navController: NavController) {
                 viewModel = vm,
                 bookingId = backStackEntry.arguments?.getString("bookingId") ?: "",
                 onApprovalComplete = { navController.popBackStack() },
+            )
+        }
+
+        composable(
+            route = BookingRoutes.LIVE_TRACKING,
+            arguments = listOf(navArgument("bookingId") { type = NavType.StringType }),
+        ) {
+            val vm: LiveTrackingViewModel = hiltViewModel()
+            LiveTrackingScreen(
+                viewModel = vm,
+                onBack = { navController.popBackStack() },
             )
         }
     }
