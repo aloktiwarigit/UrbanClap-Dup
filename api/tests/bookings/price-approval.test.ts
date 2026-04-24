@@ -5,8 +5,8 @@ vi.stubEnv('RAZORPAY_KEY_ID', 'rzp_test');
 vi.stubEnv('RAZORPAY_KEY_SECRET', 'rzp_secret');
 
 vi.mock('../../src/middleware/requireCustomer.js', () => ({
-  requireCustomer: (h: Function) => (req: HttpRequest, ctx: unknown) =>
-    h(req, ctx, { customerId: 'cust-1' }),
+  requireCustomer: (h: (req: HttpRequest, ctx: unknown, claims: { customerId: string }) => Promise<unknown>) =>
+    (req: HttpRequest, ctx: unknown) => h(req, ctx, { customerId: 'cust-1' }),
 }));
 vi.mock('../../src/middleware/verifyTechnicianToken.js', () => ({
   verifyTechnicianToken: vi.fn().mockResolvedValue({ uid: 'tech-1' }),
