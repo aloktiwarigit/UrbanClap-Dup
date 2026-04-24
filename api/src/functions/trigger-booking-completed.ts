@@ -78,22 +78,33 @@ export async function settleBooking(bookingRaw: unknown, ctx: InvocationContext)
   }
 
   const razorpay = new RazorpayRouteService();
+  let transferId: string;
   try {
-    const { transferId } = await razorpay.transfer({
+    const result = await razorpay.transfer({
       accountId: tech.razorpayLinkedAccountId,
       amount: techAmount,
       notes: { bookingId, technicianId },
       idempotencyKey: bookingId,
     });
-    await walletLedgerRepo.markPaid(bookingId, technicianId, transferId);
-    await incrementCompletedJobCount(technicianId);
-    await sendTechEarningsUpdate(technicianId, { bookingId, techAmount });
-    await systemAuditEntry('ROUTE_TRANSFER_SUCCESS', bookingId, { transferId, techAmount });
+    transferId = result.transferId;
   } catch (err: unknown) {
     const reason = err instanceof Error ? err.message : String(err);
     await walletLedgerRepo.markFailed(bookingId, technicianId, reason);
     Sentry.captureException(err);
     await systemAuditEntry('ROUTE_TRANSFER_FAILED', bookingId, { reason });
+    return;
+  }
+
+  // Transfer succeeded — mark PAID and audit immediately
+  await walletLedgerRepo.markPaid(bookingId, technicianId, transferId);
+  await systemAuditEntry('ROUTE_TRANSFER_SUCCESS', bookingId, { transferId, techAmount });
+
+  // Best-effort post-transfer notifications; never rollback PAID status
+  try {
+    await incrementCompletedJobCount(technicianId);
+    await sendTechEarningsUpdate(technicianId, { bookingId, techAmount });
+  } catch (err: unknown) {
+    Sentry.captureException(err);
   }
 }
 

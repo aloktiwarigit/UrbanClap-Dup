@@ -24,12 +24,24 @@ export async function getTechnicianForSettlement(
 
 export async function incrementCompletedJobCount(technicianId: string): Promise<void> {
   const container = getCosmosClient().database(DB_NAME).container(CONTAINER);
-  const { resource } = await container
-    .item(technicianId, technicianId)
-    .read<{ id: string; completedJobCount?: number } & Record<string, unknown>>();
-  if (!resource) return;
-  await container.item(technicianId, technicianId).replace({
-    ...resource,
-    completedJobCount: (resource.completedJobCount ?? 0) + 1,
-  });
+  const maxRetries = 3;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const { resource, etag } = await container
+      .item(technicianId, technicianId)
+      .read<{ id: string; completedJobCount?: number } & Record<string, unknown>>();
+    if (!resource) return;
+    try {
+      await container.item(technicianId, technicianId).replace(
+        { ...resource, completedJobCount: (resource.completedJobCount ?? 0) + 1 },
+        { accessCondition: { type: 'IfMatch', condition: etag ?? '' } },
+      );
+      return;
+    } catch (err: unknown) {
+      if ((err as { code?: number }).code === 412 && attempt < maxRetries - 1) {
+        // ETag mismatch: concurrent write won — retry with fresh read
+        continue;
+      }
+      throw err;
+    }
+  }
 }

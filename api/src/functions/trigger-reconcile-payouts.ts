@@ -41,30 +41,39 @@ export async function reconcilePayouts(ctx: InvocationContext): Promise<void> {
 
   for (const entry of pendingStale) {
     await systemAuditEntry('RECON_RETRY_ATTEMPT', { bookingId: entry.bookingId });
+    let transferId: string;
     try {
       const tech = await getTechnicianForSettlement(entry.technicianId);
       if (!tech?.razorpayLinkedAccountId) {
         throw new Error('no Razorpay linked account');
       }
-      const { transferId } = await razorpay.transfer({
+      const result = await razorpay.transfer({
         accountId: tech.razorpayLinkedAccountId,
         amount: entry.techAmount,
         notes: { bookingId: entry.bookingId, technicianId: entry.technicianId },
         idempotencyKey: entry.bookingId,
       });
-      await walletLedgerRepo.markPaid(entry.bookingId, entry.technicianId, transferId);
-      await incrementCompletedJobCount(entry.technicianId);
-      await sendTechEarningsUpdate(entry.technicianId, {
-        bookingId: entry.bookingId,
-        techAmount: entry.techAmount,
-      });
-      await systemAuditEntry('RECON_RETRY_SUCCESS', { bookingId: entry.bookingId, transferId });
+      transferId = result.transferId;
     } catch (err: unknown) {
       const reason = err instanceof Error ? err.message : String(err);
       await walletLedgerRepo.markFailed(entry.bookingId, entry.technicianId, reason);
       Sentry.captureException(err);
       await systemAuditEntry('RECON_RETRY_FAILED', { bookingId: entry.bookingId, reason });
       retryFailed += 1;
+      continue;
+    }
+
+    // Transfer succeeded
+    await walletLedgerRepo.markPaid(entry.bookingId, entry.technicianId, transferId);
+    await systemAuditEntry('RECON_RETRY_SUCCESS', { bookingId: entry.bookingId, transferId });
+    try {
+      await incrementCompletedJobCount(entry.technicianId);
+      await sendTechEarningsUpdate(entry.technicianId, {
+        bookingId: entry.bookingId,
+        techAmount: entry.techAmount,
+      });
+    } catch (err: unknown) {
+      Sentry.captureException(err);
     }
   }
 
