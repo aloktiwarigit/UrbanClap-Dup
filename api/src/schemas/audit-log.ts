@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const AuditLogEntrySchema = z.object({
   id: z.string().uuid(),
   adminId: z.string(),
-  role: z.enum(['super-admin', 'ops-manager', 'finance', 'support-agent']),
+  role: z.enum(['super-admin', 'ops-manager', 'finance', 'support-agent', 'system']),
   action: z.string(),
   resourceType: z.string(),
   resourceId: z.string(),

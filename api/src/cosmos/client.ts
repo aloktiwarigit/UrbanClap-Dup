@@ -40,6 +40,10 @@ export function getSscLeviesContainer(): Container {
   return getCosmosClient().database(DB_NAME).container('ssc_levies');
 }
 
+export function getWalletLedgerContainer(): Container {
+  return getCosmosClient().database(DB_NAME).container('wallet_ledger');
+}
+
 /** Inject a mock CosmosClient in tests. */
 export function _setCosmosClientForTest(mock: CosmosClient): void {
   _client = mock;
