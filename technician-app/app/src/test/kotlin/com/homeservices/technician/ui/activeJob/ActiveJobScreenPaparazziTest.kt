@@ -34,6 +34,7 @@ public class ActiveJobScreenPaparazziTest {
                 onTransitionRequested = {},
                 onPhotoCancelled = {},
                 onPhotoConfirmed = {},
+                onPhotoRetake = {},
             )
         }
     }
@@ -47,6 +48,7 @@ public class ActiveJobScreenPaparazziTest {
                 onTransitionRequested = {},
                 onPhotoCancelled = {},
                 onPhotoConfirmed = {},
+                onPhotoRetake = {},
             )
         }
     }
@@ -60,6 +62,7 @@ public class ActiveJobScreenPaparazziTest {
                 onTransitionRequested = {},
                 onPhotoCancelled = {},
                 onPhotoConfirmed = {},
+                onPhotoRetake = {},
             )
         }
     }

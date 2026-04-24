@@ -300,6 +300,45 @@ public class ActiveJobViewModelTest {
         }
 
     @Test
+    public fun `onPhotoRetake clears photoUploadError but preserves pendingPhotoStage`(): Unit =
+        runTest {
+            // Simulate failed upload that set an error
+            coEvery { uploadJobPhotoUseCase.execute(any(), any(), any()) } returns
+                Result.failure(RuntimeException("timeout"))
+            viewModel.onTransitionRequested("REACHED")
+            viewModel.onPhotoConfirmed("/cache/p.jpg")
+            advanceUntilIdle()
+            val stateWithError = viewModel.uiState.value as ActiveJobUiState.Active
+            assertThat(stateWithError.photoUploadError).isNotNull()
+
+            // Retake — error should clear, stage should remain
+            viewModel.onPhotoRetake()
+            val stateAfterRetake = viewModel.uiState.value as ActiveJobUiState.Active
+            assertThat(stateAfterRetake.photoUploadError).isNull()
+            assertThat(stateAfterRetake.pendingPhotoStage).isEqualTo("REACHED")
+        }
+
+    @Test
+    public fun `onPhotoRetake is no-op when state is Loading`(): Unit =
+        runTest {
+            every { repository.getActiveJob("bk-1") } returns emptyFlow()
+            val savedStateHandle = SavedStateHandle(mapOf("bookingId" to "bk-1"))
+            val vm =
+                ActiveJobViewModel(
+                    savedStateHandle,
+                    repository,
+                    startTripUseCase,
+                    markReachedUseCase,
+                    startWorkUseCase,
+                    completeJobUseCase,
+                    connectivityObserver,
+                    uploadJobPhotoUseCase,
+                )
+            vm.onPhotoRetake()
+            assertThat(vm.uiState.value).isInstanceOf(ActiveJobUiState.Loading::class.java)
+        }
+
+    @Test
     public fun `onPhotoConfirmed is no-op when pendingPhotoStage is null`(): Unit =
         runTest {
             // pendingPhotoStage is null by default — onPhotoConfirmed should return early

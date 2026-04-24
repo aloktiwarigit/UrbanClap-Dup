@@ -126,6 +126,12 @@ internal class ActiveJobViewModel
                 )
         }
 
+        /** User tapped Retake after an upload error — clear the error so the fresh capture gets a clean slate. */
+        public fun onPhotoRetake() {
+            val current = _uiState.value as? ActiveJobUiState.Active ?: return
+            _uiState.value = current.copy(photoUploadError = null)
+        }
+
         /**
          * User confirmed the captured photo — upload it then fire the stage transition.
          *
@@ -150,7 +156,9 @@ internal class ActiveJobViewModel
                 if (uploadResult.isSuccess) {
                     val storagePath = uploadResult.getOrThrow()
                     val s = _uiState.value as? ActiveJobUiState.Active ?: return@launch
-                    _uiState.value = s.copy(photoUploadInProgress = false, uploadedStoragePath = storagePath)
+                    // Keep photoUploadInProgress = true until fireTransition completes so the
+                    // Confirm button stays disabled and duplicate transitions are prevented.
+                    _uiState.value = s.copy(uploadedStoragePath = storagePath)
                     fireTransition(stage)
                 } else {
                     val s = _uiState.value as? ActiveJobUiState.Active ?: return@launch
@@ -183,6 +191,7 @@ internal class ActiveJobViewModel
                         s.copy(
                             pendingPhotoStage = null,
                             uploadedStoragePath = null,
+                            photoUploadInProgress = false,
                             photoUploadError = null,
                         )
                 } else {
@@ -190,6 +199,7 @@ internal class ActiveJobViewModel
                     // without re-uploading the photo.
                     _uiState.value =
                         s.copy(
+                            photoUploadInProgress = false,
                             photoUploadError = transitionResult.exceptionOrNull()?.message ?: "Transition failed — tap Retry",
                         )
                 }
