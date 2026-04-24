@@ -111,8 +111,8 @@ export const getConfidenceScoreHandler = async (
       onTimePercent,
       areaRating,
       nearestEtaMinutes,
-      dataPointCount: bookings.length,
-      isLimitedData: bookings.length < LIMITED_THRESHOLD,
+      dataPointCount: timedBookings,
+      isLimitedData: timedBookings < LIMITED_THRESHOLD,
     },
   };
 };

@@ -6,12 +6,8 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.homeservices.customer.ui.catalogue.ConfidenceScoreRow
+import com.homeservices.customer.ui.catalogue.ServiceDetailScreen
 import com.homeservices.customer.ui.catalogue.ServiceDetailViewModel
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 internal fun NavGraphBuilder.mainGraph(navController: NavController) {
     composable(
@@ -26,7 +22,9 @@ internal fun NavGraphBuilder.mainGraph(navController: NavController) {
         ),
     ) {
         val vm: ServiceDetailViewModel = hiltViewModel()
-        val confidenceScoreState by vm.confidenceScoreState.collectAsStateWithLifecycle()
-        ConfidenceScoreRow(uiState = confidenceScoreState)
+        ServiceDetailScreen(
+            viewModel = vm,
+            onBack = { navController.popBackStack() },
+        )
     }
 }
