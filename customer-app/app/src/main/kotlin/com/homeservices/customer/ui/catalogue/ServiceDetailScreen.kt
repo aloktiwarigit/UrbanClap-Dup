@@ -45,6 +45,7 @@ internal fun ServiceDetailScreen(
     onBack: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val confidenceScoreState by viewModel.confidenceScoreState.collectAsStateWithLifecycle()
     Scaffold(
         topBar = {
             TopAppBar(
@@ -62,6 +63,7 @@ internal fun ServiceDetailScreen(
     ) { innerPadding ->
         ServiceDetailContent(
             uiState = uiState,
+            confidenceScoreState = confidenceScoreState,
             onBookNow = onBookNow,
             modifier = Modifier.padding(innerPadding),
         )
@@ -71,6 +73,7 @@ internal fun ServiceDetailScreen(
 @Composable
 internal fun ServiceDetailContent(
     uiState: ServiceDetailUiState,
+    confidenceScoreState: ConfidenceScoreUiState,
     onBookNow: (serviceId: String, categoryId: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -91,6 +94,7 @@ internal fun ServiceDetailContent(
         is ServiceDetailUiState.Success -> {
             ServiceDetailBody(
                 service = uiState.service,
+                confidenceScoreState = confidenceScoreState,
                 onBookNow = { onBookNow(uiState.service.id, uiState.service.categoryId) },
                 modifier = modifier,
             )
@@ -101,6 +105,7 @@ internal fun ServiceDetailContent(
 @Composable
 private fun ServiceDetailBody(
     service: Service,
+    confidenceScoreState: ConfidenceScoreUiState,
     onBookNow: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -163,6 +168,10 @@ private fun ServiceDetailBody(
             TrustDossierCard(
                 uiState = TrustDossierUiState.Unavailable,
                 compact = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            ConfidenceScoreRow(
+                uiState = confidenceScoreState,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(16.dp))
