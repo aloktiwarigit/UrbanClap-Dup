@@ -6,6 +6,9 @@ agp = "8.6.0"
 java = "21"
 
 # AndroidX / Compose
+androidxBiometric = "1.1.0"
+androidxNavigationCompose = "2.8.9"
+androidxSecurityCrypto = "1.0.0"
 coreKtx = "1.15.0"
 activityCompose = "1.9.3"
 lifecycleViewmodelCompose = "2.8.7"
@@ -15,8 +18,32 @@ hiltNavigationCompose = "1.2.0"
 # DI
 hilt = "2.52"
 
+# Firebase
+firebaseBom = "33.9.0"
+googleServices = "4.4.2"
+
 # Observability
 sentry = "7.17.0"
+
+# Third-party auth (Maven Central: latest stable; 3.0.3 never published, using 3.2.1)
+truecallerSdk = "3.2.1"
+
+# Networking / serialisation / image loading
+retrofit = "2.11.0"
+okhttp = "4.12.0"
+moshi = "1.15.1"
+coil = "2.7.0"
+
+# Payments + Maps
+razorpay       = "1.6.40"
+googlePlaces   = "3.5.0"
+playServicesMaps = "19.0.0"
+
+# KYC-specific (Custom Tabs for DigiLocker redirect)
+androidxBrowser = "1.8.0"
+
+# Test assertions
+googleTruth = "1.4.4"
 
 # Build-time / Dev
 ktlint = "12.1.1"
@@ -26,6 +53,9 @@ kover = "0.9.0"
 androidJunit5 = "1.11.2.0"
 
 # Test
+coroutines = "1.8.1"
+coroutinesTest = "1.8.1"
+room = "2.6.1"
 junit5 = "5.11.3"
 mockk = "1.13.13"
 assertj = "3.26.3"
@@ -38,9 +68,14 @@ androidxTestRunner = "1.6.2"
 homeservices-design-system = { module = "com.homeservices:design-system", version = "0.1.0" }
 
 # AndroidX
+androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "androidxBiometric" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodelCompose" }
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycleViewmodelCompose" }
+androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "androidxNavigationCompose" }
+androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "androidxSecurityCrypto" }
+androidx-browser = { module = "androidx.browser:browser", version.ref = "androidxBrowser" }
 
 # Compose (BOM-pinned — no version)
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
@@ -55,8 +90,31 @@ hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.re
 hilt-testing = { module = "com.google.dagger:hilt-android-testing", version.ref = "hilt" }
 androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 
+# Firebase (BOM-pinned — firebase-auth-ktx / firebase-storage have no explicit version)
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+firebase-auth-ktx = { module = "com.google.firebase:firebase-auth-ktx" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging-ktx" }
+firebase-storage = { module = "com.google.firebase:firebase-storage" }
+
 # Observability
 sentry-android = { module = "io.sentry:sentry-android", version.ref = "sentry" }
+
+# Third-party auth (Maven Central)
+truecaller-sdk = { module = "com.truecaller.android.sdk:truecaller-sdk", version.ref = "truecallerSdk" }
+
+# Networking / serialisation / image loading
+retrofit-core        = { module = "com.squareup.retrofit2:retrofit",               version.ref = "retrofit" }
+retrofit-moshi       = { module = "com.squareup.retrofit2:converter-moshi",        version.ref = "retrofit" }
+okhttp-core          = { module = "com.squareup.okhttp3:okhttp",                   version.ref = "okhttp" }
+okhttp-logging       = { module = "com.squareup.okhttp3:logging-interceptor",      version.ref = "okhttp" }
+moshi-kotlin         = { module = "com.squareup.moshi:moshi-kotlin",               version.ref = "moshi" }
+moshi-kotlin-codegen = { module = "com.squareup.moshi:moshi-kotlin-codegen",       version.ref = "moshi" }
+coil-compose         = { module = "io.coil-kt:coil-compose",                       version.ref = "coil" }
+
+# Payments + Maps
+razorpay-checkout  = { module = "com.razorpay:checkout",                                  version.ref = "razorpay" }
+google-places      = { module = "com.google.android.libraries.places:places",            version.ref = "googlePlaces" }
+play-services-maps = { module = "com.google.android.gms:play-services-maps",             version.ref = "playServicesMaps" }
 
 # Test
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit5" }
@@ -69,6 +127,12 @@ assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTestCore" }
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTestRunner" }
+kotlinx-coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "coroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutinesTest" }
+room-runtime  = { module = "androidx.room:room-runtime",  version.ref = "room" }
+room-ktx      = { module = "androidx.room:room-ktx",      version.ref = "room" }
+room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+google-truth = { module = "com.google.truth:truth", version.ref = "googleTruth" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -81,3 +145,4 @@ detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 paparazzi = { id = "app.cash.paparazzi", version.ref = "paparazzi" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 android-junit5 = { id = "de.mannodermaus.android-junit5", version.ref = "androidJunit5" }
+google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }

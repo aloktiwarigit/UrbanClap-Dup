@@ -24,10 +24,15 @@ export type HeadersProvider = () =>
 export interface ApiClientOptions {
   baseUrl: string;
   headers?: HeadersProvider;
+  disableRefresh?: boolean;
+  credentials?: RequestCredentials;
 }
 
 export function createApiClient(options: ApiClientOptions) {
-  const client = createClient<paths>({ baseUrl: options.baseUrl });
+  const client = createClient<paths>({
+    baseUrl: options.baseUrl,
+    ...(options.credentials !== undefined ? { credentials: options.credentials } : {}),
+  });
 
   const authMiddleware: Middleware = {
     async onRequest({ request }) {
@@ -47,6 +52,7 @@ export function createApiClient(options: ApiClientOptions) {
       if (response.ok) return response;
 
       if (
+        !options.disableRefresh &&
         response.status === 401 &&
         !isRefreshing &&
         !request.url.includes('/auth/refresh') &&

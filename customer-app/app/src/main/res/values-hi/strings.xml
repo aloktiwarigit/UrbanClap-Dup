@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="catalogue_home_title">सेवाएं</string>
+    <string name="category_image_desc">%s श्रेणी</string>
+    <string name="catalogue_loading">लोड हो रहा है…</string>
+    <string name="catalogue_error">कुछ गलत हो गया। कृपया पुनः प्रयास करें।</string>
+    <string name="service_image_desc">%s सेवा</string>
+    <string name="service_list_title">सेवाएं</string>
+    <string name="service_duration_label">%d मिनट</string>
+    <string name="service_rating_placeholder">★ —</string>
+    <string name="includes_label">क्या शामिल है</string>
+    <string name="addons_label">ऐड-ऑन</string>
+    <string name="trust_dossier_stub">सत्यापित पेशेवर</string>
+    <string name="book_now">अभी बुक करें</string>
+    <string name="book_now_disabled_desc">बुकिंग जल्द आ रही है</string>
+    <string name="service_price_label">मूल्य</string>
+    <string name="service_detail_back_desc">वापस</string>
+</resources>

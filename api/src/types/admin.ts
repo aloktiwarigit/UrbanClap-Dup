@@ -10,7 +10,8 @@ export type AuditAction =
   | 'PAYOUT_APPROVE'
   | 'COMPLAINT_RESOLVE'
   | 'CATALOGUE_EDIT'
-  | 'ADMIN_USER_CHANGE';
+  | 'ADMIN_USER_CHANGE'
+  | 'SSC_LEVY_TRANSFER';
 
 export interface AdminContext {
   adminId: string;

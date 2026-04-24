@@ -1,15 +1,83 @@
-import {
-  type HttpRequest,
-  type HttpResponseInit,
-  type InvocationContext,
-  app,
-} from '@azure/functions';
+import { z } from 'zod';
+import { type HttpHandler, type InvocationContext, app } from '@azure/functions';
+import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
+import { getCosmosClient, DB_NAME } from '../cosmos/client.js';
+import { TechnicianDossierSchema } from '../schemas/technician-dossier.js';
+import '../bootstrap.js';
+
+const PatchFcmTokenBodySchema = z.object({
+  fcmToken: z.string().min(1),
+});
+
+export const patchFcmTokenHandler: HttpHandler = async (req, _ctx: InvocationContext) => {
+  let uid: string;
+  try {
+    const decoded = await verifyTechnicianToken(req);
+    uid = decoded.uid;
+  } catch {
+    return { status: 401, jsonBody: { code: 'UNAUTHORIZED' } };
+  }
+
+  let body: { fcmToken: string };
+  try {
+    const raw: unknown = await req.json();
+    const result = PatchFcmTokenBodySchema.safeParse(raw);
+    if (!result.success) {
+      return { status: 400, jsonBody: { code: 'VALIDATION_ERROR', issues: result.error.issues } };
+    }
+    body = result.data;
+  } catch {
+    return { status: 400, jsonBody: { code: 'PARSE_ERROR' } };
+  }
+
+  const container = getCosmosClient().database(DB_NAME).container('technicians');
+  const { resource: existing } = await container.item(uid, uid).read<Record<string, unknown>>();
+  const doc = { ...(existing ?? { id: uid }), fcmToken: body.fcmToken };
+  await container.items.upsert(doc);
+
+  return { status: 200, jsonBody: { ok: true } };
+};
+
+app.http('patchTechnicianFcmToken', {
+  route: 'v1/technicians/fcm-token',
+  methods: ['PATCH'],
+  handler: patchFcmTokenHandler,
+});
+
+export const getTechnicianProfileHandler: HttpHandler = async (req, _ctx: InvocationContext) => {
+  const id = req.params['id'];
+  if (!id) return { status: 400, jsonBody: { code: 'MISSING_ID' } };
+
+  const container = getCosmosClient().database(DB_NAME).container('technicians');
+  const { resource } = await container.item(id, id).read<Record<string, unknown>>();
+  if (!resource) return { status: 404, jsonBody: { code: 'NOT_FOUND' } };
+
+  const parsed = TechnicianDossierSchema.safeParse({
+    ...resource,
+    id,
+    displayName: resource['displayName'] ?? resource['name'] ?? undefined,
+  });
+  if (!parsed.success) return { status: 404, jsonBody: { code: 'NOT_FOUND' } };
+
+  return {
+    status: 200,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60' },
+    jsonBody: parsed.data,
+  };
+};
+
+app.http('getTechnicianProfile', {
+  route: 'v1/technicians/{id}/profile',
+  methods: ['GET'],
+  authLevel: 'anonymous',
+  handler: getTechnicianProfileHandler,
+});
+
+// ── Confidence Score ──────────────────────────────────────────────────────────
+import { type HttpRequest, type HttpResponseInit } from '@azure/functions';
 import { requireCustomer } from '../middleware/requireCustomer.js';
 import type { CustomerContext } from '../types/customer.js';
 import { ConfidenceScoreQuerySchema } from '../schemas/confidence-score.js';
-import { getCosmosClient, DB_NAME } from '../cosmos/client.js';
-
-// ── Confidence Score ──────────────────────────────────────────────────────────
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -52,7 +120,6 @@ export const getConfidenceScoreHandler = async (
   const { lat, lng } = queryResult.data;
 
   const db = getCosmosClient().database(DB_NAME);
-  // Filter by slot date (when job happened) not createdAt (when booked) — avoids excluding advance-booked recent jobs.
   const sinceDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
   const { resources: bookings } = await db
@@ -73,18 +140,17 @@ export const getConfidenceScoreHandler = async (
   let onTimeCount = 0;
   let timedBookings = 0;
   for (const b of bookings) {
-    if (!b.startedAt) continue; // exclude: no start-time data
+    if (!b.startedAt) continue;
+    timedBookings++;
     const [hh, mm] = (b.slotWindow.split('-')[0] ?? '').split(':').map(Number);
     const slotStart = new Date(`${b.slotDate}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00.000Z`);
     if (new Date(b.startedAt).getTime() - slotStart.getTime() <= LATE_MS) onTimeCount++;
-    timedBookings++;
   }
   const onTimePercent = timedBookings > 0 ? Math.round((onTimeCount / timedBookings) * 100) : 0;
 
   let techDoc: { id: string; location?: { type: string; coordinates: [number, number] } } | undefined;
   try {
-    // technicians collection is partitioned by the technician's UID (same partition key as id).
-    // This matches the pattern used by patchFcmTokenHandler in this file.
+    // technicians collection is partitioned by the technician's UID (same key as id).
     const result = await db
       .container('technicians')
       .item(technicianId, technicianId)
@@ -95,18 +161,15 @@ export const getConfidenceScoreHandler = async (
     }
   } catch (err) {
     const cosmosErr = err as { code?: number };
-    if (cosmosErr.code === 404) {
-      return { status: 404, jsonBody: { code: 'TECHNICIAN_NOT_FOUND' } };
-    }
-    throw err; // transient errors (429, 503, etc.) propagate as 500
+    if (cosmosErr.code === 404) return { status: 404, jsonBody: { code: 'TECHNICIAN_NOT_FOUND' } };
+    throw err;
   }
 
-  // areaRating: null until per-booking ratings are collected; tech global rating intentionally excluded.
-  const areaRating: number | null = null;
+  const areaRating: number | null = null; // deferred until per-booking ratings are collected
 
-  let nearestEtaMinutes: number | null = null;
   const hasCustomerLocation = lat !== 0.0 || lng !== 0.0;
-  if (hasCustomerLocation && techDoc?.location?.coordinates) {
+  let nearestEtaMinutes: number | null = null;
+  if (hasCustomerLocation && techDoc.location?.coordinates) {
     const [techLng, techLat] = techDoc.location.coordinates;
     nearestEtaMinutes = Math.round((haversineKm(lat, lng, techLat, techLng) / AVG_SPEED_KMH) * 60);
   }
@@ -126,6 +189,6 @@ export const getConfidenceScoreHandler = async (
 app.http('getConfidenceScore', {
   route: 'v1/technicians/{id}/confidence-score',
   methods: ['GET'],
-  authLevel: 'anonymous', // Firebase bearer token auth via requireCustomer middleware
+  authLevel: 'anonymous',
   handler: requireCustomer(getConfidenceScoreHandler),
 });

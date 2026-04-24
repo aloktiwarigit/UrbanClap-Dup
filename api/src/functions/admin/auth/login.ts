@@ -7,7 +7,7 @@ import { getAdminUserById } from '../../../services/adminUser.service.js';
 import { decryptSecret, verifyToken } from '../../../services/totp.service.js';
 import { createAdminSession } from '../../../services/adminSession.service.js';
 import { signAccessToken, signSetupToken } from '../../../services/jwt.service.js';
-import { writeAuditEntry } from '../../../middleware/auditLog.js';
+import { auditLog } from '../../../services/auditLog.service.js';
 
 export async function adminLoginHandler(
   req: HttpRequest,
@@ -69,16 +69,19 @@ export async function adminLoginHandler(
     sessionId: session.sessionId,
   });
 
-  const ip =
-    req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? 'unknown';
-  await writeAuditEntry({
-    adminId: adminUser.adminId,
-    role: adminUser.role,
-    action: 'LOGIN',
-    entityType: 'admin_session',
-    entityId: session.sessionId,
-    ip,
-  });
+  const ip = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? undefined;
+  const userAgent = req.headers.get('user-agent') ?? undefined;
+  void auditLog(
+    { adminId: adminUser.adminId, role: adminUser.role, sessionId: session.sessionId },
+    'admin.login',
+    'admin_session',
+    session.sessionId,
+    { sessionId: session.sessionId },
+    {
+      ...(ip !== undefined && { ip }),
+      ...(userAgent !== undefined && { userAgent }),
+    },
+  );
 
   const cookies: Cookie[] = [
     {

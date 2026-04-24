@@ -1,12 +1,20 @@
 package com.homeservices.customer.ui.catalogue
 
-import com.homeservices.customer.domain.technician.model.ConfidenceScore
+import com.homeservices.customer.domain.catalogue.model.Service
 
 public sealed class ServiceDetailUiState {
     public data object Loading : ServiceDetailUiState()
-    public data class Success(public val serviceId: String) : ServiceDetailUiState()
-    public data class Error(public val message: String) : ServiceDetailUiState()
+
+    public data class Success(
+        public val service: Service,
+    ) : ServiceDetailUiState()
+
+    public data class Error(
+        public val message: String,
+    ) : ServiceDetailUiState()
 }
+
+import com.homeservices.customer.domain.technician.model.ConfidenceScore
 
 public sealed class ConfidenceScoreUiState {
     public data object Hidden : ConfidenceScoreUiState()
