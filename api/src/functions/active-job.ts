@@ -84,6 +84,7 @@ export const transitionStatusHandler: HttpHandler = async (req, _ctx: Invocation
 
   const updated = await updateBookingFields(bookingId, {
     status: body.targetStatus as BookingDoc['status'],
+    ...(body.targetStatus === 'COMPLETED' ? { completedAt: new Date().toISOString() } : {}),
   });
   if (!updated) return { status: 500, jsonBody: { code: 'UPDATE_FAILED' } };
 
