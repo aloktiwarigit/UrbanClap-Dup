@@ -5,9 +5,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
-public class TrackBookingStatusUseCase @Inject constructor(
-    private val repository: TrackingRepository,
-) {
-    public fun execute(bookingId: String): Flow<BookingStatus> =
-        repository.trackBooking(bookingId).map { it.status }
-}
+public class TrackBookingStatusUseCase
+    @Inject
+    constructor(
+        private val repository: TrackingRepository,
+    ) {
+        public fun execute(bookingId: String): Flow<BookingStatus> = repository.trackBooking(bookingId).map { it.status }
+    }

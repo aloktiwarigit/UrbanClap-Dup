@@ -22,7 +22,6 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 public class LiveTrackingViewModelTest {
-
     private val testDispatcher = StandardTestDispatcher()
     private val getLiveLocation: GetLiveLocationUseCase = mockk()
     private val trackStatus: TrackBookingStatusUseCase = mockk()
@@ -43,36 +42,39 @@ public class LiveTrackingViewModelTest {
     }
 
     @Test
-    public fun `initial state is Loading`(): Unit = runTest {
-        every { getLiveLocation.execute(any()) } returns flowOf(null)
-        every { trackStatus.execute(any()) } returns flowOf(BookingStatus.EnRoute)
-        val vm = viewModel()
-        assertThat(vm.uiState.value).isEqualTo(LiveTrackingUiState.Loading)
-    }
+    public fun `initial state is Loading`(): Unit =
+        runTest {
+            every { getLiveLocation.execute(any()) } returns flowOf(null)
+            every { trackStatus.execute(any()) } returns flowOf(BookingStatus.EnRoute)
+            val vm = viewModel()
+            assertThat(vm.uiState.value).isEqualTo(LiveTrackingUiState.Loading)
+        }
 
     @Test
-    public fun `emits Tracking state when location arrives`(): Unit = runTest {
-        val loc = LiveLocation(12.97, 77.59, 8, "Suresh", "url")
-        every { getLiveLocation.execute("b1") } returns flowOf(loc)
-        every { trackStatus.execute("b1") } returns flowOf(BookingStatus.EnRoute)
-        val vm = viewModel("b1")
-        advanceUntilIdle()
-        val state = vm.uiState.value
-        assertThat(state).isInstanceOf(LiveTrackingUiState.Tracking::class.java)
-        val tracking = state as LiveTrackingUiState.Tracking
-        assertThat(tracking.location).isEqualTo(loc)
-        assertThat(tracking.status).isEqualTo(BookingStatus.EnRoute)
-        assertThat(tracking.techName).isEqualTo("Suresh")
-    }
+    public fun `emits Tracking state when location arrives`(): Unit =
+        runTest {
+            val loc = LiveLocation(12.97, 77.59, 8, "Suresh", "url")
+            every { getLiveLocation.execute("b1") } returns flowOf(loc)
+            every { trackStatus.execute("b1") } returns flowOf(BookingStatus.EnRoute)
+            val vm = viewModel("b1")
+            advanceUntilIdle()
+            val state = vm.uiState.value
+            assertThat(state).isInstanceOf(LiveTrackingUiState.Tracking::class.java)
+            val tracking = state as LiveTrackingUiState.Tracking
+            assertThat(tracking.location).isEqualTo(loc)
+            assertThat(tracking.status).isEqualTo(BookingStatus.EnRoute)
+            assertThat(tracking.techName).isEqualTo("Suresh")
+        }
 
     @Test
-    public fun `Tracking state has null location when no location update yet`(): Unit = runTest {
-        every { getLiveLocation.execute("b2") } returns flowOf(null)
-        every { trackStatus.execute("b2") } returns flowOf(BookingStatus.InProgress)
-        val vm = viewModel("b2")
-        advanceUntilIdle()
-        val tracking = vm.uiState.value as LiveTrackingUiState.Tracking
-        assertThat(tracking.location).isNull()
-        assertThat(tracking.status).isEqualTo(BookingStatus.InProgress)
-    }
+    public fun `Tracking state has null location when no location update yet`(): Unit =
+        runTest {
+            every { getLiveLocation.execute("b2") } returns flowOf(null)
+            every { trackStatus.execute("b2") } returns flowOf(BookingStatus.InProgress)
+            val vm = viewModel("b2")
+            advanceUntilIdle()
+            val tracking = vm.uiState.value as LiveTrackingUiState.Tracking
+            assertThat(tracking.location).isNull()
+            assertThat(tracking.status).isEqualTo(BookingStatus.InProgress)
+        }
 }

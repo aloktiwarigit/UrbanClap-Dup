@@ -13,29 +13,30 @@ import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 @HiltViewModel
-public class LiveTrackingViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
-    private val getLiveLocationUseCase: GetLiveLocationUseCase,
-    private val trackBookingStatusUseCase: TrackBookingStatusUseCase,
-) : ViewModel() {
+public class LiveTrackingViewModel
+    @Inject
+    constructor(
+        savedStateHandle: SavedStateHandle,
+        private val getLiveLocationUseCase: GetLiveLocationUseCase,
+        private val trackBookingStatusUseCase: TrackBookingStatusUseCase,
+    ) : ViewModel() {
+        private val bookingId: String = checkNotNull(savedStateHandle["bookingId"])
 
-    private val bookingId: String = checkNotNull(savedStateHandle["bookingId"])
-
-    public val uiState: StateFlow<LiveTrackingUiState> =
-        combine(
-            getLiveLocationUseCase.execute(bookingId),
-            trackBookingStatusUseCase.execute(bookingId),
-        ) { location, status ->
-            LiveTrackingUiState.Tracking(
-                location = location,
-                status = status,
-                techName = location?.techName ?: "",
-                techPhotoUrl = location?.techPhotoUrl ?: "",
-                etaMinutes = location?.etaMinutes,
+        public val uiState: StateFlow<LiveTrackingUiState> =
+            combine(
+                getLiveLocationUseCase.execute(bookingId),
+                trackBookingStatusUseCase.execute(bookingId),
+            ) { location, status ->
+                LiveTrackingUiState.Tracking(
+                    location = location,
+                    status = status,
+                    techName = location?.techName ?: "",
+                    techPhotoUrl = location?.techPhotoUrl ?: "",
+                    etaMinutes = location?.etaMinutes,
+                )
+            }.stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = LiveTrackingUiState.Loading,
             )
-        }.stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.Eagerly,
-            initialValue = LiveTrackingUiState.Loading,
-        )
-}
+    }
