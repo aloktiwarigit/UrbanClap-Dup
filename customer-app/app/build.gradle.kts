@@ -278,6 +278,23 @@ kover {
                     // CustomerFirebaseMessagingService — Android OS entry-point, not unit-testable
                     "*.CustomerFirebaseMessagingService",
                     "*.CustomerFirebaseMessagingService\$*",
+                    // BookingRepositoryImpl — thin Retrofit wrapper, integration-tested via API layer
+                    "*.BookingRepositoryImpl",
+                    "*.BookingRepositoryImpl\$*",
+                    // BookingModule — Hilt @Provides wiring + OkHttp/Retrofit construction,
+                    // same rationale as data.auth.di.* and data.catalogue.di.*
+                    "*.data.booking.di.*",
+                    // Booking remote DTOs — Moshi @JsonClass data holders with toDomain() mappers;
+                    // mapping is exercised indirectly via repository integration tests, not JVM unit tests
+                    "*.data.booking.remote.dto.*",
+                    // RazorpayPaymentUseCase.open() — uses callbackFlow + Razorpay Checkout SDK which
+                    // requires a real Activity; same rationale as FirebaseOtpUseCase (callbackFlow + SDK)
+                    "*.RazorpayPaymentUseCase",
+                    "*.RazorpayPaymentUseCase\$*",
+                    // PriceApprovalEventBus — MutableSharedFlow wrapper; post() uses tryEmit()
+                    // which is only observable in a running coroutine collector (integration-level)
+                    "*.PriceApprovalEventBus",
+                    "*.PriceApprovalEventBus\$*",
                 )
             }
         }
