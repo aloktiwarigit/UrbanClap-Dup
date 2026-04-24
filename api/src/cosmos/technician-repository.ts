@@ -121,3 +121,22 @@ export async function incrementCompletedJobCount(technicianId: string): Promise<
     }
   }
 }
+
+// ── Report helpers (E06-S05) ──────────────────────────────────────────────────
+
+export interface TechnicianReportInfo {
+  displayName: string;
+  rating: number;
+}
+
+export async function getTechnicianForReport(
+  technicianId: string,
+): Promise<TechnicianReportInfo | null> {
+  const { resource } = await getCosmosClient()
+    .database(DB_NAME)
+    .container(CONTAINER)
+    .item(technicianId, technicianId)
+    .read<{ displayName?: string; rating?: number }>();
+  if (!resource) return null;
+  return { displayName: resource.displayName ?? 'Technician', rating: resource.rating ?? 0 };
+}
