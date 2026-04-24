@@ -25,7 +25,9 @@ public interface BookingApiService {
     ): ConfirmBookingResponseDto
 
     @GET("v1/bookings/{id}")
-    public suspend fun getBooking(@Path("id") bookingId: String): GetBookingResponseDto
+    public suspend fun getBooking(
+        @Path("id") bookingId: String,
+    ): GetBookingResponseDto
 
     @POST("v1/bookings/{id}/approve-final-price")
     public suspend fun approveFinalPrice(
