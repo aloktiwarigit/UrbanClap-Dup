@@ -1,8 +1,9 @@
 import { z } from 'zod';
+import { PendingAddOnSchema } from './addon-approval.js';
 
 const BOOKING_STATUSES = [
   'PENDING_PAYMENT', 'SEARCHING', 'ASSIGNED', 'EN_ROUTE',
-  'REACHED', 'IN_PROGRESS', 'COMPLETED', 'PAID', 'CLOSED',
+  'REACHED', 'IN_PROGRESS', 'AWAITING_PRICE_APPROVAL', 'COMPLETED', 'PAID', 'CLOSED',
   'UNFULFILLED', 'CUSTOMER_CANCELLED',
 ] as const;
 
@@ -28,6 +29,9 @@ export const BookingDocSchema = z.object({
   escalated: z.boolean().optional(),
   internalNotes: z.array(z.string()).optional(),
   photos: z.record(z.string(), z.array(z.string())).optional(),
+  pendingAddOns: z.array(PendingAddOnSchema).optional(),
+  approvedAddOns: z.array(PendingAddOnSchema).optional(),
+  finalAmount: z.number().int().positive().optional(),
 });
 
 export const CreateBookingRequestSchema = z.object({
