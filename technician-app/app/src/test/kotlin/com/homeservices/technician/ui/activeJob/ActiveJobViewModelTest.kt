@@ -11,6 +11,7 @@ import com.homeservices.technician.domain.activeJob.model.ActiveJob
 import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
 import com.homeservices.technician.domain.activeJob.model.LatLng
 import com.homeservices.technician.domain.activeJob.model.NavigationEvent
+import com.homeservices.technician.domain.photo.UploadJobPhotoUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -40,6 +41,7 @@ public class ActiveJobViewModelTest {
     private lateinit var startWorkUseCase: StartWorkUseCase
     private lateinit var completeJobUseCase: CompleteJobUseCase
     private lateinit var connectivityObserver: ConnectivityObserver
+    private lateinit var uploadJobPhotoUseCase: UploadJobPhotoUseCase
     private lateinit var viewModel: ActiveJobViewModel
 
     private fun aJob(status: ActiveJobStatus = ActiveJobStatus.ASSIGNED) =
@@ -64,6 +66,7 @@ public class ActiveJobViewModelTest {
         startWorkUseCase = mockk(relaxed = true)
         completeJobUseCase = mockk(relaxed = true)
         connectivityObserver = mockk()
+        uploadJobPhotoUseCase = mockk(relaxed = true)
         every { connectivityObserver.isConnected } returns emptyFlow()
         every { repository.getActiveJob("bk-1") } returns flowOf(aJob())
         every { repository.hasPendingTransitions } returns flowOf(false)
@@ -77,6 +80,7 @@ public class ActiveJobViewModelTest {
                 startWorkUseCase,
                 completeJobUseCase,
                 connectivityObserver,
+                uploadJobPhotoUseCase,
             )
     }
 
@@ -145,6 +149,7 @@ public class ActiveJobViewModelTest {
                     startWorkUseCase,
                     completeJobUseCase,
                     connectivityObserver,
+                    uploadJobPhotoUseCase,
                 )
 
             connectFlow.value = true
@@ -190,6 +195,7 @@ public class ActiveJobViewModelTest {
                     startWorkUseCase,
                     completeJobUseCase,
                     connectivityObserver,
+                    uploadJobPhotoUseCase,
                 )
             assertThat(vm.uiState.value).isEqualTo(ActiveJobUiState.Loading)
         }
@@ -208,7 +214,61 @@ public class ActiveJobViewModelTest {
                     startWorkUseCase,
                     completeJobUseCase,
                     connectivityObserver,
+                    uploadJobPhotoUseCase,
                 )
             assertThat(vm.uiState.value).isEqualTo(ActiveJobUiState.Completed)
+        }
+
+    @Test
+    public fun `onTransitionRequested sets pendingPhotoStage`(): Unit =
+        runTest {
+            viewModel.onTransitionRequested("EN_ROUTE")
+            val state = viewModel.uiState.value as ActiveJobUiState.Active
+            assertThat(state.pendingPhotoStage).isEqualTo("EN_ROUTE")
+            assertThat(state.photoUploadInProgress).isFalse()
+        }
+
+    @Test
+    public fun `onPhotoCancelled clears pendingPhotoStage`(): Unit =
+        runTest {
+            viewModel.onTransitionRequested("REACHED")
+            viewModel.onPhotoCancelled()
+            val state = viewModel.uiState.value as ActiveJobUiState.Active
+            assertThat(state.pendingPhotoStage).isNull()
+            assertThat(state.photoUploadError).isNull()
+        }
+
+    @Test
+    public fun `onPhotoConfirmed fires startWork and clears pending state on success`(): Unit =
+        runTest(testDispatcher) {
+            coEvery { uploadJobPhotoUseCase.execute("bk-1", "IN_PROGRESS", "/cache/p.jpg") } returns
+                Result.success("https://storage/photo.jpg")
+            coEvery { startWorkUseCase("bk-1") } returns Result.success(aJob(ActiveJobStatus.IN_PROGRESS))
+
+            viewModel.onTransitionRequested("IN_PROGRESS")
+            viewModel.onPhotoConfirmed("/cache/p.jpg")
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value as ActiveJobUiState.Active
+            assertThat(state.pendingPhotoStage).isNull()
+            assertThat(state.photoUploadInProgress).isFalse()
+            assertThat(state.photoUploadError).isNull()
+            coVerify(exactly = 1) { startWorkUseCase("bk-1") }
+        }
+
+    @Test
+    public fun `onPhotoConfirmed sets photoUploadError on upload failure`(): Unit =
+        runTest(testDispatcher) {
+            coEvery { uploadJobPhotoUseCase.execute(any(), any(), any()) } returns
+                Result.failure(RuntimeException("Network timeout"))
+
+            viewModel.onTransitionRequested("REACHED")
+            viewModel.onPhotoConfirmed("/cache/p.jpg")
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value as ActiveJobUiState.Active
+            assertThat(state.photoUploadInProgress).isFalse()
+            assertThat(state.photoUploadError).isEqualTo("Network timeout")
+            assertThat(state.pendingPhotoStage).isEqualTo("REACHED")
         }
 }

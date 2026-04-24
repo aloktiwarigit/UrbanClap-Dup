@@ -15,6 +15,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -31,10 +34,9 @@ internal fun ActiveJobScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     ActiveJobScreenContent(
         uiState = uiState,
-        onStartTrip = viewModel::startTrip,
-        onMarkReached = viewModel::markReached,
-        onStartWork = viewModel::startWork,
-        onCompleteJob = viewModel::completeJob,
+        onTransitionRequested = viewModel::onTransitionRequested,
+        onPhotoCancelled = viewModel::onPhotoCancelled,
+        onPhotoConfirmed = viewModel::onPhotoConfirmed,
         modifier = modifier,
     )
 }
@@ -42,10 +44,9 @@ internal fun ActiveJobScreen(
 @Composable
 internal fun ActiveJobScreenContent(
     uiState: ActiveJobUiState,
-    onStartTrip: () -> Unit,
-    onMarkReached: () -> Unit,
-    onStartWork: () -> Unit,
-    onCompleteJob: () -> Unit,
+    onTransitionRequested: (stage: String) -> Unit,
+    onPhotoCancelled: () -> Unit,
+    onPhotoConfirmed: (filePath: String) -> Unit,
     modifier: Modifier = Modifier,
 ): Unit {
     Surface(
@@ -80,14 +81,26 @@ internal fun ActiveJobScreenContent(
                 ) {
                     Text(uiState.message, style = MaterialTheme.typography.bodyLarge)
                 }
-            is ActiveJobUiState.Active ->
+            is ActiveJobUiState.Active -> {
                 ActiveJobContent(
                     state = uiState,
-                    onStartTrip = onStartTrip,
-                    onMarkReached = onMarkReached,
-                    onStartWork = onStartWork,
-                    onCompleteJob = onCompleteJob,
+                    onTransitionRequested = onTransitionRequested,
                 )
+                uiState.pendingPhotoStage?.let { stage ->
+                    var lastCapturedPath by remember { mutableStateOf<String?>(null) }
+                    PhotoCaptureScreen(
+                        stage = stage,
+                        onPhotoTaken = { path ->
+                            lastCapturedPath = path
+                            onPhotoConfirmed(path)
+                        },
+                        onDismiss = onPhotoCancelled,
+                        isUploading = uiState.photoUploadInProgress,
+                        uploadError = uiState.photoUploadError,
+                        onRetry = { lastCapturedPath?.let(onPhotoConfirmed) },
+                    )
+                }
+            }
         }
     }
 }
@@ -95,10 +108,7 @@ internal fun ActiveJobScreenContent(
 @Composable
 private fun ActiveJobContent(
     state: ActiveJobUiState.Active,
-    onStartTrip: () -> Unit,
-    onMarkReached: () -> Unit,
-    onStartWork: () -> Unit,
-    onCompleteJob: () -> Unit,
+    onTransitionRequested: (stage: String) -> Unit,
     modifier: Modifier = Modifier,
 ): Unit {
     Column(
@@ -134,38 +144,15 @@ private fun ActiveJobContent(
             )
         }
 
-        val ctaLabel: String
-        val ctaEnabled: Boolean
-        val ctaAction: () -> Unit
-        when (state.availableAction) {
-            ActiveJobAction.START_TRIP -> {
-                ctaLabel = "Start Trip"
-                ctaEnabled = true
-                ctaAction = onStartTrip
-            }
-            ActiveJobAction.MARK_ARRIVED -> {
-                ctaLabel = "I've Arrived"
-                ctaEnabled = true
-                ctaAction = onMarkReached
-            }
-            ActiveJobAction.START_WORK -> {
-                ctaLabel = "Start Work"
-                ctaEnabled = true
-                ctaAction = onStartWork
-            }
-            ActiveJobAction.COMPLETE_JOB -> {
-                ctaLabel = "Complete Job"
-                ctaEnabled = false
-                ctaAction = onCompleteJob
-            }
-            ActiveJobAction.NONE -> {
-                ctaLabel = "Done"
-                ctaEnabled = false
-                ctaAction = {}
-            }
+        val (ctaLabel, ctaEnabled, ctaTargetStage) = when (state.availableAction) {
+            ActiveJobAction.START_TRIP -> Triple("Start Trip", true, "EN_ROUTE")
+            ActiveJobAction.MARK_ARRIVED -> Triple("I've Arrived", true, "REACHED")
+            ActiveJobAction.START_WORK -> Triple("Start Work", true, "IN_PROGRESS")
+            ActiveJobAction.COMPLETE_JOB -> Triple("Complete Job", true, "COMPLETED")
+            ActiveJobAction.NONE -> Triple("Done", false, "")
         }
         Button(
-            onClick = ctaAction,
+            onClick = { if (ctaTargetStage.isNotEmpty()) onTransitionRequested(ctaTargetStage) },
             enabled = ctaEnabled,
             modifier =
                 Modifier

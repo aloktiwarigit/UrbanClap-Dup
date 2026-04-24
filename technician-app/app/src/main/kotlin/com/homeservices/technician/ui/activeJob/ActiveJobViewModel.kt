@@ -11,6 +11,7 @@ import com.homeservices.technician.domain.activeJob.StartTripUseCase
 import com.homeservices.technician.domain.activeJob.StartWorkUseCase
 import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
 import com.homeservices.technician.domain.activeJob.model.NavigationEvent
+import com.homeservices.technician.domain.photo.UploadJobPhotoUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +33,7 @@ internal class ActiveJobViewModel
         private val startWorkUseCase: StartWorkUseCase,
         private val completeJobUseCase: CompleteJobUseCase,
         private val connectivityObserver: ConnectivityObserver,
+        private val uploadJobPhotoUseCase: UploadJobPhotoUseCase,
     ) : ViewModel() {
         private val bookingId: String = checkNotNull(savedStateHandle["bookingId"])
 
@@ -92,6 +94,47 @@ internal class ActiveJobViewModel
 
         public fun completeJob(): Unit {
             viewModelScope.launch { completeJobUseCase(bookingId) }
+        }
+
+        /** Intercepts a CTA tap — shows PhotoCaptureScreen before firing the transition. */
+        public fun onTransitionRequested(targetStage: String) {
+            val current = _uiState.value as? ActiveJobUiState.Active ?: return
+            _uiState.value = current.copy(pendingPhotoStage = targetStage, photoUploadError = null)
+        }
+
+        /** User cancelled out of the photo capture screen without taking a photo. */
+        public fun onPhotoCancelled() {
+            val current = _uiState.value as? ActiveJobUiState.Active ?: return
+            _uiState.value = current.copy(pendingPhotoStage = null, photoUploadError = null)
+        }
+
+        /** User confirmed the captured photo — upload it then fire the stage transition. */
+        public fun onPhotoConfirmed(localFilePath: String) {
+            val current = _uiState.value as? ActiveJobUiState.Active ?: return
+            val stage = current.pendingPhotoStage ?: return
+            _uiState.value = current.copy(photoUploadInProgress = true, photoUploadError = null)
+            viewModelScope.launch {
+                val result = uploadJobPhotoUseCase.execute(bookingId, stage, localFilePath)
+                if (result.isSuccess) {
+                    val s = _uiState.value as? ActiveJobUiState.Active ?: return@launch
+                    _uiState.value = s.copy(pendingPhotoStage = null, photoUploadInProgress = false)
+                    when (stage) {
+                        "EN_ROUTE" -> {
+                            val (r, navEvent) = startTripUseCase(bookingId)
+                            if (r.isSuccess && navEvent != null) _navigationEvents.emit(navEvent)
+                        }
+                        "REACHED" -> markReachedUseCase(bookingId)
+                        "IN_PROGRESS" -> startWorkUseCase(bookingId)
+                        "COMPLETED" -> completeJobUseCase(bookingId)
+                    }
+                } else {
+                    val s = _uiState.value as? ActiveJobUiState.Active ?: return@launch
+                    _uiState.value = s.copy(
+                        photoUploadInProgress = false,
+                        photoUploadError = result.exceptionOrNull()?.message ?: "Upload failed",
+                    )
+                }
+            }
         }
 
         private fun ActiveJobStatus.toAction(): ActiveJobAction =

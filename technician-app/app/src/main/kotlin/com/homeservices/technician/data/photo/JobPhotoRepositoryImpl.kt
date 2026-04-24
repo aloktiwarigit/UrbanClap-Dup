@@ -9,7 +9,7 @@ import kotlinx.coroutines.tasks.await
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 
-public class JobPhotoRepositoryImpl @Inject constructor(
+internal class JobPhotoRepositoryImpl @Inject constructor(
     private val storage: FirebaseStorage,
     private val auth: FirebaseAuth,
     private val api: PhotoApiService,

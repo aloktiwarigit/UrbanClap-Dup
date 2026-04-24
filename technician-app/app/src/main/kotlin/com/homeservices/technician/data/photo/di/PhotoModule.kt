@@ -1,7 +1,5 @@
 package com.homeservices.technician.data.photo.di
 
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.storage.FirebaseStorage
 import com.homeservices.technician.data.photo.JobPhotoRepositoryImpl
 import com.homeservices.technician.data.photo.PhotoApiService
 import com.homeservices.technician.domain.photo.JobPhotoRepository
@@ -22,18 +20,13 @@ public abstract class PhotoModule {
 
     @Binds
     @Singleton
-    public abstract fun bindJobPhotoRepository(
+    internal abstract fun bindJobPhotoRepository(
         impl: JobPhotoRepositoryImpl,
     ): JobPhotoRepository
 
     public companion object {
-        @Provides
-        @Singleton
-        public fun provideFirebaseStorage(): FirebaseStorage = FirebaseStorage.getInstance()
-
-        @Provides
-        @Singleton
-        public fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
+        // FirebaseAuth already provided by AuthModule
+        // FirebaseStorage already provided by KycModule
 
         @Provides
         @Singleton
