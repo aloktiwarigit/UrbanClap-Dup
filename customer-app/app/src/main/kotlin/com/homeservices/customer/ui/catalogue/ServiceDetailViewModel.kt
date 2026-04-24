@@ -26,9 +26,10 @@ internal class ServiceDetailViewModel
         private val _uiState = MutableStateFlow<ServiceDetailUiState>(ServiceDetailUiState.Loading)
         public val uiState: StateFlow<ServiceDetailUiState> = _uiState.asStateFlow()
 
-        private val _confidenceScoreState = MutableStateFlow<ConfidenceScoreUiState>(
-            if (technicianId != null) ConfidenceScoreUiState.Loading else ConfidenceScoreUiState.Hidden,
-        )
+        private val _confidenceScoreState =
+            MutableStateFlow<ConfidenceScoreUiState>(
+                if (technicianId != null) ConfidenceScoreUiState.Loading else ConfidenceScoreUiState.Hidden,
+            )
         public val confidenceScoreState: StateFlow<ConfidenceScoreUiState> = _confidenceScoreState.asStateFlow()
 
         init {
@@ -46,13 +47,17 @@ internal class ServiceDetailViewModel
                     // (0.0, 0.0) sentinel: API returns nearestEtaMinutes=null. Replace with
                     // a LocationRepository call when customer GPS story is implemented.
                     getConfidenceScore(technicianId, 0.0, 0.0).collect { result ->
-                        _confidenceScoreState.value = result.fold(
-                            onSuccess = { score ->
-                                if (score.isLimitedData) ConfidenceScoreUiState.Limited
-                                else ConfidenceScoreUiState.Loaded(score)
-                            },
-                            onFailure = { ConfidenceScoreUiState.Hidden },
-                        )
+                        _confidenceScoreState.value =
+                            result.fold(
+                                onSuccess = { score ->
+                                    if (score.isLimitedData) {
+                                        ConfidenceScoreUiState.Limited
+                                    } else {
+                                        ConfidenceScoreUiState.Loaded(score)
+                                    }
+                                },
+                                onFailure = { ConfidenceScoreUiState.Hidden },
+                            )
                     }
                 }
             }

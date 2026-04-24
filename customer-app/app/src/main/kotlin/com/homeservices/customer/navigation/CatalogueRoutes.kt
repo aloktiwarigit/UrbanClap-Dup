@@ -7,7 +7,13 @@ internal object CatalogueRoutes {
 
     fun serviceList(categoryId: String) = "service_list/$categoryId"
 
-    fun serviceDetail(serviceId: String, technicianId: String? = null): String =
-        if (technicianId != null) "service_detail/$serviceId?techId=$technicianId"
-        else "service_detail/$serviceId"
+    fun serviceDetail(
+        serviceId: String,
+        technicianId: String? = null,
+    ): String =
+        if (technicianId != null) {
+            "service_detail/$serviceId?techId=$technicianId"
+        } else {
+            "service_detail/$serviceId"
+        }
 }

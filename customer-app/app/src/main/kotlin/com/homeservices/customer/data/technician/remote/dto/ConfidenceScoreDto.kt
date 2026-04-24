@@ -9,11 +9,12 @@ public data class ConfidenceScoreDto(
     val dataPointCount: Int,
     val isLimitedData: Boolean,
 ) {
-    public fun toDomain(): ConfidenceScore = ConfidenceScore(
-        onTimePercent = onTimePercent,
-        areaRating = areaRating,
-        nearestEtaMinutes = nearestEtaMinutes,
-        dataPointCount = dataPointCount,
-        isLimitedData = isLimitedData,
-    )
+    public fun toDomain(): ConfidenceScore =
+        ConfidenceScore(
+            onTimePercent = onTimePercent,
+            areaRating = areaRating,
+            nearestEtaMinutes = nearestEtaMinutes,
+            dataPointCount = dataPointCount,
+            isLimitedData = isLimitedData,
+        )
 }

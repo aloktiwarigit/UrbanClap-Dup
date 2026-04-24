@@ -42,10 +42,15 @@ internal fun NavGraphBuilder.mainGraph(navController: NavController) {
         }
         composable(
             route = CatalogueRoutes.SERVICE_DETAIL,
-            arguments = listOf(
-            navArgument("serviceId") { type = NavType.StringType },
-            navArgument("techId") { type = NavType.StringType; nullable = true; defaultValue = null },
-        ),
+            arguments =
+                listOf(
+                    navArgument("serviceId") { type = NavType.StringType },
+                    navArgument("techId") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                ),
         ) {
             val vm: ServiceDetailViewModel = hiltViewModel()
             ServiceDetailScreen(

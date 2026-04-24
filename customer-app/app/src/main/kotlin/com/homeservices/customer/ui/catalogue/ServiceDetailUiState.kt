@@ -17,7 +17,12 @@ public sealed class ServiceDetailUiState {
 
 public sealed class ConfidenceScoreUiState {
     public data object Hidden : ConfidenceScoreUiState()
+
     public data object Loading : ConfidenceScoreUiState()
+
     public data object Limited : ConfidenceScoreUiState()
-    public data class Loaded(public val score: ConfidenceScore) : ConfidenceScoreUiState()
+
+    public data class Loaded(
+        public val score: ConfidenceScore,
+    ) : ConfidenceScoreUiState()
 }

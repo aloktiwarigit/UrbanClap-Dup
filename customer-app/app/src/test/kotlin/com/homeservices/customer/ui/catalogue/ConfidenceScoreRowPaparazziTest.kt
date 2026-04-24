@@ -9,19 +9,27 @@ import org.junit.Test
 
 public class ConfidenceScoreRowPaparazziTest {
     @get:Rule
-    public val paparazzi: Paparazzi = Paparazzi(
-        deviceConfig = DeviceConfig.PIXEL_5,
-        theme = "android:Theme.Material3.DayNight.NoActionBar",
-    )
+    public val paparazzi: Paparazzi =
+        Paparazzi(
+            deviceConfig = DeviceConfig.PIXEL_5,
+            theme = "android:Theme.Material3.DayNight.NoActionBar",
+        )
 
     @Ignore("Goldens recorded on CI Linux -- trigger paparazzi-record.yml workflow_dispatch, then remove @Ignore")
     @Test
     public fun loaded_lightTheme() {
         paparazzi.snapshot {
             ConfidenceScoreRow(
-                uiState = ConfidenceScoreUiState.Loaded(
-                    ConfidenceScore(onTimePercent = 94, areaRating = 4.7, nearestEtaMinutes = 12, dataPointCount = 35, isLimitedData = false),
-                ),
+                uiState =
+                    ConfidenceScoreUiState.Loaded(
+                        ConfidenceScore(
+                            onTimePercent = 94,
+                            areaRating = 4.7,
+                            nearestEtaMinutes = 12,
+                            dataPointCount = 35,
+                            isLimitedData = false,
+                        ),
+                    ),
             )
         }
     }

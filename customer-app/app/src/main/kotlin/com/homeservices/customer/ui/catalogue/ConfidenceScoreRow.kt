@@ -83,9 +83,10 @@ internal fun ConfidenceScoreRow(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
             Text(
-                text = "On-time %: jobs started within 15 min of booked slot (last 30 days).\n\n" +
-                    "Area rating: average star rating in your area.\n\n" +
-                    "ETA: estimated travel time from technician's last location at 20 km/h.",
+                text =
+                    "On-time %: jobs started within 15 min of booked slot (last 30 days).\n\n" +
+                        "Area rating: average star rating in your area.\n\n" +
+                        "ETA: estimated travel time from technician's last location at 20 km/h.",
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 24.dp),
             )
@@ -107,11 +108,12 @@ private fun ConfidenceScoreShimmer(modifier: Modifier = Modifier) {
     ) {
         repeat(3) {
             Box(
-                modifier = Modifier
-                    .width(90.dp)
-                    .height(32.dp)
-                    .alpha(alpha)
-                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(50)),
+                modifier =
+                    Modifier
+                        .width(90.dp)
+                        .height(32.dp)
+                        .alpha(alpha)
+                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(50)),
             )
         }
     }

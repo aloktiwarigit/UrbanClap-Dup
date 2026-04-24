@@ -25,9 +25,7 @@ public annotation class TechnicianHttpClient
 @InstallIn(SingletonComponent::class)
 public abstract class TechnicianModule {
     @Binds
-    internal abstract fun bindConfidenceScoreRepository(
-        impl: ConfidenceScoreRepositoryImpl,
-    ): ConfidenceScoreRepository
+    internal abstract fun bindConfidenceScoreRepository(impl: ConfidenceScoreRepositoryImpl): ConfidenceScoreRepository
 
     public companion object {
         // Known limitation (E04-S02): this client has no Firebase auth interceptor.
@@ -37,11 +35,16 @@ public abstract class TechnicianModule {
         @Singleton
         @TechnicianHttpClient
         public fun provideTechnicianOkHttpClient(): OkHttpClient =
-            OkHttpClient.Builder()
+            OkHttpClient
+                .Builder()
                 .addInterceptor(
                     HttpLoggingInterceptor().apply {
-                        level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
-                               else HttpLoggingInterceptor.Level.NONE
+                        level =
+                            if (BuildConfig.DEBUG) {
+                                HttpLoggingInterceptor.Level.BODY
+                            } else {
+                                HttpLoggingInterceptor.Level.NONE
+                            }
                     },
                 ).build()
 
@@ -51,7 +54,8 @@ public abstract class TechnicianModule {
             @TechnicianHttpClient client: OkHttpClient,
             moshi: Moshi, // injected from CatalogueModule — not redeclared here
         ): TechnicianApiService =
-            Retrofit.Builder()
+            Retrofit
+                .Builder()
                 .baseUrl(BuildConfig.API_BASE_URL + "/")
                 .addConverterFactory(MoshiConverterFactory.create(moshi))
                 .client(client)
