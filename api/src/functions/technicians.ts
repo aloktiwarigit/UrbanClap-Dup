@@ -90,11 +90,15 @@ export const getConfidenceScoreHandler = async (
       .item(technicianId, technicianId)
       .read<{ id: string; location?: { type: string; coordinates: [number, number] } }>();
     techDoc = result.resource;
-  } catch {
-    return { status: 404, jsonBody: { code: 'TECHNICIAN_NOT_FOUND' } };
-  }
-  if (!techDoc) {
-    return { status: 404, jsonBody: { code: 'TECHNICIAN_NOT_FOUND' } };
+    if (!techDoc) {
+      return { status: 404, jsonBody: { code: 'TECHNICIAN_NOT_FOUND' } };
+    }
+  } catch (err) {
+    const cosmosErr = err as { code?: number };
+    if (cosmosErr.code === 404) {
+      return { status: 404, jsonBody: { code: 'TECHNICIAN_NOT_FOUND' } };
+    }
+    throw err; // transient errors (429, 503, etc.) propagate as 500
   }
 
   // areaRating: null until per-booking ratings are collected; tech global rating intentionally excluded.

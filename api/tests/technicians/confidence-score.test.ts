@@ -82,10 +82,17 @@ describe('GET /v1/technicians/:id/confidence-score', () => {
     expect((res.jsonBody as any).nearestEtaMinutes).toBeNull();
   });
 
-  it('returns 404 when technician does not exist', async () => {
-    techsContainer.item.mockReturnValue({ read: vi.fn().mockResolvedValue({ resource: undefined }) });
+  it('returns 404 when technician does not exist (Cosmos 404)', async () => {
+    techsContainer.item.mockReturnValue({ read: vi.fn().mockRejectedValue({ code: 404 }) });
     const res = await getConfidenceScoreHandler(makeRequest('unknown-tech'), {} as InvocationContext, CUSTOMER);
     expect(res.status).toBe(404);
+  });
+
+  it('propagates non-404 Cosmos errors as thrown (not swallowed as 404)', async () => {
+    techsContainer.item.mockReturnValue({ read: vi.fn().mockRejectedValue({ code: 429, message: 'Rate limited' }) });
+    await expect(
+      getConfidenceScoreHandler(makeRequest('tech-1'), {} as InvocationContext, CUSTOMER)
+    ).rejects.toMatchObject({ code: 429 });
   });
 
   it('returns areaRating=null (no per-booking ratings collected yet)', async () => {
