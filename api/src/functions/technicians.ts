@@ -83,6 +83,8 @@ export const getConfidenceScoreHandler = async (
 
   let techDoc: { id: string; location?: { type: string; coordinates: [number, number] } } | undefined;
   try {
+    // technicians collection is partitioned by the technician's UID (same partition key as id).
+    // This matches the pattern used by patchFcmTokenHandler in this file.
     const result = await db
       .container('technicians')
       .item(technicianId, technicianId)
