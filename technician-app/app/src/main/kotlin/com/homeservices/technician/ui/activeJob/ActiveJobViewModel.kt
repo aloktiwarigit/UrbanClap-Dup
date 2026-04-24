@@ -46,8 +46,7 @@ internal class ActiveJobViewModel
         init {
             viewModelScope.launch {
                 repository.getActiveJob(bookingId).collect { job ->
-                    val hasPending =
-                        (_uiState.value as? ActiveJobUiState.Active)?.hasPendingTransitions ?: false
+                    val current = _uiState.value as? ActiveJobUiState.Active
                     _uiState.value =
                         if (job.status == ActiveJobStatus.COMPLETED) {
                             ActiveJobUiState.Completed
@@ -55,7 +54,12 @@ internal class ActiveJobViewModel
                             ActiveJobUiState.Active(
                                 job = job,
                                 availableAction = job.status.toAction(),
-                                hasPendingTransitions = hasPending,
+                                // Preserve transient UI state across polling refreshes so that
+                                // an in-progress photo capture or upload is not interrupted.
+                                hasPendingTransitions = current?.hasPendingTransitions ?: false,
+                                pendingPhotoStage = current?.pendingPhotoStage,
+                                photoUploadInProgress = current?.photoUploadInProgress ?: false,
+                                photoUploadError = current?.photoUploadError,
                             )
                         }
                 }
@@ -129,10 +133,11 @@ internal class ActiveJobViewModel
                     }
                 } else {
                     val s = _uiState.value as? ActiveJobUiState.Active ?: return@launch
-                    _uiState.value = s.copy(
-                        photoUploadInProgress = false,
-                        photoUploadError = result.exceptionOrNull()?.message ?: "Upload failed",
-                    )
+                    _uiState.value =
+                        s.copy(
+                            photoUploadInProgress = false,
+                            photoUploadError = result.exceptionOrNull()?.message ?: "Upload failed",
+                        )
                 }
             }
         }

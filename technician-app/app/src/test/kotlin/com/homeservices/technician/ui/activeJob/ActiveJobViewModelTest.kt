@@ -220,6 +220,32 @@ public class ActiveJobViewModelTest {
         }
 
     @Test
+    public fun `photo state preserved when polling refresh emits a new job`(): Unit =
+        runTest {
+            val jobFlow = MutableStateFlow(aJob(ActiveJobStatus.REACHED))
+            every { repository.getActiveJob("bk-1") } returns jobFlow
+            val savedStateHandle = SavedStateHandle(mapOf("bookingId" to "bk-1"))
+            val vm =
+                ActiveJobViewModel(
+                    savedStateHandle,
+                    repository,
+                    startTripUseCase,
+                    markReachedUseCase,
+                    startWorkUseCase,
+                    completeJobUseCase,
+                    connectivityObserver,
+                    uploadJobPhotoUseCase,
+                )
+            // Request transition (sets pendingPhotoStage)
+            vm.onTransitionRequested("REACHED")
+            // Polling fires again with the same job — photo state must survive
+            jobFlow.value = aJob(ActiveJobStatus.REACHED)
+
+            val state = vm.uiState.value as ActiveJobUiState.Active
+            assertThat(state.pendingPhotoStage).isEqualTo("REACHED")
+        }
+
+    @Test
     public fun `onPhotoConfirmed is no-op when pendingPhotoStage is null`(): Unit =
         runTest {
             // pendingPhotoStage is null by default — onPhotoConfirmed should return early

@@ -36,10 +36,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import java.io.File
 import java.util.concurrent.Executors
 
@@ -69,15 +69,17 @@ internal fun PhotoCaptureScreen(
                 PackageManager.PERMISSION_GRANTED,
         )
     }
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted -> hasCameraPermission = granted }
+    val permissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission(),
+        ) { granted -> hasCameraPermission = granted }
 
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) permissionLauncher.launch(Manifest.permission.CAMERA)
     }
 
     var capturedPath by remember { mutableStateOf<String?>(null) }
+    var noCameraAvailable by remember { mutableStateOf(false) }
     val imageCapture = remember { ImageCapture.Builder().build() }
     val executor = remember { Executors.newSingleThreadExecutor() }
     DisposableEffect(Unit) { onDispose { executor.shutdown() } }
@@ -92,6 +94,18 @@ internal fun PhotoCaptureScreen(
             return@Box
         }
 
+        if (noCameraAvailable) {
+            Column(
+                modifier = Modifier.align(Alignment.Center).padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text("No back camera available on this device", color = Color.White)
+                TextButton(onClick = onDismiss) { Text("Go back", color = Color.White) }
+            }
+            return@Box
+        }
+
         if (capturedPath == null) {
             AndroidView(
                 factory = { ctx ->
@@ -99,8 +113,15 @@ internal fun PhotoCaptureScreen(
                         ProcessCameraProvider.getInstance(ctx).addListener(
                             {
                                 val provider = ProcessCameraProvider.getInstance(ctx).get()
-                                val preview = Preview.Builder().build()
-                                    .also { it.setSurfaceProvider(pv.surfaceProvider) }
+                                if (!provider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA)) {
+                                    noCameraAvailable = true
+                                    return@addListener
+                                }
+                                val preview =
+                                    Preview
+                                        .Builder()
+                                        .build()
+                                        .also { it.setSurfaceProvider(pv.surfaceProvider) }
                                 provider.unbindAll()
                                 provider.bindToLifecycle(
                                     lifecycleOwner,
@@ -120,19 +141,21 @@ internal fun PhotoCaptureScreen(
                 text = stagePrompt(stage),
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.White,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .background(Color.Black.copy(alpha = 0.55f))
-                    .fillMaxWidth()
-                    .padding(16.dp),
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .background(Color.Black.copy(alpha = 0.55f))
+                        .fillMaxWidth()
+                        .padding(16.dp),
             )
 
             Button(
                 onClick = {
-                    val file = File(
-                        context.cacheDir,
-                        "photo_${stage}_${System.currentTimeMillis()}.jpg",
-                    )
+                    val file =
+                        File(
+                            context.cacheDir,
+                            "photo_${stage}_${System.currentTimeMillis()}.jpg",
+                        )
                     imageCapture.takePicture(
                         ImageCapture.OutputFileOptions.Builder(file).build(),
                         ContextCompat.getMainExecutor(context),
@@ -140,6 +163,7 @@ internal fun PhotoCaptureScreen(
                             override fun onImageSaved(out: ImageCapture.OutputFileResults) {
                                 capturedPath = file.absolutePath
                             }
+
                             override fun onError(exc: ImageCaptureException) { /* surfaced via uploadError on retry */ }
                         },
                     )

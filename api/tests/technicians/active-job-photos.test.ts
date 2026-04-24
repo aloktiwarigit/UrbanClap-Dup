@@ -108,4 +108,14 @@ describe('POST /v1/technicians/active-job/:bookingId/photos', () => {
     const res = await activeJobPhotosHandler(makeRequest({ stage: 'REACHED' }), CTX);
     expect(res.status).toBe(400);
   });
+
+  it('returns 409 on ETag conflict (concurrent upload retry)', async () => {
+    const etagConflict = Object.assign(new Error('ETag conflict'), { code: 412 });
+    vi.mocked(bookingRepo.addPhoto).mockRejectedValue(etagConflict);
+    const res = await activeJobPhotosHandler(
+      makeRequest({ stage: 'REACHED', photoUrl: PHOTO_URL }),
+      CTX,
+    );
+    expect(res.status).toBe(409);
+  });
 });

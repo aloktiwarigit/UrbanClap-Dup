@@ -7,16 +7,21 @@ service firebase.storage {
                          && request.auth.uid == userId;
     }
 
-    // Job site photos — technician UID is embedded in the path so the rule
-    // can verify the uploading user matches the path without a Cosmos lookup.
+    // Job site photos — technician UID is embedded in the path so rules can
+    // enforce ownership without a Cosmos DB lookup.
     // Path: bookings/{bookingId}/photos/{technicianUid}/{stage}/{file}
+    //
+    // Reads: restricted to the uploading technician. Admin and customer reads
+    // are served through the API using the Firebase Admin SDK (which bypasses
+    // Storage rules) to generate short-lived signed URLs — keeping PII off
+    // publicly-guessable paths.
     match /bookings/{bookingId}/photos/{technicianUid}/{stage}/{file} {
       allow write: if request.auth != null
                    && request.auth.uid == technicianUid
                    && request.resource.size <= 5 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
-      // Admin and the assigned customer read via their own API-issued tokens
-      allow read: if request.auth != null;
+      allow read: if request.auth != null
+                  && request.auth.uid == technicianUid;
     }
   }
 }
