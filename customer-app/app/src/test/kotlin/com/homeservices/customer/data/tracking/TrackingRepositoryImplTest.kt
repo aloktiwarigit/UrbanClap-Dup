@@ -12,7 +12,6 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 public class TrackingRepositoryImplTest {
-
     @Test
     public fun `BookingStatus fromFcmString maps EN_ROUTE`() {
         assertThat(BookingStatus.fromFcmString("EN_ROUTE")).isEqualTo(BookingStatus.EnRoute)
@@ -49,67 +48,87 @@ public class TrackingRepositoryImplTest {
     private val repo: TrackingRepositoryImpl = TrackingRepositoryImpl(bus)
 
     @Test
-    public fun `location update populates LiveLocation in state`(): Unit = runTest {
-        val results = mutableListOf<TrackingState>()
-        val job = launch { repo.trackBooking("b1").collect { results.add(it) } }
-        yield() // let collector coroutine start and subscribe before posting events
-        bus.post(
-            TrackingEvent.LocationUpdate(
-                bookingId = "b1",
-                lat = 12.97,
-                lng = 77.59,
-                etaMinutes = 10,
-                techName = "Suresh",
-                techPhotoUrl = "https://example.com/photo.jpg",
+    public fun `location update populates LiveLocation in state`(): Unit =
+        runTest {
+            val results = mutableListOf<TrackingState>()
+            val job = launch { repo.trackBooking("b1").collect { results.add(it) } }
+            yield() // let collector coroutine start and subscribe before posting events
+            bus.post(
+                TrackingEvent.LocationUpdate(
+                    bookingId = "b1",
+                    lat = 12.97,
+                    lng = 77.59,
+                    etaMinutes = 10,
+                    techName = "Suresh",
+                    techPhotoUrl = "https://example.com/photo.jpg",
+                ),
             )
-        )
-        advanceUntilIdle()
-        job.cancel()
-        assertThat(results).hasSize(1)
-        assertThat(results[0].location?.lat).isEqualTo(12.97)
-        assertThat(results[0].location?.techName).isEqualTo("Suresh")
-        assertThat(results[0].status).isEqualTo(BookingStatus.EnRoute)
-    }
+            advanceUntilIdle()
+            job.cancel()
+            assertThat(results).hasSize(2)
+            // seed
+            assertThat(results[0].location).isNull()
+            assertThat(results[0].status).isEqualTo(BookingStatus.EnRoute)
+            // after location update
+            assertThat(results[1].location?.lat).isEqualTo(12.97)
+            assertThat(results[1].location?.techName).isEqualTo("Suresh")
+            assertThat(results[1].status).isEqualTo(BookingStatus.EnRoute)
+        }
 
     @Test
-    public fun `status update changes booking status`(): Unit = runTest {
-        val results = mutableListOf<TrackingState>()
-        val job = launch { repo.trackBooking("b2").collect { results.add(it) } }
-        yield() // let collector coroutine start and subscribe before posting events
-        bus.post(TrackingEvent.StatusUpdate(bookingId = "b2", status = "REACHED"))
-        advanceUntilIdle()
-        job.cancel()
-        assertThat(results).hasSize(1)
-        assertThat(results[0].status).isEqualTo(BookingStatus.Reached)
-        assertThat(results[0].location).isNull()
-    }
+    public fun `status update changes booking status`(): Unit =
+        runTest {
+            val results = mutableListOf<TrackingState>()
+            val job = launch { repo.trackBooking("b2").collect { results.add(it) } }
+            yield() // let collector coroutine start and subscribe before posting events
+            bus.post(TrackingEvent.StatusUpdate(bookingId = "b2", status = "REACHED"))
+            advanceUntilIdle()
+            job.cancel()
+            assertThat(results).hasSize(2)
+            // seed
+            assertThat(results[0].location).isNull()
+            assertThat(results[0].status).isEqualTo(BookingStatus.EnRoute)
+            // after status update
+            assertThat(results[1].status).isEqualTo(BookingStatus.Reached)
+            assertThat(results[1].location).isNull()
+        }
 
     @Test
-    public fun `events for different bookingIds are filtered`(): Unit = runTest {
-        val results = mutableListOf<TrackingState>()
-        val job = launch { repo.trackBooking("b3").collect { results.add(it) } }
-        yield() // let collector coroutine start and subscribe before posting events
-        bus.post(TrackingEvent.StatusUpdate(bookingId = "OTHER", status = "REACHED"))
-        bus.post(TrackingEvent.StatusUpdate(bookingId = "b3", status = "IN_PROGRESS"))
-        advanceUntilIdle()
-        job.cancel()
-        assertThat(results).hasSize(1)
-        assertThat(results[0].status).isEqualTo(BookingStatus.InProgress)
-    }
+    public fun `events for different bookingIds are filtered`(): Unit =
+        runTest {
+            val results = mutableListOf<TrackingState>()
+            val job = launch { repo.trackBooking("b3").collect { results.add(it) } }
+            yield() // let collector coroutine start and subscribe before posting events
+            bus.post(TrackingEvent.StatusUpdate(bookingId = "OTHER", status = "REACHED"))
+            bus.post(TrackingEvent.StatusUpdate(bookingId = "b3", status = "IN_PROGRESS"))
+            advanceUntilIdle()
+            job.cancel()
+            assertThat(results).hasSize(2)
+            // seed
+            assertThat(results[0].status).isEqualTo(BookingStatus.EnRoute)
+            // after IN_PROGRESS for "b3"
+            assertThat(results[1].status).isEqualTo(BookingStatus.InProgress)
+        }
 
     @Test
-    public fun `sequential updates accumulate state`(): Unit = runTest {
-        val results = mutableListOf<TrackingState>()
-        val job = launch { repo.trackBooking("b4").collect { results.add(it) } }
-        yield() // let collector coroutine start and subscribe before posting events
-        bus.post(TrackingEvent.LocationUpdate("b4", 12.97, 77.59, 10, "Suresh", "url"))
-        bus.post(TrackingEvent.StatusUpdate("b4", "REACHED"))
-        advanceUntilIdle()
-        job.cancel()
-        assertThat(results).hasSize(2)
-        assertThat(results[0].location?.techName).isEqualTo("Suresh")
-        assertThat(results[0].status).isEqualTo(BookingStatus.EnRoute)
-        assertThat(results[1].location?.techName).isEqualTo("Suresh")
-        assertThat(results[1].status).isEqualTo(BookingStatus.Reached)
-    }
+    public fun `sequential updates accumulate state`(): Unit =
+        runTest {
+            val results = mutableListOf<TrackingState>()
+            val job = launch { repo.trackBooking("b4").collect { results.add(it) } }
+            yield() // let collector coroutine start and subscribe before posting events
+            bus.post(TrackingEvent.LocationUpdate("b4", 12.97, 77.59, 10, "Suresh", "url"))
+            bus.post(TrackingEvent.StatusUpdate("b4", "REACHED"))
+            advanceUntilIdle()
+            job.cancel()
+            assertThat(results).hasSize(3)
+            // seed
+            assertThat(results[0].location).isNull()
+            assertThat(results[0].status).isEqualTo(BookingStatus.EnRoute)
+            // after LocationUpdate
+            assertThat(results[1].location?.techName).isEqualTo("Suresh")
+            assertThat(results[1].status).isEqualTo(BookingStatus.EnRoute)
+            // after StatusUpdate
+            assertThat(results[2].location?.techName).isEqualTo("Suresh")
+            assertThat(results[2].status).isEqualTo(BookingStatus.Reached)
+        }
 }
