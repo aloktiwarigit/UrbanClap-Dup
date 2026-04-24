@@ -201,7 +201,7 @@ describe('settleBooking', () => {
 
     it('marks FAILED with "no Razorpay linked account" when tech has no account', async () => {
       vi.mocked(techRepo.getTechnicianForSettlement).mockResolvedValue({
-        id: 'tech-1', completedJobCount: 5, razorpayLinkedAccountId: undefined,
+        id: 'tech-1', completedJobCount: 5,
       });
 
       await settleBooking(completedBooking, mockCtx);

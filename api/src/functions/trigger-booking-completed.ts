@@ -98,7 +98,7 @@ export async function settleBooking(bookingRaw: unknown, ctx: InvocationContext)
 }
 
 app.cosmosDB('triggerBookingCompleted', {
-  connectionStringSetting: 'COSMOS_CONNECTION_STRING',
+  connection: 'COSMOS_CONNECTION_STRING',
   databaseName: DB_NAME,
   containerName: 'bookings',
   leaseContainerName: 'booking_completed_leases',
