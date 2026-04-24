@@ -5,7 +5,6 @@ import com.homeservices.customer.data.technician.ConfidenceScoreRepository
 import com.homeservices.customer.data.technician.ConfidenceScoreRepositoryImpl
 import com.homeservices.customer.data.technician.remote.TechnicianApiService
 import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -31,16 +30,9 @@ public abstract class TechnicianModule {
     ): ConfidenceScoreRepository
 
     public companion object {
-        @Provides
-        @Singleton
-        public fun provideMoshi(): Moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
-
-        // Known limitation (E04-S02): this client has no Firebase auth interceptor because
-        // customer auth (FirebaseAuth) is not wired into this branch yet (branches from main
-        // at E02-S04, predating E02-S01 customer auth). The `requireCustomer` middleware will
-        // return 401 until the Firebase ID-token interceptor is added when customer auth merges.
-        // Fix: replace this client with one that mirrors BookingModule's @AuthOkHttpClient
-        // (reads FirebaseAuth.getInstance().currentUser?.getIdToken(false)?.await()?.token).
+        // Known limitation (E04-S02): this client has no Firebase auth interceptor.
+        // The `requireCustomer` middleware returns 401 until the Firebase token interceptor
+        // is added (mirrors BookingModule's @AuthOkHttpClient pattern with getIdToken).
         @Provides
         @Singleton
         @TechnicianHttpClient
@@ -57,7 +49,7 @@ public abstract class TechnicianModule {
         @Singleton
         public fun provideTechnicianApiService(
             @TechnicianHttpClient client: OkHttpClient,
-            moshi: Moshi,
+            moshi: Moshi, // injected from CatalogueModule — not redeclared here
         ): TechnicianApiService =
             Retrofit.Builder()
                 .baseUrl(BuildConfig.API_BASE_URL + "/")

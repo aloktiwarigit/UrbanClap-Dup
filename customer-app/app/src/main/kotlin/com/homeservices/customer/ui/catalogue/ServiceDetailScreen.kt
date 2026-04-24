@@ -63,6 +63,7 @@ internal fun ServiceDetailScreen(
     ) { innerPadding ->
         ServiceDetailContent(
             uiState = uiState,
+            confidenceScoreState = confidenceScoreState,
             onBookNow = onBookNow,
             modifier = Modifier.padding(innerPadding),
         )
@@ -72,6 +73,7 @@ internal fun ServiceDetailScreen(
 @Composable
 internal fun ServiceDetailContent(
     uiState: ServiceDetailUiState,
+    confidenceScoreState: ConfidenceScoreUiState,
     onBookNow: (serviceId: String, categoryId: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -92,6 +94,7 @@ internal fun ServiceDetailContent(
         is ServiceDetailUiState.Success -> {
             ServiceDetailBody(
                 service = uiState.service,
+                confidenceScoreState = confidenceScoreState,
                 onBookNow = { onBookNow(uiState.service.id, uiState.service.categoryId) },
                 modifier = modifier,
             )
@@ -102,6 +105,7 @@ internal fun ServiceDetailContent(
 @Composable
 private fun ServiceDetailBody(
     service: Service,
+    confidenceScoreState: ConfidenceScoreUiState,
     onBookNow: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
