@@ -252,6 +252,14 @@ kover {
                     // the Retrofit runtime, not unit-testable directly.
                     "*.ActiveJobApiService",
                     "*.ActiveJobApiService\$*",
+                    // PhotoCaptureScreen generates Compose *Kt wrapper classes
+                    "*.PhotoCaptureScreenKt",
+                    "*.PhotoCaptureScreenKt\$*",
+                    // JobPhotoRepositoryImpl wraps Firebase Storage + HTTP — requires live services
+                    "*.JobPhotoRepositoryImpl",
+                    "*.JobPhotoRepositoryImpl\$*",
+                    // Photo DI module — @Provides methods are framework wiring
+                    "*.data.photo.di.*",
                 )
             }
         }
@@ -312,6 +320,12 @@ dependencies {
     implementation(libs.moshi.kotlin)
     implementation(libs.androidx.browser)
     implementation(libs.firebase.storage)
+
+    // CameraX — on-device photo capture for job stage evidence (E06-S02)
+    implementation(libs.camera.core)
+    implementation(libs.camera.camera2)
+    implementation(libs.camera.lifecycle)
+    implementation(libs.camera.view)
 
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.jupiter.api)
