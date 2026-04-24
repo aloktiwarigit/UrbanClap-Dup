@@ -48,7 +48,12 @@ export async function settleBooking(bookingRaw: unknown, ctx: InvocationContext)
 
   const bookingAmount = booking.finalAmount ?? booking.amount;
 
-  await systemAuditEntry('ROUTE_TRANSFER_ATTEMPT', bookingId, { technicianId, bookingAmount });
+  // Best-effort: audit failure must not prevent settlement
+  try {
+    await systemAuditEntry('ROUTE_TRANSFER_ATTEMPT', bookingId, { technicianId, bookingAmount });
+  } catch (auditErr: unknown) {
+    Sentry.captureException(auditErr);
+  }
 
   const tech = await getTechnicianForSettlement(technicianId);
   const completedJobCount = tech?.completedJobCount ?? 0;

@@ -40,7 +40,12 @@ export async function reconcilePayouts(ctx: InvocationContext): Promise<void> {
   let retryFailed = 0;
 
   for (const entry of pendingStale) {
-    await systemAuditEntry('RECON_RETRY_ATTEMPT', { bookingId: entry.bookingId });
+    // Best-effort: audit failure must not prevent reconciliation attempt
+    try {
+      await systemAuditEntry('RECON_RETRY_ATTEMPT', { bookingId: entry.bookingId });
+    } catch (auditErr: unknown) {
+      Sentry.captureException(auditErr);
+    }
     let transferId: string;
     try {
       const tech = await getTechnicianForSettlement(entry.technicianId);
