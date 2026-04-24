@@ -1,4 +1,4 @@
-import { CosmosClient } from '@azure/cosmos';
+import { CosmosClient, Container } from '@azure/cosmos';
 
 let _client: CosmosClient | null = null;
 
@@ -15,3 +15,7 @@ export function getCosmosClient(): CosmosClient {
 }
 
 export const DB_NAME = process.env.COSMOS_DATABASE ?? 'homeservices';
+
+export function getWalletLedgerContainer(): Container {
+  return getCosmosClient().database(DB_NAME).container('wallet_ledger');
+}
