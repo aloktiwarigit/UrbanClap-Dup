@@ -23,6 +23,9 @@ public sealed class RatingShieldState {
 
     public object ShowDialog : RatingShieldState()
 
+    /** API call in flight — sheet buttons disabled to prevent double-tap race. */
+    public object Escalating : RatingShieldState()
+
     public data class Escalated(
         val expiresAtMs: Long,
     ) : RatingShieldState()
@@ -180,6 +183,7 @@ public class RatingViewModel
         }
 
         public fun onDismissShieldDialog() {
+            if (_shieldState.value == RatingShieldState.Escalating) return // ignore dismiss during in-flight call
             _shieldState.value = RatingShieldState.Idle
             // Intentionally does NOT submit — scrim tap / back gesture is not an opt-out.
         }
@@ -199,6 +203,8 @@ public class RatingViewModel
         }
 
         public fun onEscalate() {
+            if (_shieldState.value != RatingShieldState.ShowDialog) return // guard re-entrant / double-tap
+            _shieldState.value = RatingShieldState.Escalating
             val capturedOverall = overall.value
             val capturedSubScores = CustomerSubScores(punctuality.value, skill.value, behaviour.value)
             val capturedComment = comment.value.ifBlank { null }
@@ -221,7 +227,7 @@ public class RatingViewModel
                         _shieldState.value = RatingShieldState.Escalated(r.expiresAtMs)
                         startCountdown(r.expiresAtMs)
                     }.onFailure {
-                        _shieldState.value = RatingShieldState.Idle
+                        _shieldState.value = RatingShieldState.ShowDialog // allow retry
                         _uiState.value = RatingUiState.Error(it.message ?: "escalation failed")
                     }
             }
@@ -241,13 +247,6 @@ public class RatingViewModel
             val submitOverall = draft?.overall ?: overall.value
             val submitSubScores = draft?.subScores ?: CustomerSubScores(punctuality.value, skill.value, behaviour.value)
             val submitComment = draft?.comment ?: comment.value.ifBlank { null }
-            escalatedDraft = null
-            savedStateHandle.remove<Long>("shieldExpiresAtMs")
-            savedStateHandle.remove<Int>("shieldDraftOverall")
-            savedStateHandle.remove<Int>("shieldDraftPunct")
-            savedStateHandle.remove<Int>("shieldDraftSkill")
-            savedStateHandle.remove<Int>("shieldDraftBehav")
-            savedStateHandle.remove<String>("shieldDraftComment")
             _uiState.value = RatingUiState.Submitting
             viewModelScope.launch {
                 submitUseCase
@@ -258,8 +257,18 @@ public class RatingViewModel
                         comment = submitComment,
                     ).collect { result ->
                         result
-                            .onSuccess { _uiState.value = RatingUiState.AwaitingPartner(null) }
-                            .onFailure { _uiState.value = RatingUiState.Error(it.message ?: "submit failed") }
+                            .onSuccess {
+                                // Clear shield state only after confirmed success — preserves
+                                // draft for retry if the network call fails.
+                                escalatedDraft = null
+                                savedStateHandle.remove<Long>("shieldExpiresAtMs")
+                                savedStateHandle.remove<Int>("shieldDraftOverall")
+                                savedStateHandle.remove<Int>("shieldDraftPunct")
+                                savedStateHandle.remove<Int>("shieldDraftSkill")
+                                savedStateHandle.remove<Int>("shieldDraftBehav")
+                                savedStateHandle.remove<String>("shieldDraftComment")
+                                _uiState.value = RatingUiState.AwaitingPartner(null)
+                            }.onFailure { _uiState.value = RatingUiState.Error(it.message ?: "submit failed") }
                     }
             }
         }

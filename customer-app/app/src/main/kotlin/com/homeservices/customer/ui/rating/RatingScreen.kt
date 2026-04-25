@@ -76,11 +76,12 @@ public fun RatingScreen(
             }
         }
     }
-    if (shieldState == RatingShieldState.ShowDialog) {
+    if (shieldState == RatingShieldState.ShowDialog || shieldState == RatingShieldState.Escalating) {
         ShieldBottomSheet(
             onEscalate = viewModel::onEscalate,
             onSkip = viewModel::onSkipShield,
             onDismiss = viewModel::onDismissShieldDialog,
+            isEscalating = shieldState == RatingShieldState.Escalating,
         )
     }
 }
@@ -91,6 +92,7 @@ private fun ShieldBottomSheet(
     onEscalate: () -> Unit,
     onSkip: () -> Unit,
     onDismiss: () -> Unit,
+    isEscalating: Boolean = false,
 ) {
     val sheetState = rememberModalBottomSheetState()
     ModalBottomSheet(
@@ -103,11 +105,19 @@ private fun ShieldBottomSheet(
                 style = MaterialTheme.typography.titleMedium,
             )
             Spacer(Modifier.height(16.dp))
-            Button(onClick = onEscalate, modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = onEscalate,
+                enabled = !isEscalating,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Text("हाँ")
             }
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = onSkip, modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = onSkip,
+                enabled = !isEscalating,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Text("नहीं, सीधे post करें")
             }
             Spacer(Modifier.height(16.dp))
