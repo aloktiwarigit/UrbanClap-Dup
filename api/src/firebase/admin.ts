@@ -9,3 +9,21 @@ export async function getStorageDownloadUrl(storagePath: string): Promise<string
   });
   return url;
 }
+
+export async function checkStorageFileExists(storagePath: string): Promise<boolean> {
+  const [exists] = await getStorage().bucket().file(storagePath).exists();
+  return exists;
+}
+
+export async function uploadBufferToStorage(
+  storagePath: string,
+  buffer: Buffer,
+  contentType: string,
+): Promise<void> {
+  await getStorage().bucket().file(storagePath).save(buffer, { contentType, resumable: false });
+}
+
+export async function downloadStorageFile(storagePath: string): Promise<Buffer> {
+  const [contents] = await getStorage().bucket().file(storagePath).download();
+  return contents as Buffer;
+}

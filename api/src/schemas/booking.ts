@@ -25,6 +25,7 @@ export const BookingDocSchema = z.object({
   amount: z.number().int().positive(),
   technicianId: z.string().optional(),
   createdAt: z.string(),
+  completedAt: z.string().optional(),
   feesWaived: z.boolean().optional(),
   escalated: z.boolean().optional(),
   internalNotes: z.array(z.string()).optional(),
