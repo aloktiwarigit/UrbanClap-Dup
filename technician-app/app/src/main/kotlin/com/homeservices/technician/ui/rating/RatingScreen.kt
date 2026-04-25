@@ -1,6 +1,7 @@
 package com.homeservices.technician.ui.rating
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,11 +9,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -35,10 +38,14 @@ public fun RatingScreen(
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
         when (val current = state) {
+            is RatingUiState.Loading, is RatingUiState.Submitting ->
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
             is RatingUiState.AwaitingPartner -> AwaitingPartnerBody(current.snapshot)
             is RatingUiState.Revealed -> RevealedBody(current.snapshot)
             is RatingUiState.Error -> Text("Error: ${current.message}")
-            else -> {
+            is RatingUiState.Editing -> {
                 Text("How was your customer?")
                 Spacer(Modifier.height(8.dp))
                 StarRow(label = "Overall", value = overall, onChange = viewModel::setOverall)

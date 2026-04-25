@@ -66,9 +66,6 @@ internal fun AppNavigation(
             navController.navigate("rating/$bookingId") {
                 launchSingleTop = true
             }
-            // Clear the replay cache so this event isn't redelivered to the next
-            // collector (activity recreation / returning to foreground).
-            ratingPromptEventBus.consume()
         }
     }
 

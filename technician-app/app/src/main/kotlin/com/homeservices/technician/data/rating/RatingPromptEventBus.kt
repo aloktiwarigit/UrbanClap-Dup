@@ -1,32 +1,44 @@
 package com.homeservices.technician.data.rating
 
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.receiveAsFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Buffered one-shot event bus for FCM-delivered RATING_PROMPT_TECHNICIAN events.
+ *
+ * Backed by a [Channel] rather than a [kotlinx.coroutines.flow.MutableSharedFlow]
+ * so that:
+ *  1. A prompt that arrives while no UI collector is active (cold start, app
+ *     backgrounded) is buffered and delivered once a collector subscribes.
+ *  2. Each event is consumed exactly once — the AppNavigation collector won't
+ *     re-receive an old prompt after activity recreation or returning to
+ *     foreground.
+ *  3. Multiple prompts that arrive while no collector is active are all queued
+ *     up to [CAPACITY]; if more pile up, [BufferOverflow.DROP_OLDEST] preserves
+ *     the most recent ones.
+ *
+ * The Channel is single-consumer: AppNavigation owns the only collector.
+ */
 @Singleton
 public class RatingPromptEventBus
     @Inject
     constructor() {
-        // replay = 1 so an FCM-delivered RATING_PROMPT_TECHNICIAN that arrives while
-        // no collector is active (app backgrounded or cold-starting from the push)
-        // is replayed to the AppNavigation collector once it subscribes. Without
-        // replay, the prompt is silently dropped and the rating screen never opens.
-        // The collector MUST call consume() after handling the event so the cached
-        // bookingId is not re-delivered on the next collector (activity recreation,
-        // returning to foreground, etc.).
-        private val _events = MutableSharedFlow<String>(replay = 1, extraBufferCapacity = 0)
-        public val events: SharedFlow<String> = _events.asSharedFlow()
-
-        public fun post(bookingId: String) {
-            _events.tryEmit(bookingId)
+        private companion object {
+            const val CAPACITY = 8
         }
 
-        @OptIn(ExperimentalCoroutinesApi::class)
-        public fun consume() {
-            _events.resetReplayCache()
+        private val _events =
+            Channel<String>(
+                capacity = CAPACITY,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST,
+            )
+        public val events: Flow<String> = _events.receiveAsFlow()
+
+        public fun post(bookingId: String) {
+            _events.trySend(bookingId)
         }
     }

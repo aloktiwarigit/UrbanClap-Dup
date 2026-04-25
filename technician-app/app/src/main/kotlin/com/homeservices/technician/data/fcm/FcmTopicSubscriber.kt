@@ -28,24 +28,33 @@ public class FcmTopicSubscriber
         public fun subscribeTechnician(uid: String) {
             val previous = prefs.getString(KEY_SUBSCRIBED_TECH_UID, null)
             if (previous == uid) return
+
+            val subscribeNew = {
+                // Persist the new uid only after Firebase confirms. Without this gate,
+                // a transient network/token failure would leave prefs claiming we are
+                // subscribed when Firebase has no record, and the early-return at the
+                // top would silently suppress retries on subsequent launches.
+                FirebaseMessaging
+                    .getInstance()
+                    .subscribeToTopic("technician_$uid")
+                    .addOnSuccessListener {
+                        prefs.edit().putString(KEY_SUBSCRIBED_TECH_UID, uid).apply()
+                    }
+            }
+
             if (previous != null) {
+                // Serialise unsubscribe(old) → subscribe(new) so the two callbacks
+                // can't race. addOnCompleteListener fires regardless of unsubscribe
+                // success — the new tech's topic still needs to be subscribed even if
+                // we couldn't cleanly remove the old one (Firebase will eventually
+                // reconcile via the per-installation token).
                 FirebaseMessaging
                     .getInstance()
                     .unsubscribeFromTopic("technician_$previous")
-                    .addOnSuccessListener {
-                        prefs.edit().remove(KEY_SUBSCRIBED_TECH_UID).apply()
-                    }
+                    .addOnCompleteListener { subscribeNew() }
+            } else {
+                subscribeNew()
             }
-            // Persist the new uid only after Firebase confirms the subscription. Without
-            // this gate, a transient network/token failure would leave prefs claiming
-            // we are subscribed when Firebase has no record, and the early-return at
-            // the top would silently suppress retries on subsequent launches.
-            FirebaseMessaging
-                .getInstance()
-                .subscribeToTopic("technician_$uid")
-                .addOnSuccessListener {
-                    prefs.edit().putString(KEY_SUBSCRIBED_TECH_UID, uid).apply()
-                }
         }
 
         public fun unsubscribeTechnician() {
