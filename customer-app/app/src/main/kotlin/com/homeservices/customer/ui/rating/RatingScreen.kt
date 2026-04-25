@@ -134,7 +134,7 @@ private fun CountdownChip(
     ) {
         SuggestionChip(
             onClick = {},
-            label = { Text("मालिक को ${hours}:${minutes.toString().padStart(2, '0')} बचे हैं") },
+            label = { Text("मालिक को $hours:${minutes.toString().padStart(2, '0')} बचे हैं") },
         )
         Spacer(Modifier.width(8.dp))
         TextButton(onClick = onPostAnyway) { Text("Post anyway") }
@@ -152,9 +152,10 @@ private fun StarRow(
         for (i in 1..5) {
             Text(
                 text = if (i <= value) "★" else "☆",
-                modifier = Modifier
-                    .padding(horizontal = 2.dp)
-                    .clickable(onClickLabel = "rate $i stars") { onChange(i) },
+                modifier =
+                    Modifier
+                        .padding(horizontal = 2.dp)
+                        .clickable(onClickLabel = "rate $i stars") { onChange(i) },
             )
         }
     }

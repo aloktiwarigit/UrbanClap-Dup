@@ -19,17 +19,34 @@ import javax.inject.Inject
 
 public sealed class RatingShieldState {
     public object Idle : RatingShieldState()
+
     public object ShowDialog : RatingShieldState()
-    public data class Escalated(val expiresAtMs: Long) : RatingShieldState()
+
+    public data class Escalated(
+        val expiresAtMs: Long,
+    ) : RatingShieldState()
 }
 
 public sealed class RatingUiState {
     public object Loading : RatingUiState()
-    public data class Editing(val snapshot: RatingSnapshot?) : RatingUiState()
+
+    public data class Editing(
+        val snapshot: RatingSnapshot?,
+    ) : RatingUiState()
+
     public object Submitting : RatingUiState()
-    public data class AwaitingPartner(val snapshot: RatingSnapshot?) : RatingUiState()
-    public data class Revealed(val snapshot: RatingSnapshot) : RatingUiState()
-    public data class Error(val message: String) : RatingUiState()
+
+    public data class AwaitingPartner(
+        val snapshot: RatingSnapshot?,
+    ) : RatingUiState()
+
+    public data class Revealed(
+        val snapshot: RatingSnapshot,
+    ) : RatingUiState()
+
+    public data class Error(
+        val message: String,
+    ) : RatingUiState()
 }
 
 @HiltViewModel
@@ -73,21 +90,40 @@ public class RatingViewModel
                 getUseCase.invoke(bookingId).collect { result ->
                     result
                         .onSuccess { snap ->
-                            _uiState.value = when {
-                                snap.status == RatingSnapshot.Status.REVEALED -> RatingUiState.Revealed(snap)
-                                snap.customerSide is SideState.Submitted -> RatingUiState.AwaitingPartner(snap)
-                                else -> RatingUiState.Editing(snap)
-                            }
+                            _uiState.value =
+                                when {
+                                    snap.status == RatingSnapshot.Status.REVEALED -> RatingUiState.Revealed(snap)
+                                    snap.customerSide is SideState.Submitted -> RatingUiState.AwaitingPartner(snap)
+                                    else -> RatingUiState.Editing(snap)
+                                }
                         }.onFailure { _uiState.value = RatingUiState.Error(it.message ?: "load failed") }
                 }
             }
         }
 
-        public fun setOverall(stars: Int) { _overall.value = stars; recompute() }
-        public fun setPunctuality(stars: Int) { _punctuality.value = stars; recompute() }
-        public fun setSkill(stars: Int) { _skill.value = stars; recompute() }
-        public fun setBehaviour(stars: Int) { _behaviour.value = stars; recompute() }
-        public fun setComment(text: String) { _comment.value = text.take(500) }
+        public fun setOverall(stars: Int) {
+            _overall.value = stars
+            recompute()
+        }
+
+        public fun setPunctuality(stars: Int) {
+            _punctuality.value = stars
+            recompute()
+        }
+
+        public fun setSkill(stars: Int) {
+            _skill.value = stars
+            recompute()
+        }
+
+        public fun setBehaviour(stars: Int) {
+            _behaviour.value = stars
+            recompute()
+        }
+
+        public fun setComment(text: String) {
+            _comment.value = text.take(500)
+        }
 
         private fun recompute() {
             _canSubmit.value =
@@ -118,17 +154,17 @@ public class RatingViewModel
 
         public fun onEscalate() {
             viewModelScope.launch {
-                val result = escalateUseCase.invoke(
-                    bookingId = bookingId,
-                    draftOverall = overall.value,
-                    draftComment = comment.value.ifBlank { null },
-                )
+                val result =
+                    escalateUseCase.invoke(
+                        bookingId = bookingId,
+                        draftOverall = overall.value,
+                        draftComment = comment.value.ifBlank { null },
+                    )
                 result
                     .onSuccess { r ->
                         _shieldState.value = RatingShieldState.Escalated(r.expiresAtMs)
                         startCountdown(r.expiresAtMs)
-                    }
-                    .onFailure {
+                    }.onFailure {
                         _shieldState.value = RatingShieldState.Idle
                         _uiState.value = RatingUiState.Error(it.message ?: "escalation failed")
                     }
@@ -146,16 +182,17 @@ public class RatingViewModel
         private fun doSubmit() {
             _uiState.value = RatingUiState.Submitting
             viewModelScope.launch {
-                submitUseCase.invoke(
-                    bookingId = bookingId,
-                    overall = overall.value,
-                    subScores = CustomerSubScores(punctuality.value, skill.value, behaviour.value),
-                    comment = comment.value.ifBlank { null },
-                ).collect { result ->
-                    result
-                        .onSuccess { _uiState.value = RatingUiState.AwaitingPartner(null) }
-                        .onFailure { _uiState.value = RatingUiState.Error(it.message ?: "submit failed") }
-                }
+                submitUseCase
+                    .invoke(
+                        bookingId = bookingId,
+                        overall = overall.value,
+                        subScores = CustomerSubScores(punctuality.value, skill.value, behaviour.value),
+                        comment = comment.value.ifBlank { null },
+                    ).collect { result ->
+                        result
+                            .onSuccess { _uiState.value = RatingUiState.AwaitingPartner(null) }
+                            .onFailure { _uiState.value = RatingUiState.Error(it.message ?: "submit failed") }
+                    }
             }
         }
     }
