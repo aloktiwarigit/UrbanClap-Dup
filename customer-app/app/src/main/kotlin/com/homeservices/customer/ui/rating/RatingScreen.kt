@@ -47,13 +47,6 @@ public fun RatingScreen(
     val comment by viewModel.comment.collectAsState()
     val canSubmit by viewModel.canSubmit.collectAsState()
 
-    if (shieldState == RatingShieldState.ShowDialog) {
-        ShieldBottomSheet(
-            onEscalate = viewModel::onEscalate,
-            onSkip = viewModel::onSkipShield,
-        )
-    }
-
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
         when (state) {
             is RatingUiState.AwaitingPartner -> Text("Thanks! Awaiting your technician's rating.")
@@ -82,6 +75,12 @@ public fun RatingScreen(
                 }
             }
         }
+    }
+    if (shieldState == RatingShieldState.ShowDialog) {
+        ShieldBottomSheet(
+            onEscalate = viewModel::onEscalate,
+            onSkip = viewModel::onSkipShield,
+        )
     }
 }
 
@@ -121,9 +120,10 @@ private fun CountdownChip(
 ) {
     var remainingMs by remember { mutableLongStateOf(expiresAtMs - System.currentTimeMillis()) }
     LaunchedEffect(expiresAtMs) {
-        while (remainingMs > 0) {
-            delay(60_000L)
+        while (true) {
             remainingMs = expiresAtMs - System.currentTimeMillis()
+            if (remainingMs <= 0) break
+            delay(60_000L)
         }
     }
     val hours = (remainingMs / 3_600_000).coerceAtLeast(0)
@@ -154,7 +154,7 @@ private fun StarRow(
                 text = if (i <= value) "★" else "☆",
                 modifier = Modifier
                     .padding(horizontal = 2.dp)
-                    .clickable(onClickLabel = "rate") { onChange(i) },
+                    .clickable(onClickLabel = "rate $i stars") { onChange(i) },
             )
         }
     }
