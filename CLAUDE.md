@@ -139,7 +139,7 @@ For each foundation-tier story in `docs/stories/`:
 
 ### Android story invariants (all tiers)
 
-- **libs.versions.toml sync:** First task of every `technician-app` story = copy `customer-app/gradle/libs.versions.toml` to `technician-app/gradle/libs.versions.toml`. Prevents post-Codex drift.
+- **libs.versions.toml sync:** libs.versions.toml drift is enforced by CI (`app-catalog byte-identity drift check` step in `technician-ship.yml`). No manual copy needed at story start.
 - **Paparazzi goldens:** Never record on Windows. Delete before push; trigger `paparazzi-record.yml` workflow_dispatch on CI. See `docs/patterns/paparazzi-cross-os-goldens.md`.
 - **Known gotchas:** Every Android plan's opening section cites the relevant `docs/patterns/` files for Firebase, Hilt, Paparazzi, and explicit-API traps.
 
