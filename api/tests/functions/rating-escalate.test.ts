@@ -66,11 +66,10 @@ describe('escalateRatingHandler', () => {
   });
 
   it('returns 400 VALIDATION_ERROR when draftOverall > 2', async () => {
-    (bookingRepo.getById as ReturnType<typeof vi.fn>).mockResolvedValue(closedBooking);
-    (findRatingShieldEscalation as ReturnType<typeof vi.fn>).mockResolvedValue(null);
     const res = await escalateRatingHandler(makeReq({ draftOverall: 3 }), mockCtx, mockCustomer);
     expect(res.status).toBe(400);
     expect(res.jsonBody).toMatchObject({ code: 'VALIDATION_ERROR' });
+    expect(bookingRepo.getById).not.toHaveBeenCalled();
   });
 
   it('returns 201 with complaintId and expiresAt ~2h from now on success', async () => {
@@ -101,5 +100,24 @@ describe('escalateRatingHandler', () => {
       status: 'NEW',
       customerId: 'customer_1',
     }));
+  });
+
+  it('returns 400 INVALID_JSON when body cannot be parsed', async () => {
+    const badReq = {
+      params: { bookingId: 'bk-1' },
+      query: { get: () => null, has: () => false },
+      headers: { get: () => null },
+      json: () => Promise.reject(new SyntaxError('bad json')),
+    } as unknown as HttpRequest;
+    const res = await escalateRatingHandler(badReq, mockCtx, mockCustomer);
+    expect(res.status).toBe(400);
+    expect(res.jsonBody).toMatchObject({ code: 'INVALID_JSON' });
+  });
+
+  it('returns 409 NO_TECHNICIAN when booking has no assigned technician', async () => {
+    (bookingRepo.getById as ReturnType<typeof vi.fn>).mockResolvedValue({ ...closedBooking, technicianId: null });
+    const res = await escalateRatingHandler(makeReq({ draftOverall: 2 }), mockCtx, mockCustomer);
+    expect(res.status).toBe(409);
+    expect(res.jsonBody).toMatchObject({ code: 'NO_TECHNICIAN' });
   });
 });
