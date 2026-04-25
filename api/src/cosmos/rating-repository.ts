@@ -27,6 +27,7 @@ export const ratingRepo = {
 
     if (!existing) {
       const fresh: RatingDoc = {
+        id: input.bookingId,
         bookingId: input.bookingId,
         customerId: input.customerId,
         technicianId: input.technicianId,

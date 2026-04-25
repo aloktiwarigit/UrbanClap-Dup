@@ -15,7 +15,7 @@ vi.mock('../../src/cosmos/client.js', () => ({
 
 import { ratingRepo } from '../../src/cosmos/rating-repository.js';
 
-const baseDoc = { bookingId: 'bk-1', customerId: 'cust-1', technicianId: 'tech-1' };
+const baseDoc = { id: 'bk-1', bookingId: 'bk-1', customerId: 'cust-1', technicianId: 'tech-1' };
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -33,6 +33,8 @@ describe('ratingRepo.submitSide', () => {
       overall: 5, subScores: { punctuality: 5, skill: 5, behaviour: 5 }, comment: 'great',
     });
     expect(mockContainer.items.create).toHaveBeenCalled();
+    const created = mockContainer.items.create.mock.calls[0]?.[0] as { id: string } | undefined;
+    expect(created?.id).toBe('bk-1');
     expect(result?.customerOverall).toBe(5);
     expect(result?.customerSubmittedAt).toBeTruthy();
     expect(result?.revealedAt).toBeUndefined();

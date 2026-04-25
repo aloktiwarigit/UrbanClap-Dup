@@ -7,6 +7,7 @@ import com.homeservices.customer.domain.rating.GetRatingUseCase
 import com.homeservices.customer.domain.rating.SubmitRatingUseCase
 import com.homeservices.customer.domain.rating.model.CustomerSubScores
 import com.homeservices.customer.domain.rating.model.RatingSnapshot
+import com.homeservices.customer.domain.rating.model.SideState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -74,10 +75,12 @@ public class RatingViewModel
                     result
                         .onSuccess { snap ->
                             _uiState.value =
-                                if (snap.status == RatingSnapshot.Status.REVEALED) {
-                                    RatingUiState.Revealed(snap)
-                                } else {
-                                    RatingUiState.Editing(snap)
+                                when {
+                                    snap.status == RatingSnapshot.Status.REVEALED ->
+                                        RatingUiState.Revealed(snap)
+                                    snap.customerSide is SideState.Submitted ->
+                                        RatingUiState.AwaitingPartner(snap)
+                                    else -> RatingUiState.Editing(snap)
                                 }
                         }.onFailure { _uiState.value = RatingUiState.Error(it.message ?: "load failed") }
                 }

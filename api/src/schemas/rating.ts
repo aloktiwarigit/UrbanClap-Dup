@@ -30,6 +30,7 @@ export const SubmitRatingRequestSchema = z.discriminatedUnion('side', [
 ]);
 
 export const RatingDocSchema = z.object({
+  id: z.string(),
   bookingId: z.string(),
   customerId: z.string(),
   technicianId: z.string(),

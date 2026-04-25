@@ -110,6 +110,33 @@ public class RatingViewModelTest {
         }
 
     @Test
+    public fun `transitions to AwaitingPartner when customer side already submitted (P2 fix)`(): Unit =
+        runTest {
+            val customerRating =
+                com.homeservices.customer.domain.rating.model.CustomerRating(
+                    overall = 5,
+                    subScores =
+                        com.homeservices.customer.domain.rating.model
+                            .CustomerSubScores(5, 5, 5),
+                    comment = null,
+                    submittedAt = "2026-04-24T12:00:00.000Z",
+                )
+            val snapshot =
+                RatingSnapshot(
+                    "bk-1",
+                    RatingSnapshot.Status.PARTIALLY_SUBMITTED,
+                    null,
+                    SideState.Submitted(customerRating),
+                    SideState.Pending,
+                )
+            coEvery { get.invoke("bk-1") } returns flowOf(Result.success(snapshot))
+
+            val vm = RatingViewModel(submit, get, savedState)
+
+            assertThat(vm.uiState.value).isInstanceOf(RatingUiState.AwaitingPartner::class.java)
+        }
+
+    @Test
     public fun `transitions to Error when getUseCase fails`(): Unit =
         runTest {
             coEvery { get.invoke("bk-1") } returns
