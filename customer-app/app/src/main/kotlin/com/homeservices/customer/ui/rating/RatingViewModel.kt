@@ -101,11 +101,24 @@ public class RatingViewModel
         private var countdownJob: Job? = null
 
         init {
-            // Restore shield countdown from SavedStateHandle (survives OS-initiated process death).
-            // The overall/comment draft is not restored — the customer must re-enter stars on resume,
-            // but the auto-post timer and "Post anyway" chip correctly reappear.
+            // Restore full shield state from SavedStateHandle after OS-initiated process death.
+            // Without the draft, the auto-post would submit default (zero-star) values.
             val savedExpiry = savedStateHandle.get<Long>("shieldExpiresAtMs")
             if (savedExpiry != null && savedExpiry > System.currentTimeMillis()) {
+                val dOverall = savedStateHandle.get<Int>("shieldDraftOverall") ?: 0
+                val dPunct = savedStateHandle.get<Int>("shieldDraftPunct") ?: 0
+                val dSkill = savedStateHandle.get<Int>("shieldDraftSkill") ?: 0
+                val dBehav = savedStateHandle.get<Int>("shieldDraftBehav") ?: 0
+                val dComment = savedStateHandle.get<String>("shieldDraftComment")?.ifBlank { null }
+                if (dOverall > 0) {
+                    _overall.value = dOverall
+                    _punctuality.value = dPunct
+                    _skill.value = dSkill
+                    _behaviour.value = dBehav
+                    dComment?.let { _comment.value = it }
+                    recompute()
+                    escalatedDraft = EscalatedDraft(dOverall, CustomerSubScores(dPunct, dSkill, dBehav), dComment)
+                }
                 _shieldState.value = RatingShieldState.Escalated(savedExpiry)
                 startCountdown(savedExpiry)
             }
@@ -200,6 +213,11 @@ public class RatingViewModel
                     .onSuccess { r ->
                         escalatedDraft = EscalatedDraft(capturedOverall, capturedSubScores, capturedComment)
                         savedStateHandle["shieldExpiresAtMs"] = r.expiresAtMs
+                        savedStateHandle["shieldDraftOverall"] = capturedOverall
+                        savedStateHandle["shieldDraftPunct"] = capturedSubScores.punctuality
+                        savedStateHandle["shieldDraftSkill"] = capturedSubScores.skill
+                        savedStateHandle["shieldDraftBehav"] = capturedSubScores.behaviour
+                        savedStateHandle["shieldDraftComment"] = capturedComment ?: ""
                         _shieldState.value = RatingShieldState.Escalated(r.expiresAtMs)
                         startCountdown(r.expiresAtMs)
                     }.onFailure {
@@ -225,6 +243,11 @@ public class RatingViewModel
             val submitComment = draft?.comment ?: comment.value.ifBlank { null }
             escalatedDraft = null
             savedStateHandle.remove<Long>("shieldExpiresAtMs")
+            savedStateHandle.remove<Int>("shieldDraftOverall")
+            savedStateHandle.remove<Int>("shieldDraftPunct")
+            savedStateHandle.remove<Int>("shieldDraftSkill")
+            savedStateHandle.remove<Int>("shieldDraftBehav")
+            savedStateHandle.remove<String>("shieldDraftComment")
             _uiState.value = RatingUiState.Submitting
             viewModelScope.launch {
                 submitUseCase

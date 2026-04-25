@@ -34,12 +34,24 @@ export async function escalateRatingHandler(
   if (booking.status !== 'CLOSED') return { status: 409, jsonBody: { code: 'BOOKING_NOT_CLOSED' } };
   if (!booking.technicianId) return { status: 409, jsonBody: { code: 'NO_TECHNICIAN' } };
 
-  const existingRating = await ratingRepo.getByBookingId(bookingId);
+  // Both pre-create checks query Cosmos — wrap together so a 404 from an unprovisioned
+  // container surfaces as CONTAINER_NOT_PROVISIONED rather than an unhandled 500.
+  let existingRating: Awaited<ReturnType<typeof ratingRepo.getByBookingId>>;
+  let existing: Awaited<ReturnType<typeof findRatingShieldEscalation>>;
+  try {
+    [existingRating, existing] = await Promise.all([
+      ratingRepo.getByBookingId(bookingId),
+      findRatingShieldEscalation(bookingId, customer.customerId),
+    ]);
+  } catch (err: unknown) {
+    if (typeof err === 'object' && err !== null && 'code' in err && (err as { code: number }).code === 404) {
+      return { status: 503, jsonBody: { code: 'CONTAINER_NOT_PROVISIONED' } };
+    }
+    throw err;
+  }
   if (existingRating?.customerSubmittedAt) {
     return { status: 409, jsonBody: { code: 'RATING_ALREADY_SUBMITTED' } };
   }
-
-  const existing = await findRatingShieldEscalation(bookingId, customer.customerId);
   if (existing) return { status: 409, jsonBody: { code: 'SHIELD_ALREADY_ESCALATED' } };
 
   const now = new Date();
