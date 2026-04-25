@@ -1,0 +1,82 @@
+import { app } from '@azure/functions';
+import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+import { requireCustomer } from '../middleware/requireCustomer.js';
+import type { CustomerContext } from '../types/customer.js';
+import { EscalateRatingBodySchema } from '../schemas/complaint.js';
+import type { ComplaintDoc } from '../schemas/complaint.js';
+import { bookingRepo } from '../cosmos/booking-repository.js';
+import { createComplaint, findRatingShieldEscalation } from '../cosmos/complaints-repository.js';
+import { sendOwnerRatingShieldAlert } from '../services/fcm.service.js';
+import { randomUUID } from 'crypto';
+
+export async function escalateRatingHandler(
+  req: HttpRequest,
+  ctx: InvocationContext,
+  customer: CustomerContext,
+): Promise<HttpResponseInit> {
+  const bookingId = (req as unknown as { params: { bookingId: string } }).params.bookingId;
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return { status: 400, jsonBody: { code: 'INVALID_JSON' } };
+  }
+  const parsed = EscalateRatingBodySchema.safeParse(body);
+  if (!parsed.success) {
+    return { status: 400, jsonBody: { code: 'VALIDATION_ERROR', issues: parsed.error.issues } };
+  }
+
+  const booking = await bookingRepo.getById(bookingId);
+  if (!booking) return { status: 404, jsonBody: { code: 'BOOKING_NOT_FOUND' } };
+  if (booking.customerId !== customer.customerId) return { status: 403, jsonBody: { code: 'FORBIDDEN' } };
+  if (booking.status !== 'CLOSED') return { status: 409, jsonBody: { code: 'BOOKING_NOT_CLOSED' } };
+
+  const existing = await findRatingShieldEscalation(bookingId, customer.customerId);
+  if (existing) return { status: 409, jsonBody: { code: 'SHIELD_ALREADY_ESCALATED' } };
+
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+
+  const doc: ComplaintDoc = {
+    id: randomUUID(),
+    orderId: bookingId,
+    customerId: customer.customerId,
+    technicianId: booking.technicianId ?? '',
+    description: `Rating Shield — booking ${bookingId} — draft: ${parsed.data.draftOverall}★`,
+    type: 'RATING_SHIELD',
+    draftOverall: parsed.data.draftOverall,
+    ...(parsed.data.draftComment !== undefined ? { draftComment: parsed.data.draftComment } : {}),
+    status: 'NEW',
+    internalNotes: [],
+    slaDeadlineAt: expiresAt.toISOString(),
+    expiresAt: expiresAt.toISOString(),
+    escalated: false,
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+  };
+
+  try {
+    await createComplaint(doc);
+  } catch (err: unknown) {
+    if (typeof err === 'object' && err !== null && 'code' in err && (err as { code: number }).code === 404) {
+      return { status: 503, jsonBody: { code: 'CONTAINER_NOT_PROVISIONED' } };
+    }
+    throw err;
+  }
+
+  sendOwnerRatingShieldAlert({
+    bookingId,
+    technicianId: booking.technicianId ?? '',
+    draftOverall: parsed.data.draftOverall,
+  }).catch((err: unknown) => ctx.error('FCM OWNER_RATING_SHIELD_ALERT failed', err));
+
+  return { status: 201, jsonBody: { complaintId: doc.id, expiresAt: expiresAt.toISOString() } };
+}
+
+app.http('escalateRating', {
+  methods: ['POST'],
+  route: 'v1/ratings/{bookingId}/escalate',
+  authLevel: 'anonymous',
+  handler: requireCustomer(escalateRatingHandler),
+});
