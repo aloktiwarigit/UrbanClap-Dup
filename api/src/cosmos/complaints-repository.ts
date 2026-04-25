@@ -153,3 +153,70 @@ export async function getRepeatOffenders(
     .filter(([, count]) => count >= 3)
     .map(([technicianId, count]) => ({ technicianId, count }));
 }
+
+export async function findActiveComplaintByBookingAndParty(
+  bookingId: string,
+  uid: string,
+): Promise<ComplaintDoc | null> {
+  const query: SqlQuerySpec = {
+    query: `SELECT TOP 1 * FROM c WHERE c.orderId = @bookingId
+            AND IS_DEFINED(c.filedBy)
+            AND (c.customerId = @uid OR c.technicianId = @uid)
+            AND c.status != @resolved`,
+    parameters: [
+      { name: '@bookingId', value: bookingId },
+      { name: '@uid', value: uid },
+      { name: '@resolved', value: 'RESOLVED' },
+    ],
+  };
+  const { resources } = await getCosmosClient()
+    .database(DB_NAME)
+    .container(CONTAINER)
+    .items.query<Record<string, unknown>>(query)
+    .fetchAll();
+  return resources.length > 0 ? ComplaintDocSchema.parse(resources[0]) : null;
+}
+
+export async function queryComplaintsByBookingAndParty(
+  bookingId: string,
+  uid: string,
+): Promise<ComplaintDoc[]> {
+  const query: SqlQuerySpec = {
+    query: `SELECT * FROM c WHERE c.orderId = @bookingId
+            AND (c.customerId = @uid OR c.technicianId = @uid)
+            ORDER BY c.createdAt DESC`,
+    parameters: [
+      { name: '@bookingId', value: bookingId },
+      { name: '@uid', value: uid },
+    ],
+  };
+  const { resources } = await getCosmosClient()
+    .database(DB_NAME)
+    .container(CONTAINER)
+    .items.query<Record<string, unknown>>(query)
+    .fetchAll();
+  return resources.map(r => ComplaintDocSchema.parse(r));
+}
+
+export async function getAcknowledgePastDueComplaints(): Promise<Array<{ doc: ComplaintDoc; etag: string }>> {
+  const now = new Date().toISOString();
+  const query: SqlQuerySpec = {
+    query: `SELECT * FROM c WHERE IS_DEFINED(c.acknowledgeDeadlineAt)
+            AND c.acknowledgeDeadlineAt < @now
+            AND c.status = @new
+            AND (c.escalated != true OR NOT IS_DEFINED(c.escalated))`,
+    parameters: [
+      { name: '@now', value: now },
+      { name: '@new', value: 'NEW' },
+    ],
+  };
+  const { resources } = await getCosmosClient()
+    .database(DB_NAME)
+    .container(CONTAINER)
+    .items.query<Record<string, unknown>>(query)
+    .fetchAll();
+  return resources.map(r => ({
+    doc: ComplaintDocSchema.parse(r),
+    etag: typeof r['_etag'] === 'string' ? r['_etag'] : '',
+  }));
+}

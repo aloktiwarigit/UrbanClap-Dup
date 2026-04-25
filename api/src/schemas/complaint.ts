@@ -14,6 +14,24 @@ export const ComplaintResolutionCategoryEnum = z.enum([
   'OTHER',
 ]);
 
+export const ComplaintFiledByEnum = z.enum(['CUSTOMER', 'TECHNICIAN']);
+
+export const CustomerReasonCodeEnum = z.enum([
+  'SERVICE_QUALITY',
+  'LATE_ARRIVAL',
+  'NO_SHOW',
+  'TECHNICIAN_BEHAVIOUR',
+  'BILLING_DISPUTE',
+  'OTHER',
+]);
+
+export const TechnicianReasonCodeEnum = z.enum([
+  'CUSTOMER_MISCONDUCT',
+  'LATE_PAYMENT',
+  'SAFETY_CONCERN',
+  'OTHER',
+]);
+
 export const InternalNoteSchema = z.object({
   adminId: z.string(),
   note: z.string(),
@@ -32,6 +50,10 @@ export const ComplaintDocSchema = z.object({
   internalNotes: z.array(InternalNoteSchema).default([]),
   slaDeadlineAt: z.string(),
   escalated: z.boolean().default(false),
+  filedBy: ComplaintFiledByEnum.optional(),
+  reasonCode: z.string().optional(),
+  photoStoragePath: z.string().optional(),
+  acknowledgeDeadlineAt: z.string().optional(),
   resolvedAt: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -84,6 +106,17 @@ export const RepeatOffendersResponseSchema = z.object({
   offenders: z.array(RepeatOffenderSchema),
 }).openapi('RepeatOffendersResponse');
 
+export const CreateComplaintByPartnerBodySchema = z.object({
+  bookingId: z.string().min(1),
+  reasonCode: z.string().min(1),
+  description: z.string().min(10).max(2000),
+  photoStoragePath: z.string().optional(),
+}).openapi('CreateComplaintByPartnerBody');
+
+export const PartnerComplaintListResponseSchema = z.object({
+  complaints: z.array(ComplaintDocSchema),
+}).openapi('PartnerComplaintListResponse');
+
 export type ComplaintStatus = z.infer<typeof ComplaintStatusEnum>;
 export type ComplaintResolutionCategory = z.infer<typeof ComplaintResolutionCategoryEnum>;
 export type InternalNote = z.infer<typeof InternalNoteSchema>;
@@ -94,3 +127,8 @@ export type ComplaintListQuery = z.infer<typeof ComplaintListQuerySchema>;
 export type ComplaintListResponse = z.infer<typeof ComplaintListResponseSchema>;
 export type RepeatOffender = z.infer<typeof RepeatOffenderSchema>;
 export type RepeatOffendersResponse = z.infer<typeof RepeatOffendersResponseSchema>;
+export type ComplaintFiledBy = z.infer<typeof ComplaintFiledByEnum>;
+export type CustomerReasonCode = z.infer<typeof CustomerReasonCodeEnum>;
+export type TechnicianReasonCode = z.infer<typeof TechnicianReasonCodeEnum>;
+export type CreateComplaintByPartnerBody = z.infer<typeof CreateComplaintByPartnerBodySchema>;
+export type PartnerComplaintListResponse = z.infer<typeof PartnerComplaintListResponseSchema>;
