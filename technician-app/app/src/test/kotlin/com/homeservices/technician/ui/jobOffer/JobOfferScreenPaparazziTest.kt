@@ -4,7 +4,6 @@ import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.homeservices.designsystem.theme.HomeservicesTheme
 import com.homeservices.technician.domain.jobOffer.model.JobOffer
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -30,7 +29,6 @@ public class JobOfferScreenPaparazziTest {
         )
 
     @Test
-    @Ignore("goldens recorded on CI — see docs/patterns/paparazzi-cross-os-goldens.md")
     public fun jobOfferScreen_offerArrived_lightTheme(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
@@ -44,7 +42,6 @@ public class JobOfferScreenPaparazziTest {
     }
 
     @Test
-    @Ignore("goldens recorded on CI — see docs/patterns/paparazzi-cross-os-goldens.md")
     public fun jobOfferScreen_offerArrived_darkTheme(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = true) {
@@ -58,7 +55,6 @@ public class JobOfferScreenPaparazziTest {
     }
 
     @Test
-    @Ignore("goldens recorded on CI — see docs/patterns/paparazzi-cross-os-goldens.md")
     public fun jobOfferScreen_lastFiveSeconds(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
@@ -72,7 +68,6 @@ public class JobOfferScreenPaparazziTest {
     }
 
     @Test
-    @Ignore("goldens recorded on CI — see docs/patterns/paparazzi-cross-os-goldens.md")
     public fun jobOfferScreen_expired(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {

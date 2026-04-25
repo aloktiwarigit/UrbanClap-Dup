@@ -4,7 +4,6 @@ import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.homeservices.customer.domain.technician.model.TechnicianProfile
 import com.homeservices.designsystem.theme.HomeservicesTheme
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -19,7 +18,6 @@ public class TrustDossierCardPaparazziTest {
             theme = "android:Theme.Material3.DayNight.NoActionBar",
         )
 
-    @Ignore("Record goldens on CI only — see docs/patterns/paparazzi-cross-os-goldens.md")
     @Test
     public fun compact_unavailable(): Unit {
         paparazzi.snapshot {
@@ -29,7 +27,6 @@ public class TrustDossierCardPaparazziTest {
         }
     }
 
-    @Ignore("Record goldens on CI only — see docs/patterns/paparazzi-cross-os-goldens.md")
     @Test
     public fun expanded_unavailable(): Unit {
         paparazzi.snapshot {
@@ -39,7 +36,6 @@ public class TrustDossierCardPaparazziTest {
         }
     }
 
-    @Ignore("Record goldens on CI only — see docs/patterns/paparazzi-cross-os-goldens.md")
     @Test
     public fun compact_loaded(): Unit {
         paparazzi.snapshot {
@@ -49,7 +45,6 @@ public class TrustDossierCardPaparazziTest {
         }
     }
 
-    @Ignore("Record goldens on CI only — see docs/patterns/paparazzi-cross-os-goldens.md")
     @Test
     public fun expanded_loaded(): Unit {
         paparazzi.snapshot {
