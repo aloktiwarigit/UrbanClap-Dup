@@ -3,6 +3,8 @@ import { extendZodWithOpenApi } from '@asteasolutions/zod-to-openapi';
 
 extendZodWithOpenApi(z);
 
+export const ComplaintTypeEnum = z.enum(['RATING_SHIELD', 'STANDARD']);
+
 export const ComplaintStatusEnum = z.enum(['NEW', 'INVESTIGATING', 'RESOLVED']);
 
 export const ComplaintResolutionCategoryEnum = z.enum([
@@ -26,6 +28,10 @@ export const ComplaintDocSchema = z.object({
   customerId: z.string(),
   technicianId: z.string(),
   description: z.string(),
+  type: ComplaintTypeEnum.default('STANDARD'),
+  draftOverall: z.number().int().min(1).max(5).optional(),
+  draftComment: z.string().max(500).optional(),
+  expiresAt: z.string().optional(),
   status: ComplaintStatusEnum,
   assigneeAdminId: z.string().optional(),
   resolutionCategory: ComplaintResolutionCategoryEnum.optional(),
@@ -53,6 +59,16 @@ export const PatchComplaintBodySchema = z.object({
   resolutionCategory: ComplaintResolutionCategoryEnum.optional(),
   note: z.string().min(1).max(2000).optional(),
 }).openapi('PatchComplaintBody');
+
+export const EscalateRatingBodySchema = z.object({
+  draftOverall: z.number().int().min(1).max(2),
+  draftComment: z.string().max(500).optional(),
+}).openapi('EscalateRatingBody');
+
+export const EscalateRatingResponseSchema = z.object({
+  complaintId: z.string(),
+  expiresAt: z.string(),
+}).openapi('EscalateRatingResponse');
 
 export const ComplaintListQuerySchema = z.object({
   status: z.string().optional().transform(s =>
@@ -84,6 +100,9 @@ export const RepeatOffendersResponseSchema = z.object({
   offenders: z.array(RepeatOffenderSchema),
 }).openapi('RepeatOffendersResponse');
 
+export type ComplaintType = z.infer<typeof ComplaintTypeEnum>;
+export type EscalateRatingBody = z.infer<typeof EscalateRatingBodySchema>;
+export type EscalateRatingResponse = z.infer<typeof EscalateRatingResponseSchema>;
 export type ComplaintStatus = z.infer<typeof ComplaintStatusEnum>;
 export type ComplaintResolutionCategory = z.infer<typeof ComplaintResolutionCategoryEnum>;
 export type InternalNote = z.infer<typeof InternalNoteSchema>;
