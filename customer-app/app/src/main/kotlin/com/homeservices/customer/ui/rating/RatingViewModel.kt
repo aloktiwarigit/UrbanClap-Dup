@@ -86,10 +86,16 @@ public class RatingViewModel
         private val _canSubmit = MutableStateFlow(false)
         public val canSubmit: StateFlow<Boolean> = _canSubmit.asStateFlow()
 
-        // Snapshot of overall + comment at the moment escalation was sent to the owner.
+        // Snapshot of the full rating at the moment escalation was sent to the owner.
         // doSubmit() uses these values (not the live flows) when shieldState is Escalated,
         // so the public rating always matches the draft the owner reviewed.
-        private var escalatedDraft: Pair<Int, String?>? = null
+        private data class EscalatedDraft(
+            val overall: Int,
+            val subScores: CustomerSubScores,
+            val comment: String?,
+        )
+
+        private var escalatedDraft: EscalatedDraft? = null
 
         // Held so onPostAnyway() / onSkipShield() can cancel the auto-post before it fires.
         private var countdownJob: Job? = null
@@ -151,6 +157,11 @@ public class RatingViewModel
             doSubmit()
         }
 
+        public fun onDismissShieldDialog() {
+            _shieldState.value = RatingShieldState.Idle
+            // Intentionally does NOT submit — scrim tap / back gesture is not an opt-out.
+        }
+
         public fun onSkipShield() {
             countdownJob?.cancel()
             countdownJob = null
@@ -167,6 +178,7 @@ public class RatingViewModel
 
         public fun onEscalate() {
             val capturedOverall = overall.value
+            val capturedSubScores = CustomerSubScores(punctuality.value, skill.value, behaviour.value)
             val capturedComment = comment.value.ifBlank { null }
             viewModelScope.launch {
                 val result =
@@ -177,7 +189,7 @@ public class RatingViewModel
                     )
                 result
                     .onSuccess { r ->
-                        escalatedDraft = capturedOverall to capturedComment
+                        escalatedDraft = EscalatedDraft(capturedOverall, capturedSubScores, capturedComment)
                         _shieldState.value = RatingShieldState.Escalated(r.expiresAtMs)
                         startCountdown(r.expiresAtMs)
                     }.onFailure {
@@ -198,9 +210,9 @@ public class RatingViewModel
 
         private fun doSubmit() {
             val draft = escalatedDraft
-            val submitOverall = if (draft != null) draft.first else overall.value
-            val submitComment = if (draft != null) draft.second else comment.value.ifBlank { null }
-            val submitSubScores = CustomerSubScores(punctuality.value, skill.value, behaviour.value)
+            val submitOverall = draft?.overall ?: overall.value
+            val submitSubScores = draft?.subScores ?: CustomerSubScores(punctuality.value, skill.value, behaviour.value)
+            val submitComment = draft?.comment ?: comment.value.ifBlank { null }
             escalatedDraft = null
             _uiState.value = RatingUiState.Submitting
             viewModelScope.launch {

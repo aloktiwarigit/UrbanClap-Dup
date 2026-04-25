@@ -80,6 +80,7 @@ public fun RatingScreen(
         ShieldBottomSheet(
             onEscalate = viewModel::onEscalate,
             onSkip = viewModel::onSkipShield,
+            onDismiss = viewModel::onDismissShieldDialog,
         )
     }
 }
@@ -89,10 +90,11 @@ public fun RatingScreen(
 private fun ShieldBottomSheet(
     onEscalate: () -> Unit,
     onSkip: () -> Unit,
+    onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState()
     ModalBottomSheet(
-        onDismissRequest = onSkip,
+        onDismissRequest = onDismiss,
         sheetState = sheetState,
     ) {
         Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
