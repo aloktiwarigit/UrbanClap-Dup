@@ -111,6 +111,7 @@ public class RatingViewModel
         }
 
         public fun submit() {
+            if (_uiState.value is RatingUiState.Submitting) return
             if (!_canSubmit.value) return
             _uiState.value = RatingUiState.Submitting
             viewModelScope.launch {

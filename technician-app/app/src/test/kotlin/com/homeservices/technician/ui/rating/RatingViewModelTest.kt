@@ -206,6 +206,41 @@ public class RatingViewModelTest {
         }
 
     @Test
+    public fun `submit is a no-op while a previous submit is in flight`(): Unit =
+        runTest {
+            coEvery { get.invoke("bk-1") } returns
+                flowOf(
+                    Result.success(
+                        RatingSnapshot(
+                            "bk-1",
+                            RatingSnapshot.Status.PENDING,
+                            null,
+                            SideState.Pending,
+                            SideState.Pending,
+                        ),
+                    ),
+                )
+            // Use a flow that never emits so the first submit stays in Submitting.
+            coEvery {
+                submit.invoke("bk-1", 5, TechSubScores(5, 5), null)
+            } returns kotlinx.coroutines.flow.emptyFlow()
+
+            val vm = RatingViewModel(submit, get, savedState)
+            vm.setOverall(5)
+            vm.setBehaviour(5)
+            vm.setCommunication(5)
+
+            vm.submit()
+            vm.submit()
+            vm.submit()
+
+            assertThat(vm.uiState.value).isInstanceOf(RatingUiState.Submitting::class.java)
+            io.mockk.coVerify(exactly = 1) {
+                submit.invoke("bk-1", 5, TechSubScores(5, 5), null)
+            }
+        }
+
+    @Test
     public fun `setComment truncates to 500 chars`(): Unit =
         runTest {
             coEvery { get.invoke("bk-1") } returns
