@@ -8,6 +8,7 @@ vi.mock('../../../../src/cosmos/complaints-repository.js', () => ({
   replaceComplaint: vi.fn(),
   getOverdueComplaints: vi.fn(),
   getRepeatOffenders: vi.fn(),
+  getUnacknowledgedPastDueComplaints: vi.fn(),
 }));
 
 vi.mock('../../../../src/cosmos/audit-log-repository.js', () => ({
@@ -15,7 +16,7 @@ vi.mock('../../../../src/cosmos/audit-log-repository.js', () => ({
   queryAuditLog: vi.fn(),
 }));
 
-import { getOverdueComplaints, replaceComplaint } from '../../../../src/cosmos/complaints-repository.js';
+import { getOverdueComplaints, replaceComplaint, getUnacknowledgedPastDueComplaints } from '../../../../src/cosmos/complaints-repository.js';
 import { appendAuditEntry } from '../../../../src/cosmos/audit-log-repository.js';
 import { slaBreachTimerHandler } from '../../../../src/functions/admin/complaints/sla-timer.js';
 
@@ -36,7 +37,11 @@ const overdueComplaint = {
 };
 
 describe('slaBreachTimerHandler', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Default: no unacknowledged-past-due complaints unless overridden per test
+    (getUnacknowledgedPastDueComplaints as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+  });
 
   it('sets escalated=true on each overdue complaint and calls replaceComplaint with etag', async () => {
     (getOverdueComplaints as ReturnType<typeof vi.fn>).mockResolvedValue([
@@ -86,5 +91,47 @@ describe('slaBreachTimerHandler', () => {
     await slaBreachTimerHandler({} as never, mockCtx);
     expect(replaceComplaint).not.toHaveBeenCalled();
     expect(appendAuditEntry).not.toHaveBeenCalled();
+  });
+
+  it('escalates acknowledge-past-due complaint and logs SLA_BREACH_ACK audit action', async () => {
+    const ackOverdueComplaint = {
+      ...overdueComplaint,
+      id: 'c-ack-1',
+      slaDeadlineAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      acknowledgeDeadlineAt: new Date(Date.now() - 1000).toISOString(),
+      filedBy: 'CUSTOMER' as const,
+    };
+    (getOverdueComplaints as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    (getUnacknowledgedPastDueComplaints as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { doc: ackOverdueComplaint, etag: '"ack-etag-1"' },
+    ]);
+    (replaceComplaint as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (appendAuditEntry as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    await slaBreachTimerHandler({} as never, mockCtx);
+    expect(replaceComplaint).toHaveBeenCalledOnce();
+    const [replacedDoc, passedEtag] = (replaceComplaint as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(replacedDoc.escalated).toBe(true);
+    expect(passedEtag).toBe('"ack-etag-1"');
+    expect(appendAuditEntry).toHaveBeenCalledOnce();
+    const auditCall = (appendAuditEntry as ReturnType<typeof vi.fn>).mock.calls[0]![0]!;
+    expect(auditCall.action).toBe('SLA_BREACH_ACK');
+  });
+
+  it('runs both resolve-breach and ack-breach sweeps in parallel', async () => {
+    (getOverdueComplaints as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { doc: overdueComplaint, etag: '"etag-resolve"' },
+    ]);
+    (getUnacknowledgedPastDueComplaints as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { doc: { ...overdueComplaint, id: 'c-ack-2', acknowledgeDeadlineAt: new Date(Date.now() - 500).toISOString() }, etag: '"etag-ack"' },
+    ]);
+    (replaceComplaint as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (appendAuditEntry as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    await slaBreachTimerHandler({} as never, mockCtx);
+    expect(replaceComplaint).toHaveBeenCalledTimes(2);
+    const auditActions = (appendAuditEntry as ReturnType<typeof vi.fn>).mock.calls.map(
+      (call) => (call[0] as { action: string }).action,
+    );
+    expect(auditActions).toContain('SLA_BREACH');
+    expect(auditActions).toContain('SLA_BREACH_ACK');
   });
 });
