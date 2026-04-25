@@ -288,6 +288,12 @@ kover {
                     // RatingUiState sealed class — data holders, no logic branches.
                     "*.RatingUiState",
                     "*.RatingUiState\$*",
+                    // FcmTopicSubscriber wraps FirebaseMessaging.subscribeToTopic /
+                    // unsubscribeFromTopic — Tasks-API callbacks that require a real
+                    // Firebase project + network to resolve. Same rationale as
+                    // FirebaseOtpUseCase exclusion above.
+                    "*.FcmTopicSubscriber",
+                    "*.FcmTopicSubscriber\$*",
                 )
             }
         }

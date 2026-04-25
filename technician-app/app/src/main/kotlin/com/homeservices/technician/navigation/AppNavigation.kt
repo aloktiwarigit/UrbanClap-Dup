@@ -61,7 +61,14 @@ internal fun AppNavigation(
         }
     }
 
-    LaunchedEffect(ratingPromptEventBus) {
+    val isAuthenticated = authState is AuthState.Authenticated
+    LaunchedEffect(ratingPromptEventBus, isAuthenticated) {
+        // Only collect rating prompts while authenticated. A push that arrives
+        // before login (stale topic delivery, race after a recent logout) sits
+        // in the Channel buffer until the collector subscribes — preventing
+        // unauthenticated users from being routed into RatingScreen, where the
+        // load/submit calls would fire without an auth token.
+        if (!isAuthenticated) return@LaunchedEffect
         ratingPromptEventBus.events.collect { bookingId ->
             navController.navigate("rating/$bookingId") {
                 launchSingleTop = true

@@ -4,22 +4,24 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * Tracks the technician_{uid} topic that the app is currently subscribed to,
  * persisting the last-subscribed uid in a dedicated SharedPreferences file
- * (separate from the auth prefs, which SessionManager.clearPrefs() wipes on
- * logout — using auth prefs would make unsubscribeTechnician() a no-op on
- * the logout path, leaving the previous tech's topic subscribed forever).
+ * (separate from auth prefs, which SessionManager.clearPrefs() wipes on
+ * logout).
  *
- * subscribe(new) is gated on the success of unsubscribe(old): a transient
- * Firebase failure leaves prefs pointing at the old uid so the next launch
- * retries the unsubscribe rather than leaving the installation subscribed
- * to both topics. Likewise, persistence of the new uid is gated on
- * subscribe success — the early-return on equality won't suppress retries
- * after a transient failure.
+ * subscribe(new) only runs after unsubscribe(old) succeeds, and persistence
+ * of the new uid only happens after Firebase confirms — a transient failure
+ * leaves prefs pointing at the old uid so the next launch retries.
+ *
+ * A generation counter invalidates in-flight callbacks when the auth state
+ * changes mid-flight: if subscribeTechnician(A) is in flight and the user
+ * logs out (or switches to B) before Firebase resolves, A's success listener
+ * will find that generation has advanced and refuse to mutate prefs.
  */
 @Singleton
 public class FcmTopicSubscriber
@@ -34,41 +36,54 @@ public class FcmTopicSubscriber
 
         private val prefs: SharedPreferences =
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        private val generation = AtomicInteger(0)
 
         public fun subscribeTechnician(uid: String) {
             val previous = prefs.getString(KEY_SUBSCRIBED_TECH_UID, null)
             if (previous == uid) return
+
+            val myGen = generation.incrementAndGet()
 
             val subscribeNew = {
                 FirebaseMessaging
                     .getInstance()
                     .subscribeToTopic("technician_$uid")
                     .addOnSuccessListener {
-                        prefs.edit().putString(KEY_SUBSCRIBED_TECH_UID, uid).apply()
+                        if (generation.get() == myGen) {
+                            prefs.edit().putString(KEY_SUBSCRIBED_TECH_UID, uid).apply()
+                        }
+                        // else: a subsequent auth transition has invalidated this
+                        // operation. Do not write stale state to prefs.
                     }
             }
 
             if (previous != null) {
-                // Only subscribe(new) when unsubscribe(old) succeeds. If unsub fails
-                // (offline/token error), prefs still points at the old uid and the
-                // next launch will retry the unsubscribe — preferable to silently
-                // leaving the installation subscribed to both technicians' topics.
+                // Only subscribe(new) when unsubscribe(old) succeeds AND no auth
+                // transition has happened since this call started. On failure or
+                // invalidation, prefs still points at the old uid and the next
+                // launch retries — preferable to leaving the installation subscribed
+                // to two technicians' topics simultaneously.
                 FirebaseMessaging
                     .getInstance()
                     .unsubscribeFromTopic("technician_$previous")
-                    .addOnSuccessListener { subscribeNew() }
+                    .addOnSuccessListener {
+                        if (generation.get() == myGen) subscribeNew()
+                    }
             } else {
                 subscribeNew()
             }
         }
 
         public fun unsubscribeTechnician() {
+            val myGen = generation.incrementAndGet()
             val previous = prefs.getString(KEY_SUBSCRIBED_TECH_UID, null) ?: return
             FirebaseMessaging
                 .getInstance()
                 .unsubscribeFromTopic("technician_$previous")
                 .addOnSuccessListener {
-                    prefs.edit().remove(KEY_SUBSCRIBED_TECH_UID).apply()
+                    if (generation.get() == myGen) {
+                        prefs.edit().remove(KEY_SUBSCRIBED_TECH_UID).apply()
+                    }
                 }
         }
     }
