@@ -21,6 +21,8 @@ import com.homeservices.customer.ui.catalogue.ServiceDetailScreen
 import com.homeservices.customer.ui.catalogue.ServiceDetailViewModel
 import com.homeservices.customer.ui.catalogue.ServiceListScreen
 import com.homeservices.customer.ui.catalogue.ServiceListViewModel
+import com.homeservices.customer.ui.rating.RatingRoutes
+import com.homeservices.customer.ui.rating.RatingScreen
 import com.homeservices.customer.ui.tracking.LiveTrackingScreen
 import com.homeservices.customer.ui.tracking.LiveTrackingViewModel
 
@@ -173,6 +175,13 @@ internal fun NavGraphBuilder.mainGraph(navController: NavController) {
                 viewModel = vm,
                 onBack = { navController.popBackStack() },
             )
+        }
+
+        composable(
+            route = RatingRoutes.ROUTE,
+            arguments = listOf(navArgument("bookingId") { type = NavType.StringType }),
+        ) {
+            RatingScreen()
         }
     }
 }

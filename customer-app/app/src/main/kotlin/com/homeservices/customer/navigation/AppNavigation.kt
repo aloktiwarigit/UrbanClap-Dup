@@ -10,13 +10,16 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import com.homeservices.customer.data.auth.SessionManager
 import com.homeservices.customer.data.booking.PriceApprovalEventBus
+import com.homeservices.customer.data.rating.RatingPromptEventBus
 import com.homeservices.customer.domain.auth.model.AuthState
+import com.homeservices.customer.ui.rating.RatingRoutes
 
 @Composable
 internal fun AppNavigation(
     sessionManager: SessionManager,
     activity: FragmentActivity,
     priceApprovalEventBus: PriceApprovalEventBus,
+    ratingPromptEventBus: RatingPromptEventBus,
     modifier: Modifier = Modifier,
 ) {
     val navController = rememberNavController()
@@ -55,6 +58,12 @@ internal fun AppNavigation(
             navController.navigate(BookingRoutes.priceApprovalRoute(bookingId)) {
                 launchSingleTop = true
             }
+        }
+    }
+
+    LaunchedEffect(ratingPromptEventBus) {
+        ratingPromptEventBus.events.collect { bookingId ->
+            navController.navigate(RatingRoutes.route(bookingId)) { launchSingleTop = true }
         }
     }
 
