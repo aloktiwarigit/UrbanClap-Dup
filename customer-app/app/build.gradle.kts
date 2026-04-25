@@ -309,6 +309,17 @@ kover {
                     "*.TrackingRepositoryImpl\$*",
                     // data.tracking.di — Hilt @Binds wiring, same rationale as other DI modules
                     "*.data.tracking.di.*",
+                    // RatingScreen — Compose UI composables (RatingScreen, ShieldBottomSheet,
+                    // CountdownChip, StarRow), same rationale as other *Kt screen classes.
+                    // Paparazzi snapshot test covers rendering; JVM unit tests cover ViewModel logic.
+                    "*.RatingScreenKt",
+                    "*.RatingScreenKt$*",
+                    // data.rating.di — Hilt @Provides wiring (RatingModule/Retrofit construction),
+                    // same rationale as data.auth.di.*, data.catalogue.di.*, data.booking.di.*
+                    "*.data.rating.di.*",
+                    // RatingPromptEventBus — MutableSharedFlow wrapper, same rationale as PriceApprovalEventBus
+                    "*.RatingPromptEventBus",
+                    "*.RatingPromptEventBus$*",
                 )
             }
         }
