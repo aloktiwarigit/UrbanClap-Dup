@@ -515,6 +515,14 @@ export interface components {
             customerId: string;
             technicianId: string;
             description: string;
+            /**
+             * @default STANDARD
+             * @enum {string}
+             */
+            type: "RATING_SHIELD" | "STANDARD";
+            draftOverall?: number;
+            draftComment?: string;
+            expiresAt?: string;
             /** @enum {string} */
             status: "NEW" | "INVESTIGATING" | "RESOLVED";
             assigneeAdminId?: string;
@@ -552,6 +560,14 @@ export interface components {
                 customerId: string;
                 technicianId: string;
                 description: string;
+                /**
+                 * @default STANDARD
+                 * @enum {string}
+                 */
+                type: "RATING_SHIELD" | "STANDARD";
+                draftOverall?: number;
+                draftComment?: string;
+                expiresAt?: string;
                 /** @enum {string} */
                 status: "NEW" | "INVESTIGATING" | "RESOLVED";
                 assigneeAdminId?: string;
