@@ -350,6 +350,7 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.messaging)
+    implementation(libs.firebase.storage)
 
     // Coroutines — play-services extensions (.await() on Task<T>)
     implementation(libs.kotlinx.coroutines.play.services)
