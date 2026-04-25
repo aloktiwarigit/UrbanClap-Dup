@@ -1,7 +1,6 @@
 package com.homeservices.technician.ui.activeJob
 
 import app.cash.paparazzi.Paparazzi
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -9,7 +8,6 @@ public class PhotoCaptureScreenTest {
     @get:Rule
     public val paparazzi: Paparazzi = Paparazzi()
 
-    @Ignore("Goldens recorded on CI only — see docs/patterns/paparazzi-cross-os-goldens.md")
     @Test
     public fun `PhotoCaptureScreen arrived stage prompt`(): Unit {
         paparazzi.snapshot {
