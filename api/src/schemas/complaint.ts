@@ -29,7 +29,7 @@ export const ComplaintDocSchema = z.object({
   technicianId: z.string(),
   description: z.string(),
   type: ComplaintTypeEnum.default('STANDARD'),
-  draftOverall: z.number().int().min(1).max(5).optional(),
+  draftOverall: z.number().int().min(1).max(2).optional(),
   draftComment: z.string().max(500).optional(),
   expiresAt: z.string().optional(),
   status: ComplaintStatusEnum,
