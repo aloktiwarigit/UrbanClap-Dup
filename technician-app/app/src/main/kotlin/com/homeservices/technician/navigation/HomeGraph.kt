@@ -17,6 +17,8 @@ import androidx.navigation.navArgument
 import com.homeservices.technician.domain.activeJob.model.NavigationEvent
 import com.homeservices.technician.ui.activeJob.ActiveJobScreen
 import com.homeservices.technician.ui.activeJob.ActiveJobViewModel
+import com.homeservices.technician.ui.rating.RatingRoutes
+import com.homeservices.technician.ui.rating.RatingScreen
 
 internal fun NavGraphBuilder.homeGraph(navController: NavController) {
     navigation(startDestination = "home_dashboard", route = "home") {
@@ -41,6 +43,12 @@ internal fun NavGraphBuilder.homeGraph(navController: NavController) {
                 }
             }
             ActiveJobScreen(viewModel = viewModel)
+        }
+        composable(
+            route = RatingRoutes.ROUTE,
+            arguments = listOf(navArgument("bookingId") { type = NavType.StringType }),
+        ) {
+            RatingScreen()
         }
     }
 }

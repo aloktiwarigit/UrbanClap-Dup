@@ -11,7 +11,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
+import com.google.firebase.messaging.FirebaseMessaging
 import com.homeservices.technician.data.auth.SessionManager
+import com.homeservices.technician.data.rating.RatingPromptEventBus
 import com.homeservices.technician.domain.auth.model.AuthState
 import com.homeservices.technician.ui.jobOffer.JobOfferScreen
 import com.homeservices.technician.ui.jobOffer.JobOfferUiState
@@ -21,6 +23,7 @@ import com.homeservices.technician.ui.jobOffer.JobOfferViewModel
 internal fun AppNavigation(
     sessionManager: SessionManager,
     activity: FragmentActivity,
+    ratingPromptEventBus: RatingPromptEventBus,
     modifier: Modifier = Modifier,
 ): Unit {
     val navController = rememberNavController()
@@ -29,12 +32,15 @@ internal fun AppNavigation(
     val jobOfferState by jobOfferViewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(authState) {
-        when (authState) {
-            is AuthState.Authenticated ->
+        val current = authState
+        when (current) {
+            is AuthState.Authenticated -> {
                 navController.navigate("main") {
                     popUpTo("auth") { inclusive = true }
                     launchSingleTop = true
                 }
+                FirebaseMessaging.getInstance().subscribeToTopic("technician_${current.uid}")
+            }
             is AuthState.Unauthenticated ->
                 navController.navigate("auth") {
                     popUpTo("main") { inclusive = true }
@@ -47,6 +53,14 @@ internal fun AppNavigation(
         if (jobOfferState is JobOfferUiState.Accepted) {
             val bookingId = (jobOfferState as JobOfferUiState.Accepted).bookingId
             navController.navigate("activeJob/$bookingId") {
+                launchSingleTop = true
+            }
+        }
+    }
+
+    LaunchedEffect(ratingPromptEventBus) {
+        ratingPromptEventBus.events.collect { bookingId ->
+            navController.navigate("rating/$bookingId") {
                 launchSingleTop = true
             }
         }
