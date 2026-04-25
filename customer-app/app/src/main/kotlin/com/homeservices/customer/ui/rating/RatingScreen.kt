@@ -5,30 +5,54 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import kotlinx.coroutines.delay
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 public fun RatingScreen(
     modifier: Modifier = Modifier,
     viewModel: RatingViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val shieldState by viewModel.shieldState.collectAsState()
     val overall by viewModel.overall.collectAsState()
     val punct by viewModel.punctuality.collectAsState()
     val skill by viewModel.skill.collectAsState()
     val behav by viewModel.behaviour.collectAsState()
     val comment by viewModel.comment.collectAsState()
     val canSubmit by viewModel.canSubmit.collectAsState()
+
+    if (shieldState == RatingShieldState.ShowDialog) {
+        ShieldBottomSheet(
+            onEscalate = viewModel::onEscalate,
+            onSkip = viewModel::onSkipShield,
+        )
+    }
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
         when (state) {
@@ -48,9 +72,72 @@ public fun RatingScreen(
                     label = { Text("Comment (optional, ≤500 chars)") },
                     modifier = Modifier.padding(vertical = 8.dp),
                 )
-                Button(onClick = viewModel::submit, enabled = canSubmit) { Text("Submit") }
+                if (shieldState is RatingShieldState.Escalated) {
+                    CountdownChip(
+                        expiresAtMs = (shieldState as RatingShieldState.Escalated).expiresAtMs,
+                        onPostAnyway = viewModel::onPostAnyway,
+                    )
+                } else {
+                    Button(onClick = viewModel::submit, enabled = canSubmit) { Text("Submit") }
+                }
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ShieldBottomSheet(
+    onEscalate: () -> Unit,
+    onSkip: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState()
+    ModalBottomSheet(
+        onDismissRequest = onSkip,
+        sheetState = sheetState,
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+            Text(
+                text = "क्या आप मालिक को पहले बताना चाहते हैं?",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Spacer(Modifier.height(16.dp))
+            Button(onClick = onEscalate, modifier = Modifier.fillMaxWidth()) {
+                Text("हाँ")
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = onSkip, modifier = Modifier.fillMaxWidth()) {
+                Text("नहीं, सीधे post करें")
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun CountdownChip(
+    expiresAtMs: Long,
+    onPostAnyway: () -> Unit,
+) {
+    var remainingMs by remember { mutableLongStateOf(expiresAtMs - System.currentTimeMillis()) }
+    LaunchedEffect(expiresAtMs) {
+        while (remainingMs > 0) {
+            delay(60_000L)
+            remainingMs = expiresAtMs - System.currentTimeMillis()
+        }
+    }
+    val hours = (remainingMs / 3_600_000).coerceAtLeast(0)
+    val minutes = ((remainingMs % 3_600_000) / 60_000).coerceAtLeast(0)
+    Row(
+        modifier = Modifier.padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SuggestionChip(
+            onClick = {},
+            label = { Text("मालिक को ${hours}:${minutes.toString().padStart(2, '0')} बचे हैं") },
+        )
+        Spacer(Modifier.width(8.dp))
+        TextButton(onClick = onPostAnyway) { Text("Post anyway") }
     }
 }
 
@@ -65,10 +152,9 @@ private fun StarRow(
         for (i in 1..5) {
             Text(
                 text = if (i <= value) "★" else "☆",
-                modifier =
-                    Modifier
-                        .padding(horizontal = 2.dp)
-                        .clickable(onClickLabel = "rate") { onChange(i) },
+                modifier = Modifier
+                    .padding(horizontal = 2.dp)
+                    .clickable(onClickLabel = "rate") { onChange(i) },
             )
         }
     }
