@@ -16,6 +16,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.homeservices.technician.domain.rating.model.CustomerRating
+import com.homeservices.technician.domain.rating.model.RatingSnapshot
+import com.homeservices.technician.domain.rating.model.SideState
+import com.homeservices.technician.domain.rating.model.TechRating
 
 @Composable
 public fun RatingScreen(
@@ -30,10 +34,10 @@ public fun RatingScreen(
     val canSubmit by viewModel.canSubmit.collectAsState()
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
-        when (state) {
-            is RatingUiState.AwaitingPartner -> Text("Thanks! Awaiting your customer's rating.")
-            is RatingUiState.Revealed -> Text("Both ratings revealed.")
-            is RatingUiState.Error -> Text("Error: ${(state as RatingUiState.Error).message}")
+        when (val current = state) {
+            is RatingUiState.AwaitingPartner -> AwaitingPartnerBody(current.snapshot)
+            is RatingUiState.Revealed -> RevealedBody(current.snapshot)
+            is RatingUiState.Error -> Text("Error: ${current.message}")
             else -> {
                 Text("How was your customer?")
                 Spacer(Modifier.height(8.dp))
@@ -50,6 +54,56 @@ public fun RatingScreen(
             }
         }
     }
+}
+
+@Composable
+private fun AwaitingPartnerBody(snapshot: RatingSnapshot?) {
+    Text("Thanks! Awaiting your customer's rating.")
+    Spacer(Modifier.height(12.dp))
+    val techRating = (snapshot?.techSide as? SideState.Submitted)?.rating as? TechRating
+    if (techRating != null) {
+        TechRatingDisplay(label = "Your rating", rating = techRating)
+    }
+}
+
+@Composable
+private fun RevealedBody(snapshot: RatingSnapshot) {
+    Text("Both ratings revealed.")
+    Spacer(Modifier.height(12.dp))
+    val techRating = (snapshot.techSide as? SideState.Submitted)?.rating as? TechRating
+    if (techRating != null) {
+        TechRatingDisplay(label = "Your rating", rating = techRating)
+        Spacer(Modifier.height(12.dp))
+    }
+    val customerRating = (snapshot.customerSide as? SideState.Submitted)?.rating as? CustomerRating
+    if (customerRating != null) {
+        CustomerRatingDisplay(label = "Customer's rating", rating = customerRating)
+    }
+}
+
+@Composable
+private fun TechRatingDisplay(
+    label: String,
+    rating: TechRating,
+) {
+    Text(label)
+    Text("Overall: ${rating.overall} ★")
+    Text("Behaviour: ${rating.subScores.behaviour} ★")
+    Text("Communication: ${rating.subScores.communication} ★")
+    rating.comment?.takeIf { it.isNotBlank() }?.let { Text("Comment: $it") }
+}
+
+@Composable
+private fun CustomerRatingDisplay(
+    label: String,
+    rating: CustomerRating,
+) {
+    Text(label)
+    Text("Overall: ${rating.overall} ★")
+    Text("Punctuality: ${rating.subScores.punctuality} ★")
+    Text("Skill: ${rating.subScores.skill} ★")
+    Text("Behaviour: ${rating.subScores.behaviour} ★")
+    rating.comment?.takeIf { it.isNotBlank() }?.let { Text("Comment: $it") }
 }
 
 @Composable

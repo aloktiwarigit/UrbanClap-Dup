@@ -29,15 +29,32 @@ public class FcmTopicSubscriber
             val previous = prefs.getString(KEY_SUBSCRIBED_TECH_UID, null)
             if (previous == uid) return
             if (previous != null) {
-                FirebaseMessaging.getInstance().unsubscribeFromTopic("technician_$previous")
+                FirebaseMessaging
+                    .getInstance()
+                    .unsubscribeFromTopic("technician_$previous")
+                    .addOnSuccessListener {
+                        prefs.edit().remove(KEY_SUBSCRIBED_TECH_UID).apply()
+                    }
             }
-            FirebaseMessaging.getInstance().subscribeToTopic("technician_$uid")
-            prefs.edit().putString(KEY_SUBSCRIBED_TECH_UID, uid).apply()
+            // Persist the new uid only after Firebase confirms the subscription. Without
+            // this gate, a transient network/token failure would leave prefs claiming
+            // we are subscribed when Firebase has no record, and the early-return at
+            // the top would silently suppress retries on subsequent launches.
+            FirebaseMessaging
+                .getInstance()
+                .subscribeToTopic("technician_$uid")
+                .addOnSuccessListener {
+                    prefs.edit().putString(KEY_SUBSCRIBED_TECH_UID, uid).apply()
+                }
         }
 
         public fun unsubscribeTechnician() {
             val previous = prefs.getString(KEY_SUBSCRIBED_TECH_UID, null) ?: return
-            FirebaseMessaging.getInstance().unsubscribeFromTopic("technician_$previous")
-            prefs.edit().remove(KEY_SUBSCRIBED_TECH_UID).apply()
+            FirebaseMessaging
+                .getInstance()
+                .unsubscribeFromTopic("technician_$previous")
+                .addOnSuccessListener {
+                    prefs.edit().remove(KEY_SUBSCRIBED_TECH_UID).apply()
+                }
         }
     }

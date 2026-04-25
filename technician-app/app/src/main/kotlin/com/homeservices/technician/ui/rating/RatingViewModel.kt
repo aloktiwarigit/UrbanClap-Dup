@@ -123,8 +123,23 @@ public class RatingViewModel
                         comment = comment.value.ifBlank { null },
                     ).collect { result ->
                         result
-                            .onSuccess { _uiState.value = RatingUiState.AwaitingPartner(null) }
-                            .onFailure { _uiState.value = RatingUiState.Error(it.message ?: "submit failed") }
+                            .onSuccess {
+                                // Re-fetch the snapshot so that if the technician was the second
+                                // party to rate (server flips status to REVEALED), the UI lands
+                                // on Revealed instead of AwaitingPartner. Without this refresh
+                                // the screen sticks on AwaitingPartner forever.
+                                getUseCase.invoke(bookingId).collect { snapResult ->
+                                    snapResult
+                                        .onSuccess { snap ->
+                                            _uiState.value =
+                                                if (snap.status == RatingSnapshot.Status.REVEALED) {
+                                                    RatingUiState.Revealed(snap)
+                                                } else {
+                                                    RatingUiState.AwaitingPartner(snap)
+                                                }
+                                        }.onFailure { _uiState.value = RatingUiState.AwaitingPartner(null) }
+                                }
+                            }.onFailure { _uiState.value = RatingUiState.Error(it.message ?: "submit failed") }
                     }
             }
         }
