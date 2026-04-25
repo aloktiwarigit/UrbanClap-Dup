@@ -159,7 +159,7 @@ export async function findRatingShieldEscalation(
   customerId: string,
 ): Promise<ComplaintDoc | null> {
   const query: SqlQuerySpec = {
-    query: `SELECT TOP 1 * FROM c WHERE c.orderId = @bookingId AND c.customerId = @customerId AND c.type = @type AND c.status != 'RESOLVED'`,
+    query: `SELECT TOP 1 * FROM c WHERE c.orderId = @bookingId AND c.customerId = @customerId AND c.type = @type`,
     parameters: [
       { name: '@bookingId', value: bookingId },
       { name: '@customerId', value: customerId },
