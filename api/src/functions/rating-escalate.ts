@@ -31,6 +31,7 @@ export async function escalateRatingHandler(
   if (!booking) return { status: 404, jsonBody: { code: 'BOOKING_NOT_FOUND' } };
   if (booking.customerId !== customer.customerId) return { status: 403, jsonBody: { code: 'FORBIDDEN' } };
   if (booking.status !== 'CLOSED') return { status: 409, jsonBody: { code: 'BOOKING_NOT_CLOSED' } };
+  if (!booking.technicianId) return { status: 409, jsonBody: { code: 'NO_TECHNICIAN' } };
 
   const existing = await findRatingShieldEscalation(bookingId, customer.customerId);
   if (existing) return { status: 409, jsonBody: { code: 'SHIELD_ALREADY_ESCALATED' } };
