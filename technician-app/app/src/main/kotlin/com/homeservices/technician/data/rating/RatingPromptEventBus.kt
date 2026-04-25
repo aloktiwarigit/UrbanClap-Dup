@@ -41,4 +41,16 @@ public class RatingPromptEventBus
         public fun post(bookingId: String) {
             _events.trySend(bookingId)
         }
+
+        /**
+         * Drains any buffered prompts. AppNavigation calls this on transition to
+         * Unauthenticated so that a prompt buffered for one technician can't
+         * route the next signed-in technician into the wrong booking's rating
+         * flow on shared devices.
+         */
+        public fun clearBuffered() {
+            while (_events.tryReceive().isSuccess) {
+                // intentionally empty — drain the channel
+            }
+        }
     }

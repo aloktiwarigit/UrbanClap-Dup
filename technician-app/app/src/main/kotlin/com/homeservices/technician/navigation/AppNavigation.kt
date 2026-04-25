@@ -43,6 +43,10 @@ internal fun AppNavigation(
                 fcmTopicSubscriber.subscribeTechnician(current.uid)
             }
             is AuthState.Unauthenticated -> {
+                // Drain any buffered rating prompts so the next technician to
+                // log in on this device can't be routed into the previous
+                // technician's pending booking flow.
+                ratingPromptEventBus.clearBuffered()
                 fcmTopicSubscriber.unsubscribeTechnician()
                 navController.navigate("auth") {
                     popUpTo("main") { inclusive = true }
