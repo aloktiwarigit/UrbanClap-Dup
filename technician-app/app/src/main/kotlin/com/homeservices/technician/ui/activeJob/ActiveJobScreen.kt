@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,6 +30,7 @@ import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
 @Composable
 internal fun ActiveJobScreen(
     modifier: Modifier = Modifier,
+    onFileComplaint: (bookingId: String) -> Unit = {},
     viewModel: ActiveJobViewModel = hiltViewModel(),
 ): Unit {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -38,6 +40,7 @@ internal fun ActiveJobScreen(
         onPhotoCancelled = viewModel::onPhotoCancelled,
         onPhotoConfirmed = viewModel::onPhotoConfirmed,
         onPhotoRetake = viewModel::onPhotoRetake,
+        onFileComplaint = onFileComplaint,
         modifier = modifier,
     )
 }
@@ -49,6 +52,7 @@ internal fun ActiveJobScreenContent(
     onPhotoCancelled: () -> Unit,
     onPhotoConfirmed: (filePath: String) -> Unit,
     onPhotoRetake: () -> Unit,
+    onFileComplaint: (bookingId: String) -> Unit = {},
     modifier: Modifier = Modifier,
 ): Unit {
     Surface(
