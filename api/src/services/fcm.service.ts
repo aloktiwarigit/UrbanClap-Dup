@@ -48,3 +48,19 @@ export async function sendOwnerRouteAlert(payload: {
     },
   });
 }
+
+export async function sendOwnerComplaintFiled(payload: {
+  bookingId: string;
+  filedBy: string;
+  reasonCode: string;
+}): Promise<void> {
+  await getFirebaseAdmin().messaging().send({
+    topic: 'owner_alerts',
+    data: {
+      type: 'OWNER_COMPLAINT_FILED',
+      bookingId: payload.bookingId,
+      filedBy: payload.filedBy,
+      reasonCode: payload.reasonCode,
+    },
+  });
+}
