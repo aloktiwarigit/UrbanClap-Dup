@@ -135,7 +135,7 @@ public class RatingViewModelShieldTest {
             v.submit()
             v.onEscalate()
             runCurrent()
-            assertThat(v.shieldState.value).isEqualTo(RatingShieldState.Idle)
+            assertThat(v.shieldState.value).isEqualTo(RatingShieldState.ShowDialog) // allows retry
             assertThat(v.uiState.value).isInstanceOf(RatingUiState.Error::class.java)
         }
 
