@@ -1,0 +1,55 @@
+name: docs-ship
+
+# Satisfies the required `quality-gate` status check on `main` for docs-only PRs.
+# The other *-ship.yml workflows are path-filtered to their sub-projects (api/**,
+# customer-app/**, etc.) and never trigger on docs/** changes — leaving docs-only
+# PRs unable to satisfy branch protection without an admin override.
+#
+# This workflow runs on docs/** changes (and on its own file) and emits a
+# `quality-gate` job whose name matches the required check, unblocking docs PRs.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/docs-ship.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/docs-ship.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify changed markdown files are non-empty
+        shell: bash
+        run: |
+          set -euo pipefail
+          # On PRs the GITHUB_BASE_REF is set to the target branch (main).
+          # On push to main we don't gate this — the merge already happened.
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            git fetch origin "${GITHUB_BASE_REF}" --depth=1
+            changed_md=$(git diff --name-only --diff-filter=AM "origin/${GITHUB_BASE_REF}"...HEAD -- 'docs/**/*.md' || true)
+            if [[ -z "${changed_md}" ]]; then
+              echo "No markdown files changed in this PR — nothing to validate."
+              exit 0
+            fi
+            echo "Validating changed markdown files:"
+            echo "${changed_md}"
+            while IFS= read -r f; do
+              if [[ ! -s "${f}" ]]; then
+                echo "::error file=${f}::Markdown file is empty"
+                exit 1
+              fi
+            done <<< "${changed_md}"
+          fi
+          echo "docs-only quality gate passed"
