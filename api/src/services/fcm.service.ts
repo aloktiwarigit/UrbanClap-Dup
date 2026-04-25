@@ -21,6 +21,20 @@ export async function sendTechEarningsUpdate(
   });
 }
 
+export async function sendRatingPromptCustomerPush(customerId: string, bookingId: string): Promise<void> {
+  await getFirebaseAdmin().messaging().send({
+    topic: `customer_${customerId}`,
+    data: { type: 'RATING_PROMPT_CUSTOMER', bookingId },
+  });
+}
+
+export async function sendRatingPromptTechnicianPush(technicianId: string, bookingId: string): Promise<void> {
+  await getFirebaseAdmin().messaging().send({
+    topic: `technician_${technicianId}`,
+    data: { type: 'RATING_PROMPT_TECHNICIAN', bookingId },
+  });
+}
+
 export async function sendOwnerRouteAlert(payload: {
   stalePending: number;
   failed: number;

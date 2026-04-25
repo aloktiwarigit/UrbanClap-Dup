@@ -63,6 +63,8 @@ export const GetRatingResponseSchema = z.object({
   techSide: SidePayloadSchema,
 });
 
+export type CustomerSubScores = z.infer<typeof CustomerSubScoresSchema>;
+export type TechSubScores = z.infer<typeof TechSubScoresSchema>;
 export type SubmitRatingRequest = z.infer<typeof SubmitRatingRequestSchema>;
 export type RatingDoc = z.infer<typeof RatingDocSchema>;
 export type GetRatingResponse = z.infer<typeof GetRatingResponseSchema>;

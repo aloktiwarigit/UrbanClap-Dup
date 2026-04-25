@@ -1,8 +1,9 @@
-import { type HttpHandler, type InvocationContext, app } from '@azure/functions';
+import { type HttpHandler, type HttpResponseInit, type InvocationContext, app } from '@azure/functions';
 import { verifyFirebaseIdToken } from '../services/firebaseAdmin.js';
 import { bookingRepo } from '../cosmos/booking-repository.js';
 import { ratingRepo } from '../cosmos/rating-repository.js';
 import { SubmitRatingRequestSchema, type GetRatingResponse } from '../schemas/rating.js';
+import type { CustomerSubScores, TechSubScores } from '../schemas/rating.js';
 
 async function uidFromAuth(authHeader: string): Promise<string | null> {
   if (!authHeader.startsWith('Bearer ')) return null;
@@ -46,27 +47,35 @@ export const submitRatingHandler: HttpHandler = async (req, _ctx: InvocationCont
     side: data.side,
     overall: data.overall,
     subScores: data.subScores,
-    comment: data.comment,
+    ...(data.comment !== undefined ? { comment: data.comment } : {}),
   });
   if (!result) return { status: 409, jsonBody: { code: 'RATING_ALREADY_SUBMITTED' } };
   return { status: 201, jsonBody: { bookingId: result.bookingId } };
 };
 
+type SideProjection =
+  | { status: 'PENDING' }
+  | { status: 'SUBMITTED'; overall: number; subScores: CustomerSubScores | TechSubScores; submittedAt: string; comment?: string };
+
 function projectSide(
   overall: number | undefined,
-  subScores: object | undefined,
+  subScores: CustomerSubScores | TechSubScores | undefined,
   comment: string | undefined,
   submittedAt: string | undefined,
   reveal: boolean,
-): { status: 'PENDING' } | {
-  status: 'SUBMITTED'; overall: number; subScores: object; comment?: string; submittedAt: string;
-} {
+): SideProjection {
   if (!submittedAt || overall === undefined || !subScores) return { status: 'PENDING' };
   if (!reveal) return { status: 'PENDING' };
-  return { status: 'SUBMITTED', overall, subScores, comment, submittedAt };
+  return {
+    status: 'SUBMITTED',
+    overall,
+    subScores,
+    submittedAt,
+    ...(comment !== undefined ? { comment } : {}),
+  };
 }
 
-export const getRatingHandler: HttpHandler = async (req, _ctx: InvocationContext) => {
+export const getRatingHandler: HttpHandler = async (req, _ctx: InvocationContext): Promise<HttpResponseInit> => {
   const uid = await uidFromAuth(req.headers.get('authorization') ?? '');
   if (!uid) return { status: 401, jsonBody: { code: 'UNAUTHORIZED' } };
 
@@ -97,8 +106,9 @@ export const getRatingHandler: HttpHandler = async (req, _ctx: InvocationContext
   const techVisible = revealed || (isTechnician && techHas);
 
   const response: GetRatingResponse = {
-    bookingId, status,
-    revealedAt: doc.revealedAt,
+    bookingId,
+    status,
+    ...(doc.revealedAt !== undefined ? { revealedAt: doc.revealedAt } : {}),
     customerSide: projectSide(
       doc.customerOverall, doc.customerSubScores, doc.customerComment,
       doc.customerSubmittedAt, customerVisible,

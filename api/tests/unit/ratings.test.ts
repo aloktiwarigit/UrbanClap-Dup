@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { HttpRequest, InvocationContext } from '@azure/functions';
+import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
 vi.mock('../../src/services/firebaseAdmin.js', () => ({
   verifyFirebaseIdToken: vi.fn(),
@@ -41,7 +41,7 @@ beforeEach(() => {
 
 describe('POST /v1/ratings', () => {
   it('returns 401 when no Authorization header', async () => {
-    const res = await submitRatingHandler(reqWith({ body: {} }), ctx);
+    const res = await submitRatingHandler(reqWith({ body: {} }), ctx) as HttpResponseInit;
     expect(res.status).toBe(401);
   });
 
@@ -49,7 +49,7 @@ describe('POST /v1/ratings', () => {
     const res = await submitRatingHandler(
       reqWith({ auth: 'Bearer t', body: { side: 'CUSTOMER_TO_TECH', bookingId: 'bk-1', overall: 7, subScores: { punctuality: 5, skill: 5, behaviour: 5 } } }),
       ctx,
-    );
+    ) as HttpResponseInit;
     expect(res.status).toBe(400);
   });
 
@@ -58,7 +58,7 @@ describe('POST /v1/ratings', () => {
     const res = await submitRatingHandler(
       reqWith({ auth: 'Bearer t', body: { side: 'CUSTOMER_TO_TECH', bookingId: 'bk-x', overall: 5, subScores: { punctuality: 5, skill: 5, behaviour: 5 } } }),
       ctx,
-    );
+    ) as HttpResponseInit;
     expect(res.status).toBe(404);
   });
 
@@ -67,7 +67,7 @@ describe('POST /v1/ratings', () => {
     const res = await submitRatingHandler(
       reqWith({ auth: 'Bearer t', body: { side: 'CUSTOMER_TO_TECH', bookingId: 'bk-1', overall: 5, subScores: { punctuality: 5, skill: 5, behaviour: 5 } } }),
       ctx,
-    );
+    ) as HttpResponseInit;
     expect(res.status).toBe(403);
   });
 
@@ -75,7 +75,7 @@ describe('POST /v1/ratings', () => {
     const res = await submitRatingHandler(
       reqWith({ auth: 'Bearer t', body: { side: 'TECH_TO_CUSTOMER', bookingId: 'bk-1', overall: 5, subScores: { behaviour: 5, communication: 5 } } }),
       ctx,
-    );
+    ) as HttpResponseInit;
     expect(res.status).toBe(403);
   });
 
@@ -84,7 +84,7 @@ describe('POST /v1/ratings', () => {
     const res = await submitRatingHandler(
       reqWith({ auth: 'Bearer t', body: { side: 'CUSTOMER_TO_TECH', bookingId: 'bk-1', overall: 5, subScores: { punctuality: 5, skill: 5, behaviour: 5 } } }),
       ctx,
-    );
+    ) as HttpResponseInit;
     expect(res.status).toBe(409);
     expect((res.jsonBody as any).code).toBe('BOOKING_NOT_CLOSED');
   });
@@ -94,7 +94,7 @@ describe('POST /v1/ratings', () => {
     const res = await submitRatingHandler(
       reqWith({ auth: 'Bearer t', body: { side: 'CUSTOMER_TO_TECH', bookingId: 'bk-1', overall: 5, subScores: { punctuality: 5, skill: 5, behaviour: 5 } } }),
       ctx,
-    );
+    ) as HttpResponseInit;
     expect(res.status).toBe(409);
     expect((res.jsonBody as any).code).toBe('RATING_ALREADY_SUBMITTED');
   });
@@ -108,7 +108,7 @@ describe('POST /v1/ratings', () => {
     const res = await submitRatingHandler(
       reqWith({ auth: 'Bearer t', body: { side: 'CUSTOMER_TO_TECH', bookingId: 'bk-1', overall: 5, subScores: { punctuality: 5, skill: 5, behaviour: 5 } } }),
       ctx,
-    );
+    ) as HttpResponseInit;
     expect(res.status).toBe(201);
     expect((res.jsonBody as any).bookingId).toBe('bk-1');
   });
@@ -116,13 +116,13 @@ describe('POST /v1/ratings', () => {
 
 describe('GET /v1/ratings/{bookingId}', () => {
   it('returns 401 with no auth', async () => {
-    const res = await getRatingHandler(reqWith({ bookingId: 'bk-1' }), ctx);
+    const res = await getRatingHandler(reqWith({ bookingId: 'bk-1' }), ctx) as HttpResponseInit;
     expect(res.status).toBe(401);
   });
 
   it('returns 403 when caller is not a participant', async () => {
     vi.mocked(verifyFirebaseIdToken).mockResolvedValue({ uid: 'stranger' } as any);
-    const res = await getRatingHandler(reqWith({ auth: 'Bearer t', bookingId: 'bk-1' }), ctx);
+    const res = await getRatingHandler(reqWith({ auth: 'Bearer t', bookingId: 'bk-1' }), ctx) as HttpResponseInit;
     expect(res.status).toBe(403);
   });
 
@@ -132,7 +132,7 @@ describe('GET /v1/ratings/{bookingId}', () => {
       customerOverall: 5, customerSubScores: { punctuality: 5, skill: 5, behaviour: 5 },
       customerSubmittedAt: '2026-04-24T12:00:00.000Z',
     } as any);
-    const res = await getRatingHandler(reqWith({ auth: 'Bearer t', bookingId: 'bk-1' }), ctx);
+    const res = await getRatingHandler(reqWith({ auth: 'Bearer t', bookingId: 'bk-1' }), ctx) as HttpResponseInit;
     expect(res.status).toBe(200);
     const body = res.jsonBody as any;
     expect(body.status).toBe('PARTIALLY_SUBMITTED');
@@ -149,7 +149,7 @@ describe('GET /v1/ratings/{bookingId}', () => {
       techSubmittedAt: '2026-04-24T12:30:00.000Z',
       revealedAt: '2026-04-24T12:30:00.000Z',
     } as any);
-    const res = await getRatingHandler(reqWith({ auth: 'Bearer t', bookingId: 'bk-1' }), ctx);
+    const res = await getRatingHandler(reqWith({ auth: 'Bearer t', bookingId: 'bk-1' }), ctx) as HttpResponseInit;
     expect(res.status).toBe(200);
     const body = res.jsonBody as any;
     expect(body.status).toBe('REVEALED');
@@ -159,7 +159,7 @@ describe('GET /v1/ratings/{bookingId}', () => {
 
   it('returns PENDING when no rating doc exists', async () => {
     vi.mocked(ratingRepo.getByBookingId).mockResolvedValue(null);
-    const res = await getRatingHandler(reqWith({ auth: 'Bearer t', bookingId: 'bk-1' }), ctx);
+    const res = await getRatingHandler(reqWith({ auth: 'Bearer t', bookingId: 'bk-1' }), ctx) as HttpResponseInit;
     expect(res.status).toBe(200);
     const body = res.jsonBody as any;
     expect(body.status).toBe('PENDING');
