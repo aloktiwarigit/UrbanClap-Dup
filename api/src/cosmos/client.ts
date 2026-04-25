@@ -44,6 +44,10 @@ export function getWalletLedgerContainer(): Container {
   return getCosmosClient().database(DB_NAME).container('wallet_ledger');
 }
 
+export function getRatingsContainer(): Container {
+  return getCosmosClient().database(DB_NAME).container('ratings');
+}
+
 /** Inject a mock CosmosClient in tests. */
 export function _setCosmosClientForTest(mock: CosmosClient): void {
   _client = mock;
