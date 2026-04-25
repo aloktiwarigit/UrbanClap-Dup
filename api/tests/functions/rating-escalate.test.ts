@@ -8,6 +8,9 @@ vi.mock('../../src/cosmos/complaints-repository.js', () => ({
   createComplaint: vi.fn(),
   findRatingShieldEscalation: vi.fn(),
 }));
+vi.mock('../../src/cosmos/rating-repository.js', () => ({
+  ratingRepo: { getByBookingId: vi.fn() },
+}));
 vi.mock('../../src/services/fcm.service.js', () => ({
   sendOwnerRatingShieldAlert: vi.fn().mockResolvedValue(undefined),
 }));
@@ -16,6 +19,7 @@ vi.mock('../../src/services/firebaseAdmin.js', () => ({
 }));
 
 import { bookingRepo } from '../../src/cosmos/booking-repository.js';
+import { ratingRepo } from '../../src/cosmos/rating-repository.js';
 import { createComplaint, findRatingShieldEscalation } from '../../src/cosmos/complaints-repository.js';
 import { escalateRatingHandler } from '../../src/functions/rating-escalate.js';
 
@@ -33,7 +37,11 @@ function makeReq(body: unknown = {}, bookingId = 'bk-1'): HttpRequest {
 }
 
 describe('escalateRatingHandler', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Default: no existing rating — escalation is valid
+    (ratingRepo.getByBookingId as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+  });
 
   it('returns 404 when booking not found', async () => {
     (bookingRepo.getById as ReturnType<typeof vi.fn>).mockResolvedValue(null);
@@ -63,6 +71,16 @@ describe('escalateRatingHandler', () => {
     const res = await escalateRatingHandler(makeReq({ draftOverall: 2 }), mockCtx, mockCustomer);
     expect(res.status).toBe(409);
     expect(res.jsonBody).toMatchObject({ code: 'SHIELD_ALREADY_ESCALATED' });
+  });
+
+  it('returns 409 RATING_ALREADY_SUBMITTED when customer has already rated', async () => {
+    (bookingRepo.getById as ReturnType<typeof vi.fn>).mockResolvedValue(closedBooking);
+    (ratingRepo.getByBookingId as ReturnType<typeof vi.fn>).mockResolvedValue({
+      customerSubmittedAt: '2026-04-25T10:00:00.000Z',
+    });
+    const res = await escalateRatingHandler(makeReq({ draftOverall: 2 }), mockCtx, mockCustomer);
+    expect(res.status).toBe(409);
+    expect(res.jsonBody).toMatchObject({ code: 'RATING_ALREADY_SUBMITTED' });
   });
 
   it('returns 400 VALIDATION_ERROR when draftOverall > 2', async () => {

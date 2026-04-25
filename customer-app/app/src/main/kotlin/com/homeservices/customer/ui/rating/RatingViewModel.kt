@@ -57,7 +57,7 @@ public class RatingViewModel
         private val submitUseCase: SubmitRatingUseCase,
         private val getUseCase: GetRatingUseCase,
         private val escalateUseCase: EscalateRatingUseCase,
-        savedStateHandle: SavedStateHandle,
+        private val savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
         public val bookingId: String =
             savedStateHandle.get<String>("bookingId") ?: error("bookingId required")
@@ -101,6 +101,15 @@ public class RatingViewModel
         private var countdownJob: Job? = null
 
         init {
+            // Restore shield countdown from SavedStateHandle (survives OS-initiated process death).
+            // The overall/comment draft is not restored — the customer must re-enter stars on resume,
+            // but the auto-post timer and "Post anyway" chip correctly reappear.
+            val savedExpiry = savedStateHandle.get<Long>("shieldExpiresAtMs")
+            if (savedExpiry != null && savedExpiry > System.currentTimeMillis()) {
+                _shieldState.value = RatingShieldState.Escalated(savedExpiry)
+                startCountdown(savedExpiry)
+            }
+
             viewModelScope.launch {
                 getUseCase.invoke(bookingId).collect { result ->
                     result
@@ -190,6 +199,7 @@ public class RatingViewModel
                 result
                     .onSuccess { r ->
                         escalatedDraft = EscalatedDraft(capturedOverall, capturedSubScores, capturedComment)
+                        savedStateHandle["shieldExpiresAtMs"] = r.expiresAtMs
                         _shieldState.value = RatingShieldState.Escalated(r.expiresAtMs)
                         startCountdown(r.expiresAtMs)
                     }.onFailure {
@@ -214,6 +224,7 @@ public class RatingViewModel
             val submitSubScores = draft?.subScores ?: CustomerSubScores(punctuality.value, skill.value, behaviour.value)
             val submitComment = draft?.comment ?: comment.value.ifBlank { null }
             escalatedDraft = null
+            savedStateHandle.remove<Long>("shieldExpiresAtMs")
             _uiState.value = RatingUiState.Submitting
             viewModelScope.launch {
                 submitUseCase

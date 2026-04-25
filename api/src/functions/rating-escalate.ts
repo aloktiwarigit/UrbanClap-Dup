@@ -5,9 +5,10 @@ import type { CustomerContext } from '../types/customer.js';
 import { EscalateRatingBodySchema } from '../schemas/complaint.js';
 import type { ComplaintDoc } from '../schemas/complaint.js';
 import { bookingRepo } from '../cosmos/booking-repository.js';
+import { ratingRepo } from '../cosmos/rating-repository.js';
 import { createComplaint, findRatingShieldEscalation } from '../cosmos/complaints-repository.js';
 import { sendOwnerRatingShieldAlert } from '../services/fcm.service.js';
-import { randomUUID } from 'crypto';
+import { createHash } from 'crypto';
 
 export async function escalateRatingHandler(
   req: HttpRequest,
@@ -33,14 +34,26 @@ export async function escalateRatingHandler(
   if (booking.status !== 'CLOSED') return { status: 409, jsonBody: { code: 'BOOKING_NOT_CLOSED' } };
   if (!booking.technicianId) return { status: 409, jsonBody: { code: 'NO_TECHNICIAN' } };
 
+  const existingRating = await ratingRepo.getByBookingId(bookingId);
+  if (existingRating?.customerSubmittedAt) {
+    return { status: 409, jsonBody: { code: 'RATING_ALREADY_SUBMITTED' } };
+  }
+
   const existing = await findRatingShieldEscalation(bookingId, customer.customerId);
   if (existing) return { status: 409, jsonBody: { code: 'SHIELD_ALREADY_ESCALATED' } };
 
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 2 * 60 * 60 * 1000);
 
+  // Deterministic ID: concurrent duplicate requests both try to create the same document ID;
+  // Cosmos rejects the second with a conflict, which we surface as SHIELD_ALREADY_ESCALATED.
+  const shieldId = createHash('sha256')
+    .update(`shield:${bookingId}:${customer.customerId}`)
+    .digest('hex')
+    .slice(0, 36);
+
   const doc: ComplaintDoc = {
-    id: randomUUID(),
+    id: shieldId,
     orderId: bookingId,
     customerId: customer.customerId,
     technicianId: booking.technicianId ?? '',
@@ -60,8 +73,10 @@ export async function escalateRatingHandler(
   try {
     await createComplaint(doc);
   } catch (err: unknown) {
-    if (typeof err === 'object' && err !== null && 'code' in err && (err as { code: number }).code === 404) {
-      return { status: 503, jsonBody: { code: 'CONTAINER_NOT_PROVISIONED' } };
+    if (typeof err === 'object' && err !== null && 'code' in err) {
+      const code = (err as { code: number }).code;
+      if (code === 404) return { status: 503, jsonBody: { code: 'CONTAINER_NOT_PROVISIONED' } };
+      if (code === 409) return { status: 409, jsonBody: { code: 'SHIELD_ALREADY_ESCALATED' } };
     }
     throw err;
   }
