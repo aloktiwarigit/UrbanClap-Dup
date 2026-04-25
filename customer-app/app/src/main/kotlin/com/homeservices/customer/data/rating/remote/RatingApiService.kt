@@ -1,5 +1,7 @@
 package com.homeservices.customer.data.rating.remote
 
+import com.homeservices.customer.data.rating.remote.dto.EscalateRatingRequestDto
+import com.homeservices.customer.data.rating.remote.dto.EscalateRatingResponseDto
 import com.homeservices.customer.data.rating.remote.dto.GetRatingResponseDto
 import com.homeservices.customer.data.rating.remote.dto.SubmitRatingRequestDto
 import retrofit2.http.Body
@@ -17,4 +19,10 @@ public interface RatingApiService {
     public suspend fun get(
         @Path("bookingId") bookingId: String,
     ): GetRatingResponseDto
+
+    @POST("v1/ratings/{bookingId}/escalate")
+    public suspend fun escalate(
+        @Path("bookingId") bookingId: String,
+        @Body body: EscalateRatingRequestDto,
+    ): EscalateRatingResponseDto
 }
