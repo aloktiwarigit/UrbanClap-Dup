@@ -3,6 +3,7 @@ package com.homeservices.technician.data.fcm
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.homeservices.technician.data.jobOffer.JobOfferEventBus
+import com.homeservices.technician.data.rating.RatingPromptEventBus
 import com.homeservices.technician.domain.jobOffer.FcmTokenSyncUseCase
 import com.homeservices.technician.domain.jobOffer.model.JobOffer
 import dagger.hilt.android.AndroidEntryPoint
@@ -22,14 +23,23 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
     @Inject
     public lateinit var fcmTokenSyncUseCase: FcmTokenSyncUseCase
 
+    @Inject
+    public lateinit var ratingPromptEventBus: RatingPromptEventBus
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onMessageReceived(message: RemoteMessage): Unit {
         val data = message.data
-        if (data["type"] != "JOB_OFFER") return
-
-        val offer = parseJobOffer(data) ?: return
-        eventBus.tryEmit(offer)
+        when (data["type"]) {
+            "JOB_OFFER" -> {
+                val offer = parseJobOffer(data) ?: return
+                eventBus.tryEmit(offer)
+            }
+            "RATING_PROMPT_TECHNICIAN" -> {
+                val bookingId = data["bookingId"] ?: return
+                ratingPromptEventBus.post(bookingId)
+            }
+        }
     }
 
     override fun onNewToken(token: String): Unit {
