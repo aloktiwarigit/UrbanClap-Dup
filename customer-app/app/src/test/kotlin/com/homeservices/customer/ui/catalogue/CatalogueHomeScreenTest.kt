@@ -24,7 +24,9 @@ public class CatalogueHomeScreenTest {
         }
     }
 
-    @Ignore("HandlerDispatcher IllegalStateException — Coil async handler fires after Paparazzi Looper quits on Success state; fix with Coil test dispatcher before recording")
+    @Ignore(
+        "HandlerDispatcher IllegalStateException — Coil async handler fires after Paparazzi Looper quits on Success state; fix with Coil test dispatcher before recording",
+    )
     @Test
     public fun `catalogue home success state`(): Unit {
         paparazzi.snapshot {
