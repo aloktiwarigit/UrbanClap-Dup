@@ -15,7 +15,9 @@ public class ServiceDetailScreenTest {
     @get:Rule
     public val paparazzi: Paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
 
-    @Ignore("HandlerDispatcher IllegalStateException — Coil async handler fires after Paparazzi Looper quits on Success state; fix with Coil test dispatcher before recording")
+    @Ignore(
+        "HandlerDispatcher IllegalStateException — Coil async handler fires after Paparazzi Looper quits on Success state; fix with Coil test dispatcher before recording",
+    )
     @Test
     public fun `service detail success state`(): Unit {
         paparazzi.snapshot {

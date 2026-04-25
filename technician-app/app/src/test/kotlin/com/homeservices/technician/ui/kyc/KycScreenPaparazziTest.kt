@@ -26,7 +26,9 @@ public class KycScreenPaparazziTest {
         }
     }
 
-    @Ignore("HandlerDispatcher IllegalStateException — rememberLauncherForActivityResult in KycStepPan registers a Handler that fires after Paparazzi Looper quits; fix with mock launcher before recording")
+    @Ignore(
+        "HandlerDispatcher IllegalStateException — rememberLauncherForActivityResult in KycStepPan registers a Handler that fires after Paparazzi Looper quits; fix with mock launcher before recording",
+    )
     @Test
     public fun snapshot_step2_pan_no_selection(): Unit {
         paparazzi.snapshot {
@@ -36,7 +38,9 @@ public class KycScreenPaparazziTest {
         }
     }
 
-    @Ignore("HandlerDispatcher IllegalStateException — rememberLauncherForActivityResult in KycStepPan registers a Handler that fires after Paparazzi Looper quits; fix with mock launcher before recording")
+    @Ignore(
+        "HandlerDispatcher IllegalStateException — rememberLauncherForActivityResult in KycStepPan registers a Handler that fires after Paparazzi Looper quits; fix with mock launcher before recording",
+    )
     @Test
     public fun snapshot_step2_pan_selected(): Unit {
         paparazzi.snapshot {
