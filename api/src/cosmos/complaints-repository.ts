@@ -157,16 +157,18 @@ export async function getRepeatOffenders(
 export async function findActiveComplaintByBookingAndParty(
   bookingId: string,
   uid: string,
+  filedBy: 'CUSTOMER' | 'TECHNICIAN',
 ): Promise<ComplaintDoc | null> {
   const query: SqlQuerySpec = {
     query: `SELECT TOP 1 * FROM c WHERE c.orderId = @bookingId
-            AND IS_DEFINED(c.filedBy)
+            AND c.filedBy = @filedBy
             AND (c.customerId = @uid OR c.technicianId = @uid)
             AND c.status != @resolved
             ORDER BY c.createdAt DESC`,
     parameters: [
       { name: '@bookingId', value: bookingId },
       { name: '@uid', value: uid },
+      { name: '@filedBy', value: filedBy },
       { name: '@resolved', value: 'RESOLVED' },
     ],
   };
@@ -181,14 +183,17 @@ export async function findActiveComplaintByBookingAndParty(
 export async function queryComplaintsByBookingAndParty(
   bookingId: string,
   uid: string,
+  filedBy: 'CUSTOMER' | 'TECHNICIAN',
 ): Promise<ComplaintDoc[]> {
   const query: SqlQuerySpec = {
     query: `SELECT * FROM c WHERE c.orderId = @bookingId
+            AND c.filedBy = @filedBy
             AND (c.customerId = @uid OR c.technicianId = @uid)
             ORDER BY c.createdAt DESC`,
     parameters: [
       { name: '@bookingId', value: bookingId },
       { name: '@uid', value: uid },
+      { name: '@filedBy', value: filedBy },
     ],
   };
   const { resources } = await getCosmosClient()
@@ -205,7 +210,8 @@ export async function getUnacknowledgedPastDueComplaints(): Promise<Array<{ doc:
     query: `SELECT * FROM c WHERE IS_DEFINED(c.acknowledgeDeadlineAt)
             AND c.acknowledgeDeadlineAt < @now
             AND c.status = @new
-            AND (c.escalated != true OR NOT IS_DEFINED(c.escalated))`,
+            AND (c.escalated != true OR NOT IS_DEFINED(c.escalated))
+            AND (c.ackBreached != true OR NOT IS_DEFINED(c.ackBreached))`,
     parameters: [
       { name: '@now', value: now },
       { name: '@new', value: 'NEW' },

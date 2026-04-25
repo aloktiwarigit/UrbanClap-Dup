@@ -6,6 +6,7 @@ import com.homeservices.customer.domain.complaint.GetComplaintStatusUseCase
 import com.homeservices.customer.domain.complaint.PhotoUploadUseCase
 import com.homeservices.customer.domain.complaint.SubmitComplaintUseCase
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -123,5 +124,137 @@ public class ComplaintViewModelTest {
             viewModel.onSubmit("bk-1")
             dispatcher.scheduler.advanceUntilIdle()
             assertThat(viewModel.uiState.value).isInstanceOf(ComplaintUiState.Idle::class.java)
+        }
+
+    @Test
+    public fun `onPhotoSelected transitions through PhotoUploading then back to Idle with path on success`(): Unit =
+        runTest {
+            viewModel.onReasonSelected(ComplaintReason.SERVICE_QUALITY)
+            viewModel.onDescriptionChanged("Service was not up to the mark at all.")
+            coEvery { photoUploadUseCase("bk-1", "/local/photo.jpg") } returns
+                Result.success("complaints/bk-1/uid-1/1234567890.jpg")
+
+            viewModel.onPhotoSelected("/local/photo.jpg", "bk-1")
+            // Immediately after launch, state should be PhotoUploading
+            assertThat(viewModel.uiState.value).isInstanceOf(ComplaintUiState.PhotoUploading::class.java)
+
+            dispatcher.scheduler.advanceUntilIdle()
+            val state = viewModel.uiState.value as ComplaintUiState.Idle
+            assertThat(state.photoStoragePath).isEqualTo("complaints/bk-1/uid-1/1234567890.jpg")
+        }
+
+    @Test
+    public fun `onPhotoSelected returns to Idle with null path on upload failure`(): Unit =
+        runTest {
+            viewModel.onReasonSelected(ComplaintReason.OTHER)
+            viewModel.onDescriptionChanged("Some valid description that is long enough.")
+            coEvery { photoUploadUseCase("bk-1", "/bad/photo.jpg") } returns
+                Result.failure(RuntimeException("upload failed"))
+
+            viewModel.onPhotoSelected("/bad/photo.jpg", "bk-1")
+            dispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.value as ComplaintUiState.Idle
+            assertThat(state.photoStoragePath).isNull()
+        }
+
+    @Test
+    public fun `onPhotoSelected does nothing when state is not Idle`(): Unit =
+        runTest {
+            // Put ViewModel into Submitting state
+            viewModel.onReasonSelected(ComplaintReason.LATE_ARRIVAL)
+            viewModel.onDescriptionChanged("Technician arrived 3 hours late with no notice.")
+            coEvery { submitUseCase(any(), any(), any(), any()) } returns
+                flowOf(Result.failure(RuntimeException("pending")))
+            viewModel.onSubmit("bk-1")
+            // State is now Submitting — onPhotoSelected should be a no-op
+            assertThat(viewModel.uiState.value).isInstanceOf(ComplaintUiState.Submitting::class.java)
+
+            viewModel.onPhotoSelected("/some/photo.jpg", "bk-1")
+            dispatcher.scheduler.advanceUntilIdle()
+            // State should be Error (from submit), not PhotoUploading
+            assertThat(viewModel.uiState.value).isNotInstanceOf(ComplaintUiState.PhotoUploading::class.java)
+        }
+
+    @Test
+    public fun `onRetry resets state to Idle from Error`(): Unit =
+        runTest {
+            viewModel.onReasonSelected(ComplaintReason.OTHER)
+            viewModel.onDescriptionChanged("A long enough description here to be valid.")
+            coEvery { submitUseCase(any(), any(), any(), any()) } returns
+                flowOf(Result.failure(RuntimeException("network error")))
+            viewModel.onSubmit("bk-1")
+            dispatcher.scheduler.advanceUntilIdle()
+            assertThat(viewModel.uiState.value).isInstanceOf(ComplaintUiState.Error::class.java)
+
+            viewModel.onRetry()
+            assertThat(viewModel.uiState.value).isInstanceOf(ComplaintUiState.Idle::class.java)
+        }
+
+    @Test
+    public fun `loadStatus transitions to Success when an existing complaint is found`(): Unit =
+        runTest {
+            val existingComplaint =
+                ComplaintResponseDto(
+                    "c-existing",
+                    "NEW",
+                    "2026-04-25T02:00:00Z",
+                    "2026-04-26T00:00:00Z",
+                    "LATE_ARRIVAL",
+                    "CUSTOMER",
+                    "2026-04-25T00:00:00Z",
+                )
+            every { getStatusUseCase("bk-1") } returns
+                flowOf(Result.success(listOf(existingComplaint)))
+
+            viewModel.loadStatus("bk-1")
+            dispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertThat(state).isInstanceOf(ComplaintUiState.Success::class.java)
+            assertThat((state as ComplaintUiState.Success).complaintId).isEqualTo("c-existing")
+        }
+
+    @Test
+    public fun `loadStatus does nothing when no complaints exist`(): Unit =
+        runTest {
+            every { getStatusUseCase("bk-1") } returns flowOf(Result.success(emptyList()))
+
+            viewModel.loadStatus("bk-1")
+            dispatcher.scheduler.advanceUntilIdle()
+
+            assertThat(viewModel.uiState.value).isInstanceOf(ComplaintUiState.Idle::class.java)
+        }
+
+    @Test
+    public fun `onSubmit with photo path passes it through to submitUseCase`(): Unit =
+        runTest {
+            viewModel.onReasonSelected(ComplaintReason.SERVICE_QUALITY)
+            viewModel.onDescriptionChanged("Service was not up to the mark at all.")
+            coEvery { photoUploadUseCase("bk-1", "/local/photo.jpg") } returns
+                Result.success("complaints/bk-1/uid-1/ts.jpg")
+            viewModel.onPhotoSelected("/local/photo.jpg", "bk-1")
+            dispatcher.scheduler.advanceUntilIdle()
+
+            val mockResp =
+                ComplaintResponseDto(
+                    "c-2",
+                    "NEW",
+                    "2026-04-25T02:00:00Z",
+                    "2026-04-26T00:00:00Z",
+                    "SERVICE_QUALITY",
+                    "CUSTOMER",
+                    "2026-04-25T00:00:00Z",
+                )
+            coEvery {
+                submitUseCase("bk-1", ComplaintReason.SERVICE_QUALITY, any(), "complaints/bk-1/uid-1/ts.jpg")
+            } returns flowOf(Result.success(mockResp))
+
+            viewModel.onSubmit("bk-1")
+            dispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertThat(state).isInstanceOf(ComplaintUiState.Success::class.java)
+            assertThat((state as ComplaintUiState.Success).complaintId).isEqualTo("c-2")
         }
 }

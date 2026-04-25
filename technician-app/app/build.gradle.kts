@@ -294,6 +294,20 @@ kover {
                     // FirebaseOtpUseCase exclusion above.
                     "*.FcmTopicSubscriber",
                     "*.FcmTopicSubscriber\$*",
+                    // ComplaintScreen — Compose UI composable, same rationale as other *Kt screen classes
+                    // (Paparazzi covers snapshot rendering; instrumented tests cover UI interaction paths)
+                    "*.ComplaintScreenKt",
+                    "*.ComplaintScreenKt\$*",
+                    // ComplaintRoutes — nav route sealed class, framework wiring
+                    "*.ComplaintRoutes",
+                    "*.ComplaintRoutes\$*",
+                    // data.complaint.di — Hilt @Provides wiring, same rationale as other DI modules
+                    "*.data.complaint.di.*",
+                    // PhotoUploadUseCase Firebase upload path — ref.putBytes().await() requires a live
+                    // Firebase Storage instance; the auth-guard and file-not-found paths are unit-tested.
+                    // Full happy-path is integration-tested via Espresso/Firebase Emulator in CI.
+                    "*.PhotoUploadUseCase",
+                    "*.PhotoUploadUseCase\$*",
                 )
             }
         }

@@ -16,8 +16,19 @@ vi.mock('../../../../src/cosmos/audit-log-repository.js', () => ({
   queryAuditLog: vi.fn(),
 }));
 
+vi.mock('../../../../src/services/fcm.service.js', () => ({
+  sendOwnerComplaintFiled: vi.fn(),
+  sendOwnerComplaintSlaBreach: vi.fn().mockResolvedValue(undefined),
+  sendOwnerRouteAlert: vi.fn(),
+  sendPriceApprovalPush: vi.fn(),
+  sendTechEarningsUpdate: vi.fn(),
+  sendRatingPromptCustomerPush: vi.fn(),
+  sendRatingPromptTechnicianPush: vi.fn(),
+}));
+
 import { getOverdueComplaints, replaceComplaint, getUnacknowledgedPastDueComplaints } from '../../../../src/cosmos/complaints-repository.js';
 import { appendAuditEntry } from '../../../../src/cosmos/audit-log-repository.js';
+import { sendOwnerComplaintSlaBreach } from '../../../../src/services/fcm.service.js';
 import { slaBreachTimerHandler } from '../../../../src/functions/admin/complaints/sla-timer.js';
 
 const mockCtx = { log: vi.fn() } as unknown as InvocationContext;
@@ -93,7 +104,7 @@ describe('slaBreachTimerHandler', () => {
     expect(appendAuditEntry).not.toHaveBeenCalled();
   });
 
-  it('escalates acknowledge-past-due complaint and logs SLA_BREACH_ACK audit action', async () => {
+  it('escalates acknowledge-past-due complaint and logs SLA_BREACH_ACK audit action, sets ackBreached not escalated', async () => {
     const ackOverdueComplaint = {
       ...overdueComplaint,
       id: 'c-ack-1',
@@ -110,7 +121,9 @@ describe('slaBreachTimerHandler', () => {
     await slaBreachTimerHandler({} as never, mockCtx);
     expect(replaceComplaint).toHaveBeenCalledOnce();
     const [replacedDoc, passedEtag] = (replaceComplaint as ReturnType<typeof vi.fn>).mock.calls[0]!;
-    expect(replacedDoc.escalated).toBe(true);
+    // ACK breach sets ackBreached=true, NOT escalated=true (so complaint still eligible for SLA_BREACH later)
+    expect(replacedDoc.ackBreached).toBe(true);
+    expect(replacedDoc.escalated).toBe(false);
     expect(passedEtag).toBe('"ack-etag-1"');
     expect(appendAuditEntry).toHaveBeenCalledOnce();
     const auditCall = (appendAuditEntry as ReturnType<typeof vi.fn>).mock.calls[0]![0]!;
@@ -133,5 +146,42 @@ describe('slaBreachTimerHandler', () => {
     );
     expect(auditActions).toContain('SLA_BREACH');
     expect(auditActions).toContain('SLA_BREACH_ACK');
+  });
+
+  it('deduplicates: complaint in both overdue and ackOverdue only gets SLA_BREACH once', async () => {
+    // Same complaint id in both batches — slaDeadlineAt is past AND acknowledgeDeadlineAt is past
+    const dualBreach = {
+      ...overdueComplaint,
+      id: 'dual-breach',
+      acknowledgeDeadlineAt: new Date(Date.now() - 500).toISOString(),
+    };
+    (getOverdueComplaints as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { doc: dualBreach, etag: '"etag-dual"' },
+    ]);
+    (getUnacknowledgedPastDueComplaints as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { doc: dualBreach, etag: '"etag-dual"' },
+    ]);
+    (replaceComplaint as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (appendAuditEntry as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    await slaBreachTimerHandler({} as never, mockCtx);
+    // Only one replace call (deduplicated from ACK batch)
+    expect(replaceComplaint).toHaveBeenCalledOnce();
+    // Only one audit entry, and it should be SLA_BREACH (not SLA_BREACH_ACK)
+    expect(appendAuditEntry).toHaveBeenCalledOnce();
+    const auditAction = (appendAuditEntry as ReturnType<typeof vi.fn>).mock.calls[0]![0]!;
+    expect((auditAction as { action: string }).action).toBe('SLA_BREACH');
+  });
+
+  it('sends FCM SLA breach push for each escalated complaint', async () => {
+    (getOverdueComplaints as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { doc: overdueComplaint, etag: '"etag-1"' },
+    ]);
+    (replaceComplaint as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (appendAuditEntry as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    await slaBreachTimerHandler({} as never, mockCtx);
+    expect(sendOwnerComplaintSlaBreach).toHaveBeenCalledOnce();
+    const pushCall = (sendOwnerComplaintSlaBreach as ReturnType<typeof vi.fn>).mock.calls[0]![0]!;
+    expect((pushCall as { complaintId: string }).complaintId).toBe(overdueComplaint.id);
+    expect((pushCall as { breachType: string }).breachType).toBe('SLA_BREACH');
   });
 });

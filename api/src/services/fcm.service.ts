@@ -64,3 +64,19 @@ export async function sendOwnerComplaintFiled(payload: {
     },
   });
 }
+
+export async function sendOwnerComplaintSlaBreach(payload: {
+  complaintId: string;
+  bookingId: string;
+  breachType: 'SLA_BREACH' | 'SLA_BREACH_ACK';
+}): Promise<void> {
+  await getFirebaseAdmin().messaging().send({
+    topic: 'owner_alerts',
+    data: {
+      type: 'OWNER_COMPLAINT_SLA_BREACH',
+      complaintId: payload.complaintId,
+      bookingId: payload.bookingId,
+      breachType: payload.breachType,
+    },
+  });
+}

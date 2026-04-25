@@ -733,6 +733,26 @@
             "type": "boolean",
             "default": false
           },
+          "ackBreached": {
+            "type": "boolean",
+            "default": false
+          },
+          "filedBy": {
+            "type": "string",
+            "enum": [
+              "CUSTOMER",
+              "TECHNICIAN"
+            ]
+          },
+          "reasonCode": {
+            "type": "string"
+          },
+          "photoStoragePath": {
+            "type": "string"
+          },
+          "acknowledgeDeadlineAt": {
+            "type": "string"
+          },
           "resolvedAt": {
             "type": "string"
           },
@@ -881,6 +901,26 @@
                 "escalated": {
                   "type": "boolean",
                   "default": false
+                },
+                "ackBreached": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "filedBy": {
+                  "type": "string",
+                  "enum": [
+                    "CUSTOMER",
+                    "TECHNICIAN"
+                  ]
+                },
+                "reasonCode": {
+                  "type": "string"
+                },
+                "photoStoragePath": {
+                  "type": "string"
+                },
+                "acknowledgeDeadlineAt": {
+                  "type": "string"
                 },
                 "resolvedAt": {
                   "type": "string"

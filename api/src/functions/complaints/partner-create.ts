@@ -12,7 +12,7 @@ import {
   CustomerReasonCodeEnum,
   TechnicianReasonCodeEnum,
 } from '../../schemas/complaint.js';
-import type { ComplaintDoc } from '../../schemas/complaint.js';
+import type { ComplaintDoc, PartnerComplaintResponse } from '../../schemas/complaint.js';
 import { randomUUID } from 'crypto';
 
 export async function partnerCreateComplaintHandler(
@@ -56,7 +56,7 @@ export async function partnerCreateComplaintHandler(
     : TechnicianReasonCodeEnum.safeParse(data.reasonCode).success;
   if (!reasonValid) return { status: 400, jsonBody: { code: 'INVALID_REASON_CODE' } };
 
-  const existing = await findActiveComplaintByBookingAndParty(data.bookingId, uid);
+  const existing = await findActiveComplaintByBookingAndParty(data.bookingId, uid, filedBy);
   if (existing) return { status: 409, jsonBody: { code: 'COMPLAINT_ALREADY_FILED' } };
 
   const now = new Date();
@@ -71,6 +71,7 @@ export async function partnerCreateComplaintHandler(
     slaDeadlineAt: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
     acknowledgeDeadlineAt: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
     escalated: false,
+    ackBreached: false,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
     filedBy,
@@ -83,7 +84,17 @@ export async function partnerCreateComplaintHandler(
   sendOwnerComplaintFiled({ bookingId: data.bookingId, filedBy, reasonCode: data.reasonCode })
     .catch((err: unknown) => ctx.error('sendOwnerComplaintFiled failed', err));
 
-  return { status: 201, jsonBody: doc };
+  const response: PartnerComplaintResponse = {
+    id: doc.id,
+    status: doc.status,
+    filedBy: doc.filedBy,
+    reasonCode: doc.reasonCode,
+    acknowledgeDeadlineAt: doc.acknowledgeDeadlineAt,
+    slaDeadlineAt: doc.slaDeadlineAt,
+    createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt,
+  };
+  return { status: 201, jsonBody: response };
 }
 
 app.http('partnerCreateComplaint', {

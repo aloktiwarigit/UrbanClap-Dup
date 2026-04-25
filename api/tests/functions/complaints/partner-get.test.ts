@@ -76,14 +76,23 @@ describe('GET /v1/complaints/{bookingId} (partner)', () => {
     expect((res.jsonBody as { code: string }).code).toBe('FORBIDDEN');
   });
 
-  it('returns 200 with complaints array for customer', async () => {
+  it('returns 200 with redacted complaints array for customer (no internal fields)', async () => {
     (verifyFirebaseIdToken as ReturnType<typeof vi.fn>).mockResolvedValue({ uid: 'cust-1' });
     (bookingRepo.getById as ReturnType<typeof vi.fn>).mockResolvedValue(closedBooking);
     (queryComplaintsByBookingAndParty as ReturnType<typeof vi.fn>).mockResolvedValue([mockComplaint]);
     const res = await partnerGetComplaintsHandler(makeReq('bk-1'), mockCtx);
     expect(res.status).toBe(200);
-    const body = res.jsonBody as { complaints: unknown[] };
+    const body = res.jsonBody as { complaints: Record<string, unknown>[] };
     expect(body.complaints).toHaveLength(1);
+    const c = body.complaints[0]!;
+    expect(c['id']).toBe('c-1');
+    expect(c['status']).toBe('NEW');
+    // Must NOT expose internal fields
+    expect(c['customerId']).toBeUndefined();
+    expect(c['technicianId']).toBeUndefined();
+    expect(c['internalNotes']).toBeUndefined();
+    expect(c['assigneeAdminId']).toBeUndefined();
+    expect(c['escalated']).toBeUndefined();
   });
 
   it('returns 200 with empty array when no complaints filed', async () => {

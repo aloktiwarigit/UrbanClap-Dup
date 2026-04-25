@@ -50,6 +50,7 @@ export const ComplaintDocSchema = z.object({
   internalNotes: z.array(InternalNoteSchema).default([]),
   slaDeadlineAt: z.string(),
   escalated: z.boolean().default(false),
+  ackBreached: z.boolean().default(false),
   filedBy: ComplaintFiledByEnum.optional(),
   reasonCode: z.string().optional(),
   photoStoragePath: z.string().optional(),
@@ -113,8 +114,20 @@ export const CreateComplaintByPartnerBodySchema = z.object({
   photoStoragePath: z.string().optional(),
 }).openapi('CreateComplaintByPartnerBody');
 
+// Partner-safe response: omits internal/admin-only fields and both parties' UIDs
+export const PartnerComplaintResponseSchema = z.object({
+  id: z.string(),
+  status: ComplaintStatusEnum,
+  filedBy: ComplaintFiledByEnum.optional(),
+  reasonCode: z.string().optional(),
+  acknowledgeDeadlineAt: z.string().optional(),
+  slaDeadlineAt: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+}).openapi('PartnerComplaintResponse');
+
 export const PartnerComplaintListResponseSchema = z.object({
-  complaints: z.array(ComplaintDocSchema),
+  complaints: z.array(PartnerComplaintResponseSchema),
 }).openapi('PartnerComplaintListResponse');
 
 export type ComplaintStatus = z.infer<typeof ComplaintStatusEnum>;
@@ -131,4 +144,5 @@ export type ComplaintFiledBy = z.infer<typeof ComplaintFiledByEnum>;
 export type CustomerReasonCode = z.infer<typeof CustomerReasonCodeEnum>;
 export type TechnicianReasonCode = z.infer<typeof TechnicianReasonCodeEnum>;
 export type CreateComplaintByPartnerBody = z.infer<typeof CreateComplaintByPartnerBodySchema>;
+export type PartnerComplaintResponse = z.infer<typeof PartnerComplaintResponseSchema>;
 export type PartnerComplaintListResponse = z.infer<typeof PartnerComplaintListResponseSchema>;

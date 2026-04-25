@@ -113,7 +113,7 @@ describe('POST /v1/complaints (partner)', () => {
     expect((res.jsonBody as { code: string }).code).toBe('INVALID_REASON_CODE');
   });
 
-  it('returns 201 with complaint doc for a valid customer complaint', async () => {
+  it('returns 201 with partner-safe response (no internal fields) for a valid customer complaint', async () => {
     (verifyFirebaseIdToken as ReturnType<typeof vi.fn>).mockResolvedValue({ uid: 'cust-1' });
     (bookingRepo.getById as ReturnType<typeof vi.fn>).mockResolvedValue(closedBooking);
     (findActiveComplaintByBookingAndParty as ReturnType<typeof vi.fn>).mockResolvedValue(null);
@@ -126,6 +126,13 @@ describe('POST /v1/complaints (partner)', () => {
     expect(doc['status']).toBe('NEW');
     expect(doc['acknowledgeDeadlineAt']).toBeDefined();
     expect(doc['slaDeadlineAt']).toBeDefined();
+    // Must NOT expose internal fields
+    expect(doc['customerId']).toBeUndefined();
+    expect(doc['technicianId']).toBeUndefined();
+    expect(doc['internalNotes']).toBeUndefined();
+    expect(doc['assigneeAdminId']).toBeUndefined();
+    expect(doc['escalated']).toBeUndefined();
+    expect(doc['ackBreached']).toBeUndefined();
   });
 
   it('returns 201 for a valid technician complaint with tech reason code', async () => {

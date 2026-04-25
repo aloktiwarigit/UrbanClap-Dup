@@ -28,6 +28,7 @@ public sealed class ComplaintUiState {
     public data class Success(
         val complaintId: String,
         val acknowledgeDeadlineAt: String?,
+        val status: String = "NEW",
     ) : ComplaintUiState()
 
     public data class Error(
@@ -45,6 +46,26 @@ public class ComplaintViewModel
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<ComplaintUiState>(ComplaintUiState.Idle())
         public val uiState: StateFlow<ComplaintUiState> = _uiState.asStateFlow()
+
+        public fun loadStatus(bookingId: String) {
+            viewModelScope.launch {
+                getStatusUseCase(bookingId).collect { result ->
+                    val existing = result.getOrNull()?.firstOrNull()
+                    if (existing != null && _uiState.value is ComplaintUiState.Idle) {
+                        _uiState.value =
+                            ComplaintUiState.Success(
+                                complaintId = existing.id,
+                                acknowledgeDeadlineAt = existing.acknowledgeDeadlineAt,
+                                status = existing.status ?: "NEW",
+                            )
+                    }
+                }
+            }
+        }
+
+        public fun onRetry() {
+            _uiState.value = ComplaintUiState.Idle()
+        }
 
         public fun onReasonSelected(reason: TechComplaintReason) {
             val current = _uiState.value as? ComplaintUiState.Idle ?: return
@@ -93,6 +114,7 @@ public class ComplaintViewModel
                                     ComplaintUiState.Success(
                                         complaintId = dto.id,
                                         acknowledgeDeadlineAt = dto.acknowledgeDeadlineAt,
+                                        status = dto.status ?: "NEW",
                                     )
                                 },
                                 onFailure = { e ->

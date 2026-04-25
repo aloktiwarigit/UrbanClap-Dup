@@ -3,6 +3,7 @@ import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { verifyFirebaseIdToken } from '../../services/firebaseAdmin.js';
 import { bookingRepo } from '../../cosmos/booking-repository.js';
 import { queryComplaintsByBookingAndParty } from '../../cosmos/complaints-repository.js';
+import type { PartnerComplaintResponse } from '../../schemas/complaint.js';
 
 export async function partnerGetComplaintsHandler(
   req: HttpRequest,
@@ -22,11 +23,24 @@ export async function partnerGetComplaintsHandler(
   const bookingId = req.params['bookingId'] ?? '';
   const booking = await bookingRepo.getById(bookingId);
   if (!booking) return { status: 404, jsonBody: { code: 'BOOKING_NOT_FOUND' } };
-  if (booking.customerId !== uid && booking.technicianId !== uid) {
+  const isCustomer = booking.customerId === uid;
+  const isTechnician = booking.technicianId === uid;
+  if (!isCustomer && !isTechnician) {
     return { status: 403, jsonBody: { code: 'FORBIDDEN' } };
   }
 
-  const complaints = await queryComplaintsByBookingAndParty(bookingId, uid);
+  const filedBy = isCustomer ? 'CUSTOMER' as const : 'TECHNICIAN' as const;
+  const docs = await queryComplaintsByBookingAndParty(bookingId, uid, filedBy);
+  const complaints: PartnerComplaintResponse[] = docs.map(doc => ({
+    id: doc.id,
+    status: doc.status,
+    filedBy: doc.filedBy,
+    reasonCode: doc.reasonCode,
+    acknowledgeDeadlineAt: doc.acknowledgeDeadlineAt,
+    slaDeadlineAt: doc.slaDeadlineAt,
+    createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt,
+  }));
   return { status: 200, jsonBody: { complaints } };
 }
 

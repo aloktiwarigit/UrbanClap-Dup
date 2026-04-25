@@ -1,5 +1,8 @@
 package com.homeservices.customer.ui.complaint
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -15,15 +18,18 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -38,8 +44,16 @@ public fun ComplaintScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    LaunchedEffect(bookingId) { viewModel.loadStatus(bookingId) }
+
     when (val state = uiState) {
         is ComplaintUiState.Success -> {
+            val statusText =
+                when (state.status) {
+                    "INVESTIGATING" -> "मालिक जांच कर रहे हैं।"
+                    "RESOLVED" -> "शिकायत सुलझा दी गई।"
+                    else -> "मालिक 2 घंटे में जवाब देंगे।"
+                }
             Column(
                 modifier =
                     Modifier
@@ -54,7 +68,7 @@ public fun ComplaintScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "मालिक 2 घंटे में जवाब देंगे।",
+                    text = statusText,
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Spacer(modifier = Modifier.height(24.dp))
@@ -87,7 +101,7 @@ public fun ComplaintScreen(
                     color = MaterialTheme.colorScheme.error,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = { viewModel.onReasonSelected(ComplaintReason.OTHER) }) {
+                Button(onClick = { viewModel.onRetry() }) {
                     Text(text = "पुनः प्रयास करें")
                 }
             }
@@ -95,6 +109,16 @@ public fun ComplaintScreen(
 
         is ComplaintUiState.Idle -> {
             var expanded by remember { mutableStateOf(false) }
+            val context = LocalContext.current
+            val photoPicker =
+                rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+                    uri ?: return@rememberLauncherForActivityResult
+                    val tmpFile = java.io.File(context.cacheDir, "complaint_photo_${System.currentTimeMillis()}.jpg")
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        tmpFile.outputStream().use { output -> input.copyTo(output) }
+                    }
+                    viewModel.onPhotoSelected(tmpFile.absolutePath, bookingId)
+                }
             Column(
                 modifier =
                     Modifier
@@ -145,6 +169,14 @@ public fun ComplaintScreen(
                     maxLines = 8,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                val photoButtonLabel =
+                    if (state.photoStoragePath != null) "फ़ोटो बदलें ✓" else "फ़ोटो जोड़ें (वैकल्पिक)"
+                OutlinedButton(
+                    onClick = { photoPicker.launch("image/*") },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(text = photoButtonLabel)
+                }
                 Button(
                     onClick = { viewModel.onSubmit(bookingId) },
                     enabled = state.submitEnabled,
