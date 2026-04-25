@@ -130,6 +130,11 @@ public class RatingViewModel
                 getUseCase.invoke(bookingId).collect { result ->
                     result
                         .onSuccess { snap ->
+                            // Cancel shield countdown if rating was already submitted elsewhere
+                            // (e.g. from another device, or restored countdown for a stale session).
+                            if (snap.customerSide is SideState.Submitted && _shieldState.value is RatingShieldState.Escalated) {
+                                cancelShieldState()
+                            }
                             _uiState.value =
                                 when {
                                     snap.status == RatingSnapshot.Status.REVEALED -> RatingUiState.Revealed(snap)
@@ -139,6 +144,19 @@ public class RatingViewModel
                         }.onFailure { _uiState.value = RatingUiState.Error(it.message ?: "load failed") }
                 }
             }
+        }
+
+        private fun cancelShieldState() {
+            countdownJob?.cancel()
+            countdownJob = null
+            escalatedDraft = null
+            _shieldState.value = RatingShieldState.Idle
+            savedStateHandle.remove<Long>("shieldExpiresAtMs")
+            savedStateHandle.remove<Int>("shieldDraftOverall")
+            savedStateHandle.remove<Int>("shieldDraftPunct")
+            savedStateHandle.remove<Int>("shieldDraftSkill")
+            savedStateHandle.remove<Int>("shieldDraftBehav")
+            savedStateHandle.remove<String>("shieldDraftComment")
         }
 
         public fun setOverall(stars: Int) {
@@ -260,13 +278,7 @@ public class RatingViewModel
                             .onSuccess {
                                 // Clear shield state only after confirmed success — preserves
                                 // draft for retry if the network call fails.
-                                escalatedDraft = null
-                                savedStateHandle.remove<Long>("shieldExpiresAtMs")
-                                savedStateHandle.remove<Int>("shieldDraftOverall")
-                                savedStateHandle.remove<Int>("shieldDraftPunct")
-                                savedStateHandle.remove<Int>("shieldDraftSkill")
-                                savedStateHandle.remove<Int>("shieldDraftBehav")
-                                savedStateHandle.remove<String>("shieldDraftComment")
+                                cancelShieldState()
                                 _uiState.value = RatingUiState.AwaitingPartner(null)
                             }.onFailure { _uiState.value = RatingUiState.Error(it.message ?: "submit failed") }
                     }
