@@ -90,4 +90,84 @@ public class RatingViewModelTest {
 
             assertThat(vm.uiState.value).isInstanceOf(RatingUiState.AwaitingPartner::class.java)
         }
+
+    @Test
+    public fun `transitions to Revealed when snapshot status is REVEALED`(): Unit =
+        runTest {
+            val snapshot =
+                RatingSnapshot(
+                    "bk-1",
+                    RatingSnapshot.Status.REVEALED,
+                    "2026-04-24T12:30:00.000Z",
+                    SideState.Pending,
+                    SideState.Pending,
+                )
+            coEvery { get.invoke("bk-1") } returns flowOf(Result.success(snapshot))
+
+            val vm = RatingViewModel(submit, get, savedState)
+
+            assertThat(vm.uiState.value).isInstanceOf(RatingUiState.Revealed::class.java)
+        }
+
+    @Test
+    public fun `transitions to Error when getUseCase fails`(): Unit =
+        runTest {
+            coEvery { get.invoke("bk-1") } returns
+                flowOf(Result.failure(RuntimeException("load failed")))
+
+            val vm = RatingViewModel(submit, get, savedState)
+
+            assertThat(vm.uiState.value).isInstanceOf(RatingUiState.Error::class.java)
+        }
+
+    @Test
+    public fun `submit does nothing when canSubmit is false`(): Unit =
+        runTest {
+            coEvery { get.invoke("bk-1") } returns
+                flowOf(
+                    Result.success(
+                        RatingSnapshot("bk-1", RatingSnapshot.Status.PENDING, null, SideState.Pending, SideState.Pending),
+                    ),
+                )
+            val vm = RatingViewModel(submit, get, savedState)
+            vm.submit()
+            assertThat(vm.uiState.value).isNotInstanceOf(RatingUiState.Submitting::class.java)
+        }
+
+    @Test
+    public fun `failed submit transitions to Error state`(): Unit =
+        runTest {
+            coEvery { get.invoke("bk-1") } returns
+                flowOf(
+                    Result.success(
+                        RatingSnapshot("bk-1", RatingSnapshot.Status.PENDING, null, SideState.Pending, SideState.Pending),
+                    ),
+                )
+            coEvery {
+                submit.invoke("bk-1", 5, CustomerSubScores(5, 5, 5), null)
+            } returns flowOf(Result.failure(RuntimeException("network error")))
+
+            val vm = RatingViewModel(submit, get, savedState)
+            vm.setOverall(5)
+            vm.setPunctuality(5)
+            vm.setSkill(5)
+            vm.setBehaviour(5)
+            vm.submit()
+
+            assertThat(vm.uiState.value).isInstanceOf(RatingUiState.Error::class.java)
+        }
+
+    @Test
+    public fun `setComment truncates to 500 chars`(): Unit =
+        runTest {
+            coEvery { get.invoke("bk-1") } returns
+                flowOf(
+                    Result.success(
+                        RatingSnapshot("bk-1", RatingSnapshot.Status.PENDING, null, SideState.Pending, SideState.Pending),
+                    ),
+                )
+            val vm = RatingViewModel(submit, get, savedState)
+            vm.setComment("a".repeat(600))
+            assertThat(vm.comment.value.length).isEqualTo(500)
+        }
 }
