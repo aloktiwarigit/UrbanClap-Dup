@@ -1,39 +1,45 @@
 package com.homeservices.technician.data.fcm
 
+import android.content.Context
 import android.content.SharedPreferences
 import com.google.firebase.messaging.FirebaseMessaging
-import com.homeservices.technician.data.auth.di.AuthPrefs
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * Tracks the technician_{uid} topic that the app is currently subscribed to,
- * persisting the last-subscribed uid in SharedPreferences so it survives
- * process death.
+ * persisting the last-subscribed uid in a dedicated SharedPreferences file
+ * (separate from the auth prefs, which SessionManager.clearPrefs() wipes on
+ * logout — using auth prefs would make unsubscribeTechnician() a no-op on
+ * the logout path, leaving the previous tech's topic subscribed forever).
  *
- * Without this, a logout → login-as-different-tech sequence (within or across
- * process lifetimes) leaves the previous tech's topic subscribed on Firebase's
- * side, so the new tech's app receives pushes intended for the previous tech.
+ * subscribe(new) is gated on the success of unsubscribe(old): a transient
+ * Firebase failure leaves prefs pointing at the old uid so the next launch
+ * retries the unsubscribe rather than leaving the installation subscribed
+ * to both topics. Likewise, persistence of the new uid is gated on
+ * subscribe success — the early-return on equality won't suppress retries
+ * after a transient failure.
  */
 @Singleton
 public class FcmTopicSubscriber
     @Inject
     constructor(
-        @AuthPrefs private val prefs: SharedPreferences,
+        @ApplicationContext context: Context,
     ) {
         private companion object {
-            const val KEY_SUBSCRIBED_TECH_UID = "fcm_subscribed_tech_uid"
+            const val PREFS_NAME = "fcm_topic_state"
+            const val KEY_SUBSCRIBED_TECH_UID = "subscribed_tech_uid"
         }
+
+        private val prefs: SharedPreferences =
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
         public fun subscribeTechnician(uid: String) {
             val previous = prefs.getString(KEY_SUBSCRIBED_TECH_UID, null)
             if (previous == uid) return
 
             val subscribeNew = {
-                // Persist the new uid only after Firebase confirms. Without this gate,
-                // a transient network/token failure would leave prefs claiming we are
-                // subscribed when Firebase has no record, and the early-return at the
-                // top would silently suppress retries on subsequent launches.
                 FirebaseMessaging
                     .getInstance()
                     .subscribeToTopic("technician_$uid")
@@ -43,15 +49,14 @@ public class FcmTopicSubscriber
             }
 
             if (previous != null) {
-                // Serialise unsubscribe(old) → subscribe(new) so the two callbacks
-                // can't race. addOnCompleteListener fires regardless of unsubscribe
-                // success — the new tech's topic still needs to be subscribed even if
-                // we couldn't cleanly remove the old one (Firebase will eventually
-                // reconcile via the per-installation token).
+                // Only subscribe(new) when unsubscribe(old) succeeds. If unsub fails
+                // (offline/token error), prefs still points at the old uid and the
+                // next launch will retry the unsubscribe — preferable to silently
+                // leaving the installation subscribed to both technicians' topics.
                 FirebaseMessaging
                     .getInstance()
                     .unsubscribeFromTopic("technician_$previous")
-                    .addOnCompleteListener { subscribeNew() }
+                    .addOnSuccessListener { subscribeNew() }
             } else {
                 subscribeNew()
             }
