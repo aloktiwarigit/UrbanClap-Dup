@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.fragment.app.FragmentActivity
 import com.homeservices.designsystem.theme.HomeservicesTheme
 import com.homeservices.technician.data.auth.SessionManager
+import com.homeservices.technician.data.fcm.FcmTopicSubscriber
 import com.homeservices.technician.data.rating.RatingPromptEventBus
 import com.homeservices.technician.di.BuildInfoProvider
 import com.homeservices.technician.navigation.AppNavigation
@@ -21,6 +22,8 @@ public class MainActivity : FragmentActivity() {
 
     @Inject public lateinit var ratingPromptEventBus: RatingPromptEventBus
 
+    @Inject public lateinit var fcmTopicSubscriber: FcmTopicSubscriber
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -29,6 +32,7 @@ public class MainActivity : FragmentActivity() {
                     sessionManager = sessionManager,
                     activity = this,
                     ratingPromptEventBus = ratingPromptEventBus,
+                    fcmTopicSubscriber = fcmTopicSubscriber,
                 )
             }
         }

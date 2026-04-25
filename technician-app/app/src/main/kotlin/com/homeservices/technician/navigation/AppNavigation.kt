@@ -11,8 +11,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
-import com.google.firebase.messaging.FirebaseMessaging
 import com.homeservices.technician.data.auth.SessionManager
+import com.homeservices.technician.data.fcm.FcmTopicSubscriber
 import com.homeservices.technician.data.rating.RatingPromptEventBus
 import com.homeservices.technician.domain.auth.model.AuthState
 import com.homeservices.technician.ui.jobOffer.JobOfferScreen
@@ -24,6 +24,7 @@ internal fun AppNavigation(
     sessionManager: SessionManager,
     activity: FragmentActivity,
     ratingPromptEventBus: RatingPromptEventBus,
+    fcmTopicSubscriber: FcmTopicSubscriber,
     modifier: Modifier = Modifier,
 ): Unit {
     val navController = rememberNavController()
@@ -39,13 +40,15 @@ internal fun AppNavigation(
                     popUpTo("auth") { inclusive = true }
                     launchSingleTop = true
                 }
-                FirebaseMessaging.getInstance().subscribeToTopic("technician_${current.uid}")
+                fcmTopicSubscriber.subscribeTechnician(current.uid)
             }
-            is AuthState.Unauthenticated ->
+            is AuthState.Unauthenticated -> {
+                fcmTopicSubscriber.unsubscribeTechnician()
                 navController.navigate("auth") {
                     popUpTo("main") { inclusive = true }
                     launchSingleTop = true
                 }
+            }
         }
     }
 
@@ -63,6 +66,9 @@ internal fun AppNavigation(
             navController.navigate("rating/$bookingId") {
                 launchSingleTop = true
             }
+            // Clear the replay cache so this event isn't redelivered to the next
+            // collector (activity recreation / returning to foreground).
+            ratingPromptEventBus.consume()
         }
     }
 
