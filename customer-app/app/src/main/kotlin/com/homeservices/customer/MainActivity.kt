@@ -7,6 +7,7 @@ import androidx.fragment.app.FragmentActivity
 import com.homeservices.customer.data.auth.SessionManager
 import com.homeservices.customer.data.booking.PaymentResultBus
 import com.homeservices.customer.data.booking.PriceApprovalEventBus
+import com.homeservices.customer.data.rating.RatingPromptEventBus
 import com.homeservices.customer.di.BuildInfoProvider
 import com.homeservices.customer.domain.booking.model.PaymentResult
 import com.homeservices.customer.navigation.AppNavigation
@@ -29,6 +30,8 @@ public class MainActivity :
 
     @Inject public lateinit var priceApprovalEventBus: PriceApprovalEventBus
 
+    @Inject public lateinit var ratingPromptEventBus: RatingPromptEventBus
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -37,6 +40,7 @@ public class MainActivity :
                     sessionManager = sessionManager,
                     activity = this,
                     priceApprovalEventBus = priceApprovalEventBus,
+                    ratingPromptEventBus = ratingPromptEventBus,
                 )
             }
         }
