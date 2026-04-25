@@ -159,7 +159,7 @@ export async function findRatingShieldEscalation(
   customerId: string,
 ): Promise<ComplaintDoc | null> {
   const query: SqlQuerySpec = {
-    query: `SELECT TOP 1 * FROM c WHERE c.orderId = @bookingId AND c.customerId = @customerId AND c.type = @type`,
+    query: `SELECT TOP 1 * FROM c WHERE c.orderId = @bookingId AND c.customerId = @customerId AND c.type = @type AND c.status != 'RESOLVED'`,
     parameters: [
       { name: '@bookingId', value: bookingId },
       { name: '@customerId', value: customerId },
@@ -172,5 +172,6 @@ export async function findRatingShieldEscalation(
     .items.query<Record<string, unknown>>(query)
     .fetchAll();
   if (resources.length === 0) return null;
-  return ComplaintDocSchema.parse(resources[0]);
+  const raw = resources[0];
+  return raw !== undefined ? ComplaintDocSchema.parse(raw) : null;
 }
