@@ -10,6 +10,7 @@ import com.homeservices.customer.domain.rating.model.CustomerSubScores
 import com.homeservices.customer.domain.rating.model.RatingSnapshot
 import com.homeservices.customer.domain.rating.model.SideState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -85,6 +86,14 @@ public class RatingViewModel
         private val _canSubmit = MutableStateFlow(false)
         public val canSubmit: StateFlow<Boolean> = _canSubmit.asStateFlow()
 
+        // Snapshot of overall + comment at the moment escalation was sent to the owner.
+        // doSubmit() uses these values (not the live flows) when shieldState is Escalated,
+        // so the public rating always matches the draft the owner reviewed.
+        private var escalatedDraft: Pair<Int, String?>? = null
+
+        // Held so onPostAnyway() / onSkipShield() can cancel the auto-post before it fires.
+        private var countdownJob: Job? = null
+
         init {
             viewModelScope.launch {
                 getUseCase.invoke(bookingId).collect { result ->
@@ -143,25 +152,32 @@ public class RatingViewModel
         }
 
         public fun onSkipShield() {
+            countdownJob?.cancel()
+            countdownJob = null
             _shieldState.value = RatingShieldState.Idle
             doSubmit()
         }
 
         public fun onPostAnyway() {
+            countdownJob?.cancel()
+            countdownJob = null
             _shieldState.value = RatingShieldState.Idle
             doSubmit()
         }
 
         public fun onEscalate() {
+            val capturedOverall = overall.value
+            val capturedComment = comment.value.ifBlank { null }
             viewModelScope.launch {
                 val result =
                     escalateUseCase.invoke(
                         bookingId = bookingId,
-                        draftOverall = overall.value,
-                        draftComment = comment.value.ifBlank { null },
+                        draftOverall = capturedOverall,
+                        draftComment = capturedComment,
                     )
                 result
                     .onSuccess { r ->
+                        escalatedDraft = capturedOverall to capturedComment
                         _shieldState.value = RatingShieldState.Escalated(r.expiresAtMs)
                         startCountdown(r.expiresAtMs)
                     }.onFailure {
@@ -172,22 +188,28 @@ public class RatingViewModel
         }
 
         private fun startCountdown(expiresAtMs: Long) {
-            viewModelScope.launch {
-                val remaining = expiresAtMs - System.currentTimeMillis()
-                if (remaining > 0) delay(remaining)
-                onPostAnyway()
-            }
+            countdownJob =
+                viewModelScope.launch {
+                    val remaining = expiresAtMs - System.currentTimeMillis()
+                    if (remaining > 0) delay(remaining)
+                    onPostAnyway()
+                }
         }
 
         private fun doSubmit() {
+            val draft = escalatedDraft
+            val submitOverall = if (draft != null) draft.first else overall.value
+            val submitComment = if (draft != null) draft.second else comment.value.ifBlank { null }
+            val submitSubScores = CustomerSubScores(punctuality.value, skill.value, behaviour.value)
+            escalatedDraft = null
             _uiState.value = RatingUiState.Submitting
             viewModelScope.launch {
                 submitUseCase
                     .invoke(
                         bookingId = bookingId,
-                        overall = overall.value,
-                        subScores = CustomerSubScores(punctuality.value, skill.value, behaviour.value),
-                        comment = comment.value.ifBlank { null },
+                        overall = submitOverall,
+                        subScores = submitSubScores,
+                        comment = submitComment,
                     ).collect { result ->
                         result
                             .onSuccess { _uiState.value = RatingUiState.AwaitingPartner(null) }
