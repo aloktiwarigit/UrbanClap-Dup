@@ -21,7 +21,7 @@ vi.mock('../../../src/cosmos/complaints-repository.js', () => ({
   getUnacknowledgedPastDueComplaints: vi.fn(),
 }));
 vi.mock('../../../src/services/fcm.service.js', () => ({
-  sendOwnerComplaintFiled: vi.fn(),
+  sendOwnerComplaintFiled: vi.fn().mockResolvedValue(undefined),
   sendOwnerRouteAlert: vi.fn(),
   sendPriceApprovalPush: vi.fn(),
   sendTechEarningsUpdate: vi.fn(),
@@ -40,7 +40,7 @@ function makeReq(body: unknown, token = 'Bearer valid-token'): HttpRequest {
     json: () => Promise.resolve(body),
   } as unknown as HttpRequest;
 }
-const mockCtx = { error: vi.fn() } as unknown as InvocationContext;
+let mockCtx: InvocationContext;
 const closedBooking = {
   id: 'bk-1', customerId: 'cust-1', technicianId: 'tech-1', status: 'CLOSED',
 };
@@ -51,7 +51,10 @@ const validCustomerBody = {
 };
 
 describe('POST /v1/complaints (partner)', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    mockCtx = { error: vi.fn() } as unknown as InvocationContext;
+    vi.clearAllMocks();
+  });
 
   it('returns 401 when no Bearer token', async () => {
     const res = await partnerCreateComplaintHandler(makeReq(validCustomerBody, ''), mockCtx);
@@ -135,5 +138,16 @@ describe('POST /v1/complaints (partner)', () => {
     );
     expect(res.status).toBe(201);
     expect((res.jsonBody as { filedBy: string }).filedBy).toBe('TECHNICIAN');
+  });
+
+  it('returns 400 when request body is invalid JSON', async () => {
+    (verifyFirebaseIdToken as ReturnType<typeof vi.fn>).mockResolvedValue({ uid: 'cust-1' });
+    const badReq = {
+      headers: { get: (k: string) => k === 'authorization' ? 'Bearer valid-token' : null },
+      json: () => Promise.reject(new SyntaxError('Invalid JSON')),
+    } as unknown as HttpRequest;
+    const res = await partnerCreateComplaintHandler(badReq, mockCtx);
+    expect(res.status).toBe(400);
+    expect((res.jsonBody as { code: string }).code).toBe('INVALID_JSON');
   });
 });

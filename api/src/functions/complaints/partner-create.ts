@@ -80,9 +80,8 @@ export async function partnerCreateComplaintHandler(
 
   await createComplaint(doc);
 
-  Promise.resolve(
-    sendOwnerComplaintFiled({ bookingId: data.bookingId, filedBy, reasonCode: data.reasonCode }),
-  ).catch((err: unknown) => ctx.error('sendOwnerComplaintFiled failed', err));
+  sendOwnerComplaintFiled({ bookingId: data.bookingId, filedBy, reasonCode: data.reasonCode })
+    .catch((err: unknown) => ctx.error('sendOwnerComplaintFiled failed', err));
 
   return { status: 201, jsonBody: doc };
 }
