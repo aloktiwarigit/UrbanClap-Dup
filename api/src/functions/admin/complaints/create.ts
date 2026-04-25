@@ -34,6 +34,7 @@ export async function adminCreateComplaintHandler(
     customerId: parsed.data.customerId,
     technicianId: parsed.data.technicianId,
     description: parsed.data.description,
+    type: 'STANDARD',
     status: 'NEW',
     internalNotes: [],
     slaDeadlineAt: slaDeadlineAt.toISOString(),
