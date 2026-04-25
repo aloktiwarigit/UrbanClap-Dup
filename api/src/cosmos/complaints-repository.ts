@@ -162,7 +162,8 @@ export async function findActiveComplaintByBookingAndParty(
     query: `SELECT TOP 1 * FROM c WHERE c.orderId = @bookingId
             AND IS_DEFINED(c.filedBy)
             AND (c.customerId = @uid OR c.technicianId = @uid)
-            AND c.status != @resolved`,
+            AND c.status != @resolved
+            ORDER BY c.createdAt DESC`,
     parameters: [
       { name: '@bookingId', value: bookingId },
       { name: '@uid', value: uid },
@@ -198,7 +199,7 @@ export async function queryComplaintsByBookingAndParty(
   return resources.map(r => ComplaintDocSchema.parse(r));
 }
 
-export async function getAcknowledgePastDueComplaints(): Promise<Array<{ doc: ComplaintDoc; etag: string }>> {
+export async function getUnacknowledgedPastDueComplaints(): Promise<Array<{ doc: ComplaintDoc; etag: string }>> {
   const now = new Date().toISOString();
   const query: SqlQuerySpec = {
     query: `SELECT * FROM c WHERE IS_DEFINED(c.acknowledgeDeadlineAt)
