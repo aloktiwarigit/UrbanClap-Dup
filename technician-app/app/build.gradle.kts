@@ -267,6 +267,27 @@ kover {
                     "*.JobPhotoRepositoryImpl\$*",
                     // Photo DI module — @Provides methods are framework wiring
                     "*.data.photo.di.*",
+                    // RatingScreen generates Compose *Kt wrapper classes — same rationale as
+                    // AuthScreenKt / KycScreenKt / JobOfferScreenKt / ActiveJobScreenKt: framework
+                    // recomposition guards only exercisable via Paparazzi / instrumented tests.
+                    "*.RatingScreenKt",
+                    "*.RatingScreenKt\$*",
+                    // Rating Hilt DI module (RatingModule) — @Provides for AuthOkHttpClient + Retrofit
+                    // construction, same rationale as data.auth.di.* / data.activeJob.di.* /
+                    // data.jobOffer.di.* / data.photo.di.*.
+                    "*.data.rating.di.*",
+                    // RatingApiService is an internal Retrofit interface — methods invoked by
+                    // Retrofit runtime, not unit-testable directly.
+                    "*.RatingApiService",
+                    "*.RatingApiService\$*",
+                    // RatingPromptEventBus wraps MutableSharedFlow.tryEmit() — only observable
+                    // in a running coroutine collector (integration-level), same rationale as
+                    // customer-app's PriceApprovalEventBus / TrackingEventBus exclusion.
+                    "*.RatingPromptEventBus",
+                    "*.RatingPromptEventBus\$*",
+                    // RatingUiState sealed class — data holders, no logic branches.
+                    "*.RatingUiState",
+                    "*.RatingUiState\$*",
                 )
             }
         }
