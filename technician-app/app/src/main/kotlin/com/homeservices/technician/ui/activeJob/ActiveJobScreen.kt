@@ -74,6 +74,12 @@ internal fun ActiveJobScreenContent(
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Text("Job Complete!", style = MaterialTheme.typography.headlineSmall)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    androidx.compose.material3.OutlinedButton(
+                        onClick = { onFileComplaint(uiState.bookingId) },
+                    ) {
+                        Text("समस्या रिपोर्ट करें")
+                    }
                 }
             is ActiveJobUiState.Error ->
                 Column(
