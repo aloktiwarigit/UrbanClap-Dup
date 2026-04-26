@@ -99,6 +99,19 @@ describe('detectNoShows', () => {
     expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
   });
 
+  it('allows recovery when fresh re-read shows NO_SHOW_REDISPATCH (prior run wrote status but crashed before redispatch)', async () => {
+    const booking = makeAssignedBooking('bk-recovery-status', 45);
+    vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([booking]);
+    // Fresh re-read returns NO_SHOW_REDISPATCH — prior run set status but crashed before redispatch
+    vi.mocked(bookingRepo.getById).mockResolvedValue({ status: 'NO_SHOW_REDISPATCH' } as BookingDoc);
+    vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(false);
+
+    await detectNoShows(mockCtx);
+
+    // Recovery should proceed to status write and redispatch
+    expect(dispatcherService.redispatch).toHaveBeenCalled();
+  });
+
   it('processes booking 45 minutes past slot start: writes credit, updates status+noShowRedispatchAt, redispatches, sends FCM', async () => {
     const booking = makeAssignedBooking('bk-due', 45);
     vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([booking]);
@@ -119,7 +132,7 @@ describe('detectNoShows', () => {
       'bk-due',
       expect.objectContaining({ noShowRedispatchAt: expect.any(String) }),
     );
-    expect(dispatcherService.redispatch).toHaveBeenCalledWith('bk-due', 15);
+    expect(dispatcherService.redispatch).toHaveBeenCalledWith('bk-due', 15, undefined);
     // FCM fires because creditCreated=true (this run issued the credit)
     expect(fcmService.sendNoShowCreditPush).toHaveBeenCalledWith(booking.customerId, 'bk-due', 50_000);
   });
@@ -134,7 +147,7 @@ describe('detectNoShows', () => {
     await detectNoShows(mockCtx);
 
     expect(updateBookingFields).toHaveBeenCalledWith('bk-dup', { status: 'NO_SHOW_REDISPATCH', technicianId: undefined });
-    expect(dispatcherService.redispatch).toHaveBeenCalledWith('bk-dup', 15);
+    expect(dispatcherService.redispatch).toHaveBeenCalledWith('bk-dup', 15, undefined);
     // FCM must NOT fire in recovery path — creditCreated=false means prior run already sent it
     expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
   });
@@ -260,6 +273,6 @@ describe('detectNoShows', () => {
     expect(updateBookingFields).toHaveBeenCalledTimes(2);
     expect(updateBookingFields).toHaveBeenCalledWith('bk-2', { status: 'NO_SHOW_REDISPATCH', technicianId: undefined });
     expect(updateBookingFields).toHaveBeenCalledWith('bk-2', expect.objectContaining({ noShowRedispatchAt: expect.any(String) }));
-    expect(dispatcherService.redispatch).toHaveBeenCalledWith('bk-2', 15);
+    expect(dispatcherService.redispatch).toHaveBeenCalledWith('bk-2', 15, undefined);
   });
 });

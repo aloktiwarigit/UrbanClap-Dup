@@ -43,9 +43,11 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
     // Guard against stale ASSIGNED snapshot: re-read the booking immediately before the
     // credit write. If the technician marked it IN_PROGRESS or REACHED after the query
     // returned, skip to avoid issuing a wrong credit against a live booking.
+    // Also allow NO_SHOW_REDISPATCH — the query intentionally includes that status so that
+    // a prior run that wrote credit + status but crashed before redispatch can recover.
     const freshBooking = await bookingRepo.getById(booking.id);
-    if (!freshBooking || freshBooking.status !== 'ASSIGNED') {
-      ctx.log(`detectNoShows: skipping ${booking.id} — live status is ${freshBooking?.status ?? 'NOT_FOUND'}, not ASSIGNED`);
+    if (!freshBooking || (freshBooking.status !== 'ASSIGNED' && freshBooking.status !== 'NO_SHOW_REDISPATCH')) {
+      ctx.log(`detectNoShows: skipping ${booking.id} — live status is ${freshBooking?.status ?? 'NOT_FOUND'}`);
       continue;
     }
 
@@ -119,7 +121,9 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
     let redispatchOk = false;
     if (statusWriteOk) {
       try {
-        redispatchOk = await dispatcherService.redispatch(booking.id, NO_SHOW_REDISPATCH_RADIUS_KM);
+        // Pass booking.technicianId explicitly so the exclusion filter survives even if
+        // the booking doc was already updated (technicianId cleared) before redispatch reads it.
+        redispatchOk = await dispatcherService.redispatch(booking.id, NO_SHOW_REDISPATCH_RADIUS_KM, booking.technicianId);
         if (redispatchOk) {
           // Stamp the completed-redispatch flag after confirmed offers-sent.
           await updateBookingFields(booking.id, { noShowRedispatchAt: new Date().toISOString() });

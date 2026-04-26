@@ -105,10 +105,19 @@ export const dispatcherService = {
     await dispatchBookingToTechs(bookingId, booking, DISPATCH_RADIUS_KM);
   },
 
-  /** Returns true if offers were actually sent to at least one technician. */
-  async redispatch(bookingId: string, radiusKm: number): Promise<boolean> {
+  /**
+   * Returns true if offers were actually sent to at least one technician.
+   * @param excludeTechnicianId — the no-show technician's id, passed explicitly so that
+   *   the filter is not lost if the booking doc is updated before this call reads it.
+   */
+  async redispatch(bookingId: string, radiusKm: number, excludeTechnicianId?: string): Promise<boolean> {
     const booking = await bookingRepo.getById(bookingId);
     if (!booking || booking.status !== 'NO_SHOW_REDISPATCH') return false;
-    return dispatchBookingToTechs(bookingId, booking, radiusKm);
+    // Merge the caller-supplied exclusion so redispatch works even when technicianId was
+    // already cleared from the booking document by the status-write step.
+    const bookingForDispatch = excludeTechnicianId
+      ? { ...booking, technicianId: excludeTechnicianId }
+      : booking;
+    return dispatchBookingToTechs(bookingId, bookingForDispatch, radiusKm);
   },
 };
