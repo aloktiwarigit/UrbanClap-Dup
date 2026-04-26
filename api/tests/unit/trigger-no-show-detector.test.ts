@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { InvocationContext } from '@azure/functions';
 
 vi.mock('../../src/cosmos/booking-repository.js', () => ({
-  bookingRepo: { getAssignedBookingsBefore: vi.fn() },
+  bookingRepo: { getAssignedBookingsBefore: vi.fn(), getById: vi.fn() },
   updateBookingFields: vi.fn(),
 }));
 vi.mock('../../src/cosmos/customer-credit-repository.js', () => ({
@@ -59,6 +59,8 @@ beforeEach(() => {
   vi.mocked(mockCtx.log).mockClear();
   vi.resetAllMocks();
   vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([]);
+  // Default: getById returns a booking still in NO_SHOW_REDISPATCH (redispatch allowed)
+  vi.mocked(bookingRepo.getById).mockResolvedValue({ status: 'NO_SHOW_REDISPATCH' } as BookingDoc);
   vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(true);
   vi.mocked(updateBookingFields).mockResolvedValue(null);
   vi.mocked(dispatcherService.redispatch).mockResolvedValue(undefined);
@@ -102,17 +104,34 @@ describe('detectNoShows', () => {
     expect(fcmService.sendNoShowCreditPush).toHaveBeenCalledWith(booking.customerId, 'bk-due', 50_000);
   });
 
-  it('continues with status update and redispatch when createCreditIfAbsent returns false (concurrent-run recovery)', async () => {
+  it('continues with status update and redispatch (but NOT FCM) when createCreditIfAbsent returns false (concurrent-run recovery)', async () => {
     const booking = makeAssignedBooking('bk-dup', 45);
     vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([booking]);
     vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(false);
+    // Prior run left booking in NO_SHOW_REDISPATCH — redispatch is still needed
+    vi.mocked(bookingRepo.getById).mockResolvedValue({ status: 'NO_SHOW_REDISPATCH' } as BookingDoc);
 
     await detectNoShows(mockCtx);
 
-    // Downstream steps still run — prior run may have failed mid-way
+    // Status update and redispatch still run — prior run may have failed mid-way
     expect(updateBookingFields).toHaveBeenCalledWith('bk-dup', { status: 'NO_SHOW_REDISPATCH' });
     expect(dispatcherService.redispatch).toHaveBeenCalledWith('bk-dup', 15);
-    expect(fcmService.sendNoShowCreditPush).toHaveBeenCalledWith(booking.customerId, 'bk-dup', 50_000);
+    // FCM is NOT idempotent — must NOT fire when this run did not create the credit
+    expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
+  });
+
+  it('skips redispatch when booking has already advanced past NO_SHOW_REDISPATCH (prior run completed)', async () => {
+    const booking = makeAssignedBooking('bk-already-done', 45);
+    vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([booking]);
+    vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(false);
+    // Prior run succeeded — booking is already SEARCHING or ASSIGNED
+    vi.mocked(bookingRepo.getById).mockResolvedValue({ status: 'SEARCHING' } as BookingDoc);
+
+    await detectNoShows(mockCtx);
+
+    expect(updateBookingFields).toHaveBeenCalledWith('bk-already-done', { status: 'NO_SHOW_REDISPATCH' });
+    expect(dispatcherService.redispatch).not.toHaveBeenCalled();
+    expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
   });
 
   it('skips booking entirely when createCreditIfAbsent throws (cannot determine credit state)', async () => {

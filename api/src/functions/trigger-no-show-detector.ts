@@ -73,18 +73,28 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
       ctx.log(`detectNoShows: status update failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);
     }
 
-    try {
-      await dispatcherService.redispatch(booking.id, NO_SHOW_REDISPATCH_RADIUS_KM);
-    } catch (err: unknown) {
-      Sentry.captureException(err);
-      ctx.log(`detectNoShows: redispatch failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);
+    // Re-fetch to check current status before redispatch — a prior timer run may have already
+    // advanced the booking to SEARCHING or ASSIGNED, in which case redispatch must not fire again.
+    const currentBooking = await bookingRepo.getById(booking.id);
+    if (currentBooking?.status === 'NO_SHOW_REDISPATCH') {
+      try {
+        await dispatcherService.redispatch(booking.id, NO_SHOW_REDISPATCH_RADIUS_KM);
+      } catch (err: unknown) {
+        Sentry.captureException(err);
+        ctx.log(`detectNoShows: redispatch failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    } else {
+      ctx.log(`detectNoShows: redispatch skipped for ${booking.id} — current status=${currentBooking?.status ?? 'unknown'}`);
     }
 
-    try {
-      await sendNoShowCreditPush(booking.customerId, booking.id, NO_SHOW_CREDIT_PAISE);
-    } catch (err: unknown) {
-      Sentry.captureException(err);
-      ctx.log(`detectNoShows: FCM failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);
+    // FCM push is NOT idempotent — only send when this invocation actually issued the credit.
+    if (creditCreated) {
+      try {
+        await sendNoShowCreditPush(booking.customerId, booking.id, NO_SHOW_CREDIT_PAISE);
+      } catch (err: unknown) {
+        Sentry.captureException(err);
+        ctx.log(`detectNoShows: FCM failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);
+      }
     }
   }
 }
