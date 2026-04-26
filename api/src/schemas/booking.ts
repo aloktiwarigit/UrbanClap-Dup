@@ -4,7 +4,7 @@ import { PendingAddOnSchema } from './addon-approval.js';
 const BOOKING_STATUSES = [
   'PENDING_PAYMENT', 'SEARCHING', 'ASSIGNED', 'EN_ROUTE',
   'REACHED', 'IN_PROGRESS', 'AWAITING_PRICE_APPROVAL', 'COMPLETED', 'PAID', 'CLOSED',
-  'UNFULFILLED', 'CUSTOMER_CANCELLED',
+  'UNFULFILLED', 'CUSTOMER_CANCELLED', 'NO_SHOW_REDISPATCH',
 ] as const;
 
 export const LatLngSchema = z.object({ lat: z.number(), lng: z.number() });
@@ -33,6 +33,14 @@ export const BookingDocSchema = z.object({
   pendingAddOns: z.array(PendingAddOnSchema).optional(),
   approvedAddOns: z.array(PendingAddOnSchema).optional(),
   finalAmount: z.number().int().positive().optional(),
+  /** ISO timestamp written atomically after redispatch offers are sent successfully. */
+  noShowRedispatchAt: z.string().optional(),
+  /** The technician who no-showed. Preserved separately so the exclusion filter works across timer recovery runs even after technicianId is cleared. */
+  noShowTechnicianId: z.string().optional(),
+  /** ISO timestamp written after the NO_SHOW_CREDIT_ISSUED FCM push is sent successfully. Prevents duplicate pushes across recovery runs. */
+  noShowPushSentAt: z.string().optional(),
+  /** ISO timestamp written when customer triggers Safety SOS. Used as idempotency key — second call returns 200 without re-alerting. */
+  sosActivatedAt: z.string().optional(),
 });
 
 export const CreateBookingRequestSchema = z.object({

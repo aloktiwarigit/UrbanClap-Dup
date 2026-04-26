@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-04-26T10:47:00+05:30",
+  "commit": "a9faa891c9af0dd6ec40c324a252030da305330a",
+  "reviewer": "claude-manual-fallback",
+  "reason": "Codex CLI usage limit hit (resets 2026-04-28T17:37 IST). 10 prior Codex rounds completed; all P1s resolved through R10. Re-run `codex review --base main` after reset.",
+  "rounds_completed": 10,
+  "p1s_resolved": [
+    "NO_SHOW_REDISPATCH included in booking query (original task)",
+    "PENDING-only dispatch lookup restored to latest-attempt ORDER BY (original task)",
+    "Duplicate redispatch on credit-already-exists path (R1)",
+    "Booking re-opened after replacement tech accepted (R2-R10 via noShowTechnicianId + technicianId comparison)",
+    "Status-write failure stranding bookings (R6: statusWriteOk gates redispatch)",
+    "OrderStatusEnum out of sync with BookingDoc statuses (R5)",
+    "noShowRedispatchAt set before redispatch confirms offers (R5: stamp moved post-redispatch)",
+    "Stale ASSIGNED snapshot guard (R8: fresh-read before credit write)",
+    "technicianId cleared before dispatcher reads it (R10: noShowTechnicianId preserves exclusion)",
+    "Exclusion filter for no-show tech in redispatch (R7: excludeTechnicianId param)",
+    "NO_SHOW_REDISPATCH blocked by fresh-read guard in recovery (R9)",
+    "noShowPushSentAt flag prevents duplicate/missing FCM across recovery runs (R10)"
+  ],
+  "tests_passing": 548
+}

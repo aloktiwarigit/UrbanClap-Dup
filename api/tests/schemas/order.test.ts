@@ -4,9 +4,12 @@ import {
 } from '../../src/schemas/order.js';
 
 describe('OrderStatusEnum', () => {
-  it('accepts all 8 valid statuses', () => {
-    ['SEARCHING','ASSIGNED','EN_ROUTE','REACHED','IN_PROGRESS','COMPLETED','CANCELLED','PAID']
-      .forEach(s => expect(OrderStatusEnum.parse(s)).toBe(s));
+  it('accepts all booking lifecycle statuses (including no-show and cancellation states)', () => {
+    [
+      'PENDING_PAYMENT', 'SEARCHING', 'ASSIGNED', 'EN_ROUTE', 'REACHED',
+      'IN_PROGRESS', 'AWAITING_PRICE_APPROVAL', 'COMPLETED', 'PAID', 'CLOSED',
+      'UNFULFILLED', 'CUSTOMER_CANCELLED', 'NO_SHOW_REDISPATCH', 'CANCELLED',
+    ].forEach(s => expect(OrderStatusEnum.parse(s)).toBe(s));
   });
   it('rejects unknown status', () => {
     expect(() => OrderStatusEnum.parse('UNKNOWN')).toThrow();

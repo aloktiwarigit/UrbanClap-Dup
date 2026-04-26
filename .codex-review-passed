@@ -1,1 +1,1 @@
-{"timestamp":"2026-04-25T12:46:08-04:00","commit":"9daa85dc91bde194fbc2fc8411f79da7e028b9cc","reviewer":"codex","rounds":8,"notes":"Remaining P1s in technician-app/FcmTopicSubscriber+AppNavigation are pre-existing E07-S01b code — no technician-app changes in E07-S02"}
+{"timestamp":"2026-04-26T00:04:52-04:00","commit":"243fa8f8f0653f31e533c67802dff24c9507d536","reviewer":"codex","model":"gpt-5.4","findings":"2xP1 resolved: status-before-credit ordering + customer_credits container provisioned"}

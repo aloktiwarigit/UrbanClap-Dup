@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Home Heroo — कार्यात्मक विवरण</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Devanagari:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+
+/* ── Variables ─────────────────────────────────────────── */
+:root {
+  --saffron:      #D4601A;
+  --saffron-lt:   #F09050;
+  --saffron-pale: #FBF0E8;
+  --navy:         #12243E;
+  --navy-lt:      #1E3A5F;
+  --ink:          #1A1208;
+  --ink-mid:      #3D2F20;
+  --ink-muted:    #7A6655;
+  --cream:        #F8F3EC;
+  --cream-lt:     #FDFAF6;
+  --white:        #FFFFFF;
+  --line:         #E5D8C8;
+  --card-bg:      #FDFAF6;
+  --gold:         #C4923A;
+}
+
+/* ── Reset ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: 'Noto Serif Devanagari', serif;
+  background: var(--cream);
+  color: var(--ink);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* ── Print setup ───────────────────────────────────────── */
+@page {
+  size: A4;
+  margin: 0;
+}
+@media print {
+  body { background: white; }
+  .page { page-break-after: always; box-shadow: none !important; }
+  .page:last-child { page-break-after: auto; }
+  .no-break { break-inside: avoid; }
+}
+
+/* ── Page wrapper ──────────────────────────────────────── */
+.page {
+  width: 210mm;
+  min-height: 297mm;
+  background: var(--white);
+  margin: 0 auto 24px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 40px rgba(0,0,0,.12);
+}
+@media (max-width: 900px) {
+  .page { width: 100%; min-height: auto; margin: 0 0 16px; }
+}
+
+/* ═══════════════════════════════════════════════════════ */
+/*  COVER PAGE                                            */
+/* ═══════════════════════════════════════════════════════ */
+.cover {
+  background: var(--navy);
+  min-height: 297mm;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* geometric background shapes */
+.cover::before {
+  content: '';
+  position: absolute;
+  top: -80px; right: -80px;
+  width: 420px; height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(212,96,26,.18) 0%, transparent 70%);
+  pointer-events: none;
+}
+.cover::after {
+  content: '';
+  position: absolute;
+  bottom: -60px; left: -60px;
+  width: 340px; height: 340px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(196,146,58,.14) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* diagonal saffron band */
+.cover-band {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 6px;
+  background: linear-gradient(90deg, var(--saffron) 0%, var(--saffron-lt) 60%, var(--gold) 100%);
+}
+
+.cover-inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  min-height: 297mm;
+  padding: 52px 44px 40px;
+}
+
+/* brand mark */
+.brand-mark {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: auto;
+}
+.brand-icon {
+  width: 44px; height: 44px;
+  border: 2px solid var(--saffron);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  color: var(--saffron);
+  flex-shrink: 0;
+}
+.brand-name {
+  font-family: 'Noto Sans Devanagari', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255,255,255,.55);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* cover title area */
+.cover-title-area {
+  margin-top: 60px;
+  margin-bottom: 48px;
+}
+
+.cover-eyebrow {
+  font-family: 'Noto Sans Devanagari', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--saffron-lt);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cover-eyebrow::before {
+  content: '';
+  display: inline-block;
+  width: 28px; height: 1px;
+  background: var(--saffron);
+}
+
+.cover-h1 {
+  font-size: 56px;
+  font-weight: 700;
+  color: var(--white);
+  line-height: 1.15;
+  margin-bottom: 18px;
+  letter-spacing: -0.01em;
+}
+
+.cover-h1 span {
+  color: var(--saffron-lt);
+}
+
+.cover-subtitle {
+  font-family: 'Noto Sans Devanagari', sans-serif;
+  font-size: 17px;
+  font-weight: 400;
+  color: rgba(255,255,255,.65);
+  line-height: 1.6;
+  max-width: 340px;
+}
+
+/* divider line */
+.cover-divider {
+  width: 56px; height: 3px;
+  background: linear-gradient(90deg, var(--saffron), var(--gold));
+  border-radius: 2px;
+  margin: 32px 0;
+}
+
+/* three apps */
+.cover-apps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 48px;
+}
+.cover-app {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 10px;
+  border-left: 3px solid var(--saffron);
+}
+.cover-app-icon {
+  font-size: 20px;
+  width: 32px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.cover-app-label {
+  font-family: 'Noto Sans Devanagari', sans-serif;
+  font-size: 13px;
+  color: rgba(255,255,255,.85);
+  font-weight: 500;
+}
+.cover-app-sub {
+  font-size: 11px;
+  color: rgba(255,255,255,.4);
+  margin-top: 2px;
+  font-family: 'Noto Sans Devanagari', sans-serif;
+}
+
+/* cover footer */
+.cover-footer {
+  margin-top: auto;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255,255,255,.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.cover-footer-text {
+  font-family: 'Noto Sans Devanagari', sans-serif;
+  font-size: 11px;
+  color: rgba(255,255,255,.3);
+}
+
+/* ═══════════════════════════════════════════════════════ */
+/*  CONTENT PAGES                                         */
+/* ═══════════════════════════════════════════════════════ */
+.content-page {
+  background: var(--white);
+  padding: 0;
+}
+
+/* section header strip */
+.sec-header {
+  background: var(--navy);
+  padding: 28px 40px 24px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  position: relative;
+  overflow: hidden;
+}
+.sec-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--saffron) 0%, var(--gold) 100%);
+}
+.sec-num {
+  font-size: 42px;
+  font-weight: 700;
+  color: rgba(255,255,255,.1);
+  line-height: 1;
+  font-family: 'Noto Sans Devanagari', sans-serif;
+  flex-shrink: 0;
+  min-width: 52px;
+}
+.sec-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--white);
+  line-height: 1.3;
+}
+.sec-emoji {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+/* page body */
+.page-body {
+  padding: 32px 40px 36px;
+}
+
+/* intro text */
+.intro-text {
+  font-size: 14px;
+  line-height: 1.9;
+  color: var(--ink-mid);
+  margin-bottom: 28px;
+  font-family: 'Noto Sans Devanagari', sans-serif;
+}
+
+/* three-app overview cards */
+.app-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.app-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  border-left: 4px solid var(--saffron);
+}
+.app-card-icon { font-size: 24px; flex-shrink: 0; }
+.app-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 3px;
+  font-family: 'Noto Sans Devanagari', sans-serif;
+}
+.app-card-desc {
+  font-size: 12px;
+  color: var(--ink-muted);
+  font-family: 'Noto Sans Devanagari', sans-serif;
+}
+
+/* step cards */
+.steps { display: flex; flex-direction: column; gap: 14px; }
+.step {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 16px 18px;
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  break-inside: avoid;
+}
+.step-num {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--saffron);
+  color: var(--white);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+  font-family: 'Noto Sans Devanagari', sans-serif;
+}
+.step-body {}
+.step-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 5px;
+  font-family: 'Noto Sans Devanagari', sans-serif;
+}
+.step-desc {
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: var(--ink-mid);
+  font-family: 'Noto Sans Devanagari', sans-serif;
+}
+
+/* bullet list inside steps */
+.step-bullets {
+  margin-top: 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.step-bullet {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink-mid);
+  font-family: 'Noto Sans Devanagari', sans-serif;
+  line-height: 1.6;
+}
+.step-bullet::before {
+  content: '◆';
+  color: var(--saffron);
+  font-size: 8px;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+/* highlight note */
+.note {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--saffron-pale);
+  border-left: 3px solid var(--saffron);
+  border-radius: 0 8px 8px 0;
+  margin-top: 6px;
+  break-inside: avoid;
+}
+.note-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.note-text {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--ink-mid);
+  font-family: 'Noto Sans Devanagari', sans-serif;
+}
+
+/* feature grid (2-col) */
+.feature-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.feature-card {
+  padding: 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  break-inside: avoid;
+}
+.feature-card-icon { font-size: 22px; margin-bottom: 8px; display: block; }
+.feature-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 5px;
+  font-family: 'Noto Sans Devanagari', sans-serif;
+}
+.feature-card-desc {
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--ink-muted);
+  font-family: 'Noto Sans Devanagari', sans-serif;
+}
+
+/* differentiator table */
+.diff-section { margin-bottom: 20px; break-inside: avoid; }
+.diff-party {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.diff-party-badge {
+  padding: 4px 12px;
+  background: var(--navy);
+  color: var(--white);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Noto Sans Devanagari', sans-serif;
+}
+.diff-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.diff-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 12.5px;
+  color: var(--ink-mid);
+  font-family: 'Noto Sans Devanagari', sans-serif;
+  line-height: 1.6;
+}
+.diff-item-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--saffron);
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+/* flow steps (numbered list with arrows) */
+.flow-steps { display: flex; flex-direction: column; gap: 0; }
+.flow-step {
+  display: flex;
+  gap: 0;
+  align-items: stretch;
+  break-inside: avoid;
+}
+.flow-step-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 44px;
+  flex-shrink: 0;
+}
+.flow-circle {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--saffron);
+  color: var(--white);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+  font-family: 'Noto Sans Devanagari', sans-serif;
+  z-index: 1;
+}
+.flow-line {
+  width: 2px;
+  flex: 1;
+  background: var(--line);
+  margin: 4px 0;
+}
+.flow-step:last-child .flow-line { display: none; }
+.flow-content {
+  padding: 0 0 18px 16px;
+  flex: 1;
+}
+.flow-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 3px;
+  padding-top: 6px;
+  font-family: 'Noto Sans Devanagari', sans-serif;
+}
+.flow-desc {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--ink-muted);
+  font-family: 'Noto Sans Devanagari', sans-serif;
+}
+
+/* section internal heading */
+.sub-heading {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--saffron);
+  font-family: 'Noto Sans Devanagari', sans-serif;
+  margin: 18px 0 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sub-heading::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* page footer */
+.page-footer {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  padding: 10px 40px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--white);
+}
+.page-footer-brand {
+  font-size: 10px;
+  color: var(--ink-muted);
+  font-family: 'Noto Sans Devanagari', sans-serif;
+}
+.page-footer-num {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--saffron);
+  font-family: 'Noto Sans Devanagari', sans-serif;
+}
+
+/* spacer for footer */
+.page-footer-spacer { height: 40px; }
+
+/* ── utility ──────────────────────────────────────────── */
+.mt8  { margin-top: 8px; }
+.mt16 { margin-top: 16px; }
+.mt24 { margin-top: 24px; }
+.mb8  { margin-bottom: 8px; }
+.mb16 { margin-bottom: 16px; }
+.bold { font-weight: 600; }
+
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!--  PAGE 1 — COVER                                       -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="cover">
+    <div class="cover-band"></div>
+    <div class="cover-inner">
+
+      <div class="brand-mark">
+        <div class="brand-icon">🏠</div>
+        <div class="brand-name">Home Heroo</div>
+      </div>
+
+      <div class="cover-title-area">
+        <div class="cover-eyebrow">कार्यात्मक विवरण — संपूर्ण दस्तावेज़</div>
+        <h1 class="cover-h1">Home<br><span>Heroo</span></h1>
+        <p class="cover-subtitle">ग्राहक, तकनीशियन और व्यवसाय मालिक — तीनों के लिए यह कैसे काम करता है</p>
+        <div class="cover-divider"></div>
+      </div>
+
+      <div class="cover-apps">
+        <div class="cover-app">
+          <div class="cover-app-icon">📱</div>
+          <div>
+            <div class="cover-app-label">ग्राहक ऐप</div>
+            <div class="cover-app-sub">Android · सेवा बुक करने के लिए</div>
+          </div>
+        </div>
+        <div class="cover-app">
+          <div class="cover-app-icon">🔧</div>
+          <div>
+            <div class="cover-app-label">तकनीशियन ऐप</div>
+            <div class="cover-app-sub">Android · काम लेने और करने के लिए</div>
+          </div>
+        </div>
+        <div class="cover-app">
+          <div class="cover-app-icon">💻</div>
+          <div>
+            <div class="cover-app-label">मालिक डैशबोर्ड</div>
+            <div class="cover-app-sub">Web · पूरा व्यवसाय चलाने के लिए</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cover-footer">
+        <div class="cover-footer-text">MVP — Phase 1 · Ayodhya, UP Pilot</div>
+        <div class="cover-footer-text">5 Categories · Ayodhya, UP · 2026</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════ -->
+<<!-- PAGE 2 - THREE PROMISES -->
+<div class="page content-page">
+  <div class="sec-header">
+    <div class="sec-num">01</div>
+    <div><div class="sec-title">Home Heroo क्या देता है?</div></div>
+    <div class="sec-emoji" style="margin-left:auto">🏠</div>
+  </div>
+  <div class="page-body">
+    <p class="intro-text">तीन लोगों के लिए तीन अलग-अलग apps — सब एक-दूसरे से जुड़े हैं। ग्राहक बुकिंग करे, तकनीशियन को तुरंत पता चले, मालिक सब देखे।</p>
+
+    <div class="sub-heading">ग्राहक को क्या मिलेगा</div>
+    <div class="app-cards">
+      <div class="app-card"><div class="app-card-icon">✅</div><div><div class="app-card-title">Verified तकनीशियन — समय पर</div><div class="app-card-desc">बुकिंग से पहले tech की पूरी जानकारी — नाम, फोटो, rating, पिछले काम</div></div></div>
+      <div class="app-card"><div class="app-card-icon">💰</div><div><div class="app-card-title">Fixed Price — कोई surprise नहीं</div><div class="app-card-desc">जो price दिखे वही लगे। Add-on हो तो पहले आपकी मंज़ूरी — बिना मंज़ूरी एक रुपया नहीं</div></div></div>
+      <div class="app-card"><div class="app-card-icon">📱</div><div><div class="app-card-title">3 tap में Booking + Online Payment</div><div class="app-card-desc">UPI / Card — जो चाहें। पूरा process 2 मिनट से कम</div></div></div>
+      <div class="app-card"><div class="app-card-icon">📸</div><div><div class="app-card-title">काम की Photos — step by step</div><div class="app-card-desc">Tech काम के दौरान photos भेजता रहता है — ग्राहक घर पर नहीं तो भी देख सकता है</div></div></div>
+      <div class="app-card"><div class="app-card-icon">💬</div><div><div class="app-card-title">कोई दिक्कत हो — तुरंत complaint</div><div class="app-card-desc">App से शिकायत दर्ज करें। 24 घंटे में जवाब</div></div></div>
+    </div>
+
+    <div class="sub-heading">तकनीशियन को क्या मिलेगा</div>
+    <div class="app-cards">
+      <div class="app-card"><div class="app-card-icon">📲</div><div><div class="app-card-title">Job Offer — सारी जानकारी पहले</div><div class="app-card-desc">काम कहाँ है, कितना मिलेगा — accept करने से पहले सब पता</div></div></div>
+      <div class="app-card"><div class="app-card-icon">🗺️</div><div><div class="app-card-title">Navigation — सीधे ग्राहक के घर</div><div class="app-card-desc">Accept करते ही रास्ता मिल जाता है</div></div></div>
+      <div class="app-card"><div class="app-card-icon">🏦</div><div><div class="app-card-title">हर हफ्ते Payment — सीधे bank में</div><div class="app-card-desc">काम हुआ, हफ्ते में पैसे bank account में। कोई झंझट नहीं</div></div></div>
+    </div>
+
+    <div class="sub-heading">मालिक को क्या मिलेगा</div>
+    <div class="app-cards">
+      <div class="app-card"><div class="app-card-icon">📋</div><div><div class="app-card-title">सभी Bookings एक screen पर</div><div class="app-card-desc">कौन-सी booking चल रही है, कौन-सी पूरी हुई — सब live दिखता है</div></div></div>
+      <div class="app-card"><div class="app-card-icon">💵</div><div><div class="app-card-title">Payment Automatic — manually कुछ नहीं</div><div class="app-card-desc">ग्राहक pay करे — commission अलग, tech को बाकी — सब automatic</div></div></div>
+      <div class="app-card"><div class="app-card-icon">📊</div><div><div class="app-card-title">पूरा हिसाब — आज, हफ्ते, महीने का</div><div class="app-card-desc">कितनी bookings, कितनी कमाई, कौन-से tech ने क्या किया — एक नज़र में</div></div></div>
+    </div>
+
+    <div class="page-footer-spacer"></div>
+  </div>
+  <div class="page-footer">
+    <div class="page-footer-brand">Home Heroo — कार्यात्मक विवरण</div>
+    <div class="page-footer-num">02</div>
+  </div>
+</div>
+
+
+<!-- PAGE 8 - END-TO-END FLOW -->!--  PAGE 8 — END-TO-END FLOW                             -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="page content-page">
+  <div class="sec-header">
+    <div class="sec-num">02</div>
+    <div>
+      <div class="sec-title">एक Booking का पूरा Flow</div>
+    </div>
+    <div class="sec-emoji" style="margin-left:auto">🔄</div>
+  </div>
+
+  <div class="page-body">
+    <p class="intro-text">शुरू से अंत तक — ग्राहक, तकनीशियन, और मालिक तीनों का अनुभव।</p>
+
+    <div class="flow-steps">
+      <div class="flow-step">
+        <div class="flow-step-left"><div class="flow-circle">1</div><div class="flow-line"></div></div>
+        <div class="flow-content">
+          <div class="flow-title">ग्राहक Login करता है</div>
+          <div class="flow-desc">Truecaller / OTP — एक बार। उसके बाद सीधे ऐप।</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-left"><div class="flow-circle">2</div><div class="flow-line"></div></div>
+        <div class="flow-content">
+          <div class="flow-title">Service → Tech Profile → Booking + Payment</div>
+          <div class="flow-desc">3 tap में। जो price दिखे वही — booking पक्की।</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-left"><div class="flow-circle">3</div><div class="flow-line"></div></div>
+        <div class="flow-content">
+          <div class="flow-title">System nearest Tech को Job Offer भेजता है</div>
+          <div class="flow-desc">नज़दीकी और सबसे suitable तकनीशियन को job offer जाता है।</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-left"><div class="flow-circle">4</div><div class="flow-line"></div></div>
+        <div class="flow-content">
+          <div class="flow-title">Tech Accept करता है → Navigation शुरू</div>
+          <div class="flow-desc">ग्राहक को notification: "Tech निकल पड़े।"</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-left"><div class="flow-circle">5</div><div class="flow-line"></div></div>
+        <div class="flow-content">
+          <div class="flow-title">Live Tracking → "Tech पहुंच गए"</div>
+          <div class="flow-desc">Tech कहाँ है, कब पहुंचेगा — ग्राहक को पूरी जानकारी।</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-left"><div class="flow-circle">6</div><div class="flow-line"></div></div>
+        <div class="flow-content">
+          <div class="flow-title">काम → Photos → Add-on Approval</div>
+          <div class="flow-desc">Guided photos। Add-on हो तो customer मंज़ूरी देता है — mandatory।</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-left"><div class="flow-circle">7</div><div class="flow-line"></div></div>
+        <div class="flow-content">
+          <div class="flow-title">काम पूरा → Payment → Auto-Split</div>
+          <div class="flow-desc">ग्राहक payment करता है — commission मालिक को, बाकी tech के bank में। सब automatic।</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-left"><div class="flow-circle">8</div><div class="flow-line"></div></div>
+        <div class="flow-content">
+          <div class="flow-title">Rating → काम का पूरा record</div>
+          <div class="flow-desc">दोनों एक-दूसरे को rating देते हैं। पूरा record save रहता है।</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-left"><div class="flow-circle">9</div><div class="flow-line"></div></div>
+        <div class="flow-content">
+          <div class="flow-title">मालिक के Dashboard पर सब visible</div>
+          <div class="flow-desc">मालिक के dashboard पर पूरी booking की history — payment से rating तक।</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note mt16 no-break">
+      <div class="note-icon">🚀</div>
+      <div class="note-text">
+        <strong>5 categories:</strong> AC, Plumbing, Electrical, Deep Cleaning, Pest Control।
+        Pilot city: Ayodhya, Uttar Pradesh।
+      </div>
+    </div>
+
+    <div class="page-footer-spacer"></div>
+  </div>
+
+  <div class="page-footer">
+    <div class="page-footer-brand">Home Heroo — कार्यात्मक विवरण</div>
+    <div class="page-footer-num">03</div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -67,6 +67,16 @@ export const bookingRepo = {
     return resources;
   },
 
+  async getAssignedBookingsBefore(slotDateCutoff: string): Promise<BookingDoc[]> {
+    const { resources } = await getBookingsContainer()
+      .items.query<BookingDoc>({
+        query: "SELECT * FROM c WHERE c.status IN ('ASSIGNED', 'NO_SHOW_REDISPATCH') AND c.slotDate <= @slotDate",
+        parameters: [{ name: '@slotDate', value: slotDateCutoff }],
+      })
+      .fetchAll();
+    return resources;
+  },
+
   async requestAddOn(id: string, addOn: PendingAddOn): Promise<BookingDoc | null> {
     const existing = await this.getById(id);
     if (!existing || existing.status !== 'IN_PROGRESS') return null;
@@ -116,6 +126,24 @@ export const bookingRepo = {
       .item(bookingId, bookingId)
       .replace<BookingDoc>(updated, { accessCondition: { type: 'IfMatch', condition: etag ?? '' } });
     return resource ?? null;
+  },
+
+  async markSosActivated(id: string): Promise<BookingDoc | null> {
+    const { resource: existing, etag } = await getBookingsContainer().item(id, id).read<BookingDoc>();
+    if (!existing) return null;
+    if (existing.sosActivatedAt) return existing; // already activated — concurrent request lost the race
+    const updated: BookingDoc = { ...existing, sosActivatedAt: new Date().toISOString() };
+    try {
+      const { resource } = await getBookingsContainer()
+        .item(id, id)
+        .replace<BookingDoc>(updated, { accessCondition: { type: 'IfMatch', condition: etag ?? '' } });
+      return resource ?? null;
+    } catch (e: unknown) {
+      if (typeof e === 'object' && e !== null && 'code' in e && (e as { code: number }).code === 412) {
+        return null; // lost ETag race — caller handles as already-activated
+      }
+      throw e;
+    }
   },
 };
 

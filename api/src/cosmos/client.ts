@@ -48,6 +48,10 @@ export function getRatingsContainer(): Container {
   return getCosmosClient().database(DB_NAME).container('ratings');
 }
 
+export function getCustomerCreditsContainer(): Container {
+  return getCosmosClient().database(DB_NAME).container('customer_credits');
+}
+
 /** Inject a mock CosmosClient in tests. */
 export function _setCosmosClientForTest(mock: CosmosClient): void {
   _client = mock;
