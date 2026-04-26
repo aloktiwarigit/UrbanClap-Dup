@@ -44,7 +44,10 @@ internal fun NavGraphBuilder.homeGraph(navController: NavController) {
                     }
                 }
             }
-            ActiveJobScreen(viewModel = viewModel)
+            ActiveJobScreen(
+                viewModel = viewModel,
+                onFileComplaint = { bookingId -> navController.navigate(ComplaintRoutes.route(bookingId)) },
+            )
         }
         composable(
             route = RatingRoutes.ROUTE,

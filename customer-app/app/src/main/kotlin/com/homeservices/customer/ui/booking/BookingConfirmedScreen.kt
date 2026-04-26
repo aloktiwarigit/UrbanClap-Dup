@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,6 +30,7 @@ internal fun BookingConfirmedScreen(
     bookingId: String,
     onBackToHome: () -> Unit,
     onTrackBooking: (bookingId: String) -> Unit = {},
+    onFileComplaint: (bookingId: String) -> Unit = {},
 ) {
     Column(
         modifier =
@@ -87,6 +89,16 @@ internal fun BookingConfirmedScreen(
                     .height(56.dp),
         ) {
             Text(stringResource(R.string.booking_confirmed_home))
+        }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(
+            onClick = { onFileComplaint(bookingId) },
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+        ) {
+            Text("शिकायत दर्ज करें")
         }
     }
 }

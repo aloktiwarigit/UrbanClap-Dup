@@ -153,6 +153,9 @@ internal fun NavGraphBuilder.mainGraph(navController: NavController) {
                 onTrackBooking = { id ->
                     navController.navigate(BookingRoutes.liveTrackingRoute(id))
                 },
+                onFileComplaint = { id ->
+                    navController.navigate(ComplaintRoutes.route(id))
+                },
             )
         }
 

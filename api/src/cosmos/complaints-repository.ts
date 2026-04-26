@@ -154,7 +154,7 @@ export async function getRepeatOffenders(
     .map(([technicianId, count]) => ({ technicianId, count }));
 }
 
-export async function findActiveComplaintByBookingAndParty(
+export async function findComplaintByBookingAndParty(
   bookingId: string,
   uid: string,
   filedBy: 'CUSTOMER' | 'TECHNICIAN',
@@ -163,13 +163,11 @@ export async function findActiveComplaintByBookingAndParty(
     query: `SELECT TOP 1 * FROM c WHERE c.orderId = @bookingId
             AND c.filedBy = @filedBy
             AND (c.customerId = @uid OR c.technicianId = @uid)
-            AND c.status != @resolved
             ORDER BY c.createdAt DESC`,
     parameters: [
       { name: '@bookingId', value: bookingId },
       { name: '@uid', value: uid },
       { name: '@filedBy', value: filedBy },
-      { name: '@resolved', value: 'RESOLVED' },
     ],
   };
   const { resources } = await getCosmosClient()

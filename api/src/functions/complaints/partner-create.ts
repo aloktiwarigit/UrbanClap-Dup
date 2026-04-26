@@ -4,7 +4,7 @@ import { verifyFirebaseIdToken } from '../../services/firebaseAdmin.js';
 import { bookingRepo } from '../../cosmos/booking-repository.js';
 import {
   createComplaint,
-  findActiveComplaintByBookingAndParty,
+  findComplaintByBookingAndParty,
 } from '../../cosmos/complaints-repository.js';
 import { sendOwnerComplaintFiled } from '../../services/fcm.service.js';
 import {
@@ -56,7 +56,7 @@ export async function partnerCreateComplaintHandler(
     : TechnicianReasonCodeEnum.safeParse(data.reasonCode).success;
   if (!reasonValid) return { status: 400, jsonBody: { code: 'INVALID_REASON_CODE' } };
 
-  const existing = await findActiveComplaintByBookingAndParty(data.bookingId, uid, filedBy);
+  const existing = await findComplaintByBookingAndParty(data.bookingId, uid, filedBy);
   if (existing) return { status: 409, jsonBody: { code: 'COMPLAINT_ALREADY_FILED' } };
 
   const now = new Date();
