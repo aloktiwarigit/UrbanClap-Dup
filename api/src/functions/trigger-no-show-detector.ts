@@ -13,7 +13,9 @@ const NO_SHOW_WINDOW_MS = 30 * 60 * 1_000;
 
 function slotStartUtcMs(slotDate: string, slotWindow: string): number {
   const startTime = slotWindow.split('-')[0]; // '10:00' from '10:00-12:00'
-  return new Date(`${slotDate}T${startTime}:00+05:30`).getTime();
+  const ms = new Date(`${slotDate}T${startTime}:00+05:30`).getTime();
+  if (isNaN(ms)) throw new Error(`invalid slotWindow "${slotWindow}" on slotDate "${slotDate}"`);
+  return ms;
 }
 
 export async function detectNoShows(ctx: InvocationContext): Promise<void> {
@@ -21,11 +23,21 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
   const todayIST = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
   const now = Date.now();
 
+  // Note: bookings with a slotDate > todayIST but a UTC slot start already past 30 min
+  // (i.e., slotWindow starts before 05:30 IST) are excluded by this query. For the
+  // Ayodhya pilot (service hours 08:00–20:00 IST), this edge case does not apply.
   const assignedBookings = await bookingRepo.getAssignedBookingsBefore(todayIST);
   ctx.log(`detectNoShows: ${assignedBookings.length} ASSIGNED bookings on/before ${todayIST}`);
 
   for (const booking of assignedBookings) {
-    const slotStart = slotStartUtcMs(booking.slotDate, booking.slotWindow);
+    let slotStart: number;
+    try {
+      slotStart = slotStartUtcMs(booking.slotDate, booking.slotWindow);
+    } catch (err: unknown) {
+      Sentry.captureException(err);
+      ctx.log(`detectNoShows: invalid slot data for ${booking.id} — skip`);
+      continue;
+    }
     if (now < slotStart + NO_SHOW_WINDOW_MS) continue;
 
     const created = await customerCreditRepo.createCreditIfAbsent({

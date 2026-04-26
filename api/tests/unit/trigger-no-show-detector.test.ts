@@ -56,6 +56,7 @@ function makeAssignedBooking(id: string, minutesAgo: number): BookingDoc {
 }
 
 beforeEach(() => {
+  mockCtx.log.mockClear();  // add this line
   vi.resetAllMocks();
   vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([]);
   vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(true);
@@ -160,5 +161,19 @@ describe('detectNoShows', () => {
     expect(customerCreditRepo.createCreditIfAbsent).not.toHaveBeenCalledWith(
       expect.objectContaining({ id: 'bk-notdue' }),
     );
+  });
+
+  it('aborts processing remaining bookings when createCreditIfAbsent throws (credit-gate invariant)', async () => {
+    const due1 = makeAssignedBooking('bk-1', 45);
+    const due2 = makeAssignedBooking('bk-2', 45);
+    vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([due1, due2]);
+    vi.mocked(customerCreditRepo.createCreditIfAbsent).mockRejectedValue(new Error('cosmos 503'));
+
+    await expect(detectNoShows(mockCtx)).rejects.toThrow('cosmos 503');
+
+    // Credit write failed on bk-1 — no downstream steps for either booking
+    expect(updateBookingFields).not.toHaveBeenCalled();
+    expect(dispatcherService.redispatch).not.toHaveBeenCalled();
+    expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
   });
 });
