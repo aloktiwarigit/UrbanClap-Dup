@@ -56,7 +56,7 @@ function makeAssignedBooking(id: string, minutesAgo: number): BookingDoc {
 }
 
 beforeEach(() => {
-  mockCtx.log.mockClear();  // add this line
+  vi.mocked(mockCtx.log).mockClear();
   vi.resetAllMocks();
   vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([]);
   vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(true);
