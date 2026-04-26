@@ -7,6 +7,10 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT/api"
 
+# Ensure local node_modules/.bin is on PATH (needed when running from git hooks
+# on Windows where the hook environment may not inherit the user's shell PATH).
+export PATH="$PWD/node_modules/.bin:$PATH"
+
 echo "=== Pre-Codex Smoke Gate: api ==="
 
 echo "[1/3] typecheck — catches missing types, broken imports, type errors..."
