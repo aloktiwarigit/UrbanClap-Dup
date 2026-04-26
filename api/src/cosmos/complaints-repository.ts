@@ -175,3 +175,75 @@ export async function findRatingShieldEscalation(
   const raw = resources[0];
   return raw !== undefined ? ComplaintDocSchema.parse(raw) : null;
 }
+
+export async function findComplaintByBookingAndParty(
+  bookingId: string,
+  uid: string,
+  filedBy: 'CUSTOMER' | 'TECHNICIAN',
+): Promise<ComplaintDoc | null> {
+  const query: SqlQuerySpec = {
+    query: `SELECT TOP 1 * FROM c WHERE c.orderId = @bookingId
+            AND c.filedBy = @filedBy
+            AND (c.customerId = @uid OR c.technicianId = @uid)
+            ORDER BY c.createdAt DESC`,
+    parameters: [
+      { name: '@bookingId', value: bookingId },
+      { name: '@uid', value: uid },
+      { name: '@filedBy', value: filedBy },
+    ],
+  };
+  const { resources } = await getCosmosClient()
+    .database(DB_NAME)
+    .container(CONTAINER)
+    .items.query<Record<string, unknown>>(query)
+    .fetchAll();
+  return resources.length > 0 ? ComplaintDocSchema.parse(resources[0]) : null;
+}
+
+export async function queryComplaintsByBookingAndParty(
+  bookingId: string,
+  uid: string,
+  filedBy: 'CUSTOMER' | 'TECHNICIAN',
+): Promise<ComplaintDoc[]> {
+  const query: SqlQuerySpec = {
+    query: `SELECT * FROM c WHERE c.orderId = @bookingId
+            AND c.filedBy = @filedBy
+            AND (c.customerId = @uid OR c.technicianId = @uid)
+            ORDER BY c.createdAt DESC`,
+    parameters: [
+      { name: '@bookingId', value: bookingId },
+      { name: '@uid', value: uid },
+      { name: '@filedBy', value: filedBy },
+    ],
+  };
+  const { resources } = await getCosmosClient()
+    .database(DB_NAME)
+    .container(CONTAINER)
+    .items.query<Record<string, unknown>>(query)
+    .fetchAll();
+  return resources.map(r => ComplaintDocSchema.parse(r));
+}
+
+export async function getUnacknowledgedPastDueComplaints(): Promise<Array<{ doc: ComplaintDoc; etag: string }>> {
+  const now = new Date().toISOString();
+  const query: SqlQuerySpec = {
+    query: `SELECT * FROM c WHERE IS_DEFINED(c.acknowledgeDeadlineAt)
+            AND c.acknowledgeDeadlineAt < @now
+            AND c.status = @new
+            AND (c.escalated != true OR NOT IS_DEFINED(c.escalated))
+            AND (c.ackBreached != true OR NOT IS_DEFINED(c.ackBreached))`,
+    parameters: [
+      { name: '@now', value: now },
+      { name: '@new', value: 'NEW' },
+    ],
+  };
+  const { resources } = await getCosmosClient()
+    .database(DB_NAME)
+    .container(CONTAINER)
+    .items.query<Record<string, unknown>>(query)
+    .fetchAll();
+  return resources.map(r => ({
+    doc: ComplaintDocSchema.parse(r),
+    etag: typeof r['_etag'] === 'string' ? r['_etag'] : '',
+  }));
+}

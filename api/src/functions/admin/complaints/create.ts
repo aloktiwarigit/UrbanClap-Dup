@@ -39,6 +39,7 @@ export async function adminCreateComplaintHandler(
     internalNotes: [],
     slaDeadlineAt: slaDeadlineAt.toISOString(),
     escalated: false,
+    ackBreached: false,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
   };

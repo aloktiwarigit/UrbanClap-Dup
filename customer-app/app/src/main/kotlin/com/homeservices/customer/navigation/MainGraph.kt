@@ -21,6 +21,8 @@ import com.homeservices.customer.ui.catalogue.ServiceDetailScreen
 import com.homeservices.customer.ui.catalogue.ServiceDetailViewModel
 import com.homeservices.customer.ui.catalogue.ServiceListScreen
 import com.homeservices.customer.ui.catalogue.ServiceListViewModel
+import com.homeservices.customer.ui.complaint.ComplaintRoutes
+import com.homeservices.customer.ui.complaint.ComplaintScreen
 import com.homeservices.customer.ui.rating.RatingRoutes
 import com.homeservices.customer.ui.rating.RatingScreen
 import com.homeservices.customer.ui.tracking.LiveTrackingScreen
@@ -174,6 +176,7 @@ internal fun NavGraphBuilder.mainGraph(navController: NavController) {
             LiveTrackingScreen(
                 viewModel = vm,
                 onBack = { navController.popBackStack() },
+                onFileComplaint = { id -> navController.navigate(ComplaintRoutes.route(id)) },
             )
         }
 
@@ -182,6 +185,17 @@ internal fun NavGraphBuilder.mainGraph(navController: NavController) {
             arguments = listOf(navArgument("bookingId") { type = NavType.StringType }),
         ) {
             RatingScreen()
+        }
+
+        composable(
+            route = ComplaintRoutes.ROUTE,
+            arguments = listOf(navArgument("bookingId") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val bookingId = backStackEntry.arguments?.getString("bookingId") ?: ""
+            ComplaintScreen(
+                bookingId = bookingId,
+                onBack = { navController.popBackStack() },
+            )
         }
     }
 }

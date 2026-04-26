@@ -7,6 +7,7 @@ public sealed class LiveTrackingUiState {
     public object Loading : LiveTrackingUiState()
 
     public data class Tracking(
+        val bookingId: String,
         val location: LiveLocation?,
         val status: BookingStatus,
         val techName: String,

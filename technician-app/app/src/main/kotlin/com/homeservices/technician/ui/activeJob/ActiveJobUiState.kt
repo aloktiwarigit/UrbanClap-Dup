@@ -23,7 +23,9 @@ public sealed class ActiveJobUiState {
         val photoUploadError: String? = null,
     ) : ActiveJobUiState()
 
-    public data object Completed : ActiveJobUiState()
+    public data class Completed(
+        val bookingId: String = "",
+    ) : ActiveJobUiState()
 
     public data class Error(
         val message: String,

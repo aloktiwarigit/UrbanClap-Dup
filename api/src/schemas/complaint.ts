@@ -16,6 +16,24 @@ export const ComplaintResolutionCategoryEnum = z.enum([
   'OTHER',
 ]);
 
+export const ComplaintFiledByEnum = z.enum(['CUSTOMER', 'TECHNICIAN']);
+
+export const CustomerReasonCodeEnum = z.enum([
+  'SERVICE_QUALITY',
+  'LATE_ARRIVAL',
+  'NO_SHOW',
+  'TECHNICIAN_BEHAVIOUR',
+  'BILLING_DISPUTE',
+  'OTHER',
+]);
+
+export const TechnicianReasonCodeEnum = z.enum([
+  'CUSTOMER_MISCONDUCT',
+  'LATE_PAYMENT',
+  'SAFETY_CONCERN',
+  'OTHER',
+]);
+
 export const InternalNoteSchema = z.object({
   adminId: z.string(),
   note: z.string(),
@@ -38,6 +56,11 @@ export const ComplaintDocSchema = z.object({
   internalNotes: z.array(InternalNoteSchema).default([]),
   slaDeadlineAt: z.string(),
   escalated: z.boolean().default(false),
+  ackBreached: z.boolean().default(false),
+  filedBy: ComplaintFiledByEnum.optional(),
+  reasonCode: z.string().optional(),
+  photoStoragePath: z.string().optional(),
+  acknowledgeDeadlineAt: z.string().optional(),
   resolvedAt: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -100,6 +123,29 @@ export const RepeatOffendersResponseSchema = z.object({
   offenders: z.array(RepeatOffenderSchema),
 }).openapi('RepeatOffendersResponse');
 
+export const CreateComplaintByPartnerBodySchema = z.object({
+  bookingId: z.string().min(1),
+  reasonCode: z.string().min(1),
+  description: z.string().min(10).max(2000),
+  photoStoragePath: z.string().optional(),
+}).openapi('CreateComplaintByPartnerBody');
+
+// Partner-safe response: omits internal/admin-only fields and both parties' UIDs
+export const PartnerComplaintResponseSchema = z.object({
+  id: z.string(),
+  status: ComplaintStatusEnum,
+  filedBy: ComplaintFiledByEnum.optional(),
+  reasonCode: z.string().optional(),
+  acknowledgeDeadlineAt: z.string().optional(),
+  slaDeadlineAt: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+}).openapi('PartnerComplaintResponse');
+
+export const PartnerComplaintListResponseSchema = z.object({
+  complaints: z.array(PartnerComplaintResponseSchema),
+}).openapi('PartnerComplaintListResponse');
+
 export type ComplaintType = z.infer<typeof ComplaintTypeEnum>;
 export type EscalateRatingBody = z.infer<typeof EscalateRatingBodySchema>;
 export type EscalateRatingResponse = z.infer<typeof EscalateRatingResponseSchema>;
@@ -113,3 +159,9 @@ export type ComplaintListQuery = z.infer<typeof ComplaintListQuerySchema>;
 export type ComplaintListResponse = z.infer<typeof ComplaintListResponseSchema>;
 export type RepeatOffender = z.infer<typeof RepeatOffenderSchema>;
 export type RepeatOffendersResponse = z.infer<typeof RepeatOffendersResponseSchema>;
+export type ComplaintFiledBy = z.infer<typeof ComplaintFiledByEnum>;
+export type CustomerReasonCode = z.infer<typeof CustomerReasonCodeEnum>;
+export type TechnicianReasonCode = z.infer<typeof TechnicianReasonCodeEnum>;
+export type CreateComplaintByPartnerBody = z.infer<typeof CreateComplaintByPartnerBodySchema>;
+export type PartnerComplaintResponse = z.infer<typeof PartnerComplaintResponseSchema>;
+export type PartnerComplaintListResponse = z.infer<typeof PartnerComplaintListResponseSchema>;
