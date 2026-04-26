@@ -285,9 +285,20 @@ kover {
                     // customer-app's PriceApprovalEventBus / TrackingEventBus exclusion.
                     "*.RatingPromptEventBus",
                     "*.RatingPromptEventBus\$*",
+                    // RatingReceivedEventBus — same rationale as RatingPromptEventBus: Channel
+                    // delivery observable only with a live coroutine collector.
+                    "*.RatingReceivedEventBus",
+                    "*.RatingReceivedEventBus\$*",
                     // RatingUiState sealed class — data holders, no logic branches.
                     "*.RatingUiState",
                     "*.RatingUiState\$*",
+                    // EarningsScreen generates Compose *Kt wrapper classes — same rationale as
+                    // RatingScreenKt / AuthScreenKt: recomposition guards + slot-table ops.
+                    "*.EarningsScreenKt",
+                    "*.EarningsScreenKt\$*",
+                    // MyRatingsScreen generates Compose *Kt wrapper classes — same rationale.
+                    "*.MyRatingsScreenKt",
+                    "*.MyRatingsScreenKt\$*",
                     // FcmTopicSubscriber wraps FirebaseMessaging.subscribeToTopic /
                     // unsubscribeFromTopic — Tasks-API callbacks that require a real
                     // Firebase project + network to resolve. Same rationale as
