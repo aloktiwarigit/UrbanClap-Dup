@@ -87,9 +87,17 @@ describe('GET /v1/technicians/me/ratings', () => {
   });
 
   it('trend groups ratings by ISO week Monday', async () => {
+    const recent = new Date();
+    recent.setUTCDate(recent.getUTCDate() - 2);
+    const recentIso = recent.toISOString();
+    const dow = (recent.getUTCDay() + 6) % 7;
+    const monday = new Date(recent);
+    monday.setUTCDate(recent.getUTCDate() - dow);
+    const expectedWeekStart = monday.toISOString().slice(0, 10);
+
     vi.mocked(ratingRepo.getAllByTechnicianId).mockResolvedValue([
-      makeRatingDoc({ bookingId: 'bk-1', customerOverall: 5, customerSubmittedAt: '2026-04-20T10:00:00Z' }),
-      makeRatingDoc({ bookingId: 'bk-2', customerOverall: 3, customerSubmittedAt: '2026-04-20T11:00:00Z' }),
+      makeRatingDoc({ bookingId: 'bk-1', customerOverall: 5, customerSubmittedAt: recentIso }),
+      makeRatingDoc({ bookingId: 'bk-2', customerOverall: 3, customerSubmittedAt: recentIso }),
     ]);
     const res = await getTechRatingsHandler(makeReq('Bearer tok'), ctx) as HttpResponseInit;
     const body = res.jsonBody as any;
@@ -97,6 +105,6 @@ describe('GET /v1/technicians/me/ratings', () => {
     const week = body.trend[0];
     expect(week.count).toBe(2);
     expect(week.average).toBe(4.0);
-    expect(week.weekStart).toBe('2026-04-20');
+    expect(week.weekStart).toBe(expectedWeekStart);
   });
 });

@@ -91,5 +91,6 @@ export const getTechRatingsHandler: HttpHandler = async (req: HttpRequest, _ctx:
 app.http('getTechRatings', {
   route: 'v1/technicians/me/ratings',
   methods: ['GET'],
+  authLevel: 'anonymous',
   handler: getTechRatingsHandler,
 });
