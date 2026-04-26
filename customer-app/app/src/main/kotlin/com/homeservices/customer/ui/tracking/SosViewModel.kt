@@ -1,6 +1,8 @@
 package com.homeservices.customer.ui.tracking
 
 import android.content.Context
+import android.media.MediaRecorder
+import android.os.Build
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
@@ -29,6 +32,7 @@ public class SosViewModel @Inject constructor(
     public val sosUiState: StateFlow<SosUiState> = _sosUiState.asStateFlow()
 
     private var countdownJob: Job? = null
+    private var recorder: MediaRecorder? = null
 
     public fun onSosTapped() {
         viewModelScope.launch {
@@ -36,7 +40,7 @@ public class SosViewModel @Inject constructor(
             if (consent == null) {
                 _sosUiState.value = SosUiState.ShowConsent
             } else {
-                startCountdown()
+                startCountdown(audioGranted = consent)
             }
         }
     }
@@ -44,24 +48,56 @@ public class SosViewModel @Inject constructor(
     public fun onConsentResolved(granted: Boolean) {
         viewModelScope.launch {
             consentStore.setAudioConsent(granted)
-            startCountdown()
+            startCountdown(audioGranted = granted)
         }
     }
 
     public fun onCancelCountdown() {
         countdownJob?.cancel()
         countdownJob = null
+        stopRecording()
         _sosUiState.value = SosUiState.Idle
     }
 
-    private fun startCountdown() {
+    private fun startCountdown(audioGranted: Boolean) {
         countdownJob?.cancel()
         countdownJob = viewModelScope.launch {
+            if (audioGranted) startRecording()
             for (sec in 30 downTo 1) {
                 _sosUiState.value = SosUiState.Countdown(sec)
                 delay(1_000L)
             }
+            stopRecording()
             fireSos()
+        }
+    }
+
+    private fun startRecording() {
+        runCatching {
+            val dir = File(context.filesDir, "sos").also { it.mkdirs() }
+            val file = File(dir, "sos-$bookingId.m4a")
+            val rec = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                MediaRecorder(context)
+            } else {
+                @Suppress("DEPRECATION")
+                MediaRecorder()
+            }
+            rec.apply {
+                setAudioSource(MediaRecorder.AudioSource.MIC)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                setOutputFile(file.absolutePath)
+                prepare()
+                start()
+            }
+            recorder = rec
+        }
+    }
+
+    private fun stopRecording() {
+        runCatching {
+            recorder?.apply { stop(); release() }
+            recorder = null
         }
     }
 
@@ -77,5 +113,6 @@ public class SosViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         countdownJob?.cancel()
+        stopRecording()
     }
 }
