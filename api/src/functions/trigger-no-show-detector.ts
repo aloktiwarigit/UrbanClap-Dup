@@ -81,18 +81,21 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
       }
     }
 
+    // Step 1: Set the holding status. This is idempotent if retried.
     try {
-      await updateBookingFields(booking.id, {
-        status: 'NO_SHOW_REDISPATCH',
-        noShowRedispatchAt: new Date().toISOString(),
-      });
+      await updateBookingFields(booking.id, { status: 'NO_SHOW_REDISPATCH' });
     } catch (err: unknown) {
       Sentry.captureException(err);
       ctx.log(`detectNoShows: status update failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);
     }
 
+    // Step 2: Fire redispatch. Only stamp noShowRedispatchAt AFTER a successful redispatch call —
+    // if we write the flag before and redispatch throws, the flag would suppress all future
+    // recovery attempts leaving the booking stuck.
     try {
       await dispatcherService.redispatch(booking.id, NO_SHOW_REDISPATCH_RADIUS_KM);
+      // Stamp the flag atomically on success so recovery can detect a completed redispatch.
+      await updateBookingFields(booking.id, { noShowRedispatchAt: new Date().toISOString() });
     } catch (err: unknown) {
       Sentry.captureException(err);
       ctx.log(`detectNoShows: redispatch failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);

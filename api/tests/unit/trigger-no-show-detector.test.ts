@@ -99,9 +99,10 @@ describe('detectNoShows', () => {
         reason: 'NO_SHOW',
       }),
     );
+    expect(updateBookingFields).toHaveBeenCalledWith('bk-due', { status: 'NO_SHOW_REDISPATCH' });
     expect(updateBookingFields).toHaveBeenCalledWith(
       'bk-due',
-      expect.objectContaining({ status: 'NO_SHOW_REDISPATCH', noShowRedispatchAt: expect.any(String) }),
+      expect.objectContaining({ noShowRedispatchAt: expect.any(String) }),
     );
     expect(dispatcherService.redispatch).toHaveBeenCalledWith('bk-due', 15);
     expect(fcmService.sendNoShowCreditPush).toHaveBeenCalledWith(booking.customerId, 'bk-due', 50_000);
@@ -116,10 +117,7 @@ describe('detectNoShows', () => {
 
     await detectNoShows(mockCtx);
 
-    expect(updateBookingFields).toHaveBeenCalledWith(
-      'bk-dup',
-      expect.objectContaining({ status: 'NO_SHOW_REDISPATCH', noShowRedispatchAt: expect.any(String) }),
-    );
+    expect(updateBookingFields).toHaveBeenCalledWith('bk-dup', { status: 'NO_SHOW_REDISPATCH' });
     expect(dispatcherService.redispatch).toHaveBeenCalledWith('bk-dup', 15);
     // FCM is retried in recovery when noShowRedispatchAt was absent (push may not have fired)
     expect(fcmService.sendNoShowCreditPush).toHaveBeenCalled();
@@ -215,9 +213,11 @@ describe('detectNoShows', () => {
     await detectNoShows(mockCtx);
 
     expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error));
-    // bk-1 skipped (credit threw), bk-2 proceeds
-    expect(updateBookingFields).toHaveBeenCalledTimes(1);
-    expect(updateBookingFields).toHaveBeenCalledWith('bk-2', expect.objectContaining({ status: 'NO_SHOW_REDISPATCH' }));
+    // bk-1 skipped (credit threw), bk-2 proceeds with 2 updateBookingFields calls
+    // (one for NO_SHOW_REDISPATCH status, one for noShowRedispatchAt after successful redispatch)
+    expect(updateBookingFields).toHaveBeenCalledTimes(2);
+    expect(updateBookingFields).toHaveBeenCalledWith('bk-2', { status: 'NO_SHOW_REDISPATCH' });
+    expect(updateBookingFields).toHaveBeenCalledWith('bk-2', expect.objectContaining({ noShowRedispatchAt: expect.any(String) }));
     expect(dispatcherService.redispatch).toHaveBeenCalledWith('bk-2', 15);
   });
 });
