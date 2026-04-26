@@ -59,8 +59,9 @@ beforeEach(() => {
   vi.mocked(mockCtx.log).mockClear();
   vi.resetAllMocks();
   vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([]);
-  // Default: getById returns a booking still in NO_SHOW_REDISPATCH (redispatch allowed)
-  vi.mocked(bookingRepo.getById).mockResolvedValue({ status: 'NO_SHOW_REDISPATCH' } as BookingDoc);
+  // Default: getById returns ASSIGNED (fresh-read guard passes)
+  // The dispatcher.service mock handles its own getById internally (not this mock).
+  vi.mocked(bookingRepo.getById).mockResolvedValue({ status: 'ASSIGNED' } as BookingDoc);
   vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(true);
   vi.mocked(updateBookingFields).mockResolvedValue(null);
   vi.mocked(dispatcherService.redispatch).mockResolvedValue(true);
@@ -84,6 +85,20 @@ describe('detectNoShows', () => {
     expect(dispatcherService.redispatch).not.toHaveBeenCalled();
   });
 
+  it('skips booking when fresh re-read shows technician already advanced to IN_PROGRESS (stale ASSIGNED snapshot)', async () => {
+    vi.mocked(bookingRepo.getAssignedBookingsBefore)
+      .mockResolvedValue([makeAssignedBooking('bk-in-progress', 45)]);
+    // Fresh re-read reveals tech already started work after the query returned
+    vi.mocked(bookingRepo.getById).mockResolvedValue({ status: 'IN_PROGRESS' } as BookingDoc);
+
+    await detectNoShows(mockCtx);
+
+    expect(customerCreditRepo.createCreditIfAbsent).not.toHaveBeenCalled();
+    expect(updateBookingFields).not.toHaveBeenCalled();
+    expect(dispatcherService.redispatch).not.toHaveBeenCalled();
+    expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
+  });
+
   it('processes booking 45 minutes past slot start: writes credit, updates status+noShowRedispatchAt, redispatches, sends FCM', async () => {
     const booking = makeAssignedBooking('bk-due', 45);
     vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([booking]);
@@ -99,12 +114,13 @@ describe('detectNoShows', () => {
         reason: 'NO_SHOW',
       }),
     );
-    expect(updateBookingFields).toHaveBeenCalledWith('bk-due', { status: 'NO_SHOW_REDISPATCH' });
+    expect(updateBookingFields).toHaveBeenCalledWith('bk-due', { status: 'NO_SHOW_REDISPATCH', technicianId: undefined });
     expect(updateBookingFields).toHaveBeenCalledWith(
       'bk-due',
       expect.objectContaining({ noShowRedispatchAt: expect.any(String) }),
     );
     expect(dispatcherService.redispatch).toHaveBeenCalledWith('bk-due', 15);
+    // FCM fires because creditCreated=true (this run issued the credit)
     expect(fcmService.sendNoShowCreditPush).toHaveBeenCalledWith(booking.customerId, 'bk-due', 50_000);
   });
 
@@ -117,9 +133,10 @@ describe('detectNoShows', () => {
 
     await detectNoShows(mockCtx);
 
-    expect(updateBookingFields).toHaveBeenCalledWith('bk-dup', { status: 'NO_SHOW_REDISPATCH' });
+    expect(updateBookingFields).toHaveBeenCalledWith('bk-dup', { status: 'NO_SHOW_REDISPATCH', technicianId: undefined });
     expect(dispatcherService.redispatch).toHaveBeenCalledWith('bk-dup', 15);
-    expect(fcmService.sendNoShowCreditPush).toHaveBeenCalled();
+    // FCM must NOT fire in recovery path — creditCreated=false means prior run already sent it
+    expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
   });
 
   it('skips entirely when credit exists and noShowRedispatchAt is set (redispatch already triggered)', async () => {
@@ -173,7 +190,7 @@ describe('detectNoShows', () => {
     expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
   });
 
-  it('captures Sentry + skips redispatch + FCM when updateBookingFields throws (status-write failure gates downstream)', async () => {
+  it('captures Sentry + skips redispatch when updateBookingFields throws, but still sends FCM (credit was issued)', async () => {
     vi.mocked(bookingRepo.getAssignedBookingsBefore)
       .mockResolvedValue([makeAssignedBooking('bk-err', 45)]);
     vi.mocked(updateBookingFields).mockRejectedValue(new Error('cosmos 503'));
@@ -184,12 +201,13 @@ describe('detectNoShows', () => {
     // Credit was attempted (it is the gate — comes first)
     expect(customerCreditRepo.createCreditIfAbsent).toHaveBeenCalled();
     expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error));
-    // Redispatch and FCM skipped — status-write failure means statusWriteOk=false
+    // Redispatch skipped — statusWriteOk=false gates it
     expect(dispatcherService.redispatch).not.toHaveBeenCalled();
-    expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
+    // FCM still fires — creditCreated=true means customer must get the notification
+    expect(fcmService.sendNoShowCreditPush).toHaveBeenCalled();
   });
 
-  it('captures Sentry + skips FCM when redispatch throws (push text would be misleading)', async () => {
+  it('captures Sentry when redispatch throws and still sends FCM (credit was issued, customer deserves notification)', async () => {
     vi.mocked(bookingRepo.getAssignedBookingsBefore)
       .mockResolvedValue([makeAssignedBooking('bk-rdp-err', 45)]);
     vi.mocked(dispatcherService.redispatch).mockRejectedValue(new Error('no techs'));
@@ -197,8 +215,8 @@ describe('detectNoShows', () => {
     await detectNoShows(mockCtx);
 
     expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error));
-    // FCM must NOT fire — it says "searching for new tech" which is false when dispatch failed
-    expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
+    // FCM fires because creditCreated=true — customer must always get the credit notification
+    expect(fcmService.sendNoShowCreditPush).toHaveBeenCalled();
   });
 
   it('captures Sentry without rethrowing when sendNoShowCreditPush throws', async () => {
@@ -240,7 +258,7 @@ describe('detectNoShows', () => {
     // bk-1 skipped (credit threw), bk-2 proceeds with 2 updateBookingFields calls
     // (one for NO_SHOW_REDISPATCH status, one for noShowRedispatchAt after successful redispatch)
     expect(updateBookingFields).toHaveBeenCalledTimes(2);
-    expect(updateBookingFields).toHaveBeenCalledWith('bk-2', { status: 'NO_SHOW_REDISPATCH' });
+    expect(updateBookingFields).toHaveBeenCalledWith('bk-2', { status: 'NO_SHOW_REDISPATCH', technicianId: undefined });
     expect(updateBookingFields).toHaveBeenCalledWith('bk-2', expect.objectContaining({ noShowRedispatchAt: expect.any(String) }));
     expect(dispatcherService.redispatch).toHaveBeenCalledWith('bk-2', 15);
   });

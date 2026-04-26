@@ -40,6 +40,15 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
     }
     if (now < slotStart + NO_SHOW_WINDOW_MS) continue;
 
+    // Guard against stale ASSIGNED snapshot: re-read the booking immediately before the
+    // credit write. If the technician marked it IN_PROGRESS or REACHED after the query
+    // returned, skip to avoid issuing a wrong credit against a live booking.
+    const freshBooking = await bookingRepo.getById(booking.id);
+    if (!freshBooking || freshBooking.status !== 'ASSIGNED') {
+      ctx.log(`detectNoShows: skipping ${booking.id} — live status is ${freshBooking?.status ?? 'NOT_FOUND'}, not ASSIGNED`);
+      continue;
+    }
+
     // Credit write is the atomic idempotency gate — must come first.
     // If it throws (non-409 Cosmos error), skip this booking entirely.
     // If it returns false (409 = prior run already wrote credit), proceed with
@@ -91,11 +100,12 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
       }
     }
 
-    // Step 1: Set the holding status. Track success — if this fails we must NOT stamp
-    // noShowRedispatchAt, so recovery can retry both the status write and redispatch.
+    // Step 1: Set the holding status and clear technicianId so the no-show technician's
+    // active-job screen stops receiving updates for this booking. Track success — if this
+    // fails we must NOT stamp noShowRedispatchAt, so recovery can retry both write and redispatch.
     let statusWriteOk = false;
     try {
-      await updateBookingFields(booking.id, { status: 'NO_SHOW_REDISPATCH' });
+      await updateBookingFields(booking.id, { status: 'NO_SHOW_REDISPATCH', technicianId: undefined });
       statusWriteOk = true;
     } catch (err: unknown) {
       Sentry.captureException(err);
@@ -122,9 +132,13 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
       }
     }
 
-    // FCM push: only send when redispatch actually started — the push text says "searching
-    // for a new technician", which is false if redispatch threw or never ran.
-    if (redispatchOk) {
+    // FCM push: gate on creditCreated (this run issued the credit) — ensures the customer
+    // always receives the compensation notification regardless of whether redispatch succeeded.
+    // Recovery runs (creditCreated=false) skip the push because the prior run already sent it
+    // (or it will be retried in a subsequent creditCreated=true run if the prior run crashed
+    // before reaching this point, but since credit was already written that cannot happen —
+    // creditCreated=true ↔ this run is the first to issue the credit).
+    if (creditCreated) {
       try {
         await sendNoShowCreditPush(booking.customerId, booking.id, NO_SHOW_CREDIT_PAISE);
       } catch (err: unknown) {
