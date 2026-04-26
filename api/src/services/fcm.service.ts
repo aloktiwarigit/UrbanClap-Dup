@@ -98,3 +98,18 @@ export async function sendOwnerSosAlert(payload: {
     },
   });
 }
+
+export async function sendRatingReceivedPush(
+  technicianId: string,
+  payload: { bookingId: string; overall: number; comment: string },
+): Promise<void> {
+  await getFirebaseAdmin().messaging().send({
+    topic: `technician_${technicianId}`,
+    data: {
+      type: 'RATING_RECEIVED',
+      bookingId: payload.bookingId,
+      overall: String(payload.overall),
+      comment: payload.comment,
+    },
+  });
+}

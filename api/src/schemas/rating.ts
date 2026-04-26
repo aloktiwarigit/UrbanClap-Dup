@@ -69,3 +69,31 @@ export type TechSubScores = z.infer<typeof TechSubScoresSchema>;
 export type SubmitRatingRequest = z.infer<typeof SubmitRatingRequestSchema>;
 export type RatingDoc = z.infer<typeof RatingDocSchema>;
 export type GetRatingResponse = z.infer<typeof GetRatingResponseSchema>;
+
+export const TechRatingSummaryItemSchema = z.object({
+  bookingId: z.string(),
+  overall: z.number().int().min(1).max(5),
+  subScores: CustomerSubScoresSchema,
+  comment: z.string().optional(),
+  submittedAt: z.string(),
+});
+export type TechRatingSummaryItem = z.infer<typeof TechRatingSummaryItemSchema>;
+
+export const TechRatingWeekSchema = z.object({
+  weekStart: z.string(),
+  average: z.number(),
+  count: z.number().int(),
+});
+
+export const TechRatingSummarySchema = z.object({
+  totalCount: z.number().int(),
+  averageOverall: z.number(),
+  averageSubScores: z.object({
+    punctuality: z.number(),
+    skill: z.number(),
+    behaviour: z.number(),
+  }),
+  trend: z.array(TechRatingWeekSchema),
+  items: z.array(TechRatingSummaryItemSchema),
+});
+export type TechRatingSummary = z.infer<typeof TechRatingSummarySchema>;
