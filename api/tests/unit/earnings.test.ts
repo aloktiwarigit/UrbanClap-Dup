@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
-vi.mock('../../src/services/firebaseAdmin.js', () => ({
-  verifyFirebaseIdToken: vi.fn(),
+vi.mock('../../src/middleware/verifyTechnicianToken.js', () => ({
+  verifyTechnicianToken: vi.fn(),
 }));
 vi.mock('../../src/cosmos/wallet-ledger-repository.js', () => ({
   walletLedgerRepo: { getAllByTechnicianId: vi.fn() },
@@ -10,7 +10,7 @@ vi.mock('../../src/cosmos/wallet-ledger-repository.js', () => ({
 vi.mock('@sentry/node', () => ({ captureException: vi.fn() }));
 
 import { getEarningsHandler } from '../../src/functions/earnings.js';
-import { verifyFirebaseIdToken } from '../../src/services/firebaseAdmin.js';
+import { verifyTechnicianToken } from '../../src/middleware/verifyTechnicianToken.js';
 import { walletLedgerRepo } from '../../src/cosmos/wallet-ledger-repository.js';
 import type { WalletLedgerEntry } from '../../src/schemas/wallet-ledger.js';
 
@@ -35,13 +35,13 @@ const today = new Date().toISOString().slice(0, 10);
 
 beforeEach(() => {
   vi.resetAllMocks();
-  vi.mocked(verifyFirebaseIdToken).mockResolvedValue({ uid: 'tech-1' } as any);
+  vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-1' });
   vi.mocked(walletLedgerRepo.getAllByTechnicianId).mockResolvedValue([]);
 });
 
 describe('GET /v1/technicians/me/earnings', () => {
   it('returns 401 when no Authorization header', async () => {
-    vi.mocked(verifyFirebaseIdToken).mockRejectedValue(new Error('No token'));
+    vi.mocked(verifyTechnicianToken).mockRejectedValue(new Error('No token'));
     const res = await getEarningsHandler(makeReq(), ctx) as HttpResponseInit;
     expect(res.status).toBe(401);
   });
@@ -125,5 +125,12 @@ describe('GET /v1/technicians/me/earnings', () => {
   it('calls getAllByTechnicianId with the authenticated uid', async () => {
     await getEarningsHandler(makeReq('Bearer tok'), ctx);
     expect(walletLedgerRepo.getAllByTechnicianId).toHaveBeenCalledWith('tech-1');
+  });
+
+  it('returns 500 when Cosmos call fails', async () => {
+    vi.mocked(walletLedgerRepo.getAllByTechnicianId).mockRejectedValue(new Error('Cosmos timeout'));
+    const res = await getEarningsHandler(makeReq('Bearer tok'), ctx) as HttpResponseInit;
+    expect(res.status).toBe(500);
+    expect((res.jsonBody as any).code).toBe('INTERNAL_ERROR');
   });
 });
