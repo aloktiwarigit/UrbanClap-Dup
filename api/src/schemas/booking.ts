@@ -4,7 +4,7 @@ import { PendingAddOnSchema } from './addon-approval.js';
 const BOOKING_STATUSES = [
   'PENDING_PAYMENT', 'SEARCHING', 'ASSIGNED', 'EN_ROUTE',
   'REACHED', 'IN_PROGRESS', 'AWAITING_PRICE_APPROVAL', 'COMPLETED', 'PAID', 'CLOSED',
-  'UNFULFILLED', 'CUSTOMER_CANCELLED',
+  'UNFULFILLED', 'CUSTOMER_CANCELLED', 'NO_SHOW_REDISPATCH',
 ] as const;
 
 export const LatLngSchema = z.object({ lat: z.number(), lng: z.number() });
