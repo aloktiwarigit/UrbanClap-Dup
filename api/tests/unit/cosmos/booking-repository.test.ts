@@ -36,8 +36,8 @@ const BASE: BookingDoc = {
   createdAt: '2026-04-25T04:00:00.000Z',
 };
 
-describe('bookingRepo.getAssignedBookingsBefore', () => {
-  it('queries with ASSIGNED status filter and slotDate cutoff', async () => {
+describe('bookingRepo.getAssignedBookingsBefore (includes NO_SHOW_REDISPATCH)', () => {
+  it('queries with ASSIGNED and NO_SHOW_REDISPATCH status filter and slotDate cutoff', async () => {
     mockQueryFetchAll.mockResolvedValue({ resources: [BASE] });
 
     const result = await bookingRepo.getAssignedBookingsBefore('2026-04-25');
@@ -46,7 +46,7 @@ describe('bookingRepo.getAssignedBookingsBefore', () => {
     expect(result[0]!.id).toBe('bk-1');
 
     const querySpec = mockQuery.mock.calls[0]![0] as { query: string; parameters: unknown[] };
-    expect(querySpec.query).toContain("c.status = 'ASSIGNED'");
+    expect(querySpec.query).toContain("c.status IN ('ASSIGNED', 'NO_SHOW_REDISPATCH')");
     expect(querySpec.query).toContain('c.slotDate <= @slotDate');
     expect(querySpec.parameters).toContainEqual({ name: '@slotDate', value: '2026-04-25' });
   });

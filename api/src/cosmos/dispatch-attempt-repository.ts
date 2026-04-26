@@ -7,7 +7,7 @@ export const dispatchAttemptRepo = {
     const { resources } = await getDispatchAttemptsContainer()
       .items
       .query<DispatchAttemptDoc>({
-        query: 'SELECT * FROM c WHERE c.bookingId = @bookingId',
+        query: "SELECT * FROM c WHERE c.bookingId = @bookingId AND c.status = 'PENDING'",
         parameters: [{ name: '@bookingId', value: bookingId }],
       })
       .fetchAll();
