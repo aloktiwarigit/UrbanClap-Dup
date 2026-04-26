@@ -81,4 +81,14 @@ export const walletLedgerRepo = {
       .fetchAll();
     return resources;
   },
+
+  async getAllByTechnicianId(technicianId: string): Promise<WalletLedgerEntry[]> {
+    const { resources } = await getWalletLedgerContainer()
+      .items.query<WalletLedgerEntry>(
+        { query: `SELECT * FROM c WHERE c.payoutStatus IN ('PENDING', 'PAID')` },
+        { partitionKey: technicianId },
+      )
+      .fetchAll();
+    return resources;
+  },
 };
