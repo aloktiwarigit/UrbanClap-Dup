@@ -64,3 +64,19 @@ export async function sendOwnerRatingShieldAlert(payload: {
     },
   });
 }
+
+export async function sendNoShowCreditPush(
+  customerId: string,
+  bookingId: string,
+  creditAmount: number,
+): Promise<void> {
+  await getFirebaseAdmin().messaging().send({
+    topic: `customer_${customerId}`,
+    data: {
+      type: 'NO_SHOW_CREDIT_ISSUED',
+      bookingId,
+      creditAmount: String(creditAmount),
+      bodyText: 'तकनीशियन नहीं आए — ₹500 credit आपके account में जोड़ा गया। नया तकनीशियन ढूंढ रहे हैं।',
+    },
+  });
+}
