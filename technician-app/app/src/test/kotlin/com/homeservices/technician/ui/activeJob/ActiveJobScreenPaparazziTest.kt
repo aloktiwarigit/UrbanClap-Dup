@@ -4,7 +4,6 @@ import app.cash.paparazzi.Paparazzi
 import com.homeservices.technician.domain.activeJob.model.ActiveJob
 import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
 import com.homeservices.technician.domain.activeJob.model.LatLng
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -25,7 +24,6 @@ public class ActiveJobScreenPaparazziTest {
             slotWindow = "10:00-12:00",
         )
 
-    @Ignore("Record on CI Linux via paparazzi-record.yml workflow_dispatch")
     @Test
     public fun activeJobScreen_enRoute(): Unit {
         paparazzi.snapshot {
@@ -39,7 +37,6 @@ public class ActiveJobScreenPaparazziTest {
         }
     }
 
-    @Ignore("Record on CI Linux via paparazzi-record.yml workflow_dispatch")
     @Test
     public fun activeJobScreen_reached(): Unit {
         paparazzi.snapshot {
@@ -53,7 +50,6 @@ public class ActiveJobScreenPaparazziTest {
         }
     }
 
-    @Ignore("Record on CI Linux via paparazzi-record.yml workflow_dispatch")
     @Test
     public fun activeJobScreen_inProgress(): Unit {
         paparazzi.snapshot {

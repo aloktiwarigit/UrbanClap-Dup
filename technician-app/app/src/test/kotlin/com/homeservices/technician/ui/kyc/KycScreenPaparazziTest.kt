@@ -18,7 +18,6 @@ public class KycScreenPaparazziTest {
         )
 
     @Test
-    @Ignore("goldens recorded on CI — see docs/patterns/paparazzi-cross-os-goldens.md")
     public fun snapshot_step1_aadhaar(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
@@ -27,8 +26,10 @@ public class KycScreenPaparazziTest {
         }
     }
 
+    @Ignore(
+        "HandlerDispatcher IllegalStateException — rememberLauncherForActivityResult in KycStepPan registers a Handler that fires after Paparazzi Looper quits; fix with mock launcher before recording",
+    )
     @Test
-    @Ignore("goldens recorded on CI — see docs/patterns/paparazzi-cross-os-goldens.md")
     public fun snapshot_step2_pan_no_selection(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
@@ -37,8 +38,10 @@ public class KycScreenPaparazziTest {
         }
     }
 
+    @Ignore(
+        "HandlerDispatcher IllegalStateException — rememberLauncherForActivityResult in KycStepPan registers a Handler that fires after Paparazzi Looper quits; fix with mock launcher before recording",
+    )
     @Test
-    @Ignore("goldens recorded on CI — see docs/patterns/paparazzi-cross-os-goldens.md")
     public fun snapshot_step2_pan_selected(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
@@ -51,7 +54,6 @@ public class KycScreenPaparazziTest {
     }
 
     @Test
-    @Ignore("goldens recorded on CI — see docs/patterns/paparazzi-cross-os-goldens.md")
     public fun snapshot_step3_complete(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
@@ -61,7 +63,6 @@ public class KycScreenPaparazziTest {
     }
 
     @Test
-    @Ignore("goldens recorded on CI — see docs/patterns/paparazzi-cross-os-goldens.md")
     public fun snapshot_step3_error(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
@@ -75,11 +76,10 @@ public class KycScreenPaparazziTest {
     }
 
     @Test
-    @Ignore("goldens recorded on CI — see docs/patterns/paparazzi-cross-os-goldens.md")
     public fun snapshot_loading(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
-                KycLoadingContent(message = "Processing\u2026")
+                KycLoadingContent(message = "Processing…")
             }
         }
     }

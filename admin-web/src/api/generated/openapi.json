@@ -697,6 +697,26 @@
           "description": {
             "type": "string"
           },
+          "type": {
+            "type": "string",
+            "enum": [
+              "RATING_SHIELD",
+              "STANDARD"
+            ],
+            "default": "STANDARD"
+          },
+          "draftOverall": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2
+          },
+          "draftComment": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "expiresAt": {
+            "type": "string"
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -844,6 +864,26 @@
                   "type": "string"
                 },
                 "description": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "RATING_SHIELD",
+                    "STANDARD"
+                  ],
+                  "default": "STANDARD"
+                },
+                "draftOverall": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2
+                },
+                "draftComment": {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                "expiresAt": {
                   "type": "string"
                 },
                 "status": {

@@ -309,20 +309,17 @@ kover {
                     "*.TrackingRepositoryImpl\$*",
                     // data.tracking.di — Hilt @Binds wiring, same rationale as other DI modules
                     "*.data.tracking.di.*",
-                    // ComplaintScreen — Compose UI composable, same rationale as other *Kt screen classes
-                    // (Paparazzi covers snapshot rendering; instrumented tests cover UI interaction paths)
-                    "*.ComplaintScreenKt",
-                    "*.ComplaintScreenKt\$*",
-                    // ComplaintRoutes — nav route sealed class, framework wiring
-                    "*.ComplaintRoutes",
-                    "*.ComplaintRoutes\$*",
-                    // data.complaint.di — Hilt @Provides wiring, same rationale as other DI modules
-                    "*.data.complaint.di.*",
-                    // PhotoUploadUseCase Firebase upload path — ref.putBytes().await() requires a live
-                    // Firebase Storage instance; the auth-guard and file-not-found paths are unit-tested.
-                    // Full happy-path is integration-tested via Espresso/Firebase Emulator in CI.
-                    "*.PhotoUploadUseCase",
-                    "*.PhotoUploadUseCase\$*",
+                    // RatingScreen — Compose UI composables (RatingScreen, ShieldBottomSheet,
+                    // CountdownChip, StarRow), same rationale as other *Kt screen classes.
+                    // Paparazzi snapshot test covers rendering; JVM unit tests cover ViewModel logic.
+                    "*.RatingScreenKt",
+                    "*.RatingScreenKt$*",
+                    // data.rating.di — Hilt @Provides wiring (RatingModule/Retrofit construction),
+                    // same rationale as data.auth.di.*, data.catalogue.di.*, data.booking.di.*
+                    "*.data.rating.di.*",
+                    // RatingPromptEventBus — MutableSharedFlow wrapper, same rationale as PriceApprovalEventBus
+                    "*.RatingPromptEventBus",
+                    "*.RatingPromptEventBus$*",
                 )
             }
         }
@@ -364,7 +361,6 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.messaging)
-    implementation(libs.firebase.storage)
 
     // Coroutines — play-services extensions (.await() on Task<T>)
     implementation(libs.kotlinx.coroutines.play.services)

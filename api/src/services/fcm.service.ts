@@ -49,6 +49,22 @@ export async function sendOwnerRouteAlert(payload: {
   });
 }
 
+export async function sendOwnerRatingShieldAlert(payload: {
+  bookingId: string;
+  technicianId: string;
+  draftOverall: number;
+}): Promise<void> {
+  await getFirebaseAdmin().messaging().send({
+    topic: 'owner_alerts',
+    data: {
+      type: 'OWNER_RATING_SHIELD_ALERT',
+      bookingId: payload.bookingId,
+      technicianId: payload.technicianId,
+      draftOverall: String(payload.draftOverall),
+    },
+  });
+}
+
 export async function sendOwnerComplaintFiled(payload: {
   bookingId: string;
   filedBy: string;

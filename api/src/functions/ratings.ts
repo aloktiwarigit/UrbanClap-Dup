@@ -39,6 +39,10 @@ export const submitRatingHandler: HttpHandler = async (req, _ctx: InvocationCont
     return { status: 409, jsonBody: { code: 'BOOKING_NOT_CLOSED', status: booking.status } };
   }
   if (!booking.technicianId) return { status: 409, jsonBody: { code: 'NO_TECHNICIAN' } };
+  // Rating Shield (E07-S02) is advisory — it notifies the owner and starts a 2-hour window,
+  // but the customer can always post their rating at any time ("Post anyway" button, or after
+  // the timer expires). The shield does NOT block submission here; enforcement is client-side.
+  // See docs/stories/E07-S02-rating-shield-escalation.md § AC-4 and AC-5.
 
   const result = await ratingRepo.submitSide({
     bookingId: data.bookingId,

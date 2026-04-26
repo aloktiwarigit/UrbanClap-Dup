@@ -3,7 +3,6 @@ package com.homeservices.customer.ui.booking
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.homeservices.designsystem.theme.HomeservicesTheme
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -15,7 +14,6 @@ public class BookingConfirmedScreenPaparazziTest {
             theme = "android:Theme.Material3.DayNight.NoActionBar",
         )
 
-    @Ignore("Golden to be re-recorded on CI after nav refactor — paparazzi-record.yml")
     @Test
     public fun bookingConfirmed_lightTheme() {
         paparazzi.snapshot {
@@ -28,7 +26,6 @@ public class BookingConfirmedScreenPaparazziTest {
         }
     }
 
-    @Ignore("Golden to be re-recorded on CI after nav refactor — paparazzi-record.yml")
     @Test
     public fun bookingConfirmed_darkTheme() {
         paparazzi.snapshot {

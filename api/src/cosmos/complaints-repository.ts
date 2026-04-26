@@ -154,6 +154,28 @@ export async function getRepeatOffenders(
     .map(([technicianId, count]) => ({ technicianId, count }));
 }
 
+export async function findRatingShieldEscalation(
+  bookingId: string,
+  customerId: string,
+): Promise<ComplaintDoc | null> {
+  const query: SqlQuerySpec = {
+    query: `SELECT TOP 1 * FROM c WHERE c.orderId = @bookingId AND c.customerId = @customerId AND c.type = @type`,
+    parameters: [
+      { name: '@bookingId', value: bookingId },
+      { name: '@customerId', value: customerId },
+      { name: '@type', value: 'RATING_SHIELD' },
+    ],
+  };
+  const { resources } = await getCosmosClient()
+    .database(DB_NAME)
+    .container(CONTAINER)
+    .items.query<Record<string, unknown>>(query)
+    .fetchAll();
+  if (resources.length === 0) return null;
+  const raw = resources[0];
+  return raw !== undefined ? ComplaintDocSchema.parse(raw) : null;
+}
+
 export async function findComplaintByBookingAndParty(
   bookingId: string,
   uid: string,

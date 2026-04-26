@@ -3,7 +3,6 @@ package com.homeservices.customer.ui.catalogue
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.homeservices.customer.domain.technician.model.ConfidenceScore
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -15,7 +14,6 @@ public class ConfidenceScoreRowPaparazziTest {
             theme = "android:Theme.Material3.DayNight.NoActionBar",
         )
 
-    @Ignore("Goldens recorded on CI Linux -- trigger paparazzi-record.yml workflow_dispatch, then remove @Ignore")
     @Test
     public fun loaded_lightTheme() {
         paparazzi.snapshot {
@@ -34,7 +32,6 @@ public class ConfidenceScoreRowPaparazziTest {
         }
     }
 
-    @Ignore("Goldens recorded on CI Linux -- trigger paparazzi-record.yml workflow_dispatch, then remove @Ignore")
     @Test
     public fun limitedData_lightTheme() {
         paparazzi.snapshot {

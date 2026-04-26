@@ -19,7 +19,6 @@ public class TrustDossierCardPaparazziTest {
             theme = "android:Theme.Material3.DayNight.NoActionBar",
         )
 
-    @Ignore("Record goldens on CI only — see docs/patterns/paparazzi-cross-os-goldens.md")
     @Test
     public fun compact_unavailable(): Unit {
         paparazzi.snapshot {
@@ -29,7 +28,6 @@ public class TrustDossierCardPaparazziTest {
         }
     }
 
-    @Ignore("Record goldens on CI only — see docs/patterns/paparazzi-cross-os-goldens.md")
     @Test
     public fun expanded_unavailable(): Unit {
         paparazzi.snapshot {
@@ -39,7 +37,9 @@ public class TrustDossierCardPaparazziTest {
         }
     }
 
-    @Ignore("Record goldens on CI only — see docs/patterns/paparazzi-cross-os-goldens.md")
+    @Ignore(
+        "HandlerDispatcher IllegalStateException — Coil async handler fires after Paparazzi Looper quits on Loaded state; fix with Coil test dispatcher before recording",
+    )
     @Test
     public fun compact_loaded(): Unit {
         paparazzi.snapshot {
@@ -49,7 +49,9 @@ public class TrustDossierCardPaparazziTest {
         }
     }
 
-    @Ignore("Record goldens on CI only — see docs/patterns/paparazzi-cross-os-goldens.md")
+    @Ignore(
+        "HandlerDispatcher IllegalStateException — Coil async handler fires after Paparazzi Looper quits on Loaded state; fix with Coil test dispatcher before recording",
+    )
     @Test
     public fun expanded_loaded(): Unit {
         paparazzi.snapshot {

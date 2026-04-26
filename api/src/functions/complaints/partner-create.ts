@@ -61,6 +61,7 @@ export async function partnerCreateComplaintHandler(
   const now = new Date();
   const doc: ComplaintDoc = {
     id: complaintId,
+    type: 'STANDARD',
     orderId: data.bookingId,
     customerId: booking.customerId,
     technicianId: booking.technicianId ?? '',
