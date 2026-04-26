@@ -1,3 +1,4 @@
+import '../bootstrap.js';
 import { randomUUID } from 'node:crypto';
 import type { HttpHandler } from '@azure/functions';
 import { app } from '@azure/functions';

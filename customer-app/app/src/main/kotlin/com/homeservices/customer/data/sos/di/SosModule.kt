@@ -16,6 +16,7 @@ import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
+import javax.inject.Named
 import javax.inject.Singleton
 
 private val Context.sosDataStore: DataStore<Preferences> by preferencesDataStore(name = "sos_consent")
@@ -25,6 +26,7 @@ private val Context.sosDataStore: DataStore<Preferences> by preferencesDataStore
 public object SosModule {
     @Provides
     @Singleton
+    @Named("sos_consent")
     public fun provideSosDataStore(
         @ApplicationContext context: Context,
     ): DataStore<Preferences> = context.sosDataStore

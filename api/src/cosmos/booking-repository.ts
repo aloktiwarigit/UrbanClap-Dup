@@ -129,11 +129,21 @@ export const bookingRepo = {
   },
 
   async markSosActivated(id: string): Promise<BookingDoc | null> {
-    const existing = await this.getById(id);
+    const { resource: existing, etag } = await getBookingsContainer().item(id, id).read<BookingDoc>();
     if (!existing) return null;
+    if (existing.sosActivatedAt) return existing; // already activated — concurrent request lost the race
     const updated: BookingDoc = { ...existing, sosActivatedAt: new Date().toISOString() };
-    const { resource } = await getBookingsContainer().item(id, id).replace<BookingDoc>(updated);
-    return resource!;
+    try {
+      const { resource } = await getBookingsContainer()
+        .item(id, id)
+        .replace<BookingDoc>(updated, { accessCondition: { type: 'IfMatch', condition: etag ?? '' } });
+      return resource ?? null;
+    } catch (e: unknown) {
+      if (typeof e === 'object' && e !== null && 'code' in e && (e as { code: number }).code === 412) {
+        return null; // lost ETag race — caller handles as already-activated
+      }
+      throw e;
+    }
   },
 };
 

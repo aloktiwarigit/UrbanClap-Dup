@@ -98,4 +98,20 @@ describe('POST /v1/sos/{bookingId}', () => {
     const res = await sosHandler(makeReq({ auth: 'Bearer tok' }), ctx) as HttpResponseInit;
     expect(res.status).toBe(201);
   });
+
+  it('FCM payload uses empty string when technicianId is absent', async () => {
+    vi.mocked(bookingRepo.getById).mockResolvedValue({ ...inProgressBooking, technicianId: undefined });
+    const res = await sosHandler(makeReq({ auth: 'Bearer tok' }), ctx) as HttpResponseInit;
+    expect(res.status).toBe(201);
+    expect(sendOwnerSosAlert).toHaveBeenCalledWith(
+      expect.objectContaining({ technicianId: '' }),
+    );
+  });
+
+  it('returns 201 when markSosActivated returns null due to concurrent request (ETag race)', async () => {
+    vi.mocked(bookingRepo.markSosActivated).mockResolvedValue(null);
+    const res = await sosHandler(makeReq({ auth: 'Bearer tok' }), ctx) as HttpResponseInit;
+    // The handler still fires FCM and audit even if mark returned null — caller treats as best-effort
+    expect(res.status).toBe(201);
+  });
 });

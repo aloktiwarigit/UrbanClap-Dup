@@ -1,8 +1,11 @@
 package com.homeservices.customer.ui.tracking
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.media.MediaRecorder
 import android.os.Build
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -60,11 +63,25 @@ public class SosViewModel
             _sosUiState.value = SosUiState.Idle
         }
 
+        /** Fires the SOS immediately, cancelling the countdown. Used by the "Send Now" button. */
+        public fun onSendNow() {
+            countdownJob?.cancel()
+            countdownJob = null
+            stopRecording()
+            viewModelScope.launch { fireSos() }
+        }
+
         private fun startCountdown(audioGranted: Boolean) {
             countdownJob?.cancel()
             countdownJob =
                 viewModelScope.launch {
-                    if (audioGranted) startRecording()
+                    val recordingPermitted =
+                        audioGranted &&
+                            ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.RECORD_AUDIO,
+                            ) == PackageManager.PERMISSION_GRANTED
+                    if (recordingPermitted) startRecording()
                     for (sec in 30 downTo 1) {
                         _sosUiState.value = SosUiState.Countdown(sec)
                         delay(1_000L)

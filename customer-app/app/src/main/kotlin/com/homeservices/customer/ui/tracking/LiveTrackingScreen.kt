@@ -186,14 +186,16 @@ internal fun LiveTrackingScreen(
             SosBottomSheet(
                 secondsLeft = sos.secondsLeft,
                 onCancel = { sosViewModel.onCancelCountdown() },
-                onConfirmNow = {
-                    sosViewModel.onCancelCountdown()
-                    sosViewModel.onSosTapped()
-                },
+                onConfirmNow = { sosViewModel.onSendNow() },
             )
         is SosUiState.SosConfirmed -> {
             LaunchedEffect(sos) {
                 snackbarHostState.showSnackbar("मालिक को सूचित किया गया")
+            }
+        }
+        is SosUiState.SosError -> {
+            LaunchedEffect(sos) {
+                snackbarHostState.showSnackbar("अलर्ट नहीं भेजा जा सका। फिर से कोशिश करें।")
             }
         }
         else -> Unit

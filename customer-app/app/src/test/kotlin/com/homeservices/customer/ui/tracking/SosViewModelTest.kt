@@ -132,4 +132,18 @@ public class SosViewModelTest {
             assertThat(vm.sosUiState.value).isInstanceOf(SosUiState.Countdown::class.java)
             vm.onCancelCountdown()
         }
+
+    @Test
+    public fun `onSendNow fires SOS immediately without waiting for countdown`(): Unit =
+        runTest(testDispatcher) {
+            coEvery { consentStore.getAudioConsent() } returns false
+            coEvery { sosUseCase.execute("bk-1") } returns Result.success(Unit)
+            val vm = buildVm()
+            vm.onSosTapped()
+            advanceTimeBy(1L) // countdown at 30s
+            vm.onSendNow()
+            advanceUntilIdle()
+            assertThat(vm.sosUiState.value).isInstanceOf(SosUiState.SosConfirmed::class.java)
+            coVerify(exactly = 1) { sosUseCase.execute("bk-1") }
+        }
 }
