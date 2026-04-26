@@ -11,7 +11,7 @@ vi.mock('../../../src/cosmos/booking-repository.js', () => ({
 }));
 vi.mock('../../../src/cosmos/complaints-repository.js', () => ({
   createComplaint: vi.fn(),
-  findActiveComplaintByBookingAndParty: vi.fn(),
+  findComplaintByBookingAndParty: vi.fn(),
   queryComplaintsByBookingAndParty: vi.fn(),
   queryComplaints: vi.fn(),
   getComplaint: vi.fn(),
@@ -31,7 +31,7 @@ vi.mock('../../../src/services/fcm.service.js', () => ({
 
 import { verifyFirebaseIdToken } from '../../../src/services/firebaseAdmin.js';
 import { bookingRepo } from '../../../src/cosmos/booking-repository.js';
-import { createComplaint, findActiveComplaintByBookingAndParty } from '../../../src/cosmos/complaints-repository.js';
+import { createComplaint, findComplaintByBookingAndParty } from '../../../src/cosmos/complaints-repository.js';
 import { partnerCreateComplaintHandler } from '../../../src/functions/complaints/partner-create.js';
 
 function makeReq(body: unknown, token = 'Bearer valid-token'): HttpRequest {
@@ -96,7 +96,7 @@ describe('POST /v1/complaints (partner)', () => {
   it('returns 409 COMPLAINT_ALREADY_FILED when active complaint exists', async () => {
     (verifyFirebaseIdToken as ReturnType<typeof vi.fn>).mockResolvedValue({ uid: 'cust-1' });
     (bookingRepo.getById as ReturnType<typeof vi.fn>).mockResolvedValue(closedBooking);
-    (findActiveComplaintByBookingAndParty as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 'existing-c' });
+    (findComplaintByBookingAndParty as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 'existing-c' });
     const res = await partnerCreateComplaintHandler(makeReq(validCustomerBody), mockCtx);
     expect(res.status).toBe(409);
     expect((res.jsonBody as { code: string }).code).toBe('COMPLAINT_ALREADY_FILED');
@@ -105,7 +105,7 @@ describe('POST /v1/complaints (partner)', () => {
   it('returns 400 INVALID_REASON_CODE when customer uses a technician reason code', async () => {
     (verifyFirebaseIdToken as ReturnType<typeof vi.fn>).mockResolvedValue({ uid: 'cust-1' });
     (bookingRepo.getById as ReturnType<typeof vi.fn>).mockResolvedValue(closedBooking);
-    (findActiveComplaintByBookingAndParty as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+    (findComplaintByBookingAndParty as ReturnType<typeof vi.fn>).mockResolvedValue(null);
     const res = await partnerCreateComplaintHandler(
       makeReq({ ...validCustomerBody, reasonCode: 'CUSTOMER_MISCONDUCT' }), mockCtx,
     );
@@ -116,7 +116,7 @@ describe('POST /v1/complaints (partner)', () => {
   it('returns 201 with partner-safe response (no internal fields) for a valid customer complaint', async () => {
     (verifyFirebaseIdToken as ReturnType<typeof vi.fn>).mockResolvedValue({ uid: 'cust-1' });
     (bookingRepo.getById as ReturnType<typeof vi.fn>).mockResolvedValue(closedBooking);
-    (findActiveComplaintByBookingAndParty as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+    (findComplaintByBookingAndParty as ReturnType<typeof vi.fn>).mockResolvedValue(null);
     (createComplaint as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     const res = await partnerCreateComplaintHandler(makeReq(validCustomerBody), mockCtx);
     expect(res.status).toBe(201);
@@ -138,7 +138,7 @@ describe('POST /v1/complaints (partner)', () => {
   it('returns 201 for a valid technician complaint with tech reason code', async () => {
     (verifyFirebaseIdToken as ReturnType<typeof vi.fn>).mockResolvedValue({ uid: 'tech-1' });
     (bookingRepo.getById as ReturnType<typeof vi.fn>).mockResolvedValue(closedBooking);
-    (findActiveComplaintByBookingAndParty as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+    (findComplaintByBookingAndParty as ReturnType<typeof vi.fn>).mockResolvedValue(null);
     (createComplaint as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     const res = await partnerCreateComplaintHandler(
       makeReq({ ...validCustomerBody, reasonCode: 'LATE_PAYMENT' }), mockCtx,
