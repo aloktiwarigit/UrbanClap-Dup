@@ -9,13 +9,13 @@ import { getBookingsContainer } from '../../../src/cosmos/client.js';
 import type { BookingDoc } from '../../../src/schemas/booking.js';
 
 const mockQueryFetchAll = vi.fn();
+const mockQuery = vi.fn().mockReturnValue({ fetchAll: mockQueryFetchAll });
 
 beforeEach(() => {
   vi.resetAllMocks();
+  mockQuery.mockReturnValue({ fetchAll: mockQueryFetchAll });
   vi.mocked(getBookingsContainer).mockReturnValue({
-    items: {
-      query: vi.fn().mockReturnValue({ fetchAll: mockQueryFetchAll }),
-    },
+    items: { query: mockQuery },
   } as any);
 });
 
@@ -45,8 +45,7 @@ describe('bookingRepo.getAssignedBookingsBefore', () => {
     expect(result).toHaveLength(1);
     expect(result[0]!.id).toBe('bk-1');
 
-    const queryCalls = vi.mocked(getBookingsContainer().items.query).mock.calls;
-    const querySpec = queryCalls[0]![0] as any;
+    const querySpec = mockQuery.mock.calls[0]![0] as { query: string; parameters: unknown[] };
     expect(querySpec.query).toContain("c.status = 'ASSIGNED'");
     expect(querySpec.query).toContain('c.slotDate <= @slotDate');
     expect(querySpec.parameters).toContainEqual({ name: '@slotDate', value: '2026-04-25' });
