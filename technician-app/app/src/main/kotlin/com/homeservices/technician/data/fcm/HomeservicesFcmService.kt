@@ -2,6 +2,7 @@ package com.homeservices.technician.data.fcm
 
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import com.homeservices.technician.data.earnings.EarningsUpdateEventBus
 import com.homeservices.technician.data.jobOffer.JobOfferEventBus
 import com.homeservices.technician.data.rating.RatingPromptEventBus
 import com.homeservices.technician.domain.jobOffer.FcmTokenSyncUseCase
@@ -26,6 +27,9 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
     @Inject
     public lateinit var ratingPromptEventBus: RatingPromptEventBus
 
+    @Inject
+    public lateinit var earningsUpdateEventBus: EarningsUpdateEventBus
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onMessageReceived(message: RemoteMessage): Unit {
@@ -38,6 +42,9 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
             "RATING_PROMPT_TECHNICIAN" -> {
                 val bookingId = data["bookingId"] ?: return
                 ratingPromptEventBus.post(bookingId)
+            }
+            "EARNINGS_UPDATE" -> {
+                earningsUpdateEventBus.notify()
             }
         }
     }
