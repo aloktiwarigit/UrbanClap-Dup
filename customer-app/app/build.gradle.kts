@@ -320,6 +320,17 @@ kover {
                     // RatingPromptEventBus — MutableSharedFlow wrapper, same rationale as PriceApprovalEventBus
                     "*.RatingPromptEventBus",
                     "*.RatingPromptEventBus$*",
+                    // ComplaintScreen — Compose UI composable
+                    "*.ComplaintScreenKt",
+                    "*.ComplaintScreenKt\$*",
+                    // ComplaintRoutes — nav route sealed class
+                    "*.ComplaintRoutes",
+                    "*.ComplaintRoutes\$*",
+                    // data.complaint.di — Hilt @Provides wiring
+                    "*.data.complaint.di.*",
+                    // PhotoUploadUseCase — Firebase Storage upload path
+                    "*.PhotoUploadUseCase",
+                    "*.PhotoUploadUseCase\$*",
                 )
             }
         }
@@ -361,6 +372,7 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.messaging)
+    implementation(libs.firebase.storage)
 
     // Coroutines — play-services extensions (.await() on Task<T>)
     implementation(libs.kotlinx.coroutines.play.services)
