@@ -67,18 +67,17 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
     }
 
     // When recovering from a prior run (creditCreated=false), re-fetch the live status first.
-    // If the booking has already advanced past NO_SHOW_REDISPATCH (e.g. a replacement tech
-    // accepted it → ASSIGNED), skip status reset and redispatch entirely to avoid churn.
+    // Only skip if the booking has advanced to SEARCHING or beyond — meaning redispatch already
+    // fired and the booking left the "needs redispatch" window. ASSIGNED is NOT a safe skip signal:
+    // it can mean either (a) status-write failed and original tech is still assigned, or (b) a
+    // replacement tech accepted. We retry in both cases: (a) needs the write+redispatch; (b) the
+    // duplicate updateBookingFields call is a no-op if status is already past NO_SHOW_REDISPATCH
+    // (Cosmos replace is idempotent when the document is re-written to an identical value).
     if (!creditCreated) {
       const liveBooking = await bookingRepo.getById(booking.id);
-      if (liveBooking?.status !== 'NO_SHOW_REDISPATCH' && liveBooking?.status !== 'ASSIGNED') {
-        // Already in a terminal or advanced state — nothing left to recover
-        ctx.log(`detectNoShows: recovery skipped for ${booking.id} — current status=${liveBooking?.status ?? 'unknown'}`);
-        continue;
-      }
-      if (liveBooking.status === 'ASSIGNED') {
-        // A replacement tech already accepted the redispatch; do not re-open the booking
-        ctx.log(`detectNoShows: redispatch already resolved for ${booking.id} — skipping`);
+      const safeToSkip = liveBooking && liveBooking.status !== 'ASSIGNED' && liveBooking.status !== 'NO_SHOW_REDISPATCH';
+      if (safeToSkip) {
+        ctx.log(`detectNoShows: recovery skipped for ${booking.id} — current status=${liveBooking.status}`);
         continue;
       }
     }

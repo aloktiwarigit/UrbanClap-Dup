@@ -135,18 +135,18 @@ describe('detectNoShows', () => {
     expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
   });
 
-  it('skips redispatch when a replacement tech already accepted the job (ASSIGNED after redispatch)', async () => {
-    const booking = makeAssignedBooking('bk-reassigned', 45);
+  it('retries status-write + redispatch when booking is still ASSIGNED in recovery (status-write may have failed on prior run)', async () => {
+    const booking = makeAssignedBooking('bk-assigned-retry', 45);
     vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([booking]);
     vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(false);
-    // Replacement tech accepted — booking is now ASSIGNED again
+    // ASSIGNED in recovery is ambiguous: could be original tech (status-write failed) or
+    // replacement tech. Always retry to avoid leaving a credited booking un-redispatched.
     vi.mocked(bookingRepo.getById).mockResolvedValue({ status: 'ASSIGNED' } as BookingDoc);
 
     await detectNoShows(mockCtx);
 
-    // Do not re-open a booking that already has a new technician assigned
-    expect(updateBookingFields).not.toHaveBeenCalled();
-    expect(dispatcherService.redispatch).not.toHaveBeenCalled();
+    expect(updateBookingFields).toHaveBeenCalledWith('bk-assigned-retry', { status: 'NO_SHOW_REDISPATCH' });
+    expect(dispatcherService.redispatch).toHaveBeenCalledWith('bk-assigned-retry', 15);
     expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
   });
 
