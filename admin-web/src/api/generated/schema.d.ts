@@ -533,6 +533,13 @@ export interface components {
             slaDeadlineAt: string;
             /** @default false */
             escalated: boolean;
+            /** @default false */
+            ackBreached: boolean;
+            /** @enum {string} */
+            filedBy?: "CUSTOMER" | "TECHNICIAN";
+            reasonCode?: string;
+            photoStoragePath?: string;
+            acknowledgeDeadlineAt?: string;
             resolvedAt?: string;
             createdAt: string;
             updatedAt: string;
@@ -578,6 +585,13 @@ export interface components {
                 slaDeadlineAt: string;
                 /** @default false */
                 escalated: boolean;
+                /** @default false */
+                ackBreached: boolean;
+                /** @enum {string} */
+                filedBy?: "CUSTOMER" | "TECHNICIAN";
+                reasonCode?: string;
+                photoStoragePath?: string;
+                acknowledgeDeadlineAt?: string;
                 resolvedAt?: string;
                 createdAt: string;
                 updatedAt: string;
