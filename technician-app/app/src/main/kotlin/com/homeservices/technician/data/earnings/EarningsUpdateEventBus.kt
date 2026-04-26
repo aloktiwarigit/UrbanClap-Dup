@@ -15,8 +15,7 @@ public class EarningsUpdateEventBus @Inject constructor() {
         )
     public val events: SharedFlow<Unit> = _events.asSharedFlow()
 
-    @Suppress("ACCIDENTAL_OVERRIDE")
-    public fun notify(): Unit {
+    public fun notifyEarningsUpdate(): Unit {
         _events.tryEmit(Unit)
     }
 }

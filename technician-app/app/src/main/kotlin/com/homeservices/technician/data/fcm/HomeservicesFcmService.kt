@@ -44,7 +44,7 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
                 ratingPromptEventBus.post(bookingId)
             }
             "EARNINGS_UPDATE" -> {
-                earningsUpdateEventBus.notify()
+                earningsUpdateEventBus.notifyEarningsUpdate()
             }
         }
     }
