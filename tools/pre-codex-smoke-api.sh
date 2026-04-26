@@ -7,20 +7,20 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT/api"
 
-# Ensure local node_modules/.bin is on PATH (needed when running from git hooks
-# on Windows where the hook environment may not inherit the user's shell PATH).
-export PATH="$PWD/node_modules/.bin:$PATH"
+# Call binaries directly so pnpm's cmd.exe subprocess spawning on Windows
+# (which doesn't inherit the bash PATH) doesn't block the git hook.
+BIN="$PWD/node_modules/.bin"
 
 echo "=== Pre-Codex Smoke Gate: api ==="
 
 echo "[1/3] typecheck — catches missing types, broken imports, type errors..."
-pnpm typecheck 2>&1 | tail -20
+"$BIN/tsc" --noEmit -p tsconfig.tests.json 2>&1 | tail -20
 
 echo "[2/3] lint — ESLint 0 warnings..."
-pnpm lint 2>&1 | tail -20
+"$BIN/eslint" . --max-warnings 0 2>&1 | tail -20
 
 echo "[3/3] vitest run — all unit tests must be green..."
-pnpm test 2>&1 | tail -30
+"$BIN/vitest" run 2>&1 | tail -30
 
 echo ""
 echo "=== API smoke gate PASSED — safe to invoke /codex-review-gate ==="
