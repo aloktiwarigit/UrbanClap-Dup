@@ -11,3 +11,19 @@ public sealed class MyRatingsUiState {
 
     public object Error : MyRatingsUiState()
 }
+
+public sealed class AppealState {
+    public object Idle : AppealState()
+
+    public data class Loading(
+        val bookingId: String,
+    ) : AppealState()
+
+    public object Success : AppealState()
+
+    public data class QuotaExceeded(
+        val nextAvailableAt: String?,
+    ) : AppealState()
+
+    public object Error : AppealState()
+}

@@ -21,11 +21,19 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -49,6 +57,10 @@ internal fun MyRatingsScreen(
     onBack: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val appealState by viewModel.appealState.collectAsStateWithLifecycle()
+    var selectedAppealBookingId by remember { mutableStateOf<String?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -60,6 +72,7 @@ internal fun MyRatingsScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier,
     ) { padding ->
         Box(
@@ -82,9 +95,48 @@ internal fun MyRatingsScreen(
                 is MyRatingsUiState.Success ->
                     RatingsContent(
                         summary = state.summary,
+                        onAppeal = { bookingId -> selectedAppealBookingId = bookingId },
                         modifier = Modifier.fillMaxSize(),
                     )
             }
+        }
+    }
+
+    selectedAppealBookingId?.let { bookingId ->
+        RatingAppealSheet(
+            bookingId = bookingId,
+            onDismiss = { selectedAppealBookingId = null },
+            onSubmit = { bid, reason -> viewModel.fileRatingAppeal(bid, reason) },
+            isSubmitting = appealState is AppealState.Loading,
+        )
+    }
+
+    LaunchedEffect(appealState) {
+        when (val s = appealState) {
+            is AppealState.Success -> {
+                snackbarHostState.showSnackbar(
+                    message = "अपील दर्ज हो गई ✓",
+                    duration = SnackbarDuration.Short,
+                )
+                selectedAppealBookingId = null
+                viewModel.consumeAppealState()
+            }
+            is AppealState.QuotaExceeded -> {
+                snackbarHostState.showSnackbar(
+                    message = "इस महीने अपील हो चुकी है। अगली अपील: ${s.nextAvailableAt ?: "अगले महीने"}",
+                    duration = SnackbarDuration.Long,
+                )
+                selectedAppealBookingId = null
+                viewModel.consumeAppealState()
+            }
+            is AppealState.Error -> {
+                snackbarHostState.showSnackbar(
+                    message = "अपील नहीं हो सकी",
+                    duration = SnackbarDuration.Short,
+                )
+                viewModel.consumeAppealState()
+            }
+            else -> Unit
         }
     }
 }
@@ -92,6 +144,7 @@ internal fun MyRatingsScreen(
 @Composable
 private fun RatingsContent(
     summary: TechRatingSummary,
+    onAppeal: (bookingId: String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -138,7 +191,10 @@ private fun RatingsContent(
             }
         } else {
             items(summary.items) { rating ->
-                RatingItemCard(rating = rating)
+                RatingItemCard(
+                    rating = rating,
+                    onAppeal = { onAppeal(rating.bookingId) },
+                )
             }
         }
     }
@@ -203,15 +259,32 @@ private fun RatingTrendChart(
 private val DATE_FORMATTER = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH)
 
 @Composable
-private fun RatingItemCard(rating: ReceivedRating) {
+private fun RatingItemCard(
+    rating: ReceivedRating,
+    onAppeal: () -> Unit = {},
+) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                repeat(5) { i ->
-                    Text(if (i < rating.overall) "★" else "☆", style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    repeat(5) { i ->
+                        Text(
+                            if (i < rating.overall) "★" else "☆",
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                    }
+                }
+                if (rating.overall < 5) {
+                    TextButton(onClick = onAppeal) {
+                        Text("अपील")
+                    }
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

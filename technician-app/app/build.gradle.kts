@@ -316,6 +316,20 @@ kover {
                     // PhotoUploadUseCase — Firebase Storage upload path
                     "*.PhotoUploadUseCase",
                     "*.PhotoUploadUseCase\$*",
+                    // E08-S04 Shield/Appeal Compose sheets — same rationale as other
+                    // *Kt screen wrappers: recomposition guards + slot-table ops only
+                    // exercisable via Paparazzi / instrumented tests.
+                    "*.ShieldReportSheetKt",
+                    "*.ShieldReportSheetKt\$*",
+                    "*.RatingAppealSheetKt",
+                    "*.RatingAppealSheetKt\$*",
+                    // ShieldApiService is an internal Retrofit interface — methods invoked by
+                    // Retrofit runtime, not unit-testable directly.
+                    "*.ShieldApiService",
+                    "*.ShieldApiService\$*",
+                    // Shield Hilt DI module — @Provides methods are framework wiring,
+                    // same rationale as data.rating.di.* / data.activeJob.di.*.
+                    "*.data.shield.di.*",
                 )
             }
         }

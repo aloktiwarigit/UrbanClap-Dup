@@ -21,6 +21,10 @@ public sealed class ActiveJobUiState {
         val uploadedStoragePath: String? = null, // non-null = photo already uploaded; skip re-upload on retry
         val photoUploadInProgress: Boolean = false,
         val photoUploadError: String? = null,
+        val showShieldSheet: Boolean = false,
+        val shieldReportInProgress: Boolean = false,
+        val shieldReportSuccess: Boolean = false,
+        val shieldReportError: String? = null,
     ) : ActiveJobUiState()
 
     public data class Completed(

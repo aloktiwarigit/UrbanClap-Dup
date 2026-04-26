@@ -12,6 +12,7 @@ import com.homeservices.technician.domain.activeJob.StartWorkUseCase
 import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
 import com.homeservices.technician.domain.activeJob.model.NavigationEvent
 import com.homeservices.technician.domain.photo.UploadJobPhotoUseCase
+import com.homeservices.technician.domain.shield.FileShieldReportUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +35,7 @@ internal class ActiveJobViewModel
         private val completeJobUseCase: CompleteJobUseCase,
         private val connectivityObserver: ConnectivityObserver,
         private val uploadJobPhotoUseCase: UploadJobPhotoUseCase,
+        private val fileShieldReportUseCase: FileShieldReportUseCase,
     ) : ViewModel() {
         private val bookingId: String = checkNotNull(savedStateHandle["bookingId"])
 
@@ -61,6 +63,10 @@ internal class ActiveJobViewModel
                                 uploadedStoragePath = current?.uploadedStoragePath,
                                 photoUploadInProgress = current?.photoUploadInProgress ?: false,
                                 photoUploadError = current?.photoUploadError,
+                                showShieldSheet = current?.showShieldSheet ?: false,
+                                shieldReportInProgress = current?.shieldReportInProgress ?: false,
+                                shieldReportSuccess = current?.shieldReportSuccess ?: false,
+                                shieldReportError = current?.shieldReportError,
                             )
                         }
                 }
@@ -204,6 +210,50 @@ internal class ActiveJobViewModel
                         )
                 }
             }
+        }
+
+        public fun onShowShieldSheet() {
+            val current = _uiState.value as? ActiveJobUiState.Active ?: return
+            _uiState.value = current.copy(showShieldSheet = true, shieldReportError = null)
+        }
+
+        public fun onDismissShieldSheet() {
+            val current = _uiState.value as? ActiveJobUiState.Active ?: return
+            _uiState.value = current.copy(showShieldSheet = false)
+        }
+
+        public fun fileShieldReport(description: String?) {
+            val current = _uiState.value as? ActiveJobUiState.Active ?: return
+            val bid = current.job.bookingId
+            _uiState.value = current.copy(shieldReportInProgress = true, shieldReportError = null)
+            viewModelScope.launch {
+                val result = fileShieldReportUseCase.invoke(bid, description)
+                val s = _uiState.value as? ActiveJobUiState.Active ?: return@launch
+                _uiState.value =
+                    if (result.isSuccess) {
+                        s.copy(
+                            shieldReportInProgress = false,
+                            shieldReportSuccess = true,
+                            showShieldSheet = false,
+                            shieldReportError = null,
+                        )
+                    } else {
+                        s.copy(
+                            shieldReportInProgress = false,
+                            shieldReportError = result.exceptionOrNull()?.message ?: "Report failed",
+                        )
+                    }
+            }
+        }
+
+        public fun consumeShieldReportSuccess() {
+            val current = _uiState.value as? ActiveJobUiState.Active ?: return
+            _uiState.value = current.copy(shieldReportSuccess = false)
+        }
+
+        public fun consumeShieldReportError() {
+            val current = _uiState.value as? ActiveJobUiState.Active ?: return
+            _uiState.value = current.copy(shieldReportError = null)
         }
 
         private fun ActiveJobStatus.toAction(): ActiveJobAction =

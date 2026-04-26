@@ -141,6 +141,7 @@ customer-app/release.keystore
 
 # technician-app/
 technician-app/.gradle/
+technician-app/.kotlin/
 technician-app/build/
 technician-app/app/build/
 technician-app/app/release/
