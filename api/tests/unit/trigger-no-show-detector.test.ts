@@ -153,7 +153,7 @@ describe('detectNoShows', () => {
     expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
   });
 
-  it('captures Sentry + continues when updateBookingFields throws (best-effort status write)', async () => {
+  it('captures Sentry + skips redispatch + FCM when updateBookingFields throws (status-write failure gates downstream)', async () => {
     vi.mocked(bookingRepo.getAssignedBookingsBefore)
       .mockResolvedValue([makeAssignedBooking('bk-err', 45)]);
     vi.mocked(updateBookingFields).mockRejectedValue(new Error('cosmos 503'));
@@ -164,9 +164,12 @@ describe('detectNoShows', () => {
     // Credit was attempted (it is the gate — comes first)
     expect(customerCreditRepo.createCreditIfAbsent).toHaveBeenCalled();
     expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error));
+    // Redispatch and FCM skipped — status-write failure means statusWriteOk=false
+    expect(dispatcherService.redispatch).not.toHaveBeenCalled();
+    expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
   });
 
-  it('captures Sentry + continues to FCM when redispatch throws', async () => {
+  it('captures Sentry + skips FCM when redispatch throws (push text would be misleading)', async () => {
     vi.mocked(bookingRepo.getAssignedBookingsBefore)
       .mockResolvedValue([makeAssignedBooking('bk-rdp-err', 45)]);
     vi.mocked(dispatcherService.redispatch).mockRejectedValue(new Error('no techs'));
@@ -174,7 +177,8 @@ describe('detectNoShows', () => {
     await detectNoShows(mockCtx);
 
     expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error));
-    expect(fcmService.sendNoShowCreditPush).toHaveBeenCalled();
+    // FCM must NOT fire — it says "searching for new tech" which is false when dispatch failed
+    expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
   });
 
   it('captures Sentry without rethrowing when sendNoShowCreditPush throws', async () => {
