@@ -53,8 +53,9 @@ internal fun LiveTrackingScreen(
     val sosUiState by sosViewModel.sosUiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val isInProgress = uiState is LiveTrackingUiState.Tracking &&
-        (uiState as LiveTrackingUiState.Tracking).status is BookingStatus.InProgress
+    val isInProgress =
+        uiState is LiveTrackingUiState.Tracking &&
+            (uiState as LiveTrackingUiState.Tracking).status is BookingStatus.InProgress
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -176,18 +177,20 @@ internal fun LiveTrackingScreen(
 
     // SOS overlays — rendered above Scaffold so they cover all content
     when (val sos = sosUiState) {
-        is SosUiState.ShowConsent -> SosConsentDialog(
-            onGranted = { sosViewModel.onConsentResolved(true) },
-            onDenied = { sosViewModel.onConsentResolved(false) },
-        )
-        is SosUiState.Countdown -> SosBottomSheet(
-            secondsLeft = sos.secondsLeft,
-            onCancel = { sosViewModel.onCancelCountdown() },
-            onConfirmNow = {
-                sosViewModel.onCancelCountdown()
-                sosViewModel.onSosTapped()
-            },
-        )
+        is SosUiState.ShowConsent ->
+            SosConsentDialog(
+                onGranted = { sosViewModel.onConsentResolved(true) },
+                onDenied = { sosViewModel.onConsentResolved(false) },
+            )
+        is SosUiState.Countdown ->
+            SosBottomSheet(
+                secondsLeft = sos.secondsLeft,
+                onCancel = { sosViewModel.onCancelCountdown() },
+                onConfirmNow = {
+                    sosViewModel.onCancelCountdown()
+                    sosViewModel.onSosTapped()
+                },
+            )
         is SosUiState.SosConfirmed -> {
             LaunchedEffect(sos) {
                 snackbarHostState.showSnackbar("मालिक को सूचित किया गया")

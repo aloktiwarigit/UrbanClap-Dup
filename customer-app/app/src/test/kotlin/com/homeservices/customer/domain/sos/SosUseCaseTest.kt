@@ -13,17 +13,19 @@ public class SosUseCaseTest {
     private val useCase = SosUseCase(api)
 
     @Test
-    public fun `execute returns success on HTTP 2xx`(): Unit = runTest {
-        coEvery { api.triggerSos("bk-1") } returns Unit
-        val result = useCase.execute("bk-1")
-        assertThat(result.isSuccess).isTrue()
-        coVerify(exactly = 1) { api.triggerSos("bk-1") }
-    }
+    public fun `execute returns success on HTTP 2xx`(): Unit =
+        runTest {
+            coEvery { api.triggerSos("bk-1") } returns Unit
+            val result = useCase.execute("bk-1")
+            assertThat(result.isSuccess).isTrue()
+            coVerify(exactly = 1) { api.triggerSos("bk-1") }
+        }
 
     @Test
-    public fun `execute returns failure on network error`(): Unit = runTest {
-        coEvery { api.triggerSos("bk-1") } throws RuntimeException("timeout")
-        val result = useCase.execute("bk-1")
-        assertThat(result.isFailure).isTrue()
-    }
+    public fun `execute returns failure on network error`(): Unit =
+        runTest {
+            coEvery { api.triggerSos("bk-1") } throws RuntimeException("timeout")
+            val result = useCase.execute("bk-1")
+            assertThat(result.isFailure).isTrue()
+        }
 }

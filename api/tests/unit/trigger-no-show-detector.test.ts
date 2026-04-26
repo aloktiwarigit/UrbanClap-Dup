@@ -167,8 +167,8 @@ describe('detectNoShows', () => {
     vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([booking]);
     vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(false);
     // Both steps already completed on prior run
-    const completedDoc = {
-      status: 'ASSIGNED',
+    const completedDoc: import('../../src/schemas/booking.js').BookingDoc = {
+      ...makeAssignedBooking('bk-1', 35),
       noShowRedispatchAt: '2026-04-26T05:00:00.000Z',
       noShowPushSentAt: '2026-04-26T05:00:01.000Z',
     };

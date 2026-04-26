@@ -10,15 +10,16 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-public class SosConsentStore @Inject constructor(
-    private val dataStore: DataStore<Preferences>,
-) {
-    private val key = booleanPreferencesKey("sos_audio_consent_given")
+public class SosConsentStore
+    @Inject
+    constructor(
+        private val dataStore: DataStore<Preferences>,
+    ) {
+        private val key = booleanPreferencesKey("sos_audio_consent_given")
 
-    public suspend fun getAudioConsent(): Boolean? =
-        dataStore.data.map { it[key] }.firstOrNull()
+        public suspend fun getAudioConsent(): Boolean? = dataStore.data.map { it[key] }.firstOrNull()
 
-    public suspend fun setAudioConsent(granted: Boolean) {
-        dataStore.edit { it[key] = granted }
+        public suspend fun setAudioConsent(granted: Boolean) {
+            dataStore.edit { it[key] = granted }
+        }
     }
-}

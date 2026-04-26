@@ -35,7 +35,8 @@ public object SosModule {
         @AuthOkHttpClient client: OkHttpClient,
         moshi: Moshi,
     ): SosApiService =
-        Retrofit.Builder()
+        Retrofit
+            .Builder()
             .baseUrl(BuildConfig.API_BASE_URL + "/")
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .client(client)

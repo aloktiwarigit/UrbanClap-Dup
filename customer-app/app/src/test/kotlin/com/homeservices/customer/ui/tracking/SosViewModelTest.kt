@@ -62,7 +62,7 @@ public class SosViewModelTest {
             coEvery { consentStore.getAudioConsent() } returns false
             val vm = buildVm()
             vm.onSosTapped()
-            advanceTimeBy(1L)  // processes launch + Countdown(30) emit, stops at delay(1s)
+            advanceTimeBy(1L) // processes launch + Countdown(30) emit, stops at delay(1s)
             assertThat(vm.sosUiState.value).isInstanceOf(SosUiState.Countdown::class.java)
             assertThat((vm.sosUiState.value as SosUiState.Countdown).secondsLeft).isEqualTo(30)
             // Cancel before test-scope cleanup to avoid mock-missing fireSos call
@@ -118,5 +118,18 @@ public class SosViewModelTest {
             advanceTimeBy(31_000L)
             advanceUntilIdle()
             assertThat(vm.sosUiState.value).isInstanceOf(SosUiState.SosError::class.java)
+        }
+
+    @Test
+    public fun `audio recording starts silently when consent granted and countdown proceeds`(): Unit =
+        runTest(testDispatcher) {
+            // When audioGranted=true, startRecording() is called. On JVM the MediaRecorder fails
+            // silently inside runCatching — countdown must still proceed normally.
+            coEvery { consentStore.getAudioConsent() } returns true
+            val vm = buildVm()
+            vm.onSosTapped()
+            advanceTimeBy(1L)
+            assertThat(vm.sosUiState.value).isInstanceOf(SosUiState.Countdown::class.java)
+            vm.onCancelCountdown()
         }
 }
