@@ -1,10 +1,10 @@
-import { app } from '@azure/functions';
+import { type HttpHandler, type HttpRequest, type InvocationContext, app } from '@azure/functions';
 import '../bootstrap.js';
 import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
 import { ratingRepo } from '../cosmos/rating-repository.js';
 import type { TechRatingSummary } from '../schemas/rating.js';
 
-export const getTechRatingsHandler = async (req: any, ctx: any) => {
+export const getTechRatingsHandler: HttpHandler = async (req: HttpRequest, _ctx: InvocationContext) => {
   let uid: string;
   try {
     const decoded = await verifyTechnicianToken(req);
