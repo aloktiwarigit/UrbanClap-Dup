@@ -66,6 +66,23 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
       ctx.log(`detectNoShows: credit already exists for ${booking.id} — retrying remaining steps`);
     }
 
+    // When recovering from a prior run (creditCreated=false), re-fetch the live status first.
+    // If the booking has already advanced past NO_SHOW_REDISPATCH (e.g. a replacement tech
+    // accepted it → ASSIGNED), skip status reset and redispatch entirely to avoid churn.
+    if (!creditCreated) {
+      const liveBooking = await bookingRepo.getById(booking.id);
+      if (liveBooking?.status !== 'NO_SHOW_REDISPATCH' && liveBooking?.status !== 'ASSIGNED') {
+        // Already in a terminal or advanced state — nothing left to recover
+        ctx.log(`detectNoShows: recovery skipped for ${booking.id} — current status=${liveBooking?.status ?? 'unknown'}`);
+        continue;
+      }
+      if (liveBooking.status === 'ASSIGNED') {
+        // A replacement tech already accepted the redispatch; do not re-open the booking
+        ctx.log(`detectNoShows: redispatch already resolved for ${booking.id} — skipping`);
+        continue;
+      }
+    }
+
     try {
       await updateBookingFields(booking.id, { status: 'NO_SHOW_REDISPATCH' });
     } catch (err: unknown) {
@@ -73,18 +90,11 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
       ctx.log(`detectNoShows: status update failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);
     }
 
-    // Re-fetch to check current status before redispatch — a prior timer run may have already
-    // advanced the booking to SEARCHING or ASSIGNED, in which case redispatch must not fire again.
-    const currentBooking = await bookingRepo.getById(booking.id);
-    if (currentBooking?.status === 'NO_SHOW_REDISPATCH') {
-      try {
-        await dispatcherService.redispatch(booking.id, NO_SHOW_REDISPATCH_RADIUS_KM);
-      } catch (err: unknown) {
-        Sentry.captureException(err);
-        ctx.log(`detectNoShows: redispatch failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);
-      }
-    } else {
-      ctx.log(`detectNoShows: redispatch skipped for ${booking.id} — current status=${currentBooking?.status ?? 'unknown'}`);
+    try {
+      await dispatcherService.redispatch(booking.id, NO_SHOW_REDISPATCH_RADIUS_KM);
+    } catch (err: unknown) {
+      Sentry.captureException(err);
+      ctx.log(`detectNoShows: redispatch failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);
     }
 
     // FCM push is NOT idempotent — only send when this invocation actually issued the credit.

@@ -120,16 +120,32 @@ describe('detectNoShows', () => {
     expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
   });
 
-  it('skips redispatch when booking has already advanced past NO_SHOW_REDISPATCH (prior run completed)', async () => {
-    const booking = makeAssignedBooking('bk-already-done', 45);
+  it('skips entire recovery when booking is in SEARCHING (prior run advanced past redispatch)', async () => {
+    const booking = makeAssignedBooking('bk-searching', 45);
     vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([booking]);
     vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(false);
-    // Prior run succeeded — booking is already SEARCHING or ASSIGNED
+    // Prior run wrote NO_SHOW_REDISPATCH + triggered redispatch → booking moved to SEARCHING
     vi.mocked(bookingRepo.getById).mockResolvedValue({ status: 'SEARCHING' } as BookingDoc);
 
     await detectNoShows(mockCtx);
 
-    expect(updateBookingFields).toHaveBeenCalledWith('bk-already-done', { status: 'NO_SHOW_REDISPATCH' });
+    // All downstream steps skipped — nothing left to recover
+    expect(updateBookingFields).not.toHaveBeenCalled();
+    expect(dispatcherService.redispatch).not.toHaveBeenCalled();
+    expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
+  });
+
+  it('skips redispatch when a replacement tech already accepted the job (ASSIGNED after redispatch)', async () => {
+    const booking = makeAssignedBooking('bk-reassigned', 45);
+    vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([booking]);
+    vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(false);
+    // Replacement tech accepted — booking is now ASSIGNED again
+    vi.mocked(bookingRepo.getById).mockResolvedValue({ status: 'ASSIGNED' } as BookingDoc);
+
+    await detectNoShows(mockCtx);
+
+    // Do not re-open a booking that already has a new technician assigned
+    expect(updateBookingFields).not.toHaveBeenCalled();
     expect(dispatcherService.redispatch).not.toHaveBeenCalled();
     expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
   });
