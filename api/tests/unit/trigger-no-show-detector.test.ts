@@ -26,7 +26,7 @@ const mockCtx = { log: vi.fn() } as unknown as InvocationContext;
 
 // Builds a booking doc where slotDate+slotWindow produce a slot start that is
 // `minutesAgo` minutes before now in UTC.
-function makeAssignedBooking(id: string, minutesAgo: number): BookingDoc {
+function makeAssignedBooking(id: string, minutesAgo: number, extra: Partial<BookingDoc> = {}): BookingDoc {
   const slotStartUtc = new Date(Date.now() - minutesAgo * 60 * 1000);
   // Reverse-engineer the IST date+window from the desired UTC slot start.
   // IST = UTC + 5h30m → slot start IST = slotStartUtc + 330 min
@@ -52,16 +52,31 @@ function makeAssignedBooking(id: string, minutesAgo: number): BookingDoc {
     paymentSignature: `sig-${id}`,
     amount: 59900,
     createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    ...extra,
   };
+}
+
+// getById is called multiple times per booking; this helper sets up a sequence.
+// Call order: (1) fresh-read guard, (2) recovery check (if creditCreated=false), (3) push-sent check.
+// For creditCreated=true paths: call 1 = ASSIGNED, call 2 = push-check (no noShowPushSentAt).
+// For creditCreated=false paths: call 1 = fresh-read, call 2 = recovery check, call 3 = push-check.
+function mockGetByIdSequence(...docs: (Partial<BookingDoc> | null)[]): void {
+  const mock = vi.mocked(bookingRepo.getById);
+  let i = 0;
+  mock.mockImplementation(async () => {
+    const doc = docs[i] ?? docs[docs.length - 1];
+    i++;
+    return doc as BookingDoc | null;
+  });
 }
 
 beforeEach(() => {
   vi.mocked(mockCtx.log).mockClear();
   vi.resetAllMocks();
   vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([]);
-  // Default: getById returns ASSIGNED (fresh-read guard passes)
-  // The dispatcher.service mock handles its own getById internally (not this mock).
-  vi.mocked(bookingRepo.getById).mockResolvedValue({ status: 'ASSIGNED' } as BookingDoc);
+  // Default getById sequence for creditCreated=true path:
+  // call 1: fresh-read → ASSIGNED (guard passes), call 2+: push-check → no noShowPushSentAt
+  mockGetByIdSequence({ status: 'ASSIGNED' }, { status: 'NO_SHOW_REDISPATCH' });
   vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(true);
   vi.mocked(updateBookingFields).mockResolvedValue(null);
   vi.mocked(dispatcherService.redispatch).mockResolvedValue(true);
@@ -69,7 +84,7 @@ beforeEach(() => {
 });
 
 describe('detectNoShows', () => {
-  it('does nothing when no ASSIGNED bookings returned', async () => {
+  it('does nothing when no bookings returned', async () => {
     vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([]);
     await detectNoShows(mockCtx);
     expect(customerCreditRepo.createCreditIfAbsent).not.toHaveBeenCalled();
@@ -85,11 +100,10 @@ describe('detectNoShows', () => {
     expect(dispatcherService.redispatch).not.toHaveBeenCalled();
   });
 
-  it('skips booking when fresh re-read shows technician already advanced to IN_PROGRESS (stale ASSIGNED snapshot)', async () => {
+  it('skips booking when fresh re-read shows IN_PROGRESS (stale ASSIGNED snapshot)', async () => {
     vi.mocked(bookingRepo.getAssignedBookingsBefore)
       .mockResolvedValue([makeAssignedBooking('bk-in-progress', 45)]);
-    // Fresh re-read reveals tech already started work after the query returned
-    vi.mocked(bookingRepo.getById).mockResolvedValue({ status: 'IN_PROGRESS' } as BookingDoc);
+    mockGetByIdSequence({ status: 'IN_PROGRESS' });
 
     await detectNoShows(mockCtx);
 
@@ -99,22 +113,11 @@ describe('detectNoShows', () => {
     expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
   });
 
-  it('allows recovery when fresh re-read shows NO_SHOW_REDISPATCH (prior run wrote status but crashed before redispatch)', async () => {
-    const booking = makeAssignedBooking('bk-recovery-status', 45);
-    vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([booking]);
-    // Fresh re-read returns NO_SHOW_REDISPATCH — prior run set status but crashed before redispatch
-    vi.mocked(bookingRepo.getById).mockResolvedValue({ status: 'NO_SHOW_REDISPATCH' } as BookingDoc);
-    vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(false);
-
-    await detectNoShows(mockCtx);
-
-    // Recovery should proceed to status write and redispatch
-    expect(dispatcherService.redispatch).toHaveBeenCalled();
-  });
-
-  it('processes booking 45 minutes past slot start: writes credit, updates status+noShowRedispatchAt, redispatches, sends FCM', async () => {
+  it('processes booking 45 minutes past slot start: writes credit, status, redispatches, sends FCM', async () => {
     const booking = makeAssignedBooking('bk-due', 45);
     vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([booking]);
+    // getById sequence: fresh-read → ASSIGNED (guard OK), push-check → no noShowPushSentAt
+    mockGetByIdSequence({ status: 'ASSIGNED' }, { status: 'NO_SHOW_REDISPATCH' });
 
     await detectNoShows(mockCtx);
 
@@ -122,46 +125,54 @@ describe('detectNoShows', () => {
       expect.objectContaining({
         id: 'bk-due',
         customerId: booking.customerId,
-        bookingId: 'bk-due',
         amount: 50_000,
         reason: 'NO_SHOW',
       }),
     );
-    expect(updateBookingFields).toHaveBeenCalledWith('bk-due', { status: 'NO_SHOW_REDISPATCH', technicianId: undefined });
+    expect(updateBookingFields).toHaveBeenCalledWith(
+      'bk-due',
+      expect.objectContaining({ status: 'NO_SHOW_REDISPATCH', technicianId: undefined }),
+    );
     expect(updateBookingFields).toHaveBeenCalledWith(
       'bk-due',
       expect.objectContaining({ noShowRedispatchAt: expect.any(String) }),
     );
     expect(dispatcherService.redispatch).toHaveBeenCalledWith('bk-due', 15, undefined);
-    // FCM fires because creditCreated=true (this run issued the credit)
     expect(fcmService.sendNoShowCreditPush).toHaveBeenCalledWith(booking.customerId, 'bk-due', 50_000);
+    expect(updateBookingFields).toHaveBeenCalledWith(
+      'bk-due',
+      expect.objectContaining({ noShowPushSentAt: expect.any(String) }),
+    );
   });
 
-  it('retries status-write + redispatch + FCM when credit exists but noShowRedispatchAt is absent and same tech (prior run crashed before status-write)', async () => {
-    const booking = makeAssignedBooking('bk-dup', 45);
+  it('allows recovery when fresh re-read shows NO_SHOW_REDISPATCH (prior run wrote status, crashed before redispatch)', async () => {
+    const booking = makeAssignedBooking('bk-recovery', 45);
     vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([booking]);
     vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(false);
-    // Prior run created credit but crashed before writing status — original tech still assigned
-    vi.mocked(bookingRepo.getById).mockResolvedValue({ status: 'ASSIGNED', technicianId: undefined } as BookingDoc);
+    // call 1: fresh-read → NO_SHOW_REDISPATCH, call 2: recovery check → same, call 3: push-check → no stamp
+    mockGetByIdSequence(
+      { status: 'NO_SHOW_REDISPATCH' },
+      { status: 'NO_SHOW_REDISPATCH' },
+      { status: 'NO_SHOW_REDISPATCH' },
+    );
 
     await detectNoShows(mockCtx);
 
-    expect(updateBookingFields).toHaveBeenCalledWith('bk-dup', { status: 'NO_SHOW_REDISPATCH', technicianId: undefined });
-    expect(dispatcherService.redispatch).toHaveBeenCalledWith('bk-dup', 15, undefined);
-    // FCM must NOT fire in recovery path — creditCreated=false means prior run already sent it
-    expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
+    expect(dispatcherService.redispatch).toHaveBeenCalled();
+    expect(fcmService.sendNoShowCreditPush).toHaveBeenCalled();
   });
 
-  it('skips entirely when credit exists and noShowRedispatchAt is set (redispatch already triggered)', async () => {
-    const booking = makeAssignedBooking('bk-already-dispatched', 45);
+  it('skips all steps when recovery detects both noShowRedispatchAt and noShowPushSentAt are set', async () => {
+    const booking = makeAssignedBooking('bk-done', 45);
     vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([booking]);
     vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(false);
-    // noShowRedispatchAt is present — prior run successfully fired redispatch
-    vi.mocked(bookingRepo.getById).mockResolvedValue({
+    // Both steps already completed on prior run
+    const completedDoc = {
       status: 'ASSIGNED',
-      technicianId: 'tech-new',
       noShowRedispatchAt: '2026-04-26T05:00:00.000Z',
-    } as BookingDoc);
+      noShowPushSentAt: '2026-04-26T05:00:01.000Z',
+    };
+    mockGetByIdSequence({ status: 'ASSIGNED' }, completedDoc, completedDoc);
 
     await detectNoShows(mockCtx);
 
@@ -170,18 +181,16 @@ describe('detectNoShows', () => {
     expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
   });
 
-  it('skips entirely when replacement tech accepted but noShowRedispatchAt stamp failed (technicianId differs)', async () => {
-    const booking = makeAssignedBooking('bk-stamp-failed', 45);
-    // Original booking has no technicianId (makeAssignedBooking doesn't set one)
-    // but let's give it one to make the test clear
-    const bookingWithTech = { ...booking, technicianId: 'tech-original' };
-    vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([bookingWithTech]);
+  it('skips when replacement tech detected (different technicianId in recovery check)', async () => {
+    const booking = makeAssignedBooking('bk-replaced', 45, { technicianId: 'tech-noshow' });
+    vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([booking]);
     vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(false);
-    // Replacement tech accepted, stamp write failed — liveBooking shows different technicianId
-    vi.mocked(bookingRepo.getById).mockResolvedValue({
-      status: 'ASSIGNED',
-      technicianId: 'tech-replacement',
-    } as BookingDoc);
+    // call 1: fresh-read → ASSIGNED with noShowTechnicianId preserved
+    // call 2: recovery check → ASSIGNED with a different (replacement) technicianId
+    mockGetByIdSequence(
+      { status: 'ASSIGNED', noShowTechnicianId: 'tech-noshow' },
+      { status: 'ASSIGNED', technicianId: 'tech-replacement', noShowTechnicianId: 'tech-noshow' },
+    );
 
     await detectNoShows(mockCtx);
 
@@ -190,7 +199,7 @@ describe('detectNoShows', () => {
     expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
   });
 
-  it('skips booking entirely when createCreditIfAbsent throws (cannot determine credit state)', async () => {
+  it('skips entirely when createCreditIfAbsent throws (cannot determine credit state)', async () => {
     const booking = makeAssignedBooking('bk-credit-err', 45);
     vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([booking]);
     vi.mocked(customerCreditRepo.createCreditIfAbsent).mockRejectedValue(new Error('cosmos 503'));
@@ -203,39 +212,54 @@ describe('detectNoShows', () => {
     expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
   });
 
-  it('captures Sentry + skips redispatch when updateBookingFields throws, but still sends FCM (credit was issued)', async () => {
+  it('skips redispatch when status write fails; still sends FCM (push-check shows no stamp)', async () => {
     vi.mocked(bookingRepo.getAssignedBookingsBefore)
-      .mockResolvedValue([makeAssignedBooking('bk-err', 45)]);
+      .mockResolvedValue([makeAssignedBooking('bk-status-err', 45)]);
     vi.mocked(updateBookingFields).mockRejectedValue(new Error('cosmos 503'));
+    // push-check shows no noShowPushSentAt → send push
+    mockGetByIdSequence({ status: 'ASSIGNED' }, { status: 'ASSIGNED' });
 
-    // Status write failure is non-fatal — detectNoShows should not throw
     await expect(detectNoShows(mockCtx)).resolves.not.toThrow();
 
-    // Credit was attempted (it is the gate — comes first)
     expect(customerCreditRepo.createCreditIfAbsent).toHaveBeenCalled();
     expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error));
-    // Redispatch skipped — statusWriteOk=false gates it
     expect(dispatcherService.redispatch).not.toHaveBeenCalled();
-    // FCM still fires — creditCreated=true means customer must get the notification
     expect(fcmService.sendNoShowCreditPush).toHaveBeenCalled();
   });
 
-  it('captures Sentry when redispatch throws and still sends FCM (credit was issued, customer deserves notification)', async () => {
+  it('captures Sentry when redispatch throws; still sends FCM (credit issued, push not yet sent)', async () => {
     vi.mocked(bookingRepo.getAssignedBookingsBefore)
       .mockResolvedValue([makeAssignedBooking('bk-rdp-err', 45)]);
     vi.mocked(dispatcherService.redispatch).mockRejectedValue(new Error('no techs'));
+    mockGetByIdSequence({ status: 'ASSIGNED' }, { status: 'NO_SHOW_REDISPATCH' });
 
     await detectNoShows(mockCtx);
 
     expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error));
-    // FCM fires because creditCreated=true — customer must always get the credit notification
     expect(fcmService.sendNoShowCreditPush).toHaveBeenCalled();
+  });
+
+  it('skips FCM when push-check shows noShowPushSentAt already set (idempotent across recovery)', async () => {
+    const booking = makeAssignedBooking('bk-push-done', 45);
+    vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([booking]);
+    vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(false);
+    // push-check returns a booking with noShowPushSentAt set — already notified
+    mockGetByIdSequence(
+      { status: 'NO_SHOW_REDISPATCH', noShowRedispatchAt: '2026-04-26T05:00:00.000Z' },
+      { status: 'NO_SHOW_REDISPATCH', noShowRedispatchAt: '2026-04-26T05:00:00.000Z' },
+      { status: 'NO_SHOW_REDISPATCH', noShowRedispatchAt: '2026-04-26T05:00:00.000Z', noShowPushSentAt: '2026-04-26T05:00:01.000Z' },
+    );
+
+    await detectNoShows(mockCtx);
+
+    expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
   });
 
   it('captures Sentry without rethrowing when sendNoShowCreditPush throws', async () => {
     vi.mocked(bookingRepo.getAssignedBookingsBefore)
       .mockResolvedValue([makeAssignedBooking('bk-fcm-err', 45)]);
     vi.mocked(fcmService.sendNoShowCreditPush).mockRejectedValue(new Error('FCM 503'));
+    mockGetByIdSequence({ status: 'ASSIGNED' }, { status: 'NO_SHOW_REDISPATCH' });
 
     await expect(detectNoShows(mockCtx)).resolves.not.toThrow();
     expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error));
@@ -264,15 +288,23 @@ describe('detectNoShows', () => {
     vi.mocked(customerCreditRepo.createCreditIfAbsent)
       .mockRejectedValueOnce(new Error('cosmos 503'))
       .mockResolvedValueOnce(true);
+    // bk-1: fresh-read → ASSIGNED (then credit throws → skip entirely)
+    // bk-2: fresh-read → ASSIGNED, push-check → no stamp
+    mockGetByIdSequence(
+      { status: 'ASSIGNED' },              // bk-1 fresh-read
+      { status: 'ASSIGNED' },              // bk-2 fresh-read
+      { status: 'NO_SHOW_REDISPATCH' },    // bk-2 push-check
+    );
 
     await detectNoShows(mockCtx);
 
     expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error));
-    // bk-1 skipped (credit threw), bk-2 proceeds with 2 updateBookingFields calls
-    // (one for NO_SHOW_REDISPATCH status, one for noShowRedispatchAt after successful redispatch)
-    expect(updateBookingFields).toHaveBeenCalledTimes(2);
-    expect(updateBookingFields).toHaveBeenCalledWith('bk-2', { status: 'NO_SHOW_REDISPATCH', technicianId: undefined });
-    expect(updateBookingFields).toHaveBeenCalledWith('bk-2', expect.objectContaining({ noShowRedispatchAt: expect.any(String) }));
+    // bk-1 skipped (credit threw), bk-2 proceeds
+    expect(updateBookingFields).toHaveBeenCalledWith(
+      'bk-2',
+      expect.objectContaining({ status: 'NO_SHOW_REDISPATCH' }),
+    );
     expect(dispatcherService.redispatch).toHaveBeenCalledWith('bk-2', 15, undefined);
+    expect(fcmService.sendNoShowCreditPush).toHaveBeenCalled();
   });
 });

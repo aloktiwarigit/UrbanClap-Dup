@@ -33,7 +33,12 @@ export const BookingDocSchema = z.object({
   pendingAddOns: z.array(PendingAddOnSchema).optional(),
   approvedAddOns: z.array(PendingAddOnSchema).optional(),
   finalAmount: z.number().int().positive().optional(),
+  /** ISO timestamp written atomically after redispatch offers are sent successfully. */
   noShowRedispatchAt: z.string().optional(),
+  /** The technician who no-showed. Preserved separately so the exclusion filter works across timer recovery runs even after technicianId is cleared. */
+  noShowTechnicianId: z.string().optional(),
+  /** ISO timestamp written after the NO_SHOW_CREDIT_ISSUED FCM push is sent successfully. Prevents duplicate pushes across recovery runs. */
+  noShowPushSentAt: z.string().optional(),
 });
 
 export const CreateBookingRequestSchema = z.object({

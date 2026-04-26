@@ -27,7 +27,7 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
   // (i.e., slotWindow starts before 05:30 IST) are excluded by this query. For the
   // Ayodhya pilot (service hours 08:00–20:00 IST), this edge case does not apply.
   const assignedBookings = await bookingRepo.getAssignedBookingsBefore(todayIST);
-  ctx.log(`detectNoShows: ${assignedBookings.length} ASSIGNED bookings on/before ${todayIST}`);
+  ctx.log(`detectNoShows: ${assignedBookings.length} bookings on/before ${todayIST}`);
 
   for (const booking of assignedBookings) {
     let slotStart: number;
@@ -51,10 +51,14 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
       continue;
     }
 
-    // Credit write is the atomic idempotency gate — must come first.
+    // Stable reference to the no-show technician: prefer the preserved field (survives
+    // technicianId being cleared from the booking doc), fall back to freshBooking.technicianId.
+    const noShowTechId = freshBooking.noShowTechnicianId ?? freshBooking.technicianId;
+
+    // ── Credit write (idempotency gate) ──────────────────────────────────────────
     // If it throws (non-409 Cosmos error), skip this booking entirely.
-    // If it returns false (409 = prior run already wrote credit), proceed with
-    // downstream steps anyway — the prior run may have failed mid-way.
+    // If it returns false (409 = prior run already wrote credit), proceed — the prior run
+    // may have failed mid-way and later steps may need to be retried.
     let creditCreated: boolean;
     try {
       creditCreated = await customerCreditRepo.createCreditIfAbsent({
@@ -77,55 +81,61 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
       ctx.log(`detectNoShows: credit already exists for ${booking.id} — retrying remaining steps`);
     }
 
-    // When recovering (creditCreated=false), re-fetch to check whether the status-write and
-    // redispatch already completed on a prior run.
-    // `noShowRedispatchAt` is stamped after a confirmed successful redispatch — if present,
-    // the prior run completed the flow and nothing more is needed.
-    // If absent but status is ASSIGNED with a *different* technicianId, a replacement tech
-    // accepted the redispatch but the stamp write failed — treat as done and skip.
-    // If absent and technicianId unchanged (original tech still on the booking), the prior run
-    // crashed before the status write — retry.
+    // ── Recovery skip check ───────────────────────────────────────────────────────
+    // On recovery (creditCreated=false), check which downstream steps already completed.
+    // `noShowRedispatchAt` is set after successful offers-sent.
+    // `noShowPushSentAt` is set after successful FCM push.
+    // Replacement-tech check: if ASSIGNED with a different technicianId and noShowTechId
+    // is known, the redispatch already resolved — skip entirely.
     if (!creditCreated) {
       const liveBooking = await bookingRepo.getById(booking.id);
-      if (liveBooking?.noShowRedispatchAt) {
-        ctx.log(`detectNoShows: recovery skipped for ${booking.id} — redispatch already fired at ${liveBooking.noShowRedispatchAt}`);
-        continue;
-      }
+
+      // If replacement tech accepted, both redispatch and (optionally) push are done
       if (
         liveBooking?.status === 'ASSIGNED' &&
+        noShowTechId !== undefined &&
         liveBooking.technicianId !== undefined &&
-        liveBooking.technicianId !== booking.technicianId
+        liveBooking.technicianId !== noShowTechId
       ) {
-        // A replacement tech accepted the redispatch; noShowRedispatchAt stamp failed but we're done
         ctx.log(`detectNoShows: recovery skipped for ${booking.id} — replacement tech ${liveBooking.technicianId} already assigned`);
+        continue;
+      }
+
+      // noShowRedispatchAt present → redispatch already fired; only push may be pending
+      if (liveBooking?.noShowRedispatchAt && liveBooking.noShowPushSentAt) {
+        // Both redispatch and push done — nothing left to do
+        ctx.log(`detectNoShows: recovery skipped for ${booking.id} — all steps already completed`);
         continue;
       }
     }
 
-    // Step 1: Set the holding status and clear technicianId so the no-show technician's
-    // active-job screen stops receiving updates for this booking. Track success — if this
-    // fails we must NOT stamp noShowRedispatchAt, so recovery can retry both write and redispatch.
+    // ── Step 1: Status write + preserve no-show tech ID ──────────────────────────
+    // Clear technicianId so the original tech's active-job screen stops updating.
+    // Store noShowTechnicianId separately — needed for exclusion filter across recovery runs.
+    // Track success: if this fails, noShowRedispatchAt must NOT be set so recovery retries.
     let statusWriteOk = false;
     try {
-      await updateBookingFields(booking.id, { status: 'NO_SHOW_REDISPATCH', technicianId: undefined });
+      await updateBookingFields(booking.id, {
+        status: 'NO_SHOW_REDISPATCH',
+        technicianId: undefined,
+        noShowTechnicianId: noShowTechId,
+      });
       statusWriteOk = true;
     } catch (err: unknown) {
       Sentry.captureException(err);
       ctx.log(`detectNoShows: status update failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);
     }
 
-    // Step 2: Fire redispatch only when status write succeeded — prevents redispatch running
-    // against a booking that is still ASSIGNED (dispatcher.redispatch checks for NO_SHOW_REDISPATCH).
-    // Only stamp noShowRedispatchAt when redispatch actually sent offers (boolean true return)
-    // so that recovery can distinguish "offers sent" from "no techs found / dispatcher skipped".
+    // ── Step 2: Redispatch ────────────────────────────────────────────────────────
+    // Only when status write succeeded (dispatcher checks for NO_SHOW_REDISPATCH status).
+    // Skip if noShowRedispatchAt already set (recovery: prior run completed this step).
+    // noShowTechId is passed explicitly so the exclusion filter survives even after
+    // technicianId was cleared from the booking doc in Step 1.
     let redispatchOk = false;
-    if (statusWriteOk) {
+    if (statusWriteOk && !freshBooking.noShowRedispatchAt) {
       try {
-        // Pass booking.technicianId explicitly so the exclusion filter survives even if
-        // the booking doc was already updated (technicianId cleared) before redispatch reads it.
-        redispatchOk = await dispatcherService.redispatch(booking.id, NO_SHOW_REDISPATCH_RADIUS_KM, booking.technicianId);
+        redispatchOk = await dispatcherService.redispatch(booking.id, NO_SHOW_REDISPATCH_RADIUS_KM, noShowTechId);
         if (redispatchOk) {
-          // Stamp the completed-redispatch flag after confirmed offers-sent.
           await updateBookingFields(booking.id, { noShowRedispatchAt: new Date().toISOString() });
         } else {
           ctx.log(`detectNoShows: no techs found for ${booking.id} — booking marked UNFULFILLED`);
@@ -134,22 +144,30 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
         Sentry.captureException(err);
         ctx.log(`detectNoShows: redispatch failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);
       }
+    } else if (freshBooking.noShowRedispatchAt) {
+      // Redispatch was already done on a prior run — mark ok for logging
+      redispatchOk = true;
+      ctx.log(`detectNoShows: redispatch already completed for ${booking.id}`);
     }
 
-    // FCM push: gate on creditCreated (this run issued the credit) — ensures the customer
-    // always receives the compensation notification regardless of whether redispatch succeeded.
-    // Recovery runs (creditCreated=false) skip the push because the prior run already sent it
-    // (or it will be retried in a subsequent creditCreated=true run if the prior run crashed
-    // before reaching this point, but since credit was already written that cannot happen —
-    // creditCreated=true ↔ this run is the first to issue the credit).
-    if (creditCreated) {
+    // ── Step 3: FCM push ──────────────────────────────────────────────────────────
+    // Send when:
+    //   - creditCreated=true (this run issued the credit, first-time path), OR
+    //   - creditCreated=false but noShowPushSentAt is absent (recovery: prior run crashed
+    //     before the push — retry is safe since the push is idempotent enough at 5-min cadence)
+    // Skip if noShowPushSentAt is already set (already sent on a prior run).
+    const pushAlreadySent = !!(await bookingRepo.getById(booking.id))?.noShowPushSentAt;
+    if (!pushAlreadySent) {
       try {
         await sendNoShowCreditPush(booking.customerId, booking.id, NO_SHOW_CREDIT_PAISE);
+        await updateBookingFields(booking.id, { noShowPushSentAt: new Date().toISOString() });
       } catch (err: unknown) {
         Sentry.captureException(err);
         ctx.log(`detectNoShows: FCM failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
+
+    void redispatchOk; // consumed above for logging
   }
 }
 
