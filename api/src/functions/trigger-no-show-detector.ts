@@ -40,29 +40,38 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
     }
     if (now < slotStart + NO_SHOW_WINDOW_MS) continue;
 
-    // P1 fix: write status BEFORE the idempotency credit so that a transient
-    // Cosmos failure on the status write leaves the booking in ASSIGNED and
-    // retryable on the next timer tick. If we wrote the credit first and then
-    // the status write failed, createCreditIfAbsent would return false on every
-    // subsequent run, permanently blocking redispatch.
-    await updateBookingFields(booking.id, { status: 'NO_SHOW_REDISPATCH' });
-
-    const created = await customerCreditRepo.createCreditIfAbsent({
-      id: booking.id,
-      customerId: booking.customerId,
-      bookingId: booking.id,
-      amount: NO_SHOW_CREDIT_PAISE,
-      reason: 'NO_SHOW',
-      createdAt: new Date().toISOString(),
-    });
-
-    if (!created) {
-      // Status was already flipped to NO_SHOW_REDISPATCH in a previous (partial)
-      // run. Proceed with redispatch + FCM so downstream steps are not skipped.
-      ctx.log(`detectNoShows: credit already exists bookingId=${booking.id} — continuing to redispatch`);
+    // Credit write is the atomic idempotency gate — must come first.
+    // If it throws (non-409 Cosmos error), skip this booking entirely.
+    // If it returns false (409 = prior run already wrote credit), proceed with
+    // downstream steps anyway — the prior run may have failed mid-way.
+    let creditCreated: boolean;
+    try {
+      creditCreated = await customerCreditRepo.createCreditIfAbsent({
+        id: booking.id,
+        customerId: booking.customerId,
+        bookingId: booking.id,
+        amount: NO_SHOW_CREDIT_PAISE,
+        reason: 'NO_SHOW',
+        createdAt: new Date().toISOString(),
+      });
+    } catch (err: unknown) {
+      Sentry.captureException(err);
+      ctx.log(`detectNoShows: credit write failed for ${booking.id} — skip`);
+      continue;
     }
 
-    ctx.log(`detectNoShows: processing no-show bookingId=${booking.id}`);
+    if (creditCreated) {
+      ctx.log(`detectNoShows: processing no-show bookingId=${booking.id}`);
+    } else {
+      ctx.log(`detectNoShows: credit already exists for ${booking.id} — retrying remaining steps`);
+    }
+
+    try {
+      await updateBookingFields(booking.id, { status: 'NO_SHOW_REDISPATCH' });
+    } catch (err: unknown) {
+      Sentry.captureException(err);
+      ctx.log(`detectNoShows: status update failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);
+    }
 
     try {
       await dispatcherService.redispatch(booking.id, NO_SHOW_REDISPATCH_RADIUS_KM);

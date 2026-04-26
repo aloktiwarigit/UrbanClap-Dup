@@ -102,38 +102,43 @@ describe('detectNoShows', () => {
     expect(fcmService.sendNoShowCreditPush).toHaveBeenCalledWith(booking.customerId, 'bk-due', 50_000);
   });
 
-  it('when createCreditIfAbsent returns false (concurrent run): status already written, proceeds with redispatch + FCM', async () => {
-    // Simulates a concurrent timer invocation where status was already flipped to
-    // NO_SHOW_REDISPATCH by a sibling run. The credit write is idempotent (returns false),
-    // but redispatch + FCM must still be attempted so downstream steps are not skipped.
-    vi.mocked(bookingRepo.getAssignedBookingsBefore)
-      .mockResolvedValue([makeAssignedBooking('bk-dup', 45)]);
+  it('continues with status update and redispatch when createCreditIfAbsent returns false (concurrent-run recovery)', async () => {
+    const booking = makeAssignedBooking('bk-dup', 45);
+    vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([booking]);
     vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(false);
 
     await detectNoShows(mockCtx);
 
-    // Status write runs before credit check — must have been called
+    // Downstream steps still run — prior run may have failed mid-way
     expect(updateBookingFields).toHaveBeenCalledWith('bk-dup', { status: 'NO_SHOW_REDISPATCH' });
-    // Redispatch + FCM proceed even when credit was already present
-    expect(dispatcherService.redispatch).toHaveBeenCalled();
-    expect(fcmService.sendNoShowCreditPush).toHaveBeenCalled();
+    expect(dispatcherService.redispatch).toHaveBeenCalledWith('bk-dup', 15);
+    expect(fcmService.sendNoShowCreditPush).toHaveBeenCalledWith(booking.customerId, 'bk-dup', 50_000);
   });
 
-  it('propagates when updateBookingFields throws so booking stays ASSIGNED and is retried next tick', async () => {
-    // P1 fix: status is written BEFORE the idempotency credit. If the status write
-    // fails, the credit is never written, so the next timer run will still find
-    // the booking as ASSIGNED and retry — no permanent stuck state.
+  it('skips booking entirely when createCreditIfAbsent throws (cannot determine credit state)', async () => {
+    const booking = makeAssignedBooking('bk-credit-err', 45);
+    vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([booking]);
+    vi.mocked(customerCreditRepo.createCreditIfAbsent).mockRejectedValue(new Error('cosmos 503'));
+
+    await detectNoShows(mockCtx);
+
+    expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error));
+    expect(updateBookingFields).not.toHaveBeenCalled();
+    expect(dispatcherService.redispatch).not.toHaveBeenCalled();
+    expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
+  });
+
+  it('captures Sentry + continues when updateBookingFields throws (best-effort status write)', async () => {
     vi.mocked(bookingRepo.getAssignedBookingsBefore)
       .mockResolvedValue([makeAssignedBooking('bk-err', 45)]);
     vi.mocked(updateBookingFields).mockRejectedValue(new Error('cosmos 503'));
 
-    await expect(detectNoShows(mockCtx)).rejects.toThrow('cosmos 503');
+    // Status write failure is non-fatal — detectNoShows should not throw
+    await expect(detectNoShows(mockCtx)).resolves.not.toThrow();
 
-    // Credit must NOT be written when status write fails
-    expect(customerCreditRepo.createCreditIfAbsent).not.toHaveBeenCalled();
-    // Downstream steps must NOT be attempted
-    expect(dispatcherService.redispatch).not.toHaveBeenCalled();
-    expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
+    // Credit was attempted (it is the gate — comes first)
+    expect(customerCreditRepo.createCreditIfAbsent).toHaveBeenCalled();
+    expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error));
   });
 
   it('captures Sentry + continues to FCM when redispatch throws', async () => {
@@ -172,19 +177,20 @@ describe('detectNoShows', () => {
     );
   });
 
-  it('aborts processing remaining bookings when createCreditIfAbsent throws (credit-gate invariant)', async () => {
+  it('continues to next booking when createCreditIfAbsent throws for one booking (loop isolation)', async () => {
     const due1 = makeAssignedBooking('bk-1', 45);
     const due2 = makeAssignedBooking('bk-2', 45);
     vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([due1, due2]);
-    vi.mocked(customerCreditRepo.createCreditIfAbsent).mockRejectedValue(new Error('cosmos 503'));
+    vi.mocked(customerCreditRepo.createCreditIfAbsent)
+      .mockRejectedValueOnce(new Error('cosmos 503'))
+      .mockResolvedValueOnce(true);
 
-    await expect(detectNoShows(mockCtx)).rejects.toThrow('cosmos 503');
+    await detectNoShows(mockCtx);
 
-    // Status was written for bk-1 before the credit write failed
+    expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error));
+    // bk-1 skipped (credit threw), bk-2 proceeds
     expect(updateBookingFields).toHaveBeenCalledTimes(1);
-    expect(updateBookingFields).toHaveBeenCalledWith('bk-1', { status: 'NO_SHOW_REDISPATCH' });
-    // No downstream steps (redispatch/FCM) for either booking
-    expect(dispatcherService.redispatch).not.toHaveBeenCalled();
-    expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
+    expect(updateBookingFields).toHaveBeenCalledWith('bk-2', { status: 'NO_SHOW_REDISPATCH' });
+    expect(dispatcherService.redispatch).toHaveBeenCalledWith('bk-2', 15);
   });
 });
