@@ -127,6 +127,14 @@ export const bookingRepo = {
       .replace<BookingDoc>(updated, { accessCondition: { type: 'IfMatch', condition: etag ?? '' } });
     return resource ?? null;
   },
+
+  async markSosActivated(id: string): Promise<BookingDoc | null> {
+    const existing = await this.getById(id);
+    if (!existing) return null;
+    const updated: BookingDoc = { ...existing, sosActivatedAt: new Date().toISOString() };
+    const { resource } = await getBookingsContainer().item(id, id).replace<BookingDoc>(updated);
+    return resource!;
+  },
 };
 
 export async function updateBookingFields(
