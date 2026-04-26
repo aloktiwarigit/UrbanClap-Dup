@@ -7,16 +7,19 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT/admin-web"
 
+# Call binaries directly — same Windows/pnpm PATH fix as pre-codex-smoke-api.sh
+BIN="$PWD/node_modules/.bin"
+
 echo "=== Pre-Codex Smoke Gate: admin-web ==="
 
 echo "[1/3] typecheck — catches broken imports, type errors..."
-pnpm typecheck 2>&1 | tail -20
+"$BIN/tsc" --noEmit 2>&1 | tail -20
 
 echo "[2/3] lint — ESLint + Next.js lint, 0 warnings..."
-pnpm lint 2>&1 | tail -20
+"$BIN/next" lint 2>&1 | tail -20
 
 echo "[3/3] jest / vitest run — all tests must be green..."
-pnpm test 2>&1 | tail -30
+"$BIN/vitest" run 2>&1 | tail -30
 
 echo ""
 echo "=== Web smoke gate PASSED — safe to invoke /codex-review-gate ==="
