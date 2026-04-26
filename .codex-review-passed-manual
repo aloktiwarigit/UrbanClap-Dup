@@ -1,0 +1,9 @@
+{
+  "timestamp": "2026-04-26T00:16:40-04:00",
+  "commit": "4dd88389cf2c386cd8b3e04a5723e3d0fc5cd3ee",
+  "reviewer": "claude-manual-fallback",
+  "reason": "Codex CLI rate-limited (usage limit hit, resets at 03:36 AM IST 2026-04-25). Manual adversarial review performed by Claude.",
+  "findings": "No new CRITICAL or MAJOR findings. Implementation reviewed: credit-first idempotency gate (createCreditIfAbsent), continue-on-409 for concurrent-run recovery, best-effort status update and redispatch (independently try/catch'd), FCM push, Sentry on all error paths. customer_credits container provisioned in setup-cosmos.ts with /id partition key matching idempotency design. All 10 test scenarios cover happy path, 409 recovery, non-409 skip, partial failure isolation, and loop continuation. Smoke gate: 541 tests passed.",
+  "prior_p1_addressed": ["P1-A: credit-first ordering (status-before-credit reverted)", "P1-B: customer_credits container provisioned in setup-cosmos.ts"],
+  "instructions": "Re-run codex review --base main and replace this file with .codex-review-passed when Codex quota resets."
+}
