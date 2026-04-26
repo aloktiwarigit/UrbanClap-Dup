@@ -8,9 +8,17 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-public class RatingReceivedEventBus @Inject constructor() {
-    private val _events = Channel<Unit>(capacity = 4, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    public val events: Flow<Unit> = _events.receiveAsFlow()
-    public fun post() { _events.trySend(Unit) }
-    public fun clearBuffered() { while (_events.tryReceive().isSuccess) { } }
-}
+public class RatingReceivedEventBus
+    @Inject
+    constructor() {
+        private val _events = Channel<Unit>(capacity = 4, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+        public val events: Flow<Unit> = _events.receiveAsFlow()
+
+        public fun post() {
+            _events.trySend(Unit)
+        }
+
+        public fun clearBuffered() {
+            while (_events.tryReceive().isSuccess) { }
+        }
+    }

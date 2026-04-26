@@ -12,30 +12,33 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-public class EarningsViewModel @Inject constructor(
-    private val getEarningsUseCase: GetEarningsUseCase,
-    private val earningsUpdateEventBus: EarningsUpdateEventBus,
-) : ViewModel() {
-    private val _uiState = MutableStateFlow<EarningsUiState>(EarningsUiState.Loading)
-    public val uiState: StateFlow<EarningsUiState> = _uiState.asStateFlow()
+public class EarningsViewModel
+    @Inject
+    constructor(
+        private val getEarningsUseCase: GetEarningsUseCase,
+        private val earningsUpdateEventBus: EarningsUpdateEventBus,
+    ) : ViewModel() {
+        private val _uiState = MutableStateFlow<EarningsUiState>(EarningsUiState.Loading)
+        public val uiState: StateFlow<EarningsUiState> = _uiState.asStateFlow()
 
-    init {
-        loadEarnings()
-        viewModelScope.launch {
-            earningsUpdateEventBus.events.collect { loadEarnings() }
+        init {
+            loadEarnings()
+            viewModelScope.launch {
+                earningsUpdateEventBus.events.collect { loadEarnings() }
+            }
+        }
+
+        public fun refresh(): Unit = loadEarnings()
+
+        private fun loadEarnings() {
+            viewModelScope.launch {
+                _uiState.value = EarningsUiState.Loading
+                val result = getEarningsUseCase.invoke()
+                _uiState.value =
+                    result.fold(
+                        onSuccess = { EarningsUiState.Success(it) },
+                        onFailure = { EarningsUiState.Error },
+                    )
+            }
         }
     }
-
-    public fun refresh(): Unit = loadEarnings()
-
-    private fun loadEarnings() {
-        viewModelScope.launch {
-            _uiState.value = EarningsUiState.Loading
-            val result = getEarningsUseCase.invoke()
-            _uiState.value = result.fold(
-                onSuccess = { EarningsUiState.Success(it) },
-                onFailure = { EarningsUiState.Error },
-            )
-        }
-    }
-}

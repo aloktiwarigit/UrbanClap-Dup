@@ -50,32 +50,39 @@ internal fun EarningsScreen(
         modifier = modifier,
     ) { padding ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
             contentAlignment = Alignment.Center,
         ) {
             when (val state = uiState) {
                 is EarningsUiState.Loading -> CircularProgressIndicator()
-                is EarningsUiState.Error -> Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Text("डेटा लोड नहीं हो सका", style = MaterialTheme.typography.bodyLarge)
-                    Button(onClick = viewModel::refresh) { Text("पुनः प्रयास करें") }
-                }
-                is EarningsUiState.Success -> SuccessContent(
-                    summary = state.summary,
-                    onViewRatings = onViewRatings,
-                    modifier = Modifier.fillMaxSize(),
-                )
+                is EarningsUiState.Error ->
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text("डेटा लोड नहीं हो सका", style = MaterialTheme.typography.bodyLarge)
+                        Button(onClick = viewModel::refresh) { Text("पुनः प्रयास करें") }
+                    }
+                is EarningsUiState.Success ->
+                    SuccessContent(
+                        summary = state.summary,
+                        onViewRatings = onViewRatings,
+                        modifier = Modifier.fillMaxSize(),
+                    )
             }
         }
     }
 }
 
 @Composable
-private fun SuccessContent(summary: EarningsSummary, onViewRatings: () -> Unit, modifier: Modifier = Modifier) {
+private fun SuccessContent(
+    summary: EarningsSummary,
+    onViewRatings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(16.dp),
@@ -113,7 +120,11 @@ private fun SuccessContent(summary: EarningsSummary, onViewRatings: () -> Unit, 
 }
 
 @Composable
-private fun PeriodCard(label: String, period: EarningsPeriod, modifier: Modifier = Modifier) {
+private fun PeriodCard(
+    label: String,
+    period: EarningsPeriod,
+    modifier: Modifier = Modifier,
+) {
     Card(modifier = modifier) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -162,7 +173,10 @@ private fun SparklineCard(days: List<DailyEarnings>) {
 }
 
 @Composable
-private fun EarningsSparkline(days: List<DailyEarnings>, modifier: Modifier = Modifier) {
+private fun EarningsSparkline(
+    days: List<DailyEarnings>,
+    modifier: Modifier = Modifier,
+) {
     if (days.isEmpty()) return
     val maxAmount = days.maxOfOrNull { it.techAmountPaise } ?: 0L
     val barColor = MaterialTheme.colorScheme.primary
@@ -177,11 +191,12 @@ private fun EarningsSparkline(days: List<DailyEarnings>, modifier: Modifier = Mo
             val maxBarHeight = size.height - minBarPx
 
             days.forEachIndexed { i, day ->
-                val barHeight = if (maxAmount > 0L) {
-                    (day.techAmountPaise.toFloat() / maxAmount) * maxBarHeight + minBarPx
-                } else {
-                    minBarPx
-                }
+                val barHeight =
+                    if (maxAmount > 0L) {
+                        (day.techAmountPaise.toFloat() / maxAmount) * maxBarHeight + minBarPx
+                    } else {
+                        minBarPx
+                    }
                 val x = i * spacing + (spacing - barWidth) / 2f
                 drawRect(
                     color = barColor,
@@ -195,11 +210,12 @@ private fun EarningsSparkline(days: List<DailyEarnings>, modifier: Modifier = Mo
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             days.forEach { day ->
-                val label = try {
-                    LocalDate.parse(day.date).dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
-                } catch (_: Exception) {
-                    "?"
-                }
+                val label =
+                    try {
+                        LocalDate.parse(day.date).dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
+                    } catch (_: Exception) {
+                        "?"
+                    }
                 Text(label, style = MaterialTheme.typography.labelSmall, color = labelColor)
             }
         }

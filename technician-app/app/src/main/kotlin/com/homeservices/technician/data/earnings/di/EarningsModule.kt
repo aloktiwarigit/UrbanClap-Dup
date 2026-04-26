@@ -26,7 +26,8 @@ public abstract class EarningsModule {
         public fun provideEarningsApiService(
             @AuthOkHttpClient client: OkHttpClient,
         ): EarningsApiService =
-            Retrofit.Builder()
+            Retrofit
+                .Builder()
                 .baseUrl("https://homeservices-api.azurewebsites.net/api/")
                 .client(client)
                 .addConverterFactory(MoshiConverterFactory.create())

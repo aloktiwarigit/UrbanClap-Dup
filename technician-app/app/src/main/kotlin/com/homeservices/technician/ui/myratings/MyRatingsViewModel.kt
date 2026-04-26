@@ -12,29 +12,32 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-public class MyRatingsViewModel @Inject constructor(
-    private val useCase: GetMyRatingsSummaryUseCase,
-    private val ratingReceivedEventBus: RatingReceivedEventBus,
-) : ViewModel() {
-    private val _uiState = MutableStateFlow<MyRatingsUiState>(MyRatingsUiState.Loading)
-    public val uiState: StateFlow<MyRatingsUiState> = _uiState.asStateFlow()
+public class MyRatingsViewModel
+    @Inject
+    constructor(
+        private val useCase: GetMyRatingsSummaryUseCase,
+        private val ratingReceivedEventBus: RatingReceivedEventBus,
+    ) : ViewModel() {
+        private val _uiState = MutableStateFlow<MyRatingsUiState>(MyRatingsUiState.Loading)
+        public val uiState: StateFlow<MyRatingsUiState> = _uiState.asStateFlow()
 
-    init {
-        loadRatings()
-        viewModelScope.launch {
-            ratingReceivedEventBus.events.collect { loadRatings() }
+        init {
+            loadRatings()
+            viewModelScope.launch {
+                ratingReceivedEventBus.events.collect { loadRatings() }
+            }
+        }
+
+        public fun refresh(): Unit = loadRatings()
+
+        private fun loadRatings() {
+            viewModelScope.launch {
+                _uiState.value = MyRatingsUiState.Loading
+                _uiState.value =
+                    useCase.invoke().fold(
+                        onSuccess = { MyRatingsUiState.Success(it) },
+                        onFailure = { MyRatingsUiState.Error },
+                    )
+            }
         }
     }
-
-    public fun refresh(): Unit = loadRatings()
-
-    private fun loadRatings() {
-        viewModelScope.launch {
-            _uiState.value = MyRatingsUiState.Loading
-            _uiState.value = useCase.invoke().fold(
-                onSuccess = { MyRatingsUiState.Success(it) },
-                onFailure = { MyRatingsUiState.Error },
-            )
-        }
-    }
-}

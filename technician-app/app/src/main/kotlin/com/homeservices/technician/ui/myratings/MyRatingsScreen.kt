@@ -33,8 +33,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.homeservices.technician.domain.rating.model.ReceivedRating
 import com.homeservices.technician.domain.rating.model.RatingWeekTrend
+import com.homeservices.technician.domain.rating.model.ReceivedRating
 import com.homeservices.technician.domain.rating.model.TechRatingSummary
 import java.time.Instant
 import java.time.ZoneId
@@ -63,34 +63,42 @@ internal fun MyRatingsScreen(
         modifier = modifier,
     ) { padding ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
             contentAlignment = Alignment.Center,
         ) {
             when (val state = uiState) {
                 is MyRatingsUiState.Loading -> CircularProgressIndicator()
-                is MyRatingsUiState.Error -> Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Text("डेटा लोड नहीं हो सका", style = MaterialTheme.typography.bodyLarge)
-                    Button(onClick = viewModel::refresh) { Text("पुनः प्रयास करें") }
-                }
-                is MyRatingsUiState.Success -> RatingsContent(
-                    summary = state.summary,
-                    modifier = Modifier.fillMaxSize(),
-                )
+                is MyRatingsUiState.Error ->
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text("डेटा लोड नहीं हो सका", style = MaterialTheme.typography.bodyLarge)
+                        Button(onClick = viewModel::refresh) { Text("पुनः प्रयास करें") }
+                    }
+                is MyRatingsUiState.Success ->
+                    RatingsContent(
+                        summary = state.summary,
+                        modifier = Modifier.fillMaxSize(),
+                    )
             }
         }
     }
 }
 
 @Composable
-private fun RatingsContent(summary: TechRatingSummary, modifier: Modifier = Modifier) {
+private fun RatingsContent(
+    summary: TechRatingSummary,
+    modifier: Modifier = Modifier,
+) {
     LazyColumn(
         modifier = modifier,
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+        contentPadding =
+            androidx.compose.foundation.layout
+                .PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
@@ -137,7 +145,11 @@ private fun RatingsContent(summary: TechRatingSummary, modifier: Modifier = Modi
 }
 
 @Composable
-private fun SubScoreColumn(label: String, value: Double, modifier: Modifier = Modifier) {
+private fun SubScoreColumn(
+    label: String,
+    value: Double,
+    modifier: Modifier = Modifier,
+) {
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text("%.1f".format(value), style = MaterialTheme.typography.titleMedium)
         Text(label, style = MaterialTheme.typography.labelSmall)
@@ -158,7 +170,10 @@ private fun TrendCard(weeks: List<RatingWeekTrend>) {
 }
 
 @Composable
-private fun RatingTrendChart(weeks: List<RatingWeekTrend>, modifier: Modifier = Modifier) {
+private fun RatingTrendChart(
+    weeks: List<RatingWeekTrend>,
+    modifier: Modifier = Modifier,
+) {
     if (weeks.isEmpty()) return
     val maxAvg = weeks.maxOfOrNull { it.average } ?: 5.0
     val barColor = MaterialTheme.colorScheme.primary
@@ -169,11 +184,12 @@ private fun RatingTrendChart(weeks: List<RatingWeekTrend>, modifier: Modifier = 
         val minBarPx = 4.dp.toPx()
         val maxBarHeight = size.height - minBarPx
         weeks.forEachIndexed { i, week ->
-            val barHeight = if (maxAvg > 0.0) {
-                (week.average / maxAvg).toFloat() * maxBarHeight + minBarPx
-            } else {
-                minBarPx
-            }
+            val barHeight =
+                if (maxAvg > 0.0) {
+                    (week.average / maxAvg).toFloat() * maxBarHeight + minBarPx
+                } else {
+                    minBarPx
+                }
             val x = i * spacing + (spacing - barWidth) / 2f
             drawRect(
                 color = barColor,
@@ -219,9 +235,10 @@ private fun RatingItemCard(rating: ReceivedRating) {
     }
 }
 
-private fun formatDate(isoString: String): String = try {
-    val instant = Instant.parse(isoString)
-    DATE_FORMATTER.format(instant.atZone(ZoneId.systemDefault()))
-} catch (_: Exception) {
-    isoString
-}
+private fun formatDate(isoString: String): String =
+    try {
+        val instant = Instant.parse(isoString)
+        DATE_FORMATTER.format(instant.atZone(ZoneId.systemDefault()))
+    } catch (_: Exception) {
+        isoString
+    }

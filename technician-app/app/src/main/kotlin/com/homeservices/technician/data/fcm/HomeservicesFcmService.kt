@@ -59,7 +59,10 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
         }
     }
 
-    private fun showRatingReceivedNotification(overall: Int, comment: String) {
+    private fun showRatingReceivedNotification(
+        overall: Int,
+        comment: String,
+    ) {
         val channelId = "rating_received"
         val nm = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
@@ -68,23 +71,30 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
                     channelId,
                     "Rating Notifications",
                     android.app.NotificationManager.IMPORTANCE_DEFAULT,
-                )
+                ),
             )
         }
-        val intent = android.content.Intent(this, com.homeservices.technician.MainActivity::class.java)
-            .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        val pi = android.app.PendingIntent.getActivity(
-            this, 0, intent,
-            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
-        )
+        val intent =
+            android.content
+                .Intent(this, com.homeservices.technician.MainActivity::class.java)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        val pi =
+            android.app.PendingIntent.getActivity(
+                this,
+                0,
+                intent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
+            )
         val truncatedComment = if (comment.length > 100) comment.take(97) + "…" else comment
-        val notification = androidx.core.app.NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("रेटिंग प्राप्त हुई")
-            .setContentText("आपको ${overall}★ मिले। टिप्पणी: $truncatedComment")
-            .setContentIntent(pi)
-            .setAutoCancel(true)
-            .build()
+        val notification =
+            androidx.core.app.NotificationCompat
+                .Builder(this, channelId)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle("रेटिंग प्राप्त हुई")
+                .setContentText("आपको $overall★ मिले। टिप्पणी: $truncatedComment")
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .build()
         nm.notify(System.currentTimeMillis().toInt(), notification)
     }
 

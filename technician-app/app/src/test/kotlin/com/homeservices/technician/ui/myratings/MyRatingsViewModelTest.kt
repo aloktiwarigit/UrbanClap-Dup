@@ -25,48 +25,57 @@ public class MyRatingsViewModelTest {
     private val useCase: GetMyRatingsSummaryUseCase = mockk()
     private val eventBus = RatingReceivedEventBus()
 
-    private val fakeSummary = TechRatingSummary(
-        totalCount = 3,
-        averageOverall = 4.2,
-        averageSubScores = RatingSubScoreAverages(4.5, 4.1, 4.0),
-        trend = emptyList(),
-        items = emptyList(),
-    )
+    private val fakeSummary =
+        TechRatingSummary(
+            totalCount = 3,
+            averageOverall = 4.2,
+            averageSubScores = RatingSubScoreAverages(4.5, 4.1, 4.0),
+            trend = emptyList(),
+            items = emptyList(),
+        )
 
     @BeforeEach
-    public fun setUp(): Unit { Dispatchers.setMain(dispatcher) }
+    public fun setUp(): Unit {
+        Dispatchers.setMain(dispatcher)
+    }
 
     @AfterEach
-    public fun tearDown(): Unit { Dispatchers.resetMain() }
-
-    @Test
-    public fun `init loads ratings and transitions to Success`(): Unit = runTest {
-        coEvery { useCase.invoke() } returns Result.success(fakeSummary)
-        val vm = MyRatingsViewModel(useCase, eventBus)
-        assertInstanceOf(MyRatingsUiState.Success::class.java, vm.uiState.value)
-        assertEquals(fakeSummary, (vm.uiState.value as MyRatingsUiState.Success).summary)
+    public fun tearDown(): Unit {
+        Dispatchers.resetMain()
     }
 
     @Test
-    public fun `init failure transitions to Error`(): Unit = runTest {
-        coEvery { useCase.invoke() } returns Result.failure(RuntimeException())
-        val vm = MyRatingsViewModel(useCase, eventBus)
-        assertEquals(MyRatingsUiState.Error, vm.uiState.value)
-    }
+    public fun `init loads ratings and transitions to Success`(): Unit =
+        runTest {
+            coEvery { useCase.invoke() } returns Result.success(fakeSummary)
+            val vm = MyRatingsViewModel(useCase, eventBus)
+            assertInstanceOf(MyRatingsUiState.Success::class.java, vm.uiState.value)
+            assertEquals(fakeSummary, (vm.uiState.value as MyRatingsUiState.Success).summary)
+        }
 
     @Test
-    public fun `refresh reloads ratings`(): Unit = runTest {
-        coEvery { useCase.invoke() } returns Result.success(fakeSummary)
-        val vm = MyRatingsViewModel(useCase, eventBus)
-        vm.refresh()
-        coVerify(exactly = 2) { useCase.invoke() }
-    }
+    public fun `init failure transitions to Error`(): Unit =
+        runTest {
+            coEvery { useCase.invoke() } returns Result.failure(RuntimeException())
+            val vm = MyRatingsViewModel(useCase, eventBus)
+            assertEquals(MyRatingsUiState.Error, vm.uiState.value)
+        }
 
     @Test
-    public fun `FCM event triggers reload`(): Unit = runTest {
-        coEvery { useCase.invoke() } returns Result.success(fakeSummary)
-        val vm = MyRatingsViewModel(useCase, eventBus)
-        eventBus.post()
-        coVerify(atLeast = 2) { useCase.invoke() }
-    }
+    public fun `refresh reloads ratings`(): Unit =
+        runTest {
+            coEvery { useCase.invoke() } returns Result.success(fakeSummary)
+            val vm = MyRatingsViewModel(useCase, eventBus)
+            vm.refresh()
+            coVerify(exactly = 2) { useCase.invoke() }
+        }
+
+    @Test
+    public fun `FCM event triggers reload`(): Unit =
+        runTest {
+            coEvery { useCase.invoke() } returns Result.success(fakeSummary)
+            val vm = MyRatingsViewModel(useCase, eventBus)
+            eventBus.post()
+            coVerify(atLeast = 2) { useCase.invoke() }
+        }
 }

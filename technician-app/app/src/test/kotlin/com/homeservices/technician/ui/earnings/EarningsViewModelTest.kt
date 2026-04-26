@@ -26,46 +26,57 @@ public class EarningsViewModelTest {
     private val useCase: GetEarningsUseCase = mockk()
     private val eventBus = EarningsUpdateEventBus()
 
-    private val fakeSummary = EarningsSummary(
-        today = EarningsPeriod(120000L, 1), week = EarningsPeriod(240000L, 2),
-        month = EarningsPeriod(360000L, 3), lifetime = EarningsPeriod(960000L, 8),
-        lastSevenDays = List(7) { DailyEarnings("2026-04-${20 + it}", 0L) },
-    )
+    private val fakeSummary =
+        EarningsSummary(
+            today = EarningsPeriod(120000L, 1),
+            week = EarningsPeriod(240000L, 2),
+            month = EarningsPeriod(360000L, 3),
+            lifetime = EarningsPeriod(960000L, 8),
+            lastSevenDays = List(7) { DailyEarnings("2026-04-${20 + it}", 0L) },
+        )
 
     @BeforeEach
-    public fun setUp(): Unit { Dispatchers.setMain(dispatcher) }
+    public fun setUp(): Unit {
+        Dispatchers.setMain(dispatcher)
+    }
 
     @AfterEach
-    public fun tearDown(): Unit { Dispatchers.resetMain() }
-
-    @Test
-    public fun `init loads earnings and transitions to Success`(): Unit = runTest {
-        coEvery { useCase.invoke() } returns Result.success(fakeSummary)
-        val vm = EarningsViewModel(useCase, eventBus)
-        assertInstanceOf(EarningsUiState.Success::class.java, vm.uiState.value)
-        assertEquals(fakeSummary, (vm.uiState.value as EarningsUiState.Success).summary)
+    public fun tearDown(): Unit {
+        Dispatchers.resetMain()
     }
 
     @Test
-    public fun `init failure transitions to Error`(): Unit = runTest {
-        coEvery { useCase.invoke() } returns Result.failure(RuntimeException())
-        val vm = EarningsViewModel(useCase, eventBus)
-        assertEquals(EarningsUiState.Error, vm.uiState.value)
-    }
+    public fun `init loads earnings and transitions to Success`(): Unit =
+        runTest {
+            coEvery { useCase.invoke() } returns Result.success(fakeSummary)
+            val vm = EarningsViewModel(useCase, eventBus)
+            assertInstanceOf(EarningsUiState.Success::class.java, vm.uiState.value)
+            assertEquals(fakeSummary, (vm.uiState.value as EarningsUiState.Success).summary)
+        }
 
     @Test
-    public fun `refresh reloads earnings`(): Unit = runTest {
-        coEvery { useCase.invoke() } returns Result.success(fakeSummary)
-        val vm = EarningsViewModel(useCase, eventBus)
-        vm.refresh()
-        coVerify(exactly = 2) { useCase.invoke() }
-    }
+    public fun `init failure transitions to Error`(): Unit =
+        runTest {
+            coEvery { useCase.invoke() } returns Result.failure(RuntimeException())
+            val vm = EarningsViewModel(useCase, eventBus)
+            assertEquals(EarningsUiState.Error, vm.uiState.value)
+        }
 
     @Test
-    public fun `FCM notify triggers reload`(): Unit = runTest {
-        coEvery { useCase.invoke() } returns Result.success(fakeSummary)
-        val vm = EarningsViewModel(useCase, eventBus)
-        eventBus.notifyEarningsUpdate()
-        coVerify(atLeast = 2) { useCase.invoke() }
-    }
+    public fun `refresh reloads earnings`(): Unit =
+        runTest {
+            coEvery { useCase.invoke() } returns Result.success(fakeSummary)
+            val vm = EarningsViewModel(useCase, eventBus)
+            vm.refresh()
+            coVerify(exactly = 2) { useCase.invoke() }
+        }
+
+    @Test
+    public fun `FCM notify triggers reload`(): Unit =
+        runTest {
+            coEvery { useCase.invoke() } returns Result.success(fakeSummary)
+            val vm = EarningsViewModel(useCase, eventBus)
+            eventBus.notifyEarningsUpdate()
+            coVerify(atLeast = 2) { useCase.invoke() }
+        }
 }

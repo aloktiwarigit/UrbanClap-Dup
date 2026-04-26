@@ -37,25 +37,28 @@ public data class TechRatingSummaryDto(
     val trend: List<RatingWeekTrendDto>,
     val items: List<ReceivedRatingDto>,
 ) {
-    public fun toDomain(): TechRatingSummary = TechRatingSummary(
-        totalCount = totalCount,
-        averageOverall = averageOverall,
-        averageSubScores = RatingSubScoreAverages(
-            punctuality = averageSubScores.punctuality,
-            skill = averageSubScores.skill,
-            behaviour = averageSubScores.behaviour,
-        ),
-        trend = trend.map { RatingWeekTrend(it.weekStart, it.average, it.count) },
-        items = items.map {
-            ReceivedRating(
-                bookingId = it.bookingId,
-                overall = it.overall,
-                punctuality = it.subScores["punctuality"] ?: 0,
-                skill = it.subScores["skill"] ?: 0,
-                behaviour = it.subScores["behaviour"] ?: 0,
-                comment = it.comment,
-                submittedAt = it.submittedAt,
-            )
-        },
-    )
+    public fun toDomain(): TechRatingSummary =
+        TechRatingSummary(
+            totalCount = totalCount,
+            averageOverall = averageOverall,
+            averageSubScores =
+                RatingSubScoreAverages(
+                    punctuality = averageSubScores.punctuality,
+                    skill = averageSubScores.skill,
+                    behaviour = averageSubScores.behaviour,
+                ),
+            trend = trend.map { RatingWeekTrend(it.weekStart, it.average, it.count) },
+            items =
+                items.map {
+                    ReceivedRating(
+                        bookingId = it.bookingId,
+                        overall = it.overall,
+                        punctuality = it.subScores["punctuality"] ?: 0,
+                        skill = it.subScores["skill"] ?: 0,
+                        behaviour = it.subScores["behaviour"] ?: 0,
+                        comment = it.comment,
+                        submittedAt = it.submittedAt,
+                    )
+                },
+        )
 }

@@ -42,7 +42,8 @@ internal class RatingRepositoryImpl
 
         override fun get(bookingId: String): Flow<Result<RatingSnapshot>> = flow { emit(runCatching { api.get(bookingId).toDomain() }) }
 
-        public override suspend fun getMyRatings(): Result<TechRatingSummary> = runCatching {
-            api.getMyRatings().toDomain()
-        }
+        public override suspend fun getMyRatings(): Result<TechRatingSummary> =
+            runCatching {
+                api.getMyRatings().toDomain()
+            }
     }

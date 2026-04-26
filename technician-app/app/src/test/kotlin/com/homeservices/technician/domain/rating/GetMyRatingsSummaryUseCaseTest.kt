@@ -14,26 +14,29 @@ public class GetMyRatingsSummaryUseCaseTest {
     private val repository: RatingRepository = mockk()
     private val useCase = GetMyRatingsSummaryUseCase(repository)
 
-    private val fakeSummary = TechRatingSummary(
-        totalCount = 3,
-        averageOverall = 4.2,
-        averageSubScores = RatingSubScoreAverages(4.5, 4.1, 4.0),
-        trend = emptyList(),
-        items = emptyList(),
-    )
+    private val fakeSummary =
+        TechRatingSummary(
+            totalCount = 3,
+            averageOverall = 4.2,
+            averageSubScores = RatingSubScoreAverages(4.5, 4.1, 4.0),
+            trend = emptyList(),
+            items = emptyList(),
+        )
 
     @Test
-    public fun `invoke delegates to repository`(): Unit = runTest {
-        coEvery { repository.getMyRatings() } returns Result.success(fakeSummary)
-        val result = useCase.invoke()
-        assertTrue(result.isSuccess)
-        assertEquals(fakeSummary, result.getOrThrow())
-    }
+    public fun `invoke delegates to repository`(): Unit =
+        runTest {
+            coEvery { repository.getMyRatings() } returns Result.success(fakeSummary)
+            val result = useCase.invoke()
+            assertTrue(result.isSuccess)
+            assertEquals(fakeSummary, result.getOrThrow())
+        }
 
     @Test
-    public fun `invoke returns failure when repository fails`(): Unit = runTest {
-        coEvery { repository.getMyRatings() } returns Result.failure(RuntimeException())
-        val result = useCase.invoke()
-        assertTrue(result.isFailure)
-    }
+    public fun `invoke returns failure when repository fails`(): Unit =
+        runTest {
+            coEvery { repository.getMyRatings() } returns Result.failure(RuntimeException())
+            val result = useCase.invoke()
+            assertTrue(result.isFailure)
+        }
 }
