@@ -66,24 +66,26 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
       ctx.log(`detectNoShows: credit already exists for ${booking.id} — retrying remaining steps`);
     }
 
-    // When recovering from a prior run (creditCreated=false), re-fetch the live status first.
-    // Only skip if the booking has advanced to SEARCHING or beyond — meaning redispatch already
-    // fired and the booking left the "needs redispatch" window. ASSIGNED is NOT a safe skip signal:
-    // it can mean either (a) status-write failed and original tech is still assigned, or (b) a
-    // replacement tech accepted. We retry in both cases: (a) needs the write+redispatch; (b) the
-    // duplicate updateBookingFields call is a no-op if status is already past NO_SHOW_REDISPATCH
-    // (Cosmos replace is idempotent when the document is re-written to an identical value).
+    // When recovering (creditCreated=false), re-fetch to check whether the status-write and
+    // redispatch already completed on a prior run. `noShowRedispatchAt` is written atomically
+    // with the NO_SHOW_REDISPATCH status — if it's present, redispatch was already triggered.
+    // If the booking is now ASSIGNED *and* noShowRedispatchAt is set, a replacement tech
+    // has accepted; skip entirely. If noShowRedispatchAt is absent, the prior run crashed
+    // before the status-write completed — retry the write and redispatch.
     if (!creditCreated) {
       const liveBooking = await bookingRepo.getById(booking.id);
-      const safeToSkip = liveBooking && liveBooking.status !== 'ASSIGNED' && liveBooking.status !== 'NO_SHOW_REDISPATCH';
-      if (safeToSkip) {
-        ctx.log(`detectNoShows: recovery skipped for ${booking.id} — current status=${liveBooking.status}`);
+      if (liveBooking?.noShowRedispatchAt) {
+        // Redispatch was already triggered on a prior run — nothing left to do
+        ctx.log(`detectNoShows: recovery skipped for ${booking.id} — redispatch already fired at ${liveBooking.noShowRedispatchAt}`);
         continue;
       }
     }
 
     try {
-      await updateBookingFields(booking.id, { status: 'NO_SHOW_REDISPATCH' });
+      await updateBookingFields(booking.id, {
+        status: 'NO_SHOW_REDISPATCH',
+        noShowRedispatchAt: new Date().toISOString(),
+      });
     } catch (err: unknown) {
       Sentry.captureException(err);
       ctx.log(`detectNoShows: status update failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);
@@ -96,14 +98,14 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
       ctx.log(`detectNoShows: redispatch failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);
     }
 
-    // FCM push is NOT idempotent — only send when this invocation actually issued the credit.
-    if (creditCreated) {
-      try {
-        await sendNoShowCreditPush(booking.customerId, booking.id, NO_SHOW_CREDIT_PAISE);
-      } catch (err: unknown) {
-        Sentry.captureException(err);
-        ctx.log(`detectNoShows: FCM failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);
-      }
+    // FCM push: send when this run created the credit (normal path), or when recovering and
+    // redispatch was not yet triggered (prior run crashed before the push — retry is safe
+    // as a best-effort duplicate is far better than a customer who credits but never notified).
+    try {
+      await sendNoShowCreditPush(booking.customerId, booking.id, NO_SHOW_CREDIT_PAISE);
+    } catch (err: unknown) {
+      Sentry.captureException(err);
+      ctx.log(`detectNoShows: FCM failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 }

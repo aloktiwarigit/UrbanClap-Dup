@@ -33,6 +33,7 @@ export const BookingDocSchema = z.object({
   pendingAddOns: z.array(PendingAddOnSchema).optional(),
   approvedAddOns: z.array(PendingAddOnSchema).optional(),
   finalAmount: z.number().int().positive().optional(),
+  noShowRedispatchAt: z.string().optional(),
 });
 
 export const CreateBookingRequestSchema = z.object({
