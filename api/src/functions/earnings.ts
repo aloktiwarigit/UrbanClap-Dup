@@ -20,6 +20,7 @@ export const getEarningsHandler: HttpHandler = async (req: HttpRequest, _ctx: In
   }
 
   const entries = await walletLedgerRepo.getAllByTechnicianId(uid);
+  const settled = entries.filter(e => e.payoutStatus !== 'FAILED');
 
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
@@ -33,17 +34,17 @@ export const getEarningsHandler: HttpHandler = async (req: HttpRequest, _ctx: In
     const d = new Date(now);
     d.setDate(now.getDate() - i);
     const dateStr = d.toISOString().slice(0, 10);
-    const dayTotal = entries
+    const dayTotal = settled
       .filter(e => e.createdAt.slice(0, 10) === dateStr)
       .reduce((s, e) => s + e.techAmount, 0);
     lastSevenDays.push({ date: dateStr, techAmount: dayTotal });
   }
 
   const response: EarningsResponse = {
-    today: aggregate(entries, e => e.createdAt.slice(0, 10) === todayStr),
-    week:  aggregate(entries, e => new Date(e.createdAt) >= weekStart),
-    month: aggregate(entries, e => e.createdAt.startsWith(monthStr)),
-    lifetime: aggregate(entries, _ => true),
+    today: aggregate(settled, e => e.createdAt.slice(0, 10) === todayStr),
+    week:  aggregate(settled, e => new Date(e.createdAt) >= weekStart),
+    month: aggregate(settled, e => e.createdAt.startsWith(monthStr)),
+    lifetime: aggregate(settled, _ => true),
     lastSevenDays,
   };
 

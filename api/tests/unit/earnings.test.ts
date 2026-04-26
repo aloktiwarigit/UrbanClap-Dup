@@ -69,10 +69,15 @@ describe('GET /v1/technicians/me/earnings', () => {
   });
 
   it('excludes FAILED entries from all totals', async () => {
-    vi.mocked(walletLedgerRepo.getAllByTechnicianId).mockResolvedValue([]);
+    vi.mocked(walletLedgerRepo.getAllByTechnicianId).mockResolvedValue([
+      makeEntry(`${today}T10:00:00.000Z`, 80000, 'FAILED'),
+    ]);
     const res = await getEarningsHandler(makeReq('Bearer tok'), ctx) as HttpResponseInit;
     const body = res.jsonBody as any;
+    expect(body.today.techAmount).toBe(0);
+    expect(body.today.count).toBe(0);
     expect(body.lifetime.techAmount).toBe(0);
+    expect(body.lastSevenDays[6].techAmount).toBe(0);
   });
 
   it('lastSevenDays is always exactly 7 entries ordered oldest-to-newest', async () => {
