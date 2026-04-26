@@ -3,7 +3,7 @@ import { extendZodWithOpenApi } from '@asteasolutions/zod-to-openapi';
 
 extendZodWithOpenApi(z);
 
-export const ComplaintTypeEnum = z.enum(['RATING_SHIELD', 'STANDARD']);
+export const ComplaintTypeEnum = z.enum(['RATING_SHIELD', 'STANDARD', 'ABUSIVE_CUSTOMER_SHIELD', 'RATING_APPEAL']);
 
 export const ComplaintStatusEnum = z.enum(['NEW', 'INVESTIGATING', 'RESOLVED']);
 
@@ -14,6 +14,9 @@ export const ComplaintResolutionCategoryEnum = z.enum([
   'LATE_ARRIVAL',
   'NO_SHOW',
   'OTHER',
+  'APPEAL_UPHELD',
+  'APPEAL_REMOVED',
+  'APPEAL_PARTIAL_REMOVE',
 ]);
 
 export const ComplaintFiledByEnum = z.enum(['CUSTOMER', 'TECHNICIAN']);
@@ -97,6 +100,9 @@ export const ComplaintListQuerySchema = z.object({
   status: z.string().optional().transform(s =>
     s ? s.split(',').map(x => x.trim()).filter(Boolean) : undefined
   ).pipe(z.array(ComplaintStatusEnum).optional()),
+  type: z.string().optional().transform(s =>
+    s ? s.split(',').map(x => x.trim()).filter(Boolean) : undefined
+  ).pipe(z.array(ComplaintTypeEnum).optional()),
   assigneeAdminId: z.string().optional(),
   dateFrom: z.string().datetime({ offset: true }).optional(),
   dateTo: z.string().datetime({ offset: true }).optional(),

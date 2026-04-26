@@ -39,6 +39,13 @@ export async function queryComplaints(params: ComplaintListQuery): Promise<Compl
       parameters.push({ name: `@status${i}`, value: s });
     });
   }
+  if (params.type !== undefined && params.type.length > 0) {
+    const placeholders = params.type.map((_, i) => `@type${i}`).join(', ');
+    conditions.push(`c.type IN (${placeholders})`);
+    params.type.forEach((t, i) => {
+      parameters.push({ name: `@type${i}`, value: t });
+    });
+  }
   if (params.assigneeAdminId !== undefined) {
     conditions.push('c.assigneeAdminId = @assigneeAdminId');
     parameters.push({ name: '@assigneeAdminId', value: params.assigneeAdminId });
@@ -152,6 +159,45 @@ export async function getRepeatOffenders(
   return Array.from(counts.entries())
     .filter(([, count]) => count >= 3)
     .map(([technicianId, count]) => ({ technicianId, count }));
+}
+
+export async function findShieldByTechBooking(
+  technicianId: string,
+  bookingId: string,
+): Promise<ComplaintDoc | null> {
+  const { resources } = await getCosmosClient()
+    .database(DB_NAME)
+    .container(CONTAINER)
+    .items.query<Record<string, unknown>>({
+      query: `SELECT TOP 1 * FROM c WHERE c.technicianId = @uid AND c.orderId = @bookingId AND c.type = @type`,
+      parameters: [
+        { name: '@uid', value: technicianId },
+        { name: '@bookingId', value: bookingId },
+        { name: '@type', value: 'ABUSIVE_CUSTOMER_SHIELD' },
+      ],
+    })
+    .fetchAll();
+  const raw = resources[0];
+  return raw !== undefined ? ComplaintDocSchema.parse(raw) : null;
+}
+
+export async function countAppealsByTechInMonth(
+  technicianId: string,
+  monthStart: string,
+): Promise<number> {
+  const { resources } = await getCosmosClient()
+    .database(DB_NAME)
+    .container(CONTAINER)
+    .items.query<number>({
+      query: `SELECT VALUE COUNT(1) FROM c WHERE c.technicianId = @uid AND c.type = @type AND c.createdAt >= @monthStart`,
+      parameters: [
+        { name: '@uid', value: technicianId },
+        { name: '@type', value: 'RATING_APPEAL' },
+        { name: '@monthStart', value: monthStart },
+      ],
+    })
+    .fetchAll();
+  return resources[0] ?? 0;
 }
 
 export async function findRatingShieldEscalation(

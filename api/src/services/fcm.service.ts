@@ -99,6 +99,53 @@ export async function sendOwnerSosAlert(payload: {
   });
 }
 
+export async function sendAbusiveShieldAlert(payload: {
+  bookingId: string;
+  technicianId: string;
+  customerId: string;
+}): Promise<void> {
+  await getFirebaseAdmin().messaging().send({
+    topic: 'owner_alerts',
+    data: {
+      type: 'ABUSIVE_SHIELD_ALERT',
+      bookingId: payload.bookingId,
+      technicianId: payload.technicianId,
+      customerId: payload.customerId,
+    },
+  });
+}
+
+export async function sendAppealFiledAlert(payload: {
+  appealId: string;
+  technicianId: string;
+  bookingId: string;
+}): Promise<void> {
+  await getFirebaseAdmin().messaging().send({
+    topic: 'owner_alerts',
+    data: {
+      type: 'APPEAL_FILED_ALERT',
+      appealId: payload.appealId,
+      technicianId: payload.technicianId,
+      bookingId: payload.bookingId,
+    },
+  });
+}
+
+export async function sendAppealDecisionPush(
+  technicianId: string,
+  payload: { appealId: string; decision: string; ownerNote: string },
+): Promise<void> {
+  await getFirebaseAdmin().messaging().send({
+    topic: `technician_${technicianId}`,
+    data: {
+      type: 'APPEAL_DECISION',
+      appealId: payload.appealId,
+      decision: payload.decision,
+      ownerNote: payload.ownerNote,
+    },
+  });
+}
+
 export async function sendRatingReceivedPush(
   technicianId: string,
   payload: { bookingId: string; overall: number; comment: string },

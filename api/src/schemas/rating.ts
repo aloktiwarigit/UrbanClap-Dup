@@ -43,6 +43,8 @@ export const RatingDocSchema = z.object({
   techComment: z.string().optional(),
   techSubmittedAt: z.string().optional(),
   revealedAt: z.string().optional(),
+  customerAppealRemoved: z.boolean().optional(),
+  customerAppealDisputed: z.boolean().optional(),
 });
 
 export const SidePayloadSchema = z.union([

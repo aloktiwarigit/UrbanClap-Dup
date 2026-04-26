@@ -122,6 +122,36 @@ export async function incrementCompletedJobCount(technicianId: string): Promise<
   }
 }
 
+// ── Shield helpers (E08-S04) ──────────────────────────────────────────────────
+
+export async function addBlockedCustomer(
+  technicianId: string,
+  customerId: string,
+): Promise<void> {
+  const container = getCosmosClient().database(DB_NAME).container(CONTAINER);
+  const maxRetries = 3;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const { resource, etag } = await container
+      .item(technicianId, technicianId)
+      .read<{ id: string; blockedCustomerIds?: string[] } & Record<string, unknown>>();
+    if (!resource) return;
+    if (resource.blockedCustomerIds?.includes(customerId)) return; // idempotent
+    const updated = {
+      ...resource,
+      blockedCustomerIds: [...(resource.blockedCustomerIds ?? []), customerId],
+    };
+    try {
+      await container.item(technicianId, technicianId).replace(updated, {
+        accessCondition: { type: 'IfMatch', condition: etag ?? '' },
+      });
+      return;
+    } catch (err: unknown) {
+      if ((err as { code?: number }).code === 412 && attempt < maxRetries - 1) continue;
+      throw err;
+    }
+  }
+}
+
 // ── Report helpers (E06-S05) ──────────────────────────────────────────────────
 
 export interface TechnicianReportInfo {

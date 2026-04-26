@@ -26,6 +26,7 @@ export const TechnicianProfileSchema = z.object({
   rating: z.number().min(0).max(5).optional(),
   completedJobCount: z.number().int().min(0).optional(),
   updatedAt: z.string().datetime().optional(),
+  blockedCustomerIds: z.array(z.string()).optional(),
 });
 
 export type GeoPoint = z.infer<typeof GeoPointSchema>;

@@ -42,7 +42,8 @@ async function dispatchBookingToTechs(
   // receive the same booking again via a redispatch.
   const candidates = (await getTechniciansWithinRadius(lat, lng, radiusKm, booking.serviceId))
     .filter((t) => haversine(lat, lng, t.location.coordinates[1], t.location.coordinates[0]) <= radiusKm)
-    .filter((t) => t.id !== booking.technicianId);
+    .filter((t) => t.id !== booking.technicianId)
+    .filter((t) => !(t.blockedCustomerIds ?? []).includes(booking.customerId));
 
   if (candidates.length === 0) {
     console.log(`DISPATCH_NO_TECHS bookingId=${bookingId}`);

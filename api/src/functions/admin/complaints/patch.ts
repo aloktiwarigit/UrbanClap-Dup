@@ -5,7 +5,9 @@ import { requireAdmin } from '../../../middleware/requireAdmin.js';
 import type { AdminContext } from '../../../types/admin.js';
 import { PatchComplaintBodySchema } from '../../../schemas/complaint.js';
 import { getComplaint, replaceComplaint } from '../../../cosmos/complaints-repository.js';
+import { ratingRepo } from '../../../cosmos/rating-repository.js';
 import { appendAuditEntry } from '../../../cosmos/audit-log-repository.js';
+import { sendAppealDecisionPush } from '../../../services/fcm.service.js';
 import { randomUUID } from 'crypto';
 
 export async function adminPatchComplaintHandler(
@@ -81,6 +83,45 @@ export async function adminPatchComplaintHandler(
       return { status: 409, jsonBody: { code: 'CONFLICT' } };
     }
     throw err;
+  }
+
+  // Rating appeal decision side-effects (fire-and-forget).
+  // Read the effective resolutionCategory from `updated` (which merges any prior-set
+  // category with this request's value) so a two-step admin flow — set category first,
+  // then resolve — still triggers the rating mutation, FCM, and audit entry.
+  if (
+    existing.type === 'RATING_APPEAL' &&
+    updated.status === 'RESOLVED' &&
+    oldStatus !== 'RESOLVED' &&
+    updated.resolutionCategory !== undefined
+  ) {
+    const decision = updated.resolutionCategory;
+    const ratingPatch =
+      decision === 'APPEAL_REMOVED' ? { customerAppealRemoved: true } :
+      decision === 'APPEAL_PARTIAL_REMOVE' ? { customerAppealDisputed: true } : null;
+
+    if (ratingPatch) {
+      ratingRepo.patchRatingForAppeal(existing.orderId, ratingPatch)
+        .catch((err: unknown) => ctx.error('patchRatingForAppeal failed', err));
+    }
+
+    sendAppealDecisionPush(existing.technicianId, {
+      appealId: existing.id,
+      decision,
+      ownerNote: parsed.data.note ?? '',
+    }).catch((err: unknown) => ctx.error('sendAppealDecisionPush failed', err));
+
+    appendAuditEntry({
+      id: randomUUID(),
+      adminId: admin.adminId,
+      role: admin.role,
+      action: 'APPEAL_DECIDED',
+      resourceType: 'complaint',
+      resourceId: existing.id,
+      payload: { decision, technicianId: existing.technicianId, bookingId: existing.orderId },
+      timestamp: now,
+      partitionKey: now.slice(0, 7),
+    }).catch((err: unknown) => ctx.error('audit APPEAL_DECIDED failed', err));
   }
 
   // Fire-and-forget: audit writes must not fail the response after the complaint is committed.
