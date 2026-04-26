@@ -320,6 +320,19 @@ kover {
                     // RatingPromptEventBus — MutableSharedFlow wrapper, same rationale as PriceApprovalEventBus
                     "*.RatingPromptEventBus",
                     "*.RatingPromptEventBus$*",
+                    // SOS composable screens — same rationale as other *Kt screen classes
+                    "*.SosBottomSheetKt",
+                    "*.SosBottomSheetKt\$*",
+                    "*.SosConsentDialogKt",
+                    "*.SosConsentDialogKt\$*",
+                    // SosUiState sealed interface — data holders, no logic branches
+                    "*.SosUiState",
+                    "*.SosUiState\$*",
+                    // data.sos.di — Hilt @Provides wiring, same rationale as other DI modules
+                    "*.data.sos.di.*",
+                    // SosConsentStore — thin DataStore wrapper (IO-bound, integration-tested)
+                    "*.SosConsentStore",
+                    "*.SosConsentStore\$*",
                 )
             }
         }
