@@ -2,6 +2,7 @@ package com.homeservices.technician.data.rating.remote
 
 import com.homeservices.technician.data.rating.remote.dto.GetRatingResponseDto
 import com.homeservices.technician.data.rating.remote.dto.SubmitRatingRequestDto
+import com.homeservices.technician.data.rating.remote.dto.TechRatingSummaryDto
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -17,4 +18,7 @@ public interface RatingApiService {
     public suspend fun get(
         @Path("bookingId") bookingId: String,
     ): GetRatingResponseDto
+
+    @GET("v1/technicians/me/ratings")
+    public suspend fun getMyRatings(): TechRatingSummaryDto
 }
