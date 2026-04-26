@@ -103,7 +103,7 @@ export const dispatcherService = {
 
   async redispatch(bookingId: string, radiusKm: number): Promise<void> {
     const booking = await bookingRepo.getById(bookingId);
-    if (!booking) return;
+    if (!booking || booking.status !== 'NO_SHOW_REDISPATCH') return;
     await dispatchBookingToTechs(bookingId, booking, radiusKm);
   },
 };
