@@ -294,6 +294,17 @@ kover {
                     // FirebaseOtpUseCase exclusion above.
                     "*.FcmTopicSubscriber",
                     "*.FcmTopicSubscriber\$*",
+                    // ComplaintScreen — Compose UI composable
+                    "*.ComplaintScreenKt",
+                    "*.ComplaintScreenKt\$*",
+                    // ComplaintRoutes — nav route sealed class
+                    "*.ComplaintRoutes",
+                    "*.ComplaintRoutes\$*",
+                    // data.complaint.di — Hilt @Provides wiring
+                    "*.data.complaint.di.*",
+                    // PhotoUploadUseCase — Firebase Storage upload path
+                    "*.PhotoUploadUseCase",
+                    "*.PhotoUploadUseCase\$*",
                 )
             }
         }

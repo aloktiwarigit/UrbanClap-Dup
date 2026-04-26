@@ -49,7 +49,7 @@ internal class ActiveJobViewModel
                     val current = _uiState.value as? ActiveJobUiState.Active
                     _uiState.value =
                         if (job.status == ActiveJobStatus.COMPLETED) {
-                            ActiveJobUiState.Completed
+                            ActiveJobUiState.Completed(bookingId = bookingId)
                         } else {
                             ActiveJobUiState.Active(
                                 job = job,

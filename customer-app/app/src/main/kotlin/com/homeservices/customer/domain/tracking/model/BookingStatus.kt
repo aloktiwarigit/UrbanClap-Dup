@@ -11,6 +11,8 @@ public sealed class BookingStatus {
 
     public object Cancelled : BookingStatus()
 
+    public object Closed : BookingStatus()
+
     public object Unknown : BookingStatus()
 
     public companion object {
@@ -21,6 +23,7 @@ public sealed class BookingStatus {
                 "IN_PROGRESS" -> InProgress
                 "COMPLETED" -> Completed
                 "CANCELLED" -> Cancelled
+                "CLOSED" -> Closed
                 else -> Unknown
             }
     }

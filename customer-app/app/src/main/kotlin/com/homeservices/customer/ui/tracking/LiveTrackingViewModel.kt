@@ -28,6 +28,7 @@ public class LiveTrackingViewModel
                 trackBookingStatusUseCase.execute(bookingId),
             ) { location, status ->
                 LiveTrackingUiState.Tracking(
+                    bookingId = bookingId,
                     location = location,
                     status = status,
                     techName = location?.techName ?: "",

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,6 +28,7 @@ import com.homeservices.technician.domain.rating.model.TechRating
 @Composable
 public fun RatingScreen(
     modifier: Modifier = Modifier,
+    onFileComplaint: (bookingId: String) -> Unit = {},
     viewModel: RatingViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -42,8 +44,20 @@ public fun RatingScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-            is RatingUiState.AwaitingPartner -> AwaitingPartnerBody(current.snapshot)
-            is RatingUiState.Revealed -> RevealedBody(current.snapshot)
+            is RatingUiState.AwaitingPartner -> {
+                AwaitingPartnerBody(
+                    snapshot = current.snapshot,
+                    bookingId = viewModel.bookingId,
+                    onFileComplaint = onFileComplaint,
+                )
+            }
+            is RatingUiState.Revealed -> {
+                RevealedBody(
+                    snapshot = current.snapshot,
+                    bookingId = viewModel.bookingId,
+                    onFileComplaint = onFileComplaint,
+                )
+            }
             is RatingUiState.Error -> Text("Error: ${current.message}")
             is RatingUiState.Editing -> {
                 Text("How was your customer?")
@@ -64,17 +78,29 @@ public fun RatingScreen(
 }
 
 @Composable
-private fun AwaitingPartnerBody(snapshot: RatingSnapshot?) {
+private fun AwaitingPartnerBody(
+    snapshot: RatingSnapshot?,
+    bookingId: String,
+    onFileComplaint: (String) -> Unit,
+) {
     Text("Thanks! Awaiting your customer's rating.")
     Spacer(Modifier.height(12.dp))
     val techRating = (snapshot?.techSide as? SideState.Submitted)?.rating as? TechRating
     if (techRating != null) {
         TechRatingDisplay(label = "Your rating", rating = techRating)
     }
+    Spacer(Modifier.height(16.dp))
+    OutlinedButton(onClick = { onFileComplaint(bookingId) }) {
+        Text("समस्या रिपोर्ट करें")
+    }
 }
 
 @Composable
-private fun RevealedBody(snapshot: RatingSnapshot) {
+private fun RevealedBody(
+    snapshot: RatingSnapshot,
+    bookingId: String,
+    onFileComplaint: (String) -> Unit,
+) {
     Text("Both ratings revealed.")
     Spacer(Modifier.height(12.dp))
     val techRating = (snapshot.techSide as? SideState.Submitted)?.rating as? TechRating
@@ -85,6 +111,10 @@ private fun RevealedBody(snapshot: RatingSnapshot) {
     val customerRating = (snapshot.customerSide as? SideState.Submitted)?.rating as? CustomerRating
     if (customerRating != null) {
         CustomerRatingDisplay(label = "Customer's rating", rating = customerRating)
+    }
+    Spacer(Modifier.height(16.dp))
+    OutlinedButton(onClick = { onFileComplaint(bookingId) }) {
+        Text("समस्या रिपोर्ट करें")
     }
 }
 

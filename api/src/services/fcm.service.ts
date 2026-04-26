@@ -64,3 +64,35 @@ export async function sendOwnerRatingShieldAlert(payload: {
     },
   });
 }
+
+export async function sendOwnerComplaintFiled(payload: {
+  bookingId: string;
+  filedBy: string;
+  reasonCode: string;
+}): Promise<void> {
+  await getFirebaseAdmin().messaging().send({
+    topic: 'owner_alerts',
+    data: {
+      type: 'OWNER_COMPLAINT_FILED',
+      bookingId: payload.bookingId,
+      filedBy: payload.filedBy,
+      reasonCode: payload.reasonCode,
+    },
+  });
+}
+
+export async function sendOwnerComplaintSlaBreach(payload: {
+  complaintId: string;
+  bookingId: string;
+  breachType: 'SLA_BREACH' | 'SLA_BREACH_ACK';
+}): Promise<void> {
+  await getFirebaseAdmin().messaging().send({
+    topic: 'owner_alerts',
+    data: {
+      type: 'OWNER_COMPLAINT_SLA_BREACH',
+      complaintId: payload.complaintId,
+      bookingId: payload.bookingId,
+      slaType: payload.breachType === 'SLA_BREACH' ? 'RESOLVE' : 'ACKNOWLEDGE',
+    },
+  });
+}

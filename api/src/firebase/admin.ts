@@ -25,5 +25,5 @@ export async function uploadBufferToStorage(
 
 export async function downloadStorageFile(storagePath: string): Promise<Buffer> {
   const [contents] = await getStorage().bucket().file(storagePath).download();
-  return contents as Buffer;
+  return contents;
 }
