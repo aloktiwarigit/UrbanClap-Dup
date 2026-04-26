@@ -17,6 +17,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -41,6 +42,7 @@ import java.util.Locale
 internal fun EarningsScreen(
     modifier: Modifier = Modifier,
     viewModel: EarningsViewModel = hiltViewModel(),
+    onViewRatings: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     Scaffold(
@@ -64,6 +66,7 @@ internal fun EarningsScreen(
                 }
                 is EarningsUiState.Success -> SuccessContent(
                     summary = state.summary,
+                    onViewRatings = onViewRatings,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -72,7 +75,7 @@ internal fun EarningsScreen(
 }
 
 @Composable
-private fun SuccessContent(summary: EarningsSummary, modifier: Modifier = Modifier) {
+private fun SuccessContent(summary: EarningsSummary, onViewRatings: () -> Unit, modifier: Modifier = Modifier) {
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(16.dp),
@@ -98,6 +101,14 @@ private fun SuccessContent(summary: EarningsSummary, modifier: Modifier = Modifi
         }
         item { GoalProgressCard(summary.month.techAmountPaise) }
         item { SparklineCard(summary.lastSevenDays) }
+        item {
+            OutlinedButton(
+                onClick = onViewRatings,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("रेटिंग देखें")
+            }
+        }
     }
 }
 

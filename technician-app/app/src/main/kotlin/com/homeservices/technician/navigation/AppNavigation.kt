@@ -14,6 +14,7 @@ import androidx.navigation.compose.rememberNavController
 import com.homeservices.technician.data.auth.SessionManager
 import com.homeservices.technician.data.fcm.FcmTopicSubscriber
 import com.homeservices.technician.data.rating.RatingPromptEventBus
+import com.homeservices.technician.data.rating.RatingReceivedEventBus
 import com.homeservices.technician.domain.auth.model.AuthState
 import com.homeservices.technician.ui.jobOffer.JobOfferScreen
 import com.homeservices.technician.ui.jobOffer.JobOfferUiState
@@ -24,6 +25,7 @@ internal fun AppNavigation(
     sessionManager: SessionManager,
     activity: FragmentActivity,
     ratingPromptEventBus: RatingPromptEventBus,
+    ratingReceivedEventBus: RatingReceivedEventBus,
     fcmTopicSubscriber: FcmTopicSubscriber,
     modifier: Modifier = Modifier,
 ): Unit {
@@ -47,6 +49,7 @@ internal fun AppNavigation(
                 // log in on this device can't be routed into the previous
                 // technician's pending booking flow.
                 ratingPromptEventBus.clearBuffered()
+                ratingReceivedEventBus.clearBuffered()
                 fcmTopicSubscriber.unsubscribeTechnician()
                 navController.navigate("auth") {
                     popUpTo("main") { inclusive = true }
@@ -75,6 +78,15 @@ internal fun AppNavigation(
         if (!isAuthenticated) return@LaunchedEffect
         ratingPromptEventBus.events.collect { bookingId ->
             navController.navigate("rating/$bookingId") {
+                launchSingleTop = true
+            }
+        }
+    }
+
+    LaunchedEffect(ratingReceivedEventBus, isAuthenticated) {
+        if (!isAuthenticated) return@LaunchedEffect
+        ratingReceivedEventBus.events.collect {
+            navController.navigate("ratings_transparency") {
                 launchSingleTop = true
             }
         }
