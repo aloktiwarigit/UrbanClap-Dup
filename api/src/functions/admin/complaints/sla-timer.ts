@@ -17,17 +17,18 @@ async function escalateBatch(
   auditAction: 'SLA_BREACH' | 'SLA_BREACH_ACK',
   ctx: InvocationContext,
   now: string,
+  alsoAckBreachedIds: ReadonlySet<string> = new Set(),
 ): Promise<void> {
   await Promise.all(
     batch.map(async ({ doc: complaint, etag }) => {
-      // SLA_BREACH sets `escalated: true` (picked up by resolution-overdue query).
-      // SLA_BREACH_ACK sets `ackBreached: true` only — leaving `escalated: false`
-      // so the complaint still surfaces in getOverdueComplaints() if it later
-      // crosses the 24-hour SLA deadline.
+      // Both breach types set `escalated: true` so the owner is notified promptly.
+      // When a complaint is SLA-overdue and also ACK-overdue, a single atomic replace
+      // covers both flags so no ETag race between two parallel escalateBatch calls.
+      const alsoAckBreached = alsoAckBreachedIds.has(complaint.id);
       const updated =
         auditAction === 'SLA_BREACH'
-          ? { ...complaint, escalated: true, updatedAt: now }
-          : { ...complaint, ackBreached: true, updatedAt: now };
+          ? { ...complaint, escalated: true, ...(alsoAckBreached ? { ackBreached: true } : {}), updatedAt: now }
+          : { ...complaint, ackBreached: true, escalated: true, updatedAt: now };
       try {
         await replaceComplaint(updated, etag);
       } catch (err: unknown) {
@@ -92,13 +93,14 @@ export async function slaBreachTimerHandler(
 
   const now = new Date().toISOString();
   // De-duplicate: a complaint whose slaDeadlineAt is also past (i.e. in `overdue`) satisfies
-  // both queries. Running SLA_BREACH on it is sufficient; exclude it from the ACK batch to
-  // avoid a same-ETag race between the two escalateBatch calls.
+  // both queries. Run SLA_BREACH once and set ackBreached in the same update; exclude it from
+  // the ACK batch to avoid a same-ETag race between the two escalateBatch calls.
   const overdueIds = new Set(overdue.map(({ doc }) => doc.id));
+  const ackOverdueIds = new Set(ackOverdue.map(({ doc }) => doc.id));
   const dedupedAckOverdue = ackOverdue.filter(({ doc }) => !overdueIds.has(doc.id));
 
   await Promise.all([
-    escalateBatch(overdue, 'SLA_BREACH', ctx, now),
+    escalateBatch(overdue, 'SLA_BREACH', ctx, now, ackOverdueIds),
     escalateBatch(dedupedAckOverdue, 'SLA_BREACH_ACK', ctx, now),
   ]);
 

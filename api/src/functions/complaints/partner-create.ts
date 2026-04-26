@@ -2,10 +2,7 @@ import { app } from '@azure/functions';
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { verifyFirebaseIdToken } from '../../services/firebaseAdmin.js';
 import { bookingRepo } from '../../cosmos/booking-repository.js';
-import {
-  createComplaint,
-  findComplaintByBookingAndParty,
-} from '../../cosmos/complaints-repository.js';
+import { createComplaint, getComplaint, replaceComplaint } from '../../cosmos/complaints-repository.js';
 import { sendOwnerComplaintFiled } from '../../services/fcm.service.js';
 import {
   CreateComplaintByPartnerBodySchema,
@@ -13,7 +10,6 @@ import {
   TechnicianReasonCodeEnum,
 } from '../../schemas/complaint.js';
 import type { ComplaintDoc, PartnerComplaintResponse } from '../../schemas/complaint.js';
-import { randomUUID } from 'crypto';
 
 export async function partnerCreateComplaintHandler(
   req: HttpRequest,
@@ -56,12 +52,15 @@ export async function partnerCreateComplaintHandler(
     : TechnicianReasonCodeEnum.safeParse(data.reasonCode).success;
   if (!reasonValid) return { status: 400, jsonBody: { code: 'INVALID_REASON_CODE' } };
 
-  const existing = await findComplaintByBookingAndParty(data.bookingId, uid, filedBy);
-  if (existing) return { status: 409, jsonBody: { code: 'COMPLAINT_ALREADY_FILED' } };
+  const complaintId = `${data.bookingId}-complaint-${filedBy.toLowerCase()}`;
+  const existing = await getComplaint(complaintId);
+  if (existing && existing.doc.status !== 'RESOLVED') {
+    return { status: 409, jsonBody: { code: 'COMPLAINT_ALREADY_FILED' } };
+  }
 
   const now = new Date();
   const doc: ComplaintDoc = {
-    id: randomUUID(),
+    id: complaintId,
     orderId: data.bookingId,
     customerId: booking.customerId,
     technicianId: booking.technicianId ?? '',
@@ -79,7 +78,27 @@ export async function partnerCreateComplaintHandler(
     ...(data.photoStoragePath ? { photoStoragePath: data.photoStoragePath } : {}),
   };
 
-  await createComplaint(doc);
+  if (existing) {
+    // Refile after RESOLVED — replace atomically using etag so a concurrent refile loses
+    try {
+      await replaceComplaint(doc, existing.etag);
+    } catch (err: unknown) {
+      if (typeof err === 'object' && err !== null && (err as { code?: number }).code === 412) {
+        return { status: 409, jsonBody: { code: 'COMPLAINT_ALREADY_FILED' } };
+      }
+      throw err;
+    }
+  } else {
+    // First filing — create; 409 means a concurrent request beat us to it
+    try {
+      await createComplaint(doc);
+    } catch (err: unknown) {
+      if (typeof err === 'object' && err !== null && (err as { code?: number }).code === 409) {
+        return { status: 409, jsonBody: { code: 'COMPLAINT_ALREADY_FILED' } };
+      }
+      throw err;
+    }
+  }
 
   sendOwnerComplaintFiled({ bookingId: data.bookingId, filedBy, reasonCode: data.reasonCode })
     .catch((err: unknown) => ctx.error('sendOwnerComplaintFiled failed', err));

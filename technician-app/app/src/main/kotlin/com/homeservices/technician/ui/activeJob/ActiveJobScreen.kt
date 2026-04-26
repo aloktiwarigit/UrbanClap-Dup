@@ -29,7 +29,6 @@ import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
 @Composable
 internal fun ActiveJobScreen(
     modifier: Modifier = Modifier,
-    onFileComplaint: (bookingId: String) -> Unit = {},
     viewModel: ActiveJobViewModel = hiltViewModel(),
 ): Unit {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -39,7 +38,6 @@ internal fun ActiveJobScreen(
         onPhotoCancelled = viewModel::onPhotoCancelled,
         onPhotoConfirmed = viewModel::onPhotoConfirmed,
         onPhotoRetake = viewModel::onPhotoRetake,
-        onFileComplaint = onFileComplaint,
         modifier = modifier,
     )
 }
@@ -51,7 +49,6 @@ internal fun ActiveJobScreenContent(
     onPhotoCancelled: () -> Unit,
     onPhotoConfirmed: (filePath: String) -> Unit,
     onPhotoRetake: () -> Unit,
-    onFileComplaint: (bookingId: String) -> Unit = {},
     modifier: Modifier = Modifier,
 ): Unit {
     Surface(
@@ -74,12 +71,6 @@ internal fun ActiveJobScreenContent(
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Text("Job Complete!", style = MaterialTheme.typography.headlineSmall)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    androidx.compose.material3.OutlinedButton(
-                        onClick = { onFileComplaint(uiState.bookingId) },
-                    ) {
-                        Text("समस्या रिपोर्ट करें")
-                    }
                 }
             is ActiveJobUiState.Error ->
                 Column(

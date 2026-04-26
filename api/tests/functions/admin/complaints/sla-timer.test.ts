@@ -104,7 +104,7 @@ describe('slaBreachTimerHandler', () => {
     expect(appendAuditEntry).not.toHaveBeenCalled();
   });
 
-  it('escalates acknowledge-past-due complaint and logs SLA_BREACH_ACK audit action, sets ackBreached not escalated', async () => {
+  it('escalates acknowledge-past-due complaint and logs SLA_BREACH_ACK audit action, sets ackBreached and escalated', async () => {
     const ackOverdueComplaint = {
       ...overdueComplaint,
       id: 'c-ack-1',
@@ -121,9 +121,9 @@ describe('slaBreachTimerHandler', () => {
     await slaBreachTimerHandler({} as never, mockCtx);
     expect(replaceComplaint).toHaveBeenCalledOnce();
     const [replacedDoc, passedEtag] = (replaceComplaint as ReturnType<typeof vi.fn>).mock.calls[0]!;
-    // ACK breach sets ackBreached=true, NOT escalated=true (so complaint still eligible for SLA_BREACH later)
+    // ACK breach sets both ackBreached=true and escalated=true to notify the owner promptly
     expect(replacedDoc.ackBreached).toBe(true);
-    expect(replacedDoc.escalated).toBe(false);
+    expect(replacedDoc.escalated).toBe(true);
     expect(passedEtag).toBe('"ack-etag-1"');
     expect(appendAuditEntry).toHaveBeenCalledOnce();
     const auditCall = (appendAuditEntry as ReturnType<typeof vi.fn>).mock.calls[0]![0]!;
@@ -148,7 +148,7 @@ describe('slaBreachTimerHandler', () => {
     expect(auditActions).toContain('SLA_BREACH_ACK');
   });
 
-  it('deduplicates: complaint in both overdue and ackOverdue only gets SLA_BREACH once', async () => {
+  it('deduplicates: dual-breach complaint gets one SLA_BREACH replace with both escalated and ackBreached set', async () => {
     // Same complaint id in both batches — slaDeadlineAt is past AND acknowledgeDeadlineAt is past
     const dualBreach = {
       ...overdueComplaint,
@@ -164,8 +164,11 @@ describe('slaBreachTimerHandler', () => {
     (replaceComplaint as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     (appendAuditEntry as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     await slaBreachTimerHandler({} as never, mockCtx);
-    // Only one replace call (deduplicated from ACK batch)
+    // Only one replace call (deduplicated from ACK batch) with both flags set atomically
     expect(replaceComplaint).toHaveBeenCalledOnce();
+    const [replacedDoc] = (replaceComplaint as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(replacedDoc.escalated).toBe(true);
+    expect(replacedDoc.ackBreached).toBe(true);
     // Only one audit entry, and it should be SLA_BREACH (not SLA_BREACH_ACK)
     expect(appendAuditEntry).toHaveBeenCalledOnce();
     const auditAction = (appendAuditEntry as ReturnType<typeof vi.fn>).mock.calls[0]![0]!;

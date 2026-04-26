@@ -76,7 +76,7 @@ export async function sendOwnerComplaintSlaBreach(payload: {
       type: 'OWNER_COMPLAINT_SLA_BREACH',
       complaintId: payload.complaintId,
       bookingId: payload.bookingId,
-      breachType: payload.breachType,
+      slaType: payload.breachType === 'SLA_BREACH' ? 'RESOLVE' : 'ACKNOWLEDGE',
     },
   });
 }
