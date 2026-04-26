@@ -5,8 +5,8 @@ import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
 import { walletLedgerRepo } from '../cosmos/wallet-ledger-repository.js';
 import type { EarningsResponse, EarningsPeriod, DailyEarnings, WalletLedgerEntry } from '../schemas/wallet-ledger.js';
 
-function aggregate(entries: WalletLedgerEntry[], filter: (e: WalletLedgerEntry) => boolean): EarningsPeriod {
-  const subset = entries.filter(filter);
+function aggregate(entries: WalletLedgerEntry[], predicate: (e: WalletLedgerEntry) => boolean): EarningsPeriod {
+  const subset = entries.filter(predicate);
   return { techAmount: subset.reduce((s, e) => s + e.techAmount, 0), count: subset.length };
 }
 
@@ -27,7 +27,7 @@ export const getEarningsHandler: HttpHandler = async (req: HttpRequest, _ctx: In
   const monthStr = todayStr.slice(0, 7);
   const weekStart = new Date(now);
   weekStart.setDate(now.getDate() - 6);
-  weekStart.setHours(0, 0, 0, 0);
+  weekStart.setUTCHours(0, 0, 0, 0);
 
   const lastSevenDays: DailyEarnings[] = [];
   for (let i = 6; i >= 0; i--) {
@@ -54,5 +54,6 @@ export const getEarningsHandler: HttpHandler = async (req: HttpRequest, _ctx: In
 app.http('getEarnings', {
   route: 'v1/technicians/me/earnings',
   methods: ['GET'],
+  authLevel: 'anonymous',
   handler: getEarningsHandler,
 });

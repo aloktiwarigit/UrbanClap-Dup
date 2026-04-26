@@ -68,6 +68,36 @@ describe('GET /v1/technicians/me/earnings', () => {
     expect(body.lifetime.count).toBe(1);
   });
 
+  it('aggregates week entry (3 days ago) correctly', async () => {
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    const pastDate = threeDaysAgo.toISOString().slice(0, 10);
+    vi.mocked(walletLedgerRepo.getAllByTechnicianId).mockResolvedValue([
+      makeEntry(`${pastDate}T10:00:00.000Z`, 90000),
+    ]);
+    const res = await getEarningsHandler(makeReq('Bearer tok'), ctx) as HttpResponseInit;
+    const body = res.jsonBody as any;
+    expect(body.today.techAmount).toBe(0);
+    expect(body.week.techAmount).toBe(90000);
+    expect(body.week.count).toBe(1);
+    expect(body.lifetime.techAmount).toBe(90000);
+  });
+
+  it('aggregates month entry (same month, older) correctly', async () => {
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+    const pastDate = twoDaysAgo.toISOString().slice(0, 10);
+    vi.mocked(walletLedgerRepo.getAllByTechnicianId).mockResolvedValue([
+      makeEntry(`${pastDate}T10:00:00.000Z`, 75000),
+    ]);
+    const res = await getEarningsHandler(makeReq('Bearer tok'), ctx) as HttpResponseInit;
+    const body = res.jsonBody as any;
+    expect(body.today.techAmount).toBe(0);
+    expect(body.month.techAmount).toBe(75000);
+    expect(body.month.count).toBe(1);
+    expect(body.lifetime.techAmount).toBe(75000);
+  });
+
   it('excludes FAILED entries from all totals', async () => {
     vi.mocked(walletLedgerRepo.getAllByTechnicianId).mockResolvedValue([
       makeEntry(`${today}T10:00:00.000Z`, 80000, 'FAILED'),

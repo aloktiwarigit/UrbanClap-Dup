@@ -82,6 +82,7 @@ export const walletLedgerRepo = {
     return resources;
   },
 
+  /** Returns only PENDING and PAID entries for the given technician (FAILED excluded at query level). */
   async getAllByTechnicianId(technicianId: string): Promise<WalletLedgerEntry[]> {
     const { resources } = await getWalletLedgerContainer()
       .items.query<WalletLedgerEntry>(
