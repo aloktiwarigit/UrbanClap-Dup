@@ -365,6 +365,9 @@ dependencies {
     // Coroutines — play-services extensions (.await() on Task<T>)
     implementation(libs.kotlinx.coroutines.play.services)
 
+    // Consent / preferences storage
+    implementation(libs.androidx.datastore.preferences)
+
     // Auth SDKs
     implementation(libs.truecaller.sdk)
     implementation(libs.androidx.security.crypto)
