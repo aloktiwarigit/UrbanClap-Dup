@@ -1,0 +1,39 @@
+# Karnataka Platform Workers Act 2025 — FR-9.1 data-layer enforcement.
+#
+# Companion enforcement layers:
+#   - api/tests/integration/dispatcher-data-isolation.test.ts (runtime test gate)
+#   - docs/dispatch-algorithm.md (public algorithm transparency doc)
+#   - docs/adr/0011-karnataka-decline-history-isolation.md (ADR)
+#
+# These rules fail CI if a developer accidentally introduces decline-derived
+# features into the dispatcher read path. Discipline alone is not auditable;
+# CI enforcement is. `acceptRate` is forbidden because it is mathematically
+# `1 - declineRate` — decline-derived even when positively framed.
+#
+# Path resolution: semgrep-action runs from repo root (uses: steps don't
+# honor api-ship.yml's `working-directory: api`), so paths are repo-relative.
+rules:
+  - id: karnataka-no-decline-in-dispatcher
+    pattern-either:
+      - pattern: declineCount
+      - pattern: declineHistory
+      - pattern: declineRatio
+      - pattern: pastDeclines
+      - pattern: rejectionCount
+      - pattern: rejectionHistory
+      - pattern: acceptRate
+      - pattern: acceptanceRate
+    paths:
+      include:
+        - "api/src/services/dispatcher.service.ts"
+        - "api/src/cosmos/technician-repository.ts"
+        - "api/src/cosmos/dispatch-attempt-repository.ts"
+        - "api/src/schemas/technician.ts"
+        - "api/src/schemas/dispatch-attempt.ts"
+    message: |
+      Decline history must not influence dispatch ranking
+      (Karnataka Platform Workers Act 2025, FR-9.1, NFR-C-1).
+      Reverse this change or revise docs/adr/0011-karnataka-decline-history-isolation.md
+      with explicit owner approval.
+    languages: [typescript]
+    severity: ERROR

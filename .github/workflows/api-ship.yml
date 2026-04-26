@@ -63,5 +63,12 @@ jobs:
       - name: semgrep SAST
         uses: returntocorp/semgrep-action@v1
         with:
-          config: p/typescript p/owasp-top-ten p/nodejs p/secrets
+          # `uses:` steps don't honor the job's `working-directory: api` default,
+          # so the local config path is repo-relative.
+          config: |
+            p/typescript
+            p/owasp-top-ten
+            p/nodejs
+            p/secrets
+            api/.semgrep.yml
 
