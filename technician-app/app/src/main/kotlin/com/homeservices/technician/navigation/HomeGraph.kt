@@ -2,8 +2,6 @@ package com.homeservices.technician.navigation
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -17,13 +15,14 @@ import androidx.navigation.navArgument
 import com.homeservices.technician.domain.activeJob.model.NavigationEvent
 import com.homeservices.technician.ui.activeJob.ActiveJobScreen
 import com.homeservices.technician.ui.activeJob.ActiveJobViewModel
+import com.homeservices.technician.ui.earnings.EarningsScreen
 import com.homeservices.technician.ui.rating.RatingRoutes
 import com.homeservices.technician.ui.rating.RatingScreen
 
 internal fun NavGraphBuilder.homeGraph(navController: NavController) {
     navigation(startDestination = "home_dashboard", route = "home") {
         composable("home_dashboard") {
-            Box(modifier = Modifier.fillMaxSize())
+            EarningsScreen()
         }
         composable(
             route = "activeJob/{bookingId}",
