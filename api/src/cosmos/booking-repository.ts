@@ -67,6 +67,16 @@ export const bookingRepo = {
     return resources;
   },
 
+  async getAssignedBookingsBefore(slotDateCutoff: string): Promise<BookingDoc[]> {
+    const { resources } = await getBookingsContainer()
+      .items.query<BookingDoc>({
+        query: "SELECT * FROM c WHERE c.status = 'ASSIGNED' AND c.slotDate <= @slotDate",
+        parameters: [{ name: '@slotDate', value: slotDateCutoff }],
+      })
+      .fetchAll();
+    return resources;
+  },
+
   async requestAddOn(id: string, addOn: PendingAddOn): Promise<BookingDoc | null> {
     const existing = await this.getById(id);
     if (!existing || existing.status !== 'IN_PROGRESS') return null;
