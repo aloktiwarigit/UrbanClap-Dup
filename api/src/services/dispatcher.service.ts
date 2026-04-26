@@ -35,16 +35,19 @@ async function dispatchBookingToTechs(
   bookingId: string,
   booking: BookingDoc,
   radiusKm: number,
-): Promise<void> {
+): Promise<boolean> {
   const { lat, lng } = booking.addressLatLng;
-  // Cosmos uses a bounding-box (square) query; filter to the actual circle radius
+  // Cosmos uses a bounding-box (square) query; filter to the actual circle radius.
+  // Exclude the original (no-show) technician from the candidate set so they cannot
+  // receive the same booking again via a redispatch.
   const candidates = (await getTechniciansWithinRadius(lat, lng, radiusKm, booking.serviceId))
-    .filter((t) => haversine(lat, lng, t.location.coordinates[1], t.location.coordinates[0]) <= radiusKm);
+    .filter((t) => haversine(lat, lng, t.location.coordinates[1], t.location.coordinates[0]) <= radiusKm)
+    .filter((t) => t.id !== booking.technicianId);
 
   if (candidates.length === 0) {
     console.log(`DISPATCH_NO_TECHS bookingId=${bookingId}`);
     await updateBookingFields(bookingId, { status: 'UNFULFILLED' });
-    return;
+    return false;
   }
 
   const ranked = rankTechnicians(candidates, lat, lng).slice(0, TOP_N);
@@ -89,6 +92,7 @@ async function dispatchBookingToTechs(
   );
 
   console.log(`DISPATCH_SENT bookingId=${bookingId} technicianIds=${ranked.map((t) => t.id).join(',')}`);
+  return true;
 }
 
 export const dispatcherService = {
@@ -101,9 +105,10 @@ export const dispatcherService = {
     await dispatchBookingToTechs(bookingId, booking, DISPATCH_RADIUS_KM);
   },
 
-  async redispatch(bookingId: string, radiusKm: number): Promise<void> {
+  /** Returns true if offers were actually sent to at least one technician. */
+  async redispatch(bookingId: string, radiusKm: number): Promise<boolean> {
     const booking = await bookingRepo.getById(bookingId);
-    if (!booking || booking.status !== 'NO_SHOW_REDISPATCH') return;
-    await dispatchBookingToTechs(bookingId, booking, radiusKm);
+    if (!booking || booking.status !== 'NO_SHOW_REDISPATCH') return false;
+    return dispatchBookingToTechs(bookingId, booking, radiusKm);
   },
 };

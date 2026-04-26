@@ -67,16 +67,26 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
     }
 
     // When recovering (creditCreated=false), re-fetch to check whether the status-write and
-    // redispatch already completed on a prior run. `noShowRedispatchAt` is written atomically
-    // with the NO_SHOW_REDISPATCH status — if it's present, redispatch was already triggered.
-    // If the booking is now ASSIGNED *and* noShowRedispatchAt is set, a replacement tech
-    // has accepted; skip entirely. If noShowRedispatchAt is absent, the prior run crashed
-    // before the status-write completed — retry the write and redispatch.
+    // redispatch already completed on a prior run.
+    // `noShowRedispatchAt` is stamped after a confirmed successful redispatch — if present,
+    // the prior run completed the flow and nothing more is needed.
+    // If absent but status is ASSIGNED with a *different* technicianId, a replacement tech
+    // accepted the redispatch but the stamp write failed — treat as done and skip.
+    // If absent and technicianId unchanged (original tech still on the booking), the prior run
+    // crashed before the status write — retry.
     if (!creditCreated) {
       const liveBooking = await bookingRepo.getById(booking.id);
       if (liveBooking?.noShowRedispatchAt) {
-        // Redispatch was already triggered on a prior run — nothing left to do
         ctx.log(`detectNoShows: recovery skipped for ${booking.id} — redispatch already fired at ${liveBooking.noShowRedispatchAt}`);
+        continue;
+      }
+      if (
+        liveBooking?.status === 'ASSIGNED' &&
+        liveBooking.technicianId !== undefined &&
+        liveBooking.technicianId !== booking.technicianId
+      ) {
+        // A replacement tech accepted the redispatch; noShowRedispatchAt stamp failed but we're done
+        ctx.log(`detectNoShows: recovery skipped for ${booking.id} — replacement tech ${liveBooking.technicianId} already assigned`);
         continue;
       }
     }
@@ -93,15 +103,19 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
     }
 
     // Step 2: Fire redispatch only when status write succeeded — prevents redispatch running
-    // against a booking that is still ASSIGNED (which would be a no-op or error in the
-    // dispatcher). Only stamp noShowRedispatchAt on success so recovery can use it as a gate.
+    // against a booking that is still ASSIGNED (dispatcher.redispatch checks for NO_SHOW_REDISPATCH).
+    // Only stamp noShowRedispatchAt when redispatch actually sent offers (boolean true return)
+    // so that recovery can distinguish "offers sent" from "no techs found / dispatcher skipped".
     let redispatchOk = false;
     if (statusWriteOk) {
       try {
-        await dispatcherService.redispatch(booking.id, NO_SHOW_REDISPATCH_RADIUS_KM);
-        redispatchOk = true;
-        // Stamp the completed-redispatch flag after confirmed success.
-        await updateBookingFields(booking.id, { noShowRedispatchAt: new Date().toISOString() });
+        redispatchOk = await dispatcherService.redispatch(booking.id, NO_SHOW_REDISPATCH_RADIUS_KM);
+        if (redispatchOk) {
+          // Stamp the completed-redispatch flag after confirmed offers-sent.
+          await updateBookingFields(booking.id, { noShowRedispatchAt: new Date().toISOString() });
+        } else {
+          ctx.log(`detectNoShows: no techs found for ${booking.id} — booking marked UNFULFILLED`);
+        }
       } catch (err: unknown) {
         Sentry.captureException(err);
         ctx.log(`detectNoShows: redispatch failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);

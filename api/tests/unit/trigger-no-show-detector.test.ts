@@ -63,7 +63,7 @@ beforeEach(() => {
   vi.mocked(bookingRepo.getById).mockResolvedValue({ status: 'NO_SHOW_REDISPATCH' } as BookingDoc);
   vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(true);
   vi.mocked(updateBookingFields).mockResolvedValue(null);
-  vi.mocked(dispatcherService.redispatch).mockResolvedValue(undefined);
+  vi.mocked(dispatcherService.redispatch).mockResolvedValue(true);
   vi.mocked(fcmService.sendNoShowCreditPush).mockResolvedValue(undefined);
 });
 
@@ -108,18 +108,17 @@ describe('detectNoShows', () => {
     expect(fcmService.sendNoShowCreditPush).toHaveBeenCalledWith(booking.customerId, 'bk-due', 50_000);
   });
 
-  it('retries status-write + redispatch + FCM when credit exists but noShowRedispatchAt is absent (prior run crashed before status-write)', async () => {
+  it('retries status-write + redispatch + FCM when credit exists but noShowRedispatchAt is absent and same tech (prior run crashed before status-write)', async () => {
     const booking = makeAssignedBooking('bk-dup', 45);
     vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([booking]);
     vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(false);
-    // Prior run created credit but crashed before writing status — noShowRedispatchAt is absent
-    vi.mocked(bookingRepo.getById).mockResolvedValue({ status: 'ASSIGNED' } as BookingDoc);
+    // Prior run created credit but crashed before writing status — original tech still assigned
+    vi.mocked(bookingRepo.getById).mockResolvedValue({ status: 'ASSIGNED', technicianId: undefined } as BookingDoc);
 
     await detectNoShows(mockCtx);
 
     expect(updateBookingFields).toHaveBeenCalledWith('bk-dup', { status: 'NO_SHOW_REDISPATCH' });
     expect(dispatcherService.redispatch).toHaveBeenCalledWith('bk-dup', 15);
-    // FCM is retried in recovery when noShowRedispatchAt was absent (push may not have fired)
     expect(fcmService.sendNoShowCreditPush).toHaveBeenCalled();
   });
 
@@ -130,7 +129,28 @@ describe('detectNoShows', () => {
     // noShowRedispatchAt is present — prior run successfully fired redispatch
     vi.mocked(bookingRepo.getById).mockResolvedValue({
       status: 'ASSIGNED',
+      technicianId: 'tech-new',
       noShowRedispatchAt: '2026-04-26T05:00:00.000Z',
+    } as BookingDoc);
+
+    await detectNoShows(mockCtx);
+
+    expect(updateBookingFields).not.toHaveBeenCalled();
+    expect(dispatcherService.redispatch).not.toHaveBeenCalled();
+    expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
+  });
+
+  it('skips entirely when replacement tech accepted but noShowRedispatchAt stamp failed (technicianId differs)', async () => {
+    const booking = makeAssignedBooking('bk-stamp-failed', 45);
+    // Original booking has no technicianId (makeAssignedBooking doesn't set one)
+    // but let's give it one to make the test clear
+    const bookingWithTech = { ...booking, technicianId: 'tech-original' };
+    vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([bookingWithTech]);
+    vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(false);
+    // Replacement tech accepted, stamp write failed — liveBooking shows different technicianId
+    vi.mocked(bookingRepo.getById).mockResolvedValue({
+      status: 'ASSIGNED',
+      technicianId: 'tech-replacement',
     } as BookingDoc);
 
     await detectNoShows(mockCtx);

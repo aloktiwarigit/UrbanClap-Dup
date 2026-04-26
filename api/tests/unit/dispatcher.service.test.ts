@@ -275,13 +275,14 @@ describe('dispatcherService.redispatch', () => {
     vi.mocked(updateBookingFields).mockResolvedValue(null);
   });
 
-  it('dispatches when booking is in NO_SHOW_REDISPATCH status (bypasses PAID guard)', async () => {
+  it('dispatches when booking is in NO_SHOW_REDISPATCH status and returns true', async () => {
     const noShowBooking = { ...BASE_BOOKING, status: 'NO_SHOW_REDISPATCH' as const };
     vi.mocked(bookingRepo.getById).mockResolvedValue(noShowBooking);
     vi.mocked(getTechniciansWithinRadius).mockResolvedValue([makeTech('t1', 0.05)]);
 
-    await dispatcherService.redispatch('bk-1', 15);
+    const result = await dispatcherService.redispatch('bk-1', 15);
 
+    expect(result).toBe(true);
     expect(getTechniciansWithinRadius).toHaveBeenCalledWith(
       noShowBooking.addressLatLng.lat,
       noShowBooking.addressLatLng.lng,
@@ -291,22 +292,52 @@ describe('dispatcherService.redispatch', () => {
     expect(dispatchContainer.items.create).toHaveBeenCalledOnce();
   });
 
-  it('does nothing when booking not found', async () => {
+  it('returns false when booking not found', async () => {
     vi.mocked(bookingRepo.getById).mockResolvedValue(null);
-    await dispatcherService.redispatch('missing', 15);
+    const result = await dispatcherService.redispatch('missing', 15);
+    expect(result).toBe(false);
     expect(getTechniciansWithinRadius).not.toHaveBeenCalled();
   });
 
-  it('marks booking UNFULFILLED when no techs found in expanded radius', async () => {
+  it('marks booking UNFULFILLED and returns false when no techs found in expanded radius', async () => {
     vi.mocked(bookingRepo.getById).mockResolvedValue({
       ...BASE_BOOKING,
       status: 'NO_SHOW_REDISPATCH' as const,
     });
     vi.mocked(getTechniciansWithinRadius).mockResolvedValue([]);
 
+    const result = await dispatcherService.redispatch('bk-1', 15);
+
+    expect(result).toBe(false);
+    expect(updateBookingFields).toHaveBeenCalledWith('bk-1', { status: 'UNFULFILLED' });
+  });
+
+  it('excludes the original no-show technician from the redispatch candidate set', async () => {
+    const noShowBooking = { ...BASE_BOOKING, status: 'NO_SHOW_REDISPATCH' as const, technicianId: 't-noshow' };
+    vi.mocked(bookingRepo.getById).mockResolvedValue(noShowBooking);
+    // Both the no-show tech and a replacement tech are returned by the geo query
+    vi.mocked(getTechniciansWithinRadius).mockResolvedValue([
+      makeTech('t-noshow', 0.01),
+      makeTech('t-replacement', 0.03),
+    ]);
+
     await dispatcherService.redispatch('bk-1', 15);
 
+    const created = vi.mocked(dispatchContainer.items.create).mock.calls[0]![0] as any;
+    expect(created.technicianIds).not.toContain('t-noshow');
+    expect(created.technicianIds).toContain('t-replacement');
+  });
+
+  it('marks UNFULFILLED when only the no-show tech is in range (no replacement available)', async () => {
+    const noShowBooking = { ...BASE_BOOKING, status: 'NO_SHOW_REDISPATCH' as const, technicianId: 't-noshow' };
+    vi.mocked(bookingRepo.getById).mockResolvedValue(noShowBooking);
+    vi.mocked(getTechniciansWithinRadius).mockResolvedValue([makeTech('t-noshow', 0.01)]);
+
+    const result = await dispatcherService.redispatch('bk-1', 15);
+
+    expect(result).toBe(false);
     expect(updateBookingFields).toHaveBeenCalledWith('bk-1', { status: 'UNFULFILLED' });
+    expect(dispatchContainer.items.create).not.toHaveBeenCalled();
   });
 
   it('uses the radiusKm parameter passed in, not the default 10km', async () => {
