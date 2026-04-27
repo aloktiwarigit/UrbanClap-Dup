@@ -1,6 +1,6 @@
 # Story E07-S03: Complaints module — customer + technician manual filing
 
-Status: ready-for-dev
+Status: merged
 
 > **Epic:** E07 — Ratings, Complaints & Safety (`docs/stories/README.md` §E07)
 > **Sprint:** S4 (wk 7–8) · **Estimated:** ≤ 2 dev-days · **Priority:** P1
@@ -76,8 +76,8 @@ so that **the owner is notified immediately, the complaint is tracked with SLA t
 
 > TDD: test file committed before implementation file per CLAUDE.md.
 
-- [ ] **T1 — API: extend complaint schema (api/, no separate test)**
-  - [ ] In `api/src/schemas/complaint.ts`:
+- [x] **T1 — API: extend complaint schema (api/, no separate test)**
+  - [x] In `api/src/schemas/complaint.ts`:
     - Add `ComplaintFiledByEnum = z.enum(['CUSTOMER', 'TECHNICIAN'])`
     - Add `CustomerReasonCodeEnum = z.enum(['SERVICE_QUALITY', 'LATE_ARRIVAL', 'NO_SHOW', 'TECHNICIAN_BEHAVIOUR', 'BILLING_DISPUTE', 'OTHER'])`
     - Add `TechnicianReasonCodeEnum = z.enum(['CUSTOMER_MISCONDUCT', 'LATE_PAYMENT', 'SAFETY_CONCERN', 'OTHER'])`
@@ -86,61 +86,61 @@ so that **the owner is notified immediately, the complaint is tracked with SLA t
     - Add `PartnerComplaintStatusResponseSchema = z.object({ complaints: z.array(ComplaintDocSchema) })`
     - Export new types
 
-- [ ] **T2 — API: `POST /v1/complaints` endpoint (api/, TDD)**
-  - [ ] Create `api/tests/functions/complaints/partner-create.test.ts` first — 401, 403 (not booking participant), 404, 409 BOOKING_NOT_ELIGIBLE, 409 COMPLAINT_ALREADY_FILED, 201 happy path (customer), 201 happy path (technician)
-  - [ ] Create `api/src/functions/complaints/partner-create.ts` — route `POST /v1/complaints`; auth: raw `verifyFirebaseIdToken` (handles both customer and technician tokens); fetch booking from Cosmos to derive `filedBy`; validate `reasonCode` against per-role enums; build `ComplaintDoc` with `filedBy`, `reasonCode`, `photoStoragePath`, `acknowledgeDeadlineAt = now+2h`, `slaDeadlineAt = now+24h`, `type = "STANDARD"`; duplicate-check query against complaints container; call `createComplaint()`; fire FCM `OWNER_COMPLAINT_FILED` to `owner_alerts` fire-and-forget; return 201
-  - [ ] Add repo helper `findActiveComplaintByBookingAndParty(bookingId, uid)` to `complaints-repository.ts`
+- [x] **T2 — API: `POST /v1/complaints` endpoint (api/, TDD)**
+  - [x] Create `api/tests/functions/complaints/partner-create.test.ts` first — 401, 403 (not booking participant), 404, 409 BOOKING_NOT_ELIGIBLE, 409 COMPLAINT_ALREADY_FILED, 201 happy path (customer), 201 happy path (technician)
+  - [x] Create `api/src/functions/complaints/partner-create.ts` — route `POST /v1/complaints`; auth: raw `verifyFirebaseIdToken` (handles both customer and technician tokens); fetch booking from Cosmos to derive `filedBy`; validate `reasonCode` against per-role enums; build `ComplaintDoc` with `filedBy`, `reasonCode`, `photoStoragePath`, `acknowledgeDeadlineAt = now+2h`, `slaDeadlineAt = now+24h`, `type = "STANDARD"`; duplicate-check query against complaints container; call `createComplaint()`; fire FCM `OWNER_COMPLAINT_FILED` to `owner_alerts` fire-and-forget; return 201
+  - [x] Add repo helper `findActiveComplaintByBookingAndParty(bookingId, uid)` to `complaints-repository.ts`
 
-- [ ] **T3 — API: `GET /v1/complaints/{bookingId}` endpoint (api/, TDD)**
-  - [ ] Create `api/tests/functions/complaints/partner-get.test.ts` — 401, 403, 404, 200 with complaints list
-  - [ ] Create `api/src/functions/complaints/partner-get.ts` — route `GET /v1/complaints/{bookingId}`; same dual-role auth; return complaints for that booking filed by caller (`filedBy` + `uid` filter on query)
-  - [ ] Add `queryComplaintsByBookingAndParty(bookingId, uid)` helper to `complaints-repository.ts`
+- [x] **T3 — API: `GET /v1/complaints/{bookingId}` endpoint (api/, TDD)**
+  - [x] Create `api/tests/functions/complaints/partner-get.test.ts` — 401, 403, 404, 200 with complaints list
+  - [x] Create `api/src/functions/complaints/partner-get.ts` — route `GET /v1/complaints/{bookingId}`; same dual-role auth; return complaints for that booking filed by caller (`filedBy` + `uid` filter on query)
+  - [x] Add `queryComplaintsByBookingAndParty(bookingId, uid)` helper to `complaints-repository.ts`
 
-- [ ] **T4 — API: extend SLA-timer to acknowledge breach (api/, TDD)**
-  - [ ] Extend `api/src/functions/admin/complaints/sla-timer.ts`: add a second Cosmos query for complaints where `acknowledgeDeadlineAt < @now AND status == "NEW" AND escalated != true`; set `escalated = true`, fire FCM `OWNER_COMPLAINT_SLA_BREACH` with `{ complaintId, slaType: "ACKNOWLEDGE" }`; update existing resolve-breach FCM payload to add `slaType: "RESOLVE"`
-  - [ ] Extend `api/tests/functions/admin/complaints/sla-timer.test.ts` (already exists or create): cover acknowledge-breach path + resolve-breach path
+- [x] **T4 — API: extend SLA-timer to acknowledge breach (api/, TDD)**
+  - [x] Extend `api/src/functions/admin/complaints/sla-timer.ts`: add a second Cosmos query for complaints where `acknowledgeDeadlineAt < @now AND status == "NEW" AND escalated != true`; set `escalated = true`, fire FCM `OWNER_COMPLAINT_SLA_BREACH` with `{ complaintId, slaType: "ACKNOWLEDGE" }`; update existing resolve-breach FCM payload to add `slaType: "RESOLVE"`
+  - [x] Extend `api/tests/functions/admin/complaints/sla-timer.test.ts` (already exists or create): cover acknowledge-breach path + resolve-breach path
 
-- [ ] **T5 — libs.versions.toml sync (technician-app, no tests)**
-  - [ ] Copy `customer-app/gradle/libs.versions.toml` → `technician-app/gradle/libs.versions.toml`
+- [x] **T5 — libs.versions.toml sync (technician-app, no tests)**
+  - [x] Copy `customer-app/gradle/libs.versions.toml` → `technician-app/gradle/libs.versions.toml`
 
-- [ ] **T6 — customer-app domain + data layer (TDD)**
-  - [ ] Create `customer-app/.../data/complaint/remote/dto/ComplaintDtos.kt` — Moshi `@JsonClass(generateAdapter=true)` data classes: `CreateComplaintRequestDto`, `ComplaintResponseDto`, `ComplaintListResponseDto`
-  - [ ] Create `customer-app/.../data/complaint/remote/ComplaintApiService.kt` — Retrofit interface: `createComplaint()`, `getComplaintsForBooking()`
-  - [ ] Create `customer-app/.../data/complaint/ComplaintRepository.kt` (interface) + `ComplaintRepositoryImpl.kt`
-  - [ ] Create `customer-app/.../data/complaint/di/ComplaintModule.kt` — `@Binds` ComplaintRepository, `@Provides` ComplaintApiService reusing `@AuthOkHttpClient`
-  - [ ] Create `customer-app/.../domain/complaint/SubmitComplaintUseCase.kt` + `domain/complaint/SubmitComplaintUseCaseTest.kt`
-  - [ ] Create `customer-app/.../domain/complaint/PhotoUploadUseCase.kt` (wraps FirebaseStorage upload, same pattern as `JobPhotoRepositoryImpl`) + test: upload → storagePath; compression to JPEG 80% at 1024px
-  - [ ] Create `customer-app/.../domain/complaint/GetComplaintStatusUseCase.kt` + test
+- [x] **T6 — customer-app domain + data layer (TDD)**
+  - [x] Create `customer-app/.../data/complaint/remote/dto/ComplaintDtos.kt` — Moshi `@JsonClass(generateAdapter=true)` data classes: `CreateComplaintRequestDto`, `ComplaintResponseDto`, `ComplaintListResponseDto`
+  - [x] Create `customer-app/.../data/complaint/remote/ComplaintApiService.kt` — Retrofit interface: `createComplaint()`, `getComplaintsForBooking()`
+  - [x] Create `customer-app/.../data/complaint/ComplaintRepository.kt` (interface) + `ComplaintRepositoryImpl.kt`
+  - [x] Create `customer-app/.../data/complaint/di/ComplaintModule.kt` — `@Binds` ComplaintRepository, `@Provides` ComplaintApiService reusing `@AuthOkHttpClient`
+  - [x] Create `customer-app/.../domain/complaint/SubmitComplaintUseCase.kt` + `domain/complaint/SubmitComplaintUseCaseTest.kt`
+  - [x] Create `customer-app/.../domain/complaint/PhotoUploadUseCase.kt` (wraps FirebaseStorage upload, same pattern as `JobPhotoRepositoryImpl`) + test: upload → storagePath; compression to JPEG 80% at 1024px
+  - [x] Create `customer-app/.../domain/complaint/GetComplaintStatusUseCase.kt` + test
 
-- [ ] **T7 — customer-app ViewModel + UI (TDD where applicable)**
-  - [ ] Create `customer-app/.../ui/complaint/ComplaintViewModel.kt` + `ComplaintViewModelTest.kt` — states: Idle, PhotoUploading, Submitting, Success(acknowledgeDeadlineAt), Error; `onReasonSelected()`, `onDescriptionChanged()`, `onPhotoSelected()`, `onSubmit()`; `submitEnabled` derived state (reasonCode + description non-empty)
-  - [ ] Create `customer-app/.../ui/complaint/ComplaintScreen.kt` — reason picker (customer reason codes), description field (10–2000 char counter), photo picker button (triggers gallery/camera intent), Submit button, success state with status display
-  - [ ] Create `customer-app/.../ui/complaint/ComplaintRoutes.kt` + wire `complaint/{bookingId}` route in `AppNavigation.kt` (MainGraph); add complaint nav trigger from booking detail/history screen entry point
-  - [ ] Create `customer-app/.../ui/complaint/ComplaintScreenPaparazziTest.kt` — `@Ignore` annotation; no golden recorded on Windows
+- [x] **T7 — customer-app ViewModel + UI (TDD where applicable)**
+  - [x] Create `customer-app/.../ui/complaint/ComplaintViewModel.kt` + `ComplaintViewModelTest.kt` — states: Idle, PhotoUploading, Submitting, Success(acknowledgeDeadlineAt), Error; `onReasonSelected()`, `onDescriptionChanged()`, `onPhotoSelected()`, `onSubmit()`; `submitEnabled` derived state (reasonCode + description non-empty)
+  - [x] Create `customer-app/.../ui/complaint/ComplaintScreen.kt` — reason picker (customer reason codes), description field (10–2000 char counter), photo picker button (triggers gallery/camera intent), Submit button, success state with status display
+  - [x] Create `customer-app/.../ui/complaint/ComplaintRoutes.kt` + wire `complaint/{bookingId}` route in `AppNavigation.kt` (MainGraph); add complaint nav trigger from booking detail/history screen entry point
+  - [x] Create `customer-app/.../ui/complaint/ComplaintScreenPaparazziTest.kt` — `@Ignore` annotation; no golden recorded on Windows
 
-- [ ] **T8 — technician-app domain + data layer (TDD) — mirrors T6**
-  - [ ] Create `technician-app/.../data/complaint/remote/dto/ComplaintDtos.kt`
-  - [ ] Create `technician-app/.../data/complaint/remote/ComplaintApiService.kt`
-  - [ ] Create `technician-app/.../data/complaint/ComplaintRepository.kt` + `ComplaintRepositoryImpl.kt`
-  - [ ] Create `technician-app/.../data/complaint/di/ComplaintModule.kt`
-  - [ ] Create `technician-app/.../domain/complaint/SubmitComplaintUseCase.kt` + test (technician reason codes: CUSTOMER_MISCONDUCT, LATE_PAYMENT, SAFETY_CONCERN, OTHER)
-  - [ ] Create `technician-app/.../domain/complaint/PhotoUploadUseCase.kt` + test (same Firebase Storage pattern as existing `JobPhotoRepositoryImpl`)
-  - [ ] Create `technician-app/.../domain/complaint/GetComplaintStatusUseCase.kt` + test
+- [x] **T8 — technician-app domain + data layer (TDD) — mirrors T6**
+  - [x] Create `technician-app/.../data/complaint/remote/dto/ComplaintDtos.kt`
+  - [x] Create `technician-app/.../data/complaint/remote/ComplaintApiService.kt`
+  - [x] Create `technician-app/.../data/complaint/ComplaintRepository.kt` + `ComplaintRepositoryImpl.kt`
+  - [x] Create `technician-app/.../data/complaint/di/ComplaintModule.kt`
+  - [x] Create `technician-app/.../domain/complaint/SubmitComplaintUseCase.kt` + test (technician reason codes: CUSTOMER_MISCONDUCT, LATE_PAYMENT, SAFETY_CONCERN, OTHER)
+  - [x] Create `technician-app/.../domain/complaint/PhotoUploadUseCase.kt` + test (same Firebase Storage pattern as existing `JobPhotoRepositoryImpl`)
+  - [x] Create `technician-app/.../domain/complaint/GetComplaintStatusUseCase.kt` + test
 
-- [ ] **T9 — technician-app ViewModel + UI (TDD where applicable)**
-  - [ ] Create `technician-app/.../ui/complaint/ComplaintViewModel.kt` + `ComplaintViewModelTest.kt`
-  - [ ] Create `technician-app/.../ui/complaint/ComplaintScreen.kt` — tech-specific reason codes; otherwise same structure as customer variant
-  - [ ] Create `technician-app/.../ui/complaint/ComplaintRoutes.kt` + wire `complaint/{bookingId}` in `technician-app/AppNavigation.kt`
-  - [ ] Create `technician-app/.../ui/complaint/ComplaintScreenPaparazziTest.kt` — `@Ignore`
+- [x] **T9 — technician-app ViewModel + UI (TDD where applicable)**
+  - [x] Create `technician-app/.../ui/complaint/ComplaintViewModel.kt` + `ComplaintViewModelTest.kt`
+  - [x] Create `technician-app/.../ui/complaint/ComplaintScreen.kt` — tech-specific reason codes; otherwise same structure as customer variant
+  - [x] Create `technician-app/.../ui/complaint/ComplaintRoutes.kt` + wire `complaint/{bookingId}` in `technician-app/AppNavigation.kt`
+  - [x] Create `technician-app/.../ui/complaint/ComplaintScreenPaparazziTest.kt` — `@Ignore`
 
-- [ ] **T10 — Pre-Codex smoke gates + Paparazzi cleanup + Codex review**
-  - [ ] `bash tools/pre-codex-smoke-api.sh` — must exit 0
-  - [ ] `bash tools/pre-codex-smoke.sh customer-app` — must exit 0
-  - [ ] `bash tools/pre-codex-smoke.sh technician-app` — must exit 0
-  - [ ] `git rm -r customer-app/app/src/test/snapshots/images/ 2>/dev/null || true`
-  - [ ] `git rm -r technician-app/app/src/test/snapshots/images/ 2>/dev/null || true`
-  - [ ] `codex review --base main` → `.codex-review-passed`
-  - [ ] After PR merge: trigger `paparazzi-record.yml` for both apps, commit goldens, remove `@Ignore` in chore branch
+- [x] **T10 — Pre-Codex smoke gates + Paparazzi cleanup + Codex review**
+  - [x] `bash tools/pre-codex-smoke-api.sh` — must exit 0
+  - [x] `bash tools/pre-codex-smoke.sh customer-app` — must exit 0
+  - [x] `bash tools/pre-codex-smoke.sh technician-app` — must exit 0
+  - [x] `git rm -r customer-app/app/src/test/snapshots/images/ 2>/dev/null || true`
+  - [x] `git rm -r technician-app/app/src/test/snapshots/images/ 2>/dev/null || true`
+  - [x] `codex review --base main` → `.codex-review-passed`
+  - [x] After PR merge: trigger `paparazzi-record.yml` for both apps, commit goldens, remove `@Ignore` in chore branch
 
 ---
 
@@ -197,15 +197,15 @@ Follow `docs/patterns/paparazzi-cross-os-goldens.md` exactly. New `ComplaintScre
 
 ## Definition of Done
 
-- [ ] `cd api && pnpm typecheck && pnpm lint && pnpm test:coverage` green (≥80%)
-- [ ] `cd customer-app && ./gradlew testDebugUnitTest ktlintCheck assembleDebug` green
-- [ ] `cd technician-app && ./gradlew testDebugUnitTest ktlintCheck assembleDebug` green
-- [ ] All AC pass via test assertions
-- [ ] Pre-Codex smoke gates exit 0 (api + customer-app + technician-app)
-- [ ] Paparazzi snapshot dirs deleted from both apps; `@Ignore` on both `ComplaintScreenPaparazziTest`
-- [ ] `.codex-review-passed` marker present
-- [ ] PR opened; CI green on `main`
-- [ ] Post-merge: `paparazzi-record.yml` triggered for both apps; goldens committed; `@Ignore` removed (chore branch)
+- [x] `cd api && pnpm typecheck && pnpm lint && pnpm test:coverage` green (≥80%)
+- [x] `cd customer-app && ./gradlew testDebugUnitTest ktlintCheck assembleDebug` green
+- [x] `cd technician-app && ./gradlew testDebugUnitTest ktlintCheck assembleDebug` green
+- [x] All AC pass via test assertions
+- [x] Pre-Codex smoke gates exit 0 (api + customer-app + technician-app)
+- [x] Paparazzi snapshot dirs deleted from both apps; `@Ignore` on both `ComplaintScreenPaparazziTest`
+- [x] `.codex-review-passed` marker present
+- [x] PR opened; CI green on `main`
+- [x] Post-merge: `paparazzi-record.yml` triggered for both apps; goldens committed; `@Ignore` removed (chore branch)
 
 ---
 

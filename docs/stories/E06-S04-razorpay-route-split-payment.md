@@ -1,6 +1,6 @@
 # Story E06-S04: Razorpay Route split-payment on booking completion
 
-Status: ready-for-dev
+Status: merged
 
 > **Epic:** E06 — Service Execution + Payment (`docs/stories/README.md` §E06)
 > **Sprint:** S3 (wk 5–6) · **Estimated:** ≤ 1 dev-day · **Priority:** **P0 — blocks E06-S05, E07-S01, all of E08**
@@ -72,37 +72,37 @@ so that **technicians are paid accurately on every job, the business earns its c
 
 > TDD: test file committed before implementation file per CLAUDE.md.
 
-- [ ] **T1 — Schema + type extensions (no tests needed — pure type changes)**
-  - [ ] T1.1 Extend `audit-log.ts` role enum to include `'system'`; extend `types/admin.ts` AuditAction union
-  - [ ] T1.2 Create `api/src/schemas/wallet-ledger.ts` (WalletLedgerEntry Zod schema)
-  - [ ] T1.3 Extend `api/src/schemas/technician.ts` — add `completedJobCount` optional field
-  - [ ] T1.4 Add `getWalletLedgerContainer()` to `api/src/cosmos/client.ts`
+- [x] **T1 — Schema + type extensions (no tests needed — pure type changes)**
+  - [x] T1.1 Extend `audit-log.ts` role enum to include `'system'`; extend `types/admin.ts` AuditAction union
+  - [x] T1.2 Create `api/src/schemas/wallet-ledger.ts` (WalletLedgerEntry Zod schema)
+  - [x] T1.3 Extend `api/src/schemas/technician.ts` — add `completedJobCount` optional field
+  - [x] T1.4 Add `getWalletLedgerContainer()` to `api/src/cosmos/client.ts`
 
-- [ ] **T2 — Commission calculator (TDD: RED → GREEN → commit)**
-  - [ ] T2.1 (RED) Write `api/tests/unit/commission.service.test.ts` — 22%/25% ladder, rounding
-  - [ ] T2.2 (GREEN) Implement `api/src/services/commission.service.ts`
-  - [ ] T2.3 Commit
+- [x] **T2 — Commission calculator (TDD: RED → GREEN → commit)**
+  - [x] T2.1 (RED) Write `api/tests/unit/commission.service.test.ts` — 22%/25% ladder, rounding
+  - [x] T2.2 (GREEN) Implement `api/src/services/commission.service.ts`
+  - [x] T2.3 Commit
 
-- [ ] **T3 — Wallet ledger repository + tech settlement helpers**
-  - [ ] T3.1 Implement `api/src/cosmos/wallet-ledger-repository.ts`
-  - [ ] T3.2 Add `getTechnicianForSettlement()`, `incrementCompletedJobCount()` to `technician-repository.ts`
-  - [ ] T3.3 Extend `api/src/services/fcm.service.ts` — `sendTechEarningsUpdate()`, `sendOwnerRouteAlert()`
-  - [ ] T3.4 Commit
+- [x] **T3 — Wallet ledger repository + tech settlement helpers**
+  - [x] T3.1 Implement `api/src/cosmos/wallet-ledger-repository.ts`
+  - [x] T3.2 Add `getTechnicianForSettlement()`, `incrementCompletedJobCount()` to `technician-repository.ts`
+  - [x] T3.3 Extend `api/src/services/fcm.service.ts` — `sendTechEarningsUpdate()`, `sendOwnerRouteAlert()`
+  - [x] T3.4 Commit
 
-- [ ] **T4 — Route transfer change-feed trigger (TDD)**
-  - [ ] T4.1 (RED) Write `api/tests/unit/trigger-booking-completed.test.ts` — idempotency, failure isolation, audit order
-  - [ ] T4.2 (GREEN) Implement `api/src/functions/trigger-booking-completed.ts`
-  - [ ] T4.3 Commit
+- [x] **T4 — Route transfer change-feed trigger (TDD)**
+  - [x] T4.1 (RED) Write `api/tests/unit/trigger-booking-completed.test.ts` — idempotency, failure isolation, audit order
+  - [x] T4.2 (GREEN) Implement `api/src/functions/trigger-booking-completed.ts`
+  - [x] T4.3 Commit
 
-- [ ] **T5 — Daily reconciliation cron (TDD)**
-  - [ ] T5.1 (RED) Write `api/tests/unit/trigger-reconcile-payouts.test.ts` — retry, alert, no-alert
-  - [ ] T5.2 (GREEN) Implement `api/src/functions/trigger-reconcile-payouts.ts`
-  - [ ] T5.3 Commit
+- [x] **T5 — Daily reconciliation cron (TDD)**
+  - [x] T5.1 (RED) Write `api/tests/unit/trigger-reconcile-payouts.test.ts` — retry, alert, no-alert
+  - [x] T5.2 (GREEN) Implement `api/src/functions/trigger-reconcile-payouts.ts`
+  - [x] T5.3 Commit
 
-- [ ] **T6 — Pre-Codex smoke gate + review**
-  - [ ] T6.1 `bash tools/pre-codex-smoke-api.sh` — must exit 0
-  - [ ] T6.2 `codex review --base main` (authoritative) + `/security-review` in parallel
-  - [ ] T6.3 `git push` → CI green → PR
+- [x] **T6 — Pre-Codex smoke gate + review**
+  - [x] T6.1 `bash tools/pre-codex-smoke-api.sh` — must exit 0
+  - [x] T6.2 `codex review --base main` (authoritative) + `/security-review` in parallel
+  - [x] T6.3 `git push` → CI green → PR
 
 ---
 
@@ -130,12 +130,12 @@ Add `COSMOS_CONNECTION_STRING` (format: `AccountEndpoint=<COSMOS_ENDPOINT>;Accou
 
 ## Definition of Done
 
-- [ ] `pnpm typecheck && pnpm lint && pnpm test:coverage` green
-- [ ] All AC pass (test assertions, not manual)
-- [ ] Pre-Codex smoke gate exits 0
-- [ ] `.codex-review-passed` marker present
-- [ ] `/security-review` complete (payment story trigger)
-- [ ] PR opened; CI green on `main`
+- [x] `pnpm typecheck && pnpm lint && pnpm test:coverage` green
+- [x] All AC pass (test assertions, not manual)
+- [x] Pre-Codex smoke gate exits 0
+- [x] `.codex-review-passed` marker present
+- [x] `/security-review` complete (payment story trigger)
+- [x] PR opened; CI green on `main`
 
 ---
 

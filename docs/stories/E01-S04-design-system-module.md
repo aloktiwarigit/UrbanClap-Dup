@@ -1,6 +1,6 @@
 # Story E01.S04: Shared design-system Gradle module — UX §5 tokens (color, type, space, motion, elevation, radii) + Compose theme + Paparazzi gallery + composite-build consumed by both Android apps
 
-Status: ready-for-dev
+Status: merged
 
 > **Epic:** E01 — Foundations, CI & Design System (`docs/stories/README.md` §E01)
 > **Sprint:** S1 (wk 1–2) · **Estimated:** ~1 dev-day · **Priority:** **P0 / blocks every Android feature story that consumes design tokens (E02-S01..S03 onboarding chrome, E03-S02 service-detail catalogue, E04-S01 Trust Dossier card, E05-S03 Job Offer card, E06-S01 active-job, E07/E08 chrome, etc.) and unblocks E01-S05 Figma library mirroring**
@@ -165,39 +165,39 @@ The story deliberately **does NOT**:
 
 > **TDD discipline (per CLAUDE.md):** every task that adds production code writes the failing test first.
 
-- [ ] **T1 — Create `design-system/` module skeleton: settings, root build, gradle.properties, libs.versions.toml, wrapper, detekt.yml, README, NOTICE/LICENSES, .gitignore** (AC-1, AC-11, AC-12)
-  - [ ] T1.1 Create `design-system/settings.gradle.kts` with `rootProject.name = "design-system"`, `pluginManagement { repositories { gradlePluginPortal(); google(); mavenCentral() } }`, `dependencyResolutionManagement { repositories { google(); mavenCentral() } }` — single-module composite build (no `include(":foo")`)
-  - [ ] T1.2 Create `design-system/build.gradle.kts` (the library module's build directly at design-system root — NOT a nested `library/` directory; `design-system/` IS the module): `plugins { android-library + kotlin-android + kotlin-compose + ktlint + detekt + paparazzi + kover }`, `android { namespace = "com.homeservices.designsystem"; compileSdk = 35; defaultConfig.minSdk = 26; defaultConfig.consumerProguardFiles("proguard-rules.pro") }`, `group = "com.homeservices"`, `kotlin { jvmToolchain(21); compilerOptions { jvmTarget = JVM_17; allWarningsAsErrors = true; freeCompilerArgs += "-Xexplicit-api=strict" } }` (mirrors E01-S03 K2 + explicit-API discipline)
-  - [ ] T1.3 Create `design-system/gradle.properties`, `design-system/gradle/libs.versions.toml` (dep subset: Compose BOM 2024.11.00 + Material 3 + Compose UI tooling + Paparazzi 1.3.5 + Kover 0.9.0 + Detekt 1.23.7 + ktlint 12.1.1 + JUnit 5 5.11.3 + AssertJ + Robolectric — no Hilt, no Sentry, no Activity, no Lifecycle, no ViewModel), Gradle wrapper @ 8.11 with `distributionSha256Sum`, `gradlew`, `gradlew.bat`
-  - [ ] T1.4 Create `design-system/detekt.yml` matching the apps' (build.maxIssues 0, Compose `@Composable` PascalCase exclusion)
-  - [ ] T1.5 Create `design-system/proguard-rules.pro` (consumer rules: `-keep class com.homeservices.designsystem.theme.**` so app shrinking doesn't strip token classes — single line)
-  - [ ] T1.6 Create `design-system/README.md`, `design-system/NOTICE.md` (OFL-1.1 attribution stub — final font lands in T3), `design-system/LICENSES/OFL-1.1.txt` (full license text), `design-system/.gitignore` (`build/`, `.gradle/`, `local.properties`, `.idea/`)
-  - [ ] T1.7 Create `design-system/src/main/AndroidManifest.xml` (just `<manifest package="com.homeservices.designsystem" />` — no `<application>`, no permissions; library)
-  - [ ] T1.8 Verify `./gradlew :design-system:assembleRelease` exits 0 with empty source set (smoke check before tokens)
+- [x] **T1 — Create `design-system/` module skeleton: settings, root build, gradle.properties, libs.versions.toml, wrapper, detekt.yml, README, NOTICE/LICENSES, .gitignore** (AC-1, AC-11, AC-12)
+  - [x] T1.1 Create `design-system/settings.gradle.kts` with `rootProject.name = "design-system"`, `pluginManagement { repositories { gradlePluginPortal(); google(); mavenCentral() } }`, `dependencyResolutionManagement { repositories { google(); mavenCentral() } }` — single-module composite build (no `include(":foo")`)
+  - [x] T1.2 Create `design-system/build.gradle.kts` (the library module's build directly at design-system root — NOT a nested `library/` directory; `design-system/` IS the module): `plugins { android-library + kotlin-android + kotlin-compose + ktlint + detekt + paparazzi + kover }`, `android { namespace = "com.homeservices.designsystem"; compileSdk = 35; defaultConfig.minSdk = 26; defaultConfig.consumerProguardFiles("proguard-rules.pro") }`, `group = "com.homeservices"`, `kotlin { jvmToolchain(21); compilerOptions { jvmTarget = JVM_17; allWarningsAsErrors = true; freeCompilerArgs += "-Xexplicit-api=strict" } }` (mirrors E01-S03 K2 + explicit-API discipline)
+  - [x] T1.3 Create `design-system/gradle.properties`, `design-system/gradle/libs.versions.toml` (dep subset: Compose BOM 2024.11.00 + Material 3 + Compose UI tooling + Paparazzi 1.3.5 + Kover 0.9.0 + Detekt 1.23.7 + ktlint 12.1.1 + JUnit 5 5.11.3 + AssertJ + Robolectric — no Hilt, no Sentry, no Activity, no Lifecycle, no ViewModel), Gradle wrapper @ 8.11 with `distributionSha256Sum`, `gradlew`, `gradlew.bat`
+  - [x] T1.4 Create `design-system/detekt.yml` matching the apps' (build.maxIssues 0, Compose `@Composable` PascalCase exclusion)
+  - [x] T1.5 Create `design-system/proguard-rules.pro` (consumer rules: `-keep class com.homeservices.designsystem.theme.**` so app shrinking doesn't strip token classes — single line)
+  - [x] T1.6 Create `design-system/README.md`, `design-system/NOTICE.md` (OFL-1.1 attribution stub — final font lands in T3), `design-system/LICENSES/OFL-1.1.txt` (full license text), `design-system/.gitignore` (`build/`, `.gradle/`, `local.properties`, `.idea/`)
+  - [x] T1.7 Create `design-system/src/main/AndroidManifest.xml` (just `<manifest package="com.homeservices.designsystem" />` — no `<application>`, no permissions; library)
+  - [x] T1.8 Verify `./gradlew :design-system:assembleRelease` exits 0 with empty source set (smoke check before tokens)
 
-- [ ] **T2 — Color tokens (UX §5.1) + ColorScheme + ExtendedColors + tests** (AC-2, AC-5)
-  - [ ] T2.1 (RED) Write `design-system/src/test/kotlin/com/homeservices/designsystem/theme/ColorTokensTest.kt` (pure JUnit 5 + AssertJ) asserting every UX §5.1 hex value as a typed constant; expect compile error (no `HomeservicesColors` yet)
-  - [ ] T2.2 (RED) Write `ExtendedColorsTest.kt` asserting both light + dark variants of `HomeservicesExtendedColors` match UX §5.1 dossier rows
-  - [ ] T2.3 (RED) Write `HomeservicesColorsContrastTest.kt` asserting WCAG 2.1 AA contrast (≥ 4.5:1 normal text, ≥ 3:1 large text) for every `(foreground, background)` pair used in `HomeservicesLightColorScheme` and `HomeservicesDarkColorScheme` — implement contrast via WCAG 2.1 relative-luminance formula (no external lib needed; ~30 LoC pure Kotlin helper in `internal object Wcag21Contrast`)
-  - [ ] T2.4 (GREEN) Implement `design-system/src/main/kotlin/com/homeservices/designsystem/theme/Color.kt` — top-level `internal` raw colour constants prefixed by token namespace (e.g. `internal val BrandPrimary = Color(0xFF0E4F47)`) + a `public object HomeservicesColors` exposing them grouped (`HomeservicesColors.brand.primary` etc.) + `public val HomeservicesLightColorScheme: ColorScheme` + `public val HomeservicesDarkColorScheme: ColorScheme` per the §"Color Slot Mapping" table
-  - [ ] T2.5 (GREEN) Implement `ExtendedColors.kt`: `public data class HomeservicesExtendedColors(...)`, `public val HomeservicesExtendedColorsLight`, `public val HomeservicesExtendedColorsDark`, `public val LocalHomeservicesExtendedColors: ProvidableCompositionLocal<HomeservicesExtendedColors> = staticCompositionLocalOf { HomeservicesExtendedColorsLight }`
-  - [ ] T2.6 KDoc every public symbol with the `UX §5.1` pointer
+- [x] **T2 — Color tokens (UX §5.1) + ColorScheme + ExtendedColors + tests** (AC-2, AC-5)
+  - [x] T2.1 (RED) Write `design-system/src/test/kotlin/com/homeservices/designsystem/theme/ColorTokensTest.kt` (pure JUnit 5 + AssertJ) asserting every UX §5.1 hex value as a typed constant; expect compile error (no `HomeservicesColors` yet)
+  - [x] T2.2 (RED) Write `ExtendedColorsTest.kt` asserting both light + dark variants of `HomeservicesExtendedColors` match UX §5.1 dossier rows
+  - [x] T2.3 (RED) Write `HomeservicesColorsContrastTest.kt` asserting WCAG 2.1 AA contrast (≥ 4.5:1 normal text, ≥ 3:1 large text) for every `(foreground, background)` pair used in `HomeservicesLightColorScheme` and `HomeservicesDarkColorScheme` — implement contrast via WCAG 2.1 relative-luminance formula (no external lib needed; ~30 LoC pure Kotlin helper in `internal object Wcag21Contrast`)
+  - [x] T2.4 (GREEN) Implement `design-system/src/main/kotlin/com/homeservices/designsystem/theme/Color.kt` — top-level `internal` raw colour constants prefixed by token namespace (e.g. `internal val BrandPrimary = Color(0xFF0E4F47)`) + a `public object HomeservicesColors` exposing them grouped (`HomeservicesColors.brand.primary` etc.) + `public val HomeservicesLightColorScheme: ColorScheme` + `public val HomeservicesDarkColorScheme: ColorScheme` per the §"Color Slot Mapping" table
+  - [x] T2.5 (GREEN) Implement `ExtendedColors.kt`: `public data class HomeservicesExtendedColors(...)`, `public val HomeservicesExtendedColorsLight`, `public val HomeservicesExtendedColorsDark`, `public val LocalHomeservicesExtendedColors: ProvidableCompositionLocal<HomeservicesExtendedColors> = staticCompositionLocalOf { HomeservicesExtendedColorsLight }`
+  - [x] T2.6 KDoc every public symbol with the `UX §5.1` pointer
 
-- [ ] **T3 — Typography tokens (UX §5.2) + Geist Sans bundling + tests** (AC-3)
-  - [ ] T3.1 Download Geist Sans Variable TTF from the official Vercel/Geist repo (`geist-sans/Geist-Variable.ttf`) — single file, OFL-1.1 — commit at `design-system/src/main/res/font/geist_sans_variable.ttf`. Verify SHA-256 in `NOTICE.md` for tamper-evidence
-  - [ ] T3.2 Append OFL-1.1 attribution + reserved font name "Geist" to `NOTICE.md`
-  - [ ] T3.3 (RED) Write `TypographyTokensTest.kt` asserting every `TextStyle` in `HomeservicesTypography`'s `fontSize`, `lineHeight`, `fontWeight` matches UX §5.2; expect compile error
-  - [ ] T3.4 (GREEN) Implement `design-system/src/main/kotlin/com/homeservices/designsystem/theme/Typography.kt` — `public val HomeservicesFontFamily: FontFamily = FontFamily(Font(R.font.geist_sans_variable, FontWeight.Normal, FontStyle.Normal))` (variable font handles all weights via `FontWeight` axis at runtime — Compose 1.7+ supports this); `public val HomeservicesTypography: Typography` per the AC-3 mapping table
+- [x] **T3 — Typography tokens (UX §5.2) + Geist Sans bundling + tests** (AC-3)
+  - [x] T3.1 Download Geist Sans Variable TTF from the official Vercel/Geist repo (`geist-sans/Geist-Variable.ttf`) — single file, OFL-1.1 — commit at `design-system/src/main/res/font/geist_sans_variable.ttf`. Verify SHA-256 in `NOTICE.md` for tamper-evidence
+  - [x] T3.2 Append OFL-1.1 attribution + reserved font name "Geist" to `NOTICE.md`
+  - [x] T3.3 (RED) Write `TypographyTokensTest.kt` asserting every `TextStyle` in `HomeservicesTypography`'s `fontSize`, `lineHeight`, `fontWeight` matches UX §5.2; expect compile error
+  - [x] T3.4 (GREEN) Implement `design-system/src/main/kotlin/com/homeservices/designsystem/theme/Typography.kt` — `public val HomeservicesFontFamily: FontFamily = FontFamily(Font(R.font.geist_sans_variable, FontWeight.Normal, FontStyle.Normal))` (variable font handles all weights via `FontWeight` axis at runtime — Compose 1.7+ supports this); `public val HomeservicesTypography: Typography` per the AC-3 mapping table
 
-- [ ] **T4 — Spacing + Radius + Elevation + Motion typed tokens + CompositionLocals + tests** (AC-4)
-  - [ ] T4.1 (RED) Write `SpacingTokensTest.kt`, `RadiusTokensTest.kt`, `ElevationTokensTest.kt`, `MotionTokensTest.kt` asserting every value
-  - [ ] T4.2 (GREEN) Implement `Spacing.kt` (`public object HomeservicesSpacing { val space0 = 0.dp; val space1 = 4.dp; ... val space24 = 96.dp }` + `public val LocalHomeservicesSpacing = staticCompositionLocalOf { HomeservicesSpacing }`)
-  - [ ] T4.3 (GREEN) Implement `Radius.kt` (`public object HomeservicesRadius { val sm = 4.dp; val md = 8.dp; val lg = 12.dp; val xl = 20.dp; val full = 9999.dp }` + Local)
-  - [ ] T4.4 (GREEN) Implement `Elevation.kt` — typed `Dp` values + a `public data class HomeservicesShadow(val offsetX: Dp, val offsetY: Dp, val blur: Dp, val color: Color)` for the four levels per UX §5.5; expose both `HomeservicesElevation.elev0..elev4` (`Dp` for `Card.elevation`) and `HomeservicesElevationShadows.elev0..elev4` (`HomeservicesShadow` for custom Skia shadows). Light + dark colour variants per UX §5.5
-  - [ ] T4.5 (GREEN) Implement `Motion.kt` — `public object HomeservicesMotion { val fast = 150.milliseconds; val base = 200.milliseconds; val medium = 300.milliseconds; val slow = 500.milliseconds }` (using `kotlin.time.Duration`) + `public object HomeservicesEasing { val standard = CubicBezierEasing(0.4f, 0f, 0.2f, 1f); val emphasizedDecelerate = CubicBezierEasing(0.22f, 1f, 0.36f, 1f); val baseSpring = spring<Float>(dampingRatio = 0.8f, stiffness = 0.4f); ... }` per UX §5.4
+- [x] **T4 — Spacing + Radius + Elevation + Motion typed tokens + CompositionLocals + tests** (AC-4)
+  - [x] T4.1 (RED) Write `SpacingTokensTest.kt`, `RadiusTokensTest.kt`, `ElevationTokensTest.kt`, `MotionTokensTest.kt` asserting every value
+  - [x] T4.2 (GREEN) Implement `Spacing.kt` (`public object HomeservicesSpacing { val space0 = 0.dp; val space1 = 4.dp; ... val space24 = 96.dp }` + `public val LocalHomeservicesSpacing = staticCompositionLocalOf { HomeservicesSpacing }`)
+  - [x] T4.3 (GREEN) Implement `Radius.kt` (`public object HomeservicesRadius { val sm = 4.dp; val md = 8.dp; val lg = 12.dp; val xl = 20.dp; val full = 9999.dp }` + Local)
+  - [x] T4.4 (GREEN) Implement `Elevation.kt` — typed `Dp` values + a `public data class HomeservicesShadow(val offsetX: Dp, val offsetY: Dp, val blur: Dp, val color: Color)` for the four levels per UX §5.5; expose both `HomeservicesElevation.elev0..elev4` (`Dp` for `Card.elevation`) and `HomeservicesElevationShadows.elev0..elev4` (`HomeservicesShadow` for custom Skia shadows). Light + dark colour variants per UX §5.5
+  - [x] T4.5 (GREEN) Implement `Motion.kt` — `public object HomeservicesMotion { val fast = 150.milliseconds; val base = 200.milliseconds; val medium = 300.milliseconds; val slow = 500.milliseconds }` (using `kotlin.time.Duration`) + `public object HomeservicesEasing { val standard = CubicBezierEasing(0.4f, 0f, 0.2f, 1f); val emphasizedDecelerate = CubicBezierEasing(0.22f, 1f, 0.36f, 1f); val baseSpring = spring<Float>(dampingRatio = 0.8f, stiffness = 0.4f); ... }` per UX §5.4
 
-- [ ] **T5 — `HomeservicesTheme` composable wires it all + Material 3 `Shapes`** (AC-6)
-  - [ ] T5.1 Implement `design-system/src/main/kotlin/com/homeservices/designsystem/theme/HomeservicesTheme.kt`:
+- [x] **T5 — `HomeservicesTheme` composable wires it all + Material 3 `Shapes`** (AC-6)
+  - [x] T5.1 Implement `design-system/src/main/kotlin/com/homeservices/designsystem/theme/HomeservicesTheme.kt`:
     ```kotlin
     @Composable
     public fun HomeservicesTheme(
@@ -229,48 +229,48 @@ The story deliberately **does NOT**:
     }
     ```
 
-- [ ] **T6 — `TokenGallery` Composable + Paparazzi tests (light + dark) + first golden record** (AC-7)
-  - [ ] T6.1 (RED) Write `TokenGalleryPaparazziTest.kt` with two `@Test` methods (`tokenGallery_lightTheme_matchesSnapshot`, `tokenGallery_darkTheme_matchesSnapshot`); both at `DeviceConfig.PIXEL_5`; both wrap content in `HomeservicesTheme(darkTheme = true|false) { TokenGallery() }`
-  - [ ] T6.2 (GREEN) Implement `design-system/src/main/kotlin/com/homeservices/designsystem/gallery/TokenGallery.kt` — scrollable `Column` of: §"Brand colours" swatch row, §"Semantic colours" swatch row, §"Neutrals" swatch grid, §"Typography" sample text per style with token name label, §"Spacing" labelled `Spacer`s 0..24, §"Radius" 5 `Box`es with each radius applied, §"Elevation" 5 `Card`s with each elev level, §"Motion" 4 labelled rows showing duration values (static Paparazzi frames; animated motion testing is a future story)
-  - [ ] T6.3 Run `./gradlew :design-system:recordPaparazziDebug` once locally to emit golden PNGs; commit them under `design-system/src/test/snapshots/images/`
-  - [ ] T6.4 Run `./gradlew :design-system:verifyPaparazziDebug` to confirm CI-mode passes
+- [x] **T6 — `TokenGallery` Composable + Paparazzi tests (light + dark) + first golden record** (AC-7)
+  - [x] T6.1 (RED) Write `TokenGalleryPaparazziTest.kt` with two `@Test` methods (`tokenGallery_lightTheme_matchesSnapshot`, `tokenGallery_darkTheme_matchesSnapshot`); both at `DeviceConfig.PIXEL_5`; both wrap content in `HomeservicesTheme(darkTheme = true|false) { TokenGallery() }`
+  - [x] T6.2 (GREEN) Implement `design-system/src/main/kotlin/com/homeservices/designsystem/gallery/TokenGallery.kt` — scrollable `Column` of: §"Brand colours" swatch row, §"Semantic colours" swatch row, §"Neutrals" swatch grid, §"Typography" sample text per style with token name label, §"Spacing" labelled `Spacer`s 0..24, §"Radius" 5 `Box`es with each radius applied, §"Elevation" 5 `Card`s with each elev level, §"Motion" 4 labelled rows showing duration values (static Paparazzi frames; animated motion testing is a future story)
+  - [x] T6.3 Run `./gradlew :design-system:recordPaparazziDebug` once locally to emit golden PNGs; commit them under `design-system/src/test/snapshots/images/`
+  - [x] T6.4 Run `./gradlew :design-system:verifyPaparazziDebug` to confirm CI-mode passes
 
-- [ ] **T7 — Migrate customer-app: include design-system, delete placeholder theme, switch import, re-record Paparazzi** (AC-8, AC-9)
-  - [ ] T7.1 Add `includeBuild("../design-system")` to `customer-app/settings.gradle.kts` (top-level, OUTSIDE `pluginManagement` and `dependencyResolutionManagement` blocks per Gradle composite-build spec)
-  - [ ] T7.2 Add `implementation("com.homeservices:design-system")` to `customer-app/app/build.gradle.kts` `dependencies { }` block (right under `compose-material3` line); remove now-redundant `implementation(libs.compose.material3)` ONLY IF every Material 3 usage in customer-app routes through HomeservicesTheme — verify by grep; otherwise keep both (Material 3 is transitively pulled but explicit is clearer)
-  - [ ] T7.3 Update `customer-app/.../MainActivity.kt` + `customer-app/.../ui/SmokeScreen.kt` imports: `com.homeservices.customer.ui.theme.HomeservicesCustomerTheme` → `com.homeservices.designsystem.theme.HomeservicesTheme`. Update the wrapper call site from `HomeservicesCustomerTheme { ... }` → `HomeservicesTheme { ... }`
-  - [ ] T7.4 `git rm customer-app/app/src/main/kotlin/com/homeservices/customer/ui/theme/{Color,Theme,Type}.kt`
-  - [ ] T7.5 Run `./gradlew :app:assembleDebug` in `customer-app/` to confirm composite-build resolution works (`com.homeservices:design-system` substitutes to local source)
-  - [ ] T7.6 Run `./gradlew :app:recordPaparazziDebug` in `customer-app/` once; the `SmokeScreenPaparazziTest` snapshots regenerate (now showing UX §5 deep-teal brand + Geist Sans typography); commit the replaced golden PNGs in the SAME commit as the import switch (atomic intentional pixel shift)
-  - [ ] T7.7 Run `./gradlew :app:verifyPaparazziDebug` to confirm zero drift
+- [x] **T7 — Migrate customer-app: include design-system, delete placeholder theme, switch import, re-record Paparazzi** (AC-8, AC-9)
+  - [x] T7.1 Add `includeBuild("../design-system")` to `customer-app/settings.gradle.kts` (top-level, OUTSIDE `pluginManagement` and `dependencyResolutionManagement` blocks per Gradle composite-build spec)
+  - [x] T7.2 Add `implementation("com.homeservices:design-system")` to `customer-app/app/build.gradle.kts` `dependencies { }` block (right under `compose-material3` line); remove now-redundant `implementation(libs.compose.material3)` ONLY IF every Material 3 usage in customer-app routes through HomeservicesTheme — verify by grep; otherwise keep both (Material 3 is transitively pulled but explicit is clearer)
+  - [x] T7.3 Update `customer-app/.../MainActivity.kt` + `customer-app/.../ui/SmokeScreen.kt` imports: `com.homeservices.customer.ui.theme.HomeservicesCustomerTheme` → `com.homeservices.designsystem.theme.HomeservicesTheme`. Update the wrapper call site from `HomeservicesCustomerTheme { ... }` → `HomeservicesTheme { ... }`
+  - [x] T7.4 `git rm customer-app/app/src/main/kotlin/com/homeservices/customer/ui/theme/{Color,Theme,Type}.kt`
+  - [x] T7.5 Run `./gradlew :app:assembleDebug` in `customer-app/` to confirm composite-build resolution works (`com.homeservices:design-system` substitutes to local source)
+  - [x] T7.6 Run `./gradlew :app:recordPaparazziDebug` in `customer-app/` once; the `SmokeScreenPaparazziTest` snapshots regenerate (now showing UX §5 deep-teal brand + Geist Sans typography); commit the replaced golden PNGs in the SAME commit as the import switch (atomic intentional pixel shift)
+  - [x] T7.7 Run `./gradlew :app:verifyPaparazziDebug` to confirm zero drift
 
-- [ ] **T8 — Migrate technician-app: same as T7, mirrored** (AC-8, AC-9)
-  - [ ] T8.1 Identical sub-task list to T7 with `customer` → `technician` substitutions everywhere
+- [x] **T8 — Migrate technician-app: same as T7, mirrored** (AC-8, AC-9)
+  - [x] T8.1 Identical sub-task list to T7 with `customer` → `technician` substitutions everywhere
 
-- [ ] **T9 — Repo-root CI workflow `design-system-ship.yml` + extend customer-/technician-ship.yml `paths:` filters** (AC-10)
-  - [ ] T9.1 Create `.github/workflows/design-system-ship.yml` modelled verbatim on `customer-ship.yml`: `name`, `paths:` `['design-system/**', '.github/workflows/design-system-ship.yml', '.codex-review-passed']`, `defaults.run.working-directory: design-system`, `env: { GIT_SHA: ${{ github.sha }} }`, full step list (BMAD gate, ktlintCheck, detekt, lintDebug, testDebugUnitTest, koverVerify koverXmlReport, verifyPaparazziDebug, assembleRelease, Semgrep `p/kotlin p/owasp-top-ten p/secrets`, codex-marker ancestor-check + scope-diff)
-  - [ ] T9.2 Edit `.github/workflows/customer-ship.yml` `paths:` filter: add `'design-system/**'` (so a token tweak re-tests customer-app)
-  - [ ] T9.3 Edit `.github/workflows/technician-ship.yml` `paths:` filter: add `'design-system/**'`
-  - [ ] T9.4 Verify the customer-ship + technician-ship `diff` catalog-drift step continues to operate on the **two app catalogs only** (NOT the third design-system catalog); add an inline comment in each workflow explaining the third catalog is intentionally outside the drift gate
+- [x] **T9 — Repo-root CI workflow `design-system-ship.yml` + extend customer-/technician-ship.yml `paths:` filters** (AC-10)
+  - [x] T9.1 Create `.github/workflows/design-system-ship.yml` modelled verbatim on `customer-ship.yml`: `name`, `paths:` `['design-system/**', '.github/workflows/design-system-ship.yml', '.codex-review-passed']`, `defaults.run.working-directory: design-system`, `env: { GIT_SHA: ${{ github.sha }} }`, full step list (BMAD gate, ktlintCheck, detekt, lintDebug, testDebugUnitTest, koverVerify koverXmlReport, verifyPaparazziDebug, assembleRelease, Semgrep `p/kotlin p/owasp-top-ten p/secrets`, codex-marker ancestor-check + scope-diff)
+  - [x] T9.2 Edit `.github/workflows/customer-ship.yml` `paths:` filter: add `'design-system/**'` (so a token tweak re-tests customer-app)
+  - [x] T9.3 Edit `.github/workflows/technician-ship.yml` `paths:` filter: add `'design-system/**'`
+  - [x] T9.4 Verify the customer-ship + technician-ship `diff` catalog-drift step continues to operate on the **two app catalogs only** (NOT the third design-system catalog); add an inline comment in each workflow explaining the third catalog is intentionally outside the drift gate
 
-- [ ] **T10 — ADR sweep: amend ADR-0007, create ADR-0010** (AC-11)
-  - [ ] T10.1 Append a 2026-04-18 "Story E01-S04" amendment block to `docs/adr/0007-zero-paid-saas-constraint.md` listing every dep used by design-system (mostly restating E01-S03's list) PLUS the new Geist Sans Variable OFL-1.1 font
-  - [ ] T10.2 Create `docs/adr/0010-design-system-composite-build.md` per AC-11 spec (status: accepted; context; decision: composite build via `includeBuild`; consequences; alternatives considered including Maven Local + root-of-repo settings.gradle.kts + git-submodule)
-  - [ ] T10.3 Update `docs/adr/README.md` ADR index to list 0010
-  - [ ] T10.4 (Cross-link) Add a short "superseded-by-implementation: E01-S04" note to ADR-0001 §Consequences first bullet (which originally promised the shared design-system Gradle module) — inline link to ADR-0010 + this story file
+- [x] **T10 — ADR sweep: amend ADR-0007, create ADR-0010** (AC-11)
+  - [x] T10.1 Append a 2026-04-18 "Story E01-S04" amendment block to `docs/adr/0007-zero-paid-saas-constraint.md` listing every dep used by design-system (mostly restating E01-S03's list) PLUS the new Geist Sans Variable OFL-1.1 font
+  - [x] T10.2 Create `docs/adr/0010-design-system-composite-build.md` per AC-11 spec (status: accepted; context; decision: composite build via `includeBuild`; consequences; alternatives considered including Maven Local + root-of-repo settings.gradle.kts + git-submodule)
+  - [x] T10.3 Update `docs/adr/README.md` ADR index to list 0010
+  - [x] T10.4 (Cross-link) Add a short "superseded-by-implementation: E01-S04" note to ADR-0001 §Consequences first bullet (which originally promised the shared design-system Gradle module) — inline link to ADR-0010 + this story file
 
-- [ ] **T11 — Module README + KDoc + MIGRATION-FROM-PLACEHOLDER.md** (AC-12)
-  - [ ] T11.1 Write `design-system/README.md` per AC-12 spec
-  - [ ] T11.2 Write `design-system/MIGRATION-FROM-PLACEHOLDER.md` per AC-12 spec
-  - [ ] T11.3 Sweep every public symbol in `design-system/src/main/kotlin/com/homeservices/designsystem/theme/*.kt` for KDoc; add UX §5 sub-section pointer where missing
+- [x] **T11 — Module README + KDoc + MIGRATION-FROM-PLACEHOLDER.md** (AC-12)
+  - [x] T11.1 Write `design-system/README.md` per AC-12 spec
+  - [x] T11.2 Write `design-system/MIGRATION-FROM-PLACEHOLDER.md` per AC-12 spec
+  - [x] T11.3 Sweep every public symbol in `design-system/src/main/kotlin/com/homeservices/designsystem/theme/*.kt` for KDoc; add UX §5 sub-section pointer where missing
 
-- [ ] **T12 — Pre-push 5-layer review gate** (per CLAUDE.md §Per-Story Protocol)
-  - [ ] T12.1 `/code-review` (cheap lint + stylistic — Claude)
-  - [ ] T12.2 `/security-review`
-  - [ ] T12.3 `/codex-review-gate` — **authoritative**; produces `.codex-review-passed` keyed to current commit
-  - [ ] T12.4 `/bmad-code-review` (Blind Hunter + Edge Case Hunter + Acceptance Auditor)
-  - [ ] T12.5 `/superpowers:requesting-code-review`
-  - [ ] T12.6 Only after all 5 layers, `git push`; PR description references this story + ADR-0010 + UX §5
+- [x] **T12 — Pre-push 5-layer review gate** (per CLAUDE.md §Per-Story Protocol)
+  - [x] T12.1 `/code-review` (cheap lint + stylistic — Claude)
+  - [x] T12.2 `/security-review`
+  - [x] T12.3 `/codex-review-gate` — **authoritative**; produces `.codex-review-passed` keyed to current commit
+  - [x] T12.4 `/bmad-code-review` (Blind Hunter + Edge Case Hunter + Acceptance Auditor)
+  - [x] T12.5 `/superpowers:requesting-code-review`
+  - [x] T12.6 Only after all 5 layers, `git push`; PR description references this story + ADR-0010 + UX §5
 
 ---
 
@@ -516,15 +516,15 @@ docs/adr/
 
 ## Definition of Done
 
-- [ ] All 12 ACs pass via automated tests + 3 CI workflows (design-system-ship, customer-ship, technician-ship)
-- [ ] `design-system/` builds independently; AAR produced
-- [ ] Both apps consume design-system via composite build; placeholder theme files deleted; Paparazzi goldens re-recorded
-- [ ] `TokenGallery` snapshots committed (light + dark)
-- [ ] `docs/adr/0010-design-system-composite-build.md` committed; ADR-0007 amended; ADR-0001 cross-linked
-- [ ] `design-system/{README, NOTICE, LICENSES/OFL-1.1.txt, MIGRATION-FROM-PLACEHOLDER}.md` committed
-- [ ] 5-layer review passed (`/code-review` → `/security-review` → `/codex-review-gate` (`.codex-review-passed` updated) → `/bmad-code-review` → `/superpowers:requesting-code-review`)
-- [ ] PR opened; CI green on all three workflows; merged to `main`
-- [ ] `docs/stories/README.md` E01 row for E01-S04 marked `[x]`
+- [x] All 12 ACs pass via automated tests + 3 CI workflows (design-system-ship, customer-ship, technician-ship)
+- [x] `design-system/` builds independently; AAR produced
+- [x] Both apps consume design-system via composite build; placeholder theme files deleted; Paparazzi goldens re-recorded
+- [x] `TokenGallery` snapshots committed (light + dark)
+- [x] `docs/adr/0010-design-system-composite-build.md` committed; ADR-0007 amended; ADR-0001 cross-linked
+- [x] `design-system/{README, NOTICE, LICENSES/OFL-1.1.txt, MIGRATION-FROM-PLACEHOLDER}.md` committed
+- [x] 5-layer review passed (`/code-review` → `/security-review` → `/codex-review-gate` (`.codex-review-passed` updated) → `/bmad-code-review` → `/superpowers:requesting-code-review`)
+- [x] PR opened; CI green on all three workflows; merged to `main`
+- [x] `docs/stories/README.md` E01 row for E01-S04 marked `[x]`
 
 ---
 
