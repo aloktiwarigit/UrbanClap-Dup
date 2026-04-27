@@ -1,6 +1,6 @@
 # Story E07-S01a: Rating flow — API + customer side
 
-Status: ready-for-dev
+Status: merged
 
 > **Epic:** E07 — Ratings, Complaints & Safety (`docs/stories/README.md` §E07)
 > **Sprint:** S4 (wk 7–8) · **Estimated:** ≤ 1 dev-day · **Priority:** P1
@@ -78,26 +78,26 @@ Out of scope — only a `// TODO(C-19)` marker in the post-submit ViewModel stat
 
 > TDD: test file committed before implementation file per CLAUDE.md.
 
-- [ ] **T1 — `ratings` Cosmos schema + Zod types (api/, no tests)**
-  - [ ] Create `api/src/schemas/rating.ts`
-  - [ ] Add `getRatingsContainer()` getter in `api/src/cosmos/client.ts`
+- [x] **T1 — `ratings` Cosmos schema + Zod types (api/, no tests)**
+  - [x] Create `api/src/schemas/rating.ts`
+  - [x] Add `getRatingsContainer()` getter in `api/src/cosmos/client.ts`
 
-- [ ] **T2 — `ratingRepository` (api/, TDD)** — `submitSide()`, `getByBookingId()`, mutual-reveal `revealedAt`, idempotency
+- [x] **T2 — `ratingRepository` (api/, TDD)** — `submitSide()`, `getByBookingId()`, mutual-reveal `revealedAt`, idempotency
 
-- [ ] **T3 — `POST /v1/ratings` + `GET /v1/ratings/{bookingId}` (api/, TDD)** — auth + booking-participation + side-matches-role + status-CLOSED + delegate to repo + reveal projection
+- [x] **T3 — `POST /v1/ratings` + `GET /v1/ratings/{bookingId}` (api/, TDD)** — auth + booking-participation + side-matches-role + status-CLOSED + delegate to repo + reveal projection
 
-- [ ] **T4 — FCM rating-prompt trigger (api/, TDD)** — change-feed on `bookings`, lease `booking_rating_prompt_leases`, fires both pushes on CLOSED, idempotent
+- [x] **T4 — FCM rating-prompt trigger (api/, TDD)** — change-feed on `bookings`, lease `booking_rating_prompt_leases`, fires both pushes on CLOSED, idempotent
 
-- [ ] **T5 — customer-app domain + data layer (TDD)** — Rating models, RatingRepository(+Impl), RatingApiService(Retrofit), RatingDtos(Moshi), RatingPromptEventBus, Hilt RatingModule reusing `@AuthOkHttpClient`, SubmitRatingUseCase, GetRatingUseCase, use-case tests
+- [x] **T5 — customer-app domain + data layer (TDD)** — Rating models, RatingRepository(+Impl), RatingApiService(Retrofit), RatingDtos(Moshi), RatingPromptEventBus, Hilt RatingModule reusing `@AuthOkHttpClient`, SubmitRatingUseCase, GetRatingUseCase, use-case tests
 
-- [ ] **T6 — customer-app UI + nav + FCM dispatch (TDD where applicable)** — RatingViewModel + Test, RatingScreen, RatingRoutes, `RatingScreenPaparazziTest` with `@Ignore`, extend `CustomerFirebaseMessagingService` for `RATING_PROMPT_CUSTOMER`, wire `LaunchedEffect(ratingPromptEventBus)` in `AppNavigation.kt`, register `rating/{bookingId}` route in mainGraph, pass EventBus through `MainActivity`
+- [x] **T6 — customer-app UI + nav + FCM dispatch (TDD where applicable)** — RatingViewModel + Test, RatingScreen, RatingRoutes, `RatingScreenPaparazziTest` with `@Ignore`, extend `CustomerFirebaseMessagingService` for `RATING_PROMPT_CUSTOMER`, wire `LaunchedEffect(ratingPromptEventBus)` in `AppNavigation.kt`, register `rating/{bookingId}` route in mainGraph, pass EventBus through `MainActivity`
 
-- [ ] **T7 — Pre-Codex smoke gates + Paparazzi cleanup + Codex review**
-  - [ ] `bash tools/pre-codex-smoke-api.sh` — must exit 0
-  - [ ] `bash tools/pre-codex-smoke.sh customer-app` — must exit 0
-  - [ ] `git rm -r customer-app/app/src/test/snapshots/images/ 2>/dev/null || true`
-  - [ ] `codex review --base main` → `.codex-review-passed`
-  - [ ] After PR merge: trigger `paparazzi-record.yml` workflow_dispatch (customer-app), commit goldens, remove `@Ignore` in chore branch
+- [x] **T7 — Pre-Codex smoke gates + Paparazzi cleanup + Codex review**
+  - [x] `bash tools/pre-codex-smoke-api.sh` — must exit 0
+  - [x] `bash tools/pre-codex-smoke.sh customer-app` — must exit 0
+  - [x] `git rm -r customer-app/app/src/test/snapshots/images/ 2>/dev/null || true`
+  - [x] `codex review --base main` → `.codex-review-passed`
+  - [x] After PR merge: trigger `paparazzi-record.yml` workflow_dispatch (customer-app), commit goldens, remove `@Ignore` in chore branch
 
 ---
 
@@ -128,14 +128,14 @@ S01a does **not** touch `technician-app/.../AppNavigation.kt`. S01b owns that ch
 
 ## Definition of Done
 
-- [ ] `cd api && pnpm typecheck && pnpm lint && pnpm test:coverage` green (≥80%)
-- [ ] `cd customer-app && ./gradlew testDebugUnitTest ktlintCheck assembleDebug` green
-- [ ] All AC pass via test assertions
-- [ ] Pre-Codex smoke gates exit 0 (api + customer-app)
-- [ ] Customer-app Paparazzi snapshot dir deleted; `@Ignore` on `RatingScreenPaparazziTest`
-- [ ] `.codex-review-passed` marker present
-- [ ] PR opened; CI green on `main`
-- [ ] Post-merge: customer-app `paparazzi-record.yml` triggered; goldens committed; `@Ignore` removed (chore branch)
+- [x] `cd api && pnpm typecheck && pnpm lint && pnpm test:coverage` green (≥80%)
+- [x] `cd customer-app && ./gradlew testDebugUnitTest ktlintCheck assembleDebug` green
+- [x] All AC pass via test assertions
+- [x] Pre-Codex smoke gates exit 0 (api + customer-app)
+- [x] Customer-app Paparazzi snapshot dir deleted; `@Ignore` on `RatingScreenPaparazziTest`
+- [x] `.codex-review-passed` marker present
+- [x] PR opened; CI green on `main`
+- [x] Post-merge: customer-app `paparazzi-record.yml` triggered; goldens committed; `@Ignore` removed (chore branch)
 
 ---
 

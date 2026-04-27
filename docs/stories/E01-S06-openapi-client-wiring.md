@@ -1,6 +1,6 @@
 # Story E01.S06: Cross-sub-project OpenAPI client generator — typed TS client from `api/` spec, wired into `admin-web/`
 
-Status: ready-for-dev
+Status: merged
 
 > **Epic:** E01 — Foundations, CI & Design System (`docs/stories/README.md` §E01)
 > **Sprint:** S1 (wk 1–2) · **Estimated:** ≤ 1 dev-day · **Priority:** **P0 / foundation enabler — BLOCKS E03-S01 (first real consumer) and every subsequent admin-web story that calls `api/`**
@@ -146,82 +146,82 @@ It also establishes the **cross-repo API contract discipline** that the homeserv
 > **TDD discipline (per root CLAUDE.md):** every production change starts with a failing test.
 > **Cross-sub-project sequencing:** api/ side first (produce spec), then admin-web/ side (consume spec + client). Do NOT interleave — finish the api/ side and commit it before touching admin-web/, so a revert point exists.
 
-- [ ] **T1 — ADR-0009: codegen tool decision** (AC-11)
-  - [ ] T1.1 Create `docs/adr/0009-openapi-client-generator.md` from `docs/adr/TEMPLATE.md`; capture the three-candidate tradeoff (openapi-typescript / @hey-api/openapi-ts / @openapitools/openapi-generator-cli)
-  - [ ] T1.2 Capture the spec-emission decision (zod-openapi vs @asteasolutions/zod-to-openapi vs hand-written seed) and the committed-artifact vs regenerate decision
-  - [ ] T1.3 Add the selected tool to ADR-0007 §Known free-tier dependencies if not already listed
-  - [ ] T1.4 Status: `Accepted` — committed with the rest of the story
+- [x] **T1 — ADR-0009: codegen tool decision** (AC-11)
+  - [x] T1.1 Create `docs/adr/0009-openapi-client-generator.md` from `docs/adr/TEMPLATE.md`; capture the three-candidate tradeoff (openapi-typescript / @hey-api/openapi-ts / @openapitools/openapi-generator-cli)
+  - [x] T1.2 Capture the spec-emission decision (zod-openapi vs @asteasolutions/zod-to-openapi vs hand-written seed) and the committed-artifact vs regenerate decision
+  - [x] T1.3 Add the selected tool to ADR-0007 §Known free-tier dependencies if not already listed
+  - [x] T1.4 Status: `Accepted` — committed with the rest of the story
 
-- [ ] **T2 — `api/` OpenAPI emission** (AC-1, AC-2)
-  - [ ] T2.1 Add the spec-emission library to `api/package.json` `devDependencies` (brainstorm decides which — prefer `zod-openapi@^3` for `@asteasolutions/zod-to-openapi@^7` OSS; pin minors per the api/ pattern)
-  - [ ] T2.2 (RED) Write `api/tests/openapi-build.test.ts` asserting: (a) the build script produces a file at `api/openapi.json`, (b) the file parses as valid OpenAPI 3.1 via `@apidevtools/swagger-parser` (OSS), (c) `paths["/v1/health"].get.responses["200"]` is a schema-equivalent of `HealthResponseSchema` (deep-equal modulo ordering), (d) running it twice produces byte-identical output
-  - [ ] T2.3 (GREEN) Create `api/src/openapi/registry.ts` — a single module that registers every schema + route. Include `HealthResponseSchema` + the `/v1/health` GET operation. All future endpoints add their registration here.
-  - [ ] T2.4 (GREEN) Create `api/src/openapi/build.ts` CLI entry that imports the registry and writes `api/openapi.json`. Deterministic output: sort keys, no timestamps, stable whitespace (pretty-printed with 2-space indent + trailing newline so diffs are readable)
-  - [ ] T2.5 Add `"openapi:build": "tsx src/openapi/build.ts"` to `api/package.json` scripts (tsx already in devDependencies)
-  - [ ] T2.6 Generate `api/openapi.json` — commit it
-  - [ ] T2.7 Add `api/openapi.json` to the list of files typechecked / linted (lint should ignore JSON; typecheck N/A) — verify Spectral ruleset ignores `examples` nondeterminism
+- [x] **T2 — `api/` OpenAPI emission** (AC-1, AC-2)
+  - [x] T2.1 Add the spec-emission library to `api/package.json` `devDependencies` (brainstorm decides which — prefer `zod-openapi@^3` for `@asteasolutions/zod-to-openapi@^7` OSS; pin minors per the api/ pattern)
+  - [x] T2.2 (RED) Write `api/tests/openapi-build.test.ts` asserting: (a) the build script produces a file at `api/openapi.json`, (b) the file parses as valid OpenAPI 3.1 via `@apidevtools/swagger-parser` (OSS), (c) `paths["/v1/health"].get.responses["200"]` is a schema-equivalent of `HealthResponseSchema` (deep-equal modulo ordering), (d) running it twice produces byte-identical output
+  - [x] T2.3 (GREEN) Create `api/src/openapi/registry.ts` — a single module that registers every schema + route. Include `HealthResponseSchema` + the `/v1/health` GET operation. All future endpoints add their registration here.
+  - [x] T2.4 (GREEN) Create `api/src/openapi/build.ts` CLI entry that imports the registry and writes `api/openapi.json`. Deterministic output: sort keys, no timestamps, stable whitespace (pretty-printed with 2-space indent + trailing newline so diffs are readable)
+  - [x] T2.5 Add `"openapi:build": "tsx src/openapi/build.ts"` to `api/package.json` scripts (tsx already in devDependencies)
+  - [x] T2.6 Generate `api/openapi.json` — commit it
+  - [x] T2.7 Add `api/openapi.json` to the list of files typechecked / linted (lint should ignore JSON; typecheck N/A) — verify Spectral ruleset ignores `examples` nondeterminism
 
-- [ ] **T3 — `api-ship.yml` spec-validation + drift step** (AC-2, AC-8)
-  - [ ] T3.1 Add `@stoplight/spectral-cli@^6` (OSS) to `api/devDependencies`
-  - [ ] T3.2 Edit `.github/workflows/api-ship.yml` — add a new step **before the codex-marker step** running `pnpm exec spectral lint openapi.json --ruleset oas --fail-severity error`
-  - [ ] T3.3 Add a drift-check step: `pnpm openapi:build && git diff --exit-code api/openapi.json || (echo "::error::openapi.json is out of date — run pnpm openapi:build and commit" && exit 1)`
-  - [ ] T3.4 Verify `paths:` filter on api-ship.yml still triggers appropriately (schema files under `api/src/schemas/**` are in scope — they're already under `api/**`)
+- [x] **T3 — `api-ship.yml` spec-validation + drift step** (AC-2, AC-8)
+  - [x] T3.1 Add `@stoplight/spectral-cli@^6` (OSS) to `api/devDependencies`
+  - [x] T3.2 Edit `.github/workflows/api-ship.yml` — add a new step **before the codex-marker step** running `pnpm exec spectral lint openapi.json --ruleset oas --fail-severity error`
+  - [x] T3.3 Add a drift-check step: `pnpm openapi:build && git diff --exit-code api/openapi.json || (echo "::error::openapi.json is out of date — run pnpm openapi:build and commit" && exit 1)`
+  - [x] T3.4 Verify `paths:` filter on api-ship.yml still triggers appropriately (schema files under `api/src/schemas/**` are in scope — they're already under `api/**`)
 
-- [ ] **T4 — `admin-web/` client codegen config** (AC-3, AC-4)
-  - [ ] T4.1 Add the selected codegen tool (from ADR-0009) to `admin-web/devDependencies` — e.g., `openapi-typescript@^7` OR `@hey-api/openapi-ts@^0.x` OR `@openapitools/openapi-generator-cli@^2` (pin minors per admin-web pattern)
-  - [ ] T4.2 Create the codegen config file at the tool's conventional location — e.g., `admin-web/openapi-ts.config.ts` (for @hey-api) or `admin-web/openapi.config.ts` (for openapi-typescript with a wrapper script) or `admin-web/openapitools.json` (for the Apache tool)
-  - [ ] T4.3 Copy (or symlink-via-build-step) `api/openapi.json` to `admin-web/src/api/generated/openapi.json` — the brainstorm decides the mechanism (a prebuild script reading the api/ file, OR a committed copy — the AC-7 "no cross-package imports" rule forbids direct admin-web → api/ reads at runtime, but build-time file copies are allowed)
-  - [ ] T4.4 Add `"openapi:client": "<tool-specific command>"` to `admin-web/package.json` scripts
-  - [ ] T4.5 Run it; verify output under `admin-web/src/api/generated/` is deterministic; commit the generated files
-  - [ ] T4.6 Add an ESLint `no-restricted-imports` rule (or `eslint-plugin-boundaries`) blocking any import from `admin-web/**` that resolves outside of `admin-web/` — specifically `**/api/src/**`
+- [x] **T4 — `admin-web/` client codegen config** (AC-3, AC-4)
+  - [x] T4.1 Add the selected codegen tool (from ADR-0009) to `admin-web/devDependencies` — e.g., `openapi-typescript@^7` OR `@hey-api/openapi-ts@^0.x` OR `@openapitools/openapi-generator-cli@^2` (pin minors per admin-web pattern)
+  - [x] T4.2 Create the codegen config file at the tool's conventional location — e.g., `admin-web/openapi-ts.config.ts` (for @hey-api) or `admin-web/openapi.config.ts` (for openapi-typescript with a wrapper script) or `admin-web/openapitools.json` (for the Apache tool)
+  - [x] T4.3 Copy (or symlink-via-build-step) `api/openapi.json` to `admin-web/src/api/generated/openapi.json` — the brainstorm decides the mechanism (a prebuild script reading the api/ file, OR a committed copy — the AC-7 "no cross-package imports" rule forbids direct admin-web → api/ reads at runtime, but build-time file copies are allowed)
+  - [x] T4.4 Add `"openapi:client": "<tool-specific command>"` to `admin-web/package.json` scripts
+  - [x] T4.5 Run it; verify output under `admin-web/src/api/generated/` is deterministic; commit the generated files
+  - [x] T4.6 Add an ESLint `no-restricted-imports` rule (or `eslint-plugin-boundaries`) blocking any import from `admin-web/**` that resolves outside of `admin-web/` — specifically `**/api/src/**`
 
-- [ ] **T5 — `ApiClient` wrapper with header-injection hook** (AC-5)
-  - [ ] T5.1 (RED) Write `tests/api-client.test.ts` — use `msw@^2` to mock `/v1/health`; cover all 5 sub-assertions in AC-5
-  - [ ] T5.2 (GREEN) Implement `admin-web/src/api/client.ts`:
+- [x] **T5 — `ApiClient` wrapper with header-injection hook** (AC-5)
+  - [x] T5.1 (RED) Write `tests/api-client.test.ts` — use `msw@^2` to mock `/v1/health`; cover all 5 sub-assertions in AC-5
+  - [x] T5.2 (GREEN) Implement `admin-web/src/api/client.ts`:
     - `export class ApiError extends Error { status; url; method; body; }`
     - `export function createApiClient({ baseUrl, headers })` returning `{ health: { get(): Promise<HealthResponse> } }` (or whatever shape the chosen codegen produces — adapt)
     - Internal: `async function request(method, path, init)` applies `baseUrl`, awaits `headers()` (if provided), calls `fetch`, throws `ApiError` on non-2xx, returns typed JSON on 2xx
-  - [ ] T5.3 Export `ApiClient`, `ApiError`, and `createApiClient` from `admin-web/src/api/index.ts` (barrel — the ONLY module outside `src/api/` should import from is `./api/index.ts`, not deep paths)
-  - [ ] T5.4 Add `msw@^2` to `admin-web/devDependencies` (OSS; industry-standard HTTP mocking; locks the pattern for E02+ stories)
+  - [x] T5.3 Export `ApiClient`, `ApiError`, and `createApiClient` from `admin-web/src/api/index.ts` (barrel — the ONLY module outside `src/api/` should import from is `./api/index.ts`, not deep paths)
+  - [x] T5.4 Add `msw@^2` to `admin-web/devDependencies` (OSS; industry-standard HTTP mocking; locks the pattern for E02+ stories)
 
-- [ ] **T6 — Cross-package-import lint rule + test** (AC-7)
-  - [ ] T6.1 Update `admin-web/eslint.config.mjs` with a `no-restricted-imports` rule: `patterns: [{ group: ["../../../api/*", "../../api/*"], message: "admin-web may not import from api/; use the generated client instead" }]`
-  - [ ] T6.2 Write `admin-web/tests/no-cross-package-imports.test.ts` — glob `src/**/*.{ts,tsx}` and assert no file contains `from "../../../api/"` or `from "../../api/"` or `require("../../../api/"` etc.
-  - [ ] T6.3 Validate the rule by temporarily adding a cross-import to a test fixture, confirm lint + test fail, remove the fixture
+- [x] **T6 — Cross-package-import lint rule + test** (AC-7)
+  - [x] T6.1 Update `admin-web/eslint.config.mjs` with a `no-restricted-imports` rule: `patterns: [{ group: ["../../../api/*", "../../api/*"], message: "admin-web may not import from api/; use the generated client instead" }]`
+  - [x] T6.2 Write `admin-web/tests/no-cross-package-imports.test.ts` — glob `src/**/*.{ts,tsx}` and assert no file contains `from "../../../api/"` or `from "../../api/"` or `require("../../../api/"` etc.
+  - [x] T6.3 Validate the rule by temporarily adding a cross-import to a test fixture, confirm lint + test fail, remove the fixture
 
-- [ ] **T7 — Landing page round-trip integration** (AC-6)
-  - [ ] T7.1 Update `admin-web/app/page.tsx` to call `createApiClient({ baseUrl: process.env.API_BASE_URL ?? "http://localhost:7071/api" }).health.get()` — server-side (RSC context, no `"use client"`)
-  - [ ] T7.2 Gracefully handle failure: `try/catch` around the call; on failure, render `(local)` suffix in footer; **do NOT** call `Sentry.captureException` here (best-effort at render; if the api is unreachable at build we still ship)
-  - [ ] T7.3 Update `admin-web/tests/landing.page.test.tsx` — mock the client factory; assert footer contains the `commit` + `version` when mock returns success; assert `(local)` suffix when mock throws
-  - [ ] T7.4 Update `admin-web/tests/e2e/landing.spec.ts` — assert footer text contains an 8-char hex SHA `(/[a-f0-9]{8}/)` AND a semver pattern `(/\d+\.\d+\.\d+/)` to prove the real round-trip happened
-  - [ ] T7.5 In `admin-web/playwright.config.ts` `webServer:` block, ensure the api/ dev server is also started for e2e — OR, for simplicity, stub `/v1/health` via a Next.js test-time route handler and document that decision in the PR
+- [x] **T7 — Landing page round-trip integration** (AC-6)
+  - [x] T7.1 Update `admin-web/app/page.tsx` to call `createApiClient({ baseUrl: process.env.API_BASE_URL ?? "http://localhost:7071/api" }).health.get()` — server-side (RSC context, no `"use client"`)
+  - [x] T7.2 Gracefully handle failure: `try/catch` around the call; on failure, render `(local)` suffix in footer; **do NOT** call `Sentry.captureException` here (best-effort at render; if the api is unreachable at build we still ship)
+  - [x] T7.3 Update `admin-web/tests/landing.page.test.tsx` — mock the client factory; assert footer contains the `commit` + `version` when mock returns success; assert `(local)` suffix when mock throws
+  - [x] T7.4 Update `admin-web/tests/e2e/landing.spec.ts` — assert footer text contains an 8-char hex SHA `(/[a-f0-9]{8}/)` AND a semver pattern `(/\d+\.\d+\.\d+/)` to prove the real round-trip happened
+  - [x] T7.5 In `admin-web/playwright.config.ts` `webServer:` block, ensure the api/ dev server is also started for e2e — OR, for simplicity, stub `/v1/health` via a Next.js test-time route handler and document that decision in the PR
 
-- [ ] **T8 — Lighthouse regression check** (AC-10)
-  - [ ] T8.1 Run `pnpm exec lhci autorun --config=lighthouserc.cjs` locally after the landing page change
-  - [ ] T8.2 If Performance score drops below 90, switch from per-request RSC fetch to build-time static fetch (execute in `generateStaticParams` or equivalent — decide in brainstorm). Commit the switch with a note in the PR.
+- [x] **T8 — Lighthouse regression check** (AC-10)
+  - [x] T8.1 Run `pnpm exec lhci autorun --config=lighthouserc.cjs` locally after the landing page change
+  - [x] T8.2 If Performance score drops below 90, switch from per-request RSC fetch to build-time static fetch (execute in `generateStaticParams` or equivalent — decide in brainstorm). Commit the switch with a note in the PR.
 
-- [ ] **T9 — CI layout decision + implementation** (AC-9)
-  - [ ] T9.1 Based on brainstorm §Open Questions #5, either (a) extend both `api-ship.yml` and `admin-ship.yml` with the relevant drift checks, OR (b) add a new `.github/workflows/contracts-ship.yml` that both workflows `needs:` (if GitHub Actions supports cross-workflow deps — it does not natively, so (a) is likely simpler). Pick (a) by default unless the brainstorm surfaces a strong reason.
-  - [ ] T9.2 For whichever workflow enforces the admin-side drift check: ensure `paths:` filter includes `api/openapi.json` as a trigger (so spec changes force admin-web regen + CI)
-  - [ ] T9.3 Ensure `.codex-review-passed` and `docs/reviews/**` are in the paths filters of both workflows (already the case; verify)
-  - [ ] T9.4 Confirm the codex-marker ancestor-check step is present verbatim in any new workflow file
+- [x] **T9 — CI layout decision + implementation** (AC-9)
+  - [x] T9.1 Based on brainstorm §Open Questions #5, either (a) extend both `api-ship.yml` and `admin-ship.yml` with the relevant drift checks, OR (b) add a new `.github/workflows/contracts-ship.yml` that both workflows `needs:` (if GitHub Actions supports cross-workflow deps — it does not natively, so (a) is likely simpler). Pick (a) by default unless the brainstorm surfaces a strong reason.
+  - [x] T9.2 For whichever workflow enforces the admin-side drift check: ensure `paths:` filter includes `api/openapi.json` as a trigger (so spec changes force admin-web regen + CI)
+  - [x] T9.3 Ensure `.codex-review-passed` and `docs/reviews/**` are in the paths filters of both workflows (already the case; verify)
+  - [x] T9.4 Confirm the codex-marker ancestor-check step is present verbatim in any new workflow file
 
-- [ ] **T10 — Coverage exclusion for generated files** (AC-10)
-  - [ ] T10.1 Update `admin-web/vitest.config.ts` `coverage.exclude` to add `src/api/generated/**` and `src/api/client.ts` (optional — the client IS tested, so if thresholds met without exclusion, skip this for `client.ts` and ONLY exclude the generated folder)
-  - [ ] T10.2 Verify coverage report still meets 80% thresholds after the exclusion
+- [x] **T10 — Coverage exclusion for generated files** (AC-10)
+  - [x] T10.1 Update `admin-web/vitest.config.ts` `coverage.exclude` to add `src/api/generated/**` and `src/api/client.ts` (optional — the client IS tested, so if thresholds met without exclusion, skip this for `client.ts` and ONLY exclude the generated folder)
+  - [x] T10.2 Verify coverage report still meets 80% thresholds after the exclusion
 
-- [ ] **T11 — `api/README.md` + `admin-web/README.md` updates**
-  - [ ] T11.1 In `api/README.md`, under a new `## OpenAPI` section, document: `pnpm openapi:build` produces the spec; it MUST be committed after every Zod schema or route change; CI drift-checks on every PR
-  - [ ] T11.2 In `admin-web/README.md`, under a new `## Generated API Client` section, document: `pnpm openapi:client` regenerates `src/api/generated/`; it MUST be committed after api/openapi.json changes; import via `@/api` barrel; never import from `api/` directly
-  - [ ] T11.3 Document the `API_BASE_URL` env var + the default in both READMEs
+- [x] **T11 — `api/README.md` + `admin-web/README.md` updates**
+  - [x] T11.1 In `api/README.md`, under a new `## OpenAPI` section, document: `pnpm openapi:build` produces the spec; it MUST be committed after every Zod schema or route change; CI drift-checks on every PR
+  - [x] T11.2 In `admin-web/README.md`, under a new `## Generated API Client` section, document: `pnpm openapi:client` regenerates `src/api/generated/`; it MUST be committed after api/openapi.json changes; import via `@/api` barrel; never import from `api/` directly
+  - [x] T11.3 Document the `API_BASE_URL` env var + the default in both READMEs
 
-- [ ] **T12 — Pre-push 5-layer review gate** (per root CLAUDE.md)
-  - [ ] T12.1 `/code-review` (lint + stylistic — Claude)
-  - [ ] T12.2 `/security-review` (pay attention: does the header-injection hook have any path to log-leak a token? does the spec expose any internal-only routes?)
-  - [ ] T12.3 `/codex-review-gate` — **authoritative**; must produce `.codex-review-passed` keyed to current commit SHA
-  - [ ] T12.4 `/bmad-code-review` (Blind Hunter + Edge Case Hunter + Acceptance Auditor)
-  - [ ] T12.5 `/superpowers:requesting-code-review`
-  - [ ] T12.6 Only after all 5 layers, `git push`
+- [x] **T12 — Pre-push 5-layer review gate** (per root CLAUDE.md)
+  - [x] T12.1 `/code-review` (lint + stylistic — Claude)
+  - [x] T12.2 `/security-review` (pay attention: does the header-injection hook have any path to log-leak a token? does the spec expose any internal-only routes?)
+  - [x] T12.3 `/codex-review-gate` — **authoritative**; must produce `.codex-review-passed` keyed to current commit SHA
+  - [x] T12.4 `/bmad-code-review` (Blind Hunter + Edge Case Hunter + Acceptance Auditor)
+  - [x] T12.5 `/superpowers:requesting-code-review`
+  - [x] T12.6 Only after all 5 layers, `git push`
 
 ---
 
@@ -461,24 +461,24 @@ AC-10's Lighthouse requirement is the safety net: if the round-trip somehow regr
 
 ## Definition of Done
 
-- [ ] All 11 acceptance criteria pass (verified by tests + manual smoke + green CI)
-- [ ] All 12 task groups (T1–T12) checked off
-- [ ] **api/**: `pnpm openapi:build && pnpm typecheck && pnpm lint && pnpm test:coverage` all green locally
-- [ ] **admin-web/**: `pnpm openapi:client && pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm build && pnpm test:e2e && pnpm test:a11y && pnpm exec lhci autorun` all green locally
-- [ ] `api/openapi.json` committed; re-running `pnpm openapi:build` produces byte-identical output
-- [ ] `admin-web/src/api/generated/**` committed; re-running `pnpm openapi:client` produces byte-identical output
-- [ ] ADR-0009 committed + `Accepted`; ADR-0007 amended if needed to list new OSS deps
-- [ ] Coverage ≥ 80% lines/branches/functions/statements in both sub-projects (Vitest reports)
-- [ ] WCAG 2.1 AA zero violations on `/` (axe-core unchanged from E01-S02)
-- [ ] Lighthouse scores: Perf ≥ 90, A11y ≥ 95, BP ≥ 90, SEO ≥ 90 (unchanged from E01-S02)
-- [ ] Landing page footer shows a real 8-char hex SHA + semver, proving the round-trip
-- [ ] PR opened against `main`; both `api-ship.yml` and `admin-ship.yml` GREEN end-to-end
-- [ ] 5-layer review gate complete: `.codex-review-passed` marker present, SHA is ancestor of HEAD, scope-diff clean
-- [ ] PR description includes: summary, test plan, codegen-tool choice + rationale, axe + Lighthouse reports, deliberate-deviations list, link to ADR-0009
-- [ ] `docs/stories/README.md` E01 row reflects stories count 6 + dev-days 5 + total 45 (done in the same commit as this story file)
-- [ ] No new `.md` files beyond this story file, `docs/adr/0009-openapi-client-generator.md`, and README updates to api/ + admin-web/
-- [ ] No paid-SaaS dependencies introduced (grep against ADR-0007 forbidden list)
-- [ ] No runtime imports from admin-web/ to api/ (lint rule + test pass)
+- [x] All 11 acceptance criteria pass (verified by tests + manual smoke + green CI)
+- [x] All 12 task groups (T1–T12) checked off
+- [x] **api/**: `pnpm openapi:build && pnpm typecheck && pnpm lint && pnpm test:coverage` all green locally
+- [x] **admin-web/**: `pnpm openapi:client && pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm build && pnpm test:e2e && pnpm test:a11y && pnpm exec lhci autorun` all green locally
+- [x] `api/openapi.json` committed; re-running `pnpm openapi:build` produces byte-identical output
+- [x] `admin-web/src/api/generated/**` committed; re-running `pnpm openapi:client` produces byte-identical output
+- [x] ADR-0009 committed + `Accepted`; ADR-0007 amended if needed to list new OSS deps
+- [x] Coverage ≥ 80% lines/branches/functions/statements in both sub-projects (Vitest reports)
+- [x] WCAG 2.1 AA zero violations on `/` (axe-core unchanged from E01-S02)
+- [x] Lighthouse scores: Perf ≥ 90, A11y ≥ 95, BP ≥ 90, SEO ≥ 90 (unchanged from E01-S02)
+- [x] Landing page footer shows a real 8-char hex SHA + semver, proving the round-trip
+- [x] PR opened against `main`; both `api-ship.yml` and `admin-ship.yml` GREEN end-to-end
+- [x] 5-layer review gate complete: `.codex-review-passed` marker present, SHA is ancestor of HEAD, scope-diff clean
+- [x] PR description includes: summary, test plan, codegen-tool choice + rationale, axe + Lighthouse reports, deliberate-deviations list, link to ADR-0009
+- [x] `docs/stories/README.md` E01 row reflects stories count 6 + dev-days 5 + total 45 (done in the same commit as this story file)
+- [x] No new `.md` files beyond this story file, `docs/adr/0009-openapi-client-generator.md`, and README updates to api/ + admin-web/
+- [x] No paid-SaaS dependencies introduced (grep against ADR-0007 forbidden list)
+- [x] No runtime imports from admin-web/ to api/ (lint rule + test pass)
 
 ---
 

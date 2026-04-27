@@ -1,6 +1,6 @@
 # Story E01.S01: API skeleton — Fastify + Zod + Azure Functions local dev + `/v1/health` + green CI
 
-Status: ready-for-dev
+Status: merged
 
 > **Epic:** E01 — Foundations, CI & Design System (`docs/stories/README.md` §E01)
 > **Sprint:** S1 (wk 1–2) · **Estimated:** ≤ 1 dev-day · **Priority:** **P0 / blocks all other api/ stories**
@@ -101,60 +101,60 @@ This story turns the placeholder agency-baseline scaffold (`api/package.json` na
 
 > **TDD discipline (per CLAUDE.md):** for each task that introduces production code, write the failing test first, then make it pass, then refactor. Sub-tasks are ordered for that.
 
-- [ ] **T1 — Rename + metadata** (AC-8)
-  - [ ] T1.1 Rename `api/package.json` `name` to `"homeservices-api"`, set version `0.1.0`, add `engines`
-  - [ ] T1.2 Add `api/README.md` with the sections in AC-8
+- [x] **T1 — Rename + metadata** (AC-8)
+  - [x] T1.1 Rename `api/package.json` `name` to `"homeservices-api"`, set version `0.1.0`, add `engines`
+  - [x] T1.2 Add `api/README.md` with the sections in AC-8
 
-- [ ] **T2 — TypeScript + ESLint config (strict)** (AC-4)
-  - [ ] T2.1 Add `api/tsconfig.json` with the compiler options listed in AC-4
-  - [ ] T2.2 Add `api/eslint.config.mjs` (flat config) extending `@typescript-eslint/recommended-type-checked` + `eslint-plugin-import`; `--max-warnings 0`
-  - [ ] T2.3 Add `api/.editorconfig` (2 spaces, LF, UTF-8, trim trailing ws)
-  - [ ] T2.4 Add `api/.prettierrc.json` (single-quote, no-semi false, print-width 100, trailing-comma `all`)
+- [x] **T2 — TypeScript + ESLint config (strict)** (AC-4)
+  - [x] T2.1 Add `api/tsconfig.json` with the compiler options listed in AC-4
+  - [x] T2.2 Add `api/eslint.config.mjs` (flat config) extending `@typescript-eslint/recommended-type-checked` + `eslint-plugin-import`; `--max-warnings 0`
+  - [x] T2.3 Add `api/.editorconfig` (2 spaces, LF, UTF-8, trim trailing ws)
+  - [x] T2.4 Add `api/.prettierrc.json` (single-quote, no-semi false, print-width 100, trailing-comma `all`)
 
-- [ ] **T3 — Azure Functions runtime + host config** (AC-1, AC-9)
-  - [ ] T3.1 Add `api/host.json` (v2.0 schema, Functions runtime v4, `extensionBundle` v4.x, `logging.applicationInsights.samplingSettings.isEnabled: true`)
-  - [ ] T3.2 Add `api/local.settings.example.json` per AC-9
-  - [ ] T3.3 Verify `api/local.settings.json` is gitignored (root `.gitignore`); add `api/local.settings.json` and `api/.azure/` entries under an explicit `# api/` section if not present
-  - [ ] T3.4 Add `@azure/functions@^4` to dependencies; remove `tsup`-only build that doesn't emit Functions output, replace with `tsc --build` producing `dist/` matching Functions v4 layout
+- [x] **T3 — Azure Functions runtime + host config** (AC-1, AC-9)
+  - [x] T3.1 Add `api/host.json` (v2.0 schema, Functions runtime v4, `extensionBundle` v4.x, `logging.applicationInsights.samplingSettings.isEnabled: true`)
+  - [x] T3.2 Add `api/local.settings.example.json` per AC-9
+  - [x] T3.3 Verify `api/local.settings.json` is gitignored (root `.gitignore`); add `api/local.settings.json` and `api/.azure/` entries under an explicit `# api/` section if not present
+  - [x] T3.4 Add `@azure/functions@^4` to dependencies; remove `tsup`-only build that doesn't emit Functions output, replace with `tsc --build` producing `dist/` matching Functions v4 layout
 
-- [ ] **T4 — Shared Zod helper + version util** (AC-3, AC-5)
-  - [ ] T4.1 (RED) Write `tests/zod-pattern.test.ts` covering: valid parse, ZodError on invalid, error-to-HTTP conversion shape `{ error: "ValidationError", issues: [...] }`
-  - [ ] T4.2 (GREEN) Implement `src/shared/zod.ts` exporting `parseBody<T>(schema, raw): T` and `zodErrorToHttp(err: ZodError): { status: 400, body: {...} }`
-  - [ ] T4.3 (RED) Write `tests/version.test.ts` asserting `getVersionInfo()` returns `{version, commit}` from `package.json` + `process.env.GIT_SHA` (defaulting to `"dev"`)
-  - [ ] T4.4 (GREEN) Implement `src/shared/version.ts`
+- [x] **T4 — Shared Zod helper + version util** (AC-3, AC-5)
+  - [x] T4.1 (RED) Write `tests/zod-pattern.test.ts` covering: valid parse, ZodError on invalid, error-to-HTTP conversion shape `{ error: "ValidationError", issues: [...] }`
+  - [x] T4.2 (GREEN) Implement `src/shared/zod.ts` exporting `parseBody<T>(schema, raw): T` and `zodErrorToHttp(err: ZodError): { status: 400, body: {...} }`
+  - [x] T4.3 (RED) Write `tests/version.test.ts` asserting `getVersionInfo()` returns `{version, commit}` from `package.json` + `process.env.GIT_SHA` (defaulting to `"dev"`)
+  - [x] T4.4 (GREEN) Implement `src/shared/version.ts`
 
-- [ ] **T5 — `/v1/health` endpoint** (AC-1, AC-2)
-  - [ ] T5.1 Add `src/schemas/health.ts` exporting `HealthResponseSchema` (Zod, `.strict()`) per AC-2
-  - [ ] T5.2 (RED) Write `tests/health.test.ts` using `@azure/functions` test helpers OR the recommended `azure-functions-handler-tester` pattern (or directly invoke the handler function with a fabricated `HttpRequest`). Assert status 200, JSON content-type, schema-valid body, all required keys present.
-  - [ ] T5.3 (GREEN) Implement `src/functions/health.ts` registering an HTTP trigger via Azure Functions v4 programming model (`app.http("health", { methods: ["GET"], route: "v1/health", authLevel: "anonymous", handler: ... })`)
-  - [ ] T5.4 Verify locally: `pnpm dev` boots, `curl localhost:7071/api/v1/health` returns expected JSON
-  - [ ] T5.5 Confirm < 100 ms warm response (informal benchmark; capture in PR description; not a CI gate)
+- [x] **T5 — `/v1/health` endpoint** (AC-1, AC-2)
+  - [x] T5.1 Add `src/schemas/health.ts` exporting `HealthResponseSchema` (Zod, `.strict()`) per AC-2
+  - [x] T5.2 (RED) Write `tests/health.test.ts` using `@azure/functions` test helpers OR the recommended `azure-functions-handler-tester` pattern (or directly invoke the handler function with a fabricated `HttpRequest`). Assert status 200, JSON content-type, schema-valid body, all required keys present.
+  - [x] T5.3 (GREEN) Implement `src/functions/health.ts` registering an HTTP trigger via Azure Functions v4 programming model (`app.http("health", { methods: ["GET"], route: "v1/health", authLevel: "anonymous", handler: ... })`)
+  - [x] T5.4 Verify locally: `pnpm dev` boots, `curl localhost:7071/api/v1/health` returns expected JSON
+  - [x] T5.5 Confirm < 100 ms warm response (informal benchmark; capture in PR description; not a CI gate)
 
-- [ ] **T6 — Sentry + OTel safe no-op init** (AC-7)
-  - [ ] T6.1 Add `src/observability/sentry.ts` — `initSentry()` early-returns if `SENTRY_DSN` is unset; otherwise calls `Sentry.init({ dsn, tracesSampleRate: 0.1 })`
-  - [ ] T6.2 Add `src/observability/otel.ts` — `initOtel()` early-returns if `OTEL_EXPORTER_OTLP_ENDPOINT` is unset; otherwise registers auto-instrumentations + OTLP exporter
-  - [ ] T6.3 Wire both in a `src/bootstrap.ts` imported at the top of every function file (single import, no per-handler boilerplate)
-  - [ ] T6.4 Test (`tests/observability.test.ts`): no env vars → init returns without throwing AND no Sentry/OTel network calls happen (mock the SDKs or assert `Sentry.isInitialized() === false`)
+- [x] **T6 — Sentry + OTel safe no-op init** (AC-7)
+  - [x] T6.1 Add `src/observability/sentry.ts` — `initSentry()` early-returns if `SENTRY_DSN` is unset; otherwise calls `Sentry.init({ dsn, tracesSampleRate: 0.1 })`
+  - [x] T6.2 Add `src/observability/otel.ts` — `initOtel()` early-returns if `OTEL_EXPORTER_OTLP_ENDPOINT` is unset; otherwise registers auto-instrumentations + OTLP exporter
+  - [x] T6.3 Wire both in a `src/bootstrap.ts` imported at the top of every function file (single import, no per-handler boilerplate)
+  - [x] T6.4 Test (`tests/observability.test.ts`): no env vars → init returns without throwing AND no Sentry/OTel network calls happen (mock the SDKs or assert `Sentry.isInitialized() === false`)
 
-- [ ] **T7 — Vitest config + coverage thresholds** (AC-5)
-  - [ ] T7.1 Add `api/vitest.config.ts` with `coverage: { provider: "v8", thresholds: { lines: 80, branches: 80, functions: 80, statements: 80 }, exclude: ["**/*.config.*", "src/bootstrap.ts", "src/observability/**", "tests/**"] }`
-  - [ ] T7.2 Confirm `pnpm test:coverage` passes locally with all thresholds met
-  - [ ] T7.3 Add `coverage/` to `.gitignore` if not already
+- [x] **T7 — Vitest config + coverage thresholds** (AC-5)
+  - [x] T7.1 Add `api/vitest.config.ts` with `coverage: { provider: "v8", thresholds: { lines: 80, branches: 80, functions: 80, statements: 80 }, exclude: ["**/*.config.*", "src/bootstrap.ts", "src/observability/**", "tests/**"] }`
+  - [x] T7.2 Confirm `pnpm test:coverage` passes locally with all thresholds met
+  - [x] T7.3 Add `coverage/` to `.gitignore` if not already
 
-- [ ] **T8 — Fix `ship.yml`** (AC-6)
-  - [ ] T8.1 Remove the `services: postgres:` block in `api/.github/workflows/ship.yml` (we use Cosmos per ADR-0003)
-  - [ ] T8.2 Verify the BMAD-gate step paths resolve from the **repo root** (not from `api/`); if the workflow is triggered with `paths: [api/**]` filter, ensure `working-directory: api` is set for `pnpm install/typecheck/lint/test` while the BMAD-gate `test -f` lookups continue to use root-relative paths
-  - [ ] T8.3 Add `paths` filter on `pull_request` and `push` so the api workflow only runs when `api/**` or this workflow file changes (avoid wasted CI minutes on customer-app/admin-web/technician-app changes)
-  - [ ] T8.4 Confirm Semgrep step uses `p/typescript p/owasp-top-ten p/nodejs p/secrets` (already correct in baseline; just verify)
-  - [ ] T8.5 Push branch + open draft PR to confirm CI is green; iterate until all steps pass
+- [x] **T8 — Fix `ship.yml`** (AC-6)
+  - [x] T8.1 Remove the `services: postgres:` block in `api/.github/workflows/ship.yml` (we use Cosmos per ADR-0003)
+  - [x] T8.2 Verify the BMAD-gate step paths resolve from the **repo root** (not from `api/`); if the workflow is triggered with `paths: [api/**]` filter, ensure `working-directory: api` is set for `pnpm install/typecheck/lint/test` while the BMAD-gate `test -f` lookups continue to use root-relative paths
+  - [x] T8.3 Add `paths` filter on `pull_request` and `push` so the api workflow only runs when `api/**` or this workflow file changes (avoid wasted CI minutes on customer-app/admin-web/technician-app changes)
+  - [x] T8.4 Confirm Semgrep step uses `p/typescript p/owasp-top-ten p/nodejs p/secrets` (already correct in baseline; just verify)
+  - [x] T8.5 Push branch + open draft PR to confirm CI is green; iterate until all steps pass
 
-- [ ] **T9 — Pre-push 5-layer review gate** (per CLAUDE.md §Per-Story Protocol)
-  - [ ] T9.1 `/code-review` (cheap lint pass — Claude)
-  - [ ] T9.2 `/security-review`
-  - [ ] T9.3 `/codex-review-gate` — **authoritative**; must produce `.codex-review-passed` keyed to current commit SHA
-  - [ ] T9.4 `/bmad-code-review` (Blind Hunter + Edge Case Hunter + Acceptance Auditor)
-  - [ ] T9.5 `/superpowers:requesting-code-review`
-  - [ ] T9.6 Only after all 5 layers, `git push`
+- [x] **T9 — Pre-push 5-layer review gate** (per CLAUDE.md §Per-Story Protocol)
+  - [x] T9.1 `/code-review` (cheap lint pass — Claude)
+  - [x] T9.2 `/security-review`
+  - [x] T9.3 `/codex-review-gate` — **authoritative**; must produce `.codex-review-passed` keyed to current commit SHA
+  - [x] T9.4 `/bmad-code-review` (Blind Hunter + Edge Case Hunter + Acceptance Auditor)
+  - [x] T9.5 `/superpowers:requesting-code-review`
+  - [x] T9.6 Only after all 5 layers, `git push`
 
 ---
 
@@ -362,17 +362,17 @@ This sets the latency floor for all future endpoints. Real perf SLOs (NFR-P-1 < 
 
 ## Definition of Done
 
-- [ ] All 10 acceptance criteria pass (verified by tests + manual `func start` smoke + green CI)
-- [ ] All 9 task groups (T1–T9) checked off
-- [ ] `pnpm typecheck && pnpm lint && pnpm test:coverage` all green locally
-- [ ] `func start` boots locally; `curl localhost:7071/api/v1/health` returns valid JSON
-- [ ] Coverage ≥ 80% on lines/branches/functions/statements (Vitest report)
-- [ ] PR opened against `main`; `ship.yml` is GREEN end-to-end
-- [ ] 5-layer review gate complete: `.codex-review-passed` marker present and matches HEAD SHA
-- [ ] PR description includes: summary, test plan, screenshot of green CI, perf-warm response time
-- [ ] `docs/stories/README.md` Phase 5 Status Tracker row for E01 marked as "Started: ✅"
-- [ ] No new `.md` files created beyond this story file and `api/README.md`
-- [ ] No paid-SaaS dependencies introduced (verified by `grep` against ADR-0007 forbidden list)
+- [x] All 10 acceptance criteria pass (verified by tests + manual `func start` smoke + green CI)
+- [x] All 9 task groups (T1–T9) checked off
+- [x] `pnpm typecheck && pnpm lint && pnpm test:coverage` all green locally
+- [x] `func start` boots locally; `curl localhost:7071/api/v1/health` returns valid JSON
+- [x] Coverage ≥ 80% on lines/branches/functions/statements (Vitest report)
+- [x] PR opened against `main`; `ship.yml` is GREEN end-to-end
+- [x] 5-layer review gate complete: `.codex-review-passed` marker present and matches HEAD SHA
+- [x] PR description includes: summary, test plan, screenshot of green CI, perf-warm response time
+- [x] `docs/stories/README.md` Phase 5 Status Tracker row for E01 marked as "Started: ✅"
+- [x] No new `.md` files created beyond this story file and `api/README.md`
+- [x] No paid-SaaS dependencies introduced (verified by `grep` against ADR-0007 forbidden list)
 
 ---
 

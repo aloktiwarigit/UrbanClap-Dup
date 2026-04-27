@@ -1,6 +1,6 @@
 # Story E01.S02: Admin web skeleton — Next.js 15 + Tailwind + Storybook + landing page + green CI
 
-Status: ready-for-dev
+Status: merged
 
 > **Epic:** E01 — Foundations, CI & Design System (`docs/stories/README.md` §E01)
 > **Sprint:** S1 (wk 1–2) · **Estimated:** ≤ 1 dev-day · **Priority:** **P0 / blocks all other `admin-web/` stories (E09-S01..S06, E10-S04) and UX-driven design-system work (E01-S04, E01-S05)**
@@ -123,78 +123,78 @@ It also applies the two disaster fixes already proven in E01-S01 (workflow-at-wr
 
 > **TDD discipline (per CLAUDE.md):** for each task that introduces production code, write the failing test first, then make it pass, then refactor. Sub-tasks are ordered for that.
 
-- [ ] **T1 — Rename + metadata** (AC-10)
-  - [ ] T1.1 Rename `admin-web/package.json` `name` to `"homeservices-admin"`; set `version` `0.1.0`; add `engines`; add `packageManager: "pnpm@9.15.4"`
-  - [ ] T1.2 Add `admin-web/.nvmrc` containing `22`
-  - [ ] T1.3 Add `admin-web/.editorconfig`, `admin-web/.prettierrc.json`, `admin-web/.prettierignore` (mirror api/ shapes)
-  - [ ] T1.4 Create `admin-web/README.md` with the sections in AC-10
-  - [ ] T1.5 Create `admin-web/.env.example` with the stub keys in AC-10; verify `admin-web/.env.local` is gitignored (add to root `.gitignore` under `# admin-web/` block if missing)
+- [x] **T1 — Rename + metadata** (AC-10)
+  - [x] T1.1 Rename `admin-web/package.json` `name` to `"homeservices-admin"`; set `version` `0.1.0`; add `engines`; add `packageManager: "pnpm@9.15.4"`
+  - [x] T1.2 Add `admin-web/.nvmrc` containing `22`
+  - [x] T1.3 Add `admin-web/.editorconfig`, `admin-web/.prettierrc.json`, `admin-web/.prettierignore` (mirror api/ shapes)
+  - [x] T1.4 Create `admin-web/README.md` with the sections in AC-10
+  - [x] T1.5 Create `admin-web/.env.example` with the stub keys in AC-10; verify `admin-web/.env.local` is gitignored (add to root `.gitignore` under `# admin-web/` block if missing)
 
-- [ ] **T2 — TypeScript strict config** (AC-6)
-  - [ ] T2.1 Replace `admin-web/tsconfig.json` with strict + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` + `moduleResolution: "Bundler"` + `paths: { "@/*": ["./src/*"] }` + `include: ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"]`
-  - [ ] T2.2 Add `admin-web/next-env.d.ts` if not already present (Next.js auto-generates; check)
+- [x] **T2 — TypeScript strict config** (AC-6)
+  - [x] T2.1 Replace `admin-web/tsconfig.json` with strict + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` + `moduleResolution: "Bundler"` + `paths: { "@/*": ["./src/*"] }` + `include: ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"]`
+  - [x] T2.2 Add `admin-web/next-env.d.ts` if not already present (Next.js auto-generates; check)
 
-- [ ] **T3 — ESLint 9 flat config** (AC-6)
-  - [ ] T3.1 Add `admin-web/eslint.config.mjs` extending `next/core-web-vitals`, `@typescript-eslint/recommended-type-checked`, `eslint-plugin-jsx-a11y` with `--max-warnings 0`
-  - [ ] T3.2 Update `pnpm lint` script to `next lint && eslint . --max-warnings 0` (keep both — Next's own lint catches framework issues the flat config doesn't)
+- [x] **T3 — ESLint 9 flat config** (AC-6)
+  - [x] T3.1 Add `admin-web/eslint.config.mjs` extending `next/core-web-vitals`, `@typescript-eslint/recommended-type-checked`, `eslint-plugin-jsx-a11y` with `--max-warnings 0`
+  - [x] T3.2 Update `pnpm lint` script to `next lint && eslint . --max-warnings 0` (keep both — Next's own lint catches framework issues the flat config doesn't)
 
-- [ ] **T4 — Tailwind v4 + design tokens** (AC-4)
-  - [ ] T4.1 Add Tailwind v4 deps (`tailwindcss@^4`, `@tailwindcss/postcss`, `postcss`, `autoprefixer`) to `devDependencies`
-  - [ ] T4.2 Create `admin-web/postcss.config.mjs` with the `@tailwindcss/postcss` plugin
-  - [ ] T4.3 Create `admin-web/app/globals.css` importing Tailwind layers (`@import "tailwindcss"`) and defining CSS custom properties for foundation tokens (color, type, space, radii, elevation, motion) per UX §5 + architecture §6.4
-  - [ ] T4.4 Ensure `admin-web/app/layout.tsx` imports `./globals.css` and sets `<html lang="en" className={...}>` with a theme class toggle hook
-  - [ ] T4.5 (RED) Write `tests/tokens.test.tsx` asserting a token CSS variable is computed on the document element
-  - [ ] T4.6 (GREEN) Wire the tokens — they should already be there from T4.3; this test guards future regressions
+- [x] **T4 — Tailwind v4 + design tokens** (AC-4)
+  - [x] T4.1 Add Tailwind v4 deps (`tailwindcss@^4`, `@tailwindcss/postcss`, `postcss`, `autoprefixer`) to `devDependencies`
+  - [x] T4.2 Create `admin-web/postcss.config.mjs` with the `@tailwindcss/postcss` plugin
+  - [x] T4.3 Create `admin-web/app/globals.css` importing Tailwind layers (`@import "tailwindcss"`) and defining CSS custom properties for foundation tokens (color, type, space, radii, elevation, motion) per UX §5 + architecture §6.4
+  - [x] T4.4 Ensure `admin-web/app/layout.tsx` imports `./globals.css` and sets `<html lang="en" className={...}>` with a theme class toggle hook
+  - [x] T4.5 (RED) Write `tests/tokens.test.tsx` asserting a token CSS variable is computed on the document element
+  - [x] T4.6 (GREEN) Wire the tokens — they should already be there from T4.3; this test guards future regressions
 
-- [ ] **T5 — Landing page** (AC-1, AC-2, AC-4)
-  - [ ] T5.1 (RED) Write `tests/landing.page.test.tsx` (Vitest + React Testing Library) asserting brand + tagline + CTA + footer-with-build-info rendered
-  - [ ] T5.2 (GREEN) Implement `admin-web/app/page.tsx` as a React Server Component (RSC). Use Tailwind tokens only (no hex, no px magic numbers). Include a semantic `<header>`, `<main>`, `<footer>`. The CTA is a `<Link href="/login">` — `/login` itself is a stub route (T5.4) returning a 501 Coming Soon message.
-  - [ ] T5.3 Add `admin-web/src/lib/build-info.ts` exporting `getBuildInfo()` reading `NEXT_PUBLIC_GIT_SHA` (falls back to `"dev"`) + `package.json` version via Next's compile-time `process.env` inlining (NOT `readFileSync` — there's no `dist/` layout in Next.js; use `NEXT_PUBLIC_APP_VERSION` env injected at build via `next.config.ts` `env` block)
-  - [ ] T5.4 Add `admin-web/app/login/page.tsx` — minimal 501 placeholder ("Owner sign-in coming in E02-S04"). RSC, token-only styling, linked from landing CTA.
-  - [ ] T5.5 (RED + GREEN) Add `tests/e2e/landing.spec.ts` — Playwright test for the happy path
+- [x] **T5 — Landing page** (AC-1, AC-2, AC-4)
+  - [x] T5.1 (RED) Write `tests/landing.page.test.tsx` (Vitest + React Testing Library) asserting brand + tagline + CTA + footer-with-build-info rendered
+  - [x] T5.2 (GREEN) Implement `admin-web/app/page.tsx` as a React Server Component (RSC). Use Tailwind tokens only (no hex, no px magic numbers). Include a semantic `<header>`, `<main>`, `<footer>`. The CTA is a `<Link href="/login">` — `/login` itself is a stub route (T5.4) returning a 501 Coming Soon message.
+  - [x] T5.3 Add `admin-web/src/lib/build-info.ts` exporting `getBuildInfo()` reading `NEXT_PUBLIC_GIT_SHA` (falls back to `"dev"`) + `package.json` version via Next's compile-time `process.env` inlining (NOT `readFileSync` — there's no `dist/` layout in Next.js; use `NEXT_PUBLIC_APP_VERSION` env injected at build via `next.config.ts` `env` block)
+  - [x] T5.4 Add `admin-web/app/login/page.tsx` — minimal 501 placeholder ("Owner sign-in coming in E02-S04"). RSC, token-only styling, linked from landing CTA.
+  - [x] T5.5 (RED + GREEN) Add `tests/e2e/landing.spec.ts` — Playwright test for the happy path
 
-- [ ] **T6 — Sentry wiring (no-op-when-unset) + OTel deferral** (AC-9)
-  - [ ] T6.1 Delete `@opentelemetry/api` and `@opentelemetry/sdk-node` from `admin-web/package.json` dependencies (remove after `pnpm install` regenerates the lockfile)
-  - [ ] T6.2 Rewrite `admin-web/src/instrumentation.ts` as: read `SENTRY_DSN`; if unset, early return; else import and call `Sentry.init({ dsn, tracesSampleRate: 0.1 })`. Add a TODO comment pointing to the future OTel story (mirror the api/ `bootstrap.ts` pattern).
-  - [ ] T6.3 Add `admin-web/src/sentry.client.config.ts` — init client SDK the same way, reading `NEXT_PUBLIC_SENTRY_DSN`
-  - [ ] T6.4 Add `admin-web/src/sentry.server.config.ts` for server-side runtime (re-reads `SENTRY_DSN`)
-  - [ ] T6.5 (RED + GREEN) `tests/sentry-init.test.ts` — mock `@sentry/nextjs`; assert init not called when DSN unset; assert init called once with tracesSampleRate=0.1 when set
+- [x] **T6 — Sentry wiring (no-op-when-unset) + OTel deferral** (AC-9)
+  - [x] T6.1 Delete `@opentelemetry/api` and `@opentelemetry/sdk-node` from `admin-web/package.json` dependencies (remove after `pnpm install` regenerates the lockfile)
+  - [x] T6.2 Rewrite `admin-web/src/instrumentation.ts` as: read `SENTRY_DSN`; if unset, early return; else import and call `Sentry.init({ dsn, tracesSampleRate: 0.1 })`. Add a TODO comment pointing to the future OTel story (mirror the api/ `bootstrap.ts` pattern).
+  - [x] T6.3 Add `admin-web/src/sentry.client.config.ts` — init client SDK the same way, reading `NEXT_PUBLIC_SENTRY_DSN`
+  - [x] T6.4 Add `admin-web/src/sentry.server.config.ts` for server-side runtime (re-reads `SENTRY_DSN`)
+  - [x] T6.5 (RED + GREEN) `tests/sentry-init.test.ts` — mock `@sentry/nextjs`; assert init not called when DSN unset; assert init called once with tracesSampleRate=0.1 when set
 
-- [ ] **T7 — Vitest + Playwright + coverage** (AC-7)
-  - [ ] T7.1 Add/update `admin-web/vitest.config.ts` with React Testing Library setup + v8 coverage thresholds 80% on lines/branches/functions/statements
-  - [ ] T7.2 Confirm `admin-web/playwright.config.ts` includes a11y project (`@axe-core/playwright`) and default (Chromium) project; both run against `http://localhost:3000`
-  - [ ] T7.3 Write `tests/a11y/landing.a11y.spec.ts` — Playwright + axe-core scanning `/` for WCAG 2.1 AA violations; fail on any moderate/serious/critical
-  - [ ] T7.4 Add `coverage/` to `admin-web/.gitignore`
+- [x] **T7 — Vitest + Playwright + coverage** (AC-7)
+  - [x] T7.1 Add/update `admin-web/vitest.config.ts` with React Testing Library setup + v8 coverage thresholds 80% on lines/branches/functions/statements
+  - [x] T7.2 Confirm `admin-web/playwright.config.ts` includes a11y project (`@axe-core/playwright`) and default (Chromium) project; both run against `http://localhost:3000`
+  - [x] T7.3 Write `tests/a11y/landing.a11y.spec.ts` — Playwright + axe-core scanning `/` for WCAG 2.1 AA violations; fail on any moderate/serious/critical
+  - [x] T7.4 Add `coverage/` to `admin-web/.gitignore`
 
-- [ ] **T8 — Storybook with seed stories** (AC-5)
-  - [ ] T8.1 Verify `admin-web/.storybook/main.ts` references `@storybook/nextjs` framework; ensure it picks up `src/components/**/*.stories.tsx`
-  - [ ] T8.2 Create `admin-web/src/components/Button.tsx` — a minimal token-styled button with `variant: 'primary' | 'secondary' | 'ghost'` and `size: 'sm' | 'md' | 'lg'`
-  - [ ] T8.3 Create `admin-web/src/components/Button.stories.tsx` with the variants × sizes × states matrix
-  - [ ] T8.4 Create `admin-web/src/components/TokenSwatch.stories.tsx` — renders the full color palette (server-side static)
-  - [ ] T8.5 Create `admin-web/src/components/Typography.stories.tsx` — renders all text size tokens
-  - [ ] T8.6 Confirm `pnpm storybook` boots locally; `pnpm storybook:build` produces `storybook-static/`
+- [x] **T8 — Storybook with seed stories** (AC-5)
+  - [x] T8.1 Verify `admin-web/.storybook/main.ts` references `@storybook/nextjs` framework; ensure it picks up `src/components/**/*.stories.tsx`
+  - [x] T8.2 Create `admin-web/src/components/Button.tsx` — a minimal token-styled button with `variant: 'primary' | 'secondary' | 'ghost'` and `size: 'sm' | 'md' | 'lg'`
+  - [x] T8.3 Create `admin-web/src/components/Button.stories.tsx` with the variants × sizes × states matrix
+  - [x] T8.4 Create `admin-web/src/components/TokenSwatch.stories.tsx` — renders the full color palette (server-side static)
+  - [x] T8.5 Create `admin-web/src/components/Typography.stories.tsx` — renders all text size tokens
+  - [x] T8.6 Confirm `pnpm storybook` boots locally; `pnpm storybook:build` produces `storybook-static/`
 
-- [ ] **T9 — Lighthouse CI budgets** (AC-3)
-  - [ ] T9.1 Update `admin-web/lighthouserc.js` with category-score assertions per AC-3 (Performance ≥ 90, Accessibility ≥ 95, Best-Practices ≥ 90, SEO ≥ 90)
-  - [ ] T9.2 Add `settings.numberOfRuns: 3` and `assert.assertions.*` blocks for `categories:*:minScore`
-  - [ ] T9.3 Verify `pnpm exec lhci autorun` works locally against `pnpm start`
+- [x] **T9 — Lighthouse CI budgets** (AC-3)
+  - [x] T9.1 Update `admin-web/lighthouserc.js` with category-score assertions per AC-3 (Performance ≥ 90, Accessibility ≥ 95, Best-Practices ≥ 90, SEO ≥ 90)
+  - [x] T9.2 Add `settings.numberOfRuns: 3` and `assert.assertions.*` blocks for `categories:*:minScore`
+  - [x] T9.3 Verify `pnpm exec lhci autorun` works locally against `pnpm start`
 
-- [ ] **T10 — Move ship.yml + fix paths filter + codex-marker ancestor-check** (AC-8)
-  - [ ] T10.1 `git mv admin-web/.github/workflows/ship.yml .github/workflows/admin-ship.yml` (apply the lesson from E01-S01 C1 finding — GitHub Actions only discovers workflows at the repo-root `.github/workflows/`)
-  - [ ] T10.2 Rewrite `.github/workflows/admin-ship.yml` name to `"admin-ship"`; add `paths:` filter `['admin-web/**', '.github/workflows/admin-ship.yml']` on both `pull_request` and `push`
-  - [ ] T10.3 Add `defaults.run.working-directory: admin-web` at job scope
-  - [ ] T10.4 Add `env: { GIT_SHA: ${{ github.sha }}, NEXT_PUBLIC_GIT_SHA: ${{ github.sha }} }` at job scope
-  - [ ] T10.5 Wire all steps: checkout, pnpm/action-setup, actions/setup-node (with `cache-dependency-path: admin-web/pnpm-lock.yaml`), BMAD-gate (hard-fail), pnpm install, typecheck, lint, test:coverage, build, semgrep, e2e-and-a11y job (Playwright + axe-core), Lighthouse CI, storybook:build, pnpm audit (`|| true` inline-commented same as api/)
-  - [ ] T10.6 Replace the codex-review-marker step with the **ancestor-check + scope-diff** pattern from `.github/workflows/api-ship.yml` (verbatim adaptation — marker SHA must be ancestor of HEAD; diff since marker limited to `.codex-review-passed` + `docs/reviews/`)
-  - [ ] T10.7 Delete the obsolete `admin-web/.github/` directory after the move; verify `admin-web/.github/workflows/ship.yml` no longer exists
+- [x] **T10 — Move ship.yml + fix paths filter + codex-marker ancestor-check** (AC-8)
+  - [x] T10.1 `git mv admin-web/.github/workflows/ship.yml .github/workflows/admin-ship.yml` (apply the lesson from E01-S01 C1 finding — GitHub Actions only discovers workflows at the repo-root `.github/workflows/`)
+  - [x] T10.2 Rewrite `.github/workflows/admin-ship.yml` name to `"admin-ship"`; add `paths:` filter `['admin-web/**', '.github/workflows/admin-ship.yml']` on both `pull_request` and `push`
+  - [x] T10.3 Add `defaults.run.working-directory: admin-web` at job scope
+  - [x] T10.4 Add `env: { GIT_SHA: ${{ github.sha }}, NEXT_PUBLIC_GIT_SHA: ${{ github.sha }} }` at job scope
+  - [x] T10.5 Wire all steps: checkout, pnpm/action-setup, actions/setup-node (with `cache-dependency-path: admin-web/pnpm-lock.yaml`), BMAD-gate (hard-fail), pnpm install, typecheck, lint, test:coverage, build, semgrep, e2e-and-a11y job (Playwright + axe-core), Lighthouse CI, storybook:build, pnpm audit (`|| true` inline-commented same as api/)
+  - [x] T10.6 Replace the codex-review-marker step with the **ancestor-check + scope-diff** pattern from `.github/workflows/api-ship.yml` (verbatim adaptation — marker SHA must be ancestor of HEAD; diff since marker limited to `.codex-review-passed` + `docs/reviews/`)
+  - [x] T10.7 Delete the obsolete `admin-web/.github/` directory after the move; verify `admin-web/.github/workflows/ship.yml` no longer exists
 
-- [ ] **T11 — Pre-push 5-layer review gate** (per CLAUDE.md §Per-Story Protocol)
-  - [ ] T11.1 `/code-review` (lint + stylistic — Claude)
-  - [ ] T11.2 `/security-review`
-  - [ ] T11.3 `/codex-review-gate` — **authoritative**; must produce `.codex-review-passed` keyed to current commit SHA
-  - [ ] T11.4 `/bmad-code-review` (Blind Hunter + Edge Case Hunter + Acceptance Auditor)
-  - [ ] T11.5 `/superpowers:requesting-code-review`
-  - [ ] T11.6 Only after all 5 layers, `git push`
+- [x] **T11 — Pre-push 5-layer review gate** (per CLAUDE.md §Per-Story Protocol)
+  - [x] T11.1 `/code-review` (lint + stylistic — Claude)
+  - [x] T11.2 `/security-review`
+  - [x] T11.3 `/codex-review-gate` — **authoritative**; must produce `.codex-review-passed` keyed to current commit SHA
+  - [x] T11.4 `/bmad-code-review` (Blind Hunter + Edge Case Hunter + Acceptance Auditor)
+  - [x] T11.5 `/superpowers:requesting-code-review`
+  - [x] T11.6 Only after all 5 layers, `git push`
 
 ---
 
@@ -434,20 +434,20 @@ All enforced in CI via `lhci autorun` + assertions in `lighthouserc.js`.
 
 ## Definition of Done
 
-- [ ] All 11 acceptance criteria pass (verified by tests + manual smoke + green CI)
-- [ ] All 11 task groups (T1–T11) checked off
-- [ ] `pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm build && pnpm test:e2e && pnpm test:a11y && pnpm exec lhci autorun && pnpm storybook:build` all green locally
-- [ ] `pnpm dev` boots; `http://localhost:3000` serves the landing page; Storybook serves at `http://localhost:6006`
-- [ ] Coverage ≥ 80% on lines/branches/functions/statements (Vitest report)
-- [ ] WCAG 2.1 AA zero violations on `/` and `/login` (axe-core)
-- [ ] Lighthouse scores: Perf ≥ 90, A11y ≥ 95, BP ≥ 90, SEO ≥ 90
-- [ ] PR opened against `main`; `.github/workflows/admin-ship.yml` is GREEN end-to-end
-- [ ] 5-layer review gate complete: `.codex-review-passed` marker present and its SHA is an ancestor of HEAD with scope-diff clean
-- [ ] PR description includes: summary, test plan, axe report screenshot, Lighthouse run summary, deliberate-deviations list
-- [ ] `docs/stories/README.md` Phase 5 Status Tracker row for E01 marked as "Started: ✅" (may already be set from E01-S01)
-- [ ] `admin-web/.github/workflows/ship.yml` deleted; `.github/workflows/admin-ship.yml` present and correct
-- [ ] No new `.md` files created beyond this story file and `admin-web/README.md`
-- [ ] No paid-SaaS dependencies introduced (verified by grepping against ADR-0007 forbidden list)
+- [x] All 11 acceptance criteria pass (verified by tests + manual smoke + green CI)
+- [x] All 11 task groups (T1–T11) checked off
+- [x] `pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm build && pnpm test:e2e && pnpm test:a11y && pnpm exec lhci autorun && pnpm storybook:build` all green locally
+- [x] `pnpm dev` boots; `http://localhost:3000` serves the landing page; Storybook serves at `http://localhost:6006`
+- [x] Coverage ≥ 80% on lines/branches/functions/statements (Vitest report)
+- [x] WCAG 2.1 AA zero violations on `/` and `/login` (axe-core)
+- [x] Lighthouse scores: Perf ≥ 90, A11y ≥ 95, BP ≥ 90, SEO ≥ 90
+- [x] PR opened against `main`; `.github/workflows/admin-ship.yml` is GREEN end-to-end
+- [x] 5-layer review gate complete: `.codex-review-passed` marker present and its SHA is an ancestor of HEAD with scope-diff clean
+- [x] PR description includes: summary, test plan, axe report screenshot, Lighthouse run summary, deliberate-deviations list
+- [x] `docs/stories/README.md` Phase 5 Status Tracker row for E01 marked as "Started: ✅" (may already be set from E01-S01)
+- [x] `admin-web/.github/workflows/ship.yml` deleted; `.github/workflows/admin-ship.yml` present and correct
+- [x] No new `.md` files created beyond this story file and `admin-web/README.md`
+- [x] No paid-SaaS dependencies introduced (verified by grepping against ADR-0007 forbidden list)
 
 ---
 

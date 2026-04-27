@@ -1,6 +1,6 @@
 # Story E06-S05: Customer-facing auto-generated PDF service report
 
-Status: ready-for-dev
+Status: merged
 
 > **Epic:** E06 — Service Execution + Payment (`docs/stories/README.md` §E06)
 > **Sprint:** S3 (wk 5–6) · **Estimated:** ≤ 1 dev-day · **Priority:** P1
@@ -59,37 +59,37 @@ The generated PDF must include:
 
 > TDD: test file committed before implementation file per CLAUDE.md.
 
-- [ ] **T1 — Schema + env vars (no tests needed — pure type changes)**
-  - [ ] T1.1 Add `completedAt?: z.string()` to `BookingDocSchema` in `api/src/schemas/booking.ts`
-  - [ ] T1.2 Set `completedAt` in `transitionStatusHandler` (`active-job.ts`) on COMPLETED transition
-  - [ ] T1.3 Create `api/src/schemas/report.ts` — `ReportData` interface + `PhotoSet` interface
-  - [ ] T1.4 Verify `COSMOS_CONNECTION_STRING` is in `local.settings.example.json` (added by E06-S04)
+- [x] **T1 — Schema + env vars (no tests needed — pure type changes)**
+  - [x] T1.1 Add `completedAt?: z.string()` to `BookingDocSchema` in `api/src/schemas/booking.ts`
+  - [x] T1.2 Set `completedAt` in `transitionStatusHandler` (`active-job.ts`) on COMPLETED transition
+  - [x] T1.3 Create `api/src/schemas/report.ts` — `ReportData` interface + `PhotoSet` interface
+  - [x] T1.4 Verify `COSMOS_CONNECTION_STRING` is in `local.settings.example.json` (added by E06-S04)
 
-- [ ] **T2 — Firebase Storage helpers + technician-repository extension (no TDD — thin infra wrappers)**
-  - [ ] T2.1 Add `checkStorageFileExists()`, `uploadBufferToStorage()`, `downloadStorageFile()` to `api/src/firebase/admin.ts`
-  - [ ] T2.2 Add `getTechnicianForReport()` to `api/src/cosmos/technician-repository.ts`
+- [x] **T2 — Firebase Storage helpers + technician-repository extension (no TDD — thin infra wrappers)**
+  - [x] T2.1 Add `checkStorageFileExists()`, `uploadBufferToStorage()`, `downloadStorageFile()` to `api/src/firebase/admin.ts`
+  - [x] T2.2 Add `getTechnicianForReport()` to `api/src/cosmos/technician-repository.ts`
 
-- [ ] **T3 — Data assembly service (TDD)**
-  - [ ] T3.1 (RED) Write `api/tests/unit/report-data.service.test.ts`
-  - [ ] T3.2 (GREEN) Implement `api/src/services/report-data.service.ts`
-  - [ ] T3.3 Commit
+- [x] **T3 — Data assembly service (TDD)**
+  - [x] T3.1 (RED) Write `api/tests/unit/report-data.service.test.ts`
+  - [x] T3.2 (GREEN) Implement `api/src/services/report-data.service.ts`
+  - [x] T3.3 Commit
 
-- [ ] **T4 — PDF generator (TDD)**
-  - [ ] T4.1 Install `pdfkit` + `@types/pdfkit`
-  - [ ] T4.2 (RED) Write `api/tests/unit/pdf-generator.service.test.ts`
-  - [ ] T4.3 (GREEN) Implement `api/src/services/pdf-generator.service.ts`
-  - [ ] T4.4 Commit
+- [x] **T4 — PDF generator (TDD)**
+  - [x] T4.1 Install `pdfkit` + `@types/pdfkit`
+  - [x] T4.2 (RED) Write `api/tests/unit/pdf-generator.service.test.ts`
+  - [x] T4.3 (GREEN) Implement `api/src/services/pdf-generator.service.ts`
+  - [x] T4.4 Commit
 
-- [ ] **T5 — ACS email service + change-feed trigger (TDD)**
-  - [ ] T5.1 Create `api/src/services/acs-email.service.ts`
-  - [ ] T5.2 (RED) Write `api/tests/unit/trigger-service-report.test.ts`
-  - [ ] T5.3 (GREEN) Implement `api/src/functions/trigger-service-report.ts`
-  - [ ] T5.4 Full test suite + coverage
-  - [ ] T5.5 Commit
+- [x] **T5 — ACS email service + change-feed trigger (TDD)**
+  - [x] T5.1 Create `api/src/services/acs-email.service.ts`
+  - [x] T5.2 (RED) Write `api/tests/unit/trigger-service-report.test.ts`
+  - [x] T5.3 (GREEN) Implement `api/src/functions/trigger-service-report.ts`
+  - [x] T5.4 Full test suite + coverage
+  - [x] T5.5 Commit
 
-- [ ] **T6 — Pre-Codex smoke gate + review**
-  - [ ] T6.1 `bash tools/pre-codex-smoke-api.sh` — must exit 0
-  - [ ] T6.2 `codex review --base main` — authoritative gate
+- [x] **T6 — Pre-Codex smoke gate + review**
+  - [x] T6.1 `bash tools/pre-codex-smoke-api.sh` — must exit 0
+  - [x] T6.2 `codex review --base main` — authoritative gate
 
 ---
 
@@ -117,11 +117,11 @@ Add `"pdfkit"` to `compilerOptions.types` is not needed — `@types/pdfkit` prov
 
 ## Definition of Done
 
-- [ ] `pnpm typecheck && pnpm lint && pnpm test:coverage` green
-- [ ] All AC pass (test assertions, not manual)
-- [ ] Pre-Codex smoke gate exits 0
-- [ ] `.codex-review-passed` marker present
-- [ ] PR opened; CI green on `main`
+- [x] `pnpm typecheck && pnpm lint && pnpm test:coverage` green
+- [x] All AC pass (test assertions, not manual)
+- [x] Pre-Codex smoke gate exits 0
+- [x] `.codex-review-passed` marker present
+- [x] PR opened; CI green on `main`
 
 ---
 

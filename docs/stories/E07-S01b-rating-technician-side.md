@@ -1,6 +1,6 @@
 # Story E07-S01b: Rating flow — technician side
 
-Status: ready-for-dev
+Status: merged
 
 > **Epic:** E07 — Ratings, Complaints & Safety (`docs/stories/README.md` §E07)
 > **Sprint:** S4 (wk 7–8) · **Estimated:** ≤ 0.5 dev-day · **Priority:** P1
@@ -55,30 +55,30 @@ Already enforced server-side in S01a (409 `RATING_ALREADY_SUBMITTED`).
 
 > TDD: test file committed before implementation file per CLAUDE.md.
 
-- [ ] **T1 — libs.versions.toml sync (codemod, no tests)**
-  - [ ] `cp customer-app/gradle/libs.versions.toml technician-app/gradle/libs.versions.toml`
-  - [ ] `cd technician-app && ./gradlew help -q`
+- [x] **T1 — libs.versions.toml sync (codemod, no tests)**
+  - [x] `cp customer-app/gradle/libs.versions.toml technician-app/gradle/libs.versions.toml`
+  - [x] `cd technician-app && ./gradlew help -q`
 
-- [ ] **T2 — Domain + data layer (TDD)** — Mirror S01a's customer-side artifacts in the technician package, with `TechSubScores(behaviour, communication)` instead of `CustomerSubScores`. New files: `domain/rating/model/Rating.kt`, `domain/rating/SubmitTechRatingUseCase.kt`, `domain/rating/GetTechRatingUseCase.kt`, `data/rating/RatingRepository.kt`, `RatingRepositoryImpl.kt`, `RatingPromptEventBus.kt`, `remote/RatingApiService.kt`, `remote/dto/RatingDtos.kt`, `data/rating/di/RatingModule.kt` + use-case tests.
+- [x] **T2 — Domain + data layer (TDD)** — Mirror S01a's customer-side artifacts in the technician package, with `TechSubScores(behaviour, communication)` instead of `CustomerSubScores`. New files: `domain/rating/model/Rating.kt`, `domain/rating/SubmitTechRatingUseCase.kt`, `domain/rating/GetTechRatingUseCase.kt`, `data/rating/RatingRepository.kt`, `RatingRepositoryImpl.kt`, `RatingPromptEventBus.kt`, `remote/RatingApiService.kt`, `remote/dto/RatingDtos.kt`, `data/rating/di/RatingModule.kt` + use-case tests.
 
-- [ ] **T3 — UI + ViewModel + Paparazzi stub (TDD)** — `RatingViewModel`, `RatingScreen`, `RatingRoutes`, `RatingViewModelTest`, `RatingScreenPaparazziTest` (`@Ignore`).
+- [x] **T3 — UI + ViewModel + Paparazzi stub (TDD)** — `RatingViewModel`, `RatingScreen`, `RatingRoutes`, `RatingViewModelTest`, `RatingScreenPaparazziTest` (`@Ignore`).
 
-- [ ] **T4 — Create first FCM service in technician-app**
-  - [ ] Create `technician-app/.../firebase/TechnicianFirebaseMessagingService.kt`
-  - [ ] Register `<service>` in `AndroidManifest.xml` with `MESSAGING_EVENT` intent-filter
+- [x] **T4 — Create first FCM service in technician-app**
+  - [x] Create `technician-app/.../firebase/TechnicianFirebaseMessagingService.kt`
+  - [x] Register `<service>` in `AndroidManifest.xml` with `MESSAGING_EVENT` intent-filter
 
-- [ ] **T5 — Wire `AppNavigation.kt` + `MainActivity.kt`**
-  - [ ] Add `ratingPromptEventBus: RatingPromptEventBus` parameter
-  - [ ] In `LaunchedEffect(authState)` Authenticated branch, add `FirebaseMessaging.getInstance().subscribeToTopic("technician_${uid}")`
-  - [ ] Add `LaunchedEffect(ratingPromptEventBus)` to navigate to `rating/{bookingId}`
-  - [ ] Register `composable("rating/{bookingId}")` in `homeGraph`
-  - [ ] In `MainActivity.kt`, `@Inject lateinit var ratingPromptEventBus: RatingPromptEventBus` and pass to `AppNavigation(...)`
+- [x] **T5 — Wire `AppNavigation.kt` + `MainActivity.kt`**
+  - [x] Add `ratingPromptEventBus: RatingPromptEventBus` parameter
+  - [x] In `LaunchedEffect(authState)` Authenticated branch, add `FirebaseMessaging.getInstance().subscribeToTopic("technician_${uid}")`
+  - [x] Add `LaunchedEffect(ratingPromptEventBus)` to navigate to `rating/{bookingId}`
+  - [x] Register `composable("rating/{bookingId}")` in `homeGraph`
+  - [x] In `MainActivity.kt`, `@Inject lateinit var ratingPromptEventBus: RatingPromptEventBus` and pass to `AppNavigation(...)`
 
-- [ ] **T6 — Pre-Codex smoke gate + Paparazzi cleanup + Codex review**
-  - [ ] `bash tools/pre-codex-smoke.sh technician-app` — must exit 0
-  - [ ] `git rm -r technician-app/app/src/test/snapshots/images/ 2>/dev/null || true`
-  - [ ] `codex review --base main` → `.codex-review-passed`
-  - [ ] After PR merge: trigger `paparazzi-record.yml` workflow_dispatch (technician-app), commit goldens, remove `@Ignore` in chore branch
+- [x] **T6 — Pre-Codex smoke gate + Paparazzi cleanup + Codex review**
+  - [x] `bash tools/pre-codex-smoke.sh technician-app` — must exit 0
+  - [x] `git rm -r technician-app/app/src/test/snapshots/images/ 2>/dev/null || true`
+  - [x] `codex review --base main` → `.codex-review-passed`
+  - [x] After PR merge: trigger `paparazzi-record.yml` workflow_dispatch (technician-app), commit goldens, remove `@Ignore` in chore branch
 
 ---
 
@@ -124,13 +124,13 @@ No google-services.json change is needed — the file is already in place from t
 
 ## Definition of Done
 
-- [ ] `cd technician-app && ./gradlew testDebugUnitTest ktlintCheck assembleDebug` green
-- [ ] All AC pass via test assertions (AC-3 mutual-reveal verifiable manually OR via integration test against deployed S01a)
-- [ ] Pre-Codex smoke gate exits 0 (technician-app)
-- [ ] Technician-app Paparazzi snapshot dir deleted; `@Ignore` on `RatingScreenPaparazziTest`
-- [ ] `.codex-review-passed` marker present
-- [ ] PR opened; CI green on `main`
-- [ ] Post-merge: technician-app `paparazzi-record.yml` triggered; goldens committed; `@Ignore` removed (chore branch)
+- [x] `cd technician-app && ./gradlew testDebugUnitTest ktlintCheck assembleDebug` green
+- [x] All AC pass via test assertions (AC-3 mutual-reveal verifiable manually OR via integration test against deployed S01a)
+- [x] Pre-Codex smoke gate exits 0 (technician-app)
+- [x] Technician-app Paparazzi snapshot dir deleted; `@Ignore` on `RatingScreenPaparazziTest`
+- [x] `.codex-review-passed` marker present
+- [x] PR opened; CI green on `main`
+- [x] Post-merge: technician-app `paparazzi-record.yml` triggered; goldens committed; `@Ignore` removed (chore branch)
 
 ---
 

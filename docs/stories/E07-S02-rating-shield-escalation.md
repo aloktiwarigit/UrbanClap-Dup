@@ -1,6 +1,6 @@
 # Story E07-S02: Rating Shield — pre-review escalation for low ratings
 
-Status: ready-for-dev
+Status: merged
 
 > **Epic:** E07 — Ratings, Complaints & Safety (`docs/stories/README.md` §E07)
 > **Sprint:** S4 (wk 7–8) · **Estimated:** ≤ 1.5 dev-days · **Priority:** P1
@@ -76,43 +76,43 @@ so that **the owner gets a chance to resolve my complaint within 2 hours, while 
 
 > TDD: test file committed before implementation file per CLAUDE.md.
 
-- [ ] **T1 — API: extend complaint schema + escalate endpoint (api/, TDD)**
-  - [ ] Extend `api/src/schemas/complaint.ts`:
+- [x] **T1 — API: extend complaint schema + escalate endpoint (api/, TDD)**
+  - [x] Extend `api/src/schemas/complaint.ts`:
     - Add `ComplaintTypeEnum = z.enum(['RATING_SHIELD', 'STANDARD'])` with default `'STANDARD'`
     - Add optional fields to `ComplaintDocSchema`: `type`, `draftOverall: z.number().int().min(1).max(5).optional()`, `draftComment: z.string().max(500).optional()`, `expiresAt: z.string().optional()`
     - Add `EscalateRatingBodySchema = z.object({ draftOverall: z.number().int().min(1).max(2), draftComment: z.string().max(500).optional() })`
     - Add `EscalateRatingResponseSchema = z.object({ complaintId: z.string(), expiresAt: z.string() })`
-  - [ ] Create `api/src/functions/ratings/escalate.ts` — route `POST /v1/ratings/{bookingId}/escalate`; customer auth via `requireCustomer`; 401/403/404/409 guards; builds complaint doc (type RATING_SHIELD, expiresAt +2h, slaDeadlineAt +2h); writes to Cosmos via `createComplaint()`; fires FCM `OWNER_RATING_SHIELD_ALERT` to topic `owner_alerts`; returns `{ complaintId, expiresAt }` 201
-  - [ ] Create `api/tests/functions/ratings/escalate.test.ts` — all 7 AC-7 error paths + happy path
+  - [x] Create `api/src/functions/ratings/escalate.ts` — route `POST /v1/ratings/{bookingId}/escalate`; customer auth via `requireCustomer`; 401/403/404/409 guards; builds complaint doc (type RATING_SHIELD, expiresAt +2h, slaDeadlineAt +2h); writes to Cosmos via `createComplaint()`; fires FCM `OWNER_RATING_SHIELD_ALERT` to topic `owner_alerts`; returns `{ complaintId, expiresAt }` 201
+  - [x] Create `api/tests/functions/ratings/escalate.test.ts` — all 7 AC-7 error paths + happy path
 
-- [ ] **T2 — customer-app domain layer (TDD)**
-  - [ ] Add `RatingShieldState` sealed class to `ui/rating/RatingViewModel.kt` (or a companion `RatingShieldState.kt` if ViewModel file is large)
-  - [ ] Create `domain/rating/EscalateRatingUseCase.kt` — calls `RatingApiService.escalateRating(bookingId, body)`, returns `EscalateRatingResult(complaintId, expiresAt: Long)`
-  - [ ] Create `data/rating/dto/EscalateRatingDto.kt` — request/response Moshi data classes
-  - [ ] Add `escalateRating()` to `RatingApiService.kt` Retrofit interface
-  - [ ] Create `domain/rating/EscalateRatingUseCaseTest.kt` — success + network error + 409 conflict
+- [x] **T2 — customer-app domain layer (TDD)**
+  - [x] Add `RatingShieldState` sealed class to `ui/rating/RatingViewModel.kt` (or a companion `RatingShieldState.kt` if ViewModel file is large)
+  - [x] Create `domain/rating/EscalateRatingUseCase.kt` — calls `RatingApiService.escalateRating(bookingId, body)`, returns `EscalateRatingResult(complaintId, expiresAt: Long)`
+  - [x] Create `data/rating/dto/EscalateRatingDto.kt` — request/response Moshi data classes
+  - [x] Add `escalateRating()` to `RatingApiService.kt` Retrofit interface
+  - [x] Create `domain/rating/EscalateRatingUseCaseTest.kt` — success + network error + 409 conflict
 
-- [ ] **T3 — customer-app ViewModel shield logic (TDD)**
-  - [ ] Extend `RatingViewModel` UiState to include `shieldState: RatingShieldState` (default `Idle`)
-  - [ ] `onSubmit()`: if `overall ≤ 2 && shieldState == Idle` → set `shieldState = ShowDialog`, return without API call
-  - [ ] `onEscalate()`: calls `EscalateRatingUseCase`; on success sets `shieldState = Escalated(expiresAt)` + stores `draftRating` in ViewModel; on failure surfaces error snackbar
-  - [ ] `onSkipShield()` / `onPostAnyway()`: calls existing `submitRating()` with stored draft; resets shield state to `Idle` after
-  - [ ] `startCountdown()`: `viewModelScope.launch` with 1-min ticker; when `System.currentTimeMillis() >= expiresAt` triggers `onPostAnyway()`
-  - [ ] Add `RatingViewModelShieldTest.kt` covering: Idle→ShowDialog on ≤2★, Idle stays on ≥3★, onSkipShield posts immediately, onEscalate sets Escalated, countdown auto-posts at expiry
+- [x] **T3 — customer-app ViewModel shield logic (TDD)**
+  - [x] Extend `RatingViewModel` UiState to include `shieldState: RatingShieldState` (default `Idle`)
+  - [x] `onSubmit()`: if `overall ≤ 2 && shieldState == Idle` → set `shieldState = ShowDialog`, return without API call
+  - [x] `onEscalate()`: calls `EscalateRatingUseCase`; on success sets `shieldState = Escalated(expiresAt)` + stores `draftRating` in ViewModel; on failure surfaces error snackbar
+  - [x] `onSkipShield()` / `onPostAnyway()`: calls existing `submitRating()` with stored draft; resets shield state to `Idle` after
+  - [x] `startCountdown()`: `viewModelScope.launch` with 1-min ticker; when `System.currentTimeMillis() >= expiresAt` triggers `onPostAnyway()`
+  - [x] Add `RatingViewModelShieldTest.kt` covering: Idle→ShowDialog on ≤2★, Idle stays on ≥3★, onSkipShield posts immediately, onEscalate sets Escalated, countdown auto-posts at expiry
 
-- [ ] **T4 — customer-app UI: shield bottom sheet (Compose)**
-  - [ ] Add `ShieldBottomSheet` composable inside `RatingScreen.kt` — shown when `shieldState == ShowDialog`; Hindi copy as specified; "हाँ" / "नहीं, सीधे post करें" buttons
-  - [ ] Add countdown chip to `RatingScreen` — visible when `shieldState is Escalated`; format `h:mm` remaining; "Post anyway" button
-  - [ ] No new navigation route; no new Paparazzi test file needed (existing `@Ignored` stub covers the screen)
+- [x] **T4 — customer-app UI: shield bottom sheet (Compose)**
+  - [x] Add `ShieldBottomSheet` composable inside `RatingScreen.kt` — shown when `shieldState == ShowDialog`; Hindi copy as specified; "हाँ" / "नहीं, सीधे post करें" buttons
+  - [x] Add countdown chip to `RatingScreen` — visible when `shieldState is Escalated`; format `h:mm` remaining; "Post anyway" button
+  - [x] No new navigation route; no new Paparazzi test file needed (existing `@Ignored` stub covers the screen)
 
-- [ ] **T5 — Hilt: bind EscalateRatingUseCase**
-  - [ ] Add `@Binds` or `@Provides` for `EscalateRatingUseCase` in existing `RatingModule.kt`
-  - [ ] No new Hilt module
+- [x] **T5 — Hilt: bind EscalateRatingUseCase**
+  - [x] Add `@Binds` or `@Provides` for `EscalateRatingUseCase` in existing `RatingModule.kt`
+  - [x] No new Hilt module
 
-- [ ] **T6 — Pre-Codex smoke gates + Codex review**
-  - [ ] `bash tools/pre-codex-smoke-api.sh` — must exit 0
-  - [ ] `bash tools/pre-codex-smoke.sh customer-app` — must exit 0
-  - [ ] `codex review --base main` → `.codex-review-passed`
+- [x] **T6 — Pre-Codex smoke gates + Codex review**
+  - [x] `bash tools/pre-codex-smoke-api.sh` — must exit 0
+  - [x] `bash tools/pre-codex-smoke.sh customer-app` — must exit 0
+  - [x] `codex review --base main` → `.codex-review-passed`
 
 ---
 
@@ -142,12 +142,12 @@ No technician-app changes in this story — skip the sync step.
 
 ## Definition of Done
 
-- [ ] `cd api && pnpm typecheck && pnpm lint && pnpm test:coverage` green (≥80%)
-- [ ] `cd customer-app && ./gradlew testDebugUnitTest ktlintCheck assembleDebug` green
-- [ ] All AC pass via test assertions
-- [ ] Pre-Codex smoke gates exit 0 (api + customer-app)
-- [ ] `.codex-review-passed` marker present
-- [ ] PR opened; CI green on `main`
+- [x] `cd api && pnpm typecheck && pnpm lint && pnpm test:coverage` green (≥80%)
+- [x] `cd customer-app && ./gradlew testDebugUnitTest ktlintCheck assembleDebug` green
+- [x] All AC pass via test assertions
+- [x] Pre-Codex smoke gates exit 0 (api + customer-app)
+- [x] `.codex-review-passed` marker present
+- [x] PR opened; CI green on `main`
 
 ---
 
