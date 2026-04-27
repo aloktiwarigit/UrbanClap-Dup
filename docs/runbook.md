@@ -337,4 +337,82 @@ After every incident:
 
 ---
 
-**Runbook v1.0 complete.** Living document — update after every incident and every significant architectural change.
+## 10. DPDP 72-hour breach notification (added 2026-04-26)
+
+**Statutory basis:** Digital Personal Data Protection Act 2023 §10 +
+Data Protection Board rules. Applies nationwide; relevant to the Ayodhya
+pilot regardless of state.
+
+**Trigger.** Any of:
+
+1. Sentry alert containing PII (uid, phone, address, KYC fields, payment
+   identifiers) on a path that should not have logged it.
+2. Cosmos DB alert: unauthorised egress, exposed connection string, anomalous
+   read pattern from non-admin source.
+3. External notification — customer/tech/researcher reports unauthorised
+   access to their data.
+4. Unauthorised access to admin-web (compromised admin session, leaked TOTP).
+5. Razorpay breach notification touching our merchant account.
+
+**Owner:** Alok Tiwari. Sole operator — no escalation chain in pilot.
+
+### Within 24 hours: data-principal notification
+
+1. Identify affected uids via audit log query (`resourceType` = container
+   touched + `timestamp` window).
+2. For each affected user, send FCM + email:
+   ```
+   Subject: Important — security incident affecting your Home Heroo data
+
+   We detected unauthorised access to your account information on
+   <DATE>. The following data may have been viewed: <LIST>. We have
+   <ACTION TAKEN>. You should: <RECOMMENDED ACTIONS, e.g. change
+   Firebase password, watch for fraud>.
+
+   Incident ID: <UUID>
+   ```
+3. Audit-log entry: `action='DPDP_BREACH_USER_NOTIFIED'`, `resourceId=<uid>`.
+
+### Within 48 hours: DPDP Board notification
+
+Email to the Data Protection Board (`dpdp@meity.gov.in` or successor
+authority — verify current address quarterly):
+
+```
+Subject: §10 breach notification — Home Heroo (homeservices-mvp)
+
+1. Data fiduciary: <legal entity name>, GSTIN <if registered>
+2. Contact: Alok Tiwari, aloktiwari49@gmail.com, <phone>
+3. Incident discovered: <ISO datetime>
+4. Nature of breach: <unauthorised access / accidental disclosure / loss / etc.>
+5. Categories of personal data affected: <see DPDP §2(t)>
+6. Approximate number of affected data principals: <N>
+7. Likely consequences: <description>
+8. Measures taken or proposed: <description>
+9. Data principal notification status: <complete / in-progress with timeline>
+```
+
+### Within 72 hours: full incident report
+
+File at `docs/postmortems/YYYY-MM-DD-dpdp-<slug>.md` with:
+
+- Cause (root cause analysis)
+- Scope (number of users, fields, time window)
+- Mitigation (what we did)
+- Prevention (what we'll change so it doesn't recur)
+- Timeline of detection → notification → resolution
+- Audit log queries used to bound the scope
+- Reference to ADR if architectural change required
+
+Cross-reference the incident in `docs/runbook.md` § Past Incidents.
+
+### Drill cadence
+
+- Tabletop exercise: quarterly (calendar reminder).
+- After every incident: rerun this section as a checklist; update gaps.
+
+---
+
+**Runbook v1.1 complete (DPDP §10 breach playbook added 2026-04-26).**
+Living document — update after every incident and every significant
+architectural change.
