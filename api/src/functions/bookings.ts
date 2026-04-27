@@ -1,6 +1,7 @@
 import type { HttpHandler } from '@azure/functions';
 import { app } from '@azure/functions';
 import { requireCustomer, type CustomerHttpHandler } from '../middleware/requireCustomer.js';
+import { auditLog } from '../services/auditLog.service.js';
 import { CreateBookingRequestSchema, ConfirmBookingRequestSchema } from '../schemas/booking.js';
 import { RequestAddOnBodySchema, ApproveAddOnsBodySchema } from '../schemas/addon-approval.js';
 import { bookingRepo } from '../cosmos/booking-repository.js';
@@ -45,6 +46,14 @@ const confirmHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
 
   const confirmed = await bookingRepo.confirmPayment(id, parsed.data.razorpayPaymentId, parsed.data.razorpaySignature);
   if (!confirmed) return { status: 409, jsonBody: { code: 'BOOKING_ALREADY_PROCESSED' } };
+
+  void auditLog(
+    { adminId: 'system', role: 'system' },
+    'CUSTOMER_CONFIRMED_PAYMENT',
+    'booking',
+    confirmed.id,
+    { bookingId: confirmed.id, customerId: customer.customerId, amount: booking.amount },
+  );
 
   return { status: 200, jsonBody: { bookingId: confirmed.id, status: confirmed.status } };
 };

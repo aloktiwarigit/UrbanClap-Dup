@@ -3,6 +3,7 @@ import { extractPanFromStoragePath } from '../../services/formRecognizer.service
 import { upsertKycStatus } from '../../cosmos/technician-repository.js';
 import { verifyTechnicianToken } from '../../middleware/verifyTechnicianToken.js';
 import { SubmitPanOcrRequestSchema } from '../../schemas/kyc.js';
+import { kycAuditEntry } from '../../services/kycAudit.service.js';
 
 export async function submitPanOcr(
   req: HttpRequest,
@@ -35,6 +36,7 @@ export async function submitPanOcr(
       panImagePath: firebaseStoragePath,
       kycStatus: 'PAN_DONE',
     });
+    kycAuditEntry(technicianId, 'pan', 'PAN_DONE', ocrResult.panNumber);
     return { status: 200, jsonBody: { kycStatus: 'PAN_DONE', panNumber: ocrResult.panNumber } };
   }
 
@@ -42,6 +44,7 @@ export async function submitPanOcr(
     panImagePath: firebaseStoragePath,
     kycStatus: 'MANUAL_REVIEW',
   });
+  kycAuditEntry(technicianId, 'pan', 'MANUAL_REVIEW', null);
   return { status: 200, jsonBody: { kycStatus: 'MANUAL_REVIEW', panNumber: null } };
 }
 

@@ -16,9 +16,14 @@ vi.mock('../../src/services/dispatcher.service.js', () => ({
   dispatcherService: { triggerDispatch: vi.fn().mockResolvedValue(undefined) },
 }));
 
+vi.mock('../../src/services/auditLog.service.js', () => ({
+  auditLog: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { razorpayWebhookHandler, reconcileStaleBookingsHandler } from '../../src/functions/webhooks.js';
 import { bookingRepo } from '../../src/cosmos/booking-repository.js';
 import { dispatcherService } from '../../src/services/dispatcher.service.js';
+import { auditLog } from '../../src/services/auditLog.service.js';
 
 function makeSignature(body: string, secret = 'webhook_secret') {
   return createHmac('sha256', secret).update(body).digest('hex');
@@ -81,6 +86,32 @@ describe('POST /v1/webhooks/razorpay', () => {
     expect((res.jsonBody as { received: boolean }).received).toBe(true);
     expect(vi.mocked(bookingRepo.markPaid)).toHaveBeenCalledWith('bk-1', 'pay_123');
     expect(vi.mocked(dispatcherService.triggerDispatch)).toHaveBeenCalledWith('bk-1');
+  });
+
+  it('emits PAYMENT_CAPTURED audit entry on successful markPaid', async () => {
+    const body = JSON.stringify({
+      event: 'payment.captured',
+      payload: { payment: { entity: { id: 'pay_123', order_id: 'order_456' } } },
+    });
+    const signature = makeSignature(body);
+    const req = makeWebhookReq(body, signature);
+
+    (bookingRepo.getByPaymentOrderId as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'bk-1', status: 'SEARCHING', paymentOrderId: 'order_456', amount: 49900,
+    });
+    (bookingRepo.markPaid as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'bk-1', status: 'PAID', amount: 49900,
+    });
+
+    await razorpayWebhookHandler(req, mockCtx);
+
+    expect(vi.mocked(auditLog)).toHaveBeenCalledWith(
+      expect.objectContaining({ adminId: 'system', role: 'system' }),
+      'PAYMENT_CAPTURED',
+      'booking',
+      'bk-1',
+      expect.objectContaining({ bookingId: 'bk-1', paymentId: 'pay_123', orderId: 'order_456' }),
+    );
   });
 
   it('idempotency — second call on PAID booking returns 200, markPaid not called', async () => {

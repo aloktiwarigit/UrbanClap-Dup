@@ -3,6 +3,7 @@ import { verifyTechnicianToken } from '../../middleware/verifyTechnicianToken.js
 import { exchangeCodeForAadhaar } from '../../services/digilocker.service.js';
 import { upsertKycStatus } from '../../cosmos/technician-repository.js';
 import { SubmitAadhaarRequestSchema } from '../../schemas/kyc.js';
+import { kycAuditEntry } from '../../services/kycAudit.service.js';
 
 export async function submitAadhaar(
   req: HttpRequest,
@@ -34,6 +35,7 @@ export async function submitAadhaar(
       aadhaarVerified: false,
       kycStatus: 'PENDING_MANUAL',
     });
+    kycAuditEntry(technicianId, 'aadhaar', 'PENDING_MANUAL', null);
     return {
       status: 200,
       jsonBody: { kycStatus: 'PENDING_MANUAL', aadhaarVerified: false, aadhaarMaskedNumber: null },
@@ -45,6 +47,7 @@ export async function submitAadhaar(
     aadhaarMaskedNumber: aadhaarResult.maskedNumber,
     kycStatus: 'AADHAAR_DONE',
   });
+  kycAuditEntry(technicianId, 'aadhaar', 'AADHAAR_DONE', aadhaarResult.maskedNumber);
 
   return {
     status: 200,

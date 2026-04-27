@@ -37,16 +37,33 @@ export async function adminLoginHandler(
 
   const { idToken, totpCode } = parsed.data;
 
+  const ip = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? undefined;
+  const userAgent = req.headers.get('user-agent') ?? undefined;
+
   let uid: string;
   try {
     const decoded = await verifyFirebaseIdToken(idToken);
     uid = decoded.uid;
   } catch {
+    void auditLog(
+      { adminId: 'system', role: 'system' },
+      'ADMIN_LOGIN_FAILED',
+      'admin_session',
+      'unknown',
+      { reason: 'BAD_TOKEN', ip },
+    );
     return { status: 401, jsonBody: { code: 'FIREBASE_TOKEN_INVALID' } };
   }
 
   const adminUser = await getAdminUserById(uid);
   if (!adminUser || adminUser.deactivatedAt) {
+    void auditLog(
+      { adminId: uid, role: 'system' },
+      'ADMIN_LOGIN_FAILED',
+      'admin_session',
+      uid,
+      { reason: 'DEACTIVATED', email: adminUser?.email ?? null, ip },
+    );
     return { status: 401, jsonBody: { code: 'ADMIN_NOT_FOUND' } };
   }
 
@@ -59,6 +76,13 @@ export async function adminLoginHandler(
 
   const secret = decryptSecret(adminUser.totpSecret!);
   if (!verifyToken(totpCode, secret)) {
+    void auditLog(
+      { adminId: adminUser.adminId, role: adminUser.role },
+      'ADMIN_LOGIN_FAILED',
+      'admin_session',
+      adminUser.adminId,
+      { reason: 'WRONG_TOTP', email: adminUser.email, ip },
+    );
     return { status: 422, jsonBody: { code: 'TOTP_INVALID' } };
   }
 
@@ -69,8 +93,6 @@ export async function adminLoginHandler(
     sessionId: session.sessionId,
   });
 
-  const ip = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? undefined;
-  const userAgent = req.headers.get('user-agent') ?? undefined;
   void auditLog(
     { adminId: adminUser.adminId, role: adminUser.role, sessionId: session.sessionId },
     'admin.login',

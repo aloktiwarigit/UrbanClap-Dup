@@ -4,6 +4,7 @@ import { type InvocationContext, app } from '@azure/functions';
 import { RazorpayWebhookPayloadSchema } from '../schemas/webhook.js';
 import { bookingRepo } from '../cosmos/booking-repository.js';
 import { dispatcherService } from '../services/dispatcher.service.js';
+import { auditLog } from '../services/auditLog.service.js';
 
 export const razorpayWebhookHandler: HttpHandler = async (req, _ctx) => {
   const secret = process.env['RAZORPAY_WEBHOOK_SECRET'];
@@ -50,6 +51,14 @@ export const razorpayWebhookHandler: HttpHandler = async (req, _ctx) => {
   if (!updated) {
     return { status: 200, jsonBody: { received: true } };
   }
+
+  void auditLog(
+    { adminId: 'system', role: 'system' },
+    'PAYMENT_CAPTURED',
+    'booking',
+    booking.id,
+    { bookingId: booking.id, paymentId, orderId, amount: booking.amount },
+  );
 
   dispatcherService.triggerDispatch(booking.id).catch(() => {
     // fire-and-forget — dispatch failure does not fail the webhook ack

@@ -26,6 +26,7 @@ import { createAdminSession } from '../../src/services/adminSession.service.js';
 import { encryptSecret, generateSecret } from '../../src/services/totp.service.js';
 import { signSetupToken } from '../../src/services/jwt.service.js';
 import { HttpRequest } from '@azure/functions';
+import { auditLog } from '../../src/services/auditLog.service.js';
 
 const fakeCtx = {} as any;
 const VALID_SESSION = { sessionId: 'sess-abc', adminId: 'u1', role: 'super-admin' as const };
@@ -99,6 +100,49 @@ describe('POST /v1/admin/auth/login', () => {
     const res = await adminLoginHandler(makeLoginReq({ idToken: 'tok', totpCode: '000000' }), fakeCtx);
     expect(res.status).toBe(422);
     expect((res.jsonBody as any).code).toBe('TOTP_INVALID');
+  });
+
+  it('emits ADMIN_LOGIN_FAILED with BAD_TOKEN when Firebase rejects the ID token', async () => {
+    vi.mocked(verifyFirebaseIdToken).mockRejectedValue(new Error('invalid'));
+    await adminLoginHandler(makeLoginReq({ idToken: 'bad' }), fakeCtx);
+    expect(vi.mocked(auditLog)).toHaveBeenCalledWith(
+      expect.objectContaining({ adminId: 'system', role: 'system' }),
+      'ADMIN_LOGIN_FAILED',
+      'admin_session',
+      'unknown',
+      expect.objectContaining({ reason: 'BAD_TOKEN' }),
+    );
+  });
+
+  it('emits ADMIN_LOGIN_FAILED with DEACTIVATED when admin user is not found', async () => {
+    vi.mocked(verifyFirebaseIdToken).mockResolvedValue({ uid: 'u1' } as any);
+    vi.mocked(getAdminUserById).mockResolvedValue(null);
+    await adminLoginHandler(makeLoginReq({ idToken: 'tok' }), fakeCtx);
+    expect(vi.mocked(auditLog)).toHaveBeenCalledWith(
+      expect.objectContaining({ adminId: 'u1' }),
+      'ADMIN_LOGIN_FAILED',
+      'admin_session',
+      'u1',
+      expect.objectContaining({ reason: 'DEACTIVATED' }),
+    );
+  });
+
+  it('emits ADMIN_LOGIN_FAILED with WRONG_TOTP when TOTP code is invalid', async () => {
+    const secret = generateSecret();
+    vi.mocked(verifyFirebaseIdToken).mockResolvedValue({ uid: 'u1' } as any);
+    vi.mocked(getAdminUserById).mockResolvedValue({
+      adminId: 'u1', email: 'a@b.com', role: 'super-admin',
+      totpEnrolled: true, totpSecret: encryptSecret(secret), totpSecretPending: null,
+      deactivatedAt: null,
+    } as any);
+    await adminLoginHandler(makeLoginReq({ idToken: 'tok', totpCode: '000000' }), fakeCtx);
+    expect(vi.mocked(auditLog)).toHaveBeenCalledWith(
+      expect.objectContaining({ adminId: 'u1', role: 'super-admin' }),
+      'ADMIN_LOGIN_FAILED',
+      'admin_session',
+      'u1',
+      expect.objectContaining({ reason: 'WRONG_TOTP', email: 'a@b.com' }),
+    );
   });
 
   it('returns 200 with cookies on successful login', async () => {

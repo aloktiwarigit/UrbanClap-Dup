@@ -17,11 +17,15 @@ vi.mock('../../src/services/fcm.service.js', () => ({
 vi.mock('../../src/services/firebaseAdmin.js', () => ({
   verifyFirebaseIdToken: vi.fn().mockResolvedValue({ uid: 'customer_1' }),
 }));
+vi.mock('../../src/services/auditLog.service.js', () => ({
+  auditLog: vi.fn().mockResolvedValue(undefined),
+}));
 
 import { bookingRepo } from '../../src/cosmos/booking-repository.js';
 import { ratingRepo } from '../../src/cosmos/rating-repository.js';
 import { createComplaint, findRatingShieldEscalation } from '../../src/cosmos/complaints-repository.js';
 import { escalateRatingHandler } from '../../src/functions/rating-escalate.js';
+import { auditLog } from '../../src/services/auditLog.service.js';
 
 const closedBooking = { id: 'bk-1', customerId: 'customer_1', technicianId: 'tech_1', status: 'CLOSED' };
 const mockCustomer = { customerId: 'customer_1' };
@@ -130,6 +134,25 @@ describe('escalateRatingHandler', () => {
     const res = await escalateRatingHandler(badReq, mockCtx, mockCustomer);
     expect(res.status).toBe(400);
     expect(res.jsonBody).toMatchObject({ code: 'INVALID_JSON' });
+  });
+
+  it('emits RATING_SHIELD_ESCALATED audit on successful escalation', async () => {
+    (bookingRepo.getById as ReturnType<typeof vi.fn>).mockResolvedValue(closedBooking);
+    (findRatingShieldEscalation as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+    (createComplaint as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    await escalateRatingHandler(makeReq({ draftOverall: 1 }), mockCtx, mockCustomer);
+    expect(vi.mocked(auditLog)).toHaveBeenCalledWith(
+      expect.objectContaining({ adminId: 'system', role: 'system' }),
+      'RATING_SHIELD_ESCALATED',
+      'complaint',
+      expect.any(String),
+      expect.objectContaining({
+        bookingId: 'bk-1',
+        customerId: 'customer_1',
+        technicianId: 'tech_1',
+        draftOverall: 1,
+      }),
+    );
   });
 
   it('returns 409 NO_TECHNICIAN when booking has no assigned technician', async () => {

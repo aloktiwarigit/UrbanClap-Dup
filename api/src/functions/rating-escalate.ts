@@ -9,6 +9,7 @@ import { ratingRepo } from '../cosmos/rating-repository.js';
 import { createComplaint, findRatingShieldEscalation } from '../cosmos/complaints-repository.js';
 import { sendOwnerRatingShieldAlert } from '../services/fcm.service.js';
 import { createHash } from 'crypto';
+import { auditLog } from '../services/auditLog.service.js';
 
 export async function escalateRatingHandler(
   req: HttpRequest,
@@ -93,6 +94,20 @@ export async function escalateRatingHandler(
     }
     throw err;
   }
+
+  void auditLog(
+    { adminId: 'system', role: 'system' },
+    'RATING_SHIELD_ESCALATED',
+    'complaint',
+    doc.id,
+    {
+      complaintId: doc.id,
+      bookingId,
+      customerId: customer.customerId,
+      technicianId: booking.technicianId ?? '',
+      draftOverall: parsed.data.draftOverall,
+    },
+  );
 
   sendOwnerRatingShieldAlert({
     bookingId,

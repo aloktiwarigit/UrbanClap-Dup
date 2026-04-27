@@ -23,7 +23,12 @@ vi.mock('../../src/services/razorpay.service.js', () => ({
   verifyPaymentSignature: vi.fn().mockReturnValue(true),
 }));
 
+vi.mock('../../src/services/auditLog.service.js', () => ({
+  auditLog: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { confirmBookingHandler } from '../../src/functions/bookings.js';
+import { auditLog } from '../../src/services/auditLog.service.js';
 
 function confirmReq(id: string, body: unknown) {
   const req = new HttpRequest({
@@ -54,6 +59,21 @@ describe('POST /v1/bookings/:id/confirm', () => {
     ) as HttpResponseInit;
     expect(res.status).toBe(400);
     expect((res.jsonBody as { code: string }).code).toBe('SIGNATURE_INVALID');
+  });
+
+  it('emits CUSTOMER_CONFIRMED_PAYMENT audit on successful confirmation', async () => {
+    const res = await confirmBookingHandler(
+      confirmReq('bk-1', { razorpayPaymentId: 'pay_1', razorpayOrderId: 'order_1', razorpaySignature: 'sig' }),
+      {} as never,
+    ) as import('@azure/functions').HttpResponseInit;
+    expect(res.status).toBe(200);
+    expect(vi.mocked(auditLog)).toHaveBeenCalledWith(
+      expect.objectContaining({ adminId: 'system', role: 'system' }),
+      'CUSTOMER_CONFIRMED_PAYMENT',
+      'booking',
+      'bk-1',
+      expect.objectContaining({ bookingId: 'bk-1', customerId: 'cust-1' }),
+    );
   });
 
   it('returns 404 when booking not found', async () => {

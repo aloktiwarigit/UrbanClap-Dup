@@ -10,6 +10,9 @@ vi.mock('../../src/cosmos/technician-repository.js', () => ({
 vi.mock('../../src/middleware/verifyTechnicianToken.js', () => ({
   verifyTechnicianToken: vi.fn(),
 }));
+vi.mock('../../src/services/kycAudit.service.js', () => ({
+  kycAuditEntry: vi.fn(),
+}));
 
 describe('POST /v1/kyc/pan-ocr', () => {
   let handler: typeof import('../../src/functions/kyc/submit-pan-ocr.js').submitPanOcr;
@@ -62,6 +65,48 @@ describe('POST /v1/kyc/pan-ocr', () => {
     const body = res.jsonBody as { kycStatus: string; panNumber: null };
     expect(body.kycStatus).toBe('MANUAL_REVIEW');
     expect(body.panNumber).toBeNull();
+  });
+
+  it('emits KYC_PAN_VERIFIED audit with masked PAN on OCR success', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { extractPanFromStoragePath } = await import('../../src/services/formRecognizer.service.js');
+    const { upsertKycStatus } = await import('../../src/cosmos/technician-repository.js');
+    const { kycAuditEntry } = await import('../../src/services/kycAudit.service.js');
+    vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+    vi.mocked(extractPanFromStoragePath).mockResolvedValue({ status: 'PAN_DONE', panNumber: 'ABCDE1234F' });
+    vi.mocked(upsertKycStatus).mockResolvedValue(undefined);
+
+    const req = new HttpRequest({
+      method: 'POST',
+      url: 'http://localhost/v1/kyc/pan-ocr',
+      headers: { Authorization: 'Bearer valid-token' },
+      body: { string: JSON.stringify({ technicianId: 'tech-001', firebaseStoragePath: 'technicians/tech-001/pan.jpg' }) },
+    });
+    await handler(req, new InvocationContext());
+
+    expect(vi.mocked(kycAuditEntry)).toHaveBeenCalledWith(
+      'tech-001', 'pan', 'PAN_DONE', 'ABCDE1234F',
+    );
+  });
+
+  it('emits KYC_PAN_REJECTED audit on OCR failure', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { extractPanFromStoragePath } = await import('../../src/services/formRecognizer.service.js');
+    const { kycAuditEntry } = await import('../../src/services/kycAudit.service.js');
+    vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+    vi.mocked(extractPanFromStoragePath).mockResolvedValue({ status: 'MANUAL_REVIEW', panNumber: null });
+
+    const req = new HttpRequest({
+      method: 'POST',
+      url: 'http://localhost/v1/kyc/pan-ocr',
+      headers: { Authorization: 'Bearer valid-token' },
+      body: { string: JSON.stringify({ technicianId: 'tech-001', firebaseStoragePath: 'technicians/tech-001/pan.jpg' }) },
+    });
+    await handler(req, new InvocationContext());
+
+    expect(vi.mocked(kycAuditEntry)).toHaveBeenCalledWith(
+      'tech-001', 'pan', 'MANUAL_REVIEW', null,
+    );
   });
 
   it('returns 401 when token invalid', async () => {

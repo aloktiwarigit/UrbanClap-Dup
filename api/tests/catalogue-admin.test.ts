@@ -10,6 +10,7 @@ import {
   updateServiceHandler,
   toggleServiceHandler,
 } from '../src/functions/catalogue-admin.js';
+import { catalogueAuditEntry } from '../src/services/catalogueAudit.service.js';
 
 const mockAdmin: AdminContext = { adminId: 'dev-user', role: 'super-admin', sessionId: 'test-session' };
 
@@ -45,6 +46,10 @@ vi.mock('../src/middleware/requireAdmin.js', () => ({
     (handler: (req: HttpRequest, ctx: never, admin: AdminContext) => Promise<unknown>) =>
       (req: HttpRequest, ctx: never) => handler(req, ctx, mockAdmin)
   ),
+}));
+
+vi.mock('../src/services/catalogueAudit.service.js', () => ({
+  catalogueAuditEntry: vi.fn(),
 }));
 
 function makeReq(url: string, body?: unknown, params: Record<string, string> = {}, method = 'POST') {
@@ -121,5 +126,60 @@ describe('PATCH /v1/admin/catalogue/services/{id}/toggle', () => {
     const res = await toggleServiceHandler(makeReq('http://localhost/...', undefined, { id: 'leak-fix' }, 'PATCH'), {} as never, mockAdmin);
     expect(res.status).toBe(200);
     expect((res.jsonBody as { isActive: boolean }).isActive).toBe(false);
+  });
+});
+
+describe('audit instrumentation — FR-9.4 catalogue mutations', () => {
+  it('emits CATALOGUE_CATEGORY_CREATED on createCategoryHandler success', async () => {
+    const body = { id: 'plumbing', name: 'Plumbing', heroImageUrl: 'https://example.com/p.jpg', sortOrder: 3 };
+    await createCategoryHandler(makeReq('http://localhost/api/v1/admin/catalogue/categories', body), {} as never, mockAdmin);
+    expect(vi.mocked(catalogueAuditEntry)).toHaveBeenCalledWith(
+      mockAdmin, 'CATALOGUE_CATEGORY_CREATED', 'category', 'plumbing', expect.objectContaining({ id: 'plumbing' }),
+    );
+  });
+
+  it('emits CATALOGUE_CATEGORY_UPDATED on updateCategoryHandler success', async () => {
+    const body = { name: 'Plumbing Updated', heroImageUrl: 'https://example.com/p.jpg', sortOrder: 3 };
+    await updateCategoryHandler(makeReq('http://localhost/...', body, { id: 'plumbing' }, 'PUT'), {} as never, mockAdmin);
+    expect(vi.mocked(catalogueAuditEntry)).toHaveBeenCalledWith(
+      mockAdmin, 'CATALOGUE_CATEGORY_UPDATED', 'category', 'plumbing', expect.objectContaining({ id: 'plumbing' }),
+    );
+  });
+
+  it('emits CATALOGUE_CATEGORY_TOGGLED on toggleCategoryHandler success', async () => {
+    await toggleCategoryHandler(makeReq('http://localhost/...', undefined, { id: 'plumbing' }, 'PATCH'), {} as never, mockAdmin);
+    expect(vi.mocked(catalogueAuditEntry)).toHaveBeenCalledWith(
+      mockAdmin, 'CATALOGUE_CATEGORY_TOGGLED', 'category', 'plumbing', expect.objectContaining({ id: 'plumbing' }),
+    );
+  });
+
+  it('emits CATALOGUE_SERVICE_CREATED on createServiceHandler success', async () => {
+    const body = {
+      id: 'leak-fix', categoryId: 'plumbing', name: 'Leak Fix', shortDescription: 'Fast.',
+      heroImageUrl: 'https://example.com/l.jpg', basePrice: 39900, commissionBps: 2250,
+      durationMinutes: 60, includes: [], faq: [], addOns: [], photoStages: [],
+    };
+    await createServiceHandler(makeReq('http://localhost/...', body), {} as never, mockAdmin);
+    expect(vi.mocked(catalogueAuditEntry)).toHaveBeenCalledWith(
+      mockAdmin, 'CATALOGUE_SERVICE_CREATED', 'service', 'leak-fix', expect.objectContaining({ id: 'leak-fix' }),
+    );
+  });
+
+  it('emits CATALOGUE_SERVICE_UPDATED on updateServiceHandler success', async () => {
+    const body = {
+      name: 'Leak Fix Updated', shortDescription: 'Faster.', heroImageUrl: 'https://example.com/l2.jpg',
+      basePrice: 49900, commissionBps: 2250, durationMinutes: 45, includes: [], faq: [], addOns: [], photoStages: [],
+    };
+    await updateServiceHandler(makeReq('http://localhost/...', body, { id: 'leak-fix' }, 'PUT'), {} as never, mockAdmin);
+    expect(vi.mocked(catalogueAuditEntry)).toHaveBeenCalledWith(
+      mockAdmin, 'CATALOGUE_SERVICE_UPDATED', 'service', 'leak-fix', expect.objectContaining({ id: 'leak-fix' }),
+    );
+  });
+
+  it('emits CATALOGUE_SERVICE_TOGGLED on toggleServiceHandler success', async () => {
+    await toggleServiceHandler(makeReq('http://localhost/...', undefined, { id: 'leak-fix' }, 'PATCH'), {} as never, mockAdmin);
+    expect(vi.mocked(catalogueAuditEntry)).toHaveBeenCalledWith(
+      mockAdmin, 'CATALOGUE_SERVICE_TOGGLED', 'service', 'leak-fix', expect.objectContaining({ id: 'leak-fix' }),
+    );
   });
 });
