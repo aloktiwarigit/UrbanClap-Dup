@@ -48,9 +48,19 @@ export const ErasureRequestDocSchema = z.object({
   requestedAt: z.string(),
   scheduledDeletionAt: z.string(),
   /** Per-request salt; only mechanism that links anonymizedHash back to userId. */
-  anonymizationSalt: z.string().min(16),
-  /** SHA-256(userId + salt); set at EXECUTING/EXECUTED. */
+  /**
+   * Per-request salt (32 hex chars at submit time). Wiped to empty string on
+   * EXECUTED so that the natural-person uid cannot be re-derived from the
+   * surviving doc. Schema accepts empty so the post-erasure shape parses.
+   */
+  anonymizationSalt: z.string(),
+  /** SHA-256(userId + salt); set at EXECUTING and retained for ops cross-reference. */
   anonymizedHash: z.string().optional(),
+  /**
+   * Set true on EXECUTED — userId has been replaced with anonymizedHash on
+   * this doc so re-identification requires inputs no longer present.
+   */
+  userIdWiped: z.boolean().optional(),
   executedAt: z.string().optional(),
   revokedAt: z.string().optional(),
   deniedAt: z.string().optional(),

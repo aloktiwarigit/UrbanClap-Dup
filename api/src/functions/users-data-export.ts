@@ -3,14 +3,14 @@ import { app } from '@azure/functions';
 import type { HttpRequest, InvocationContext, HttpResponseInit } from '@azure/functions';
 import { verifyFirebaseIdToken } from '../services/firebaseAdmin.js';
 import { assembleUserDataExport } from '../services/dataExport.service.js';
+import { inferUserRole } from '../services/userRole.service.js';
 
 /**
  * GET /v1/users/me/data-export — DPDP §11 right-to-access.
  *
- * Returns every PII field the platform holds about the calling user.
- * Role is supplied by the client via x-user-role header (CUSTOMER|TECHNICIAN);
- * defaults to CUSTOMER. The token is the authoritative subject — role only
- * controls which container surface is read.
+ * Role is derived from the technicians container, NOT a client-supplied
+ * header — preventing a customer from spoofing TECHNICIAN to widen the read
+ * surface. The token is the authoritative subject.
  */
 export async function dataExportHandler(
   req: HttpRequest,
@@ -28,9 +28,7 @@ export async function dataExportHandler(
     return { status: 401, jsonBody: { code: 'TOKEN_INVALID' } };
   }
 
-  const declaredRole = (req.headers.get('x-user-role') ?? 'customer').toLowerCase();
-  const role: 'CUSTOMER' | 'TECHNICIAN' = declaredRole === 'technician' ? 'TECHNICIAN' : 'CUSTOMER';
-
+  const role = await inferUserRole(uid);
   const exported = await assembleUserDataExport(uid, role);
   return { status: 200, jsonBody: exported };
 }

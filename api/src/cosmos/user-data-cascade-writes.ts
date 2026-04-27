@@ -122,6 +122,11 @@ export const userDataCascadeWrites = {
   /**
    * Wallet ledger is retained for 7 years per RBI/finance regulation.
    * Anonymize technicianId only; do NOT delete entries.
+   *
+   * Partition key changes from `technicianId = uid` to `technicianId = hash`,
+   * so we use insert-then-delete with idempotent guards: if a prior attempt
+   * created the new doc but failed to delete the old, the next pass tolerates
+   * Cosmos 409 (already-created) on insert and 404 (already-deleted) on delete.
    */
   async anonymizeWalletLedger(uid: string, anonymizedHash: string): Promise<number> {
     const { resources } = await getWalletLedgerContainer()
@@ -131,19 +136,27 @@ export const userDataCascadeWrites = {
       })
       .fetchAll();
     let n = 0;
+    const anonId = `deleted-${anonymizedHash.slice(0, 16)}`;
     for (const r of resources) {
-      const updated: Record<string, unknown> = { ...r };
-      const anonId = `deleted-${anonymizedHash.slice(0, 16)}`;
-      updated['technicianId'] = anonId;
-      updated['partitionKey'] = anonId;
+      const updated: Record<string, unknown> = {
+        ...r,
+        technicianId: anonId,
+        partitionKey: anonId,
+      };
       const id = r['id'] as string;
-      // Partition key changed → delete-then-insert (anonymized PK is the new identity)
+      // Insert first — anonymized doc lives in new partition. Idempotent on 409.
+      try {
+        await getWalletLedgerContainer().items.create(updated);
+      } catch (err) {
+        const code = (err as { code?: number }).code;
+        if (code !== 409) throw err;
+      }
+      // Then delete the original. Idempotent on 404.
       try {
         await getWalletLedgerContainer().item(id, uid).delete();
       } catch (err) {
         if (!isCosmos404(err)) throw err;
       }
-      await getWalletLedgerContainer().items.create(updated);
       n += 1;
     }
     return n;

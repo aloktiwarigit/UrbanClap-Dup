@@ -5,15 +5,15 @@ vi.mock('../../src/services/firebaseAdmin.js', () => ({
   verifyFirebaseIdToken: vi.fn(),
 }));
 
+vi.mock('../../src/services/userRole.service.js', () => ({
+  inferUserRole: vi.fn().mockResolvedValue('CUSTOMER'),
+}));
+
 vi.mock('../../src/cosmos/erasure-request-repository.js', () => ({
   createErasureRequest: vi.fn(),
   getErasureRequestById: vi.fn(),
   getPendingErasureRequestForUser: vi.fn(),
   replaceErasureRequest: vi.fn(),
-}));
-
-vi.mock('../../src/cosmos/audit-log-repository.ts', () => ({
-  appendAuditEntry: vi.fn(),
 }));
 
 vi.mock('../../src/services/auditLog.service.js', () => ({

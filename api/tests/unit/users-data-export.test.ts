@@ -9,6 +9,10 @@ vi.mock('../../src/services/firebaseAdmin.js', () => ({
   verifyFirebaseIdToken: vi.fn(),
 }));
 
+vi.mock('../../src/services/userRole.service.js', () => ({
+  inferUserRole: vi.fn(),
+}));
+
 vi.mock('../../src/cosmos/booking-repository.js', () => ({
   bookingRepo: { getById: vi.fn() },
   updateBookingFields: vi.fn(),
@@ -34,7 +38,7 @@ vi.mock('../../src/cosmos/wallet-ledger-repository.js', () => ({
   walletLedgerRepo: { getByBookingId: vi.fn() },
 }));
 
-vi.mock('../../src/cosmos/audit-log-repository.ts', () => ({
+vi.mock('../../src/cosmos/audit-log-repository.js', () => ({
   appendAuditEntry: vi.fn(),
   queryAuditLog: vi.fn(),
 }));
@@ -97,7 +101,9 @@ describe('GET /v1/users/me/data-export', () => {
   it('returns 200 with assembled export for an authenticated customer', async () => {
     const { verifyFirebaseIdToken } = await import('../../src/services/firebaseAdmin.js');
     const { assembleUserDataExport } = await import('../../src/services/dataExport.service.js');
+    const { inferUserRole } = await import('../../src/services/userRole.service.js');
     (verifyFirebaseIdToken as MockFn).mockResolvedValue({ uid: 'cust-1' });
+    (inferUserRole as MockFn).mockResolvedValue('CUSTOMER');
     (assembleUserDataExport as MockFn).mockResolvedValue({
       dataInventoryVersion: 1,
       userId: 'cust-1',
@@ -126,7 +132,9 @@ describe('GET /v1/users/me/data-export', () => {
   it('returns 200 with technician export including KYC + wallet ledger', async () => {
     const { verifyFirebaseIdToken } = await import('../../src/services/firebaseAdmin.js');
     const { assembleUserDataExport } = await import('../../src/services/dataExport.service.js');
+    const { inferUserRole } = await import('../../src/services/userRole.service.js');
     (verifyFirebaseIdToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+    (inferUserRole as MockFn).mockResolvedValue('TECHNICIAN');
     (assembleUserDataExport as MockFn).mockResolvedValue({
       dataInventoryVersion: 1,
       userId: 'tech-1',
@@ -156,7 +164,9 @@ describe('GET /v1/users/me/data-export', () => {
   it('does NOT leak unmasked Aadhaar or full PAN', async () => {
     const { verifyFirebaseIdToken } = await import('../../src/services/firebaseAdmin.js');
     const { assembleUserDataExport } = await import('../../src/services/dataExport.service.js');
+    const { inferUserRole } = await import('../../src/services/userRole.service.js');
     (verifyFirebaseIdToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+    (inferUserRole as MockFn).mockResolvedValue('TECHNICIAN');
     (assembleUserDataExport as MockFn).mockResolvedValue({
       dataInventoryVersion: 1,
       userId: 'tech-1',

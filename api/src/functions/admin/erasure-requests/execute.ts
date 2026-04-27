@@ -77,22 +77,35 @@ export async function executeErasureRequestHandler(
     });
   } catch (err) {
     Sentry.captureException(err);
+    const failureReason = err instanceof Error ? err.message : String(err);
     const failed: ErasureRequestDoc = {
       ...executing,
       status: 'FAILED',
       failedAt: new Date().toISOString(),
-      failureReason: err instanceof Error ? err.message : String(err),
+      failureReason,
     };
     await replaceErasureRequest(failed);
+    await auditLog(
+      { adminId: admin.adminId, role: admin.role, sessionId: admin.sessionId },
+      'ERASURE_FAILED',
+      'user',
+      anonymizedHash,
+      { erasureId: id, failureReason, userRole: doc.userRole, source: 'admin-execute' },
+    );
     return {
       status: 500,
-      jsonBody: { code: 'CASCADE_FAILED', message: failed.failureReason },
+      jsonBody: { code: 'CASCADE_FAILED', message: failureReason },
     };
   }
 
-  // Step 3: mark EXECUTED with deletedCounts.
+  // Step 3: mark EXECUTED, wipe userId + anonymizationSalt so the natural-
+  // person uid cannot be re-derived from the surviving doc. anonymizedHash
+  // remains for ops cross-reference.
   const finalDoc: ErasureRequestDoc = {
     ...executing,
+    userId: anonymizedHash,
+    anonymizationSalt: '',
+    userIdWiped: true,
     status: 'EXECUTED',
     executedAt: new Date().toISOString(),
     deletedCounts: counts,
@@ -103,10 +116,9 @@ export async function executeErasureRequestHandler(
     { adminId: admin.adminId, role: admin.role, sessionId: admin.sessionId },
     'ERASURE_EXECUTED',
     'user',
-    doc.userId,
+    anonymizedHash,
     {
       erasureId: id,
-      anonymizedHash,
       deletedCounts: counts,
       userRole: doc.userRole,
     },

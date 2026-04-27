@@ -178,13 +178,15 @@ describe('PATCH /v1/admin/erasure-requests/:id (EXECUTE)', () => {
     expect(typeof last['anonymizedHash']).toBe('string');
     expect((last['anonymizedHash'] as string).length).toBe(64); // SHA-256 hex
 
-    expect(auditService.auditLog).toHaveBeenCalledWith(
-      expect.objectContaining({ adminId: 'admin-1', role: 'super-admin' }),
-      'ERASURE_EXECUTED',
-      'user',
-      'cust-1',
-      expect.any(Object),
+    // After fix P1 #2: post-cascade audit entry uses anonymizedHash (NOT raw uid)
+    // so no audit row links the natural-person uid to a deleted account.
+    const erasureExecutedCall = (auditService.auditLog as MockFn).mock.calls.find(
+      (call: unknown[]) => call[1] === 'ERASURE_EXECUTED',
     );
+    expect(erasureExecutedCall).toBeDefined();
+    const auditedResourceId = erasureExecutedCall![3] as string;
+    expect(auditedResourceId).toMatch(/^[0-9a-f]{64}$/);
+    expect(auditedResourceId).not.toBe('cust-1');
   });
 
   it('returns 500 with FAILED state when cascade throws', async () => {

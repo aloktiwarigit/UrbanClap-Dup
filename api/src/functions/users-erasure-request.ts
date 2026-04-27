@@ -4,6 +4,7 @@ import type { HttpRequest, InvocationContext, HttpResponseInit } from '@azure/fu
 import { randomBytes, randomUUID } from 'node:crypto';
 import { verifyFirebaseIdToken } from '../services/firebaseAdmin.js';
 import { auditLog } from '../services/auditLog.service.js';
+import { inferUserRole } from '../services/userRole.service.js';
 import {
   createErasureRequest,
   getPendingErasureRequestForUser,
@@ -28,11 +29,6 @@ async function authenticate(req: HttpRequest): Promise<{ uid: string } | { error
   }
 }
 
-function inferRole(req: HttpRequest): 'CUSTOMER' | 'TECHNICIAN' {
-  const v = (req.headers.get('x-user-role') ?? 'customer').toLowerCase();
-  return v === 'technician' ? 'TECHNICIAN' : 'CUSTOMER';
-}
-
 export async function submitErasureRequestHandler(
   req: HttpRequest,
   _ctx: InvocationContext,
@@ -42,7 +38,7 @@ export async function submitErasureRequestHandler(
     return { status: auth.errorStatus, jsonBody: { code: auth.code } };
   }
   const { uid } = auth;
-  const role = inferRole(req);
+  const role = await inferUserRole(uid);
 
   let body: unknown;
   try {

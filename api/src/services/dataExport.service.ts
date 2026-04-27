@@ -32,7 +32,15 @@ function maskPan(pan: string | null | undefined): string | null {
   return pan.replace(/^.{5}/, 'XXXXX');
 }
 
-function projectBooking(b: Record<string, unknown>): Record<string, unknown> {
+/**
+ * Project a booking for the caller. The counterparty's uid is omitted under
+ * DPDP §11 — a data principal is entitled to *their* personal data, not the
+ * other party's identifier returned in machine-readable bulk form.
+ */
+function projectBooking(
+  b: Record<string, unknown>,
+  callerRole: 'CUSTOMER' | 'TECHNICIAN',
+): Record<string, unknown> {
   return {
     id: b['id'],
     serviceId: b['serviceId'],
@@ -44,21 +52,35 @@ function projectBooking(b: Record<string, unknown>): Record<string, unknown> {
     status: b['status'],
     amount: b['amount'],
     finalAmount: b['finalAmount'],
-    customerId: b['customerId'],
-    technicianId: b['technicianId'],
+    ...(callerRole === 'CUSTOMER' ? { customerId: b['customerId'] } : {}),
+    ...(callerRole === 'TECHNICIAN' ? { technicianId: b['technicianId'] } : {}),
     createdAt: b['createdAt'],
     completedAt: b['completedAt'],
   };
 }
 
-function projectRating(r: Record<string, unknown>): Record<string, unknown> {
+/**
+ * Project a rating for the caller. We strip the side that belongs to the
+ * other party — a customer's export shouldn't include the technician's
+ * private comment about them, and vice versa.
+ */
+function projectRating(
+  r: Record<string, unknown>,
+  callerRole: 'CUSTOMER' | 'TECHNICIAN',
+): Record<string, unknown> {
+  if (callerRole === 'CUSTOMER') {
+    return {
+      id: r['id'],
+      bookingId: r['bookingId'],
+      customerOverall: r['customerOverall'],
+      customerSubScores: r['customerSubScores'],
+      customerComment: r['customerComment'],
+      customerSubmittedAt: r['customerSubmittedAt'],
+    };
+  }
   return {
     id: r['id'],
     bookingId: r['bookingId'],
-    customerOverall: r['customerOverall'],
-    customerSubScores: r['customerSubScores'],
-    customerComment: r['customerComment'],
-    customerSubmittedAt: r['customerSubmittedAt'],
     techOverall: r['techOverall'],
     techSubScores: r['techSubScores'],
     techComment: r['techComment'],
@@ -66,17 +88,29 @@ function projectRating(r: Record<string, unknown>): Record<string, unknown> {
   };
 }
 
-function projectComplaint(c: Record<string, unknown>): Record<string, unknown> {
+/**
+ * Project a complaint. Free-text fields (description, photoStoragePath) are
+ * the *filer's* personal narrative — returning them to the non-filer leaks
+ * the other party's testimony about them. We only emit those fields when
+ * the caller's role matches `filedBy`.
+ */
+function projectComplaint(
+  c: Record<string, unknown>,
+  callerRole: 'CUSTOMER' | 'TECHNICIAN',
+): Record<string, unknown> {
+  const callerIsAuthor = c['filedBy'] === callerRole;
   return {
     id: c['id'],
     orderId: c['orderId'],
-    description: c['description'],
     status: c['status'],
     filedBy: c['filedBy'],
     reasonCode: c['reasonCode'],
-    photoStoragePath: c['photoStoragePath'],
     createdAt: c['createdAt'],
     resolvedAt: c['resolvedAt'],
+    ...(callerIsAuthor && {
+      description: c['description'],
+      photoStoragePath: c['photoStoragePath'],
+    }),
   };
 }
 
@@ -133,9 +167,9 @@ export async function assembleUserDataExport(
     userId,
     role,
     profile,
-    bookings: bookings.map(projectBooking),
-    ratings: ratings.map(projectRating),
-    complaints: complaints.map(projectComplaint),
+    bookings: bookings.map((b) => projectBooking(b, role)),
+    ratings: ratings.map((r) => projectRating(r, role)),
+    complaints: complaints.map((c) => projectComplaint(c, role)),
     kyc,
     walletLedger,
     fcmTokens: { acknowledged: fcmAcknowledged },
