@@ -120,17 +120,23 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
     // Clear technicianId so the original tech's active-job screen stops updating.
     // Store noShowTechnicianId separately — needed for exclusion filter across recovery runs.
     // Track success: if this fails, noShowRedispatchAt must NOT be set so recovery retries.
+    // Skip if already SEARCHING: a prior run already wrote this step. Writing again would
+    // revert SEARCHING → NO_SHOW_REDISPATCH and break the SEARCHING recovery guard in Step 2.
     let statusWriteOk = false;
-    try {
-      await updateBookingFields(booking.id, {
-        status: 'NO_SHOW_REDISPATCH',
-        technicianId: undefined,
-        noShowTechnicianId: noShowTechId,
-      });
-      statusWriteOk = true;
-    } catch (err: unknown) {
-      Sentry.captureException(err);
-      ctx.log(`detectNoShows: status update failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);
+    if (freshBooking.status === 'SEARCHING') {
+      statusWriteOk = true; // Step 1 was completed by the prior run that crashed in Step 2.
+    } else {
+      try {
+        await updateBookingFields(booking.id, {
+          status: 'NO_SHOW_REDISPATCH',
+          technicianId: undefined,
+          noShowTechnicianId: noShowTechId,
+        });
+        statusWriteOk = true;
+      } catch (err: unknown) {
+        Sentry.captureException(err);
+        ctx.log(`detectNoShows: status update failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);
+      }
     }
 
     // ── Step 2: Redispatch ────────────────────────────────────────────────────────
