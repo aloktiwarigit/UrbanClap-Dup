@@ -140,16 +140,24 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
     // technicianId was cleared from the booking doc in Step 1.
     let redispatchOk = false;
     if (statusWriteOk && !freshBooking.noShowRedispatchAt) {
-      try {
-        redispatchOk = await dispatcherService.redispatch(booking.id, NO_SHOW_REDISPATCH_RADIUS_KM, noShowTechId);
-        if (redispatchOk) {
-          await updateBookingFields(booking.id, { noShowRedispatchAt: new Date().toISOString() });
-        } else {
-          ctx.log(`detectNoShows: no techs found for ${booking.id} — booking marked UNFULFILLED`);
+      // Re-read before dispatching: a concurrent timer invocation that won the credit race
+      // may have already written noShowRedispatchAt between freshBooking and now.
+      const preDispatchDoc = await bookingRepo.getById(booking.id);
+      if (preDispatchDoc?.noShowRedispatchAt) {
+        redispatchOk = true;
+        ctx.log(`detectNoShows: redispatch already completed concurrently for ${booking.id}`);
+      } else {
+        try {
+          redispatchOk = await dispatcherService.redispatch(booking.id, NO_SHOW_REDISPATCH_RADIUS_KM, noShowTechId);
+          if (redispatchOk) {
+            await updateBookingFields(booking.id, { noShowRedispatchAt: new Date().toISOString() });
+          } else {
+            ctx.log(`detectNoShows: no techs found for ${booking.id} — booking marked UNFULFILLED`);
+          }
+        } catch (err: unknown) {
+          Sentry.captureException(err);
+          ctx.log(`detectNoShows: redispatch failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);
         }
-      } catch (err: unknown) {
-        Sentry.captureException(err);
-        ctx.log(`detectNoShows: redispatch failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);
       }
     } else if (freshBooking.noShowRedispatchAt) {
       // Redispatch was already done on a prior run — mark ok for logging
