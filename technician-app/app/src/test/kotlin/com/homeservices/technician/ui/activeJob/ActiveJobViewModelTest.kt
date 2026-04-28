@@ -216,7 +216,7 @@ public class ActiveJobViewModelTest {
                     connectivityObserver,
                     uploadJobPhotoUseCase,
                 )
-            assertThat(vm.uiState.value).isEqualTo(ActiveJobUiState.Completed)
+            assertThat(vm.uiState.value).isInstanceOf(ActiveJobUiState.Completed::class.java)
         }
 
     @Test

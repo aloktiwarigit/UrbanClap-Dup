@@ -78,6 +78,7 @@ export async function escalateRatingHandler(
     slaDeadlineAt: expiresAt.toISOString(),
     expiresAt: expiresAt.toISOString(),
     escalated: false,
+    ackBreached: false,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
   };

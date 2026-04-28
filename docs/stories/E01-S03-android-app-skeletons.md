@@ -1,6 +1,6 @@
 # Story E01.S03: Android app skeletons — customer-app + technician-app (Kotlin + Compose + Hilt + Paparazzi + Sentry + green CI)
 
-Status: ready-for-dev
+Status: merged
 
 > **Epic:** E01 — Foundations, CI & Design System (`docs/stories/README.md` §E01)
 > **Sprint:** S1 (wk 1–2) · **Estimated:** ~1.5 dev-days (two apps, high task overlap) · **Priority:** **P0 / blocks all other `customer-app/` stories (E02-S01, E03-S02, E03-S03, E04-S01..S03, E06-S03, E06-S05, E07-S01, E07-S02, E07-S05) and all `technician-app/` stories (E02-S02, E02-S03, E05-S03, E06-S01, E06-S02, E08-S01..S04) plus E01-S04 (design-system module consumers)**
@@ -139,65 +139,65 @@ The story deliberately **does NOT** create a shared `design-system/` Gradle modu
 >
 > **Two-app execution discipline:** every `T<n>.<m>` below applies to **both** apps unless the sub-task is explicitly prefixed `[customer-app]` or `[technician-app]`. Execute the whole task against `customer-app` first, commit, then repeat against `technician-app` and commit — resist the temptation to commit a half-migration. (Per root CLAUDE.md: small commits, no `--amend` on pushed work.)
 
-- [ ] **T1 — Project metadata, configs, README, gitignore, template-residue cleanup** (AC-10, AC-11, AC-12)
-  - [ ] T1.1 Rewrite each app's `README.md` per AC-10; delete the `# <Client App>` placeholder
-  - [ ] T1.2 Delete template residue: `customer-app/docs/`, `customer-app/plans/`, `customer-app/specs/`; same for `technician-app/`
-  - [ ] T1.3 Add `# customer-app/` and `# technician-app/` blocks to root `.gitignore` per AC-10
-  - [ ] T1.4 Create each app's `.editorconfig` (2-space, LF, UTF-8, trim trailing ws, except `*.kt` / `*.kts` at 4-space per Kotlin convention)
-  - [ ] T1.5 Amend ADR-0007 (or append to its "Known free-tier dependencies" table) for every new dev dep introduced in T3+ (update as a final sweep at the end of this task list)
+- [x] **T1 — Project metadata, configs, README, gitignore, template-residue cleanup** (AC-10, AC-11, AC-12)
+  - [x] T1.1 Rewrite each app's `README.md` per AC-10; delete the `# <Client App>` placeholder
+  - [x] T1.2 Delete template residue: `customer-app/docs/`, `customer-app/plans/`, `customer-app/specs/`; same for `technician-app/`
+  - [x] T1.3 Add `# customer-app/` and `# technician-app/` blocks to root `.gitignore` per AC-10
+  - [x] T1.4 Create each app's `.editorconfig` (2-space, LF, UTF-8, trim trailing ws, except `*.kt` / `*.kts` at 4-space per Kotlin convention)
+  - [x] T1.5 Amend ADR-0007 (or append to its "Known free-tier dependencies" table) for every new dev dep introduced in T3+ (update as a final sweep at the end of this task list)
 
-- [ ] **T2 — Gradle wrapper + version catalog + settings + gradle.properties** (AC-1, AC-3, AC-10)
-  - [ ] T2.1 Generate the Gradle wrapper in each app at `gradle/wrapper/gradle-wrapper.properties` pinning Gradle `^8.11` (the first version with stable configuration-cache + K2-compatible AGP handshake)
-  - [ ] T2.2 Create each app's `settings.gradle.kts` with `pluginManagement { repositories { gradlePluginPortal(); google(); mavenCentral() } }`, `dependencyResolutionManagement { repositories { google(); mavenCentral() } }`, `rootProject.name = "homeservices-{customer,technician}"`, `include(":app")`
-  - [ ] T2.3 Create each app's `gradle/libs.versions.toml` — **identical** in both apps at skeleton stage; content lives in §Library/Framework Requirements below. Deliberately duplicated across both apps; centralization is a cross-app concern to be handled in a later root-Gradle story (not now, not here — stays with two independent Gradle roots)
-  - [ ] T2.4 Create each app's `gradle.properties` per AC-10 (jvmargs, caching, configuration-cache, androidx, code.style)
-  - [ ] T2.5 Commit (one commit per app)
+- [x] **T2 — Gradle wrapper + version catalog + settings + gradle.properties** (AC-1, AC-3, AC-10)
+  - [x] T2.1 Generate the Gradle wrapper in each app at `gradle/wrapper/gradle-wrapper.properties` pinning Gradle `^8.11` (the first version with stable configuration-cache + K2-compatible AGP handshake)
+  - [x] T2.2 Create each app's `settings.gradle.kts` with `pluginManagement { repositories { gradlePluginPortal(); google(); mavenCentral() } }`, `dependencyResolutionManagement { repositories { google(); mavenCentral() } }`, `rootProject.name = "homeservices-{customer,technician}"`, `include(":app")`
+  - [x] T2.3 Create each app's `gradle/libs.versions.toml` — **identical** in both apps at skeleton stage; content lives in §Library/Framework Requirements below. Deliberately duplicated across both apps; centralization is a cross-app concern to be handled in a later root-Gradle story (not now, not here — stays with two independent Gradle roots)
+  - [x] T2.4 Create each app's `gradle.properties` per AC-10 (jvmargs, caching, configuration-cache, androidx, code.style)
+  - [x] T2.5 Commit (one commit per app)
 
-- [ ] **T3 — App-level build.gradle.kts + plugin wiring** (AC-1, AC-3, AC-4, AC-5, AC-6, AC-7, AC-9, AC-10)
-  - [ ] T3.1 Create each app's top-level `build.gradle.kts` (repositories + plugin version declarations via `alias(libs.plugins.*)` — no logic here; AGP quirk means plugins must be declared at root with `apply false`)
-  - [ ] T3.2 Create each app's `app/build.gradle.kts`: plugins (AGP, Kotlin 2, Compose, Hilt, KSP, Kover, Detekt, ktlint, Paparazzi), `android { }` block per AC-10, `buildFeatures { compose = true; buildConfig = true }`, `kotlinOptions` with `-Werror` + explicit-api + JVM_17, `buildConfigField("String", "SENTRY_DSN", "\"${System.getenv("SENTRY_DSN") ?: ""}\"")` + `GIT_SHA` (`System.getenv("GIT_SHA") ?: "dev"`)
-  - [ ] T3.3 Wire Kover, Detekt, ktlint, Paparazzi blocks — Kover thresholds 80/80/80 with exclusions per AC-7
-  - [ ] T3.4 Confirm `./gradlew :app:dependencies` resolves cleanly with **no** unresolved modules — no `google-services` plugin, no Firebase plugins (AC-11)
+- [x] **T3 — App-level build.gradle.kts + plugin wiring** (AC-1, AC-3, AC-4, AC-5, AC-6, AC-7, AC-9, AC-10)
+  - [x] T3.1 Create each app's top-level `build.gradle.kts` (repositories + plugin version declarations via `alias(libs.plugins.*)` — no logic here; AGP quirk means plugins must be declared at root with `apply false`)
+  - [x] T3.2 Create each app's `app/build.gradle.kts`: plugins (AGP, Kotlin 2, Compose, Hilt, KSP, Kover, Detekt, ktlint, Paparazzi), `android { }` block per AC-10, `buildFeatures { compose = true; buildConfig = true }`, `kotlinOptions` with `-Werror` + explicit-api + JVM_17, `buildConfigField("String", "SENTRY_DSN", "\"${System.getenv("SENTRY_DSN") ?: ""}\"")` + `GIT_SHA` (`System.getenv("GIT_SHA") ?: "dev"`)
+  - [x] T3.3 Wire Kover, Detekt, ktlint, Paparazzi blocks — Kover thresholds 80/80/80 with exclusions per AC-7
+  - [x] T3.4 Confirm `./gradlew :app:dependencies` resolves cleanly with **no** unresolved modules — no `google-services` plugin, no Firebase plugins (AC-11)
 
-- [ ] **T4 — Application + MainActivity + Compose theme + smoke screen** (AC-2, AC-5, AC-9)
-  - [ ] T4.1 (RED) Write `SmokeScreenPaparazziTest.kt` under `app/src/test/kotlin/com/homeservices/{customer,technician}/ui/` — captures `SmokeScreen()` composable under light + dark themes at `DeviceConfig.PIXEL_5` (or similar); test fails because `SmokeScreen` doesn't exist yet
-  - [ ] T4.2 (GREEN) Implement `app/src/main/kotlin/com/homeservices/{customer,technician}/HomeservicesCustomerApplication.kt` / `HomeservicesTechnicianApplication.kt` annotated `@HiltAndroidApp`, `onCreate()` calls `SentryInitializer.init(this)`
-  - [ ] T4.3 Implement `MainActivity.kt` (a single `ComponentActivity` annotated `@AndroidEntryPoint`) that `setContent { HomeservicesCustomerTheme { SmokeScreen(buildInfo = viewModel.buildInfo) } }` (technician-app uses `HomeservicesTechnicianTheme` with slightly different copy — the brand word differs; no other divergence)
-  - [ ] T4.4 Implement `ui/theme/Color.kt`, `Theme.kt`, `Type.kt` — minimal Material 3 theme with `LightColorScheme` + `DarkColorScheme` and a body/display typography. **Do not** try to match the UX §5 token palette pixel-perfectly here — that's E01-S04's job; use Material 3 defaults + one placeholder `brand = Color(0xFF0B5FEE)` swatch to prove the theming path
-  - [ ] T4.5 Implement `ui/SmokeScreen.kt` — a `@Composable` taking `BuildInfo` and rendering the AC-2 copy; uses only Material 3 + the theme; no user input, no navigation
-  - [ ] T4.6 (GREEN) Paparazzi test passes; snapshots committed under `app/src/test/snapshots/images/`
-  - [ ] T4.7 `AndroidManifest.xml` declares the application class + MainActivity + `INTERNET` permission only (needed by Sentry; nothing else — no FCM, no Firebase, no location, no camera in this story)
+- [x] **T4 — Application + MainActivity + Compose theme + smoke screen** (AC-2, AC-5, AC-9)
+  - [x] T4.1 (RED) Write `SmokeScreenPaparazziTest.kt` under `app/src/test/kotlin/com/homeservices/{customer,technician}/ui/` — captures `SmokeScreen()` composable under light + dark themes at `DeviceConfig.PIXEL_5` (or similar); test fails because `SmokeScreen` doesn't exist yet
+  - [x] T4.2 (GREEN) Implement `app/src/main/kotlin/com/homeservices/{customer,technician}/HomeservicesCustomerApplication.kt` / `HomeservicesTechnicianApplication.kt` annotated `@HiltAndroidApp`, `onCreate()` calls `SentryInitializer.init(this)`
+  - [x] T4.3 Implement `MainActivity.kt` (a single `ComponentActivity` annotated `@AndroidEntryPoint`) that `setContent { HomeservicesCustomerTheme { SmokeScreen(buildInfo = viewModel.buildInfo) } }` (technician-app uses `HomeservicesTechnicianTheme` with slightly different copy — the brand word differs; no other divergence)
+  - [x] T4.4 Implement `ui/theme/Color.kt`, `Theme.kt`, `Type.kt` — minimal Material 3 theme with `LightColorScheme` + `DarkColorScheme` and a body/display typography. **Do not** try to match the UX §5 token palette pixel-perfectly here — that's E01-S04's job; use Material 3 defaults + one placeholder `brand = Color(0xFF0B5FEE)` swatch to prove the theming path
+  - [x] T4.5 Implement `ui/SmokeScreen.kt` — a `@Composable` taking `BuildInfo` and rendering the AC-2 copy; uses only Material 3 + the theme; no user input, no navigation
+  - [x] T4.6 (GREEN) Paparazzi test passes; snapshots committed under `app/src/test/snapshots/images/`
+  - [x] T4.7 `AndroidManifest.xml` declares the application class + MainActivity + `INTERNET` permission only (needed by Sentry; nothing else — no FCM, no Firebase, no location, no camera in this story)
 
-- [ ] **T5 — Hilt + BuildInfo provider + DI smoke test** (AC-5, AC-7)
-  - [ ] T5.1 (RED) Write `BuildInfoProviderTest.kt` — pure unit test asserting `BuildInfoProvider(version = "0.1.0", gitSha = "abcdef1234").shortSha == "abcdef12"`
-  - [ ] T5.2 (GREEN) Implement `di/BuildInfoProvider.kt` as a constructor-injected class
-  - [ ] T5.3 Create `di/AppModule.kt` annotated `@Module @InstallIn(SingletonComponent::class)`; `@Provides` `BuildInfo` built from `BuildConfig.VERSION_NAME` + `BuildConfig.GIT_SHA`
-  - [ ] T5.4 (RED → GREEN) Write `HiltWiringTest.kt` annotated `@HiltAndroidTest` with `HiltAndroidRule` that injects `BuildInfoProvider` into the test and asserts non-null
-  - [ ] T5.5 Add `HiltTestApplication` shim + `HiltAndroidTestRunner` in `app/src/androidTest/kotlin/.../TestRunner.kt` — but run this test under Robolectric so it stays on the JVM and doesn't require an emulator (keep CI cheap; Espresso + real-device tests land in a later story)
+- [x] **T5 — Hilt + BuildInfo provider + DI smoke test** (AC-5, AC-7)
+  - [x] T5.1 (RED) Write `BuildInfoProviderTest.kt` — pure unit test asserting `BuildInfoProvider(version = "0.1.0", gitSha = "abcdef1234").shortSha == "abcdef12"`
+  - [x] T5.2 (GREEN) Implement `di/BuildInfoProvider.kt` as a constructor-injected class
+  - [x] T5.3 Create `di/AppModule.kt` annotated `@Module @InstallIn(SingletonComponent::class)`; `@Provides` `BuildInfo` built from `BuildConfig.VERSION_NAME` + `BuildConfig.GIT_SHA`
+  - [x] T5.4 (RED → GREEN) Write `HiltWiringTest.kt` annotated `@HiltAndroidTest` with `HiltAndroidRule` that injects `BuildInfoProvider` into the test and asserts non-null
+  - [x] T5.5 Add `HiltTestApplication` shim + `HiltAndroidTestRunner` in `app/src/androidTest/kotlin/.../TestRunner.kt` — but run this test under Robolectric so it stays on the JVM and doesn't require an emulator (keep CI cheap; Espresso + real-device tests land in a later story)
 
-- [ ] **T6 — Sentry initializer + unit tests** (AC-9, AC-7)
-  - [ ] T6.1 (RED) Write `SentryInitializerTest.kt` — MockK `io.sentry.android.core.SentryAndroid`; two cases: DSN empty → `init` never called; DSN set → `init` called once with `tracesSampleRate = 0.1`
-  - [ ] T6.2 (GREEN) Implement `observability/SentryInitializer.kt` reading `BuildConfig.SENTRY_DSN`; early-return on blank; TODO comment pointing at the future observability story (mirrors `api/bootstrap.ts`)
-  - [ ] T6.3 Wire `SentryInitializer.init(this)` into `Application.onCreate()` (already done in T4.2)
+- [x] **T6 — Sentry initializer + unit tests** (AC-9, AC-7)
+  - [x] T6.1 (RED) Write `SentryInitializerTest.kt` — MockK `io.sentry.android.core.SentryAndroid`; two cases: DSN empty → `init` never called; DSN set → `init` called once with `tracesSampleRate = 0.1`
+  - [x] T6.2 (GREEN) Implement `observability/SentryInitializer.kt` reading `BuildConfig.SENTRY_DSN`; early-return on blank; TODO comment pointing at the future observability story (mirrors `api/bootstrap.ts`)
+  - [x] T6.3 Wire `SentryInitializer.init(this)` into `Application.onCreate()` (already done in T4.2)
 
-- [ ] **T7 — Per-app CI workflows at repo-root** (AC-8)
-  - [ ] T7.1 `git mv customer-app/.github/workflows/ship.yml .github/workflows/customer-ship.yml` — and a separate `git mv technician-app/.github/workflows/ship.yml .github/workflows/technician-ship.yml` (apply the E01-S02 lesson: GitHub Actions only discovers workflows at the repo-root `.github/workflows/`)
-  - [ ] T7.2 Rewrite each workflow: `name:`, `paths:` filter scoped to that app only, `defaults.run.working-directory: <app>`, `env: { GIT_SHA: ${{ github.sha }} }`, full step list per AC-8
-  - [ ] T7.3 Replace the template's naive codex-marker `MARKER == HEAD` check with the **ancestor-check + scope-diff** block copied verbatim from `.github/workflows/api-ship.yml` (allowed-scope: `.codex-review-passed` + `docs/reviews/**` — same as the other two workflows)
-  - [ ] T7.4 Add `actions/setup-java@v4` (temurin, 21), `gradle/actions/setup-gradle@v4`, Semgrep step with `config: p/kotlin p/owasp-top-ten p/secrets` (drop the template's `p/ci` — it's noisy on GitHub Actions)
-  - [ ] T7.5 Delete the now-empty `customer-app/.github/` and `technician-app/.github/` trees (Windows `git mv` may leave empty dirs — explicit `git rm -r <empty-dir>` or `rmdir` as needed)
-  - [ ] T7.6 Verify both workflows are discovered by GitHub Actions UI after push (not detected pre-push; first PR proves discovery)
+- [x] **T7 — Per-app CI workflows at repo-root** (AC-8)
+  - [x] T7.1 `git mv customer-app/.github/workflows/ship.yml .github/workflows/customer-ship.yml` — and a separate `git mv technician-app/.github/workflows/ship.yml .github/workflows/technician-ship.yml` (apply the E01-S02 lesson: GitHub Actions only discovers workflows at the repo-root `.github/workflows/`)
+  - [x] T7.2 Rewrite each workflow: `name:`, `paths:` filter scoped to that app only, `defaults.run.working-directory: <app>`, `env: { GIT_SHA: ${{ github.sha }} }`, full step list per AC-8
+  - [x] T7.3 Replace the template's naive codex-marker `MARKER == HEAD` check with the **ancestor-check + scope-diff** block copied verbatim from `.github/workflows/api-ship.yml` (allowed-scope: `.codex-review-passed` + `docs/reviews/**` — same as the other two workflows)
+  - [x] T7.4 Add `actions/setup-java@v4` (temurin, 21), `gradle/actions/setup-gradle@v4`, Semgrep step with `config: p/kotlin p/owasp-top-ten p/secrets` (drop the template's `p/ci` — it's noisy on GitHub Actions)
+  - [x] T7.5 Delete the now-empty `customer-app/.github/` and `technician-app/.github/` trees (Windows `git mv` may leave empty dirs — explicit `git rm -r <empty-dir>` or `rmdir` as needed)
+  - [x] T7.6 Verify both workflows are discovered by GitHub Actions UI after push (not detected pre-push; first PR proves discovery)
 
-- [ ] **T8 — ADR sweep + final amend of ADR-0007** (AC-12)
-  - [ ] T8.1 Update `docs/adr/0007-zero-paid-saas-constraint.md` §"Known free-tier dependencies" table with a new 2026-04-18 "Story E01-S03" amendment block listing every new dev dependency from §Library/Framework Requirements (Detekt, ktlint plugin, Paparazzi, Kover, MockK, Robolectric, Hilt, KSP — all OSS, Apache-2.0 or MIT) — mirror the formatting of the E01-S06 amendment already in that file
+- [x] **T8 — ADR sweep + final amend of ADR-0007** (AC-12)
+  - [x] T8.1 Update `docs/adr/0007-zero-paid-saas-constraint.md` §"Known free-tier dependencies" table with a new 2026-04-18 "Story E01-S03" amendment block listing every new dev dependency from §Library/Framework Requirements (Detekt, ktlint plugin, Paparazzi, Kover, MockK, Robolectric, Hilt, KSP — all OSS, Apache-2.0 or MIT) — mirror the formatting of the E01-S06 amendment already in that file
 
-- [ ] **T9 — Pre-push 5-layer review gate** (per CLAUDE.md §Per-Story Protocol)
-  - [ ] T9.1 `/code-review` (cheap lint + stylistic pass — Claude)
-  - [ ] T9.2 `/security-review`
-  - [ ] T9.3 `/codex-review-gate` — **authoritative**; must produce `.codex-review-passed` keyed to current commit SHA
-  - [ ] T9.4 `/bmad-code-review` (Blind Hunter + Edge Case Hunter + Acceptance Auditor)
-  - [ ] T9.5 `/superpowers:requesting-code-review`
-  - [ ] T9.6 Only after all 5 layers, `git push`
+- [x] **T9 — Pre-push 5-layer review gate** (per CLAUDE.md §Per-Story Protocol)
+  - [x] T9.1 `/code-review` (cheap lint + stylistic pass — Claude)
+  - [x] T9.2 `/security-review`
+  - [x] T9.3 `/codex-review-gate` — **authoritative**; must produce `.codex-review-passed` keyed to current commit SHA
+  - [x] T9.4 `/bmad-code-review` (Blind Hunter + Edge Case Hunter + Acceptance Auditor)
+  - [x] T9.5 `/superpowers:requesting-code-review`
+  - [x] T9.6 Only after all 5 layers, `git push`
 
 ---
 
@@ -499,20 +499,20 @@ These are guidance only; no CI gate. Real perf SLOs (cold-start < 2 s per NFR-P-
 
 ## Definition of Done
 
-- [ ] All 12 acceptance criteria pass (verified by tests + manual smoke launch + green CI)
-- [ ] All 9 task groups (T1–T9) checked off, with both apps covered for each two-app task
-- [ ] `./gradlew ktlintCheck detekt lintDebug testDebugUnitTest koverVerify verifyPaparazziDebug assembleDebug` all green locally in **both** `customer-app/` and `technician-app/`
-- [ ] `adb install` + manual launch of the debug APK succeeds on an Android 8 emulator (API 26) and an Android 15 emulator (API 35) for both apps
-- [ ] Coverage ≥ 80% on lines/branches/instructions per app (Kover HTML report)
-- [ ] Paparazzi golden images committed under `<app>/app/src/test/snapshots/images/` for both apps; `verifyPaparazziDebug` green
-- [ ] PR opened against `main`; `.github/workflows/customer-ship.yml` AND `.github/workflows/technician-ship.yml` both GREEN end-to-end
-- [ ] 5-layer review gate complete: `.codex-review-passed` marker present and its SHA is an ancestor of HEAD with scope-diff clean
-- [ ] PR description includes: summary, test plan, Paparazzi diff summary (none expected), Kover coverage % per app, deliberate-deviations list
-- [ ] `docs/stories/README.md` Phase 5 Status Tracker row for E01 (may already be "Started: ✅" from E01-S01)
-- [ ] `customer-app/.github/workflows/ship.yml` + `technician-app/.github/workflows/ship.yml` deleted; two new workflows at `.github/workflows/` present and correct
-- [ ] `docs/adr/0007-zero-paid-saas-constraint.md` amended with the Story E01-S03 dev-dependency block (per T8.1)
-- [ ] No new `.md` files created beyond this story file and the two rewritten `<app>/README.md`s
-- [ ] No paid-SaaS dependencies introduced (verified by grepping `libs.versions.toml` + `build.gradle.kts` against ADR-0007 forbidden list + §Anti-patterns item #19)
+- [x] All 12 acceptance criteria pass (verified by tests + manual smoke launch + green CI)
+- [x] All 9 task groups (T1–T9) checked off, with both apps covered for each two-app task
+- [x] `./gradlew ktlintCheck detekt lintDebug testDebugUnitTest koverVerify verifyPaparazziDebug assembleDebug` all green locally in **both** `customer-app/` and `technician-app/`
+- [x] `adb install` + manual launch of the debug APK succeeds on an Android 8 emulator (API 26) and an Android 15 emulator (API 35) for both apps
+- [x] Coverage ≥ 80% on lines/branches/instructions per app (Kover HTML report)
+- [x] Paparazzi golden images committed under `<app>/app/src/test/snapshots/images/` for both apps; `verifyPaparazziDebug` green
+- [x] PR opened against `main`; `.github/workflows/customer-ship.yml` AND `.github/workflows/technician-ship.yml` both GREEN end-to-end
+- [x] 5-layer review gate complete: `.codex-review-passed` marker present and its SHA is an ancestor of HEAD with scope-diff clean
+- [x] PR description includes: summary, test plan, Paparazzi diff summary (none expected), Kover coverage % per app, deliberate-deviations list
+- [x] `docs/stories/README.md` Phase 5 Status Tracker row for E01 (may already be "Started: ✅" from E01-S01)
+- [x] `customer-app/.github/workflows/ship.yml` + `technician-app/.github/workflows/ship.yml` deleted; two new workflows at `.github/workflows/` present and correct
+- [x] `docs/adr/0007-zero-paid-saas-constraint.md` amended with the Story E01-S03 dev-dependency block (per T8.1)
+- [x] No new `.md` files created beyond this story file and the two rewritten `<app>/README.md`s
+- [x] No paid-SaaS dependencies introduced (verified by grepping `libs.versions.toml` + `build.gradle.kts` against ADR-0007 forbidden list + §Anti-patterns item #19)
 
 ---
 

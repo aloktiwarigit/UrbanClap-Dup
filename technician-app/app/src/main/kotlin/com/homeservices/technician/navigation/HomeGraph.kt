@@ -14,6 +14,8 @@ import androidx.navigation.navArgument
 import com.homeservices.technician.domain.activeJob.model.NavigationEvent
 import com.homeservices.technician.ui.activeJob.ActiveJobScreen
 import com.homeservices.technician.ui.activeJob.ActiveJobViewModel
+import com.homeservices.technician.ui.complaint.ComplaintRoutes
+import com.homeservices.technician.ui.complaint.ComplaintScreen
 import com.homeservices.technician.ui.earnings.EarningsScreen
 import com.homeservices.technician.ui.myratings.MyRatingsScreen
 import com.homeservices.technician.ui.rating.RatingRoutes
@@ -44,13 +46,24 @@ internal fun NavGraphBuilder.homeGraph(navController: NavController) {
                     }
                 }
             }
-            ActiveJobScreen(viewModel = viewModel)
+            ActiveJobScreen(
+                viewModel = viewModel,
+            )
         }
         composable(
             route = RatingRoutes.ROUTE,
             arguments = listOf(navArgument("bookingId") { type = NavType.StringType }),
         ) {
-            RatingScreen()
+            RatingScreen(
+                onFileComplaint = { id -> navController.navigate(ComplaintRoutes.route(id)) },
+            )
+        }
+        composable(
+            route = ComplaintRoutes.ROUTE,
+            arguments = listOf(navArgument("bookingId") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val bookingId = backStackEntry.arguments?.getString("bookingId") ?: ""
+            ComplaintScreen(bookingId = bookingId, onBack = { navController.popBackStack() })
         }
     }
 }
