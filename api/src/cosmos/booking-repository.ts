@@ -70,7 +70,7 @@ export const bookingRepo = {
   async getAssignedBookingsBefore(slotDateCutoff: string): Promise<BookingDoc[]> {
     const { resources } = await getBookingsContainer()
       .items.query<BookingDoc>({
-        query: "SELECT * FROM c WHERE c.status IN ('ASSIGNED', 'NO_SHOW_REDISPATCH') AND c.slotDate <= @slotDate",
+        query: "SELECT * FROM c WHERE (c.status IN ('ASSIGNED', 'NO_SHOW_REDISPATCH') OR (c.status = 'SEARCHING' AND IS_DEFINED(c.noShowTechnicianId))) AND c.slotDate <= @slotDate",
         parameters: [{ name: '@slotDate', value: slotDateCutoff }],
       })
       .fetchAll();

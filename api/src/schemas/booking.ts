@@ -39,8 +39,10 @@ export const BookingDocSchema = z.object({
   noShowTechnicianId: z.string().optional(),
   /** ISO timestamp written after the NO_SHOW_CREDIT_ISSUED FCM push is sent successfully. Prevents duplicate pushes across recovery runs. */
   noShowPushSentAt: z.string().optional(),
-  /** ISO timestamp written when customer triggers Safety SOS. Used as idempotency key — second call returns 200 without re-alerting. */
+  /** ISO timestamp written when customer triggers Safety SOS. */
   sosActivatedAt: z.string().optional(),
+  /** ISO timestamp written after sendOwnerSosAlert() succeeds. Absent = alert pending retry. */
+  sosAlertSentAt: z.string().optional(),
 });
 
 export const CreateBookingRequestSchema = z.object({

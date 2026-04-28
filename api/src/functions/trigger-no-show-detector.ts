@@ -46,7 +46,14 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
     // Also allow NO_SHOW_REDISPATCH — the query intentionally includes that status so that
     // a prior run that wrote credit + status but crashed before redispatch can recover.
     const freshBooking = await bookingRepo.getById(booking.id);
-    if (!freshBooking || (freshBooking.status !== 'ASSIGNED' && freshBooking.status !== 'NO_SHOW_REDISPATCH')) {
+    const isRecoverableSearching =
+      freshBooking?.status === 'SEARCHING' && freshBooking.noShowTechnicianId !== undefined;
+    if (
+      !freshBooking ||
+      (freshBooking.status !== 'ASSIGNED' &&
+        freshBooking.status !== 'NO_SHOW_REDISPATCH' &&
+        !isRecoverableSearching)
+    ) {
       ctx.log(`detectNoShows: skipping ${booking.id} — live status is ${freshBooking?.status ?? 'NOT_FOUND'}`);
       continue;
     }

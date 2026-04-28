@@ -6,6 +6,7 @@ vi.mock('../../src/services/firebaseAdmin.js', () => ({
 }));
 vi.mock('../../src/cosmos/booking-repository.js', () => ({
   bookingRepo: { getById: vi.fn(), markSosActivated: vi.fn() },
+  updateBookingFields: vi.fn(),
 }));
 vi.mock('../../src/services/fcm.service.js', () => ({
   sendOwnerSosAlert: vi.fn(),
@@ -17,7 +18,7 @@ vi.mock('@sentry/node', () => ({ captureException: vi.fn() }));
 
 import { sosHandler } from '../../src/functions/sos.js';
 import { verifyFirebaseIdToken } from '../../src/services/firebaseAdmin.js';
-import { bookingRepo } from '../../src/cosmos/booking-repository.js';
+import { bookingRepo, updateBookingFields } from '../../src/cosmos/booking-repository.js';
 import { sendOwnerSosAlert } from '../../src/services/fcm.service.js';
 import { appendAuditEntry } from '../../src/cosmos/audit-log-repository.js';
 import type { BookingDoc } from '../../src/schemas/booking.js';
@@ -46,6 +47,7 @@ beforeEach(() => {
   vi.mocked(bookingRepo.markSosActivated).mockResolvedValue({ ...inProgressBooking, sosActivatedAt: '2026-04-26T06:00:00.000Z' });
   vi.mocked(sendOwnerSosAlert).mockResolvedValue(undefined);
   vi.mocked(appendAuditEntry).mockResolvedValue(undefined);
+  vi.mocked(updateBookingFields).mockResolvedValue(undefined as any);
 });
 
 describe('POST /v1/sos/{bookingId}', () => {
@@ -73,30 +75,49 @@ describe('POST /v1/sos/{bookingId}', () => {
     expect((res.jsonBody as any).code).toBe('BOOKING_NOT_IN_PROGRESS');
   });
 
-  it('returns 200 when SOS already activated (idempotent)', async () => {
-    vi.mocked(bookingRepo.getById).mockResolvedValue({ ...inProgressBooking, sosActivatedAt: '2026-04-26T05:00:00.000Z' });
+  it('returns 200 ALREADY_PROCESSED when both sosActivatedAt and sosAlertSentAt are set', async () => {
+    vi.mocked(bookingRepo.getById).mockResolvedValue({
+      ...inProgressBooking,
+      sosActivatedAt: '2026-04-26T05:00:00.000Z',
+      sosAlertSentAt: '2026-04-26T05:00:01.000Z',
+    });
     const res = await sosHandler(makeReq({ auth: 'Bearer tok' }), ctx) as HttpResponseInit;
     expect(res.status).toBe(200);
+    expect((res.jsonBody as any).code).toBe('ALREADY_PROCESSED');
     expect(bookingRepo.markSosActivated).not.toHaveBeenCalled();
     expect(sendOwnerSosAlert).not.toHaveBeenCalled();
   });
 
-  it('returns 201 on success and fires FCM + audit (non-blocking)', async () => {
+  it('retries FCM when sosActivatedAt is set but sosAlertSentAt is absent (prior run FCM failure)', async () => {
+    vi.mocked(bookingRepo.getById).mockResolvedValue({
+      ...inProgressBooking,
+      sosActivatedAt: '2026-04-26T05:00:00.000Z',
+    });
+    const res = await sosHandler(makeReq({ auth: 'Bearer tok' }), ctx) as HttpResponseInit;
+    expect(res.status).toBe(201);
+    expect(bookingRepo.markSosActivated).not.toHaveBeenCalled();
+    expect(sendOwnerSosAlert).toHaveBeenCalled();
+    expect(updateBookingFields).toHaveBeenCalledWith('bk-1', expect.objectContaining({ sosAlertSentAt: expect.any(String) }));
+  });
+
+  it('returns 201 on fresh SOS — marks first, sends alert, writes sosAlertSentAt', async () => {
     const res = await sosHandler(makeReq({ auth: 'Bearer tok' }), ctx) as HttpResponseInit;
     expect(res.status).toBe(201);
     expect(bookingRepo.markSosActivated).toHaveBeenCalledWith('bk-1');
     expect(sendOwnerSosAlert).toHaveBeenCalledWith({
       bookingId: 'bk-1', customerId: 'cust-1', technicianId: 'tech-1', slotAddress: '42 MG Road, Bangalore',
     });
+    expect(updateBookingFields).toHaveBeenCalledWith('bk-1', expect.objectContaining({ sosAlertSentAt: expect.any(String) }));
     expect(appendAuditEntry).toHaveBeenCalledWith(expect.objectContaining({
       action: 'SOS_TRIGGERED', resourceType: 'booking', resourceId: 'bk-1', role: 'system',
     }));
   });
 
-  it('FCM failure propagates (booking was already marked — only the ETag winner reaches this point)', async () => {
+  it('FCM failure propagates — sosAlertSentAt is not written so next retry can resend', async () => {
     vi.mocked(sendOwnerSosAlert).mockRejectedValue(new Error('FCM down'));
     await expect(sosHandler(makeReq({ auth: 'Bearer tok' }), ctx)).rejects.toThrow('FCM down');
     expect(bookingRepo.markSosActivated).toHaveBeenCalled();
+    expect(updateBookingFields).not.toHaveBeenCalled();
   });
 
   it('FCM payload uses empty string when technicianId is absent', async () => {
@@ -108,7 +129,7 @@ describe('POST /v1/sos/{bookingId}', () => {
     );
   });
 
-  it('returns 200 ALREADY_PROCESSED when markSosActivated returns null (ETag race lost — alert not sent by this request)', async () => {
+  it('returns 200 ALREADY_PROCESSED when markSosActivated returns null (ETag race lost)', async () => {
     vi.mocked(bookingRepo.markSosActivated).mockResolvedValue(null);
     const res = await sosHandler(makeReq({ auth: 'Bearer tok' }), ctx) as HttpResponseInit;
     expect(res.status).toBe(200);
