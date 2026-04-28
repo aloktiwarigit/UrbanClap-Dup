@@ -18,7 +18,16 @@ const sosInner: CustomerHttpHandler = async (req, ctx, customer) => {
   if (booking.status !== 'IN_PROGRESS') return { status: 409, jsonBody: { code: 'BOOKING_NOT_IN_PROGRESS' } };
   if (booking.sosActivatedAt) return { status: 200, jsonBody: { code: 'ALREADY_PROCESSED' } };
 
-  await bookingRepo.markSosActivated(bookingId);
+  // Alert before marking: if FCM fails the booking stays unmarked so the client can retry.
+  await sendOwnerSosAlert({
+    bookingId,
+    customerId: customer.customerId,
+    technicianId: booking.technicianId ?? '',
+    slotAddress: booking.addressText,
+  });
+
+  const marked = await bookingRepo.markSosActivated(bookingId);
+  if (!marked) return { status: 200, jsonBody: { code: 'ALREADY_PROCESSED' } };
 
   const now = new Date().toISOString();
   const auditEntry: AuditLogDoc = {
@@ -32,13 +41,6 @@ const sosInner: CustomerHttpHandler = async (req, ctx, customer) => {
     timestamp: now,
     partitionKey: now.slice(0, 7),
   };
-
-  sendOwnerSosAlert({
-    bookingId,
-    customerId: customer.customerId,
-    technicianId: booking.technicianId ?? '',
-    slotAddress: booking.addressText,
-  }).catch((err: unknown) => ctx.error('FCM SOS_ALERT failed', err));
 
   appendAuditEntry(auditEntry).catch((err: unknown) => ctx.error('Audit SOS_TRIGGERED failed', err));
 

@@ -93,10 +93,10 @@ describe('POST /v1/sos/{bookingId}', () => {
     }));
   });
 
-  it('FCM failure does not affect 201 response', async () => {
+  it('FCM failure propagates so the booking stays unmarked and the client can retry', async () => {
     vi.mocked(sendOwnerSosAlert).mockRejectedValue(new Error('FCM down'));
-    const res = await sosHandler(makeReq({ auth: 'Bearer tok' }), ctx) as HttpResponseInit;
-    expect(res.status).toBe(201);
+    await expect(sosHandler(makeReq({ auth: 'Bearer tok' }), ctx)).rejects.toThrow('FCM down');
+    expect(bookingRepo.markSosActivated).not.toHaveBeenCalled();
   });
 
   it('FCM payload uses empty string when technicianId is absent', async () => {
@@ -108,10 +108,11 @@ describe('POST /v1/sos/{bookingId}', () => {
     );
   });
 
-  it('returns 201 when markSosActivated returns null due to concurrent request (ETag race)', async () => {
+  it('returns 200 ALREADY_PROCESSED when markSosActivated returns null (ETag race — owner alert was already sent)', async () => {
     vi.mocked(bookingRepo.markSosActivated).mockResolvedValue(null);
     const res = await sosHandler(makeReq({ auth: 'Bearer tok' }), ctx) as HttpResponseInit;
-    // The handler still fires FCM and audit even if mark returned null — caller treats as best-effort
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(200);
+    expect((res.jsonBody as any).code).toBe('ALREADY_PROCESSED');
+    expect(sendOwnerSosAlert).toHaveBeenCalled();
   });
 });
