@@ -122,16 +122,26 @@ describe('POST /v1/technicians/me/rating-appeal', () => {
     expect((res.jsonBody as any).nextAvailableAt).toBeDefined();
   });
 
-  it('returns 201 with appealId on happy path', async () => {
+  it('returns 201 with deterministic appealId on happy path', async () => {
     const res = await ratingAppealHandler(makeReq({ body: validBody }), ctx) as HttpResponseInit;
     expect(res.status).toBe(201);
-    expect((res.jsonBody as any).appealId).toBeDefined();
+    const appealId = (res.jsonBody as any).appealId as string;
+    expect(appealId).toMatch(/^appeal-tech-1-\d{4}-\d{2}$/);
     expect(createComplaint).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'RATING_APPEAL', technicianId: 'tech-1' }),
+      expect.objectContaining({ id: appealId, type: 'RATING_APPEAL', technicianId: 'tech-1' }),
     );
     await Promise.resolve();
     expect(sendAppealFiledAlert).toHaveBeenCalledWith(
       expect.objectContaining({ bookingId: 'bk-1', technicianId: 'tech-1' }),
     );
+  });
+
+  it('returns 409 APPEAL_QUOTA_EXCEEDED when Cosmos rejects duplicate id (race condition)', async () => {
+    const cosmosConflict = Object.assign(new Error('Conflict'), { code: 409 });
+    vi.mocked(createComplaint).mockRejectedValue(cosmosConflict);
+    const res = await ratingAppealHandler(makeReq({ body: validBody }), ctx) as HttpResponseInit;
+    expect(res.status).toBe(409);
+    expect((res.jsonBody as any).code).toBe('APPEAL_QUOTA_EXCEEDED');
+    expect((res.jsonBody as any).nextAvailableAt).toBeDefined();
   });
 });

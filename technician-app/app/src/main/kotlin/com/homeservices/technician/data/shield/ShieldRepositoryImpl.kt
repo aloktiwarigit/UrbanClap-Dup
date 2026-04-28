@@ -41,9 +41,13 @@ public class ShieldRepositoryImpl
                             } catch (_: Exception) {
                                 null
                             }
-                        Result.success(
-                            RatingAppealResult(quotaExceeded = true, nextAvailableAt = err?.nextAvailableAt),
-                        )
+                        if (err?.code == "APPEAL_QUOTA_EXCEEDED") {
+                            Result.success(
+                                RatingAppealResult(quotaExceeded = true, nextAvailableAt = err.nextAvailableAt),
+                            )
+                        } else {
+                            Result.failure(IllegalStateException("rating appeal failed: ${resp.code()}"))
+                        }
                     }
                     !resp.isSuccessful ->
                         Result.failure(IllegalStateException("rating appeal failed: ${resp.code()}"))

@@ -2,7 +2,6 @@ import { app } from '@azure/functions';
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import '../bootstrap.js';
 import * as Sentry from '@sentry/node';
-import { randomUUID } from 'node:crypto';
 import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
 import { bookingRepo } from '../cosmos/booking-repository.js';
 import { ratingRepo } from '../cosmos/rating-repository.js';
@@ -56,7 +55,10 @@ export async function ratingAppealHandler(req: HttpRequest, _ctx: InvocationCont
     };
   }
 
-  const appealId = randomUUID();
+  // Deterministic ID enforces at-most-one appeal per tech per month at the Cosmos level.
+  // Cosmos rejects items.create() with 409 on duplicate id, closing the check-then-act race.
+  const yearMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+  const appealId = `appeal-${uid}-${yearMonth}`;
   const slaDeadlineAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
   const nowIso = now.toISOString();
   const doc: ComplaintDoc = {
@@ -74,7 +76,18 @@ export async function ratingAppealHandler(req: HttpRequest, _ctx: InvocationCont
     updatedAt: nowIso,
   };
 
-  await createComplaint(doc);
+  try {
+    await createComplaint(doc);
+  } catch (e: unknown) {
+    if (typeof e === 'object' && e !== null && 'code' in e && (e as { code: number }).code === 409) {
+      const nextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+      return {
+        status: 409,
+        jsonBody: { code: 'APPEAL_QUOTA_EXCEEDED', nextAvailableAt: nextMonth.toISOString() },
+      };
+    }
+    throw e;
+  }
 
   sendAppealFiledAlert({ appealId, technicianId: uid, bookingId: parsed.data.bookingId })
     .catch((e) => Sentry.captureException(e));

@@ -100,16 +100,25 @@ public class ShieldRepositoryImplTest {
         }
 
     @Test
-    public fun `fileRatingAppeal handles 409 with malformed JSON gracefully`(): Unit =
+    public fun `fileRatingAppeal returns failure on 409 with malformed JSON`(): Unit =
         runTest {
             val errorBody = "not-json".toResponseBody("application/json".toMediaType())
             coEvery { api.fileRatingAppeal(any()) } returns Response.error(409, errorBody)
 
             val result = repo.fileRatingAppeal("bk-1", "valid reason that is at least twenty characters")
 
-            assertThat(result.isSuccess).isTrue()
-            val v = result.getOrThrow()
-            assertThat(v.quotaExceeded).isTrue()
-            assertThat(v.nextAvailableAt).isNull()
+            assertThat(result.isFailure).isTrue()
+        }
+
+    @Test
+    public fun `fileRatingAppeal returns failure on 409 with non-quota error code`(): Unit =
+        runTest {
+            val errorJson = """{"code":"RATING_NOT_APPEALABLE"}"""
+            val errorBody = errorJson.toResponseBody("application/json".toMediaType())
+            coEvery { api.fileRatingAppeal(any()) } returns Response.error(409, errorBody)
+
+            val result = repo.fileRatingAppeal("bk-1", "valid reason that is at least twenty characters")
+
+            assertThat(result.isFailure).isTrue()
         }
 }
