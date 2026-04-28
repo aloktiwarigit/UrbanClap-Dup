@@ -4,6 +4,8 @@ import { bookingRepo } from '../cosmos/booking-repository.js';
 import { ratingRepo } from '../cosmos/rating-repository.js';
 import { SubmitRatingRequestSchema, type GetRatingResponse } from '../schemas/rating.js';
 import type { CustomerSubScores, TechSubScores } from '../schemas/rating.js';
+import { sendRatingReceivedPush } from '../services/fcm.service.js';
+import * as Sentry from '@sentry/node';
 
 async function uidFromAuth(authHeader: string): Promise<string | null> {
   if (!authHeader.startsWith('Bearer ')) return null;
@@ -54,6 +56,23 @@ export const submitRatingHandler: HttpHandler = async (req, _ctx: InvocationCont
     ...(data.comment !== undefined ? { comment: data.comment } : {}),
   });
   if (!result) return { status: 409, jsonBody: { code: 'RATING_ALREADY_SUBMITTED' } };
+  if (
+    data.side === 'CUSTOMER_TO_TECH' &&
+    data.overall < 5 &&
+    data.comment &&
+    data.comment.trim().length > 0 &&
+    booking.technicianId
+  ) {
+    try {
+      await sendRatingReceivedPush(booking.technicianId, {
+        bookingId: data.bookingId,
+        overall: data.overall,
+        comment: data.comment,
+      });
+    } catch (err) {
+      Sentry.captureException(err);
+    }
+  }
   return { status: 201, jsonBody: { bookingId: result.bookingId } };
 };
 

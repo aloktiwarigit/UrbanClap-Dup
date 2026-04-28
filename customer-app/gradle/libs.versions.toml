@@ -64,6 +64,9 @@ robolectric = "4.14.1"
 androidxTestCore = "1.6.1"
 androidxTestRunner = "1.6.2"
 
+# DataStore
+datastorePreferences = "1.1.1"
+
 # Camera
 camerax = "1.4.0"
 
@@ -79,6 +82,7 @@ androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycleViewmodelCompose" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "androidxNavigationCompose" }
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "androidxSecurityCrypto" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferences" }
 androidx-browser = { module = "androidx.browser:browser", version.ref = "androidxBrowser" }
 
 # Compose (BOM-pinned — no version)

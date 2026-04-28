@@ -65,6 +65,55 @@ export async function sendOwnerRatingShieldAlert(payload: {
   });
 }
 
+export async function sendNoShowCreditPush(
+  customerId: string,
+  bookingId: string,
+  creditAmount: number,
+): Promise<void> {
+  await getFirebaseAdmin().messaging().send({
+    topic: `customer_${customerId}`,
+    data: {
+      type: 'NO_SHOW_CREDIT_ISSUED',
+      bookingId,
+      creditAmount: String(creditAmount),
+      bodyText: 'तकनीशियन नहीं आए — ₹500 credit आपके account में जोड़ा गया। नया तकनीशियन ढूंढ रहे हैं।',
+    },
+  });
+}
+
+export async function sendOwnerSosAlert(payload: {
+  bookingId: string;
+  customerId: string;
+  technicianId: string;
+  slotAddress: string;
+}): Promise<void> {
+  await getFirebaseAdmin().messaging().send({
+    topic: 'owner_alerts',
+    data: {
+      type: 'SOS_ALERT',
+      bookingId: payload.bookingId,
+      customerId: payload.customerId,
+      technicianId: payload.technicianId,
+      slotAddress: payload.slotAddress,
+    },
+  });
+}
+
+export async function sendRatingReceivedPush(
+  technicianId: string,
+  payload: { bookingId: string; overall: number; comment: string },
+): Promise<void> {
+  await getFirebaseAdmin().messaging().send({
+    topic: `technician_${technicianId}`,
+    data: {
+      type: 'RATING_RECEIVED',
+      bookingId: payload.bookingId,
+      overall: String(payload.overall),
+      comment: payload.comment,
+    },
+  });
+}
+
 export async function sendOwnerComplaintFiled(payload: {
   bookingId: string;
   filedBy: string;

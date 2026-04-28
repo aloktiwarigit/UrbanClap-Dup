@@ -3,6 +3,7 @@ package com.homeservices.technician.data.rating
 import com.homeservices.technician.data.rating.remote.RatingApiService
 import com.homeservices.technician.data.rating.remote.dto.SubmitRatingRequestDto
 import com.homeservices.technician.domain.rating.model.RatingSnapshot
+import com.homeservices.technician.domain.rating.model.TechRatingSummary
 import com.homeservices.technician.domain.rating.model.TechSubScores
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -40,4 +41,9 @@ internal class RatingRepositoryImpl
             }
 
         override fun get(bookingId: String): Flow<Result<RatingSnapshot>> = flow { emit(runCatching { api.get(bookingId).toDomain() }) }
+
+        public override suspend fun getMyRatings(): Result<TechRatingSummary> =
+            runCatching {
+                api.getMyRatings().toDomain()
+            }
     }

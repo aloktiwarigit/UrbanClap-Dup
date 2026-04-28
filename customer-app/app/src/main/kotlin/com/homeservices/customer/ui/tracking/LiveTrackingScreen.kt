@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -21,10 +22,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -42,18 +47,37 @@ import com.homeservices.customer.domain.tracking.model.BookingStatus
 @Composable
 internal fun LiveTrackingScreen(
     viewModel: LiveTrackingViewModel = hiltViewModel(),
+    sosViewModel: SosViewModel = hiltViewModel(),
     onBack: () -> Unit,
     onFileComplaint: (bookingId: String) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val sosUiState by sosViewModel.sosUiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    val isInProgress =
+        uiState is LiveTrackingUiState.Tracking &&
+            (uiState as LiveTrackingUiState.Tracking).status is BookingStatus.InProgress
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Tracking your service") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (isInProgress) {
+                        IconButton(onClick = { sosViewModel.onSosTapped() }) {
+                            Icon(
+                                Icons.Filled.Warning,
+                                contentDescription = "Safety alert",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 },
             )
@@ -160,6 +184,32 @@ internal fun LiveTrackingScreen(
                 }
             }
         }
+    }
+
+    // SOS overlays — rendered above Scaffold so they cover all content
+    when (val sos = sosUiState) {
+        is SosUiState.ShowConsent ->
+            SosConsentDialog(
+                onGranted = { sosViewModel.onConsentResolved(true) },
+                onDenied = { sosViewModel.onConsentResolved(false) },
+            )
+        is SosUiState.Countdown ->
+            SosBottomSheet(
+                secondsLeft = sos.secondsLeft,
+                onCancel = { sosViewModel.onCancelCountdown() },
+                onConfirmNow = { sosViewModel.onSendNow() },
+            )
+        is SosUiState.SosConfirmed -> {
+            LaunchedEffect(sos) {
+                snackbarHostState.showSnackbar("मालिक को सूचित किया गया")
+            }
+        }
+        is SosUiState.SosError -> {
+            LaunchedEffect(sos) {
+                snackbarHostState.showSnackbar("अलर्ट नहीं भेजा जा सका। फिर से कोशिश करें।")
+            }
+        }
+        else -> Unit
     }
 }
 

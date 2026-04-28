@@ -153,3 +153,4 @@ technician-app/app/*.iml
 technician-app/app/release/keystore.properties
 technician-app/keystore.jks
 technician-app/release.keystore
+.claude/

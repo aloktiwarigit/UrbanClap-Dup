@@ -12,11 +12,14 @@ const client = new CosmosClient({
 const DB = 'homeservices';
 
 const containers = [
-  { id: 'admin_users',    partitionKey: '/adminId',      ttl: undefined },
-  { id: 'admin_sessions', partitionKey: '/sessionId',    ttl: 28800 },
-  { id: 'audit_log',      partitionKey: '/partitionKey', ttl: undefined },
-  { id: 'health',         partitionKey: '/id',           ttl: undefined },
-  { id: 'ssc_levies',     partitionKey: '/quarter',      ttl: undefined },
+  { id: 'admin_users',       partitionKey: '/adminId',      ttl: undefined },
+  { id: 'admin_sessions',    partitionKey: '/sessionId',    ttl: 28800 },
+  { id: 'audit_log',         partitionKey: '/partitionKey', ttl: undefined },
+  { id: 'health',            partitionKey: '/id',           ttl: undefined },
+  { id: 'ssc_levies',        partitionKey: '/quarter',      ttl: undefined },
+  // E07-S04: customer credit wallet for no-show compensation — partitioned by /id
+  // (one document per bookingId, idempotency-safe via conflict on duplicate /id)
+  { id: 'customer_credits',  partitionKey: '/id',           ttl: undefined },
 ] as const;
 
 async function main() {

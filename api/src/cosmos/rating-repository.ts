@@ -79,4 +79,16 @@ export const ratingRepo = {
       .replace<RatingDoc>(updated);
     return resource ?? updated;
   },
+
+  async getAllByTechnicianId(technicianId: string): Promise<RatingDoc[]> {
+    const { resources } = await getRatingsContainer()
+      .items.query<RatingDoc>(
+        {
+          query: `SELECT * FROM c WHERE c.technicianId = @uid AND IS_DEFINED(c.customerSubmittedAt)`,
+          parameters: [{ name: '@uid', value: technicianId }],
+        },
+      )
+      .fetchAll();
+    return resources;
+  },
 };

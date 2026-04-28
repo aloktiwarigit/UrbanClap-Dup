@@ -4,8 +4,11 @@ import { extendZodWithOpenApi } from '@asteasolutions/zod-to-openapi';
 extendZodWithOpenApi(z);
 
 export const OrderStatusEnum = z.enum([
-  'SEARCHING', 'ASSIGNED', 'EN_ROUTE', 'REACHED',
-  'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'PAID',
+  'PENDING_PAYMENT', 'SEARCHING', 'ASSIGNED', 'EN_ROUTE', 'REACHED',
+  'IN_PROGRESS', 'AWAITING_PRICE_APPROVAL', 'COMPLETED', 'PAID', 'CLOSED',
+  'UNFULFILLED', 'CUSTOMER_CANCELLED', 'NO_SHOW_REDISPATCH',
+  // Legacy alias used by older clients — kept for backward-compat
+  'CANCELLED',
 ]);
 
 export const OrderSchema = z.object({
