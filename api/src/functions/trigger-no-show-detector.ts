@@ -140,12 +140,19 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
     // technicianId was cleared from the booking doc in Step 1.
     let redispatchOk = false;
     if (statusWriteOk && !freshBooking.noShowRedispatchAt) {
-      // Re-read before dispatching: a concurrent timer invocation that won the credit race
-      // may have already written noShowRedispatchAt between freshBooking and now.
+      // Re-read before dispatching: a concurrent invocation or a prior crash may have already
+      // moved the booking to SEARCHING without writing noShowRedispatchAt.
       const preDispatchDoc = await bookingRepo.getById(booking.id);
       if (preDispatchDoc?.noShowRedispatchAt) {
+        // Concurrent run completed the step.
         redispatchOk = true;
         ctx.log(`detectNoShows: redispatch already completed concurrently for ${booking.id}`);
+      } else if (preDispatchDoc?.status === 'SEARCHING') {
+        // Prior run called redispatch() (moving the booking to SEARCHING) but crashed before
+        // writing noShowRedispatchAt. The dispatch attempt is live — just write the timestamp.
+        await updateBookingFields(booking.id, { noShowRedispatchAt: new Date().toISOString() });
+        redispatchOk = true;
+        ctx.log(`detectNoShows: recovery — booking ${booking.id} already SEARCHING, completing noShowRedispatchAt write`);
       } else {
         try {
           redispatchOk = await dispatcherService.redispatch(booking.id, NO_SHOW_REDISPATCH_RADIUS_KM, noShowTechId);
