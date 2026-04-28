@@ -18,16 +18,16 @@ const sosInner: CustomerHttpHandler = async (req, ctx, customer) => {
   if (booking.status !== 'IN_PROGRESS') return { status: 409, jsonBody: { code: 'BOOKING_NOT_IN_PROGRESS' } };
   if (booking.sosActivatedAt) return { status: 200, jsonBody: { code: 'ALREADY_PROCESSED' } };
 
-  // Alert before marking: if FCM fails the booking stays unmarked so the client can retry.
+  // Mark first so only the ETag winner sends the owner alert, preventing duplicate FCM on double-tap.
+  const marked = await bookingRepo.markSosActivated(bookingId);
+  if (!marked) return { status: 200, jsonBody: { code: 'ALREADY_PROCESSED' } };
+
   await sendOwnerSosAlert({
     bookingId,
     customerId: customer.customerId,
     technicianId: booking.technicianId ?? '',
     slotAddress: booking.addressText,
   });
-
-  const marked = await bookingRepo.markSosActivated(bookingId);
-  if (!marked) return { status: 200, jsonBody: { code: 'ALREADY_PROCESSED' } };
 
   const now = new Date().toISOString();
   const auditEntry: AuditLogDoc = {

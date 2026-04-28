@@ -93,10 +93,10 @@ describe('POST /v1/sos/{bookingId}', () => {
     }));
   });
 
-  it('FCM failure propagates so the booking stays unmarked and the client can retry', async () => {
+  it('FCM failure propagates (booking was already marked — only the ETag winner reaches this point)', async () => {
     vi.mocked(sendOwnerSosAlert).mockRejectedValue(new Error('FCM down'));
     await expect(sosHandler(makeReq({ auth: 'Bearer tok' }), ctx)).rejects.toThrow('FCM down');
-    expect(bookingRepo.markSosActivated).not.toHaveBeenCalled();
+    expect(bookingRepo.markSosActivated).toHaveBeenCalled();
   });
 
   it('FCM payload uses empty string when technicianId is absent', async () => {
@@ -108,11 +108,11 @@ describe('POST /v1/sos/{bookingId}', () => {
     );
   });
 
-  it('returns 200 ALREADY_PROCESSED when markSosActivated returns null (ETag race — owner alert was already sent)', async () => {
+  it('returns 200 ALREADY_PROCESSED when markSosActivated returns null (ETag race lost — alert not sent by this request)', async () => {
     vi.mocked(bookingRepo.markSosActivated).mockResolvedValue(null);
     const res = await sosHandler(makeReq({ auth: 'Bearer tok' }), ctx) as HttpResponseInit;
     expect(res.status).toBe(200);
     expect((res.jsonBody as any).code).toBe('ALREADY_PROCESSED');
-    expect(sendOwnerSosAlert).toHaveBeenCalled();
+    expect(sendOwnerSosAlert).not.toHaveBeenCalled();
   });
 });
