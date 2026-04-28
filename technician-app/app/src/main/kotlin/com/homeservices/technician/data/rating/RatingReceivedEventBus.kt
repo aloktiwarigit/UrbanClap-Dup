@@ -1,9 +1,9 @@
 package com.homeservices.technician.data.rating
 
 import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -11,14 +11,14 @@ import javax.inject.Singleton
 public class RatingReceivedEventBus
     @Inject
     constructor() {
-        private val _events = Channel<Unit>(capacity = 4, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-        public val events: Flow<Unit> = _events.receiveAsFlow()
+        private val _events = MutableSharedFlow<Unit>(extraBufferCapacity = 4, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+        public val events: SharedFlow<Unit> = _events.asSharedFlow()
 
         public fun post() {
-            _events.trySend(Unit)
+            _events.tryEmit(Unit)
         }
 
         public fun clearBuffered() {
-            while (_events.tryReceive().isSuccess) { }
+            // SharedFlow (replay=0) holds no per-subscriber buffer; nothing to drain.
         }
     }
