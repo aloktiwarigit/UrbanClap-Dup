@@ -181,15 +181,30 @@ describe('detectNoShows', () => {
     expect(fcmService.sendNoShowCreditPush).not.toHaveBeenCalled();
   });
 
-  it('skips when replacement tech detected (different technicianId in recovery check)', async () => {
+  it('sends push when replacement tech detected but noShowPushSentAt was never written (crash in step 3)', async () => {
     const booking = makeAssignedBooking('bk-replaced', 45, { technicianId: 'tech-noshow' });
     vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([booking]);
     vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(false);
-    // call 1: fresh-read → ASSIGNED with noShowTechnicianId preserved
-    // call 2: recovery check → ASSIGNED with a different (replacement) technicianId
+    // call 1: fresh-read; call 2: recovery check — replacement tech, noShowPushSentAt absent
     mockGetByIdSequence(
       { status: 'ASSIGNED', noShowTechnicianId: 'tech-noshow' },
       { status: 'ASSIGNED', technicianId: 'tech-replacement', noShowTechnicianId: 'tech-noshow' },
+    );
+
+    await detectNoShows(mockCtx);
+
+    expect(fcmService.sendNoShowCreditPush).toHaveBeenCalledWith('cust-bk-replaced', 'bk-replaced', 50_000);
+    expect(updateBookingFields).toHaveBeenCalledWith('bk-replaced', expect.objectContaining({ noShowPushSentAt: expect.any(String) }));
+    expect(dispatcherService.redispatch).not.toHaveBeenCalled();
+  });
+
+  it('skips push when replacement tech detected and noShowPushSentAt already written', async () => {
+    const booking = makeAssignedBooking('bk-replaced-done', 45, { technicianId: 'tech-noshow' });
+    vi.mocked(bookingRepo.getAssignedBookingsBefore).mockResolvedValue([booking]);
+    vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(false);
+    mockGetByIdSequence(
+      { status: 'ASSIGNED', noShowTechnicianId: 'tech-noshow' },
+      { status: 'ASSIGNED', technicianId: 'tech-replacement', noShowTechnicianId: 'tech-noshow', noShowPushSentAt: '2026-04-26T05:00:01.000Z' },
     );
 
     await detectNoShows(mockCtx);

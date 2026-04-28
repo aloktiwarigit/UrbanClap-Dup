@@ -97,13 +97,23 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
     if (!creditCreated) {
       const liveBooking = await bookingRepo.getById(booking.id);
 
-      // If replacement tech accepted, both redispatch and (optionally) push are done
+      // If replacement tech accepted, redispatch already resolved.
+      // Still send the push if noShowPushSentAt is absent (crashed in step 3 before the push).
       if (
         liveBooking?.status === 'ASSIGNED' &&
         noShowTechId !== undefined &&
         liveBooking.technicianId !== undefined &&
         liveBooking.technicianId !== noShowTechId
       ) {
+        if (!liveBooking.noShowPushSentAt) {
+          try {
+            await sendNoShowCreditPush(booking.customerId, booking.id, NO_SHOW_CREDIT_PAISE);
+            await updateBookingFields(booking.id, { noShowPushSentAt: new Date().toISOString() });
+          } catch (err: unknown) {
+            Sentry.captureException(err);
+            ctx.log(`detectNoShows: FCM recovery failed ${booking.id}: ${err instanceof Error ? err.message : String(err)}`);
+          }
+        }
         ctx.log(`detectNoShows: recovery skipped for ${booking.id} — replacement tech ${liveBooking.technicianId} already assigned`);
         continue;
       }
