@@ -192,3 +192,41 @@ export async function sendOwnerComplaintSlaBreach(payload: {
     },
   });
 }
+
+/** DPDP §12 erasure cron: final-notice push at the moment of cascade execution. */
+export async function sendErasureFinalNotice(payload: {
+  userId: string;
+  userRole: 'CUSTOMER' | 'TECHNICIAN';
+  erasureId: string;
+}): Promise<void> {
+  const topic = payload.userRole === 'CUSTOMER'
+    ? `customer_${payload.userId}`
+    : `technician_${payload.userId}`;
+  await getFirebaseAdmin().messaging().send({
+    topic,
+    data: {
+      type: 'ERASURE_FINAL_NOTICE',
+      erasureId: payload.erasureId,
+    },
+  });
+}
+
+/** DPDP §12 erasure denial: notify the data principal of the legal reason. */
+export async function sendErasureDenied(payload: {
+  userId: string;
+  userRole: 'CUSTOMER' | 'TECHNICIAN';
+  erasureId: string;
+  reason: string;
+}): Promise<void> {
+  const topic = payload.userRole === 'CUSTOMER'
+    ? `customer_${payload.userId}`
+    : `technician_${payload.userId}`;
+  await getFirebaseAdmin().messaging().send({
+    topic,
+    data: {
+      type: 'ERASURE_DENIED',
+      erasureId: payload.erasureId,
+      reason: payload.reason,
+    },
+  });
+}
