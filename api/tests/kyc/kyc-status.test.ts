@@ -73,4 +73,44 @@ describe('GET /v1/kyc/status', () => {
 
     expect(res.status).toBe(401);
   });
+
+  it('[P1-B] returns 403 when token uid does not match requested technicianId (IDOR guard)', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+
+    const req = new HttpRequest({
+      method: 'GET',
+      url: 'http://localhost/v1/kyc/status?technicianId=tech-002',
+      headers: { Authorization: 'Bearer valid' },
+    });
+    const res = await handler(req, new InvocationContext());
+
+    expect(res.status).toBe(403);
+  });
+
+  it('[T10] response does NOT expose panNumberEncrypted (encrypted blob stays server-side)', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { getKycByTechnicianId } = await import('../../src/cosmos/technician-repository.js');
+    vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+    vi.mocked(getKycByTechnicianId).mockResolvedValue({
+      aadhaarVerified: true,
+      aadhaarMaskedNumber: 'XXXX-XXXX-1234',
+      panNumber: 'ABCDE####F',
+      panImagePath: null,
+      kycStatus: 'PAN_DONE',
+      updatedAt: '2026-04-29T10:00:00Z',
+      panNumberEncrypted: { iv: 'aXY=', ciphertext: 'Y2lw', tag: 'dGFn', v: 1 },
+    });
+
+    const req = new HttpRequest({
+      method: 'GET',
+      url: 'http://localhost/v1/kyc/status?technicianId=tech-001',
+      headers: { Authorization: 'Bearer valid' },
+    });
+    const res = await handler(req, new InvocationContext());
+
+    expect(res.status).toBe(200);
+    const body = res.jsonBody as Record<string, unknown>;
+    expect(body['panNumberEncrypted']).toBeUndefined();
+  });
 });
