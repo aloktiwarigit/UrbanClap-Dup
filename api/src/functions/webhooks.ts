@@ -1,4 +1,4 @@
-import { createHmac, randomUUID } from 'node:crypto';
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import type { HttpHandler, Timer } from '@azure/functions';
 import { type InvocationContext, app } from '@azure/functions';
 import * as Sentry from '@sentry/node';
@@ -6,17 +6,22 @@ import { RazorpayWebhookPayloadSchema } from '../schemas/webhook.js';
 import { bookingRepo } from '../cosmos/booking-repository.js';
 import { dispatcherService } from '../services/dispatcher.service.js';
 import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
+import { getWebhookEventsContainer } from '../cosmos/client.js';
+
+function isValidSignature(payload: string, provided: string, secret: string): boolean {
+  const expected = createHmac('sha256', secret).update(payload).digest('hex');
+  if (expected.length !== provided.length) return false;
+  return timingSafeEqual(Buffer.from(expected, 'utf8'), Buffer.from(provided, 'utf8'));
+}
 
 export const razorpayWebhookHandler: HttpHandler = async (req, _ctx) => {
   const secret = process.env['RAZORPAY_WEBHOOK_SECRET'];
   if (!secret) return { status: 500, jsonBody: { code: 'CONFIGURATION_ERROR' } };
 
   const signature = req.headers.get('x-razorpay-signature') ?? '';
-
   const rawBody = await req.text();
 
-  const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
-  if (expected !== signature) {
+  if (!isValidSignature(rawBody, signature, secret)) {
     return { status: 400, jsonBody: { code: 'SIGNATURE_INVALID' } };
   }
 
@@ -30,6 +35,26 @@ export const razorpayWebhookHandler: HttpHandler = async (req, _ctx) => {
     parsed = result.data;
   } catch {
     return { status: 400, jsonBody: { code: 'PARSE_ERROR' } };
+  }
+
+  // Event-ID replay defense — best-effort, never return 5xx from this block
+  const eventId = req.headers.get('razorpay-event-id');
+  if (eventId) {
+    try {
+      await getWebhookEventsContainer().items.create({
+        id: eventId,
+        bookingId: parsed.payload.payment.entity.order_id,
+        processedAt: new Date().toISOString(),
+      });
+    } catch (err: unknown) {
+      if (
+        typeof err === 'object' && err !== null && 'code' in err &&
+        (err as { code: number }).code === 409
+      ) {
+        return { status: 200, jsonBody: { received: true, deduplicated: true } };
+      }
+      Sentry.captureException(err);
+    }
   }
 
   if (parsed.event !== 'payment.captured') {
