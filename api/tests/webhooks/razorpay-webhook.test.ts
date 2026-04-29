@@ -165,29 +165,32 @@ describe('POST /v1/webhooks/razorpay', () => {
     expect((res.jsonBody as { code?: string }).code).not.toBe('SIGNATURE_INVALID');
   });
 
-  it('same-length wrong signature is rejected (timing-safe path)', async () => {
+  it('same-length wrong signature is rejected without throwing (timing-safe path)', async () => {
     const body = JSON.stringify({
       event: 'payment.captured',
       payload: { payment: { entity: { id: 'p', order_id: 'o' } } },
     });
-    const validSig = makeSignature(body); // 64 hex chars
-    const sameLen = validSig.replace(/.$/, validSig.endsWith('f') ? '0' : 'f');
+    // A 64-char string of non-hex chars produces a 0-byte buffer when decoded with 'hex'.
+    // Buffer lengths differ (32 vs 0) — must return 400 without throwing RangeError.
+    const sameLen = 'z'.repeat(64);
     const req = makeWebhookReq(body, sameLen);
     const res = await razorpayWebhookHandler(req, mockCtx) as HttpResponseInit;
     expect(res.status).toBe(400);
     expect((res.jsonBody as { code: string }).code).toBe('SIGNATURE_INVALID');
   });
 
-  // --- AC-2: Event-ID replay defense (3 tests) ---
+  // --- AC-2: Event-ID replay defense (4 tests) ---
+  // Dedup write is placed AFTER successful markPaid so transient Cosmos failures
+  // during business logic do not permanently suppress Razorpay retries.
 
-  it('duplicate event-id on second delivery returns 200 deduplicated, markPaid not called twice', async () => {
+  it('sequential retry after successful payment: PAID idempotency prevents second markPaid', async () => {
     const body = JSON.stringify({
       event: 'payment.captured',
       payload: { payment: { entity: { id: 'pay_dup', order_id: 'order_dup' } } },
     });
     const signature = makeSignature(body);
 
-    // First delivery: Cosmos create succeeds, booking is processed normally
+    // First delivery: markPaid succeeds → dedup record written
     mockItemsCreate.mockResolvedValueOnce({});
     (bookingRepo.getByPaymentOrderId as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       id: 'bk-dup', status: 'SEARCHING', paymentOrderId: 'order_dup',
@@ -198,15 +201,38 @@ describe('POST /v1/webhooks/razorpay', () => {
     expect(res1.status).toBe(200);
     expect(vi.mocked(bookingRepo.markPaid)).toHaveBeenCalledTimes(1);
 
-    // Isolate call-count accounting between the two deliveries
     mockItemsCreate.mockClear();
 
-    // Second delivery: Cosmos create throws 409 — returns deduplicated immediately
-    mockItemsCreate.mockRejectedValueOnce({ code: 409 });
+    // Second delivery: booking is now PAID → PAID idempotency fires before dedup block
+    (bookingRepo.getByPaymentOrderId as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'bk-dup', status: 'PAID', paymentOrderId: 'order_dup',
+    });
+
     const res2 = await razorpayWebhookHandler(makeWebhookReqWithEventId(body, signature, 'evt_001'), mockCtx) as HttpResponseInit;
     expect(res2.status).toBe(200);
-    expect((res2.jsonBody as { deduplicated?: boolean }).deduplicated).toBe(true);
+    expect((res2.jsonBody as { received: boolean }).received).toBe(true);
     expect(vi.mocked(bookingRepo.markPaid)).toHaveBeenCalledTimes(1); // not called again
+    expect(mockItemsCreate).not.toHaveBeenCalled(); // dedup block not reached (PAID check fired first)
+  });
+
+  it('concurrent same event-id: 409 on dedup write returns 200 deduplicated', async () => {
+    // Simulates concurrent delivery where first request already wrote the dedup record,
+    // but this request still sees booking as SEARCHING (race window after markPaid).
+    const body = JSON.stringify({
+      event: 'payment.captured',
+      payload: { payment: { entity: { id: 'pay_conc', order_id: 'order_conc' } } },
+    });
+    const signature = makeSignature(body);
+
+    mockItemsCreate.mockRejectedValueOnce({ code: 409 });
+    (bookingRepo.getByPaymentOrderId as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'bk-conc', status: 'SEARCHING', paymentOrderId: 'order_conc',
+    });
+    (bookingRepo.markPaid as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ id: 'bk-conc', status: 'PAID' });
+
+    const res = await razorpayWebhookHandler(makeWebhookReqWithEventId(body, signature, 'evt_concurrent'), mockCtx) as HttpResponseInit;
+    expect(res.status).toBe(200);
+    expect((res.jsonBody as { deduplicated?: boolean }).deduplicated).toBe(true);
   });
 
   it('no razorpay-event-id header processes normally without dedup', async () => {
@@ -227,18 +253,18 @@ describe('POST /v1/webhooks/razorpay', () => {
     expect(mockItemsCreate).not.toHaveBeenCalled();
   });
 
-  it('non-409 Cosmos error is captured by Sentry and processing continues', async () => {
+  it('non-409 Cosmos error on dedup write is captured by Sentry and processing continues', async () => {
     const body = JSON.stringify({
       event: 'payment.captured',
       payload: { payment: { entity: { id: 'pay_s', order_id: 'order_s' } } },
     });
     const signature = makeSignature(body);
 
-    mockItemsCreate.mockRejectedValueOnce(new Error('Cosmos unavailable'));
     (bookingRepo.getByPaymentOrderId as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       id: 'bk-s', status: 'SEARCHING', paymentOrderId: 'order_s',
     });
     (bookingRepo.markPaid as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ id: 'bk-s', status: 'PAID' });
+    mockItemsCreate.mockRejectedValueOnce(new Error('Cosmos unavailable'));
 
     const res = await razorpayWebhookHandler(makeWebhookReqWithEventId(body, signature, 'evt_sentry'), mockCtx) as HttpResponseInit;
     expect(res.status).toBe(200);

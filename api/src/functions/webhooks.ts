@@ -8,10 +8,14 @@ import { dispatcherService } from '../services/dispatcher.service.js';
 import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
 import { getWebhookEventsContainer } from '../cosmos/client.js';
 
+// Compare buffer lengths (not string lengths) so non-hex chars in `provided`
+// that produce shorter buffers are caught without timingSafeEqual throwing.
 function isValidSignature(payload: string, provided: string, secret: string): boolean {
   const expected = createHmac('sha256', secret).update(payload).digest('hex');
-  if (expected.length !== provided.length) return false;
-  return timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(provided, 'hex'));
+  const expectedBuf = Buffer.from(expected, 'hex');
+  const providedBuf = Buffer.from(provided, 'hex');
+  if (expectedBuf.length !== providedBuf.length) return false;
+  return timingSafeEqual(expectedBuf, providedBuf);
 }
 
 export const razorpayWebhookHandler: HttpHandler = async (req, _ctx) => {
@@ -37,26 +41,6 @@ export const razorpayWebhookHandler: HttpHandler = async (req, _ctx) => {
     return { status: 400, jsonBody: { code: 'PARSE_ERROR' } };
   }
 
-  // Event-ID replay defense — best-effort, never return 5xx from this block
-  const eventId = req.headers.get('razorpay-event-id');
-  if (eventId) {
-    try {
-      await getWebhookEventsContainer().items.create({
-        id: eventId,
-        bookingId: parsed.payload.payment.entity.order_id,
-        processedAt: new Date().toISOString(),
-      });
-    } catch (err: unknown) {
-      if (
-        typeof err === 'object' && err !== null && 'code' in err &&
-        (err as { code: number }).code === 409
-      ) {
-        return { status: 200, jsonBody: { received: true, deduplicated: true } };
-      }
-      Sentry.captureException(err);
-    }
-  }
-
   if (parsed.event !== 'payment.captured') {
     return { status: 200, jsonBody: { received: true } };
   }
@@ -76,6 +60,28 @@ export const razorpayWebhookHandler: HttpHandler = async (req, _ctx) => {
   const updated = await bookingRepo.markPaid(booking.id, paymentId);
   if (!updated) {
     return { status: 200, jsonBody: { received: true } };
+  }
+
+  // Event-ID replay defense written AFTER successful markPaid so a transient
+  // Cosmos failure before this point does not permanently suppress Razorpay retries.
+  // Best-effort: non-409 Cosmos errors are logged but never block the webhook ack.
+  const eventId = req.headers.get('razorpay-event-id');
+  if (eventId) {
+    try {
+      await getWebhookEventsContainer().items.create({
+        id: eventId,
+        bookingId: booking.id,
+        processedAt: new Date().toISOString(),
+      });
+    } catch (err: unknown) {
+      if (
+        typeof err === 'object' && err !== null && 'code' in err &&
+        (err as { code: number }).code === 409
+      ) {
+        return { status: 200, jsonBody: { received: true, deduplicated: true } };
+      }
+      Sentry.captureException(err);
+    }
   }
 
   const _ts = new Date().toISOString();
