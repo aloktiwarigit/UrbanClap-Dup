@@ -57,6 +57,14 @@ export async function adminPatchComplaintHandler(
       // Reopen: clear stale resolution fields so the category guard works correctly next time.
       delete updated.resolvedAt;
       delete updated.resolutionCategory;
+      // If this is a RATING_APPEAL, undo any rating visibility flags so the rating
+      // is no longer hidden/disputed while the appeal is under re-review.
+      if (existing.type === 'RATING_APPEAL') {
+        ratingRepo.patchRatingForAppeal(existing.orderId, {
+          customerAppealRemoved: false,
+          customerAppealDisputed: false,
+        }).catch((err: unknown) => ctx.error('patchRatingForAppeal on reopen failed', err));
+      }
     }
   }
   if (parsed.data.assigneeAdminId !== undefined) {
@@ -66,7 +74,8 @@ export async function adminPatchComplaintHandler(
       updated.assigneeAdminId = parsed.data.assigneeAdminId;
     }
   }
-  if (parsed.data.resolutionCategory !== undefined && updated.status === 'RESOLVED') {
+  // Allow saving resolutionCategory before the complaint is RESOLVED (two-step admin flow).
+  if (parsed.data.resolutionCategory !== undefined) {
     updated.resolutionCategory = parsed.data.resolutionCategory;
   }
   if (parsed.data.note !== undefined) {

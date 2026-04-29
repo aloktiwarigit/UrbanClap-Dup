@@ -160,6 +160,19 @@ describe('adminPatchComplaintHandler', () => {
     expect(auditCall.payload).toMatchObject({ from: null, to: 'admin_2' });
   });
 
+  it('persists resolutionCategory even before complaint is RESOLVED (two-step flow)', async () => {
+    (getComplaint as ReturnType<typeof vi.fn>).mockResolvedValue({ doc: existingComplaint, etag: '"e"' });
+    (replaceComplaint as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (appendAuditEntry as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    const res = await adminPatchComplaintHandler(
+      makeReq({ resolutionCategory: 'OTHER' }),
+      mockCtx,
+      mockAdmin,
+    );
+    expect(res.status).toBe(200);
+    expect((res.jsonBody as Record<string, unknown>)['resolutionCategory']).toBe('OTHER');
+  });
+
   describe('RATING_APPEAL decision side-effects', () => {
     const appealComplaint = { ...existingComplaint, type: 'RATING_APPEAL' as const };
     const errCtx = { error: vi.fn() } as unknown as InvocationContext;
@@ -253,6 +266,26 @@ describe('adminPatchComplaintHandler', () => {
       await Promise.resolve();
       expect(ratingRepo.patchRatingForAppeal).not.toHaveBeenCalled();
       expect(sendAppealDecisionPush).not.toHaveBeenCalled();
+    });
+
+    it('clears rating flags when reopening a resolved RATING_APPEAL', async () => {
+      const resolvedAppeal = {
+        ...appealComplaint,
+        status: 'RESOLVED' as const,
+        resolutionCategory: 'APPEAL_REMOVED' as const,
+        resolvedAt: new Date().toISOString(),
+      };
+      (getComplaint as ReturnType<typeof vi.fn>).mockResolvedValue({ doc: resolvedAppeal, etag: '"e"' });
+      await adminPatchComplaintHandler(
+        makeReq({ status: 'INVESTIGATING' }),
+        errCtx,
+        mockAdmin,
+      );
+      await Promise.resolve();
+      expect(ratingRepo.patchRatingForAppeal).toHaveBeenCalledWith(
+        appealComplaint.orderId,
+        { customerAppealRemoved: false, customerAppealDisputed: false },
+      );
     });
 
     it('re-fires side effects when admin corrects resolutionCategory on already-RESOLVED appeal', async () => {
