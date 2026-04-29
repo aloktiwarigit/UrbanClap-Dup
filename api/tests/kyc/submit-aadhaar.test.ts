@@ -80,7 +80,7 @@ describe('POST /v1/kyc/aadhaar', () => {
     });
     await handler(req, new InvocationContext());
 
-    expect(vi.mocked(kycAuditEntry)).toHaveBeenCalledWith('tech-001', 'AADHAAR', 'VERIFIED', 'XXXX-XXXX-1234');
+    expect(vi.mocked(kycAuditEntry)).toHaveBeenCalledWith('tech-001', 'AADHAAR', 'VERIFIED');
   });
 
   it('emits KYC_AADHAAR_REJECTED audit entry when DigiLocker returns null', async () => {
@@ -97,7 +97,7 @@ describe('POST /v1/kyc/aadhaar', () => {
     });
     await handler(req, new InvocationContext());
 
-    expect(vi.mocked(kycAuditEntry)).toHaveBeenCalledWith('tech-001', 'AADHAAR', 'REJECTED', '');
+    expect(vi.mocked(kycAuditEntry)).toHaveBeenCalledWith('tech-001', 'AADHAAR', 'REJECTED');
   });
 
   it('returns 401 on invalid token', async () => {

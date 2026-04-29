@@ -1,5 +1,4 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import * as Sentry from '@sentry/node';
 import { verifyTechnicianToken } from '../../middleware/verifyTechnicianToken.js';
 import { exchangeCodeForAadhaar } from '../../services/digilocker.service.js';
 import { upsertKycStatus } from '../../cosmos/technician-repository.js';
@@ -36,7 +35,7 @@ export async function submitAadhaar(
       aadhaarVerified: false,
       kycStatus: 'PENDING_MANUAL',
     });
-    void kycAuditEntry(technicianId, 'AADHAAR', 'REJECTED', '').catch(Sentry.captureException);
+    void kycAuditEntry(technicianId, 'AADHAAR', 'REJECTED');
     return {
       status: 200,
       jsonBody: { kycStatus: 'PENDING_MANUAL', aadhaarVerified: false, aadhaarMaskedNumber: null },
@@ -48,7 +47,7 @@ export async function submitAadhaar(
     aadhaarMaskedNumber: aadhaarResult.maskedNumber,
     kycStatus: 'AADHAAR_DONE',
   });
-  void kycAuditEntry(technicianId, 'AADHAAR', 'VERIFIED', aadhaarResult.maskedNumber).catch(Sentry.captureException);
+  void kycAuditEntry(technicianId, 'AADHAAR', 'VERIFIED');
 
   return {
     status: 200,

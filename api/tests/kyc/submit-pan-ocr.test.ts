@@ -81,7 +81,7 @@ describe('POST /v1/kyc/pan-ocr', () => {
     });
     await handler(req, new InvocationContext());
 
-    expect(vi.mocked(kycAuditEntry)).toHaveBeenCalledWith('tech-001', 'PAN', 'VERIFIED', 'ABCDE1234F');
+    expect(vi.mocked(kycAuditEntry)).toHaveBeenCalledWith('tech-001', 'PAN', 'VERIFIED');
   });
 
   it('emits KYC_PAN_REJECTED audit entry on OCR failure', async () => {
@@ -98,7 +98,7 @@ describe('POST /v1/kyc/pan-ocr', () => {
     });
     await handler(req, new InvocationContext());
 
-    expect(vi.mocked(kycAuditEntry)).toHaveBeenCalledWith('tech-001', 'PAN', 'REJECTED', '');
+    expect(vi.mocked(kycAuditEntry)).toHaveBeenCalledWith('tech-001', 'PAN', 'REJECTED');
   });
 
   it('returns 401 when token invalid', async () => {

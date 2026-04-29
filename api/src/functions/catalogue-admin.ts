@@ -5,7 +5,6 @@ import {
   type InvocationContext,
 } from '@azure/functions';
 import '../bootstrap.js';
-import * as Sentry from '@sentry/node';
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { CreateCategoryBodySchema, UpdateCategoryBodySchema } from '../schemas/service-category.js';
 import { CreateServiceBodySchema, UpdateServiceBodySchema } from '../schemas/service.js';
@@ -37,7 +36,7 @@ export async function createCategoryHandler(req: HttpRequest, _ctx: InvocationCo
     const existing = await catalogueRepo.getCategoryById(body.id);
     if (existing) return { status: 409, headers: JSON_HEADERS, jsonBody: { error: `Category '${body.id}' already exists` } };
     const created = await catalogueRepo.createCategory(body, admin.adminId);
-    void catalogueAuditEntry(admin.adminId, admin.role, 'CATALOGUE_CATEGORY_CREATED', 'category', created.id, { name: created.name }).catch(Sentry.captureException);
+    await catalogueAuditEntry(admin.adminId, admin.role, 'CATALOGUE_CATEGORY_CREATED', 'category', created.id, { name: created.name });
     return { status: 201, headers: JSON_HEADERS, jsonBody: created };
   } catch (err) {
     if (err instanceof ZodError) return zodErr(err);
@@ -51,7 +50,7 @@ export async function updateCategoryHandler(req: HttpRequest, _ctx: InvocationCo
     const body = UpdateCategoryBodySchema.parse(await parseJson(req));
     const updated = await catalogueRepo.updateCategory(id, body, admin.adminId);
     if (!updated) return { status: 404, headers: JSON_HEADERS, jsonBody: { error: 'Category not found' } };
-    void catalogueAuditEntry(admin.adminId, admin.role, 'CATALOGUE_CATEGORY_UPDATED', 'category', id, { changes: body }).catch(Sentry.captureException);
+    await catalogueAuditEntry(admin.adminId, admin.role, 'CATALOGUE_CATEGORY_UPDATED', 'category', id, { changes: body });
     return { status: 200, headers: JSON_HEADERS, jsonBody: updated };
   } catch (err) {
     if (err instanceof ZodError) return zodErr(err);
@@ -63,7 +62,7 @@ export async function toggleCategoryHandler(req: HttpRequest, _ctx: InvocationCo
   const id = req.params['id']!;
   const updated = await catalogueRepo.toggleCategory(id, admin.adminId);
   if (!updated) return { status: 404, headers: JSON_HEADERS, jsonBody: { error: 'Category not found' } };
-  void catalogueAuditEntry(admin.adminId, admin.role, 'CATALOGUE_CATEGORY_TOGGLED', 'category', id, { isActive: updated.isActive }).catch(Sentry.captureException);
+  await catalogueAuditEntry(admin.adminId, admin.role, 'CATALOGUE_CATEGORY_TOGGLED', 'category', id, { isActive: updated.isActive });
   return { status: 200, headers: JSON_HEADERS, jsonBody: updated };
 }
 
@@ -83,7 +82,7 @@ export async function createServiceHandler(req: HttpRequest, _ctx: InvocationCon
     const existing = await catalogueRepo.getServiceByIdCrossPartition(body.id);
     if (existing) return { status: 409, headers: JSON_HEADERS, jsonBody: { error: `Service '${body.id}' already exists` } };
     const created = await catalogueRepo.createService(body, admin.adminId);
-    void catalogueAuditEntry(admin.adminId, admin.role, 'CATALOGUE_SERVICE_CREATED', 'service', created.id, { name: created.name, categoryId: created.categoryId }).catch(Sentry.captureException);
+    await catalogueAuditEntry(admin.adminId, admin.role, 'CATALOGUE_SERVICE_CREATED', 'service', created.id, { name: created.name, categoryId: created.categoryId });
     return { status: 201, headers: JSON_HEADERS, jsonBody: created };
   } catch (err) {
     if (err instanceof ZodError) return zodErr(err);
@@ -97,7 +96,7 @@ export async function updateServiceHandler(req: HttpRequest, _ctx: InvocationCon
     const body = UpdateServiceBodySchema.parse(await parseJson(req));
     const updated = await catalogueRepo.updateService(id, body, admin.adminId);
     if (!updated) return { status: 404, headers: JSON_HEADERS, jsonBody: { error: 'Service not found' } };
-    void catalogueAuditEntry(admin.adminId, admin.role, 'CATALOGUE_SERVICE_UPDATED', 'service', id, { changes: body }).catch(Sentry.captureException);
+    await catalogueAuditEntry(admin.adminId, admin.role, 'CATALOGUE_SERVICE_UPDATED', 'service', id, { changes: body });
     return { status: 200, headers: JSON_HEADERS, jsonBody: updated };
   } catch (err) {
     if (err instanceof ZodError) return zodErr(err);
@@ -109,7 +108,7 @@ export async function toggleServiceHandler(req: HttpRequest, _ctx: InvocationCon
   const id = req.params['id']!;
   const updated = await catalogueRepo.toggleService(id, admin.adminId);
   if (!updated) return { status: 404, headers: JSON_HEADERS, jsonBody: { error: 'Service not found' } };
-  void catalogueAuditEntry(admin.adminId, admin.role, 'CATALOGUE_SERVICE_TOGGLED', 'service', id, { isActive: updated.isActive }).catch(Sentry.captureException);
+  await catalogueAuditEntry(admin.adminId, admin.role, 'CATALOGUE_SERVICE_TOGGLED', 'service', id, { isActive: updated.isActive });
   return { status: 200, headers: JSON_HEADERS, jsonBody: updated };
 }
 
