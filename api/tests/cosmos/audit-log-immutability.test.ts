@@ -155,10 +155,23 @@ describe('auditLog.service.ts: file-scan invariant', () => {
 });
 
 describe('container-name uniqueness invariant', () => {
-  // Only `audit-log-repository.ts` may reference the literal 'audit_log'
-  // container name. Any other file referencing it is an immutability bypass
-  // (e.g. an admin handler reading via a different code path that could
-  // later add .replace/.delete without going through the repository).
+  // The `audit_log` container literal is restricted to an approved set of
+  // source files. Any file outside this set referencing the literal is a
+  // potential immutability bypass.
+  //
+  // Approved set:
+  //   1. audit-log-repository.ts   — canonical append-only repository
+  //   2. user-data-cascade-writes.ts — DPDP §11 erasure cascade: anonymizes
+  //      resourceId on audit entries (does NOT delete entries). Approved
+  //      exception documented in docs/adr/0013-audit-log-immutability.md §6.
+  //   3. user-data-export-reads.ts — DPDP §11 data export: reads audit entries
+  //      for the data principal's export bundle (read-only access). Approved
+  //      exception documented in docs/adr/0013-audit-log-immutability.md §6.
+  const APPROVED_FILES = [
+    resolve(SRC_ROOT, 'cosmos', 'audit-log-repository.ts'),
+    resolve(SRC_ROOT, 'cosmos', 'user-data-cascade-writes.ts'),
+    resolve(SRC_ROOT, 'cosmos', 'user-data-export-reads.ts'),
+  ];
 
   function walk(dir: string): string[] {
     const out: string[] = [];
@@ -174,16 +187,26 @@ describe('container-name uniqueness invariant', () => {
     return out;
   }
 
-  it('exactly one source file references the audit_log container literal', () => {
+  it('only approved source files reference the audit_log container literal', () => {
     const files = walk(SRC_ROOT);
-    const refs = files.filter((f) =>
-      /['"]audit_log['"]/.test(readFileSync(f, 'utf8')),
-    );
     const norm = (p: string) => p.split(sep).join('/');
-    // Use both length and equality assertions so the failure message is
-    // diagnostic ("found 0 / found 2" vs sorted-array equality).
-    expect(refs).toHaveLength(1);
-    expect(norm(refs[0]!)).toBe(norm(REPO_PATH));
+    const unapproved = files.filter((f) => {
+      if (!(/['"]audit_log['"]/.test(readFileSync(f, 'utf8')))) return false;
+      return !APPROVED_FILES.some((a) => norm(a) === norm(f));
+    });
+    // Diagnostic message: lists any new unapproved files so the failure is actionable.
+    expect(
+      unapproved.map(norm),
+      'New file references audit_log — either add to APPROVED_FILES with an ADR citation, or route through audit-log-repository.ts',
+    ).toHaveLength(0);
+  });
+
+  it('all approved files exist (guard against stale allowlist)', () => {
+    const norm = (p: string) => p.split(sep).join('/');
+    const { existsSync } = require('node:fs') as typeof import('node:fs');
+    for (const f of APPROVED_FILES) {
+      expect(existsSync(f), `Approved file missing: ${norm(f)}`).toBe(true);
+    }
   });
 });
 
