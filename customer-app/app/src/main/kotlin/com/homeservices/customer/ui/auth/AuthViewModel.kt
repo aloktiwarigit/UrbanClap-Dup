@@ -159,6 +159,16 @@ public class AuthViewModel
                             "Sign-in failed. Please try again.",
                             retriesLeft = 0,
                         )
+                is AuthResult.Error.WrongCredential ->
+                    _uiState.value = AuthUiState.Error("Incorrect email or password.", retriesLeft = 0)
+                is AuthResult.Error.UserNotFound ->
+                    _uiState.value = AuthUiState.Error("No account found with that email.", retriesLeft = 0)
+                is AuthResult.Error.EmailAlreadyInUse ->
+                    _uiState.value = AuthUiState.Error("An account already exists with this email.", retriesLeft = 0)
+                is AuthResult.Error.WeakPassword ->
+                    _uiState.value = AuthUiState.Error("Password is too weak. Please choose a stronger one.", retriesLeft = 0)
+                is AuthResult.Error.InvalidEmail ->
+                    _uiState.value = AuthUiState.Error("The email address is not valid.", retriesLeft = 0)
                 is AuthResult.Cancelled, is AuthResult.Unavailable ->
                     _uiState.value = AuthUiState.OtpEntry(phoneNumber = currentPhoneNumber)
             }
