@@ -1,5 +1,8 @@
 package com.homeservices.customer.ui.tracking
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -54,6 +57,10 @@ internal fun LiveTrackingScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val sosUiState by sosViewModel.sosUiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val audioPermissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            sosViewModel.onAudioPermissionResult(granted)
+        }
 
     val isInProgress =
         uiState is LiveTrackingUiState.Tracking &&
@@ -207,6 +214,11 @@ internal fun LiveTrackingScreen(
         is SosUiState.SosError -> {
             LaunchedEffect(sos) {
                 snackbarHostState.showSnackbar("अलर्ट नहीं भेजा जा सका। फिर से कोशिश करें।")
+            }
+        }
+        is SosUiState.RequestAudioPermission -> {
+            LaunchedEffect(sos) {
+                audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
             }
         }
         else -> Unit
