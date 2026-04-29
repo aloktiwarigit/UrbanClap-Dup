@@ -74,6 +74,7 @@ export async function shieldReportHandler(req: HttpRequest, _ctx: InvocationCont
     internalNotes: [],
     slaDeadlineAt,
     escalated: false,
+    ...(parsed.data.evidenceUrls?.length ? { evidenceUrls: parsed.data.evidenceUrls } : {}),
     createdAt: now,
     updatedAt: now,
   };

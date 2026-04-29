@@ -65,6 +65,7 @@ export const ComplaintDocSchema = z.object({
   photoStoragePath: z.string().optional(),
   acknowledgeDeadlineAt: z.string().optional(),
   resolvedAt: z.string().optional(),
+  evidenceUrls: z.array(z.string().url()).max(5).optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
