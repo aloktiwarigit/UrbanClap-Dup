@@ -781,6 +781,14 @@
           "resolvedAt": {
             "type": "string"
           },
+          "evidenceUrls": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            },
+            "maxItems": 5
+          },
           "createdAt": {
             "type": "string"
           },
@@ -977,6 +985,14 @@
                 },
                 "resolvedAt": {
                   "type": "string"
+                },
+                "evidenceUrls": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "maxItems": 5
                 },
                 "createdAt": {
                   "type": "string"
