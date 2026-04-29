@@ -701,7 +701,9 @@
             "type": "string",
             "enum": [
               "RATING_SHIELD",
-              "STANDARD"
+              "STANDARD",
+              "ABUSIVE_CUSTOMER_SHIELD",
+              "RATING_APPEAL"
             ],
             "default": "STANDARD"
           },
@@ -736,7 +738,10 @@
               "BILLING_DISPUTE",
               "LATE_ARRIVAL",
               "NO_SHOW",
-              "OTHER"
+              "OTHER",
+              "APPEAL_UPHELD",
+              "APPEAL_REMOVED",
+              "APPEAL_PARTIAL_REMOVE"
             ]
           },
           "internalNotes": {
@@ -775,6 +780,14 @@
           },
           "resolvedAt": {
             "type": "string"
+          },
+          "evidenceUrls": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            },
+            "maxItems": 5
           },
           "createdAt": {
             "type": "string"
@@ -853,7 +866,10 @@
               "BILLING_DISPUTE",
               "LATE_ARRIVAL",
               "NO_SHOW",
-              "OTHER"
+              "OTHER",
+              "APPEAL_UPHELD",
+              "APPEAL_REMOVED",
+              "APPEAL_PARTIAL_REMOVE"
             ]
           },
           "note": {
@@ -890,7 +906,9 @@
                   "type": "string",
                   "enum": [
                     "RATING_SHIELD",
-                    "STANDARD"
+                    "STANDARD",
+                    "ABUSIVE_CUSTOMER_SHIELD",
+                    "RATING_APPEAL"
                   ],
                   "default": "STANDARD"
                 },
@@ -925,7 +943,10 @@
                     "BILLING_DISPUTE",
                     "LATE_ARRIVAL",
                     "NO_SHOW",
-                    "OTHER"
+                    "OTHER",
+                    "APPEAL_UPHELD",
+                    "APPEAL_REMOVED",
+                    "APPEAL_PARTIAL_REMOVE"
                   ]
                 },
                 "internalNotes": {
@@ -964,6 +985,14 @@
                 },
                 "resolvedAt": {
                   "type": "string"
+                },
+                "evidenceUrls": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "maxItems": 5
                 },
                 "createdAt": {
                   "type": "string"

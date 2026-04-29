@@ -1,6 +1,7 @@
 package com.homeservices.technician.ui.activeJob
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,9 +12,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +44,11 @@ internal fun ActiveJobScreen(
         onPhotoCancelled = viewModel::onPhotoCancelled,
         onPhotoConfirmed = viewModel::onPhotoConfirmed,
         onPhotoRetake = viewModel::onPhotoRetake,
+        onShowShieldSheet = viewModel::onShowShieldSheet,
+        onDismissShieldSheet = viewModel::onDismissShieldSheet,
+        onShieldSubmit = viewModel::fileShieldReport,
+        onShieldSuccessConsumed = viewModel::consumeShieldReportSuccess,
+        onShieldErrorConsumed = viewModel::consumeShieldReportError,
         modifier = modifier,
     )
 }
@@ -49,6 +60,11 @@ internal fun ActiveJobScreenContent(
     onPhotoCancelled: () -> Unit,
     onPhotoConfirmed: (filePath: String) -> Unit,
     onPhotoRetake: () -> Unit,
+    onShowShieldSheet: () -> Unit = {},
+    onDismissShieldSheet: () -> Unit = {},
+    onShieldSubmit: (description: String?) -> Unit = {},
+    onShieldSuccessConsumed: () -> Unit = {},
+    onShieldErrorConsumed: () -> Unit = {},
     modifier: Modifier = Modifier,
 ): Unit {
     Surface(
@@ -84,10 +100,18 @@ internal fun ActiveJobScreenContent(
                     Text(uiState.message, style = MaterialTheme.typography.bodyLarge)
                 }
             is ActiveJobUiState.Active -> {
-                ActiveJobContent(
-                    state = uiState,
-                    onTransitionRequested = onTransitionRequested,
-                )
+                val snackbarHostState = remember { SnackbarHostState() }
+                Box(modifier = Modifier.fillMaxSize()) {
+                    ActiveJobContent(
+                        state = uiState,
+                        onTransitionRequested = onTransitionRequested,
+                        onShowShieldSheet = onShowShieldSheet,
+                    )
+                    SnackbarHost(
+                        hostState = snackbarHostState,
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                    )
+                }
                 uiState.pendingPhotoStage?.let { stage ->
                     var lastCapturedPath by remember { mutableStateOf<String?>(null) }
                     PhotoCaptureScreen(
@@ -103,6 +127,32 @@ internal fun ActiveJobScreenContent(
                         onRetake = onPhotoRetake,
                     )
                 }
+                if (uiState.showShieldSheet) {
+                    ShieldReportSheet(
+                        onDismiss = onDismissShieldSheet,
+                        onSubmit = onShieldSubmit,
+                        isSubmitting = uiState.shieldReportInProgress,
+                    )
+                }
+                LaunchedEffect(uiState.shieldReportSuccess) {
+                    if (uiState.shieldReportSuccess) {
+                        snackbarHostState.showSnackbar(
+                            message = "रिपोर्ट दर्ज हो गई ✓",
+                            duration = SnackbarDuration.Short,
+                        )
+                        onShieldSuccessConsumed()
+                    }
+                }
+                LaunchedEffect(uiState.shieldReportError) {
+                    val err = uiState.shieldReportError
+                    if (err != null) {
+                        snackbarHostState.showSnackbar(
+                            message = "रिपोर्ट नहीं हो सकी, पुनः प्रयास करें",
+                            duration = SnackbarDuration.Short,
+                        )
+                        onShieldErrorConsumed()
+                    }
+                }
             }
         }
     }
@@ -112,6 +162,7 @@ internal fun ActiveJobScreenContent(
 private fun ActiveJobContent(
     state: ActiveJobUiState.Active,
     onTransitionRequested: (stage: String) -> Unit,
+    onShowShieldSheet: () -> Unit = {},
     modifier: Modifier = Modifier,
 ): Unit {
     Column(
@@ -155,15 +206,28 @@ private fun ActiveJobContent(
                 ActiveJobAction.COMPLETE_JOB -> Triple("Complete Job", true, "COMPLETED")
                 ActiveJobAction.NONE -> Triple("Done", false, "")
             }
-        Button(
-            onClick = { if (ctaTargetStage.isNotEmpty()) onTransitionRequested(ctaTargetStage) },
-            enabled = ctaEnabled,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(ctaLabel, style = MaterialTheme.typography.titleMedium)
+            Button(
+                onClick = { if (ctaTargetStage.isNotEmpty()) onTransitionRequested(ctaTargetStage) },
+                enabled = ctaEnabled,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+            ) {
+                Text(ctaLabel, style = MaterialTheme.typography.titleMedium)
+            }
+            OutlinedButton(
+                onClick = onShowShieldSheet,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+            ) {
+                Text("ग्राहक रिपोर्ट करें")
+            }
         }
     }
 }

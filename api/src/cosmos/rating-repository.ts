@@ -80,6 +80,20 @@ export const ratingRepo = {
     return resource ?? updated;
   },
 
+  async patchRatingForAppeal(
+    bookingId: string,
+    patch: { customerAppealRemoved?: boolean; customerAppealDisputed?: boolean },
+  ): Promise<void> {
+    const { resource, etag } = await getRatingsContainer()
+      .item(bookingId, bookingId)
+      .read<RatingDoc>();
+    if (!resource) return;
+    const updated = { ...resource, ...patch };
+    await getRatingsContainer()
+      .item(bookingId, bookingId)
+      .replace(updated, { accessCondition: { type: 'IfMatch', condition: etag ?? '' } });
+  },
+
   async getAllByTechnicianId(technicianId: string): Promise<RatingDoc[]> {
     const { resources } = await getRatingsContainer()
       .items.query<RatingDoc>(

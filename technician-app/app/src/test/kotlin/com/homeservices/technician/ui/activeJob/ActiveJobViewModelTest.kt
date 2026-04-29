@@ -12,6 +12,7 @@ import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
 import com.homeservices.technician.domain.activeJob.model.LatLng
 import com.homeservices.technician.domain.activeJob.model.NavigationEvent
 import com.homeservices.technician.domain.photo.UploadJobPhotoUseCase
+import com.homeservices.technician.domain.shield.FileShieldReportUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -42,6 +43,7 @@ public class ActiveJobViewModelTest {
     private lateinit var completeJobUseCase: CompleteJobUseCase
     private lateinit var connectivityObserver: ConnectivityObserver
     private lateinit var uploadJobPhotoUseCase: UploadJobPhotoUseCase
+    private lateinit var fileShieldReportUseCase: FileShieldReportUseCase
     private lateinit var viewModel: ActiveJobViewModel
 
     private fun aJob(status: ActiveJobStatus = ActiveJobStatus.ASSIGNED) =
@@ -67,6 +69,7 @@ public class ActiveJobViewModelTest {
         completeJobUseCase = mockk(relaxed = true)
         connectivityObserver = mockk()
         uploadJobPhotoUseCase = mockk(relaxed = true)
+        fileShieldReportUseCase = mockk(relaxed = true)
         every { connectivityObserver.isConnected } returns emptyFlow()
         every { repository.getActiveJob("bk-1") } returns flowOf(aJob())
         every { repository.hasPendingTransitions } returns flowOf(false)
@@ -81,6 +84,7 @@ public class ActiveJobViewModelTest {
                 completeJobUseCase,
                 connectivityObserver,
                 uploadJobPhotoUseCase,
+                fileShieldReportUseCase,
             )
     }
 
@@ -150,6 +154,7 @@ public class ActiveJobViewModelTest {
                     completeJobUseCase,
                     connectivityObserver,
                     uploadJobPhotoUseCase,
+                    fileShieldReportUseCase,
                 )
 
             connectFlow.value = true
@@ -196,6 +201,7 @@ public class ActiveJobViewModelTest {
                     completeJobUseCase,
                     connectivityObserver,
                     uploadJobPhotoUseCase,
+                    fileShieldReportUseCase,
                 )
             assertThat(vm.uiState.value).isEqualTo(ActiveJobUiState.Loading)
         }
@@ -215,6 +221,7 @@ public class ActiveJobViewModelTest {
                     completeJobUseCase,
                     connectivityObserver,
                     uploadJobPhotoUseCase,
+                    fileShieldReportUseCase,
                 )
             assertThat(vm.uiState.value).isInstanceOf(ActiveJobUiState.Completed::class.java)
         }
@@ -253,6 +260,7 @@ public class ActiveJobViewModelTest {
                     completeJobUseCase,
                     connectivityObserver,
                     uploadJobPhotoUseCase,
+                    fileShieldReportUseCase,
                 )
             // Request transition (sets pendingPhotoStage)
             vm.onTransitionRequested("REACHED")
@@ -333,6 +341,7 @@ public class ActiveJobViewModelTest {
                     completeJobUseCase,
                     connectivityObserver,
                     uploadJobPhotoUseCase,
+                    fileShieldReportUseCase,
                 )
             vm.onPhotoRetake()
             assertThat(vm.uiState.value).isInstanceOf(ActiveJobUiState.Loading::class.java)
