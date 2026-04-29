@@ -40,7 +40,9 @@ public class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        handleNavigationIntent(intent)
+        // Capture cold-start nav extra BEFORE setContent; passed into AppNavigation so
+        // the destination can be acted on after the nav graph's collectors are active.
+        val coldStartNav = intent?.getStringExtra("navigate_to")
         setContent {
             HomeservicesTheme {
                 AppNavigation(
@@ -49,6 +51,7 @@ public class MainActivity : FragmentActivity() {
                     ratingPromptEventBus = ratingPromptEventBus,
                     ratingReceivedEventBus = ratingReceivedEventBus,
                     fcmTopicSubscriber = fcmTopicSubscriber,
+                    coldStartNavDestination = coldStartNav,
                 )
             }
         }
@@ -56,10 +59,8 @@ public class MainActivity : FragmentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        handleNavigationIntent(intent)
-    }
-
-    private fun handleNavigationIntent(intent: Intent?) {
+        // Warm-start: Compose is already running; post to bus so AppNavigation's
+        // active LaunchedEffect collector receives the event immediately.
         navigateFromExtra(intent?.getStringExtra("navigate_to"), ratingReceivedEventBus)
     }
 

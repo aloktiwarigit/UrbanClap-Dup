@@ -27,6 +27,7 @@ internal fun AppNavigation(
     ratingPromptEventBus: RatingPromptEventBus,
     ratingReceivedEventBus: RatingReceivedEventBus,
     fcmTopicSubscriber: FcmTopicSubscriber,
+    coldStartNavDestination: String? = null,
     modifier: Modifier = Modifier,
 ): Unit {
     val navController = rememberNavController()
@@ -86,6 +87,17 @@ internal fun AppNavigation(
     LaunchedEffect(ratingReceivedEventBus, isAuthenticated) {
         if (!isAuthenticated) return@LaunchedEffect
         ratingReceivedEventBus.events.collect {
+            navController.navigate("ratings_transparency") {
+                launchSingleTop = true
+            }
+        }
+    }
+
+    // Cold-start: the bus has replay=0 so events posted before this LaunchedEffect
+    // subscribes would be lost. Navigate directly from the captured intent extra instead.
+    LaunchedEffect(coldStartNavDestination, isAuthenticated) {
+        if (!isAuthenticated || coldStartNavDestination == null) return@LaunchedEffect
+        if (coldStartNavDestination == "ratings_transparency") {
             navController.navigate("ratings_transparency") {
                 launchSingleTop = true
             }
