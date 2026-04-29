@@ -1,1 +1,1 @@
-{"timestamp":"2026-04-29T00:00:14-04:00","commit":"7cf9685436b8b64f049d8a1cc22ff2d3da0b75ef","reviewer":"codex","model":"gpt-5.4","p1_fixes":"dedup-after-markPaid + buffer-length timingSafeEqual guard"}
+{"timestamp":"2026-04-29T00:50:07-04:00","commit":"a3d10b199286998b5dbeb63272b38f911e66da25","reviewer":"codex","model":"gpt-5.4","findings":"2xP2-fixed"}

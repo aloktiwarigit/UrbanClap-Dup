@@ -1,7 +1,8 @@
 import { userDataExportReads } from '../cosmos/user-data-export-reads.js';
+import { decryptPan } from './piiCrypto.service.js';
 
 /** Bumped any time the shape of the export response changes. */
-export const DATA_INVENTORY_VERSION = 1;
+export const DATA_INVENTORY_VERSION = 2; // v2: added kyc.panDecrypted (DPDP §11, W2-6)
 
 /** Audit log lookback for the export response (last 90 days). */
 const AUDIT_LOG_LOOKBACK_DAYS = 90;
@@ -15,8 +16,12 @@ export interface UserDataExportResponse {
   bookings: Array<Record<string, unknown>>;
   ratings: Array<Record<string, unknown>>;
   complaints: Array<Record<string, unknown>>;
-  /** Technician-only — Aadhaar masked, PAN masked. null for customers. */
-  kyc: { aadhaarMaskedNumber: string | null; panNumber: string | null } | null;
+  /** Technician-only — Aadhaar masked, PAN masked + decrypted (if encrypted blob present). null for customers. */
+  kyc: {
+    aadhaarMaskedNumber: string | null;
+    panNumber: string | null;
+    panDecrypted: string | null;
+  } | null;
   /** Technician-only — financial ledger entries (retained 7y per RBI). */
   walletLedger: Array<Record<string, unknown>>;
   /** Acknowledgment of FCM topic subscriptions; never the raw token. */
@@ -141,12 +146,22 @@ export async function assembleUserDataExport(
       profile = { ...techDoc.profile, uid: userId };
     }
     if (techDoc.kyc) {
+      let panDecrypted: string | null = null;
+      if (techDoc.kyc.panNumberEncrypted) {
+        try {
+          panDecrypted = decryptPan(techDoc.kyc.panNumberEncrypted);
+        } catch {
+          // Key rotation or blob corruption — fall back to masked only
+          panDecrypted = null;
+        }
+      }
       kyc = {
         aadhaarMaskedNumber: techDoc.kyc.aadhaarMaskedNumber ?? null,
         panNumber: maskPan(techDoc.kyc.panNumber),
+        panDecrypted,
       };
     } else {
-      kyc = { aadhaarMaskedNumber: null, panNumber: null };
+      kyc = { aadhaarMaskedNumber: null, panNumber: null, panDecrypted: null };
     }
     fcmAcknowledged = techDoc.fcmToken !== null && techDoc.fcmToken !== undefined;
     const ledger = await userDataExportReads.listWalletLedgerForTechnician(userId);

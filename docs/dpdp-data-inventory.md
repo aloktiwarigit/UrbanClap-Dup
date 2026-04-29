@@ -141,7 +141,7 @@ property of the `/v1/users/me/data-export` response.
 
 ```json
 {
-  "dataInventoryVersion": 1,
+  "dataInventoryVersion": 2,
   "exportedKeys": {
     "CUSTOMER": [
       "userId",
