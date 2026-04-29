@@ -9,12 +9,17 @@ vi.mock('../../src/services/userRole.service.js', () => ({
   inferUserRole: vi.fn().mockResolvedValue('CUSTOMER'),
 }));
 
-vi.mock('../../src/cosmos/erasure-request-repository.js', () => ({
-  createErasureRequest: vi.fn(),
-  getErasureRequestById: vi.fn(),
-  getPendingErasureRequestForUser: vi.fn(),
-  replaceErasureRequest: vi.fn(),
-}));
+vi.mock('../../src/cosmos/erasure-request-repository.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/cosmos/erasure-request-repository.js')>();
+  return {
+    ...actual,
+    createErasureRequest: vi.fn(),
+    getErasureRequestById: vi.fn(),
+    getPendingErasureRequestForUser: vi.fn(),
+    getActiveErasureRequestForUser: vi.fn(),
+    replaceErasureRequest: vi.fn(),
+  };
+});
 
 vi.mock('../../src/services/auditLog.service.js', () => ({
   auditLog: vi.fn().mockResolvedValue(undefined),
@@ -95,12 +100,21 @@ describe('POST /v1/users/me/erasure-request', () => {
     const { verifyFirebaseIdToken } = await import('../../src/services/firebaseAdmin.js');
     const repo = await import('../../src/cosmos/erasure-request-repository.js');
     (verifyFirebaseIdToken as MockFn).mockResolvedValue({ uid: 'cust-1' });
-    (repo.getPendingErasureRequestForUser as MockFn).mockResolvedValue({
-      id: 'er-existing',
-      userId: 'cust-1',
-      status: 'PENDING',
-      requestedAt: '2026-04-25T00:00:00.000Z',
-      scheduledDeletionAt: '2026-05-02T00:00:00.000Z',
+
+    // Simulate concurrent submit: createErasureRequest throws DuplicatePendingError
+    (repo.createErasureRequest as MockFn).mockRejectedValue(new repo.DuplicatePendingError());
+    (repo.getActiveErasureRequestForUser as MockFn).mockResolvedValue({
+      doc: {
+        id: 'pending:cust-1',
+        partitionKey: 'pending:cust-1',
+        userId: 'cust-1',
+        userRole: 'CUSTOMER',
+        status: 'PENDING',
+        requestedAt: '2026-04-25T00:00:00.000Z',
+        scheduledDeletionAt: '2026-05-02T00:00:00.000Z',
+        anonymizationSalt: 'salt-1234567890abcd',
+      },
+      etag: '"etag-abc"',
     });
 
     const res = (await submitHandler(
@@ -111,11 +125,10 @@ describe('POST /v1/users/me/erasure-request', () => {
     expect((res.jsonBody as { code: string }).code).toBe('ERASURE_REQUEST_PENDING');
   });
 
-  it('returns 201 with erasureId and scheduledDeletionAt 7 days out', async () => {
+  it('returns 201 with erasureId "pending:{uid}" and scheduledDeletionAt 7 days out', async () => {
     const { verifyFirebaseIdToken } = await import('../../src/services/firebaseAdmin.js');
     const repo = await import('../../src/cosmos/erasure-request-repository.js');
     (verifyFirebaseIdToken as MockFn).mockResolvedValue({ uid: 'cust-1' });
-    (repo.getPendingErasureRequestForUser as MockFn).mockResolvedValue(null);
     (repo.createErasureRequest as MockFn).mockResolvedValue(undefined);
 
     const before = Date.now();
@@ -127,7 +140,7 @@ describe('POST /v1/users/me/erasure-request', () => {
 
     expect(res.status).toBe(201);
     const body = res.jsonBody as { erasureId: string; scheduledDeletionAt: string; status: string };
-    expect(body.erasureId).toMatch(/[0-9a-f-]{36}/);
+    expect(body.erasureId).toBe('pending:cust-1');
     expect(body.status).toBe('PENDING');
     const scheduled = Date.parse(body.scheduledDeletionAt);
     const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
@@ -137,6 +150,7 @@ describe('POST /v1/users/me/erasure-request', () => {
     // Persisted with PENDING status + per-request salt for irreversible anonymization
     const created = (repo.createErasureRequest as MockFn).mock.calls[0]![0] as Record<string, unknown>;
     expect(created['status']).toBe('PENDING');
+    expect(created['id']).toBe('pending:cust-1');
     expect(created['userId']).toBe('cust-1');
     expect(typeof created['anonymizationSalt']).toBe('string');
     expect((created['anonymizationSalt'] as string).length).toBeGreaterThanOrEqual(16);
@@ -148,7 +162,6 @@ describe('POST /v1/users/me/erasure-request', () => {
     const repo = await import('../../src/cosmos/erasure-request-repository.js');
     const auditService = await import('../../src/services/auditLog.service.js');
     (verifyFirebaseIdToken as MockFn).mockResolvedValue({ uid: 'cust-1' });
-    (repo.getPendingErasureRequestForUser as MockFn).mockResolvedValue(null);
     (repo.createErasureRequest as MockFn).mockResolvedValue(undefined);
 
     await submitHandler(
@@ -185,20 +198,20 @@ describe('DELETE /v1/users/me/erasure-request', () => {
     const { verifyFirebaseIdToken } = await import('../../src/services/firebaseAdmin.js');
     const repo = await import('../../src/cosmos/erasure-request-repository.js');
     (verifyFirebaseIdToken as MockFn).mockResolvedValue({ uid: 'cust-1' });
-    (repo.getPendingErasureRequestForUser as MockFn).mockResolvedValue(null);
+    (repo.getActiveErasureRequestForUser as MockFn).mockResolvedValue(null);
 
     const res = (await revokeHandler(makeDelete(), new InvocationContext())) as HttpResponseInit;
     expect(res.status).toBe(404);
   });
 
-  it('returns 204 and marks request REVOKED with audit entry', async () => {
+  it('returns 204 and marks request REVOKED with etag-guarded replace + audit entry', async () => {
     const { verifyFirebaseIdToken } = await import('../../src/services/firebaseAdmin.js');
     const repo = await import('../../src/cosmos/erasure-request-repository.js');
     const auditService = await import('../../src/services/auditLog.service.js');
     (verifyFirebaseIdToken as MockFn).mockResolvedValue({ uid: 'cust-1' });
     const pending = {
-      id: 'er-1',
-      partitionKey: 'er-1',
+      id: 'pending:cust-1',
+      partitionKey: 'pending:cust-1',
       userId: 'cust-1',
       userRole: 'CUSTOMER' as const,
       status: 'PENDING' as const,
@@ -206,14 +219,19 @@ describe('DELETE /v1/users/me/erasure-request', () => {
       scheduledDeletionAt: '2026-05-02T00:00:00.000Z',
       anonymizationSalt: 'salt-1234567890abcd',
     };
-    (repo.getPendingErasureRequestForUser as MockFn).mockResolvedValue(pending);
+    (repo.getActiveErasureRequestForUser as MockFn).mockResolvedValue({
+      doc: pending,
+      etag: '"etag-xyz"',
+    });
     (repo.replaceErasureRequest as MockFn).mockResolvedValue(undefined);
 
     const res = (await revokeHandler(makeDelete(), new InvocationContext())) as HttpResponseInit;
     expect(res.status).toBe(204);
-    const replaced = (repo.replaceErasureRequest as MockFn).mock.calls[0]![0] as Record<string, unknown>;
+
+    const [replaced, passedEtag] = (repo.replaceErasureRequest as MockFn).mock.calls[0]! as [Record<string, unknown>, string];
     expect(replaced['status']).toBe('REVOKED');
     expect(typeof replaced['revokedAt']).toBe('string');
+    expect(passedEtag).toBe('"etag-xyz"');
 
     expect(auditService.auditLog).toHaveBeenCalledWith(
       expect.objectContaining({ adminId: 'cust-1' }),
