@@ -1,9 +1,11 @@
-import { createHmac } from 'node:crypto';
+import { createHmac, randomUUID } from 'node:crypto';
 import type { HttpHandler, Timer } from '@azure/functions';
 import { type InvocationContext, app } from '@azure/functions';
+import * as Sentry from '@sentry/node';
 import { RazorpayWebhookPayloadSchema } from '../schemas/webhook.js';
 import { bookingRepo } from '../cosmos/booking-repository.js';
 import { dispatcherService } from '../services/dispatcher.service.js';
+import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
 
 export const razorpayWebhookHandler: HttpHandler = async (req, _ctx) => {
   const secret = process.env['RAZORPAY_WEBHOOK_SECRET'];
@@ -50,6 +52,9 @@ export const razorpayWebhookHandler: HttpHandler = async (req, _ctx) => {
   if (!updated) {
     return { status: 200, jsonBody: { received: true } };
   }
+
+  const _ts = new Date().toISOString();
+  void appendAuditEntry({ id: randomUUID(), adminId: 'system', role: 'system', action: 'PAYMENT_CAPTURED', resourceType: 'booking', resourceId: booking.id, payload: { bookingId: booking.id, paymentId, orderId }, timestamp: _ts, partitionKey: _ts.slice(0, 7) }).catch(Sentry.captureException);
 
   dispatcherService.triggerDispatch(booking.id).catch(() => {
     // fire-and-forget — dispatch failure does not fail the webhook ack

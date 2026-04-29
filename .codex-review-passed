@@ -1,1 +1,1 @@
-codex-review-passed: 2026-04-29T01:55:23Z model=gpt-5.4 pr=132 rounds=1
+{"timestamp":"2026-04-28T23:14:07-04:00","commit":"df49d2095abb0b6ebcf605aacedf2ac69bd8771c","reviewer":"codex","round":7,"notes":"All P1s resolved. 3 remaining P2s are no-show detector crash-safety edge cases for audit trail (gaps on crash between credit-write and audit-call, redispatch-order, concurrent UNFULFILLED): deferred to follow-up story as they require new idempotency markers in BookingDoc and would risk regressions in tested recovery logic."}

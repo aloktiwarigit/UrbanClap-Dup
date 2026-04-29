@@ -1,5 +1,7 @@
+import { randomUUID } from 'node:crypto';
 import type { HttpHandler } from '@azure/functions';
 import { app } from '@azure/functions';
+import * as Sentry from '@sentry/node';
 import { requireCustomer, type CustomerHttpHandler } from '../middleware/requireCustomer.js';
 import { CreateBookingRequestSchema, ConfirmBookingRequestSchema } from '../schemas/booking.js';
 import { RequestAddOnBodySchema, ApproveAddOnsBodySchema } from '../schemas/addon-approval.js';
@@ -8,6 +10,7 @@ import { createRazorpayOrder, verifyPaymentSignature } from '../services/razorpa
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
 import { sendPriceApprovalPush } from '../services/fcm.service.js';
+import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
 
 const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
   const body = await req.json().catch(() => null);
@@ -45,6 +48,13 @@ const confirmHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
 
   const confirmed = await bookingRepo.confirmPayment(id, parsed.data.razorpayPaymentId, parsed.data.razorpaySignature);
   if (!confirmed) return { status: 409, jsonBody: { code: 'BOOKING_ALREADY_PROCESSED' } };
+
+  // Only audit when this call actually performed the transition. If status is PAID the webhook
+  // already processed the booking — this is an idempotent confirm, not a new event.
+  if (confirmed.status === 'SEARCHING') {
+    const _ts = new Date().toISOString();
+    void appendAuditEntry({ id: randomUUID(), adminId: 'system', role: 'system', action: 'CUSTOMER_CONFIRMED_PAYMENT', resourceType: 'booking', resourceId: confirmed.id, payload: { bookingId: confirmed.id, paymentId: parsed.data.razorpayPaymentId }, timestamp: _ts, partitionKey: _ts.slice(0, 7) }).catch(Sentry.captureException);
+  }
 
   return { status: 200, jsonBody: { bookingId: confirmed.id, status: confirmed.status } };
 };

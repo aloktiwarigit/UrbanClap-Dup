@@ -13,6 +13,7 @@ vi.mock('../../src/services/dispatcher.service.js', () => ({
 }));
 vi.mock('../../src/services/fcm.service.js');
 vi.mock('@sentry/node', () => ({ captureException: vi.fn() }));
+vi.mock('../../src/cosmos/audit-log-repository.js', () => ({ appendAuditEntry: vi.fn() }));
 
 import { detectNoShows } from '../../src/functions/trigger-no-show-detector.js';
 import { bookingRepo, updateBookingFields } from '../../src/cosmos/booking-repository.js';
@@ -20,6 +21,7 @@ import { customerCreditRepo } from '../../src/cosmos/customer-credit-repository.
 import { dispatcherService } from '../../src/services/dispatcher.service.js';
 import * as fcmService from '../../src/services/fcm.service.js';
 import * as Sentry from '@sentry/node';
+import { appendAuditEntry } from '../../src/cosmos/audit-log-repository.js';
 import type { BookingDoc } from '../../src/schemas/booking.js';
 
 const mockCtx = { log: vi.fn() } as unknown as InvocationContext;
@@ -78,6 +80,7 @@ beforeEach(() => {
   // call 1: fresh-read → ASSIGNED (guard passes), call 2+: push-check → no noShowPushSentAt
   mockGetByIdSequence({ status: 'ASSIGNED' }, { status: 'NO_SHOW_REDISPATCH' });
   vi.mocked(customerCreditRepo.createCreditIfAbsent).mockResolvedValue(true);
+  vi.mocked(appendAuditEntry).mockResolvedValue(undefined);
   vi.mocked(updateBookingFields).mockResolvedValue(null);
   vi.mocked(dispatcherService.redispatch).mockResolvedValue(true);
   vi.mocked(fcmService.sendNoShowCreditPush).mockResolvedValue(undefined);
@@ -294,6 +297,69 @@ describe('detectNoShows', () => {
     expect(customerCreditRepo.createCreditIfAbsent).not.toHaveBeenCalledWith(
       expect.objectContaining({ id: 'bk-notdue' }),
     );
+  });
+
+  it('emits NO_SHOW_CREDIT_ISSUED audit entry when credit is first written', async () => {
+    vi.mocked(bookingRepo.getAssignedBookingsBefore)
+      .mockResolvedValue([makeAssignedBooking('bk-audit-credit', 45)]);
+    mockGetByIdSequence({ status: 'ASSIGNED' }, { status: 'NO_SHOW_REDISPATCH' });
+
+    await detectNoShows(mockCtx);
+
+    expect(appendAuditEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'NO_SHOW_CREDIT_ISSUED', resourceId: 'bk-audit-credit' }),
+    );
+  });
+
+  it('emits NO_SHOW_REDISPATCH_INITIATED audit entry when redispatch succeeds', async () => {
+    vi.mocked(bookingRepo.getAssignedBookingsBefore)
+      .mockResolvedValue([makeAssignedBooking('bk-audit-rdp', 45)]);
+    mockGetByIdSequence({ status: 'ASSIGNED' }, { status: 'NO_SHOW_REDISPATCH' });
+
+    await detectNoShows(mockCtx);
+
+    expect(appendAuditEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'NO_SHOW_REDISPATCH_INITIATED', resourceId: 'bk-audit-rdp' }),
+    );
+  });
+
+  it('emits BOOKING_UNFULFILLED audit entry when dispatcher set status to UNFULFILLED', async () => {
+    vi.mocked(bookingRepo.getAssignedBookingsBefore)
+      .mockResolvedValue([makeAssignedBooking('bk-audit-unf', 45)]);
+    vi.mocked(dispatcherService.redispatch).mockResolvedValue(false);
+    // getById sequence: fresh-read → ASSIGNED, preDispatch → NO_SHOW_REDISPATCH, postDispatch → UNFULFILLED
+    mockGetByIdSequence(
+      { status: 'ASSIGNED' },
+      { status: 'NO_SHOW_REDISPATCH' },
+      { status: 'UNFULFILLED' },
+      { status: 'UNFULFILLED' },
+    );
+
+    await detectNoShows(mockCtx);
+
+    expect(appendAuditEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'BOOKING_UNFULFILLED', resourceId: 'bk-audit-unf' }),
+    );
+  });
+
+  it('does NOT emit BOOKING_UNFULFILLED when concurrent run moved booking to SEARCHING or ASSIGNED', async () => {
+    vi.mocked(bookingRepo.getAssignedBookingsBefore)
+      .mockResolvedValue([makeAssignedBooking('bk-race', 45)]);
+    vi.mocked(dispatcherService.redispatch).mockResolvedValue(false);
+    // postDispatch read shows SEARCHING (not UNFULFILLED) — concurrent run is handling this booking
+    mockGetByIdSequence(
+      { status: 'ASSIGNED' },
+      { status: 'NO_SHOW_REDISPATCH' },
+      { status: 'SEARCHING' },
+      { status: 'SEARCHING' },
+    );
+
+    await detectNoShows(mockCtx);
+
+    const unfulfilledCall = vi.mocked(appendAuditEntry).mock.calls.find(
+      ([doc]) => (doc as { action: string }).action === 'BOOKING_UNFULFILLED',
+    );
+    expect(unfulfilledCall).toBeUndefined();
   });
 
   it('continues to next booking when createCreditIfAbsent throws for one booking (loop isolation)', async () => {
