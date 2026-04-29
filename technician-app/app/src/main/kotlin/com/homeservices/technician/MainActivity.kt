@@ -15,6 +15,17 @@ import com.truecaller.android.sdk.legacy.TruecallerSDK
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
+/**
+ * Routes a FCM cold-start navigation extra to the appropriate event bus.
+ * Extracted to a top-level function so it can be unit tested without instantiating an Activity.
+ */
+internal fun navigateFromExtra(
+    extra: String?,
+    bus: RatingReceivedEventBus,
+) {
+    if (extra == "ratings_transparency") bus.post()
+}
+
 @AndroidEntryPoint
 public class MainActivity : FragmentActivity() {
     @Inject public lateinit var buildInfo: BuildInfoProvider
@@ -29,6 +40,7 @@ public class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleNavigationIntent(intent)
         setContent {
             HomeservicesTheme {
                 AppNavigation(
@@ -40,6 +52,15 @@ public class MainActivity : FragmentActivity() {
                 )
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleNavigationIntent(intent)
+    }
+
+    private fun handleNavigationIntent(intent: Intent?) {
+        navigateFromExtra(intent?.getStringExtra("navigate_to"), ratingReceivedEventBus)
     }
 
     /**

@@ -163,6 +163,42 @@ public class RatingDtosTest {
     }
 
     @Test
+    public fun `toDomain treats SUBMITTED customerSide with null subScores as Pending`() {
+        val dto =
+            GetRatingResponseDto(
+                bookingId = "bk-1",
+                status = "PARTIALLY_SUBMITTED",
+                customerSide =
+                    SidePayloadDto(
+                        status = "SUBMITTED",
+                        overall = 5,
+                        subScores = null,
+                        submittedAt = "2026-04-24T12:00:00.000Z",
+                    ),
+                techSide = SidePayloadDto(status = "PENDING"),
+            )
+        assertThat(dto.toDomain().customerSide).isEqualTo(SideState.Pending)
+    }
+
+    @Test
+    public fun `toDomain treats SUBMITTED techSide with null overall as Pending`() {
+        val dto =
+            GetRatingResponseDto(
+                bookingId = "bk-1",
+                status = "PARTIALLY_SUBMITTED",
+                customerSide = SidePayloadDto(status = "PENDING"),
+                techSide =
+                    SidePayloadDto(
+                        status = "SUBMITTED",
+                        overall = null,
+                        subScores = mapOf("behaviour" to 4, "communication" to 5),
+                        submittedAt = "2026-04-24T12:30:00.000Z",
+                    ),
+            )
+        assertThat(dto.toDomain().techSide).isEqualTo(SideState.Pending)
+    }
+
+    @Test
     public fun `toDomain customerSide defaults missing sub-score keys to zero`() {
         val dto =
             GetRatingResponseDto(
