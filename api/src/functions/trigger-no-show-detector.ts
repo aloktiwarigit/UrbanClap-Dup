@@ -87,7 +87,7 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
     if (creditCreated) {
       ctx.log(`detectNoShows: processing no-show bookingId=${booking.id}`);
       const _ts = new Date().toISOString();
-      void appendAuditEntry({ id: randomUUID(), adminId: 'system', role: 'system', action: 'NO_SHOW_CREDIT_ISSUED', resourceType: 'booking', resourceId: booking.id, payload: { bookingId: booking.id, technicianId: noShowTechId, creditAmount: NO_SHOW_CREDIT_PAISE }, timestamp: _ts, partitionKey: _ts.slice(0, 7) }).catch(Sentry.captureException);
+      void appendAuditEntry({ id: randomUUID(), adminId: 'system', role: 'system', action: 'NO_SHOW_CREDIT_ISSUED', resourceType: 'booking', resourceId: booking.id, payload: { bookingId: booking.id, creditAmount: NO_SHOW_CREDIT_PAISE }, timestamp: _ts, partitionKey: _ts.slice(0, 7) }).catch(Sentry.captureException);
     } else {
       ctx.log(`detectNoShows: credit already exists for ${booking.id} — retrying remaining steps`);
     }
@@ -179,11 +179,16 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
           if (redispatchOk) {
             await updateBookingFields(booking.id, { noShowRedispatchAt: new Date().toISOString() });
             const _ts = new Date().toISOString();
-            void appendAuditEntry({ id: randomUUID(), adminId: 'system', role: 'system', action: 'NO_SHOW_TECH_SWAPPED', resourceType: 'booking', resourceId: booking.id, payload: { bookingId: booking.id, oldTechId: noShowTechId }, timestamp: _ts, partitionKey: _ts.slice(0, 7) }).catch(Sentry.captureException);
+            void appendAuditEntry({ id: randomUUID(), adminId: 'system', role: 'system', action: 'NO_SHOW_REDISPATCH_INITIATED', resourceType: 'booking', resourceId: booking.id, payload: { bookingId: booking.id }, timestamp: _ts, partitionKey: _ts.slice(0, 7) }).catch(Sentry.captureException);
           } else {
             ctx.log(`detectNoShows: no techs found for ${booking.id} — booking marked UNFULFILLED`);
-            const _ts = new Date().toISOString();
-            void appendAuditEntry({ id: randomUUID(), adminId: 'system', role: 'system', action: 'BOOKING_UNFULFILLED', resourceType: 'booking', resourceId: booking.id, payload: { bookingId: booking.id }, timestamp: _ts, partitionKey: _ts.slice(0, 7) }).catch(Sentry.captureException);
+            // Guard: a concurrent run may have already moved the booking to SEARCHING; only emit
+            // BOOKING_UNFULFILLED when the booking is genuinely stuck (not actively redispatching).
+            const postDispatchDoc = await bookingRepo.getById(booking.id);
+            if (postDispatchDoc?.status !== 'SEARCHING') {
+              const _ts = new Date().toISOString();
+              void appendAuditEntry({ id: randomUUID(), adminId: 'system', role: 'system', action: 'BOOKING_UNFULFILLED', resourceType: 'booking', resourceId: booking.id, payload: { bookingId: booking.id }, timestamp: _ts, partitionKey: _ts.slice(0, 7) }).catch(Sentry.captureException);
+            }
           }
         } catch (err: unknown) {
           Sentry.captureException(err);

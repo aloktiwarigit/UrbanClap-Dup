@@ -311,29 +311,55 @@ describe('detectNoShows', () => {
     );
   });
 
-  it('emits NO_SHOW_TECH_SWAPPED audit entry when redispatch succeeds', async () => {
+  it('emits NO_SHOW_REDISPATCH_INITIATED audit entry when redispatch succeeds', async () => {
     vi.mocked(bookingRepo.getAssignedBookingsBefore)
-      .mockResolvedValue([makeAssignedBooking('bk-audit-swap', 45)]);
+      .mockResolvedValue([makeAssignedBooking('bk-audit-rdp', 45)]);
     mockGetByIdSequence({ status: 'ASSIGNED' }, { status: 'NO_SHOW_REDISPATCH' });
 
     await detectNoShows(mockCtx);
 
     expect(appendAuditEntry).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'NO_SHOW_TECH_SWAPPED', resourceId: 'bk-audit-swap' }),
+      expect.objectContaining({ action: 'NO_SHOW_REDISPATCH_INITIATED', resourceId: 'bk-audit-rdp' }),
     );
   });
 
-  it('emits BOOKING_UNFULFILLED audit entry when no techs are available', async () => {
+  it('emits BOOKING_UNFULFILLED audit entry when no techs are available and booking is not SEARCHING', async () => {
     vi.mocked(bookingRepo.getAssignedBookingsBefore)
       .mockResolvedValue([makeAssignedBooking('bk-audit-unf', 45)]);
     vi.mocked(dispatcherService.redispatch).mockResolvedValue(false);
-    mockGetByIdSequence({ status: 'ASSIGNED' }, { status: 'NO_SHOW_REDISPATCH' });
+    // getById sequence: fresh-read → ASSIGNED, preDispatch → NO_SHOW_REDISPATCH, postDispatch → NO_SHOW_REDISPATCH (not SEARCHING)
+    mockGetByIdSequence(
+      { status: 'ASSIGNED' },
+      { status: 'NO_SHOW_REDISPATCH' },
+      { status: 'NO_SHOW_REDISPATCH' },
+      { status: 'NO_SHOW_REDISPATCH' },
+    );
 
     await detectNoShows(mockCtx);
 
     expect(appendAuditEntry).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'BOOKING_UNFULFILLED', resourceId: 'bk-audit-unf' }),
     );
+  });
+
+  it('does NOT emit BOOKING_UNFULFILLED when concurrent run moved booking to SEARCHING', async () => {
+    vi.mocked(bookingRepo.getAssignedBookingsBefore)
+      .mockResolvedValue([makeAssignedBooking('bk-race', 45)]);
+    vi.mocked(dispatcherService.redispatch).mockResolvedValue(false);
+    // postDispatch read shows SEARCHING — concurrent run is handling this booking
+    mockGetByIdSequence(
+      { status: 'ASSIGNED' },
+      { status: 'NO_SHOW_REDISPATCH' },
+      { status: 'SEARCHING' },
+      { status: 'SEARCHING' },
+    );
+
+    await detectNoShows(mockCtx);
+
+    const unfulfilledCall = vi.mocked(appendAuditEntry).mock.calls.find(
+      ([doc]) => (doc as { action: string }).action === 'BOOKING_UNFULFILLED',
+    );
+    expect(unfulfilledCall).toBeUndefined();
   });
 
   it('continues to next booking when createCreditIfAbsent throws for one booking (loop isolation)', async () => {

@@ -22,7 +22,7 @@ function readApiFile(rel: string): string {
 /** Each entry: [relative path, token that must appear in the source]. */
 const AUDIT_HANDLERS: [string, string][] = [
   ['src/functions/trigger-no-show-detector.ts', 'NO_SHOW_CREDIT_ISSUED'],
-  ['src/functions/trigger-no-show-detector.ts', 'NO_SHOW_TECH_SWAPPED'],
+  ['src/functions/trigger-no-show-detector.ts', 'NO_SHOW_REDISPATCH_INITIATED'],
   ['src/functions/trigger-no-show-detector.ts', 'BOOKING_UNFULFILLED'],
   ['src/functions/webhooks.ts', 'PAYMENT_CAPTURED'],
   ['src/functions/bookings.ts', 'CUSTOMER_CONFIRMED_PAYMENT'],
