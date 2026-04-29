@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -101,7 +103,8 @@ internal fun AppNavigation(
     //   (logout/re-login) while still allowing a first navigation after deferred auth.
     //   Uses remember (not rememberSaveable) so config-changes reset it; launchSingleTop
     //   prevents duplicate back-stack entries if re-navigation occurs.
-    val coldStartNavigated = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    // rememberSaveable persists across config changes so rotation doesn't re-navigate.
+    val coldStartNavigated = rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(coldStartNavDestination, isAuthenticated) {
         if (coldStartNavigated.value || coldStartNavDestination == null) return@LaunchedEffect
         if (isAuthenticated && coldStartNavDestination == "ratings_transparency") {
