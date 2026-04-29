@@ -42,7 +42,12 @@ export async function submitPanOcr(
     // P1-A: mask before any Cosmos write; null means non-canonical format → route to MANUAL_REVIEW
     const maskedPan = maskPan(ocrResult.panNumber);
     if (!maskedPan) {
+      // Non-canonical format: explicitly clear stale PAN fields so MANUAL_REVIEW state is consistent.
+      // upsertKycStatus merges patches; without explicit nulls the old panNumber/panNumberEncrypted
+      // would survive the spread and remain visible via get-kyc-status / data-export.
       await upsertKycStatus(technicianId, {
+        panNumber: null,
+        panNumberEncrypted: undefined,
         panImagePath: firebaseStoragePath,
         kycStatus: 'MANUAL_REVIEW',
       });

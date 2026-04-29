@@ -2,7 +2,7 @@ import { userDataExportReads } from '../cosmos/user-data-export-reads.js';
 import { decryptPan } from './piiCrypto.service.js';
 
 /** Bumped any time the shape of the export response changes. */
-export const DATA_INVENTORY_VERSION = 1;
+export const DATA_INVENTORY_VERSION = 2; // v2: added kyc.panDecrypted (DPDP §11, W2-6)
 
 /** Audit log lookback for the export response (last 90 days). */
 const AUDIT_LOG_LOOKBACK_DAYS = 90;

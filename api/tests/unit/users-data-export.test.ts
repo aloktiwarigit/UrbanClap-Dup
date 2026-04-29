@@ -105,7 +105,7 @@ describe('GET /v1/users/me/data-export', () => {
     (verifyFirebaseIdToken as MockFn).mockResolvedValue({ uid: 'cust-1' });
     (inferUserRole as MockFn).mockResolvedValue('CUSTOMER');
     (assembleUserDataExport as MockFn).mockResolvedValue({
-      dataInventoryVersion: 1,
+      dataInventoryVersion: 2,
       userId: 'cust-1',
       role: 'CUSTOMER',
       profile: { uid: 'cust-1' },
@@ -122,7 +122,7 @@ describe('GET /v1/users/me/data-export', () => {
     const res = (await handler(makeReq('customer'), new InvocationContext())) as HttpResponseInit;
     expect(res.status).toBe(200);
     const body = res.jsonBody as Record<string, unknown>;
-    expect(body['dataInventoryVersion']).toBe(1);
+    expect(body['dataInventoryVersion']).toBe(2);
     expect(body['userId']).toBe('cust-1');
     expect(body['role']).toBe('CUSTOMER');
     expect(Array.isArray(body['bookings'])).toBe(true);
@@ -136,7 +136,7 @@ describe('GET /v1/users/me/data-export', () => {
     (verifyFirebaseIdToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
     (inferUserRole as MockFn).mockResolvedValue('TECHNICIAN');
     (assembleUserDataExport as MockFn).mockResolvedValue({
-      dataInventoryVersion: 1,
+      dataInventoryVersion: 2,
       userId: 'tech-1',
       role: 'TECHNICIAN',
       profile: { id: 'tech-1', skills: ['ac'] },
@@ -168,7 +168,7 @@ describe('GET /v1/users/me/data-export', () => {
     (verifyFirebaseIdToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
     (inferUserRole as MockFn).mockResolvedValue('TECHNICIAN');
     (assembleUserDataExport as MockFn).mockResolvedValue({
-      dataInventoryVersion: 1,
+      dataInventoryVersion: 2,
       userId: 'tech-1',
       role: 'TECHNICIAN',
       profile: { id: 'tech-1' },

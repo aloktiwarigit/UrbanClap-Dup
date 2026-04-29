@@ -257,10 +257,10 @@ describe('POST /v1/kyc/pan-ocr', () => {
     expect(res.status).toBe(200);
     const body = res.jsonBody as { kycStatus: string };
     expect(body.kycStatus).toBe('MANUAL_REVIEW');
-    // Cosmos must NOT receive a cleartext PAN
+    // Cosmos patch must explicitly null panNumber and undefined panNumberEncrypted (stale data cleared)
     const call = vi.mocked(upsertKycStatus).mock.calls[0];
     const patch = call?.[1] as Record<string, unknown>;
-    expect(patch['panNumber']).toBeUndefined();
-    expect(patch['panNumberEncrypted']).toBeUndefined();
+    expect(patch['panNumber']).toBeNull();        // explicitly cleared, not just omitted
+    expect(patch['panNumberEncrypted']).toBeUndefined(); // explicitly cleared
   });
 });
