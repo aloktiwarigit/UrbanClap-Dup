@@ -19,6 +19,10 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 public class HomeservicesFcmService : FirebaseMessagingService() {
+    private companion object {
+        private const val REQUEST_CODE_RATING = 1001
+    }
+
     @Inject
     public lateinit var eventBus: JobOfferEventBus
 
@@ -135,10 +139,11 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
             android.content
                 .Intent(this, com.homeservices.technician.MainActivity::class.java)
                 .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                .putExtra("navigate_to", "ratings_transparency")
         val pi =
             android.app.PendingIntent.getActivity(
                 this,
-                0,
+                REQUEST_CODE_RATING,
                 intent,
                 android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
             )

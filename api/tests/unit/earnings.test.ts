@@ -14,6 +14,8 @@ import { verifyTechnicianToken } from '../../src/middleware/verifyTechnicianToke
 import { walletLedgerRepo } from '../../src/cosmos/wallet-ledger-repository.js';
 import type { WalletLedgerEntry } from '../../src/schemas/wallet-ledger.js';
 
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+
 const ctx = { log: vi.fn(), error: vi.fn() } as unknown as InvocationContext;
 
 function makeReq(auth?: string): HttpRequest {
@@ -31,7 +33,8 @@ function makeEntry(createdAt: string, techAmount: number, payoutStatus: 'PENDING
   };
 }
 
-const today = new Date().toISOString().slice(0, 10);
+// Use IST-aware today so tests pass regardless of UTC offset at run time
+const today = new Date(Date.now() + IST_OFFSET_MS).toISOString().slice(0, 10);
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -132,5 +135,52 @@ describe('GET /v1/technicians/me/earnings', () => {
     const res = await getEarningsHandler(makeReq('Bearer tok'), ctx) as HttpResponseInit;
     expect(res.status).toBe(500);
     expect((res.jsonBody as any).code).toBe('INTERNAL_ERROR');
+  });
+
+  // IST boundary tests — use vi.setSystemTime to make the time deterministic
+
+  it('#136 entry at 23:30 IST (18:00 UTC) is counted in IST today, not skipped', async () => {
+    // System time: 2026-04-29T18:15:00Z = April 29 23:45 IST (today IST = "2026-04-29")
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-29T18:15:00.000Z'));
+    vi.mocked(walletLedgerRepo.getAllByTechnicianId).mockResolvedValue([
+      makeEntry('2026-04-29T18:00:00.000Z', 100000), // 23:30 IST Apr 29 = today IST
+    ]);
+    const res = await getEarningsHandler(makeReq('Bearer tok'), ctx) as HttpResponseInit;
+    const body = res.jsonBody as any;
+    expect(body.today.techAmount).toBe(100000);
+    expect(body.today.count).toBe(1);
+    vi.useRealTimers();
+  });
+
+  it('#136 entry at 00:30 IST next day (19:00 UTC) is NOT counted in IST today', async () => {
+    // System time: 2026-04-29T18:15:00Z = April 29 23:45 IST (today IST = "2026-04-29")
+    // Entry at 19:00 UTC = April 30 00:30 IST = tomorrow IST, should NOT be in today
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-29T18:15:00.000Z'));
+    vi.mocked(walletLedgerRepo.getAllByTechnicianId).mockResolvedValue([
+      makeEntry('2026-04-29T19:00:00.000Z', 100000), // 00:30 IST Apr 30 = tomorrow IST
+    ]);
+    const res = await getEarningsHandler(makeReq('Bearer tok'), ctx) as HttpResponseInit;
+    const body = res.jsonBody as any;
+    expect(body.today.techAmount).toBe(0);
+    expect(body.today.count).toBe(0);
+    vi.useRealTimers();
+  });
+
+  it('#136 monthly goal resets at IST month boundary, not UTC midnight', async () => {
+    // System time: 2026-04-30T18:45:00Z = May 1 00:15 IST — IST month is "2026-05"
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-30T18:45:00.000Z'));
+    vi.mocked(walletLedgerRepo.getAllByTechnicianId).mockResolvedValue([
+      makeEntry('2026-04-30T18:00:00.000Z', 80000), // 23:30 IST Apr 30 = April IST month
+      makeEntry('2026-04-30T18:45:00.000Z', 20000), // 00:15 IST May 1  = May IST month
+    ]);
+    const res = await getEarningsHandler(makeReq('Bearer tok'), ctx) as HttpResponseInit;
+    const body = res.jsonBody as any;
+    // monthStr is "2026-05" (IST), so only the May entry counts
+    expect(body.month.techAmount).toBe(20000);
+    expect(body.month.count).toBe(1);
+    vi.useRealTimers();
   });
 });

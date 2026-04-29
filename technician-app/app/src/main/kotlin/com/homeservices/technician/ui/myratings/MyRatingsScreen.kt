@@ -282,14 +282,16 @@ private fun RatingItemCard(
                     }
                 }
                 when {
-                    rating.appealDisputed -> Text(
-                        "विवादित",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                    rating.overall < 5 -> TextButton(onClick = onAppeal) {
-                        Text("अपील")
-                    }
+                    rating.appealDisputed ->
+                        Text(
+                            "विवादित",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    rating.overall < 5 ->
+                        TextButton(onClick = onAppeal) {
+                            Text("अपील")
+                        }
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

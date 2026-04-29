@@ -15,6 +15,17 @@ import com.truecaller.android.sdk.legacy.TruecallerSDK
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
+/**
+ * Routes a FCM cold-start navigation extra to the appropriate event bus.
+ * Extracted to a top-level function so it can be unit tested without instantiating an Activity.
+ */
+internal fun navigateFromExtra(
+    extra: String?,
+    bus: RatingReceivedEventBus,
+) {
+    if (extra == "ratings_transparency") bus.post()
+}
+
 @AndroidEntryPoint
 public class MainActivity : FragmentActivity() {
     @Inject public lateinit var buildInfo: BuildInfoProvider
@@ -29,6 +40,9 @@ public class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Capture cold-start nav extra BEFORE setContent; passed into AppNavigation so
+        // the destination can be acted on after the nav graph's collectors are active.
+        val coldStartNav = intent?.getStringExtra("navigate_to")
         setContent {
             HomeservicesTheme {
                 AppNavigation(
@@ -37,9 +51,17 @@ public class MainActivity : FragmentActivity() {
                     ratingPromptEventBus = ratingPromptEventBus,
                     ratingReceivedEventBus = ratingReceivedEventBus,
                     fcmTopicSubscriber = fcmTopicSubscriber,
+                    coldStartNavDestination = coldStartNav,
                 )
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // Warm-start: Compose is already running; post to bus so AppNavigation's
+        // active LaunchedEffect collector receives the event immediately.
+        navigateFromExtra(intent?.getStringExtra("navigate_to"), ratingReceivedEventBus)
     }
 
     /**

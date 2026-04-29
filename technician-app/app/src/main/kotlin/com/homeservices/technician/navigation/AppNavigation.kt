@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -27,6 +29,7 @@ internal fun AppNavigation(
     ratingPromptEventBus: RatingPromptEventBus,
     ratingReceivedEventBus: RatingReceivedEventBus,
     fcmTopicSubscriber: FcmTopicSubscriber,
+    coldStartNavDestination: String? = null,
     modifier: Modifier = Modifier,
 ): Unit {
     val navController = rememberNavController()
@@ -86,6 +89,26 @@ internal fun AppNavigation(
     LaunchedEffect(ratingReceivedEventBus, isAuthenticated) {
         if (!isAuthenticated) return@LaunchedEffect
         ratingReceivedEventBus.events.collect {
+            navController.navigate("ratings_transparency") {
+                launchSingleTop = true
+            }
+        }
+    }
+
+    // Cold-start: the bus has replay=0 so events posted before the collector exists
+    // are dropped. Navigate directly from the captured intent extra instead.
+    // - Keyed on both keys so it fires after login if the user wasn't yet authenticated
+    //   at cold-start (e.g. logged-out state at notification tap).
+    // - coldStartNavigated guards against re-fire on subsequent auth state changes
+    //   (logout/re-login) while still allowing a first navigation after deferred auth.
+    //   Uses remember (not rememberSaveable) so config-changes reset it; launchSingleTop
+    //   prevents duplicate back-stack entries if re-navigation occurs.
+    // rememberSaveable persists across config changes so rotation doesn't re-navigate.
+    val coldStartNavigated = rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(coldStartNavDestination, isAuthenticated) {
+        if (coldStartNavigated.value || coldStartNavDestination == null) return@LaunchedEffect
+        if (isAuthenticated && coldStartNavDestination == "ratings_transparency") {
+            coldStartNavigated.value = true
             navController.navigate("ratings_transparency") {
                 launchSingleTop = true
             }

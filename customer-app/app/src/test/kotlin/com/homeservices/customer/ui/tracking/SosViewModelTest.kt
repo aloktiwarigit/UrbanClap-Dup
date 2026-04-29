@@ -1,13 +1,19 @@
 package com.homeservices.customer.ui.tracking
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.SavedStateHandle
 import com.google.common.truth.Truth.assertThat
 import com.homeservices.customer.data.sos.SosConsentStore
 import com.homeservices.customer.domain.sos.SosUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -145,5 +151,45 @@ public class SosViewModelTest {
             advanceUntilIdle()
             assertThat(vm.sosUiState.value).isInstanceOf(SosUiState.SosConfirmed::class.java)
             coVerify(exactly = 1) { sosUseCase.execute("bk-1") }
+        }
+
+    @Test
+    public fun `#137 emits RequestAudioPermission when consent granted but OS permission denied`(): Unit =
+        runTest(testDispatcher) {
+            mockkStatic(ContextCompat::class)
+            every {
+                ContextCompat.checkSelfPermission(any(), Manifest.permission.RECORD_AUDIO)
+            } returns PackageManager.PERMISSION_DENIED
+            coEvery { consentStore.getAudioConsent() } returns true
+            val vm = buildVm()
+            vm.onSosTapped()
+            advanceTimeBy(1L)
+            assertThat(vm.sosUiState.value).isInstanceOf(SosUiState.RequestAudioPermission::class.java)
+            unmockkStatic(ContextCompat::class)
+        }
+
+    @Test
+    public fun `#137 SOS alert fires after audio permission denied — graceful degradation`(): Unit =
+        runTest(testDispatcher) {
+            mockkStatic(ContextCompat::class)
+            every {
+                ContextCompat.checkSelfPermission(any(), Manifest.permission.RECORD_AUDIO)
+            } returns PackageManager.PERMISSION_DENIED
+            coEvery { consentStore.getAudioConsent() } returns true
+            coEvery { sosUseCase.execute("bk-1") } returns Result.success(Unit)
+            val vm = buildVm()
+            vm.onSosTapped()
+            advanceTimeBy(1L)
+            assertThat(vm.sosUiState.value).isInstanceOf(SosUiState.RequestAudioPermission::class.java)
+            // User denies the OS permission dialog
+            vm.onAudioPermissionResult(false)
+            advanceTimeBy(1L) // countdown starts at 30s
+            assertThat(vm.sosUiState.value).isInstanceOf(SosUiState.Countdown::class.java)
+            advanceTimeBy(31_000L)
+            advanceUntilIdle()
+            // SOS fires regardless of missing audio permission
+            assertThat(vm.sosUiState.value).isInstanceOf(SosUiState.SosConfirmed::class.java)
+            coVerify { sosUseCase.execute("bk-1") }
+            unmockkStatic(ContextCompat::class)
         }
 }

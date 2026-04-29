@@ -71,17 +71,24 @@ public class SosViewModel
             viewModelScope.launch { fireSos() }
         }
 
+        /** Called by the UI after the RECORD_AUDIO OS permission dialog resolves. */
+        public fun onAudioPermissionResult(granted: Boolean) {
+            startCountdown(audioGranted = granted)
+        }
+
         private fun startCountdown(audioGranted: Boolean) {
+            val osPermissionGranted =
+                ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                    PackageManager.PERMISSION_GRANTED
+            if (audioGranted && !osPermissionGranted) {
+                // Pause and ask UI to request the OS permission; countdown resumes via onAudioPermissionResult.
+                _sosUiState.value = SosUiState.RequestAudioPermission
+                return
+            }
             countdownJob?.cancel()
             countdownJob =
                 viewModelScope.launch {
-                    val recordingPermitted =
-                        audioGranted &&
-                            ContextCompat.checkSelfPermission(
-                                context,
-                                Manifest.permission.RECORD_AUDIO,
-                            ) == PackageManager.PERMISSION_GRANTED
-                    if (recordingPermitted) startRecording()
+                    if (audioGranted && osPermissionGranted) startRecording()
                     for (sec in 30 downTo 1) {
                         _sosUiState.value = SosUiState.Countdown(sec)
                         delay(1_000L)
