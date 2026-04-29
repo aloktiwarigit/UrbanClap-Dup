@@ -182,10 +182,12 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
             void appendAuditEntry({ id: randomUUID(), adminId: 'system', role: 'system', action: 'NO_SHOW_REDISPATCH_INITIATED', resourceType: 'booking', resourceId: booking.id, payload: { bookingId: booking.id }, timestamp: _ts, partitionKey: _ts.slice(0, 7) }).catch(Sentry.captureException);
           } else {
             ctx.log(`detectNoShows: no techs found for ${booking.id} — booking marked UNFULFILLED`);
-            // Guard: a concurrent run may have already moved the booking to SEARCHING; only emit
-            // BOOKING_UNFULFILLED when the booking is genuinely stuck (not actively redispatching).
+            // Guard: dispatcher.redispatch() returns false both when no candidates exist AND when a
+            // concurrent invocation already moved the booking out of NO_SHOW_REDISPATCH (to SEARCHING
+            // or ASSIGNED). Only emit BOOKING_UNFULFILLED when the dispatcher actually set the status
+            // to UNFULFILLED (which it does only when candidate list is genuinely exhausted).
             const postDispatchDoc = await bookingRepo.getById(booking.id);
-            if (postDispatchDoc?.status !== 'SEARCHING') {
+            if (postDispatchDoc?.status === 'UNFULFILLED') {
               const _ts = new Date().toISOString();
               void appendAuditEntry({ id: randomUUID(), adminId: 'system', role: 'system', action: 'BOOKING_UNFULFILLED', resourceType: 'booking', resourceId: booking.id, payload: { bookingId: booking.id }, timestamp: _ts, partitionKey: _ts.slice(0, 7) }).catch(Sentry.captureException);
             }

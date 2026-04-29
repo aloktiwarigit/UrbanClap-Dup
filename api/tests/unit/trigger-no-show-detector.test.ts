@@ -323,16 +323,16 @@ describe('detectNoShows', () => {
     );
   });
 
-  it('emits BOOKING_UNFULFILLED audit entry when no techs are available and booking is not SEARCHING', async () => {
+  it('emits BOOKING_UNFULFILLED audit entry when dispatcher set status to UNFULFILLED', async () => {
     vi.mocked(bookingRepo.getAssignedBookingsBefore)
       .mockResolvedValue([makeAssignedBooking('bk-audit-unf', 45)]);
     vi.mocked(dispatcherService.redispatch).mockResolvedValue(false);
-    // getById sequence: fresh-read → ASSIGNED, preDispatch → NO_SHOW_REDISPATCH, postDispatch → NO_SHOW_REDISPATCH (not SEARCHING)
+    // getById sequence: fresh-read → ASSIGNED, preDispatch → NO_SHOW_REDISPATCH, postDispatch → UNFULFILLED
     mockGetByIdSequence(
       { status: 'ASSIGNED' },
       { status: 'NO_SHOW_REDISPATCH' },
-      { status: 'NO_SHOW_REDISPATCH' },
-      { status: 'NO_SHOW_REDISPATCH' },
+      { status: 'UNFULFILLED' },
+      { status: 'UNFULFILLED' },
     );
 
     await detectNoShows(mockCtx);
@@ -342,11 +342,11 @@ describe('detectNoShows', () => {
     );
   });
 
-  it('does NOT emit BOOKING_UNFULFILLED when concurrent run moved booking to SEARCHING', async () => {
+  it('does NOT emit BOOKING_UNFULFILLED when concurrent run moved booking to SEARCHING or ASSIGNED', async () => {
     vi.mocked(bookingRepo.getAssignedBookingsBefore)
       .mockResolvedValue([makeAssignedBooking('bk-race', 45)]);
     vi.mocked(dispatcherService.redispatch).mockResolvedValue(false);
-    // postDispatch read shows SEARCHING — concurrent run is handling this booking
+    // postDispatch read shows SEARCHING (not UNFULFILLED) — concurrent run is handling this booking
     mockGetByIdSequence(
       { status: 'ASSIGNED' },
       { status: 'NO_SHOW_REDISPATCH' },
