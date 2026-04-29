@@ -11,7 +11,7 @@ import { getWebhookEventsContainer } from '../cosmos/client.js';
 function isValidSignature(payload: string, provided: string, secret: string): boolean {
   const expected = createHmac('sha256', secret).update(payload).digest('hex');
   if (expected.length !== provided.length) return false;
-  return timingSafeEqual(Buffer.from(expected, 'utf8'), Buffer.from(provided, 'utf8'));
+  return timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(provided, 'hex'));
 }
 
 export const razorpayWebhookHandler: HttpHandler = async (req, _ctx) => {

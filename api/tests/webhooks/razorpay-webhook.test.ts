@@ -198,6 +198,9 @@ describe('POST /v1/webhooks/razorpay', () => {
     expect(res1.status).toBe(200);
     expect(vi.mocked(bookingRepo.markPaid)).toHaveBeenCalledTimes(1);
 
+    // Isolate call-count accounting between the two deliveries
+    mockItemsCreate.mockClear();
+
     // Second delivery: Cosmos create throws 409 — returns deduplicated immediately
     mockItemsCreate.mockRejectedValueOnce({ code: 409 });
     const res2 = await razorpayWebhookHandler(makeWebhookReqWithEventId(body, signature, 'evt_001'), mockCtx) as HttpResponseInit;
