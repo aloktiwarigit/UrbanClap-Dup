@@ -9,8 +9,31 @@ function container() {
   return getCosmosClient().database(DB_NAME).container(CONTAINER);
 }
 
+export class DuplicatePendingError extends Error {
+  constructor() { super('ERASURE_REQUEST_PENDING'); }
+}
+
+function isCosmosConflict(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'statusCode' in err &&
+    (err as { statusCode: number }).statusCode === 409
+  );
+}
+
+/**
+ * Creates an erasure request. The caller MUST set doc.id = "pending:{userId}"
+ * so Cosmos enforces one-at-a-time atomically. Throws DuplicatePendingError
+ * on 409 Conflict (concurrent submit or active document already exists).
+ */
 export async function createErasureRequest(doc: ErasureRequestDoc): Promise<void> {
-  await container().items.create(doc);
+  try {
+    await container().items.create(doc);
+  } catch (err) {
+    if (isCosmosConflict(err)) throw new DuplicatePendingError();
+    throw err;
+  }
 }
 
 export async function getErasureRequestById(
@@ -24,21 +47,22 @@ export async function getErasureRequestById(
   };
 }
 
-/** Used by user-facing submit to enforce one PENDING request per user (409). */
+/**
+ * Returns the user's active erasure document (any status) with its etag.
+ * Uses the deterministic "pending:{userId}" id for a single-partition point read.
+ */
+export async function getActiveErasureRequestForUser(
+  userId: string,
+): Promise<{ doc: ErasureRequestDoc; etag: string } | null> {
+  return getErasureRequestById(`pending:${userId}`);
+}
+
+/** @deprecated use getActiveErasureRequestForUser */
 export async function getPendingErasureRequestForUser(
   userId: string,
 ): Promise<ErasureRequestDoc | null> {
-  const query: SqlQuerySpec = {
-    query: 'SELECT TOP 1 * FROM c WHERE c.userId = @userId AND c.status = @pending',
-    parameters: [
-      { name: '@userId', value: userId },
-      { name: '@pending', value: 'PENDING' },
-    ],
-  };
-  const { resources } = await container().items
-    .query<Record<string, unknown>>(query)
-    .fetchAll();
-  return resources.length > 0 ? ErasureRequestDocSchema.parse(resources[0]) : null;
+  const result = await getActiveErasureRequestForUser(userId);
+  return result !== null && result.doc.status === 'PENDING' ? result.doc : null;
 }
 
 /** Used by cron timer: PENDING with scheduledDeletionAt <= now. */

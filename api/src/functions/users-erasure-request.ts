@@ -1,13 +1,14 @@
 import '../bootstrap.js';
 import { app } from '@azure/functions';
 import type { HttpRequest, InvocationContext, HttpResponseInit } from '@azure/functions';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import { verifyFirebaseIdToken } from '../services/firebaseAdmin.js';
 import { auditLog } from '../services/auditLog.service.js';
 import { inferUserRole } from '../services/userRole.service.js';
 import {
   createErasureRequest,
-  getPendingErasureRequestForUser,
+  DuplicatePendingError,
+  getActiveErasureRequestForUser,
   replaceErasureRequest,
 } from '../cosmos/erasure-request-repository.js';
 import {
@@ -51,17 +52,10 @@ export async function submitErasureRequestHandler(
     return { status: 400, jsonBody: { code: 'VALIDATION_ERROR', issues: parsed.error.issues } };
   }
 
-  const existing = await getPendingErasureRequestForUser(uid);
-  if (existing) {
-    return {
-      status: 409,
-      jsonBody: { code: 'ERASURE_REQUEST_PENDING', erasureId: existing.id },
-    };
-  }
-
   const requestedAt = new Date();
   const scheduledDeletionAt = new Date(requestedAt.getTime() + ERASURE_GRACE_PERIOD_MS);
-  const id = randomUUID();
+  // Deterministic ID: Cosmos enforces one-document-per-user atomically on create.
+  const id = `pending:${uid}`;
   const salt = randomBytes(16).toString('hex'); // 32 chars; well above the 16-char min
 
   const doc: ErasureRequestDoc = {
@@ -75,7 +69,28 @@ export async function submitErasureRequestHandler(
     anonymizationSalt: salt,
     ...(parsed.data.reason !== undefined && { reason: parsed.data.reason }),
   };
-  await createErasureRequest(doc);
+
+  try {
+    await createErasureRequest(doc);
+  } catch (err) {
+    if (!(err instanceof DuplicatePendingError)) throw err;
+
+    // Conflict: a document at "pending:{uid}" already exists — inspect it.
+    const active = await getActiveErasureRequestForUser(uid);
+    if (!active) throw err; // shouldn't happen; surface as 500
+
+    const { doc: existing, etag } = active;
+
+    if (existing.status === 'PENDING' || existing.status === 'EXECUTING') {
+      return { status: 409, jsonBody: { code: 'ERASURE_REQUEST_PENDING', erasureId: existing.id } };
+    }
+    if (existing.status === 'EXECUTED') {
+      return { status: 409, jsonBody: { code: 'USER_ALREADY_ERASED' } };
+    }
+
+    // REVOKED / DENIED / FAILED — allow re-submission by replacing in-place.
+    await replaceErasureRequest(doc, etag);
+  }
 
   await auditLog(
     { adminId: uid, role: 'system' },
@@ -110,17 +125,20 @@ export async function revokeErasureRequestHandler(
   }
   const { uid } = auth;
 
-  const existing = await getPendingErasureRequestForUser(uid);
-  if (!existing) {
+  const active = await getActiveErasureRequestForUser(uid);
+  if (!active || active.doc.status !== 'PENDING') {
     return { status: 404, jsonBody: { code: 'NO_PENDING_ERASURE_REQUEST' } };
   }
 
+  const { doc: existing, etag } = active;
   const updated: ErasureRequestDoc = {
     ...existing,
     status: 'REVOKED',
     revokedAt: new Date().toISOString(),
   };
-  await replaceErasureRequest(updated);
+  // Pass etag for optimistic concurrency — rejects 412 if cron/admin already
+  // transitioned this request to EXECUTING while we were processing the revoke.
+  await replaceErasureRequest(updated, etag);
 
   await auditLog(
     { adminId: uid, role: 'system' },
