@@ -93,11 +93,13 @@ internal fun AppNavigation(
         }
     }
 
-    // Cold-start: the bus has replay=0 so events posted before this LaunchedEffect
-    // subscribes would be lost. Navigate directly from the captured intent extra instead.
-    LaunchedEffect(coldStartNavDestination, isAuthenticated) {
-        if (!isAuthenticated || coldStartNavDestination == null) return@LaunchedEffect
-        if (coldStartNavDestination == "ratings_transparency") {
+    // Cold-start: the bus has replay=0 so events posted before the collector exists
+    // are dropped. Navigate directly from the captured intent extra instead.
+    // Keyed only on coldStartNavDestination (not isAuthenticated) so this fires
+    // exactly once per cold-start — re-login or config changes don't re-trigger it.
+    LaunchedEffect(coldStartNavDestination) {
+        if (coldStartNavDestination == null) return@LaunchedEffect
+        if (isAuthenticated && coldStartNavDestination == "ratings_transparency") {
             navController.navigate("ratings_transparency") {
                 launchSingleTop = true
             }
