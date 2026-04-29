@@ -11,6 +11,9 @@ vi.mock('../../../../src/cosmos/finance-repository.js', () => ({
   writeLedgerEntry: vi.fn(),
   getTechnicianLinkedAccount: vi.fn(),
 }));
+vi.mock('../../../../src/cosmos/technician-repository.js', () => ({
+  getTechnicianPayoutCadence: vi.fn().mockResolvedValue(null), // null = WEEKLY — passes through
+}));
 vi.mock('../../../../src/services/adminSession.service.js', () => ({
   touchAndGetSession: vi.fn().mockResolvedValue({ sessionId: 's1' }),
 }));

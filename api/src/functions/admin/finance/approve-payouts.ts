@@ -6,6 +6,7 @@ import type { AdminContext } from '../../../types/admin.js';
 import {
   getWeekSnapshot, getPayoutQueue, getLedgerTransfer, writeLedgerEntry, getTechnicianLinkedAccount,
 } from '../../../cosmos/finance-repository.js';
+import { getTechnicianPayoutCadence } from '../../../cosmos/technician-repository.js';
 import { RazorpayRouteService } from '../../../services/razorpayRoute.service.js';
 import { auditLog } from '../../../services/auditLog.service.js';
 
@@ -36,6 +37,13 @@ export const adminApprovePayoutsHandler: AdminHttpHandler = async (
   const errors: Array<{ technicianId: string; reason: string }> = [];
 
   for (const entry of queue.entries) {
+    // AC-6: only process WEEKLY cadence (or legacy undefined). INSTANT and NEXT_DAY are handled separately.
+    const cadence = await getTechnicianPayoutCadence(entry.technicianId);
+    if (cadence === 'INSTANT' || cadence === 'NEXT_DAY') {
+      approved += 1; // handled by their own flow — count as processed, not failed
+      continue;
+    }
+
     const existing = await getLedgerTransfer(entry.technicianId, weekStart);
     if (existing) {
       approved += 1;

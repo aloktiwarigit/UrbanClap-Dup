@@ -21,8 +21,12 @@ export const getEarningsHandler: HttpHandler = async (req: HttpRequest, ctx: Inv
   }
 
   try {
-    const entries = await walletLedgerRepo.getAllByTechnicianId(uid);
+    const [entries, heldEntries] = await Promise.all([
+      walletLedgerRepo.getAllByTechnicianId(uid),
+      walletLedgerRepo.getPendingHeldByTechnicianId(uid),
+    ]);
     const settled = entries.filter(e => e.payoutStatus !== 'FAILED');
+    const pendingHeld = heldEntries.reduce((s, e) => s + e.techAmount, 0);
 
     // All period boundaries are computed in IST (+05:30) because technicians work in India.
     // Entries in Cosmos are stored in UTC; we shift for date comparisons.
@@ -60,6 +64,7 @@ export const getEarningsHandler: HttpHandler = async (req: HttpRequest, ctx: Inv
       month: aggregate(settled, e => toIstDateStr(e.createdAt).slice(0, 7) === monthStr),
       lifetime: aggregate(settled, _ => true),
       lastSevenDays,
+      pendingHeld,
     };
 
     return { status: 200, jsonBody: response };
