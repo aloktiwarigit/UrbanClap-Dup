@@ -97,7 +97,7 @@ export async function escalateRatingHandler(
   }
 
   const _ts = new Date().toISOString();
-  void appendAuditEntry({ id: randomUUID(), adminId: 'system', role: 'system', action: 'RATING_SHIELD_ESCALATED', resourceType: 'booking', resourceId: bookingId, payload: { bookingId, complaintId: doc.id, draftOverall: parsed.data.draftOverall }, timestamp: _ts, partitionKey: _ts.slice(0, 7) }).catch(Sentry.captureException);
+  void appendAuditEntry({ id: randomUUID(), adminId: customer.customerId, role: 'system', action: 'RATING_SHIELD_ESCALATED', resourceType: 'booking', resourceId: bookingId, payload: { bookingId, complaintId: doc.id, draftOverall: parsed.data.draftOverall }, timestamp: _ts, partitionKey: _ts.slice(0, 7) }).catch(Sentry.captureException);
 
   sendOwnerRatingShieldAlert({
     bookingId,
