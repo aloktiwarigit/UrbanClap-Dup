@@ -29,7 +29,7 @@ export interface Complaint {
   customerId: string;
   technicianId: string;
   description: string;
-  type: ComplaintType;
+  type?: ComplaintType;
   status: ComplaintStatus;
   assigneeAdminId?: string;
   resolutionCategory?: ComplaintResolutionCategory;
