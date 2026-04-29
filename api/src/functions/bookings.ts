@@ -11,8 +11,16 @@ import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
 import { sendPriceApprovalPush } from '../services/fcm.service.js';
 import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
+import { isSoftLaunchEnabled, isMarketingPaused } from '../services/featureFlags.service.js';
 
 const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
+  if (!(await isSoftLaunchEnabled(customer.customerId))) {
+    return { status: 503, jsonBody: { code: 'SERVICE_UNAVAILABLE', message: 'Launch coming soon' } };
+  }
+  if (await isMarketingPaused(customer.customerId)) {
+    return { status: 503, jsonBody: { code: 'TEMPORARILY_UNAVAILABLE', message: 'We are pausing new bookings briefly' } };
+  }
+
   const body = await req.json().catch(() => null);
   const parsed = CreateBookingRequestSchema.safeParse(body);
   if (!parsed.success) return { status: 422, jsonBody: { code: 'VALIDATION_ERROR', issues: parsed.error.issues } };

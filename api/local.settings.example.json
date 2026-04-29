@@ -7,6 +7,8 @@
     "ACS_CONNECTION_STRING": "<azure-communication-services-connection-string>",
     "ACS_SENDER_ADDRESS": "DoNotReply@<domain>.azurecomm.net",
     "SSC_OWNER_EMAIL": "<owner-email@example.com>",
-    "COSMOS_CONNECTION_STRING": "<azure-cosmos-db-connection-string>"
+    "COSMOS_CONNECTION_STRING": "<azure-cosmos-db-connection-string>",
+    "GROWTHBOOK_API_HOST": "https://cdn.growthbook.io",
+    "GROWTHBOOK_CLIENT_KEY": ""
   }
 }

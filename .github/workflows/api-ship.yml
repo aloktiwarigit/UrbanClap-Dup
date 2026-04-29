@@ -60,6 +60,12 @@ jobs:
       - name: openapi spec quality (spectral — contract lint)
         run: pnpm run openapi:lint
 
+      - name: verify launch env vars configured
+        run: |
+          if [ -z "${{ secrets.GROWTHBOOK_CLIENT_KEY }}" ]; then
+            echo "::warning::GROWTHBOOK_CLIENT_KEY not set in repository secrets — soft_launch_enabled flag will not work"
+          fi
+
       - name: semgrep SAST
         uses: returntocorp/semgrep-action@v1
         with:
