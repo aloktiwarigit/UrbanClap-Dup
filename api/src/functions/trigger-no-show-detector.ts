@@ -172,6 +172,9 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
         // writing noShowRedispatchAt. The dispatch attempt is live — just write the timestamp.
         await updateBookingFields(booking.id, { noShowRedispatchAt: new Date().toISOString() });
         redispatchOk = true;
+        // Emit the audit that the prior run never wrote before crashing.
+        const _rts = new Date().toISOString();
+        void appendAuditEntry({ id: randomUUID(), adminId: 'system', role: 'system', action: 'NO_SHOW_REDISPATCH_INITIATED', resourceType: 'booking', resourceId: booking.id, payload: { bookingId: booking.id }, timestamp: _rts, partitionKey: _rts.slice(0, 7) }).catch(Sentry.captureException);
         ctx.log(`detectNoShows: recovery — booking ${booking.id} already SEARCHING, completing noShowRedispatchAt write`);
       } else {
         try {
