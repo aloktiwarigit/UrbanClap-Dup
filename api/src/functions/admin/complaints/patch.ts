@@ -89,27 +89,34 @@ export async function adminPatchComplaintHandler(
   // Read the effective resolutionCategory from `updated` (which merges any prior-set
   // category with this request's value) so a two-step admin flow — set category first,
   // then resolve — still triggers the rating mutation, FCM, and audit entry.
+  // Fire side effects when a RATING_APPEAL transitions to RESOLVED, or when an admin
+  // corrects the resolutionCategory on an already-resolved appeal (e.g. UPHELD → REMOVED).
   if (
     existing.type === 'RATING_APPEAL' &&
     updated.status === 'RESOLVED' &&
-    oldStatus !== 'RESOLVED' &&
-    updated.resolutionCategory !== undefined
+    updated.resolutionCategory !== undefined &&
+    (oldStatus !== 'RESOLVED' || updated.resolutionCategory !== existing.resolutionCategory)
   ) {
     const decision = updated.resolutionCategory;
     const ratingPatch =
       decision === 'APPEAL_REMOVED' ? { customerAppealRemoved: true } :
       decision === 'APPEAL_PARTIAL_REMOVE' ? { customerAppealDisputed: true } : null;
 
+    const dispatchPush = () =>
+      sendAppealDecisionPush(existing.technicianId, {
+        appealId: existing.id,
+        decision,
+        ownerNote: parsed.data.note ?? '',
+      }).catch((err: unknown) => ctx.error('sendAppealDecisionPush failed', err));
+
+    // Await rating mutation before push so the client never reads stale data on refresh.
     if (ratingPatch) {
       ratingRepo.patchRatingForAppeal(existing.orderId, ratingPatch)
+        .then(dispatchPush)
         .catch((err: unknown) => ctx.error('patchRatingForAppeal failed', err));
+    } else {
+      dispatchPush();
     }
-
-    sendAppealDecisionPush(existing.technicianId, {
-      appealId: existing.id,
-      decision,
-      ownerNote: parsed.data.note ?? '',
-    }).catch((err: unknown) => ctx.error('sendAppealDecisionPush failed', err));
 
     appendAuditEntry({
       id: randomUUID(),

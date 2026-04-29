@@ -252,6 +252,30 @@ describe('adminPatchComplaintHandler', () => {
       expect(sendAppealDecisionPush).not.toHaveBeenCalled();
     });
 
+    it('re-fires side effects when admin corrects resolutionCategory on already-RESOLVED appeal', async () => {
+      const alreadyResolved = {
+        ...appealComplaint,
+        status: 'RESOLVED' as const,
+        resolutionCategory: 'APPEAL_UPHELD' as const,
+        resolvedAt: new Date().toISOString(),
+      };
+      (getComplaint as ReturnType<typeof vi.fn>).mockResolvedValue({ doc: alreadyResolved, etag: '"e"' });
+      await adminPatchComplaintHandler(
+        makeReq({ resolutionCategory: 'APPEAL_REMOVED' }),
+        errCtx,
+        mockAdmin,
+      );
+      await Promise.resolve();
+      expect(ratingRepo.patchRatingForAppeal).toHaveBeenCalledWith(
+        appealComplaint.orderId,
+        { customerAppealRemoved: true },
+      );
+      expect(sendAppealDecisionPush).toHaveBeenCalledWith(
+        appealComplaint.technicianId,
+        expect.objectContaining({ decision: 'APPEAL_REMOVED' }),
+      );
+    });
+
     it('uses effective resolutionCategory from existing complaint when only status flips to RESOLVED', async () => {
       const investigatingWithCategory = {
         ...appealComplaint,
