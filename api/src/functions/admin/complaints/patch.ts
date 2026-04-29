@@ -57,14 +57,6 @@ export async function adminPatchComplaintHandler(
       // Reopen: clear stale resolution fields so the category guard works correctly next time.
       delete updated.resolvedAt;
       delete updated.resolutionCategory;
-      // If this is a RATING_APPEAL, undo any rating visibility flags so the rating
-      // is no longer hidden/disputed while the appeal is under re-review.
-      if (existing.type === 'RATING_APPEAL') {
-        ratingRepo.patchRatingForAppeal(existing.orderId, {
-          customerAppealRemoved: false,
-          customerAppealDisputed: false,
-        }).catch((err: unknown) => ctx.error('patchRatingForAppeal on reopen failed', err));
-      }
     }
   }
   if (parsed.data.assigneeAdminId !== undefined) {
@@ -92,6 +84,19 @@ export async function adminPatchComplaintHandler(
       return { status: 409, jsonBody: { code: 'CONFLICT' } };
     }
     throw err;
+  }
+
+  // Reopen side effect: undo rating flags only after the complaint write commits.
+  if (
+    existing.type === 'RATING_APPEAL' &&
+    parsed.data.status !== undefined &&
+    parsed.data.status !== 'RESOLVED' &&
+    oldStatus === 'RESOLVED'
+  ) {
+    ratingRepo.patchRatingForAppeal(existing.orderId, {
+      customerAppealRemoved: false,
+      customerAppealDisputed: false,
+    }).catch((err: unknown) => ctx.error('patchRatingForAppeal on reopen failed', err));
   }
 
   // Rating appeal decision side-effects (fire-and-forget).
