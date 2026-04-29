@@ -82,4 +82,31 @@ describe('Dispatch ranking — invariant to decline history (Ayodhya pilot)', ()
     expect(profile).not.toHaveProperty('declineHistory');
     expect(profile).not.toHaveProperty('declines');
   });
+
+  it('phantom decline field on input is ignored — output ordering unchanged', () => {
+    /**
+     * Adversarial check (Karnataka FR-9.1, E10-S01): if a future refactor
+     * accidentally introduces a decline-derived field on TechnicianProfile,
+     * rankTechnicians must continue to ignore it. A phantom `declineCount` is
+     * tacked on via an unsafe cast to simulate that scenario.
+     */
+    const cleanA = makeTech('tech-A', 0.02, { rating: 4.0 });
+    const cleanB = makeTech('tech-B', 0.10, { rating: 4.0 });
+    const cleanC = makeTech('tech-C', 0.50, { rating: 4.0 });
+
+    const phantomA = { ...cleanA, declineCount: 999 } as unknown as TechnicianProfile;
+    const phantomB = { ...cleanB, declineCount: 0 } as unknown as TechnicianProfile;
+    const phantomC = { ...cleanC, declineCount: 0 } as unknown as TechnicianProfile;
+
+    const cleanRanking = rankTechnicians([cleanC, cleanB, cleanA], BOOKING_LAT, BOOKING_LNG)
+      .map((t) => t.id);
+    const phantomRanking = rankTechnicians(
+      [phantomC, phantomB, phantomA],
+      BOOKING_LAT,
+      BOOKING_LNG,
+    ).map((t) => t.id);
+
+    expect(phantomRanking).toEqual(cleanRanking);
+    expect(phantomRanking).toEqual(['tech-A', 'tech-B', 'tech-C']);
+  });
 });
