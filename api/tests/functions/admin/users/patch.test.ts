@@ -6,6 +6,9 @@ vi.mock('../../../../src/services/adminUser.service.js', () => ({
   getAdminUserById: vi.fn(),
   updateAdminUser: vi.fn(),
 }));
+vi.mock('../../../../src/services/adminSession.service.js', () => ({
+  deleteAllSessionsForAdmin: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock('../../../../src/services/auditLog.service.js', () => ({
   auditLog: vi.fn().mockResolvedValue(undefined),
 }));
@@ -15,6 +18,7 @@ vi.mock('../../../../src/cosmos/audit-log-repository.js', () => ({
 
 import { adminPatchUserHandler } from '../../../../src/functions/admin/users/patch.js';
 import { updateAdminUser } from '../../../../src/services/adminUser.service.js';
+import { deleteAllSessionsForAdmin } from '../../../../src/services/adminSession.service.js';
 import { auditLog } from '../../../../src/services/auditLog.service.js';
 import type { AdminContext } from '../../../../src/types/admin.js';
 
@@ -157,5 +161,34 @@ describe('adminPatchUserHandler — role ceiling guard', () => {
     expect(res.status).toBe(200);
     // updateAdminUser called with empty patch — Cosmos does a no-op replace
     expect(updateAdminUser).toHaveBeenCalledWith('super-1', {});
+  });
+
+  // ── Session revocation on privilege changes ───────────────────────────
+
+  it('revokes all sessions for target when role changes', async () => {
+    vi.mocked(updateAdminUser).mockResolvedValue(undefined);
+    await adminPatchUserHandler(makeReq('target-user', { role: 'finance' }), fakeCtx, superAdmin);
+    expect(deleteAllSessionsForAdmin).toHaveBeenCalledWith('target-user');
+  });
+
+  it('revokes all sessions for target when deactivatedAt is set', async () => {
+    vi.mocked(updateAdminUser).mockResolvedValue(undefined);
+    await adminPatchUserHandler(makeReq('target-user', { deactivatedAt: '2024-01-01T00:00:00Z' }), fakeCtx, superAdmin);
+    expect(deleteAllSessionsForAdmin).toHaveBeenCalledWith('target-user');
+  });
+
+  it('does NOT revoke sessions for displayName-only patch', async () => {
+    vi.mocked(updateAdminUser).mockResolvedValue(undefined);
+    await adminPatchUserHandler(makeReq('target-user', { displayName: 'Bob' }), fakeCtx, superAdmin);
+    expect(deleteAllSessionsForAdmin).not.toHaveBeenCalled();
+  });
+
+  // ── Not-found handling ────────────────────────────────────────────────
+
+  it('returns 404 when updateAdminUser throws not-found error', async () => {
+    vi.mocked(updateAdminUser).mockRejectedValue(new Error('AdminUser target-user not found'));
+    const res = await adminPatchUserHandler(makeReq('target-user', { displayName: 'Ghost' }), fakeCtx, superAdmin);
+    expect(res.status).toBe(404);
+    expect((res.jsonBody as { code: string }).code).toBe('ADMIN_USER_NOT_FOUND');
   });
 });

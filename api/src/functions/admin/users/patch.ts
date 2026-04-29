@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { requireAdmin } from '../../../middleware/requireAdmin.js';
 import type { AdminContext } from '../../../types/admin.js';
 import { updateAdminUser, type AdminUser } from '../../../services/adminUser.service.js';
+import { deleteAllSessionsForAdmin } from '../../../services/adminSession.service.js';
 import { auditLog } from '../../../services/auditLog.service.js';
 
 const PatchAdminUserBodySchema = z.object({
@@ -56,7 +57,21 @@ export async function adminPatchUserHandler(
   // ?? null: deactivatedAt from Zod is string | null | undefined; service expects string | null
   if ('deactivatedAt' in parsed.data) patch.deactivatedAt = parsed.data.deactivatedAt ?? null;
 
-  await updateAdminUser(adminId, patch);
+  try {
+    await updateAdminUser(adminId, patch);
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('not found')) {
+      return { status: 404, jsonBody: { code: 'ADMIN_USER_NOT_FOUND' } };
+    }
+    throw err;
+  }
+
+  // Role or deactivation change — revoke all existing sessions so the new
+  // privilege level (or deactivated state) takes effect immediately.
+  const requiresSessionRevocation = 'role' in patch || 'deactivatedAt' in patch;
+  if (requiresSessionRevocation) {
+    await deleteAllSessionsForAdmin(adminId);
+  }
 
   void auditLog(
     admin,
