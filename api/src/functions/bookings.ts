@@ -50,7 +50,7 @@ const confirmHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
   if (!confirmed) return { status: 409, jsonBody: { code: 'BOOKING_ALREADY_PROCESSED' } };
 
   const _ts = new Date().toISOString();
-  void appendAuditEntry({ id: randomUUID(), adminId: customer.customerId, role: 'system', action: 'CUSTOMER_CONFIRMED_PAYMENT', resourceType: 'booking', resourceId: confirmed.id, payload: { bookingId: confirmed.id, paymentId: parsed.data.razorpayPaymentId }, timestamp: _ts, partitionKey: _ts.slice(0, 7) }).catch(Sentry.captureException);
+  void appendAuditEntry({ id: randomUUID(), adminId: 'system', role: 'system', action: 'CUSTOMER_CONFIRMED_PAYMENT', resourceType: 'booking', resourceId: confirmed.id, payload: { bookingId: confirmed.id, paymentId: parsed.data.razorpayPaymentId }, timestamp: _ts, partitionKey: _ts.slice(0, 7) }).catch(Sentry.captureException);
 
   return { status: 200, jsonBody: { bookingId: confirmed.id, status: confirmed.status } };
 };

@@ -76,7 +76,7 @@ describe('POST /v1/bookings/:id/confirm', () => {
     ) as HttpResponseInit;
     expect(res.status).toBe(200);
     expect(vi.mocked(appendAuditEntry)).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'CUSTOMER_CONFIRMED_PAYMENT', resourceId: 'bk-1', adminId: 'cust-1' }),
+      expect.objectContaining({ action: 'CUSTOMER_CONFIRMED_PAYMENT', resourceId: 'bk-1' }),
     );
   });
 

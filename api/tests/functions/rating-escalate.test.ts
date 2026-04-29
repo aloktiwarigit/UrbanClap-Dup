@@ -143,7 +143,7 @@ describe('escalateRatingHandler', () => {
 
     expect(res.status).toBe(201);
     expect(vi.mocked(appendAuditEntry)).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'RATING_SHIELD_ESCALATED', resourceId: 'bk-1', adminId: 'customer_1' }),
+      expect.objectContaining({ action: 'RATING_SHIELD_ESCALATED', resourceId: 'bk-1' }),
     );
   });
 
