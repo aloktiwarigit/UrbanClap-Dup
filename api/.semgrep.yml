@@ -19,10 +19,27 @@ rules:
       - pattern: declineHistory
       - pattern: declineRatio
       - pattern: pastDeclines
+      - pattern: declined_in_last
       - pattern: rejectionCount
       - pattern: rejectionHistory
       - pattern: acceptRate
       - pattern: acceptanceRate
+      - pattern: $X["declineCount"]
+      - pattern: $X['declineCount']
+      - pattern: $X["declineHistory"]
+      - pattern: $X['declineHistory']
+      - pattern: $X["declineRatio"]
+      - pattern: $X['declineRatio']
+      - pattern: $X["pastDeclines"]
+      - pattern: $X['pastDeclines']
+      - pattern: $X["declined_in_last"]
+      - pattern: $X['declined_in_last']
+      - pattern: $X["rejectionCount"]
+      - pattern: $X['rejectionCount']
+      - pattern: $X["acceptRate"]
+      - pattern: $X['acceptRate']
+      - pattern: $X["acceptanceRate"]
+      - pattern: $X['acceptanceRate']
     paths:
       include:
         - "api/src/services/dispatcher.service.ts"
