@@ -413,6 +413,57 @@ Cross-reference the incident in `docs/runbook.md` § Past Incidents.
 
 ---
 
-**Runbook v1.1 complete (DPDP §10 breach playbook added 2026-04-26).**
-Living document — update after every incident and every significant
-architectural change.
+## 11. Admin Setup Procedure (first deploy)
+
+**Do this once before the pilot owner completes TOTP enrollment. Skipping this leaves the setup endpoint open.**
+
+### Step 1 — Generate the setup secret
+
+```bash
+# Generate a 32-byte cryptographically random secret
+openssl rand -hex 32
+# Example output: a3f8c2d1e9b47056...
+```
+
+### Step 2 — Set the env var in Azure Functions
+
+In the Azure Portal → your Function App → Configuration → Application settings:
+
+```
+ADMIN_SETUP_SECRET = <the hex value from step 1>
+```
+
+Save and restart the Function App.
+
+### Step 3 — Share with the owner only
+
+Send the secret value to Alok (the legitimate owner) via a secure out-of-band channel (e.g. Signal, not email). This value must **not** appear in source control, chat history, or issue trackers.
+
+### Step 4 — Owner completes enrollment
+
+The owner opens the TOTP setup URL and sets the `X-Setup-Secret` header (or uses a pre-configured tool / admin web UI that embeds it):
+
+```
+GET  /api/v1/admin/auth/setup-totp
+X-Setup-Secret: <secret>
+Authorization: Bearer <setup-token>
+```
+
+Follow with the POST to confirm the TOTP code. On success, the owner's TOTP device is enrolled and the setup endpoint is now locked (any subsequent attempt without the secret returns 403).
+
+### Step 5 — Optional: rotate or remove the secret
+
+After enrollment is confirmed:
+- **Remove:** Delete `ADMIN_SETUP_SECRET` from Azure Function App settings → setup endpoint reverts to open mode (safe post-enrollment since `ALREADY_ENROLLED` blocks re-setup).
+- **Rotate:** Replace with a new value for future re-enrollment scenarios (e.g. new admin, device lost).
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `403 SETUP_SECRET_REQUIRED` | Header missing or wrong value | Check the `X-Setup-Secret` header matches `ADMIN_SETUP_SECRET` in Azure settings exactly |
+| `409 ALREADY_ENROLLED` | Owner already completed setup | Setup is done — no action needed |
+| `401 SETUP_TOKEN_INVALID` | Setup JWT expired (15 min TTL) | Re-login to get a new setup token |
+
+**Runbook v1.1 complete (DPDP §10 breach playbook + admin setup procedure).**
+Living document — update after every incident and every significant architectural change.

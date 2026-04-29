@@ -60,3 +60,14 @@ export async function touchAndGetSession(
 export async function deleteSession(sessionId: string): Promise<void> {
   await container().item(sessionId, sessionId).delete();
 }
+
+/** Revoke all active sessions for an admin — called when role or deactivatedAt changes. */
+export async function deleteAllSessionsForAdmin(adminId: string): Promise<void> {
+  const { resources } = await container()
+    .items.query<AdminSession>({
+      query: 'SELECT c.id FROM c WHERE c.adminId = @adminId',
+      parameters: [{ name: '@adminId', value: adminId }],
+    })
+    .fetchAll();
+  await Promise.all(resources.map((s) => container().item(s.id, s.id).delete()));
+}
