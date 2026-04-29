@@ -6,6 +6,7 @@ import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.homeservices.customer.data.auth.SessionManager
+import com.homeservices.customer.domain.auth.model.AuthProvider
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -32,11 +33,19 @@ public class SaveSessionUseCaseTest {
     public fun `save stores uid and phoneLastFour in SessionManager`(): Unit =
         runTest {
             val user = mockk<FirebaseUser> { every { uid } returns "uid-abc" }
-            coEvery { sessionManager.saveSession(any(), any()) } returns Unit
+            coEvery {
+                sessionManager.saveSession(any(), any(), any(), any(), any())
+            } returns Unit
 
             useCase.save(user, "7890")
 
-            coVerify { sessionManager.saveSession("uid-abc", "7890") }
+            coVerify {
+                sessionManager.saveSession(
+                    uid = "uid-abc",
+                    phoneLastFour = "7890",
+                    authProvider = AuthProvider.Phone,
+                )
+            }
         }
 
     @Test
@@ -44,13 +53,21 @@ public class SaveSessionUseCaseTest {
         runTest {
             val user = mockk<FirebaseUser> { every { uid } returns "anon-uid" }
             val authResultMock = mockk<AuthResult> { every { this@mockk.user } returns user }
-            coEvery { sessionManager.saveSession(any(), any()) } returns Unit
+            coEvery {
+                sessionManager.saveSession(any(), any(), any(), any(), any())
+            } returns Unit
             every { firebaseAuth.signInAnonymously() } returns Tasks.forResult(authResultMock)
 
             val result = useCase.saveAnonymousWithPhone("+919876541234")
 
             assertThat(result).isInstanceOf(AppAuthResult.Success::class.java)
-            coVerify { sessionManager.saveSession("anon-uid", "1234") }
+            coVerify {
+                sessionManager.saveSession(
+                    uid = "anon-uid",
+                    phoneLastFour = "1234",
+                    authProvider = AuthProvider.Phone,
+                )
+            }
         }
 
     @Test
