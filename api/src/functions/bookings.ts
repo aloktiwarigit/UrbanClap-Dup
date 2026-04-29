@@ -14,10 +14,10 @@ import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
 import { isSoftLaunchEnabled, isMarketingPaused } from '../services/featureFlags.service.js';
 
 const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
-  if (!(await isSoftLaunchEnabled())) {
+  if (!(await isSoftLaunchEnabled(customer.customerId))) {
     return { status: 503, jsonBody: { code: 'SERVICE_UNAVAILABLE', message: 'Launch coming soon' } };
   }
-  if (await isMarketingPaused()) {
+  if (await isMarketingPaused(customer.customerId)) {
     return { status: 503, jsonBody: { code: 'TEMPORARILY_UNAVAILABLE', message: 'We are pausing new bookings briefly' } };
   }
 
