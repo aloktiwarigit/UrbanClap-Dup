@@ -21,6 +21,7 @@ public class EarningsRepositoryImpl
                     month = EarningsPeriod(dto.month.techAmount, dto.month.count),
                     lifetime = EarningsPeriod(dto.lifetime.techAmount, dto.lifetime.count),
                     lastSevenDays = dto.lastSevenDays.map { DailyEarnings(it.date, it.techAmount) },
+                    pendingHeldPaise = dto.pendingHeld,
                 )
             }
     }

@@ -330,6 +330,24 @@ kover {
                     // Shield Hilt DI module — @Provides methods are framework wiring,
                     // same rationale as data.rating.di.* / data.activeJob.di.*.
                     "*.data.shield.di.*",
+                    // PayoutCadenceScreen generates Compose *Kt wrapper classes — same rationale
+                    // as RatingScreenKt / EarningsScreenKt: recomposition guards + slot-table ops.
+                    "*.PayoutCadenceScreenKt",
+                    "*.PayoutCadenceScreenKt\$*",
+                    // Payout Hilt DI module — @Provides methods are framework wiring,
+                    // same rationale as data.rating.di.* / data.shield.di.*.
+                    "*.data.payout.di.*",
+                    // PayoutApiService is an internal Retrofit interface — methods invoked by
+                    // Retrofit runtime, not unit-testable directly.
+                    "*.PayoutApiService",
+                    "*.PayoutApiService\$*",
+                    // PayoutCadenceViewModel.saveCadence$1 — viewModelScope.launch lambda containing
+                    // biometric + PATCH call. The ?: return@launch guard and coroutine suspension
+                    // points are only exercisable via instrumented tests (real FragmentActivity needed
+                    // for BiometricPrompt). Business logic paths are fully covered by ViewModel unit
+                    // tests using mockk.
+                    "*.PayoutCadenceViewModel\$saveCadence\$1",
+                    "*.PayoutCadenceViewModel\$saveCadence\$1\$*",
                 )
             }
         }

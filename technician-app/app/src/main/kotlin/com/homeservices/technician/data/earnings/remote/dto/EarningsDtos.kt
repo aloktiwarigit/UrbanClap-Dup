@@ -21,4 +21,5 @@ public data class EarningsResponseDto(
     val month: EarningsPeriodDto,
     val lifetime: EarningsPeriodDto,
     val lastSevenDays: List<DailyEarningsDto>,
+    val pendingHeld: Long = 0L,
 )

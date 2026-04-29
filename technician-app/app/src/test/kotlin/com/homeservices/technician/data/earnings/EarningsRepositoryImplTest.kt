@@ -22,6 +22,7 @@ public class EarningsRepositoryImplTest {
             month = EarningsPeriodDto(360000L, 3),
             lifetime = EarningsPeriodDto(960000L, 8),
             lastSevenDays = listOf(DailyEarningsDto("2026-04-26", 120000L)),
+            pendingHeld = 50000L,
         )
 
     @Test
@@ -37,6 +38,40 @@ public class EarningsRepositoryImplTest {
             assertEquals(1, s.lastSevenDays.size)
             assertEquals("2026-04-26", s.lastSevenDays[0].date)
             assertEquals(120000L, s.lastSevenDays[0].techAmountPaise)
+        }
+
+    @Test
+    public fun `getEarnings maps pendingHeld to pendingHeldPaise`(): Unit =
+        runTest {
+            coEvery { apiService.getEarnings() } returns dto
+            val result = repository.getEarnings()
+            assertEquals(50000L, result.getOrThrow().pendingHeldPaise)
+        }
+
+    @Test
+    public fun `getEarnings maps zero pendingHeld`(): Unit =
+        runTest {
+            coEvery { apiService.getEarnings() } returns dto.copy(pendingHeld = 0L)
+            val result = repository.getEarnings()
+            assertEquals(0L, result.getOrThrow().pendingHeldPaise)
+        }
+
+    @Test
+    public fun `getEarnings maps multiple lastSevenDays entries`(): Unit =
+        runTest {
+            val entries =
+                listOf(
+                    DailyEarningsDto("2026-04-23", 0L),
+                    DailyEarningsDto("2026-04-24", 60000L),
+                    DailyEarningsDto("2026-04-25", 80000L),
+                )
+            coEvery { apiService.getEarnings() } returns dto.copy(lastSevenDays = entries)
+            val result = repository.getEarnings()
+            val days = result.getOrThrow().lastSevenDays
+            assertEquals(3, days.size)
+            assertEquals(0L, days[0].techAmountPaise)
+            assertEquals(60000L, days[1].techAmountPaise)
+            assertEquals(80000L, days[2].techAmountPaise)
         }
 
     @Test

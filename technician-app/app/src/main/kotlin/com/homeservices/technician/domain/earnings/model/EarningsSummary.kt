@@ -18,4 +18,5 @@ public data class EarningsSummary(
     val month: EarningsPeriod,
     val lifetime: EarningsPeriod,
     val lastSevenDays: List<DailyEarnings>,
+    val pendingHeldPaise: Long = 0L,
 )

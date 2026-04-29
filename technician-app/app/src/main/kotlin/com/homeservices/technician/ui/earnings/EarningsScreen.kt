@@ -43,6 +43,7 @@ internal fun EarningsScreen(
     modifier: Modifier = Modifier,
     viewModel: EarningsViewModel = hiltViewModel(),
     onViewRatings: () -> Unit = {},
+    onPayoutSettings: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     Scaffold(
@@ -70,6 +71,7 @@ internal fun EarningsScreen(
                     SuccessContent(
                         summary = state.summary,
                         onViewRatings = onViewRatings,
+                        onPayoutSettings = onPayoutSettings,
                         modifier = Modifier.fillMaxSize(),
                     )
             }
@@ -81,6 +83,7 @@ internal fun EarningsScreen(
 private fun SuccessContent(
     summary: EarningsSummary,
     onViewRatings: () -> Unit,
+    onPayoutSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -108,6 +111,27 @@ private fun SuccessContent(
         }
         item { GoalProgressCard(summary.month.techAmountPaise) }
         item { SparklineCard(summary.lastSevenDays) }
+        if (summary.pendingHeldPaise > 0L) {
+            item {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("रिलीज़ होने वाला", style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            "${formatRupees(summary.pendingHeldPaise)} pending release",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+            }
+        }
+        item {
+            OutlinedButton(
+                onClick = onPayoutSettings,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("पेमेंट सेटिंग")
+            }
+        }
         item {
             OutlinedButton(
                 onClick = onViewRatings,

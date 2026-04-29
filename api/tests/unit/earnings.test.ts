@@ -5,7 +5,7 @@ vi.mock('../../src/middleware/verifyTechnicianToken.js', () => ({
   verifyTechnicianToken: vi.fn(),
 }));
 vi.mock('../../src/cosmos/wallet-ledger-repository.js', () => ({
-  walletLedgerRepo: { getAllByTechnicianId: vi.fn() },
+  walletLedgerRepo: { getAllByTechnicianId: vi.fn(), getPendingHeldByTechnicianId: vi.fn() },
 }));
 vi.mock('@sentry/node', () => ({ captureException: vi.fn() }));
 
@@ -25,11 +25,17 @@ function makeReq(auth?: string): HttpRequest {
   } as unknown as HttpRequest;
 }
 
-function makeEntry(createdAt: string, techAmount: number, payoutStatus: 'PENDING' | 'PAID' | 'FAILED' = 'PAID'): WalletLedgerEntry {
+function makeEntry(
+  createdAt: string,
+  techAmount: number,
+  payoutStatus: 'PENDING' | 'PAID' | 'FAILED' = 'PAID',
+  heldForCadence?: boolean,
+): WalletLedgerEntry {
   return {
     id: 'e1', bookingId: 'bk-1', technicianId: 'tech-1', partitionKey: 'tech-1',
     bookingAmount: techAmount + 10000, completedJobCountAtSettlement: 1,
     commissionBps: 1000, commissionAmount: 1000, techAmount, payoutStatus, createdAt,
+    ...(heldForCadence !== undefined ? { heldForCadence } : {}),
   };
 }
 
@@ -40,6 +46,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-1' });
   vi.mocked(walletLedgerRepo.getAllByTechnicianId).mockResolvedValue([]);
+  vi.mocked(walletLedgerRepo.getPendingHeldByTechnicianId).mockResolvedValue([]);
 });
 
 describe('GET /v1/technicians/me/earnings', () => {
@@ -166,6 +173,37 @@ describe('GET /v1/technicians/me/earnings', () => {
     expect(body.today.techAmount).toBe(0);
     expect(body.today.count).toBe(0);
     vi.useRealTimers();
+  });
+
+  describe('pendingHeld (AC-7)', () => {
+    it('returns pendingHeld=0 when no held entries', async () => {
+      const res = await getEarningsHandler(makeReq('Bearer tok'), ctx) as HttpResponseInit;
+      const body = res.jsonBody as any;
+      expect(body.pendingHeld).toBe(0);
+    });
+
+    it('sums techAmount of PENDING heldForCadence entries', async () => {
+      vi.mocked(walletLedgerRepo.getPendingHeldByTechnicianId).mockResolvedValue([
+        makeEntry(`${today}T08:00:00.000Z`, 50000, 'PENDING', true),
+        makeEntry(`${today}T09:00:00.000Z`, 30000, 'PENDING', true),
+      ]);
+      const res = await getEarningsHandler(makeReq('Bearer tok'), ctx) as HttpResponseInit;
+      const body = res.jsonBody as any;
+      expect(body.pendingHeld).toBe(80000);
+    });
+
+    it('pendingHeld does NOT include paid or failed entries', async () => {
+      vi.mocked(walletLedgerRepo.getPendingHeldByTechnicianId).mockResolvedValue([
+        makeEntry(`${today}T08:00:00.000Z`, 50000, 'PENDING', true),
+      ]);
+      vi.mocked(walletLedgerRepo.getAllByTechnicianId).mockResolvedValue([
+        makeEntry(`${today}T09:00:00.000Z`, 70000, 'PAID'),
+      ]);
+      const res = await getEarningsHandler(makeReq('Bearer tok'), ctx) as HttpResponseInit;
+      const body = res.jsonBody as any;
+      expect(body.pendingHeld).toBe(50000); // only the held entry
+      expect(body.today.techAmount).toBe(70000); // paid entry counted in totals
+    });
   });
 
   it('#136 monthly goal resets at IST month boundary, not UTC midnight', async () => {
