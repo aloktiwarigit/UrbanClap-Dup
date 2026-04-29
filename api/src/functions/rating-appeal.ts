@@ -72,6 +72,7 @@ export async function ratingAppealHandler(req: HttpRequest, _ctx: InvocationCont
     internalNotes: [],
     slaDeadlineAt,
     escalated: false,
+    ackBreached: false,
     ...(parsed.data.evidenceUrls?.length ? { evidenceUrls: parsed.data.evidenceUrls } : {}),
     createdAt: nowIso,
     updatedAt: nowIso,
