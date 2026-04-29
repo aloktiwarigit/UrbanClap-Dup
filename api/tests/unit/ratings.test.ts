@@ -164,4 +164,62 @@ describe('GET /v1/ratings/{bookingId}', () => {
     const body = res.jsonBody as any;
     expect(body.status).toBe('PENDING');
   });
+
+  it('regression-catch: technician caller, only technician submitted — tech sees SUBMITTED, customer sees PENDING', async () => {
+    vi.mocked(verifyFirebaseIdToken).mockResolvedValue({ uid: 'tech-1' } as any);
+    vi.mocked(ratingRepo.getByBookingId).mockResolvedValue({
+      bookingId: 'bk-1', customerId: 'cust-1', technicianId: 'tech-1',
+      techOverall: 4, techSubScores: { behaviour: 4, communication: 5 },
+      techSubmittedAt: '2026-04-24T12:30:00.000Z',
+    } as any);
+    const res = await getRatingHandler(reqWith({ auth: 'Bearer t', bookingId: 'bk-1' }), ctx) as HttpResponseInit;
+    expect(res.status).toBe(200);
+    const body = res.jsonBody as any;
+    expect(body.status).toBe('PARTIALLY_SUBMITTED');
+    expect(body.techSide.status).toBe('SUBMITTED');
+    expect(body.techSide.overall).toBe(4);
+    expect(body.customerSide).toEqual({ status: 'PENDING' });
+  });
+
+  it('regression-catch: customer caller, only TECHNICIAN submitted — both sides PENDING, comment absent', async () => {
+    // Catches: isCustomer ↔ isTechnician swap. customerVisible = revealed||(isCustomer&&customerHas)
+    // customerHas=false → customerVisible=false; techVisible = revealed||(isTechnician&&techHas)
+    // isTechnician=false for this caller → techVisible=false. Both sides must be PENDING.
+    vi.mocked(verifyFirebaseIdToken).mockResolvedValue({ uid: 'cust-1' } as any);
+    vi.mocked(ratingRepo.getByBookingId).mockResolvedValue({
+      bookingId: 'bk-1', customerId: 'cust-1', technicianId: 'tech-1',
+      techOverall: 4, techSubScores: { behaviour: 4, communication: 5 },
+      techComment: 'Great customer',
+      techSubmittedAt: '2026-04-24T12:30:00.000Z',
+    } as any);
+    const res = await getRatingHandler(reqWith({ auth: 'Bearer t', bookingId: 'bk-1' }), ctx) as HttpResponseInit;
+    expect(res.status).toBe(200);
+    const body = res.jsonBody as any;
+    expect(body.status).toBe('PARTIALLY_SUBMITTED');
+    expect(body.customerSide).toEqual({ status: 'PENDING' });
+    expect(body.techSide).toEqual({ status: 'PENDING' });
+    expect(body.techSide).not.toHaveProperty('comment');
+    expect(body.customerSide).not.toHaveProperty('comment');
+  });
+
+  it('regression-catch: technician caller, only CUSTOMER submitted — both sides PENDING, comment absent', async () => {
+    // Catches: isTechnician ↔ isCustomer swap. techVisible = revealed||(isTechnician&&techHas)
+    // techHas=false → techVisible=false; customerVisible = revealed||(isCustomer&&customerHas)
+    // isCustomer=false for this caller → customerVisible=false. Both sides must be PENDING.
+    vi.mocked(verifyFirebaseIdToken).mockResolvedValue({ uid: 'tech-1' } as any);
+    vi.mocked(ratingRepo.getByBookingId).mockResolvedValue({
+      bookingId: 'bk-1', customerId: 'cust-1', technicianId: 'tech-1',
+      customerOverall: 5, customerSubScores: { punctuality: 5, skill: 5, behaviour: 5 },
+      customerComment: 'Very professional',
+      customerSubmittedAt: '2026-04-24T12:00:00.000Z',
+    } as any);
+    const res = await getRatingHandler(reqWith({ auth: 'Bearer t', bookingId: 'bk-1' }), ctx) as HttpResponseInit;
+    expect(res.status).toBe(200);
+    const body = res.jsonBody as any;
+    expect(body.status).toBe('PARTIALLY_SUBMITTED');
+    expect(body.customerSide).toEqual({ status: 'PENDING' });
+    expect(body.techSide).toEqual({ status: 'PENDING' });
+    expect(body.customerSide).not.toHaveProperty('comment');
+    expect(body.techSide).not.toHaveProperty('comment');
+  });
 });
