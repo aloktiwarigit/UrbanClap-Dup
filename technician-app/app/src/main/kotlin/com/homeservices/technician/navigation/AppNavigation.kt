@@ -95,11 +95,17 @@ internal fun AppNavigation(
 
     // Cold-start: the bus has replay=0 so events posted before the collector exists
     // are dropped. Navigate directly from the captured intent extra instead.
-    // Keyed only on coldStartNavDestination (not isAuthenticated) so this fires
-    // exactly once per cold-start — re-login or config changes don't re-trigger it.
-    LaunchedEffect(coldStartNavDestination) {
-        if (coldStartNavDestination == null) return@LaunchedEffect
+    // - Keyed on both keys so it fires after login if the user wasn't yet authenticated
+    //   at cold-start (e.g. logged-out state at notification tap).
+    // - coldStartNavigated guards against re-fire on subsequent auth state changes
+    //   (logout/re-login) while still allowing a first navigation after deferred auth.
+    //   Uses remember (not rememberSaveable) so config-changes reset it; launchSingleTop
+    //   prevents duplicate back-stack entries if re-navigation occurs.
+    val coldStartNavigated = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    LaunchedEffect(coldStartNavDestination, isAuthenticated) {
+        if (coldStartNavigated.value || coldStartNavDestination == null) return@LaunchedEffect
         if (isAuthenticated && coldStartNavDestination == "ratings_transparency") {
+            coldStartNavigated.value = true
             navController.navigate("ratings_transparency") {
                 launchSingleTop = true
             }
