@@ -18,7 +18,7 @@
 // See docs/adr/0013-audit-log-immutability.md.
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { resolve, join, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -203,7 +203,6 @@ describe('container-name uniqueness invariant', () => {
 
   it('all approved files exist (guard against stale allowlist)', () => {
     const norm = (p: string) => p.split(sep).join('/');
-    const { existsSync } = require('node:fs') as typeof import('node:fs');
     for (const f of APPROVED_FILES) {
       expect(existsSync(f), `Approved file missing: ${norm(f)}`).toBe(true);
     }

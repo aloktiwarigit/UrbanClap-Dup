@@ -1,6 +1,8 @@
 import '../../../bootstrap.js';
+import { randomUUID } from 'node:crypto';
 import { app } from '@azure/functions';
 import type { HttpRequest, InvocationContext, HttpResponseInit, Cookie } from '@azure/functions';
+import * as Sentry from '@sentry/node';
 import { LoginRequestSchema } from '../../../schemas/admin-auth.js';
 import { verifyFirebaseIdToken } from '../../../services/firebaseAdmin.js';
 import { getAdminUserById } from '../../../services/adminUser.service.js';
@@ -8,6 +10,7 @@ import { decryptSecret, verifyToken } from '../../../services/totp.service.js';
 import { createAdminSession } from '../../../services/adminSession.service.js';
 import { signAccessToken, signSetupToken } from '../../../services/jwt.service.js';
 import { auditLog } from '../../../services/auditLog.service.js';
+import { appendAuditEntry } from '../../../cosmos/audit-log-repository.js';
 
 export async function adminLoginHandler(
   req: HttpRequest,
@@ -59,6 +62,8 @@ export async function adminLoginHandler(
 
   const secret = decryptSecret(adminUser.totpSecret!);
   if (!verifyToken(totpCode, secret)) {
+    const _ts = new Date().toISOString();
+    void appendAuditEntry({ id: randomUUID(), adminId: adminUser.adminId, role: adminUser.role, action: 'ADMIN_LOGIN_FAILED', resourceType: 'admin_session', resourceId: adminUser.adminId, payload: { reason: 'TOTP_INVALID' }, timestamp: _ts, partitionKey: _ts.slice(0, 7) }).catch(Sentry.captureException);
     return { status: 422, jsonBody: { code: 'TOTP_INVALID' } };
   }
 

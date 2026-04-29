@@ -1,8 +1,10 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+import * as Sentry from '@sentry/node';
 import { extractPanFromStoragePath } from '../../services/formRecognizer.service.js';
 import { upsertKycStatus } from '../../cosmos/technician-repository.js';
 import { verifyTechnicianToken } from '../../middleware/verifyTechnicianToken.js';
 import { SubmitPanOcrRequestSchema } from '../../schemas/kyc.js';
+import { kycAuditEntry } from '../../services/kycAudit.service.js';
 
 export async function submitPanOcr(
   req: HttpRequest,
@@ -35,6 +37,7 @@ export async function submitPanOcr(
       panImagePath: firebaseStoragePath,
       kycStatus: 'PAN_DONE',
     });
+    void kycAuditEntry(technicianId, 'PAN', 'VERIFIED', ocrResult.panNumber ?? '').catch(Sentry.captureException);
     return { status: 200, jsonBody: { kycStatus: 'PAN_DONE', panNumber: ocrResult.panNumber } };
   }
 
@@ -42,6 +45,7 @@ export async function submitPanOcr(
     panImagePath: firebaseStoragePath,
     kycStatus: 'MANUAL_REVIEW',
   });
+  void kycAuditEntry(technicianId, 'PAN', 'REJECTED', '').catch(Sentry.captureException);
   return { status: 200, jsonBody: { kycStatus: 'MANUAL_REVIEW', panNumber: null } };
 }
 
