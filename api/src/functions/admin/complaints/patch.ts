@@ -98,9 +98,14 @@ export async function adminPatchComplaintHandler(
     (oldStatus !== 'RESOLVED' || updated.resolutionCategory !== existing.resolutionCategory)
   ) {
     const decision = updated.resolutionCategory;
+    // Always write both flags explicitly so a corrected decision (e.g. REMOVED → UPHELD)
+    // clears the stale flag and the rating is no longer hidden or marked disputed.
     const ratingPatch =
-      decision === 'APPEAL_REMOVED' ? { customerAppealRemoved: true } :
-      decision === 'APPEAL_PARTIAL_REMOVE' ? { customerAppealDisputed: true } : null;
+      decision === 'APPEAL_REMOVED'
+        ? { customerAppealRemoved: true, customerAppealDisputed: false }
+        : decision === 'APPEAL_PARTIAL_REMOVE'
+        ? { customerAppealDisputed: true, customerAppealRemoved: false }
+        : { customerAppealRemoved: false, customerAppealDisputed: false };
 
     const dispatchPush = () =>
       sendAppealDecisionPush(existing.technicianId, {
@@ -110,13 +115,9 @@ export async function adminPatchComplaintHandler(
       }).catch((err: unknown) => ctx.error('sendAppealDecisionPush failed', err));
 
     // Await rating mutation before push so the client never reads stale data on refresh.
-    if (ratingPatch) {
-      ratingRepo.patchRatingForAppeal(existing.orderId, ratingPatch)
-        .then(dispatchPush)
-        .catch((err: unknown) => ctx.error('patchRatingForAppeal failed', err));
-    } else {
-      dispatchPush();
-    }
+    ratingRepo.patchRatingForAppeal(existing.orderId, ratingPatch)
+      .then(dispatchPush)
+      .catch((err: unknown) => ctx.error('patchRatingForAppeal failed', err));
 
     appendAuditEntry({
       id: randomUUID(),

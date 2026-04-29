@@ -78,6 +78,7 @@ export const TechRatingSummaryItemSchema = z.object({
   subScores: CustomerSubScoresSchema,
   comment: z.string().optional(),
   submittedAt: z.string(),
+  appealDisputed: z.boolean().optional(),
 });
 export type TechRatingSummaryItem = z.infer<typeof TechRatingSummaryItemSchema>;
 

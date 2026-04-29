@@ -71,6 +71,7 @@ export const getTechRatingsHandler: HttpHandler = async (req: HttpRequest, _ctx:
     },
     ...(d.customerComment ? { comment: d.customerComment } : {}),
     submittedAt: d.customerSubmittedAt!,
+    ...(d.customerAppealDisputed === true ? { appealDisputed: true } : {}),
   }));
 
   return {

@@ -281,8 +281,13 @@ private fun RatingItemCard(
                         )
                     }
                 }
-                if (rating.overall < 5) {
-                    TextButton(onClick = onAppeal) {
+                when {
+                    rating.appealDisputed -> Text(
+                        "विवादित",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    rating.overall < 5 -> TextButton(onClick = onAppeal) {
                         Text("अपील")
                     }
                 }

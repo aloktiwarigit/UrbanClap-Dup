@@ -182,7 +182,7 @@ describe('adminPatchComplaintHandler', () => {
       await Promise.resolve();
       expect(ratingRepo.patchRatingForAppeal).toHaveBeenCalledWith(
         appealComplaint.orderId,
-        { customerAppealRemoved: true },
+        { customerAppealRemoved: true, customerAppealDisputed: false },
       );
       expect(sendAppealDecisionPush).toHaveBeenCalledWith(
         appealComplaint.technicianId,
@@ -202,12 +202,12 @@ describe('adminPatchComplaintHandler', () => {
       await Promise.resolve();
       expect(ratingRepo.patchRatingForAppeal).toHaveBeenCalledWith(
         appealComplaint.orderId,
-        { customerAppealDisputed: true },
+        { customerAppealDisputed: true, customerAppealRemoved: false },
       );
       expect(sendAppealDecisionPush).toHaveBeenCalled();
     });
 
-    it('on APPEAL_UPHELD: skips rating patch but fires push + audit', async () => {
+    it('on APPEAL_UPHELD: clears both appeal flags + fires push + audit', async () => {
       (getComplaint as ReturnType<typeof vi.fn>).mockResolvedValue({ doc: appealComplaint, etag: '"e"' });
       await adminPatchComplaintHandler(
         makeReq({ status: 'RESOLVED', resolutionCategory: 'APPEAL_UPHELD' }),
@@ -215,7 +215,10 @@ describe('adminPatchComplaintHandler', () => {
         mockAdmin,
       );
       await Promise.resolve();
-      expect(ratingRepo.patchRatingForAppeal).not.toHaveBeenCalled();
+      expect(ratingRepo.patchRatingForAppeal).toHaveBeenCalledWith(
+        appealComplaint.orderId,
+        { customerAppealRemoved: false, customerAppealDisputed: false },
+      );
       expect(sendAppealDecisionPush).toHaveBeenCalledWith(
         appealComplaint.technicianId,
         expect.objectContaining({ decision: 'APPEAL_UPHELD' }),
@@ -268,7 +271,7 @@ describe('adminPatchComplaintHandler', () => {
       await Promise.resolve();
       expect(ratingRepo.patchRatingForAppeal).toHaveBeenCalledWith(
         appealComplaint.orderId,
-        { customerAppealRemoved: true },
+        { customerAppealRemoved: true, customerAppealDisputed: false },
       );
       expect(sendAppealDecisionPush).toHaveBeenCalledWith(
         appealComplaint.technicianId,
@@ -291,7 +294,7 @@ describe('adminPatchComplaintHandler', () => {
       await Promise.resolve();
       expect(ratingRepo.patchRatingForAppeal).toHaveBeenCalledWith(
         appealComplaint.orderId,
-        { customerAppealRemoved: true },
+        { customerAppealRemoved: true, customerAppealDisputed: false },
       );
     });
   });
