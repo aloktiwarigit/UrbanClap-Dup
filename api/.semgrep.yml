@@ -62,7 +62,7 @@ rules:
       - pattern: $X.container("audit_log").items.delete(...)
       - pattern: $X.container("audit_log").items.patch(...)
       - pattern: $X.container("audit_log").items.batch(...)
-      - pattern: $X.container("audit_log").items.executeBulkOperations(...)
+      - pattern: $X.container("audit_log").items.bulk(...)
       - pattern: $X.container("audit_log").item($Y, $Z).replace(...)
       - pattern: $X.container("audit_log").item($Y, $Z).delete(...)
       - pattern: $X.container("audit_log").item($Y, $Z).patch(...)
