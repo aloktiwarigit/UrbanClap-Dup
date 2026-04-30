@@ -57,15 +57,15 @@ rules:
 
   - id: audit-log-immutable
     pattern-either:
-      - pattern: getAuditLogContainer().items.upsert(...)
-      - pattern: getAuditLogContainer().items.replace(...)
-      - pattern: getAuditLogContainer().items.delete(...)
-      - pattern: getAuditLogContainer().items.patch(...)
-      - pattern: getAuditLogContainer().items.batch(...)
-      - pattern: getAuditLogContainer().items.bulkOperations(...)
-      - pattern: $X.item($Y, $Z).replace(...)
-      - pattern: $X.item($Y, $Z).delete(...)
-      - pattern: $X.item($Y, $Z).patch(...)
+      - pattern: $X.container("audit_log").items.upsert(...)
+      - pattern: $X.container("audit_log").items.replace(...)
+      - pattern: $X.container("audit_log").items.delete(...)
+      - pattern: $X.container("audit_log").items.patch(...)
+      - pattern: $X.container("audit_log").items.batch(...)
+      - pattern: $X.container("audit_log").items.executeBulkOperations(...)
+      - pattern: $X.container("audit_log").item($Y, $Z).replace(...)
+      - pattern: $X.container("audit_log").item($Y, $Z).delete(...)
+      - pattern: $X.container("audit_log").item($Y, $Z).patch(...)
     paths:
       include:
         - "api/src/**/*.ts"
