@@ -117,12 +117,18 @@ public class AuthOrchestrator
                 } else {
                     emailPasswordUseCase.signUp(email, password).collect { result ->
                         if (result is AuthResult.Success) {
-                            saveSessionUseCase.saveWithEmail(result.user)
+                            // Send verification email but do NOT save session yet.
+                            // Session is saved after UI confirms isEmailVerified via completeEmailVerification().
+                            result.user.sendEmailVerification().await()
                         }
                         emit(result)
                     }
                 }
             }
+
+        public suspend fun completeEmailVerification(user: FirebaseUser) {
+            saveSessionUseCase.saveWithEmail(user)
+        }
 
         public fun sendPasswordReset(email: String): Flow<Result<Unit>> = emailPasswordUseCase.sendPasswordReset(email)
 
@@ -162,7 +168,7 @@ public class AuthOrchestrator
                 val result = anonymousUser.linkWithCredential(emailCredential).await()
                 val user = result.user!!
                 user.sendEmailVerification().await()
-                saveSessionUseCase.saveWithEmail(user)
+                // Do NOT save session here — wait for UI to confirm isEmailVerified via completeEmailVerification().
                 AuthResult.Success(user)
             } catch (e: FirebaseAuthUserCollisionException) {
                 AuthResult.Error.EmailAlreadyInUse

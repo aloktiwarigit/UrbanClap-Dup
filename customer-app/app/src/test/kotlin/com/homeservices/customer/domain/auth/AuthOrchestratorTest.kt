@@ -213,19 +213,24 @@ public class AuthOrchestratorTest {
         }
 
     @Test
-    public fun `startEmailSignUp — no anonymous user — delegates to emailPasswordUseCase signUp`(): Unit =
+    public fun `startEmailSignUp — no anonymous user — sends verification email without saving session`(): Unit =
         runTest {
-            val mockUser: FirebaseUser = mockk(relaxed = true)
+            val mockUser: FirebaseUser =
+                mockk(relaxed = true) {
+                    every { sendEmailVerification() } returns Tasks.forResult(null)
+                }
             every { emailPasswordUseCase.signUp(any(), any()) } returns
                 flowOf(
                     AuthResult.Success(mockUser),
                 )
             every { firebaseAuth.currentUser } returns null
-            coEvery { saveSessionUseCase.saveWithEmail(mockUser) } returns Unit
 
             val results = orchestrator.startEmailSignUp("a@b.com", "pass1234").toList()
 
             assertThat(results.single()).isInstanceOf(AuthResult.Success::class.java)
+            // Session must NOT be saved until UI confirms isEmailVerified via completeEmailVerification()
+            coVerify(exactly = 0) { saveSessionUseCase.saveWithEmail(any()) }
+            verify { mockUser.sendEmailVerification() }
         }
 
     @Test
@@ -296,7 +301,8 @@ public class AuthOrchestratorTest {
 
             assertThat(results.single()).isInstanceOf(AuthResult.Success::class.java)
             verify(exactly = 0) { emailPasswordUseCase.signUp(any(), any()) }
-            coVerify { saveSessionUseCase.saveWithEmail(mockUser) }
+            // Session must NOT be saved until UI confirms isEmailVerified via completeEmailVerification()
+            coVerify(exactly = 0) { saveSessionUseCase.saveWithEmail(any()) }
         }
 
     @Test

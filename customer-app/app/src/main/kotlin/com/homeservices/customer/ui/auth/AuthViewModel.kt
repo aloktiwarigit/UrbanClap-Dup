@@ -162,7 +162,7 @@ public class AuthViewModel
                 is AuthResult.Error.WrongCredential ->
                     _uiState.value = AuthUiState.Error("Incorrect email or password.", retriesLeft = 0)
                 is AuthResult.Error.UserNotFound ->
-                    _uiState.value = AuthUiState.Error("No account found with that email.", retriesLeft = 0)
+                    _uiState.value = AuthUiState.Error("Incorrect email or password.", retriesLeft = 0)
                 is AuthResult.Error.EmailAlreadyInUse ->
                     _uiState.value = AuthUiState.Error("An account already exists with this email.", retriesLeft = 0)
                 is AuthResult.Error.WeakPassword ->
