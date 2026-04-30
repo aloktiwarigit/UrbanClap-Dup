@@ -5,6 +5,7 @@ import androidx.fragment.app.FragmentActivity
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthProvider
@@ -235,5 +236,95 @@ public class AuthOrchestratorTest {
             val results = orchestrator.sendPasswordReset("a@b.com").toList()
 
             assertThat(results.single().isSuccess).isTrue()
+        }
+
+    @Test
+    public fun `startGoogleSignIn — Unavailable — emits AuthResult Unavailable`(): Unit =
+        runTest {
+            val activity = mockk<FragmentActivity>()
+            coEvery { googleSignInUseCase.getCredential(any()) } returns GoogleSignInResult.Unavailable
+
+            val results = orchestrator.startGoogleSignIn(activity).toList()
+
+            assertThat(results.single()).isEqualTo(AuthResult.Unavailable)
+        }
+
+    @Test
+    public fun `startGoogleSignIn — Error — emits AuthResult Error General`(): Unit =
+        runTest {
+            val activity = mockk<FragmentActivity>()
+            val cause = RuntimeException("Google Play unavailable")
+            coEvery { googleSignInUseCase.getCredential(any()) } returns GoogleSignInResult.Error(cause)
+
+            val results = orchestrator.startGoogleSignIn(activity).toList()
+
+            val result = results.single()
+            assertThat(result).isInstanceOf(AuthResult.Error.General::class.java)
+            assertThat((result as AuthResult.Error.General).cause).isSameAs(cause)
+        }
+
+    @Test
+    public fun `startEmailSignIn — error result — does not save session and emits error`(): Unit =
+        runTest {
+            every { emailPasswordUseCase.signIn(any(), any()) } returns
+                flowOf(AuthResult.Error.WrongCredential)
+
+            val results = orchestrator.startEmailSignIn("a@b.com", "wrong").toList()
+
+            assertThat(results.single()).isEqualTo(AuthResult.Error.WrongCredential)
+            coVerify(exactly = 0) { saveSessionUseCase.saveWithEmail(any()) }
+        }
+
+    @Test
+    public fun `startEmailSignUp — anonymous user — calls linkAnonymousToEmail instead of signUp`(): Unit =
+        runTest {
+            val mockUser: FirebaseUser =
+                mockk(relaxed = true) {
+                    every { sendEmailVerification() } returns Tasks.forResult(null)
+                }
+            val mockFirebaseAuthResult: com.google.firebase.auth.AuthResult =
+                mockk { every { user } returns mockUser }
+            val mockAnonymousUser: FirebaseUser =
+                mockk {
+                    every { isAnonymous } returns true
+                    every { linkWithCredential(any()) } returns Tasks.forResult(mockFirebaseAuthResult)
+                }
+            every { firebaseAuth.currentUser } returns mockAnonymousUser
+            coEvery { saveSessionUseCase.saveWithEmail(any()) } returns Unit
+
+            val results = orchestrator.startEmailSignUp("a@b.com", "pass1234").toList()
+
+            assertThat(results.single()).isInstanceOf(AuthResult.Success::class.java)
+            verify(exactly = 0) { emailPasswordUseCase.signUp(any(), any()) }
+            coVerify { saveSessionUseCase.saveWithEmail(mockUser) }
+        }
+
+    @Test
+    public fun `startGoogleSignIn — CredentialObtained anonymous user linkWithCredential collision — falls back to signInWithCredential`(): Unit =
+        runTest {
+            val mockCredential: AuthCredential = mockk()
+            val mockUser: FirebaseUser = mockk(relaxed = true)
+            val mockFirebaseAuthResult: com.google.firebase.auth.AuthResult =
+                mockk { every { user } returns mockUser }
+            val collisionEx: FirebaseAuthUserCollisionException = mockk(relaxed = true)
+            val mockAnonymousUser: FirebaseUser =
+                mockk {
+                    every { isAnonymous } returns true
+                    every { linkWithCredential(mockCredential) } returns Tasks.forException(collisionEx)
+                }
+            val activity = mockk<FragmentActivity>()
+
+            coEvery { googleSignInUseCase.getCredential(any()) } returns
+                GoogleSignInResult.CredentialObtained(mockCredential)
+            every { firebaseAuth.currentUser } returns mockAnonymousUser
+            every { firebaseAuth.signInWithCredential(mockCredential) } returns
+                Tasks.forResult(mockFirebaseAuthResult)
+            coEvery { saveSessionUseCase.saveWithGoogle(mockUser) } returns Unit
+
+            val results = orchestrator.startGoogleSignIn(activity).toList()
+
+            assertThat(results.single()).isInstanceOf(AuthResult.Success::class.java)
+            verify { firebaseAuth.signInWithCredential(mockCredential) }
+            coVerify { saveSessionUseCase.saveWithGoogle(mockUser) }
         }
 }
