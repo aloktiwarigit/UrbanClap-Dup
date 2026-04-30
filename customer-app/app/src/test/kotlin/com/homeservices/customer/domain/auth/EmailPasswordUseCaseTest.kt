@@ -119,6 +119,19 @@ public class EmailPasswordUseCaseTest {
         assertThat(results.single()).isEqualTo(AppAuthResult.Error.WeakPassword)
     }
 
+    @Test
+    public fun `signUp — FirebaseAuthInvalidCredentialsException INVALID_EMAIL — emits InvalidEmail`(): Unit = runTest {
+        val ex: FirebaseAuthInvalidCredentialsException = mockk(relaxed = true) {
+            every { errorCode } returns "ERROR_INVALID_EMAIL"
+        }
+        every { firebaseAuth.createUserWithEmailAndPassword(any(), any()) } returns
+            Tasks.forException(ex)
+
+        val results = sut.signUp("not-an-email", "pass1234").toList()
+
+        assertThat(results.single()).isEqualTo(AppAuthResult.Error.InvalidEmail)
+    }
+
     // ── sendPasswordReset ────────────────────────────────────────────────────
 
     @Test
