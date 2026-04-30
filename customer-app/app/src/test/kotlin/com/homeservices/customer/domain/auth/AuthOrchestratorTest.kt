@@ -2,10 +2,14 @@ package com.homeservices.customer.domain.auth
 
 import android.content.Context
 import androidx.fragment.app.FragmentActivity
+import com.google.android.gms.tasks.Tasks
+import com.google.firebase.auth.AuthCredential
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthProvider
 import com.homeservices.customer.domain.auth.model.AuthResult
+import com.homeservices.customer.domain.auth.model.GoogleSignInResult
 import com.homeservices.customer.domain.auth.model.OtpSendResult
 import com.homeservices.customer.domain.auth.model.TruecallerAuthResult
 import io.mockk.coEvery
@@ -15,6 +19,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -24,6 +29,9 @@ public class AuthOrchestratorTest {
     private lateinit var truecallerUseCase: TruecallerLoginUseCase
     private lateinit var firebaseOtpUseCase: FirebaseOtpUseCase
     private lateinit var saveSessionUseCase: SaveSessionUseCase
+    private val googleSignInUseCase: GoogleSignInUseCase = mockk()
+    private val emailPasswordUseCase: EmailPasswordUseCase = mockk()
+    private val firebaseAuth: FirebaseAuth = mockk()
     private lateinit var orchestrator: AuthOrchestrator
 
     @BeforeEach
@@ -31,7 +39,14 @@ public class AuthOrchestratorTest {
         truecallerUseCase = mockk(relaxed = true)
         firebaseOtpUseCase = mockk(relaxed = true)
         saveSessionUseCase = mockk(relaxed = true)
-        orchestrator = AuthOrchestrator(truecallerUseCase, firebaseOtpUseCase, saveSessionUseCase)
+        orchestrator = AuthOrchestrator(
+            truecallerUseCase = truecallerUseCase,
+            firebaseOtpUseCase = firebaseOtpUseCase,
+            saveSessionUseCase = saveSessionUseCase,
+            googleSignInUseCase = googleSignInUseCase,
+            emailPasswordUseCase = emailPasswordUseCase,
+            firebaseAuth = firebaseAuth,
+        )
     }
 
     @Test
@@ -125,4 +140,90 @@ public class AuthOrchestratorTest {
 
             coVerify { saveSessionUseCase.save(user, "6789") }
         }
+
+    @Test
+    public fun `startGoogleSignIn — CredentialObtained no anonymous user — signInWithCredential and saveWithGoogle`(): Unit = runTest {
+        val mockCredential: AuthCredential = mockk()
+        val mockUser: FirebaseUser = mockk(relaxed = true)
+        val mockFirebaseAuthResult: com.google.firebase.auth.AuthResult = mockk { every { user } returns mockUser }
+        val activity = mockk<FragmentActivity>()
+
+        coEvery { googleSignInUseCase.getCredential(any()) } returns GoogleSignInResult.CredentialObtained(mockCredential)
+        every { firebaseAuth.currentUser } returns null
+        every { firebaseAuth.signInWithCredential(mockCredential) } returns Tasks.forResult(mockFirebaseAuthResult)
+        coEvery { saveSessionUseCase.saveWithGoogle(mockUser) } returns Unit
+
+        val results = orchestrator.startGoogleSignIn(activity).toList()
+
+        assertThat(results.single()).isInstanceOf(AuthResult.Success::class.java)
+        coVerify { saveSessionUseCase.saveWithGoogle(mockUser) }
+    }
+
+    @Test
+    public fun `startGoogleSignIn — CredentialObtained anonymous user — linkWithCredential called`(): Unit = runTest {
+        val mockCredential: AuthCredential = mockk()
+        val mockUser: FirebaseUser = mockk(relaxed = true)
+        val mockFirebaseAuthResult: com.google.firebase.auth.AuthResult = mockk { every { user } returns mockUser }
+        val mockAnonymousUser: FirebaseUser = mockk {
+            every { isAnonymous } returns true
+            every { linkWithCredential(mockCredential) } returns Tasks.forResult(mockFirebaseAuthResult)
+        }
+        val activity = mockk<FragmentActivity>()
+
+        coEvery { googleSignInUseCase.getCredential(any()) } returns GoogleSignInResult.CredentialObtained(mockCredential)
+        every { firebaseAuth.currentUser } returns mockAnonymousUser
+        coEvery { saveSessionUseCase.saveWithGoogle(any()) } returns Unit
+
+        val results = orchestrator.startGoogleSignIn(activity).toList()
+
+        assertThat(results.single()).isInstanceOf(AuthResult.Success::class.java)
+        verify { mockAnonymousUser.linkWithCredential(mockCredential) }
+    }
+
+    @Test
+    public fun `startGoogleSignIn — Cancelled — emits AuthResult Cancelled`(): Unit = runTest {
+        val activity = mockk<FragmentActivity>()
+        coEvery { googleSignInUseCase.getCredential(any()) } returns GoogleSignInResult.Cancelled
+
+        val results = orchestrator.startGoogleSignIn(activity).toList()
+
+        assertThat(results.single()).isEqualTo(AuthResult.Cancelled)
+    }
+
+    @Test
+    public fun `startEmailSignIn — success — saves session and emits Success`(): Unit = runTest {
+        val mockUser: FirebaseUser = mockk(relaxed = true)
+        every { emailPasswordUseCase.signIn(any(), any()) } returns flowOf(
+            AuthResult.Success(mockUser)
+        )
+        coEvery { saveSessionUseCase.saveWithEmail(mockUser) } returns Unit
+
+        val results = orchestrator.startEmailSignIn("a@b.com", "pass1234").toList()
+
+        assertThat(results.single()).isInstanceOf(AuthResult.Success::class.java)
+        coVerify { saveSessionUseCase.saveWithEmail(mockUser) }
+    }
+
+    @Test
+    public fun `startEmailSignUp — no anonymous user — delegates to emailPasswordUseCase signUp`(): Unit = runTest {
+        val mockUser: FirebaseUser = mockk(relaxed = true)
+        every { emailPasswordUseCase.signUp(any(), any()) } returns flowOf(
+            AuthResult.Success(mockUser)
+        )
+        every { firebaseAuth.currentUser } returns null
+        coEvery { saveSessionUseCase.saveWithEmail(mockUser) } returns Unit
+
+        val results = orchestrator.startEmailSignUp("a@b.com", "pass1234").toList()
+
+        assertThat(results.single()).isInstanceOf(AuthResult.Success::class.java)
+    }
+
+    @Test
+    public fun `sendPasswordReset — delegates to emailPasswordUseCase and returns result`(): Unit = runTest {
+        every { emailPasswordUseCase.sendPasswordReset(any()) } returns flowOf(Result.success(Unit))
+
+        val results = orchestrator.sendPasswordReset("a@b.com").toList()
+
+        assertThat(results.single().isSuccess).isTrue()
+    }
 }
