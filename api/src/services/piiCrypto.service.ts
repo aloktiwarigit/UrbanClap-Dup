@@ -31,7 +31,7 @@ function getKey(): Buffer {
 export function encryptPan(plaintext: string): EncryptedPan {
   const key = getKey();
   const iv = randomBytes(12);
-  const cipher = createCipheriv(ALGO, key, iv);
+  const cipher = createCipheriv(ALGO, key, iv, { authTagLength: 16 });
   const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
   return {
     iv: iv.toString('base64'),
