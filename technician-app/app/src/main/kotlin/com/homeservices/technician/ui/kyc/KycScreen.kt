@@ -13,7 +13,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -21,14 +22,21 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsSecondaryButton
+import com.homeservices.designsystem.components.HsSectionCard
+import com.homeservices.designsystem.components.HsTimelineStep
+import com.homeservices.designsystem.components.HsTrustBadge
+import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
+import com.homeservices.technician.BuildConfig
 import com.homeservices.technician.domain.kyc.model.KycStatus
 
 @Composable
@@ -42,9 +50,7 @@ internal fun KycScreen(
 
     LaunchedEffect(uiState) {
         when (val state = uiState) {
-            is KycUiState.AadhaarPending -> {
-                launchCustomTab(context, state.consentUrl)
-            }
+            is KycUiState.AadhaarPending -> launchCustomTab(context, state.consentUrl)
             is KycUiState.Complete -> onComplete()
             else -> Unit
         }
@@ -58,22 +64,16 @@ internal fun KycScreen(
             is KycUiState.Idle -> {
                 KycStepAadhaar(
                     onStartKyc = { viewModel.startKyc() },
+                    onSkip = onComplete,
                 )
             }
-            is KycUiState.Loading -> {
-                KycLoadingContent(message = "Processing\u2026")
-            }
-            is KycUiState.AadhaarPending -> {
-                // CustomTab launched via LaunchedEffect — show waiting message
-                KycLoadingContent(message = "Opening DigiLocker\u2026")
-            }
+            is KycUiState.Loading -> KycLoadingContent(message = "Processing verification")
+            is KycUiState.AadhaarPending -> KycLoadingContent(message = "Opening DigiLocker")
             is KycUiState.AadhaarDone -> {
                 KycStepPan(
                     selectedUri = null,
                     onUriSelected = { uri ->
-                        if (uri != null) {
-                            viewModel.submitPan(uri)
-                        }
+                        if (uri != null) viewModel.submitPan(uri)
                     },
                 )
             }
@@ -81,18 +81,12 @@ internal fun KycScreen(
                 KycStepPan(
                     selectedUri = Uri.parse(state.uploadUri),
                     onUriSelected = { uri ->
-                        if (uri != null) {
-                            viewModel.submitPan(uri)
-                        }
+                        if (uri != null) viewModel.submitPan(uri)
                     },
                 )
             }
-            is KycUiState.PanUploading -> {
-                KycLoadingContent(message = "Uploading PAN card\u2026")
-            }
-            is KycUiState.Complete -> {
-                KycStepReview(status = state.status, onRetry = null)
-            }
+            is KycUiState.PanUploading -> KycLoadingContent(message = "Uploading PAN card")
+            is KycUiState.Complete -> KycStepReview(status = state.status, onRetry = null)
             is KycUiState.Error -> {
                 KycStepReview(
                     status = null,
@@ -105,36 +99,76 @@ internal fun KycScreen(
 }
 
 @Composable
-internal fun KycStepAadhaar(
-    onStartKyc: () -> Unit,
+private fun KycFrame(
+    eyebrow: String,
+    title: String,
+    body: String,
     modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
 ) {
+    val spacing = LocalHomeservicesSpacing.current
     Column(
         modifier =
             modifier
                 .fillMaxSize()
-                .padding(horizontal = 32.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(spacing.space6),
         verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            text = "Step 1 of 2: Aadhaar Verification",
-            style = MaterialTheme.typography.headlineSmall,
-            textAlign = TextAlign.Center,
+        Column(verticalArrangement = Arrangement.spacedBy(spacing.space3)) {
+            HsTrustBadge(text = eyebrow)
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Spacer(modifier = Modifier.height(spacing.space6))
+        HsSectionCard {
+            content()
+        }
+    }
+}
+
+@Composable
+internal fun KycStepAadhaar(
+    onStartKyc: () -> Unit,
+    onSkip: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    KycFrame(
+        eyebrow = "Step 1 of 2",
+        title = "Verify your identity",
+        body = "Complete Aadhaar verification through DigiLocker before you can receive live jobs.",
+        modifier = modifier,
+    ) {
+        HsTimelineStep(
+            title = "DigiLocker consent",
+            body = "You approve access directly with DigiLocker. We only store the verification outcome.",
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Verify your identity using DigiLocker. Your Aadhaar data is fetched securely.",
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Spacer(modifier = Modifier.height(16.dp))
+        HsTimelineStep(
+            title = "Secure profile unlock",
+            body = "Verified partners can continue to PAN upload and job activation.",
         )
-        Spacer(modifier = Modifier.height(32.dp))
-        Button(
+        Spacer(modifier = Modifier.height(24.dp))
+        HsPrimaryButton(
+            text = "Verify with DigiLocker",
             onClick = onStartKyc,
             modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text("Verify with DigiLocker")
+        )
+        if (BuildConfig.DEBUG) {
+            Spacer(modifier = Modifier.height(12.dp))
+            HsSecondaryButton(
+                text = "Skip KYC (debug only)",
+                onClick = onSkip,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
@@ -151,48 +185,57 @@ internal fun KycStepPan(
             onResult = { uri -> onUriSelected(uri) },
         )
 
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .padding(horizontal = 32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
+    KycPanContent(
+        selectedUri = selectedUri,
+        onChoosePhoto = { launcher.launch("image/*") },
+        onSubmit = { onUriSelected(selectedUri) },
+        modifier = modifier,
+    )
+}
+
+@Composable
+internal fun KycPanContent(
+    selectedUri: Uri?,
+    onChoosePhoto: () -> Unit,
+    onSubmit: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    KycFrame(
+        eyebrow = "Step 2 of 2",
+        title = "Upload PAN card",
+        body = "Add a clear PAN card image so finance can approve payouts and tax records.",
+        modifier = modifier,
     ) {
-        Text(
-            text = "Step 2 of 2: PAN Card Upload",
-            style = MaterialTheme.typography.headlineSmall,
-            textAlign = TextAlign.Center,
+        HsTimelineStep(
+            title = "Photo quality",
+            body = "Keep all corners visible, avoid glare, and make sure the PAN number is readable.",
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Upload a clear photo of your PAN card for identity verification.",
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Spacer(modifier = Modifier.height(16.dp))
+        HsTimelineStep(
+            title = "Review",
+            body = "Most document checks complete quickly after submission.",
         )
-        Spacer(modifier = Modifier.height(32.dp))
-        Button(
-            onClick = { launcher.launch("image/*") },
+        Spacer(modifier = Modifier.height(24.dp))
+        HsPrimaryButton(
+            text = if (selectedUri == null) "Upload PAN card photo" else "Change photo",
+            onClick = onChoosePhoto,
             modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(if (selectedUri == null) "Upload PAN card photo" else "Change photo")
-        }
+        )
         if (selectedUri != null) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Photo selected. Tap 'Submit' to continue.",
+                text = "Photo selected. Submit it for verification.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
             )
             Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = { onUriSelected(selectedUri) },
+            HsSecondaryButton(
+                text = "Submit for review",
+                onClick = onSubmit,
                 modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Submit")
-            }
+            )
         }
     }
 }
@@ -204,53 +247,37 @@ internal fun KycStepReview(
     modifier: Modifier = Modifier,
     errorMessage: String? = null,
 ) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .padding(horizontal = 32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        if (errorMessage != null) {
-            Text(
-                text = "Something went wrong",
-                style = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.error,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = errorMessage,
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+    if (errorMessage != null) {
+        KycFrame(
+            eyebrow = "Action needed",
+            title = "Verification did not complete",
+            body = errorMessage,
+            modifier = modifier,
+        ) {
             if (onRetry != null) {
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(onClick = onRetry, modifier = Modifier.fillMaxWidth()) {
-                    Text("Try again")
-                }
+                HsPrimaryButton(
+                    text = "Try again",
+                    onClick = onRetry,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
-        } else {
+        }
+    } else {
+        KycFrame(
+            eyebrow = "Submitted",
+            title = "KYC under review",
+            body = "Your documents are with the verification team. You will be notified once approved.",
+            modifier = modifier,
+        ) {
             Text(
-                text = "KYC Submitted",
-                style = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Status: ${status?.name ?: "Unknown"}",
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
+                text = "Current status",
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Your documents are under review. You\u2019ll be notified once approved.",
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = status?.name ?: "UNKNOWN",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
             )
         }
     }
@@ -262,10 +289,19 @@ internal fun KycLoadingContent(
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator()
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(text = message, style = MaterialTheme.typography.bodyMedium)
+        KycFrame(
+            eyebrow = "Verification",
+            title = message,
+            body = "Keep this screen open while the secure check continues.",
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                CircularProgressIndicator()
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(text = "Please wait", style = MaterialTheme.typography.bodyMedium)
+            }
         }
     }
 }
@@ -275,5 +311,5 @@ private fun launchCustomTab(
     url: String,
 ) {
     val intent = CustomTabsIntent.Builder().build()
-    intent.launchUrl(context, android.net.Uri.parse(url))
+    intent.launchUrl(context, Uri.parse(url))
 }

@@ -25,6 +25,12 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="${MAPS_API_KEY}" />
 
+        <!-- Sentry: auto-init disabled; SentryInitializer.init() called manually
+             with DSN from BuildConfig (blank DSN = Sentry disabled gracefully) -->
+        <meta-data
+            android:name="io.sentry.auto-init"
+            android:value="false" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

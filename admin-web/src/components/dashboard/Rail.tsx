@@ -7,18 +7,16 @@ import type { Route } from 'next';
 interface NavItem {
   label: string;
   href: string;
-  icon: string; // text icon / emoji shorthand
+  icon: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Live Ops', href: '/dashboard', icon: '⬡' },
-  { label: 'Orders', href: '/dashboard/orders', icon: '◈' },
-  { label: 'Technicians', href: '/dashboard/technicians', icon: '◉' },
-  { label: 'Customers', href: '/dashboard/customers', icon: '◎' },
-  { label: 'Finance', href: '/dashboard/finance', icon: '◆' },
-  { label: 'Complaints', href: '/complaints', icon: '◇' },
-  { label: 'Audit Log', href: '/dashboard/audit', icon: '⊕' },
-  { label: 'Settings', href: '/dashboard/settings', icon: '⊗' },
+  { label: 'Live Ops', href: '/dashboard', icon: 'LO' },
+  { label: 'Orders', href: '/orders', icon: 'OR' },
+  { label: 'Catalogue', href: '/catalogue', icon: 'CA' },
+  { label: 'Finance', href: '/finance', icon: 'FI' },
+  { label: 'Complaints', href: '/complaints', icon: 'CO' },
+  { label: 'Audit Log', href: '/audit-log', icon: 'AU' },
 ];
 
 export function Rail() {
@@ -26,11 +24,11 @@ export function Rail() {
 
   return (
     <>
-      {/* Desktop rail */}
       <nav
         aria-label="Primary navigation"
+        className="rail-desktop"
         style={{
-          width: '68px',
+          width: '76px',
           minHeight: '100vh',
           background: 'var(--ink-1)',
           borderRight: '1px solid var(--ink-4)',
@@ -38,33 +36,31 @@ export function Rail() {
           flexDirection: 'column',
           alignItems: 'center',
           paddingTop: '1rem',
-          gap: '4px',
+          gap: '6px',
           flexShrink: 0,
           position: 'sticky',
           top: 0,
           alignSelf: 'flex-start',
         }}
-        className="rail-desktop"
       >
-        {/* Logo mark */}
         <div
           style={{
-            width: '36px',
-            height: '36px',
+            width: '40px',
+            height: '40px',
             borderRadius: '8px',
             background: 'var(--teal)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             color: 'var(--ink-0)',
-            fontFamily: 'var(--font-display)',
-            fontWeight: 700,
-            fontSize: '1rem',
+            fontFamily: 'var(--font-body)',
+            fontWeight: 800,
+            fontSize: '0.9rem',
             marginBottom: '1rem',
           }}
           aria-hidden="true"
         >
-          H
+          HS
         </div>
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -76,18 +72,20 @@ export function Rail() {
               aria-current={isActive ? 'page' : undefined}
               title={item.label}
               style={{
-                width: '44px',
+                width: '48px',
                 height: '44px',
                 borderRadius: '8px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '1.125rem',
                 textDecoration: 'none',
                 background: isActive ? 'var(--teal-dim)' : 'transparent',
                 color: isActive ? 'var(--teal-soft)' : 'var(--fog-0)',
                 transition: 'background 120ms, color 120ms',
                 outline: 'none',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '0.7rem',
+                fontWeight: 700,
               }}
             >
               {item.icon}
@@ -96,16 +94,16 @@ export function Rail() {
         })}
       </nav>
 
-      {/* Mobile bottom bar */}
       <nav
         aria-label="Primary navigation (mobile)"
+        className="rail-mobile"
         style={{
           display: 'none',
           position: 'fixed',
           bottom: 0,
           left: 0,
           right: 0,
-          height: '56px',
+          minHeight: '60px',
           background: 'var(--ink-1)',
           borderTop: '1px solid var(--ink-4)',
           flexDirection: 'row',
@@ -113,9 +111,8 @@ export function Rail() {
           justifyContent: 'space-around',
           zIndex: 50,
         }}
-        className="rail-mobile"
       >
-        {NAV_ITEMS.slice(0, 6).map((item) => {
+        {NAV_ITEMS.slice(0, 5).map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
@@ -129,13 +126,14 @@ export function Rail() {
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '2px',
                 width: '48px',
                 height: '48px',
                 borderRadius: '8px',
                 textDecoration: 'none',
                 color: isActive ? 'var(--teal-soft)' : 'var(--fog-0)',
-                fontSize: '1rem',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '0.65rem',
+                fontWeight: 700,
               }}
             >
               {item.icon}

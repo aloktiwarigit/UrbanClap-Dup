@@ -7,16 +7,15 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,14 +23,20 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.getSystemService
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.homeservices.designsystem.components.HsInfoRow
+import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsPriceText
+import com.homeservices.designsystem.components.HsSecondaryButton
+import com.homeservices.designsystem.components.HsSectionCard
+import com.homeservices.designsystem.components.HsTrustBadge
 import com.homeservices.technician.R
 import com.homeservices.technician.domain.jobOffer.model.JobOffer
 
@@ -52,7 +57,7 @@ internal fun JobOfferScreen(
                     @Suppress("DEPRECATION")
                     vibrator?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
                 } catch (_: Exception) {
-                    // Haptic not available on emulator/test — guard silently
+                    // Haptic not available on emulator/test.
                 }
             }
         }
@@ -130,88 +135,96 @@ private fun JobOfferContent(
         modifier =
             modifier
                 .fillMaxSize()
-                .padding(24.dp),
+                .padding(16.dp),
         verticalArrangement = Arrangement.SpaceBetween,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Header: countdown ring
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.padding(top = 32.dp),
-        ) {
-            CircularProgressIndicator(
-                progress = { progress },
-                modifier = Modifier.size(96.dp),
-                color = countdownColor,
-                strokeWidth = 6.dp,
-            )
-            Text(
-                text = "$remainingSeconds",
-                style = MaterialTheme.typography.headlineMedium,
-                color = countdownColor,
-            )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            HsTrustBadge(text = stringResource(R.string.job_offer_new_request))
+            Spacer(Modifier.height(18.dp))
+            Box(contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.size(104.dp),
+                    color = countdownColor,
+                    strokeWidth = 7.dp,
+                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "$remainingSeconds",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = countdownColor,
+                    )
+                    Text(
+                        text = stringResource(R.string.job_offer_seconds),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
 
-        // Job details
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = offer.serviceName,
-                style = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Center,
-            )
-            Text(
-                text = offer.addressText,
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = "${offer.slotDate}  ${offer.slotWindow}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = "%.1f km away".format(offer.distanceKm),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = "Earnings: ₹${offer.amountPaise / 100}",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
+        HsSectionCard {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = offer.serviceName,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        text = stringResource(R.string.job_offer_why_you),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                HsInfoRow(label = stringResource(R.string.job_offer_address), value = offer.addressText)
+                HsInfoRow(
+                    label = stringResource(R.string.job_offer_slot),
+                    value = "${offer.slotDate} ${offer.slotWindow}",
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.job_offer_distance),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = stringResource(R.string.job_offer_distance_km, offer.distanceKm),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = stringResource(R.string.job_offer_earnings),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        HsPriceText(pricePaise = offer.amountPaise.toInt())
+                    }
+                }
+            }
         }
 
-        // Accept / Decline buttons
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Button(
+            HsPrimaryButton(
+                text = stringResource(R.string.job_offer_accept),
                 onClick = onAccept,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF2E7D32),
-                    ),
-            ) {
-                Text("Accept", style = MaterialTheme.typography.titleMedium)
-            }
-            OutlinedButton(
+                modifier = Modifier.fillMaxWidth(),
+            )
+            HsSecondaryButton(
+                text = stringResource(R.string.job_offer_decline),
                 onClick = onDecline,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-            ) {
-                Text("Decline", style = MaterialTheme.typography.titleMedium)
-            }
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
@@ -223,19 +236,23 @@ private fun JobOfferResultContent(
     modifier: Modifier = Modifier,
 ): Unit {
     Box(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize().padding(24.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.headlineSmall,
-            color =
-                if (isSuccess) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-            textAlign = TextAlign.Center,
-        )
+        HsSectionCard {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color =
+                    if (isSuccess) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }

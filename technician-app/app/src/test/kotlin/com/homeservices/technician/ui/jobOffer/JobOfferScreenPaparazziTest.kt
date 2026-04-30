@@ -22,7 +22,7 @@ public class JobOfferScreenPaparazziTest {
             serviceName = "AC Repair",
             addressText = "12 Main Street, Bengaluru",
             slotDate = "2026-05-01",
-            slotWindow = "10:00–12:00",
+            slotWindow = "10:00-12:00",
             amountPaise = 50000L,
             distanceKm = 2.5,
             expiresAtMs = System.currentTimeMillis() + 30_000L,

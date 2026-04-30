@@ -5,7 +5,6 @@ import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.homeservices.designsystem.theme.HomeservicesTheme
 import com.homeservices.technician.domain.kyc.model.KycStatus
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -21,33 +20,28 @@ public class KycScreenPaparazziTest {
     public fun snapshot_step1_aadhaar(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
-                KycStepAadhaar(onStartKyc = {})
+                KycStepAadhaar(onStartKyc = {}, onSkip = {})
             }
         }
     }
 
-    @Ignore(
-        "HandlerDispatcher IllegalStateException — rememberLauncherForActivityResult in KycStepPan registers a Handler that fires after Paparazzi Looper quits; fix with mock launcher before recording",
-    )
     @Test
     public fun snapshot_step2_pan_no_selection(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
-                KycStepPan(selectedUri = null, onUriSelected = {})
+                KycPanContent(selectedUri = null, onChoosePhoto = {}, onSubmit = {})
             }
         }
     }
 
-    @Ignore(
-        "HandlerDispatcher IllegalStateException — rememberLauncherForActivityResult in KycStepPan registers a Handler that fires after Paparazzi Looper quits; fix with mock launcher before recording",
-    )
     @Test
     public fun snapshot_step2_pan_selected(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
-                KycStepPan(
+                KycPanContent(
                     selectedUri = Uri.parse("content://media/external/images/media/1"),
-                    onUriSelected = {},
+                    onChoosePhoto = {},
+                    onSubmit = {},
                 )
             }
         }
@@ -79,7 +73,7 @@ public class KycScreenPaparazziTest {
     public fun snapshot_loading(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
-                KycLoadingContent(message = "Processing…")
+                KycLoadingContent(message = "Processing verification")
             }
         }
     }

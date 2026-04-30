@@ -3,7 +3,7 @@ package com.homeservices.customer.ui.catalogue
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.homeservices.customer.domain.catalogue.model.Category
-import org.junit.Ignore
+import com.homeservices.designsystem.theme.HomeservicesTheme
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -17,26 +17,32 @@ public class CatalogueHomeScreenTest {
     @Test
     public fun `catalogue home loading state`(): Unit {
         paparazzi.snapshot {
-            CatalogueHomeContent(
-                uiState = CatalogueHomeUiState.Loading,
-                onCategoryClick = {},
-            )
+            HomeservicesTheme(darkTheme = false) {
+                CatalogueHomeContent(
+                    uiState = CatalogueHomeUiState.Loading,
+                    onCategoryClick = {},
+                )
+            }
         }
     }
 
-    @Ignore(
-        "HandlerDispatcher IllegalStateException — Coil async handler fires after Paparazzi Looper quits on Success state; fix with Coil test dispatcher before recording",
-    )
     @Test
     public fun `catalogue home success state`(): Unit {
         paparazzi.snapshot {
-            CatalogueHomeContent(
-                uiState =
-                    CatalogueHomeUiState.Success(
-                        listOf(Category("1", "Plumbing", "https://example.com/img.jpg", 5)),
-                    ),
-                onCategoryClick = {},
-            )
+            HomeservicesTheme(darkTheme = false) {
+                CatalogueHomeContent(
+                    uiState =
+                        CatalogueHomeUiState.Success(
+                            listOf(
+                                Category("1", "Plumbing", "", 5),
+                                Category("2", "AC Repair", "", 8),
+                                Category("3", "Salon", "", 12),
+                                Category("4", "Cleaning", "", 6),
+                            ),
+                        ),
+                    onCategoryClick = {},
+                )
+            }
         }
     }
 }

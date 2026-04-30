@@ -40,7 +40,7 @@ android {
         buildConfigField(
             "String",
             "API_BASE_URL",
-            "\"${System.getenv("API_BASE_URL") ?: "http://10.0.2.2:7071"}\"",
+            "\"${System.getenv("API_BASE_URL") ?: "https://func-homeservices-prod.azurewebsites.net/api"}\"",
         )
         buildConfigField(
             "String",

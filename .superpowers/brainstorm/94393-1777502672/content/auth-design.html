@@ -1,0 +1,209 @@
+<h2>Email + Google Auth — End-to-End Design</h2>
+<p class="subtitle">Customer-app only · Foundation tier · Story E02-S05 (split A + B)</p>
+
+<div class="section">
+  <h3>Auth Flow State Machine</h3>
+  <div style="background:#0f172a;border-radius:12px;padding:24px;font-family:monospace;font-size:13px;line-height:2;color:#94a3b8;overflow-x:auto;">
+    <div style="color:#38bdf8;font-weight:700;margin-bottom:8px;">App Launch</div>
+    <div style="padding-left:20px;">
+      → Truecaller available?
+      <div style="padding-left:20px;">
+        <span style="color:#4ade80;">YES</span> → <span style="color:#fbbf24;">TruecallerLoading</span> → Success → <span style="color:#4ade80;font-weight:700;">✓ Authenticated</span>
+        <div style="padding-left:40px;color:#64748b;">Cancelled / Failure ↓</div>
+      </div>
+      <div style="padding-left:20px;">
+        <span style="color:#f87171;">NO</span>  → <span style="color:#a78bfa;font-weight:700;">MethodSelection</span> (NEW)
+      </div>
+    </div>
+
+    <div style="margin-top:16px;color:#a78bfa;font-weight:700;">MethodSelection</div>
+    <div style="padding-left:20px;">
+      → [ Continue with Google ] → <span style="color:#fbbf24;">GoogleSigningIn</span> → <span style="color:#4ade80;font-weight:700;">✓ Authenticated</span> <span style="color:#64748b;">/ Error</span>
+      <div style="padding-left:116px;color:#64748b;font-size:11px;">← links anonymous account if Truecaller ran first</div>
+    </div>
+    <div style="padding-left:20px;">
+      → [ Continue with Email ] → <span style="color:#fbbf24;">EmailEntry</span>
+      <div style="padding-left:20px;">
+        → Sign In → <span style="color:#4ade80;font-weight:700;">✓ Authenticated</span> <span style="color:#64748b;">/ Error</span>
+        <br>→ Sign Up → <span style="color:#fbbf24;">EmailVerificationSent</span> → <span style="color:#4ade80;font-weight:700;">✓ Authenticated</span>
+      </div>
+    </div>
+    <div style="padding-left:20px;">
+      → [ Use phone number ] → <span style="color:#fbbf24;">OtpEntry</span> → <span style="color:#4ade80;font-weight:700;">✓ Authenticated</span> <span style="color:#64748b;">(existing flow)</span>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>New Screen — Method Selection (replaces direct OtpEntry fallback)</h3>
+  <div class="split" style="gap:20px;align-items:flex-start;">
+    <div class="mockup" style="flex:1;">
+      <div class="mockup-header">AuthScreen — MethodSelection state</div>
+      <div class="mockup-body" style="background:#0f172a;padding:32px 24px;display:flex;flex-direction:column;align-items:center;gap:0;">
+        <div style="width:64px;height:64px;background:#1e3a5f;border-radius:16px;margin-bottom:24px;display:flex;align-items:center;justify-content:center;font-size:28px;">🏠</div>
+        <div style="color:#f1f5f9;font-size:20px;font-weight:700;margin-bottom:6px;">Sign in to HomeServices</div>
+        <div style="color:#64748b;font-size:13px;margin-bottom:36px;text-align:center;">Choose how you'd like to continue</div>
+
+        <button class="mock-button" style="width:100%;background:#fff;color:#1e293b;border:1px solid #334155;border-radius:10px;padding:14px;display:flex;align-items:center;gap:12px;margin-bottom:12px;font-size:14px;font-weight:600;">
+          <span style="font-size:18px;">G</span> Continue with Google
+        </button>
+        <button class="mock-button" style="width:100%;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:10px;padding:14px;display:flex;align-items:center;gap:12px;margin-bottom:12px;font-size:14px;font-weight:600;">
+          <span style="font-size:18px;">✉</span> Continue with Email
+        </button>
+
+        <div style="display:flex;align-items:center;gap:12px;width:100%;margin:8px 0;">
+          <div style="flex:1;height:1px;background:#1e293b;"></div>
+          <div style="color:#475569;font-size:12px;">or</div>
+          <div style="flex:1;height:1px;background:#1e293b;"></div>
+        </div>
+
+        <button class="mock-button" style="width:100%;background:transparent;color:#64748b;border:none;padding:10px;font-size:13px;">
+          📱 Use phone number
+        </button>
+
+        <div style="color:#334155;font-size:11px;margin-top:24px;text-align:center;">
+          By continuing, you agree to our<br>Terms of Service and Privacy Policy
+        </div>
+      </div>
+    </div>
+
+    <div class="mockup" style="flex:1;">
+      <div class="mockup-header">AuthScreen — EmailEntry state</div>
+      <div class="mockup-body" style="background:#0f172a;padding:32px 24px;display:flex;flex-direction:column;gap:0;">
+        <div style="color:#f1f5f9;font-size:18px;font-weight:700;margin-bottom:4px;">Sign in with Email</div>
+        <div style="color:#64748b;font-size:12px;margin-bottom:24px;">New user? <span style="color:#38bdf8;">Create account</span></div>
+
+        <div style="color:#64748b;font-size:11px;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Email address</div>
+        <input class="mock-input" placeholder="you@example.com" style="width:100%;margin-bottom:16px;box-sizing:border-box;" />
+
+        <div style="color:#64748b;font-size:11px;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Password</div>
+        <input class="mock-input" type="password" placeholder="Min. 8 characters" style="width:100%;margin-bottom:4px;box-sizing:border-box;" />
+        <div style="color:#38bdf8;font-size:12px;text-align:right;margin-bottom:20px;">Forgot password?</div>
+
+        <button class="mock-button" style="width:100%;background:#3b82f6;color:white;border-radius:10px;padding:14px;font-size:14px;font-weight:600;">Sign In</button>
+
+        <div style="text-align:center;margin-top:16px;">
+          <span style="color:#475569;font-size:12px;">← </span>
+          <span style="color:#38bdf8;font-size:12px;">Back to sign-in options</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Layer-by-layer changes (customer-app only)</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div style="background:#0f172a;border-radius:8px;padding:16px;border-left:3px solid #4ade80;">
+      <div style="color:#4ade80;font-weight:700;font-size:12px;margin-bottom:8px;">DOMAIN (new)</div>
+      <div style="color:#94a3b8;font-size:12px;line-height:1.8;">
+        GoogleSignInUseCase<br>
+        EmailPasswordUseCase<br>
+        AuthProvider enum (PHONE · GOOGLE · EMAIL)<br>
+        AuthOrchestrator +3 methods<br>
+        AuthOrchestrator: account-linking logic
+      </div>
+    </div>
+    <div style="background:#0f172a;border-radius:8px;padding:16px;border-left:3px solid #38bdf8;">
+      <div style="color:#38bdf8;font-weight:700;font-size:12px;margin-bottom:8px;">DATA (extended)</div>
+      <div style="color:#94a3b8;font-size:12px;line-height:1.8;">
+        AuthState.Authenticated +email +displayName +authProvider<br>
+        SessionManager +3 encrypted keys<br>
+        SaveSessionUseCase +2 methods<br>
+        AuthModule: CredentialManager provider
+      </div>
+    </div>
+    <div style="background:#0f172a;border-radius:8px;padding:16px;border-left:3px solid #a78bfa;">
+      <div style="color:#a78bfa;font-weight:700;font-size:12px;margin-bottom:8px;">UI (new + extended)</div>
+      <div style="color:#94a3b8;font-size:12px;line-height:1.8;">
+        AuthUiState +MethodSelection +EmailEntry +GoogleSigningIn<br>
+        AuthScreen +MethodSelectionContent +EmailEntryContent<br>
+        AuthViewModel +onGoogleSignIn +onEmailSignIn +onEmailSignUp +onPhoneSelected<br>
+        Paparazzi stubs (CI records goldens)
+      </div>
+    </div>
+    <div style="background:#0f172a;border-radius:8px;padding:16px;border-left:3px solid #fbbf24;">
+      <div style="color:#fbbf24;font-weight:700;font-size:12px;margin-bottom:8px;">UNCHANGED</div>
+      <div style="color:#94a3b8;font-size:12px;line-height:1.8;">
+        API backend (Firebase token = provider-agnostic)<br>
+        FirebaseOtpUseCase<br>
+        BiometricGateUseCase<br>
+        Technician-app (zero changes)<br>
+        Admin-web auth (separate story E02-S04)
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Key engineering decisions</h3>
+  <div style="background:#0f172a;border-radius:8px;padding:20px;">
+    <div style="display:grid;gap:12px;">
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <span style="color:#4ade80;font-size:16px;flex-shrink:0;">①</span>
+        <div>
+          <div style="color:#f1f5f9;font-size:13px;font-weight:600;">Email = Password-based (not magic link)</div>
+          <div style="color:#64748b;font-size:12px;">Magic links require switching apps mid-flow — friction on Indian devices. Password is familiar + Firebase handles bcrypt server-side. "Forgot password" email reset covers recovery.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <span style="color:#4ade80;font-size:16px;flex-shrink:0;">②</span>
+        <div>
+          <div style="color:#f1f5f9;font-size:13px;font-weight:600;">Google = Credential Manager API (Android 14+) + legacy GoogleSignInClient fallback</div>
+          <div style="color:#64748b;font-size:12px;">Credential Manager is the modern path (one-tap bottom sheet). Fallback to GoogleSignInClient for API 21–33. Firebase receives the ID token from either path identically.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <span style="color:#4ade80;font-size:16px;flex-shrink:0;">③</span>
+        <div>
+          <div style="color:#f1f5f9;font-size:13px;font-weight:600;">Account linking via Firebase anonymous upgrade</div>
+          <div style="color:#64748b;font-size:12px;">Truecaller path signs in anonymously. When user then chooses Google/email, we call <code style="color:#38bdf8;">currentUser.linkWithCredential()</code> — same Firebase UID preserved, booking history intact. On EMAIL_ALREADY_EXISTS collision, we sign in with the existing credential instead.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <span style="color:#4ade80;font-size:16px;flex-shrink:0;">④</span>
+        <div>
+          <div style="color:#f1f5f9;font-size:13px;font-weight:600;">Truecaller still auto-launches (no change to happy path)</div>
+          <div style="color:#64748b;font-size:12px;">~85% of Indian Android users have Truecaller. Keeping auto-launch preserves sub-2-second sign-in for the majority. MethodSelection is only shown on cancel/failure — not as the initial screen.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <span style="color:#4ade80;font-size:16px;flex-shrink:0;">⑤</span>
+        <div>
+          <div style="color:#f1f5f9;font-size:13px;font-weight:600;">Zero backend changes</div>
+          <div style="color:#64748b;font-size:12px;"><code style="color:#38bdf8;">requireCustomer.ts</code> calls <code style="color:#38bdf8;">verifyFirebaseIdToken()</code> — Firebase Admin SDK validates any provider's ID token identically. The API is already provider-agnostic.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Story split (Foundation tier)</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div style="background:#0f172a;border-radius:8px;padding:16px;border:1px solid #1e3a5f;">
+      <div style="color:#38bdf8;font-weight:700;margin-bottom:8px;">E02-S05-A · Domain + Data</div>
+      <div style="color:#94a3b8;font-size:12px;line-height:1.8;">
+        WS-A: AuthProvider enum + AuthState extension + SessionManager<br>
+        WS-B: GoogleSignInUseCase (TDD)<br>
+        WS-B: EmailPasswordUseCase (TDD)<br>
+        WS-B: SaveSessionUseCase extension (TDD)<br>
+        WS-B: AuthOrchestrator extension + account-linking (TDD)<br>
+        WS-C: AuthModule + CredentialManager provider<br>
+        WS-E: smoke gate → Codex
+      </div>
+    </div>
+    <div style="background:#0f172a;border-radius:8px;padding:16px;border:1px solid #1e3a5f;">
+      <div style="color:#a78bfa;font-weight:700;margin-bottom:8px;">E02-S05-B · UI (depends on A)</div>
+      <div style="color:#94a3b8;font-size:12px;line-height:1.8;">
+        WS-D: AuthUiState extension<br>
+        WS-D: MethodSelectionContent composable<br>
+        WS-D: EmailEntryContent composable<br>
+        WS-D: AuthViewModel new actions<br>
+        WS-D: AuthScreen routing update<br>
+        WS-D: Paparazzi stubs (goldens via CI)<br>
+        WS-E: smoke gate → Codex
+      </div>
+    </div>
+  </div>
+</div>

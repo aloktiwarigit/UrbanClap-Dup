@@ -3,6 +3,7 @@ package com.homeservices.technician.ui.kyc
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.homeservices.technician.data.kyc.DigiLockerCallbackBus
 import com.homeservices.technician.domain.kyc.KycOrchestrator
 import com.homeservices.technician.domain.kyc.model.DigiLockerResult
 import com.homeservices.technician.domain.kyc.model.KycStatus
@@ -30,9 +31,16 @@ internal class KycViewModel
     @Inject
     constructor(
         private val orchestrator: KycOrchestrator,
+        private val callbackBus: DigiLockerCallbackBus,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<KycUiState>(KycUiState.Idle)
         public val uiState: StateFlow<KycUiState> = _uiState.asStateFlow()
+
+        init {
+            viewModelScope.launch {
+                callbackBus.events.collect { authCode -> handleDeepLink(authCode) }
+            }
+        }
 
         /**
          * Initiates the Aadhaar verification flow by emitting the DigiLocker consent URL.

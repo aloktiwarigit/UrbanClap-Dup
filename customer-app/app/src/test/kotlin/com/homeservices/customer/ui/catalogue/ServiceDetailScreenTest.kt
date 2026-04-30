@@ -4,7 +4,7 @@ import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.homeservices.customer.domain.catalogue.model.AddOn
 import com.homeservices.customer.domain.catalogue.model.Service
-import org.junit.Ignore
+import com.homeservices.designsystem.theme.HomeservicesTheme
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -15,17 +15,16 @@ public class ServiceDetailScreenTest {
     @get:Rule
     public val paparazzi: Paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
 
-    @Ignore(
-        "HandlerDispatcher IllegalStateException — Coil async handler fires after Paparazzi Looper quits on Success state; fix with Coil test dispatcher before recording",
-    )
     @Test
     public fun `service detail success state`(): Unit {
         paparazzi.snapshot {
-            ServiceDetailContent(
-                uiState = ServiceDetailUiState.Success(sampleService()),
-                confidenceScoreState = ConfidenceScoreUiState.Hidden,
-                onBookNow = { _, _ -> },
-            )
+            HomeservicesTheme(darkTheme = false) {
+                ServiceDetailContent(
+                    uiState = ServiceDetailUiState.Success(sampleService()),
+                    confidenceScoreState = ConfidenceScoreUiState.Hidden,
+                    onBookNow = { _, _ -> },
+                )
+            }
         }
     }
 
@@ -33,12 +32,12 @@ public class ServiceDetailScreenTest {
         Service(
             id = "s1",
             categoryId = "c1",
-            name = "Pipe Fix",
-            description = "Full fix",
-            basePrice = 50000,
+            name = "AC deep cleaning",
+            description = "Indoor unit cleaning, filter wash, drain check, and basic performance inspection.",
+            basePrice = 79900,
             durationMinutes = 60,
-            imageUrl = "https://example.com/img.jpg",
-            includes = listOf("Tools", "Labour"),
-            addOns = listOf(AddOn("Extra pipe", 10000)),
+            imageUrl = "",
+            includes = listOf("Indoor unit foam cleaning", "Filter wash", "Drain pipe inspection"),
+            addOns = listOf(AddOn("Gas pressure check", 14900), AddOn("Outdoor unit wash", 19900)),
         )
 }

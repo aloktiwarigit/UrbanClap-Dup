@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
-/* Dashboard design tokens — E09-S01 */
+/* Dashboard design tokens - E09-S01 */
 :root {
-  --ink-0: #070a0b; --ink-1: #0E1416; --ink-2: #131b1e;
+  --ink-0: #070a0b; --ink-1: #0e1416; --ink-2: #131b1e;
   --ink-3: #1a2427; --ink-4: #263135; --ink-5: #3d4a50;
   --fog-0: #6b7a81; --fog-1: #96a4ab; --fog-2: #c4d1d7; --fog-3: #ebf2f5;
   --teal: #22a38f; --teal-soft: #2fc9b1; --teal-dim: #15584e;
@@ -22,7 +22,7 @@
 }
 
 @theme {
-  /* color — brand + neutrals + semantic */
+  /* color - brand + neutrals + semantic */
   --color-brand: #4f46e5;
   --color-brand-fg: #ffffff;
   --color-surface: #ffffff;
@@ -44,7 +44,7 @@
   --text-3xl: 1.875rem;
   --text-4xl: 2.25rem;
 
-  /* spacing — 4 / 8 / 12 / 16 / 24 / 32 / 48 px */
+  /* spacing - 4 / 8 / 12 / 16 / 24 / 32 / 48 px */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -58,7 +58,7 @@
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
 
-  /* elevation — 3 tiers */
+  /* elevation - 3 tiers */
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.10), 0 2px 4px -2px rgba(15, 23, 42, 0.08);
   --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.10), 0 4px 6px -4px rgba(15, 23, 42, 0.08);
@@ -70,7 +70,6 @@
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* dark mode override — class-based per Q5 */
 .dark {
   --color-surface: #0b1220;
   --color-surface-alt: #111a2e;
@@ -80,10 +79,8 @@
   --color-brand-fg: #ffffff;
 }
 
-/* utility classes */
 .input { @apply border border-gray-300 rounded px-3 py-2 text-sm w-full; }
 
-/* base — focus visibility + safe defaults (NFR-A enforcement) */
 :focus-visible {
   outline: 2px solid var(--color-brand);
   outline-offset: 2px;
@@ -98,4 +95,23 @@ body {
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: var(--text-base);
   line-height: 1.5;
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .rail-desktop {
+    display: none !important;
+  }
+
+  .rail-mobile {
+    display: flex !important;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  main {
+    padding-bottom: 72px;
+  }
 }

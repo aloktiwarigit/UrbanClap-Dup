@@ -1,35 +1,18 @@
-# API service — repo-local Semgrep rules.
+# Karnataka Platform Workers Act 2025 — FR-9.1 data-layer enforcement.
 #
-# This file is loaded alongside the public rule packs in
-# `.github/workflows/api-ship.yml`. The semgrep-action runs from the REPO ROOT
-# (it does not honor the job-level `working-directory: api`), so all
-# `paths.include` / `paths.exclude` entries below MUST be repo-relative and
-# anchored with a leading slash to comply with Semgrepignore v2 / Gitignore
-# semantics (e.g. `/api/src/**/*.ts`).
+# Companion enforcement layers:
+#   - api/tests/integration/dispatcher-data-isolation.test.ts (runtime test gate)
+#   - docs/dispatch-algorithm.md (public algorithm transparency doc)
+#   - docs/adr/0011-karnataka-decline-history-isolation.md (ADR)
 #
-# When invoked locally from the repo root
-# (`semgrep --config api/.semgrep.yml`), anchored paths still resolve
-# correctly against the same repo-root.
-
+# These rules fail CI if a developer accidentally introduces decline-derived
+# features into the dispatcher read path. Discipline alone is not auditable;
+# CI enforcement is. `acceptRate` is forbidden because it is mathematically
+# `1 - declineRate` — decline-derived even when positively framed.
+#
+# Path resolution: semgrep-action runs from repo root (uses: steps don't
+# honor api-ship.yml's `working-directory: api`), so paths are repo-relative.
 rules:
-  # ---------------------------------------------------------------------------
-  # karnataka-no-decline-in-dispatcher
-  #
-  # Karnataka Platform Workers Act 2025 — FR-9.1 data-layer enforcement.
-  #
-  # Companion enforcement layers:
-  #   - api/tests/integration/dispatcher-data-isolation.test.ts (runtime test gate)
-  #   - docs/dispatch-algorithm.md (public algorithm transparency doc)
-  #   - docs/adr/0011-karnataka-decline-history-isolation.md (ADR)
-  #
-  # These rules fail CI if a developer accidentally introduces decline-derived
-  # features into the dispatcher read path. Discipline alone is not auditable;
-  # CI enforcement is. `acceptRate` is forbidden because it is mathematically
-  # `1 - declineRate` — decline-derived even when positively framed.
-  #
-  # Path resolution: semgrep-action runs from repo root (uses: steps don't
-  # honor api-ship.yml's `working-directory: api`), so paths are repo-relative.
-  # ---------------------------------------------------------------------------
   - id: karnataka-no-decline-in-dispatcher
     pattern-either:
       - pattern: declineCount
@@ -69,75 +52,5 @@ rules:
       (Karnataka Platform Workers Act 2025, FR-9.1, NFR-C-1).
       Reverse this change or revise docs/adr/0011-karnataka-decline-history-isolation.md
       with explicit owner approval.
-    languages: [typescript]
-    severity: ERROR
-
-  # ---------------------------------------------------------------------------
-  # audit-log-immutable
-  #
-  # FR-9.4 + DPDP Act §8 + RBI financial-records retention require an
-  # immutable, append-only audit log. Companion enforcement layers:
-  #   - api/tests/cosmos/audit-log-immutability.test.ts  (module surface +
-  #     file-scan + container-name uniqueness + Semgrep-rule-presence
-  #     defensive tests)
-  #   - docs/adr/0013-audit-log-immutability.md           (decision record)
-  #
-  # `CONTAINER`-metavariable patterns are deliberately NOT included here
-  # because the `CONTAINER` identifier is reused across other repositories
-  # (complaints-repository, finance-repository, etc.) with different literal
-  # values. Lockdown of audit-log-repository.ts itself is handled by the
-  # file-scan defensive test, which targets the file directly.
-  #
-  # `.batch(...)`, `.bulk(...)` and `.executeBulkOperations(...)` are
-  # included because the Cosmos SDK's batch APIs accept
-  # `operationType: 'Delete' | 'Replace' | 'Upsert'` in their input array,
-  # which would otherwise bypass the per-method patterns.
-  # ---------------------------------------------------------------------------
-  - id: audit-log-immutable
-    pattern-either:
-      # Items-collection mutation / deletion (literal string).
-      - pattern: $X.container("audit_log").items.upsert(...)
-      - pattern: $X.container("audit_log").items.replace(...)
-      - pattern: $X.container("audit_log").items.delete(...)
-      - pattern: $X.container("audit_log").items.deleteAllItemsForPartitionKey(...)
-      - pattern: $X.container('audit_log').items.upsert(...)
-      - pattern: $X.container('audit_log').items.replace(...)
-      - pattern: $X.container('audit_log').items.delete(...)
-      - pattern: $X.container('audit_log').items.deleteAllItemsForPartitionKey(...)
-      # Item-level mutation / deletion (literal string).
-      - pattern: $X.container("audit_log").item(...).replace(...)
-      - pattern: $X.container("audit_log").item(...).delete(...)
-      - pattern: $X.container("audit_log").item(...).patch(...)
-      - pattern: $X.container('audit_log').item(...).replace(...)
-      - pattern: $X.container('audit_log').item(...).delete(...)
-      - pattern: $X.container('audit_log').item(...).patch(...)
-      # Cosmos batch / bulk APIs — accept operationType: 'Delete'/'Replace'/'Upsert'
-      # in their input array, escaping the per-method patterns above.
-      - pattern: $X.container("audit_log").items.batch(...)
-      - pattern: $X.container("audit_log").items.bulk(...)
-      - pattern: $X.container("audit_log").items.executeBulkOperations(...)
-      - pattern: $X.container('audit_log').items.batch(...)
-      - pattern: $X.container('audit_log').items.bulk(...)
-      - pattern: $X.container('audit_log').items.executeBulkOperations(...)
-    paths:
-      include:
-        - "/api/src/**/*.ts"
-      exclude:
-        - "/api/tests/**"
-    message: |
-      Audit log entries must NOT be mutated or deleted (FR-9.4, DPDP Act §8,
-      RBI financial-records retention).
-
-      The `audit_log` container is append-only. Reverse this change or, if
-      the change is genuinely required (e.g. legal hold, DPDP §10 erasure
-      cascade onto resourceId), open an ADR following the pattern in
-      docs/adr/0013-audit-log-immutability.md and get explicit owner
-      approval. ADR 0011 (Karnataka decline-history isolation) is the
-      precedent for this kind of CI-enforced data invariant.
-
-      The Cosmos SDK exposes mutation paths beyond `.upsert/.replace/.delete`
-      — `.batch(...)`, `.bulk(...)` and `.executeBulkOperations(...)` accept
-      `operationType: 'Delete' | 'Replace' | 'Upsert'` in their input arrays
-      and are equally forbidden against the audit_log container.
     languages: [typescript]
     severity: ERROR

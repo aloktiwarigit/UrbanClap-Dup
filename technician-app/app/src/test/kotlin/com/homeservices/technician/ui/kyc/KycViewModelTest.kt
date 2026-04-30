@@ -1,6 +1,7 @@
 package com.homeservices.technician.ui.kyc
 
 import android.net.Uri
+import com.homeservices.technician.data.kyc.DigiLockerCallbackBus
 import com.homeservices.technician.domain.kyc.KycOrchestrator
 import com.homeservices.technician.domain.kyc.model.DigiLockerResult
 import com.homeservices.technician.domain.kyc.model.KycStatus
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 public class KycViewModelTest {
     private lateinit var orchestrator: KycOrchestrator
+    private lateinit var callbackBus: DigiLockerCallbackBus
     private lateinit var viewModel: KycViewModel
     private val testDispatcher = UnconfinedTestDispatcher()
 
@@ -29,7 +31,8 @@ public class KycViewModelTest {
     public fun setUp(): Unit {
         Dispatchers.setMain(testDispatcher)
         orchestrator = mockk(relaxed = true)
-        viewModel = KycViewModel(orchestrator)
+        callbackBus = DigiLockerCallbackBus()
+        viewModel = KycViewModel(orchestrator, callbackBus)
     }
 
     @AfterEach
@@ -64,6 +67,18 @@ public class KycViewModelTest {
             } returns flowOf(DigiLockerResult.AadhaarVerified("XXXX-XXXX-1234"))
 
             viewModel.handleDeepLink("auth-code-123")
+
+            assertThat(viewModel.uiState.value).isEqualTo(KycUiState.AadhaarDone)
+        }
+
+    @Test
+    public fun `callback bus auth code emits AadhaarDone`(): Unit =
+        runTest {
+            every {
+                orchestrator.startAadhaarConsent("auth-code-bus", any())
+            } returns flowOf(DigiLockerResult.AadhaarVerified("XXXX-XXXX-1234"))
+
+            callbackBus.post("auth-code-bus")
 
             assertThat(viewModel.uiState.value).isEqualTo(KycUiState.AadhaarDone)
         }
