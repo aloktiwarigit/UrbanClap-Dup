@@ -300,7 +300,7 @@ public class AuthOrchestratorTest {
         }
 
     @Test
-    public fun `startGoogleSignIn — CredentialObtained anonymous user linkWithCredential collision — falls back to signInWithCredential`(): Unit =
+    public fun `startGoogleSignIn — anon user linkWithCredential collision — falls back to signInWithCredential`(): Unit =
         runTest {
             val mockCredential: AuthCredential = mockk()
             val mockUser: FirebaseUser = mockk(relaxed = true)
