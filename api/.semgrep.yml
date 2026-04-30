@@ -54,3 +54,24 @@ rules:
       with explicit owner approval.
     languages: [typescript]
     severity: ERROR
+
+  - id: audit-log-immutable
+    pattern-either:
+      - pattern: getAuditLogContainer().items.upsert(...)
+      - pattern: getAuditLogContainer().items.replace(...)
+      - pattern: getAuditLogContainer().items.delete(...)
+      - pattern: getAuditLogContainer().items.patch(...)
+      - pattern: getAuditLogContainer().items.batch(...)
+      - pattern: getAuditLogContainer().items.bulkOperations(...)
+      - pattern: $X.item($Y, $Z).replace(...)
+      - pattern: $X.item($Y, $Z).delete(...)
+      - pattern: $X.item($Y, $Z).patch(...)
+    paths:
+      include:
+        - "api/src/**/*.ts"
+    message: |
+      Audit log entries must NOT be mutated or deleted (FR-9.4, DPDP Act 2023 §8).
+      The audit_log container is append-only by design. Reverse this change or open
+      an ADR with explicit owner approval.
+    languages: [typescript]
+    severity: ERROR
