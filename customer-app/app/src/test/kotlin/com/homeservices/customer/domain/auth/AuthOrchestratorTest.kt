@@ -199,7 +199,10 @@ public class AuthOrchestratorTest {
     @Test
     public fun `startEmailSignIn — success — saves session and emits Success`(): Unit =
         runTest {
-            val mockUser: FirebaseUser = mockk(relaxed = true)
+            val mockUser: FirebaseUser =
+                mockk(relaxed = true) {
+                    every { isEmailVerified } returns true
+                }
             every { emailPasswordUseCase.signIn(any(), any()) } returns
                 flowOf(
                     AuthResult.Success(mockUser),

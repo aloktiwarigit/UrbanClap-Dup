@@ -100,9 +100,22 @@ public class AuthOrchestrator
             flow {
                 emailPasswordUseCase.signIn(email, password).collect { result ->
                     if (result is AuthResult.Success) {
-                        saveSessionUseCase.saveWithEmail(result.user)
+                        if (result.user.isEmailVerified) {
+                            saveSessionUseCase.saveWithEmail(result.user)
+                            emit(result)
+                        } else {
+                            // Signed in but unverified — re-send verification and require confirmation.
+                            @Suppress("TooGenericExceptionCaught")
+                            try {
+                                result.user.sendEmailVerification().await()
+                            } catch (_: Exception) {
+                                // Best-effort; verification email will be resent when user taps Continue.
+                            }
+                            emit(AuthResult.Unavailable)
+                        }
+                    } else {
+                        emit(result)
                     }
-                    emit(result)
                 }
             }
 
