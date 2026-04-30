@@ -23,13 +23,16 @@ public class GoogleSignInUseCase
         private val credentialManager: CredentialManager,
         @ApplicationContext private val context: Context,
     ) {
+        // Overridable in tests via internal setter — matches TruecallerLoginUseCase pattern.
+        // Production value from BuildConfig; tests inject a fake string directly.
+        internal var webClientId: String = com.homeservices.customer.BuildConfig.GOOGLE_WEB_CLIENT_ID
+
         @Suppress("TooGenericExceptionCaught")
         public suspend fun getCredential(activity: FragmentActivity): GoogleSignInResult {
-            val clientId = context.getString(com.homeservices.customer.R.string.default_web_client_id)
-            if (clientId.startsWith("PLACEHOLDER")) {
+            if (webClientId.isBlank()) {
                 return GoogleSignInResult.Error(
                     IllegalStateException(
-                        "Google Sign-In not configured: replace google-services.json with one containing a web OAuth client",
+                        "Google Sign-In not configured: set GOOGLE_WEB_CLIENT_ID env var or add it to local.properties",
                     ),
                 )
             }
@@ -39,7 +42,7 @@ public class GoogleSignInUseCase
                     GetGoogleIdOption
                         .Builder()
                         .setFilterByAuthorizedAccounts(false)
-                        .setServerClientId(clientId)
+                        .setServerClientId(webClientId)
                         .setNonce(nonce)
                         .build()
                 val request =

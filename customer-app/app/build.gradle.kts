@@ -49,6 +49,11 @@ android {
         )
         buildConfigField(
             "String",
+            "GOOGLE_WEB_CLIENT_ID",
+            "\"${System.getenv("GOOGLE_WEB_CLIENT_ID") ?: ""}\"",
+        )
+        buildConfigField(
+            "String",
             "MAPS_API_KEY",
             "\"${System.getenv("MAPS_API_KEY") ?: ""}\"",
         )

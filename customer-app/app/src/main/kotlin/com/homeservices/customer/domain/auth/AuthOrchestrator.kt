@@ -119,7 +119,13 @@ public class AuthOrchestrator
                         if (result is AuthResult.Success) {
                             // Send verification email but do NOT save session yet.
                             // Session is saved after UI confirms isEmailVerified via completeEmailVerification().
-                            result.user.sendEmailVerification().await()
+                            @Suppress("TooGenericExceptionCaught")
+                            try {
+                                result.user.sendEmailVerification().await()
+                            } catch (e: Exception) {
+                                emit(AuthResult.Error.General(e))
+                                return@collect
+                            }
                         }
                         emit(result)
                     }
