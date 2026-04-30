@@ -50,8 +50,7 @@ public class AuthOrchestrator
             }
         }
 
-        public fun observeTruecallerResults(): SharedFlow<TruecallerAuthResult> =
-            truecallerUseCase.resultFlow
+        public fun observeTruecallerResults(): SharedFlow<TruecallerAuthResult> = truecallerUseCase.resultFlow
 
         public fun sendOtp(
             phoneNumber: String,
@@ -67,8 +66,7 @@ public class AuthOrchestrator
         public fun signInWithCredential(credential: PhoneAuthCredential): Flow<AuthResult> =
             firebaseOtpUseCase.signInWithCredential(credential)
 
-        public suspend fun completeWithTruecaller(phoneNumber: String): AuthResult =
-            saveSessionUseCase.saveAnonymousWithPhone(phoneNumber)
+        public suspend fun completeWithTruecaller(phoneNumber: String): AuthResult = saveSessionUseCase.saveAnonymousWithPhone(phoneNumber)
 
         public suspend fun completeWithFirebase(
             user: FirebaseUser,
@@ -79,52 +77,54 @@ public class AuthOrchestrator
 
         // ── New for E02-S05-A ──────────────────────────────────────────────
 
-        public fun startGoogleSignIn(activity: FragmentActivity): Flow<AuthResult> = flow {
-            when (val credResult = googleSignInUseCase.getCredential(activity)) {
-                is GoogleSignInResult.CredentialObtained -> {
-                    val authResult = linkOrSignIn(credResult.credential)
-                    if (authResult is AuthResult.Success) {
-                        saveSessionUseCase.saveWithGoogle(authResult.user)
+        public fun startGoogleSignIn(activity: FragmentActivity): Flow<AuthResult> =
+            flow {
+                when (val credResult = googleSignInUseCase.getCredential(activity)) {
+                    is GoogleSignInResult.CredentialObtained -> {
+                        val authResult = linkOrSignIn(credResult.credential)
+                        if (authResult is AuthResult.Success) {
+                            saveSessionUseCase.saveWithGoogle(authResult.user)
+                        }
+                        emit(authResult)
                     }
-                    emit(authResult)
+                    GoogleSignInResult.Cancelled -> emit(AuthResult.Cancelled)
+                    GoogleSignInResult.Unavailable -> emit(AuthResult.Unavailable)
+                    is GoogleSignInResult.Error -> emit(AuthResult.Error.General(credResult.cause))
                 }
-                GoogleSignInResult.Cancelled -> emit(AuthResult.Cancelled)
-                GoogleSignInResult.Unavailable -> emit(AuthResult.Unavailable)
-                is GoogleSignInResult.Error -> emit(AuthResult.Error.General(credResult.cause))
             }
-        }
 
         public fun startEmailSignIn(
             email: String,
             password: String,
-        ): Flow<AuthResult> = flow {
-            emailPasswordUseCase.signIn(email, password).collect { result ->
-                if (result is AuthResult.Success) {
-                    saveSessionUseCase.saveWithEmail(result.user)
-                }
-                emit(result)
-            }
-        }
-
-        public fun startEmailSignUp(
-            email: String,
-            password: String,
-        ): Flow<AuthResult> = flow {
-            val currentUser = firebaseAuth.currentUser
-            if (currentUser != null && currentUser.isAnonymous) {
-                emit(linkAnonymousToEmail(currentUser, email, password))
-            } else {
-                emailPasswordUseCase.signUp(email, password).collect { result ->
+        ): Flow<AuthResult> =
+            flow {
+                emailPasswordUseCase.signIn(email, password).collect { result ->
                     if (result is AuthResult.Success) {
                         saveSessionUseCase.saveWithEmail(result.user)
                     }
                     emit(result)
                 }
             }
-        }
 
-        public fun sendPasswordReset(email: String): Flow<Result<Unit>> =
-            emailPasswordUseCase.sendPasswordReset(email)
+        public fun startEmailSignUp(
+            email: String,
+            password: String,
+        ): Flow<AuthResult> =
+            flow {
+                val currentUser = firebaseAuth.currentUser
+                if (currentUser != null && currentUser.isAnonymous) {
+                    emit(linkAnonymousToEmail(currentUser, email, password))
+                } else {
+                    emailPasswordUseCase.signUp(email, password).collect { result ->
+                        if (result is AuthResult.Success) {
+                            saveSessionUseCase.saveWithEmail(result.user)
+                        }
+                        emit(result)
+                    }
+                }
+            }
+
+        public fun sendPasswordReset(email: String): Flow<Result<Unit>> = emailPasswordUseCase.sendPasswordReset(email)
 
         @Suppress("TooGenericExceptionCaught")
         private suspend fun linkOrSignIn(credential: AuthCredential): AuthResult {
@@ -154,10 +154,11 @@ public class AuthOrchestrator
             anonymousUser: FirebaseUser,
             email: String,
             password: String,
-        ): AuthResult {
-            return try {
+        ): AuthResult =
+            try {
                 val emailCredential =
-                    com.google.firebase.auth.EmailAuthProvider.getCredential(email, password)
+                    com.google.firebase.auth.EmailAuthProvider
+                        .getCredential(email, password)
                 val result = anonymousUser.linkWithCredential(emailCredential).await()
                 val user = result.user!!
                 user.sendEmailVerification().await()
@@ -170,5 +171,4 @@ public class AuthOrchestrator
             } catch (e: FirebaseException) {
                 AuthResult.Error.General(e)
             }
-        }
     }

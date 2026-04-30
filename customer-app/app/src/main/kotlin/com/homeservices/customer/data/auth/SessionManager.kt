@@ -53,17 +53,19 @@ public class SessionManager
             }
         }
 
-        private fun parseProvider(raw: String?): AuthProvider = when (raw) {
-            "google" -> AuthProvider.Google
-            "email" -> AuthProvider.Email
-            else -> AuthProvider.Phone
-        }
+        private fun parseProvider(raw: String?): AuthProvider =
+            when (raw) {
+                "google" -> AuthProvider.Google
+                "email" -> AuthProvider.Email
+                else -> AuthProvider.Phone
+            }
 
-        private fun providerKey(provider: AuthProvider): String = when (provider) {
-            AuthProvider.Phone -> "phone"
-            AuthProvider.Google -> "google"
-            AuthProvider.Email -> "email"
-        }
+        private fun providerKey(provider: AuthProvider): String =
+            when (provider) {
+                AuthProvider.Phone -> "phone"
+                AuthProvider.Google -> "google"
+                AuthProvider.Email -> "email"
+            }
 
         public suspend fun saveSession(
             uid: String,
@@ -73,22 +75,25 @@ public class SessionManager
             authProvider: AuthProvider = AuthProvider.Phone,
         ) {
             withContext(Dispatchers.IO) {
-                val editor = prefs.edit()
-                    .putString(KEY_UID, uid)
-                    .putString(KEY_AUTH_PROVIDER, providerKey(authProvider))
-                    .putLong(KEY_SESSION_CREATED_AT, System.currentTimeMillis())
+                val editor =
+                    prefs
+                        .edit()
+                        .putString(KEY_UID, uid)
+                        .putString(KEY_AUTH_PROVIDER, providerKey(authProvider))
+                        .putLong(KEY_SESSION_CREATED_AT, System.currentTimeMillis())
                 if (phoneLastFour != null) editor.putString(KEY_PHONE_LAST_FOUR, phoneLastFour)
                 if (email != null) editor.putString(KEY_EMAIL, email)
                 if (displayName != null) editor.putString(KEY_DISPLAY_NAME, displayName)
                 editor.apply()
             }
-            _authState.value = AuthState.Authenticated(
-                uid = uid,
-                phoneLastFour = phoneLastFour,
-                email = email,
-                displayName = displayName,
-                authProvider = authProvider,
-            )
+            _authState.value =
+                AuthState.Authenticated(
+                    uid = uid,
+                    phoneLastFour = phoneLastFour,
+                    email = email,
+                    displayName = displayName,
+                    authProvider = authProvider,
+                )
         }
 
         public suspend fun clearSession() {

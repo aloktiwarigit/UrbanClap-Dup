@@ -24,17 +24,21 @@ public class GoogleSignInUseCase
         @ApplicationContext private val context: Context,
     ) {
         @Suppress("TooGenericExceptionCaught")
-        public suspend fun getCredential(activity: FragmentActivity): GoogleSignInResult {
-            return try {
+        public suspend fun getCredential(activity: FragmentActivity): GoogleSignInResult =
+            try {
                 val nonce = generateNonce()
-                val googleIdOption = GetGoogleIdOption.Builder()
-                    .setFilterByAuthorizedAccounts(false)
-                    .setServerClientId(context.getString(com.homeservices.customer.R.string.default_web_client_id))
-                    .setNonce(nonce)
-                    .build()
-                val request = GetCredentialRequest.Builder()
-                    .addCredentialOption(googleIdOption)
-                    .build()
+                val googleIdOption =
+                    GetGoogleIdOption
+                        .Builder()
+                        .setFilterByAuthorizedAccounts(false)
+                        .setServerClientId(context.getString(com.homeservices.customer.R.string.default_web_client_id))
+                        .setNonce(nonce)
+                        .build()
+                val request =
+                    GetCredentialRequest
+                        .Builder()
+                        .addCredentialOption(googleIdOption)
+                        .build()
                 val response = credentialManager.getCredential(context = activity, request = request)
                 val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(response.credential.data)
                 val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
@@ -46,7 +50,6 @@ public class GoogleSignInUseCase
             } catch (e: Exception) {
                 GoogleSignInResult.Error(e)
             }
-        }
 
         private fun generateNonce(): String {
             val bytes = ByteArray(16)
