@@ -45,7 +45,7 @@ export function decryptPan(blob: EncryptedPan): string {
   const key = getKey();
   const tagBuf = Buffer.from(blob.tag, 'base64');
   if (tagBuf.length !== 16) throw new Error('GCM auth tag must be exactly 16 bytes');
-  const decipher = createDecipheriv(ALGO, key, Buffer.from(blob.iv, 'base64'));
+  const decipher = createDecipheriv(ALGO, key, Buffer.from(blob.iv, 'base64'), { authTagLength: 16 });
   decipher.setAuthTag(tagBuf);
   return Buffer.concat([
     decipher.update(Buffer.from(blob.ciphertext, 'base64')),
