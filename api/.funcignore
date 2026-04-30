@@ -1,0 +1,20 @@
+# .funcignore overrides .gitignore for func azure functionapp publish.
+# dist/ MUST be included — it is the compiled TypeScript output.
+# node_modules is included (needed for --no-build deploys).
+
+.git/
+.gitignore
+.github/
+local.settings.json
+*.ts
+tsconfig*.json
+eslint.config.mjs
+tests/
+coverage/
+.nyc_output/
+*.log
+plans/
+docs/
+specs/
+scripts/
+src/
