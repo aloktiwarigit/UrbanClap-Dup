@@ -32,6 +32,24 @@ public class SaveSessionUseCase
             )
         }
 
+        public suspend fun saveWithGoogle(user: FirebaseUser) {
+            sessionManager.saveSession(
+                uid = user.uid,
+                email = user.email,
+                displayName = user.displayName,
+                authProvider = AuthProvider.Google,
+            )
+        }
+
+        public suspend fun saveWithEmail(user: FirebaseUser) {
+            sessionManager.saveSession(
+                uid = user.uid,
+                email = user.email,
+                displayName = user.displayName,
+                authProvider = AuthProvider.Email,
+            )
+        }
+
         /**
          * Truecaller pilot path: signs in anonymously to Firebase, stores uid + last 4 digits.
          * Phase 2 replaces this with Firebase custom-token flow. See ADR-0005.

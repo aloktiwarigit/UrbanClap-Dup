@@ -91,4 +91,40 @@ public class SaveSessionUseCaseTest {
 
             assertThat(result).isInstanceOf(AppAuthResult.Error.General::class.java)
         }
+
+    @Test
+    public fun `saveWithGoogle — calls sessionManager with Google provider and email`(): Unit = runTest {
+        val mockUser: FirebaseUser = mockk {
+            every { uid } returns "google-uid"
+            every { email } returns "alice@gmail.com"
+            every { displayName } returns "Alice"
+        }
+        useCase.saveWithGoogle(mockUser)
+        coVerify {
+            sessionManager.saveSession(
+                uid = "google-uid",
+                email = "alice@gmail.com",
+                displayName = "Alice",
+                authProvider = AuthProvider.Google,
+            )
+        }
+    }
+
+    @Test
+    public fun `saveWithEmail — calls sessionManager with Email provider`(): Unit = runTest {
+        val mockUser: FirebaseUser = mockk {
+            every { uid } returns "email-uid"
+            every { email } returns "user@example.com"
+            every { displayName } returns null
+        }
+        useCase.saveWithEmail(mockUser)
+        coVerify {
+            sessionManager.saveSession(
+                uid = "email-uid",
+                email = "user@example.com",
+                displayName = null,
+                authProvider = AuthProvider.Email,
+            )
+        }
+    }
 }
