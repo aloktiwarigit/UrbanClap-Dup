@@ -81,9 +81,21 @@ public class SessionManager
                         .putString(KEY_UID, uid)
                         .putString(KEY_AUTH_PROVIDER, providerKey(authProvider))
                         .putLong(KEY_SESSION_CREATED_AT, System.currentTimeMillis())
-                if (phoneLastFour != null) editor.putString(KEY_PHONE_LAST_FOUR, phoneLastFour)
-                if (email != null) editor.putString(KEY_EMAIL, email)
-                if (displayName != null) editor.putString(KEY_DISPLAY_NAME, displayName)
+                if (phoneLastFour != null) {
+                    editor.putString(KEY_PHONE_LAST_FOUR, phoneLastFour)
+                } else {
+                    editor.remove(KEY_PHONE_LAST_FOUR)
+                }
+                if (email != null) {
+                    editor.putString(KEY_EMAIL, email)
+                } else {
+                    editor.remove(KEY_EMAIL)
+                }
+                if (displayName != null) {
+                    editor.putString(KEY_DISPLAY_NAME, displayName)
+                } else {
+                    editor.remove(KEY_DISPLAY_NAME)
+                }
                 editor.apply()
             }
             _authState.value =
