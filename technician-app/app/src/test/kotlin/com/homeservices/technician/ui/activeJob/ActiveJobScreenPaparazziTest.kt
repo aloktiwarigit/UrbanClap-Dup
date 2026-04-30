@@ -1,6 +1,8 @@
 package com.homeservices.technician.ui.activeJob
 
 import app.cash.paparazzi.Paparazzi
+import app.cash.paparazzi.DeviceConfig
+import com.homeservices.designsystem.theme.HomeservicesTheme
 import com.homeservices.technician.domain.activeJob.model.ActiveJob
 import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
 import com.homeservices.technician.domain.activeJob.model.LatLng
@@ -9,7 +11,11 @@ import org.junit.Test
 
 public class ActiveJobScreenPaparazziTest {
     @get:Rule
-    public val paparazzi: Paparazzi = Paparazzi()
+    public val paparazzi: Paparazzi =
+        Paparazzi(
+            deviceConfig = DeviceConfig.PIXEL_5,
+            theme = "android:Theme.Material3.DayNight.NoActionBar",
+        )
 
     private fun aJob(status: ActiveJobStatus) =
         ActiveJob(
@@ -27,39 +33,45 @@ public class ActiveJobScreenPaparazziTest {
     @Test
     public fun activeJobScreen_enRoute(): Unit {
         paparazzi.snapshot {
-            ActiveJobScreenContent(
-                uiState = ActiveJobUiState.Active(aJob(ActiveJobStatus.EN_ROUTE), ActiveJobAction.MARK_ARRIVED),
-                onTransitionRequested = {},
-                onPhotoCancelled = {},
-                onPhotoConfirmed = {},
-                onPhotoRetake = {},
-            )
+            HomeservicesTheme(darkTheme = false) {
+                ActiveJobScreenContent(
+                    uiState = ActiveJobUiState.Active(aJob(ActiveJobStatus.EN_ROUTE), ActiveJobAction.MARK_ARRIVED),
+                    onTransitionRequested = {},
+                    onPhotoCancelled = {},
+                    onPhotoConfirmed = {},
+                    onPhotoRetake = {},
+                )
+            }
         }
     }
 
     @Test
     public fun activeJobScreen_reached(): Unit {
         paparazzi.snapshot {
-            ActiveJobScreenContent(
-                uiState = ActiveJobUiState.Active(aJob(ActiveJobStatus.REACHED), ActiveJobAction.START_WORK),
-                onTransitionRequested = {},
-                onPhotoCancelled = {},
-                onPhotoConfirmed = {},
-                onPhotoRetake = {},
-            )
+            HomeservicesTheme(darkTheme = false) {
+                ActiveJobScreenContent(
+                    uiState = ActiveJobUiState.Active(aJob(ActiveJobStatus.REACHED), ActiveJobAction.START_WORK),
+                    onTransitionRequested = {},
+                    onPhotoCancelled = {},
+                    onPhotoConfirmed = {},
+                    onPhotoRetake = {},
+                )
+            }
         }
     }
 
     @Test
     public fun activeJobScreen_inProgress(): Unit {
         paparazzi.snapshot {
-            ActiveJobScreenContent(
-                uiState = ActiveJobUiState.Active(aJob(ActiveJobStatus.IN_PROGRESS), ActiveJobAction.COMPLETE_JOB),
-                onTransitionRequested = {},
-                onPhotoCancelled = {},
-                onPhotoConfirmed = {},
-                onPhotoRetake = {},
-            )
+            HomeservicesTheme(darkTheme = false) {
+                ActiveJobScreenContent(
+                    uiState = ActiveJobUiState.Active(aJob(ActiveJobStatus.IN_PROGRESS), ActiveJobAction.COMPLETE_JOB),
+                    onTransitionRequested = {},
+                    onPhotoCancelled = {},
+                    onPhotoConfirmed = {},
+                    onPhotoRetake = {},
+                )
+            }
         }
     }
 }

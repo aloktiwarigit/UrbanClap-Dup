@@ -2,22 +2,26 @@ package com.homeservices.customer.ui.booking
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -27,6 +31,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.booking.model.BookingSlot
@@ -54,7 +59,6 @@ internal fun SlotPickerScreen(
 ) {
     val today = LocalDate.now()
     val dates = (0..6).map { today.plusDays(it.toLong()) }
-
     var selectedDate by rememberSaveable { mutableStateOf<LocalDate?>(null) }
     var selectedWindow by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -73,52 +77,76 @@ internal fun SlotPickerScreen(
             )
         },
     ) { innerPadding ->
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(16.dp),
-        ) {
-            Text(text = "Select Date", style = MaterialTheme.typography.titleSmall)
-            Spacer(Modifier.height(8.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                dates.forEach { date ->
-                    FilterChip(
-                        selected = selectedDate == date,
-                        onClick = { selectedDate = date },
-                        label = { Text(date.format(DATE_DISPLAY)) },
+        Surface(modifier = Modifier.fillMaxSize().padding(innerPadding), color = MaterialTheme.colorScheme.background) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier.weight(1f).padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Text("Choose your slot", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Pick a convenient arrival window. You can review everything before payment.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-            Text(text = "Select Time", style = MaterialTheme.typography.titleSmall)
-            Spacer(Modifier.height(8.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TIME_WINDOWS.forEach { window ->
-                    FilterChip(
-                        selected = selectedWindow == window,
-                        onClick = { selectedWindow = window },
-                        label = { Text(window) },
-                    )
-                }
-            }
-
-            Spacer(Modifier.weight(1f))
-            Button(
-                onClick = {
-                    val date = selectedDate
-                    val window = selectedWindow
-                    if (date != null && window != null) {
-                        onSlotSelected(BookingSlot(date.format(DATE_ISO), window))
+                    SlotSection(title = "Date") {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            dates.forEach { date ->
+                                FilterChip(
+                                    selected = selectedDate == date,
+                                    onClick = { selectedDate = date },
+                                    label = { Text(date.format(DATE_DISPLAY)) },
+                                )
+                            }
+                        }
                     }
-                },
-                enabled = selectedDate != null && selectedWindow != null,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.slot_picker_next))
+                    SlotSection(title = "Time") {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TIME_WINDOWS.forEach { window ->
+                                FilterChip(
+                                    selected = selectedWindow == window,
+                                    onClick = { selectedWindow = window },
+                                    label = { Text(window) },
+                                )
+                            }
+                        }
+                    }
+                }
+                Surface(shadowElevation = 8.dp, color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
+                    Row(modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp)) {
+                        Button(
+                            onClick = {
+                                val date = selectedDate
+                                val window = selectedWindow
+                                if (date != null && window != null) {
+                                    onSlotSelected(BookingSlot(date.format(DATE_ISO), window))
+                                }
+                            },
+                            enabled = selectedDate != null && selectedWindow != null,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(R.string.slot_picker_next))
+                        }
+                    }
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun SlotSection(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            content()
         }
     }
 }

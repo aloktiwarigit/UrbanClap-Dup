@@ -12,15 +12,15 @@ internal fun SosConsentDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDenied,
-        title = { Text("Audio रिकॉर्डिंग") },
+        title = { Text("Record audio with alert?") },
         text = {
-            Text("क्या आप audio record करना चाहते हैं? यह सिर्फ आपके device पर save होगा।")
+            Text("You can attach a short local audio recording to help owner support review the situation.")
         },
         confirmButton = {
-            TextButton(onClick = onGranted) { Text("हाँ") }
+            TextButton(onClick = onGranted) { Text("Allow") }
         },
         dismissButton = {
-            TextButton(onClick = onDenied) { Text("नहीं") }
+            TextButton(onClick = onDenied) { Text("Skip") }
         },
     )
 }

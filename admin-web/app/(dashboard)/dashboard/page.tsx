@@ -58,16 +58,17 @@ export default async function LiveOpsDashboardPage() {
         flexDirection: 'column',
         gap: '1.25rem',
         maxWidth: '1400px',
+        margin: '0 auto',
+        width: '100%',
       }}
     >
-      {/* Row 1 — KPI counter strip */}
       <CounterStrip summary={summary} />
 
-      {/* Row 2 — Map + Feed */}
       <div
+        className="dashboard-grid dashboard-grid-feed"
         style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 340px',
+          gridTemplateColumns: 'minmax(0, 1fr) 340px',
           gap: '1.25rem',
           alignItems: 'start',
         }}
@@ -76,11 +77,11 @@ export default async function LiveOpsDashboardPage() {
         <OrderFeed />
       </div>
 
-      {/* Row 3 — Utilisation + Payout queue */}
       <div
+        className="dashboard-grid dashboard-grid-payout"
         style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 280px',
+          gridTemplateColumns: 'minmax(0, 1fr) 280px',
           gap: '1.25rem',
           alignItems: 'start',
         }}

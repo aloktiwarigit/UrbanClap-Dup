@@ -1,7 +1,9 @@
 package com.homeservices.customer.ui.rating
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,6 +18,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -28,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.delay
@@ -47,35 +51,25 @@ public fun RatingScreen(
     val comment by viewModel.comment.collectAsState()
     val canSubmit by viewModel.canSubmit.collectAsState()
 
-    Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
-        when (state) {
-            is RatingUiState.AwaitingPartner -> Text("Thanks! Awaiting your technician's rating.")
-            is RatingUiState.Revealed -> Text("Both ratings revealed.")
-            is RatingUiState.Error -> Text("Error: ${(state as RatingUiState.Error).message}")
-            else -> {
-                Text("How was your service?")
-                Spacer(Modifier.height(8.dp))
-                StarRow(label = "Overall", value = overall, onChange = viewModel::setOverall)
-                StarRow(label = "Punctuality", value = punct, onChange = viewModel::setPunctuality)
-                StarRow(label = "Skill", value = skill, onChange = viewModel::setSkill)
-                StarRow(label = "Behaviour", value = behav, onChange = viewModel::setBehaviour)
-                OutlinedTextField(
-                    value = comment,
-                    onValueChange = viewModel::setComment,
-                    label = { Text("Comment (optional, ≤500 chars)") },
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
-                if (shieldState is RatingShieldState.Escalated) {
-                    CountdownChip(
-                        expiresAtMs = (shieldState as RatingShieldState.Escalated).expiresAtMs,
-                        onPostAnyway = viewModel::onPostAnyway,
-                    )
-                } else {
-                    Button(onClick = viewModel::submit, enabled = canSubmit) { Text("Submit") }
-                }
-            }
-        }
-    }
+    RatingContent(
+        state = state,
+        shieldState = shieldState,
+        overall = overall,
+        punctuality = punct,
+        skill = skill,
+        behaviour = behav,
+        comment = comment,
+        canSubmit = canSubmit,
+        onOverallChange = viewModel::setOverall,
+        onPunctualityChange = viewModel::setPunctuality,
+        onSkillChange = viewModel::setSkill,
+        onBehaviourChange = viewModel::setBehaviour,
+        onCommentChange = viewModel::setComment,
+        onSubmit = viewModel::submit,
+        onPostAnyway = viewModel::onPostAnyway,
+        modifier = modifier,
+    )
+
     if (shieldState == RatingShieldState.ShowDialog || shieldState == RatingShieldState.Escalating) {
         ShieldBottomSheet(
             onEscalate = viewModel::onEscalate,
@@ -83,6 +77,91 @@ public fun RatingScreen(
             onDismiss = viewModel::onDismissShieldDialog,
             isEscalating = shieldState == RatingShieldState.Escalating,
         )
+    }
+}
+
+@Composable
+internal fun RatingContent(
+    state: RatingUiState,
+    shieldState: RatingShieldState,
+    overall: Int,
+    punctuality: Int,
+    skill: Int,
+    behaviour: Int,
+    comment: String,
+    canSubmit: Boolean,
+    onOverallChange: (Int) -> Unit,
+    onPunctualityChange: (Int) -> Unit,
+    onSkillChange: (Int) -> Unit,
+    onBehaviourChange: (Int) -> Unit,
+    onCommentChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onPostAnyway: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Column(modifier = Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            when (state) {
+                is RatingUiState.AwaitingPartner -> StatusMessage("Rating submitted", "We will reveal both ratings after the technician responds.")
+                is RatingUiState.Revealed -> StatusMessage("Ratings revealed", "Thanks for keeping the service marketplace fair.")
+                is RatingUiState.Error -> StatusMessage("Could not load rating", state.message)
+                is RatingUiState.Loading -> StatusMessage("Loading rating", "Preparing your service feedback form.")
+                else -> {
+                    Text("Rate your service", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Your rating helps improve technician quality and customer support follow-up.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    RatingCard {
+                        StarRow("Overall experience", overall, onOverallChange)
+                        StarRow("Punctuality", punctuality, onPunctualityChange)
+                        StarRow("Skill quality", skill, onSkillChange)
+                        StarRow("Behaviour", behaviour, onBehaviourChange)
+                    }
+                    OutlinedTextField(
+                        value = comment,
+                        onValueChange = onCommentChange,
+                        label = { Text("Comment (optional)") },
+                        supportingText = { Text("${comment.length}/500") },
+                        minLines = 3,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    if (shieldState is RatingShieldState.Escalated) {
+                        CountdownChip(expiresAtMs = shieldState.expiresAtMs, onPostAnyway = onPostAnyway)
+                    } else {
+                        Spacer(Modifier.weight(1f))
+                        Button(onClick = onSubmit, enabled = canSubmit, modifier = Modifier.fillMaxWidth()) {
+                            Text("Submit rating")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RatingCard(content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp,
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+    }
+}
+
+@Composable
+private fun StatusMessage(
+    title: String,
+    body: String,
+) {
+    Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(8.dp))
+        Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -95,30 +174,22 @@ private fun ShieldBottomSheet(
     isEscalating: Boolean = false,
 ) {
     val sheetState = rememberModalBottomSheetState()
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-    ) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+            Text("Share this privately first?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(8.dp))
             Text(
-                text = "क्या आप मालिक को पहले बताना चाहते हैं?",
-                style = MaterialTheme.typography.titleMedium,
+                "Low ratings can be sent to owner support before posting publicly.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(16.dp))
-            Button(
-                onClick = onEscalate,
-                enabled = !isEscalating,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("हाँ")
+            Button(onClick = onEscalate, enabled = !isEscalating, modifier = Modifier.fillMaxWidth()) {
+                Text("Send to support first")
             }
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(
-                onClick = onSkip,
-                enabled = !isEscalating,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("नहीं, सीधे post करें")
+            OutlinedButton(onClick = onSkip, enabled = !isEscalating, modifier = Modifier.fillMaxWidth()) {
+                Text("Post rating now")
             }
             Spacer(Modifier.height(16.dp))
         }
@@ -140,14 +211,8 @@ private fun CountdownChip(
     }
     val hours = (remainingMs / 3_600_000).coerceAtLeast(0)
     val minutes = ((remainingMs % 3_600_000) / 60_000).coerceAtLeast(0)
-    Row(
-        modifier = Modifier.padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SuggestionChip(
-            onClick = {},
-            label = { Text("मालिक को $hours:${minutes.toString().padStart(2, '0')} बचे हैं") },
-        )
+    Row(modifier = Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        SuggestionChip(onClick = {}, label = { Text("Private review: $hours:${minutes.toString().padStart(2, '0')} left") })
         Spacer(Modifier.width(8.dp))
         TextButton(onClick = onPostAnyway) { Text("Post anyway") }
     }
@@ -159,16 +224,17 @@ private fun StarRow(
     value: Int,
     onChange: (Int) -> Unit,
 ) {
-    Row(modifier = Modifier.padding(vertical = 4.dp)) {
-        Text("$label: ", modifier = Modifier.padding(end = 8.dp))
-        for (i in 1..5) {
-            Text(
-                text = if (i <= value) "★" else "☆",
-                modifier =
-                    Modifier
-                        .padding(horizontal = 2.dp)
-                        .clickable(onClickLabel = "rate $i stars") { onChange(i) },
-            )
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(label, style = MaterialTheme.typography.labelLarge)
+        Row {
+            for (i in 1..5) {
+                Text(
+                    text = if (i <= value) "★" else "☆",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = if (i <= value) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(end = 6.dp).clickable(onClickLabel = "rate $i stars") { onChange(i) },
+                )
+            }
         }
     }
 }

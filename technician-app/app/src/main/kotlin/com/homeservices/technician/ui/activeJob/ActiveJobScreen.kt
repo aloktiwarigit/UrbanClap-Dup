@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -20,10 +19,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.homeservices.designsystem.components.HsInfoRow
+import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsSectionCard
+import com.homeservices.designsystem.components.HsSkeletonBlock
+import com.homeservices.designsystem.components.HsTrustBadge
+import com.homeservices.technician.R
 import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
 
 @Composable
@@ -56,33 +63,17 @@ internal fun ActiveJobScreenContent(
         color = MaterialTheme.colorScheme.background,
     ) {
         when (uiState) {
-            is ActiveJobUiState.Loading ->
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    Text("Loading…", style = MaterialTheme.typography.bodyLarge)
-                }
+            is ActiveJobUiState.Loading -> ActiveJobSkeleton()
             is ActiveJobUiState.Completed ->
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    Text("Job Complete!", style = MaterialTheme.typography.headlineSmall)
-                }
+                CenterMessage(
+                    title = stringResource(R.string.active_job_complete_title),
+                    body = stringResource(R.string.active_job_complete_body),
+                )
             is ActiveJobUiState.Error ->
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    Text(uiState.message, style = MaterialTheme.typography.bodyLarge)
-                }
+                CenterMessage(
+                    title = stringResource(R.string.active_job_error_title),
+                    body = uiState.message,
+                )
             is ActiveJobUiState.Active -> {
                 ActiveJobContent(
                     state = uiState,
@@ -118,53 +109,59 @@ private fun ActiveJobContent(
         modifier =
             modifier
                 .fillMaxSize()
-                .padding(24.dp),
+                .padding(16.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(state.job.serviceName, style = MaterialTheme.typography.headlineSmall)
-            Text(
-                state.job.addressText,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                "${state.job.slotDate}  ${state.job.slotWindow}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        StatusStepper(currentStatus = state.job.status)
-
-        if (state.hasPendingTransitions) {
-            Text(
-                "Offline — status will sync on reconnect",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.error,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            HsTrustBadge(text = statusLabel(state.job.status))
+            HsSectionCard {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = state.job.serviceName,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    HsInfoRow(label = stringResource(R.string.active_job_address), value = state.job.addressText)
+                    HsInfoRow(
+                        label = stringResource(R.string.active_job_slot),
+                        value = "${state.job.slotDate} ${state.job.slotWindow}",
+                    )
+                }
+            }
+            HsSectionCard(title = stringResource(R.string.active_job_progress_title)) {
+                StatusStepper(currentStatus = state.job.status)
+            }
+            if (state.hasPendingTransitions) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.errorContainer,
+                ) {
+                    Text(
+                        text = stringResource(R.string.active_job_offline_sync),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(12.dp),
+                    )
+                }
+            }
         }
 
         val (ctaLabel, ctaEnabled, ctaTargetStage) =
             when (state.availableAction) {
-                ActiveJobAction.START_TRIP -> Triple("Start Trip", true, "EN_ROUTE")
-                ActiveJobAction.MARK_ARRIVED -> Triple("I've Arrived", true, "REACHED")
-                ActiveJobAction.START_WORK -> Triple("Start Work", true, "IN_PROGRESS")
-                ActiveJobAction.COMPLETE_JOB -> Triple("Complete Job", true, "COMPLETED")
-                ActiveJobAction.NONE -> Triple("Done", false, "")
+                ActiveJobAction.START_TRIP -> Triple(stringResource(R.string.active_job_start_trip), true, "EN_ROUTE")
+                ActiveJobAction.MARK_ARRIVED -> Triple(stringResource(R.string.active_job_mark_arrived), true, "REACHED")
+                ActiveJobAction.START_WORK -> Triple(stringResource(R.string.active_job_start_work), true, "IN_PROGRESS")
+                ActiveJobAction.COMPLETE_JOB -> Triple(stringResource(R.string.active_job_complete_job), true, "COMPLETED")
+                ActiveJobAction.NONE -> Triple(stringResource(R.string.active_job_done), false, "")
             }
-        Button(
+        HsPrimaryButton(
+            text = ctaLabel,
             onClick = { if (ctaTargetStage.isNotEmpty()) onTransitionRequested(ctaTargetStage) },
             enabled = ctaEnabled,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-        ) {
-            Text(ctaLabel, style = MaterialTheme.typography.titleMedium)
-        }
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -175,23 +172,23 @@ private fun StatusStepper(
 ): Unit {
     val steps =
         listOf(
-            ActiveJobStatus.ASSIGNED to "Assigned",
-            ActiveJobStatus.EN_ROUTE to "En Route",
-            ActiveJobStatus.REACHED to "Arrived",
-            ActiveJobStatus.IN_PROGRESS to "Working",
-            ActiveJobStatus.COMPLETED to "Done",
+            ActiveJobStatus.ASSIGNED to stringResource(R.string.active_job_status_assigned),
+            ActiveJobStatus.EN_ROUTE to stringResource(R.string.active_job_status_en_route),
+            ActiveJobStatus.REACHED to stringResource(R.string.active_job_status_arrived),
+            ActiveJobStatus.IN_PROGRESS to stringResource(R.string.active_job_status_working),
+            ActiveJobStatus.COMPLETED to stringResource(R.string.active_job_status_done),
         )
     val currentIndex = steps.indexOfFirst { it.first == currentStatus }
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         steps.forEachIndexed { index, (_, label) ->
             val isDone = index <= currentIndex
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.size(56.dp),
+                modifier = Modifier.size(58.dp),
             ) {
                 Surface(
                     shape = MaterialTheme.shapes.extraSmall,
@@ -219,3 +216,45 @@ private fun StatusStepper(
         }
     }
 }
+
+@Composable
+private fun ActiveJobSkeleton() {
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        HsSkeletonBlock(widthFraction = 0.42f, height = 32.dp)
+        HsSkeletonBlock(height = 132.dp)
+        HsSkeletonBlock(height = 108.dp)
+        Spacer(Modifier.weight(1f))
+        HsSkeletonBlock(height = 56.dp)
+    }
+}
+
+@Composable
+private fun CenterMessage(
+    title: String,
+    body: String,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            body,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun statusLabel(status: ActiveJobStatus): String =
+    when (status) {
+        ActiveJobStatus.ASSIGNED -> stringResource(R.string.active_job_status_assigned)
+        ActiveJobStatus.EN_ROUTE -> stringResource(R.string.active_job_status_en_route)
+        ActiveJobStatus.REACHED -> stringResource(R.string.active_job_status_arrived)
+        ActiveJobStatus.IN_PROGRESS -> stringResource(R.string.active_job_status_working)
+        ActiveJobStatus.COMPLETED -> stringResource(R.string.active_job_status_done)
+    }

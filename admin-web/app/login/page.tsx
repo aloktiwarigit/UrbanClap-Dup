@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { getFirebaseAuth } from '@/lib/auth/firebase';
 import { useRouter } from 'next/navigation';
+import { getFirebaseAuth } from '@/lib/auth/firebase';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -66,23 +66,35 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-[100dvh] flex items-center justify-center p-[var(--space-6)] bg-[var(--color-surface)]">
+    <main className="min-h-[100dvh] grid place-items-center p-[var(--space-6)] bg-[var(--color-surface-alt)] text-[var(--color-text)]">
       <form
         onSubmit={(e) => void handleSubmit(e)}
-        className="w-full max-w-[24rem] flex flex-col gap-[var(--space-4)]"
+        className="w-full max-w-[27rem] grid gap-[var(--space-5)] rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-[var(--space-6)] shadow-[var(--shadow-lg)]"
         aria-label="Admin sign-in"
       >
-        <h1 className="text-[length:var(--text-2xl)] font-bold text-[var(--color-text)]">
-          Sign in
-        </h1>
+        <div className="grid gap-[var(--space-2)]">
+          <p className="text-[length:var(--text-sm)] font-semibold uppercase text-[var(--color-brand)]">
+            Homeservices admin
+          </p>
+          <h1 className="m-0 text-[length:var(--text-3xl)] font-bold">
+            Sign in to operations
+          </h1>
+          <p className="m-0 text-[length:var(--text-sm)] text-[var(--color-text-muted)]">
+            Use your admin credentials and authenticator code to manage live bookings,
+            payouts, and complaint recovery.
+          </p>
+        </div>
 
         {error && (
-          <p role="alert" className="text-sm text-[var(--color-error)]">
+          <p
+            role="alert"
+            className="m-0 rounded-[var(--radius-md)] border border-red-200 bg-red-50 px-[var(--space-3)] py-[var(--space-2)] text-sm text-[var(--color-danger)]"
+          >
             {error}
           </p>
         )}
 
-        <label className="flex flex-col gap-1 text-sm text-[var(--color-text-muted)]">
+        <label className="grid gap-1 text-sm font-medium text-[var(--color-text)]">
           Email
           <input
             type="email"
@@ -90,11 +102,11 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
-            className="px-3 py-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
+            className="min-h-11 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[var(--color-text)]"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-[var(--color-text-muted)]">
+        <label className="grid gap-1 text-sm font-medium text-[var(--color-text)]">
           Password
           <input
             type="password"
@@ -102,11 +114,11 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
             autoComplete="current-password"
-            className="px-3 py-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
+            className="min-h-11 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[var(--color-text)]"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-[var(--color-text-muted)]">
+        <label className="grid gap-1 text-sm font-medium text-[var(--color-text)]">
           Authenticator code
           <input
             type="text"
@@ -115,18 +127,18 @@ export default function LoginPage() {
             maxLength={6}
             value={totpCode}
             onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
-            placeholder="6-digit code (required after first setup)"
+            placeholder="6-digit code"
             autoComplete="one-time-code"
-            className="px-3 py-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
+            className="min-h-11 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[var(--color-text)]"
           />
         </label>
 
         <button
           type="submit"
           disabled={loading}
-          className="px-4 py-2 rounded bg-[var(--color-primary)] text-white font-medium disabled:opacity-50"
+          className="min-h-12 rounded-[var(--radius-md)] bg-[var(--color-brand)] px-4 py-2 font-semibold text-[var(--color-brand-fg)] shadow-[var(--shadow-md)] disabled:opacity-50"
         >
-          {loading ? 'Signing in…' : 'Sign in'}
+          {loading ? 'Signing in...' : 'Sign in'}
         </button>
       </form>
     </main>
