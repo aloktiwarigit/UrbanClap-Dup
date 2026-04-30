@@ -7,6 +7,7 @@ import androidx.fragment.app.FragmentActivity
 import com.homeservices.designsystem.theme.HomeservicesTheme
 import com.homeservices.technician.data.auth.SessionManager
 import com.homeservices.technician.data.fcm.FcmTopicSubscriber
+import com.homeservices.technician.data.kyc.DigiLockerCallbackBus
 import com.homeservices.technician.data.rating.RatingPromptEventBus
 import com.homeservices.technician.data.rating.RatingReceivedEventBus
 import com.homeservices.technician.di.BuildInfoProvider
@@ -27,6 +28,8 @@ public class MainActivity : FragmentActivity() {
 
     @Inject public lateinit var fcmTopicSubscriber: FcmTopicSubscriber
 
+    @Inject public lateinit var digiLockerCallbackBus: DigiLockerCallbackBus
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -39,6 +42,18 @@ public class MainActivity : FragmentActivity() {
                     fcmTopicSubscriber = fcmTopicSubscriber,
                 )
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        val data = intent.data ?: return
+        if (data.scheme == "homeservices" &&
+            data.host == "kyc" &&
+            data.path?.startsWith("/aadhaar-callback") == true
+        ) {
+            val code = data.getQueryParameter("code") ?: return
+            digiLockerCallbackBus.post(code)
         }
     }
 

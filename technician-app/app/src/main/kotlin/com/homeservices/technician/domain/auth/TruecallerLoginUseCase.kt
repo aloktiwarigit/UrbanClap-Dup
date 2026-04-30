@@ -36,33 +36,39 @@ public class TruecallerLoginUseCase
                 }
             }
 
-        // TruecallerSDK.getInstance() throws IllegalStateException if not yet initialised —
-        // that is the expected signal to call init(). Exception is not lost; it drives the init path.
-        @Suppress("SwallowedException")
+        @Suppress("SwallowedException", "TooGenericExceptionCaught")
         public fun init(context: Context) {
             try {
                 TruecallerSDK.getInstance()
-            } catch (e: IllegalStateException) {
-                val scope =
-                    TruecallerSdkScope
-                        .Builder(context, sdkCallback)
-                        .sdkOptions(TruecallerSdkScope.SDK_OPTION_WITHOUT_OTP)
-                        .build()
-                TruecallerSDK.init(scope)
+            } catch (e: Exception) {
+                try {
+                    val scope =
+                        TruecallerSdkScope
+                            .Builder(context, sdkCallback)
+                            .sdkOptions(TruecallerSdkScope.SDK_OPTION_WITHOUT_OTP)
+                            .build()
+                    TruecallerSDK.init(scope)
+                } catch (initEx: Exception) {
+                    // No Truecaller Partner clientId — degrades to OTP-only auth.
+                }
             }
         }
 
-        // TruecallerSDK.getInstance() throws if SDK not yet initialised — graceful degradation to OTP.
-        @Suppress("SwallowedException")
+        @Suppress("SwallowedException", "TooGenericExceptionCaught")
         public fun isAvailable(): Boolean =
             try {
                 TruecallerSDK.getInstance().isUsable
-            } catch (e: IllegalStateException) {
+            } catch (e: Exception) {
                 false
             }
 
+        @Suppress("TooGenericExceptionCaught")
         public fun launch(activity: FragmentActivity) {
-            TruecallerSDK.getInstance().getUserProfile(activity)
+            try {
+                TruecallerSDK.getInstance().getUserProfile(activity)
+            } catch (e: Exception) {
+                _resultFlow.tryEmit(TruecallerAuthResult.Cancelled)
+            }
         }
 
         internal fun simulateSdkCallback(block: (ITrueCallback) -> Unit) {

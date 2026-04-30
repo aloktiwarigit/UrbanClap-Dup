@@ -1,13 +1,32 @@
 {
   "project_info": {
-    "project_number": "000000000000",
-    "project_id": "homeservices-mvp-dev",
-    "storage_bucket": "homeservices-mvp-dev.appspot.com"
+    "project_number": "1044159357347",
+    "project_id": "homeservices-prod-001",
+    "storage_bucket": "homeservices-prod-001.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:1111111111111111111111",
+        "mobilesdk_app_id": "1:1044159357347:android:966ad8b5a7b1c12f97fa16",
+        "android_client_info": {
+          "package_name": "com.homeservices.customer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDLAk_Ye8yeoT8of2niAclnmo4K5A_FTNE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1044159357347:android:8df0499111f4cfd197fa16",
         "android_client_info": {
           "package_name": "com.homeservices.technician"
         }
@@ -15,7 +34,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "PLACEHOLDER_REPLACE_WITH_REAL_KEY_FROM_FIREBASE_CONSOLE"
+          "current_key": "AIzaSyDLAk_Ye8yeoT8of2niAclnmo4K5A_FTNE"
         }
       ],
       "services": {

@@ -124,6 +124,12 @@ admin-web/.lighthouseci/
 admin-web/.env.local
 admin-web/*.tsbuildinfo
 
+# Kotlin language server artifacts
+**/.kotlin/
+
+# Debug screenshots
+docs/design/snap.png
+
 # customer-app/
 customer-app/.gradle/
 customer-app/build/

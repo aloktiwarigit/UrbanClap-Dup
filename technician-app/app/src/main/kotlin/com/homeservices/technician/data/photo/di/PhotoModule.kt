@@ -30,7 +30,7 @@ public abstract class PhotoModule {
         internal fun providePhotoApiService(): PhotoApiService =
             Retrofit
                 .Builder()
-                .baseUrl("https://homeservices-api.azurewebsites.net/api/")
+                .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
                 .client(
                     OkHttpClient
                         .Builder()
