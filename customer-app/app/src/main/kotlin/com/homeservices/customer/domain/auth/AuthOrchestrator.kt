@@ -126,9 +126,19 @@ public class AuthOrchestrator
                 }
             }
 
-        public suspend fun completeEmailVerification(user: FirebaseUser) {
-            saveSessionUseCase.saveWithEmail(user)
-        }
+        @Suppress("TooGenericExceptionCaught")
+        public suspend fun completeEmailVerification(user: FirebaseUser): AuthResult =
+            try {
+                user.reload().await()
+                if (!user.isEmailVerified) {
+                    AuthResult.Unavailable
+                } else {
+                    saveSessionUseCase.saveWithEmail(user)
+                    AuthResult.Success(user)
+                }
+            } catch (e: Exception) {
+                AuthResult.Error.General(e)
+            }
 
         public fun sendPasswordReset(email: String): Flow<Result<Unit>> = emailPasswordUseCase.sendPasswordReset(email)
 

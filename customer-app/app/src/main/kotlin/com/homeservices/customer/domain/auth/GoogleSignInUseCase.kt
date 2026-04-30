@@ -24,14 +24,22 @@ public class GoogleSignInUseCase
         @ApplicationContext private val context: Context,
     ) {
         @Suppress("TooGenericExceptionCaught")
-        public suspend fun getCredential(activity: FragmentActivity): GoogleSignInResult =
-            try {
+        public suspend fun getCredential(activity: FragmentActivity): GoogleSignInResult {
+            val clientId = context.getString(com.homeservices.customer.R.string.default_web_client_id)
+            if (clientId.startsWith("PLACEHOLDER")) {
+                return GoogleSignInResult.Error(
+                    IllegalStateException(
+                        "Google Sign-In not configured: replace google-services.json with one containing a web OAuth client",
+                    ),
+                )
+            }
+            return try {
                 val nonce = generateNonce()
                 val googleIdOption =
                     GetGoogleIdOption
                         .Builder()
                         .setFilterByAuthorizedAccounts(false)
-                        .setServerClientId(context.getString(com.homeservices.customer.R.string.default_web_client_id))
+                        .setServerClientId(clientId)
                         .setNonce(nonce)
                         .build()
                 val request =
@@ -50,6 +58,7 @@ public class GoogleSignInUseCase
             } catch (e: Exception) {
                 GoogleSignInResult.Error(e)
             }
+        }
 
         private fun generateNonce(): String {
             val bytes = ByteArray(16)
