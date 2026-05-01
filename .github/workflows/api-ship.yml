@@ -126,6 +126,8 @@ jobs:
             --settings \
               SCM_DO_BUILD_DURING_DEPLOYMENT=true \
               ENABLE_ORYX_BUILD=true \
+              NPM_CONFIG_INCLUDE=dev \
+              NPM_CONFIG_PRODUCTION=false \
               NODE_ENV=production \
               GIT_SHA="${GITHUB_SHA}" \
               AzureWebJobsFeatureFlags=EnableWorkerIndexing \

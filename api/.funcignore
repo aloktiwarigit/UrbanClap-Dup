@@ -6,6 +6,7 @@
 .github/
 .deploy-stage/
 node_modules/
+.pnpm-store/
 deploy*.zip
 local.settings.json
 package-lock.json
