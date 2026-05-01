@@ -5,7 +5,7 @@ vi.mock('../../src/middleware/verifyTechnicianToken.js', () => ({
   verifyTechnicianToken: vi.fn(),
 }));
 vi.mock('../../src/cosmos/wallet-ledger-repository.js', () => ({
-  walletLedgerRepo: { getAllByTechnicianId: vi.fn() },
+  walletLedgerRepo: { getAllByTechnicianId: vi.fn(), getPendingHeldByTechnicianId: vi.fn() },
 }));
 vi.mock('@sentry/node', () => ({ captureException: vi.fn() }));
 
@@ -40,6 +40,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-1' });
   vi.mocked(walletLedgerRepo.getAllByTechnicianId).mockResolvedValue([]);
+  vi.mocked(walletLedgerRepo.getPendingHeldByTechnicianId).mockResolvedValue([]);
 });
 
 afterEach(() => {
