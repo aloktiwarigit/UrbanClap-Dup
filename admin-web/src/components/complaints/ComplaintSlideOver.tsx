@@ -167,7 +167,7 @@ export function ComplaintSlideOver({
             />
             <button
               onClick={handleAddNote}
-              className="mt-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm"
+              className="btn btn-primary mt-1"
             >
               Add Note
             </button>
@@ -193,7 +193,7 @@ export function ComplaintSlideOver({
               </select>
               <button
                 onClick={handleResolve}
-                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-sm"
+                className="btn btn-success"
               >
                 Resolve
               </button>

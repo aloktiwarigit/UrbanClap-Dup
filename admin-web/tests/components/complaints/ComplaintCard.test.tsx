@@ -38,18 +38,18 @@ describe('ComplaintCard', () => {
     expect(screen.getByText(/\d+h/)).toBeDefined();
   });
 
-  it('shows SLA badge as red when less than 2 hours remain', () => {
+  it('shows SLA badge as urgent when less than 2 hours remain', () => {
     const soonDeadline = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 min from now
     render(<ComplaintCard complaint={makeComplaint({ slaDeadlineAt: soonDeadline })} onClick={vi.fn()} />);
     const slaEl = screen.getByText(/\d+m/);
-    expect(slaEl.className).toContain('text-red-600');
+    expect(slaEl).toHaveAttribute('data-urgent', '');
   });
 
-  it('shows SLA badge as non-red when more than 2 hours remain', () => {
+  it('shows SLA badge as non-urgent when more than 2 hours remain', () => {
     const farDeadline = new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(); // 5h from now
     render(<ComplaintCard complaint={makeComplaint({ slaDeadlineAt: farDeadline })} onClick={vi.fn()} />);
     const slaEl = screen.getByText(/\d+h/);
-    expect(slaEl.className).not.toContain('text-red-600');
+    expect(slaEl).not.toHaveAttribute('data-urgent');
   });
 
   it('calls onClick when the card is clicked', () => {
