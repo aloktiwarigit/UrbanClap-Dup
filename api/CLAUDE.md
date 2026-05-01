@@ -1,82 +1,191 @@
-# Client Project — Enterprise Baseline (Node API)
+# Client Project - Enterprise Baseline (Node API)
 
-## Phase gate
+## Phase Gate
 
 Same as sibling templates. `src/` gated until BMAD artifacts exist.
 
 ## Stack
 
 - Node 22 LTS + TypeScript `strict: true`
-- Fastify (or Hono) for HTTP; Zod for validation
+- Fastify or Hono for HTTP; Zod for validation
 - Sentry Node SDK + OpenTelemetry auto-instrumentation
 - GrowthBook Node SDK (OSS)
 - PostHog Node SDK
 - Prisma or Drizzle (per ADR)
-- Vitest (unit + integration), Supertest (HTTP), Testcontainers (DB-in-docker)
-- Semgrep SAST + Snyk (OSS CLI) for dep audit
+- Vitest, Supertest, and Testcontainers
+- Semgrep SAST and dependency audit
 
 ## CI
 
-- typecheck, ESLint (0 warnings), Vitest ≥80% coverage
-- Integration tests against Testcontainers
-- Semgrep (owasp-top-ten + typescript)
-- `pnpm audit --audit-level=high`
-- OpenAPI spec validation if applicable
-- Codex review marker check
+- Typecheck, ESLint with 0 warnings, and Vitest
+- Integration tests against Testcontainers where applicable
+- Semgrep with OWASP, TypeScript, Node.js, secrets, and `api/.semgrep.yml`
+- OpenAPI spec build and lint
+- API deployment is handled by `.github/workflows/api-ship.yml`
 
-## Deployment — Azure Functions (func-homeservices-prod, centralindia)
+## Deployment - Azure Functions (func-homeservices-prod, centralindia)
 
-**Deployed automatically by `api-ship.yml` on push/merge to `main`.**
-Manual trigger: `gh workflow run api-ship.yml` or GitHub Actions → workflow_dispatch.
+Last known good production deployment:
+- Commit: `8555ae3a`
+- GitHub Actions run: `25203003001`
+- Date: 2026-05-01
+- Result: Oryx remote build succeeded, `/api/v1/health` returned `status=ok`, and the runtime admin endpoint showed 82 indexed functions.
 
-### How the deploy works (DO NOT change this without understanding why)
+### Canonical Deploy Path
 
-The deploy job:
-1. Runs on **ubuntu-latest** (Linux — required for Linux-compatible node_modules)
-2. `pnpm install --frozen-lockfile` (all deps for tsc)
-3. `pnpm build` (compiles TypeScript → dist/)
-4. Creates `.deploy-stage/` with only: `host.json`, `package.json`, `pnpm-lock.yaml`, `dist/`
-5. `pnpm install --prod` inside `.deploy-stage/` (Linux prod-only node_modules, no devDeps)
-6. Zips `.deploy-stage/` → `deploy.zip` (<950MB gate)
-7. Uploads zip to `sthomeservicesprod` blob storage (`function-packages` container)
-8. Sets `WEBSITE_RUN_FROM_PACKAGE` to the SAS blob URL
-9. Restarts the function app
-10. Calls Azure REST `syncfunctiontriggers` directly (NOT via `func` CLI — that times out)
-11. Polls `/api/v1/health` for up to 6 minutes (36 × 10s)
+Use `.github/workflows/api-ship.yml`. Do not hand-build a zip from Windows and do not use `Azure/functions-action@v1`.
 
-### Why NOT to use these approaches
+Deploy is automatic on push to `main` when `api/**` or `.github/workflows/api-ship.yml` changes. Manual deploy:
 
-| Approach | Why it fails |
-|---|---|
-| `Azure/functions-action@v1` + publish profile | Kudu SCM unreachable on Linux Consumption plan |
-| `func publish` without `--javascript` | Can't detect language on Ubuntu runner |
-| `func publish --javascript --no-build` on Windows | Windows node_modules crash on Linux Azure |
-| `func publish` Oryx remote build | Trigger sync times out / BadRequest, exits 1 |
-| `azure/login@v2` with `creds` JSON | JSON gets corrupted (warnings mixed in) |
-| `azure/login@v2` with individual secrets | Tries OIDC by default, not service principal |
+```bash
+gh workflow run api-ship.yml --ref main
+gh run list --workflow api-ship.yml --limit 5
+gh run watch <run-id> --exit-status
+```
 
-### GitHub Secrets required
+The deploy job must:
 
-| Secret | Value |
-|---|---|
-| `AZURE_CLIENT_ID` | SP app ID (b1844efc-c007-47a8-b08f-0d0bac0bdeb2) |
-| `AZURE_CLIENT_SECRET` | SP secret — regenerate with `az ad app credential reset --id <clientId>` |
-| `AZURE_TENANT_ID` | 45e4c830-3c4e-472c-9802-6e4f1ecf7a7e |
-| `AZURE_SUBSCRIPTION_ID` | 83296266-5b58-4b55-851c-8e6b55cc43e6 |
+1. Run on `ubuntu-latest`.
+2. Install and build from `api/` with Node 22.
+3. Authenticate with `az login --service-principal`, not `azure/login@v2`.
+4. Delete stale `WEBSITE_RUN_FROM_PACKAGE` before publish.
+5. Enable Oryx remote build on the function app.
+6. Publish with `func azure functionapp publish "$AZURE_FUNCTIONAPP_NAME" --javascript --build remote --verbose`.
+7. List indexed functions after publish.
+8. Poll `https://func-homeservices-prod.azurewebsites.net/api/v1/health`.
+9. Require the health payload commit to match `${GITHUB_SHA:0:8}` so an old deployment cannot pass.
 
-### Cosmos DB — pre-provisioned requirements
+### Required Oryx App Settings
 
-These containers must exist before the function app can start (change-feed triggers):
-- `booking_completed_leases` (partition key: `/id`)
-- `booking_rating_prompt_leases` (partition key: `/id`)
-- `booking_report_leases` (partition key: `/id`)
+These settings are not optional. They prevent the exact failures seen on 2026-05-01.
 
-And these app settings must be present (extension bundle 4.33.1 split-format):
-- `COSMOS_CONNECTION_STRING__accountEndpoint`
-- `COSMOS_CONNECTION_STRING__accountKey`
+```bash
+az functionapp config appsettings delete \
+  --name func-homeservices-prod \
+  --resource-group rg-homeservices-prod \
+  --setting-names WEBSITE_RUN_FROM_PACKAGE \
+  --output none || true
 
-### Verify deployment
+az functionapp config appsettings set \
+  --name func-homeservices-prod \
+  --resource-group rg-homeservices-prod \
+  --settings \
+    SCM_DO_BUILD_DURING_DEPLOYMENT=true \
+    ENABLE_ORYX_BUILD=true \
+    NPM_CONFIG_INCLUDE=dev \
+    NPM_CONFIG_PRODUCTION=false \
+    NODE_ENV=production \
+    GIT_SHA="$GITHUB_SHA" \
+    AzureWebJobsFeatureFlags=EnableWorkerIndexing \
+  --output none
+```
+
+Why `NPM_CONFIG_INCLUDE=dev` matters: Oryx runs `npm install` and then `npm run build`. Without dev dependencies, `typescript` is missing and the remote build fails with `sh: 1: tsc: not found`.
+
+Why delete `WEBSITE_RUN_FROM_PACKAGE`: a stale blob URL can override newly published content and keep serving an old or empty app.
+
+### Required Ignore Rules
+
+`api/.funcignore` must keep the Oryx upload source-build friendly:
+
+```text
+node_modules/
+.pnpm-store/
+local.settings.json
+tests/
+coverage/
+docs/
+specs/
+plans/
+```
+
+Do not exclude `src/`, `dist/`, `host.json`, `package.json`, `pnpm-lock.yaml`, or `tsconfig*.json`.
+
+### GitHub Secrets Required
+
+The workflow expects these repository secrets:
+
+```text
+AZURE_CLIENT_ID
+AZURE_CLIENT_SECRET
+AZURE_TENANT_ID
+AZURE_SUBSCRIPTION_ID
+```
+
+If the service-principal secret fails with `AADSTS7000215`, regenerate it with Azure CLI and paste the raw secret value into GitHub Secrets. Avoid PowerShell commands that capture warning text into the secret.
+
+### Cosmos DB Pre-Provisioning
+
+These lease containers must exist before the function app starts. Cosmos Serverless cannot auto-create these leases with provisioned throughput from the trigger extension.
+
+```text
+booking_completed_leases       partition key: /id
+booking_rating_prompt_leases   partition key: /id
+booking_report_leases          partition key: /id
+```
+
+These app settings must also exist for the Cosmos extension bundle used in production:
+
+```text
+COSMOS_CONNECTION_STRING
+COSMOS_CONNECTION_STRING__accountEndpoint
+COSMOS_CONNECTION_STRING__accountKey
+COSMOS_DATABASE
+```
+
+### Verification Commands
+
+Health:
 
 ```bash
 curl https://func-homeservices-prod.azurewebsites.net/api/v1/health
 ```
+
+Expected shape:
+
+```json
+{"status":"ok","version":"0.1.0","commit":"<first-8-of-git-sha>"}
+```
+
+List indexed functions from Azure:
+
+```bash
+az functionapp function list \
+  --name func-homeservices-prod \
+  --resource-group rg-homeservices-prod \
+  --query "[].name" \
+  -o tsv
+```
+
+Runtime admin verification when function list is suspicious:
+
+```powershell
+$key = az functionapp keys list --name func-homeservices-prod --resource-group rg-homeservices-prod --query masterKey -o tsv
+$headers = @{ 'x-functions-key' = $key }
+$functions = Invoke-RestMethod -Uri "https://func-homeservices-prod.azurewebsites.net/admin/functions" -Headers $headers
+@($functions).Count
+```
+
+### Known Bad Paths
+
+| Approach | Failure mode |
+|---|---|
+| Local `func publish` from Windows | Uploads Windows-built `node_modules`; Linux Azure can crash or load zero functions. |
+| `func publish --no-build` | Depends on locally built artifacts and local module ABI. |
+| Manual blob zip with `WEBSITE_RUN_FROM_PACKAGE` | Easy to leave a stale package mounted; caused health 404 after trigger sync. |
+| `Azure/functions-action@v1` with publish profile | Kudu/SCM is unreliable or unreachable on Linux Consumption. |
+| `azure/login@v2` in this repo | Previously fell into OIDC or malformed creds issues. Use direct `az login --service-principal`. |
+| Oryx without `NPM_CONFIG_INCLUDE=dev` | Remote build fails with `tsc: not found`. |
+| Continuing after failed Oryx publish without checking logs | Health will stay 404 because no new build was deployed. |
+
+### Debugging Failed Future Deploys
+
+1. Read the deploy step logs first:
+   ```bash
+   gh run view <run-id> --log-failed
+   gh run view <run-id> --job <deploy-job-id> --log
+   ```
+2. Search for `Remote build failed`, `tsc: not found`, `Deployment successful`, `Syncing triggers`, and `Functions in func-homeservices-prod`.
+3. If health is 404, check whether Oryx actually reached `Deployment successful`.
+4. If Oryx succeeded but functions are empty, inspect `/admin/functions` with the master key and then Azure Portal Log stream.
+5. If functions are indexed but health is old or 404, check `WEBSITE_RUN_FROM_PACKAGE`, `GIT_SHA`, and the health route commit.
