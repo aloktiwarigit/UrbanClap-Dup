@@ -8,7 +8,7 @@ import { EditServiceClient } from './EditServiceClient';
 type AdminService = components['schemas']['AdminService'];
 
 async function fetchService(id: string, token: string): Promise<AdminService | null> {
-  const baseUrl = process.env['API_BASE_URL'] ?? 'http://localhost:3001';
+  const baseUrl = process.env['API_BASE_URL'] ?? 'http://localhost:7071/api';
   const res = await fetch(`${baseUrl}/v1/admin/catalogue/services/${id}`, {
     headers: { Authorization: `Bearer ${token}` },
     cache: 'no-store',

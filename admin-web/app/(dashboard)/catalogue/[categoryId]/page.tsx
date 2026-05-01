@@ -10,7 +10,7 @@ type AdminServiceCategory = components['schemas']['AdminServiceCategory'];
 type AdminService = components['schemas']['AdminService'];
 
 async function fetchCategory(id: string, token: string): Promise<AdminServiceCategory | null> {
-  const baseUrl = process.env['API_BASE_URL'] ?? 'http://localhost:3001';
+  const baseUrl = process.env['API_BASE_URL'] ?? 'http://localhost:7071/api';
   const res = await fetch(`${baseUrl}/v1/admin/catalogue/categories/${id}`, {
     headers: { Authorization: `Bearer ${token}` },
     cache: 'no-store',
@@ -21,7 +21,7 @@ async function fetchCategory(id: string, token: string): Promise<AdminServiceCat
 }
 
 async function fetchServices(categoryId: string, token: string): Promise<AdminService[]> {
-  const baseUrl = process.env['API_BASE_URL'] ?? 'http://localhost:3001';
+  const baseUrl = process.env['API_BASE_URL'] ?? 'http://localhost:7071/api';
   const res = await fetch(
     `${baseUrl}/v1/admin/catalogue/services?categoryId=${encodeURIComponent(categoryId)}`,
     {

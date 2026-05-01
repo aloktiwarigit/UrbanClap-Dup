@@ -12,7 +12,7 @@ import type { components } from '@/api/generated/schema';
 type DashboardSummary = components['schemas']['DashboardSummary'];
 type TechLocation = components['schemas']['TechLocation'];
 
-const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:3000';
+const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:7071/api';
 
 async function getServerClient() {
   const cookieStore = await cookies();

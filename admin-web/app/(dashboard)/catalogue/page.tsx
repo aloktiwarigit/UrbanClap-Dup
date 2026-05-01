@@ -8,7 +8,7 @@ import { CatalogueCategoryList } from './CatalogueCategoryList';
 type AdminServiceCategory = components['schemas']['AdminServiceCategory'];
 
 async function fetchAdminCategories(token: string): Promise<AdminServiceCategory[]> {
-  const baseUrl = process.env['API_BASE_URL'] ?? 'http://localhost:3001';
+  const baseUrl = process.env['API_BASE_URL'] ?? 'http://localhost:7071/api';
   const res = await fetch(`${baseUrl}/v1/admin/catalogue/categories`, {
     headers: { Authorization: `Bearer ${token}` },
     cache: 'no-store',
