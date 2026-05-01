@@ -34,8 +34,27 @@ export default async function ComplaintsPage() {
     }
   }
 
-  const activeData = activeResult.status === 'fulfilled' ? activeResult.value : { items: [], total: 0 };
-  const resolvedData = resolvedResult.status === 'fulfilled' ? resolvedResult.value : { items: [], total: 0 };
+  // Recoverable errors (the page renders an empty state):
+  //   - ApiError 404: complaints container not provisioned yet (fresh deploy)
+  //   - TypeError: network failure / `fetch failed` (api/ offline in dev)
+  // Anything else (5xx, schema errors, unknown) re-throws — (dashboard)/error.tsx
+  // catches it and shows "Something stalled. Try again." so operators don't see
+  // an empty board when the API actually broke.
+  function isRecoverableError(e: unknown): boolean {
+    if (e instanceof ApiError) return e.status === 404;
+    if (e instanceof TypeError) return true;
+    return false;
+  }
+
+  function unwrap<T>(r: PromiseSettledResult<T>, fallback: T): T {
+    if (r.status === 'fulfilled') return r.value;
+    if (isRecoverableError(r.reason)) return fallback;
+    throw r.reason;
+  }
+
+  const empty = { items: [] as Complaint[], total: 0 };
+  const activeData = unwrap(activeResult, empty);
+  const resolvedData = unwrap(resolvedResult, empty);
 
   // Deduplicate by id (a complaint can flip status between the two queries).
   const resolvedById = new Map(resolvedData.items.map((c) => [c.id, c]));

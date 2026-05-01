@@ -73,4 +73,20 @@ describe('ComplaintsPage', () => {
     expect(props.initialComplaints).toHaveLength(1);
     expect(props.totalComplaints).toBe(1);
   });
+
+  it('re-throws non-recoverable API errors so error.tsx can catch them', async () => {
+    // Real ApiError-like error (status 500 = server bug, not "data missing").
+    // The page must NOT silently render an empty board — operators need to know.
+    const { ApiError } = await import('@/api/client');
+    const fiveHundred = new ApiError({
+      status: 500,
+      method: 'GET',
+      url: '/v1/admin/complaints',
+      body: 'boom',
+    });
+    listMock.mockRejectedValueOnce(fiveHundred).mockResolvedValueOnce({ items: [], total: 0 });
+    await expect(async () => {
+      await ComplaintsPage();
+    }).rejects.toBe(fiveHundred);
+  });
 });

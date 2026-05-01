@@ -19,30 +19,45 @@ export function ThemeProvider({
   children: ReactNode;
 }) {
   const [theme, setLocal] = useState<Theme>(initialTheme);
-  const writeSeq = useRef(0);
-  const latestSeq = useRef(0);
 
-  const setTheme = useCallback((next: Theme) => {
-    setLocal(next);
-    if (typeof document !== 'undefined') {
-      document.documentElement.dataset['theme'] = next;
-    }
-    const seq = ++writeSeq.current;
-    latestSeq.current = seq;
-    void (async () => {
-      try {
-        await setThemeCookie(next);
-      } catch {
-        // Server Action failed — DOM is already updated optimistically;
-        // next page load will re-read whatever cookie value persisted.
-        return;
+  // Coalesced single-flight writer: rapid toggles update `desired` and the
+  // running flush picks up the latest value. Prevents out-of-order Server
+  // Action completions from persisting a stale cookie under fast toggling.
+  const desired = useRef<Theme>(initialTheme);
+  const flushing = useRef(false);
+
+  const flushWrite = useCallback(async () => {
+    if (flushing.current) return;
+    flushing.current = true;
+    try {
+      let written: Theme | null = null;
+      while (written !== desired.current) {
+        const target: Theme = desired.current;
+        try {
+          await setThemeCookie(target);
+        } catch {
+          // Server Action failed — DOM is already updated optimistically.
+          // Stop the loop; next setTheme call (or page reload) reconciles.
+          return;
+        }
+        written = target;
       }
-      // If a newer setTheme started after this one, it now owns the cookie —
-      // we don't need to re-write. The latestSeq guard exists for diagnostic
-      // clarity; awaited writes already serialise cookie state on the server.
-      if (seq !== latestSeq.current) return;
-    })();
+    } finally {
+      flushing.current = false;
+    }
   }, []);
+
+  const setTheme = useCallback(
+    (next: Theme) => {
+      setLocal(next);
+      if (typeof document !== 'undefined') {
+        document.documentElement.dataset['theme'] = next;
+      }
+      desired.current = next;
+      void flushWrite();
+    },
+    [flushWrite],
+  );
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>
