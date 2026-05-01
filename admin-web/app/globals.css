@@ -521,6 +521,60 @@ button {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
+   Topbar — editorial header strip
+   ───────────────────────────────────────────────────────────────────────── */
+
+.topbar {
+  height: 52px;
+  background: var(--rail-bg);
+  border-bottom: 1px solid var(--rail-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-5);
+  flex-shrink: 0;
+}
+.topbar__brand { display: flex; flex-direction: column; gap: 0; }
+.topbar__title {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  line-height: 1.1;
+}
+.topbar__city {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--color-text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.topbar__right { display: flex; align-items: center; gap: var(--space-4); }
+.topbar__live { display: flex; align-items: center; gap: var(--space-1); }
+.topbar__live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--teal);
+  animation: liveBreath 2s var(--ease-in-out) infinite;
+}
+.topbar__live-label {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--teal);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.topbar__clock {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+}
+.topbar__slot { display: flex; align-items: center; }
+
+/* ─────────────────────────────────────────────────────────────────────────
    Dashboard-specific layout helpers (kept from prior token sheet)
    ───────────────────────────────────────────────────────────────────────── */
 
