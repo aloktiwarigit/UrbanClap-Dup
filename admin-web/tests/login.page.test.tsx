@@ -9,9 +9,14 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: 
 describe('LoginPage', () => {
   it('renders email, password, and TOTP fields', () => {
     render(<LoginPage />);
-    expect(screen.getByRole('heading', { level: 1, name: /sign in/i })).toBeDefined();
-    expect(screen.getByLabelText(/email/i)).toBeDefined();
-    expect(screen.getByLabelText(/password/i)).toBeDefined();
+    // Post-rebrand: the level-1 "Sign in to the field." lives in the brand-wall aside
+    // which is `hidden lg:flex`; below the lg breakpoint (jsdom default) it is
+    // display:none. The right-pane heading is the always-visible h2 "Sign in."
+    expect(screen.getByRole('heading', { level: 2, name: /sign in/i })).toBeDefined();
+    expect(screen.getByLabelText('Email')).toBeDefined();
+    // Anchor to exact "Password" — the Authenticator code field's hint mentions
+    // "1Password" which would otherwise match a /password/i regex.
+    expect(screen.getByLabelText('Password')).toBeDefined();
     expect(screen.getByLabelText(/authenticator code/i)).toBeDefined();
     expect(screen.getByRole('button', { name: /sign in/i })).toBeDefined();
   });
