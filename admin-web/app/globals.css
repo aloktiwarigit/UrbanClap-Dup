@@ -50,6 +50,13 @@
   --paper-text-0: #1A140F;
   --paper-text-1: #4A4135;
   --paper-text-2: #6E665B;
+
+  /* Rail navigation — separate token namespace so light-mode override is clean */
+  --rail-bg: var(--ink-1);
+  --rail-text: var(--fog-0);
+  --rail-text-active: var(--teal-soft);
+  --rail-active-bg: var(--teal-dim);
+  --rail-border: var(--ink-4);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -150,6 +157,13 @@ html[data-theme="light"] {
   --fog-1: var(--paper-text-1);
   --fog-2: var(--paper-text-0);
   --fog-3: var(--paper-text-0);
+
+  /* Rail in light mode — paper background needs deeper text and a different active pill */
+  --rail-bg: var(--paper-1);
+  --rail-text: var(--paper-text-1);
+  --rail-text-active: var(--paper-text-0);
+  --rail-active-bg: color-mix(in oklab, var(--marigold) 18%, var(--paper-2));
+  --rail-border: var(--paper-line);
 }
 
 /* Dark-class kept as a no-op for back-compat with the layout.tsx
@@ -401,6 +415,79 @@ button {
   color: var(--color-text);
 }
 .btn-link:hover { border-bottom-color: var(--marigold); color: var(--marigold-soft); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Alert primitive — editorial banner. Replaces ad-hoc bg-{color}-50 toasts.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  border: 1px solid var(--color-border);
+  border-left-width: 3px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+}
+.alert-success { border-left-color: var(--teal); color: var(--teal-soft); }
+.alert-warn    { border-left-color: var(--ember); color: var(--ember); }
+.alert-danger  { border-left-color: var(--rose); color: var(--rose); }
+.alert-info    { border-left-color: var(--marigold); color: var(--marigold-soft); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Chip primitive — small status tag. Replaces ad-hoc bg-{color}-100 chips.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.125rem 0.5rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-eyebrow);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.chip-success { border-color: var(--teal-dim); color: var(--teal-soft); }
+.chip-warn    { border-color: var(--ember); color: var(--ember); }
+.chip-danger  { border-color: var(--rose); color: var(--rose); }
+.chip-info    { border-color: var(--marigold-dim); color: var(--marigold-soft); }
+
+/* For complaint card "X" repeat-offender count chip */
+.chip-numeral {
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border-radius: 999px;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Add btn-success variant */
+.btn-success {
+  background: var(--teal-dim);
+  color: var(--teal-soft);
+  border-color: var(--teal-dim);
+}
+.btn-success:hover {
+  background: var(--teal);
+  color: var(--ink-0);
+  border-color: var(--teal);
+}
 
 /* ─────────────────────────────────────────────────────────────────────────
    Theme toggle — mono label, marigold underline on active

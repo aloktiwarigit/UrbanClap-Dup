@@ -11,7 +11,6 @@ export interface EmptyStateProps {
 export function EmptyState({ eyebrow, headline, copy, action }: EmptyStateProps) {
   return (
     <section
-      role="region"
       aria-label={headline}
       className="empty-state"
       style={{
