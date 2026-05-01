@@ -33,6 +33,21 @@
     <string name="book_now_disabled_desc">Booking coming soon</string>
     <string name="service_price_label">Fixed price</string>
     <string name="service_detail_back_desc">Back</string>
+    <string name="service_detail_eyebrow">Home-ready service</string>
+    <string name="service_detail_duration_caption">Typical visit</string>
+    <string name="service_detail_quality_title">Professional service, no surprises</string>
+    <string name="service_detail_quality_body">Your fixed price stays visible while you choose a slot. Any extra work needs your approval first.</string>
+    <string name="service_detail_includes_subtitle">Every visit starts with these checks.</string>
+    <string name="service_detail_addons_subtitle">Optional work is billed only after approval.</string>
+    <string name="service_detail_cta_support">Trust checks shown before confirmation</string>
+    <string name="trust_dossier_title">Professional trust dossier</string>
+    <string name="trust_dossier_loading_title">Building trust dossier</string>
+    <string name="trust_dossier_error_title">Trust profile unavailable</string>
+    <string name="trust_dossier_unavailable_title">Verified professional assigned before confirmation</string>
+    <string name="trust_dossier_unavailable_body">We show identity checks, background status, work history, and reviews before the technician reaches your home.</string>
+    <string name="trust_dossier_signal_identity">Identity checked</string>
+    <string name="trust_dossier_signal_background">Background checked</string>
+    <string name="trust_dossier_signal_reviews">Reviewed jobs</string>
 
     <!-- Booking flow -->
     <string name="slot_picker_title">Choose Date &amp; Time</string>
