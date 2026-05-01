@@ -11,55 +11,45 @@ export const metadata: Metadata = { title: 'Complaints — Homeservices Admin' }
 export default async function ComplaintsPage() {
   const client = await getServerApiClient();
 
-  let allComplaints: Complaint[] = [];
-  let total = 0;
-  try {
-    // Two separate queries so active complaints are never crowded out by the
-    // 30-day resolved volume. Active is a single page capped at the API max
-    // (200). Offset-based multi-page fetching over a live dataset risks
-    // silently skipping tickets whose status changes between pages; cursor
-    // pagination would require an API change deferred to post-pilot scale.
-    // At pilot (≤5 k bookings/mo) the concurrent active queue never
-    // approaches 200, so one page is always sufficient.
-    const [activeData, resolvedData] = await Promise.all([
-      listComplaints(client, {
-        status: 'NEW,INVESTIGATING',
-        sortDir: 'asc',
-        page: 1,
-        pageSize: 200, // API max — covers full pilot-scale active queue
-      }),
-      listComplaints(client, {
-        status: 'RESOLVED',
-        resolvedSince: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        sortDir: 'desc', // most recently resolved first
-        page: 1,
-        pageSize: 100,
-      }),
-    ]);
+  const [activeResult, resolvedResult] = await Promise.allSettled([
+    listComplaints(client, {
+      status: 'NEW,INVESTIGATING',
+      sortDir: 'asc',
+      page: 1,
+      pageSize: 200,
+    }),
+    listComplaints(client, {
+      status: 'RESOLVED',
+      resolvedSince: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      sortDir: 'desc',
+      page: 1,
+      pageSize: 100,
+    }),
+  ]);
 
-    // Deduplicate by id — a complaint can appear in both result sets if its
-    // status flips while the two queries are in flight. Prefer the copy with
-    // the later updatedAt so both resolve-race and reopen-race are handled.
-    const resolvedById = new Map(resolvedData.items.map((c) => [c.id, c]));
-    allComplaints = [
-      ...activeData.items.map((c) => {
-        const resolved = resolvedById.get(c.id);
-        if (!resolved) return c;
-        return resolved.updatedAt >= c.updatedAt ? resolved : c;
-      }),
-      ...resolvedData.items.filter((c) => !activeData.items.some((a) => a.id === c.id)),
-    ];
-    const duplicates = activeData.items.length + resolvedData.items.length - allComplaints.length;
-    total = activeData.total + resolvedData.total - duplicates;
-  } catch (err) {
-    if (err instanceof ApiError && (err.status === 401 || err.status === 403)) redirect('/dashboard');
-    // 404 means the complaints container hasn't been provisioned yet (fresh/staging
-    // deployment) — treat as empty rather than crashing the page.
-    if (err instanceof ApiError && err.status === 404) {
-      return <ComplaintsClient initialComplaints={[]} totalComplaints={0} />;
+  // 401/403 from either query → bounce to dashboard (auth issue).
+  for (const r of [activeResult, resolvedResult]) {
+    if (r.status === 'rejected' && r.reason instanceof ApiError) {
+      if (r.reason.status === 401 || r.reason.status === 403) redirect('/dashboard');
     }
-    throw err;
   }
+
+  const activeData = activeResult.status === 'fulfilled' ? activeResult.value : { items: [], total: 0 };
+  const resolvedData = resolvedResult.status === 'fulfilled' ? resolvedResult.value : { items: [], total: 0 };
+
+  // Deduplicate by id (a complaint can flip status between the two queries).
+  const resolvedById = new Map(resolvedData.items.map((c) => [c.id, c]));
+  const allComplaints: Complaint[] = [
+    ...activeData.items.map((c) => {
+      const resolved = resolvedById.get(c.id);
+      if (!resolved) return c;
+      return resolved.updatedAt >= c.updatedAt ? resolved : c;
+    }),
+    ...resolvedData.items.filter((c) => !activeData.items.some((a) => a.id === c.id)),
+  ];
+
+  const duplicates = activeData.items.length + resolvedData.items.length - allComplaints.length;
+  const total = activeData.total + resolvedData.total - duplicates;
 
   return <ComplaintsClient initialComplaints={allComplaints} totalComplaints={total} />;
 }
