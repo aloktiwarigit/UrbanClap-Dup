@@ -3,6 +3,7 @@
 // TODO(E09-S01-v2): replace polling with FCM topic listener for sub-second latency
 
 import { useState, useEffect, useCallback } from 'react';
+import { EmptyState } from '@/components/EmptyState';
 import type { components } from '@/api/generated/schema';
 
 type BookingEvent = components['schemas']['BookingEvent'];
@@ -83,75 +84,83 @@ export function OrderFeed() {
       >
         Live Feed
       </h2>
-      <ol
-        aria-live="polite"
-        aria-label="Order events"
-        style={{
-          listStyle: 'none',
-          padding: 0,
-          margin: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '2px',
-          maxHeight: '400px',
-          overflowY: 'auto',
-        }}
-      >
-        {events.map((event) => (
-          <li
-            key={event.id}
-            data-kind={event.kind}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr auto',
-              gap: '0.5rem',
-              padding: '0.5rem 0.75rem',
-              background: 'var(--ink-2)',
-              borderRadius: '4px',
-              borderLeft: `3px solid ${KIND_COLORS[event.kind]}`,
-            }}
-          >
-            <div>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: '0.8125rem',
-                  color: 'var(--fog-2)',
-                  fontFamily: 'var(--font-body)',
-                  fontWeight: 500,
-                }}
-              >
-                {event.title}
-              </p>
-              {event.detail !== undefined && event.detail !== '' && (
+      {events.length === 0 ? (
+        <EmptyState
+          eyebrow="Live feed"
+          headline="The feed is quiet"
+          copy="New bookings, assignments, and complaints will land here as they happen."
+        />
+      ) : (
+        <ol
+          aria-live="polite"
+          aria-label="Order events"
+          style={{
+            listStyle: 'none',
+            padding: 0,
+            margin: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '2px',
+            maxHeight: '400px',
+            overflowY: 'auto',
+          }}
+        >
+          {events.map((event) => (
+            <li
+              key={event.id}
+              data-kind={event.kind}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr auto',
+                gap: '0.5rem',
+                padding: '0.5rem 0.75rem',
+                background: 'var(--ink-2)',
+                borderRadius: 'var(--radius-sm)',
+                borderLeft: `3px solid ${KIND_COLORS[event.kind]}`,
+              }}
+            >
+              <div>
                 <p
                   style={{
                     margin: 0,
-                    fontSize: '0.6875rem',
-                    color: 'var(--fog-0)',
-                    fontFamily: 'var(--font-mono)',
-                    marginTop: '2px',
+                    fontSize: '0.8125rem',
+                    color: 'var(--fog-2)',
+                    fontFamily: 'var(--font-body)',
+                    fontWeight: 500,
                   }}
                 >
-                  {event.detail}
+                  {event.title}
                 </p>
-              )}
-            </div>
-            <time
-              dateTime={event.createdAt}
-              style={{
-                fontSize: '0.625rem',
-                color: 'var(--fog-0)',
-                fontFamily: 'var(--font-mono)',
-                alignSelf: 'center',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {formatTime(event.createdAt)}
-            </time>
-          </li>
-        ))}
-      </ol>
+                {event.detail !== undefined && event.detail !== '' && (
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: '0.6875rem',
+                      color: 'var(--fog-0)',
+                      fontFamily: 'var(--font-mono)',
+                      marginTop: '2px',
+                    }}
+                  >
+                    {event.detail}
+                  </p>
+                )}
+              </div>
+              <time
+                dateTime={event.createdAt}
+                style={{
+                  fontSize: '0.625rem',
+                  color: 'var(--fog-0)',
+                  fontFamily: 'var(--font-mono)',
+                  alignSelf: 'center',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {formatTime(event.createdAt)}
+              </time>
+            </li>
+          ))}
+        </ol>
+      )}
     </section>
   );
 }
