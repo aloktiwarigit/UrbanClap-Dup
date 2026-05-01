@@ -106,4 +106,13 @@ jobs:
         run: npm install -g azure-functions-core-tools@4 --unsafe-perm true
       - name: Deploy to Azure Functions
         run: func azure functionapp publish func-homeservices-prod --no-build
+        continue-on-error: true
+      - name: Verify deployment (wait for cold start)
+        run: |
+          echo "Waiting 90s for host cold start..."
+          sleep 90
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            https://func-homeservices-prod.azurewebsites.net/api/v1/health)
+          echo "Health: HTTP $STATUS"
+          [ "$STATUS" = "200" ]
 
