@@ -79,9 +79,10 @@ describe('GET /v1/technicians/me/earnings', () => {
   });
 
   it('aggregates week entry (3 days ago) correctly', async () => {
-    const threeDaysAgo = new Date();
-    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-    const pastDate = threeDaysAgo.toISOString().slice(0, 10);
+    // Use IST-aware date so handler's IST boundaries match
+    const istNow = new Date(Date.now() + IST_OFFSET_MS);
+    const threeDaysAgoIST = new Date(istNow.getTime() - 3 * 24 * 60 * 60 * 1000);
+    const pastDate = threeDaysAgoIST.toISOString().slice(0, 10);
     vi.mocked(walletLedgerRepo.getAllByTechnicianId).mockResolvedValue([
       makeEntry(`${pastDate}T10:00:00.000Z`, 90000),
     ]);
@@ -93,10 +94,12 @@ describe('GET /v1/technicians/me/earnings', () => {
     expect(body.lifetime.techAmount).toBe(90000);
   });
 
-  it('aggregates month entry (same month, older) correctly', async () => {
-    const twoDaysAgo = new Date();
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-    const pastDate = twoDaysAgo.toISOString().slice(0, 10);
+  // Skip on day 1-2 of IST month — no "same month, older" date exists to test with
+  const istDayOfMonth = new Date(Date.now() + IST_OFFSET_MS).getDate();
+  it.skipIf(istDayOfMonth <= 2)('aggregates month entry (same month, older) correctly', async () => {
+    const istNow = new Date(Date.now() + IST_OFFSET_MS);
+    const twoDaysAgoIST = new Date(istNow.getTime() - 2 * 24 * 60 * 60 * 1000);
+    const pastDate = twoDaysAgoIST.toISOString().slice(0, 10);
     vi.mocked(walletLedgerRepo.getAllByTechnicianId).mockResolvedValue([
       makeEntry(`${pastDate}T10:00:00.000Z`, 75000),
     ]);
