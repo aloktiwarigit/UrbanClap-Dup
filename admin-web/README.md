@@ -38,7 +38,7 @@ Azure Static Web Apps (free tier — 100 GB/mo bandwidth). Deploy wiring is **ou
 
 - **App Router only.** No `pages/`. All routes in `app/<route>/page.tsx`.
 - **RSC by default.** `"use client"` only when needed (event handlers, browser APIs, React state).
-- **Tokens only.** Every color/space/type/radius/elevation/motion comes from a token defined in `app/globals.css` `@theme { ... }`. No hex literals, no magic `px`, no inline styles. Dark mode via `class="dark"` on `<html>`.
+- **Tokens only.** Every color/space/type/radius/elevation/motion comes from a token defined in `app/globals.css` `@theme { ... }`. No hex literals, no magic `px`, no inline styles. Theme via `data-theme="light|dark"` on `<html>`, server-rendered from the `theme` cookie.
 - **Tailwind v4 only.** No Emotion, no styled-components, no CSS Modules for new code.
 - **Strict TS + zero ESLint warnings.** `tsconfig.json` includes `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`.
 - **Tests live under `tests/`.** Unit + component in `tests/*.test.tsx`; e2e in `tests/e2e/`; a11y in `tests/a11y/`. **No snapshot tests.**
