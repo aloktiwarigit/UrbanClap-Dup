@@ -107,16 +107,28 @@ jobs:
           rm -rf .deploy-stage deploy.zip
           mkdir -p .deploy-stage
 
-          cp host.json package.json pnpm-lock.yaml .deploy-stage/
+          cp host.json package.json .deploy-stage/
           cp -R dist .deploy-stage/dist
 
+          # Use npm (not pnpm) to guarantee flat real node_modules — pnpm virtual
+          # store creates symlinks that break in WEBSITE_RUN_FROM_PACKAGE zip mounts
           cd .deploy-stage
-          pnpm install --prod --frozen-lockfile --config.node-linker=hoisted --config.package-import-method=copy
+          npm install --omit=dev --ignore-scripts --no-audit --no-fund
           find . -name '*.map' -delete
+
+          # Verify node_modules has real files (not symlinks)
+          node_mod_count=$(find node_modules -type f -name "*.js" | wc -l)
+          echo "node_modules JS files: ${node_mod_count}"
+          if [ "$node_mod_count" -lt 100 ]; then
+            echo "node_modules looks empty or symlink-only — aborting"
+            exit 1
+          fi
+
           zip -r -q ../deploy.zip .
           cd ..
 
-          unzip -l deploy.zip host.json package.json 'dist/functions/health.js'
+          unzip -l deploy.zip host.json package.json 'dist/functions/health.js' \
+            'node_modules/@azure/functions/dist/index.js'
           package_size_bytes="$(wc -c < deploy.zip)"
           max_size_bytes=$((950 * 1024 * 1024))
           if [ "$package_size_bytes" -gt "$max_size_bytes" ]; then
