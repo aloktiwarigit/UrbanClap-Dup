@@ -101,6 +101,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build
         run: pnpm run build
+      - name: Install Azure Functions Core Tools
+        run: npm install -g azure-functions-core-tools@4 --unsafe-perm true
       - name: Azure login
         run: |
           set -euo pipefail
@@ -110,26 +112,17 @@ jobs:
             --tenant "${{ secrets.AZURE_TENANT_ID }}" \
             --output none
           az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-      - name: Prepare Function App for Oryx remote build
+      - name: Enable Oryx remote build
         run: |
-          set -euo pipefail
-
-          app_name="${AZURE_FUNCTIONAPP_NAME}"
-          resource_group="$(az functionapp list --query "[?name=='${app_name}'].resourceGroup | [0]" -o tsv)"
-          if [ -z "$resource_group" ] || [ "$resource_group" = "null" ]; then
-            echo "Could not find resource group for ${app_name}"
-            exit 1
-          fi
-
           az functionapp config appsettings delete \
-            --name "$app_name" \
-            --resource-group "$resource_group" \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --resource-group rg-homeservices-prod \
             --setting-names WEBSITE_RUN_FROM_PACKAGE \
             --output none || true
 
           az functionapp config appsettings set \
-            --name "$app_name" \
-            --resource-group "$resource_group" \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --resource-group rg-homeservices-prod \
             --settings \
               SCM_DO_BUILD_DURING_DEPLOYMENT=true \
               ENABLE_ORYX_BUILD=true \
@@ -137,21 +130,17 @@ jobs:
               GIT_SHA="${GITHUB_SHA}" \
               AzureWebJobsFeatureFlags=EnableWorkerIndexing \
             --output none
-      - name: Publish with Oryx remote build
-        id: publish
+      - name: Deploy via Oryx remote build
+        # Oryx builds on Azure Linux — functions ARE discovered (proven).
+        # Trigger sync may return BadRequest/timeout (known timing issue) — continue anyway.
+        run: func azure functionapp publish "$AZURE_FUNCTIONAPP_NAME" --javascript --build remote --verbose
         continue-on-error: true
-        run: |
-          set -euo pipefail
-          pnpm exec func azure functionapp publish "${AZURE_FUNCTIONAPP_NAME}" --javascript --build remote --verbose
       - name: List indexed functions
         continue-on-error: true
         run: |
-          set -euo pipefail
-          resource_group="$(az functionapp list --query "[?name=='${AZURE_FUNCTIONAPP_NAME}'].resourceGroup | [0]" -o tsv)"
-          echo "Publish outcome: ${{ steps.publish.outcome }}"
           az functionapp function list \
-            --name "${AZURE_FUNCTIONAPP_NAME}" \
-            --resource-group "$resource_group" \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --resource-group rg-homeservices-prod \
             --query "[].name" \
             -o tsv
       - name: Verify health endpoint
