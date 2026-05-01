@@ -1,6 +1,7 @@
 name: api-ship
 
 on:
+  workflow_dispatch:
   pull_request:
     branches: [main]
     paths:
@@ -80,7 +81,9 @@ jobs:
     name: Deploy to Azure Functions
     runs-on: ubuntu-latest
     needs: quality-gate
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    env:
+      AZURE_FUNCTIONAPP_NAME: func-homeservices-prod
     defaults:
       run:
         working-directory: api
@@ -98,10 +101,80 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build
         run: pnpm run build
-      - name: Deploy to Azure Functions
-        uses: Azure/functions-action@v1
-        with:
-          app-name: func-homeservices-prod
-          package: api
-          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+      - name: Azure login
+        run: |
+          set -euo pipefail
+          az login --service-principal \
+            --username "${{ secrets.AZURE_CLIENT_ID }}" \
+            --password "${{ secrets.AZURE_CLIENT_SECRET }}" \
+            --tenant "${{ secrets.AZURE_TENANT_ID }}" \
+            --output none
+          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+      - name: Prepare Function App for Oryx remote build
+        run: |
+          set -euo pipefail
 
+          app_name="${AZURE_FUNCTIONAPP_NAME}"
+          resource_group="$(az functionapp list --query "[?name=='${app_name}'].resourceGroup | [0]" -o tsv)"
+          if [ -z "$resource_group" ] || [ "$resource_group" = "null" ]; then
+            echo "Could not find resource group for ${app_name}"
+            exit 1
+          fi
+
+          az functionapp config appsettings delete \
+            --name "$app_name" \
+            --resource-group "$resource_group" \
+            --setting-names WEBSITE_RUN_FROM_PACKAGE \
+            --output none || true
+
+          az functionapp config appsettings set \
+            --name "$app_name" \
+            --resource-group "$resource_group" \
+            --settings \
+              SCM_DO_BUILD_DURING_DEPLOYMENT=true \
+              ENABLE_ORYX_BUILD=true \
+              NODE_ENV=production \
+              GIT_SHA="${GITHUB_SHA}" \
+              AzureWebJobsFeatureFlags=EnableWorkerIndexing \
+            --output none
+      - name: Publish with Oryx remote build
+        id: publish
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          pnpm exec func azure functionapp publish "${AZURE_FUNCTIONAPP_NAME}" --javascript --build remote --verbose
+      - name: List indexed functions
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          resource_group="$(az functionapp list --query "[?name=='${AZURE_FUNCTIONAPP_NAME}'].resourceGroup | [0]" -o tsv)"
+          echo "Publish outcome: ${{ steps.publish.outcome }}"
+          az functionapp function list \
+            --name "${AZURE_FUNCTIONAPP_NAME}" \
+            --resource-group "$resource_group" \
+            --query "[].name" \
+            -o tsv
+      - name: Verify health endpoint
+        run: |
+          set -euo pipefail
+
+          health_url="https://${AZURE_FUNCTIONAPP_NAME}.azurewebsites.net/api/v1/health"
+          expected_commit="${GITHUB_SHA:0:8}"
+          for attempt in $(seq 1 36); do
+            status_code="$(curl -sS -o /tmp/api-health.json -w '%{http_code}' "$health_url" || true)"
+            if [ "$status_code" = "200" ]; then
+              if jq -e --arg commit "$expected_commit" '.status == "ok" and .commit == $commit' /tmp/api-health.json >/dev/null; then
+                cat /tmp/api-health.json
+                exit 0
+              fi
+              echo "Health returned 200 but not the expected commit ${expected_commit}; retrying..."
+              cat /tmp/api-health.json
+            else
+              echo "Health check attempt ${attempt}/36 returned ${status_code}; retrying..."
+            fi
+            sleep 10
+          done
+
+          echo "Health endpoint did not return 200."
+          cat /tmp/api-health.json || true
+          exit 1

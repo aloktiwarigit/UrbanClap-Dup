@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
 vi.mock('../../src/middleware/verifyTechnicianToken.js', () => ({
@@ -31,12 +31,19 @@ function makeEntry(createdAt: string, techAmount: number, payoutStatus: 'PENDING
   };
 }
 
-const today = new Date().toISOString().slice(0, 10);
+const fixedNow = new Date('2026-04-15T12:00:00.000Z');
+const today = fixedNow.toISOString().slice(0, 10);
 
 beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(fixedNow);
   vi.resetAllMocks();
   vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-1' });
   vi.mocked(walletLedgerRepo.getAllByTechnicianId).mockResolvedValue([]);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('GET /v1/technicians/me/earnings', () => {

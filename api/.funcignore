@@ -1,0 +1,18 @@
+# Keep Core Tools publishes source-build friendly. Do not exclude dist/, src/,
+# package.json, pnpm-lock.yaml, or tsconfig*.json.
+
+.git/
+.gitignore
+.github/
+.deploy-stage/
+node_modules/
+deploy*.zip
+local.settings.json
+package-lock.json
+tests/
+coverage/
+.nyc_output/
+*.log
+plans/
+docs/
+specs/

@@ -111,6 +111,8 @@ api/dist/
 api/coverage/
 api/local.settings.json
 api/.azure/
+api/.deploy-stage/
+api/deploy*.zip
 
 # admin-web/
 admin-web/node_modules/

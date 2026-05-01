@@ -4,12 +4,17 @@ let _client: CosmosClient | null = null;
 
 export function getCosmosClient(): CosmosClient {
   if (!_client) {
-    const endpoint = process.env.COSMOS_ENDPOINT;
-    const key = process.env.COSMOS_KEY;
-    if (!endpoint || !key) {
-      throw new Error('Missing required env vars: COSMOS_ENDPOINT, COSMOS_KEY');
+    const connectionString = process.env.COSMOS_CONNECTION_STRING;
+    if (connectionString) {
+      _client = new CosmosClient(connectionString);
+    } else {
+      const endpoint = process.env.COSMOS_ENDPOINT;
+      const key = process.env.COSMOS_KEY;
+      if (!endpoint || !key) {
+        throw new Error('Missing COSMOS_CONNECTION_STRING or COSMOS_ENDPOINT+COSMOS_KEY');
+      }
+      _client = new CosmosClient({ endpoint, key });
     }
-    _client = new CosmosClient({ endpoint, key });
   }
   return _client;
 }
