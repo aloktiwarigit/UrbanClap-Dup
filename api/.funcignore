@@ -1,14 +1,14 @@
-# .funcignore overrides .gitignore for func azure functionapp publish.
-# dist/ MUST be included — it is the compiled TypeScript output.
-# node_modules is included (needed for --no-build deploys).
+# Keep Core Tools publishes source-build friendly. Do not exclude dist/, src/,
+# package.json, pnpm-lock.yaml, or tsconfig*.json.
 
 .git/
 .gitignore
 .github/
+.deploy-stage/
+node_modules/
+deploy*.zip
 local.settings.json
-*.ts
-tsconfig*.json
-eslint.config.mjs
+package-lock.json
 tests/
 coverage/
 .nyc_output/
@@ -16,5 +16,3 @@ coverage/
 plans/
 docs/
 specs/
-scripts/
-src/
