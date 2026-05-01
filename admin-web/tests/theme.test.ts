@@ -6,6 +6,7 @@ vi.mock('next/headers', () => ({
 
 import { cookies } from 'next/headers';
 import { readThemeCookie, THEME_COOKIE_NAME, type Theme } from '@/lib/theme';
+import { setThemeCookie } from '../app/actions/theme';
 
 describe('readThemeCookie', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -27,5 +28,23 @@ describe('readThemeCookie', () => {
       get: () => ({ value: 'midnight' }),
     } as never);
     expect(await readThemeCookie()).toBe<Theme>('dark');
+  });
+});
+
+describe('setThemeCookie (Server Action)', () => {
+  it('writes "light" when called with "light"', async () => {
+    const set = vi.fn();
+    vi.mocked(cookies).mockResolvedValue({ set, get: () => undefined } as never);
+    await setThemeCookie('light');
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'theme', value: 'light' }),
+    );
+  });
+
+  it('rejects unrecognised theme values', async () => {
+    const set = vi.fn();
+    vi.mocked(cookies).mockResolvedValue({ set, get: () => undefined } as never);
+    await expect(setThemeCookie('midnight' as never)).rejects.toThrow();
+    expect(set).not.toHaveBeenCalled();
   });
 });
