@@ -25,7 +25,7 @@ function Tile({ id, label, value, accent }: TileProps) {
       style={{
         background: 'var(--ink-2)',
         border: '1px solid var(--ink-4)',
-        borderRadius: '8px',
+        borderRadius: 'var(--radius-sm)',
         padding: '1rem 1.25rem',
         display: 'flex',
         flexDirection: 'column',
