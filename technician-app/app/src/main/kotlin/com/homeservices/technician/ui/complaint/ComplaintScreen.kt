@@ -137,7 +137,10 @@ internal fun ComplaintContent(
 }
 
 @Composable
-private fun SuccessState(state: ComplaintUiState.Success, onBack: () -> Unit) {
+private fun SuccessState(
+    state: ComplaintUiState.Success,
+    onBack: () -> Unit,
+) {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -153,7 +156,11 @@ private fun SuccessState(state: ComplaintUiState.Success, onBack: () -> Unit) {
 
 @Composable
 private fun LoadingState() {
-    Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
         CircularProgressIndicator()
         Spacer(Modifier.height(12.dp))
         Text("Submitting issue", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -161,7 +168,10 @@ private fun LoadingState() {
 }
 
 @Composable
-private fun ErrorState(message: String, onRetry: () -> Unit) {
+private fun ErrorState(
+    message: String,
+    onRetry: () -> Unit,
+) {
     Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
         Text("Something went wrong", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
