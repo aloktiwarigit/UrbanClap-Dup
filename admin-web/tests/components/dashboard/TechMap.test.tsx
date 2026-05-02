@@ -10,8 +10,8 @@ const techs: TechLocation[] = [
     technicianId: 'tech-1',
     name: 'Ravi Kumar',
     serviceType: 'plumbing',
-    lat: 12.93,
-    lng: 77.62,
+    lat: 26.79,
+    lng: 82.20,
     state: 'active',
     updatedAt: '2026-04-19T10:00:00Z',
   },
@@ -19,8 +19,8 @@ const techs: TechLocation[] = [
     technicianId: 'tech-2',
     name: 'Suresh Babu',
     serviceType: 'electrical',
-    lat: 12.91,
-    lng: 77.65,
+    lat: 26.78,
+    lng: 82.22,
     state: 'enroute',
     updatedAt: '2026-04-19T10:05:00Z',
   },
@@ -28,8 +28,8 @@ const techs: TechLocation[] = [
     technicianId: 'tech-3',
     name: 'Anand Pillai',
     serviceType: 'carpentry',
-    lat: 12.95,
-    lng: 77.63,
+    lat: 26.81,
+    lng: 82.18,
     state: 'idle',
     updatedAt: '2026-04-19T10:08:00Z',
   },
@@ -51,10 +51,10 @@ describe('TechMap', () => {
 
   it('pin positions are computed as percentages within bounding box', () => {
     render(<TechMap techs={techs} />);
-    // Bengaluru bounding box: LAT_MIN=12.88, LAT_MAX=12.98, LNG_MIN=77.60, LNG_MAX=77.68
-    // tech-1: lat=12.93, lng=77.62
-    //   left = ((77.62-77.60)/(77.68-77.60))*100 = (0.02/0.08)*100 = 25%
-    //   top  = (1 - (12.93-12.88)/(12.98-12.88))*100 = (1 - 0.05/0.10)*100 = 50%
+    // Ayodhya bounding box: LAT_MIN=26.70, LAT_MAX=26.88, LNG_MIN=82.10, LNG_MAX=82.30
+    // tech-1: lat=26.79, lng=82.20
+    //   left = ((82.20-82.10)/(82.30-82.10))*100 = (0.10/0.20)*100 = 50%
+    //   top  = (1 - (26.79-26.70)/(26.88-26.70))*100 = (1 - 0.09/0.18)*100 = 50%
     const pin1 = screen.getByTestId('pin-tech-1');
     const style = pin1.getAttribute('style') ?? '';
     expect(style).toContain('left:');
@@ -71,13 +71,21 @@ describe('TechMap', () => {
     const alertTechs: TechLocation[] = [
       {
         technicianId: 'tech-a',
-        lat: 12.92,
-        lng: 77.64,
+        lat: 26.79,
+        lng: 82.21,
         state: 'alert',
         updatedAt: '2026-04-19T10:00:00Z',
       },
     ];
     render(<TechMap techs={alertTechs} />);
     expect(screen.getByTestId('pin-tech-a').getAttribute('data-state')).toBe('alert');
+  });
+
+  it('exposes Ayodhya operational zone in the aria-label', () => {
+    const { container } = render(<TechMap techs={[]} />);
+    const map = container.querySelector('[aria-label*="Ayodhya"]');
+    expect(map).not.toBeNull();
+    const bengaluruRef = container.querySelector('[aria-label*="Bengaluru"]');
+    expect(bengaluruRef).toBeNull();
   });
 });

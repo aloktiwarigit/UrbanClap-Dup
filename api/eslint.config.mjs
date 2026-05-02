@@ -3,7 +3,7 @@ import importPlugin from 'eslint-plugin-import';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'coverage/**', 'node_modules/**', '*.config.*', 'scripts/**'],
+    ignores: ['dist/**', 'coverage/**', 'node_modules/**', '*.config.*', 'scripts/**', '.deploy-stage/**'],
   },
   ...tseslint.configs.recommendedTypeChecked,
   {

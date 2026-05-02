@@ -6,10 +6,10 @@ import type { ReportData } from '../schemas/report.js';
 
 const NEXT_SERVICE_RECS: Record<string, string> = {
   'ac-repair': 'Schedule your next AC service in 3 months to maintain cooling efficiency.',
-  'deep-cleaning': 'Book your next deep clean in 6 months for a healthy home.',
+  'water-pump': 'A pre-monsoon pump check helps prevent breakdown during heavy use.',
   'plumbing': 'An annual plumbing inspection is recommended to prevent leaks.',
   'electrical': 'Schedule an annual electrical safety check for peace of mind.',
-  'pest-control': 'A follow-up pest treatment in 3 months ensures lasting protection.',
+  'water-purifier': 'Service your RO every 3 months — sediment filters need quarterly replacement.',
 };
 
 export async function assembleReportData(booking: BookingDoc): Promise<ReportData> {

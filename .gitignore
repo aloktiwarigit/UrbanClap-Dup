@@ -132,6 +132,17 @@ admin-web/*.tsbuildinfo
 # Debug screenshots
 docs/design/snap.png
 
+# === Visual-audit + Playwright MCP scratch (manual session output) ===
+.playwright-mcp/
+demo-screenshots/
+/before-*.png
+/after-*.png
+/light-*.png
+
+# === Firebase admin SDK credentials (NEVER commit) ===
+**/firebase-adminsdk*.json
+**/.firebase-adminsdk.json
+
 # customer-app/
 customer-app/.gradle/
 customer-app/build/

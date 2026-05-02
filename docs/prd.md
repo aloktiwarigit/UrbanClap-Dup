@@ -53,11 +53,11 @@ classification:
 
 ## Executive Summary
 
-homeservices-mvp is a three-app home-services marketplace for India — Customer Android + Technician Android + Owner web admin — replicating Urban Company's core booking loop (customer request → nearest qualified technician → FCM notification to owner → owner receives payment → owner settles technician with commission) at small scale (one city pilot) with two non-negotiable differentiators: **(a) impeccable UI/UX at Airbnb/CRED tier to beat UC's 1.4★ customer experience, and (b) fair vendor economics (22–25% commission vs UC's 28%) with transparent, Karnataka-compliant dispatch to attract UC's discontented technicians post-Jan/Feb 2026 protests.**
+homeservices-mvp is a three-app home-services marketplace for India — Customer Android + Technician Android + Owner web admin — replicating Urban Company's core booking loop (customer request → nearest qualified technician → FCM notification to owner → owner receives payment → owner settles technician with commission) at small scale (one city pilot) with two non-negotiable differentiators: **(a) impeccable UI/UX at Airbnb/CRED tier to beat UC's 1.4★ customer experience, and (b) fair vendor economics (22–25% commission vs UC's 28%) with transparent right-to-refuse-compliant dispatch architecture (defensive against Karnataka Platform Workers Act + future state extensions; no decline-derived ranking) to attract UC's discontented technicians post-Jan/Feb 2026 protests.**
 
 The platform is built solo by the founder using BMAD + Claude Code on Firebase + Azure free tiers (FCM as universal messaging spine, Cosmos DB Serverless, Azure Functions, Firebase Auth with one-time OTP + persistent device session). Operational infrastructure cost is targeted at **₹0/month at pilot scale (≤5,000 bookings/mo)** and ceilings at **≤₹50,000/month at full scale (50,000+ bookings/mo)** — enabling unit-economic viability that public-company UC cannot match.
 
-**Target users:** (1) Premium-LTV urban customers (Persona Riya — convenience-first, design-literate, Bengaluru/Pune/Gurgaon 3BHK+ resident booking 2–4×/month), (2) Ambitious independent technicians (Persona Suresh — ITI-certified, currently burnt by UC's 28% commission and opaque dispatch, seeking fair deal + career progression), (3) Solo founder-operator (Persona Alokt — needs full real-time visibility + override authority + audit trail + low-touch automation).
+**Target users:** (1) Premium-LTV urban customers (Persona Riya — convenience-first, trust-first, Hindi-prominent, Ayodhya/UP rural-town resident booking 1–3×/month, mid-income household, sub-₹10k Android primary device), (2) Ambitious independent technicians (Persona Suresh — ITI-certified, currently burnt by UC's 28% commission and opaque dispatch, seeking fair deal + career progression), (3) Solo founder-operator (Persona Alokt — needs full real-time visibility + override authority + audit trail + low-touch automation).
 
 **Problem being solved:** Fragmented, opaque, untrustworthy home services marketplace in India. Unorganised sector (99% of the ₹5.1 lakh crore TAM) is cheap but unreliable. Organised (UC) is reliable-on-paper but suffers catastrophic customer NPS (1.4★) and partner antagonism (nationwide 2026 protests). Neither serves the premium-LTV customer or career-minded technician well.
 
@@ -136,7 +136,7 @@ The platform is built solo by the founder using BMAD + Claude Code on Firebase +
 | LTV:CAC ratio | ≥ 3:1 by month 6 | Sustainable growth floor |
 | Infra cost | ₹0 / month | Hard constraint |
 | Active vendors | 200–500 | Pilot city |
-| Active categories | 5 | AC, deep cleaning, plumbing, electrical, pest control |
+| Active categories | 5 | AC repair, water pump / borewell, plumbing, electrical, RO / water purifier |
 
 **Growth phase (12-month horizon):**
 
@@ -716,6 +716,8 @@ See §Product Scope above for detail. TL;DR: **25 features.** 15 P0 (blockers), 
 - Community features: board + ride-share
 - Owner: full management (tech/customer/finance/marketing/analytics/catalog)
 - Regulatory dashboard with quarterly remittance automation
+- **E12-S03 — admin-web Hindi i18n.** Trigger: when first non-bilingual admin/ops user is hired. Scope: install `next-intl`; structure `messages/en.json` + `messages/hi.json`; route prefix `/[locale]/...`; translate all admin-web strings. Estimated: 2 dev-days. Tier: Foundation.
+- **E13-S01 — Ayodhya regional tech recruitment + verification.** Trigger: prerequisite to flipping `marketing.public-launch` GrowthBook flag. Scope: identify ≥2 technicians per active serviceId in Ayodhya service radius (~10km from `[82.20, 26.79]` GeoJSON `[longitude, latitude]`); complete DigiLocker Aadhaar KYC + PAN OCR + tech-app onboarding for each. Operations/recruitment story, not a software story. Tracked here to make the launch-flag prerequisite (E10-S04 AC) auditable.
 
 **Phase 3 (Months 7–9) — Subscription + Native Products:**
 - UC Plus-equivalent subscription (Razorpay Subscriptions)
@@ -768,7 +770,7 @@ See §Product Scope above for detail. TL;DR: **25 features.** 15 P0 (blockers), 
 ### Scope Guardrails (Locked Decisions)
 
 - **MVP = exactly 25 features (D21).** No feature creep. Any proposed addition moves something to Phase 2+.
-- **Pre-launch vendor recruitment sprint of 2 weeks is mandatory (D22).** No coding past Phase 0 until 50 techs onboarded.
+- **D22 superseded 2026-05-01 (umbrella spec `docs/superpowers/specs/2026-05-01-ayodhya-hindi-pivot-design.md` §5.4):** original "no coding until 50 techs" gate replaced by per-serviceId launch-flag prerequisite. Coding may proceed in parallel with recruitment. `marketing.public-launch` flag = on requires **≥2 verified technicians per active serviceId** in Ayodhya service radius (10km from `[82.20, 26.79]`); `marketing.soft-launch` flag (≤100 F&F bookings, D23) may flip earlier with **≥1 tech per serviceId**. Original D22 ("50 techs mandatory") was Bengaluru-metro context, has been silently bypassed across 37+ stories of execution; the supersede makes the new gate explicit and auditable.
 - **Soft launch to 100 F&F before public (D23).** Use rating shield aggressively.
 - **Single-city pilot — no multi-city work in Year 1 (D15 from brainstorm).**
 - **Commission ladder: 22% → 25% at 50-job milestone per tech (D24).**
@@ -1175,7 +1177,7 @@ Consolidated, testable NFRs. Each is numbered and verifiable. Cross-references e
 
 | ID | Requirement | Measurement |
 |---|---|---|
-| NFR-L-1 | MVP: English + Hindi (HI) UI on all customer-facing surfaces | String resource files in both; manual verification |
+| NFR-L-1 | MVP: English + Hindi (HI) MUST be selectable in-app on all external mobile surfaces (customer-app + technician-app) via in-app language picker (`AppCompatDelegate.setApplicationLocales()`); not system-locale-only. First-launch picker; persisted choice. Admin-web stays English-only for MVP (E12-S03 Phase 2 stub). | String resource files in both apps; first-launch picker test; Paparazzi screenshots in `values-hi/` variant; field copy testing per E10-S04 launch AC |
 | NFR-L-2 | Phase 2: Tamil, Bengali, Marathi, Telugu, Kannada added | Rollout plan in Phase 2 backlog |
 | NFR-L-3 | Currency: ₹ with Indian number formatting (lakhs/crores) | Unit test for formatter |
 | NFR-L-4 | Dates: 12-hour clock, DD-MMM-YYYY (e.g., "17 Apr 2026") | Unit test |
@@ -1226,7 +1228,7 @@ Consolidated, testable NFRs. Each is numbered and verifiable. Cross-references e
 |---|---|---|---|
 | OQ-1 | Brand name | Brainstorm 5 candidates; Indian with `.in` + `.com` available | Phase 3 (before UX) |
 | OQ-2 | Pilot city | Bengaluru (forces Karnataka compliance as MVP) OR Pune (less regulatory burden) | Phase 3 |
-| OQ-3 | Initial 5 categories | AC Repair, Deep Cleaning, Plumbing, Electrical, Pest Control | Pre-launch |
+| OQ-3 | Initial 5 categories | AC Repair, Water Pump / Borewell, Plumbing, Electrical, RO / Water Purifier (revised 2026-05-01 for Ayodhya pilot — see umbrella spec §2.3) | Pre-launch |
 | OQ-4 | Exact commission % | 22% for first 100 techs → ladder to 25% at 50-job/tech milestone | Pre-launch |
 | OQ-5 | Default payout cadence | Weekly (with T-3 flexible options) | MVP |
 | OQ-6 | Working capital source | Founder-funded or client-funded | Pre-launch (must confirm) |

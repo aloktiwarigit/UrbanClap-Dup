@@ -2,7 +2,7 @@
 
 import { useState, useEffect, type ReactNode } from 'react';
 
-const CITY = process.env.NEXT_PUBLIC_CITY ?? 'Bengaluru';
+const CITY = process.env.NEXT_PUBLIC_CITY ?? 'Ayodhya';
 
 function formatClock(date: Date): string {
   return date.toLocaleTimeString('en-IN', {

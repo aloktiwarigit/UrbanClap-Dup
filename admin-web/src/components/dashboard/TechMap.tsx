@@ -10,11 +10,11 @@ interface TechMapProps {
   techs: TechLocation[];
 }
 
-// Bengaluru operational bounding box
-const LAT_MIN = 12.88;
-const LAT_MAX = 12.98;
-const LNG_MIN = 77.60;
-const LNG_MAX = 77.68;
+// Ayodhya operational bounding box (~10km radius around city centre [82.20, 26.79])
+const LAT_MIN = 26.70;
+const LAT_MAX = 26.88;
+const LNG_MIN = 82.10;
+const LNG_MAX = 82.30;
 
 function pinLeft(lng: number): number {
   return ((lng - LNG_MIN) / (LNG_MAX - LNG_MIN)) * 100;
@@ -35,7 +35,7 @@ export function TechMap({ techs }: TechMapProps) {
   return (
     <div
       role="img"
-      aria-label="Technician locations map — Bengaluru operational zone"
+      aria-label="Technician locations map — Ayodhya operational zone"
       style={{
         position: 'relative',
         width: '100%',
