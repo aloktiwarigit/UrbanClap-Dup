@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">HomeHeroo तकनीशियन</string>
+    <!-- Job offer -->
+    <string name="job_offer_accepted">ऑफर स्वीकार किया!</string>
+    <string name="job_offer_declined">ऑफर अस्वीकार किया</string>
+    <string name="job_offer_expired">ऑफर समाप्त हो गया</string>
+    <string name="job_offer_new_request">नया जॉब अनुरोध</string>
+    <string name="job_offer_seconds">सेकंड</string>
+    <string name="job_offer_why_you">कौशल, दूरी और उपलब्धता के आधार पर आपसे मिलान किया गया।</string>
+    <string name="job_offer_address">ग्राहक का पता</string>
+    <string name="job_offer_slot">सेवा स्लॉट</string>
+    <string name="job_offer_distance">दूरी</string>
+    <string name="job_offer_distance_km">%.1f किमी दूर</string>
+    <string name="job_offer_earnings">कमाई</string>
+    <string name="job_offer_accept">जॉब स्वीकार करें</string>
+    <string name="job_offer_decline">अस्वीकार करें</string>
+    <!-- Active job -->
+    <string name="active_job_complete_title">जॉब पूरी हुई</string>
+    <string name="active_job_complete_body">आपकी पूर्णता दर्ज की गई। कमाई जल्द ही अपडेट होगी।</string>
+    <string name="active_job_error_title">जॉब लोड नहीं हो सकी</string>
+    <string name="active_job_address">ग्राहक का पता</string>
+    <string name="active_job_slot">सेवा स्लॉट</string>
+    <string name="active_job_progress_title">जॉब प्रगति</string>
+    <string name="active_job_offline_sync">ऑफलाइन — पुनः कनेक्ट होने पर स्थिति सिंक होगी</string>
+    <string name="active_job_start_trip">यात्रा शुरू करें</string>
+    <string name="active_job_mark_arrived">मैं पहुँच गया</string>
+    <string name="active_job_start_work">काम शुरू करें</string>
+    <string name="active_job_complete_job">जॉब पूरी करें</string>
+    <string name="active_job_done">हो गया</string>
+    <string name="active_job_status_assigned">असाइन किया गया</string>
+    <string name="active_job_status_en_route">रास्ते में</string>
+    <string name="active_job_status_arrived">पहुँच गया</string>
+    <string name="active_job_status_working">काम चल रहा है</string>
+    <string name="active_job_status_done">पूरा हुआ</string>
+    <!-- Earnings screen -->
+    <string name="earnings_title">कमाई</string>
+    <string name="earnings_error">कमाई लोड नहीं हो सकी</string>
+    <string name="earnings_retry">पुनः प्रयास करें</string>
+    <string name="earnings_empty_title">अभी कोई कमाई नहीं</string>
+    <string name="earnings_empty_body">आज का भुगतान शुरू करने के लिए पहली जॉब स्वीकार करें। जॉब पूरी होने के कुछ मिनटों में कमाई यहाँ दिखेगी।</string>
+    <string name="earnings_hint_online">जॉब ऑफर पाने के लिए ऑनलाइन रहें</string>
+    <string name="earnings_hint_complete">भुगतान बैलेंस बनाने के लिए जॉब पूरी करें</string>
+    <string name="earnings_hint_ratings">अच्छी रेटिंग से अधिक बुकिंग मिलती है</string>
+    <string name="earnings_payout_settings">पेआउट सेटिंग्स</string>
+    <string name="earnings_dashboard_title">आपका पेआउट डैशबोर्ड</string>
+    <string name="earnings_period_today">आज</string>
+    <string name="earnings_period_week">इस सप्ताह</string>
+    <string name="earnings_period_month">इस महीने</string>
+    <string name="earnings_period_lifetime">कुल</string>
+    <string name="earnings_no_jobs">अभी कोई जॉब नहीं</string>
+    <string name="earnings_jobs_count">%d जॉब</string>
+    <string name="earnings_monthly_goal">मासिक लक्ष्य</string>
+    <string name="earnings_last_seven_days">पिछले 7 दिन</string>
+    <string name="earnings_sparkline_empty">पहली जॉब के बाद यहाँ गतिविधि दिखेगी</string>
+    <string name="earnings_view_ratings">रेटिंग देखें</string>
+</resources>

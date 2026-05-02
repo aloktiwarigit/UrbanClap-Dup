@@ -359,6 +359,9 @@ kover {
                     "*.LanguageSettingsScreenKt\$*",
                     "*.SettingsScreenKt",
                     "*.SettingsScreenKt\$*",
+                    // ProfileScreen — Compose UI composable, same rationale as other *Kt screen classes
+                    "*.ProfileScreenKt",
+                    "*.ProfileScreenKt\$*",
                 )
             }
         }
@@ -390,6 +393,7 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
     implementation(libs.compose.material3)
     implementation(libs.compose.material.icons.core)
+    implementation(libs.compose.material.icons.extended)
     implementation(libs.homeservices.design.system)
 
     implementation(libs.hilt.android)

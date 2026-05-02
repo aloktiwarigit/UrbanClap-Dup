@@ -3,8 +3,10 @@ package com.homeservices.customer.data.catalogue
 import com.google.common.truth.Truth.assertThat
 import com.homeservices.customer.data.catalogue.remote.CatalogueApiService
 import com.homeservices.customer.data.catalogue.remote.dto.AddOnDto
+import com.homeservices.customer.data.catalogue.remote.dto.CatalogueListResponse
 import com.homeservices.customer.data.catalogue.remote.dto.CategoryDto
 import com.homeservices.customer.data.catalogue.remote.dto.ServiceDto
+import com.homeservices.customer.data.catalogue.remote.dto.ServiceSummaryDto
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.flow.first
@@ -20,13 +22,23 @@ public class CatalogueRepositoryImplTest {
     public fun `getCategories emits success with mapped domain models`(): Unit =
         runTest {
             coEvery { api.getCategories() } returns
-                listOf(
-                    CategoryDto("cat1", "Plumbing", "https://cdn.example.com/plumbing.jpg", 5),
+                CatalogueListResponse(
+                    categories =
+                        listOf(
+                            CategoryDto(
+                                "cat1",
+                                "Plumbing",
+                                "https://cdn.example.com/plumbing.jpg",
+                                listOf(ServiceSummaryDto("s1", "Leak Fix", 39900), ServiceSummaryDto("s2", "Tap Install", 59900)),
+                            ),
+                        ),
                 )
             val result = sut.getCategories().first()
             assertThat(result.isSuccess).isTrue()
             assertThat(result.getOrThrow().first().id).isEqualTo("cat1")
             assertThat(result.getOrThrow().first().name).isEqualTo("Plumbing")
+            assertThat(result.getOrThrow().first().serviceCount).isEqualTo(2)
+            assertThat(result.getOrThrow().first().minPricePaise).isEqualTo(39900)
         }
 
     @Test

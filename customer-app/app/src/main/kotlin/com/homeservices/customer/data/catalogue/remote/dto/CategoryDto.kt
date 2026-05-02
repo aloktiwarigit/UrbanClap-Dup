@@ -4,11 +4,23 @@ import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
+public data class CatalogueListResponse(
+    @Json(name = "categories") val categories: List<CategoryDto>,
+)
+
+@JsonClass(generateAdapter = true)
 public data class CategoryDto(
     @Json(name = "id") public val id: String,
     @Json(name = "name") public val name: String,
-    @Json(name = "imageUrl") public val imageUrl: String,
-    @Json(name = "serviceCount") public val serviceCount: Int,
+    @Json(name = "heroImageUrl") public val imageUrl: String,
+    @Json(name = "services") public val services: List<ServiceSummaryDto>,
+)
+
+@JsonClass(generateAdapter = true)
+public data class ServiceSummaryDto(
+    @Json(name = "id") public val id: String,
+    @Json(name = "name") public val name: String,
+    @Json(name = "basePrice") public val basePrice: Int,
 )
 
 public fun CategoryDto.toDomain() =
@@ -16,5 +28,6 @@ public fun CategoryDto.toDomain() =
         id = id,
         name = name,
         imageUrl = imageUrl,
-        serviceCount = serviceCount,
+        serviceCount = services.size,
+        minPricePaise = services.minOfOrNull { it.basePrice } ?: 0,
     )
