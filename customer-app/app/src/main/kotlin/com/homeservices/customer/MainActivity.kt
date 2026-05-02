@@ -3,7 +3,7 @@ package com.homeservices.customer
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
-import androidx.fragment.app.FragmentActivity
+import androidx.appcompat.app.AppCompatActivity
 import com.homeservices.customer.data.auth.SessionManager
 import com.homeservices.customer.data.booking.PaymentResultBus
 import com.homeservices.customer.data.booking.PriceApprovalEventBus
@@ -21,7 +21,7 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 public class MainActivity :
-    FragmentActivity(),
+    AppCompatActivity(),
     PaymentResultWithDataListener {
     @Inject public lateinit var buildInfo: BuildInfoProvider
 
