@@ -1,8 +1,10 @@
 package com.homeservices.customer.ui.catalogue
 
 import com.google.common.truth.Truth.assertThat
+import com.homeservices.customer.domain.catalogue.CatalogueLocalizer
 import com.homeservices.customer.domain.catalogue.GetCategoriesUseCase
 import com.homeservices.customer.domain.catalogue.model.Category
+import com.homeservices.customer.domain.locale.GetCurrentLocaleUseCase
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -21,16 +23,19 @@ import java.io.IOException
 public class CatalogueHomeViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
     private val useCase: GetCategoriesUseCase = mockk()
+    private val localizer = CatalogueLocalizer()
+    private val getCurrentLocale: GetCurrentLocaleUseCase = mockk()
     private lateinit var sut: CatalogueHomeViewModel
 
     @Before
     public fun setUp(): Unit {
         Dispatchers.setMain(dispatcher)
+        every { getCurrentLocale() } returns flowOf("en")
         every { useCase() } returns
             flowOf(
                 Result.success(listOf(Category("1", "Plumbing", "https://cdn.example.com/plumbing.jpg", 3))),
             )
-        sut = CatalogueHomeViewModel(useCase)
+        sut = CatalogueHomeViewModel(useCase, localizer, getCurrentLocale)
     }
 
     @After
@@ -50,7 +55,7 @@ public class CatalogueHomeViewModelTest {
     public fun `uiState emits Error on failure`(): Unit =
         runTest(dispatcher) {
             every { useCase() } returns flowOf(Result.failure(IOException("net err")))
-            sut = CatalogueHomeViewModel(useCase)
+            sut = CatalogueHomeViewModel(useCase, localizer, getCurrentLocale)
             assertThat(sut.uiState.value).isInstanceOf(CatalogueHomeUiState.Error::class.java)
         }
 }

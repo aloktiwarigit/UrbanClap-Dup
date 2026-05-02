@@ -2,9 +2,11 @@ package com.homeservices.customer.ui.catalogue
 
 import androidx.lifecycle.SavedStateHandle
 import com.google.common.truth.Truth.assertThat
+import com.homeservices.customer.domain.catalogue.CatalogueLocalizer
 import com.homeservices.customer.domain.catalogue.GetServiceDetailUseCase
 import com.homeservices.customer.domain.catalogue.model.AddOn
 import com.homeservices.customer.domain.catalogue.model.Service
+import com.homeservices.customer.domain.locale.GetCurrentLocaleUseCase
 import com.homeservices.customer.domain.technician.GetConfidenceScoreUseCase
 import com.homeservices.customer.domain.technician.model.ConfidenceScore
 import io.mockk.every
@@ -25,6 +27,8 @@ public class ServiceDetailViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
     private val serviceDetailUseCase: GetServiceDetailUseCase = mockk()
     private val confidenceScoreUseCase: GetConfidenceScoreUseCase = mockk()
+    private val localizer = CatalogueLocalizer()
+    private val getCurrentLocale: GetCurrentLocaleUseCase = mockk()
 
     private val testService =
         Service(
@@ -41,6 +45,7 @@ public class ServiceDetailViewModelTest {
 
     @Before public fun setUp(): Unit {
         Dispatchers.setMain(dispatcher)
+        every { getCurrentLocale() } returns flowOf("en")
     }
 
     @After public fun tearDown(): Unit {
@@ -51,7 +56,13 @@ public class ServiceDetailViewModelTest {
     public fun `loads service detail for given serviceId`(): Unit =
         runTest(dispatcher) {
             every { serviceDetailUseCase("svc1") } returns flowOf(Result.success(testService))
-            val vm = ServiceDetailViewModel(SavedStateHandle(mapOf("serviceId" to "svc1")), serviceDetailUseCase, confidenceScoreUseCase)
+            val vm = ServiceDetailViewModel(
+                SavedStateHandle(mapOf("serviceId" to "svc1")),
+                serviceDetailUseCase,
+                confidenceScoreUseCase,
+                localizer,
+                getCurrentLocale,
+            )
             assertThat(vm.uiState.value).isInstanceOf(ServiceDetailUiState.Success::class.java)
             assertThat((vm.uiState.value as ServiceDetailUiState.Success).service).isEqualTo(testService)
         }
@@ -60,7 +71,13 @@ public class ServiceDetailViewModelTest {
     public fun `emits Error on failure`(): Unit =
         runTest(dispatcher) {
             every { serviceDetailUseCase("svc1") } returns flowOf(Result.failure(RuntimeException("not found")))
-            val vm = ServiceDetailViewModel(SavedStateHandle(mapOf("serviceId" to "svc1")), serviceDetailUseCase, confidenceScoreUseCase)
+            val vm = ServiceDetailViewModel(
+                SavedStateHandle(mapOf("serviceId" to "svc1")),
+                serviceDetailUseCase,
+                confidenceScoreUseCase,
+                localizer,
+                getCurrentLocale,
+            )
             assertThat(vm.uiState.value).isInstanceOf(ServiceDetailUiState.Error::class.java)
             assertThat((vm.uiState.value as ServiceDetailUiState.Error).message).isEqualTo("not found")
         }
@@ -69,7 +86,13 @@ public class ServiceDetailViewModelTest {
     public fun `confidenceScoreState is Hidden when no techId`(): Unit =
         runTest(dispatcher) {
             every { serviceDetailUseCase("svc1") } returns flowOf(Result.success(testService))
-            val vm = ServiceDetailViewModel(SavedStateHandle(mapOf("serviceId" to "svc1")), serviceDetailUseCase, confidenceScoreUseCase)
+            val vm = ServiceDetailViewModel(
+                SavedStateHandle(mapOf("serviceId" to "svc1")),
+                serviceDetailUseCase,
+                confidenceScoreUseCase,
+                localizer,
+                getCurrentLocale,
+            )
             assertThat(vm.confidenceScoreState.value).isInstanceOf(ConfidenceScoreUiState.Hidden::class.java)
         }
 
@@ -84,6 +107,8 @@ public class ServiceDetailViewModelTest {
                     SavedStateHandle(mapOf("serviceId" to "svc1", "techId" to "tech-1")),
                     serviceDetailUseCase,
                     confidenceScoreUseCase,
+                    localizer,
+                    getCurrentLocale,
                 )
             assertThat(vm.confidenceScoreState.value).isInstanceOf(ConfidenceScoreUiState.Loaded::class.java)
             assertThat((vm.confidenceScoreState.value as ConfidenceScoreUiState.Loaded).score).isEqualTo(score)
@@ -100,6 +125,8 @@ public class ServiceDetailViewModelTest {
                     SavedStateHandle(mapOf("serviceId" to "svc1", "techId" to "tech-1")),
                     serviceDetailUseCase,
                     confidenceScoreUseCase,
+                    localizer,
+                    getCurrentLocale,
                 )
             assertThat(vm.confidenceScoreState.value).isInstanceOf(ConfidenceScoreUiState.Limited::class.java)
         }

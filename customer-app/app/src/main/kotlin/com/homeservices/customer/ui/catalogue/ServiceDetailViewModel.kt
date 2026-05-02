@@ -3,12 +3,15 @@ package com.homeservices.customer.ui.catalogue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.homeservices.customer.domain.catalogue.CatalogueLocalizer
 import com.homeservices.customer.domain.catalogue.GetServiceDetailUseCase
+import com.homeservices.customer.domain.locale.GetCurrentLocaleUseCase
 import com.homeservices.customer.domain.technician.GetConfidenceScoreUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -19,6 +22,8 @@ internal class ServiceDetailViewModel
         savedStateHandle: SavedStateHandle,
         private val getServiceDetail: GetServiceDetailUseCase,
         private val getConfidenceScore: GetConfidenceScoreUseCase,
+        private val localizer: CatalogueLocalizer,
+        private val getCurrentLocale: GetCurrentLocaleUseCase,
     ) : ViewModel() {
         private val serviceId: String = checkNotNull(savedStateHandle["serviceId"])
         private val technicianId: String? = savedStateHandle["techId"]
@@ -34,12 +39,15 @@ internal class ServiceDetailViewModel
 
         init {
             viewModelScope.launch {
-                getServiceDetail(serviceId).collect { result ->
-                    _uiState.value =
-                        result.fold(
-                            onSuccess = { ServiceDetailUiState.Success(it) },
-                            onFailure = { ServiceDetailUiState.Error(it.message ?: "Unknown error") },
-                        )
+                combine(getServiceDetail(serviceId), getCurrentLocale()) { result, locale ->
+                    result.fold(
+                        onSuccess = { service ->
+                            ServiceDetailUiState.Success(localizer.localizeService(service, locale))
+                        },
+                        onFailure = { ServiceDetailUiState.Error(it.message ?: "Unknown error") },
+                    )
+                }.collect { state ->
+                    _uiState.value = state
                 }
             }
             if (technicianId != null) {
