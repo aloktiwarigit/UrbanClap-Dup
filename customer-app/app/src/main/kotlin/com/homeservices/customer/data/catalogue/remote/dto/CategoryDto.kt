@@ -20,6 +20,7 @@ public data class CategoryDto(
 public data class ServiceSummaryDto(
     @Json(name = "id") public val id: String,
     @Json(name = "name") public val name: String,
+    @Json(name = "basePrice") public val basePrice: Int,
 )
 
 public fun CategoryDto.toDomain() =
@@ -28,4 +29,5 @@ public fun CategoryDto.toDomain() =
         name = name,
         imageUrl = imageUrl,
         serviceCount = services.size,
+        minPricePaise = services.minOfOrNull { it.basePrice } ?: 0,
     )

@@ -29,7 +29,7 @@ public class CatalogueRepositoryImplTest {
                                 "cat1",
                                 "Plumbing",
                                 "https://cdn.example.com/plumbing.jpg",
-                                listOf(ServiceSummaryDto("s1", "Leak Fix"), ServiceSummaryDto("s2", "Tap Install")),
+                                listOf(ServiceSummaryDto("s1", "Leak Fix", 39900), ServiceSummaryDto("s2", "Tap Install", 59900)),
                             ),
                         ),
                 )
@@ -38,6 +38,7 @@ public class CatalogueRepositoryImplTest {
             assertThat(result.getOrThrow().first().id).isEqualTo("cat1")
             assertThat(result.getOrThrow().first().name).isEqualTo("Plumbing")
             assertThat(result.getOrThrow().first().serviceCount).isEqualTo(2)
+            assertThat(result.getOrThrow().first().minPricePaise).isEqualTo(39900)
         }
 
     @Test

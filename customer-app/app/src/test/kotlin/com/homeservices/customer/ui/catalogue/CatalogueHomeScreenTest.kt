@@ -35,10 +35,10 @@ public class CatalogueHomeScreenTest {
                     uiState =
                         CatalogueHomeUiState.Success(
                             listOf(
-                                Category("1", "Plumbing", "", 5),
-                                Category("2", "AC Repair", "", 8),
-                                Category("3", "Salon", "", 12),
-                                Category("4", "Cleaning", "", 6),
+                                Category("plumbing", "Plumbing", "", 5, minPricePaise = 39900),
+                                Category("ac-repair", "AC Repair", "", 8, minPricePaise = 59900),
+                                Category("electrical", "Electrical", "", 3, minPricePaise = 29900),
+                                Category("water-purifier", "RO / Water Purifier", "", 2, minPricePaise = 49900),
                             ),
                         ),
                     onCategoryClick = {},

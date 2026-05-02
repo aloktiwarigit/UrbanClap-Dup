@@ -5,4 +5,5 @@ public data class Category(
     public val name: String,
     public val imageUrl: String,
     public val serviceCount: Int,
+    public val minPricePaise: Int,
 )

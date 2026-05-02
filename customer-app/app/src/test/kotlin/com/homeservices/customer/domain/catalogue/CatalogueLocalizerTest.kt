@@ -15,6 +15,7 @@ public class CatalogueLocalizerTest {
             name = "AC Repair",
             imageUrl = "x",
             serviceCount = 3,
+            minPricePaise = 59900,
         )
 
     private val acService =

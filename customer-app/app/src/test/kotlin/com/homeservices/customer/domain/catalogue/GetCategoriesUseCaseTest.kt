@@ -17,7 +17,7 @@ public class GetCategoriesUseCaseTest {
     @Test
     public fun `invoke delegates to repository and returns categories`(): Unit =
         runTest {
-            val cats = listOf(Category("1", "Plumbing", "url", 3))
+            val cats = listOf(Category("1", "Plumbing", "url", 3, minPricePaise = 39900))
             every { repo.getCategories() } returns flowOf(Result.success(cats))
             val result = sut().first()
             assertThat(result.getOrThrow()).isEqualTo(cats)
