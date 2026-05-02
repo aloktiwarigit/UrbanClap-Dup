@@ -10,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -28,7 +29,15 @@ public fun LanguageSettingsScreen(
     val selected by viewModel.selectedTag.collectAsStateWithLifecycle()
     val saved by viewModel.savedFlow.collectAsStateWithLifecycle()
 
-    if (saved) onSaved()
+    // Per Codex P2: locale change can recreate the Activity while savedFlow is still true.
+    // Reset before navigating so the restored composition does not pop past the intended
+    // destination on the back stack.
+    LaunchedEffect(saved) {
+        if (saved) {
+            viewModel.savedFlow.value = false
+            onSaved()
+        }
+    }
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(

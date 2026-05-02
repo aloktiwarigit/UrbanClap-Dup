@@ -10,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,8 +28,16 @@ public fun FirstLaunchLanguageScreen(
     val selected by viewModel.selectedTag.collectAsStateWithLifecycle()
     val confirmed by viewModel.confirmedFlow.collectAsStateWithLifecycle()
 
-    if (confirmed) {
-        onConfirmed()
+    // Per Codex P2: keep navigation in a LaunchedEffect so it consumes the event once.
+    // setApplicationLocales() can recreate the Activity; calling onConfirmed() during
+    // composition would re-fire on every recomposition and pop past intended destinations.
+    // Reset confirmedFlow before navigating so a recreated Activity restoring confirmed=true
+    // does not retrigger.
+    LaunchedEffect(confirmed) {
+        if (confirmed) {
+            viewModel.confirmedFlow.value = false
+            onConfirmed()
+        }
     }
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
