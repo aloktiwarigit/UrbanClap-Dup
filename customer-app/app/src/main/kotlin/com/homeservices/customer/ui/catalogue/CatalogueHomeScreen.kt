@@ -106,7 +106,7 @@ private data class PromoBanner(
 
 private val promoBanners =
     listOf(
-        PromoBanner(Color(0xFFF59E0B), Color(0xFFB45309), "🌡️", "गर्मी से पहले AC सर्विस", "से ₹599 · आज की स्लॉट उपलब्ध", "अभी बुक करें", imageAsset = null /* "banner_1.jpg" */),
+        PromoBanner(Color(0xFFF59E0B), Color(0xFFB45309), "🌡️", "गर्मी से पहले AC सर्विस", "से ₹599 · आज की स्लॉट उपलब्ध", "अभी बुक करें", imageAsset = "banner-image-1.png"),
         PromoBanner(
             Color(0xFF0E4F47),
             Color(0xFF064E3B),
@@ -114,9 +114,9 @@ private val promoBanners =
             "आधार सत्यापित प्रोफेशनल",
             "हर तकनीशियन बैकग्राउंड चेक्ड · 30 दिन गारंटी",
             "और जानें",
-            imageAsset = null, /* "banner_2.jpg" */
+            imageAsset = "banner-image-2.png",
         ),
-        PromoBanner(Color(0xFF6D28D9), Color(0xFF4C1D95), "🎁", "पहली बुकिंग पर 10% छूट", "कूपन: PEHLI · सभी सेवाओं पर लागू", "कूपन लगाएं", imageAsset = null /* "banner_3.jpg" */),
+        PromoBanner(Color(0xFF6D28D9), Color(0xFF4C1D95), "🎁", "पहली बुकिंग पर 10% छूट", "कूपन: PEHLI · सभी सेवाओं पर लागू", "कूपन लगाएं", imageAsset = "banner-image-3.png"),
     )
 
 // ── Category styles ───────────────────────────────────────────────────────────
