@@ -171,7 +171,7 @@
 | **E10-S01** | Karnataka right-to-refuse enforcement — data-layer isolation + ranking-invariance integration test in CI | FR-9.1, NFR-C-1 | Dispatcher read-model has no decline fields; test fails CI if any dispatcher query touches decline history |
 | **E10-S02** | Central SSC aggregator levy automation — quarterly cron calculates 1-2% of GMV + Razorpay transfer to SSC fund | FR-9.2, NFR-C-2 | Quarterly timer trigger; itemised report; owner verification; audit log entry |
 | **E10-S03** | GST e-invoice pipeline — per-booking generation + B2B path (GSTIN in profile) + IRP integration when applicable | NFR-C-4 | MVP covers single-state GST; e-invoicing for B2B triggered on toggle (C-34 GST mode) |
-| **E10-S04** | Launch readiness suite — soft-launch feature flag (GrowthBook OSS), marketing-pause toggle, emergency-rollback playbook test, DR drill | NFR-R-1/R-3, Runbook §5 | Flag-controlled: first 100 F&F bookings only while soft-launch; DR drill documented |
+| **E10-S04** | Launch readiness suite — soft-launch feature flag (GrowthBook OSS), marketing-pause toggle, emergency-rollback playbook test, DR drill | NFR-R-1/R-3, Runbook §5 | Flag-controlled: first 100 F&F bookings only while soft-launch (D23); DR drill documented; **launch-gate ACs (added 2026-05-01)**: (1) `marketing.public-launch` flag = on requires ≥2 verified techs per active serviceId in Ayodhya service radius `[82.20, 26.79]`; soft-launch flag may flip with ≥1 tech per serviceId; (2) Hindi `strings.xml` content + serviceId/categoryId Hindi-name lookup table field-tested with ≥3 Ayodhya techs and ≥3 Ayodhya customers, comprehension feedback captured in `docs/launch-readiness/hindi-field-test-2026-XX.md` before public-launch flag flips on |
 
 ---
 

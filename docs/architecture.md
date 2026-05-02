@@ -53,6 +53,7 @@ project_name: 'homeservices-mvp'
 | **Immutable audit log** | NFR-S-6, FR-7.4 | Append-only Cosmos collection with deny-write/update policy. |
 | **DPDP — India data residency** | NFR-C-3 | Azure India Central + Firebase Asia-South1 (Mumbai) only. |
 | **Dispatch p95 < 2s** | NFR-P-3 | Cosmos geospatial index + FCM data message; no server roundtrip for tech-to-tech relay. |
+| **Hindi+English in-app locale switching on external mobile surfaces** | NFR-L-1, umbrella spec §2.2 | Both Android apps MUST support `AppCompatDelegate.setApplicationLocales()` with first-launch picker. Admin-web exempt for MVP. |
 
 ### 1.3 What we are explicitly NOT building at MVP
 
