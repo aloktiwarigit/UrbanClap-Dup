@@ -31,4 +31,25 @@
     <string name="active_job_status_arrived">Arrived</string>
     <string name="active_job_status_working">Working</string>
     <string name="active_job_status_done">Done</string>
+    <!-- Earnings screen -->
+    <string name="earnings_title">Earnings</string>
+    <string name="earnings_error">Could not load earnings</string>
+    <string name="earnings_retry">Try again</string>
+    <string name="earnings_empty_title">No earnings yet</string>
+    <string name="earnings_empty_body">Accept your first job to start today\'s payout. Earnings appear here within minutes of job completion.</string>
+    <string name="earnings_hint_online">Stay online to receive job offers</string>
+    <string name="earnings_hint_complete">Complete jobs to build your payout balance</string>
+    <string name="earnings_hint_ratings">Good ratings unlock more bookings</string>
+    <string name="earnings_payout_settings">Payout settings</string>
+    <string name="earnings_dashboard_title">Your payout dashboard</string>
+    <string name="earnings_period_today">Today</string>
+    <string name="earnings_period_week">This week</string>
+    <string name="earnings_period_month">This month</string>
+    <string name="earnings_period_lifetime">Lifetime</string>
+    <string name="earnings_no_jobs">No jobs yet</string>
+    <string name="earnings_jobs_count">%d jobs</string>
+    <string name="earnings_monthly_goal">Monthly goal</string>
+    <string name="earnings_last_seven_days">Last 7 days</string>
+    <string name="earnings_sparkline_empty">Activity will appear here after your first job</string>
+    <string name="earnings_view_ratings">View ratings</string>
 </resources>

@@ -33,6 +33,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -40,14 +41,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.designsystem.components.HsSectionCard
+import com.homeservices.technician.R
 import com.homeservices.technician.domain.earnings.model.DailyEarnings
 import com.homeservices.technician.domain.earnings.model.EarningsPeriod
 import com.homeservices.technician.domain.earnings.model.EarningsSummary
@@ -55,11 +59,13 @@ import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 
-private val WarmIvory = Color(0xFFFFFDF8)
-private val BrandGreen = Color(0xFF0F5C48)
-private val BrandGreenSoft = Color(0xFFD8F0E8)
-private val TextPrimary = Color(0xFF20243A)
-private val TextSecondary = Color(0xFF6F6A60)
+private val WarmIvory = Color(0xFFFFFBF5)
+private val BrandGreen = Color(0xFF0E4F47)
+private val AppBarStart = Color(0xFF064A3D)
+private val AppBarEnd = Color(0xFF0B6B58)
+private val BrandGreenSoft = Color(0xFFE8F5F3)
+private val TextPrimary = Color(0xFF1A1A2E)
+private val TextSecondary = Color(0xFF6B7280)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,9 +76,26 @@ internal fun EarningsScreen(
     onPayoutSettings: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    Scaffold(topBar = {
-        TopAppBar(title = { Text("Earnings", fontWeight = FontWeight.Bold, color = TextPrimary) })
-    }, modifier = modifier) { padding ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                modifier = Modifier.background(Brush.horizontalGradient(listOf(AppBarStart, AppBarEnd))),
+                title = {
+                    Text(
+                        stringResource(R.string.earnings_title),
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White,
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = Color.Transparent,
+                    titleContentColor = Color.White,
+                ),
+            )
+        },
+        modifier = modifier,
+    ) { padding ->
         EarningsContent(
             uiState = uiState,
             onRetry = viewModel::refresh,
@@ -97,13 +120,16 @@ internal fun EarningsContent(
             is EarningsUiState.Error ->
                 CenterState {
                     Text(
-                        "Could not load earnings",
+                        stringResource(R.string.earnings_error),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = TextPrimary,
                     )
                     Spacer(Modifier.height(12.dp))
-                    Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = BrandGreen)) { Text("Try again") }
+                    Button(
+                        onClick = onRetry,
+                        colors = ButtonDefaults.buttonColors(containerColor = BrandGreen),
+                    ) { Text(stringResource(R.string.earnings_retry)) }
                 }
             is EarningsUiState.Success ->
                 if (state.summary.lifetime.count == 0) {
@@ -142,7 +168,7 @@ private fun EarningsEmptyState(onPayoutSettings: () -> Unit) {
         }
         Spacer(Modifier.height(24.dp))
         Text(
-            text = "No earnings yet",
+            text = stringResource(R.string.earnings_empty_title),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = TextPrimary,
@@ -150,20 +176,20 @@ private fun EarningsEmptyState(onPayoutSettings: () -> Unit) {
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Accept your first job to start today's payout. Earnings appear here within minutes of job completion.",
+            text = stringResource(R.string.earnings_empty_body),
             style = MaterialTheme.typography.bodyMedium,
             color = TextSecondary,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(32.dp))
-        StepHint(icon = Icons.Default.Work, text = "Stay online to receive job offers")
+        StepHint(icon = Icons.Default.Work, text = stringResource(R.string.earnings_hint_online))
         Spacer(Modifier.height(12.dp))
-        StepHint(icon = Icons.AutoMirrored.Filled.TrendingUp, text = "Complete jobs to build your payout balance")
+        StepHint(icon = Icons.AutoMirrored.Filled.TrendingUp, text = stringResource(R.string.earnings_hint_complete))
         Spacer(Modifier.height(12.dp))
-        StepHint(icon = Icons.Default.Star, text = "Good ratings unlock more bookings")
+        StepHint(icon = Icons.Default.Star, text = stringResource(R.string.earnings_hint_ratings))
         Spacer(Modifier.height(32.dp))
         OutlinedButton(onClick = onPayoutSettings, modifier = Modifier.fillMaxWidth()) {
-            Text("Payout settings")
+            Text(stringResource(R.string.earnings_payout_settings))
         }
     }
 }
@@ -203,24 +229,32 @@ private fun EarningsSuccess(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
-            Text("Your payout dashboard", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Text(stringResource(R.string.earnings_dashboard_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = TextPrimary)
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                PeriodCard("Today", summary.today, modifier = Modifier.weight(1f))
-                PeriodCard("This week", summary.week, modifier = Modifier.weight(1f))
+                PeriodCard(stringResource(R.string.earnings_period_today), summary.today, modifier = Modifier.weight(1f))
+                PeriodCard(stringResource(R.string.earnings_period_week), summary.week, modifier = Modifier.weight(1f))
             }
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                PeriodCard("This month", summary.month, modifier = Modifier.weight(1f))
-                PeriodCard("Lifetime", summary.lifetime, modifier = Modifier.weight(1f))
+                PeriodCard(stringResource(R.string.earnings_period_month), summary.month, modifier = Modifier.weight(1f))
+                PeriodCard(stringResource(R.string.earnings_period_lifetime), summary.lifetime, modifier = Modifier.weight(1f))
             }
         }
         item { GoalProgressCard(summary.month.techAmountPaise) }
         item { SparklineCard(summary.lastSevenDays) }
-        item { OutlinedButton(onClick = onViewRatings, modifier = Modifier.fillMaxWidth()) { Text("View ratings") } }
-        item { OutlinedButton(onClick = onPayoutSettings, modifier = Modifier.fillMaxWidth()) { Text("Payout settings") } }
+        item {
+            OutlinedButton(onClick = onViewRatings, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.earnings_view_ratings))
+            }
+        }
+        item {
+            OutlinedButton(onClick = onPayoutSettings, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.earnings_payout_settings))
+            }
+        }
     }
 }
 
@@ -239,7 +273,7 @@ private fun PeriodCard(
             color = TextPrimary,
         )
         Text(
-            text = if (period.count == 0) "No jobs yet" else "${period.count} jobs",
+            text = if (period.count == 0) stringResource(R.string.earnings_no_jobs) else stringResource(R.string.earnings_jobs_count, period.count),
             style = MaterialTheme.typography.bodySmall,
             color = if (period.count == 0) TextSecondary else BrandGreen,
         )
@@ -250,7 +284,7 @@ private val MONTHLY_GOAL_PAISE = 3_500_000L
 
 @Composable
 private fun GoalProgressCard(monthAmountPaise: Long) {
-    HsSectionCard(title = "Monthly goal") {
+    HsSectionCard(title = stringResource(R.string.earnings_monthly_goal)) {
         LinearProgressIndicator(
             progress = { (monthAmountPaise.toFloat() / MONTHLY_GOAL_PAISE).coerceIn(0f, 1f) },
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)),
@@ -267,14 +301,14 @@ private fun GoalProgressCard(monthAmountPaise: Long) {
 
 @Composable
 private fun SparklineCard(days: List<DailyEarnings>) {
-    HsSectionCard(title = "Last 7 days") {
+    HsSectionCard(title = stringResource(R.string.earnings_last_seven_days)) {
         if (days.isEmpty() || days.all { it.techAmountPaise == 0L }) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier.fillMaxWidth().height(84.dp),
             ) {
                 Text(
-                    "Activity will appear here after your first job",
+                    stringResource(R.string.earnings_sparkline_empty),
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
                     textAlign = TextAlign.Center,
@@ -330,4 +364,4 @@ private fun CenterState(content: @Composable ColumnScope.() -> Unit) {
     )
 }
 
-private fun formatRupees(paise: Long): String = "Rs %,.0f".format(paise / 100.0)
+private fun formatRupees(paise: Long): String = "₹%,.0f".format(paise / 100.0)
