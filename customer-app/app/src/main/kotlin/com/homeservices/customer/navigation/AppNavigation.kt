@@ -7,12 +7,21 @@ import androidx.compose.ui.Modifier
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.homeservices.customer.data.auth.SessionManager
 import com.homeservices.customer.data.booking.PriceApprovalEventBus
 import com.homeservices.customer.data.rating.RatingPromptEventBus
 import com.homeservices.customer.domain.auth.model.AuthState
+import com.homeservices.customer.domain.locale.IsFirstLaunchUseCase
+import com.homeservices.customer.ui.locale.FirstLaunchLanguageScreen
 import com.homeservices.customer.ui.rating.RatingRoutes
+
+public object LocaleRoutes {
+    public const val FIRST_LAUNCH: String = "first_launch_language"
+    public const val SETTINGS: String = "settings"
+    public const val LANGUAGE_SETTINGS: String = "language_settings"
+}
 
 @Composable
 internal fun AppNavigation(
@@ -20,17 +29,23 @@ internal fun AppNavigation(
     activity: FragmentActivity,
     priceApprovalEventBus: PriceApprovalEventBus,
     ratingPromptEventBus: RatingPromptEventBus,
+    isFirstLaunch: IsFirstLaunchUseCase,
     modifier: Modifier = Modifier,
 ) {
     val navController = rememberNavController()
     val authState by sessionManager.authState.collectAsStateWithLifecycle()
+    val firstLaunchPending by isFirstLaunch().collectAsStateWithLifecycle(initialValue = true)
 
-    LaunchedEffect(authState) {
+    val startDestination = if (firstLaunchPending) LocaleRoutes.FIRST_LAUNCH else "auth"
+
+    LaunchedEffect(authState, firstLaunchPending) {
+        if (firstLaunchPending) return@LaunchedEffect
         val currentAuth = authState
         when (currentAuth) {
             is AuthState.Authenticated -> {
                 navController.navigate("main") {
                     popUpTo("auth") { inclusive = true }
+                    popUpTo(LocaleRoutes.FIRST_LAUNCH) { inclusive = true }
                     launchSingleTop = true
                 }
                 com.google.firebase.messaging.FirebaseMessaging
@@ -38,15 +53,12 @@ internal fun AppNavigation(
                     .subscribeToTopic("customer_${currentAuth.uid}")
             }
             is AuthState.Unauthenticated -> {
-                // Unsubscribe from all customer topics before navigating to auth.
-                // We can't know the previous uid here, so we rely on the fact that
-                // Unauthenticated state is only reached after the auth flow clears the session.
-                // The safest approach: delete the FCM token so no topics persist.
                 com.google.firebase.messaging.FirebaseMessaging
                     .getInstance()
                     .deleteToken()
                 navController.navigate("auth") {
                     popUpTo("main") { inclusive = true }
+                    popUpTo(LocaleRoutes.FIRST_LAUNCH) { inclusive = true }
                     launchSingleTop = true
                 }
             }
@@ -69,10 +81,21 @@ internal fun AppNavigation(
 
     NavHost(
         navController = navController,
-        startDestination = "auth",
+        startDestination = startDestination,
         modifier = modifier,
     ) {
+        composable(LocaleRoutes.FIRST_LAUNCH) {
+            FirstLaunchLanguageScreen(
+                onConfirmed = {
+                    navController.navigate("auth") {
+                        popUpTo(LocaleRoutes.FIRST_LAUNCH) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
         authGraph(navController, activity)
         mainGraph(navController)
+        settingsGraph(navController)
     }
 }
