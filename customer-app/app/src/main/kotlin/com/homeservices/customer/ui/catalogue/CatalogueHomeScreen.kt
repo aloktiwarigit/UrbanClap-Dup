@@ -6,6 +6,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,21 +14,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AcUnit
@@ -82,18 +81,15 @@ import com.homeservices.customer.R
 import com.homeservices.customer.domain.catalogue.model.Category
 import kotlinx.coroutines.delay
 
-// ── Brand & colour tokens ─────────────────────────────────────────────────────
-private val HeroGradientStart = Color(0xFF0A3D35)
-private val HeroGradientEnd = Color(0xFF166E60)
+// ── Colour tokens (Codex-refined) ────────────────────────────────────────────
+private val HeroStart = Color(0xFF064A3D)
+private val HeroEnd = Color(0xFF0B6B58)
 private val BrandGreen = Color(0xFF0E4F47)
-private val BrandGreenLight = Color(0xFF1A7A6E)
 private val WarmIvory = Color(0xFFFFFBF5)
-private val SearchBg = Color(0xFFF3F4F6)
 private val TextPrimary = Color(0xFF1A1A2E)
 private val TextSecondary = Color(0xFF6B7280)
-private val NavBg = Color(0xFFFFFFFF)
 
-// ── Promo banner data ─────────────────────────────────────────────────────────
+// ── Promo banners ─────────────────────────────────────────────────────────────
 private data class PromoBanner(
     val gradientStart: Color,
     val gradientEnd: Color,
@@ -105,33 +101,19 @@ private data class PromoBanner(
 
 private val promoBanners =
     listOf(
-        PromoBanner(
-            Color(0xFFD97706),
-            Color(0xFF92400E),
-            "🌡️",
-            "गर्मी से पहले AC सर्विस",
-            "से ₹599 · आज की स्लॉट उपलब्ध",
-            "अभी बुक करें",
-        ),
+        PromoBanner(Color(0xFFF59E0B), Color(0xFFB45309), "🌡️", "गर्मी से पहले AC सर्विस", "से ₹599 · आज की स्लॉट उपलब्ध", "अभी बुक करें"),
         PromoBanner(
             Color(0xFF0E4F47),
             Color(0xFF064E3B),
-            "⭐",
-            "50,000+ खुश ग्राहक",
-            "4.8★ रेटिंग · आधार सत्यापित प्रोफेशनल",
+            "🛡️",
+            "आधार सत्यापित प्रोफेशनल",
+            "हर तकनीशियन बैकग्राउंड चेक्ड · 30 दिन गारंटी",
             "और जानें",
         ),
-        PromoBanner(
-            Color(0xFF6D28D9),
-            Color(0xFF4C1D95),
-            "🎁",
-            "पहली बुकिंग पर 10% छूट",
-            "कूपन: PEHLI · सभी सेवाओं पर लागू",
-            "कूपन लगाएं",
-        ),
+        PromoBanner(Color(0xFF6D28D9), Color(0xFF4C1D95), "🎁", "पहली बुकिंग पर 10% छूट", "कूपन: PEHLI · सभी सेवाओं पर लागू", "कूपन लगाएं"),
     )
 
-// ── Category visual identity ──────────────────────────────────────────────────
+// ── Category styles ───────────────────────────────────────────────────────────
 private data class CategoryStyle(
     val gradientStart: Color,
     val gradientEnd: Color,
@@ -148,12 +130,9 @@ private fun categoryStyle(id: String): CategoryStyle =
         else -> CategoryStyle(Color(0xFF7C3AED), Color(0xFF4C1D95), Icons.Default.Build)
     }
 
-private fun formatPrice(paise: Int): String {
-    if (paise <= 0) return ""
-    return "से ₹${paise / 100}"
-}
+private fun formatPrice(paise: Int): String = if (paise > 0) "से ₹${paise / 100}" else ""
 
-// ── Navigation ────────────────────────────────────────────────────────────────
+// ── Nav items ─────────────────────────────────────────────────────────────────
 private data class NavItem(
     val label: String,
     val icon: ImageVector,
@@ -188,64 +167,83 @@ internal fun CatalogueHomeContent(
 
     Scaffold(
         containerColor = WarmIvory,
-        bottomBar = {
-            HomeBottomNav(selected = selectedNav, onSelect = { selectedNav = it })
-        },
+        // ── Sticky brand hero ──────────────────────────────────────────────
+        topBar = { StickyHero(onSettingsClick = onSettingsClick) },
+        bottomBar = { HomeBottomNav(selected = selectedNav, onSelect = { selectedNav = it }) },
     ) { scaffoldPadding ->
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(scaffoldPadding)
-                    .verticalScroll(rememberScrollState()),
-        ) {
-            // ── Zone 1: Brand hero ──────────────────────────────────────────
-            HeroBanner(onSettingsClick = onSettingsClick)
-
-            // ── Zone 2: Promo slider ────────────────────────────────────────
-            PromoSlider()
-
-            // ── Zone 3: Trust strip ─────────────────────────────────────────
-            TrustStrip()
-
-            // ── Zone 4: Category grid ───────────────────────────────────────
-            when (uiState) {
-                is CatalogueHomeUiState.Loading -> LoadingState()
-                is CatalogueHomeUiState.Error -> ErrorState()
-                is CatalogueHomeUiState.Success -> {
-                    Text(
-                        text = "हमारी सेवाएं",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = TextPrimary,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-                    )
-                    CategoryGrid(
-                        categories = uiState.categories,
-                        onCategoryClick = onCategoryClick,
-                    )
+        when (selectedNav) {
+            0 ->
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
+                    contentPadding = PaddingValues(bottom = 16.dp),
+                ) {
+                    item { PromoSlider() }
+                    item { TrustStrip() }
+                    when (uiState) {
+                        is CatalogueHomeUiState.Loading -> item { LoadingState() }
+                        is CatalogueHomeUiState.Error -> item { ErrorState() }
+                        is CatalogueHomeUiState.Success -> {
+                            item {
+                                Text(
+                                    text = "हमारी सेवाएं",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = TextPrimary,
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                                )
+                            }
+                            val rows = uiState.categories.chunked(2)
+                            items(rows) { row ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    row.forEach { cat ->
+                                        CategoryCard(category = cat, onClick = { onCategoryClick(cat.id) }, modifier = Modifier.weight(1f))
+                                    }
+                                    if (row.size == 1) Spacer(Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
                 }
-            }
-            Spacer(Modifier.height(8.dp))
+            1 ->
+                ComingSoonTab(
+                    icon = Icons.Default.Book,
+                    title = "आपकी बुकिंग",
+                    subtitle = "बुकिंग करने के बाद यहाँ दिखेगी",
+                    modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
+                )
+            2 ->
+                ComingSoonTab(
+                    icon = Icons.Default.SupportAgent,
+                    title = "सहायता",
+                    subtitle = "जल्द ही उपलब्ध — समस्या के लिए कॉल करें: 1800-XXX-XXXX",
+                    modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
+                )
+            3 ->
+                ComingSoonTab(
+                    icon = Icons.Default.Person,
+                    title = "प्रोफ़ाइल",
+                    subtitle = "प्रोफ़ाइल सुविधा जल्द आ रही है",
+                    modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
+                )
         }
     }
 }
 
-// ── Zone 1 — Brand hero ───────────────────────────────────────────────────────
+// ── Sticky hero (Codex spec: height 300dp, gradient #064A3D→#0B6B58) ──────────
 @Composable
-private fun HeroBanner(onSettingsClick: () -> Unit) {
+private fun StickyHero(onSettingsClick: () -> Unit) {
     Box(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(HeroGradientStart, HeroGradientEnd),
-                    ),
-                ).padding(horizontal = 20.dp, vertical = 20.dp),
+                .background(Brush.verticalGradient(listOf(HeroStart, HeroEnd)))
+                .statusBarsPadding()
+                .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 20.dp),
     ) {
         Column {
-            // Top row: brand + settings
+            // Brand row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -265,7 +263,7 @@ private fun HeroBanner(onSettingsClick: () -> Unit) {
                     Text(
                         text = "घर की हर ज़रूरत, एक जगह",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.75f),
+                        color = Color.White.copy(alpha = 0.72f),
                     )
                 }
                 IconButton(onClick = onSettingsClick) {
@@ -273,7 +271,7 @@ private fun HeroBanner(onSettingsClick: () -> Unit) {
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
 
             // Location chip
             Row(
@@ -281,9 +279,9 @@ private fun HeroBanner(onSettingsClick: () -> Unit) {
                 modifier =
                     Modifier
                         .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(999.dp))
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                        .padding(horizontal = 12.dp, vertical = 5.dp),
             ) {
-                Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFFFCD34D), modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFFFCD34D), modifier = Modifier.size(15.dp))
                 Spacer(Modifier.width(4.dp))
                 Text(
                     text = "अयोध्या, उत्तर प्रदेश",
@@ -292,9 +290,9 @@ private fun HeroBanner(onSettingsClick: () -> Unit) {
                 )
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(14.dp))
 
-            // Search bar embedded in hero
+            // Search bar (Codex: height 56dp, radius 18dp, white bg)
             var query by remember { mutableStateOf("") }
             TextField(
                 value = query,
@@ -302,15 +300,15 @@ private fun HeroBanner(onSettingsClick: () -> Unit) {
                 placeholder = {
                     Text(
                         "AC, प्लंबर, इलेक्ट्रीशियन खोजें…",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 16.sp),
                         color = TextSecondary,
                     )
                 },
                 leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Search, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(24.dp))
                 },
                 singleLine = true,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(18.dp),
                 colors =
                     TextFieldDefaults.colors(
                         focusedContainerColor = Color.White,
@@ -321,111 +319,93 @@ private fun HeroBanner(onSettingsClick: () -> Unit) {
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
                     ),
-                modifier = Modifier.fillMaxWidth().height(52.dp),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
             )
         }
     }
 }
 
-// ── Zone 2 — Promotional slider ───────────────────────────────────────────────
+// ── Promo slider (Codex: height 132dp, radius 24dp) ──────────────────────────
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PromoSlider() {
     val pagerState = rememberPagerState(pageCount = { promoBanners.size })
-
     LaunchedEffect(Unit) {
         while (true) {
             delay(4_000)
-            val next = (pagerState.currentPage + 1) % promoBanners.size
-            pagerState.animateScrollToPage(next, animationSpec = tween(600))
+            pagerState.animateScrollToPage(
+                (pagerState.currentPage + 1) % promoBanners.size,
+                animationSpec = tween(600),
+            )
         }
     }
-
     Column(modifier = Modifier.padding(vertical = 16.dp)) {
         HorizontalPager(
             state = pagerState,
             contentPadding = PaddingValues(horizontal = 20.dp),
             pageSpacing = 12.dp,
-            modifier = Modifier.fillMaxWidth(),
         ) { page ->
-            val banner = promoBanners[page]
+            val b = promoBanners[page]
             Box(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(110.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(banner.gradientStart, banner.gradientEnd),
-                            ),
-                        ).padding(horizontal = 20.dp, vertical = 14.dp),
+                        .height(132.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Brush.horizontalGradient(listOf(b.gradientStart, b.gradientEnd)))
+                        .padding(horizontal = 20.dp, vertical = 14.dp),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(text = banner.emoji, fontSize = 36.sp)
-                    Spacer(Modifier.width(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize()) {
+                    Text(b.emoji, fontSize = 38.sp)
+                    Spacer(Modifier.width(14.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = banner.title,
-                            style =
-                                MaterialTheme.typography.titleSmall.copy(
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 15.sp,
-                                ),
+                            b.title,
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold, fontSize = 20.sp),
                             color = Color.White,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                         Spacer(Modifier.height(3.dp))
                         Text(
-                            text = banner.subtitle,
-                            style = MaterialTheme.typography.bodySmall,
+                            b.subtitle,
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 15.sp),
                             color = Color.White.copy(alpha = 0.85f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            text = banner.cta + " →",
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            "${b.cta} →",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
                             color = Color.White,
                         )
                     }
                 }
             }
         }
-
         // Dot indicators
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            repeat(promoBanners.size) { index ->
-                val selected = pagerState.currentPage == index
+        Row(modifier = Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.Center) {
+            repeat(promoBanners.size) { i ->
+                val sel = pagerState.currentPage == i
                 Box(
                     modifier =
                         Modifier
                             .padding(horizontal = 3.dp)
-                            .size(if (selected) 20.dp else 6.dp, 6.dp)
-                            .clip(if (selected) RoundedCornerShape(3.dp) else CircleShape)
-                            .background(if (selected) BrandGreen else Color(0xFFD1D5DB)),
+                            .size(if (sel) 20.dp else 6.dp, 6.dp)
+                            .clip(if (sel) RoundedCornerShape(3.dp) else CircleShape)
+                            .background(if (sel) BrandGreen else Color(0xFFD1D5DB)),
                 )
             }
         }
     }
 }
 
-// ── Zone 3 — Trust strip ──────────────────────────────────────────────────────
+// ── Trust strip (Codex: white cards, border, 44dp height) ────────────────────
 @Composable
 private fun TrustStrip() {
     Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         TrustChip(icon = Icons.Default.VerifiedUser, label = "आधार सत्यापित", modifier = Modifier.weight(1f))
@@ -444,16 +424,19 @@ private fun TrustChip(
     Row(
         modifier =
             modifier
-                .background(Color(0xFFD1FAE5), RoundedCornerShape(8.dp))
-                .padding(horizontal = 6.dp, vertical = 6.dp),
+                .height(44.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(Color.White)
+                .border(1.dp, Color(0xFFDDE7E3), RoundedCornerShape(14.dp))
+                .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        Icon(icon, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(13.dp))
-        Spacer(Modifier.width(3.dp))
+        Icon(icon, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(4.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.SemiBold),
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.SemiBold),
             color = BrandGreen,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -461,32 +444,7 @@ private fun TrustChip(
     }
 }
 
-// ── Zone 4 — Category grid ────────────────────────────────────────────────────
-@Composable
-private fun CategoryGrid(
-    categories: List<Category>,
-    onCategoryClick: (String) -> Unit,
-) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-        val rows = categories.chunked(2)
-        rows.forEach { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                row.forEach { category ->
-                    CategoryCard(
-                        category = category,
-                        onClick = { onCategoryClick(category.id) },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                if (row.size == 1) Spacer(Modifier.weight(1f))
-            }
-        }
-    }
-}
-
+// ── Category card (Codex: 148dp, radius 20dp, icon tile 56dp, 17sp title) ────
 @Composable
 private fun CategoryCard(
     category: Category,
@@ -506,7 +464,7 @@ private fun CategoryCard(
             modifier
                 .height(148.dp)
                 .scale(scale)
-                .clip(RoundedCornerShape(18.dp))
+                .clip(RoundedCornerShape(20.dp))
                 .background(Brush.verticalGradient(listOf(style.gradientStart, style.gradientEnd)))
                 .pointerInput(Unit) {
                     detectTapGestures(
@@ -519,44 +477,46 @@ private fun CategoryCard(
                     )
                 },
     ) {
-        // Ghost icon — decorative background
+        // Ghost icon
         Icon(
             style.icon,
             contentDescription = null,
-            tint = Color.White.copy(alpha = 0.07f),
-            modifier = Modifier.size(110.dp).align(Alignment.BottomEnd).padding(end = 6.dp, bottom = 6.dp),
+            tint = Color.White.copy(alpha = 0.08f),
+            modifier = Modifier.size(110.dp).align(Alignment.BottomEnd).padding(6.dp),
         )
-        // Content
-        Column(modifier = Modifier.fillMaxSize().padding(14.dp)) {
+        Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+            // Icon tile (Codex: 56dp)
             Box(
                 contentAlignment = Alignment.Center,
                 modifier =
                     Modifier
-                        .size(44.dp)
-                        .background(Color.White.copy(alpha = 0.18f), RoundedCornerShape(12.dp)),
+                        .size(56.dp)
+                        .background(Color.White.copy(alpha = 0.18f), RoundedCornerShape(14.dp)),
             ) {
-                Icon(style.icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(26.dp))
+                Icon(style.icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
             }
             Spacer(Modifier.weight(1f))
+            // Title (Codex: 17sp Bold)
             Text(
                 text = category.name,
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, fontSize = 13.sp),
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, fontSize = 17.sp),
                 color = Color.White,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
+            // Price (Codex: 15sp Semibold)
             if (category.minPricePaise > 0) {
                 Text(
                     text = formatPrice(category.minPricePaise),
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                    color = Color.White.copy(alpha = 0.85f),
+                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold),
+                    color = Color.White.copy(alpha = 0.88f),
                 )
             }
         }
         Icon(
             Icons.AutoMirrored.Filled.ArrowForward,
             contentDescription = null,
-            tint = Color.White.copy(alpha = 0.6f),
+            tint = Color.White.copy(alpha = 0.55f),
             modifier = Modifier.size(16.dp).align(Alignment.TopEnd).padding(top = 12.dp, end = 12.dp),
         )
     }
@@ -568,11 +528,11 @@ private fun HomeBottomNav(
     selected: Int,
     onSelect: (Int) -> Unit,
 ) {
-    NavigationBar(containerColor = NavBg, tonalElevation = 8.dp) {
-        navItems.forEachIndexed { index, item ->
+    NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
+        navItems.forEachIndexed { i, item ->
             NavigationBarItem(
-                selected = selected == index,
-                onClick = { onSelect(index) },
+                selected = selected == i,
+                onClick = { onSelect(i) },
                 icon = { Icon(item.icon, contentDescription = item.label) },
                 label = { Text(item.label, style = MaterialTheme.typography.labelSmall, maxLines = 1) },
                 colors =
@@ -608,6 +568,38 @@ private fun ErrorState() {
             )
             Spacer(Modifier.height(6.dp))
             Text(stringResource(R.string.catalogue_error), style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+        }
+    }
+}
+
+@Composable
+private fun ComingSoonTab(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier =
+                    Modifier
+                        .size(72.dp)
+                        .background(BrandGreen.copy(alpha = 0.1f), RoundedCornerShape(20.dp)),
+            ) {
+                Icon(icon, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(36.dp))
+            }
+            Spacer(Modifier.height(20.dp))
+            Text(title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = TextPrimary)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextSecondary,
+                modifier = Modifier.padding(horizontal = 16.dp),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
         }
     }
 }
