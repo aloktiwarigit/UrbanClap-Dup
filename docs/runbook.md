@@ -427,6 +427,7 @@ After every incident:
 
 ---
 
+<<<<<<< Updated upstream
 ## 10. DPDP 72-hour breach notification (added 2026-04-26)
 
 **Statutory basis:** Digital Personal Data Protection Act 2023 §10 +
@@ -697,3 +698,269 @@ FCM is Google-managed infrastructure.
 
 **Runbook v1.2 complete (E10-S04: Emergency rollback + DR drill + launch checklist).**
 Living document — update after every incident and every significant architectural change.
+=======
+**Runbook v1.0 complete.** Living document — update after every incident and every significant architectural change.
+
+---
+
+## Operational Procedures 2026-04-26
+
+**Author:** Alok Tiwari (audit pass — paired with `docs/threat-model.md` Addendum 2026-04-26)
+**Trigger:** Procedures missing from v1.0 that have become load-bearing after E02–E10 stories landed.
+
+### OP-A1: Razorpay account compromise / signature key leaked
+
+**Trigger:**
+- Razorpay sends a security advisory email
+- Sentry alerts spike on `WebhookSignatureInvalid` AND `RAZORPAY_KEY_ID` is unchanged
+- An unexpected payout shows up in the Razorpay dashboard
+- A team member confirms a key leaked into git history, a screenshot, or a third-party tool
+
+**Severity:** P0 (financial)
+
+**Immediate action (first 5 minutes):**
+1. From Razorpay Dashboard → Account & Settings → API Keys → **Regenerate** Key ID + Key Secret (this revokes the old keys immediately).
+2. From Razorpay Dashboard → Webhooks → **Regenerate** webhook secret.
+3. Pause all in-flight payouts: Razorpay Dashboard → Route → Pause Transfers (if Route active).
+
+**Investigation:**
+- `gh run list --workflow=ship.yml --limit 20` — confirm no rogue deploys.
+- Razorpay Dashboard → Reports → All Transactions: filter last 24h, look for transfers/payouts you don't recognise.
+- Cosmos `wallet_ledger` container: `SELECT * FROM c WHERE c.createdAt > <leak-window-start> ORDER BY c.createdAt DESC` — cross-check with Razorpay's record.
+- Audit log: `queryAuditLog({ action: 'finance.payout_approved', dateFrom: <leak-window-start> })`.
+
+**Mitigation:**
+- Update `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` in Azure Key Vault.
+- Trigger a redeploy of the API Function so it picks up new env vars (Function App → Restart).
+- File reversal requests via Razorpay Dashboard for any unauthorised transfers (Razorpay supports reversal within 24h of capture).
+
+**Recovery:**
+- Resume payouts only after a clean reconciliation between Cosmos `wallet_ledger` and Razorpay's transaction history for the leak window.
+- Notify affected technicians via FCM `technician_<uid>` if any of their payouts were affected.
+
+**Post-incident:**
+- DPDP-Act check: if PII flowed through unauthorised payouts (notes payload), consider this a breach → trigger OP-A4.
+- Add Semgrep rule banning `RAZORPAY_KEY_*` outside `services/razorpay.service.ts` and `services/razorpayRoute.service.ts`.
+- Postmortem in `docs/postmortems/`.
+
+**Owner / escalation:**
+- Razorpay account manager via Razorpay Dashboard support
+- CA / legal counsel within 24h if reversed amount > ₹50,000
+
+---
+
+### OP-A2: FCM service-account-key rotation
+
+**Trigger:**
+- Quarterly cadence (calendar reminder; rotate every 90 days)
+- Suspicion of leak (Firebase Admin SDK key in git, Sentry breadcrumb, etc.)
+- Firebase Console → Service Accounts → "Last used" anomaly
+
+**Severity:** P1 (without rotation: standing risk; on suspected leak: P0)
+
+**Immediate action (first 5 minutes — leak case):**
+1. Firebase Console → Project settings → Service accounts → **Disable** the suspect key.
+2. Generate a new private key (Firebase Console → Service Accounts → Generate new private key).
+3. Stage the new JSON in Azure Key Vault as `firebase-admin-sdk-NEW`.
+
+**Investigation:**
+- Firebase Console → IAM → review which projects/services hold the old key.
+- Sentry: search for `firebase` in last 30 days for any logged JSON containing the old key fingerprint.
+- GitHub: `gh secret list` — confirm no GitHub Actions secret holds the old key (Codex review marker check should have prevented this; verify).
+
+**Mitigation:**
+- Update API Function App settings: replace `FIREBASE_ADMIN_KEY_JSON` env var (or Key Vault reference) with the new key.
+- Restart the Function App. Confirm a successful FCM publish via the next dispatch in App Insights.
+
+**Recovery:**
+- Once new key is verified working for 24h, **delete** the old service-account-key (not just disable) from Firebase IAM.
+- Update local `.env.local` for any developers (rotation broadcast in team channel).
+
+**Post-incident:**
+- If leak confirmed, treat as breach + run OP-A4.
+- Document rotation date in `docs/runbooks/key-rotation-log.md` (append-only).
+
+**Owner / escalation:** Firebase support via console.
+
+---
+
+### OP-A3: Cosmos partition / document size limit reached
+
+**Trigger:**
+- Cosmos write returns `RequestEntityTooLarge` (HTTP 413) with code `EntityTooLarge`
+- Azure Monitor alert: a single document approaching 2 MB (Cosmos hard limit) or a logical partition approaching 20 GB
+- Owner sees `CONTAINER_NOT_PROVISIONED` or `DocumentTooLarge` in Sentry
+
+**Severity:** P1 (writes to that partition fail; reads still work)
+
+**Note on the "rating list" assumption:** the threat brief mentioned a single rating-doc growing past document size. As of audit, `rating-repository.ts` writes ONE document per booking-rating-side, so that exact failure mode is not present. The real-world equivalents are: (a) `audit_log` partition (monthly partitions, could grow large), (b) `complaints` doc with a long `internalNotes` array, (c) `dispatch_attempts` doc — though TTL'd. This procedure covers all three.
+
+**Immediate action (first 5 minutes):**
+1. Identify which container + partition is failing: Azure Portal → Cosmos → Metrics → "Document count by partition key".
+2. Pause writes to the affected partition: deploy a feature-flag (GrowthBook) `partition_writes_paused_<container>=true`.
+
+**Investigation:**
+- Run `SELECT VALUE COUNT(1) FROM c WHERE c.partitionKey = '<key>'` to confirm doc count.
+- Check biggest documents: `SELECT TOP 10 c.id, LENGTH(JSON.stringify(c)) AS size FROM c WHERE c.partitionKey = '<key>' ORDER BY size DESC`.
+- For `complaints`: a complaint with hundreds of `internalNotes` entries is the usual culprit.
+
+**Mitigation:**
+- For **audit_log**: rotate to a new partition-key scheme (already monthly via `timestamp.slice(0, 7)`; if a single month exceeds 20 GB, switch to weekly: `timestamp.slice(0, 7) + '-W' + weekNum`).
+- For **complaints**: cap `internalNotes` array size in `replaceComplaint` (e.g. ≤ 500 entries; archive older notes to a sibling `complaint_notes_archive` container).
+- For **bookings hot partition** (e.g. all-customers-in-one-partition mistake — won't happen in current schema where partition is `customerId`): add a salt to partition key for known-hot tenants.
+
+**Recovery:**
+- Re-enable writes after migration: flip GrowthBook flag.
+- Run a backfill if rotated container schema diverges.
+
+**Post-incident:**
+- ADR for the partition-key change.
+- Update Cosmos quota alerts to fire at 70% of new limit.
+
+**Owner / escalation:** Azure support (Developer plan, free).
+
+---
+
+### OP-A4: DPDP Act breach notification (72-hour window)
+
+**Trigger:**
+- Confirmed unauthorised access to PII (customer phone numbers, addresses, geo-coordinates, technician PAN, KYC photos, admin TOTP secrets)
+- Triggered by OP-A1, OP-A2 leak case, or OP-A6 audit log tamper case
+
+**Severity:** P0 (regulatory clock starts at the moment of confirmation)
+
+**Immediate action (first 5 minutes):**
+1. **Start a clock.** DPDP Act 2023 § 8(6) requires notification "without delay"; consensus interpretation by MeitY guidance is 72 hours from awareness.
+2. Log start time + initial impact estimate in `docs/postmortems/breach-YYYY-MM-DD-<slug>.md` (created from template now).
+3. Pause any data-export functions that touch the affected dataset.
+
+**Investigation:**
+- Determine WHO was accessed (count of data principals, by category).
+- Determine WHAT data categories were exposed (phone, address, geo, PAN, KYC photo, etc.).
+- Determine HOW (which surface; reference threat-model entry).
+- Determine FROM-WHEN to UNTIL-WHEN.
+- Preserve audit logs for the affected window (snapshot the audit_log container to Storage append-blob).
+
+**Mitigation:**
+- Close the leak surface (per the originating procedure).
+- Reset credentials for any data principals whose creds were exposed.
+
+**Recovery — within 72h:**
+- Notify the Data Protection Board of India via the specified online portal (URL TBD until DPB sets up; until then, file via written letter to MeitY per § 8(6) interim guidance).
+- Notify affected data principals via the channel they registered (FCM + SMS + email if applicable).
+- Notification must include: nature of breach, categories of data, approximate count, likely consequences, mitigation steps taken, contact for queries.
+
+**Post-incident:**
+- File a copy of the notification in `docs/breach-notifications/YYYY-MM-DD-<slug>.md`.
+- Postmortem within 7 days.
+- CA + legal counsel review.
+
+**Owner / escalation:** Founder; legal counsel from contact list § 9.
+
+---
+
+### OP-A5: Karnataka Labour Department audit response (1-week notice)
+
+**Trigger:**
+- Owner receives formal notice of audit from Karnataka Labour Dept (typically 5-7 days notice for platform-worker compliance)
+
+**Severity:** P1 (regulatory; financial penalty risk)
+
+**Immediate action (first 24 hours):**
+1. Acknowledge the notice in writing within 48 hours; cite acknowledgement number.
+2. Engage labour counsel from § 9 contact list.
+3. Notify CA — they may need to provide concurrent records.
+
+**Preparation (days 2-5):**
+- Export the algorithm-transparency document (`docs/dispatch-algorithm.md`) — confirm it still matches `api/src/services/dispatcher.service.ts` ranking logic.
+- Run `api/tests/integration/dispatcher-data-isolation.test.ts` and capture green output as evidence that decline-history is not used in dispatch (FR-9.1 / ADR-0011).
+- Export from owner admin: technician-population list, decline-rate by technician (for show — not used in dispatch), payout register, welfare-board contribution register.
+- Audit log dump for the relevant period: `queryAuditLog({ dateFrom: <quarter-start> })` → CSV.
+- Snapshot Cosmos `wallet_ledger` for the relevant period.
+
+**Day-of-audit:**
+- Walk auditor through `docs/dispatch-algorithm.md` and the four-layer decline-history isolation (Semgrep + integration test + code comment + ADR).
+- Hand over CSVs; do NOT alter live data while audit is in progress (Cosmos at the read endpoint is safe; ensure no migrations are running).
+
+**Post-incident:**
+- Capture auditor questions/findings in `docs/audits/karnataka-YYYY-MM-DD.md`.
+- Address findings within the auditor's deadline; track in GitHub project `compliance`.
+
+**Owner / escalation:** Labour counsel; CA.
+
+---
+
+### OP-A6: Mass tech deactivation / protest event (UC-style)
+
+**Trigger:**
+- INC-9 signals (acceptance rate drops > 30% / day, multiple complaints, social media chatter)
+- A coordinated email/letter from a worker collective
+- Press inquiry referencing platform workers
+
+**Severity:** P1 (reputational + regulatory — Karnataka Act protections tight)
+
+**Immediate action (first 5 minutes):**
+1. **Do NOT** issue any ID block, payout freeze, or dispatch-priority change against named techs (FR-9.1 + Karnataka Act + ADR-0011).
+2. Open the audit log for the past 7 days: confirm no decline-history-based dispatcher modifications were merged.
+3. Capture social-media + email evidence; freeze a copy in `docs/incidents/protest-YYYY-MM-DD/` for the postmortem.
+
+**Investigation:**
+- Pull dispatch logs for the protesting techs: `bookingEventRepo` filtered by `technicianId IN (...)` to confirm dispatch was equitable.
+- Pull payout register for the protesting techs: confirm no missed/late payouts.
+- Pull rating data: any retaliatory low-rating cluster?
+
+**Mitigation (owner-led, NOT code-led):**
+- Owner directly calls top 5-10 protesting techs; offers a 30-min listening session.
+- FCM broadcast to `techs_all` topic with transparency: "We are listening, dispatch algorithm is unchanged, here's the public algorithm doc → `<link>`".
+- If the grievance is genuine and code-fixable (e.g. payout timing bug, complaint-misclassification): create story + implement urgently (Foundation tier).
+
+**Recovery:**
+- Public-facing comms: a single owner-signed note (no PR-speak); link to `docs/dispatch-algorithm.md`.
+- If Karnataka Labour Dept escalates: trigger OP-A5.
+
+**Post-incident:**
+- Postmortem in `docs/postmortems/`. Include "what would have prevented this" — usually a pre-emptive comms cadence (monthly tech 1:1s — already in §7 quarterly tasks).
+- Re-walk threat-model § 4.2.
+
+**Owner / escalation:** Founder leads; labour counsel on standby.
+
+---
+
+### OP-A7: Audit log integrity verification (preventive)
+
+**Trigger:**
+- Quarterly cadence
+- Any time T-A3 mitigation is deferred and another quarter passes
+- Triggered automatically by OP-A1 / OP-A2 (any compromise event)
+
+**Severity:** P2 (preventive)
+
+**Procedure:**
+1. Pull the prior quarter's audit_log entries: `queryAuditLog({ dateFrom: <Q-start>, dateTo: <Q-end> })`.
+2. Compute SHA-256 over the sorted-by-timestamp concatenation of `(id, action, resourceType, resourceId, timestamp)`.
+3. Append the digest + range to `docs/audit-log-digests.md` (append-only file in repo, signed off by owner each quarter).
+4. Cross-check current quarter's digest against recomputed digest of past quarters in append-blob storage (once T-A3 is mitigated).
+
+**Investigation (if digests don't match):**
+- Compare entry counts.
+- Run `SELECT * FROM c WHERE c.id NOT IN (<known-id-list>)` — find injected entries.
+- Compare against Sentry breadcrumbs from the affected window.
+
+**Mitigation:**
+- Treat any mismatch as P0 → triggers OP-A4 (DPDP) + investigation.
+
+**Owner / escalation:** Founder.
+
+---
+
+### Cross-references to existing INCs
+
+- **OP-A1** complements **INC-2** (payment failures) — INC-2 is for outage / vendor side; OP-A1 is for compromise / our side.
+- **OP-A4** is upstream of every DPDP-relevant incident; INC-1 through INC-7 should escalate here on confirmation of PII exposure.
+- **OP-A6** complements **INC-9** — INC-9 is signal detection, OP-A6 is full response procedure.
+- **DR drill (E10-S04, planned)** — when implemented, this runbook's § 6 should reference the drill cadence enforcement (timer trigger or GitHub Action).
+
+---
+
+**Operational Procedures 2026-04-26 complete. Total new procedures: 7.**
+>>>>>>> Stashed changes
