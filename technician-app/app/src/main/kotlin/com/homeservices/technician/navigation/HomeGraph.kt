@@ -16,6 +16,7 @@ import com.homeservices.technician.ui.activeJob.ActiveJobScreen
 import com.homeservices.technician.ui.activeJob.ActiveJobViewModel
 import com.homeservices.technician.ui.complaint.ComplaintRoutes
 import com.homeservices.technician.ui.complaint.ComplaintScreen
+import com.homeservices.technician.ui.dashboard.TechnicianDashboardScreen
 import com.homeservices.technician.ui.earnings.EarningsScreen
 import com.homeservices.technician.ui.myratings.MyRatingsScreen
 import com.homeservices.technician.ui.payoutsettings.PayoutCadenceScreen
@@ -25,6 +26,13 @@ import com.homeservices.technician.ui.rating.RatingScreen
 internal fun NavGraphBuilder.homeGraph(navController: NavController) {
     navigation(startDestination = "home_dashboard", route = "home") {
         composable("home_dashboard") {
+            TechnicianDashboardScreen(
+                onOpenEarnings = { navController.navigate("earnings") },
+                onOpenRatings = { navController.navigate("ratings_transparency") },
+                onOpenKyc = { /* KYC lives in OnboardingGraph; cross-graph wiring tracked as follow-up */ },
+            )
+        }
+        composable("earnings") {
             EarningsScreen(
                 onViewRatings = { navController.navigate("ratings_transparency") },
                 onPayoutSettings = { navController.navigate("payout_settings") },
