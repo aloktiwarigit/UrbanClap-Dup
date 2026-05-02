@@ -7,6 +7,7 @@ java = "21"
 
 # AndroidX / Compose
 androidxBiometric = "1.1.0"
+androidxAppcompat = "1.7.0"
 androidxNavigationCompose = "2.8.9"
 androidxSecurityCrypto = "1.0.0"
 coreKtx = "1.15.0"
@@ -78,6 +79,7 @@ homeservices-design-system = { module = "com.homeservices:design-system", versio
 
 # AndroidX
 androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "androidxBiometric" }
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidxAppcompat" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodelCompose" }
