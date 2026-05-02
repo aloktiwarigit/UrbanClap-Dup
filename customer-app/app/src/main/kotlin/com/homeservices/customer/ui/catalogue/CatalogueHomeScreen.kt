@@ -221,10 +221,7 @@ internal fun CatalogueHomeContent(
                     modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
                 )
             3 ->
-                ComingSoonTab(
-                    icon = Icons.Default.Person,
-                    title = "प्रोफ़ाइल",
-                    subtitle = "प्रोफ़ाइल सुविधा जल्द आ रही है",
+                com.homeservices.customer.ui.profile.ProfileScreen(
                     modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
                 )
         }
