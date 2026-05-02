@@ -49,6 +49,11 @@ android {
         )
         buildConfigField(
             "String",
+            "GOOGLE_WEB_CLIENT_ID",
+            "\"${System.getenv("GOOGLE_WEB_CLIENT_ID") ?: ""}\"",
+        )
+        buildConfigField(
+            "String",
             "MAPS_API_KEY",
             "\"${System.getenv("MAPS_API_KEY") ?: ""}\"",
         )
@@ -388,6 +393,11 @@ dependencies {
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.messaging)
     implementation(libs.firebase.storage)
+
+    // Credential Manager + Google Identity Library
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.playservices)
+    implementation(libs.google.identity.googleid)
 
     // Coroutines — play-services extensions (.await() on Task<T>)
     implementation(libs.kotlinx.coroutines.play.services)

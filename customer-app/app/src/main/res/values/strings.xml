@@ -91,4 +91,5 @@
     <string name="price_approval_approved">Approved</string>
     <string name="price_approval_declined">Declined</string>
     <string name="price_approval_selected_total">Approved add-ons total</string>
+
 </resources>

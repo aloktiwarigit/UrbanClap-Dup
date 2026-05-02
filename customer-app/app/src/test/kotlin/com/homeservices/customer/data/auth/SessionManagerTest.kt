@@ -3,6 +3,7 @@ package com.homeservices.customer.data.auth
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider
+import com.homeservices.customer.domain.auth.model.AuthProvider
 import com.homeservices.customer.domain.auth.model.AuthState
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
@@ -112,6 +113,52 @@ public class SessionManagerTest {
 
         val state = freshManager.authState.value
         assertThat(state).isInstanceOf(AuthState.Authenticated::class.java)
-        assertThat((state as AuthState.Authenticated).phoneLastFour).isEmpty()
+        assertThat((state as AuthState.Authenticated).phoneLastFour).isNull()
+    }
+
+    @Test
+    public fun `saveSession with email provider — round-trips email and displayName`(): Unit =
+        runTest {
+            sessionManager.saveSession(
+                uid = "uid-email",
+                email = "user@example.com",
+                displayName = "Alice",
+                authProvider = AuthProvider.Email,
+            )
+            val state = sessionManager.authState.value as AuthState.Authenticated
+            assertThat(state.uid).isEqualTo("uid-email")
+            assertThat(state.email).isEqualTo("user@example.com")
+            assertThat(state.displayName).isEqualTo("Alice")
+            assertThat(state.authProvider).isEqualTo(AuthProvider.Email)
+        }
+
+    @Test
+    public fun `saveSession with Google provider — round-trips displayName`(): Unit =
+        runTest {
+            sessionManager.saveSession(
+                uid = "uid-google",
+                email = "alice@gmail.com",
+                displayName = "Alice G",
+                authProvider = AuthProvider.Google,
+            )
+            val state = sessionManager.authState.value as AuthState.Authenticated
+            assertThat(state.authProvider).isEqualTo(AuthProvider.Google)
+            assertThat(state.displayName).isEqualTo("Alice G")
+        }
+
+    @Test
+    public fun `old session missing new keys — defaults to Phone provider and null email`() {
+        // Write a session without the new keys (simulates pre-E02-S05 data)
+        prefs
+            .edit()
+            .putString("uid", "old-uid")
+            .putLong("session_created_at_epoch_ms", System.currentTimeMillis())
+            .apply()
+        // Create fresh SessionManager to trigger readInitialState()
+        val freshSut = SessionManager(prefs)
+        val state = freshSut.authState.value as AuthState.Authenticated
+        assertThat(state.authProvider).isEqualTo(AuthProvider.Phone)
+        assertThat(state.email).isNull()
+        assertThat(state.displayName).isNull()
     }
 }

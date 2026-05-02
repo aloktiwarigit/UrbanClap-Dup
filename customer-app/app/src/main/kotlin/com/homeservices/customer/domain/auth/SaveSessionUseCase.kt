@@ -4,6 +4,7 @@ import com.google.firebase.FirebaseException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.homeservices.customer.data.auth.SessionManager
+import com.homeservices.customer.domain.auth.model.AuthProvider
 import com.homeservices.customer.domain.auth.model.AuthResult
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -24,7 +25,29 @@ public class SaveSessionUseCase
             user: FirebaseUser,
             phoneLastFour: String,
         ) {
-            sessionManager.saveSession(user.uid, phoneLastFour)
+            sessionManager.saveSession(
+                uid = user.uid,
+                phoneLastFour = phoneLastFour,
+                authProvider = AuthProvider.Phone,
+            )
+        }
+
+        public suspend fun saveWithGoogle(user: FirebaseUser) {
+            sessionManager.saveSession(
+                uid = user.uid,
+                email = user.email,
+                displayName = user.displayName,
+                authProvider = AuthProvider.Google,
+            )
+        }
+
+        public suspend fun saveWithEmail(user: FirebaseUser) {
+            sessionManager.saveSession(
+                uid = user.uid,
+                email = user.email,
+                displayName = user.displayName,
+                authProvider = AuthProvider.Email,
+            )
         }
 
         /**
@@ -39,7 +62,11 @@ public class SaveSessionUseCase
                         IllegalStateException("null user after anonymous sign-in"),
                     )
                 val lastFour = phoneNumber.takeLast(PHONE_LAST_DIGITS)
-                sessionManager.saveSession(user.uid, lastFour)
+                sessionManager.saveSession(
+                    uid = user.uid,
+                    phoneLastFour = lastFour,
+                    authProvider = AuthProvider.Phone,
+                )
                 AuthResult.Success(user)
             } catch (e: FirebaseException) {
                 AuthResult.Error.General(e)

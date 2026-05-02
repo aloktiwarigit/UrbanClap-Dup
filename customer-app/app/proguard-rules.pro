@@ -7,3 +7,10 @@
 # Firebase Auth — required for phone auth credential classes
 -keepattributes Signature
 -keepattributes *Annotation*
+
+# Credential Manager + Google Identity Library
+-keep class androidx.credentials.** { *; }
+-keep class com.google.android.libraries.identity.googleid.** { *; }
+# Firebase Google auth provider
+-keep class com.google.firebase.auth.GoogleAuthProvider { *; }
+-keep class com.google.firebase.auth.FirebaseAuthUserCollisionException { *; }
