@@ -12,7 +12,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.homeservices.customer.R
 
 @Composable
 public fun SettingsScreen(
@@ -25,7 +27,7 @@ public fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Settings",
+                text = stringResource(R.string.settings_title),
                 style = MaterialTheme.typography.headlineMedium,
             )
             Surface(
@@ -37,7 +39,7 @@ public fun SettingsScreen(
                         .clickable(onClick = onLanguageClick),
             ) {
                 Text(
-                    text = "Language / भाषा",
+                    text = stringResource(R.string.settings_language),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(16.dp),
                 )
