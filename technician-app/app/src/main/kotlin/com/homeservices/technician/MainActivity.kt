@@ -32,6 +32,7 @@ public class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        navigateFromExtra(intent.getStringExtra("navigate_to"), ratingReceivedEventBus)
         setContent {
             HomeservicesTheme {
                 AppNavigation(
