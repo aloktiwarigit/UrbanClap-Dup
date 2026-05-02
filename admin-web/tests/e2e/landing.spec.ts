@@ -28,19 +28,27 @@ test('footer shows real commit sha and semver from /v1/health', async ({ page })
   await expect(footer).toContainText(/\d+\.\d+\.\d+/);
 });
 
-test('dark mode toggle changes computed background color', async ({ page }) => {
+test('theme toggle changes computed background color', async ({ page }) => {
   await page.goto('/');
-  // Read resolved backgroundColor on <html> — globals.css declares `html { background: var(--color-surface) }`.
-  // Reading custom properties via getPropertyValue can return empty for layer-scoped declarations in
-  // Chromium (Tailwind v4 wraps :root tokens in @layer theme); the resolved color is the reliable signal.
-  const initialBg = await page.evaluate(
+  // ThemeProvider toggles theme by mutating `documentElement.dataset.theme`.
+  // globals.css makes :root tokens dark by default and overrides them under
+  // `html[data-theme="light"]`; `.dark` is a no-op (line ~171). Force both
+  // states explicitly so the assertion is independent of cookie/system-pref
+  // defaults. Read resolved backgroundColor (not the var) — getPropertyValue
+  // can return empty for layer-scoped declarations in Tailwind v4's @theme.
+  await page.evaluate(() => {
+    document.documentElement.dataset['theme'] = 'light';
+  });
+  const lightBg = await page.evaluate(
     () => getComputedStyle(document.documentElement).backgroundColor,
   );
-  await page.evaluate(() => document.documentElement.classList.add('dark'));
+  await page.evaluate(() => {
+    document.documentElement.dataset['theme'] = 'dark';
+  });
   const darkBg = await page.evaluate(
     () => getComputedStyle(document.documentElement).backgroundColor,
   );
-  expect(darkBg).not.toBe(initialBg);
+  expect(lightBg).not.toBe(darkBg);
+  expect(lightBg).not.toBe('');
   expect(darkBg).not.toBe('');
-  expect(initialBg).not.toBe('');
 });
