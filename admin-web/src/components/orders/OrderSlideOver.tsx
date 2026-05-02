@@ -46,7 +46,7 @@ export function OrderSlideOver({ order, onClose, onOrderUpdated }: OrderSlideOve
           <section><h3 className="text-xs text-gray-500 font-medium mb-1">Created</h3><p>{formatDate(currentOrder.createdAt)}</p></section>
 
           {toast && (
-            <p role="status" className={`text-sm rounded p-2 ${toast.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+            <p role="status" className={`alert ${toast.type === 'success' ? 'alert-success' : 'alert-danger'}`}>
               {toast.message}
             </p>
           )}

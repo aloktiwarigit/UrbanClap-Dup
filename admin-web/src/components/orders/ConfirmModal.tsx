@@ -79,7 +79,7 @@ export function ConfirmModal({
           <button
             onClick={() => void onConfirm(value)}
             disabled={isDisabled}
-            className="px-4 py-2 rounded bg-blue-600 text-white text-sm font-medium disabled:opacity-50"
+            className="btn btn-primary"
           >
             {loading ? 'Processing…' : 'Confirm'}
           </button>

@@ -1,16 +1,62 @@
 @import "tailwindcss";
 
-/* Dashboard design tokens - E09-S01 */
+/* ─────────────────────────────────────────────────────────────────────────
+   homeservices admin — Editorial Command Center
+   Dark-default warm-ink. Marigold (turmeric) accent. Hairline rules.
+   E10-S99 visual rebrand — supersedes E09-S01 token block.
+   ───────────────────────────────────────────────────────────────────────── */
+
 :root {
-  --ink-0: #070a0b; --ink-1: #0e1416; --ink-2: #131b1e;
-  --ink-3: #1a2427; --ink-4: #263135; --ink-5: #3d4a50;
-  --fog-0: #6b7a81; --fog-1: #96a4ab; --fog-2: #c4d1d7; --fog-3: #ebf2f5;
-  --teal: #22a38f; --teal-soft: #2fc9b1; --teal-dim: #15584e;
-  --coral: #f07a52; --coral-soft: #f4946f;
-  --ember: #e9b44c; --rose: #d65d7a; --lavender: #8b7dc3;
-  --font-display: "Fraunces", "Times New Roman", serif;
-  --font-body: "IBM Plex Sans", -apple-system, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  /* Type — actual fonts loaded via next/font in layout.tsx */
+  --font-display: var(--font-fraunces), "Times New Roman", Georgia, serif;
+  --font-body: var(--font-geist), -apple-system, "Segoe UI", system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, Menlo, monospace;
+
+  /* Warm-ink palette — dark default. Existing var names kept so dashboard
+     widgets (Rail, CounterStrip, TechMap…) keep working without rewrites. */
+  --ink-0: #0E0B08;   /* canvas */
+  --ink-1: #14110C;   /* canvas-raised */
+  --ink-2: #1A1610;   /* surface */
+  --ink-3: #221C15;   /* surface-raised */
+  --ink-4: #2E2719;   /* hairline strong */
+  --ink-5: #3E3528;   /* divider */
+
+  --fog-0: #6E665B;   /* text-mute */
+  --fog-1: #9A9082;   /* text-soft */
+  --fog-2: #C7BCA9;   /* text-default */
+  --fog-3: #F1E9D8;   /* text-strong (vellum) */
+
+  /* Single warm accent — saffron / turmeric. Used SPARINGLY. */
+  --marigold: #E2A04A;
+  --marigold-soft: #F1B86A;
+  --marigold-dim: #6F4818;
+
+  /* Status spectrum — kept names (teal, coral, ember, rose, lavender) so
+     existing widgets keep working. Values retuned for editorial warmth. */
+  --teal: #5BA38E;        /* on-duty */
+  --teal-soft: #7DBFAC;
+  --teal-dim: #1F4B41;
+  --coral: #C26B47;       /* stalled */
+  --coral-soft: #E08B66;
+  --ember: #E9B44C;       /* warning */
+  --rose: #B6385C;        /* danger / breach */
+  --lavender: #8B7DC3;    /* secondary status */
+
+  /* Paper palette — light mode override (html.light) */
+  --paper-0: #F4EDDF;
+  --paper-1: #FBF6E9;
+  --paper-2: #E9DFC6;
+  --paper-line: #D4C9AB;
+  --paper-text-0: #1A140F;
+  --paper-text-1: #4A4135;
+  --paper-text-2: #6E665B;
+
+  /* Rail navigation — separate token namespace so light-mode override is clean */
+  --rail-bg: var(--ink-1);
+  --rail-text: var(--fog-0);
+  --rail-text-active: var(--teal-soft);
+  --rail-active-bg: var(--teal-dim);
+  --rail-border: var(--ink-4);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -21,97 +67,520 @@
   }
 }
 
+/* Tailwind v4 design tokens — DARK by default (no .dark prefix needed) */
 @theme {
-  /* color - brand + neutrals + semantic */
-  --color-brand: #4f46e5;
-  --color-brand-fg: #ffffff;
-  --color-surface: #ffffff;
-  --color-surface-alt: #f8fafc;
-  --color-text: #0f172a;
-  --color-text-muted: #475569;
-  --color-border: #e2e8f0;
-  --color-success: #16a34a;
-  --color-warn: #d97706;
-  --color-danger: #dc2626;
+  /* Brand & semantic colors */
+  --color-brand: #E2A04A;             /* marigold */
+  --color-brand-fg: #14110C;          /* ink on marigold (high-contrast) */
+  --color-surface: #0E0B08;
+  --color-surface-alt: #14110C;
+  --color-surface-raised: #1A1610;
+  --color-text: #F1E9D8;              /* vellum */
+  --color-text-muted: #9A9082;
+  --color-text-faint: #6E665B;
+  --color-border: #2E2719;
+  --color-border-strong: #3E3528;
+  --color-success: #5BA38E;
+  --color-warn: #E9B44C;
+  --color-danger: #B6385C;
 
-  /* type scale */
+  /* Type scale */
+  --text-eyebrow: 0.6875rem;
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
   --text-lg: 1.125rem;
   --text-xl: 1.25rem;
   --text-2xl: 1.5rem;
-  --text-3xl: 1.875rem;
-  --text-4xl: 2.25rem;
+  --text-3xl: 2rem;
+  --text-4xl: 2.75rem;
+  --text-5xl: 4rem;
+  --text-6xl: 5.5rem;
+  --text-display: 7.5rem;
 
-  /* spacing - 4 / 8 / 12 / 16 / 24 / 32 / 48 px */
+  /* Spacing */
+  --space-0-5: 0.125rem;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
   --space-4: 1rem;
+  --space-5: 1.25rem;
   --space-6: 1.5rem;
   --space-8: 2rem;
+  --space-10: 2.5rem;
   --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
 
-  /* radii */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
+  /* Radii — editorial = sharp. Soft only on form chips. */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-pill: 999px;
 
-  /* elevation - 3 tiers */
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.10), 0 2px 4px -2px rgba(15, 23, 42, 0.08);
-  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.10), 0 4px 6px -4px rgba(15, 23, 42, 0.08);
+  /* Elevation — crisp hairline + ink-shadow, no gauzy blur */
+  --shadow-sm: 0 0 0 1px var(--ink-4);
+  --shadow-md: 0 1px 0 0 var(--ink-4), 0 0 0 1px var(--ink-4);
+  --shadow-lg: 0 24px 60px -28px rgba(0,0,0,0.85), 0 0 0 1px var(--ink-4);
 
-  /* motion */
+  /* Motion */
   --duration-fast: 120ms;
-  --duration-base: 200ms;
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-base: 220ms;
+  --duration-slow: 420ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.dark {
-  --color-surface: #0b1220;
-  --color-surface-alt: #111a2e;
-  --color-text: #e2e8f0;
-  --color-text-muted: #94a3b8;
-  --color-border: #1f2a44;
-  --color-brand-fg: #ffffff;
+/* Light-mode override — only if user explicitly requested light.
+   Selector uses both .light (legacy) and [data-theme="light"] (post-hydration safe). */
+html.light,
+html[data-theme="light"] {
+  --color-surface: var(--paper-0);
+  --color-surface-alt: var(--paper-1);
+  --color-surface-raised: var(--paper-2);
+  --color-text: var(--paper-text-0);
+  --color-text-muted: var(--paper-text-1);
+  --color-text-faint: var(--paper-text-2);
+  --color-border: var(--paper-line);
+  --color-border-strong: #B0A382;
+  --color-brand-fg: var(--paper-0);
+
+  /* re-map ink-* / fog-* used by dashboard widgets so they read on paper */
+  --ink-0: var(--paper-0);
+  --ink-1: var(--paper-1);
+  --ink-2: var(--paper-2);
+  --ink-3: #DFD4B8;
+  --ink-4: var(--paper-line);
+  --ink-5: #B0A382;
+  --fog-0: var(--paper-text-2);
+  --fog-1: var(--paper-text-1);
+  --fog-2: var(--paper-text-0);
+  --fog-3: var(--paper-text-0);
+
+  /* Rail in light mode — paper background needs deeper text and a different active pill */
+  --rail-bg: var(--paper-1);
+  --rail-text: var(--paper-text-1);
+  --rail-text-active: var(--paper-text-0);
+  --rail-active-bg: color-mix(in oklab, var(--marigold) 18%, var(--paper-2));
+  --rail-border: var(--paper-line);
 }
 
-.input { @apply border border-gray-300 rounded px-3 py-2 text-sm w-full; }
+/* Dark-class kept as a no-op for back-compat with the layout.tsx
+   theme script that toggles .dark; default is already dark. */
+.dark { /* no-op — root is dark */ }
 
-:focus-visible {
-  outline: 2px solid var(--color-brand);
-  outline-offset: 2px;
+/* Subtle paper grain — warmth and depth without performance cost */
+html::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0.04;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.92' numOctaves='1' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.7'/></svg>");
 }
 
 html {
   background: var(--color-surface);
   color: var(--color-text);
+  font-family: var(--font-body);
+  font-feature-settings: "ss01" 1, "cv11" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-body);
   font-size: var(--text-base);
-  line-height: 1.5;
+  line-height: 1.55;
   margin: 0;
+  background: var(--color-surface);
+  color: var(--color-text);
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Editorial typographic helpers
+   ───────────────────────────────────────────────────────────────────────── */
+
+.eyebrow {
+  font-family: var(--font-body);
+  font-size: var(--text-eyebrow);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--color-text-muted);
+}
+
+.display {
+  font-family: var(--font-display);
+  font-feature-settings: "ss01" 1;
+  font-optical-sizing: auto;
+  font-weight: 380;
+  letter-spacing: -0.02em;
+  line-height: 0.96;
+}
+
+.numeral {
+  font-family: var(--font-display);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: lining-nums tabular-nums;
+  font-weight: 460;
+  letter-spacing: -0.045em;
+  line-height: 0.92;
+}
+
+.tnum { font-variant-numeric: tabular-nums lining-nums; }
+
+.italic-serif {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 380;
+}
+
+.hairline {
+  height: 1px;
+  background: var(--color-border);
+  border: 0;
+  width: 100%;
+  display: block;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Live indicator — marigold breathing pulse
+   ───────────────────────────────────────────────────────────────────────── */
+
+@keyframes liveBreath {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.85); }
+}
+.live-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--marigold);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--marigold) 22%, transparent);
+  animation: liveBreath 1800ms var(--ease-in-out) infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Page-load orchestrated reveal — staggered editorial rise
+   ───────────────────────────────────────────────────────────────────────── */
+
+@keyframes editorialRise {
+  from { opacity: 0; transform: translateY(0.75rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.rise { animation: editorialRise 540ms var(--ease-out) both; }
+.rise-1 { animation-delay: 60ms; }
+.rise-2 { animation-delay: 140ms; }
+.rise-3 { animation-delay: 220ms; }
+.rise-4 { animation-delay: 300ms; }
+.rise-5 { animation-delay: 380ms; }
+.rise-6 { animation-delay: 460ms; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Form controls — global tokenization. This makes EVERY native input/
+   select/textarea on every dashboard page editorial-themed for free.
+   ───────────────────────────────────────────────────────────────────────── */
+
+input, select, textarea {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.625rem 0.75rem;
+  transition: border-color var(--duration-base) var(--ease-out),
+              background var(--duration-base) var(--ease-out);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--color-text-faint);
+}
+
+input:hover, select:hover, textarea:hover {
+  border-color: var(--color-border-strong);
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--marigold);
+  background: var(--color-surface-raised);
+}
+
+/* Tame native date-picker icon for dark mode */
+input[type="date"], input[type="datetime-local"], input[type="time"] {
+  color-scheme: dark;
+}
+html.light input[type="date"],
+html.light input[type="datetime-local"],
+html.light input[type="time"],
+html[data-theme="light"] input[type="date"],
+html[data-theme="light"] input[type="datetime-local"],
+html[data-theme="light"] input[type="time"] {
+  color-scheme: light;
+}
+
+/* Multi-select / size>1 select — editorial list-style */
+select[size]:not([size="1"]),
+select[multiple] {
+  padding: 0.25rem;
+}
+select[size]:not([size="1"]) option,
+select[multiple] option {
+  padding: 0.375rem 0.5rem;
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+}
+
+/* Legacy .input class kept for components that still reference it */
+.input {
+  display: block;
+  width: 100%;
+}
+
+button {
+  font-family: var(--font-body);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Focus ring — marigold offset, sharp not blurry
+   ───────────────────────────────────────────────────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid var(--marigold);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Reusable button primitives — minimal, editorial. Used by landing/login;
+   dashboard pages can adopt incrementally.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0 1.125rem;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all var(--duration-base) var(--ease-out);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--marigold);
+  color: var(--ink-0);
+  border-color: var(--marigold);
+}
+.btn-primary:hover { background: var(--marigold-soft); border-color: var(--marigold-soft); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+.btn-ghost:hover { border-color: var(--marigold); color: var(--marigold-soft); }
+
+/* Subtle "view more" / link affordance */
+.btn-link {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  padding: 0 0 2px 0;
+  min-height: 0;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-weight: 500;
+  color: var(--color-text);
+}
+.btn-link:hover { border-bottom-color: var(--marigold); color: var(--marigold-soft); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Alert primitive — editorial banner. Replaces ad-hoc bg-{color}-50 toasts.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  border: 1px solid var(--color-border);
+  border-left-width: 3px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+}
+.alert-success { border-left-color: var(--teal); color: var(--teal-soft); }
+.alert-warn    { border-left-color: var(--ember); color: var(--ember); }
+.alert-danger  { border-left-color: var(--rose); color: var(--rose); }
+.alert-info    { border-left-color: var(--marigold); color: var(--marigold-soft); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Chip primitive — small status tag. Replaces ad-hoc bg-{color}-100 chips.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.125rem 0.5rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-eyebrow);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.chip-success { border-color: var(--teal-dim); color: var(--teal-soft); }
+.chip-warn    { border-color: var(--ember); color: var(--ember); }
+.chip-danger  { border-color: var(--rose); color: var(--rose); }
+.chip-info    { border-color: var(--marigold-dim); color: var(--marigold-soft); }
+
+/* For complaint card "X" repeat-offender count chip */
+.chip-numeral {
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border-radius: 999px;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Add btn-success variant */
+.btn-success {
+  background: var(--teal-dim);
+  color: var(--teal-soft);
+  border-color: var(--teal-dim);
+}
+.btn-success:hover {
+  background: var(--teal);
+  color: var(--ink-0);
+  border-color: var(--teal);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Theme toggle — mono label, marigold underline on active
+   ───────────────────────────────────────────────────────────────────────── */
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+.theme-toggle__option {
+  font-family: var(--font-mono);
+  font-size: var(--text-eyebrow);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--color-text-faint);
+  background: transparent;
+  border: 0;
+  padding: 0 0 2px 0;
+  border-bottom: 1px solid transparent;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+.theme-toggle__option:hover {
+  color: var(--color-text-muted);
+}
+.theme-toggle__option[data-active] {
+  color: var(--color-text);
+  border-bottom-color: var(--marigold);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Topbar — editorial header strip
+   ───────────────────────────────────────────────────────────────────────── */
+
+.topbar {
+  height: 52px;
+  background: var(--rail-bg);
+  border-bottom: 1px solid var(--rail-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-5);
+  flex-shrink: 0;
+}
+.topbar__brand { display: flex; flex-direction: column; gap: 0; }
+.topbar__title {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  line-height: 1.1;
+}
+.topbar__city {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--color-text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.topbar__right { display: flex; align-items: center; gap: var(--space-4); }
+.topbar__live { display: flex; align-items: center; gap: var(--space-1); }
+.topbar__live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--teal);
+  animation: liveBreath 2s var(--ease-in-out) infinite;
+}
+.topbar__live-label {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--teal);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.topbar__clock {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+}
+.topbar__slot { display: flex; align-items: center; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Dashboard-specific layout helpers (kept from prior token sheet)
+   ───────────────────────────────────────────────────────────────────────── */
+
 @media (max-width: 900px) {
-  .rail-desktop {
-    display: none !important;
-  }
-
-  .rail-mobile {
-    display: flex !important;
-  }
-
-  .dashboard-grid {
-    grid-template-columns: 1fr !important;
-  }
-
-  main {
-    padding-bottom: 72px;
-  }
+  .rail-desktop { display: none !important; }
+  .rail-mobile { display: flex !important; }
+  .dashboard-grid { grid-template-columns: 1fr !important; }
+  main { padding-bottom: 72px; }
 }

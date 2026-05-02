@@ -10,6 +10,32 @@ cp .env.example .env.local   # leave SENTRY_DSN blank for local dev
 pnpm dev                     # http://localhost:3000
 ```
 
+## Firebase dev keys (required for login)
+
+The login form uses Firebase Phone Auth. `.env.local` ships with placeholder values that fail with `auth/api-key-not-valid` on actual sign-in. To run the login flow locally:
+
+1. **Create a dev Firebase project** (or get added to the existing one):
+   - Go to https://console.firebase.google.com
+   - Create a project named `homeservices-dev` (or reuse any throwaway project).
+   - Add a Web app: Project settings → General → Your apps → "Add app" → Web.
+   - Enable Phone Auth: Authentication → Sign-in method → Phone → Enable.
+   - Add `localhost` to Authorized domains.
+
+2. **Copy the SDK config into `.env.local`:**
+   ```
+   NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSy...                   # Web API Key
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=homeservices-dev.firebaseapp.com
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=homeservices-dev
+   ```
+
+3. **Restart `pnpm dev`** — Firebase reads env at module import.
+
+> Production keys live in the Azure Static Web Apps environment, not in `.env.local`. Never commit real keys; `.env.local` is gitignored but treat it as secret regardless. To rotate the placeholder `JWT_SECRET` to a per-developer random value:
+> ```
+> node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+> ```
+> and replace `JWT_SECRET=` in `.env.local`.
+
 ## Test
 
 ```bash
@@ -38,7 +64,7 @@ Azure Static Web Apps (free tier — 100 GB/mo bandwidth). Deploy wiring is **ou
 
 - **App Router only.** No `pages/`. All routes in `app/<route>/page.tsx`.
 - **RSC by default.** `"use client"` only when needed (event handlers, browser APIs, React state).
-- **Tokens only.** Every color/space/type/radius/elevation/motion comes from a token defined in `app/globals.css` `@theme { ... }`. No hex literals, no magic `px`, no inline styles. Dark mode via `class="dark"` on `<html>`.
+- **Tokens only.** Every color/space/type/radius/elevation/motion comes from a token defined in `app/globals.css` `@theme { ... }`. No hex literals, no magic `px`, no inline styles. Theme via `data-theme="light|dark"` on `<html>`, server-rendered from the `theme` cookie.
 - **Tailwind v4 only.** No Emotion, no styled-components, no CSS Modules for new code.
 - **Strict TS + zero ESLint warnings.** `tsconfig.json` includes `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`.
 - **Tests live under `tests/`.** Unit + component in `tests/*.test.tsx`; e2e in `tests/e2e/`; a11y in `tests/a11y/`. **No snapshot tests.**

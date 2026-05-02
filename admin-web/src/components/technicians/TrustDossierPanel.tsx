@@ -43,7 +43,7 @@ export function TrustDossierPanel({ technicianId }: TrustDossierPanelProps) {
       {open && (
         <div className="mt-2 rounded border border-gray-100 bg-gray-50 p-3 text-xs space-y-1">
           {loading && <p className="text-gray-400">Loading…</p>}
-          {error && <p className="text-red-500">Could not load: {error}</p>}
+          {error && <p className="alert alert-danger">Could not load: {error}</p>}
           {dossier && (
             <>
               <p className="font-semibold">{dossier.displayName}</p>
@@ -85,7 +85,7 @@ export function TrustDossierPanel({ technicianId }: TrustDossierPanelProps) {
 
 function Badge({ label }: { label: string }) {
   return (
-    <span className="rounded bg-green-50 text-green-700 px-1.5 py-0.5 text-xs font-medium">
+    <span className="chip chip-success">
       {label}
     </span>
   );

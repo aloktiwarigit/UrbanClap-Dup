@@ -47,7 +47,7 @@ export function OrdersTable({ orders, total, page, pageSize, totalPages, isLoadi
                 <td className="px-4 py-3">{order.city}</td>
                 <td className="px-4 py-3 whitespace-nowrap">{formatScheduled(order.scheduledAt)}</td>
                 <td className="px-4 py-3 font-medium">{formatAmount(order.amount)}</td>
-                <td className="px-4 py-3 text-blue-600">View →</td>
+                <td className="px-4 py-3 text-[var(--marigold)]">View →</td>
               </tr>
             ))}
           </tbody>

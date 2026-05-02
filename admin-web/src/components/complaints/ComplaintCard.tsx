@@ -44,19 +44,20 @@ export function ComplaintCard({ complaint, tick: _tick, onClick }: ComplaintCard
           </p>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
-          <span className={`text-xs font-medium ${urgent ? 'text-red-600' : 'text-gray-500'}`}>
+          <span
+            data-urgent={urgent ? '' : undefined}
+            className={`text-xs font-medium ${urgent ? 'text-[var(--rose)]' : 'text-[var(--color-text-muted)]'}`}
+          >
             {slaLabel}
           </span>
           {complaint.escalated && (
-            <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
-              escalated
-            </span>
+            <span className="chip chip-danger">escalated</span>
           )}
         </div>
       </div>
       {complaint.assigneeAdminId && (
         <div className="mt-2 flex items-center gap-1">
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">
+          <span className="chip chip-info chip-numeral">
             {complaint.assigneeAdminId.slice(0, 1).toUpperCase()}
           </span>
           <span className="text-xs text-gray-400 truncate">{complaint.assigneeAdminId}</span>

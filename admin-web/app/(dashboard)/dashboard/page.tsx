@@ -1,7 +1,6 @@
 export const dynamic = 'force-dynamic';
 
-import { cookies } from 'next/headers';
-import { createApiClient } from '@/api/client';
+import { getServerApiClient } from '@/lib/serverApi';
 import { CounterStrip } from '@/components/dashboard/CounterStrip';
 import { TechMap } from '@/components/dashboard/TechMap';
 import { OrderFeed } from '@/components/dashboard/OrderFeed';
@@ -11,17 +10,6 @@ import type { components } from '@/api/generated/schema';
 
 type DashboardSummary = components['schemas']['DashboardSummary'];
 type TechLocation = components['schemas']['TechLocation'];
-
-const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:3000';
-
-async function getServerClient() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('hs_access')?.value ?? '';
-  return createApiClient({
-    baseUrl: API_BASE,
-    headers: () => Promise.resolve({ Authorization: `Bearer ${token}` }),
-  });
-}
 
 const FALLBACK_SUMMARY: DashboardSummary = {
   bookingsToday: 0,
@@ -33,7 +21,7 @@ const FALLBACK_SUMMARY: DashboardSummary = {
 };
 
 export default async function LiveOpsDashboardPage() {
-  const client = await getServerClient();
+  const client = await getServerApiClient();
 
   const [summaryResult, techsResult] = await Promise.allSettled([
     client.GET('/v1/admin/dashboard/summary'),

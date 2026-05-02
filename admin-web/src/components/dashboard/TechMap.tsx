@@ -1,6 +1,7 @@
 'use client';
 
 import type { components } from '@/api/generated/schema';
+import { EmptyState } from '@/components/EmptyState';
 
 // Future: swap for @vis.gl/react-google-maps once Maps SDK billing confirmed
 type TechLocation = components['schemas']['TechLocation'];
@@ -40,7 +41,7 @@ export function TechMap({ techs }: TechMapProps) {
         width: '100%',
         aspectRatio: '16/9',
         background: 'var(--ink-1)',
-        borderRadius: '8px',
+        borderRadius: 'var(--radius-sm)',
         overflow: 'hidden',
         border: '1px solid var(--ink-4)',
       }}
@@ -76,6 +77,26 @@ export function TechMap({ techs }: TechMapProps) {
           />
         ))}
       </svg>
+
+      {/* Empty state overlay when no techs on duty */}
+      {techs.length === 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+          }}
+        >
+          <EmptyState
+            eyebrow="Field map"
+            headline="No technicians on duty"
+            copy="Pins will appear here once techs come online."
+          />
+        </div>
+      )}
 
       {/* Tech pins */}
       {techs.map((tech) => {
@@ -114,7 +135,7 @@ export function TechMap({ techs }: TechMapProps) {
           display: 'flex',
           gap: '8px',
           background: 'rgba(14, 20, 22, 0.85)',
-          borderRadius: '4px',
+          borderRadius: 'var(--radius-sm)',
           padding: '4px 8px',
         }}
       >

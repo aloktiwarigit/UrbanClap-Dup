@@ -18,7 +18,7 @@ export function PayoutQueue({ payoutsPending, techCount }: PayoutQueueProps) {
       style={{
         background: 'var(--ink-2)',
         border: '1px solid var(--ink-4)',
-        borderRadius: '8px',
+        borderRadius: 'var(--radius-sm)',
         padding: '1rem 1.25rem',
       }}
     >
@@ -70,48 +70,62 @@ export function PayoutQueue({ payoutsPending, techCount }: PayoutQueueProps) {
           </span>
         </div>
 
-        <div style={{ marginTop: '0.5rem', position: 'relative', display: 'inline-block' }}>
-          <button
-            disabled
-            aria-disabled="true"
-            aria-describedby="payout-cta-tooltip"
+        {payoutsPending === 0 ? (
+          <p
             style={{
-              width: '100%',
-              padding: '0.5rem 1rem',
-              borderRadius: '6px',
-              border: '1px solid var(--ink-5)',
-              background: 'var(--ink-3)',
-              color: 'var(--fog-0)',
-              fontFamily: 'var(--font-body)',
-              fontSize: '0.8125rem',
-              cursor: 'not-allowed',
-              opacity: 0.6,
+              margin: 0,
+              marginTop: 'var(--space-2)',
+              fontSize: 'var(--text-xs)',
+              color: 'var(--color-text-faint)',
+              fontStyle: 'italic',
             }}
           >
-            Approve all payouts
-          </button>
-          <span
-            id="payout-cta-tooltip"
-            role="tooltip"
-            style={{
-              display: 'none', // shown via CSS :hover on parent — simplified for SSR compatibility
-              position: 'absolute',
-              bottom: 'calc(100% + 6px)',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              background: 'var(--ink-0)',
-              color: 'var(--fog-1)',
-              fontSize: '0.6875rem',
-              fontFamily: 'var(--font-mono)',
-              padding: '4px 8px',
-              borderRadius: '4px',
-              whiteSpace: 'nowrap',
-              pointerEvents: 'none',
-            }}
-          >
-            Coming in E10-S03
-          </span>
-        </div>
+            Nothing pending — payouts cleared.
+          </p>
+        ) : (
+          <div style={{ marginTop: '0.5rem', position: 'relative', display: 'inline-block' }}>
+            <button
+              disabled
+              aria-disabled="true"
+              aria-describedby="payout-cta-tooltip"
+              style={{
+                width: '100%',
+                padding: '0.5rem 1rem',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--ink-5)',
+                background: 'var(--ink-3)',
+                color: 'var(--fog-0)',
+                fontFamily: 'var(--font-body)',
+                fontSize: '0.8125rem',
+                cursor: 'not-allowed',
+                opacity: 0.6,
+              }}
+            >
+              Approve all payouts
+            </button>
+            <span
+              id="payout-cta-tooltip"
+              role="tooltip"
+              style={{
+                display: 'none', // shown via CSS :hover on parent — simplified for SSR compatibility
+                position: 'absolute',
+                bottom: 'calc(100% + 6px)',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: 'var(--ink-0)',
+                color: 'var(--fog-1)',
+                fontSize: '0.6875rem',
+                fontFamily: 'var(--font-mono)',
+                padding: '4px 8px',
+                borderRadius: 'var(--radius-sm)',
+                whiteSpace: 'nowrap',
+                pointerEvents: 'none',
+              }}
+            >
+              Coming in E10-S03
+            </span>
+          </div>
+        )}
       </div>
     </section>
   );

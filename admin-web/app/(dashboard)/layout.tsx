@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import { AdminAuthProvider, type AuthState } from '@/lib/auth/context';
 import { Rail } from '@/components/dashboard/Rail';
 import { Topbar } from '@/components/dashboard/Topbar';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const jwtSecretEnv = process.env.JWT_SECRET;
@@ -43,7 +44,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       >
         <Rail />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          <Topbar />
+          <Topbar rightSlot={<ThemeToggle />} />
           <main style={{ flex: 1, overflow: 'auto' }}>{children}</main>
         </div>
       </div>

@@ -12,7 +12,7 @@ async function getToken(): Promise<string> {
 }
 
 function apiBase(): string {
-  return process.env['API_BASE_URL'] ?? 'http://localhost:3001';
+  return process.env['API_BASE_URL'] ?? 'http://localhost:7071/api';
 }
 
 export async function toggleCategoryAction(id: string): Promise<AdminServiceCategory | null> {

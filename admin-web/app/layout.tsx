@@ -1,21 +1,45 @@
 import type { Metadata } from 'next';
+import { Fraunces, Geist, JetBrains_Mono } from 'next/font/google';
+import { ThemeProvider } from '@/components/theme/ThemeProvider';
+import { readThemeCookie } from '@/lib/theme';
 import './globals.css';
+
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  variable: '--font-fraunces',
+  display: 'swap',
+  weight: ['300', '400', '500', '600'],
+  style: ['normal', 'italic'],
+});
+
+const geist = Geist({
+  subsets: ['latin'],
+  variable: '--font-geist',
+  display: 'swap',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains-mono',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'homeservices — admin',
-  description: 'Owner console for the homeservices platform.',
+  description: 'Owner console for the homeservices field-operations platform.',
 };
 
-const themeScript = `(function(){try{var t=localStorage.getItem('theme');var m=window.matchMedia('(prefers-color-scheme: dark)').matches;if(t==='dark'||(!t&&m))document.documentElement.classList.add('dark');}catch(e){}})();`;
-
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const theme = await readThemeCookie();
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        {/* nosemgrep: no-dangerous-html — pre-hydration theme script must run before React; minimised IIFE; no user input. See ADR/E01-S02 brainstorm §5. */}
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
-      <body>{children}</body>
+    <html
+      lang="en"
+      data-theme={theme}
+      className={`${fraunces.variable} ${geist.variable} ${jetbrainsMono.variable}`}
+    >
+      <body>
+        <ThemeProvider initialTheme={theme}>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }
