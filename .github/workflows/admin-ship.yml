@@ -157,6 +157,12 @@ jobs:
           api_location: ''
           output_location: ''
         env:
+          # SWA action's container only supports Node 18/20/22; the workflow-scope
+          # FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 from line ~34 leaks into the action
+          # and breaks the deploy with "Node version 24.13.0 is not supported".
+          # Override here to keep Oryx + the action on supported runtimes.
+          # Oryx itself respects admin-web/.nvmrc (pinned to 22).
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: ''
           # NEXT_PUBLIC_* are baked at build time by Oryx inside the SWA action
           # container. Server-only secrets (JWT_SECRET, etc.) live in SWA app
           # settings — set via `az staticwebapp appsettings set` (see runbook §5.1).
