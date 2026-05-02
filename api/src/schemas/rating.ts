@@ -43,6 +43,8 @@ export const RatingDocSchema = z.object({
   techComment: z.string().optional(),
   techSubmittedAt: z.string().optional(),
   revealedAt: z.string().optional(),
+  customerAppealRemoved: z.boolean().optional(),
+  customerAppealDisputed: z.boolean().optional(),
 });
 
 export const SidePayloadSchema = z.union([
@@ -76,6 +78,7 @@ export const TechRatingSummaryItemSchema = z.object({
   subScores: CustomerSubScoresSchema,
   comment: z.string().optional(),
   submittedAt: z.string(),
+  appealDisputed: z.boolean().optional(),
 });
 export type TechRatingSummaryItem = z.infer<typeof TechRatingSummaryItemSchema>;
 

@@ -4,6 +4,7 @@ import com.homeservices.technician.data.rating.RatingReceivedEventBus
 import com.homeservices.technician.domain.rating.GetMyRatingsSummaryUseCase
 import com.homeservices.technician.domain.rating.model.RatingSubScoreAverages
 import com.homeservices.technician.domain.rating.model.TechRatingSummary
+import com.homeservices.technician.domain.shield.FileRatingAppealUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -24,6 +25,7 @@ public class MyRatingsViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
     private val useCase: GetMyRatingsSummaryUseCase = mockk()
     private val eventBus = RatingReceivedEventBus()
+    private val fileRatingAppealUseCase: FileRatingAppealUseCase = mockk(relaxed = true)
 
     private val fakeSummary =
         TechRatingSummary(
@@ -48,7 +50,7 @@ public class MyRatingsViewModelTest {
     public fun `init loads ratings and transitions to Success`(): Unit =
         runTest {
             coEvery { useCase.invoke() } returns Result.success(fakeSummary)
-            val vm = MyRatingsViewModel(useCase, eventBus)
+            val vm = MyRatingsViewModel(useCase, eventBus, fileRatingAppealUseCase)
             assertInstanceOf(MyRatingsUiState.Success::class.java, vm.uiState.value)
             assertEquals(fakeSummary, (vm.uiState.value as MyRatingsUiState.Success).summary)
         }
@@ -57,7 +59,7 @@ public class MyRatingsViewModelTest {
     public fun `init failure transitions to Error`(): Unit =
         runTest {
             coEvery { useCase.invoke() } returns Result.failure(RuntimeException())
-            val vm = MyRatingsViewModel(useCase, eventBus)
+            val vm = MyRatingsViewModel(useCase, eventBus, fileRatingAppealUseCase)
             assertEquals(MyRatingsUiState.Error, vm.uiState.value)
         }
 
@@ -65,7 +67,7 @@ public class MyRatingsViewModelTest {
     public fun `refresh reloads ratings`(): Unit =
         runTest {
             coEvery { useCase.invoke() } returns Result.success(fakeSummary)
-            val vm = MyRatingsViewModel(useCase, eventBus)
+            val vm = MyRatingsViewModel(useCase, eventBus, fileRatingAppealUseCase)
             vm.refresh()
             coVerify(exactly = 2) { useCase.invoke() }
         }
@@ -74,7 +76,7 @@ public class MyRatingsViewModelTest {
     public fun `FCM event triggers reload`(): Unit =
         runTest {
             coEvery { useCase.invoke() } returns Result.success(fakeSummary)
-            val vm = MyRatingsViewModel(useCase, eventBus)
+            val vm = MyRatingsViewModel(useCase, eventBus, fileRatingAppealUseCase)
             eventBus.post()
             coVerify(atLeast = 2) { useCase.invoke() }
         }

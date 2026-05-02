@@ -12,7 +12,7 @@ function encryptionKey(): Buffer {
 export function encryptSecret(plaintext: string): string {
   const key = encryptionKey();
   const iv = randomBytes(12);
-  const cipher = createCipheriv(ALGORITHM, key, iv);
+  const cipher = createCipheriv(ALGORITHM, key, iv, { authTagLength: 16 });
   const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
   const tag = cipher.getAuthTag();
   return Buffer.concat([iv, tag, encrypted]).toString('base64');

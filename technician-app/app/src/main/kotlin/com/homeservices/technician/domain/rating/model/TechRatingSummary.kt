@@ -20,6 +20,7 @@ public data class ReceivedRating(
     val behaviour: Int,
     val comment: String?,
     val submittedAt: String,
+    val appealDisputed: Boolean = false,
 )
 
 public data class TechRatingSummary(

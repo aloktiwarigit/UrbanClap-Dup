@@ -23,6 +23,9 @@ export const walletLedgerRepo = {
         techAmount: input.techAmount,
         payoutStatus: 'PENDING',
         createdAt: new Date().toISOString(),
+        ...(input.payoutCadence !== undefined ? { payoutCadence: input.payoutCadence } : {}),
+        ...(input.payoutFeeAmount !== undefined ? { payoutFeeAmount: input.payoutFeeAmount } : {}),
+        ...(input.heldForCadence !== undefined ? { heldForCadence: input.heldForCadence } : {}),
       });
       return true;
     } catch (err: unknown) {
@@ -44,6 +47,7 @@ export const walletLedgerRepo = {
         payoutStatus: 'PAID',
         razorpayTransferId,
         settledAt: new Date().toISOString(),
+        heldForCadence: false,
       });
   },
 
@@ -77,6 +81,32 @@ export const walletLedgerRepo = {
       .items.query<WalletLedgerEntry>({
         query: `SELECT * FROM c WHERE c.payoutStatus = 'FAILED' AND c.createdAt > @cutoff`,
         parameters: [{ name: '@cutoff', value: thirtyDaysAgo }],
+      })
+      .fetchAll();
+    return resources;
+  },
+
+  async getPendingHeldByTechnicianId(technicianId: string): Promise<WalletLedgerEntry[]> {
+    const { resources } = await getWalletLedgerContainer()
+      .items.query<WalletLedgerEntry>(
+        {
+          query: `SELECT * FROM c WHERE c.payoutStatus = 'PENDING' AND c.heldForCadence = true`,
+        },
+        { partitionKey: technicianId },
+      )
+      .fetchAll();
+    return resources;
+  },
+
+  async getNextDayPendingBefore(cutoffDateIst: string): Promise<WalletLedgerEntry[]> {
+    const { resources } = await getWalletLedgerContainer()
+      .items.query<WalletLedgerEntry>({
+        query: `SELECT * FROM c
+                WHERE c.payoutCadence = 'NEXT_DAY'
+                  AND c.heldForCadence = true
+                  AND c.payoutStatus = 'PENDING'
+                  AND c.createdAt < @cutoff`,
+        parameters: [{ name: '@cutoff', value: cutoffDateIst }],
       })
       .fetchAll();
     return resources;

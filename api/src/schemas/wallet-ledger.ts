@@ -3,6 +3,9 @@ import { z } from 'zod';
 export const WalletLedgerPayoutStatusSchema = z.enum(['PENDING', 'PAID', 'FAILED']);
 export type WalletLedgerPayoutStatus = z.infer<typeof WalletLedgerPayoutStatusSchema>;
 
+export const PayoutCadenceSchema = z.enum(['WEEKLY', 'NEXT_DAY', 'INSTANT']);
+export type PayoutCadence = z.infer<typeof PayoutCadenceSchema>;
+
 export const WalletLedgerEntrySchema = z.object({
   id: z.string(),
   bookingId: z.string(),
@@ -18,6 +21,9 @@ export const WalletLedgerEntrySchema = z.object({
   failureReason: z.string().optional(),
   createdAt: z.string(),
   settledAt: z.string().optional(),
+  payoutCadence: PayoutCadenceSchema.optional(),
+  payoutFeeAmount: z.number().int().nonnegative().optional(),
+  heldForCadence: z.boolean().optional(),
 });
 
 export type WalletLedgerEntry = z.infer<typeof WalletLedgerEntrySchema>;
@@ -30,6 +36,9 @@ export type WalletLedgerCreateInput = {
   commissionBps: number;
   commissionAmount: number;
   techAmount: number;
+  payoutCadence?: PayoutCadence;
+  payoutFeeAmount?: number;
+  heldForCadence?: boolean;
 };
 
 export const EarningsPeriodSchema = z.object({
@@ -50,5 +59,6 @@ export const EarningsResponseSchema = z.object({
   month: EarningsPeriodSchema,
   lifetime: EarningsPeriodSchema,
   lastSevenDays: z.array(DailyEarningsSchema),
+  pendingHeld: z.number().int().nonnegative(),
 });
 export type EarningsResponse = z.infer<typeof EarningsResponseSchema>;

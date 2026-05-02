@@ -18,13 +18,20 @@ import com.homeservices.technician.ui.complaint.ComplaintRoutes
 import com.homeservices.technician.ui.complaint.ComplaintScreen
 import com.homeservices.technician.ui.earnings.EarningsScreen
 import com.homeservices.technician.ui.myratings.MyRatingsScreen
+import com.homeservices.technician.ui.payoutsettings.PayoutCadenceScreen
 import com.homeservices.technician.ui.rating.RatingRoutes
 import com.homeservices.technician.ui.rating.RatingScreen
 
 internal fun NavGraphBuilder.homeGraph(navController: NavController) {
     navigation(startDestination = "home_dashboard", route = "home") {
         composable("home_dashboard") {
-            EarningsScreen(onViewRatings = { navController.navigate("ratings_transparency") })
+            EarningsScreen(
+                onViewRatings = { navController.navigate("ratings_transparency") },
+                onPayoutSettings = { navController.navigate("payout_settings") },
+            )
+        }
+        composable("payout_settings") {
+            PayoutCadenceScreen(onBack = { navController.popBackStack() })
         }
         composable("ratings_transparency") {
             MyRatingsScreen(onBack = { navController.popBackStack() })

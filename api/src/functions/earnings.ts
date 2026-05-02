@@ -21,33 +21,50 @@ export const getEarningsHandler: HttpHandler = async (req: HttpRequest, ctx: Inv
   }
 
   try {
-    const entries = await walletLedgerRepo.getAllByTechnicianId(uid);
+    const [entries, heldEntries] = await Promise.all([
+      walletLedgerRepo.getAllByTechnicianId(uid),
+      walletLedgerRepo.getPendingHeldByTechnicianId(uid),
+    ]);
     const settled = entries.filter(e => e.payoutStatus !== 'FAILED');
+    const pendingHeld = heldEntries.reduce((s, e) => s + e.techAmount, 0);
 
+    // All period boundaries are computed in IST (+05:30) because technicians work in India.
+    // Entries in Cosmos are stored in UTC; we shift for date comparisons.
+    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
     const now = new Date();
-    const todayStr = now.toISOString().slice(0, 10);
+    const istNow = new Date(now.getTime() + IST_OFFSET_MS);
+
+    const todayStr = istNow.toISOString().slice(0, 10);
     const monthStr = todayStr.slice(0, 7);
-    const weekStart = new Date(now);
-    weekStart.setUTCDate(now.getUTCDate() - 6);
-    weekStart.setUTCHours(0, 0, 0, 0);
+
+    // Week boundary: IST midnight 6 IST days ago, expressed as a UTC Date for Cosmos comparison.
+    const weekStartIst = new Date(istNow);
+    weekStartIst.setUTCDate(istNow.getUTCDate() - 6);
+    const weekStartIstDateStr = weekStartIst.toISOString().slice(0, 10);
+    const weekStartUtc = new Date(new Date(`${weekStartIstDateStr}T00:00:00.000Z`).getTime() - IST_OFFSET_MS);
+
+    // Helper: IST calendar date string from a UTC ISO entry timestamp.
+    const toIstDateStr = (utcIso: string): string =>
+      new Date(new Date(utcIso).getTime() + IST_OFFSET_MS).toISOString().slice(0, 10);
 
     const lastSevenDays: DailyEarnings[] = [];
     for (let i = 6; i >= 0; i--) {
-      const d = new Date(now);
-      d.setUTCDate(now.getUTCDate() - i);
+      const d = new Date(istNow);
+      d.setUTCDate(istNow.getUTCDate() - i);
       const dateStr = d.toISOString().slice(0, 10);
       const dayTotal = settled
-        .filter(e => e.createdAt.slice(0, 10) === dateStr)
+        .filter(e => toIstDateStr(e.createdAt) === dateStr)
         .reduce((s, e) => s + e.techAmount, 0);
       lastSevenDays.push({ date: dateStr, techAmount: dayTotal });
     }
 
     const response: EarningsResponse = {
-      today: aggregate(settled, e => e.createdAt.slice(0, 10) === todayStr),
-      week:  aggregate(settled, e => new Date(e.createdAt) >= weekStart),
-      month: aggregate(settled, e => e.createdAt.startsWith(monthStr)),
+      today: aggregate(settled, e => toIstDateStr(e.createdAt) === todayStr),
+      week:  aggregate(settled, e => new Date(e.createdAt) >= weekStartUtc),
+      month: aggregate(settled, e => toIstDateStr(e.createdAt).slice(0, 7) === monthStr),
       lifetime: aggregate(settled, _ => true),
       lastSevenDays,
+      pendingHeld,
     };
 
     return { status: 200, jsonBody: response };

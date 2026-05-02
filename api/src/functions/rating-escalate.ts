@@ -1,5 +1,7 @@
+import { randomUUID, createHash } from 'crypto';
 import { app } from '@azure/functions';
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+import * as Sentry from '@sentry/node';
 import { requireCustomer } from '../middleware/requireCustomer.js';
 import type { CustomerContext } from '../types/customer.js';
 import { EscalateRatingBodySchema } from '../schemas/complaint.js';
@@ -8,7 +10,7 @@ import { bookingRepo } from '../cosmos/booking-repository.js';
 import { ratingRepo } from '../cosmos/rating-repository.js';
 import { createComplaint, findRatingShieldEscalation } from '../cosmos/complaints-repository.js';
 import { sendOwnerRatingShieldAlert } from '../services/fcm.service.js';
-import { createHash } from 'crypto';
+import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
 
 export async function escalateRatingHandler(
   req: HttpRequest,
@@ -93,6 +95,9 @@ export async function escalateRatingHandler(
     }
     throw err;
   }
+
+  const _ts = new Date().toISOString();
+  void appendAuditEntry({ id: randomUUID(), adminId: 'system', role: 'system', action: 'RATING_SHIELD_ESCALATED', resourceType: 'booking', resourceId: bookingId, payload: { bookingId, complaintId: doc.id, draftOverall: parsed.data.draftOverall }, timestamp: _ts, partitionKey: _ts.slice(0, 7) }).catch(Sentry.captureException);
 
   sendOwnerRatingShieldAlert({
     bookingId,

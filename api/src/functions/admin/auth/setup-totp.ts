@@ -1,6 +1,30 @@
 import '../../../bootstrap.js';
 import { app } from '@azure/functions';
 import type { HttpRequest, InvocationContext, HttpResponseInit, Cookie } from '@azure/functions';
+import { timingSafeEqual } from 'crypto';
+
+if (!process.env.ADMIN_SETUP_SECRET) {
+  console.warn('[SECURITY] ADMIN_SETUP_SECRET is not set — TOTP setup endpoint is open to any caller. Set this env var before production deploy.');
+}
+
+function checkSetupSecret(req: HttpRequest): HttpResponseInit | null {
+  const required = process.env.ADMIN_SETUP_SECRET;
+  if (!required) return null;
+  const provided = req.headers.get('x-setup-secret') ?? '';
+  // Always run timingSafeEqual on equal-length buffers before checking length.
+  // Doing the length check first would leak the secret length via timing.
+  const reqBuf = Buffer.from(required);
+  const maxLen = Math.max(reqBuf.length, Buffer.byteLength(provided));
+  const a = Buffer.alloc(maxLen);
+  const b = Buffer.alloc(maxLen);
+  reqBuf.copy(a);
+  Buffer.from(provided).copy(b);
+  const match = timingSafeEqual(a, b) && provided.length === required.length;
+  if (!match) {
+    return { status: 403, jsonBody: { code: 'SETUP_SECRET_REQUIRED' } };
+  }
+  return null;
+}
 import { SetupTotpVerifySchema } from '../../../schemas/admin-auth.js';
 import { verifySetupToken, signAccessToken } from '../../../services/jwt.service.js';
 import { getAdminUserById, updateAdminUser } from '../../../services/adminUser.service.js';
@@ -25,6 +49,9 @@ export async function setupTotpGetHandler(
   req: HttpRequest,
   _ctx: InvocationContext,
 ): Promise<HttpResponseInit> {
+  const secretGuard = checkSetupSecret(req);
+  if (secretGuard) return secretGuard;
+
   const setupPayload = await extractSetupPayload(req);
   if (!setupPayload) return { status: 401, jsonBody: { code: 'SETUP_TOKEN_INVALID' } };
 
@@ -54,6 +81,9 @@ export async function setupTotpPostHandler(
   req: HttpRequest,
   _ctx: InvocationContext,
 ): Promise<HttpResponseInit> {
+  const secretGuard = checkSetupSecret(req);
+  if (secretGuard) return secretGuard;
+
   const setupPayload = await extractSetupPayload(req);
   if (!setupPayload) return { status: 401, jsonBody: { code: 'SETUP_TOKEN_INVALID' } };
 

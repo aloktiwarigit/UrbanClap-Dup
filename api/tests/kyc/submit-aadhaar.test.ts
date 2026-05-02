@@ -10,6 +10,7 @@ vi.mock('../../src/middleware/verifyTechnicianToken.js', () => ({
 vi.mock('../../src/services/digilocker.service.js', () => ({
   exchangeCodeForAadhaar: vi.fn(),
 }));
+vi.mock('../../src/services/kycAudit.service.js', () => ({ kycAuditEntry: vi.fn().mockResolvedValue(undefined) }));
 
 describe('POST /v1/kyc/aadhaar', () => {
   let handler: typeof import('../../src/functions/kyc/submit-aadhaar.js').submitAadhaar;
@@ -61,6 +62,42 @@ describe('POST /v1/kyc/aadhaar', () => {
     const body = res.jsonBody as Record<string, unknown>;
     expect(body['kycStatus']).toBe('PENDING_MANUAL');
     expect(body['aadhaarVerified']).toBe(false);
+  });
+
+  it('emits KYC_AADHAAR_VERIFIED audit entry on successful DigiLocker exchange', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { exchangeCodeForAadhaar } = await import('../../src/services/digilocker.service.js');
+    const { upsertKycStatus } = await import('../../src/cosmos/technician-repository.js');
+    const { kycAuditEntry } = await import('../../src/services/kycAudit.service.js');
+    vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+    vi.mocked(exchangeCodeForAadhaar).mockResolvedValue({ maskedNumber: 'XXXX-XXXX-1234' });
+    vi.mocked(upsertKycStatus).mockResolvedValue(undefined);
+
+    const req = new HttpRequest({
+      method: 'POST', url: 'http://localhost/v1/kyc/aadhaar',
+      headers: { Authorization: 'Bearer valid' },
+      body: { string: JSON.stringify({ technicianId: 'tech-001', authCode: 'digicode', redirectUri: 'https://homeservices.app/digilocker' }) },
+    });
+    await handler(req, new InvocationContext());
+
+    expect(vi.mocked(kycAuditEntry)).toHaveBeenCalledWith('tech-001', 'AADHAAR', 'VERIFIED');
+  });
+
+  it('emits KYC_AADHAAR_REJECTED audit entry when DigiLocker returns null', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { exchangeCodeForAadhaar } = await import('../../src/services/digilocker.service.js');
+    const { kycAuditEntry } = await import('../../src/services/kycAudit.service.js');
+    vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+    vi.mocked(exchangeCodeForAadhaar).mockResolvedValue(null);
+
+    const req = new HttpRequest({
+      method: 'POST', url: 'http://localhost/v1/kyc/aadhaar',
+      headers: { Authorization: 'Bearer valid' },
+      body: { string: JSON.stringify({ technicianId: 'tech-001', authCode: '', redirectUri: 'https://homeservices.app/digilocker' }) },
+    });
+    await handler(req, new InvocationContext());
+
+    expect(vi.mocked(kycAuditEntry)).toHaveBeenCalledWith('tech-001', 'AADHAAR', 'REJECTED');
   });
 
   it('returns 401 on invalid token', async () => {

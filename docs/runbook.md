@@ -337,4 +337,273 @@ After every incident:
 
 ---
 
-**Runbook v1.0 complete.** Living document — update after every incident and every significant architectural change.
+## 10. DPDP 72-hour breach notification (added 2026-04-26)
+
+**Statutory basis:** Digital Personal Data Protection Act 2023 §10 +
+Data Protection Board rules. Applies nationwide; relevant to the Ayodhya
+pilot regardless of state.
+
+**Trigger.** Any of:
+
+1. Sentry alert containing PII (uid, phone, address, KYC fields, payment
+   identifiers) on a path that should not have logged it.
+2. Cosmos DB alert: unauthorised egress, exposed connection string, anomalous
+   read pattern from non-admin source.
+3. External notification — customer/tech/researcher reports unauthorised
+   access to their data.
+4. Unauthorised access to admin-web (compromised admin session, leaked TOTP).
+5. Razorpay breach notification touching our merchant account.
+
+**Owner:** Alok Tiwari. Sole operator — no escalation chain in pilot.
+
+### Within 24 hours: data-principal notification
+
+1. Identify affected uids via audit log query (`resourceType` = container
+   touched + `timestamp` window).
+2. For each affected user, send FCM + email:
+   ```
+   Subject: Important — security incident affecting your Home Heroo data
+
+   We detected unauthorised access to your account information on
+   <DATE>. The following data may have been viewed: <LIST>. We have
+   <ACTION TAKEN>. You should: <RECOMMENDED ACTIONS, e.g. change
+   Firebase password, watch for fraud>.
+
+   Incident ID: <UUID>
+   ```
+3. Audit-log entry: `action='DPDP_BREACH_USER_NOTIFIED'`, `resourceId=<uid>`.
+
+### Within 48 hours: DPDP Board notification
+
+Email to the Data Protection Board (`dpdp@meity.gov.in` or successor
+authority — verify current address quarterly):
+
+```
+Subject: §10 breach notification — Home Heroo (homeservices-mvp)
+
+1. Data fiduciary: <legal entity name>, GSTIN <if registered>
+2. Contact: Alok Tiwari, aloktiwari49@gmail.com, <phone>
+3. Incident discovered: <ISO datetime>
+4. Nature of breach: <unauthorised access / accidental disclosure / loss / etc.>
+5. Categories of personal data affected: <see DPDP §2(t)>
+6. Approximate number of affected data principals: <N>
+7. Likely consequences: <description>
+8. Measures taken or proposed: <description>
+9. Data principal notification status: <complete / in-progress with timeline>
+```
+
+### Within 72 hours: full incident report
+
+File at `docs/postmortems/YYYY-MM-DD-dpdp-<slug>.md` with:
+
+- Cause (root cause analysis)
+- Scope (number of users, fields, time window)
+- Mitigation (what we did)
+- Prevention (what we'll change so it doesn't recur)
+- Timeline of detection → notification → resolution
+- Audit log queries used to bound the scope
+- Reference to ADR if architectural change required
+
+Cross-reference the incident in `docs/runbook.md` § Past Incidents.
+
+### Drill cadence
+
+- Tabletop exercise: quarterly (calendar reminder).
+- After every incident: rerun this section as a checklist; update gaps.
+
+---
+
+## 11. Admin Setup Procedure (first deploy)
+
+**Do this once before the pilot owner completes TOTP enrollment. Skipping this leaves the setup endpoint open.**
+
+### Step 1 — Generate the setup secret
+
+```bash
+# Generate a 32-byte cryptographically random secret
+openssl rand -hex 32
+# Example output: a3f8c2d1e9b47056...
+```
+
+### Step 2 — Set the env var in Azure Functions
+
+In the Azure Portal → your Function App → Configuration → Application settings:
+
+```
+ADMIN_SETUP_SECRET = <the hex value from step 1>
+```
+
+Save and restart the Function App.
+
+### Step 3 — Share with the owner only
+
+Send the secret value to Alok (the legitimate owner) via a secure out-of-band channel (e.g. Signal, not email). This value must **not** appear in source control, chat history, or issue trackers.
+
+### Step 4 — Owner completes enrollment
+
+The owner opens the TOTP setup URL and sets the `X-Setup-Secret` header (or uses a pre-configured tool / admin web UI that embeds it):
+
+```
+GET  /api/v1/admin/auth/setup-totp
+X-Setup-Secret: <secret>
+Authorization: Bearer <setup-token>
+```
+
+Follow with the POST to confirm the TOTP code. On success, the owner's TOTP device is enrolled and the setup endpoint is now locked (any subsequent attempt without the secret returns 403).
+
+### Step 5 — Optional: rotate or remove the secret
+
+After enrollment is confirmed:
+- **Remove:** Delete `ADMIN_SETUP_SECRET` from Azure Function App settings → setup endpoint reverts to open mode (safe post-enrollment since `ALREADY_ENROLLED` blocks re-setup).
+- **Rotate:** Replace with a new value for future re-enrollment scenarios (e.g. new admin, device lost).
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `403 SETUP_SECRET_REQUIRED` | Header missing or wrong value | Check the `X-Setup-Secret` header matches `ADMIN_SETUP_SECRET` in Azure settings exactly |
+| `409 ALREADY_ENROLLED` | Owner already completed setup | Setup is done — no action needed |
+| `401 SETUP_TOKEN_INVALID` | Setup JWT expired (15 min TTL) | Re-login to get a new setup token |
+
+---
+
+## Emergency Rollback
+
+**Trigger:** Sentry error rate > 5%, payment webhook failures > 2/10 min, FCM delivery < 80%/30 min, or any unhandled first-time exception in production.
+
+**Estimated time: < 15 minutes from detection to user impact ended.**
+
+### Step 1 — Disable soft_launch_enabled (immediate user impact ended)
+
+In GrowthBook dashboard → Feature Flags → `soft_launch_enabled` → set to `false`.
+
+All new booking creation attempts immediately return:
+```json
+{ "code": "SERVICE_UNAVAILABLE", "message": "Launch coming soon" }
+```
+Customers see "coming soon" instead of an error. No data is written.
+
+### Step 2 — Triage in-flight bookings
+
+For any bookings currently in `PAID` or `SEARCHING` state:
+- Open admin-web → Orders → filter by status `SEARCHING`
+- Owner manually closes or refunds via admin override panel
+- Razorpay Route payouts for `COMPLETED` bookings continue automatically (unaffected)
+
+### Step 3 — Revert the bad commit (if code regression)
+
+```bash
+git log --oneline origin/main | head -5    # identify the bad SHA
+git revert -m 1 <sha>                      # creates a revert commit
+git push origin HEAD:feature/revert-<sha>  # push to a new branch
+# Open PR → CI green → merge
+```
+
+Do NOT force-push to main. Use revert + PR.
+
+### Step 4 — Re-enable after root cause fixed
+
+Once the fix is deployed and smoke-tested:
+- GrowthBook → `soft_launch_enabled` → set to `true`
+- Monitor Sentry for 10 minutes
+- Notify F&F users via admin FCM broadcast (topic: `all_customers`)
+
+---
+
+## Launch Checklist
+
+Required env vars before enabling `soft_launch_enabled`:
+
+| Env var | Where set | Note |
+|---|---|---|
+| `GROWTHBOOK_CLIENT_KEY` | Azure Functions app settings | Required for soft-launch flag to work |
+| `GROWTHBOOK_API_HOST` | Azure Functions app settings | Default: `https://cdn.growthbook.io` |
+| `RAZORPAY_KEY_ID` | Azure Functions app settings | Production key (not test) |
+| `RAZORPAY_KEY_SECRET` | Azure Functions app settings | Production key (not test) |
+| `RAZORPAY_WEBHOOK_SECRET` | Azure Functions app settings | For webhook signature validation |
+| `COSMOS_PAN_ENCRYPTION_KEY` | Azure Functions app settings | `openssl rand -base64 32` |
+| `ADMIN_SETUP_SECRET` | Azure Functions app settings | First-run only — remove after TOTP enrollment |
+
+See `docs/launch-checklist.md` for the full pre-launch checklist.
+
+---
+
+## Disaster Recovery Drill
+
+**Run this drill 1–2 weeks before launch to confirm recovery procedures work.**
+
+### 1. Cosmos DB restore (point-in-time)
+
+Azure Cosmos DB Serverless has continuous backup enabled by default.
+
+**Procedure:**
+1. Azure Portal → Cosmos DB account → Backups → Restore
+2. Select timestamp (up to 30 days back)
+3. Restore to a new account (restoration is non-destructive — original account remains)
+4. Verify document counts and spot-check data integrity
+5. DNS/connection string cutover: Azure Functions → Configuration → `COSMOS_CONNECTION_STRING` → update to new account endpoint
+6. Restart Function App to pick up new connection string
+
+**Estimated RTO:**
+- Full restore: 2–4 hours (depends on data volume)
+- Connection string cutover: 30 minutes (if restore already complete)
+
+**Drill:** Restore to a test Cosmos account, verify 5 sample bookings match production, then delete the test account.
+
+### 2. Azure Functions cold-start recovery
+
+If Functions are unresponsive (HTTP 5xx or no response):
+
+```bash
+# Portal path:
+# Azure Portal → Function App → Overview → Restart
+
+# CLI (faster):
+az functionapp restart --name <app-name> --resource-group <resource-group>
+```
+
+**Estimated RTO:** < 5 minutes (Functions restart and warm up within 2–3 cold-start invocations)
+
+**Drill:** Restart the staging Function App and verify `GET /api/health` returns 200 within 60 seconds.
+
+### 3. Firebase Auth outage
+
+Firebase Phone Auth is Google-managed infrastructure.
+
+**During outage:**
+- Existing sessions (Firebase JWT / persistent token) continue to work — customers mid-flow are unaffected
+- New logins fail with `auth/network-request-failed` → customer-app shows "Please try again later" message
+- No owner action needed
+
+**Resolution:** Monitor [Firebase Status](https://status.firebase.google.com). Firebase has 99.9% monthly uptime SLA.
+
+**Owner action:** None. If outage > 1 hour, post in-app maintenance banner via admin FCM broadcast.
+
+### 4. FCM outage
+
+FCM is Google-managed infrastructure.
+
+**During outage:**
+- Job offers not delivered via push → technicians must manually check the app for new jobs
+- Owner FCM alerts not delivered → owner monitors admin dashboard directly
+- `dispatcher.service.ts` logs `FCM_DELIVERY_FAILED` to Sentry — confirms outage is FCM-side
+
+**Resolution:** None needed. FCM has 99.9% SLA. Bookings and payments are unaffected.
+
+**Owner action:** Notify active technicians via SMS (manual, out-of-band) if outage > 30 minutes.
+
+### 5. Razorpay Route outage
+
+**During outage:**
+- Payout disbursements via Route will fail
+- `trigger-booking-completed.ts` captures Route errors to Sentry (`RazorpayRoutePayoutFailed`)
+- Settled amounts stay in `PENDING` state in `wallet_ledger` entries — **idempotent and safe to retry**
+
+**Resolution:** When Route recovers, `trigger-reconcile-payouts.ts` automatically retries all `FAILED` ledger entries on its next scheduled run (every 6 hours).
+
+**Owner action:**
+- Monitor `/v1/admin/finance/payout-queue` for stuck `PENDING` entries
+- If entries remain stuck > 24 hours after Route recovery, manually trigger `trigger-reconcile-payouts` from Azure Portal → Functions → Run
+
+**Runbook v1.2 complete (E10-S04: Emergency rollback + DR drill + launch checklist).**
+Living document — update after every incident and every significant architectural change.

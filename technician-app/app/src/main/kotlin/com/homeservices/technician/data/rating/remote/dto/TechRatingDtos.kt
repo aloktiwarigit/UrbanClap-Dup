@@ -13,6 +13,7 @@ public data class ReceivedRatingDto(
     val subScores: Map<String, Int>,
     val comment: String? = null,
     val submittedAt: String,
+    val appealDisputed: Boolean? = null,
 )
 
 @JsonClass(generateAdapter = true)
@@ -58,6 +59,7 @@ public data class TechRatingSummaryDto(
                         behaviour = it.subScores["behaviour"] ?: 0,
                         comment = it.comment,
                         submittedAt = it.submittedAt,
+                        appealDisputed = it.appealDisputed == true,
                     )
                 },
         )

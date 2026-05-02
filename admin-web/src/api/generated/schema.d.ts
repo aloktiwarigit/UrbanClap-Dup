@@ -519,7 +519,7 @@ export interface components {
              * @default STANDARD
              * @enum {string}
              */
-            type: "RATING_SHIELD" | "STANDARD";
+            type: "RATING_SHIELD" | "STANDARD" | "ABUSIVE_CUSTOMER_SHIELD" | "RATING_APPEAL";
             draftOverall?: number;
             draftComment?: string;
             expiresAt?: string;
@@ -527,7 +527,7 @@ export interface components {
             status: "NEW" | "INVESTIGATING" | "RESOLVED";
             assigneeAdminId?: string;
             /** @enum {string} */
-            resolutionCategory?: "TECHNICIAN_MISCONDUCT" | "SERVICE_QUALITY" | "BILLING_DISPUTE" | "LATE_ARRIVAL" | "NO_SHOW" | "OTHER";
+            resolutionCategory?: "TECHNICIAN_MISCONDUCT" | "SERVICE_QUALITY" | "BILLING_DISPUTE" | "LATE_ARRIVAL" | "NO_SHOW" | "OTHER" | "APPEAL_UPHELD" | "APPEAL_REMOVED" | "APPEAL_PARTIAL_REMOVE";
             /** @default [] */
             internalNotes: components["schemas"]["InternalNote"][];
             slaDeadlineAt: string;
@@ -541,6 +541,7 @@ export interface components {
             photoStoragePath?: string;
             acknowledgeDeadlineAt?: string;
             resolvedAt?: string;
+            evidenceUrls?: string[];
             createdAt: string;
             updatedAt: string;
         };
@@ -557,7 +558,7 @@ export interface components {
             expectedStatus?: "NEW" | "INVESTIGATING" | "RESOLVED";
             assigneeAdminId?: string | null;
             /** @enum {string} */
-            resolutionCategory?: "TECHNICIAN_MISCONDUCT" | "SERVICE_QUALITY" | "BILLING_DISPUTE" | "LATE_ARRIVAL" | "NO_SHOW" | "OTHER";
+            resolutionCategory?: "TECHNICIAN_MISCONDUCT" | "SERVICE_QUALITY" | "BILLING_DISPUTE" | "LATE_ARRIVAL" | "NO_SHOW" | "OTHER" | "APPEAL_UPHELD" | "APPEAL_REMOVED" | "APPEAL_PARTIAL_REMOVE";
             note?: string;
         };
         ComplaintListResponse: {
@@ -571,7 +572,7 @@ export interface components {
                  * @default STANDARD
                  * @enum {string}
                  */
-                type: "RATING_SHIELD" | "STANDARD";
+                type: "RATING_SHIELD" | "STANDARD" | "ABUSIVE_CUSTOMER_SHIELD" | "RATING_APPEAL";
                 draftOverall?: number;
                 draftComment?: string;
                 expiresAt?: string;
@@ -579,7 +580,7 @@ export interface components {
                 status: "NEW" | "INVESTIGATING" | "RESOLVED";
                 assigneeAdminId?: string;
                 /** @enum {string} */
-                resolutionCategory?: "TECHNICIAN_MISCONDUCT" | "SERVICE_QUALITY" | "BILLING_DISPUTE" | "LATE_ARRIVAL" | "NO_SHOW" | "OTHER";
+                resolutionCategory?: "TECHNICIAN_MISCONDUCT" | "SERVICE_QUALITY" | "BILLING_DISPUTE" | "LATE_ARRIVAL" | "NO_SHOW" | "OTHER" | "APPEAL_UPHELD" | "APPEAL_REMOVED" | "APPEAL_PARTIAL_REMOVE";
                 /** @default [] */
                 internalNotes: components["schemas"]["InternalNote"][];
                 slaDeadlineAt: string;
@@ -593,6 +594,7 @@ export interface components {
                 photoStoragePath?: string;
                 acknowledgeDeadlineAt?: string;
                 resolvedAt?: string;
+                evidenceUrls?: string[];
                 createdAt: string;
                 updatedAt: string;
             }[];

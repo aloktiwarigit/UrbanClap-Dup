@@ -1,4 +1,5 @@
 import '../bootstrap.js';
+import { randomUUID } from 'node:crypto';
 import { app } from '@azure/functions';
 import type { Timer, InvocationContext } from '@azure/functions';
 import * as Sentry from '@sentry/node';
@@ -6,6 +7,7 @@ import { bookingRepo, updateBookingFields } from '../cosmos/booking-repository.j
 import { customerCreditRepo } from '../cosmos/customer-credit-repository.js';
 import { dispatcherService } from '../services/dispatcher.service.js';
 import { sendNoShowCreditPush } from '../services/fcm.service.js';
+import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
 
 const NO_SHOW_CREDIT_PAISE = 50_000;
 const NO_SHOW_REDISPATCH_RADIUS_KM = 15;
@@ -84,6 +86,8 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
 
     if (creditCreated) {
       ctx.log(`detectNoShows: processing no-show bookingId=${booking.id}`);
+      const _ts = new Date().toISOString();
+      void appendAuditEntry({ id: randomUUID(), adminId: 'system', role: 'system', action: 'NO_SHOW_CREDIT_ISSUED', resourceType: 'booking', resourceId: booking.id, payload: { bookingId: booking.id, creditAmount: NO_SHOW_CREDIT_PAISE }, timestamp: _ts, partitionKey: _ts.slice(0, 7) }).catch(Sentry.captureException);
     } else {
       ctx.log(`detectNoShows: credit already exists for ${booking.id} — retrying remaining steps`);
     }
@@ -168,14 +172,28 @@ export async function detectNoShows(ctx: InvocationContext): Promise<void> {
         // writing noShowRedispatchAt. The dispatch attempt is live — just write the timestamp.
         await updateBookingFields(booking.id, { noShowRedispatchAt: new Date().toISOString() });
         redispatchOk = true;
+        // Emit the audit that the prior run never wrote before crashing.
+        const _rts = new Date().toISOString();
+        void appendAuditEntry({ id: randomUUID(), adminId: 'system', role: 'system', action: 'NO_SHOW_REDISPATCH_INITIATED', resourceType: 'booking', resourceId: booking.id, payload: { bookingId: booking.id }, timestamp: _rts, partitionKey: _rts.slice(0, 7) }).catch(Sentry.captureException);
         ctx.log(`detectNoShows: recovery — booking ${booking.id} already SEARCHING, completing noShowRedispatchAt write`);
       } else {
         try {
           redispatchOk = await dispatcherService.redispatch(booking.id, NO_SHOW_REDISPATCH_RADIUS_KM, noShowTechId);
           if (redispatchOk) {
             await updateBookingFields(booking.id, { noShowRedispatchAt: new Date().toISOString() });
+            const _ts = new Date().toISOString();
+            void appendAuditEntry({ id: randomUUID(), adminId: 'system', role: 'system', action: 'NO_SHOW_REDISPATCH_INITIATED', resourceType: 'booking', resourceId: booking.id, payload: { bookingId: booking.id }, timestamp: _ts, partitionKey: _ts.slice(0, 7) }).catch(Sentry.captureException);
           } else {
             ctx.log(`detectNoShows: no techs found for ${booking.id} — booking marked UNFULFILLED`);
+            // Guard: dispatcher.redispatch() returns false both when no candidates exist AND when a
+            // concurrent invocation already moved the booking out of NO_SHOW_REDISPATCH (to SEARCHING
+            // or ASSIGNED). Only emit BOOKING_UNFULFILLED when the dispatcher actually set the status
+            // to UNFULFILLED (which it does only when candidate list is genuinely exhausted).
+            const postDispatchDoc = await bookingRepo.getById(booking.id);
+            if (postDispatchDoc?.status === 'UNFULFILLED') {
+              const _ts = new Date().toISOString();
+              void appendAuditEntry({ id: randomUUID(), adminId: 'system', role: 'system', action: 'BOOKING_UNFULFILLED', resourceType: 'booking', resourceId: booking.id, payload: { bookingId: booking.id }, timestamp: _ts, partitionKey: _ts.slice(0, 7) }).catch(Sentry.captureException);
+            }
           }
         } catch (err: unknown) {
           Sentry.captureException(err);

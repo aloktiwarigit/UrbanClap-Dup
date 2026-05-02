@@ -86,6 +86,31 @@ describe('GET /v1/technicians/me/ratings', () => {
     expect(body.items[1].bookingId).toBe('bk-old');
   });
 
+  it('includes appealDisputed=true on items with customerAppealDisputed set', async () => {
+    vi.mocked(ratingRepo.getAllByTechnicianId).mockResolvedValue([
+      makeRatingDoc({ bookingId: 'bk-disputed', customerOverall: 2, customerAppealDisputed: true }),
+      makeRatingDoc({ bookingId: 'bk-normal' }),
+    ]);
+    const res = await getTechRatingsHandler(makeReq('Bearer tok'), ctx) as HttpResponseInit;
+    const body = res.jsonBody as any;
+    const disputed = body.items.find((i: any) => i.bookingId === 'bk-disputed');
+    const normal = body.items.find((i: any) => i.bookingId === 'bk-normal');
+    expect(disputed?.appealDisputed).toBe(true);
+    expect(normal?.appealDisputed).toBeUndefined();
+  });
+
+  it('excludes ratings with customerAppealRemoved=true from summary', async () => {
+    vi.mocked(ratingRepo.getAllByTechnicianId).mockResolvedValue([
+      makeRatingDoc({ bookingId: 'bk-removed', customerOverall: 1, customerAppealRemoved: true }),
+      makeRatingDoc({ bookingId: 'bk-visible', customerOverall: 5 }),
+    ]);
+    const res = await getTechRatingsHandler(makeReq('Bearer tok'), ctx) as HttpResponseInit;
+    const body = res.jsonBody as any;
+    expect(body.totalCount).toBe(1);
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0].bookingId).toBe('bk-visible');
+  });
+
   it('trend groups ratings by ISO week Monday', async () => {
     const recent = new Date();
     recent.setUTCDate(recent.getUTCDate() - 2);

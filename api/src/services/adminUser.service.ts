@@ -6,6 +6,7 @@ export interface AdminUser {
   adminId: string;
   email: string;
   role: AdminRole;
+  displayName?: string;
   totpEnrolled: boolean;
   totpSecret: string | null;
   totpSecretPending: string | null;
@@ -44,6 +45,8 @@ export async function updateAdminUser(
       | 'totpSecretPending'
       | 'totpEnrolled'
       | 'deactivatedAt'
+      | 'role'
+      | 'displayName'
     >
   >,
 ): Promise<void> {

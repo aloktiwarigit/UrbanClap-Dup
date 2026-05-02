@@ -23,7 +23,10 @@ vi.mock('../../src/services/razorpay.service.js', () => ({
   verifyPaymentSignature: vi.fn().mockReturnValue(true),
 }));
 
+vi.mock('../../src/cosmos/audit-log-repository.js', () => ({ appendAuditEntry: vi.fn().mockResolvedValue(undefined) }));
+
 import { confirmBookingHandler } from '../../src/functions/bookings.js';
+import { appendAuditEntry } from '../../src/cosmos/audit-log-repository.js';
 
 function confirmReq(id: string, body: unknown) {
   const req = new HttpRequest({
@@ -64,6 +67,17 @@ describe('POST /v1/bookings/:id/confirm', () => {
       {} as never,
     ) as HttpResponseInit;
     expect(res.status).toBe(404);
+  });
+
+  it('emits CUSTOMER_CONFIRMED_PAYMENT audit entry on successful confirmation', async () => {
+    const res = await confirmBookingHandler(
+      confirmReq('bk-1', { razorpayPaymentId: 'pay_audit', razorpayOrderId: 'order_1', razorpaySignature: 'sig' }),
+      {} as never,
+    ) as HttpResponseInit;
+    expect(res.status).toBe(200);
+    expect(vi.mocked(appendAuditEntry)).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'CUSTOMER_CONFIRMED_PAYMENT', resourceId: 'bk-1' }),
+    );
   });
 
   it('returns 403 when customerId does not match booking', async () => {

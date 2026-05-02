@@ -6,8 +6,9 @@ export async function getKycStatus(
   req: HttpRequest,
   _ctx: InvocationContext
 ): Promise<HttpResponseInit> {
+  let decodedToken: { uid: string };
   try {
-    await verifyTechnicianToken(req);
+    decodedToken = await verifyTechnicianToken(req);
   } catch {
     return { status: 401, jsonBody: { error: 'Unauthorized' } };
   }
@@ -15,6 +16,11 @@ export async function getKycStatus(
   const technicianId = req.query.get('technicianId');
   if (!technicianId) {
     return { status: 400, jsonBody: { error: 'technicianId query param required' } };
+  }
+
+  // P1-B: caller may only read their own KYC record
+  if (decodedToken.uid !== technicianId) {
+    return { status: 403, jsonBody: { error: 'Forbidden' } };
   }
 
   const kyc = await getKycByTechnicianId(technicianId);

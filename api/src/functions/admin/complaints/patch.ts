@@ -5,7 +5,9 @@ import { requireAdmin } from '../../../middleware/requireAdmin.js';
 import type { AdminContext } from '../../../types/admin.js';
 import { PatchComplaintBodySchema } from '../../../schemas/complaint.js';
 import { getComplaint, replaceComplaint } from '../../../cosmos/complaints-repository.js';
+import { ratingRepo } from '../../../cosmos/rating-repository.js';
 import { appendAuditEntry } from '../../../cosmos/audit-log-repository.js';
+import { sendAppealDecisionPush } from '../../../services/fcm.service.js';
 import { randomUUID } from 'crypto';
 
 export async function adminPatchComplaintHandler(
@@ -64,7 +66,8 @@ export async function adminPatchComplaintHandler(
       updated.assigneeAdminId = parsed.data.assigneeAdminId;
     }
   }
-  if (parsed.data.resolutionCategory !== undefined && updated.status === 'RESOLVED') {
+  // Allow saving resolutionCategory before the complaint is RESOLVED (two-step admin flow).
+  if (parsed.data.resolutionCategory !== undefined) {
     updated.resolutionCategory = parsed.data.resolutionCategory;
   }
   if (parsed.data.note !== undefined) {
@@ -81,6 +84,66 @@ export async function adminPatchComplaintHandler(
       return { status: 409, jsonBody: { code: 'CONFLICT' } };
     }
     throw err;
+  }
+
+  // Reopen side effect: undo rating flags only after the complaint write commits.
+  if (
+    existing.type === 'RATING_APPEAL' &&
+    parsed.data.status !== undefined &&
+    parsed.data.status !== 'RESOLVED' &&
+    oldStatus === 'RESOLVED'
+  ) {
+    ratingRepo.patchRatingForAppeal(existing.orderId, {
+      customerAppealRemoved: false,
+      customerAppealDisputed: false,
+    }).catch((err: unknown) => ctx.error('patchRatingForAppeal on reopen failed', err));
+  }
+
+  // Rating appeal decision side-effects (fire-and-forget).
+  // Read the effective resolutionCategory from `updated` (which merges any prior-set
+  // category with this request's value) so a two-step admin flow — set category first,
+  // then resolve — still triggers the rating mutation, FCM, and audit entry.
+  // Fire side effects when a RATING_APPEAL transitions to RESOLVED, or when an admin
+  // corrects the resolutionCategory on an already-resolved appeal (e.g. UPHELD → REMOVED).
+  if (
+    existing.type === 'RATING_APPEAL' &&
+    updated.status === 'RESOLVED' &&
+    updated.resolutionCategory !== undefined &&
+    (oldStatus !== 'RESOLVED' || updated.resolutionCategory !== existing.resolutionCategory)
+  ) {
+    const decision = updated.resolutionCategory;
+    // Always write both flags explicitly so a corrected decision (e.g. REMOVED → UPHELD)
+    // clears the stale flag and the rating is no longer hidden or marked disputed.
+    const ratingPatch =
+      decision === 'APPEAL_REMOVED'
+        ? { customerAppealRemoved: true, customerAppealDisputed: false }
+        : decision === 'APPEAL_PARTIAL_REMOVE'
+        ? { customerAppealDisputed: true, customerAppealRemoved: false }
+        : { customerAppealRemoved: false, customerAppealDisputed: false };
+
+    const dispatchPush = () =>
+      sendAppealDecisionPush(existing.technicianId, {
+        appealId: existing.id,
+        decision,
+        ownerNote: parsed.data.note ?? '',
+      }).catch((err: unknown) => ctx.error('sendAppealDecisionPush failed', err));
+
+    // Await rating mutation before push so the client never reads stale data on refresh.
+    ratingRepo.patchRatingForAppeal(existing.orderId, ratingPatch)
+      .then(dispatchPush)
+      .catch((err: unknown) => ctx.error('patchRatingForAppeal failed', err));
+
+    appendAuditEntry({
+      id: randomUUID(),
+      adminId: admin.adminId,
+      role: admin.role,
+      action: 'APPEAL_DECIDED',
+      resourceType: 'complaint',
+      resourceId: existing.id,
+      payload: { decision, technicianId: existing.technicianId, bookingId: existing.orderId },
+      timestamp: now,
+      partitionKey: now.slice(0, 7),
+    }).catch((err: unknown) => ctx.error('audit APPEAL_DECIDED failed', err));
   }
 
   // Fire-and-forget: audit writes must not fail the response after the complaint is committed.

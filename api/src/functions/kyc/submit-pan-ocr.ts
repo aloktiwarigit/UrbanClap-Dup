@@ -3,13 +3,16 @@ import { extractPanFromStoragePath } from '../../services/formRecognizer.service
 import { upsertKycStatus } from '../../cosmos/technician-repository.js';
 import { verifyTechnicianToken } from '../../middleware/verifyTechnicianToken.js';
 import { SubmitPanOcrRequestSchema } from '../../schemas/kyc.js';
+import { kycAuditEntry } from '../../services/kycAudit.service.js';
+import { encryptPan, maskPan } from '../../services/piiCrypto.service.js';
 
 export async function submitPanOcr(
   req: HttpRequest,
   _ctx: InvocationContext
 ): Promise<HttpResponseInit> {
+  let decodedToken: { uid: string };
   try {
-    await verifyTechnicianToken(req);
+    decodedToken = await verifyTechnicianToken(req);
   } catch {
     return { status: 401, jsonBody: { error: 'Unauthorized' } };
   }
@@ -27,21 +30,53 @@ export async function submitPanOcr(
   }
 
   const { technicianId, firebaseStoragePath } = parsed.data;
+
+  // P1-C: caller may only update their own KYC record
+  if (decodedToken.uid !== technicianId) {
+    return { status: 403, jsonBody: { error: 'Forbidden' } };
+  }
+
   const ocrResult = await extractPanFromStoragePath(firebaseStoragePath);
 
   if (ocrResult.status === 'PAN_DONE') {
+    // P1-A: mask before any Cosmos write; null means non-canonical format → route to MANUAL_REVIEW
+    const maskedPan = maskPan(ocrResult.panNumber);
+    if (!maskedPan) {
+      // Non-canonical format: explicitly clear stale PAN fields so MANUAL_REVIEW state is consistent.
+      // upsertKycStatus merges patches; without explicit nulls the old panNumber/panNumberEncrypted
+      // would survive the spread and remain visible via get-kyc-status / data-export.
+      await upsertKycStatus(technicianId, {
+        panNumber: null,
+        panNumberEncrypted: undefined,
+        panImagePath: firebaseStoragePath,
+        kycStatus: 'MANUAL_REVIEW',
+      });
+      void kycAuditEntry(technicianId, 'PAN', 'REJECTED');
+      return { status: 200, jsonBody: { kycStatus: 'MANUAL_REVIEW', panNumber: null } };
+    }
+
+    let panNumberEncrypted: ReturnType<typeof encryptPan>;
+    try {
+      panNumberEncrypted = encryptPan(ocrResult.panNumber);
+    } catch {
+      return { status: 500, jsonBody: { error: 'Encryption service unavailable' } };
+    }
+
     await upsertKycStatus(technicianId, {
-      panNumber: ocrResult.panNumber,
+      panNumber: maskedPan,
+      panNumberEncrypted,
       panImagePath: firebaseStoragePath,
       kycStatus: 'PAN_DONE',
     });
-    return { status: 200, jsonBody: { kycStatus: 'PAN_DONE', panNumber: ocrResult.panNumber } };
+    void kycAuditEntry(technicianId, 'PAN', 'VERIFIED');
+    return { status: 200, jsonBody: { kycStatus: 'PAN_DONE', panNumber: maskedPan } };
   }
 
   await upsertKycStatus(technicianId, {
     panImagePath: firebaseStoragePath,
     kycStatus: 'MANUAL_REVIEW',
   });
+  void kycAuditEntry(technicianId, 'PAN', 'REJECTED');
   return { status: 200, jsonBody: { kycStatus: 'MANUAL_REVIEW', panNumber: null } };
 }
 

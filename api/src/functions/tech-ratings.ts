@@ -14,8 +14,9 @@ export const getTechRatingsHandler: HttpHandler = async (req: HttpRequest, _ctx:
   }
 
   const docs = await ratingRepo.getAllByTechnicianId(uid);
+  const visibleDocs = docs.filter((d) => d.customerAppealRemoved !== true);
 
-  const n = docs.length;
+  const n = visibleDocs.length;
   if (n === 0) {
     return {
       status: 200,
@@ -30,17 +31,17 @@ export const getTechRatingsHandler: HttpHandler = async (req: HttpRequest, _ctx:
   }
 
   const round1 = (v: number) => Math.round(v * 10) / 10;
-  const sumOverall = docs.reduce((s, d) => s + (d.customerOverall ?? 0), 0);
-  const sumP = docs.reduce((s, d) => s + (d.customerSubScores?.punctuality ?? 0), 0);
-  const sumS = docs.reduce((s, d) => s + (d.customerSubScores?.skill ?? 0), 0);
-  const sumB = docs.reduce((s, d) => s + (d.customerSubScores?.behaviour ?? 0), 0);
+  const sumOverall = visibleDocs.reduce((s, d) => s + (d.customerOverall ?? 0), 0);
+  const sumP = visibleDocs.reduce((s, d) => s + (d.customerSubScores?.punctuality ?? 0), 0);
+  const sumS = visibleDocs.reduce((s, d) => s + (d.customerSubScores?.skill ?? 0), 0);
+  const sumB = visibleDocs.reduce((s, d) => s + (d.customerSubScores?.behaviour ?? 0), 0);
 
-  const sorted = [...docs].sort(
+  const sorted = [...visibleDocs].sort(
     (a, b) => (b.customerSubmittedAt ?? '').localeCompare(a.customerSubmittedAt ?? ''),
   );
 
   const weekMap = new Map<string, { sum: number; count: number }>();
-  for (const d of docs) {
+  for (const d of visibleDocs) {
     if (!d.customerSubmittedAt) continue;
     const date = new Date(d.customerSubmittedAt);
     const dow = (date.getUTCDay() + 6) % 7;
@@ -70,6 +71,7 @@ export const getTechRatingsHandler: HttpHandler = async (req: HttpRequest, _ctx:
     },
     ...(d.customerComment ? { comment: d.customerComment } : {}),
     submittedAt: d.customerSubmittedAt!,
+    ...(d.customerAppealDisputed === true ? { appealDisputed: true } : {}),
   }));
 
   return {

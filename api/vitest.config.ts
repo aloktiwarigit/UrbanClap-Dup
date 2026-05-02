@@ -58,6 +58,20 @@ export default defineConfig({
         // pure helper functions (getPriorQuarter, quarterBounds, computeLevyAmount)
         // are covered by the ssc-levy function test suite via the service mock.
         'src/services/ssc-levy.service.ts',
+        // DPDP cascade modules added in E10-S05 — cloud singletons; exercised
+        // indirectly via mocks in users-data-export, users-erasure-request,
+        // admin-erasure-{execute,deny}, erasure-cron, and dpdp-data-inventory tests.
+        'src/cosmos/erasure-request-repository.ts',
+        'src/cosmos/user-data-export-reads.ts',
+        'src/cosmos/user-data-cascade-writes.ts',
+        'src/services/erasureCascade.service.ts',
+        'src/services/userRole.service.ts',
+        // DPDP function entry points — Azure Functions runtime registration
+        // around thin handlers; the action handlers are unit-tested directly.
+        'src/functions/admin/erasure-requests/list.ts',
+        'src/functions/admin/erasure-requests/patch.ts',
+        'src/functions/users-data-export.ts',
+        'src/functions/trigger-erasure-deadline.ts',
         // Type-only declarations — zero executable statements.
         'src/types/**',
       ],
