@@ -4,7 +4,11 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -90,6 +94,8 @@ private val TextPrimary = Color(0xFF1A1A2E)
 private val TextSecondary = Color(0xFF6B7280)
 
 // ── Promo banners ─────────────────────────────────────────────────────────────
+// To activate real photos: place banner_1.jpg / banner_2.jpg / banner_3.jpg in
+// res/drawable/ and replace the null values below with R.drawable.banner_1 etc.
 private data class PromoBanner(
     val gradientStart: Color,
     val gradientEnd: Color,
@@ -97,11 +103,12 @@ private data class PromoBanner(
     val title: String,
     val subtitle: String,
     val cta: String,
+    @DrawableRes val imageRes: Int? = null,
 )
 
 private val promoBanners =
     listOf(
-        PromoBanner(Color(0xFFF59E0B), Color(0xFFB45309), "🌡️", "गर्मी से पहले AC सर्विस", "से ₹599 · आज की स्लॉट उपलब्ध", "अभी बुक करें"),
+        PromoBanner(Color(0xFFF59E0B), Color(0xFFB45309), "🌡️", "गर्मी से पहले AC सर्विस", "से ₹599 · आज की स्लॉट उपलब्ध", "अभी बुक करें", imageRes = null /* R.drawable.banner_1 */),
         PromoBanner(
             Color(0xFF0E4F47),
             Color(0xFF064E3B),
@@ -109,8 +116,9 @@ private val promoBanners =
             "आधार सत्यापित प्रोफेशनल",
             "हर तकनीशियन बैकग्राउंड चेक्ड · 30 दिन गारंटी",
             "और जानें",
+            imageRes = null, /* R.drawable.banner_2 */
         ),
-        PromoBanner(Color(0xFF6D28D9), Color(0xFF4C1D95), "🎁", "पहली बुकिंग पर 10% छूट", "कूपन: PEHLI · सभी सेवाओं पर लागू", "कूपन लगाएं"),
+        PromoBanner(Color(0xFF6D28D9), Color(0xFF4C1D95), "🎁", "पहली बुकिंग पर 10% छूट", "कूपन: PEHLI · सभी सेवाओं पर लागू", "कूपन लगाएं", imageRes = null /* R.drawable.banner_3 */),
     )
 
 // ── Category styles ───────────────────────────────────────────────────────────
@@ -348,11 +356,33 @@ private fun PromoSlider() {
                     Modifier
                         .fillMaxWidth()
                         .height(132.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(Brush.horizontalGradient(listOf(b.gradientStart, b.gradientEnd)))
-                        .padding(horizontal = 20.dp, vertical = 14.dp),
+                        .clip(RoundedCornerShape(24.dp)),
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize()) {
+                if (b.imageRes != null) {
+                    Image(
+                        painter = painterResource(id = b.imageRes),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .background(Color(0xFF000000).copy(alpha = 0.45f)),
+                    )
+                } else {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .background(Brush.horizontalGradient(listOf(b.gradientStart, b.gradientEnd))),
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 14.dp),
+                ) {
                     Text(b.emoji, fontSize = 38.sp)
                     Spacer(Modifier.width(14.dp))
                     Column(modifier = Modifier.weight(1f)) {
