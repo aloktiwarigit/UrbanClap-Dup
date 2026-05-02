@@ -21,10 +21,19 @@ public class HiltWiringTest {
     @Inject
     public lateinit var buildInfoProvider: BuildInfoProvider
 
+    @Inject
+    public lateinit var localeRepository: com.homeservices.customer.domain.locale.LocaleRepository
+
     @org.junit.Test
     public fun hiltGraphResolvesBuildInfoProvider(): Unit {
         hiltRule.inject()
         assertThat(buildInfoProvider).isNotNull
         assertThat(buildInfoProvider.version).isNotBlank
+    }
+
+    @org.junit.Test
+    public fun hiltGraphResolvesLocaleRepository(): Unit {
+        hiltRule.inject()
+        assertThat(localeRepository).isNotNull
     }
 }
