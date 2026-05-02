@@ -3,13 +3,14 @@ package com.homeservices.customer
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
-import androidx.fragment.app.FragmentActivity
+import androidx.appcompat.app.AppCompatActivity
 import com.homeservices.customer.data.auth.SessionManager
 import com.homeservices.customer.data.booking.PaymentResultBus
 import com.homeservices.customer.data.booking.PriceApprovalEventBus
 import com.homeservices.customer.data.rating.RatingPromptEventBus
 import com.homeservices.customer.di.BuildInfoProvider
 import com.homeservices.customer.domain.booking.model.PaymentResult
+import com.homeservices.customer.domain.locale.IsFirstLaunchUseCase
 import com.homeservices.customer.navigation.AppNavigation
 import com.homeservices.designsystem.theme.HomeservicesTheme
 import com.razorpay.PaymentData
@@ -20,7 +21,7 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 public class MainActivity :
-    FragmentActivity(),
+    AppCompatActivity(),
     PaymentResultWithDataListener {
     @Inject public lateinit var buildInfo: BuildInfoProvider
 
@@ -32,6 +33,8 @@ public class MainActivity :
 
     @Inject public lateinit var ratingPromptEventBus: RatingPromptEventBus
 
+    @Inject public lateinit var isFirstLaunch: IsFirstLaunchUseCase
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -41,6 +44,7 @@ public class MainActivity :
                     activity = this,
                     priceApprovalEventBus = priceApprovalEventBus,
                     ratingPromptEventBus = ratingPromptEventBus,
+                    isFirstLaunch = isFirstLaunch,
                 )
             }
         }

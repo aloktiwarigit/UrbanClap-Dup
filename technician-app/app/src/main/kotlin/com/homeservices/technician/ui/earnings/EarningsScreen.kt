@@ -2,7 +2,6 @@ package com.homeservices.technician.ui.earnings
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -71,15 +70,17 @@ internal fun EarningsContent(
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (val state = uiState) {
             is EarningsUiState.Loading -> CenterState { CircularProgressIndicator() }
-            is EarningsUiState.Error -> CenterState {
-                Text("Could not load earnings", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Button(onClick = onRetry) { Text("Try again") }
-            }
-            is EarningsUiState.Success -> EarningsSuccess(
-                summary = state.summary,
-                onViewRatings = onViewRatings,
-                onPayoutSettings = onPayoutSettings,
-            )
+            is EarningsUiState.Error ->
+                CenterState {
+                    Text("Could not load earnings", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Button(onClick = onRetry) { Text("Try again") }
+                }
+            is EarningsUiState.Success ->
+                EarningsSuccess(
+                    summary = state.summary,
+                    onViewRatings = onViewRatings,
+                    onPayoutSettings = onPayoutSettings,
+                )
         }
     }
 }
@@ -118,7 +119,11 @@ private fun EarningsSuccess(
 }
 
 @Composable
-private fun PeriodCard(label: String, period: EarningsPeriod, modifier: Modifier = Modifier) {
+private fun PeriodCard(
+    label: String,
+    period: EarningsPeriod,
+    modifier: Modifier = Modifier,
+) {
     HsSectionCard(modifier = modifier) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(formatRupees(period.techAmountPaise), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -147,7 +152,10 @@ private fun SparklineCard(days: List<DailyEarnings>) {
 }
 
 @Composable
-private fun EarningsSparkline(days: List<DailyEarnings>, modifier: Modifier = Modifier) {
+private fun EarningsSparkline(
+    days: List<DailyEarnings>,
+    modifier: Modifier = Modifier,
+) {
     if (days.isEmpty()) return
     val maxAmount = days.maxOfOrNull { it.techAmountPaise } ?: 0L
     val barColor = MaterialTheme.colorScheme.primary
@@ -166,11 +174,12 @@ private fun EarningsSparkline(days: List<DailyEarnings>, modifier: Modifier = Mo
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             days.forEach { day ->
-                val label = try {
-                    LocalDate.parse(day.date).dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
-                } catch (_: Exception) {
-                    "?"
-                }
+                val label =
+                    try {
+                        LocalDate.parse(day.date).dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
+                    } catch (_: Exception) {
+                        "?"
+                    }
                 Text(label, style = MaterialTheme.typography.labelSmall, color = labelColor)
             }
         }

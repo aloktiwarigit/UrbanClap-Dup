@@ -74,4 +74,30 @@
     <string name="price_approval_approved">अनुमोदित</string>
     <string name="price_approval_declined">मना किया</string>
     <string name="price_approval_selected_total">अनुमोदित ऐड-ऑन कुल</string>
+
+    <string name="app_name">होमसर्विसेज ग्राहक</string>
+
+    <!-- Slot picker -->
+    <string name="slot_picker_title">तारीख और समय चुनें</string>
+    <string name="slot_picker_next">आगे</string>
+
+    <!-- Trust dossier — Aadhaar/Police badges, certifications, languages, reviews -->
+    <string name="trust_dossier_assigning">आपके स्लॉट के लिए जल्द ही तकनीशियन असाइन किया जाएगा।</string>
+    <string name="trust_dossier_badge_aadhaar">आधार सत्यापित</string>
+    <string name="trust_dossier_badge_police">पुलिस वेरिफिकेशन पूरा</string>
+    <string name="trust_dossier_certifications_label">प्रमाणपत्र</string>
+    <string name="trust_dossier_error">तकनीशियन प्रोफाइल लोड नहीं हो सका।</string>
+    <string name="trust_dossier_jobs">%d जॉब</string>
+    <string name="trust_dossier_languages_label">भाषाएं</string>
+    <string name="trust_dossier_loading">तकनीशियन प्रोफाइल लोड हो रही है...</string>
+    <string name="trust_dossier_promise">हमारे सभी तकनीशियन आधार सत्यापित और पुलिस वेरिफाइड हैं।</string>
+    <string name="trust_dossier_reviews_label">हाल के रिव्यू</string>
+    <string name="trust_dossier_trained_by">%s द्वारा प्रशिक्षित</string>
+    <string name="trust_dossier_years">%d साल अनुभव</string>
+
+    <!-- Settings -->
+    <string name="settings_title">सेटिंग्स</string>
+    <string name="settings_language">भाषा</string>
+    <string name="settings_language_title">भाषा चुनें</string>
+    <string name="settings_language_save">सेव करें</string>
 </resources>

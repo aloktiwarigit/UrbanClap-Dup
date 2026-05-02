@@ -35,6 +35,7 @@ internal fun NavGraphBuilder.mainGraph(navController: NavController) {
             CatalogueHomeScreen(
                 viewModel = vm,
                 onCategoryClick = { id -> navController.navigate(CatalogueRoutes.serviceList(id)) },
+                onSettingsClick = { navController.navigate(LocaleRoutes.SETTINGS) },
             )
         }
         composable(

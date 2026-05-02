@@ -2,9 +2,11 @@ package com.homeservices.customer.ui.catalogue
 
 import androidx.lifecycle.SavedStateHandle
 import com.google.common.truth.Truth.assertThat
+import com.homeservices.customer.domain.catalogue.CatalogueLocalizer
 import com.homeservices.customer.domain.catalogue.GetServicesForCategoryUseCase
 import com.homeservices.customer.domain.catalogue.model.AddOn
 import com.homeservices.customer.domain.catalogue.model.Service
+import com.homeservices.customer.domain.locale.GetCurrentLocaleUseCase
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -22,10 +24,13 @@ import org.junit.Test
 public class ServiceListViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
     private val useCase: GetServicesForCategoryUseCase = mockk()
+    private val localizer = CatalogueLocalizer()
+    private val getCurrentLocale: GetCurrentLocaleUseCase = mockk()
 
     @Before
     public fun setUp(): Unit {
         Dispatchers.setMain(dispatcher)
+        every { getCurrentLocale() } returns flowOf("en")
     }
 
     @After
@@ -50,7 +55,7 @@ public class ServiceListViewModelTest {
                 )
             every { useCase("cat1") } returns flowOf(Result.success(listOf(service)))
             val handle = SavedStateHandle(mapOf("categoryId" to "cat1"))
-            val vm = ServiceListViewModel(handle, useCase)
+            val vm = ServiceListViewModel(handle, useCase, localizer, getCurrentLocale)
             assertThat(vm.uiState.value).isInstanceOf(ServiceListUiState.Success::class.java)
             assertThat((vm.uiState.value as ServiceListUiState.Success).services).hasSize(1)
         }
@@ -60,7 +65,7 @@ public class ServiceListViewModelTest {
         runTest(dispatcher) {
             every { useCase("cat1") } returns flowOf(Result.failure(RuntimeException("err")))
             val handle = SavedStateHandle(mapOf("categoryId" to "cat1"))
-            val vm = ServiceListViewModel(handle, useCase)
+            val vm = ServiceListViewModel(handle, useCase, localizer, getCurrentLocale)
             assertThat(vm.uiState.value).isInstanceOf(ServiceListUiState.Error::class.java)
         }
 }

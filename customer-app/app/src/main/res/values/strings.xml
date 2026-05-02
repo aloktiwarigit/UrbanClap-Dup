@@ -92,4 +92,10 @@
     <string name="price_approval_declined">Declined</string>
     <string name="price_approval_selected_total">Approved add-ons total</string>
 
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_title">Choose language</string>
+    <string name="settings_language_save">Save</string>
+
 </resources>

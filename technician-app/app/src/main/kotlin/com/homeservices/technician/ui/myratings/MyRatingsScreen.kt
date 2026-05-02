@@ -79,10 +79,11 @@ internal fun MyRatingsContent(
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (val state = uiState) {
             is MyRatingsUiState.Loading -> CenterState { CircularProgressIndicator() }
-            is MyRatingsUiState.Error -> CenterState {
-                Text("Could not load ratings", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Button(onClick = onRetry) { Text("Try again") }
-            }
+            is MyRatingsUiState.Error ->
+                CenterState {
+                    Text("Could not load ratings", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Button(onClick = onRetry) { Text("Try again") }
+                }
             is MyRatingsUiState.Success -> RatingsSuccess(summary = state.summary)
         }
     }
@@ -97,10 +98,22 @@ private fun RatingsSuccess(summary: TechRatingSummary) {
     ) {
         item {
             HsSectionCard {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Column {
-                        Text("%.1f".format(summary.averageOverall), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
-                        Text("${summary.totalCount} customer ratings", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "%.1f".format(summary.averageOverall),
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            "${summary.totalCount} customer ratings",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                     Text("★", style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.primary)
                 }
@@ -115,7 +128,11 @@ private fun RatingsSuccess(summary: TechRatingSummary) {
         }
         if (summary.trend.isNotEmpty()) item { TrendCard(weeks = summary.trend) }
         if (summary.items.isEmpty()) {
-            item { Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Text("No ratings yet", style = MaterialTheme.typography.bodyLarge) } }
+            item {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text("No ratings yet", style = MaterialTheme.typography.bodyLarge)
+                }
+            }
         } else {
             items(summary.items) { rating -> RatingItemCard(rating = rating) }
         }
@@ -123,7 +140,11 @@ private fun RatingsSuccess(summary: TechRatingSummary) {
 }
 
 @Composable
-private fun SubScoreColumn(label: String, value: Double, modifier: Modifier = Modifier) {
+private fun SubScoreColumn(
+    label: String,
+    value: Double,
+    modifier: Modifier = Modifier,
+) {
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text("%.1f".format(value), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -138,7 +159,10 @@ private fun TrendCard(weeks: List<RatingWeekTrend>) {
 }
 
 @Composable
-private fun RatingTrendChart(weeks: List<RatingWeekTrend>, modifier: Modifier = Modifier) {
+private fun RatingTrendChart(
+    weeks: List<RatingWeekTrend>,
+    modifier: Modifier = Modifier,
+) {
     if (weeks.isEmpty()) return
     val maxAvg = weeks.maxOfOrNull { it.average } ?: 5.0
     val barColor = MaterialTheme.colorScheme.primary
@@ -162,7 +186,17 @@ private fun RatingItemCard(rating: ReceivedRating) {
     HsSectionCard {
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             repeat(5) { i ->
-                Text(if (i < rating.overall) "★" else "☆", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                Text(
+                    if (i <
+                        rating.overall
+                    ) {
+                        "★"
+                    } else {
+                        "☆"
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
