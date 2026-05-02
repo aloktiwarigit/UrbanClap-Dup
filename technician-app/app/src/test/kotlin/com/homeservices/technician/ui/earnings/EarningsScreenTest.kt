@@ -21,6 +21,7 @@ public class EarningsScreenTest {
                     uiState = EarningsUiState.Success(sampleSummary()),
                     onRetry = {},
                     onViewRatings = {},
+                    onPayoutSettings = {},
                 )
             }
         }
