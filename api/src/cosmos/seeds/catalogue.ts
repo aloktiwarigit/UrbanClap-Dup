@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+import { argv } from 'node:process';
 import { getCosmosClient, DB_NAME } from '../client.js';
 import type { ServiceCategory } from '../../schemas/service-category.js';
 import type { Service } from '../../schemas/service.js';
@@ -5,15 +7,15 @@ import type { Service } from '../../schemas/service.js';
 const NOW = new Date().toISOString();
 const SYSTEM = 'seed-script';
 
-const CATEGORIES: ServiceCategory[] = [
+export const CATEGORIES: ServiceCategory[] = [
   { id: 'ac-repair', name: 'AC Repair', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/categories%2Fac-repair.jpg', sortOrder: 1, isActive: true, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
-  { id: 'deep-cleaning', name: 'Deep Cleaning', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/categories%2Fdeep-cleaning.jpg', sortOrder: 2, isActive: true, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
+  { id: 'water-pump', name: 'Water Pump / Borewell', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/categories%2Fwater-pump.jpg', sortOrder: 2, isActive: true, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
   { id: 'plumbing', name: 'Plumbing', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/categories%2Fplumbing.jpg', sortOrder: 3, isActive: true, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
   { id: 'electrical', name: 'Electrical', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/categories%2Felectrical.jpg', sortOrder: 4, isActive: true, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
-  { id: 'pest-control', name: 'Pest Control', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/categories%2Fpest-control.jpg', sortOrder: 5, isActive: true, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
+  { id: 'water-purifier', name: 'RO / Water Purifier', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/categories%2Fwater-purifier.jpg', sortOrder: 5, isActive: true, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
 ];
 
-const SERVICES: Service[] = [
+export const SERVICES: Service[] = [
   // AC Repair
   {
     id: 'ac-deep-clean',
@@ -69,56 +71,38 @@ const SERVICES: Service[] = [
     createdAt: NOW,
     updatedAt: NOW,
   },
-  // Deep Cleaning
+  // Water Pump / Borewell
   {
-    id: 'deep-clean-1bhk',
-    categoryId: 'deep-cleaning',
-    name: '1 BHK Deep Clean',
-    shortDescription: 'Full home deep clean — kitchen, bathroom, living area, bedroom.',
-    heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fdeep-clean-1bhk.jpg',
-    basePrice: 129900,
+    id: 'water-pump-repair',
+    categoryId: 'water-pump',
+    name: 'Water Pump Repair',
+    shortDescription: 'Surface + submersible pump troubleshooting and repair — fully covered at ₹699.',
+    heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fwater-pump-repair.jpg',
+    basePrice: 69900,
+    commissionBps: 2250,
+    durationMinutes: 90,
+    includes: ['On-site diagnosis', 'Capacitor / starter / impeller replacement (parts extra)', 'Test run + flow verification'],
+    faq: [{ question: 'Are spare parts included?', answer: 'No — parts are billed separately at MRP.' }],
+    addOns: [{ id: 'pump-rewinding', name: 'Motor rewinding', price: 250000, triggerCondition: 'if motor windings are burnt' }],
+    photoStages: [{ id: 'pump-before', label: 'Pump unit before service', required: true }, { id: 'pump-after', label: 'Pump unit after service', required: true }],
+    isActive: true,
+    updatedBy: SYSTEM,
+    createdAt: NOW,
+    updatedAt: NOW,
+  },
+  {
+    id: 'borewell-servicing',
+    categoryId: 'water-pump',
+    name: 'Borewell Servicing',
+    shortDescription: 'Borewell flushing, pump retrieval, and servicing.',
+    heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fborewell-servicing.jpg',
+    basePrice: 199900,
     commissionBps: 2250,
     durationMinutes: 240,
-    includes: ['Kitchen degreasing + scrub', 'Bathroom disinfection', 'Floor mopping + scrubbing', 'Balcony cleaning', 'Window wiping (inside)'],
-    faq: [{ question: 'Do I need to clear the home?', answer: 'Remove valuables and breakables. Large furniture can stay.' }],
-    addOns: [{ id: 'sofa-clean', name: 'Sofa cleaning (per seat)', price: 39900, triggerCondition: 'add on request' }],
-    photoStages: [{ id: 'before-kitchen', label: 'Kitchen before', required: true }, { id: 'after-kitchen', label: 'Kitchen after', required: true }],
-    isActive: true,
-    updatedBy: SYSTEM,
-    createdAt: NOW,
-    updatedAt: NOW,
-  },
-  {
-    id: 'deep-clean-2bhk',
-    categoryId: 'deep-cleaning',
-    name: '2 BHK Deep Clean',
-    shortDescription: '2 BHK full home deep clean including 2 bathrooms.',
-    heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fdeep-clean-2bhk.jpg',
-    basePrice: 179900,
-    commissionBps: 2250,
-    durationMinutes: 360,
-    includes: ['All rooms + 2 bathrooms', 'Kitchen degreasing', 'Balcony scrub', 'Window wiping (inside)'],
-    faq: [{ question: 'How many technicians come?', answer: '2 technicians for a 2 BHK.' }],
-    addOns: [{ id: 'mattress-clean', name: 'Mattress cleaning (per mattress)', price: 49900, triggerCondition: 'add on request' }],
-    photoStages: [{ id: 'before-bathroom', label: 'Bathroom before', required: true }, { id: 'after-bathroom', label: 'Bathroom after', required: true }],
-    isActive: true,
-    updatedBy: SYSTEM,
-    createdAt: NOW,
-    updatedAt: NOW,
-  },
-  {
-    id: 'deep-clean-3bhk',
-    categoryId: 'deep-cleaning',
-    name: '3 BHK Deep Clean',
-    shortDescription: '3 BHK full home deep clean — thorough, top-to-bottom.',
-    heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fdeep-clean-3bhk.jpg',
-    basePrice: 229900,
-    commissionBps: 2250,
-    durationMinutes: 480,
-    includes: ['All rooms + 3 bathrooms', 'Kitchen degreasing', 'Balcony scrub x2', 'Window wiping (inside)'],
-    faq: [],
-    addOns: [],
-    photoStages: [{ id: 'before-living', label: 'Living room before', required: true }, { id: 'after-living', label: 'Living room after', required: true }],
+    includes: ['Pump retrieval', 'Borewell flushing', 'Pump cleaning', 'Re-installation', 'Flow + pressure test'],
+    faq: [{ question: 'How deep does this cover?', answer: 'Up to 200 ft. Below that, additional charges apply.' }],
+    addOns: [{ id: 'extra-depth', name: 'Extra depth beyond 200 ft', price: 500, triggerCondition: 'per foot beyond 200 ft' }],
+    photoStages: [{ id: 'borewell-before', label: 'Borewell access before', required: true }, { id: 'pump-pulled', label: 'Pump after retrieval', required: true }, { id: 'borewell-after', label: 'Borewell sealed after service', required: true }],
     isActive: true,
     updatedBy: SYSTEM,
     createdAt: NOW,
@@ -234,56 +218,38 @@ const SERVICES: Service[] = [
     createdAt: NOW,
     updatedAt: NOW,
   },
-  // Pest Control
+  // RO / Water Purifier
   {
-    id: 'pest-cockroach',
-    categoryId: 'pest-control',
-    name: 'Cockroach Control',
-    shortDescription: 'Gel treatment for complete cockroach elimination.',
-    heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fpest-cockroach.jpg',
-    basePrice: 59900,
+    id: 'ro-installation',
+    categoryId: 'water-purifier',
+    name: 'RO Installation',
+    shortDescription: 'New RO water purifier installation with TDS check.',
+    heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fro-installation.jpg',
+    basePrice: 89900,
     commissionBps: 2250,
-    durationMinutes: 60,
-    includes: ['Gel bait application at all infestation points', '30-day re-treatment guarantee', 'Safe for children + pets'],
-    faq: [{ question: 'When can I use the kitchen after treatment?', answer: '30 minutes — gel is odourless and surface-safe.' }],
-    addOns: [],
-    photoStages: [{ id: 'infestation-spots', label: 'Key infestation areas', required: false }, { id: 'post-treatment', label: 'Gel application', required: true }],
+    durationMinutes: 90,
+    includes: ['Wall mounting', 'Inlet + outlet plumbing', 'TDS measurement before/after', 'Test run + flow verification'],
+    faq: [{ question: 'Is the RO unit included?', answer: 'No — bring your own. We install whatever brand you provide.' }],
+    addOns: [{ id: 'extra-piping', name: 'Extra inlet/outlet piping', price: 25000, triggerCondition: 'per metre beyond 2 m' }],
+    photoStages: [{ id: 'ro-before-wall', label: 'Wall before installation', required: true }, { id: 'ro-after-install', label: 'Completed installation with TDS reading', required: true }],
     isActive: true,
     updatedBy: SYSTEM,
     createdAt: NOW,
     updatedAt: NOW,
   },
   {
-    id: 'pest-bed-bugs',
-    categoryId: 'pest-control',
-    name: 'Bed Bug Treatment',
-    shortDescription: 'Heat + chemical treatment for full bed bug elimination.',
-    heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fpest-bed-bugs.jpg',
-    basePrice: 149900,
+    id: 'ro-service-amc',
+    categoryId: 'water-purifier',
+    name: 'RO Service / Filter Change',
+    shortDescription: 'Quarterly RO service — filter change, sanitisation, TDS check.',
+    heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fro-service-amc.jpg',
+    basePrice: 49900,
     commissionBps: 2250,
-    durationMinutes: 120,
-    includes: ['Mattress + furniture inspection', 'Residual spray treatment', '60-day guarantee', 'Follow-up visit if reinfestation'],
-    faq: [{ question: 'How soon can I sleep on the bed?', answer: 'After 4 hours once the spray dries.' }],
-    addOns: [],
-    photoStages: [{ id: 'mattress-before', label: 'Mattress before treatment', required: true }, { id: 'after-treatment', label: 'Post-treatment', required: true }],
-    isActive: true,
-    updatedBy: SYSTEM,
-    createdAt: NOW,
-    updatedAt: NOW,
-  },
-  {
-    id: 'pest-full-home',
-    categoryId: 'pest-control',
-    name: 'Full Home Pest Control',
-    shortDescription: 'Comprehensive treatment for all common household pests.',
-    heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fpest-full-home.jpg',
-    basePrice: 249900,
-    commissionBps: 2250,
-    durationMinutes: 180,
-    includes: ['Cockroaches, ants, lizards, silverfish, spiders', 'Spray + gel combo', 'All rooms + kitchen + bathrooms', '90-day guarantee'],
-    faq: [{ question: 'Is it safe for pets?', answer: 'Pets should be removed during treatment and for 2 hours after.' }],
-    addOns: [{ id: 'mosquito-fogging', name: 'Mosquito fogging (outdoor)', price: 49900, triggerCondition: 'if outdoor space > 500 sq ft' }],
-    photoStages: [{ id: 'before-overview', label: 'Home overview before', required: false }, { id: 'treatment-in-progress', label: 'Treatment in progress', required: true }],
+    durationMinutes: 45,
+    includes: ['Sediment filter change', 'Carbon filter change', 'RO membrane cleaning (if not due for replacement)', 'Sanitisation', 'TDS measurement before/after'],
+    faq: [{ question: 'How often should I service?', answer: 'Every 3 months for optimal performance.' }, { question: 'Is membrane replacement included?', answer: 'No — only cleaning. Replacement is a separate add-on every 24 months.' }],
+    addOns: [{ id: 'membrane-replacement', name: 'RO membrane replacement', price: 150000, triggerCondition: 'if TDS reduction efficiency drops below 85%' }],
+    photoStages: [{ id: 'ro-before-service', label: 'RO unit before service', required: true }, { id: 'old-filters', label: 'Old filters removed', required: true }, { id: 'ro-after-service', label: 'Unit after service with new TDS reading', required: true }],
     isActive: true,
     updatedBy: SYSTEM,
     createdAt: NOW,
@@ -316,7 +282,9 @@ async function seed(): Promise<void> {
   console.log(`Done. ${CATEGORIES.length} categories, ${SERVICES.length} services.`);
 }
 
-seed().catch((err: unknown) => {
-  console.error(err);
-  process.exit(1);
-});
+if (argv[1] && fileURLToPath(import.meta.url) === argv[1]) {
+  seed().catch((err: unknown) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

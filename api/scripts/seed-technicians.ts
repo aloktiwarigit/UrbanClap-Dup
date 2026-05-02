@@ -1,19 +1,21 @@
 #!/usr/bin/env tsx
-// Seed 10 test technicians spread across Bengaluru.
+// Seed 10 test technicians spread across Ayodhya, UP rural pilot region.
 // Run: pnpm seed:technicians
 // Requires: COSMOS_ENDPOINT and COSMOS_KEY env vars.
 
+import { fileURLToPath } from 'node:url';
+import { argv } from 'node:process';
 import { getCosmosClient, DB_NAME } from '../src/cosmos/client.js';
 import type { TechnicianProfile } from '../src/schemas/technician.js';
 
 const NOW = new Date().toISOString();
 const CONTAINER = 'technicians';
 
-const TECHNICIANS: TechnicianProfile[] = [
+export const TECHNICIANS: TechnicianProfile[] = [
   {
-    id: 'tech-blr-001',
-    technicianId: 'tech-blr-001',
-    location: { type: 'Point', coordinates: [77.6245, 12.9352] }, // Koramangala
+    id: 'tech-ayd-001',
+    technicianId: 'tech-ayd-001',
+    location: { type: 'Point', coordinates: [82.1968, 26.7913] }, // Ram Janmabhoomi area
     skills: ['ac-deep-clean', 'ac-gas-refill', 'ac-installation'],
     availabilityWindows: [
       { dayOfWeek: 1, startHour: 8, endHour: 18 },
@@ -28,9 +30,9 @@ const TECHNICIANS: TechnicianProfile[] = [
     updatedAt: NOW,
   },
   {
-    id: 'tech-blr-002',
-    technicianId: 'tech-blr-002',
-    location: { type: 'Point', coordinates: [77.6408, 12.9784] }, // Indiranagar
+    id: 'tech-ayd-002',
+    technicianId: 'tech-ayd-002',
+    location: { type: 'Point', coordinates: [82.2042, 26.7752] }, // Naya Ghat
     skills: ['pipe-leak-fix', 'tap-repair', 'bathroom-fitting'],
     availabilityWindows: [
       { dayOfWeek: 1, startHour: 9, endHour: 19 },
@@ -44,9 +46,9 @@ const TECHNICIANS: TechnicianProfile[] = [
     updatedAt: NOW,
   },
   {
-    id: 'tech-blr-003',
-    technicianId: 'tech-blr-003',
-    location: { type: 'Point', coordinates: [77.7500, 12.9698] }, // Whitefield
+    id: 'tech-ayd-003',
+    technicianId: 'tech-ayd-003',
+    location: { type: 'Point', coordinates: [82.1815, 26.8019] }, // Faizabad Cantt
     skills: ['main-switch-fix', 'light-fitting', 'fan-installation', 'ac-deep-clean'],
     availabilityWindows: [
       { dayOfWeek: 0, startHour: 10, endHour: 17 },
@@ -60,10 +62,10 @@ const TECHNICIANS: TechnicianProfile[] = [
     updatedAt: NOW,
   },
   {
-    id: 'tech-blr-004',
-    technicianId: 'tech-blr-004',
-    location: { type: 'Point', coordinates: [77.6474, 12.9116] }, // HSR Layout
-    skills: ['deep-clean-1bhk', 'deep-clean-2bhk'],
+    id: 'tech-ayd-004',
+    technicianId: 'tech-ayd-004',
+    location: { type: 'Point', coordinates: [82.2238, 26.7905] }, // Saket College area
+    skills: ['ac-deep-clean', 'ac-gas-refill'],
     availabilityWindows: [
       { dayOfWeek: 1, startHour: 8, endHour: 17 },
       { dayOfWeek: 2, startHour: 8, endHour: 17 },
@@ -78,10 +80,10 @@ const TECHNICIANS: TechnicianProfile[] = [
     updatedAt: NOW,
   },
   {
-    id: 'tech-blr-005',
-    technicianId: 'tech-blr-005',
-    location: { type: 'Point', coordinates: [77.7011, 12.9591] }, // Marathahalli
-    skills: ['cockroach-treatment', 'bed-bug-treatment', 'general-pest-control'],
+    id: 'tech-ayd-005',
+    technicianId: 'tech-ayd-005',
+    location: { type: 'Point', coordinates: [82.1652, 26.7871] }, // Reedganj
+    skills: ['water-pump-repair', 'borewell-servicing'],
     availabilityWindows: [
       { dayOfWeek: 2, startHour: 9, endHour: 18 },
       { dayOfWeek: 4, startHour: 9, endHour: 18 },
@@ -93,10 +95,10 @@ const TECHNICIANS: TechnicianProfile[] = [
     updatedAt: NOW,
   },
   {
-    id: 'tech-blr-006',
-    technicianId: 'tech-blr-006',
-    location: { type: 'Point', coordinates: [77.5830, 12.9299] }, // Jayanagar
-    skills: ['pipe-leak-fix', 'main-switch-fix', 'light-fitting'],
+    id: 'tech-ayd-006',
+    technicianId: 'tech-ayd-006',
+    location: { type: 'Point', coordinates: [82.2105, 26.8084] }, // Civil Lines
+    skills: ['ro-installation', 'ro-service-amc'],
     availabilityWindows: [
       { dayOfWeek: 1, startHour: 8, endHour: 18 },
       { dayOfWeek: 3, startHour: 8, endHour: 18 },
@@ -108,10 +110,10 @@ const TECHNICIANS: TechnicianProfile[] = [
     updatedAt: NOW,
   },
   {
-    id: 'tech-blr-007',
-    technicianId: 'tech-blr-007',
-    location: { type: 'Point', coordinates: [77.6101, 12.9166] }, // BTM Layout
-    skills: ['deep-clean-2bhk', 'deep-clean-3bhk', 'deep-clean-1bhk'],
+    id: 'tech-ayd-007',
+    technicianId: 'tech-ayd-007',
+    location: { type: 'Point', coordinates: [82.1893, 26.7681] }, // Chowk
+    skills: ['main-switch-fix', 'fan-installation', 'pipe-leak-fix'],
     availabilityWindows: [
       { dayOfWeek: 1, startHour: 9, endHour: 17 },
       { dayOfWeek: 2, startHour: 9, endHour: 17 },
@@ -124,10 +126,10 @@ const TECHNICIANS: TechnicianProfile[] = [
     updatedAt: NOW,
   },
   {
-    id: 'tech-blr-008',
-    technicianId: 'tech-blr-008',
-    location: { type: 'Point', coordinates: [77.6790, 12.8399] }, // Electronic City
-    skills: ['ac-deep-clean', 'cockroach-treatment', 'general-pest-control'],
+    id: 'tech-ayd-008',
+    technicianId: 'tech-ayd-008',
+    location: { type: 'Point', coordinates: [82.2378, 26.7798] }, // Saadat Ganj
+    skills: ['water-pump-repair', 'borewell-servicing', 'main-switch-fix'],
     availabilityWindows: [
       { dayOfWeek: 0, startHour: 9, endHour: 17 },
       { dayOfWeek: 3, startHour: 8, endHour: 18 },
@@ -140,10 +142,10 @@ const TECHNICIANS: TechnicianProfile[] = [
     updatedAt: NOW,
   },
   {
-    id: 'tech-blr-009',
-    technicianId: 'tech-blr-009',
-    location: { type: 'Point', coordinates: [77.5963, 13.1007] }, // Yelahanka
-    skills: ['tap-repair', 'bathroom-fitting', 'pipe-leak-fix'],
+    id: 'tech-ayd-009',
+    technicianId: 'tech-ayd-009',
+    location: { type: 'Point', coordinates: [82.1748, 26.8203] }, // Nirmali Kund
+    skills: ['ro-installation', 'ro-service-amc', 'tap-repair'],
     availabilityWindows: [
       { dayOfWeek: 2, startHour: 8, endHour: 17 },
       { dayOfWeek: 4, startHour: 8, endHour: 17 },
@@ -155,10 +157,10 @@ const TECHNICIANS: TechnicianProfile[] = [
     updatedAt: NOW,
   },
   {
-    id: 'tech-blr-010',
-    technicianId: 'tech-blr-010',
-    location: { type: 'Point', coordinates: [77.5468, 12.9255] }, // Banashankari
-    skills: ['fan-installation', 'main-switch-fix', 'ac-gas-refill'],
+    id: 'tech-ayd-010',
+    technicianId: 'tech-ayd-010',
+    location: { type: 'Point', coordinates: [82.2151, 26.7617] }, // Bareta
+    skills: ['ac-installation', 'ac-deep-clean', 'pipe-leak-fix'],
     availabilityWindows: [
       { dayOfWeek: 1, startHour: 9, endHour: 18 },
       { dayOfWeek: 3, startHour: 9, endHour: 18 },
@@ -183,7 +185,9 @@ async function main(): Promise<void> {
   console.log('Done.');
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+if (argv[1] && fileURLToPath(import.meta.url) === argv[1]) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}
