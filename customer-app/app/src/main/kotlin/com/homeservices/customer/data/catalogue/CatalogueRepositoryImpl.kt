@@ -15,7 +15,7 @@ internal class CatalogueRepositoryImpl
     ) : CatalogueRepository {
         override fun getCategories(): Flow<Result<List<Category>>> =
             flow {
-                emit(runCatching { api.getCategories().map { it.toDomain() } })
+                emit(runCatching { api.getCategories().categories.map { it.toDomain() } })
             }
 
         override fun getServicesForCategory(categoryId: String): Flow<Result<List<Service>>> =

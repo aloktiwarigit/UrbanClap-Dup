@@ -4,7 +4,28 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- House outline (safe zone 24–84) -->
+    <!-- Roof triangle -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,30 L54,78 M30,54 L78,54" />
+        android:pathData="M54,24 L20,56 L88,56 Z" />
+    <!-- Walls + door cutout -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M24,56 L24,84 L44,84 L44,64 L64,64 L64,84 L84,84 L84,56 Z" />
+    <!-- Door recess (brand green to show depth) -->
+    <path
+        android:fillColor="#0E4F47"
+        android:pathData="M46,66 L46,84 L62,84 L62,66 Z" />
+    <!-- Marigold check badge — top right -->
+    <path
+        android:fillColor="#F4B740"
+        android:pathData="M78,38 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M72,38 L76,42 L84,34" />
 </vector>

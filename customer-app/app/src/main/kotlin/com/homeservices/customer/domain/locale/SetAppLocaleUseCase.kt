@@ -10,8 +10,10 @@ public class SetAppLocaleUseCase
         private val repo: LocaleRepository,
     ) {
         public suspend operator fun invoke(tag: String) {
-            AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
+            // Persist before applying — setApplicationLocales() can trigger Activity recreation
+            // on API <33, which would cancel viewModelScope and leave DataStore writes incomplete.
             repo.setLocale(tag)
             repo.markFirstLaunchCompleted()
+            AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
         }
     }
