@@ -8,10 +8,11 @@ import org.junit.Test
 
 public class SettingsScreenPaparazziTest {
     @get:Rule
-    public val paparazzi: Paparazzi = Paparazzi(
-        deviceConfig = DeviceConfig.PIXEL_5,
-        theme = "android:Theme.Material3.DayNight.NoActionBar",
-    )
+    public val paparazzi: Paparazzi =
+        Paparazzi(
+            deviceConfig = DeviceConfig.PIXEL_5,
+            theme = "android:Theme.Material3.DayNight.NoActionBar",
+        )
 
     @Test
     public fun settings_light() {

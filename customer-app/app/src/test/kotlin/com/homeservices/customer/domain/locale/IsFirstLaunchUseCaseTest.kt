@@ -12,9 +12,10 @@ public class IsFirstLaunchUseCaseTest {
     private val repo: LocaleRepository = mockk()
 
     @Test
-    public fun `returns repo firstLaunchPending flow`(): Unit = runTest {
-        every { repo.firstLaunchPending } returns flowOf(true)
-        val useCase = IsFirstLaunchUseCase(repo)
-        assertThat(useCase().first()).isTrue()
-    }
+    public fun `returns repo firstLaunchPending flow`(): Unit =
+        runTest {
+            every { repo.firstLaunchPending } returns flowOf(true)
+            val useCase = IsFirstLaunchUseCase(repo)
+            assertThat(useCase().first()).isTrue()
+        }
 }

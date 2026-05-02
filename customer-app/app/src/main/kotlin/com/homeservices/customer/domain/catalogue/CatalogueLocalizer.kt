@@ -10,7 +10,10 @@ import javax.inject.Singleton
 public class CatalogueLocalizer
     @Inject
     constructor() {
-        public fun localizeCategory(category: Category, locale: String): Category =
+        public fun localizeCategory(
+            category: Category,
+            locale: String,
+        ): Category =
             if (locale == "hi") {
                 val hindiName = HindiLocaleNames.categoryHindiNames[category.id]
                 if (hindiName != null) category.copy(name = hindiName) else category
@@ -18,7 +21,10 @@ public class CatalogueLocalizer
                 category
             }
 
-        public fun localizeService(service: Service, locale: String): Service =
+        public fun localizeService(
+            service: Service,
+            locale: String,
+        ): Service =
             if (locale == "hi") {
                 val hindiName = HindiLocaleNames.serviceHindiNames[service.id]
                 val hindiDesc = HindiLocaleNames.serviceShortDescriptionsHindi[service.id]

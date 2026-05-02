@@ -28,11 +28,12 @@ public class SetAppLocaleUseCaseTest {
     }
 
     @Test
-    public fun `invoke applies AppCompatDelegate locale and persists tag`(): Unit = runTest {
-        useCase("hi")
+    public fun `invoke applies AppCompatDelegate locale and persists tag`(): Unit =
+        runTest {
+            useCase("hi")
 
-        verify { AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("hi")) }
-        coVerify { repo.setLocale("hi") }
-        coVerify { repo.markFirstLaunchCompleted() }
-    }
+            verify { AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("hi")) }
+            coVerify { repo.setLocale("hi") }
+            coVerify { repo.markFirstLaunchCompleted() }
+        }
 }

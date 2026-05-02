@@ -56,13 +56,14 @@ public class ServiceDetailViewModelTest {
     public fun `loads service detail for given serviceId`(): Unit =
         runTest(dispatcher) {
             every { serviceDetailUseCase("svc1") } returns flowOf(Result.success(testService))
-            val vm = ServiceDetailViewModel(
-                SavedStateHandle(mapOf("serviceId" to "svc1")),
-                serviceDetailUseCase,
-                confidenceScoreUseCase,
-                localizer,
-                getCurrentLocale,
-            )
+            val vm =
+                ServiceDetailViewModel(
+                    SavedStateHandle(mapOf("serviceId" to "svc1")),
+                    serviceDetailUseCase,
+                    confidenceScoreUseCase,
+                    localizer,
+                    getCurrentLocale,
+                )
             assertThat(vm.uiState.value).isInstanceOf(ServiceDetailUiState.Success::class.java)
             assertThat((vm.uiState.value as ServiceDetailUiState.Success).service).isEqualTo(testService)
         }
@@ -71,13 +72,14 @@ public class ServiceDetailViewModelTest {
     public fun `emits Error on failure`(): Unit =
         runTest(dispatcher) {
             every { serviceDetailUseCase("svc1") } returns flowOf(Result.failure(RuntimeException("not found")))
-            val vm = ServiceDetailViewModel(
-                SavedStateHandle(mapOf("serviceId" to "svc1")),
-                serviceDetailUseCase,
-                confidenceScoreUseCase,
-                localizer,
-                getCurrentLocale,
-            )
+            val vm =
+                ServiceDetailViewModel(
+                    SavedStateHandle(mapOf("serviceId" to "svc1")),
+                    serviceDetailUseCase,
+                    confidenceScoreUseCase,
+                    localizer,
+                    getCurrentLocale,
+                )
             assertThat(vm.uiState.value).isInstanceOf(ServiceDetailUiState.Error::class.java)
             assertThat((vm.uiState.value as ServiceDetailUiState.Error).message).isEqualTo("not found")
         }
@@ -86,13 +88,14 @@ public class ServiceDetailViewModelTest {
     public fun `confidenceScoreState is Hidden when no techId`(): Unit =
         runTest(dispatcher) {
             every { serviceDetailUseCase("svc1") } returns flowOf(Result.success(testService))
-            val vm = ServiceDetailViewModel(
-                SavedStateHandle(mapOf("serviceId" to "svc1")),
-                serviceDetailUseCase,
-                confidenceScoreUseCase,
-                localizer,
-                getCurrentLocale,
-            )
+            val vm =
+                ServiceDetailViewModel(
+                    SavedStateHandle(mapOf("serviceId" to "svc1")),
+                    serviceDetailUseCase,
+                    confidenceScoreUseCase,
+                    localizer,
+                    getCurrentLocale,
+                )
             assertThat(vm.confidenceScoreState.value).isInstanceOf(ConfidenceScoreUiState.Hidden::class.java)
         }
 

@@ -31,9 +31,10 @@ public fun SettingsScreen(
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onLanguageClick),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onLanguageClick),
             ) {
                 Text(
                     text = "Language / भाषा",

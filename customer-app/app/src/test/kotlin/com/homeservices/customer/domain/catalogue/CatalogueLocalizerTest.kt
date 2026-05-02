@@ -9,24 +9,26 @@ import org.junit.Test
 public class CatalogueLocalizerTest {
     private val localizer = CatalogueLocalizer()
 
-    private val acCategory = Category(
-        id = "ac-repair",
-        name = "AC Repair",
-        imageUrl = "x",
-        serviceCount = 3,
-    )
+    private val acCategory =
+        Category(
+            id = "ac-repair",
+            name = "AC Repair",
+            imageUrl = "x",
+            serviceCount = 3,
+        )
 
-    private val acService = Service(
-        id = "ac-deep-clean",
-        categoryId = "ac-repair",
-        name = "AC Deep Clean",
-        description = "Chemical wash, gas check.",
-        basePrice = 59900,
-        durationMinutes = 90,
-        imageUrl = "x",
-        includes = emptyList(),
-        addOns = emptyList<AddOn>(),
-    )
+    private val acService =
+        Service(
+            id = "ac-deep-clean",
+            categoryId = "ac-repair",
+            name = "AC Deep Clean",
+            description = "Chemical wash, gas check.",
+            basePrice = 59900,
+            durationMinutes = 90,
+            imageUrl = "x",
+            includes = emptyList(),
+            addOns = emptyList<AddOn>(),
+        )
 
     @Test
     public fun `category is left untouched when locale is en`() {
