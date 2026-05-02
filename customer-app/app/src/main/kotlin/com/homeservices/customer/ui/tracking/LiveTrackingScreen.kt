@@ -58,9 +58,8 @@ internal fun LiveTrackingScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val sosUiState by sosViewModel.sosUiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val isInProgress =
-        uiState is LiveTrackingUiState.Tracking &&
-            (uiState as LiveTrackingUiState.Tracking).status is BookingStatus.InProgress
+    val isInProgress = uiState is LiveTrackingUiState.Tracking &&
+        (uiState as LiveTrackingUiState.Tracking).status is BookingStatus.InProgress
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },

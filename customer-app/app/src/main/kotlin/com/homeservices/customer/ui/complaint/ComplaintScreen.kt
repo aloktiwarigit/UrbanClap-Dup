@@ -160,11 +160,7 @@ private fun SuccessState(
 
 @Composable
 private fun LoadingState() {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
+    Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
         CircularProgressIndicator()
         Spacer(Modifier.height(12.dp))
         Text("Submitting complaint", color = MaterialTheme.colorScheme.onSurfaceVariant)

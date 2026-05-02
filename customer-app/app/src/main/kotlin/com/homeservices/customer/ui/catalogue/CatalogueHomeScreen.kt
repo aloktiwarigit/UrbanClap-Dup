@@ -62,10 +62,7 @@ internal fun CatalogueHomeContent(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
                 ) {
-                    item(span = {
-                        androidx.compose.foundation.lazy.grid
-                            .GridItemSpan(maxLineSpan)
-                    }) {
+                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                         StorefrontHeader()
                     }
                     items(uiState.categories, key = { it.id }) { category ->
@@ -178,10 +175,7 @@ private fun CatalogueLoadingSkeleton() {
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
     ) {
-        item(span = {
-            androidx.compose.foundation.lazy.grid
-                .GridItemSpan(maxLineSpan)
-        }) {
+        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
             Column(modifier = Modifier.padding(bottom = 14.dp)) {
                 PlaceholderLine(widthFraction = 0.55f, height = 34.dp)
                 Spacer(Modifier.height(10.dp))

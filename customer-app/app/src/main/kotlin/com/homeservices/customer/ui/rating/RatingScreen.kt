@@ -102,11 +102,7 @@ internal fun RatingContent(
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(modifier = Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             when (state) {
-                is RatingUiState.AwaitingPartner ->
-                    StatusMessage(
-                        "Rating submitted",
-                        "We will reveal both ratings after the technician responds.",
-                    )
+                is RatingUiState.AwaitingPartner -> StatusMessage("Rating submitted", "We will reveal both ratings after the technician responds.")
                 is RatingUiState.Revealed -> StatusMessage("Ratings revealed", "Thanks for keeping the service marketplace fair.")
                 is RatingUiState.Error -> StatusMessage("Could not load rating", state.message)
                 is RatingUiState.Loading -> StatusMessage("Loading rating", "Preparing your service feedback form.")
@@ -162,11 +158,7 @@ private fun StatusMessage(
     title: String,
     body: String,
 ) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
+    Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
         Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
         Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
