@@ -278,6 +278,96 @@ Safety events are always treated as real until confirmed otherwise.
 3. Mobile apps: Play Store release builds via GitHub Actions → internal testing track → (after manual sanity test) promote to production.
 4. Database migrations: Cosmos is schema-flexible; additive changes (new fields) need no migration. Breaking changes require a story + coordinated deploy.
 
+### 5.1 Admin Web — One-time Azure Static Web Apps setup
+
+The `admin-ship.yml` workflow's `deploy` job pushes to an Azure Static Web App (Free SKU, ₹0/mo, 100 GB bandwidth). The resource and its secrets must be provisioned **once** before the first deploy.
+
+**Fast path (recommended):** export your Firebase web-app config to a local JSON file and run:
+
+```bash
+bash tools/bootstrap-admin-web-deploy.sh path/to/firebase-web-config.json
+```
+
+The script is idempotent — it creates the SWA resource if missing, fetches the deployment token, sets all 4 GitHub secrets + the `ADMIN_WEB_PUBLIC_URL` variable, and provisions `JWT_SECRET` on SWA app settings (preserved across re-runs unless `ROTATE_JWT=true`). Prereqs: `az login`, `gh auth login`, `jq`, `openssl`.
+
+The Firebase config JSON has the shape `{ "apiKey": "...", "authDomain": "...", "projectId": "..." }` — pull it from Firebase Console → Project settings → Your apps → Web → Config.
+
+**Manual path (if you'd rather drive it by hand):**
+
+**Step 1 — Create the Static Web App resource:**
+
+```bash
+az staticwebapp create \
+  --name swa-homeservices-admin-prod \
+  --resource-group rg-homeservices-prod \
+  --location eastasia \
+  --sku Free
+```
+
+(Same RG as the API Function App. **`centralindia` is NOT available** for `Microsoft.Web/staticSites` — SWA Free is restricted to `westus2 / centralus / eastus2 / westeurope / eastasia`. `eastasia` is closest to Bengaluru at ~140 ms RTT.)
+
+**Step 2 — Get the deployment token + public hostname:**
+
+```bash
+# Deployment token → goes into GH secret AZURE_STATIC_WEB_APPS_API_TOKEN
+az staticwebapp secrets list \
+  --name swa-homeservices-admin-prod \
+  --resource-group rg-homeservices-prod \
+  --query "properties.apiKey" -o tsv
+
+# Public hostname → goes into GH variable ADMIN_WEB_PUBLIC_URL
+az staticwebapp show \
+  --name swa-homeservices-admin-prod \
+  --resource-group rg-homeservices-prod \
+  --query "defaultHostname" -o tsv
+# Output looks like: swa-homeservices-admin-prod.<random>.5.azurestaticapps.net
+```
+
+**Step 3 — Configure GitHub repo secrets + variables:**
+
+`Settings → Secrets and variables → Actions`:
+
+| Type | Name | Value |
+|---|---|---|
+| Secret | `AZURE_STATIC_WEB_APPS_API_TOKEN` | from Step 2 |
+| Secret | `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase Console → Project settings → Web app config |
+| Secret | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | same |
+| Secret | `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | same |
+| Variable | `ADMIN_WEB_PUBLIC_URL` | `https://<defaultHostname from Step 2>` |
+
+**Step 4 — Set server-side runtime env vars via SWA app settings:**
+
+`NEXT_PUBLIC_*` are baked at build time (Step 3 above). Server-only secrets must be set on the SWA resource itself:
+
+```bash
+az staticwebapp appsettings set \
+  --name swa-homeservices-admin-prod \
+  --setting-names \
+    JWT_SECRET="$(openssl rand -hex 32)"
+```
+
+`JWT_SECRET` is consumed by `admin-web/middleware.ts` to verify the `hs_access` access-token cookie on `/dashboard/*`.
+
+**Step 5 — First deploy:**
+
+Push to `main` (or run `gh workflow run admin-ship.yml`). The `deploy` job will:
+1. Wait for `quality-gate` and `e2e-and-a11y` to pass.
+2. Invoke `Azure/static-web-apps-deploy@v1`, which runs Oryx inside the action's container — Oryx auto-detects Next.js 15, runs `pnpm install` + `pnpm build`, deploys SSR runtime + static assets.
+3. App goes live at the URL from Step 2 within ~2-3 min.
+
+**Step 6 — Verify:**
+
+```bash
+curl -I "$(az staticwebapp show --name swa-homeservices-admin-prod --resource-group rg-homeservices-prod --query 'defaultHostname' -o tsv | sed 's|^|https://|')"
+# Expect 200/302 (302 = middleware redirecting unauthenticated user to /login)
+```
+
+**Caveats:**
+- Azure SWA's hybrid Next.js support is in **preview** — middleware works but adds ~200-400 ms cold-start latency on first request after idle. Acceptable for an internal admin dashboard.
+- ISR (`revalidate`) is **not** supported — use SSR or static.
+- `next/image` Loader is restricted — defaults to unoptimized. Acceptable for admin.
+- If SWA hybrid Next.js limitations bite later, fallback is Azure App Service B1 (~₹1k/mo) or Container Apps (free 180k vCPU-sec/mo) — both need an ADR amendment to ADR-0007.
+
 **Rollback:**
 - Admin / API: revert commit + push to `main` → auto-rolls forward. Static Web Apps retains previous deployment slots.
 - Mobile: Play Store Staged Rollouts + Halt-Rollout feature. Previous APK users unaffected; new users get old version until hotfix ships.
