@@ -26,8 +26,8 @@ beforeEach(() => {
   vi.resetAllMocks();
 });
 
-describe('LandingPage — display headline / CTA / fallback footer (post-rebrand)', () => {
-  it('renders the display h1, CTA, and · local fallback marker when /v1/health throws', async () => {
+describe('LandingPage — brand/tagline/CTA + fallback footer', () => {
+  it('renders brand, tagline, CTA, and (local) fallback when /v1/health throws', async () => {
     (createApiClient as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       GET: vi.fn().mockRejectedValue(new Error('api unreachable')),
     });
@@ -35,17 +35,15 @@ describe('LandingPage — display headline / CTA / fallback footer (post-rebrand
     const jsx = await LandingPage();
     render(jsx);
 
-    // Editorial rebrand replaced the old "homeservices" h1 + tagline with the
-    // display headline. Brand is now a small italic-serif <p>, not a heading.
-    expect(screen.getByRole('heading', { level: 1, name: /operate the field/i })).toBeDefined();
+    expect(screen.getByRole('heading', { level: 1, name: /homeservices/i })).toBeDefined();
+    expect(screen.getByText(/live operations at a glance/i)).toBeDefined();
 
     const cta = screen.getByRole('link', { name: /sign in to admin/i });
     expect(cta.getAttribute('href')).toBe('/login');
 
-    // Footer fallback marker — rebrand changed "(local)" to " · local".
-    // Version is rendered in both the header (sm:inline) and the footer.
-    expect(screen.getAllByText(/0\.1\.0/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/· local/)).toBeDefined();
+    expect(screen.getByText(/0\.1\.0/)).toBeDefined();
+    expect(screen.getByText(/dev/)).toBeDefined();
+    expect(screen.getByText(/\(local\)/)).toBeDefined();
   });
 });
 
@@ -67,14 +65,13 @@ describe('LandingPage — /v1/health round-trip', () => {
     const jsx = await LandingPage();
     render(jsx);
 
-    // Version renders in both the header and footer.
-    expect(screen.getAllByText(/0\.9\.7/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/0\.9\.7/)).toBeDefined();
     expect(screen.getByText(/cafebabe/)).toBeDefined();
-    // Successful round-trip must not render the · local fallback marker.
-    expect(screen.queryByText(/· local/)).toBeNull();
+    // Successful round-trip must not render the (local) fallback marker.
+    expect(screen.queryByText(/\(local\)/)).toBeNull();
   });
 
-  it('falls back to · local when /v1/health returns an error envelope', async () => {
+  it('falls back to (local) when /v1/health returns an error envelope', async () => {
     (createApiClient as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       GET: vi.fn().mockResolvedValue({
         data: undefined,
@@ -85,6 +82,6 @@ describe('LandingPage — /v1/health round-trip', () => {
     const jsx = await LandingPage();
     render(jsx);
 
-    expect(screen.getByText(/· local/)).toBeDefined();
+    expect(screen.getByText(/\(local\)/)).toBeDefined();
   });
 });
