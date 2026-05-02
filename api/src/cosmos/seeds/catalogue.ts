@@ -257,6 +257,20 @@ export const SERVICES: Service[] = [
   },
 ];
 
+// Categories + services dropped during the 2026-05-01 Ayodhya pivot. The seed
+// must deactivate (not just leave alone) any of these that already exist in
+// Cosmos from prior Bengaluru-era seeding, otherwise the public catalogue
+// continues to surface them as bookable.
+export const DROPPED_CATEGORY_IDS = ['deep-cleaning', 'pest-control'] as const;
+export const DROPPED_SERVICES: ReadonlyArray<{ id: string; categoryId: string }> = [
+  { id: 'deep-clean-1bhk', categoryId: 'deep-cleaning' },
+  { id: 'deep-clean-2bhk', categoryId: 'deep-cleaning' },
+  { id: 'deep-clean-3bhk', categoryId: 'deep-cleaning' },
+  { id: 'pest-cockroach', categoryId: 'pest-control' },
+  { id: 'pest-bed-bugs', categoryId: 'pest-control' },
+  { id: 'pest-full-home', categoryId: 'pest-control' },
+];
+
 async function seed(): Promise<void> {
   const db = getCosmosClient().database(DB_NAME);
 
@@ -273,13 +287,40 @@ async function seed(): Promise<void> {
     console.log(`  upserted: ${cat.id}`);
   }
 
+  console.log('Deactivating dropped categories (if present)...');
+  for (const droppedId of DROPPED_CATEGORY_IDS) {
+    try {
+      const { resource } = await catContainer.item(droppedId, droppedId).read<ServiceCategory>();
+      if (resource && resource.isActive !== false) {
+        await catContainer.items.upsert({ ...resource, isActive: false, updatedBy: SYSTEM, updatedAt: NOW });
+        console.log(`  deactivated category: ${droppedId}`);
+      }
+    } catch (err) {
+      // 404 on a fresh DB is expected; surface anything else
+      if ((err as { code?: number }).code !== 404) throw err;
+    }
+  }
+
   console.log('Seeding services...');
   for (const svc of SERVICES) {
     await svcContainer.items.upsert(svc);
     console.log(`  upserted: ${svc.id}`);
   }
 
-  console.log(`Done. ${CATEGORIES.length} categories, ${SERVICES.length} services.`);
+  console.log('Deactivating dropped services (if present)...');
+  for (const dropped of DROPPED_SERVICES) {
+    try {
+      const { resource } = await svcContainer.item(dropped.id, dropped.categoryId).read<Service>();
+      if (resource && resource.isActive !== false) {
+        await svcContainer.items.upsert({ ...resource, isActive: false, updatedBy: SYSTEM, updatedAt: NOW });
+        console.log(`  deactivated service: ${dropped.id}`);
+      }
+    } catch (err) {
+      if ((err as { code?: number }).code !== 404) throw err;
+    }
+  }
+
+  console.log(`Done. ${CATEGORIES.length} categories, ${SERVICES.length} services. Dropped categories/services deactivated where present.`);
 }
 
 if (argv[1] && fileURLToPath(import.meta.url) === argv[1]) {

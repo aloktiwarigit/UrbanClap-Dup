@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { TECHNICIANS } from '../../scripts/seed-technicians.js';
+import { SERVICES, CATEGORIES } from '../../src/cosmos/seeds/catalogue.js';
 
 // Ayodhya operational bounding box (~10km radius around city centre [82.20, 26.79])
 const LNG_MIN = 82.10;
@@ -29,11 +30,34 @@ describe('seed-technicians Ayodhya coords', () => {
     }
   });
 
-  it('seeded technicians cover all 5 active services with at least 2 each', () => {
-    const required = ['ac-deep-clean', 'water-pump-repair', 'pipe-leak-fix', 'main-switch-fix', 'ro-installation'];
-    for (const serviceId of required) {
-      const matchCount = TECHNICIANS.filter(t => t.skills.includes(serviceId)).length;
-      expect(matchCount, `${serviceId} coverage (need >=2 per launch-gate prerequisite)`).toBeGreaterThanOrEqual(2);
+  it('every seeded technician skill is a real catalogue serviceId', () => {
+    // Dispatch matches booking.serviceId against tech.skills via ARRAY_CONTAINS;
+    // any drift between skill strings and catalogue IDs silently breaks dispatch.
+    const validServiceIds = new Set(SERVICES.map(s => s.id));
+    for (const tech of TECHNICIANS) {
+      for (const skill of tech.skills) {
+        expect(validServiceIds.has(skill), `${tech.id} skill "${skill}" must be a catalogue serviceId`).toBe(true);
+      }
+    }
+  });
+
+  it('every active catalogue serviceId has >=2 KYC-approved + online technicians (launch-gate prerequisite)', () => {
+    const eligible = TECHNICIANS.filter(t => t.kycStatus === 'APPROVED' && t.isOnline);
+    for (const svc of SERVICES.filter(s => s.isActive)) {
+      const matchCount = eligible.filter(t => t.skills.includes(svc.id)).length;
+      expect(
+        matchCount,
+        `${svc.id} (${svc.categoryId}) coverage — need >=2 KYC-approved + online techs per umbrella spec sec 2.3`,
+      ).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it('every active catalogue category has >=2 techs with at least one of its services', () => {
+    const eligible = TECHNICIANS.filter(t => t.kycStatus === 'APPROVED' && t.isOnline);
+    for (const cat of CATEGORIES.filter(c => c.isActive)) {
+      const catServiceIds = new Set(SERVICES.filter(s => s.categoryId === cat.id).map(s => s.id));
+      const matchCount = eligible.filter(t => t.skills.some(skill => catServiceIds.has(skill))).length;
+      expect(matchCount, `${cat.id} category coverage — need >=2 eligible techs`).toBeGreaterThanOrEqual(2);
     }
   });
 });
