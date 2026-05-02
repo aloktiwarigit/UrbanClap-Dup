@@ -46,6 +46,7 @@ internal fun EarningsScreen(
     modifier: Modifier = Modifier,
     viewModel: EarningsViewModel = hiltViewModel(),
     onViewRatings: () -> Unit = {},
+    onPayoutSettings: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     Scaffold(topBar = { TopAppBar(title = { Text("Earnings") }) }, modifier = modifier) { padding ->
@@ -53,6 +54,7 @@ internal fun EarningsScreen(
             uiState = uiState,
             onRetry = viewModel::refresh,
             onViewRatings = onViewRatings,
+            onPayoutSettings = onPayoutSettings,
             modifier = Modifier.padding(padding),
         )
     }
@@ -63,6 +65,7 @@ internal fun EarningsContent(
     uiState: EarningsUiState,
     onRetry: () -> Unit,
     onViewRatings: () -> Unit,
+    onPayoutSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -72,7 +75,11 @@ internal fun EarningsContent(
                 Text("Could not load earnings", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Button(onClick = onRetry) { Text("Try again") }
             }
-            is EarningsUiState.Success -> EarningsSuccess(summary = state.summary, onViewRatings = onViewRatings)
+            is EarningsUiState.Success -> EarningsSuccess(
+                summary = state.summary,
+                onViewRatings = onViewRatings,
+                onPayoutSettings = onPayoutSettings,
+            )
         }
     }
 }
@@ -81,6 +88,7 @@ internal fun EarningsContent(
 private fun EarningsSuccess(
     summary: EarningsSummary,
     onViewRatings: () -> Unit,
+    onPayoutSettings: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -105,6 +113,7 @@ private fun EarningsSuccess(
         item { GoalProgressCard(summary.month.techAmountPaise) }
         item { SparklineCard(summary.lastSevenDays) }
         item { OutlinedButton(onClick = onViewRatings, modifier = Modifier.fillMaxWidth()) { Text("View ratings") } }
+        item { OutlinedButton(onClick = onPayoutSettings, modifier = Modifier.fillMaxWidth()) { Text("Payout settings") } }
     }
 }
 
