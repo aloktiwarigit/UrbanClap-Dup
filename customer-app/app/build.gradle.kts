@@ -359,6 +359,9 @@ kover {
                     "*.LanguageSettingsScreenKt\$*",
                     "*.SettingsScreenKt",
                     "*.SettingsScreenKt\$*",
+                    // ProfileScreen — Compose UI composable, same rationale as other *Kt screen classes
+                    "*.ProfileScreenKt",
+                    "*.ProfileScreenKt\$*",
                 )
             }
         }

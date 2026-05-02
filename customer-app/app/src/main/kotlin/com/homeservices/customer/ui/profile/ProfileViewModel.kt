@@ -20,7 +20,7 @@ internal class ProfileViewModel
         val authState: StateFlow<AuthState> =
             sessionManager.authState.stateIn(
                 viewModelScope,
-                SharingStarted.WhileSubscribed(5_000),
+                SharingStarted.Eagerly,
                 AuthState.Unauthenticated,
             )
 
