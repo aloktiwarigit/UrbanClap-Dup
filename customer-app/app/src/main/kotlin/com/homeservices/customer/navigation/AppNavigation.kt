@@ -44,8 +44,10 @@ internal fun AppNavigation(
         when (currentAuth) {
             is AuthState.Authenticated -> {
                 navController.navigate("main") {
+                    // Single pop target: by the time this fires, firstLaunchPending is false
+                    // (guarded above) and FirstLaunchLanguageScreen.onConfirmed has already
+                    // popped first_launch when navigating to auth. Stack here is [auth].
                     popUpTo("auth") { inclusive = true }
-                    popUpTo(LocaleRoutes.FIRST_LAUNCH) { inclusive = true }
                     launchSingleTop = true
                 }
                 com.google.firebase.messaging.FirebaseMessaging
@@ -57,8 +59,10 @@ internal fun AppNavigation(
                     .getInstance()
                     .deleteToken()
                 navController.navigate("auth") {
+                    // Single pop target: logout from main means stack is [main]; first_launch
+                    // is never on the stack at this point (it was popped on initial language
+                    // pick before any auth state transition).
                     popUpTo("main") { inclusive = true }
-                    popUpTo(LocaleRoutes.FIRST_LAUNCH) { inclusive = true }
                     launchSingleTop = true
                 }
             }
