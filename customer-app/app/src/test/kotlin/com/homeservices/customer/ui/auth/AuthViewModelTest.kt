@@ -371,4 +371,302 @@ public class AuthViewModelTest {
 
             assertThat(viewModel.uiState.value).isInstanceOf(AuthUiState.OtpEntry::class.java)
         }
+
+    @Test
+    public fun `method selection actions switch between phone email and method picker`() {
+        viewModel.onPhoneSelected()
+        assertThat(viewModel.uiState.value).isEqualTo(AuthUiState.OtpEntry(phoneNumber = ""))
+
+        viewModel.onEmailSelected()
+        assertThat(viewModel.uiState.value).isEqualTo(AuthUiState.EmailEntry())
+
+        viewModel.onBackToMethodSelection()
+        assertThat(viewModel.uiState.value).isEqualTo(AuthUiState.MethodSelection)
+    }
+
+    @Test
+    public fun `onEmailModeToggled alternates modes and preserves typed email`() {
+        viewModel.onEmailModeToggled("person@example.com")
+        assertThat(viewModel.uiState.value)
+            .isEqualTo(
+                AuthUiState.EmailEntry(
+                    mode = AuthUiState.EmailEntry.Mode.SignUp,
+                    prefillEmail = "person@example.com",
+                ),
+            )
+
+        viewModel.onEmailModeToggled("")
+        assertThat(viewModel.uiState.value)
+            .isEqualTo(
+                AuthUiState.EmailEntry(
+                    mode = AuthUiState.EmailEntry.Mode.SignIn,
+                    prefillEmail = "person@example.com",
+                ),
+            )
+    }
+
+    @Test
+    public fun `onGoogleSignInClicked handles success cancelled unavailable and error states`(): Unit =
+        runTest(testDispatcher) {
+            val activity = mockk<FragmentActivity>()
+            val user = mockk<FirebaseUser>()
+            val cause = RuntimeException("google down")
+
+            every { orchestrator.startGoogleSignIn(activity) } returns flowOf(AuthResult.Success(user))
+            viewModel.onGoogleSignInClicked(activity)
+            assertThat(viewModel.uiState.value).isEqualTo(AuthUiState.GoogleSigningIn)
+
+            every { orchestrator.startGoogleSignIn(activity) } returns flowOf(AuthResult.Cancelled)
+            viewModel.onGoogleSignInClicked(activity)
+            assertThat(viewModel.uiState.value).isEqualTo(AuthUiState.MethodSelection)
+
+            every { orchestrator.startGoogleSignIn(activity) } returns flowOf(AuthResult.Unavailable)
+            viewModel.onGoogleSignInClicked(activity)
+            assertThat(viewModel.uiState.value)
+                .isEqualTo(
+                    AuthUiState.Error(
+                        message = "Google Sign-In is not available on this device. Use email or phone.",
+                        retriesLeft = 0,
+                    ),
+                )
+
+            every { orchestrator.startGoogleSignIn(activity) } returns flowOf(AuthResult.Error.General(cause))
+            viewModel.onGoogleSignInClicked(activity)
+            assertThat(viewModel.uiState.value)
+                .isEqualTo(AuthUiState.Error("Sign-in failed. Please try again.", retriesLeft = 0))
+        }
+
+    @Test
+    public fun `email auth validates blank fields before submitting`() {
+        viewModel.onEmailSignInClicked("   ", "password")
+
+        assertThat(viewModel.uiState.value)
+            .isEqualTo(AuthUiState.Error("Enter your email and password.", retriesLeft = 0))
+    }
+
+    @Test
+    public fun `email sign in success leaves submitting state while session completion navigates away`(): Unit =
+        runTest(testDispatcher) {
+            val user = mockk<FirebaseUser>()
+            every { orchestrator.startEmailSignIn("person@example.com", "password") } returns
+                flowOf(AuthResult.Success(user))
+
+            viewModel.onEmailSignInClicked(" person@example.com ", "password")
+
+            assertThat(viewModel.uiState.value)
+                .isEqualTo(
+                    AuthUiState.EmailSubmitting(
+                        email = "person@example.com",
+                        mode = AuthUiState.EmailEntry.Mode.SignIn,
+                    ),
+                )
+        }
+
+    @Test
+    public fun `email sign in unavailable asks user to verify email`(): Unit =
+        runTest(testDispatcher) {
+            every { orchestrator.startEmailSignIn("person@example.com", "password") } returns
+                flowOf(AuthResult.Unavailable)
+
+            viewModel.onEmailSignInClicked("person@example.com", "password")
+
+            assertThat(viewModel.uiState.value)
+                .isEqualTo(
+                    AuthUiState.EmailVerificationSent(
+                        email = "person@example.com",
+                        message = "Verify your email before continuing.",
+                    ),
+                )
+        }
+
+    @Test
+    public fun `email sign up success shows verification email sent`(): Unit =
+        runTest(testDispatcher) {
+            val user = mockk<FirebaseUser>()
+            every { orchestrator.startEmailSignUp("person@example.com", "password") } returns
+                flowOf(AuthResult.Success(user))
+
+            viewModel.onEmailSignUpClicked("person@example.com", "password")
+
+            assertThat(viewModel.uiState.value)
+                .isEqualTo(
+                    AuthUiState.EmailVerificationSent(
+                        email = "person@example.com",
+                        message = "Verification email sent.",
+                    ),
+                )
+        }
+
+    @Test
+    public fun `email auth cancelled returns to email entry with prefilled address`(): Unit =
+        runTest(testDispatcher) {
+            every { orchestrator.startEmailSignIn("person@example.com", "password") } returns
+                flowOf(AuthResult.Cancelled)
+
+            viewModel.onEmailSignInClicked("person@example.com", "password")
+
+            assertThat(viewModel.uiState.value)
+                .isEqualTo(
+                    AuthUiState.EmailEntry(
+                        mode = AuthUiState.EmailEntry.Mode.SignIn,
+                        prefillEmail = "person@example.com",
+                    ),
+                )
+        }
+
+    @Test
+    public fun `email auth maps domain errors to user messages`(): Unit =
+        runTest(testDispatcher) {
+            val cases =
+                listOf(
+                    AuthResult.Error.WrongCode to "Incorrect code",
+                    AuthResult.Error.RateLimited to "Too many attempts. Try again later.",
+                    AuthResult.Error.CodeExpired to "Code expired. Please resend.",
+                    AuthResult.Error.WrongCredential to "Incorrect email or password.",
+                    AuthResult.Error.UserNotFound to "Incorrect email or password.",
+                    AuthResult.Error.EmailAlreadyInUse to "An account already exists with this email.",
+                    AuthResult.Error.WeakPassword to "Password is too weak. Please choose a stronger one.",
+                    AuthResult.Error.InvalidEmail to "The email address is not valid.",
+                    AuthResult.Error.General(RuntimeException("sdk")) to "Sign-in failed. Please try again.",
+                )
+
+            cases.forEachIndexed { index, (error, message) ->
+                val email = "person$index@example.com"
+                every { orchestrator.startEmailSignIn(email, "password") } returns flowOf(error)
+
+                viewModel.onEmailSignInClicked(email, "password")
+
+                assertThat(viewModel.uiState.value)
+                    .isEqualTo(AuthUiState.Error(message = message, retriesLeft = 0))
+            }
+        }
+
+    @Test
+    public fun `email verification continue handles all orchestrator outcomes`(): Unit =
+        runTest(testDispatcher) {
+            val user = mockk<FirebaseUser>()
+
+            coEvery { orchestrator.completeCurrentEmailVerification() } returns AuthResult.Success(user)
+            viewModel.onEmailVerificationContinue("person@example.com")
+            assertThat(viewModel.uiState.value)
+                .isEqualTo(
+                    AuthUiState.EmailSubmitting(
+                        email = "person@example.com",
+                        mode = AuthUiState.EmailEntry.Mode.SignIn,
+                    ),
+                )
+
+            coEvery { orchestrator.completeCurrentEmailVerification() } returns AuthResult.Unavailable
+            viewModel.onEmailVerificationContinue("person@example.com")
+            assertThat(viewModel.uiState.value)
+                .isEqualTo(
+                    AuthUiState.EmailVerificationSent(
+                        email = "person@example.com",
+                        message = "We still cannot confirm verification. Open the email, then try again.",
+                    ),
+                )
+
+            coEvery { orchestrator.completeCurrentEmailVerification() } returns AuthResult.Cancelled
+            viewModel.onEmailVerificationContinue("person@example.com")
+            assertThat(viewModel.uiState.value)
+                .isEqualTo(AuthUiState.EmailVerificationSent(email = "person@example.com"))
+
+            coEvery { orchestrator.completeCurrentEmailVerification() } returns AuthResult.Error.InvalidEmail
+            viewModel.onEmailVerificationContinue("person@example.com")
+            assertThat(viewModel.uiState.value)
+                .isEqualTo(AuthUiState.Error("The email address is not valid.", retriesLeft = 0))
+        }
+
+    @Test
+    public fun `resend verification email reports success and failure`(): Unit =
+        runTest(testDispatcher) {
+            coEvery { orchestrator.resendCurrentEmailVerification() } returns Result.success(Unit)
+            viewModel.onResendVerificationEmail("person@example.com")
+            assertThat(viewModel.uiState.value)
+                .isEqualTo(
+                    AuthUiState.EmailVerificationSent(
+                        email = "person@example.com",
+                        message = "Verification email sent again.",
+                    ),
+                )
+
+            coEvery { orchestrator.resendCurrentEmailVerification() } returns
+                Result.failure(RuntimeException("network"))
+            viewModel.onResendVerificationEmail("person@example.com")
+            assertThat(viewModel.uiState.value)
+                .isEqualTo(
+                    AuthUiState.EmailVerificationSent(
+                        email = "person@example.com",
+                        message = "Could not resend the email. Try again in a moment.",
+                    ),
+                )
+        }
+
+    @Test
+    public fun `forgot password validates email and handles success and failure`(): Unit =
+        runTest(testDispatcher) {
+            viewModel.onForgotPassword(" ")
+            assertThat(viewModel.uiState.value)
+                .isEqualTo(AuthUiState.Error("Enter your email first.", retriesLeft = 0))
+
+            every { orchestrator.sendPasswordReset("person@example.com") } returns flowOf(Result.success(Unit))
+            viewModel.onForgotPassword(" person@example.com ")
+            assertThat(viewModel.uiState.value)
+                .isEqualTo(
+                    AuthUiState.EmailEntry(
+                        mode = AuthUiState.EmailEntry.Mode.SignIn,
+                        prefillEmail = "person@example.com",
+                    ),
+                )
+
+            every { orchestrator.sendPasswordReset("person@example.com") } returns
+                flowOf(Result.failure(RuntimeException("network")))
+            viewModel.onForgotPassword("person@example.com")
+            assertThat(viewModel.uiState.value)
+                .isEqualTo(AuthUiState.Error("Could not send password reset email.", retriesLeft = 0))
+        }
+
+    @Test
+    public fun `onRetry returns to OTP entry when a phone number is active`(): Unit =
+        runTest(testDispatcher) {
+            val activity = mockk<FragmentActivity>()
+            every {
+                orchestrator.sendOtp("+919876543210", activity, null)
+            } returns flowOf(OtpSendResult.Error(RuntimeException("network")))
+
+            viewModel.onPhoneNumberSubmitted("+919876543210", activity)
+            viewModel.onRetry()
+
+            assertThat(viewModel.uiState.value)
+                .isEqualTo(AuthUiState.OtpEntry(phoneNumber = "+919876543210"))
+        }
+
+    @Test
+    public fun `onOtpEntered handles email-style firebase auth errors`(): Unit =
+        runTest(testDispatcher) {
+            val activity = mockk<FragmentActivity>()
+            val resendToken = mockk<PhoneAuthProvider.ForceResendingToken>()
+            every {
+                orchestrator.sendOtp("+919876543210", activity, null)
+            } returns flowOf(OtpSendResult.CodeSent("verId", resendToken))
+
+            val cases =
+                listOf(
+                    AuthResult.Error.WrongCredential to "Incorrect email or password.",
+                    AuthResult.Error.UserNotFound to "Incorrect email or password.",
+                    AuthResult.Error.EmailAlreadyInUse to "An account already exists with this email.",
+                    AuthResult.Error.WeakPassword to "Password is too weak. Please choose a stronger one.",
+                    AuthResult.Error.InvalidEmail to "The email address is not valid.",
+                )
+
+            viewModel.onPhoneNumberSubmitted("+919876543210", activity)
+            cases.forEachIndexed { index, (error, message) ->
+                every { orchestrator.verifyOtp("verId", "11111$index") } returns flowOf(error)
+
+                viewModel.onOtpEntered("11111$index")
+
+                assertThat(viewModel.uiState.value)
+                    .isEqualTo(AuthUiState.Error(message = message, retriesLeft = 0))
+            }
+        }
 }

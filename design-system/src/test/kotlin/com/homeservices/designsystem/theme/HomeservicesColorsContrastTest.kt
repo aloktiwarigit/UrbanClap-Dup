@@ -79,7 +79,7 @@ internal class HomeservicesColorsContrastTest {
 
         /**
          * onSurfaceVariant / surfaceVariant — large/secondary text slot (UX §11.2 / NFR-A-5).
-         * AA large-text threshold is 3.0:1. Neutral-500 (#71717A) on Neutral-100 (#F4F4F5)
+         * AA large-text threshold is 3.0:1. Neutral-500 (#5F6C66) on Neutral-100 (#E8F1EC)
          * is intentionally below 4.5:1 as it targets secondary labels and captions at ≥18pt.
          */
         @Test
@@ -173,7 +173,7 @@ internal class HomeservicesColorsContrastTest {
 
         /**
          * onSurfaceVariant / surfaceVariant — large/secondary text slot (UX §11.2 / NFR-A-5).
-         * Neutral-500-dark (#9CA3AF) on Neutral-100-dark (#1D1F23) — large-text AA threshold.
+         * Neutral-500-dark (#B7C6BD) on Neutral-100-dark (#172A24) — large-text AA threshold.
          */
         @Test
         internal fun onSurfaceVariant_over_surfaceVariant_meetsAA_largeText() {

@@ -5,16 +5,16 @@
     "$description": "UX §5.1 colour tokens. Light and dark variants per token.",
     "brand": {
       "primary": {
-        "light": { "$value": "#0E4F47", "$type": "color", "$description": "Brand primary teal — light mode. BrandPrimaryLight in Color.kt." },
-        "dark":  { "$value": "#1E8378", "$type": "color", "$description": "Brand primary teal — dark mode. BrandPrimaryDark in Color.kt." }
+        "light": { "$value": "#0B3D2E", "$type": "color", "$description": "Brand primary forest green - light mode. BrandPrimaryLight in Color.kt." },
+        "dark":  { "$value": "#7AC7AA", "$type": "color", "$description": "Brand primary forest green - dark mode. BrandPrimaryDark in Color.kt." }
       },
       "primaryHover": {
-        "light": { "$value": "#0A3D37", "$type": "color", "$description": "Brand primary hover/pressed — light. BrandPrimaryHoverLight in Color.kt." },
-        "dark":  { "$value": "#2BA08F", "$type": "color", "$description": "Brand primary hover/pressed — dark. BrandPrimaryHoverDark in Color.kt." }
+        "light": { "$value": "#062A20", "$type": "color", "$description": "Brand primary hover/pressed - light. BrandPrimaryHoverLight in Color.kt." },
+        "dark":  { "$value": "#94D8C0", "$type": "color", "$description": "Brand primary hover/pressed - dark. BrandPrimaryHoverDark in Color.kt." }
       },
       "accent": {
-        "light": { "$value": "#EF6F4B", "$type": "color", "$description": "Warm coral accent — light. BrandAccentLight in Color.kt." },
-        "dark":  { "$value": "#F78866", "$type": "color", "$description": "Warm coral accent — dark. BrandAccentDark in Color.kt." }
+        "light": { "$value": "#B68A2C", "$type": "color", "$description": "Warm brass accent - light. BrandAccentLight in Color.kt." },
+        "dark":  { "$value": "#D7B760", "$type": "color", "$description": "Warm brass accent - dark. BrandAccentDark in Color.kt." }
       }
     },
     "semantic": {
@@ -37,28 +37,28 @@
     },
     "neutral": {
       "0": {
-        "light": { "$value": "#FFFFFF", "$type": "color", "$description": "Page background — light. Neutral0Light in Color.kt." },
-        "dark":  { "$value": "#0A0A0B", "$type": "color", "$description": "Page background — dark. Neutral0Dark in Color.kt." }
+        "light": { "$value": "#FBF7EF", "$type": "color", "$description": "Page background - light. Neutral0Light in Color.kt." },
+        "dark":  { "$value": "#071511", "$type": "color", "$description": "Page background - dark. Neutral0Dark in Color.kt." }
       },
       "50": {
-        "light": { "$value": "#FAFAFA", "$type": "color", "$description": "Card/panel background — light. Neutral50Light in Color.kt." },
-        "dark":  { "$value": "#141518", "$type": "color", "$description": "Card/panel background — dark. Neutral50Dark in Color.kt." }
+        "light": { "$value": "#FFFDF8", "$type": "color", "$description": "Card/panel background - light. Neutral50Light in Color.kt." },
+        "dark":  { "$value": "#0D1D18", "$type": "color", "$description": "Card/panel background - dark. Neutral50Dark in Color.kt." }
       },
       "100": {
-        "light": { "$value": "#F4F4F5", "$type": "color", "$description": "Subtle surface — light. Neutral100Light in Color.kt." },
-        "dark":  { "$value": "#1D1F23", "$type": "color", "$description": "Subtle surface — dark. Neutral100Dark in Color.kt." }
+        "light": { "$value": "#E8F1EC", "$type": "color", "$description": "Subtle surface - light. Neutral100Light in Color.kt." },
+        "dark":  { "$value": "#172A24", "$type": "color", "$description": "Subtle surface - dark. Neutral100Dark in Color.kt." }
       },
       "200": {
-        "light": { "$value": "#E4E4E7", "$type": "color", "$description": "Border/divider — light. Neutral200Light in Color.kt." },
-        "dark":  { "$value": "#2A2D34", "$type": "color", "$description": "Border/divider — dark. Neutral200Dark in Color.kt." }
+        "light": { "$value": "#DED8CD", "$type": "color", "$description": "Border/divider - light. Neutral200Light in Color.kt." },
+        "dark":  { "$value": "#2E423A", "$type": "color", "$description": "Border/divider - dark. Neutral200Dark in Color.kt." }
       },
       "500": {
-        "light": { "$value": "#71717A", "$type": "color", "$description": "Secondary text/metadata — light. Neutral500Light in Color.kt." },
-        "dark":  { "$value": "#9CA3AF", "$type": "color", "$description": "Secondary text/metadata — dark. Neutral500Dark in Color.kt." }
+        "light": { "$value": "#5F6C66", "$type": "color", "$description": "Secondary text/metadata - light. Neutral500Light in Color.kt." },
+        "dark":  { "$value": "#B7C6BD", "$type": "color", "$description": "Secondary text/metadata - dark. Neutral500Dark in Color.kt." }
       },
       "900": {
-        "light": { "$value": "#18181B", "$type": "color", "$description": "Primary text — light. Neutral900Light in Color.kt." },
-        "dark":  { "$value": "#FAFAFA", "$type": "color", "$description": "Primary text — dark. Neutral900Dark in Color.kt." }
+        "light": { "$value": "#18231F", "$type": "color", "$description": "Primary text - light. Neutral900Light in Color.kt." },
+        "dark":  { "$value": "#F4FBF6", "$type": "color", "$description": "Primary text - dark. Neutral900Dark in Color.kt." }
       }
     },
     "extended": {
@@ -67,22 +67,22 @@
         "dark":  { "$value": "#25C97B", "$type": "color", "$description": "DigiLocker verified badge — dark. Aliases semantic.success.dark. ExtendedColors.kt." }
       },
       "neighbourhood": {
-        "light": { "$value": "#EF6F4B", "$type": "color", "$description": "Society-verified badge — light. Aliases brand.accent.light. ExtendedColors.kt." },
-        "dark":  { "$value": "#F78866", "$type": "color", "$description": "Society-verified badge — dark. Aliases brand.accent.dark. ExtendedColors.kt." }
+        "light": { "$value": "#B68A2C", "$type": "color", "$description": "Society-verified badge - light. Aliases brand.accent.light. ExtendedColors.kt." },
+        "dark":  { "$value": "#D7B760", "$type": "color", "$description": "Society-verified badge - dark. Aliases brand.accent.dark. ExtendedColors.kt." }
       },
       "brandAccent": {
-        "light": { "$value": "#EF6F4B", "$type": "color", "$description": "Brand accent surface tint — light. Aliases brand.accent.light. ExtendedColors.kt." },
-        "dark":  { "$value": "#F78866", "$type": "color", "$description": "Brand accent surface tint — dark. Aliases brand.accent.dark. ExtendedColors.kt." }
+        "light": { "$value": "#B68A2C", "$type": "color", "$description": "Brand accent surface tint - light. Aliases brand.accent.light. ExtendedColors.kt." },
+        "dark":  { "$value": "#D7B760", "$type": "color", "$description": "Brand accent surface tint - dark. Aliases brand.accent.dark. ExtendedColors.kt." }
       },
       "brandPrimaryHover": {
-        "light": { "$value": "#0A3D37", "$type": "color", "$description": "Brand primary hover — light. Aliases brand.primaryHover.light. ExtendedColors.kt." },
-        "dark":  { "$value": "#2BA08F", "$type": "color", "$description": "Brand primary hover — dark. Aliases brand.primaryHover.dark. ExtendedColors.kt." }
+        "light": { "$value": "#062A20", "$type": "color", "$description": "Brand primary hover - light. Aliases brand.primaryHover.light. ExtendedColors.kt." },
+        "dark":  { "$value": "#94D8C0", "$type": "color", "$description": "Brand primary hover - dark. Aliases brand.primaryHover.dark. ExtendedColors.kt." }
       }
     },
     "m3container": {
-      "primaryContainer": { "$value": "#CFEBE5", "$type": "color", "$description": "M3 primaryContainer — light teal tint. HomeservicesLightColorScheme in Color.kt." },
+      "primaryContainer": { "$value": "#E8F1EC", "$type": "color", "$description": "M3 primaryContainer - light forest tint. HomeservicesLightColorScheme in Color.kt." },
       "onSecondaryLight":  { "$value": "#3D1A0E", "$type": "color", "$description": "M3 onSecondary — dark warm brown (light mode). HomeservicesLightColorScheme in Color.kt." },
-      "onSecondaryDark":   { "$value": "#4A1B0E", "$type": "color", "$description": "M3 onSecondary — deep coral brown (dark mode). HomeservicesDarkColorScheme in Color.kt." },
+      "onSecondaryDark":   { "$value": "#4A1B0E", "$type": "color", "$description": "M3 onSecondary - deep warm brown (dark mode). HomeservicesDarkColorScheme in Color.kt." },
       "onErrorDark":       { "$value": "#3A0A0A", "$type": "color", "$description": "M3 onError — deep crimson (dark mode). HomeservicesDarkColorScheme in Color.kt." }
     }
   },
