@@ -7,7 +7,12 @@ const BOOKING_STATUSES = [
   'UNFULFILLED', 'CUSTOMER_CANCELLED', 'NO_SHOW_REDISPATCH',
 ] as const;
 
+const PAYMENT_METHODS = ['RAZORPAY', 'CASH_ON_SERVICE'] as const;
+const CASH_COLLECTION_STATUSES = ['PENDING', 'COLLECTED'] as const;
+
 export const LatLngSchema = z.object({ lat: z.number(), lng: z.number() });
+export const PaymentMethodSchema = z.enum(PAYMENT_METHODS);
+export const CashCollectionStatusSchema = z.enum(CASH_COLLECTION_STATUSES);
 
 export const BookingDocSchema = z.object({
   id: z.string(),
@@ -20,6 +25,8 @@ export const BookingDocSchema = z.object({
   addressLatLng: LatLngSchema,
   status: z.enum(BOOKING_STATUSES),
   paymentOrderId: z.string(),
+  paymentMethod: PaymentMethodSchema.optional(),
+  cashCollectionStatus: CashCollectionStatusSchema.optional(),
   paymentId: z.string().nullable(),
   paymentSignature: z.string().nullable(),
   amount: z.number().int().positive(),
@@ -52,6 +59,7 @@ export const CreateBookingRequestSchema = z.object({
   slotWindow: z.string().regex(/^\d{2}:\d{2}-\d{2}:\d{2}$/),
   addressText: z.string().min(1),
   addressLatLng: LatLngSchema,
+  paymentMethod: PaymentMethodSchema.default('RAZORPAY'),
 });
 
 export const ConfirmBookingRequestSchema = z.object({

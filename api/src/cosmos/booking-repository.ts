@@ -12,9 +12,12 @@ export const bookingRepo = {
     paymentOrderId: string,
     amount: number,
   ): Promise<BookingDoc> {
+    const paymentMethod = req.paymentMethod ?? 'RAZORPAY';
     const doc: BookingDoc = {
       id: randomUUID(), customerId, ...req,
       status: 'PENDING_PAYMENT', paymentOrderId,
+      paymentMethod,
+      ...(paymentMethod === 'CASH_ON_SERVICE' ? { cashCollectionStatus: 'PENDING' as const } : {}),
       paymentId: null, paymentSignature: null,
       amount, createdAt: now(),
     };
