@@ -108,6 +108,18 @@ public class SessionManager
                 )
         }
 
+        public suspend fun updateDisplayName(displayName: String?) {
+            val current = _authState.value as? AuthState.Authenticated ?: return
+            val normalizedName = displayName?.trim()?.takeIf { it.isNotEmpty() }
+            saveSession(
+                uid = current.uid,
+                phoneLastFour = current.phoneLastFour,
+                email = current.email,
+                displayName = normalizedName,
+                authProvider = current.authProvider,
+            )
+        }
+
         public suspend fun clearSession() {
             withContext(Dispatchers.IO) { clearPrefs() }
             _authState.value = AuthState.Unauthenticated

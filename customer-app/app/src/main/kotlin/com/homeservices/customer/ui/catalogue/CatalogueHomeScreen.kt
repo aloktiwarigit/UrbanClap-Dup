@@ -74,6 +74,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -249,16 +250,16 @@ internal fun CatalogueHomeContent(
                     modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
                 )
             2 ->
-                ComingSoonTab(
-                    icon = Icons.Default.SupportAgent,
-                    title = "सहायता",
-                    subtitle = "जल्द ही उपलब्ध — समस्या के लिए कॉल करें: 1800-XXX-XXXX",
+                SupportTab(
+                    onOpenBookings = { selectedNav = 1 },
+                    onOpenProfile = { selectedNav = 3 },
                     modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
                 )
             3 ->
                 com.homeservices.customer.ui.profile.ProfileScreen(
                     modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
                     onLanguageClick = onProfileLanguageClick,
+                    onBookingsClick = { selectedNav = 1 },
                 )
         }
     }
@@ -693,32 +694,183 @@ private fun ErrorState() {
 }
 
 @Composable
-private fun ComingSoonTab(
+private fun SupportTab(
+    onOpenBookings: () -> Unit,
+    onOpenProfile: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val uriHandler = LocalUriHandler.current
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 108.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        item { SupportHero() }
+        item {
+            SupportActionCard(
+                icon = Icons.Default.SupportAgent,
+                title = "सपोर्ट को कॉल करें",
+                subtitle = "बुकिंग, भुगतान या सुरक्षा के लिए सीधे सहायता लें",
+                onClick = { uriHandler.openUri("tel:1800123456") },
+            )
+        }
+        item {
+            SupportActionCard(
+                icon = Icons.Default.Book,
+                title = "मेरी बुकिंग",
+                subtitle = "ट्रैकिंग, शिकायत और रेटिंग के लिए अपनी बुकिंग खोलें",
+                onClick = onOpenBookings,
+            )
+        }
+        item {
+            SupportInfoCard(
+                icon = Icons.Default.Shield,
+                title = "सुरक्षा और SOS",
+                subtitle = "लाइव ट्रैकिंग स्क्रीन से SOS भेजें। टीम बुकिंग और लोकेशन संदर्भ के साथ अलर्ट देखती है।",
+            )
+        }
+        item {
+            SupportActionCard(
+                icon = Icons.Default.Person,
+                title = "प्रोफ़ाइल और भाषा",
+                subtitle = "खाता, भाषा और भरोसे से जुड़ी सेटिंग देखें",
+                onClick = onOpenProfile,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SupportHero() {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(24.dp))
+                .background(Brush.horizontalGradient(listOf(BrandGreen, Color(0xFF123B32))))
+                .padding(18.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(46.dp).background(Color.White.copy(alpha = 0.16f), RoundedCornerShape(16.dp)),
+            ) {
+                Icon(Icons.Default.SupportAgent, contentDescription = null, tint = Color.White, modifier = Modifier.size(26.dp))
+            }
+            Text(
+                text = "मदद और सुरक्षा",
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold),
+                color = Color.White,
+            )
+            Text(
+                text = "बुकिंग, भुगतान, शिकायत और सुरक्षा मामलों के लिए Owner support उपलब्ध है।",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.84f),
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SupportPill("30 दिन गारंटी")
+                SupportPill("सत्यापित तकनीशियन")
+            }
+        }
+    }
+}
+
+@Composable
+private fun SupportPill(label: String) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+        color = Color.White,
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(999.dp))
+                .background(Color.White.copy(alpha = 0.14f))
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+        maxLines = 1,
+    )
+}
+
+@Composable
+private fun SupportActionCard(
     icon: ImageVector,
     title: String,
     subtitle: String,
-    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
 ) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier =
-                    Modifier
-                        .size(72.dp)
-                        .background(BrandGreen.copy(alpha = 0.1f), RoundedCornerShape(20.dp)),
-            ) {
-                Icon(icon, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(36.dp))
-            }
-            Spacer(Modifier.height(20.dp))
-            Text(title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = TextPrimary)
-            Spacer(Modifier.height(8.dp))
+    SupportCardFrame(modifier = Modifier.clickable(onClick = onClick)) {
+        SupportCardContent(icon = icon, title = title, subtitle = subtitle, trailing = true)
+    }
+}
+
+@Composable
+private fun SupportInfoCard(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+) {
+    SupportCardFrame {
+        SupportCardContent(icon = icon, title = title, subtitle = subtitle, trailing = false)
+    }
+}
+
+@Composable
+private fun SupportCardFrame(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .background(SurfaceWhite)
+                .border(1.dp, CardBorder, RoundedCornerShape(18.dp))
+                .padding(16.dp),
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun SupportCardContent(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    trailing: Boolean,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.size(44.dp).background(MutedGreen, RoundedCornerShape(15.dp)),
+        ) {
+            Icon(icon, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(24.dp))
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
-                subtitle,
+                text = title,
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                color = TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary,
-                modifier = Modifier.padding(horizontal = 16.dp),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (trailing) {
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = TextSecondary.copy(alpha = 0.64f),
+                modifier = Modifier.size(18.dp),
             )
         }
     }

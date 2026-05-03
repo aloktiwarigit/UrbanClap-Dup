@@ -29,6 +29,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -41,7 +42,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -62,11 +65,15 @@ internal fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel(),
     modifier: Modifier = Modifier,
     onLanguageClick: () -> Unit = {},
+    onBookingsClick: () -> Unit = {},
 ) {
     val authState by viewModel.authState.collectAsStateWithLifecycle()
     val user = authState as? AuthState.Authenticated
     var showSignOutDialog by remember { mutableStateOf(false) }
-    var comingSoonMessage by remember { mutableStateOf<String?>(null) }
+    var showNameDialog by remember { mutableStateOf(false) }
+    var showPrivacyDialog by remember { mutableStateOf(false) }
+    var draftName by remember(user?.displayName) { mutableStateOf(user?.displayName.orEmpty()) }
+    val uriHandler = LocalUriHandler.current
 
     if (showSignOutDialog) {
         AlertDialog(
@@ -89,13 +96,49 @@ internal fun ProfileScreen(
         )
     }
 
-    comingSoonMessage?.let { message ->
+    if (showNameDialog) {
         AlertDialog(
-            onDismissRequest = { comingSoonMessage = null },
-            title = { Text("जल्द आ रहा है") },
-            text = { Text(message) },
+            onDismissRequest = { showNameDialog = false },
+            title = { Text("नाम संपादित करें") },
+            text = {
+                OutlinedTextField(
+                    value = draftName,
+                    onValueChange = { draftName = it.take(80) },
+                    label = { Text("पूरा नाम") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
             confirmButton = {
-                TextButton(onClick = { comingSoonMessage = null }) {
+                TextButton(
+                    onClick = {
+                        viewModel.updateDisplayName(draftName)
+                        showNameDialog = false
+                    },
+                    enabled = draftName.trim().isNotEmpty(),
+                ) {
+                    Text("सेव करें", color = BrandGreen, fontWeight = FontWeight.SemiBold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNameDialog = false }) {
+                    Text("रद्द करें", color = TextSecondary)
+                }
+            },
+        )
+    }
+
+    if (showPrivacyDialog) {
+        AlertDialog(
+            onDismissRequest = { showPrivacyDialog = false },
+            title = { Text("गोपनीयता नीति") },
+            text = {
+                Text(
+                    "आपका नाम, फ़ोन, पता और बुकिंग जानकारी सेवा देने, तकनीशियन असाइन करने, सपोर्ट और सुरक्षा समीक्षा के लिए इस्तेमाल होती है। पता केवल असाइन किए गए तकनीशियन और Owner support के साथ साझा किया जाता है।",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showPrivacyDialog = false }) {
                     Text("ठीक है", color = BrandGreen, fontWeight = FontWeight.SemiBold)
                 }
             },
@@ -116,7 +159,10 @@ internal fun ProfileScreen(
                     icon = Icons.Default.Edit,
                     label = "नाम संपादित करें",
                     sublabel = user?.displayName ?: "अभी तक सेट नहीं",
-                    onClick = { comingSoonMessage = "नाम बदलने की सुविधा जल्द उपलब्ध होगी।" },
+                    onClick = {
+                        draftName = user?.displayName.orEmpty()
+                        showNameDialog = true
+                    },
                 )
                 HorizontalDivider(color = CardBorder, thickness = 0.5.dp)
                 MenuRow(
@@ -135,8 +181,8 @@ internal fun ProfileScreen(
                 MenuRow(
                     icon = Icons.Default.BookOnline,
                     label = "बुकिंग इतिहास",
-                    sublabel = "जल्द आ रहा है",
-                    disabled = true,
+                    sublabel = "ट्रैकिंग, शिकायत और रेटिंग देखें",
+                    onClick = onBookingsClick,
                 )
             }
         }
@@ -148,15 +194,15 @@ internal fun ProfileScreen(
                 MenuRow(
                     icon = Icons.Default.Headset,
                     label = "ग्राहक सेवा",
-                    sublabel = "1800-XXX-XXXX",
-                    onClick = { comingSoonMessage = "ग्राहक सहायता जल्द उपलब्ध होगी।" },
+                    sublabel = "1800-123-456",
+                    onClick = { uriHandler.openUri("tel:1800123456") },
                 )
                 HorizontalDivider(color = CardBorder, thickness = 0.5.dp)
                 MenuRow(
                     icon = Icons.Default.Shield,
                     label = "गोपनीयता नीति",
                     sublabel = null,
-                    onClick = { comingSoonMessage = "गोपनीयता नीति जल्द उपलब्ध होगी।" },
+                    onClick = { showPrivacyDialog = true },
                 )
             }
         }
@@ -231,6 +277,8 @@ private fun ProfileHeader(user: AuthState.Authenticated?) {
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 if (user?.phoneLastFour != null) {
                     Text(

@@ -161,4 +161,26 @@ public class SessionManagerTest {
         assertThat(state.email).isNull()
         assertThat(state.displayName).isNull()
     }
+
+    @Test
+    public fun `updateDisplayName preserves current session fields`(): Unit =
+        runTest {
+            sessionManager.saveSession(
+                uid = "uid-email",
+                phoneLastFour = "4321",
+                email = "user@example.com",
+                displayName = "Old Name",
+                authProvider = AuthProvider.Email,
+            )
+
+            sessionManager.updateDisplayName("  New Name  ")
+
+            val state = sessionManager.authState.value as AuthState.Authenticated
+            assertThat(state.uid).isEqualTo("uid-email")
+            assertThat(state.phoneLastFour).isEqualTo("4321")
+            assertThat(state.email).isEqualTo("user@example.com")
+            assertThat(state.displayName).isEqualTo("New Name")
+            assertThat(state.authProvider).isEqualTo(AuthProvider.Email)
+            assertThat(prefs.getString("display_name", null)).isEqualTo("New Name")
+        }
 }

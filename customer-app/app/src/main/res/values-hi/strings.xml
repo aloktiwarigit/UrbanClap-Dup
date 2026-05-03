@@ -17,7 +17,7 @@
     <string name="addons_label">ऐड-ऑन</string>
     <string name="trust_dossier_stub">सत्यापित प्रोफेशनल</string>
     <string name="book_now">अभी बुक करें</string>
-    <string name="book_now_disabled_desc">बुकिंग जल्द आ रही है</string>
+    <string name="book_now_disabled_desc">आगे बढ़ने के लिए स्लॉट चुनें</string>
     <string name="service_price_label">फिक्स्ड कीमत</string>
     <string name="service_detail_back_desc">वापस</string>
     <string name="service_detail_eyebrow">होम-रेडी सेवा</string>
