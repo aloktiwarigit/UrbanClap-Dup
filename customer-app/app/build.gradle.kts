@@ -274,6 +274,12 @@ kover {
                     "*.BookingSummaryScreenKt\$*",
                     "*.BookingConfirmedScreenKt",
                     "*.BookingConfirmedScreenKt\$*",
+                    // Customer bookings list Compose screen, same rationale as other *Kt screen classes
+                    "*.CustomerBookingsScreenKt",
+                    "*.CustomerBookingsScreenKt\$*",
+                    // CustomerBookingsUiState sealed class, data holders with no logic branches
+                    "*.CustomerBookingsUiState",
+                    "*.CustomerBookingsUiState\$*",
                     // BookingUiState sealed class — data holders, no logic branches
                     "*.BookingUiState",
                     "*.BookingUiState\$*",
