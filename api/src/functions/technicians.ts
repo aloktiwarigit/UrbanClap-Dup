@@ -3,6 +3,7 @@ import { type HttpHandler, type HttpRequest, type HttpResponseInit, type Invocat
 import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
 import { requireCustomer } from '../middleware/requireCustomer.js';
 import { getCosmosClient, DB_NAME } from '../cosmos/client.js';
+import { getTechnicianAvailability, patchTechnicianAvailability } from '../cosmos/technician-repository.js';
 import { TechnicianDossierSchema } from '../schemas/technician-dossier.js';
 import { ConfidenceScoreQuerySchema } from '../schemas/confidence-score.js';
 import type { CustomerContext } from '../types/customer.js';
@@ -10,6 +11,23 @@ import '../bootstrap.js';
 
 const PatchFcmTokenBodySchema = z.object({
   fcmToken: z.string().min(1),
+});
+
+const AvailabilityWindowBodySchema = z.object({
+  dayOfWeek: z.number().int().min(0).max(6),
+  startHour: z.number().int().min(0).max(23),
+  endHour: z.number().int().min(1).max(24),
+}).refine(window => window.endHour > window.startHour, {
+  message: 'endHour must be after startHour',
+  path: ['endHour'],
+});
+
+const PatchAvailabilityBodySchema = z.object({
+  isOnline: z.boolean().optional(),
+  isAvailable: z.boolean().optional(),
+  availabilityWindows: z.array(AvailabilityWindowBodySchema).optional(),
+}).refine(body => Object.keys(body).length > 0, {
+  message: 'At least one availability field is required',
 });
 
 export const patchFcmTokenHandler: HttpHandler = async (req, _ctx: InvocationContext) => {
@@ -41,10 +59,74 @@ export const patchFcmTokenHandler: HttpHandler = async (req, _ctx: InvocationCon
   return { status: 200, jsonBody: { ok: true } };
 };
 
+export const getMyTechnicianAvailabilityHandler: HttpHandler = async (
+  req: HttpRequest,
+  ctx: InvocationContext,
+) => {
+  let uid: string;
+  try {
+    ({ uid } = await verifyTechnicianToken(req));
+  } catch {
+    return { status: 401, jsonBody: { code: 'UNAUTHENTICATED' } };
+  }
+
+  try {
+    return { status: 200, jsonBody: await getTechnicianAvailability(uid) };
+  } catch (err: unknown) {
+    ctx.error('getMyTechnicianAvailability failed', err);
+    return { status: 500, jsonBody: { code: 'INTERNAL_ERROR' } };
+  }
+};
+
+export const patchMyTechnicianAvailabilityHandler: HttpHandler = async (
+  req: HttpRequest,
+  ctx: InvocationContext,
+) => {
+  let uid: string;
+  try {
+    ({ uid } = await verifyTechnicianToken(req));
+  } catch {
+    return { status: 401, jsonBody: { code: 'UNAUTHENTICATED' } };
+  }
+
+  let body: z.infer<typeof PatchAvailabilityBodySchema>;
+  try {
+    const raw: unknown = await req.json();
+    const parsed = PatchAvailabilityBodySchema.safeParse(raw);
+    if (!parsed.success) {
+      return { status: 400, jsonBody: { code: 'VALIDATION_ERROR', issues: parsed.error.issues } };
+    }
+    body = parsed.data;
+  } catch {
+    return { status: 400, jsonBody: { code: 'PARSE_ERROR' } };
+  }
+
+  try {
+    return { status: 200, jsonBody: await patchTechnicianAvailability(uid, body) };
+  } catch (err: unknown) {
+    ctx.error('patchMyTechnicianAvailability failed', err);
+    return { status: 500, jsonBody: { code: 'INTERNAL_ERROR' } };
+  }
+};
+
 app.http('patchTechnicianFcmToken', {
   route: 'v1/technicians/fcm-token',
   methods: ['PATCH'],
   handler: patchFcmTokenHandler,
+});
+
+app.http('getMyTechnicianAvailability', {
+  route: 'v1/technicians/me/availability',
+  methods: ['GET'],
+  authLevel: 'anonymous',
+  handler: getMyTechnicianAvailabilityHandler,
+});
+
+app.http('patchMyTechnicianAvailability', {
+  route: 'v1/technicians/me/availability',
+  methods: ['PATCH'],
+  authLevel: 'anonymous',
+  handler: patchMyTechnicianAvailabilityHandler,
 });
 
 export const getTechnicianProfileHandler: HttpHandler = async (req, _ctx: InvocationContext) => {

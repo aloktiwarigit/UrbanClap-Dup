@@ -1,7 +1,7 @@
 import { getCosmosClient, DB_NAME } from './client.js';
 import { boundingBoxPolygon } from './geo.js';
 import type { TechnicianKyc, KycStatus } from '../schemas/kyc.js';
-import type { TechnicianProfile } from '../schemas/technician.js';
+import type { AvailabilityWindow, TechnicianProfile } from '../schemas/technician.js';
 
 const CONTAINER = 'technicians';
 
@@ -50,6 +50,65 @@ export async function upsertTechnicianProfile(profile: TechnicianProfile): Promi
   const client = getCosmosClient();
   const container = client.database(DB_NAME).container(CONTAINER);
   await container.items.upsert(profile);
+}
+
+export interface TechnicianAvailability {
+  isOnline: boolean;
+  isAvailable: boolean;
+  availabilityWindows: AvailabilityWindow[];
+  updatedAt?: string;
+}
+
+export interface TechnicianAvailabilityPatch {
+  isOnline?: boolean | undefined;
+  isAvailable?: boolean | undefined;
+  availabilityWindows?: AvailabilityWindow[] | undefined;
+}
+
+const defaultAvailabilityWindows = (): AvailabilityWindow[] =>
+  Array.from({ length: 7 }, (_, dayOfWeek) => [
+    { dayOfWeek, startHour: 8, endHour: 12 },
+    { dayOfWeek, startHour: 12, endHour: 17 },
+  ]).flat();
+
+function normalizeAvailability(doc?: Partial<TechnicianProfile> & Record<string, unknown>): TechnicianAvailability {
+  const availability: TechnicianAvailability = {
+    isOnline: typeof doc?.isOnline === 'boolean' ? doc.isOnline : true,
+    isAvailable: typeof doc?.isAvailable === 'boolean' ? doc.isAvailable : true,
+    availabilityWindows: Array.isArray(doc?.availabilityWindows)
+      ? doc.availabilityWindows
+      : defaultAvailabilityWindows(),
+  };
+  if (typeof doc?.updatedAt === 'string') availability.updatedAt = doc.updatedAt;
+  return availability;
+}
+
+export async function getTechnicianAvailability(technicianId: string): Promise<TechnicianAvailability> {
+  const client = getCosmosClient();
+  const container = client.database(DB_NAME).container(CONTAINER);
+  const { resource } = await container.item(technicianId, technicianId).read<Partial<TechnicianProfile> & Record<string, unknown>>();
+  return normalizeAvailability(resource);
+}
+
+export async function patchTechnicianAvailability(
+  technicianId: string,
+  patch: TechnicianAvailabilityPatch,
+): Promise<TechnicianAvailability> {
+  const client = getCosmosClient();
+  const container = client.database(DB_NAME).container(CONTAINER);
+  const { resource } = await container.item(technicianId, technicianId).read<Record<string, unknown>>();
+  const updatedAt = new Date().toISOString();
+  const updated = {
+    ...(resource ?? { id: technicianId, technicianId }),
+    id: technicianId,
+    technicianId: (resource?.technicianId as string | undefined) ?? technicianId,
+    ...(patch.isOnline !== undefined ? { isOnline: patch.isOnline } : {}),
+    ...(patch.isAvailable !== undefined ? { isAvailable: patch.isAvailable } : {}),
+    ...(patch.availabilityWindows !== undefined ? { availabilityWindows: patch.availabilityWindows } : {}),
+    updatedAt,
+  };
+  await container.items.upsert(updated);
+  return normalizeAvailability(updated);
 }
 
 export async function getTechniciansWithinRadius(

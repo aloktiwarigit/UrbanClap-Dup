@@ -79,6 +79,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.technician.R
 import com.homeservices.technician.domain.auth.model.AuthState
+import com.homeservices.technician.domain.availability.model.TechnicianAvailability
 import com.homeservices.technician.domain.earnings.model.EarningsSummary
 import com.homeservices.technician.domain.jobs.model.TechnicianBooking
 import com.homeservices.technician.domain.jobs.model.TechnicianBookingStatus
@@ -105,11 +106,13 @@ internal fun TechnicianHomeScreen(
     modifier: Modifier = Modifier,
     viewModel: TechnicianHomeViewModel = hiltViewModel(),
     earningsViewModel: EarningsViewModel = hiltViewModel(),
+    availabilityViewModel: AvailabilityViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val earningsState by earningsViewModel.uiState.collectAsStateWithLifecycle()
+    val availabilityState by availabilityViewModel.uiState.collectAsStateWithLifecycle()
     var selectedTab by rememberSaveable { mutableStateOf(TechTab.Today) }
-    var isOnline by rememberSaveable { mutableStateOf(true) }
+    val isOnline = availabilityState.availability.acceptingJobs
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -138,13 +141,13 @@ internal fun TechnicianHomeScreen(
                         earningsState = earningsState,
                         isOnline = isOnline,
                         onOnlineChange = {
-                            isOnline = it
+                            availabilityViewModel.setAcceptingJobs(it)
                             scope.launch {
                                 snackbarHostState.showSnackbar(
                                     if (it) {
-                                        "You are online for new jobs"
+                                        "Availability synced: online for new jobs"
                                     } else {
-                                        "You are offline"
+                                        "Availability synced: offline"
                                     },
                                 )
                             }
@@ -167,13 +170,15 @@ internal fun TechnicianHomeScreen(
                     )
                 TechTab.Availability ->
                     AvailabilityScreen(
-                        isOnline = isOnline,
+                        state = availabilityState,
                         onOnlineChange = {
-                            isOnline = it
+                            availabilityViewModel.setAcceptingJobs(it)
                             scope.launch {
-                                snackbarHostState.showSnackbar("Availability updated on this device")
+                                snackbarHostState.showSnackbar("Availability sync requested")
                             }
                         },
+                        onWindowChange = availabilityViewModel::setWindowEnabled,
+                        onRetry = availabilityViewModel::refresh,
                     )
                 TechTab.Profile ->
                     ProfileScreen(
@@ -765,12 +770,13 @@ private fun InfoLine(
 
 @Composable
 private fun AvailabilityScreen(
-    isOnline: Boolean,
+    state: AvailabilityUiState,
     onOnlineChange: (Boolean) -> Unit,
+    onWindowChange: (startHour: Int, endHour: Int, enabled: Boolean) -> Unit,
+    onRetry: () -> Unit,
 ) {
-    var morning by rememberSaveable { mutableStateOf(true) }
-    var afternoon by rememberSaveable { mutableStateOf(true) }
-    var evening by rememberSaveable { mutableStateOf(false) }
+    val availability = state.availability
+    val isOnline = availability.acceptingJobs
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 18.dp, top = 18.dp, end = 18.dp, bottom = 118.dp),
@@ -779,7 +785,7 @@ private fun AvailabilityScreen(
         item {
             SectionHeader(
                 title = "Availability",
-                subtitle = "Control when new jobs can reach you",
+                subtitle = "Synced to dispatch for new job matching",
             )
         }
         item {
@@ -803,7 +809,12 @@ private fun AvailabilityScreen(
                 icon = Icons.Default.Schedule,
                 title = "Morning",
                 subtitle = "08:00 - 12:00",
-                trailing = { FieldSwitch(checked = morning, onCheckedChange = { morning = it }) },
+                trailing = {
+                    FieldSwitch(
+                        checked = availability.hasWindow(8, 12),
+                        onCheckedChange = { onWindowChange(8, 12, it) },
+                    )
+                },
             )
         }
         item {
@@ -811,7 +822,12 @@ private fun AvailabilityScreen(
                 icon = Icons.Default.Schedule,
                 title = "Afternoon",
                 subtitle = "12:00 - 17:00",
-                trailing = { FieldSwitch(checked = afternoon, onCheckedChange = { afternoon = it }) },
+                trailing = {
+                    FieldSwitch(
+                        checked = availability.hasWindow(12, 17),
+                        onCheckedChange = { onWindowChange(12, 17, it) },
+                    )
+                },
             )
         }
         item {
@@ -819,20 +835,58 @@ private fun AvailabilityScreen(
                 icon = Icons.Default.Schedule,
                 title = "Evening",
                 subtitle = "17:00 - 21:00",
-                trailing = { FieldSwitch(checked = evening, onCheckedChange = { evening = it }) },
+                trailing = {
+                    FieldSwitch(
+                        checked = availability.hasWindow(17, 21),
+                        onCheckedChange = { onWindowChange(17, 21, it) },
+                    )
+                },
             )
         }
         item {
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = SoftGreen,
-            ) {
-                Text(
-                    text = "Availability is kept on this phone until profile sync is enabled.",
-                    modifier = Modifier.padding(14.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = DeepGreen,
-                )
+            AvailabilitySyncCard(
+                state = state,
+                onRetry = onRetry,
+            )
+        }
+    }
+}
+
+private fun TechnicianAvailability.hasWindow(
+    startHour: Int,
+    endHour: Int,
+): Boolean = availabilityWindows.any { it.startHour == startHour && it.endHour == endHour }
+
+@Composable
+private fun AvailabilitySyncCard(
+    state: AvailabilityUiState,
+    onRetry: () -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = if (state.errorMessage == null) SoftGreen else WarningSoft,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text =
+                    when {
+                        state.isLoading -> "Loading availability from your profile."
+                        state.isSaving -> "Saving availability to dispatch."
+                        state.errorMessage != null -> state.errorMessage
+                        else -> "Availability is synced with dispatch for future job matching."
+                    },
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (state.errorMessage == null) DeepGreen else Ink,
+            )
+            if (state.errorMessage != null) {
+                OutlinedButton(onClick = onRetry) {
+                    Icon(Icons.Default.Refresh, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Retry")
+                }
             }
         }
     }
