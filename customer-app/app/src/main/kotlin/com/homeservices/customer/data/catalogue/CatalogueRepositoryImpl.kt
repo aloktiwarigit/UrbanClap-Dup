@@ -23,7 +23,8 @@ internal class CatalogueRepositoryImpl
             flow {
                 emit(
                     runCatching {
-                        api.getCategories()
+                        api
+                            .getCategories()
                             .categories
                             .firstOrNull { it.id == categoryId }
                             ?.services

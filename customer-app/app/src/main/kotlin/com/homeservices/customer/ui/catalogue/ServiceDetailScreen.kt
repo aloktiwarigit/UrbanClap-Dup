@@ -573,7 +573,10 @@ private fun ServiceDetailSkeleton(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun PlaceholderLine(widthFraction: Float, height: Dp) {
+private fun PlaceholderLine(
+    widthFraction: Float,
+    height: Dp,
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(widthFraction).height(height),
         shape = PillShape,
@@ -582,7 +585,10 @@ private fun PlaceholderLine(widthFraction: Float, height: Dp) {
 }
 
 @Composable
-private fun PlaceholderBlock(height: Dp, modifier: Modifier = Modifier) {
+private fun PlaceholderBlock(
+    height: Dp,
+    modifier: Modifier = Modifier,
+) {
     Surface(
         modifier = modifier.fillMaxWidth().height(height),
         shape = CardShape,

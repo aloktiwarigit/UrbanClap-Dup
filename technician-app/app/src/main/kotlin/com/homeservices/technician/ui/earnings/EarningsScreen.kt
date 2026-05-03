@@ -87,11 +87,12 @@ internal fun EarningsScreen(
                         color = Color.White,
                     )
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    scrolledContainerColor = Color.Transparent,
-                    titleContentColor = Color.White,
-                ),
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        scrolledContainerColor = Color.Transparent,
+                        titleContentColor = Color.White,
+                    ),
             )
         },
         modifier = modifier,
@@ -229,7 +230,12 @@ private fun EarningsSuccess(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
-            Text(stringResource(R.string.earnings_dashboard_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Text(
+                stringResource(R.string.earnings_dashboard_title),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary,
+            )
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
@@ -273,7 +279,14 @@ private fun PeriodCard(
             color = TextPrimary,
         )
         Text(
-            text = if (period.count == 0) stringResource(R.string.earnings_no_jobs) else stringResource(R.string.earnings_jobs_count, period.count),
+            text =
+                if (period.count ==
+                    0
+                ) {
+                    stringResource(R.string.earnings_no_jobs)
+                } else {
+                    stringResource(R.string.earnings_jobs_count, period.count)
+                },
             style = MaterialTheme.typography.bodySmall,
             color = if (period.count == 0) TextSecondary else BrandGreen,
         )

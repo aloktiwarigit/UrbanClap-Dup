@@ -12,7 +12,6 @@ import com.homeservices.customer.domain.booking.model.BookingSlot
 import com.homeservices.customer.domain.booking.model.PaymentResult
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.slot as mockkSlot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -23,6 +22,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import io.mockk.slot as mockkSlot
 
 @OptIn(ExperimentalCoroutinesApi::class)
 public class BookingViewModelTest {
