@@ -23,6 +23,7 @@ public class CatalogueHomeScreenTest {
                     onCategoryClick = {},
                     onSettingsClick = {},
                     onProfileLanguageClick = {},
+                    onTrackBooking = {},
                 )
             }
         }
@@ -45,6 +46,7 @@ public class CatalogueHomeScreenTest {
                     onCategoryClick = {},
                     onSettingsClick = {},
                     onProfileLanguageClick = {},
+                    onTrackBooking = {},
                 )
             }
         }

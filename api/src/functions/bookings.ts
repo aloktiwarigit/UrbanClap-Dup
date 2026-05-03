@@ -163,6 +163,44 @@ const getBookingInner: CustomerHttpHandler = async (req, _ctx, customer) => {
 };
 export const getBookingHandler: HttpHandler = requireCustomer(getBookingInner);
 
+const getMyBookingsInner: CustomerHttpHandler = async (_req, ctx, customer) => {
+  try {
+    const bookings = await bookingRepo.getByCustomerId(customer.customerId);
+    const serviceNames = new Map<string, string>();
+
+    await Promise.all(
+      [...new Set(bookings.map((booking) => booking.serviceId))].map(async (serviceId) => {
+        const service = await catalogueRepo.getServiceByIdCrossPartition(serviceId);
+        serviceNames.set(serviceId, service?.name ?? serviceId);
+      }),
+    );
+
+    return {
+      status: 200,
+      jsonBody: {
+        bookings: bookings.map((booking) => ({
+          bookingId: booking.id,
+          serviceId: booking.serviceId,
+          serviceName: serviceNames.get(booking.serviceId) ?? booking.serviceId,
+          addressText: booking.addressText,
+          addressLatLng: booking.addressLatLng,
+          status: booking.status,
+          slotDate: booking.slotDate,
+          slotWindow: booking.slotWindow,
+          amount: booking.finalAmount ?? booking.amount,
+          paymentMethod: booking.paymentMethod ?? 'RAZORPAY',
+          createdAt: booking.createdAt,
+        })),
+      },
+    };
+  } catch (err: unknown) {
+    Sentry.captureException(err);
+    ctx.error('getMyBookings failed', err);
+    return { status: 500, jsonBody: { code: 'INTERNAL_ERROR' } };
+  }
+};
+export const getMyBookingsHandler: HttpHandler = requireCustomer(getMyBookingsInner);
+
 export const requestAddonHandler: HttpHandler = async (req, _ctx) => {
   let uid: string;
   try { ({ uid } = await verifyTechnicianToken(req)); }
@@ -199,6 +237,7 @@ export const approveFinalPriceHandler: HttpHandler = requireCustomer(approveFina
 
 app.http('createBooking', { route: 'v1/bookings', methods: ['POST'], handler: createBookingHandler });
 app.http('confirmBooking', { route: 'v1/bookings/{id}/confirm', methods: ['POST'], handler: confirmBookingHandler });
+app.http('getMyBookings', { route: 'v1/bookings', methods: ['GET'], handler: getMyBookingsHandler });
 app.http('getBooking', { route: 'v1/bookings/{id}', methods: ['GET'], handler: getBookingHandler });
 app.http('requestAddon', { route: 'v1/bookings/{id}/request-addon', methods: ['POST'], handler: requestAddonHandler });
 app.http('approveFinalPrice', { route: 'v1/bookings/{id}/approve-final-price', methods: ['POST'], handler: approveFinalPriceHandler });
