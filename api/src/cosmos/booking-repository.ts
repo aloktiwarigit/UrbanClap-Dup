@@ -96,6 +96,20 @@ export const bookingRepo = {
     return resources;
   },
 
+  async getByCustomerId(customerId: string): Promise<BookingDoc[]> {
+    const { resources } = await getBookingsContainer()
+      .items.query<BookingDoc>({
+        query: `SELECT * FROM c
+                WHERE c.customerId = @customerId`,
+        parameters: [{ name: '@customerId', value: customerId }],
+      })
+      .fetchAll();
+    return resources.sort((a, b) => {
+      const slotCompare = b.slotDate.localeCompare(a.slotDate) || b.slotWindow.localeCompare(a.slotWindow);
+      return slotCompare || b.createdAt.localeCompare(a.createdAt);
+    });
+  },
+
   async requestAddOn(id: string, addOn: PendingAddOn): Promise<BookingDoc | null> {
     const existing = await this.getById(id);
     if (!existing || existing.status !== 'IN_PROGRESS') return null;

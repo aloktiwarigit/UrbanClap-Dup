@@ -37,6 +37,7 @@ internal fun NavGraphBuilder.mainGraph(navController: NavController) {
                 onCategoryClick = { id -> navController.navigate(CatalogueRoutes.serviceList(id)) },
                 onSettingsClick = { navController.navigate(LocaleRoutes.SETTINGS) },
                 onProfileLanguageClick = { navController.navigate(LocaleRoutes.LANGUAGE_SETTINGS) },
+                onTrackBooking = { id -> navController.navigate(BookingRoutes.liveTrackingRoute(id)) },
             )
         }
         composable(

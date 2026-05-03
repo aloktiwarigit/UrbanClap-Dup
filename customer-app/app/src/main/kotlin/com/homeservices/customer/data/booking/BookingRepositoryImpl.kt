@@ -9,6 +9,7 @@ import com.homeservices.customer.data.booking.remote.dto.LatLngDto
 import com.homeservices.customer.domain.booking.model.AddOnDecision
 import com.homeservices.customer.domain.booking.model.BookingRequest
 import com.homeservices.customer.domain.booking.model.BookingResult
+import com.homeservices.customer.domain.booking.model.CustomerBooking
 import com.homeservices.customer.domain.booking.model.PendingAddOn
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -37,6 +38,11 @@ internal class BookingRepositoryImpl
                             ).toDomain()
                     },
                 )
+            }
+
+        override fun getMyBookings(): Flow<Result<List<CustomerBooking>>> =
+            flow {
+                emit(runCatching { api.getMyBookings().bookings.map { it.toDomain() } })
             }
 
         override fun confirmBooking(

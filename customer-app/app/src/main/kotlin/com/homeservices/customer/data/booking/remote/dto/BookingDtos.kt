@@ -2,6 +2,8 @@ package com.homeservices.customer.data.booking.remote.dto
 
 import com.homeservices.customer.domain.booking.model.BookingPaymentMethod
 import com.homeservices.customer.domain.booking.model.BookingResult
+import com.homeservices.customer.domain.booking.model.CustomerBooking
+import com.homeservices.customer.domain.booking.model.CustomerBookingStatus
 import com.homeservices.customer.domain.booking.model.PendingAddOn
 import com.squareup.moshi.JsonClass
 
@@ -91,3 +93,42 @@ public data class ApproveFinalPriceResponseDto(
     val status: String,
     val finalAmount: Int?,
 )
+
+@JsonClass(generateAdapter = true)
+public data class CustomerBookingsResponseDto(
+    val bookings: List<CustomerBookingDto> = emptyList(),
+)
+
+@JsonClass(generateAdapter = true)
+public data class CustomerBookingDto(
+    val bookingId: String,
+    val serviceId: String,
+    val serviceName: String,
+    val addressText: String,
+    val status: String,
+    val slotDate: String,
+    val slotWindow: String,
+    val amount: Long,
+    val paymentMethod: String? = null,
+    val createdAt: String,
+) {
+    public fun toDomain(): CustomerBooking =
+        CustomerBooking(
+            bookingId = bookingId,
+            serviceId = serviceId,
+            serviceName = serviceName,
+            addressText = addressText,
+            status =
+                runCatching {
+                    CustomerBookingStatus.valueOf(status)
+                }.getOrDefault(CustomerBookingStatus.UNKNOWN),
+            slotDate = slotDate,
+            slotWindow = slotWindow,
+            amountPaise = amount,
+            paymentMethod =
+                paymentMethod
+                    ?.let { runCatching { BookingPaymentMethod.valueOf(it) }.getOrNull() }
+                    ?: BookingPaymentMethod.RAZORPAY,
+            createdAt = createdAt,
+        )
+}

@@ -83,6 +83,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.catalogue.model.Category
+import com.homeservices.customer.ui.bookings.CustomerBookingsScreen
 import kotlinx.coroutines.delay
 
 // ── Colour tokens (Codex-refined) ────────────────────────────────────────────
@@ -174,6 +175,7 @@ internal fun CatalogueHomeScreen(
     onCategoryClick: (String) -> Unit,
     onSettingsClick: () -> Unit,
     onProfileLanguageClick: () -> Unit,
+    onTrackBooking: (String) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     CatalogueHomeContent(
@@ -181,6 +183,7 @@ internal fun CatalogueHomeScreen(
         onCategoryClick = onCategoryClick,
         onSettingsClick = onSettingsClick,
         onProfileLanguageClick = onProfileLanguageClick,
+        onTrackBooking = onTrackBooking,
     )
 }
 
@@ -190,6 +193,7 @@ internal fun CatalogueHomeContent(
     onCategoryClick: (String) -> Unit,
     onSettingsClick: () -> Unit,
     onProfileLanguageClick: () -> Unit,
+    onTrackBooking: (String) -> Unit,
 ) {
     var selectedNav by remember { mutableIntStateOf(0) }
 
@@ -240,10 +244,8 @@ internal fun CatalogueHomeContent(
                     }
                 }
             1 ->
-                ComingSoonTab(
-                    icon = Icons.Default.Book,
-                    title = "आपकी बुकिंग",
-                    subtitle = "बुकिंग करने के बाद यहाँ दिखेगी",
+                CustomerBookingsScreen(
+                    onTrackBooking = onTrackBooking,
                     modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
                 )
             2 ->

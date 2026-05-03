@@ -232,10 +232,10 @@ private fun StatusTimeline(currentStatus: BookingStatus) {
             BookingStatus.InProgress to "Working",
             BookingStatus.Completed to "Done",
         )
-    val activeIndex = stages.indexOfFirst { (status, _) -> status == currentStatus }.coerceAtLeast(0)
+    val activeIndex = stages.indexOfFirst { (status, _) -> status == currentStatus }
 
     stages.forEachIndexed { index, (_, label) ->
-        val isActive = index <= activeIndex
+        val isActive = activeIndex >= 0 && index <= activeIndex
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 3.dp)) {
             Surface(
                 modifier = Modifier.size(if (isActive) 14.dp else 10.dp),
@@ -259,11 +259,17 @@ private fun StatusTimeline(currentStatus: BookingStatus) {
 
 private fun statusLabel(status: BookingStatus): String =
     when (status) {
+        BookingStatus.PendingPayment -> "Payment pending"
+        BookingStatus.Paid -> "Booking confirmed"
+        BookingStatus.Searching -> "Finding technician"
+        BookingStatus.Assigned -> "Technician assigned"
         BookingStatus.EnRoute -> "Technician on the way"
         BookingStatus.Reached -> "Technician arrived"
         BookingStatus.InProgress -> "Work in progress"
+        BookingStatus.AwaitingPriceApproval -> "Price approval needed"
         BookingStatus.Completed -> "Service completed"
         BookingStatus.Closed -> "Booking closed"
         BookingStatus.Cancelled -> "Booking cancelled"
+        BookingStatus.Unfulfilled -> "Technician unavailable"
         BookingStatus.Unknown -> "Status unavailable"
     }
