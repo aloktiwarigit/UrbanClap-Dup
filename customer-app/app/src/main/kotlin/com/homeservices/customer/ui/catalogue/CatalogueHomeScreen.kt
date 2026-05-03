@@ -4,11 +4,13 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.ui.layout.ContentScale
-import coil.compose.AsyncImage
 import androidx.compose.foundation.border
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -101,12 +103,12 @@ private data class PromoBanner(
     val title: String,
     val subtitle: String,
     val cta: String,
-    val imageAsset: String? = null,
+    @DrawableRes val imageRes: Int? = null,
 )
 
 private val promoBanners =
     listOf(
-        PromoBanner(Color(0xFFF59E0B), Color(0xFFB45309), "🌡️", "गर्मी से पहले AC सर्विस", "से ₹599 · आज की स्लॉट उपलब्ध", "अभी बुक करें", imageAsset = "banner-image-1.png"),
+        PromoBanner(Color(0xFFF59E0B), Color(0xFFB45309), "🌡️", "गर्मी से पहले AC सर्विस", "से ₹599 · आज की स्लॉट उपलब्ध", "अभी बुक करें", imageRes = com.homeservices.customer.R.drawable.banner_image_1),
         PromoBanner(
             Color(0xFF0E4F47),
             Color(0xFF064E3B),
@@ -114,9 +116,9 @@ private val promoBanners =
             "आधार सत्यापित प्रोफेशनल",
             "हर तकनीशियन बैकग्राउंड चेक्ड · 30 दिन गारंटी",
             "और जानें",
-            imageAsset = "banner-image-2.png",
+            imageRes = com.homeservices.customer.R.drawable.banner_image_2,
         ),
-        PromoBanner(Color(0xFF6D28D9), Color(0xFF4C1D95), "🎁", "पहली बुकिंग पर 10% छूट", "कूपन: PEHLI · सभी सेवाओं पर लागू", "कूपन लगाएं", imageAsset = "banner-image-3.png"),
+        PromoBanner(Color(0xFF6D28D9), Color(0xFF4C1D95), "🎁", "पहली बुकिंग पर 10% छूट", "कूपन: PEHLI · सभी सेवाओं पर लागू", "कूपन लगाएं", imageRes = com.homeservices.customer.R.drawable.banner_image_3),
     )
 
 // ── Category styles ───────────────────────────────────────────────────────────
@@ -356,9 +358,9 @@ private fun PromoSlider() {
                         .height(132.dp)
                         .clip(RoundedCornerShape(24.dp)),
             ) {
-                if (b.imageAsset != null) {
-                    AsyncImage(
-                        model = "file:///android_asset/${b.imageAsset}",
+                if (b.imageRes != null) {
+                    Image(
+                        painter = painterResource(id = b.imageRes),
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
@@ -374,7 +376,9 @@ private fun PromoSlider() {
                         modifier =
                             Modifier
                                 .fillMaxSize()
-                                .background(Brush.horizontalGradient(listOf(b.gradientStart, b.gradientEnd))),
+                                .background(
+                                    Brush.horizontalGradient(listOf(b.gradientStart, b.gradientEnd)),
+                                ),
                     )
                 }
                 Row(
