@@ -68,13 +68,13 @@ public object HomeservicesColors {
      * [HomeservicesDarkColorScheme].
      */
     public object Brand {
-        /** Teal primary — light. UX §5.1 Brand.Primary. */
+        /** Forest primary — light. UX §5.1 Brand.Primary. */
         public val primary: Color = BrandPrimaryLight
 
-        /** Teal primary hover/pressed — light. UX §5.1 Brand.PrimaryHover. */
+        /** Forest primary hover/pressed — light. UX §5.1 Brand.PrimaryHover. */
         public val primaryHover: Color = BrandPrimaryHoverLight
 
-        /** Coral accent — light. UX §5.1 Brand.Accent. */
+        /** Brass accent — light. UX §5.1 Brand.Accent. */
         public val accent: Color = BrandAccentLight
     }
 

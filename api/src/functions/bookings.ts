@@ -49,7 +49,7 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     const booking = await bookingRepo.createPending(parsed.data, customer.customerId, cashOrderId, service.basePrice);
     const paid = await bookingRepo.markPaid(booking.id, 'cash_on_service_pending');
     if (!paid) return { status: 500, jsonBody: { code: 'BOOKING_CONFIRMATION_FAILED' } };
-    dispatcherService.triggerDispatch(booking.id).catch((err) => {
+    dispatcherService.triggerDispatch(booking.id).catch((err: unknown) => {
       Sentry.captureException(err);
       console.error('[createBooking] cash-on-service dispatch failed', { bookingId: booking.id, err });
     });
@@ -71,7 +71,7 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     const booking = await bookingRepo.createPending(manualRequest, customer.customerId, manualOrderId, service.basePrice);
     const paid = await bookingRepo.markPaid(booking.id, 'manual_payment_not_configured');
     if (!paid) return { status: 500, jsonBody: { code: 'BOOKING_CONFIRMATION_FAILED' } };
-    dispatcherService.triggerDispatch(booking.id).catch((err) => {
+    dispatcherService.triggerDispatch(booking.id).catch((err: unknown) => {
       Sentry.captureException(err);
       console.error('[createBooking] manual-payment dispatch failed', { bookingId: booking.id, err });
     });
