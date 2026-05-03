@@ -1,18 +1,26 @@
 package com.homeservices.customer.ui.auth
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -25,14 +33,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.homeservices.designsystem.components.HsActionButton
 import com.homeservices.designsystem.components.HsPrimaryButton
-import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsSecondaryButton
+import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTrustBadge
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
 
@@ -78,7 +88,7 @@ internal fun AuthScreen(
 
             is AuthUiState.GoogleSigningIn ->
                 LoadingContent(
-                    eyebrow = "Google Sign-In",
+                    eyebrow = "Google sign-in",
                     title = "Signing in with Google",
                     message = "Choose your Google account to continue.",
                 )
@@ -162,14 +172,14 @@ private fun AuthFrame(
             modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(spacing.space6),
-        verticalArrangement = Arrangement.Center,
+                .padding(horizontal = spacing.space6, vertical = spacing.space8),
+        verticalArrangement = Arrangement.spacedBy(spacing.space6),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(spacing.space3)) {
             HsTrustBadge(text = eyebrow)
             Text(
                 text = title,
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
             )
             Text(
@@ -178,17 +188,11 @@ private fun AuthFrame(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Spacer(modifier = Modifier.height(spacing.space6))
         HsSectionCard {
             content()
         }
-        Spacer(modifier = Modifier.height(spacing.space4))
-        Text(
-            text = "Encrypted sign-in. No booking or payment action happens without your confirmation.",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
+        SecurityNote(
+            text = "Secure sign-in. Booking and payment actions always need your confirmation.",
         )
     }
 }
@@ -200,32 +204,100 @@ private fun MethodSelectionContent(
     onPhoneSelected: () -> Unit,
 ) {
     AuthFrame(
-        eyebrow = "Customer app",
-        title = "Choose how to sign in",
-        body = "Use Google, email, or your mobile number to manage bookings and service updates.",
+        eyebrow = "Homeservices",
+        title = "Sign in to book services",
+        body = "Use Google, email, or phone to manage bookings, service updates, and support cases.",
     ) {
-        Button(
-            onClick = onGoogleSelected,
-            modifier = Modifier.fillMaxWidth().height(48.dp),
-        ) {
-            Text("Continue with Google")
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            HsActionButton(
+                text = "Continue with Google",
+                onClick = onGoogleSelected,
+                modifier = Modifier.fillMaxWidth(),
+                leadingContent = { GoogleMark() },
+            )
+            HsActionButton(
+                text = "Continue with email",
+                onClick = onEmailSelected,
+                modifier = Modifier.fillMaxWidth(),
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.Email,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                },
+            )
+            HsActionButton(
+                text = "Continue with phone",
+                onClick = onPhoneSelected,
+                modifier = Modifier.fillMaxWidth(),
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.Phone,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                },
+            )
         }
         Spacer(modifier = Modifier.height(12.dp))
-        HsSecondaryButton(
-            text = "Continue with Email",
-            onClick = onEmailSelected,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        TextButton(onClick = onPhoneSelected, modifier = Modifier.fillMaxWidth()) {
-            Text("Use phone number instead")
-        }
-        Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Email sign-up requires verification before booking access.",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            text = "By continuing, you agree to the Terms of Service and Privacy Policy.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
+private fun GoogleMark() {
+    Surface(
+        shape = CircleShape,
+        color = Color.White,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier.size(22.dp),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = "G",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF1A73E8),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SecurityNote(text: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Default.Lock,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(16.dp),
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.weight(1f).padding(start = 8.dp),
         )
     }
 }
@@ -356,7 +428,7 @@ private fun PhoneEntryContent(
     val isValidPhone = phone.trim().matches(Regex("""^\+[1-9]\d{9,14}$"""))
 
     AuthFrame(
-        eyebrow = "Customer app",
+        eyebrow = "Homeservices",
         title = "Book trusted home services",
         body = "Sign in once to manage bookings, track your professional, approve prices, and raise support requests.",
     ) {

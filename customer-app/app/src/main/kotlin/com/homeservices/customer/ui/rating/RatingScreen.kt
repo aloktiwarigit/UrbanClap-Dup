@@ -3,7 +3,6 @@ package com.homeservices.customer.ui.rating
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,11 +10,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
@@ -34,6 +31,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsSecondaryButton
+import com.homeservices.designsystem.components.HsSectionCard
+import com.homeservices.designsystem.components.HsTrustBadge
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -100,7 +101,7 @@ internal fun RatingContent(
     modifier: Modifier = Modifier,
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(modifier = Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             when (state) {
                 is RatingUiState.AwaitingPartner ->
                     StatusMessage(
@@ -111,16 +112,20 @@ internal fun RatingContent(
                 is RatingUiState.Error -> StatusMessage("Could not load rating", state.message)
                 is RatingUiState.Loading -> StatusMessage("Loading rating", "Preparing your service feedback form.")
                 else -> {
-                    Text("Rate your service", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                    HsTrustBadge(text = "Service feedback")
+                    Text("Rate your service", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                     Text(
                         "Your rating helps improve technician quality and customer support follow-up.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    RatingCard {
+                    HsSectionCard {
                         StarRow("Overall experience", overall, onOverallChange)
+                        Spacer(Modifier.height(12.dp))
                         StarRow("Punctuality", punctuality, onPunctualityChange)
+                        Spacer(Modifier.height(12.dp))
                         StarRow("Skill quality", skill, onSkillChange)
+                        Spacer(Modifier.height(12.dp))
                         StarRow("Behaviour", behaviour, onBehaviourChange)
                     }
                     OutlinedTextField(
@@ -135,25 +140,16 @@ internal fun RatingContent(
                         CountdownChip(expiresAtMs = shieldState.expiresAtMs, onPostAnyway = onPostAnyway)
                     } else {
                         Spacer(Modifier.weight(1f))
-                        Button(onClick = onSubmit, enabled = canSubmit, modifier = Modifier.fillMaxWidth()) {
-                            Text("Submit rating")
-                        }
+                        HsPrimaryButton(
+                            text = "Submit rating",
+                            onClick = onSubmit,
+                            enabled = canSubmit,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun RatingCard(content: @Composable ColumnScope.() -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp,
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
     }
 }
 
@@ -192,13 +188,19 @@ private fun ShieldBottomSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(16.dp))
-            Button(onClick = onEscalate, enabled = !isEscalating, modifier = Modifier.fillMaxWidth()) {
-                Text("Send to support first")
-            }
+            HsPrimaryButton(
+                text = "Send to support first",
+                onClick = onEscalate,
+                enabled = !isEscalating,
+                modifier = Modifier.fillMaxWidth(),
+            )
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = onSkip, enabled = !isEscalating, modifier = Modifier.fillMaxWidth()) {
-                Text("Post rating now")
-            }
+            HsSecondaryButton(
+                text = "Post rating now",
+                onClick = onSkip,
+                enabled = !isEscalating,
+                modifier = Modifier.fillMaxWidth(),
+            )
             Spacer(Modifier.height(16.dp))
         }
     }
@@ -237,7 +239,7 @@ private fun StarRow(
         Row {
             for (i in 1..5) {
                 Text(
-                    text = if (i <= value) "★" else "☆",
+                    text = if (i <= value) "\u2605" else "\u2606",
                     style = MaterialTheme.typography.headlineSmall,
                     color = if (i <= value) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(end = 6.dp).clickable(onClickLabel = "rate $i stars") { onChange(i) },

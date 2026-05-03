@@ -1,17 +1,15 @@
 package com.homeservices.customer.ui.catalogue
 
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -75,6 +73,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -108,7 +108,14 @@ private data class PromoBanner(
 
 private val promoBanners =
     listOf(
-        PromoBanner(Color(0xFF5A4A2D), Color(0xFF3E3324), "गर्मी से पहले AC सर्विस", "से ₹599 · आज की स्लॉट उपलब्ध", "अभी बुक करें", imageRes = com.homeservices.customer.R.drawable.banner_image_1),
+        PromoBanner(
+            Color(0xFF5A4A2D),
+            Color(0xFF3E3324),
+            "गर्मी से पहले AC सर्विस",
+            "से ₹599 · आज की स्लॉट उपलब्ध",
+            "अभी बुक करें",
+            imageRes = com.homeservices.customer.R.drawable.banner_image_1,
+        ),
         PromoBanner(
             Color(0xFF0B3D2E),
             Color(0xFF062A20),
@@ -117,7 +124,14 @@ private val promoBanners =
             "और जानें",
             imageRes = com.homeservices.customer.R.drawable.banner_image_2,
         ),
-        PromoBanner(Color(0xFFB68A2C), Color(0xFF6B4C12), "पहली बुकिंग पर 10% छूट", "कूपन: PEHLI · सभी सेवाओं पर लागू", "कूपन लगाएं", imageRes = com.homeservices.customer.R.drawable.banner_image_3),
+        PromoBanner(
+            Color(0xFFB68A2C),
+            Color(0xFF6B4C12),
+            "पहली बुकिंग पर 10% छूट",
+            "कूपन: PEHLI · सभी सेवाओं पर लागू",
+            "कूपन लगाएं",
+            imageRes = com.homeservices.customer.R.drawable.banner_image_3,
+        ),
     )
 
 // ── Category styles ───────────────────────────────────────────────────────────
@@ -566,7 +580,12 @@ private fun CategoryCard(
                 Spacer(Modifier.height(3.dp))
                 Text(
                     text = formatPrice(category.minPricePaise),
-                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.SemiBold),
+                    style =
+                        MaterialTheme.typography.labelLarge.copy(
+                            fontSize = 13.sp,
+                            lineHeight = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        ),
                     color = BrandGreen,
                 )
             }
@@ -636,7 +655,11 @@ private fun GlassNavItem(
         Spacer(Modifier.height(2.dp))
         Text(
             item.label,
-            style = MaterialTheme.typography.labelSmall.copy(fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold, fontSize = 10.sp),
+            style =
+                MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
+                    fontSize = 10.sp,
+                ),
             color = itemColor,
             maxLines = 1,
         )

@@ -336,7 +336,8 @@ public class AuthViewModel
                 AuthResult.Error.RateLimited -> "Too many attempts. Try again later."
                 AuthResult.Error.CodeExpired -> "Code expired. Please resend."
                 AuthResult.Error.WrongCredential,
-                AuthResult.Error.UserNotFound -> "Incorrect email or password."
+                AuthResult.Error.UserNotFound,
+                -> "Incorrect email or password."
                 AuthResult.Error.EmailAlreadyInUse -> "An account already exists with this email."
                 AuthResult.Error.WeakPassword -> "Password is too weak. Please choose a stronger one."
                 AuthResult.Error.InvalidEmail -> "The email address is not valid."

@@ -21,7 +21,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -46,6 +45,7 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.homeservices.customer.domain.tracking.model.BookingStatus
+import com.homeservices.designsystem.components.HsSecondaryButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -184,12 +184,11 @@ private fun TrackingBody(
                 }
             }
             if (state.status is BookingStatus.Closed) {
-                OutlinedButton(
+                HsSecondaryButton(
+                    text = "File a complaint",
                     onClick = { onFileComplaint(state.bookingId) },
                     modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("File a complaint")
-                }
+                )
             }
         }
     }

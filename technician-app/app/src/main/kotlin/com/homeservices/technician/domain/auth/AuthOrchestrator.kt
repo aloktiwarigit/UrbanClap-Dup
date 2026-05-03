@@ -66,8 +66,7 @@ public class AuthOrchestrator
         public fun signInWithCredential(credential: PhoneAuthCredential): Flow<AuthResult> =
             firebaseOtpUseCase.signInWithCredential(credential)
 
-        public suspend fun completeWithTruecaller(phoneNumber: String): AuthResult =
-            saveSessionUseCase.saveAnonymousWithPhone(phoneNumber)
+        public suspend fun completeWithTruecaller(phoneNumber: String): AuthResult = saveSessionUseCase.saveAnonymousWithPhone(phoneNumber)
 
         public suspend fun completeWithFirebase(
             user: FirebaseUser,

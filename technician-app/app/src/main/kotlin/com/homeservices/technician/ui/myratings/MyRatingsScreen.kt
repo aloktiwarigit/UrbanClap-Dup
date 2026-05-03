@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -36,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.technician.domain.rating.model.RatingWeekTrend
 import com.homeservices.technician.domain.rating.model.ReceivedRating
@@ -82,7 +82,7 @@ internal fun MyRatingsContent(
             is MyRatingsUiState.Error ->
                 CenterState {
                     Text("Could not load ratings", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    Button(onClick = onRetry) { Text("Try again") }
+                    HsPrimaryButton(text = "Try again", onClick = onRetry)
                 }
             is MyRatingsUiState.Success -> RatingsSuccess(summary = state.summary)
         }
@@ -115,7 +115,7 @@ private fun RatingsSuccess(summary: TechRatingSummary) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Text("★", style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.primary)
+                    Text("\u2605", style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.primary)
                 }
             }
         }
@@ -190,9 +190,9 @@ private fun RatingItemCard(rating: ReceivedRating) {
                     if (i <
                         rating.overall
                     ) {
-                        "★"
+                        "\u2605"
                     } else {
-                        "☆"
+                        "\u2606"
                     },
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,

@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.homeservices.designsystem.components.HsPrimaryButton
 
 private data class CadenceOption(
     val value: String,
@@ -126,17 +126,12 @@ private fun ReadyContent(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        Button(
+        HsPrimaryButton(
+            text = if (state.isSaving) "Saving..." else "\u0938\u0947\u0935 \u0915\u0930\u0947\u0902",
             onClick = onSave,
             enabled = state.isDirty && !state.isSaving,
             modifier = Modifier.fillMaxWidth(),
-        ) {
-            if (state.isSaving) {
-                CircularProgressIndicator(modifier = Modifier.height(18.dp))
-            } else {
-                Text("सेव करें")
-            }
-        }
+        )
     }
 }
 

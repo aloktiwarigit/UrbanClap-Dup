@@ -23,10 +23,11 @@ public data class LanguageOption(
     public val nativeName: String,
 )
 
-public val DefaultLanguageOptions: List<LanguageOption> = listOf(
-    LanguageOption(tag = "en", displayLabel = "English", nativeName = "English"),
-    LanguageOption(tag = "hi", displayLabel = "Hindi", nativeName = "हिन्दी"),
-)
+public val DefaultLanguageOptions: List<LanguageOption> =
+    listOf(
+        LanguageOption(tag = "en", displayLabel = "English", nativeName = "English"),
+        LanguageOption(tag = "hi", displayLabel = "Hindi", nativeName = "हिन्दी"),
+    )
 
 @Composable
 public fun LanguagePickerCard(
@@ -40,18 +41,20 @@ public fun LanguagePickerCard(
             val isSelected = option.tag == selectedTag
             Surface(
                 shape = RoundedCornerShape(16.dp),
-                color = if (isSelected) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surfaceVariant
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .selectable(
-                        selected = isSelected,
-                        onClick = { onSelect(option.tag) },
-                        role = Role.RadioButton,
-                    ),
+                color =
+                    if (isSelected) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .selectable(
+                            selected = isSelected,
+                            onClick = { onSelect(option.tag) },
+                            role = Role.RadioButton,
+                        ),
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

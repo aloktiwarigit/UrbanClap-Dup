@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -19,6 +18,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
+import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsTrustBadge
 import com.homeservices.designsystem.locale.DefaultLanguageOptions
 import com.homeservices.designsystem.locale.LanguagePickerCard
 
@@ -42,9 +43,10 @@ public fun LanguageSettingsScreen(
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
-            modifier = Modifier.fillMaxSize().statusBarsPadding().padding(16.dp),
+            modifier = Modifier.fillMaxSize().statusBarsPadding().padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            HsTrustBadge(text = "Settings")
             Text(
                 text = stringResource(R.string.settings_language_title),
                 style = MaterialTheme.typography.headlineSmall,
@@ -54,9 +56,11 @@ public fun LanguageSettingsScreen(
                 selectedTag = selected,
                 onSelect = viewModel::onSelect,
             )
-            Button(onClick = viewModel::onSave, modifier = Modifier.fillMaxWidth()) {
-                Text(text = stringResource(R.string.settings_language_save))
-            }
+            HsPrimaryButton(
+                text = stringResource(R.string.settings_language_save),
+                onClick = viewModel::onSave,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
