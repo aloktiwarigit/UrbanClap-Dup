@@ -44,20 +44,28 @@
     <string name="address_privacy_note">आपका पता केवल असाइन किए गए तकनीशियन और सपोर्ट के साथ शेयर होता है।</string>
     <string name="address_next">आगे</string>
     <string name="booking_summary_title">बुकिंग सारांश</string>
-    <string name="booking_summary_heading">रिव्यू करें और पे करें</string>
-    <string name="booking_summary_subtitle">पेमेंट सफल होने के बाद ही बुकिंग शुरू होगी।</string>
+    <string name="booking_summary_heading">रिव्यू करें और बुक करें</string>
+    <string name="booking_summary_subtitle">ऑनलाइन पेमेंट चुनें या तकनीशियन के घर पहुंचने पर कैश दें।</string>
     <string name="booking_summary_slot_label">स्लॉट</string>
     <string name="booking_summary_address_label">पता</string>
+    <string name="booking_payment_method_title">पेमेंट तरीका</string>
+    <string name="booking_payment_online_title">अभी ऑनलाइन पे करें</string>
+    <string name="booking_payment_online_body">Razorpay से UPI, कार्ड या वॉलेट इस्तेमाल करें।</string>
+    <string name="booking_payment_cash_title">तकनीशियन आने पर कैश</string>
+    <string name="booking_payment_cash_body">अभी सर्विस ऑर्डर बनाएं और घर पर भुगतान करें।</string>
     <string name="booking_payment_secure_title">सुरक्षित Razorpay पेमेंट</string>
     <string name="booking_payment_secure_body">पेमेंट के बाद आपको लाइव असाइनमेंट अपडेट मिलेंगे।</string>
+    <string name="booking_payment_cash_note_title">कैश पेमेंट चुना गया</string>
+    <string name="booking_payment_cash_note_body">हम अभी तकनीशियन असाइन करेंगे। उनके पहुंचने पर तय राशि दें।</string>
     <string name="booking_summary_pay_now">पे करें</string>
+    <string name="booking_summary_book_cash">कैश के साथ बुक करें</string>
     <string name="booking_error_title">बुकिंग आगे नहीं बढ़ सकी</string>
     <string name="booking_confirmed_title">बुकिंग कन्फर्म हो गई!</string>
-    <string name="booking_confirmed_body">पेमेंट पूरा हो गया है। हम आपके स्लॉट के लिए सत्यापित तकनीशियन असाइन कर रहे हैं।</string>
+    <string name="booking_confirmed_body">हम आपके स्लॉट के लिए सत्यापित तकनीशियन असाइन कर रहे हैं।</string>
     <string name="booking_confirmed_id_label">बुकिंग ID: %s</string>
     <string name="booking_confirmed_track">सर्विस ट्रैक करें</string>
     <string name="booking_confirmed_home">होम पर जाएं</string>
-    <string name="booking_timeline_paid">पेमेंट कन्फर्म</string>
+    <string name="booking_timeline_paid">बुकिंग कन्फर्म</string>
     <string name="booking_timeline_paid_body">आपका स्लॉट रिजर्व है और जॉब डिस्पैच के लिए तैयार है।</string>
     <string name="booking_timeline_assigning">तकनीशियन असाइनमेंट</string>
     <string name="booking_timeline_assigning_body">हम स्किल, दूरी और उपलब्धता के आधार पर मैच करते हैं।</string>
@@ -79,6 +87,10 @@
 
     <!-- Slot picker -->
     <string name="slot_picker_title">तारीख और समय चुनें</string>
+    <string name="slot_picker_heading">अपना स्लॉट चुनें</string>
+    <string name="slot_picker_subtitle">सुविधाजनक आने का समय चुनें। भुगतान से पहले आप सब कुछ देख सकते हैं।</string>
+    <string name="slot_picker_date_label">तारीख</string>
+    <string name="slot_picker_time_label">समय</string>
     <string name="slot_picker_next">आगे</string>
 
     <!-- Trust dossier — Aadhaar/Police badges, certifications, languages, reviews -->

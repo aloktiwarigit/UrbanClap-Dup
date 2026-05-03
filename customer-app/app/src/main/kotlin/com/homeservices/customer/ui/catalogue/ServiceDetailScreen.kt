@@ -1,6 +1,8 @@
 package com.homeservices.customer.ui.catalogue
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -54,14 +57,14 @@ import com.homeservices.customer.ui.shared.TrustDossierCard
 import com.homeservices.customer.ui.shared.TrustDossierUiState
 
 // ── Brand tokens (aligned with ServiceListScreen / CatalogueHomeScreen) ───────
-private val WarmIvory = Color(0xFFFFFBF5)
-private val BrandGreen = Color(0xFF0E4F47)
-private val HeroStart = Color(0xFF064A3D)
-private val HeroEnd = Color(0xFF0B6B58)
-private val TextPrimary = Color(0xFF1A1A2E)
-private val TextSecondary = Color(0xFF6B7280)
-private val CardBorder = Color(0xFFE8E2D8)
-private val MetricGreenBg = Color(0xFFE8F5F3)
+private val WarmIvory = Color(0xFFFBF7EF)
+private val BrandGreen = Color(0xFF0B3D2E)
+private val HeroStart = Color(0xFF062A20)
+private val HeroEnd = Color(0xFF0B3D2E)
+private val TextPrimary = Color(0xFF18231F)
+private val TextSecondary = Color(0xFF5F6C66)
+private val CardBorder = Color(0xFFDED8CD)
+private val MetricGreenBg = Color(0xFFE8F1EC)
 private val MetricNeutralBg = Color(0xFFF5F4F0)
 private val SkeletonLine = Color(0xFFEDE7DD)
 private val PillShape = RoundedCornerShape(percent = 50)
@@ -167,20 +170,32 @@ private fun ServiceHero(
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.aspectRatio(1.18f)) {
-        if (service.imageUrl.isBlank()) {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(Brush.verticalGradient(listOf(HeroStart, HeroEnd))),
-            )
-        } else {
-            AsyncImage(
-                model = service.imageUrl,
-                contentDescription = stringResource(R.string.service_image_desc, service.name),
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-            )
+        val localHeroRes = serviceHeroImageRes(service.id)
+        when {
+            localHeroRes != null -> {
+                Image(
+                    painter = painterResource(id = localHeroRes),
+                    contentDescription = stringResource(R.string.service_image_desc, service.name),
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                )
+            }
+            service.imageUrl.isNotBlank() -> {
+                AsyncImage(
+                    model = service.imageUrl,
+                    contentDescription = stringResource(R.string.service_image_desc, service.name),
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                )
+            }
+            else -> {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(Brush.verticalGradient(listOf(HeroStart, HeroEnd))),
+                )
+            }
         }
 
         // Bottom gradient scrim for legibility
@@ -250,6 +265,25 @@ private fun ServiceHero(
         }
     }
 }
+
+@DrawableRes
+private fun serviceHeroImageRes(serviceId: String): Int? =
+    when (serviceId) {
+        "ac-deep-clean" -> R.drawable.service_hero_ac_deep_clean
+        "ac-gas-refill" -> R.drawable.service_hero_ac_gas_refill
+        "ac-installation" -> R.drawable.service_hero_ac_installation
+        "water-pump-repair" -> R.drawable.service_hero_water_pump_repair
+        "borewell-servicing" -> R.drawable.service_hero_borewell_servicing
+        "plumbing-leak-fix" -> R.drawable.service_hero_plumbing_leak_fix
+        "plumbing-tap-install" -> R.drawable.service_hero_plumbing_tap_install
+        "plumbing-pipe-repair" -> R.drawable.service_hero_plumbing_pipe_repair
+        "electrical-fan-install" -> R.drawable.service_hero_electrical_fan_install
+        "electrical-switchboard-fix" -> R.drawable.service_hero_electrical_switchboard_fix
+        "electrical-wiring" -> R.drawable.service_hero_electrical_wiring
+        "ro-installation" -> R.drawable.service_hero_ro_installation
+        "ro-service-amc" -> R.drawable.service_hero_ro_service_amc
+        else -> null
+    }
 
 @Composable
 private fun ServiceMetricRow(service: Service) {

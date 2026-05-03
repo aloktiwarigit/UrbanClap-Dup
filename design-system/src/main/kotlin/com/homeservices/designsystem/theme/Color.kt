@@ -12,12 +12,12 @@ import androidx.compose.ui.graphics.Color
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Brand — light
-internal val BrandPrimaryLight = Color(0xFF0E4F47)
-internal val BrandPrimaryDark = Color(0xFF1E8378)
-internal val BrandPrimaryHoverLight = Color(0xFF0A3D37)
-internal val BrandPrimaryHoverDark = Color(0xFF2BA08F)
-internal val BrandAccentLight = Color(0xFFEF6F4B)
-internal val BrandAccentDark = Color(0xFFF78866)
+internal val BrandPrimaryLight = Color(0xFF0B3D2E)
+internal val BrandPrimaryDark = Color(0xFF7AC7AA)
+internal val BrandPrimaryHoverLight = Color(0xFF062A20)
+internal val BrandPrimaryHoverDark = Color(0xFF94D8C0)
+internal val BrandAccentLight = Color(0xFFB68A2C)
+internal val BrandAccentDark = Color(0xFFD7B760)
 
 // Semantic
 internal val SemanticSuccessLight = Color(0xFF10A85E)
@@ -30,18 +30,18 @@ internal val SemanticInfoLight = Color(0xFF2E72D9)
 internal val SemanticInfoDark = Color(0xFF4F90EC)
 
 // Neutral
-internal val Neutral0Light = Color(0xFFFFFFFF)
-internal val Neutral0Dark = Color(0xFF0A0A0B)
-internal val Neutral50Light = Color(0xFFFAFAFA)
-internal val Neutral50Dark = Color(0xFF141518)
-internal val Neutral100Light = Color(0xFFF4F4F5)
-internal val Neutral100Dark = Color(0xFF1D1F23)
-internal val Neutral200Light = Color(0xFFE4E4E7)
-internal val Neutral200Dark = Color(0xFF2A2D34)
-internal val Neutral500Light = Color(0xFF71717A)
-internal val Neutral500Dark = Color(0xFF9CA3AF)
-internal val Neutral900Light = Color(0xFF18181B)
-internal val Neutral900Dark = Color(0xFFFAFAFA)
+internal val Neutral0Light = Color(0xFFFBF7EF)
+internal val Neutral0Dark = Color(0xFF071511)
+internal val Neutral50Light = Color(0xFFFFFDF8)
+internal val Neutral50Dark = Color(0xFF0D1D18)
+internal val Neutral100Light = Color(0xFFE8F1EC)
+internal val Neutral100Dark = Color(0xFF172A24)
+internal val Neutral200Light = Color(0xFFDED8CD)
+internal val Neutral200Dark = Color(0xFF2E423A)
+internal val Neutral500Light = Color(0xFF5F6C66)
+internal val Neutral500Dark = Color(0xFFB7C6BD)
+internal val Neutral900Light = Color(0xFF18231F)
+internal val Neutral900Dark = Color(0xFFF4FBF6)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public grouping object — UX §5.1
@@ -56,7 +56,7 @@ internal val Neutral900Dark = Color(0xFFFAFAFA)
  *
  * Usage — access via nested objects:
  * ```
- * HomeservicesColors.brand.primary    // #0E4F47
+ * HomeservicesColors.brand.primary    // #0B3D2E
  * HomeservicesColors.semantic.danger  // #D73C3C
  * ```
  */
@@ -112,9 +112,9 @@ public object HomeservicesColors {
  * Material 3 light colour scheme for Homeservices, derived from UX §5.1.
  *
  * Slot mapping summary:
- * - primary / onPrimary          — brand teal / white (≥9:1 AA)
- * - primaryContainer             — light teal tint (#CFEBE5)
- * - secondary / onSecondary      — coral accent / dark warm brown (≥5:1 AA — white fails on coral)
+ * - primary / onPrimary          — forest green / white
+ * - primaryContainer             — soft forest tint (#E8F1EC)
+ * - secondary / onSecondary      — brass accent / dark warm brown
  * - tertiary                     — info blue
  * - error / onError              — danger red / white (≥4.5:1 AA)
  * - background / onBackground    — Neutral-0 / Neutral-900
@@ -126,10 +126,10 @@ public val HomeservicesLightColorScheme: ColorScheme =
     lightColorScheme(
         primary = BrandPrimaryLight,
         onPrimary = Color.White,
-        primaryContainer = Color(0xFFCFEBE5),
+        primaryContainer = Color(0xFFE8F1EC),
         onPrimaryContainer = BrandPrimaryLight,
         secondary = BrandAccentLight,
-        onSecondary = Color(0xFF3D1A0E),
+        onSecondary = Color(0xFF1F1606),
         tertiary = SemanticInfoLight,
         error = SemanticDangerLight,
         onError = Color.White,
@@ -147,9 +147,9 @@ public val HomeservicesLightColorScheme: ColorScheme =
  * Material 3 dark colour scheme for Homeservices, derived from UX §5.1.
  *
  * Slot mapping summary:
- * - primary / onPrimary          — brand teal dark / pure black (≥8:1 AA — deep teal on medium teal is ~3:1)
- * - primaryContainer             — brand teal dark (reused as container)
- * - secondary / onSecondary      — coral accent dark / deep coral (≥5:1 AA)
+ * - primary / onPrimary          — light forest green / deep green
+ * - primaryContainer             — forest green container
+ * - secondary / onSecondary      — brass accent / warm dark text
  * - tertiary                     — info blue dark
  * - error / onError              — danger red dark / deeper wine red (≥4.5:1 AA)
  * - background / onBackground    — Neutral-0-dark / Neutral-900-dark
@@ -160,11 +160,11 @@ public val HomeservicesLightColorScheme: ColorScheme =
 public val HomeservicesDarkColorScheme: ColorScheme =
     darkColorScheme(
         primary = BrandPrimaryDark,
-        onPrimary = Color.Black,
-        primaryContainer = BrandPrimaryDark,
-        onPrimaryContainer = Color.White,
+        onPrimary = Color(0xFF061D17),
+        primaryContainer = BrandPrimaryLight,
+        onPrimaryContainer = Color(0xFFE8F1EC),
         secondary = BrandAccentDark,
-        onSecondary = Color(0xFF4A1B0E),
+        onSecondary = Color(0xFF20190A),
         tertiary = SemanticInfoDark,
         error = SemanticDangerDark,
         onError = Color(0xFF3A0A0A),

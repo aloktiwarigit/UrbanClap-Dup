@@ -30,7 +30,7 @@ public abstract class ShieldModule {
         ): ShieldApiService =
             Retrofit
                 .Builder()
-                .baseUrl("https://homeservices-api.azurewebsites.net/api/")
+                .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
                 .client(client)
                 .addConverterFactory(MoshiConverterFactory.create())
                 .build()

@@ -12,22 +12,30 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.navArgument
 import com.homeservices.technician.domain.activeJob.model.NavigationEvent
+import com.homeservices.technician.domain.auth.model.AuthState
 import com.homeservices.technician.ui.activeJob.ActiveJobScreen
 import com.homeservices.technician.ui.activeJob.ActiveJobViewModel
 import com.homeservices.technician.ui.complaint.ComplaintRoutes
 import com.homeservices.technician.ui.complaint.ComplaintScreen
-import com.homeservices.technician.ui.earnings.EarningsScreen
+import com.homeservices.technician.ui.home.TechnicianHomeScreen
 import com.homeservices.technician.ui.myratings.MyRatingsScreen
 import com.homeservices.technician.ui.payoutsettings.PayoutCadenceScreen
 import com.homeservices.technician.ui.rating.RatingRoutes
 import com.homeservices.technician.ui.rating.RatingScreen
 
-internal fun NavGraphBuilder.homeGraph(navController: NavController) {
+internal fun NavGraphBuilder.homeGraph(
+    navController: NavController,
+    authState: AuthState,
+    onSignOut: () -> Unit,
+) {
     navigation(startDestination = "home_dashboard", route = "home") {
         composable("home_dashboard") {
-            EarningsScreen(
+            TechnicianHomeScreen(
+                authState = authState,
+                onOpenJob = { bookingId -> navController.navigate("activeJob/$bookingId") },
                 onViewRatings = { navController.navigate("ratings_transparency") },
                 onPayoutSettings = { navController.navigate("payout_settings") },
+                onSignOut = onSignOut,
             )
         }
         composable("payout_settings") {

@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.fragment.app.FragmentActivity
@@ -21,6 +22,7 @@ import com.homeservices.technician.domain.auth.model.AuthState
 import com.homeservices.technician.ui.jobOffer.JobOfferScreen
 import com.homeservices.technician.ui.jobOffer.JobOfferUiState
 import com.homeservices.technician.ui.jobOffer.JobOfferViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 internal fun AppNavigation(
@@ -36,6 +38,7 @@ internal fun AppNavigation(
     val authState by sessionManager.authState.collectAsStateWithLifecycle()
     val jobOfferViewModel: JobOfferViewModel = hiltViewModel()
     val jobOfferState by jobOfferViewModel.uiState.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(authState) {
         val current = authState
@@ -122,7 +125,11 @@ internal fun AppNavigation(
         ) {
             authGraph(navController, activity)
             onboardingGraph(navController)
-            homeGraph(navController)
+            homeGraph(
+                navController = navController,
+                authState = authState,
+                onSignOut = { scope.launch { sessionManager.clearSession() } },
+            )
         }
         if (jobOfferState !is JobOfferUiState.Idle && jobOfferState !is JobOfferUiState.Accepted) {
             JobOfferScreen(

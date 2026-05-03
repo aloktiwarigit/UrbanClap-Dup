@@ -36,6 +36,7 @@ internal fun NavGraphBuilder.mainGraph(navController: NavController) {
                 viewModel = vm,
                 onCategoryClick = { id -> navController.navigate(CatalogueRoutes.serviceList(id)) },
                 onSettingsClick = { navController.navigate(LocaleRoutes.SETTINGS) },
+                onProfileLanguageClick = { navController.navigate(LocaleRoutes.LANGUAGE_SETTINGS) },
             )
         }
         composable(

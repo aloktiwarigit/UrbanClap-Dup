@@ -14,17 +14,17 @@ internal class ColorTokensTest {
 
     @Test
     internal fun brandPrimary_light_matchesUxSpec() {
-        assertThat(HomeservicesColors.brand.primary).isEqualTo(Color(0xFF0E4F47))
+        assertThat(HomeservicesColors.brand.primary).isEqualTo(Color(0xFF0B3D2E))
     }
 
     @Test
     internal fun brandPrimaryHover_light_matchesUxSpec() {
-        assertThat(HomeservicesColors.brand.primaryHover).isEqualTo(Color(0xFF0A3D37))
+        assertThat(HomeservicesColors.brand.primaryHover).isEqualTo(Color(0xFF062A20))
     }
 
     @Test
     internal fun brandAccent_light_matchesUxSpec() {
-        assertThat(HomeservicesColors.brand.accent).isEqualTo(Color(0xFFEF6F4B))
+        assertThat(HomeservicesColors.brand.accent).isEqualTo(Color(0xFFB68A2C))
     }
 
     // ── Semantic: light (HomeservicesColors.semantic) ─────────────────────────
@@ -53,7 +53,7 @@ internal class ColorTokensTest {
 
     @Test
     internal fun lightColorScheme_primary_matchesBrandPrimary() {
-        assertThat(HomeservicesLightColorScheme.primary).isEqualTo(Color(0xFF0E4F47))
+        assertThat(HomeservicesLightColorScheme.primary).isEqualTo(Color(0xFF0B3D2E))
     }
 
     @Test
@@ -63,26 +63,26 @@ internal class ColorTokensTest {
 
     @Test
     internal fun lightColorScheme_primaryContainer_matchesUxSpec() {
-        assertThat(HomeservicesLightColorScheme.primaryContainer).isEqualTo(Color(0xFFCFEBE5))
+        assertThat(HomeservicesLightColorScheme.primaryContainer).isEqualTo(Color(0xFFE8F1EC))
     }
 
     @Test
     internal fun lightColorScheme_onPrimaryContainer_matchesBrandPrimary() {
-        assertThat(HomeservicesLightColorScheme.onPrimaryContainer).isEqualTo(Color(0xFF0E4F47))
+        assertThat(HomeservicesLightColorScheme.onPrimaryContainer).isEqualTo(Color(0xFF0B3D2E))
     }
 
     // ── Light ColorScheme: secondary/tertiary/error slots ────────────────────
 
     @Test
     internal fun lightColorScheme_secondary_matchesBrandAccent() {
-        assertThat(HomeservicesLightColorScheme.secondary).isEqualTo(Color(0xFFEF6F4B))
+        assertThat(HomeservicesLightColorScheme.secondary).isEqualTo(Color(0xFFB68A2C))
     }
 
     @Test
     internal fun lightColorScheme_onSecondary_isDarkWarmBrown() {
-        // Dark warm brown to hit WCAG AA ≥4.5:1 on coral BrandAccentLight
-        // (white on coral #EF6F4B = 2.98:1, fails both normal and large-text AA).
-        assertThat(HomeservicesLightColorScheme.onSecondary).isEqualTo(Color(0xFF3D1A0E))
+        // Dark warm brown to hit WCAG AA ≥4.5:1 on brass BrandAccentLight
+        // Brass requires dark text; white does not meet normal-text AA.
+        assertThat(HomeservicesLightColorScheme.onSecondary).isEqualTo(Color(0xFF1F1606))
     }
 
     @Test
@@ -104,78 +104,77 @@ internal class ColorTokensTest {
 
     @Test
     internal fun lightColorScheme_background_matchesNeutral0() {
-        assertThat(HomeservicesLightColorScheme.background).isEqualTo(Color(0xFFFFFFFF))
+        assertThat(HomeservicesLightColorScheme.background).isEqualTo(Color(0xFFFBF7EF))
     }
 
     @Test
     internal fun lightColorScheme_onBackground_matchesNeutral900() {
-        assertThat(HomeservicesLightColorScheme.onBackground).isEqualTo(Color(0xFF18181B))
+        assertThat(HomeservicesLightColorScheme.onBackground).isEqualTo(Color(0xFF18231F))
     }
 
     @Test
     internal fun lightColorScheme_surface_matchesNeutral50() {
-        assertThat(HomeservicesLightColorScheme.surface).isEqualTo(Color(0xFFFAFAFA))
+        assertThat(HomeservicesLightColorScheme.surface).isEqualTo(Color(0xFFFFFDF8))
     }
 
     @Test
     internal fun lightColorScheme_onSurface_matchesNeutral900() {
-        assertThat(HomeservicesLightColorScheme.onSurface).isEqualTo(Color(0xFF18181B))
+        assertThat(HomeservicesLightColorScheme.onSurface).isEqualTo(Color(0xFF18231F))
     }
 
     @Test
     internal fun lightColorScheme_surfaceVariant_matchesNeutral100() {
-        assertThat(HomeservicesLightColorScheme.surfaceVariant).isEqualTo(Color(0xFFF4F4F5))
+        assertThat(HomeservicesLightColorScheme.surfaceVariant).isEqualTo(Color(0xFFE8F1EC))
     }
 
     @Test
     internal fun lightColorScheme_onSurfaceVariant_matchesNeutral500() {
-        assertThat(HomeservicesLightColorScheme.onSurfaceVariant).isEqualTo(Color(0xFF71717A))
+        assertThat(HomeservicesLightColorScheme.onSurfaceVariant).isEqualTo(Color(0xFF5F6C66))
     }
 
     @Test
     internal fun lightColorScheme_outline_matchesNeutral200() {
-        assertThat(HomeservicesLightColorScheme.outline).isEqualTo(Color(0xFFE4E4E7))
+        assertThat(HomeservicesLightColorScheme.outline).isEqualTo(Color(0xFFDED8CD))
     }
 
     @Test
     internal fun lightColorScheme_outlineVariant_matchesNeutral100() {
-        assertThat(HomeservicesLightColorScheme.outlineVariant).isEqualTo(Color(0xFFF4F4F5))
+        assertThat(HomeservicesLightColorScheme.outlineVariant).isEqualTo(Color(0xFFE8F1EC))
     }
 
     // ── Dark ColorScheme: primary slots ───────────────────────────────────────
 
     @Test
     internal fun darkColorScheme_primary_matchesBrandPrimaryDark() {
-        assertThat(HomeservicesDarkColorScheme.primary).isEqualTo(Color(0xFF1E8378))
+        assertThat(HomeservicesDarkColorScheme.primary).isEqualTo(Color(0xFF7AC7AA))
     }
 
     @Test
     internal fun darkColorScheme_onPrimary_isBlack() {
-        // Pure black chosen to hit WCAG AA ≥4.5:1 on medium teal BrandPrimaryDark
-        // (#0A2E2A deep teal on #1E8378 medium teal = 3.18:1, fails normal-text AA).
-        assertThat(HomeservicesDarkColorScheme.onPrimary).isEqualTo(Color.Black)
+        // Deep forest text keeps normal-text AA on the light forest dark-theme primary.
+        assertThat(HomeservicesDarkColorScheme.onPrimary).isEqualTo(Color(0xFF061D17))
     }
 
     @Test
     internal fun darkColorScheme_primaryContainer_matchesBrandPrimaryDark() {
-        assertThat(HomeservicesDarkColorScheme.primaryContainer).isEqualTo(Color(0xFF1E8378))
+        assertThat(HomeservicesDarkColorScheme.primaryContainer).isEqualTo(Color(0xFF0B3D2E))
     }
 
     @Test
     internal fun darkColorScheme_onPrimaryContainer_isWhite() {
-        assertThat(HomeservicesDarkColorScheme.onPrimaryContainer).isEqualTo(Color.White)
+        assertThat(HomeservicesDarkColorScheme.onPrimaryContainer).isEqualTo(Color(0xFFE8F1EC))
     }
 
     // ── Dark ColorScheme: secondary/tertiary/error slots ─────────────────────
 
     @Test
     internal fun darkColorScheme_secondary_matchesBrandAccentDark() {
-        assertThat(HomeservicesDarkColorScheme.secondary).isEqualTo(Color(0xFFF78866))
+        assertThat(HomeservicesDarkColorScheme.secondary).isEqualTo(Color(0xFFD7B760))
     }
 
     @Test
     internal fun darkColorScheme_onSecondary_matchesUxSpec() {
-        assertThat(HomeservicesDarkColorScheme.onSecondary).isEqualTo(Color(0xFF4A1B0E))
+        assertThat(HomeservicesDarkColorScheme.onSecondary).isEqualTo(Color(0xFF20190A))
     }
 
     @Test
@@ -199,41 +198,41 @@ internal class ColorTokensTest {
 
     @Test
     internal fun darkColorScheme_background_matchesNeutral0Dark() {
-        assertThat(HomeservicesDarkColorScheme.background).isEqualTo(Color(0xFF0A0A0B))
+        assertThat(HomeservicesDarkColorScheme.background).isEqualTo(Color(0xFF071511))
     }
 
     @Test
     internal fun darkColorScheme_onBackground_matchesNeutral900Dark() {
-        assertThat(HomeservicesDarkColorScheme.onBackground).isEqualTo(Color(0xFFFAFAFA))
+        assertThat(HomeservicesDarkColorScheme.onBackground).isEqualTo(Color(0xFFF4FBF6))
     }
 
     @Test
     internal fun darkColorScheme_surface_matchesNeutral50Dark() {
-        assertThat(HomeservicesDarkColorScheme.surface).isEqualTo(Color(0xFF141518))
+        assertThat(HomeservicesDarkColorScheme.surface).isEqualTo(Color(0xFF0D1D18))
     }
 
     @Test
     internal fun darkColorScheme_onSurface_matchesNeutral900Dark() {
-        assertThat(HomeservicesDarkColorScheme.onSurface).isEqualTo(Color(0xFFFAFAFA))
+        assertThat(HomeservicesDarkColorScheme.onSurface).isEqualTo(Color(0xFFF4FBF6))
     }
 
     @Test
     internal fun darkColorScheme_surfaceVariant_matchesNeutral100Dark() {
-        assertThat(HomeservicesDarkColorScheme.surfaceVariant).isEqualTo(Color(0xFF1D1F23))
+        assertThat(HomeservicesDarkColorScheme.surfaceVariant).isEqualTo(Color(0xFF172A24))
     }
 
     @Test
     internal fun darkColorScheme_onSurfaceVariant_matchesNeutral500Dark() {
-        assertThat(HomeservicesDarkColorScheme.onSurfaceVariant).isEqualTo(Color(0xFF9CA3AF))
+        assertThat(HomeservicesDarkColorScheme.onSurfaceVariant).isEqualTo(Color(0xFFB7C6BD))
     }
 
     @Test
     internal fun darkColorScheme_outline_matchesNeutral200Dark() {
-        assertThat(HomeservicesDarkColorScheme.outline).isEqualTo(Color(0xFF2A2D34))
+        assertThat(HomeservicesDarkColorScheme.outline).isEqualTo(Color(0xFF2E423A))
     }
 
     @Test
     internal fun darkColorScheme_outlineVariant_matchesNeutral100Dark() {
-        assertThat(HomeservicesDarkColorScheme.outlineVariant).isEqualTo(Color(0xFF1D1F23))
+        assertThat(HomeservicesDarkColorScheme.outlineVariant).isEqualTo(Color(0xFF172A24))
     }
 }

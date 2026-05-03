@@ -2,6 +2,7 @@ package com.homeservices.technician.data.auth.di
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.credentials.CredentialManager
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 import com.google.firebase.auth.FirebaseAuth
@@ -18,6 +19,12 @@ public object AuthModule {
     @Provides
     @Singleton
     public fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
+
+    @Provides
+    @Singleton
+    public fun provideCredentialManager(
+        @ApplicationContext context: Context,
+    ): CredentialManager = CredentialManager.create(context)
 
     @Provides
     @Singleton

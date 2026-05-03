@@ -29,7 +29,26 @@ public class CatalogueRepositoryImplTest {
                                 "cat1",
                                 "Plumbing",
                                 "https://cdn.example.com/plumbing.jpg",
-                                listOf(ServiceSummaryDto("s1", "Leak Fix", 39900), ServiceSummaryDto("s2", "Tap Install", 59900)),
+                                listOf(
+                                    ServiceSummaryDto(
+                                        id = "s1",
+                                        categoryId = "cat1",
+                                        name = "Leak Fix",
+                                        shortDescription = "Fix visible pipe leaks",
+                                        heroImageUrl = "https://cdn.example.com/leak.jpg",
+                                        basePrice = 39900,
+                                        durationMinutes = 45,
+                                    ),
+                                    ServiceSummaryDto(
+                                        id = "s2",
+                                        categoryId = "cat1",
+                                        name = "Tap Install",
+                                        shortDescription = "Install a customer supplied tap",
+                                        heroImageUrl = "https://cdn.example.com/tap.jpg",
+                                        basePrice = 59900,
+                                        durationMinutes = 60,
+                                    ),
+                                ),
                             ),
                         ),
                 )
@@ -77,21 +96,33 @@ public class CatalogueRepositoryImplTest {
     @Test
     public fun `getServicesForCategory returns list for category`(): Unit =
         runTest {
-            coEvery { api.getServicesForCategory("cat1") } returns
-                listOf(
-                    ServiceDto(
-                        "svc1",
-                        "cat1",
-                        "Pipe fix",
-                        "desc",
-                        50000,
-                        60,
-                        "https://cdn/img.jpg",
-                        listOf("Labour"),
-                        emptyList(),
-                    ),
+            coEvery { api.getCategories() } returns
+                CatalogueListResponse(
+                    categories =
+                        listOf(
+                            CategoryDto(
+                                id = "cat1",
+                                name = "Plumbing",
+                                imageUrl = "https://cdn.example.com/plumbing.jpg",
+                                services =
+                                    listOf(
+                                        ServiceSummaryDto(
+                                            id = "svc1",
+                                            categoryId = "cat1",
+                                            name = "Pipe fix",
+                                            shortDescription = "desc",
+                                            heroImageUrl = "https://cdn/img.jpg",
+                                            basePrice = 50000,
+                                            durationMinutes = 60,
+                                        ),
+                                    ),
+                            ),
+                        ),
                 )
             val result = sut.getServicesForCategory("cat1").first()
-            assertThat(result.getOrThrow()).hasSize(1)
+            val services = result.getOrThrow()
+            assertThat(services).hasSize(1)
+            assertThat(services.first().id).isEqualTo("svc1")
+            assertThat(services.first().name).isEqualTo("Pipe fix")
         }
 }

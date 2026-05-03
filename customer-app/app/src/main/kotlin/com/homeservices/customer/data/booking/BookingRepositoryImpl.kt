@@ -32,6 +32,7 @@ internal class BookingRepositoryImpl
                                     slotWindow = request.slot.window,
                                     addressText = request.addressText,
                                     addressLatLng = LatLngDto(lat = request.addressLat, lng = request.addressLng),
+                                    paymentMethod = request.paymentMethod.name,
                                 ),
                             ).toDomain()
                     },

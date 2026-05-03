@@ -2,6 +2,7 @@ package com.homeservices.customer.ui.profile
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -38,7 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -49,13 +50,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.domain.auth.model.AuthState
 
 // ── Brand tokens (aligned with rest of design system) ────────────────────────
-private val WarmIvory = Color(0xFFFFFBF5)
-private val BrandGreen = Color(0xFF0E4F47)
-private val HeroStart = Color(0xFF064A3D)
-private val HeroEnd = Color(0xFF0B6B58)
-private val TextPrimary = Color(0xFF1A1A2E)
-private val TextSecondary = Color(0xFF6B7280)
-private val CardBorder = Color(0xFFE8E2D8)
+private val WarmIvory = Color(0xFFFBF7EF)
+private val BrandGreen = Color(0xFF0B3D2E)
+private val TextPrimary = Color(0xFF18231F)
+private val TextSecondary = Color(0xFF5F6C66)
+private val CardBorder = Color(0xFFDED8CD)
 private val DangerRed = Color(0xFFDC2626)
 private val CardShape = RoundedCornerShape(12.dp)
 
@@ -63,10 +62,12 @@ private val CardShape = RoundedCornerShape(12.dp)
 internal fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel(),
     modifier: Modifier = Modifier,
+    onLanguageClick: () -> Unit = {},
 ) {
     val authState by viewModel.authState.collectAsStateWithLifecycle()
     val user = authState as? AuthState.Authenticated
     var showSignOutDialog by remember { mutableStateOf(false) }
+    var comingSoonMessage by remember { mutableStateOf<String?>(null) }
 
     if (showSignOutDialog) {
         AlertDialog(
@@ -89,6 +90,19 @@ internal fun ProfileScreen(
         )
     }
 
+    comingSoonMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = { comingSoonMessage = null },
+            title = { Text("जल्द आ रहा है") },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = { comingSoonMessage = null }) {
+                    Text("ठीक है", color = BrandGreen, fontWeight = FontWeight.SemiBold)
+                }
+            },
+        )
+    }
+
     LazyColumn(
         modifier = modifier.fillMaxSize().background(WarmIvory),
     ) {
@@ -103,12 +117,14 @@ internal fun ProfileScreen(
                     icon = Icons.Default.Edit,
                     label = "नाम संपादित करें",
                     sublabel = user?.displayName ?: "अभी तक सेट नहीं",
+                    onClick = { comingSoonMessage = "नाम बदलने की सुविधा जल्द उपलब्ध होगी।" },
                 )
                 HorizontalDivider(color = CardBorder, thickness = 0.5.dp)
                 MenuRow(
                     icon = Icons.Default.Language,
                     label = "भाषा",
                     sublabel = "हिंदी",
+                    onClick = onLanguageClick,
                 )
             }
         }
@@ -134,12 +150,14 @@ internal fun ProfileScreen(
                     icon = Icons.Default.Headset,
                     label = "ग्राहक सेवा",
                     sublabel = "1800-XXX-XXXX",
+                    onClick = { comingSoonMessage = "ग्राहक सहायता जल्द उपलब्ध होगी।" },
                 )
                 HorizontalDivider(color = CardBorder, thickness = 0.5.dp)
                 MenuRow(
                     icon = Icons.Default.Shield,
                     label = "गोपनीयता नीति",
                     sublabel = null,
+                    onClick = { comingSoonMessage = "गोपनीयता नीति जल्द उपलब्ध होगी।" },
                 )
             }
         }
@@ -187,15 +205,15 @@ private fun ProfileHeader(user: AuthState.Authenticated?) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(HeroStart, HeroEnd)))
-                .padding(start = 20.dp, end = 20.dp, top = 32.dp, bottom = 28.dp),
+                .background(Color.White)
+                .statusBarsPadding()
+                .padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 18.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // Avatar circle
-            Surface(shape = CircleShape, color = Color.White.copy(alpha = 0.15f)) {
+            Surface(shape = CircleShape, color = BrandGreen.copy(alpha = 0.10f)) {
                 Box(
                     modifier = Modifier.size(64.dp),
                     contentAlignment = Alignment.Center,
@@ -204,7 +222,7 @@ private fun ProfileHeader(user: AuthState.Authenticated?) {
                         text = avatarInitials(user),
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White,
+                        color = BrandGreen,
                     )
                 }
             }
@@ -213,20 +231,20 @@ private fun ProfileHeader(user: AuthState.Authenticated?) {
                     text = user?.displayName ?: "मेहमान",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = TextPrimary,
                 )
                 if (user?.phoneLastFour != null) {
                     Text(
                         text = "+91 xxxxxx${user.phoneLastFour}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.72f),
+                        color = TextSecondary,
                     )
                 }
                 if (user?.email != null) {
                     Text(
                         text = user.email,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.72f),
+                        color = TextSecondary,
                     )
                 }
             }
@@ -264,10 +282,16 @@ private fun MenuRow(
     label: String,
     sublabel: String?,
     disabled: Boolean = false,
+    onClick: (() -> Unit)? = null,
 ) {
     val contentAlpha = if (disabled) 0.45f else 1f
+    val enabled = !disabled && onClick != null
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .then(if (enabled) Modifier.clickable(onClick = onClick ?: {}) else Modifier)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
@@ -294,7 +318,7 @@ private fun MenuRow(
                 )
             }
         }
-        if (!disabled) {
+        if (enabled) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,

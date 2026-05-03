@@ -161,6 +161,23 @@ public class AuthOrchestrator
 
         public fun sendPasswordReset(email: String): Flow<Result<Unit>> = emailPasswordUseCase.sendPasswordReset(email)
 
+        public suspend fun completeCurrentEmailVerification(): AuthResult {
+            val user = firebaseAuth.currentUser ?: return AuthResult.Unavailable
+            return completeEmailVerification(user)
+        }
+
+        @Suppress("TooGenericExceptionCaught")
+        public suspend fun resendCurrentEmailVerification(): Result<Unit> =
+            try {
+                val user =
+                    firebaseAuth.currentUser
+                        ?: return Result.failure(IllegalStateException("No signed-in user"))
+                user.sendEmailVerification().await()
+                Result.success(Unit)
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+
         @Suppress("TooGenericExceptionCaught")
         private suspend fun linkOrSignIn(credential: AuthCredential): AuthResult {
             val currentUser = firebaseAuth.currentUser

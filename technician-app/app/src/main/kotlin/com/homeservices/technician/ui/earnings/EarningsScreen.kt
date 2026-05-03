@@ -59,13 +59,13 @@ import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 
-private val WarmIvory = Color(0xFFFFFBF5)
-private val BrandGreen = Color(0xFF0E4F47)
-private val AppBarStart = Color(0xFF064A3D)
-private val AppBarEnd = Color(0xFF0B6B58)
-private val BrandGreenSoft = Color(0xFFE8F5F3)
-private val TextPrimary = Color(0xFF1A1A2E)
-private val TextSecondary = Color(0xFF6B7280)
+private val WarmIvory = Color(0xFFFBF7EF)
+private val BrandGreen = Color(0xFF0B3D2E)
+private val AppBarStart = Color(0xFF062A20)
+private val AppBarEnd = Color(0xFF0B3D2E)
+private val BrandGreenSoft = Color(0xFFE8F1EC)
+private val TextPrimary = Color(0xFF18231F)
+private val TextSecondary = Color(0xFF5F6C66)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

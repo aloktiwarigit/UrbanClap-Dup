@@ -23,7 +23,7 @@ internal interface ActiveJobApiService {
 }
 
 internal data class ActiveJobResponse(
-    val id: String,
+    val bookingId: String,
     val customerId: String,
     val serviceId: String,
     val serviceName: String,

@@ -12,6 +12,22 @@ import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
 import { sendPriceApprovalPush } from '../services/fcm.service.js';
 import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
 import { isSoftLaunchEnabled, isMarketingPaused } from '../services/featureFlags.service.js';
+import { dispatcherService } from '../services/dispatcher.service.js';
+
+function makeRazorpayReceipt(customerId: string): string {
+  return `bk_${Date.now().toString(36)}_${customerId.slice(0, 20)}`;
+}
+
+function hasRazorpayCredentials(): boolean {
+  const hasUsableValue = (value: string | undefined): boolean => {
+    const normalized = value?.trim().toLowerCase();
+    if (!normalized) return false;
+    if (normalized === 'placeholder') return false;
+    if (normalized.endsWith('_placeholder')) return false;
+    return true;
+  };
+  return hasUsableValue(process.env.RAZORPAY_KEY_ID) && hasUsableValue(process.env.RAZORPAY_KEY_SECRET);
+}
 
 const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
   if (!(await isSoftLaunchEnabled(customer.customerId))) {
@@ -28,14 +44,74 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
   const service = await catalogueRepo.getServiceByIdCrossPartition(parsed.data.serviceId);
   if (!service || !service.isActive) return { status: 404, jsonBody: { code: 'SERVICE_NOT_FOUND' } };
 
-  const order = await createRazorpayOrder({
-    amount: service.basePrice,
-    currency: 'INR',
-    receipt: `${customer.customerId}-${Date.now()}`,
-  });
+  if (parsed.data.paymentMethod === 'CASH_ON_SERVICE') {
+    const cashOrderId = `cash_${randomUUID()}`;
+    const booking = await bookingRepo.createPending(parsed.data, customer.customerId, cashOrderId, service.basePrice);
+    const paid = await bookingRepo.markPaid(booking.id, 'cash_on_service_pending');
+    if (!paid) return { status: 500, jsonBody: { code: 'BOOKING_CONFIRMATION_FAILED' } };
+    dispatcherService.triggerDispatch(booking.id).catch((err) => {
+      Sentry.captureException(err);
+      console.error('[createBooking] cash-on-service dispatch failed', { bookingId: booking.id, err });
+    });
+    return {
+      status: 201,
+      jsonBody: {
+        bookingId: booking.id,
+        razorpayOrderId: cashOrderId,
+        amount: service.basePrice,
+        requiresPayment: false,
+        paymentMethod: 'CASH_ON_SERVICE',
+      },
+    };
+  }
+
+  if (!hasRazorpayCredentials()) {
+    const manualOrderId = `manual_${randomUUID()}`;
+    const manualRequest = { ...parsed.data, paymentMethod: 'CASH_ON_SERVICE' as const };
+    const booking = await bookingRepo.createPending(manualRequest, customer.customerId, manualOrderId, service.basePrice);
+    const paid = await bookingRepo.markPaid(booking.id, 'manual_payment_not_configured');
+    if (!paid) return { status: 500, jsonBody: { code: 'BOOKING_CONFIRMATION_FAILED' } };
+    dispatcherService.triggerDispatch(booking.id).catch((err) => {
+      Sentry.captureException(err);
+      console.error('[createBooking] manual-payment dispatch failed', { bookingId: booking.id, err });
+    });
+    return {
+      status: 201,
+      jsonBody: {
+        bookingId: booking.id,
+        razorpayOrderId: manualOrderId,
+        amount: service.basePrice,
+        requiresPayment: false,
+        paymentMethod: 'CASH_ON_SERVICE',
+      },
+    };
+  }
+
+  let order: Awaited<ReturnType<typeof createRazorpayOrder>>;
+  try {
+    order = await createRazorpayOrder({
+      amount: service.basePrice,
+      currency: 'INR',
+      receipt: makeRazorpayReceipt(customer.customerId),
+    });
+  } catch (err) {
+    Sentry.captureException(err);
+    console.error('[createBooking] Razorpay order creation failed', {
+      customerId: customer.customerId,
+      serviceId: parsed.data.serviceId,
+      err,
+    });
+    return {
+      status: 502,
+      jsonBody: {
+        code: 'PAYMENT_ORDER_FAILED',
+        message: 'Could not start payment. Please try again.',
+      },
+    };
+  }
 
   const booking = await bookingRepo.createPending(parsed.data, customer.customerId, order.id, service.basePrice);
-  return { status: 201, jsonBody: { bookingId: booking.id, razorpayOrderId: order.id, amount: order.amount } };
+  return { status: 201, jsonBody: { bookingId: booking.id, razorpayOrderId: order.id, amount: order.amount, requiresPayment: true, paymentMethod: 'RAZORPAY' } };
 };
 
 const confirmHandler: CustomerHttpHandler = async (req, _ctx, customer) => {

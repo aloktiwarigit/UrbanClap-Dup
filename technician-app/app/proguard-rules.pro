@@ -10,3 +10,9 @@
 
 # Security-crypto (EncryptedSharedPreferences)
 -keep class androidx.security.crypto.** { *; }
+
+# Credential Manager + Google Identity Library
+-keep class androidx.credentials.** { *; }
+-keep class com.google.android.libraries.identity.googleid.** { *; }
+-keep class com.google.firebase.auth.GoogleAuthProvider { *; }
+-keep class com.google.firebase.auth.FirebaseAuthUserCollisionException { *; }

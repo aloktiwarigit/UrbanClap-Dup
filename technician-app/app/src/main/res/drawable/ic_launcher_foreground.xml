@@ -14,11 +14,11 @@
         android:pathData="M72,28 m-16,0 a16,16 0 1,0 32,0 a16,16 0 1,0 -32,0" />
     <!-- Wrench jaw cutout (brand-on-brand for depth) -->
     <path
-        android:fillColor="#0E4F47"
+        android:fillColor="#0B3D2E"
         android:pathData="M72,28 m-8,0 a8,8 0 1,0 16,0 a8,8 0 1,0 -16,0" />
-    <!-- Marigold check badge — bottom right -->
+    <!-- Brass check badge — bottom right -->
     <path
-        android:fillColor="#F4B740"
+        android:fillColor="#B68A2C"
         android:pathData="M78,78 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" />
     <path
         android:strokeColor="#FFFFFF"

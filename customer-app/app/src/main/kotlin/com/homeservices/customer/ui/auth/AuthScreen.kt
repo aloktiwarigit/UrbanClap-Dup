@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -26,10 +27,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSectionCard
+import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsTrustBadge
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
 
@@ -42,6 +45,16 @@ internal fun AuthScreen(
     onOtpEntered: (String) -> Unit,
     onResendRequested: () -> Unit,
     onRetry: () -> Unit,
+    onGoogleSelected: () -> Unit = {},
+    onEmailSelected: () -> Unit = {},
+    onPhoneSelected: () -> Unit = {},
+    onEmailSignIn: (String, String) -> Unit = { _, _ -> },
+    onEmailSignUp: (String, String) -> Unit = { _, _ -> },
+    onEmailModeToggle: (String) -> Unit = {},
+    onBackToMethodSelection: () -> Unit = {},
+    onEmailVerificationContinue: (String) -> Unit = {},
+    onResendVerificationEmail: (String) -> Unit = {},
+    onForgotPassword: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -54,6 +67,50 @@ internal fun AuthScreen(
                     eyebrow = "Secure sign in",
                     title = "Checking Truecaller",
                     message = "We are verifying your number before falling back to OTP.",
+                )
+
+            is AuthUiState.MethodSelection ->
+                MethodSelectionContent(
+                    onGoogleSelected = onGoogleSelected,
+                    onEmailSelected = onEmailSelected,
+                    onPhoneSelected = onPhoneSelected,
+                )
+
+            is AuthUiState.GoogleSigningIn ->
+                LoadingContent(
+                    eyebrow = "Google Sign-In",
+                    title = "Signing in with Google",
+                    message = "Choose your Google account to continue.",
+                )
+
+            is AuthUiState.EmailEntry ->
+                EmailEntryContent(
+                    state = uiState,
+                    onEmailSignIn = onEmailSignIn,
+                    onEmailSignUp = onEmailSignUp,
+                    onEmailModeToggle = onEmailModeToggle,
+                    onBackToMethodSelection = onBackToMethodSelection,
+                    onForgotPassword = onForgotPassword,
+                )
+
+            is AuthUiState.EmailSubmitting ->
+                LoadingContent(
+                    eyebrow = "Email sign in",
+                    title =
+                        if (uiState.mode == AuthUiState.EmailEntry.Mode.SignUp) {
+                            "Creating account"
+                        } else {
+                            "Signing in"
+                        },
+                    message = "Keep this screen open while we verify ${uiState.email}.",
+                )
+
+            is AuthUiState.EmailVerificationSent ->
+                EmailVerificationSentContent(
+                    state = uiState,
+                    onContinue = onEmailVerificationContinue,
+                    onResend = onResendVerificationEmail,
+                    onBackToMethodSelection = onBackToMethodSelection,
                 )
 
             is AuthUiState.OtpEntry -> {
@@ -133,6 +190,160 @@ private fun AuthFrame(
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
         )
+    }
+}
+
+@Composable
+private fun MethodSelectionContent(
+    onGoogleSelected: () -> Unit,
+    onEmailSelected: () -> Unit,
+    onPhoneSelected: () -> Unit,
+) {
+    AuthFrame(
+        eyebrow = "Customer app",
+        title = "Choose how to sign in",
+        body = "Use Google, email, or your mobile number to manage bookings and service updates.",
+    ) {
+        Button(
+            onClick = onGoogleSelected,
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+        ) {
+            Text("Continue with Google")
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        HsSecondaryButton(
+            text = "Continue with Email",
+            onClick = onEmailSelected,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        TextButton(onClick = onPhoneSelected, modifier = Modifier.fillMaxWidth()) {
+            Text("Use phone number instead")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Email sign-up requires verification before booking access.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
+private fun EmailEntryContent(
+    state: AuthUiState.EmailEntry,
+    onEmailSignIn: (String, String) -> Unit,
+    onEmailSignUp: (String, String) -> Unit,
+    onEmailModeToggle: (String) -> Unit,
+    onBackToMethodSelection: () -> Unit,
+    onForgotPassword: (String) -> Unit,
+) {
+    var email by remember(state.prefillEmail) { mutableStateOf(state.prefillEmail) }
+    var password by remember(state.mode) { mutableStateOf("") }
+    val isSignUp = state.mode == AuthUiState.EmailEntry.Mode.SignUp
+    val isValidEmail = email.trim().matches(Regex("""^[^@\s]+@[^@\s]+\.[^@\s]+$"""))
+    val isReady = isValidEmail && password.length >= 6
+
+    AuthFrame(
+        eyebrow = if (isSignUp) "Create account" else "Email sign in",
+        title = if (isSignUp) "Create your email login" else "Sign in with email",
+        body =
+            if (isSignUp) {
+                "We will send a verification email before enabling bookings."
+            } else {
+                "Use your verified email and password to continue."
+            },
+    ) {
+        TextButton(onClick = onBackToMethodSelection, modifier = Modifier.fillMaxWidth()) {
+            Text("Back to sign-in options")
+        }
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("Email") },
+            placeholder = { Text("you@example.com") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("Password") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            visualTransformation = PasswordVisualTransformation(),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+        HsPrimaryButton(
+            text = if (isSignUp) "Create account" else "Sign in",
+            onClick = {
+                if (isSignUp) {
+                    onEmailSignUp(email.trim(), password)
+                } else {
+                    onEmailSignIn(email.trim(), password)
+                }
+            },
+            enabled = isReady,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        TextButton(
+            onClick = { onEmailModeToggle(email.trim()) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(if (isSignUp) "Already have an account? Sign in" else "New here? Create account")
+        }
+        if (!isSignUp) {
+            TextButton(
+                onClick = { onForgotPassword(email.trim()) },
+                enabled = isValidEmail,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Forgot password?")
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmailVerificationSentContent(
+    state: AuthUiState.EmailVerificationSent,
+    onContinue: (String) -> Unit,
+    onResend: (String) -> Unit,
+    onBackToMethodSelection: () -> Unit,
+) {
+    AuthFrame(
+        eyebrow = "Email verification",
+        title = "Check your inbox",
+        body = "We sent a verification link to ${state.email}. Open it, then return here to continue.",
+    ) {
+        if (state.message != null) {
+            Text(
+                text = state.message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+        HsPrimaryButton(
+            text = "I verified, continue",
+            onClick = { onContinue(state.email) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        HsSecondaryButton(
+            text = "Resend email",
+            onClick = { onResend(state.email) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        TextButton(onClick = onBackToMethodSelection, modifier = Modifier.fillMaxWidth()) {
+            Text("Use another sign-in method")
+        }
     }
 }
 

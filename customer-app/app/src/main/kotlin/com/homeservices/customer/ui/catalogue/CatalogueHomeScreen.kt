@@ -9,6 +9,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -53,9 +55,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -71,6 +70,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -86,12 +86,13 @@ import com.homeservices.customer.domain.catalogue.model.Category
 import kotlinx.coroutines.delay
 
 // ── Colour tokens (Codex-refined) ────────────────────────────────────────────
-private val HeroStart = Color(0xFF064A3D)
-private val HeroEnd = Color(0xFF0B6B58)
-private val BrandGreen = Color(0xFF0E4F47)
-private val WarmIvory = Color(0xFFFFFBF5)
-private val TextPrimary = Color(0xFF1A1A2E)
-private val TextSecondary = Color(0xFF6B7280)
+private val BrandGreen = Color(0xFF0B3D2E)
+private val WarmIvory = Color(0xFFFBF7EF)
+private val SurfaceWhite = Color(0xFFFFFFFF)
+private val MutedGreen = Color(0xFFE8F1EC)
+private val CardBorder = Color(0xFFDED8CD)
+private val TextPrimary = Color(0xFF18231F)
+private val TextSecondary = Color(0xFF5F6C66)
 
 // ── Promo banners ─────────────────────────────────────────────────────────────
 // To activate real photos: place banner_1.jpg / banner_2.jpg / banner_3.jpg in
@@ -99,7 +100,6 @@ private val TextSecondary = Color(0xFF6B7280)
 private data class PromoBanner(
     val gradientStart: Color,
     val gradientEnd: Color,
-    val emoji: String,
     val title: String,
     val subtitle: String,
     val cta: String,
@@ -108,34 +108,33 @@ private data class PromoBanner(
 
 private val promoBanners =
     listOf(
-        PromoBanner(Color(0xFFF59E0B), Color(0xFFB45309), "🌡️", "गर्मी से पहले AC सर्विस", "से ₹599 · आज की स्लॉट उपलब्ध", "अभी बुक करें", imageRes = com.homeservices.customer.R.drawable.banner_image_1),
+        PromoBanner(Color(0xFF5A4A2D), Color(0xFF3E3324), "गर्मी से पहले AC सर्विस", "से ₹599 · आज की स्लॉट उपलब्ध", "अभी बुक करें", imageRes = com.homeservices.customer.R.drawable.banner_image_1),
         PromoBanner(
-            Color(0xFF0E4F47),
-            Color(0xFF064E3B),
-            "🛡️",
+            Color(0xFF0B3D2E),
+            Color(0xFF062A20),
             "आधार सत्यापित प्रोफेशनल",
             "हर तकनीशियन बैकग्राउंड चेक्ड · 30 दिन गारंटी",
             "और जानें",
             imageRes = com.homeservices.customer.R.drawable.banner_image_2,
         ),
-        PromoBanner(Color(0xFF6D28D9), Color(0xFF4C1D95), "🎁", "पहली बुकिंग पर 10% छूट", "कूपन: PEHLI · सभी सेवाओं पर लागू", "कूपन लगाएं", imageRes = com.homeservices.customer.R.drawable.banner_image_3),
+        PromoBanner(Color(0xFFB68A2C), Color(0xFF6B4C12), "पहली बुकिंग पर 10% छूट", "कूपन: PEHLI · सभी सेवाओं पर लागू", "कूपन लगाएं", imageRes = com.homeservices.customer.R.drawable.banner_image_3),
     )
 
 // ── Category styles ───────────────────────────────────────────────────────────
 private data class CategoryStyle(
-    val gradientStart: Color,
-    val gradientEnd: Color,
+    val iconBackground: Color,
+    val iconTint: Color,
     val icon: ImageVector,
 )
 
 private fun categoryStyle(id: String): CategoryStyle =
     when (id) {
-        "ac-repair" -> CategoryStyle(Color(0xFF0284C7), Color(0xFF0369A1), Icons.Default.AcUnit)
-        "water-pump" -> CategoryStyle(Color(0xFF2563EB), Color(0xFF1E40AF), Icons.Default.Water)
-        "plumbing" -> CategoryStyle(Color(0xFF059669), Color(0xFF065F46), Icons.Default.Plumbing)
-        "electrical" -> CategoryStyle(Color(0xFFD97706), Color(0xFF92400E), Icons.Default.ElectricBolt)
-        "water-purifier" -> CategoryStyle(Color(0xFF16A34A), Color(0xFF14532D), Icons.Default.FilterAlt)
-        else -> CategoryStyle(Color(0xFF7C3AED), Color(0xFF4C1D95), Icons.Default.Build)
+        "ac-repair" -> CategoryStyle(Color(0xFFEAF4F7), Color(0xFF246174), Icons.Default.AcUnit)
+        "water-pump" -> CategoryStyle(Color(0xFFEAF1F8), Color(0xFF355F8A), Icons.Default.Water)
+        "plumbing" -> CategoryStyle(Color(0xFFEAF4EE), Color(0xFF2E6B4F), Icons.Default.Plumbing)
+        "electrical" -> CategoryStyle(Color(0xFFF5EFE4), Color(0xFF80622F), Icons.Default.ElectricBolt)
+        "water-purifier" -> CategoryStyle(Color(0xFFEAF4EE), Color(0xFF2E6B4F), Icons.Default.FilterAlt)
+        else -> CategoryStyle(MutedGreen, BrandGreen, Icons.Default.Build)
     }
 
 private fun formatPrice(paise: Int): String = if (paise > 0) "से ₹${paise / 100}" else ""
@@ -160,9 +159,15 @@ internal fun CatalogueHomeScreen(
     viewModel: CatalogueHomeViewModel,
     onCategoryClick: (String) -> Unit,
     onSettingsClick: () -> Unit,
+    onProfileLanguageClick: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    CatalogueHomeContent(uiState = uiState, onCategoryClick = onCategoryClick, onSettingsClick = onSettingsClick)
+    CatalogueHomeContent(
+        uiState = uiState,
+        onCategoryClick = onCategoryClick,
+        onSettingsClick = onSettingsClick,
+        onProfileLanguageClick = onProfileLanguageClick,
+    )
 }
 
 @Composable
@@ -170,13 +175,19 @@ internal fun CatalogueHomeContent(
     uiState: CatalogueHomeUiState,
     onCategoryClick: (String) -> Unit,
     onSettingsClick: () -> Unit,
+    onProfileLanguageClick: () -> Unit,
 ) {
     var selectedNav by remember { mutableIntStateOf(0) }
 
     Scaffold(
         containerColor = WarmIvory,
-        // ── Sticky brand hero ──────────────────────────────────────────────
-        topBar = { StickyHero(onSettingsClick = onSettingsClick) },
+        topBar = {
+            when (selectedNav) {
+                0 -> StickyHero(onSettingsClick = onSettingsClick)
+                1, 2 -> CompactTabBar(title = navItems[selectedNav].label)
+                else -> Unit
+            }
+        },
         bottomBar = { HomeBottomNav(selected = selectedNav, onSelect = { selectedNav = it }) },
     ) { scaffoldPadding ->
         when (selectedNav) {
@@ -194,7 +205,7 @@ internal fun CatalogueHomeContent(
                             item {
                                 Text(
                                     text = "हमारी सेवाएं",
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, fontSize = 19.sp),
                                     color = TextPrimary,
                                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
                                 )
@@ -231,106 +242,117 @@ internal fun CatalogueHomeContent(
             3 ->
                 com.homeservices.customer.ui.profile.ProfileScreen(
                     modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
+                    onLanguageClick = onProfileLanguageClick,
                 )
         }
     }
 }
 
-// ── Sticky hero (Codex spec: height 300dp, gradient #064A3D→#0B6B58) ──────────
+// ── Home header ───────────────────────────────────────────────────────────────
 @Composable
 private fun StickyHero(onSettingsClick: () -> Unit) {
-    Box(
+    Column(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(HeroStart, HeroEnd)))
+                .background(WarmIvory)
                 .statusBarsPadding()
-                .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 20.dp),
+                .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 10.dp),
     ) {
-        Column {
-            // Brand row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "HomeHeroo",
+                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold, fontSize = 22.sp),
+                    color = BrandGreen,
+                )
+                Spacer(Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.LocationOn, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(15.dp))
+                    Spacer(Modifier.width(4.dp))
                     Text(
-                        text = "HomeHeroo",
-                        style =
-                            MaterialTheme.typography.headlineMedium.copy(
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 26.sp,
-                                letterSpacing = (-0.5).sp,
-                            ),
-                        color = Color.White,
+                        text = "अयोध्या, उत्तर प्रदेश",
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
+                        color = TextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
-                    Text(
-                        text = "घर की हर ज़रूरत, एक जगह",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.72f),
-                    )
-                }
-                IconButton(onClick = onSettingsClick) {
-                    Icon(Icons.Default.Settings, contentDescription = null, tint = Color.White.copy(alpha = 0.8f))
                 }
             }
-
-            Spacer(Modifier.height(10.dp))
-
-            // Location chip
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+            IconButton(
+                onClick = onSettingsClick,
                 modifier =
                     Modifier
-                        .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(999.dp))
-                        .padding(horizontal = 12.dp, vertical = 5.dp),
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(SurfaceWhite)
+                        .border(1.dp, CardBorder, CircleShape),
             ) {
-                Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFFFCD34D), modifier = Modifier.size(15.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    text = "अयोध्या, उत्तर प्रदेश",
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = Color.White,
-                )
+                Icon(Icons.Default.Settings, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(21.dp))
             }
-
-            Spacer(Modifier.height(14.dp))
-
-            // Search bar (Codex: height 56dp, radius 18dp, white bg)
-            var query by remember { mutableStateOf("") }
-            TextField(
-                value = query,
-                onValueChange = { query = it },
-                placeholder = {
-                    Text(
-                        "AC, प्लंबर, इलेक्ट्रीशियन खोजें…",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 16.sp),
-                        color = TextSecondary,
-                    )
-                },
-                leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(24.dp))
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(18.dp),
-                colors =
-                    TextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent,
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                    ),
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-            )
         }
+
+        Spacer(Modifier.height(10.dp))
+
+        var query by remember { mutableStateOf("") }
+        TextField(
+            value = query,
+            onValueChange = { query = it },
+            placeholder = {
+                Text(
+                    "AC, प्लंबर, इलेक्ट्रीशियन खोजें...",
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
+                    color = TextSecondary,
+                )
+            },
+            leadingIcon = {
+                Icon(Icons.Default.Search, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(23.dp))
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(18.dp),
+            colors =
+                TextFieldDefaults.colors(
+                    focusedContainerColor = SurfaceWhite,
+                    unfocusedContainerColor = SurfaceWhite,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent,
+                    focusedTextColor = TextPrimary,
+                    unfocusedTextColor = TextPrimary,
+                ),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .border(1.dp, CardBorder, RoundedCornerShape(18.dp)),
+        )
     }
 }
 
-// ── Promo slider (Codex: height 132dp, radius 24dp) ──────────────────────────
+@Composable
+private fun CompactTabBar(title: String) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(WarmIvory)
+                .statusBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+            color = TextPrimary,
+        )
+    }
+}
+
+// ── Promo slider ──────────────────────────────────────────────────────────────
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PromoSlider() {
@@ -344,10 +366,10 @@ private fun PromoSlider() {
             )
         }
     }
-    Column(modifier = Modifier.padding(vertical = 16.dp)) {
+    Column(modifier = Modifier.padding(top = 6.dp, bottom = 12.dp)) {
         HorizontalPager(
             state = pagerState,
-            contentPadding = PaddingValues(horizontal = 20.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp),
             pageSpacing = 12.dp,
         ) { page ->
             val b = promoBanners[page]
@@ -355,7 +377,8 @@ private fun PromoSlider() {
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(132.dp)
+                        .height(196.dp)
+                        .shadow(10.dp, RoundedCornerShape(24.dp), clip = false)
                         .clip(RoundedCornerShape(24.dp)),
             ) {
                 if (b.imageRes != null) {
@@ -369,7 +392,14 @@ private fun PromoSlider() {
                         modifier =
                             Modifier
                                 .fillMaxSize()
-                                .background(Color(0xFF000000).copy(alpha = 0.45f)),
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            Color.Transparent,
+                                            Color(0xFF000000).copy(alpha = 0.62f),
+                                        ),
+                                    ),
+                                ),
                     )
                 } else {
                     Box(
@@ -382,31 +412,29 @@ private fun PromoSlider() {
                     )
                 }
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.Bottom,
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 22.dp, vertical = 20.dp),
                 ) {
-                    Text(b.emoji, fontSize = 38.sp)
-                    Spacer(Modifier.width(14.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             b.title,
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold, fontSize = 20.sp),
+                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold, fontSize = 24.sp),
                             color = Color.White,
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
-                        Spacer(Modifier.height(3.dp))
+                        Spacer(Modifier.height(5.dp))
                         Text(
                             b.subtitle,
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 15.sp),
+                            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
                             color = Color.White.copy(alpha = 0.85f),
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(10.dp))
                         Text(
                             "${b.cta} →",
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
                             color = Color.White,
                         )
                     }
@@ -414,14 +442,14 @@ private fun PromoSlider() {
             }
         }
         // Dot indicators
-        Row(modifier = Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.Center) {
+        Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.Center) {
             repeat(promoBanners.size) { i ->
                 val sel = pagerState.currentPage == i
                 Box(
                     modifier =
                         Modifier
                             .padding(horizontal = 3.dp)
-                            .size(if (sel) 20.dp else 6.dp, 6.dp)
+                            .size(if (sel) 18.dp else 5.dp, 5.dp)
                             .clip(if (sel) RoundedCornerShape(3.dp) else CircleShape)
                             .background(if (sel) BrandGreen else Color(0xFFD1D5DB)),
                 )
@@ -434,7 +462,7 @@ private fun PromoSlider() {
 @Composable
 private fun TrustStrip() {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 2.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         TrustChip(icon = Icons.Default.VerifiedUser, label = "आधार सत्यापित", modifier = Modifier.weight(1f))
@@ -455,8 +483,8 @@ private fun TrustChip(
             modifier
                 .height(44.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(Color.White)
-                .border(1.dp, Color(0xFFDDE7E3), RoundedCornerShape(14.dp))
+                .background(SurfaceWhite)
+                .border(1.dp, CardBorder, RoundedCornerShape(14.dp))
                 .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
@@ -465,7 +493,7 @@ private fun TrustChip(
         Spacer(Modifier.width(4.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.SemiBold),
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.SemiBold),
             color = BrandGreen,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -491,10 +519,11 @@ private fun CategoryCard(
     Box(
         modifier =
             modifier
-                .height(148.dp)
+                .height(126.dp)
                 .scale(scale)
-                .clip(RoundedCornerShape(20.dp))
-                .background(Brush.verticalGradient(listOf(style.gradientStart, style.gradientEnd)))
+                .clip(RoundedCornerShape(16.dp))
+                .background(SurfaceWhite)
+                .border(1.dp, CardBorder, RoundedCornerShape(16.dp))
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onPress = {
@@ -506,48 +535,42 @@ private fun CategoryCard(
                     )
                 },
     ) {
-        // Ghost icon
-        Icon(
-            style.icon,
-            contentDescription = null,
-            tint = Color.White.copy(alpha = 0.08f),
-            modifier = Modifier.size(110.dp).align(Alignment.BottomEnd).padding(6.dp),
-        )
-        Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
-            // Icon tile (Codex: 56dp)
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier =
-                    Modifier
-                        .size(56.dp)
-                        .background(Color.White.copy(alpha = 0.18f), RoundedCornerShape(14.dp)),
-            ) {
-                Icon(style.icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
+        Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier =
+                        Modifier
+                            .size(36.dp)
+                            .background(style.iconBackground, RoundedCornerShape(12.dp)),
+                ) {
+                    Icon(style.icon, contentDescription = null, tint = style.iconTint, modifier = Modifier.size(21.dp))
+                }
+                Spacer(Modifier.weight(1f))
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    tint = TextSecondary.copy(alpha = 0.55f),
+                    modifier = Modifier.size(16.dp),
+                )
             }
-            Spacer(Modifier.weight(1f))
-            // Title (Codex: 17sp Bold)
+            Spacer(Modifier.height(8.dp))
             Text(
                 text = category.name,
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, fontSize = 17.sp),
-                color = Color.White,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 18.sp),
+                color = TextPrimary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            // Price (Codex: 15sp Semibold)
             if (category.minPricePaise > 0) {
+                Spacer(Modifier.height(3.dp))
                 Text(
                     text = formatPrice(category.minPricePaise),
-                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold),
-                    color = Color.White.copy(alpha = 0.88f),
+                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.SemiBold),
+                    color = BrandGreen,
                 )
             }
         }
-        Icon(
-            Icons.AutoMirrored.Filled.ArrowForward,
-            contentDescription = null,
-            tint = Color.White.copy(alpha = 0.55f),
-            modifier = Modifier.size(16.dp).align(Alignment.TopEnd).padding(top = 12.dp, end = 12.dp),
-        )
     }
 }
 
@@ -557,23 +580,66 @@ private fun HomeBottomNav(
     selected: Int,
     onSelect: (Int) -> Unit,
 ) {
-    NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
-        navItems.forEachIndexed { i, item ->
-            NavigationBarItem(
-                selected = selected == i,
-                onClick = { onSelect(i) },
-                icon = { Icon(item.icon, contentDescription = item.label) },
-                label = { Text(item.label, style = MaterialTheme.typography.labelSmall, maxLines = 1) },
-                colors =
-                    NavigationBarItemDefaults.colors(
-                        selectedIconColor = BrandGreen,
-                        selectedTextColor = BrandGreen,
-                        indicatorColor = BrandGreen.copy(alpha = 0.12f),
-                        unselectedIconColor = TextSecondary,
-                        unselectedTextColor = TextSecondary,
-                    ),
-            )
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(start = 18.dp, end = 18.dp, top = 8.dp, bottom = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(68.dp)
+                    .shadow(24.dp, RoundedCornerShape(28.dp), clip = false)
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(Color.White.copy(alpha = 0.74f))
+                    .border(1.dp, Color.White.copy(alpha = 0.86f), RoundedCornerShape(28.dp))
+                    .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            navItems.forEachIndexed { i, item ->
+                GlassNavItem(
+                    item = item,
+                    selected = selected == i,
+                    onClick = { onSelect(i) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun GlassNavItem(
+    item: NavItem,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val itemColor = if (selected) BrandGreen else TextSecondary
+    Column(
+        modifier =
+            modifier
+                .height(52.dp)
+                .clip(RoundedCornerShape(22.dp))
+                .background(if (selected) MutedGreen.copy(alpha = 0.95f) else Color.Transparent)
+                .clickable(onClick = onClick)
+                .padding(vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Icon(item.icon, contentDescription = item.label, tint = itemColor, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.height(2.dp))
+        Text(
+            item.label,
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold, fontSize = 10.sp),
+            color = itemColor,
+            maxLines = 1,
+        )
     }
 }
 

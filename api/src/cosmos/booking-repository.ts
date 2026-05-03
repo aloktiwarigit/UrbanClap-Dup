@@ -12,9 +12,12 @@ export const bookingRepo = {
     paymentOrderId: string,
     amount: number,
   ): Promise<BookingDoc> {
+    const paymentMethod = req.paymentMethod ?? 'RAZORPAY';
     const doc: BookingDoc = {
       id: randomUUID(), customerId, ...req,
       status: 'PENDING_PAYMENT', paymentOrderId,
+      paymentMethod,
+      ...(paymentMethod === 'CASH_ON_SERVICE' ? { cashCollectionStatus: 'PENDING' as const } : {}),
       paymentId: null, paymentSignature: null,
       amount, createdAt: now(),
     };
@@ -72,6 +75,22 @@ export const bookingRepo = {
       .items.query<BookingDoc>({
         query: "SELECT * FROM c WHERE (c.status IN ('ASSIGNED', 'NO_SHOW_REDISPATCH') OR (c.status = 'SEARCHING' AND IS_DEFINED(c.noShowTechnicianId))) AND c.slotDate <= @slotDate",
         parameters: [{ name: '@slotDate', value: slotDateCutoff }],
+      })
+      .fetchAll();
+    return resources;
+  },
+
+  async getByTechnicianId(technicianId: string): Promise<BookingDoc[]> {
+    const { resources } = await getBookingsContainer()
+      .items.query<BookingDoc>({
+        query: `SELECT * FROM c
+                WHERE c.technicianId = @technicianId
+                  AND c.status IN (
+                    'ASSIGNED', 'EN_ROUTE', 'REACHED', 'IN_PROGRESS',
+                    'AWAITING_PRICE_APPROVAL', 'COMPLETED', 'PAID', 'CLOSED'
+                  )
+                ORDER BY c.slotDate ASC, c.slotWindow ASC`,
+        parameters: [{ name: '@technicianId', value: technicianId }],
       })
       .fetchAll();
     return resources;

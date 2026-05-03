@@ -26,8 +26,7 @@ public class GoogleSignInUseCaseTest {
         context = mockk(relaxed = true)
         activity = mockk(relaxed = true)
         sut = GoogleSignInUseCase(credentialManager, context)
-        // Override internal property so tests reach the CredentialManager call.
-        // BuildConfig.GOOGLE_WEB_CLIENT_ID is blank in test builds.
+        // Override internal property so tests do not depend on build-time config.
         sut.webClientId = "fake-web-client-id"
     }
 

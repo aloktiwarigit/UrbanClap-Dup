@@ -51,6 +51,10 @@
 
     <!-- Booking flow -->
     <string name="slot_picker_title">Choose Date &amp; Time</string>
+    <string name="slot_picker_heading">Choose your slot</string>
+    <string name="slot_picker_subtitle">Pick a convenient arrival window. You can review everything before payment.</string>
+    <string name="slot_picker_date_label">Date</string>
+    <string name="slot_picker_time_label">Time</string>
     <string name="slot_picker_next">Next</string>
     <string name="address_screen_title">Your Address</string>
     <string name="address_heading">Where should the technician come?</string>
@@ -61,20 +65,28 @@
     <string name="address_privacy_note">Your address is shared only with the assigned technician and owner support.</string>
     <string name="address_next">Next</string>
     <string name="booking_summary_title">Booking Summary</string>
-    <string name="booking_summary_heading">Review and pay</string>
-    <string name="booking_summary_subtitle">Your booking starts only after payment succeeds.</string>
+    <string name="booking_summary_heading">Review and book</string>
+    <string name="booking_summary_subtitle">Choose online payment or pay cash when the technician reaches your home.</string>
     <string name="booking_summary_slot_label">Slot</string>
     <string name="booking_summary_address_label">Address</string>
+    <string name="booking_payment_method_title">Payment method</string>
+    <string name="booking_payment_online_title">Pay online now</string>
+    <string name="booking_payment_online_body">Use Razorpay with UPI, cards, or wallets.</string>
+    <string name="booking_payment_cash_title">Cash when technician arrives</string>
+    <string name="booking_payment_cash_body">Create the service order now and pay at your doorstep.</string>
     <string name="booking_payment_secure_title">Secure Razorpay payment</string>
     <string name="booking_payment_secure_body">You will get live assignment updates after payment confirmation.</string>
+    <string name="booking_payment_cash_note_title">Cash payment selected</string>
+    <string name="booking_payment_cash_note_body">We will assign a technician now. Please pay the listed amount when they reach.</string>
     <string name="booking_summary_pay_now">Pay Now</string>
+    <string name="booking_summary_book_cash">Book with Cash</string>
     <string name="booking_error_title">Booking could not continue</string>
     <string name="booking_confirmed_title">Booking Confirmed!</string>
-    <string name="booking_confirmed_body">Payment is complete. We are assigning a verified technician for your slot.</string>
+    <string name="booking_confirmed_body">We are assigning a verified technician for your slot.</string>
     <string name="booking_confirmed_id_label">Booking ID: %s</string>
     <string name="booking_confirmed_track">Track your service</string>
     <string name="booking_confirmed_home">Back to Home</string>
-    <string name="booking_timeline_paid">Payment confirmed</string>
+    <string name="booking_timeline_paid">Booking confirmed</string>
     <string name="booking_timeline_paid_body">Your slot is reserved and the job is queued for dispatch.</string>
     <string name="booking_timeline_assigning">Technician assignment</string>
     <string name="booking_timeline_assigning_body">We match based on service skill, distance, and availability.</string>
@@ -93,9 +105,9 @@
     <string name="price_approval_selected_total">Approved add-ons total</string>
 
     <!-- Settings -->
-    <string name="settings_title">Settings</string>
-    <string name="settings_language">Language</string>
-    <string name="settings_language_title">Choose language</string>
-    <string name="settings_language_save">Save</string>
+    <string name="settings_title">सेटिंग्स</string>
+    <string name="settings_language">भाषा</string>
+    <string name="settings_language_title">भाषा चुनें</string>
+    <string name="settings_language_save">सेव करें</string>
 
 </resources>

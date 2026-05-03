@@ -14,12 +14,14 @@ public data class ServiceDto(
     @Json(name = "id") public val id: String,
     @Json(name = "categoryId") public val categoryId: String,
     @Json(name = "name") public val name: String,
-    @Json(name = "description") public val description: String,
+    @Json(name = "description") public val description: String? = null,
+    @Json(name = "shortDescription") public val shortDescription: String? = null,
     @Json(name = "basePrice") public val basePrice: Int,
     @Json(name = "durationMinutes") public val durationMinutes: Int,
-    @Json(name = "imageUrl") public val imageUrl: String,
-    @Json(name = "includes") public val includes: List<String>,
-    @Json(name = "addOns") public val addOns: List<AddOnDto>,
+    @Json(name = "imageUrl") public val imageUrl: String? = null,
+    @Json(name = "heroImageUrl") public val heroImageUrl: String? = null,
+    @Json(name = "includes") public val includes: List<String> = emptyList(),
+    @Json(name = "addOns") public val addOns: List<AddOnDto> = emptyList(),
 )
 
 public fun ServiceDto.toDomain() =
@@ -27,10 +29,10 @@ public fun ServiceDto.toDomain() =
         id = id,
         categoryId = categoryId,
         name = name,
-        description = description,
+        description = description ?: shortDescription.orEmpty(),
         basePrice = basePrice,
         durationMinutes = durationMinutes,
-        imageUrl = imageUrl,
+        imageUrl = imageUrl ?: heroImageUrl.orEmpty(),
         includes = includes,
         addOns =
             addOns.map {

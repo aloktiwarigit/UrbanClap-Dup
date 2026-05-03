@@ -48,14 +48,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.catalogue.model.Service
 
-private val WarmIvory = Color(0xFFFFFBF5)
-private val AppBarStart = Color(0xFF064A3D)
-private val AppBarEnd = Color(0xFF0B6B58)
-private val BrandGreen = Color(0xFF0E4F47)
-private val ServiceTitle = Color(0xFF1A1A2E)
-private val ServiceDescription = Color(0xFF6B7280)
-private val ServiceCardBorder = Color(0xFFE8E2D8)
-private val DurationChipBackground = Color(0xFFF0FDF4)
+private val WarmIvory = Color(0xFFFBF7EF)
+private val AppBarStart = Color(0xFF062A20)
+private val AppBarEnd = Color(0xFF0B3D2E)
+private val BrandGreen = Color(0xFF0B3D2E)
+private val ServiceTitle = Color(0xFF18231F)
+private val ServiceDescription = Color(0xFF5F6C66)
+private val ServiceCardBorder = Color(0xFFDED8CD)
+private val DurationChipBackground = Color(0xFFE8F1EC)
 private val SkeletonLine = Color(0xFFEDE7DD)
 private val ServiceCardShape = RoundedCornerShape(12.dp)
 private val PillShape = RoundedCornerShape(percent = 50)

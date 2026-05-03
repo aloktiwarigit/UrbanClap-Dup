@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.homeservices.customer.domain.booking.ConfirmBookingUseCase
 import com.homeservices.customer.domain.booking.CreateBookingUseCase
 import com.homeservices.customer.domain.booking.RazorpayPaymentUseCase
+import com.homeservices.customer.domain.booking.model.BookingPaymentMethod
 import com.homeservices.customer.domain.booking.model.BookingRequest
 import com.homeservices.customer.domain.booking.model.BookingSlot
 import com.homeservices.customer.domain.booking.model.PaymentResult
@@ -54,6 +55,14 @@ internal class BookingViewModel
             serviceId: String,
             categoryId: String,
         ) {
+            startBooking(serviceId, categoryId, BookingPaymentMethod.RAZORPAY)
+        }
+
+        public fun startBooking(
+            serviceId: String,
+            categoryId: String,
+            paymentMethod: BookingPaymentMethod,
+        ) {
             val state = _uiState.value as? BookingUiState.Ready ?: return
             viewModelScope.launch {
                 _uiState.value = BookingUiState.CreatingBooking
@@ -65,16 +74,21 @@ internal class BookingViewModel
                         addressText = state.addressText,
                         addressLat = state.lat,
                         addressLng = state.lng,
+                        paymentMethod = paymentMethod,
                     )
                 createBooking(request).first().fold(
                     onSuccess = { result ->
                         pendingBookingId = result.bookingId
                         _uiState.value =
-                            BookingUiState.AwaitingPayment(
-                                bookingId = result.bookingId,
-                                razorpayOrderId = result.razorpayOrderId,
-                                amount = result.amount,
-                            )
+                            if (result.requiresPayment) {
+                                BookingUiState.AwaitingPayment(
+                                    bookingId = result.bookingId,
+                                    razorpayOrderId = result.razorpayOrderId,
+                                    amount = result.amount,
+                                )
+                            } else {
+                                BookingUiState.BookingConfirmed(result.bookingId)
+                            }
                     },
                     onFailure = { _uiState.value = BookingUiState.Error(it.message ?: "Booking failed") },
                 )

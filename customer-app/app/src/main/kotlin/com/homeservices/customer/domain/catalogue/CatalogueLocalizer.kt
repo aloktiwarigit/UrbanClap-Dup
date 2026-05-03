@@ -14,7 +14,7 @@ public class CatalogueLocalizer
             category: Category,
             locale: String,
         ): Category =
-            if (locale == "hi") {
+            if (locale.startsWith("hi")) {
                 val hindiName = HindiLocaleNames.categoryHindiNames[category.id]
                 if (hindiName != null) category.copy(name = hindiName) else category
             } else {
@@ -25,7 +25,7 @@ public class CatalogueLocalizer
             service: Service,
             locale: String,
         ): Service =
-            if (locale == "hi") {
+            if (locale.startsWith("hi")) {
                 val hindiName = HindiLocaleNames.serviceHindiNames[service.id]
                 val hindiDesc = HindiLocaleNames.serviceShortDescriptionsHindi[service.id]
                 service.copy(

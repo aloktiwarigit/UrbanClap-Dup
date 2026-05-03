@@ -83,13 +83,17 @@ internal fun SlotPickerScreen(
                     modifier = Modifier.weight(1f).padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    Text("Choose your slot", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                     Text(
-                        "Pick a convenient arrival window. You can review everything before payment.",
+                        stringResource(R.string.slot_picker_heading),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        stringResource(R.string.slot_picker_subtitle),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    SlotSection(title = "Date") {
+                    SlotSection(title = stringResource(R.string.slot_picker_date_label)) {
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             dates.forEach { date ->
                                 FilterChip(
@@ -100,7 +104,7 @@ internal fun SlotPickerScreen(
                             }
                         }
                     }
-                    SlotSection(title = "Time") {
+                    SlotSection(title = stringResource(R.string.slot_picker_time_label)) {
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             TIME_WINDOWS.forEach { window ->
                                 FilterChip(

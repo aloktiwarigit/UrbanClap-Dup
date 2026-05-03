@@ -22,6 +22,7 @@ public class CatalogueHomeScreenTest {
                     uiState = CatalogueHomeUiState.Loading,
                     onCategoryClick = {},
                     onSettingsClick = {},
+                    onProfileLanguageClick = {},
                 )
             }
         }
@@ -43,6 +44,7 @@ public class CatalogueHomeScreenTest {
                         ),
                     onCategoryClick = {},
                     onSettingsClick = {},
+                    onProfileLanguageClick = {},
                 )
             }
         }

@@ -1,5 +1,6 @@
 package com.homeservices.customer.data.booking.remote.dto
 
+import com.homeservices.customer.domain.booking.model.BookingPaymentMethod
 import com.homeservices.customer.domain.booking.model.BookingResult
 import com.homeservices.customer.domain.booking.model.PendingAddOn
 import com.squareup.moshi.JsonClass
@@ -12,6 +13,7 @@ public data class CreateBookingRequestDto(
     val slotWindow: String,
     val addressText: String,
     val addressLatLng: LatLngDto,
+    val paymentMethod: String = BookingPaymentMethod.RAZORPAY.name,
 )
 
 @JsonClass(generateAdapter = true)
@@ -25,8 +27,20 @@ public data class CreateBookingResponseDto(
     val bookingId: String,
     val razorpayOrderId: String,
     val amount: Int,
+    val requiresPayment: Boolean = true,
+    val paymentMethod: String? = null,
 ) {
-    public fun toDomain(): BookingResult = BookingResult(bookingId, razorpayOrderId, amount)
+    public fun toDomain(): BookingResult =
+        BookingResult(
+            bookingId = bookingId,
+            razorpayOrderId = razorpayOrderId,
+            amount = amount,
+            requiresPayment = requiresPayment,
+            paymentMethod =
+                paymentMethod
+                    ?.let { runCatching { BookingPaymentMethod.valueOf(it) }.getOrNull() }
+                    ?: BookingPaymentMethod.RAZORPAY,
+        )
 }
 
 @JsonClass(generateAdapter = true)

@@ -5,11 +5,14 @@ import com.homeservices.customer.data.booking.PaymentResultBus
 import com.homeservices.customer.domain.booking.ConfirmBookingUseCase
 import com.homeservices.customer.domain.booking.CreateBookingUseCase
 import com.homeservices.customer.domain.booking.RazorpayPaymentUseCase
+import com.homeservices.customer.domain.booking.model.BookingPaymentMethod
+import com.homeservices.customer.domain.booking.model.BookingRequest
 import com.homeservices.customer.domain.booking.model.BookingResult
 import com.homeservices.customer.domain.booking.model.BookingSlot
 import com.homeservices.customer.domain.booking.model.PaymentResult
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot as mockkSlot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -65,6 +68,31 @@ public class BookingViewModelTest {
             val state = vm.uiState.value
             assertThat(state).isInstanceOf(BookingUiState.AwaitingPayment::class.java)
             assertThat((state as BookingUiState.AwaitingPayment).razorpayOrderId).isEqualTo("order_1")
+        }
+
+    @Test
+    public fun `startBooking with cash creates cash booking and confirms without Razorpay`(): Unit =
+        runTest(dispatcher) {
+            val capturedRequest = mockkSlot<BookingRequest>()
+            every { createBooking(capture(capturedRequest)) } returns
+                flowOf(
+                    Result.success(
+                        BookingResult(
+                            bookingId = "bk1",
+                            razorpayOrderId = "cash_1",
+                            amount = 50000,
+                            requiresPayment = false,
+                            paymentMethod = BookingPaymentMethod.CASH_ON_SERVICE,
+                        ),
+                    ),
+                )
+            val vm = makeVm()
+            vm.setSlotAndAddress(slot, "123 Main St", 12.9716, 77.5946)
+            vm.startBooking("svc1", "cat1", BookingPaymentMethod.CASH_ON_SERVICE)
+            val state = vm.uiState.value
+            assertThat(capturedRequest.captured.paymentMethod).isEqualTo(BookingPaymentMethod.CASH_ON_SERVICE)
+            assertThat(state).isInstanceOf(BookingUiState.BookingConfirmed::class.java)
+            assertThat((state as BookingUiState.BookingConfirmed).bookingId).isEqualTo("bk1")
         }
 
     @Test

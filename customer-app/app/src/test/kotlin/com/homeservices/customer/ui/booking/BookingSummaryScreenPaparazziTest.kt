@@ -29,7 +29,7 @@ public class BookingSummaryScreenPaparazziTest {
             HomeservicesTheme(darkTheme = false) {
                 BookingSummaryContent(
                     uiState = readyState,
-                    onPayNow = {},
+                    onCreateBooking = {},
                     onBack = {},
                 )
             }
@@ -42,7 +42,7 @@ public class BookingSummaryScreenPaparazziTest {
             HomeservicesTheme(darkTheme = true) {
                 BookingSummaryContent(
                     uiState = readyState,
-                    onPayNow = {},
+                    onCreateBooking = {},
                     onBack = {},
                 )
             }

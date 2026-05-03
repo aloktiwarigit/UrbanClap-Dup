@@ -1,4 +1,42 @@
+import groovy.json.JsonSlurper
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
+
+val localProperties =
+    Properties().apply {
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.isFile) {
+            localPropertiesFile.inputStream().use(::load)
+        }
+    }
+
+fun localProperty(name: String): String? = localProperties.getProperty(name)?.takeIf { it.isNotBlank() }
+
+fun googleServicesWebClientId(): String? {
+    val googleServicesFile = file("google-services.json")
+    if (!googleServicesFile.isFile) return null
+    val root = JsonSlurper().parse(googleServicesFile) as? Map<*, *> ?: return null
+    val clients = root["client"] as? List<*> ?: return null
+
+    return clients
+        .asSequence()
+        .mapNotNull { it as? Map<*, *> }
+        .flatMap { client ->
+            ((client["oauth_client"] as? List<*>) ?: emptyList<Any?>()).asSequence()
+        }.mapNotNull { it as? Map<*, *> }
+        .firstOrNull { it["client_type"] == 3 }
+        ?.get("client_id")
+        ?.toString()
+        ?.takeIf { it.isNotBlank() }
+}
+
+fun buildConfigString(value: String): String = "\"${value.replace("\\", "\\\\").replace("\"", "\\\"")}\""
+
+val googleWebClientId =
+    System.getenv("GOOGLE_WEB_CLIENT_ID")?.takeIf { it.isNotBlank() }
+        ?: localProperty("GOOGLE_WEB_CLIENT_ID")
+        ?: googleServicesWebClientId()
+        ?: ""
 
 plugins {
     alias(libs.plugins.android.application)
@@ -36,6 +74,11 @@ android {
             "String",
             "GIT_SHA",
             "\"${System.getenv("GIT_SHA") ?: "dev"}\"",
+        )
+        buildConfigField(
+            "String",
+            "GOOGLE_WEB_CLIENT_ID",
+            buildConfigString(googleWebClientId),
         )
     }
 
@@ -392,6 +435,11 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.messaging)
+
+    // Credential Manager + Google Identity Library
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.playservices)
+    implementation(libs.google.identity.googleid)
 
     // Coroutines — play-services extensions (.await() on Task<T>)
     implementation(libs.kotlinx.coroutines.play.services)

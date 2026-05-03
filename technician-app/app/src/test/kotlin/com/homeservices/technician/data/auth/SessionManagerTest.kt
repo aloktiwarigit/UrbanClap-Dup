@@ -3,6 +3,7 @@ package com.homeservices.technician.data.auth
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider
+import com.homeservices.technician.domain.auth.model.AuthProvider
 import com.homeservices.technician.domain.auth.model.AuthState
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
@@ -100,7 +101,7 @@ public class SessionManagerTest {
     }
 
     @Test
-    public fun `initial state handles null phoneLastFour in prefs gracefully`() {
+    public fun `initial state handles missing phoneLastFour in prefs gracefully`() {
         // Covers the `prefs.getString(KEY_PHONE_LAST_FOUR, "") ?: ""` null branch
         prefs
             .edit()
@@ -112,6 +113,24 @@ public class SessionManagerTest {
 
         val state = freshManager.authState.value
         assertThat(state).isInstanceOf(AuthState.Authenticated::class.java)
-        assertThat((state as AuthState.Authenticated).phoneLastFour).isEmpty()
+        assertThat((state as AuthState.Authenticated).phoneLastFour).isNull()
+        assertThat(state.authProvider).isEqualTo(AuthProvider.Phone)
     }
+
+    @Test
+    public fun `saveSession with Email provider round-trips email and displayName`(): Unit =
+        runTest {
+            sessionManager.saveSession(
+                uid = "uid-email",
+                email = "tech@example.com",
+                displayName = "Tech User",
+                authProvider = AuthProvider.Email,
+            )
+
+            val state = sessionManager.authState.value as AuthState.Authenticated
+            assertThat(state.email).isEqualTo("tech@example.com")
+            assertThat(state.displayName).isEqualTo("Tech User")
+            assertThat(state.authProvider).isEqualTo(AuthProvider.Email)
+            assertThat(prefs.getString("auth_provider", null)).isEqualTo("email")
+        }
 }

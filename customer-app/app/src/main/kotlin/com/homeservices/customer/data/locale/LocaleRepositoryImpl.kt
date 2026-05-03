@@ -9,6 +9,7 @@ import com.homeservices.customer.data.locale.di.LocalePrefs
 import com.homeservices.customer.domain.locale.LocaleRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -25,7 +26,7 @@ public class LocaleRepositoryImpl
         }
 
         override val currentLocale: Flow<String> =
-            dataStore.data.map { prefs -> prefs[KEY_LOCALE_TAG] ?: DEFAULT_LOCALE }
+            dataStore.data.map { prefs -> prefs[KEY_LOCALE_TAG] ?: deviceSupportedLocale() }
 
         override val firstLaunchPending: Flow<Boolean> =
             dataStore.data.map { prefs -> !(prefs[KEY_FIRST_LAUNCH_COMPLETED] ?: false) }
@@ -37,4 +38,10 @@ public class LocaleRepositoryImpl
         override suspend fun markFirstLaunchCompleted() {
             dataStore.edit { prefs -> prefs[KEY_FIRST_LAUNCH_COMPLETED] = true }
         }
+
+        private fun deviceSupportedLocale(): String =
+            when (Locale.getDefault().language) {
+                "hi" -> "hi"
+                else -> DEFAULT_LOCALE
+            }
     }

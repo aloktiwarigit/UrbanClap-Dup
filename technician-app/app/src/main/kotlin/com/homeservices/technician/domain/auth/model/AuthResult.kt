@@ -21,5 +21,15 @@ public sealed class AuthResult {
         public data object WrongCode : Error()
 
         public data object CodeExpired : Error()
+
+        public data object WrongCredential : Error()
+
+        public data object UserNotFound : Error()
+
+        public data object EmailAlreadyInUse : Error()
+
+        public data object WeakPassword : Error()
+
+        public data object InvalidEmail : Error()
     }
 }

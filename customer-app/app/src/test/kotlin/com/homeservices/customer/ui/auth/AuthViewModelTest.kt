@@ -61,18 +61,18 @@ public class AuthViewModelTest {
         }
 
     @Test
-    public fun `initAuth transitions to OtpEntry when Truecaller is unavailable`(): Unit =
+    public fun `initAuth transitions to MethodSelection when Truecaller is unavailable`(): Unit =
         runTest {
             val activity = mockk<FragmentActivity>()
             every { orchestrator.start(activity, activity) } returns AuthOrchestrator.StartResult.FallbackToOtp
 
             viewModel.initAuth(activity)
 
-            assertThat(viewModel.uiState.value).isInstanceOf(AuthUiState.OtpEntry::class.java)
+            assertThat(viewModel.uiState.value).isEqualTo(AuthUiState.MethodSelection)
         }
 
     @Test
-    public fun `Truecaller Cancelled result transitions to OtpEntry`(): Unit =
+    public fun `Truecaller Cancelled result transitions to MethodSelection`(): Unit =
         runTest(testDispatcher) {
             val activity = mockk<FragmentActivity>()
             every { orchestrator.start(activity, activity) } returns AuthOrchestrator.StartResult.TruecallerLaunched
@@ -80,11 +80,11 @@ public class AuthViewModelTest {
             viewModel.initAuth(activity)
             truecallerResultFlow.emit(TruecallerAuthResult.Cancelled)
 
-            assertThat(viewModel.uiState.value).isInstanceOf(AuthUiState.OtpEntry::class.java)
+            assertThat(viewModel.uiState.value).isEqualTo(AuthUiState.MethodSelection)
         }
 
     @Test
-    public fun `Truecaller Failure result transitions to OtpEntry`(): Unit =
+    public fun `Truecaller Failure result transitions to MethodSelection`(): Unit =
         runTest(testDispatcher) {
             val activity = mockk<FragmentActivity>()
             every { orchestrator.start(activity, activity) } returns AuthOrchestrator.StartResult.TruecallerLaunched
@@ -92,7 +92,7 @@ public class AuthViewModelTest {
             viewModel.initAuth(activity)
             truecallerResultFlow.emit(TruecallerAuthResult.Failure(errorType = 5))
 
-            assertThat(viewModel.uiState.value).isInstanceOf(AuthUiState.OtpEntry::class.java)
+            assertThat(viewModel.uiState.value).isEqualTo(AuthUiState.MethodSelection)
         }
 
     @Test
@@ -311,11 +311,11 @@ public class AuthViewModelTest {
         }
 
     @Test
-    public fun `onRetry resets state to OtpEntry`(): Unit =
+    public fun `onRetry resets state to MethodSelection when no phone is active`(): Unit =
         runTest {
             viewModel.onRetry()
 
-            assertThat(viewModel.uiState.value).isInstanceOf(AuthUiState.OtpEntry::class.java)
+            assertThat(viewModel.uiState.value).isEqualTo(AuthUiState.MethodSelection)
         }
 
     @Test
