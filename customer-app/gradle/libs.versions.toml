@@ -42,7 +42,9 @@ razorpay       = "1.6.40"
 googlePlaces   = "3.5.0"
 playServicesMaps = "19.0.0"
 playServicesLocation = "21.3.0"
+playIntegrity        = "1.4.0"
 mapsCompose           = "4.3.3"
+workManager          = "2.9.1"
 
 # KYC-specific (Custom Tabs for DigiLocker redirect)
 androidxBrowser = "1.8.0"
@@ -137,6 +139,8 @@ google-places      = { module = "com.google.android.libraries.places:places",   
 play-services-maps = { module = "com.google.android.gms:play-services-maps",             version.ref = "playServicesMaps" }
 play-services-location = { module = "com.google.android.gms:play-services-location",      version.ref = "playServicesLocation" }
 maps-compose          = { module = "com.google.maps.android:maps-compose",              version.ref = "mapsCompose" }
+play-integrity        = { module = "com.google.android.play:integrity",                 version.ref = "playIntegrity" }
+androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx",               version.ref = "workManager" }
 
 # Test
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit5" }
