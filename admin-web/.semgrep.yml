@@ -20,3 +20,13 @@ rules:
     message: Do not read process.env in client components. Expose via NEXT_PUBLIC_ or server boundary.
     languages: [typescript, tsx]
     severity: ERROR
+
+  - id: no-setup-token-in-sessionstorage
+    pattern-either:
+      - pattern: sessionStorage.setItem('setupToken', ...)
+      - pattern: sessionStorage.getItem('setupToken')
+    message: "setupToken must be delivered via HttpOnly hs_setup cookie, not sessionStorage"
+    severity: ERROR
+    languages: [typescript, javascript]
+    paths:
+      include: ["admin-web/**"]
