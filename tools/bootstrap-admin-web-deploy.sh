@@ -43,6 +43,7 @@ fi
 # --- config ---
 RG="rg-homeservices-prod"
 SWA_NAME="swa-homeservices-admin-prod"
+ADMIN_API_BASE_URL="${ADMIN_API_BASE_URL:-https://func-homeservices-prod.azurewebsites.net/api}"
 # SWA Free is restricted to: westus2, centralus, eastus2, westeurope, eastasia.
 # centralindia is NOT available for Microsoft.Web/staticSites. eastasia (Hong Kong)
 # is the closest option to Bengaluru — ~140 ms RTT vs ~250 ms from westeurope.
@@ -100,7 +101,12 @@ printf '%s' "$FB_PROJECT_ID"    | gh secret set NEXT_PUBLIC_FIREBASE_PROJECT_ID 
 gh variable set ADMIN_WEB_PUBLIC_URL --body "$SWA_URL"
 
 # --- 5. SWA app settings (server-side runtime) ---
-echo "[5/5] Configuring SWA app settings (JWT_SECRET)..."
+echo "[5/5] Configuring SWA app settings (JWT_SECRET, API_BASE_URL)..."
+az staticwebapp appsettings set \
+  --name "$SWA_NAME" --resource-group "$RG" \
+  --setting-names "API_BASE_URL=$ADMIN_API_BASE_URL" \
+  --output none
+
 EXISTING_JWT="$(az staticwebapp appsettings list \
   --name "$SWA_NAME" --resource-group "$RG" \
   --query "properties.JWT_SECRET" -o tsv 2>/dev/null || echo "")"
