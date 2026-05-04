@@ -1,6 +1,7 @@
 import '../../../bootstrap.js';
 import { app } from '@azure/functions';
 import type { HttpRequest, InvocationContext, HttpResponseInit, Cookie } from '@azure/functions';
+import { withRateLimit } from '../../../middleware/withRateLimit.js';
 import { timingSafeEqual } from 'crypto';
 
 if (!process.env.ADMIN_SETUP_SECRET) {
@@ -146,16 +147,20 @@ export async function setupTotpPostHandler(
   return { status: 200, cookies, jsonBody: { adminId: adminUser.adminId } };
 }
 
+const totpRateLimiter = withRateLimit({
+  buckets: { ip: { capacity: 10, refillPerSec: 10 / 60 } },
+});
+
 app.http('adminSetupTotpGet', {
   methods: ['GET'],
   route: 'v1/admin/auth/setup-totp',
   authLevel: 'anonymous',
-  handler: setupTotpGetHandler,
+  handler: totpRateLimiter(setupTotpGetHandler),
 });
 
 app.http('adminSetupTotpPost', {
   methods: ['POST'],
   route: 'v1/admin/auth/setup-totp',
   authLevel: 'anonymous',
-  handler: setupTotpPostHandler,
+  handler: totpRateLimiter(setupTotpPostHandler),
 });

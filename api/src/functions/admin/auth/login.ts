@@ -2,6 +2,7 @@ import '../../../bootstrap.js';
 import { randomUUID } from 'node:crypto';
 import { app } from '@azure/functions';
 import type { HttpRequest, InvocationContext, HttpResponseInit, Cookie } from '@azure/functions';
+import { withRateLimit } from '../../../middleware/withRateLimit.js';
 import * as Sentry from '@sentry/node';
 import { LoginRequestSchema } from '../../../schemas/admin-auth.js';
 import { verifyFirebaseIdToken } from '../../../services/firebaseAdmin.js';
@@ -212,9 +213,13 @@ export async function adminLoginHandler(
   return completeTotpLogin(req, adminUser, role, totpCode);
 }
 
+const adminLoginRateLimiter = withRateLimit({
+  buckets: { ip: { capacity: 10, refillPerSec: 10 / 60 } },
+});
+
 app.http('adminLogin', {
   methods: ['POST'],
   route: 'v1/admin/auth/login',
   authLevel: 'anonymous',
-  handler: adminLoginHandler,
+  handler: adminLoginRateLimiter(adminLoginHandler),
 });

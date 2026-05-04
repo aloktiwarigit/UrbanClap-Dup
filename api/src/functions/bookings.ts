@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { HttpHandler } from '@azure/functions';
 import { app } from '@azure/functions';
 import * as Sentry from '@sentry/node';
+import { withRateLimit } from '../middleware/withRateLimit.js';
 import { requireCustomer, type CustomerHttpHandler } from '../middleware/requireCustomer.js';
 import { CreateBookingRequestSchema, ConfirmBookingRequestSchema } from '../schemas/booking.js';
 import { RequestAddOnBodySchema, ApproveAddOnsBodySchema } from '../schemas/addon-approval.js';
@@ -265,7 +266,11 @@ const approveFinalPriceInner: CustomerHttpHandler = async (req, _ctx, customer) 
 };
 export const approveFinalPriceHandler: HttpHandler = requireCustomer(approveFinalPriceInner);
 
-app.http('createBooking', { route: 'v1/bookings', methods: ['POST'], handler: createBookingHandler });
+const createBookingRateLimiter = withRateLimit({
+  buckets: { ip: { capacity: 20, refillPerSec: 20 / 60 } },
+});
+
+app.http('createBooking', { route: 'v1/bookings', methods: ['POST'], handler: createBookingRateLimiter(createBookingHandler) });
 app.http('confirmBooking', { route: 'v1/bookings/{id}/confirm', methods: ['POST'], handler: confirmBookingHandler });
 app.http('getMyBookings', { route: 'v1/bookings', methods: ['GET'], handler: getMyBookingsHandler });
 app.http('getBooking', { route: 'v1/bookings/{id}', methods: ['GET'], handler: getBookingHandler });
