@@ -70,11 +70,11 @@ jobs:
       - name: assemble debug APK (clean-room compile check)
         run: ./gradlew assembleDebug
 
-      - name: ktlint + detekt + android lint
-        run: ./gradlew ktlintCheck detekt lintDebug
-
       - name: unit tests + coverage gate
         run: ./gradlew testDebugUnitTest koverVerify
+
+      - name: ktlint + detekt + android lint
+        run: ./gradlew ktlintCheck detekt lintDebug
 
       - name: paparazzi screenshot diff
         run: ./gradlew verifyPaparazziDebug

@@ -37,8 +37,8 @@ function getSafeNextPath(): string {
   return next;
 }
 
-function routeTo(path: string) {
-  return path as Parameters<ReturnType<typeof useRouter>['push']>[0];
+function routeTo(path: string): Parameters<ReturnType<typeof useRouter>['push']>[0] {
+  return path;
 }
 
 function normalizeLoginError(code: string | undefined): string {

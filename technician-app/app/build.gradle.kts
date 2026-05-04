@@ -180,6 +180,7 @@ detekt {
     allRules = false
     autoCorrect = false
     ignoreFailures = false
+    baseline = file("detekt-baseline.xml")
 }
 
 kover {

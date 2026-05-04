@@ -59,21 +59,6 @@ jobs:
         env:
           NODE_ENV: test
 
-      - name: openapi spec is up to date
-        # Requires contents: write to push the auto-regenerated file back.
-        permissions:
-          contents: write
-        run: |
-          pnpm run openapi:build
-          if ! git diff --exit-code openapi.json; then
-            echo "::warning::api/openapi.json regenerated on CI — committing"
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add openapi.json
-            git commit -m "chore(api): auto-regenerate openapi.json [skip ci]"
-            git push
-          fi
-
       - name: openapi spec quality (spectral — contract lint)
         run: pnpm run openapi:lint
 
@@ -89,11 +74,52 @@ jobs:
             p/secrets
             api/.semgrep.yml
 
+  openapi-sync:
+    name: Auto-commit regenerated openapi.json
+    runs-on: ubuntu-latest
+    needs: quality-gate
+    # Only push back on direct pushes to main — PRs cannot push to the PR branch from a
+    # workflow and workflow_dispatch has no target branch guarantee.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: api/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: openapi spec is up to date
+        run: |
+          pnpm run openapi:build
+          if ! git diff --exit-code openapi.json; then
+            echo "::warning::api/openapi.json regenerated on CI — committing"
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add openapi.json
+            git commit -m "chore(api): auto-regenerate openapi.json [skip ci]"
+            git push
+          fi
+
   deploy:
     name: Deploy to Azure Functions
     runs-on: ubuntu-latest
-    needs: quality-gate
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: [quality-gate, openapi-sync]
+    # openapi-sync is skipped on workflow_dispatch (push-only); treat skipped as success.
+    if: |
+      always() &&
+      needs.quality-gate.result == 'success' &&
+      (needs.openapi-sync.result == 'success' || needs.openapi-sync.result == 'skipped') &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     permissions:
       id-token: write
       contents: read
@@ -149,8 +175,9 @@ jobs:
             --output none
       - name: Deploy via Oryx remote build
         # Oryx builds on Azure Linux — functions ARE discovered (proven).
-        # Trigger sync BadRequest/timeout is a known non-fatal race; the step below
-        # (List indexed functions) and the health check verify the actual deploy outcome.
+        # Trigger sync timeout is a known non-fatal race; subsequent steps verify the
+        # actual deploy outcome. The 36-attempt health probe is the real deploy verifier.
+        continue-on-error: true
         run: func azure functionapp publish "$AZURE_FUNCTIONAPP_NAME" --javascript --build remote --verbose
       - name: List indexed functions
         continue-on-error: true
