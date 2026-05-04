@@ -11,7 +11,7 @@
  * ADR-0005 Phase 2 implementation.
  */
 
-import '../../../bootstrap.js';
+import '../../bootstrap.js';
 import { app } from '@azure/functions';
 import type { HttpRequest, InvocationContext, HttpResponseInit } from '@azure/functions';
 import { createVerify } from 'node:crypto';
