@@ -17,7 +17,9 @@ test('CTA navigates to /login', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('link', { name: /sign in to admin/i }).click();
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByRole('heading', { level: 1, name: /sign in/i })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 1, name: /secure operations access/i }),
+  ).toBeVisible();
 });
 
 test('footer shows real commit sha and semver from /v1/health', async ({ page }) => {
