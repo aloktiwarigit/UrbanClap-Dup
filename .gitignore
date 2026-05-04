@@ -38,6 +38,7 @@ pnpm-debug.log*
 # === Android / Kotlin ===
 **/local.properties
 **/.gradle/
+**/.gradle-user-home*/
 **/build/
 **/captures/
 **/.idea/
@@ -131,6 +132,7 @@ admin-web/*.tsbuildinfo
 
 # Debug screenshots
 docs/design/snap.png
+moto-g-snapshots/
 
 # === Visual-audit + Playwright MCP scratch (manual session output) ===
 .playwright-mcp/
