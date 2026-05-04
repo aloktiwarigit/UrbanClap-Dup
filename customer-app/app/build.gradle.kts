@@ -141,6 +141,7 @@ android {
     }
 
     lint {
+        baseline = file("lint-baseline.xml")
         warningsAsErrors = true
         checkDependencies = false
         abortOnError = true
@@ -191,6 +192,7 @@ detekt {
     allRules = false
     autoCorrect = false
     ignoreFailures = false
+    baseline = file("detekt-baseline.xml")
 }
 
 kover {

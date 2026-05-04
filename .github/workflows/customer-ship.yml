@@ -21,6 +21,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 env:
   GIT_SHA: ${{ github.sha }}
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
@@ -69,6 +72,9 @@ jobs:
 
       - name: unit tests + coverage gate
         run: ./gradlew testDebugUnitTest koverVerify
+
+      - name: ktlint + detekt + android lint
+        run: ./gradlew ktlintCheck detekt lintDebug
 
       - name: paparazzi screenshot diff
         run: ./gradlew verifyPaparazziDebug

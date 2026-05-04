@@ -149,7 +149,7 @@ function toServiceProfile(doc: Record<string, unknown> | null): TechnicianServic
     typeof coordinates[1] === 'number';
   return {
     skills,
-    location: hasCoordinates ? { lat: coordinates[1], lng: coordinates[0] } : null,
+    location: hasCoordinates ? { lat: coordinates[1] as number, lng: coordinates[0] as number } : null,
   };
 }
 

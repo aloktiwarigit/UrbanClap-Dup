@@ -31,6 +31,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   quality-gate:
     runs-on: ubuntu-latest
@@ -66,8 +69,11 @@ jobs:
             exit 1
           fi
 
-      - name: typecheck + unit tests
-        run: pnpm typecheck && pnpm test
+      - name: lint
+        run: pnpm lint --max-warnings 0
+
+      - name: typecheck + unit tests (with coverage gate)
+        run: pnpm typecheck && pnpm test:coverage
 
       - name: build (clean-room compile check)
         run: pnpm build
@@ -80,7 +86,6 @@ jobs:
   e2e-and-a11y:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    if: github.event_name == 'push'
     needs: quality-gate
     defaults:
       run:
@@ -128,6 +133,7 @@ jobs:
       - name: axe-core a11y (WCAG AA)
         run: pnpm test:a11y
       - name: lighthouse CI budgets
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: pnpm exec lhci autorun --config=lighthouserc.cjs
 
   deploy:
