@@ -27,8 +27,13 @@ export class CatalogueRepository {
   }
 
   async getCategoryById(id: string): Promise<ServiceCategory | null> {
-    const { resource } = await this.cats.item(id, id).read<ServiceCategory>();
-    return resource ?? null;
+    const { resources } = await this.cats.items
+      .query<ServiceCategory>({
+        query: 'SELECT * FROM c WHERE c.id = @id',
+        parameters: [{ name: '@id', value: id }],
+      })
+      .fetchAll();
+    return resources[0] ?? null;
   }
 
   async createCategory(body: CreateCategoryBody, uid: string): Promise<ServiceCategory> {
@@ -41,7 +46,7 @@ export class CatalogueRepository {
     const existing = await this.getCategoryById(id);
     if (!existing) return null;
     const updated: ServiceCategory = { ...existing, ...body, id, updatedBy: uid, updatedAt: now() };
-    const { resource } = await this.cats.item(id, id).replace<ServiceCategory>(updated);
+    const { resource } = await this.cats.items.upsert<ServiceCategory>(updated);
     return resource!;
   }
 
@@ -49,7 +54,7 @@ export class CatalogueRepository {
     const existing = await this.getCategoryById(id);
     if (!existing) return null;
     const updated = { ...existing, isActive: !existing.isActive, updatedBy: uid, updatedAt: now() };
-    const { resource } = await this.cats.item(id, id).replace<ServiceCategory>(updated);
+    const { resource } = await this.cats.items.upsert<ServiceCategory>(updated);
     return resource!;
   }
 

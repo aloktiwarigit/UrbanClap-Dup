@@ -1,5 +1,6 @@
 import { getCosmosClient, DB_NAME } from './client.js';
-import { boundingBoxPolygon } from './geo.js';
+import { boundingBoxPolygon, haversine } from './geo.js';
+import type { BookingDoc } from '../schemas/booking.js';
 import type { TechnicianKyc, KycStatus } from '../schemas/kyc.js';
 import type { AvailabilityWindow, TechnicianProfile } from '../schemas/technician.js';
 
@@ -213,6 +214,87 @@ export async function getTechniciansWithinRadius(
     .query<TechnicianProfile>(query)
     .fetchAll();
   return resources;
+}
+
+export interface TechnicianLookupInfo {
+  id: string;
+  technicianId: string;
+  displayName?: string;
+  name?: string;
+  rating?: number;
+  isOnline?: boolean;
+  isAvailable?: boolean;
+}
+
+export async function getTechniciansByIds(
+  technicianIds: string[],
+): Promise<TechnicianLookupInfo[]> {
+  const ids = [...new Set(technicianIds.filter(Boolean))];
+  if (ids.length === 0) return [];
+
+  const client = getCosmosClient();
+  const container = client.database(DB_NAME).container(CONTAINER);
+  const { resources } = await container.items
+    .query<TechnicianLookupInfo>({
+      query: `SELECT c.id, c.technicianId, c.displayName, c.name, c.rating, c.isOnline, c.isAvailable
+              FROM c
+              WHERE ARRAY_CONTAINS(@ids, c.id) OR ARRAY_CONTAINS(@ids, c.technicianId)`,
+      parameters: [{ name: '@ids', value: ids }],
+    })
+    .fetchAll();
+  return resources;
+}
+
+function technicianDisplayName(tech: TechnicianProfile & Record<string, unknown>): string {
+  const displayName = tech['displayName'];
+  if (typeof displayName === 'string' && displayName.trim() !== '') return displayName;
+  const name = tech['name'];
+  if (typeof name === 'string' && name.trim() !== '') return name;
+  return tech.technicianId || tech.id;
+}
+
+export interface TechnicianCandidate {
+  technicianId: string;
+  displayName: string;
+  distanceKm: number;
+  rating?: number;
+  isOnline: boolean;
+  isAvailable: boolean;
+}
+
+export async function getTechnicianCandidatesForBooking(
+  booking: BookingDoc,
+  radiusKm: number,
+): Promise<TechnicianCandidate[]> {
+  const { lat, lng } = booking.addressLatLng;
+  const assignedTechnicianIds = new Set(booking.technicianId ? [booking.technicianId] : []);
+  const candidates = await getTechniciansWithinRadius(lat, lng, radiusKm, booking.serviceId);
+  return candidates
+    .map((tech) => {
+      const distanceKm = haversine(lat, lng, tech.location.coordinates[1], tech.location.coordinates[0]);
+      return { tech: tech as TechnicianProfile & Record<string, unknown>, distanceKm };
+    })
+    .filter(({ tech, distanceKm }) =>
+      distanceKm <= radiusKm &&
+      !assignedTechnicianIds.has(tech.id) &&
+      !assignedTechnicianIds.has(tech.technicianId)
+    )
+    .filter(({ tech }) => !(tech.blockedCustomerIds ?? []).includes(booking.customerId))
+    .sort((a, b) => {
+      if (a.distanceKm !== b.distanceKm) return a.distanceKm - b.distanceKm;
+      return (b.tech.rating ?? 0) - (a.tech.rating ?? 0);
+    })
+    .map(({ tech, distanceKm }) => {
+      const candidate: TechnicianCandidate = {
+        technicianId: tech.technicianId || tech.id,
+        displayName: technicianDisplayName(tech),
+        distanceKm: Number(distanceKm.toFixed(2)),
+        isOnline: tech.isOnline,
+        isAvailable: tech.isAvailable,
+      };
+      if (tech.rating !== undefined) candidate.rating = tech.rating;
+      return candidate;
+    });
 }
 
 // ── Settlement helpers (E06-S04) ──────────────────────────────────────────────

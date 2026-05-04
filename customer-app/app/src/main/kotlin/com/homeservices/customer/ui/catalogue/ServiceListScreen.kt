@@ -141,11 +141,57 @@ internal fun ServiceListContent(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                         )
                     }
-                    items(uiState.services, key = { it.id }) { service ->
-                        ServiceCard(service = service, onClick = { onServiceClick(service.id) })
+                    if (uiState.services.isEmpty()) {
+                        item {
+                            EmptyServiceList()
+                        }
+                    } else {
+                        items(uiState.services, key = { it.id }) { service ->
+                            ServiceCard(service = service, onClick = { onServiceClick(service.id) })
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun EmptyServiceList() {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 96.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Surface(
+                shape = PillShape,
+                color = DurationChipBackground,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Build,
+                    contentDescription = null,
+                    tint = BrandGreen,
+                    modifier = Modifier.padding(14.dp).size(24.dp),
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = stringResource(R.string.service_list_empty_title),
+                color = ServiceTitle,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.service_list_empty_copy),
+                color = ServiceDescription,
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }

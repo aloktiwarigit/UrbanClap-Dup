@@ -45,7 +45,7 @@ vi.mock('../../src/services/dispatcher.service.js', () => ({
 
 vi.mock('../../src/cosmos/catalogue-repository.js', () => ({
   catalogueRepo: {
-    getServiceByIdCrossPartition: vi.fn().mockResolvedValue({ id: 'svc-1', basePrice: 59900, isActive: true }),
+    getServiceByIdCrossPartition: vi.fn().mockResolvedValue({ id: 'svc-1', name: 'AC Deep Clean', basePrice: 59900, isActive: true }),
   },
 }));
 
@@ -106,6 +106,7 @@ describe('POST /v1/bookings', () => {
       'cust-1',
       expect.stringMatching(/^cash_/),
       59900,
+      expect.objectContaining({ serviceName: 'AC Deep Clean' }),
     );
     expect(bookingRepo.markPaid).toHaveBeenCalledWith('bk-1', 'cash_on_service_pending');
     expect(dispatcherService.triggerDispatch).toHaveBeenCalledWith('bk-1');

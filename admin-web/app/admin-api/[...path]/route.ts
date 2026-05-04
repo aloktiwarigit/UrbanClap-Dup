@@ -3,8 +3,7 @@ import { getApiBaseUrl } from '@/lib/apiBase';
 
 export const dynamic = 'force-dynamic';
 
-const PROXY_PREFIX = '/admin-api';
-const REFRESH_PROXY_PATH = `${PROXY_PREFIX}/v1/admin/auth/refresh`;
+const LEGACY_REFRESH_PROXY_PATH = '/admin-api/v1/admin/auth/refresh';
 
 type ProxyContext = {
   params: Promise<{ path?: string[] }>;
@@ -34,7 +33,7 @@ function isLocalhost(requestUrl: string): boolean {
 function rewriteSetCookie(cookie: string, requestUrl: string): string {
   let rewritten = cookie.replace(
     /;\s*Path=\/api\/v1\/admin\/auth\/refresh/gi,
-    `; Path=${REFRESH_PROXY_PATH}`,
+    '; Path=/',
   );
 
   if (isLocalhost(requestUrl)) {
@@ -42,6 +41,27 @@ function rewriteSetCookie(cookie: string, requestUrl: string): string {
   }
 
   return rewritten;
+}
+
+function rewriteSetCookies(cookie: string, requestUrl: string): string[] {
+  const rewritten = rewriteSetCookie(cookie, requestUrl);
+  const shouldClearLegacyRefresh =
+    /^hs_refresh=/i.test(cookie.trim()) &&
+    /;\s*Path=\/api\/v1\/admin\/auth\/refresh/gi.test(cookie) &&
+    /;\s*Max-Age=0\b/i.test(cookie);
+
+  if (!shouldClearLegacyRefresh) return [rewritten];
+
+  return [
+    rewritten,
+    rewriteSetCookie(
+      cookie.replace(
+        /;\s*Path=\/api\/v1\/admin\/auth\/refresh/gi,
+        `; Path=${LEGACY_REFRESH_PROXY_PATH}`,
+      ),
+      requestUrl,
+    ),
+  ];
 }
 
 function buildForwardHeaders(request: Request): Headers {
@@ -94,7 +114,9 @@ async function proxy(request: Request, context: ProxyContext): Promise<NextRespo
   });
 
   for (const cookie of getSetCookieHeaders(upstream.headers)) {
-    response.headers.append('set-cookie', rewriteSetCookie(cookie, request.url));
+    for (const rewritten of rewriteSetCookies(cookie, request.url)) {
+      response.headers.append('set-cookie', rewritten);
+    }
   }
 
   return response;

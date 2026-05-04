@@ -6,6 +6,7 @@ import {
   waiveFeeOrder,
   escalateOrder,
   addOrderNote,
+  fetchTechnicianCandidatesForOrder,
 } from '../src/api/orders';
 
 const mockOrder = {
@@ -87,6 +88,22 @@ describe('order override API clients', () => {
       expect.objectContaining({ method: 'POST' }),
     );
     expect(result.id).toBe('ord_1');
+  });
+
+  it('fetchTechnicianCandidatesForOrder calls candidate URL', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ technicians: [{ technicianId: 'tech_2', displayName: 'Ravi', distanceKm: 1.2, isOnline: true, isAvailable: true }] }),
+      }),
+    );
+    const result = await fetchTechnicianCandidatesForOrder('ord_1');
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith(
+      expect.stringContaining('/admin-api/v1/admin/orders/ord_1/technician-candidates'),
+      expect.objectContaining({ credentials: 'include' }),
+    );
+    expect(result[0]?.technicianId).toBe('tech_2');
   });
 
   it('reassignOrder throws on non-ok response', async () => {

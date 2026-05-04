@@ -17,7 +17,11 @@ export const CashCollectionStatusSchema = z.enum(CASH_COLLECTION_STATUSES);
 export const BookingDocSchema = z.object({
   id: z.string(),
   customerId: z.string(),
+  customerName: z.string().optional(),
+  customerPhone: z.string().optional(),
+  customerEmail: z.string().optional(),
   serviceId: z.string(),
+  serviceName: z.string().optional(),
   categoryId: z.string(),
   slotDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   slotWindow: z.string().regex(/^\d{2}:\d{2}-\d{2}:\d{2}$/),

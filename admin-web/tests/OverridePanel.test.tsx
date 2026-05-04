@@ -10,12 +10,13 @@ vi.mock('../src/api/orders', () => ({
   waiveFeeOrder: vi.fn(),
   escalateOrder: vi.fn(),
   addOrderNote: vi.fn(),
+  fetchTechnicianCandidatesForOrder: vi.fn(),
   fetchOrders: vi.fn(),
   fetchOrderById: vi.fn(),
   fetchAllOrdersForExport: vi.fn(),
 }));
 
-import { completeOrder } from '../src/api/orders';
+import { completeOrder, fetchTechnicianCandidatesForOrder, reassignOrder } from '../src/api/orders';
 
 const sampleOrder: Order = {
   id: 'ord_abc123',
@@ -34,6 +35,16 @@ const mockUpdatedOrder: Order = { ...sampleOrder, status: 'COMPLETED' };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(fetchTechnicianCandidatesForOrder).mockResolvedValue([
+    {
+      technicianId: 'tech_2',
+      displayName: 'Ravi Kumar',
+      distanceKm: 2.4,
+      rating: 4.8,
+      isOnline: true,
+      isAvailable: true,
+    },
+  ]);
 });
 
 describe('OverridePanel', () => {
@@ -129,7 +140,7 @@ describe('OverridePanel', () => {
     expect(screen.getByLabelText('Note')).toBeDefined();
   });
 
-  it('reassign modal shows extra input for Technician ID', () => {
+  it('reassign modal shows a technician dropdown', async () => {
     render(
       <OverridePanel
         order={sampleOrder}
@@ -139,7 +150,34 @@ describe('OverridePanel', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: /re-assign tech/i }));
     expect(screen.getByRole('dialog')).toBeDefined();
-    expect(screen.getByLabelText('New Technician ID')).toBeDefined();
+    await waitFor(() => {
+      expect(screen.getByLabelText('Technician')).toBeDefined();
+      expect(screen.getByRole('option', { name: /ravi kumar/i })).toBeDefined();
+    });
+  });
+
+  it('submitting reassign uses selected technician id', async () => {
+    vi.mocked(reassignOrder).mockResolvedValue({ ...sampleOrder, technicianId: 'tech_2' });
+    render(
+      <OverridePanel
+        order={sampleOrder}
+        onActionComplete={vi.fn()}
+        onError={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /re-assign tech/i }));
+    const select = await screen.findByLabelText('Technician');
+    fireEvent.change(select, { target: { value: 'tech_2' } });
+    fireEvent.change(screen.getByRole('textbox', { name: /reason/i }), {
+      target: { value: 'Customer requested reassignment' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
+    await waitFor(() => {
+      expect(reassignOrder).toHaveBeenCalledWith('ord_abc123', {
+        technicianId: 'tech_2',
+        reason: 'Customer requested reassignment',
+      });
+    });
   });
 
   it('onError called when API throws', async () => {

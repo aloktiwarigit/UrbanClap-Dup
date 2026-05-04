@@ -8,6 +8,8 @@
     <string name="catalogue_loading">लोड हो रहा है...</string>
     <string name="catalogue_error_title">सेवाएं लोड नहीं हो सकीं</string>
     <string name="catalogue_error">कुछ गलत हो गया। कृपया फिर से प्रयास करें।</string>
+    <string name="service_list_empty_title">सेवाएं उपलब्ध नहीं हैं</string>
+    <string name="service_list_empty_copy">यह श्रेणी अभी बुकिंग के लिए तैयार नहीं है। कृपया दूसरी सेवा देखें।</string>
     <string name="service_image_desc">%s सेवा</string>
     <string name="service_list_title">सेवाएं</string>
     <string name="service_list_subtitle">फिक्स्ड-प्राइस सेवाएं देखें और अपने घर के लिए सही विकल्प चुनें।</string>

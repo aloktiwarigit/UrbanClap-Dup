@@ -31,17 +31,21 @@ export async function getCategoriesHandler(
     byCat.set(svc.categoryId, list);
   }
 
+  const categoriesWithServices = categories
+    .map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      heroImageUrl: cat.heroImageUrl,
+      sortOrder: cat.sortOrder,
+      services: (byCat.get(cat.id) ?? []).map((s) => ServiceCardSchema.parse(s)),
+    }))
+    .filter((cat) => cat.services.length > 0);
+
   return {
     status: 200,
     headers: CACHE_HEADERS,
     jsonBody: {
-      categories: categories.map((cat) => ({
-        id: cat.id,
-        name: cat.name,
-        heroImageUrl: cat.heroImageUrl,
-        sortOrder: cat.sortOrder,
-        services: (byCat.get(cat.id) ?? []).map((s) => ServiceCardSchema.parse(s)),
-      })),
+      categories: categoriesWithServices,
     },
   };
 }

@@ -19,7 +19,9 @@ vi.mock('../../../../src/services/adminSession.service.js', () => ({
 }));
 vi.mock('../../../../src/services/jwt.service.js', () => ({
   signAccessToken: vi.fn().mockResolvedValue('access-token'),
+  signMfaChallengeToken: vi.fn().mockResolvedValue('mfa-challenge-token'),
   signSetupToken: vi.fn().mockResolvedValue('setup-token'),
+  verifyMfaChallengeToken: vi.fn(),
 }));
 vi.mock('../../../../src/services/auditLog.service.js', () => ({ auditLog: vi.fn() }));
 
@@ -33,7 +35,7 @@ import {
 } from '../../../../src/services/adminUser.service.js';
 import { verifyToken } from '../../../../src/services/totp.service.js';
 import { createAdminSession } from '../../../../src/services/adminSession.service.js';
-import { signAccessToken } from '../../../../src/services/jwt.service.js';
+import { signAccessToken, signMfaChallengeToken } from '../../../../src/services/jwt.service.js';
 
 const mockCtx = {} as InvocationContext;
 
@@ -89,6 +91,22 @@ describe('POST /v1/admin/auth/login', () => {
       ([doc]) => (doc as { action: string }).action === 'ADMIN_LOGIN_FAILED',
     );
     expect(failedCall).toBeUndefined();
+  });
+
+  it('returns an MFA challenge after identity verification when authenticator code is missing', async () => {
+    const res = await adminLoginHandler(
+      loginReq({ idToken: 'id-tok' }),
+      mockCtx,
+    ) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect((res.jsonBody as { mfaRequired?: boolean }).mfaRequired).toBe(true);
+    expect((res.jsonBody as { challengeToken?: string }).challengeToken).toBe('mfa-challenge-token');
+    expect(signMfaChallengeToken).toHaveBeenCalledWith({
+      sub: 'admin-1',
+      email: 'admin@test.com',
+    });
+    expect(createAdminSession).not.toHaveBeenCalled();
   });
 
   it('claims a verified email invite and starts TOTP setup', async () => {

@@ -5,16 +5,28 @@ import type { PendingAddOn, AddOnDecision } from '../schemas/addon-approval.js';
 
 function now() { return new Date().toISOString(); }
 
+export interface BookingCreateMetadata {
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  serviceName?: string;
+}
+
 export const bookingRepo = {
   async createPending(
     req: CreateBookingRequest,
     customerId: string,
     paymentOrderId: string,
     amount: number,
+    metadata: BookingCreateMetadata = {},
   ): Promise<BookingDoc> {
     const paymentMethod = req.paymentMethod ?? 'RAZORPAY';
     const doc: BookingDoc = {
       id: randomUUID(), customerId, ...req,
+      ...(metadata.customerName ? { customerName: metadata.customerName } : {}),
+      ...(metadata.customerPhone ? { customerPhone: metadata.customerPhone } : {}),
+      ...(metadata.customerEmail ? { customerEmail: metadata.customerEmail } : {}),
+      ...(metadata.serviceName ? { serviceName: metadata.serviceName } : {}),
       status: 'PENDING_PAYMENT', paymentOrderId,
       paymentMethod,
       ...(paymentMethod === 'CASH_ON_SERVICE' ? { cashCollectionStatus: 'PENDING' as const } : {}),

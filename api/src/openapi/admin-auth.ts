@@ -34,7 +34,7 @@ registry.registerPath({
 registry.registerPath({
   method: 'post', path: '/v1/admin/auth/refresh', operationId: 'adminRefresh',
   tags: ['admin-auth'], summary: 'Refresh access token',
-  responses: { 200: { description: 'New hs_access cookie set' } },
+  responses: { 200: { description: 'Session cookies refreshed' } },
 });
 
 registry.registerPath({

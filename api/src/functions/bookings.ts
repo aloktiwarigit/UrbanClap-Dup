@@ -29,6 +29,18 @@ function hasRazorpayCredentials(): boolean {
   return hasUsableValue(process.env.RAZORPAY_KEY_ID) && hasUsableValue(process.env.RAZORPAY_KEY_SECRET);
 }
 
+function bookingMetadata(
+  customer: Parameters<CustomerHttpHandler>[2],
+  serviceName: string,
+) {
+  return {
+    ...(customer.displayName ? { customerName: customer.displayName } : {}),
+    ...(customer.phoneNumber ? { customerPhone: customer.phoneNumber } : {}),
+    ...(customer.email ? { customerEmail: customer.email } : {}),
+    serviceName,
+  };
+}
+
 const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
   if (!(await isSoftLaunchEnabled(customer.customerId))) {
     return { status: 503, jsonBody: { code: 'SERVICE_UNAVAILABLE', message: 'Launch coming soon' } };
@@ -46,7 +58,13 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
 
   if (parsed.data.paymentMethod === 'CASH_ON_SERVICE') {
     const cashOrderId = `cash_${randomUUID()}`;
-    const booking = await bookingRepo.createPending(parsed.data, customer.customerId, cashOrderId, service.basePrice);
+    const booking = await bookingRepo.createPending(
+      parsed.data,
+      customer.customerId,
+      cashOrderId,
+      service.basePrice,
+      bookingMetadata(customer, service.name),
+    );
     const paid = await bookingRepo.markPaid(booking.id, 'cash_on_service_pending');
     if (!paid) return { status: 500, jsonBody: { code: 'BOOKING_CONFIRMATION_FAILED' } };
     dispatcherService.triggerDispatch(booking.id).catch((err: unknown) => {
@@ -68,7 +86,13 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
   if (!hasRazorpayCredentials()) {
     const manualOrderId = `manual_${randomUUID()}`;
     const manualRequest = { ...parsed.data, paymentMethod: 'CASH_ON_SERVICE' as const };
-    const booking = await bookingRepo.createPending(manualRequest, customer.customerId, manualOrderId, service.basePrice);
+    const booking = await bookingRepo.createPending(
+      manualRequest,
+      customer.customerId,
+      manualOrderId,
+      service.basePrice,
+      bookingMetadata(customer, service.name),
+    );
     const paid = await bookingRepo.markPaid(booking.id, 'manual_payment_not_configured');
     if (!paid) return { status: 500, jsonBody: { code: 'BOOKING_CONFIRMATION_FAILED' } };
     dispatcherService.triggerDispatch(booking.id).catch((err: unknown) => {
@@ -110,7 +134,13 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     };
   }
 
-  const booking = await bookingRepo.createPending(parsed.data, customer.customerId, order.id, service.basePrice);
+  const booking = await bookingRepo.createPending(
+    parsed.data,
+    customer.customerId,
+    order.id,
+    service.basePrice,
+    bookingMetadata(customer, service.name),
+  );
   return { status: 201, jsonBody: { bookingId: booking.id, razorpayOrderId: order.id, amount: order.amount, requiresPayment: true, paymentMethod: 'RAZORPAY' } };
 };
 

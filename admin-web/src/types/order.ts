@@ -1,6 +1,18 @@
 export type OrderStatus =
-  | 'SEARCHING' | 'ASSIGNED' | 'EN_ROUTE' | 'REACHED'
-  | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'PAID';
+  | 'PENDING_PAYMENT'
+  | 'SEARCHING'
+  | 'ASSIGNED'
+  | 'EN_ROUTE'
+  | 'REACHED'
+  | 'IN_PROGRESS'
+  | 'AWAITING_PRICE_APPROVAL'
+  | 'COMPLETED'
+  | 'PAID'
+  | 'CLOSED'
+  | 'UNFULFILLED'
+  | 'CUSTOMER_CANCELLED'
+  | 'NO_SHOW_REDISPATCH'
+  | 'CANCELLED';
 
 export interface Order {
   id: string;
@@ -37,6 +49,15 @@ export interface RefundRequest { reason: string; amountPaise?: number; }
 export interface WaiveFeeRequest { reason: string; }
 export interface EscalateRequest { reason: string; priority: 'HIGH' | 'CRITICAL'; }
 export interface NoteRequest { note: string; }
+
+export interface TechnicianCandidate {
+  technicianId: string;
+  displayName: string;
+  distanceKm: number;
+  rating?: number;
+  isOnline: boolean;
+  isAvailable: boolean;
+}
 
 export interface OrdersQueryParams {
   status?: string;

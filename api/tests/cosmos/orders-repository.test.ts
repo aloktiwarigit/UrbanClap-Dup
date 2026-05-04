@@ -5,7 +5,24 @@ vi.mock('../../src/cosmos/client.js', () => ({
   DB_NAME: 'homeservices',
 }));
 
+vi.mock('../../src/cosmos/catalogue-repository.js', () => ({
+  catalogueRepo: {
+    getServiceByIdCrossPartition: vi.fn(),
+  },
+}));
+
+vi.mock('../../src/cosmos/technician-repository.js', () => ({
+  getTechniciansByIds: vi.fn(),
+}));
+
+vi.mock('../../src/services/firebaseAdmin.js', () => ({
+  getFirebaseAdmin: vi.fn(),
+}));
+
 import { getCosmosClient } from '../../src/cosmos/client.js';
+import { catalogueRepo } from '../../src/cosmos/catalogue-repository.js';
+import { getTechniciansByIds } from '../../src/cosmos/technician-repository.js';
+import { getFirebaseAdmin } from '../../src/services/firebaseAdmin.js';
 import { queryOrders, getOrderById } from '../../src/cosmos/orders-repository.js';
 
 const sampleOrder = {
@@ -33,6 +50,15 @@ const customerCreatedBooking = {
 };
 
 describe('queryOrders', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(catalogueRepo.getServiceByIdCrossPartition).mockResolvedValue(null);
+    vi.mocked(getTechniciansByIds).mockResolvedValue([]);
+    vi.mocked(getFirebaseAdmin).mockImplementation(() => {
+      throw new Error('Firebase unavailable');
+    });
+  });
+
   it('returns paginated response with items', async () => {
     // Mock: first call returns count [1], second returns items [sampleOrder]
     let callCount = 0;
@@ -94,6 +120,47 @@ describe('queryOrders', () => {
     });
   });
 
+  it('hydrates generated customer, service, and technician names when source docs are available', async () => {
+    let callCount = 0;
+    const container = {
+      database: () => ({
+        container: () => ({
+          items: {
+            query: () => ({
+              fetchAll: vi.fn().mockImplementation(async () => {
+                callCount++;
+                return callCount === 1
+                  ? { resources: [1] }
+                  : { resources: [{ ...customerCreatedBooking, technicianId: 'tech_1' }] };
+              }),
+            }),
+          },
+        }),
+      }),
+    };
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue(container);
+    vi.mocked(catalogueRepo.getServiceByIdCrossPartition).mockResolvedValue({ name: 'AC Deep Clean' } as never);
+    vi.mocked(getTechniciansByIds).mockResolvedValue([
+      { id: 'tech_1', technicianId: 'tech_1', displayName: 'Ravi Kumar' },
+    ]);
+    vi.mocked(getFirebaseAdmin).mockReturnValue({
+      auth: () => ({
+        getUsers: vi.fn().mockResolvedValue({
+          users: [{ uid: 'firebase_uid_123', displayName: 'alok', phoneNumber: '+919999999999' }],
+        }),
+      }),
+    } as never);
+
+    const result = await queryOrders({ page: 1, pageSize: 50 });
+
+    expect(result.items[0]).toMatchObject({
+      customerName: 'alok',
+      customerPhone: '+919999999999',
+      serviceName: 'AC Deep Clean',
+      technicianName: 'Ravi Kumar',
+    });
+  });
+
   it('includes status filter in query when provided', async () => {
     const querySpy = vi.fn().mockReturnValue({
       fetchAll: vi.fn().mockResolvedValue({ resources: [] }),
@@ -125,7 +192,14 @@ describe('queryOrders', () => {
 });
 
 describe('getOrderById', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(catalogueRepo.getServiceByIdCrossPartition).mockResolvedValue(null);
+    vi.mocked(getTechniciansByIds).mockResolvedValue([]);
+    vi.mocked(getFirebaseAdmin).mockImplementation(() => {
+      throw new Error('Firebase unavailable');
+    });
+  });
 
   it('returns parsed order when resource present', async () => {
     (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({

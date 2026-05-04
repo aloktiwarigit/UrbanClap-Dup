@@ -1,6 +1,9 @@
 import type { CosmosClient, SqlParameter } from '@azure/cosmos';
 import { getCosmosClient, DB_NAME } from './client.js';
 import { OrderSchema, type Order, type OrderListQuery, type OrderListResponse } from '../schemas/order.js';
+import { catalogueRepo } from './catalogue-repository.js';
+import { getTechniciansByIds } from './technician-repository.js';
+import { getFirebaseAdmin } from '../services/firebaseAdmin.js';
 
 function getContainer(client: CosmosClient) {
   return client.database(DB_NAME).container('bookings');
@@ -58,6 +61,97 @@ function toAdminOrder(resource: unknown): Order {
     amount: asNumber(raw['finalAmount']) ?? asNumber(raw['amount']) ?? 0,
     createdAt: asString(raw['createdAt']) ?? scheduledAt,
     _ts: asNumber(raw['_ts']),
+  });
+}
+
+function unique(values: Array<string | undefined>): string[] {
+  return [...new Set(values.filter((value): value is string => typeof value === 'string' && value.trim() !== ''))];
+}
+
+function isGeneratedCustomerName(customerName: string, customerId: string): boolean {
+  return customerName === `Customer ${customerId.slice(0, 8)}`;
+}
+
+async function fetchServiceNames(serviceIds: string[]): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  await Promise.all(
+    serviceIds.map(async (serviceId) => {
+      try {
+        const service = await catalogueRepo.getServiceByIdCrossPartition(serviceId);
+        if (service?.name) names.set(serviceId, service.name);
+      } catch {
+        // Admin orders must still render even if catalogue enrichment is temporarily unavailable.
+      }
+    }),
+  );
+  return names;
+}
+
+async function fetchTechnicianNames(technicianIds: string[]): Promise<Map<string, string>> {
+  try {
+    const techs = await getTechniciansByIds(technicianIds);
+    const names = new Map<string, string>();
+    for (const tech of techs) {
+      const displayName = tech.displayName?.trim() || tech.name?.trim() || tech.technicianId || tech.id;
+      if (tech.id) names.set(tech.id, displayName);
+      if (tech.technicianId) names.set(tech.technicianId, displayName);
+    }
+    return names;
+  } catch {
+    return new Map();
+  }
+}
+
+interface CustomerProfile {
+  displayName?: string;
+  phoneNumber?: string;
+  email?: string;
+}
+
+async function fetchCustomerProfiles(customerIds: string[]): Promise<Map<string, CustomerProfile>> {
+  if (customerIds.length === 0) return new Map();
+
+  try {
+    const auth = getFirebaseAdmin().auth();
+    const profiles = new Map<string, CustomerProfile>();
+    for (let index = 0; index < customerIds.length; index += 100) {
+      const result = await auth.getUsers(customerIds.slice(index, index + 100).map((uid) => ({ uid })));
+      for (const user of result.users) {
+        profiles.set(user.uid, {
+          ...(user.displayName ? { displayName: user.displayName } : {}),
+          ...(user.phoneNumber ? { phoneNumber: user.phoneNumber } : {}),
+          ...(user.email ? { email: user.email } : {}),
+        });
+      }
+    }
+    return profiles;
+  } catch {
+    return new Map();
+  }
+}
+
+async function hydrateOrders(orders: Order[]): Promise<Order[]> {
+  if (orders.length === 0) return orders;
+
+  const [serviceNames, technicianNames, customerProfiles] = await Promise.all([
+    fetchServiceNames(unique(orders.map((order) => order.serviceId))),
+    fetchTechnicianNames(unique(orders.map((order) => order.technicianId))),
+    fetchCustomerProfiles(unique(orders.map((order) => order.customerId))),
+  ]);
+
+  return orders.map((order) => {
+    const customerProfile = customerProfiles.get(order.customerId);
+    const customerName = isGeneratedCustomerName(order.customerName, order.customerId)
+      ? customerProfile?.displayName ?? customerProfile?.phoneNumber ?? order.customerName
+      : order.customerName;
+
+    return OrderSchema.parse({
+      ...order,
+      customerName,
+      customerPhone: order.customerPhone || customerProfile?.phoneNumber || '',
+      serviceName: order.serviceName ?? (order.serviceId ? serviceNames.get(order.serviceId) : undefined),
+      technicianName: order.technicianName ?? (order.technicianId ? technicianNames.get(order.technicianId) : undefined),
+    });
   });
 }
 
@@ -131,7 +225,7 @@ export async function queryOrders(filters: OrderListQuery): Promise<OrderListRes
     parameters: params,
   };
   const { resources } = await container.items.query(dataQuery).fetchAll();
-  const items: Order[] = resources.map(toAdminOrder);
+  const items: Order[] = await hydrateOrders(resources.map(toAdminOrder));
 
   return {
     items,
@@ -150,5 +244,5 @@ export async function getOrderById(id: string): Promise<Order | null> {
     parameters: [{ name: '@id', value: id }],
   }).fetchAll();
   if (!resources.length) return null;
-  return toAdminOrder(resources[0]);
+  return (await hydrateOrders([toAdminOrder(resources[0])]))[0] ?? null;
 }

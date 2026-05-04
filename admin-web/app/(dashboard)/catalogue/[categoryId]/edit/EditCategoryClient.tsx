@@ -34,6 +34,7 @@ export function EditCategoryClient({ category }: EditCategoryClientProps) {
       throw new Error(`Failed to update category: ${res.status} ${text}`);
     }
     router.push(`/catalogue/${category.id}`);
+    router.refresh();
   }
 
   return (

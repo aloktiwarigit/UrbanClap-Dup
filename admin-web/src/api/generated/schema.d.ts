@@ -215,6 +215,23 @@ export interface paths {
         patch: operations["adminToggleService"];
         trace?: never;
     };
+    "/v1/admin/orders/{id}/technician-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Eligible technicians near an order address */
+        get: operations["adminGetOrderTechnicianCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/complaints": {
         parameters: {
             query?: never;
@@ -1426,6 +1443,58 @@ export interface operations {
             };
         };
     };
+    adminGetOrderTechnicianCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Technician candidates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        technicians: {
+                            technicianId: string;
+                            displayName: string;
+                            distanceKm: number;
+                            rating?: number;
+                            isOnline: boolean;
+                            isAvailable: boolean;
+                        }[];
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     adminListComplaints: {
         parameters: {
             query?: {
@@ -1953,7 +2022,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description New hs_access cookie set */
+            /** @description Session cookies refreshed */
             200: {
                 headers: {
                     [name: string]: unknown;

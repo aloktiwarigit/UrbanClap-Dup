@@ -4,8 +4,10 @@ process.env.JWT_SECRET = 'test-secret-that-is-long-enough-for-hs256-minimum-32-c
 
 const {
   signAccessToken,
+  signMfaChallengeToken,
   signSetupToken,
   verifyAccessToken,
+  verifyMfaChallengeToken,
   verifySetupToken,
 } = await import('../../src/services/jwt.service.js');
 
@@ -47,6 +49,21 @@ describe('jwt.service', () => {
     it('returns null for an access token passed to verifySetupToken', async () => {
       const token = await signAccessToken({ sub: 'u', role: 'ops-manager', sessionId: 's' });
       expect(await verifySetupToken(token)).toBeNull();
+    });
+  });
+
+  describe('MFA challenge token', () => {
+    it('round-trips with correct payload', async () => {
+      const token = await signMfaChallengeToken({ sub: 'u1', email: 'admin@x.com' });
+      const payload = await verifyMfaChallengeToken(token);
+      expect(payload?.sub).toBe('u1');
+      expect(payload?.email).toBe('admin@x.com');
+      expect(payload?.type).toBe('admin-mfa-challenge');
+    });
+
+    it('returns null for an access token passed to verifyMfaChallengeToken', async () => {
+      const token = await signAccessToken({ sub: 'u', role: 'ops-manager', sessionId: 's' });
+      expect(await verifyMfaChallengeToken(token)).toBeNull();
     });
   });
 });

@@ -29,6 +29,7 @@ export default function NewCategoryPage() {
       throw new Error(`Failed to create category: ${res.status} ${text}`);
     }
     router.push('/catalogue');
+    router.refresh();
   }
 
   return (

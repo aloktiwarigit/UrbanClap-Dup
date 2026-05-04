@@ -18,6 +18,14 @@ export interface SetupTokenPayload {
   exp: number;
 }
 
+export interface MfaChallengeTokenPayload {
+  sub: string;
+  email: string;
+  type: 'admin-mfa-challenge';
+  iat: number;
+  exp: number;
+}
+
 function jwtKey(): Uint8Array {
   const s = process.env.JWT_SECRET;
   if (!s) throw new Error('JWT_SECRET not configured');
@@ -44,6 +52,16 @@ export async function signSetupToken(
     .sign(jwtKey());
 }
 
+export async function signMfaChallengeToken(
+  payload: Pick<MfaChallengeTokenPayload, 'sub' | 'email'>,
+): Promise<string> {
+  return new SignJWT({ ...payload, type: 'admin-mfa-challenge' })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('5m')
+    .sign(jwtKey());
+}
+
 export async function verifyAccessToken(
   token: string,
 ): Promise<AccessTokenPayload | null> {
@@ -63,6 +81,18 @@ export async function verifySetupToken(
     const { payload } = await jwtVerify(token, jwtKey());
     if (payload['type'] !== 'totp-setup') return null;
     return payload as unknown as SetupTokenPayload;
+  } catch {
+    return null;
+  }
+}
+
+export async function verifyMfaChallengeToken(
+  token: string,
+): Promise<MfaChallengeTokenPayload | null> {
+  try {
+    const { payload } = await jwtVerify(token, jwtKey());
+    if (payload['type'] !== 'admin-mfa-challenge') return null;
+    return payload as unknown as MfaChallengeTokenPayload;
   } catch {
     return null;
   }

@@ -4,7 +4,12 @@ const jwtSecret = process.env['JWT_SECRET'] ?? 'e2e-test-jwt-secret-placeholder-
 
 export default defineConfig({
   testDir: './tests',
-  testMatch: ['e2e/admin-completion.spec.ts', 'e2e/rbac-403.spec.ts'],
+  testMatch: [
+    'e2e/admin-completion.spec.ts',
+    'e2e/login.spec.ts',
+    'e2e/rbac-403.spec.ts',
+    'e2e/totp-enrollment.spec.ts',
+  ],
   fullyParallel: true,
   reporter: 'list',
   use: {

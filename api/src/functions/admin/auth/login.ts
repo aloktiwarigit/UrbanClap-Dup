@@ -13,75 +13,36 @@ import {
 } from '../../../services/adminUser.service.js';
 import { decryptSecret, verifyToken } from '../../../services/totp.service.js';
 import { createAdminSession } from '../../../services/adminSession.service.js';
-import { signAccessToken, signSetupToken } from '../../../services/jwt.service.js';
+import {
+  signAccessToken,
+  signMfaChallengeToken,
+  signSetupToken,
+  verifyMfaChallengeToken,
+} from '../../../services/jwt.service.js';
 import { auditLog } from '../../../services/auditLog.service.js';
 import { appendAuditEntry } from '../../../cosmos/audit-log-repository.js';
-import { normalizeAdminRole } from '../../../types/admin.js';
+import { normalizeAdminRole, type AdminRole } from '../../../types/admin.js';
 
-export async function adminLoginHandler(
+type LoginAdminUser = {
+  adminId: string;
+  email: string;
+  role: unknown;
+  totpEnrolled?: boolean;
+  totpSecret?: string | null;
+  deactivatedAt?: string | null;
+};
+
+async function completeTotpLogin(
   req: HttpRequest,
-  _ctx: InvocationContext,
+  adminUser: LoginAdminUser,
+  role: AdminRole,
+  totpCode: string,
 ): Promise<HttpResponseInit> {
-  let raw: unknown;
-  try {
-    raw = await req.json();
-  } catch {
-    return { status: 400, jsonBody: { code: 'INVALID_JSON' } };
+  if (!adminUser.totpSecret) {
+    return { status: 409, jsonBody: { code: 'TOTP_NOT_CONFIGURED' } };
   }
 
-  const parsed = LoginRequestSchema.safeParse(raw);
-  if (!parsed.success) {
-    return {
-      status: 400,
-      jsonBody: {
-        code: 'VALIDATION_ERROR',
-        issues: parsed.error.issues.map((i) => ({
-          path: i.path,
-          message: i.message,
-          code: i.code,
-        })),
-      },
-    };
-  }
-
-  const { idToken, totpCode } = parsed.data;
-
-  let uid: string;
-  let verifiedEmail: string | null = null;
-  try {
-    const decoded = await verifyFirebaseIdToken(idToken);
-    uid = decoded.uid;
-    if (decoded.email && decoded.email_verified === true) {
-      verifiedEmail = decoded.email.toLowerCase();
-    }
-  } catch {
-    return { status: 401, jsonBody: { code: 'FIREBASE_TOKEN_INVALID' } };
-  }
-
-  let adminUser = await getAdminUserById(uid);
-  if (!adminUser && verifiedEmail) {
-    const invite = await getAdminUserByEmail(verifiedEmail);
-    if (invite && isAdminInvite(invite) && !invite.deactivatedAt) {
-      adminUser = await claimAdminInvite(invite, uid, verifiedEmail);
-    }
-  }
-
-  if (!adminUser || adminUser.deactivatedAt) {
-    return { status: 401, jsonBody: { code: 'ADMIN_NOT_FOUND' } };
-  }
-  const role = normalizeAdminRole(adminUser.role);
-  if (!role) {
-    return { status: 401, jsonBody: { code: 'ADMIN_NOT_FOUND' } };
-  }
-
-  if (!adminUser.totpEnrolled) {
-    const setupToken = await signSetupToken({ sub: adminUser.adminId, email: adminUser.email });
-    return { status: 200, jsonBody: { requiresSetup: true, setupToken } };
-  }
-
-  if (!totpCode) return { status: 422, jsonBody: { code: 'TOTP_REQUIRED' } };
-
-  const secret = decryptSecret(adminUser.totpSecret!);
+  const secret = decryptSecret(adminUser.totpSecret);
   if (!verifyToken(totpCode, secret)) {
     const _ts = new Date().toISOString();
     void appendAuditEntry({ id: randomUUID(), adminId: adminUser.adminId, role, action: 'ADMIN_LOGIN_FAILED', resourceType: 'admin_session', resourceId: adminUser.adminId, payload: { reason: 'TOTP_INVALID' }, timestamp: _ts, partitionKey: _ts.slice(0, 7) }).catch(Sentry.captureException);
@@ -125,7 +86,7 @@ export async function adminLoginHandler(
       httpOnly: true,
       secure: true,
       sameSite: 'Strict',
-      path: '/api/v1/admin/auth/refresh',
+      path: '/',
       maxAge: 28800,
     },
   ];
@@ -135,6 +96,120 @@ export async function adminLoginHandler(
     cookies,
     jsonBody: { adminId: adminUser.adminId, role, email: adminUser.email },
   };
+}
+
+async function completeChallengeLogin(
+  req: HttpRequest,
+  challengeToken: string,
+  totpCode: string,
+): Promise<HttpResponseInit> {
+  const challenge = await verifyMfaChallengeToken(challengeToken);
+  if (!challenge) {
+    return { status: 401, jsonBody: { code: 'MFA_CHALLENGE_INVALID' } };
+  }
+
+  const adminUser = await getAdminUserById(challenge.sub);
+  if (!adminUser || adminUser.deactivatedAt) {
+    return { status: 401, jsonBody: { code: 'ADMIN_NOT_FOUND' } };
+  }
+  if (adminUser.email.toLowerCase() !== challenge.email.toLowerCase()) {
+    return { status: 401, jsonBody: { code: 'MFA_CHALLENGE_INVALID' } };
+  }
+
+  const role = normalizeAdminRole(adminUser.role);
+  if (!role) {
+    return { status: 401, jsonBody: { code: 'ADMIN_NOT_FOUND' } };
+  }
+
+  if (!adminUser.totpEnrolled) {
+    return { status: 409, jsonBody: { code: 'TOTP_NOT_ENROLLED' } };
+  }
+
+  return completeTotpLogin(req, adminUser, role, totpCode);
+}
+
+export async function adminLoginHandler(
+  req: HttpRequest,
+  _ctx: InvocationContext,
+): Promise<HttpResponseInit> {
+  let raw: unknown;
+  try {
+    raw = await req.json();
+  } catch {
+    return { status: 400, jsonBody: { code: 'INVALID_JSON' } };
+  }
+
+  const parsed = LoginRequestSchema.safeParse(raw);
+  if (!parsed.success) {
+    return {
+      status: 400,
+      jsonBody: {
+        code: 'VALIDATION_ERROR',
+        issues: parsed.error.issues.map((i) => ({
+          path: i.path,
+          message: i.message,
+          code: i.code,
+        })),
+      },
+    };
+  }
+
+  if ('challengeToken' in parsed.data) {
+    return completeChallengeLogin(req, parsed.data.challengeToken, parsed.data.totpCode);
+  }
+
+  const { idToken, totpCode } = parsed.data;
+
+  let uid: string;
+  let verifiedEmail: string | null = null;
+  try {
+    const decoded = await verifyFirebaseIdToken(idToken);
+    uid = decoded.uid;
+    if (decoded.email && decoded.email_verified === true) {
+      verifiedEmail = decoded.email.toLowerCase();
+    }
+  } catch {
+    return { status: 401, jsonBody: { code: 'FIREBASE_TOKEN_INVALID' } };
+  }
+
+  let adminUser = await getAdminUserById(uid);
+  if (!adminUser && verifiedEmail) {
+    const invite = await getAdminUserByEmail(verifiedEmail);
+    if (invite && isAdminInvite(invite) && !invite.deactivatedAt) {
+      adminUser = await claimAdminInvite(invite, uid, verifiedEmail);
+    }
+  }
+
+  if (!adminUser || adminUser.deactivatedAt) {
+    return { status: 401, jsonBody: { code: 'ADMIN_NOT_FOUND' } };
+  }
+  const role = normalizeAdminRole(adminUser.role);
+  if (!role) {
+    return { status: 401, jsonBody: { code: 'ADMIN_NOT_FOUND' } };
+  }
+
+  if (!adminUser.totpEnrolled) {
+    const setupToken = await signSetupToken({ sub: adminUser.adminId, email: adminUser.email });
+    return { status: 200, jsonBody: { requiresSetup: true, setupToken } };
+  }
+
+  if (!totpCode) {
+    const challengeToken = await signMfaChallengeToken({
+      sub: adminUser.adminId,
+      email: adminUser.email,
+    });
+    return {
+      status: 200,
+      jsonBody: {
+        mfaRequired: true,
+        challengeToken,
+        email: adminUser.email,
+        expiresInSeconds: 300,
+      },
+    };
+  }
+
+  return completeTotpLogin(req, adminUser, role, totpCode);
 }
 
 app.http('adminLogin', {

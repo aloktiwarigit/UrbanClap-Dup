@@ -79,7 +79,7 @@ test.describe('TOTP enrollment (first login)', () => {
     await page.click('button[type="submit"]');
 
     await expect(page).toHaveURL(/\/setup/);
-    await expect(page.getByAltText('TOTP QR code')).toBeVisible();
+    await expect(page.getByAltText('Microsoft Authenticator setup QR code')).toBeVisible();
   });
 
   test('completes enrollment and redirects to /dashboard', async ({ page }) => {
@@ -111,7 +111,7 @@ test.describe('TOTP enrollment (first login)', () => {
     });
 
     await page.goto('/setup');
-    await expect(page.getByAltText('TOTP QR code')).toBeVisible();
+    await expect(page.getByAltText('Microsoft Authenticator setup QR code')).toBeVisible();
     await page.fill('input[inputmode="numeric"]', '123456');
     await page.click('button[type="submit"]');
     await expect(page).toHaveURL(/\/dashboard/);

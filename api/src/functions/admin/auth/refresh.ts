@@ -22,17 +22,28 @@ export async function adminRefreshHandler(
     sessionId: session.sessionId,
   });
 
-  const cookie: Cookie = {
-    name: 'hs_access',
-    value: accessToken,
-    httpOnly: true,
-    secure: true,
-    sameSite: 'Strict',
-    path: '/',
-    maxAge: 900,
-  };
+  const responseCookies: Cookie[] = [
+    {
+      name: 'hs_access',
+      value: accessToken,
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Strict',
+      path: '/',
+      maxAge: 900,
+    },
+    {
+      name: 'hs_refresh',
+      value: session.sessionId,
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Strict',
+      path: '/',
+      maxAge: 28800,
+    },
+  ];
 
-  return { status: 200, cookies: [cookie], jsonBody: { ok: true } };
+  return { status: 200, cookies: responseCookies, jsonBody: { ok: true } };
 }
 
 app.http('adminRefresh', {

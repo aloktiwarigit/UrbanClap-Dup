@@ -5,6 +5,10 @@ interface ExtraInput {
   label: string;
   value: string;
   onChange: (v: string) => void;
+  options?: Array<{ value: string; label: string }>;
+  placeholder?: string;
+  disabled?: boolean;
+  helperText?: string;
 }
 
 interface ConfirmModalProps {
@@ -31,7 +35,7 @@ export function ConfirmModal({
   const isDisabled =
     loading ||
     value.length < inputMinLength ||
-    (extraInput !== undefined && extraInput.value.trim() === '');
+    (extraInput !== undefined && (extraInput.disabled === true || extraInput.value.trim() === ''));
 
   return (
     <div
@@ -48,14 +52,35 @@ export function ConfirmModal({
         {extraInput && (
           <div className="mb-3">
             <label className="block text-sm text-gray-600 mb-1">{extraInput.label}</label>
-            <input
-              aria-label={extraInput.label}
-              type="text"
-              value={extraInput.value}
-              onChange={e => extraInput.onChange(e.target.value)}
-              className="w-full rounded border border-gray-300 p-2 text-sm"
-              placeholder={extraInput.label}
-            />
+            {extraInput.options ? (
+              <select
+                aria-label={extraInput.label}
+                value={extraInput.value}
+                onChange={e => extraInput.onChange(e.target.value)}
+                disabled={extraInput.disabled}
+                className="w-full rounded border border-gray-300 p-2 text-sm"
+              >
+                <option value="">{extraInput.placeholder ?? `Select ${extraInput.label}`}</option>
+                {extraInput.options.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                aria-label={extraInput.label}
+                type="text"
+                value={extraInput.value}
+                onChange={e => extraInput.onChange(e.target.value)}
+                disabled={extraInput.disabled}
+                className="w-full rounded border border-gray-300 p-2 text-sm"
+                placeholder={extraInput.placeholder ?? extraInput.label}
+              />
+            )}
+            {extraInput.helperText && (
+              <p className="mt-1 text-xs text-gray-500">{extraInput.helperText}</p>
+            )}
           </div>
         )}
 

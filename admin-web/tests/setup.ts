@@ -3,6 +3,7 @@ import { cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
 afterEach(() => {
+  if (typeof document === 'undefined') return;
   cleanup();
 });
 
@@ -13,6 +14,7 @@ afterEach(() => {
  * a CSS variable gets the real design-token value.
  */
 beforeAll(() => {
+  if (typeof document === 'undefined') return;
   const style = document.createElement('style');
   style.textContent = `
     :root {

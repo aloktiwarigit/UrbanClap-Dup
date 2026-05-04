@@ -1,12 +1,20 @@
 import { z } from 'zod';
 
-export const LoginRequestSchema = z.object({
-  idToken: z.string().min(1),
-  totpCode: z.string().regex(/^\d{6}$/).optional(),
-});
+const TotpCodeSchema = z.string().regex(/^\d{6}$/);
+
+export const LoginRequestSchema = z.union([
+  z.object({
+    idToken: z.string().min(1),
+    totpCode: TotpCodeSchema.optional(),
+  }),
+  z.object({
+    challengeToken: z.string().min(1),
+    totpCode: TotpCodeSchema,
+  }),
+]);
 export type LoginRequest = z.infer<typeof LoginRequestSchema>;
 
 export const SetupTotpVerifySchema = z.object({
-  totpCode: z.string().regex(/^\d{6}$/, 'TOTP code must be exactly 6 digits'),
+  totpCode: TotpCodeSchema,
 });
 export type SetupTotpVerify = z.infer<typeof SetupTotpVerifySchema>;

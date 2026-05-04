@@ -12,6 +12,8 @@
     <string name="service_image_desc">%s service</string>
     <string name="service_list_title">Services</string>
     <string name="service_list_subtitle">Compare fixed-price services and pick the option that fits your home.</string>
+    <string name="service_list_empty_title">No services available</string>
+    <string name="service_list_empty_copy">This category is not bookable yet. Please check another service.</string>
     <string name="service_duration_label">%d min</string>
     <string name="service_rating_placeholder">Rating pending</string>
     <string name="includes_label">What\'s included</string>

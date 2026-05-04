@@ -36,6 +36,7 @@ import {
   SscLevyDocSchema,
   SscLevyStatusSchema,
 } from '../schemas/ssc-levy.js';
+import { TechnicianCandidateListResponseSchema } from '../schemas/order.js';
 
 extendZodWithOpenApi(z);
 
@@ -244,6 +245,22 @@ registry.registerPath({
   tags: ['admin-catalogue'], summary: 'Toggle service active state',
   parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
   responses: { 200: { description: 'Toggled', content: { 'application/json': { schema: AdminService } } }, 404: { description: 'Not found' } },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/v1/admin/orders/{id}/technician-candidates',
+  operationId: 'adminGetOrderTechnicianCandidates',
+  tags: ['orders'],
+  security: [{ cookieAuth: [] }],
+  summary: 'Eligible technicians near an order address',
+  parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+  responses: {
+    200: { description: 'Technician candidates', content: { 'application/json': { schema: TechnicianCandidateListResponseSchema } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+    404: { description: 'Order not found' },
+  },
 });
 
 // ── Complaints ─────────────────────────────────────────────────────────────────

@@ -3,10 +3,8 @@ import { makeAccessJwt, makeFakeFirebaseIdToken } from './helpers/make-token';
 
 test.describe('Login flow', () => {
   test.beforeEach(async ({ page }) => {
-    const cookieToken = await makeAccessJwt('u1', 'super-admin');
     const firebaseIdToken = await makeFakeFirebaseIdToken('uid123', 'admin@test.com');
 
-    // Firebase sign-in + accounts:lookup (called by SDK after sign-in to populate user profile)
     await page.route('**/identitytoolkit.googleapis.com/**', (route) => {
       const url = route.request().url();
       if (url.includes('accounts:lookup') || url.includes('getAccountInfo')) {
@@ -32,7 +30,6 @@ test.describe('Login flow', () => {
       });
     });
 
-    // securetoken.googleapis.com — called by getIdToken() if the cached token needs refresh
     await page.route('**/securetoken.googleapis.com/**', (route) =>
       route.fulfill({
         status: 200,
@@ -48,9 +45,24 @@ test.describe('Login flow', () => {
         }),
       }),
     );
+  });
 
-    // Use addCookies() in the handler — more reliable than set-cookie header in route.fulfill()
+  test('successful login completes Microsoft Authenticator and redirects to /dashboard', async ({ page }) => {
+    const cookieToken = await makeAccessJwt('u1', 'super-admin');
     await page.route('**/admin-api/v1/admin/auth/login', async (route) => {
+      const body = route.request().postDataJSON() as { idToken?: string };
+      if (body.idToken) {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            mfaRequired: true,
+            challengeToken: 'mfa.challenge.token',
+            email: 'admin@test.com',
+          }),
+        });
+      }
+
       await page.context().addCookies([{
         name: 'hs_access',
         value: cookieToken,
@@ -60,37 +72,51 @@ test.describe('Login flow', () => {
         secure: false,
         sameSite: 'Lax',
       }]);
-      await route.fulfill({
+      return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ adminId: 'u1', role: 'super-admin', email: 'a@b.com' }),
+        body: JSON.stringify({ adminId: 'u1', role: 'super-admin', email: 'admin@test.com' }),
       });
     });
-  });
 
-  test('successful login redirects to /dashboard', async ({ page }) => {
     await page.goto('/login');
     await page.fill('input[type="email"]', 'admin@test.com');
     await page.fill('input[type="password"]', 'password');
-    await page.fill('input[inputmode="numeric"]', '123456');
-    await page.click('button[type="submit"]');
+    await page.getByRole('button', { name: /sign in with password/i }).click();
+    await expect(page.getByRole('heading', { name: /open microsoft authenticator/i })).toBeVisible();
+    await page.getByLabel(/microsoft authenticator code/i).fill('123456');
+    await page.getByRole('button', { name: /verify microsoft authenticator/i }).click();
     await expect(page).toHaveURL(/\/dashboard/);
   });
 
-  test('wrong TOTP shows inline error', async ({ page }) => {
-    await page.route('**/admin-api/v1/admin/auth/login', (route) =>
-      route.fulfill({
+  test('wrong Microsoft Authenticator code shows inline error', async ({ page }) => {
+    await page.route('**/admin-api/v1/admin/auth/login', (route) => {
+      const body = route.request().postDataJSON() as { idToken?: string };
+      if (body.idToken) {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            mfaRequired: true,
+            challengeToken: 'mfa.challenge.token',
+            email: 'admin@test.com',
+          }),
+        });
+      }
+      return route.fulfill({
         status: 422,
         contentType: 'application/json',
         body: JSON.stringify({ code: 'TOTP_INVALID' }),
-      }),
-    );
+      });
+    });
+
     await page.goto('/login');
     await page.fill('input[type="email"]', 'admin@test.com');
     await page.fill('input[type="password"]', 'password');
-    await page.fill('input[inputmode="numeric"]', '000000');
-    await page.click('button[type="submit"]');
-    await expect(page.locator('p[role="alert"]')).toContainText('Invalid authenticator code');
+    await page.getByRole('button', { name: /sign in with password/i }).click();
+    await page.getByLabel(/microsoft authenticator code/i).fill('000000');
+    await page.getByRole('button', { name: /verify microsoft authenticator/i }).click();
+    await expect(page.locator('p[role="alert"]')).toContainText('Microsoft Authenticator code did not match');
     await expect(page).toHaveURL(/\/login/);
   });
 });

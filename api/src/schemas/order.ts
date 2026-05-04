@@ -56,7 +56,21 @@ export const OrderListResponseSchema = z.object({
   totalPages: z.number(),
 });
 
+export const TechnicianCandidateSchema = z.object({
+  technicianId: z.string(),
+  displayName: z.string(),
+  distanceKm: z.number().nonnegative(),
+  rating: z.number().min(0).max(5).optional(),
+  isOnline: z.boolean(),
+  isAvailable: z.boolean(),
+});
+
+export const TechnicianCandidateListResponseSchema = z.object({
+  technicians: z.array(TechnicianCandidateSchema),
+});
+
 export type Order = z.infer<typeof OrderSchema>;
 export type OrderStatus = z.infer<typeof OrderStatusEnum>;
 export type OrderListQuery = z.infer<typeof OrderListQuerySchema>;
 export type OrderListResponse = z.infer<typeof OrderListResponseSchema>;
+export type TechnicianCandidate = z.infer<typeof TechnicianCandidateSchema>;

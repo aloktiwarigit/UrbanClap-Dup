@@ -8,8 +8,9 @@ import {
   waiveFeeOrder,
   escalateOrder,
   addOrderNote,
+  fetchTechnicianCandidatesForOrder,
 } from '@/api/orders';
-import type { Order } from '@/types/order';
+import type { Order, TechnicianCandidate } from '@/types/order';
 
 type Action = 'reassign' | 'complete' | 'refund' | 'waive-fee' | 'escalate' | 'note';
 
@@ -31,9 +32,31 @@ export function OverridePanel({
   const [activeAction, setActiveAction] = useState<Action | null>(null);
   const [loading, setLoading] = useState(false);
   const [reassignTechId, setReassignTechId] = useState('');
+  const [technicianCandidates, setTechnicianCandidates] = useState<TechnicianCandidate[]>([]);
+  const [candidatesLoading, setCandidatesLoading] = useState(false);
+  const [candidatesError, setCandidatesError] = useState<string | null>(null);
   const [escalatePriority, setEscalatePriority] = useState<'HIGH' | 'CRITICAL'>('HIGH');
 
   const close = () => setActiveAction(null);
+
+  const openAction = (action: Action) => {
+    setActiveAction(action);
+    if (action !== 'reassign') return;
+
+    setReassignTechId('');
+    setCandidatesError(null);
+    setCandidatesLoading(true);
+    fetchTechnicianCandidatesForOrder(order.id)
+      .then((candidates) => {
+        setTechnicianCandidates(candidates);
+        if (candidates.length === 1) setReassignTechId(candidates[0]!.technicianId);
+      })
+      .catch(() => {
+        setTechnicianCandidates([]);
+        setCandidatesError('Could not load technicians for this area.');
+      })
+      .finally(() => setCandidatesLoading(false));
+  };
 
   const run = async (apiCall: () => Promise<Order>) => {
     setLoading(true);
@@ -71,13 +94,36 @@ export function OverridePanel({
     title: string;
     label?: string;
     minLen?: number;
-    extraInput?: { label: string; value: string; onChange: (v: string) => void };
+    extraInput?: {
+      label: string;
+      value: string;
+      onChange: (v: string) => void;
+      options?: Array<{ value: string; label: string }>;
+      placeholder?: string;
+      disabled?: boolean;
+      helperText?: string;
+    };
   }
 
   const actionConfigs: Record<Action, ActionConfig> = {
     reassign: {
       title: 'Re-assign Technician',
-      extraInput: { label: 'New Technician ID', value: reassignTechId, onChange: setReassignTechId },
+      extraInput: {
+        label: 'Technician',
+        value: reassignTechId,
+        onChange: setReassignTechId,
+        options: technicianCandidates.map((tech) => ({
+          value: tech.technicianId,
+          label: `${tech.displayName} (${tech.technicianId}) - ${tech.distanceKm.toFixed(1)} km`,
+        })),
+        placeholder: candidatesLoading ? 'Loading technicians...' : 'Select technician',
+        disabled: candidatesLoading || technicianCandidates.length === 0,
+        helperText: candidatesError ?? (
+          technicianCandidates.length === 0 && !candidatesLoading
+            ? 'No eligible technicians found for this service area.'
+            : ''
+        ),
+      },
     },
     complete: { title: 'Mark Order Complete' },
     refund: { title: 'Issue Refund (stub)' },
@@ -122,7 +168,7 @@ export function OverridePanel({
         {visibleButtons.map(({ action, label }) => (
           <button
             key={action}
-            onClick={() => setActiveAction(action)}
+            onClick={() => openAction(action)}
             className="border border-gray-300 rounded px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
           >
             {label}

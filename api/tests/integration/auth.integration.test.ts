@@ -27,7 +27,7 @@ import { claimAdminInvite, getAdminUserByEmail, getAdminUserById } from '../../s
 import { updateAdminUser } from '../../src/services/adminUser.service.js';
 import { createAdminSession } from '../../src/services/adminSession.service.js';
 import { encryptSecret, generateSecret } from '../../src/services/totp.service.js';
-import { signSetupToken } from '../../src/services/jwt.service.js';
+import { signMfaChallengeToken, signSetupToken } from '../../src/services/jwt.service.js';
 import { HttpRequest } from '@azure/functions';
 
 const fakeCtx = {} as any;
@@ -116,7 +116,7 @@ describe('POST /v1/admin/auth/login', () => {
     );
   });
 
-  it('returns 422 when TOTP code is missing for enrolled user', async () => {
+  it('returns an MFA challenge when authenticator code is missing for enrolled user', async () => {
     const secret = generateSecret();
     vi.mocked(verifyFirebaseIdToken).mockResolvedValue({ uid: 'u1' } as any);
     vi.mocked(getAdminUserById).mockResolvedValue({
@@ -125,8 +125,11 @@ describe('POST /v1/admin/auth/login', () => {
       deactivatedAt: null,
     } as any);
     const res = await adminLoginHandler(makeLoginReq({ idToken: 'tok' }), fakeCtx);
-    expect(res.status).toBe(422);
-    expect((res.jsonBody as any).code).toBe('TOTP_REQUIRED');
+    expect(res.status).toBe(200);
+    expect((res.jsonBody as any).mfaRequired).toBe(true);
+    expect((res.jsonBody as any).challengeToken).toBeDefined();
+    expect((res.jsonBody as any).email).toBe('a@b.com');
+    expect(createAdminSession).not.toHaveBeenCalled();
   });
 
   it('returns 422 for wrong TOTP code', async () => {
@@ -155,9 +158,30 @@ describe('POST /v1/admin/auth/login', () => {
     vi.mocked(createAdminSession).mockResolvedValue(VALID_SESSION as any);
     const res = await adminLoginHandler(makeLoginReq({ idToken: 'tok', totpCode }), fakeCtx);
     expect(res.status).toBe(200);
-    const cookies = (res as any).cookies as Array<{ name: string }>;
+    const cookies = (res as any).cookies as Array<{ name: string; path: string }>;
     expect(cookies?.some((c) => c.name === 'hs_access')).toBe(true);
-    expect(cookies?.some((c) => c.name === 'hs_refresh')).toBe(true);
+    expect(cookies?.some((c) => c.name === 'hs_refresh' && c.path === '/')).toBe(true);
+  });
+
+  it('completes login with a short-lived MFA challenge token', async () => {
+    const { generateSync } = await import('otplib');
+    const secret = generateSecret();
+    const totpCode = generateSync({ secret, strategy: 'totp' });
+    const challengeToken = await signMfaChallengeToken({ sub: 'u1', email: 'a@b.com' });
+    vi.mocked(getAdminUserById).mockResolvedValue({
+      adminId: 'u1', email: 'a@b.com', role: 'super-admin',
+      totpEnrolled: true, totpSecret: encryptSecret(secret), totpSecretPending: null,
+      deactivatedAt: null,
+    } as any);
+    vi.mocked(createAdminSession).mockResolvedValue(VALID_SESSION as any);
+
+    const res = await adminLoginHandler(makeLoginReq({ challengeToken, totpCode }), fakeCtx);
+
+    expect(res.status).toBe(200);
+    expect(verifyFirebaseIdToken).not.toHaveBeenCalled();
+    const cookies = (res as any).cookies as Array<{ name: string; path: string }>;
+    expect(cookies?.some((c) => c.name === 'hs_access')).toBe(true);
+    expect(cookies?.some((c) => c.name === 'hs_refresh' && c.path === '/')).toBe(true);
   });
 });
 
@@ -232,7 +256,8 @@ describe('POST /v1/admin/auth/setup-totp', () => {
       fakeCtx,
     );
     expect(res.status).toBe(200);
-    const cookies = (res as any).cookies as Array<{ name: string }>;
+    const cookies = (res as any).cookies as Array<{ name: string; path: string }>;
     expect(cookies?.some((c) => c.name === 'hs_access')).toBe(true);
+    expect(cookies?.some((c) => c.name === 'hs_refresh' && c.path === '/')).toBe(true);
   });
 });

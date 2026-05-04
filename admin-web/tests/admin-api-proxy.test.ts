@@ -44,7 +44,7 @@ describe('admin API proxy route', () => {
     await expect(response.json()).resolves.toEqual({ ok: true });
   });
 
-  it('rewrites refresh cookie path to the proxy refresh endpoint', async () => {
+  it('rewrites refresh cookie path to the admin app root', async () => {
     vi.stubEnv('API_BASE_URL', 'https://functions.example.test/api');
     vi.stubGlobal(
       'fetch',
@@ -67,6 +67,34 @@ describe('admin API proxy route', () => {
     const response = await POST(request, context(['v1', 'admin', 'auth', 'login']));
     const setCookie = response.headers.get('set-cookie') ?? '';
 
+    expect(setCookie).toContain('Path=/');
+    expect(setCookie).not.toContain('Secure');
+  });
+
+  it('clears the legacy proxy-scoped refresh cookie on logout', async () => {
+    vi.stubEnv('API_BASE_URL', 'https://functions.example.test/api');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response('{}', {
+          status: 200,
+          headers: {
+            'set-cookie':
+              'hs_refresh=; Max-Age=0; Path=/api/v1/admin/auth/refresh; HttpOnly; Secure; SameSite=Strict',
+          },
+        }),
+      ),
+    );
+
+    const request = new Request('http://localhost:3000/admin-api/v1/admin/auth/logout', {
+      method: 'POST',
+      body: '{}',
+    });
+
+    const response = await POST(request, context(['v1', 'admin', 'auth', 'logout']));
+    const setCookie = response.headers.get('set-cookie') ?? '';
+
+    expect(setCookie).toContain('Path=/');
     expect(setCookie).toContain('Path=/admin-api/v1/admin/auth/refresh');
     expect(setCookie).not.toContain('Secure');
   });

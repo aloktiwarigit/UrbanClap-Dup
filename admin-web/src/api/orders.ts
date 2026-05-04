@@ -8,6 +8,7 @@ import type {
   WaiveFeeRequest,
   EscalateRequest,
   NoteRequest,
+  TechnicianCandidate,
 } from '@/types/order';
 import { apiUrl } from './base';
 
@@ -111,4 +112,13 @@ export async function addOrderNote(id: string, body: NoteRequest): Promise<Order
   });
   if (!res.ok) throw new Error(`addOrderNote failed: ${res.status}`);
   return res.json() as Promise<Order>;
+}
+
+export async function fetchTechnicianCandidatesForOrder(id: string): Promise<TechnicianCandidate[]> {
+  const res = await fetch(apiUrl(`/v1/admin/orders/${id}/technician-candidates`), {
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error(`fetchTechnicianCandidatesForOrder failed: ${res.status}`);
+  const json = (await res.json()) as { technicians?: TechnicianCandidate[] };
+  return json.technicians ?? [];
 }
