@@ -82,8 +82,11 @@ async function completeTotpLogin(
       maxAge: 900,
     },
     {
+      // Format: "<sessionId>:<rawRefreshToken>" — sessionId is the partition key
+      // for O(1) lookup in the refresh handler; rawRefreshToken is the one-time
+      // credential rotated on each use.
       name: 'hs_refresh',
-      value: session.sessionId,
+      value: `${session.sessionId}:${session.rawRefreshToken}`,
       httpOnly: true,
       secure: true,
       sameSite: 'Strict',
@@ -191,7 +194,24 @@ export async function adminLoginHandler(
 
   if (!adminUser.totpEnrolled) {
     const setupToken = await signSetupToken({ sub: adminUser.adminId, email: adminUser.email });
-    return { status: 200, jsonBody: { requiresSetup: true, setupToken } };
+    // Deliver setupToken as an HttpOnly cookie (hs_setup) so the client never
+    // touches it via JS. Also include it in the JSON body for the deprecation
+    // window while old clients (if any) drain. Once all clients use the cookie
+    // path the JSON field can be dropped.
+    const setupCookie: Cookie = {
+      name: 'hs_setup',
+      value: setupToken,
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Strict',
+      path: '/setup',
+      maxAge: 600,
+    };
+    return {
+      status: 200,
+      cookies: [setupCookie],
+      jsonBody: { requiresSetup: true, setupToken },
+    };
   }
 
   if (!totpCode) {

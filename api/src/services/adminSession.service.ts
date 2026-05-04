@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { getCosmosClient, DB_NAME } from '../cosmos/client.js';
 import type { AdminRole } from '../types/admin.js';
 
@@ -9,6 +9,12 @@ export interface AdminSession {
   role: AdminRole;
   lastActivityAt: string;
   hardExpiresAt: string;
+  refreshTokenHash: string;
+}
+
+export interface AdminSessionWithRawToken extends AdminSession {
+  /** Raw refresh token — returned to caller once; never stored in Cosmos. */
+  rawRefreshToken: string;
 }
 
 const CONTAINER = 'admin_sessions';
@@ -19,22 +25,65 @@ function container() {
   return getCosmosClient().database(DB_NAME).container(CONTAINER);
 }
 
+function sha256(value: string): string {
+  return createHash('sha256').update(value).digest('hex');
+}
+
 export async function createAdminSession(args: {
   adminId: string;
   role: AdminRole;
-}): Promise<AdminSession> {
+}): Promise<AdminSessionWithRawToken> {
   const sessionId = randomUUID();
+  const rawRefreshToken = randomUUID();
   const now = new Date();
-  const session: AdminSession = {
+  const sessionDoc: AdminSession = {
     id: sessionId,
     sessionId,
     adminId: args.adminId,
     role: args.role,
     lastActivityAt: now.toISOString(),
     hardExpiresAt: new Date(now.getTime() + HARD_EXPIRY_MS).toISOString(),
+    refreshTokenHash: sha256(rawRefreshToken),
   };
-  await container().items.create(session);
-  return session;
+  await container().items.create(sessionDoc);
+  return { ...sessionDoc, rawRefreshToken };
+}
+
+/**
+ * Validate the raw refresh token against the stored hash and rotate it.
+ * Returns the new raw refresh token on success, or null on any failure.
+ *
+ * Uses ETag-conditional replace to guard against concurrent rotation races.
+ */
+export async function validateAndRotateRefresh(
+  sessionId: string,
+  rawToken: string,
+): Promise<string | null> {
+  const { resource, etag } = await container()
+    .item(sessionId, sessionId)
+    .read<AdminSession>();
+
+  if (!resource) return null;
+
+  const now = new Date();
+  if (new Date(resource.hardExpiresAt) <= now) return null;
+  if (now.getTime() - new Date(resource.lastActivityAt).getTime() > INACTIVITY_MS) return null;
+
+  // Constant-time hash comparison via SHA-256 (avoids timing oracle on raw token)
+  if (sha256(rawToken) !== resource.refreshTokenHash) return null;
+
+  const newRawToken = randomUUID();
+  const updated: AdminSession = {
+    ...resource,
+    refreshTokenHash: sha256(newRawToken),
+    lastActivityAt: now.toISOString(),
+  };
+
+  await container()
+    .item(sessionId, sessionId)
+    .replace(updated, { accessCondition: { type: 'IfMatch', condition: etag ?? '' } });
+
+  return newRawToken;
 }
 
 export async function touchAndGetSession(

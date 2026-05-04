@@ -2,18 +2,49 @@ import { CosmosClient, type Container } from '@azure/cosmos';
 
 let _client: CosmosClient | null = null;
 
+const RETRY_OPTIONS = {
+  maxRetryAttemptsOnThrottledRequests: 9,
+  maxWaitTimeInSeconds: 30,
+} as const;
+
+/**
+ * Parse a Cosmos DB connection string into endpoint + key components.
+ * Format: AccountEndpoint=https://...;AccountKey=<base64>=;
+ */
+function parseConnectionString(cs: string): { endpoint: string; key: string } {
+  const endpointMatch = /AccountEndpoint=([^;]+)/i.exec(cs);
+  const keyMatch = /AccountKey=([^;]+)/i.exec(cs);
+  if (!endpointMatch || !keyMatch) {
+    throw new Error('Invalid COSMOS_CONNECTION_STRING: missing AccountEndpoint or AccountKey');
+  }
+  return { endpoint: endpointMatch[1]!, key: keyMatch[1]! };
+}
+
 export function getCosmosClient(): CosmosClient {
   if (!_client) {
     const connectionString = process.env.COSMOS_CONNECTION_STRING;
+    const userAgentSuffix = `homeservices-api/${process.env.GIT_SHA || 'local'}`;
+
     if (connectionString) {
-      _client = new CosmosClient(connectionString);
+      const { endpoint, key } = parseConnectionString(connectionString);
+      _client = new CosmosClient({
+        endpoint,
+        key,
+        connectionPolicy: { retryOptions: RETRY_OPTIONS },
+        userAgentSuffix,
+      });
     } else {
       const endpoint = process.env.COSMOS_ENDPOINT;
       const key = process.env.COSMOS_KEY;
       if (!endpoint || !key) {
         throw new Error('Missing COSMOS_CONNECTION_STRING or COSMOS_ENDPOINT+COSMOS_KEY');
       }
-      _client = new CosmosClient({ endpoint, key });
+      _client = new CosmosClient({
+        endpoint,
+        key,
+        connectionPolicy: { retryOptions: RETRY_OPTIONS },
+        userAgentSuffix,
+      });
     }
   }
   return _client;
