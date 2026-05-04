@@ -47,11 +47,25 @@ export const bookingRepo = {
     paymentId: string,
     paymentSignature: string,
   ): Promise<BookingDoc | null> {
-    const existing = await this.getById(id);
+    const { resource: existing, etag } = await getBookingsContainer().item(id, id).read<BookingDoc>();
     if (!existing) return null;
     if (existing.status === 'PAID') return existing; // webhook already processed — idempotent success
     if (existing.status !== 'PENDING_PAYMENT') return null;
     const updated: BookingDoc = { ...existing, status: 'SEARCHING', paymentId, paymentSignature };
+    const useEtag = process.env.BOOKINGS_ETAG_GUARDS === 'on';
+    if (useEtag) {
+      try {
+        const { resource } = await getBookingsContainer()
+          .item(id, id)
+          .replace<BookingDoc>(updated, { accessCondition: { type: 'IfMatch', condition: etag ?? '' } });
+        return resource ?? null;
+      } catch (e: unknown) {
+        if (typeof e === 'object' && e !== null && 'code' in e && (e as { code: number }).code === 412) {
+          return null; // lost ETag race — idempotent by design
+        }
+        throw e;
+      }
+    }
     const { resource } = await getBookingsContainer().item(id, id).replace<BookingDoc>(updated);
     return resource!;
   },
@@ -67,9 +81,23 @@ export const bookingRepo = {
   },
 
   async markPaid(id: string, paymentId: string): Promise<BookingDoc | null> {
-    const existing = await this.getById(id);
+    const { resource: existing, etag } = await getBookingsContainer().item(id, id).read<BookingDoc>();
     if (!existing || (existing.status !== 'SEARCHING' && existing.status !== 'PENDING_PAYMENT')) return null;
     const updated: BookingDoc = { ...existing, status: 'PAID', paymentId };
+    const useEtag = process.env.BOOKINGS_ETAG_GUARDS === 'on';
+    if (useEtag) {
+      try {
+        const { resource } = await getBookingsContainer()
+          .item(id, id)
+          .replace<BookingDoc>(updated, { accessCondition: { type: 'IfMatch', condition: etag ?? '' } });
+        return resource ?? null;
+      } catch (e: unknown) {
+        if (typeof e === 'object' && e !== null && 'code' in e && (e as { code: number }).code === 412) {
+          return null; // lost ETag race — idempotent by design
+        }
+        throw e;
+      }
+    }
     const { resource } = await getBookingsContainer().item(id, id).replace<BookingDoc>(updated);
     return resource!;
   },
