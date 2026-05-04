@@ -38,6 +38,11 @@ val googleWebClientId =
         ?: googleServicesWebClientId()
         ?: ""
 
+val mapsApiKey =
+    System.getenv("MAPS_API_KEY")?.takeIf { it.isNotBlank() }
+        ?: localProperty("MAPS_API_KEY")
+        ?: ""
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -80,6 +85,12 @@ android {
             "GOOGLE_WEB_CLIENT_ID",
             buildConfigString(googleWebClientId),
         )
+        buildConfigField(
+            "String",
+            "MAPS_API_KEY",
+            buildConfigString(mapsApiKey),
+        )
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     buildTypes {
@@ -384,6 +395,14 @@ kover {
                     // Retrofit runtime, not unit-testable directly.
                     "*.PayoutApiService",
                     "*.PayoutApiService\$*",
+                    // Service selection screen generates Compose *Kt wrapper classes — same
+                    // rationale as the other Compose screen exclusions above.
+                    "*.ServiceSelectionScreenKt",
+                    "*.ServiceSelectionScreenKt\$*",
+                    // Service profile Hilt DI module and Retrofit interface are framework wiring.
+                    "*.data.serviceprofile.di.*",
+                    "*.ServiceProfileApiService",
+                    "*.ServiceProfileApiService\$*",
                     // PayoutCadenceViewModel.saveCadence$1 — viewModelScope.launch lambda containing
                     // biometric + PATCH call. The ?: return@launch guard and coroutine suspension
                     // points are only exercisable via instrumented tests (real FragmentActivity needed
@@ -449,6 +468,9 @@ dependencies {
     implementation(libs.androidx.security.crypto)
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.play.services.location)
+    implementation(libs.play.services.maps)
+    implementation(libs.maps.compose)
 
     // KYC networking + serialization
     implementation(libs.retrofit.core)

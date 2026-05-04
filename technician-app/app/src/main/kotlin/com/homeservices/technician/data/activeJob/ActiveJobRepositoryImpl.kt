@@ -7,6 +7,7 @@ import com.homeservices.technician.domain.activeJob.ActiveJobRepository
 import com.homeservices.technician.domain.activeJob.model.ActiveJob
 import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
 import com.homeservices.technician.domain.activeJob.model.LatLng
+import com.homeservices.technician.domain.location.CurrentLocationProvider
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -23,6 +24,7 @@ public class ActiveJobRepositoryImpl
         private val api: ActiveJobApiService,
         private val dao: ActiveJobDao,
         private val firebaseAuth: FirebaseAuth,
+        private val currentLocationProvider: CurrentLocationProvider,
     ) : ActiveJobRepository {
         override fun getActiveJob(bookingId: String): Flow<ActiveJob> =
             flow {
@@ -58,7 +60,13 @@ public class ActiveJobRepositoryImpl
                     api.transitionStatus(
                         "Bearer $token",
                         bookingId,
-                        TransitionRequest(targetStatus.name),
+                        TransitionRequest(
+                            targetStatus = targetStatus.name,
+                            currentLocation =
+                                runCatching { currentLocationProvider.currentLocation() }
+                                    .getOrNull()
+                                    ?.toDto(),
+                        ),
                     )
                 if (response.isSuccessful) {
                     Result.success(response.body()!!.toDomain())
@@ -114,4 +122,6 @@ public class ActiveJobRepositoryImpl
                 slotDate = slotDate,
                 slotWindow = slotWindow,
             )
+
+        private fun LatLng.toDto(): LatLngDto = LatLngDto(lat = lat, lng = lng)
     }

@@ -7,6 +7,8 @@ import com.google.firebase.auth.GetTokenResult
 import com.homeservices.technician.data.activeJob.db.ActiveJobDao
 import com.homeservices.technician.data.activeJob.db.PendingTransitionEntity
 import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
+import com.homeservices.technician.domain.activeJob.model.LatLng
+import com.homeservices.technician.domain.location.CurrentLocationProvider
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -25,6 +27,7 @@ public class ActiveJobRepositoryImplTest {
     private lateinit var api: ActiveJobApiService
     private lateinit var dao: ActiveJobDao
     private lateinit var firebaseAuth: FirebaseAuth
+    private lateinit var currentLocationProvider: CurrentLocationProvider
     private lateinit var repo: ActiveJobRepositoryImpl
 
     private fun aResponse(status: String = "ASSIGNED") =
@@ -45,6 +48,7 @@ public class ActiveJobRepositoryImplTest {
         api = mockk(relaxed = true)
         dao = mockk(relaxed = true)
         firebaseAuth = mockk()
+        currentLocationProvider = mockk()
 
         val user = mockk<FirebaseUser>()
         val tokenResult = mockk<GetTokenResult>()
@@ -53,7 +57,8 @@ public class ActiveJobRepositoryImplTest {
         every { user.getIdToken(false) } returns Tasks.forResult(tokenResult)
 
         every { dao.getPendingFlow() } returns emptyFlow()
-        repo = ActiveJobRepositoryImpl(api, dao, firebaseAuth)
+        coEvery { currentLocationProvider.currentLocation() } returns null
+        repo = ActiveJobRepositoryImpl(api, dao, firebaseAuth, currentLocationProvider)
     }
 
     @Test
@@ -65,6 +70,26 @@ public class ActiveJobRepositoryImplTest {
 
             assertThat(result.isSuccess).isTrue()
             coVerify(exactly = 0) { dao.insert(any()) }
+        }
+
+    @Test
+    public fun `transitionStatus includes current GPS when available`(): Unit =
+        runTest {
+            coEvery { currentLocationProvider.currentLocation() } returns LatLng(26.8, 82.2)
+            coEvery { api.transitionStatus(any(), any(), any()) } returns Response.success(aResponse("EN_ROUTE"))
+
+            repo.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE)
+
+            coVerify {
+                api.transitionStatus(
+                    "Bearer test-token",
+                    "bk-1",
+                    TransitionRequest(
+                        targetStatus = "EN_ROUTE",
+                        currentLocation = LatLngDto(lat = 26.8, lng = 82.2),
+                    ),
+                )
+            }
         }
 
     @Test
@@ -113,7 +138,7 @@ public class ActiveJobRepositoryImplTest {
     public fun `hasPendingTransitions emits false when queue is empty`(): Unit =
         runTest {
             every { dao.getPendingFlow() } returns flowOf(emptyList())
-            val repo2 = ActiveJobRepositoryImpl(api, dao, firebaseAuth)
+            val repo2 = ActiveJobRepositoryImpl(api, dao, firebaseAuth, currentLocationProvider)
 
             val hasPending = repo2.hasPendingTransitions.first()
 
@@ -127,7 +152,7 @@ public class ActiveJobRepositoryImplTest {
                 flowOf(
                     listOf(PendingTransitionEntity("id-1", "bk-1", "EN_ROUTE", 1000L)),
                 )
-            val repo2 = ActiveJobRepositoryImpl(api, dao, firebaseAuth)
+            val repo2 = ActiveJobRepositoryImpl(api, dao, firebaseAuth, currentLocationProvider)
 
             val hasPending = repo2.hasPendingTransitions.first()
 
