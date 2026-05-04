@@ -61,7 +61,10 @@ public class AuthViewModel
             when (result) {
                 is TruecallerAuthResult.Success -> {
                     viewModelScope.launch {
-                        val authResult = orchestrator.completeWithTruecaller(result.phoneLastFour)
+                        // Pass the full Success object so the orchestrator can choose between
+                        // Phase 1 (anonymous sign-in) and Phase 2 (server-side RSA verify)
+                        // based on the truecaller_server_verify_v2 feature flag.
+                        val authResult = orchestrator.completeWithTruecaller(result)
                         if (authResult is AuthResult.Error) {
                             _uiState.value =
                                 AuthUiState.Error(
