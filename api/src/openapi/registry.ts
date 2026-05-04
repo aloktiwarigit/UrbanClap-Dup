@@ -42,6 +42,49 @@ extendZodWithOpenApi(z);
 
 export const registry = new OpenAPIRegistry();
 
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+const TruecallerVerifyRequestSchema = z.object({
+  payload: z.string().min(1).openapi({ example: 'base64encodedPayload==' }),
+  signature: z.string().min(1).openapi({ example: 'base64encodedSignature==' }),
+  signatureAlgorithm: z.string().min(1).openapi({ example: 'SHA512withRSA' }),
+  fcmToken: z.string().optional().openapi({ example: 'fcm-token-abc123' }),
+}).openapi('TruecallerVerifyRequest');
+
+const TruecallerVerifyResponseSchema = z.object({
+  firebaseCustomToken: z.string().openapi({ example: 'eyJhbGci...' }),
+  sessionExpiresAt: z.number().openapi({ example: 1700000000000 }),
+}).openapi('TruecallerVerifyResponse');
+
+registry.register('TruecallerVerifyRequest', TruecallerVerifyRequestSchema);
+registry.register('TruecallerVerifyResponse', TruecallerVerifyResponseSchema);
+
+registry.registerPath({
+  method: 'post',
+  path: '/v1/auth/truecaller/verify',
+  operationId: 'verifyTruecaller',
+  tags: ['auth'],
+  summary: 'Verify Truecaller profile signature and mint Firebase custom token',
+  description:
+    'Verifies the Truecaller SDK RSA payload/signature against the Truecaller public key API ' +
+    '(cached 24h in Cosmos). On success, mints a Firebase custom token for the verified phone number. ' +
+    'Called by customer-app when truecaller_server_verify_v2 flag is ON.',
+  request: {
+    body: {
+      content: { 'application/json': { schema: TruecallerVerifyRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Signature valid — Firebase custom token issued',
+      content: { 'application/json': { schema: TruecallerVerifyResponseSchema } },
+    },
+    400: {
+      description: 'Validation error or invalid signature',
+    },
+  },
+});
+
 const HealthResponse = HealthResponseSchema.openapi('HealthResponse');
 registry.register('HealthResponse', HealthResponse);
 

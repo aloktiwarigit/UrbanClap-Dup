@@ -250,6 +250,11 @@ kover {
                     "*.navigation.*",
                     // Hilt DI modules — @Provides methods are framework wiring
                     "*.data.auth.di.*",
+                    // data.auth.remote.di — AuthApiModule (@Provides for AuthApi Retrofit + @PublicOkHttpClient),
+                    // same rationale as data.auth.di.* and data.booking.di.*
+                    "*.data.auth.remote.di.*",
+                    // domain.flags.di — FeatureFlagsModule (@Binds), same rationale as other DI modules
+                    "*.domain.flags.di.*",
                     "*.data.catalogue.di.*",
                     // Stub home screen — placeholder Compose composable, no logic
                     "*.ui.home.*",
@@ -345,6 +350,11 @@ kover {
                     // Booking remote DTOs — Moshi @JsonClass data holders with toDomain() mappers;
                     // mapping is exercised indirectly via repository integration tests, not JVM unit tests
                     "*.data.booking.remote.dto.*",
+                    // Auth remote DTOs — Moshi @JsonClass data holders (TruecallerVerifyRequest/Response),
+                    // same rationale as *.data.booking.remote.dto.*
+                    "*.data.auth.remote.dto.*",
+                    // BuildConfigFeatureFlags — reads a compile-time constant; no branches to test
+                    "*.BuildConfigFeatureFlags",
                     // RazorpayPaymentUseCase.open() — uses callbackFlow + Razorpay Checkout SDK which
                     // requires a real Activity; same rationale as FirebaseOtpUseCase (callbackFlow + SDK)
                     "*.RazorpayPaymentUseCase",
