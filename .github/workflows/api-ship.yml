@@ -55,7 +55,7 @@ jobs:
         run: pnpm lint --max-warnings 0
 
       - name: unit + integration tests (with coverage gate)
-        run: pnpm test --coverage
+        run: pnpm test:coverage
         env:
           NODE_ENV: test
 

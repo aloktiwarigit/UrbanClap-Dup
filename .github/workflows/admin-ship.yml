@@ -73,7 +73,7 @@ jobs:
         run: pnpm lint --max-warnings 0
 
       - name: typecheck + unit tests (with coverage gate)
-        run: pnpm typecheck && pnpm test --coverage
+        run: pnpm typecheck && pnpm test:coverage
 
       - name: build (clean-room compile check)
         run: pnpm build
