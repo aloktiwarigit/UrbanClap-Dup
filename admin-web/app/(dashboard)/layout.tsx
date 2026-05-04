@@ -7,6 +7,7 @@ import { AdminAuthProvider, type AuthState } from '@/lib/auth/context';
 import { Rail } from '@/components/dashboard/Rail';
 import { Topbar } from '@/components/dashboard/Topbar';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import { normalizeAdminRole } from '@/admin/capabilities';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const jwtSecretEnv = process.env.JWT_SECRET;
@@ -20,10 +21,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (token) {
     try {
       const { payload } = await jwtVerify(token, JWT_SECRET);
+      const role = normalizeAdminRole(payload['role']);
+      if (!role) throw new Error('invalid role');
       initialAuth = {
         adminId: payload.sub as string,
         email: '',
-        role: payload['role'] as AuthState['role'],
+        role,
       };
     } catch {
       redirect('/login');

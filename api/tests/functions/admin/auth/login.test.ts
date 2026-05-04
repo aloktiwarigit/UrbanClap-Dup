@@ -32,6 +32,8 @@ import {
   getAdminUserById,
 } from '../../../../src/services/adminUser.service.js';
 import { verifyToken } from '../../../../src/services/totp.service.js';
+import { createAdminSession } from '../../../../src/services/adminSession.service.js';
+import { signAccessToken } from '../../../../src/services/jwt.service.js';
 
 const mockCtx = {} as InvocationContext;
 
@@ -115,5 +117,23 @@ describe('POST /v1/admin/auth/login', () => {
     expect(res.status).toBe(200);
     expect((res.jsonBody as { requiresSetup?: boolean }).requiresSetup).toBe(true);
     expect(claimAdminInvite).toHaveBeenCalledWith(invite, 'firebase-uid', 'anshutiwari183@gmail.com');
+  });
+
+  it('normalizes legacy admin role to super-admin on successful login', async () => {
+    vi.mocked(getAdminUserById).mockResolvedValue({ ...validAdmin, role: 'admin' } as never);
+
+    const res = await adminLoginHandler(
+      loginReq({ idToken: 'id-tok', totpCode: '123456' }),
+      mockCtx,
+    ) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(createAdminSession).toHaveBeenCalledWith({ adminId: 'admin-1', role: 'super-admin' });
+    expect(signAccessToken).toHaveBeenCalledWith({
+      sub: 'admin-1',
+      role: 'super-admin',
+      sessionId: 'sess-1',
+    });
+    expect((res.jsonBody as { role: string }).role).toBe('super-admin');
   });
 });

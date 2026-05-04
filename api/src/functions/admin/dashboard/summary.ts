@@ -5,6 +5,16 @@ import type { AdminContext } from '../../../types/admin.js';
 import { getCosmosClient, DB_NAME } from '../../../cosmos/client.js';
 import { DashboardSummaryResponseSchema } from '../../../schemas/dashboard.js';
 
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+
+function getIndiaBusinessDayStartIso(now = new Date()): string {
+  const shifted = new Date(now.getTime() + IST_OFFSET_MS);
+  const year = shifted.getUTCFullYear();
+  const month = shifted.getUTCMonth();
+  const date = shifted.getUTCDate();
+  return new Date(Date.UTC(year, month, date) - IST_OFFSET_MS).toISOString();
+}
+
 export async function summaryHandler(
   _req: HttpRequest,
   ctx: InvocationContext,
@@ -12,9 +22,7 @@ export async function summaryHandler(
 ): Promise<HttpResponseInit> {
   try {
     const db = getCosmosClient().database(DB_NAME);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayIso = today.toISOString();
+    const todayIso = getIndiaBusinessDayStartIso();
 
     const [bookingsResult, gmvResult, techsResult] = await Promise.all([
       db
@@ -27,7 +35,7 @@ export async function summaryHandler(
       db
         .container('bookings')
         .items.query({
-          query: 'SELECT VALUE SUM(c.amount) FROM c WHERE c.status = "completed" AND c.createdAt >= @today',
+          query: 'SELECT VALUE SUM(IIF(IS_DEFINED(c.finalAmount), c.finalAmount, c.amount)) FROM c WHERE c.createdAt >= @today',
           parameters: [{ name: '@today', value: todayIso }],
         })
         .fetchAll(),

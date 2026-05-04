@@ -116,7 +116,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** List service categories (admin, includes inactive) */
+        get: operations["adminListCategories"];
         put?: never;
         /** Create a service category */
         post: operations["adminCreateCategory"];
@@ -133,7 +134,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get a service category */
+        get: operations["adminGetCategory"];
         /** Update a service category */
         put: operations["adminUpdateCategory"];
         post?: never;
@@ -185,7 +187,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get a service */
+        get: operations["adminGetService"];
         /** Update a service */
         put: operations["adminUpdateService"];
         post?: never;
@@ -258,6 +261,108 @@ export interface paths {
         get: operations["adminGetRepeatOffenders"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List admin users without secrets */
+        get: operations["adminListUsers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/users/{adminId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch admin user role, display name, or activation state */
+        patch: operations["adminPatchUser"];
+        trace?: never;
+    };
+    "/v1/admin/erasure-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List erasure requests */
+        get: operations["adminListErasureRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/erasure-requests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Execute or deny an erasure request */
+        patch: operations["adminPatchErasureRequest"];
+        trace?: never;
+    };
+    "/v1/admin/compliance/ssc-levy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List SSC levies */
+        get: operations["adminListSscLevies"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/compliance/ssc-levy/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve SSC levy transfer */
+        post: operations["adminApproveSscLevy"];
         delete?: never;
         options?: never;
         head?: never;
@@ -610,6 +715,87 @@ export interface components {
         RepeatOffendersResponse: {
             offenders: components["schemas"]["RepeatOffender"][];
         };
+        /** @enum {string} */
+        AdminRole: "super-admin" | "ops-manager" | "finance" | "support-agent";
+        AdminUserListItem: {
+            adminId: string;
+            /** Format: email */
+            email: string;
+            role: components["schemas"]["AdminRole"];
+            displayName?: string;
+            totpEnrolled: boolean;
+            createdAt: string;
+            updatedAt: string;
+            deactivatedAt: string | null;
+        };
+        PatchAdminUserBody: {
+            role?: components["schemas"]["AdminRole"];
+            displayName?: string;
+            deactivatedAt?: string | null;
+        };
+        ErasureRequestDoc: {
+            id: string;
+            partitionKey: string;
+            userId: string;
+            /** @enum {string} */
+            userRole: "CUSTOMER" | "TECHNICIAN";
+            /** @enum {string} */
+            status: "PENDING" | "EXECUTING" | "EXECUTED" | "REVOKED" | "DENIED" | "FAILED";
+            reason?: string;
+            requestedAt: string;
+            scheduledDeletionAt: string;
+            anonymizationSalt: string;
+            anonymizedHash?: string;
+            userIdWiped?: boolean;
+            executedAt?: string;
+            revokedAt?: string;
+            deniedAt?: string;
+            /** @enum {string} */
+            denialReason?: "legal-hold" | "regulatory-retention-conflict" | "fraud-investigation";
+            failedAt?: string;
+            failureReason?: string;
+            deletedCounts?: {
+                bookings: number;
+                ratings: number;
+                complaints: number;
+                walletLedgerAnonymized: number;
+                bookingEventsAnonymized: number;
+                dispatchAttemptsAnonymized: number;
+                auditLogAnonymized: number;
+                technicianHardDeleted: boolean;
+                kycHardDeleted: boolean;
+                fcmTokensCleared: boolean;
+            };
+        };
+        AdminErasurePatchBody: {
+            /** @enum {string} */
+            action: "EXECUTE";
+        } | {
+            /** @enum {string} */
+            action: "DENY";
+            /** @enum {string} */
+            reason: "legal-hold" | "regulatory-retention-conflict" | "fraud-investigation";
+        };
+        SscLevyDoc: {
+            id: string;
+            quarter: string;
+            gmv: number;
+            levyRate: 0.01 | 0.02;
+            levyAmount: number;
+            /** @enum {string} */
+            status: "PENDING_APPROVAL" | "APPROVED" | "TRANSFERRED" | "FAILED";
+            razorpayTransferId?: string;
+            approvedAt?: string;
+            transferredAt?: string;
+            createdAt: string;
+        };
+        SscLevyApproveResponse: {
+            levyId: string;
+            quarter: string;
+            transferId: string;
+            /** @enum {string} */
+            status: "TRANSFERRED";
+        };
         AdminLoginRequest: {
             idToken: string;
             totpCode?: string;
@@ -825,6 +1011,42 @@ export interface operations {
             };
         };
     };
+    adminListCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Categories list */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        categories: components["schemas"]["AdminServiceCategory"][];
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     adminCreateCategory: {
         parameters: {
             query?: never;
@@ -864,6 +1086,49 @@ export interface operations {
             };
             /** @description Duplicate id */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminGetCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Category */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminServiceCategory"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1023,6 +1288,49 @@ export interface operations {
             };
             /** @description Duplicate id */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminGetService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminService"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1287,6 +1595,286 @@ export interface operations {
             };
             /** @description Forbidden */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminListUsers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Admin users */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        users: components["schemas"]["AdminUserListItem"][];
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminPatchUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                adminId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchAdminUserBody"];
+            };
+        };
+        responses: {
+            /** @description Patched */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        ok: true;
+                    };
+                };
+            };
+            /** @description Validation error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin user not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminListErasureRequests: {
+        parameters: {
+            query?: {
+                status?: string;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Erasure requests */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["ErasureRequestDoc"][];
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminPatchErasureRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AdminErasurePatchBody"];
+            };
+        };
+        responses: {
+            /** @description Erasure action accepted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Erasure request not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Request is not pending or cool-off has not elapsed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminListSscLevies: {
+        parameters: {
+            query?: {
+                status?: "PENDING_APPROVAL" | "APPROVED" | "TRANSFERRED" | "FAILED";
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description SSC levies */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        levies: components["schemas"]["SscLevyDoc"][];
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminApproveSscLevy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Transfer created */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SscLevyApproveResponse"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Levy not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid levy status */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

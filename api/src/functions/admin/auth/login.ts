@@ -16,6 +16,7 @@ import { createAdminSession } from '../../../services/adminSession.service.js';
 import { signAccessToken, signSetupToken } from '../../../services/jwt.service.js';
 import { auditLog } from '../../../services/auditLog.service.js';
 import { appendAuditEntry } from '../../../cosmos/audit-log-repository.js';
+import { normalizeAdminRole } from '../../../types/admin.js';
 
 export async function adminLoginHandler(
   req: HttpRequest,
@@ -68,6 +69,10 @@ export async function adminLoginHandler(
   if (!adminUser || adminUser.deactivatedAt) {
     return { status: 401, jsonBody: { code: 'ADMIN_NOT_FOUND' } };
   }
+  const role = normalizeAdminRole(adminUser.role);
+  if (!role) {
+    return { status: 401, jsonBody: { code: 'ADMIN_NOT_FOUND' } };
+  }
 
   if (!adminUser.totpEnrolled) {
     const setupToken = await signSetupToken({ sub: adminUser.adminId, email: adminUser.email });
@@ -79,21 +84,21 @@ export async function adminLoginHandler(
   const secret = decryptSecret(adminUser.totpSecret!);
   if (!verifyToken(totpCode, secret)) {
     const _ts = new Date().toISOString();
-    void appendAuditEntry({ id: randomUUID(), adminId: adminUser.adminId, role: adminUser.role, action: 'ADMIN_LOGIN_FAILED', resourceType: 'admin_session', resourceId: adminUser.adminId, payload: { reason: 'TOTP_INVALID' }, timestamp: _ts, partitionKey: _ts.slice(0, 7) }).catch(Sentry.captureException);
+    void appendAuditEntry({ id: randomUUID(), adminId: adminUser.adminId, role, action: 'ADMIN_LOGIN_FAILED', resourceType: 'admin_session', resourceId: adminUser.adminId, payload: { reason: 'TOTP_INVALID' }, timestamp: _ts, partitionKey: _ts.slice(0, 7) }).catch(Sentry.captureException);
     return { status: 422, jsonBody: { code: 'TOTP_INVALID' } };
   }
 
-  const session = await createAdminSession({ adminId: adminUser.adminId, role: adminUser.role });
+  const session = await createAdminSession({ adminId: adminUser.adminId, role });
   const accessToken = await signAccessToken({
     sub: adminUser.adminId,
-    role: adminUser.role,
+    role,
     sessionId: session.sessionId,
   });
 
   const ip = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? undefined;
   const userAgent = req.headers.get('user-agent') ?? undefined;
   void auditLog(
-    { adminId: adminUser.adminId, role: adminUser.role, sessionId: session.sessionId },
+    { adminId: adminUser.adminId, role, sessionId: session.sessionId },
     'admin.login',
     'admin_session',
     session.sessionId,
@@ -128,7 +133,7 @@ export async function adminLoginHandler(
   return {
     status: 200,
     cookies,
-    jsonBody: { adminId: adminUser.adminId, role: adminUser.role, email: adminUser.email },
+    jsonBody: { adminId: adminUser.adminId, role, email: adminUser.email },
   };
 }
 

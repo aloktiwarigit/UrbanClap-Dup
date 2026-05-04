@@ -15,6 +15,18 @@ export interface AdminUser {
   deactivatedAt: string | null;
 }
 
+export type AdminUserListItem = Pick<
+  AdminUser,
+  | 'adminId'
+  | 'email'
+  | 'role'
+  | 'displayName'
+  | 'totpEnrolled'
+  | 'createdAt'
+  | 'updatedAt'
+  | 'deactivatedAt'
+>;
+
 const CONTAINER = 'admin_users';
 const INVITE_PREFIX = 'invite:';
 
@@ -47,6 +59,27 @@ export async function getAdminUserByEmail(email: string): Promise<AdminUser | nu
     })
     .fetchAll();
   return resources[0] ?? null;
+}
+
+export async function listAdminUsers(): Promise<AdminUserListItem[]> {
+  const { resources } = await container()
+    .items.query<AdminUserListItem>({
+      query: `
+        SELECT
+          c.adminId,
+          c.email,
+          c.role,
+          c.displayName,
+          c.totpEnrolled,
+          c.createdAt,
+          c.updatedAt,
+          c.deactivatedAt
+        FROM c
+        ORDER BY c.createdAt DESC
+      `,
+    })
+    .fetchAll();
+  return resources;
 }
 
 export async function claimAdminInvite(invite: AdminUser, firebaseUid: string, email: string): Promise<AdminUser> {

@@ -46,6 +46,19 @@ describe('PayoutQueueTable', () => {
     expect(screen.getByRole('button', { name: /approve all/i })).toBeDisabled();
   });
 
+  it('hides approve command when role cannot approve payouts', () => {
+    render(
+      <PayoutQueueTable
+        entries={entries}
+        totalNetPayable={286750}
+        onApproveAll={vi.fn()}
+        canApproveAll={false}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /approve all/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/restricted to super-admins/i)).toBeInTheDocument();
+  });
+
   it('formats netPayable as paise / 100 with ₹ prefix', () => {
     render(<PayoutQueueTable entries={entries} totalNetPayable={286750} onApproveAll={vi.fn()} />);
     // 193750 paise = ₹1,937.50

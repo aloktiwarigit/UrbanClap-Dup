@@ -5,7 +5,13 @@ import { StatusBadge } from './StatusBadge';
 import { OverridePanel } from './OverridePanel';
 import { TrustDossierPanel } from '@/components/technicians/TrustDossierPanel';
 
-interface OrderSlideOverProps { order: Order; onClose: () => void; onOrderUpdated?: (updated: Order) => void; }
+interface OrderSlideOverProps {
+  order: Order;
+  onClose: () => void;
+  onOrderUpdated?: (updated: Order) => void;
+  canOverride?: boolean | undefined;
+  canFinancialOverride?: boolean | undefined;
+}
 
 type Toast = { message: string; type: 'success' | 'error' };
 
@@ -18,7 +24,13 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
 }
 
-export function OrderSlideOver({ order, onClose, onOrderUpdated }: OrderSlideOverProps) {
+export function OrderSlideOver({
+  order,
+  onClose,
+  onOrderUpdated,
+  canOverride,
+  canFinancialOverride,
+}: OrderSlideOverProps) {
   const [currentOrder, setCurrentOrder] = useState<Order>(order);
   const [toast, setToast] = useState<Toast | null>(null);
 
@@ -53,6 +65,8 @@ export function OrderSlideOver({ order, onClose, onOrderUpdated }: OrderSlideOve
 
           <OverridePanel
             order={currentOrder}
+            canOverride={canOverride}
+            canFinancialOverride={canFinancialOverride}
             onActionComplete={updated => {
               setCurrentOrder(updated);
               setToast({ message: 'Action completed successfully.', type: 'success' });

@@ -10,6 +10,7 @@ import {
   getAdminUserById,
   getAdminInviteId,
   getAdminUserByEmail,
+  listAdminUsers,
   createAdminUser,
   isAdminInvite,
 } from '../../src/services/adminUser.service.js';
@@ -55,6 +56,22 @@ describe('adminUser.service', () => {
       expect(query).toHaveBeenCalledWith(expect.objectContaining({
         parameters: [{ name: '@email', value: 'admin@test.com' }],
       }));
+    });
+  });
+
+  describe('listAdminUsers', () => {
+    it('selects only non-secret fields ordered by newest first', async () => {
+      const fetchAll = vi.fn().mockResolvedValue({ resources: [{ adminId: 'u1' }] });
+      const query = vi.fn().mockReturnValue({ fetchAll });
+      container.items.query = query;
+
+      await expect(listAdminUsers()).resolves.toEqual([{ adminId: 'u1' }]);
+
+      const spec = query.mock.calls[0]![0] as { query: string };
+      expect(spec.query).toContain('c.adminId');
+      expect(spec.query).toContain('c.totpEnrolled');
+      expect(spec.query).toContain('ORDER BY c.createdAt DESC');
+      expect(spec.query).not.toContain('totpSecret');
     });
   });
 

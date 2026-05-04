@@ -31,18 +31,17 @@ function makeReq(cookieHeader?: string): HttpRequest {
   });
 }
 
-const fakeEvents = [
+const fakeBookings = [
   {
-    id: 'evt-1',
-    bookingId: 'b-1',
-    status: 'completed',
+    id: 'b-1',
+    status: 'COMPLETED',
     customerId: 'c-1',
     technicianId: 't-1',
     serviceId: 'svc-1',
     amount: 50000,
     createdAt: '2026-04-19T10:00:00Z',
-    kind: 'completed',
-    title: 'Booking completed',
+    slotDate: '2026-04-19',
+    slotWindow: '10:00-11:00',
   },
 ];
 
@@ -82,16 +81,17 @@ describe('GET /v1/admin/dashboard/feed', () => {
 
   it('returns 200 with BookingEventsResponse on happy path', async () => {
     vi.mocked(touchAndGetSession).mockResolvedValue({ sessionId: 's1' } as any);
+    const containerSpy = vi.fn().mockReturnValue({
+      items: {
+        query: vi.fn().mockReturnValue({
+          fetchAll: vi.fn().mockResolvedValue({ resources: fakeBookings }),
+        }),
+      },
+    });
 
     vi.mocked(getCosmosClient).mockReturnValue({
       database: () => ({
-        container: () => ({
-          items: {
-            query: vi.fn().mockReturnValue({
-              fetchAll: vi.fn().mockResolvedValue({ resources: fakeEvents }),
-            }),
-          },
-        }),
+        container: containerSpy,
       }),
     } as any);
 
@@ -103,12 +103,19 @@ describe('GET /v1/admin/dashboard/feed', () => {
 
     expect(res.status).toBe(200);
     expect(res.headers).toMatchObject({ 'Cache-Control': 'no-store' });
+    expect(containerSpy).toHaveBeenCalledWith('bookings');
 
     const parsed = BookingEventsResponseSchema.safeParse(res.jsonBody);
     expect(parsed.success).toBe(true);
     if (parsed.success) {
       expect(parsed.data.events).toHaveLength(1);
       expect(parsed.data.total).toBe(1);
+      expect(parsed.data.events[0]).toMatchObject({
+        bookingId: 'b-1',
+        status: 'COMPLETED',
+        kind: 'completed',
+        title: 'Booking completed',
+      });
     }
   });
 

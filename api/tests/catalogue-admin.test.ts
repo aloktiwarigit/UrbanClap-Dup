@@ -2,10 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { HttpRequest } from '@azure/functions';
 import type { AdminContext } from '../src/types/admin.js';
 import {
+  listAdminCategoriesHandler,
+  getCategoryHandler,
   createCategoryHandler,
   updateCategoryHandler,
   toggleCategoryHandler,
   listAdminServicesHandler,
+  getServiceHandler,
   createServiceHandler,
   updateServiceHandler,
   toggleServiceHandler,
@@ -28,6 +31,7 @@ vi.mock('../src/cosmos/catalogue-repository.js', () => {
       // Existence checks: return null so create handlers return 201 (not 409)
       getCategoryById: vi.fn().mockResolvedValue(null),
       getServiceByIdCrossPartition: vi.fn().mockResolvedValue(null),
+      listAllCategories: vi.fn().mockResolvedValue([cat]),
       createCategory: vi.fn().mockResolvedValue(cat),
       updateCategory: vi.fn().mockResolvedValue(cat),
       toggleCategory: vi.fn().mockResolvedValue({ ...cat, isActive: false }),
@@ -79,6 +83,30 @@ describe('POST /v1/admin/catalogue/categories', () => {
   });
 });
 
+describe('GET /v1/admin/catalogue/categories', () => {
+  it('returns admin category list including inactive categories', async () => {
+    const res = await listAdminCategoriesHandler(
+      makeReq('http://localhost/api/v1/admin/catalogue/categories', undefined, {}, 'GET'),
+      {} as never,
+      mockAdmin,
+    );
+    expect(res.status).toBe(200);
+    const body = res.jsonBody as { categories: { id: string }[] };
+    expect(body.categories[0]?.id).toBe('plumbing');
+  });
+});
+
+describe('GET /v1/admin/catalogue/categories/{id}', () => {
+  it('returns 404 when category is missing', async () => {
+    const res = await getCategoryHandler(
+      makeReq('http://localhost/...', undefined, { id: 'missing' }, 'GET'),
+      {} as never,
+      mockAdmin,
+    );
+    expect(res.status).toBe(404);
+  });
+});
+
 describe('PUT /v1/admin/catalogue/categories/{id}', () => {
   it('returns 200 with updated category', async () => {
     const body = { name: 'Plumbing Updated', heroImageUrl: 'https://example.com/p.jpg', sortOrder: 3 };
@@ -118,6 +146,17 @@ describe('GET /v1/admin/catalogue/services', () => {
     expect(res.status).toBe(200);
     const body = res.jsonBody as { services: { id: string }[] };
     expect(body.services[0]?.id).toBe('leak-fix');
+  });
+});
+
+describe('GET /v1/admin/catalogue/services/{id}', () => {
+  it('returns 404 when service is missing', async () => {
+    const res = await getServiceHandler(
+      makeReq('http://localhost/...', undefined, { id: 'missing' }, 'GET'),
+      {} as never,
+      mockAdmin,
+    );
+    expect(res.status).toBe(404);
   });
 });
 

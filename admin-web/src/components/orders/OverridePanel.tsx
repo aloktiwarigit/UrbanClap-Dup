@@ -17,9 +17,17 @@ interface OverridePanelProps {
   order: Order;
   onActionComplete: (updatedOrder: Order) => void;
   onError: (message: string) => void;
+  canOverride?: boolean | undefined;
+  canFinancialOverride?: boolean | undefined;
 }
 
-export function OverridePanel({ order, onActionComplete, onError }: OverridePanelProps) {
+export function OverridePanel({
+  order,
+  onActionComplete,
+  onError,
+  canOverride = true,
+  canFinancialOverride = true,
+}: OverridePanelProps) {
   const [activeAction, setActiveAction] = useState<Action | null>(null);
   const [loading, setLoading] = useState(false);
   const [reassignTechId, setReassignTechId] = useState('');
@@ -78,18 +86,26 @@ export function OverridePanel({ order, onActionComplete, onError }: OverridePane
     note: { title: 'Add Internal Note', label: 'Note', minLen: 1 },
   };
 
-  const buttons: Array<{ action: Action; label: string }> = [
+  const buttons: Array<{ action: Action; label: string; financial?: boolean }> = [
     { action: 'reassign', label: 'Re-assign Tech' },
     { action: 'complete', label: 'Mark Complete' },
-    { action: 'refund', label: 'Issue Refund' },
-    { action: 'waive-fee', label: 'Waive Fee' },
+    { action: 'refund', label: 'Issue Refund', financial: true },
+    { action: 'waive-fee', label: 'Waive Fee', financial: true },
     { action: 'escalate', label: 'Escalate' },
     { action: 'note', label: 'Add Note' },
   ];
 
+  const visibleButtons = buttons.filter((button) => !button.financial || canFinancialOverride);
+
   return (
     <section aria-label="Order actions">
       <h3 className="text-xs text-gray-500 font-medium mb-2">Actions</h3>
+      {!canOverride ? (
+        <p className="text-xs text-gray-500">
+          Your role can review this order but cannot run operational overrides.
+        </p>
+      ) : (
+        <>
       <div className="mb-2 flex items-center gap-2 text-xs text-gray-600">
         <label htmlFor="escalate-priority">Escalate priority:</label>
         <select
@@ -103,7 +119,7 @@ export function OverridePanel({ order, onActionComplete, onError }: OverridePane
         </select>
       </div>
       <div className="grid grid-cols-3 gap-2">
-        {buttons.map(({ action, label }) => (
+        {visibleButtons.map(({ action, label }) => (
           <button
             key={action}
             onClick={() => setActiveAction(action)}
@@ -113,6 +129,8 @@ export function OverridePanel({ order, onActionComplete, onError }: OverridePane
           </button>
         ))}
       </div>
+        </>
+      )}
       {activeAction && (() => {
         const cfg = actionConfigs[activeAction];
         return (

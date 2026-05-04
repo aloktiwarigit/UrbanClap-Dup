@@ -6,6 +6,65 @@ function getContainer(client: CosmosClient) {
   return client.database(DB_NAME).container('bookings');
 }
 
+function asString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() !== '' ? value : undefined;
+}
+
+function asNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function scheduledAtFromSlot(slotDate: string | undefined, slotWindow: string | undefined): string | undefined {
+  if (!slotDate) return undefined;
+  const slotStart = slotWindow?.split('-')[0] ?? '00:00';
+  return `${slotDate}T${slotStart}:00+05:30`;
+}
+
+function cityFromBooking(resource: Record<string, unknown>): string {
+  const city = asString(resource['city']);
+  if (city) return city;
+
+  const address = asString(resource['addressText']);
+  const inferred = address
+    ?.split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .at(-1);
+
+  return inferred ?? 'Unspecified';
+}
+
+function toAdminOrder(resource: unknown): Order {
+  const raw = resource as Record<string, unknown>;
+  const customerId = asString(raw['customerId']) ?? 'unknown-customer';
+  const scheduledAt = asString(raw['scheduledAt'])
+    ?? scheduledAtFromSlot(asString(raw['slotDate']), asString(raw['slotWindow']))
+    ?? asString(raw['createdAt'])
+    ?? new Date(0).toISOString();
+
+  return OrderSchema.parse({
+    ...raw,
+    id: asString(raw['id']) ?? '',
+    customerId,
+    customerName: asString(raw['customerName']) ?? `Customer ${customerId.slice(0, 8)}`,
+    customerPhone: asString(raw['customerPhone']) ?? '',
+    serviceId: asString(raw['serviceId']),
+    serviceName: asString(raw['serviceName']),
+    technicianId: asString(raw['technicianId']),
+    technicianName: asString(raw['technicianName']),
+    status: raw['status'],
+    city: cityFromBooking(raw),
+    scheduledAt,
+    amount: asNumber(raw['finalAmount']) ?? asNumber(raw['amount']) ?? 0,
+    createdAt: asString(raw['createdAt']) ?? scheduledAt,
+    _ts: asNumber(raw['_ts']),
+  });
+}
+
+function endOfDateFilter(value: string): string {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T23:59:59.999Z` : value;
+}
+
 function buildWhereClause(filters: OrderListQuery): { where: string; params: SqlParameter[] } {
   const conditions: string[] = [];
   const params: SqlParameter[] = [];
@@ -16,7 +75,7 @@ function buildWhereClause(filters: OrderListQuery): { where: string; params: Sql
     filters.status.forEach((s, i) => params.push({ name: `@status${i}`, value: s }));
   }
   if (filters.city) {
-    conditions.push('c.city = @city');
+    conditions.push('(c.city = @city OR (IS_DEFINED(c.addressText) AND CONTAINS(LOWER(c.addressText), LOWER(@city))))');
     params.push({ name: '@city', value: filters.city });
   }
   if (filters.categoryId) {
@@ -32,12 +91,14 @@ function buildWhereClause(filters: OrderListQuery): { where: string; params: Sql
     params.push({ name: '@customerPhone', value: filters.customerPhone });
   }
   if (filters.dateFrom) {
-    conditions.push('c.scheduledAt >= @dateFrom');
+    conditions.push('((IS_DEFINED(c.scheduledAt) AND c.scheduledAt >= @dateFrom) OR (NOT IS_DEFINED(c.scheduledAt) AND c.slotDate >= @dateFromDate))');
     params.push({ name: '@dateFrom', value: filters.dateFrom });
+    params.push({ name: '@dateFromDate', value: filters.dateFrom.slice(0, 10) });
   }
   if (filters.dateTo) {
-    conditions.push('c.scheduledAt <= @dateTo');
-    params.push({ name: '@dateTo', value: filters.dateTo });
+    conditions.push('((IS_DEFINED(c.scheduledAt) AND c.scheduledAt <= @dateTo) OR (NOT IS_DEFINED(c.scheduledAt) AND c.slotDate <= @dateToDate))');
+    params.push({ name: '@dateTo', value: endOfDateFilter(filters.dateTo) });
+    params.push({ name: '@dateToDate', value: filters.dateTo.slice(0, 10) });
   }
   if (filters.minAmount !== undefined) {
     conditions.push('c.amount >= @minAmount');
@@ -70,7 +131,7 @@ export async function queryOrders(filters: OrderListQuery): Promise<OrderListRes
     parameters: params,
   };
   const { resources } = await container.items.query(dataQuery).fetchAll();
-  const items: Order[] = resources.map((r: unknown) => OrderSchema.parse(r));
+  const items: Order[] = resources.map(toAdminOrder);
 
   return {
     items,
@@ -89,5 +150,5 @@ export async function getOrderById(id: string): Promise<Order | null> {
     parameters: [{ name: '@id', value: id }],
   }).fetchAll();
   if (!resources.length) return null;
-  return OrderSchema.parse(resources[0]);
+  return toAdminOrder(resources[0]);
 }

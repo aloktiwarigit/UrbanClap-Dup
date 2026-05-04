@@ -12,6 +12,8 @@ import {
   type FinanceSummary,
   type PayoutQueue,
 } from '@/api/finance';
+import { hasCapability } from '@/admin/capabilities';
+import { useAdminAuth } from '@/lib/auth/context';
 
 function toDateStr(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -27,6 +29,8 @@ function defaultRange(): { from: string; to: string } {
 type Toast = { message: string; type: 'success' | 'error' };
 
 export function FinanceClient() {
+  const { auth } = useAdminAuth();
+  const canApprovePayouts = hasCapability(auth?.role, 'finance.approvePayouts');
   const initial = defaultRange();
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
@@ -155,6 +159,7 @@ export function FinanceClient() {
           <PayoutQueueTable
             entries={queue.entries}
             totalNetPayable={queue.totalNetPayable}
+            canApproveAll={canApprovePayouts}
             onApproveAll={() => setShowModal(true)}
           />
         )}

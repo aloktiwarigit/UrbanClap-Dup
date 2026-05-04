@@ -8,6 +8,8 @@ import { OrdersTable } from './OrdersTable';
 import { OrderFilters, type FiltersState } from './OrderFilters';
 import { OrderSlideOver } from './OrderSlideOver';
 import { exportOrdersCsv } from './exportCsv';
+import { hasCapability } from '@/admin/capabilities';
+import { useAdminAuth } from '@/lib/auth/context';
 
 const DEFAULT_FILTERS: FiltersState = {
   status: '', city: '', categoryId: '', technicianId: '',
@@ -49,6 +51,9 @@ function filtersToQueryParams(f: FiltersState): OrdersQueryParams {
 void DEFAULT_FILTERS;
 
 export function OrdersClient() {
+  const { auth } = useAdminAuth();
+  const canOverride = hasCapability(auth?.role, 'orders.override');
+  const canFinancialOverride = hasCapability(auth?.role, 'orders.financialOverride');
   const router = useRouter();
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
@@ -135,6 +140,8 @@ export function OrdersClient() {
       {selectedOrder && (
         <OrderSlideOver
           order={selectedOrder}
+          canOverride={canOverride}
+          canFinancialOverride={canFinancialOverride}
           onClose={() => setSelectedOrder(null)}
           onOrderUpdated={updated => {
             setSelectedOrder(updated);

@@ -28,7 +28,6 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
   const [basePrice, setBasePrice] = useState(String(initial?.basePrice ?? ''));
   const [durationMinutes, setDurationMinutes] = useState(String(initial?.durationMinutes ?? ''));
   const [commissionBps, setCommissionBps] = useState(String(initial?.commissionBps ?? '2250'));
-  const [isActive, setIsActive] = useState(initial?.isActive ?? true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -144,7 +143,7 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
 
       <div>
         <label htmlFor="svc-price" style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
-          Base Price (paise — ₹599 = 59900)
+          Base Price (paise - INR 599 = 59900)
         </label>
         <input
           id="svc-price"
@@ -176,7 +175,7 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
 
       <div>
         <label htmlFor="svc-commission" style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
-          Commission (basis points — 2250 = 22.5%, range 1500–3500)
+          Commission (basis points - 2250 = 22.5%, range 1500-3500)
         </label>
         <input
           id="svc-commission"
@@ -190,20 +189,6 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
           placeholder="2250"
         />
       </div>
-
-      {isEdit && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-          <input
-            id="svc-active"
-            type="checkbox"
-            checked={isActive}
-            onChange={(e) => setIsActive(e.target.checked)}
-          />
-          <label htmlFor="svc-active" style={{ fontSize: 'var(--text-sm)', fontWeight: 600 }}>
-            Active
-          </label>
-        </div>
-      )}
 
       {error !== null && (
         <p style={{ color: 'var(--color-danger)', fontSize: 'var(--text-sm)', margin: 0 }}>
@@ -227,7 +212,7 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
             opacity: submitting ? 0.6 : 1,
           }}
         >
-          {submitting ? 'Saving…' : isEdit ? 'Update Service' : 'Create Service'}
+          {submitting ? 'Saving...' : isEdit ? 'Update Service' : 'Create Service'}
         </button>
         <button
           type="button"

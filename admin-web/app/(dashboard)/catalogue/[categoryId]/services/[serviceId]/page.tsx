@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import type { components } from '@/api/generated/schema';
 import { getApiBaseUrl } from '@/lib/apiBase';
+import { handleAdminFetchError } from '@/lib/serverFetch';
 import { EditServiceClient } from './EditServiceClient';
 
 type AdminService = components['schemas']['AdminService'];
@@ -15,7 +16,7 @@ async function fetchService(id: string, token: string): Promise<AdminService | n
     cache: 'no-store',
   });
   if (res.status === 404) return null;
-  if (!res.ok) return null;
+  if (!res.ok) handleAdminFetchError(res, 'Catalogue service');
   return (await res.json()) as AdminService;
 }
 

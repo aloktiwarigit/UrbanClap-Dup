@@ -14,6 +14,14 @@ describe('OrderFilters', () => {
     expect(screen.getByRole('listbox', { name: /status/i })).toBeDefined();
   });
 
+  it('includes every backend booking status operators need to filter', () => {
+    render(<OrderFilters filters={defaultFilters} onChange={vi.fn()} />);
+    expect(screen.getByRole('option', { name: 'PENDING_PAYMENT' })).toBeDefined();
+    expect(screen.getByRole('option', { name: 'AWAITING_PRICE_APPROVAL' })).toBeDefined();
+    expect(screen.getByRole('option', { name: 'CUSTOMER_CANCELLED' })).toBeDefined();
+    expect(screen.getByRole('option', { name: 'NO_SHOW_REDISPATCH' })).toBeDefined();
+  });
+
   it('renders city input', () => {
     render(<OrderFilters filters={defaultFilters} onChange={vi.fn()} />);
     expect(screen.getByPlaceholderText('City')).toBeDefined();

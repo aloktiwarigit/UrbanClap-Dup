@@ -4,7 +4,22 @@ export interface FiltersState {
   customerPhone: string; page: number;
 }
 
-const ALL_STATUSES = ['SEARCHING','ASSIGNED','EN_ROUTE','REACHED','IN_PROGRESS','COMPLETED','CANCELLED','PAID'] as const;
+const ALL_STATUSES = [
+  'PENDING_PAYMENT',
+  'SEARCHING',
+  'ASSIGNED',
+  'EN_ROUTE',
+  'REACHED',
+  'IN_PROGRESS',
+  'AWAITING_PRICE_APPROVAL',
+  'COMPLETED',
+  'PAID',
+  'CLOSED',
+  'UNFULFILLED',
+  'CUSTOMER_CANCELLED',
+  'NO_SHOW_REDISPATCH',
+  'CANCELLED',
+] as const;
 
 interface OrderFiltersProps { filters: FiltersState; onChange: (f: FiltersState) => void; }
 

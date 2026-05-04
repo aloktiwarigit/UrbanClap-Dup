@@ -2,8 +2,9 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getServerApiClient } from '@/lib/serverApi';
 import { ApiError } from '@/api/client';
-import { listComplaints } from '@/api/complaints';
+import { getRepeatOffenders, listComplaints } from '@/api/complaints';
 import type { Complaint } from '@/types/complaint';
+import type { RepeatOffender } from '@/types/complaint';
 import { ComplaintsClient } from './ComplaintsClient';
 
 export const metadata: Metadata = { title: 'Complaints — HomeHeroo Admin' };
@@ -11,7 +12,7 @@ export const metadata: Metadata = { title: 'Complaints — HomeHeroo Admin' };
 export default async function ComplaintsPage() {
   const client = await getServerApiClient();
 
-  const [activeResult, resolvedResult] = await Promise.allSettled([
+  const [activeResult, resolvedResult, repeatOffendersResult] = await Promise.allSettled([
     listComplaints(client, {
       status: 'NEW,INVESTIGATING',
       sortDir: 'asc',
@@ -25,10 +26,11 @@ export default async function ComplaintsPage() {
       page: 1,
       pageSize: 100,
     }),
+    getRepeatOffenders(client),
   ]);
 
   // 401/403 from either query → bounce to dashboard (auth issue).
-  for (const r of [activeResult, resolvedResult]) {
+  for (const r of [activeResult, resolvedResult, repeatOffendersResult]) {
     if (r.status === 'rejected' && r.reason instanceof ApiError) {
       if (r.reason.status === 401 || r.reason.status === 403) redirect('/dashboard');
     }
@@ -55,6 +57,7 @@ export default async function ComplaintsPage() {
   const empty = { items: [] as Complaint[], total: 0 };
   const activeData = unwrap(activeResult, empty);
   const resolvedData = unwrap(resolvedResult, empty);
+  const repeatOffenders = unwrap(repeatOffendersResult, [] as RepeatOffender[]);
 
   // Deduplicate by id (a complaint can flip status between the two queries).
   const resolvedById = new Map(resolvedData.items.map((c) => [c.id, c]));
@@ -70,5 +73,11 @@ export default async function ComplaintsPage() {
   const duplicates = activeData.items.length + resolvedData.items.length - allComplaints.length;
   const total = activeData.total + resolvedData.total - duplicates;
 
-  return <ComplaintsClient initialComplaints={allComplaints} totalComplaints={total} />;
+  return (
+    <ComplaintsClient
+      initialComplaints={allComplaints}
+      totalComplaints={total}
+      repeatOffenders={repeatOffenders}
+    />
+  );
 }

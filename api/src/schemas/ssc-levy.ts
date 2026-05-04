@@ -8,7 +8,7 @@ export const SscLevyStatusSchema = z.enum([
 ]);
 
 export const SscLevyDocSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().regex(/^\d{4}-Q[1-4]$/),
   quarter: z.string().regex(/^\d{4}-Q[1-4]$/),
   gmv: z.number().int().nonnegative(),         // paise
   levyRate: z.union([z.literal(0.01), z.literal(0.02)]),

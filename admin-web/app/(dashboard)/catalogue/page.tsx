@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { components } from '@/api/generated/schema';
 import { EmptyState } from '@/components/EmptyState';
 import { getApiBaseUrl } from '@/lib/apiBase';
+import { handleAdminFetchError } from '@/lib/serverFetch';
 import { CatalogueCategoryList } from './CatalogueCategoryList';
 
 type AdminServiceCategory = components['schemas']['AdminServiceCategory'];
@@ -13,19 +14,14 @@ async function fetchAdminCategories(token: string): Promise<AdminServiceCategory
   // Raw fetch — the generated schema declares only POST for this path
   // (src/api/generated/schema.d.ts:119), so client.GET(...) does not typecheck.
   const baseUrl = getApiBaseUrl();
-  const [result] = await Promise.allSettled([
-    fetch(`${baseUrl}/v1/admin/catalogue/categories`, {
-      headers: { Cookie: `hs_access=${token}` },
-      cache: 'no-store',
-    }),
-  ]);
-  if (result.status !== 'fulfilled' || !result.value.ok) return [];
-  try {
-    const json = (await result.value.json()) as { categories: AdminServiceCategory[] };
-    return json.categories ?? [];
-  } catch {
-    return [];
-  }
+  const res = await fetch(`${baseUrl}/v1/admin/catalogue/categories`, {
+    headers: { Cookie: `hs_access=${token}` },
+    cache: 'no-store',
+  });
+
+  if (!res.ok) handleAdminFetchError(res, 'Catalogue categories');
+  const json = (await res.json()) as { categories?: AdminServiceCategory[] };
+  return json.categories ?? [];
 }
 
 export default async function CataloguePage() {
@@ -62,7 +58,7 @@ export default async function CataloguePage() {
         <EmptyState
           eyebrow="Catalogue"
           headline="The catalogue is empty"
-          copy="Either no categories have been provisioned yet, or the API is offline. Create one to get started."
+          copy="No categories have been provisioned yet. Create one to get started."
         />
       ) : (
         <CatalogueCategoryList categories={categories} />

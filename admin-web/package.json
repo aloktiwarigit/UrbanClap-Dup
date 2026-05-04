@@ -18,6 +18,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test --project=chromium",
+    "test:e2e:mock": "playwright test -c playwright.mock.config.ts --project=chromium",
     "test:a11y": "playwright test --project=a11y",
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build",

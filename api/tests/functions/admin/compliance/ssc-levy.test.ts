@@ -12,6 +12,7 @@ vi.mock('../../../../src/cosmos/ssc-levy-repository.js', () => ({
     createLevy: vi.fn(),
     updateLevy: vi.fn(),
     getLevyById: vi.fn(),
+    listLevies: vi.fn(),
   },
 }));
 
@@ -44,6 +45,7 @@ import { HttpRequest } from '@azure/functions';
 import {
   sscLevyTimerHandler,
   approveSscLevyHandler,
+  listSscLeviesHandler,
 } from '../../../../src/functions/admin/compliance/ssc-levy.js';
 import { sscLevyRepo } from '../../../../src/cosmos/ssc-levy-repository.js';
 import { calculateQuarterlyGmv } from '../../../../src/services/ssc-levy.service.js';
@@ -318,5 +320,51 @@ describe('approveSscLevyHandler', () => {
     expect(sscLevyRepo.updateLevy).toHaveBeenCalledTimes(2);
     const lastUpdate = vi.mocked(sscLevyRepo.updateLevy).mock.calls[1]![2]!;
     expect(lastUpdate.status).toBe('TRANSFERRED'); // the failed attempt was TRANSFERRED, not FAILED
+  });
+});
+
+describe('listSscLeviesHandler', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const makeReq = (query: Record<string, string> = {}) =>
+    new HttpRequest({
+      url: `http://localhost/api/v1/admin/compliance/ssc-levy?${new URLSearchParams(query).toString()}`,
+      method: 'GET',
+      query,
+    });
+
+  it('returns 403 when role is ops-manager', async () => {
+    const res = await listSscLeviesHandler(makeReq(), mockCtx, opsCtx);
+    expect(res.status).toBe(403);
+    expect(sscLevyRepo.listLevies).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 for invalid status', async () => {
+    const res = await listSscLeviesHandler(makeReq({ status: 'NOPE' }), mockCtx, superAdminCtx);
+    expect(res.status).toBe(400);
+    expect((res.jsonBody as { code: string }).code).toBe('INVALID_STATUS');
+  });
+
+  it('returns 400 for pageSize outside 1..200', async () => {
+    const res = await listSscLeviesHandler(makeReq({ pageSize: '201' }), mockCtx, superAdminCtx);
+    expect(res.status).toBe(400);
+    expect((res.jsonBody as { code: string }).code).toBe('INVALID_PAGE_SIZE');
+  });
+
+  it('returns levies and passes filters to repository', async () => {
+    vi.mocked(sscLevyRepo.listLevies).mockResolvedValue([sampleLevy]);
+
+    const res = await listSscLeviesHandler(
+      makeReq({ status: 'PENDING_APPROVAL', pageSize: '25' }),
+      mockCtx,
+      superAdminCtx,
+    );
+
+    expect(res.status).toBe(200);
+    expect(sscLevyRepo.listLevies).toHaveBeenCalledWith({
+      status: 'PENDING_APPROVAL',
+      pageSize: 25,
+    });
+    expect(res.jsonBody).toEqual({ levies: [sampleLevy] });
   });
 });

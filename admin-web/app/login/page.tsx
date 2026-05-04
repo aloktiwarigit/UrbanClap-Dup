@@ -40,7 +40,11 @@ export default function LoginPage() {
           ? 'Invalid authenticator code. Please try again.'
           : data.code === 'TOTP_REQUIRED'
             ? 'Please enter your 6-digit authenticator code.'
-            : 'Login failed. Check your credentials.',
+            : data.code === 'ADMIN_NOT_FOUND'
+              ? 'This email is not provisioned as an active admin user.'
+              : data.code === 'FIREBASE_TOKEN_INVALID'
+                ? 'Firebase could not verify this sign-in. Try again.'
+                : 'Login failed. Check your credentials.',
       );
       return;
     }

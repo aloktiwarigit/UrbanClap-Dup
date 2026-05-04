@@ -150,7 +150,7 @@ app.http('adminRefundOrder', {
   methods: ['POST'],
   route: 'v1/admin/orders/{id}/refund',
   authLevel: 'anonymous',
-  handler: requireAdmin(['super-admin', 'ops-manager'])(refundOrderHandler),
+  handler: requireAdmin(['super-admin'])(refundOrderHandler),
 });
 
 // ── waive-fee ───────────────────────────────────────────────────────────────
@@ -194,7 +194,7 @@ app.http('adminWaiveFeeOrder', {
   methods: ['POST'],
   route: 'v1/admin/orders/{id}/waive-fee',
   authLevel: 'anonymous',
-  handler: requireAdmin(['super-admin', 'ops-manager'])(waiveFeeOrderHandler),
+  handler: requireAdmin(['super-admin'])(waiveFeeOrderHandler),
 });
 
 // ── escalate ────────────────────────────────────────────────────────────────

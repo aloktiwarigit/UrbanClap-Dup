@@ -1,17 +1,23 @@
 'use client';
 
-// TODO(E10-S03): wire CTA to payout approval endpoint
+import Link from 'next/link';
+import { hasCapability } from '@/admin/capabilities';
+import { FeatureGate } from '@/components/auth/FeatureGate';
+import { useAdminAuth } from '@/lib/auth/context';
 
 interface PayoutQueueProps {
-  payoutsPending: number; // paise
+  payoutsPending: number;
   techCount: number;
 }
 
 function formatPaise(paise: number): string {
-  return `₹${(paise / 100).toLocaleString('en-IN')}`;
+  return `INR ${(paise / 100).toLocaleString('en-IN')}`;
 }
 
 export function PayoutQueue({ payoutsPending, techCount }: PayoutQueueProps) {
+  const { auth } = useAdminAuth();
+  const canApprove = hasCapability(auth?.role, 'finance.approvePayouts');
+
   return (
     <section
       aria-label="Payout queue"
@@ -66,7 +72,7 @@ export function PayoutQueue({ payoutsPending, techCount }: PayoutQueueProps) {
             Schedule
           </span>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--fog-0)' }}>
-            Weekly · Sun 23:59 IST
+            Weekly - Sun 23:59 IST
           </span>
         </div>
 
@@ -80,16 +86,24 @@ export function PayoutQueue({ payoutsPending, techCount }: PayoutQueueProps) {
               fontStyle: 'italic',
             }}
           >
-            Nothing pending — payouts cleared.
+            Nothing pending - payouts cleared.
           </p>
         ) : (
-          <div style={{ marginTop: '0.5rem', position: 'relative', display: 'inline-block' }}>
-            <button
-              disabled
-              aria-disabled="true"
-              aria-describedby="payout-cta-tooltip"
+          <FeatureGate
+            capability="finance.read"
+            fallback={
+              <p style={{ margin: '0.5rem 0 0', fontSize: 'var(--text-xs)', color: 'var(--color-text-faint)' }}>
+                Finance access is required to review payouts.
+              </p>
+            }
+          >
+            <Link
+              href="/finance"
               style={{
+                display: 'inline-flex',
+                justifyContent: 'center',
                 width: '100%',
+                marginTop: '0.5rem',
                 padding: '0.5rem 1rem',
                 borderRadius: 'var(--radius-sm)',
                 border: '1px solid var(--ink-5)',
@@ -97,34 +111,12 @@ export function PayoutQueue({ payoutsPending, techCount }: PayoutQueueProps) {
                 color: 'var(--fog-0)',
                 fontFamily: 'var(--font-body)',
                 fontSize: '0.8125rem',
-                cursor: 'not-allowed',
-                opacity: 0.6,
+                textDecoration: 'none',
               }}
             >
-              Approve all payouts
-            </button>
-            <span
-              id="payout-cta-tooltip"
-              role="tooltip"
-              style={{
-                display: 'none', // shown via CSS :hover on parent — simplified for SSR compatibility
-                position: 'absolute',
-                bottom: 'calc(100% + 6px)',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                background: 'var(--ink-0)',
-                color: 'var(--fog-1)',
-                fontSize: '0.6875rem',
-                fontFamily: 'var(--font-mono)',
-                padding: '4px 8px',
-                borderRadius: 'var(--radius-sm)',
-                whiteSpace: 'nowrap',
-                pointerEvents: 'none',
-              }}
-            >
-              Coming in E10-S03
-            </span>
-          </div>
+              {canApprove ? 'Approve payouts in Finance' : 'Review payout queue'}
+            </Link>
+          </FeatureGate>
         )}
       </div>
     </section>

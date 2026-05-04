@@ -3,6 +3,7 @@
 // TODO(E09-S01-v2): replace polling with FCM topic listener for sub-second latency
 
 import { useState, useEffect, useCallback } from 'react';
+import { apiUrl } from '@/api/base';
 import { EmptyState } from '@/components/EmptyState';
 import type { components } from '@/api/generated/schema';
 
@@ -10,7 +11,6 @@ type BookingEvent = components['schemas']['BookingEvent'];
 
 const MAX_FEED_ITEMS = 50;
 const POLL_INTERVAL_MS = 30_000;
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? '';
 
 const KIND_COLORS: Record<BookingEvent['kind'], string> = {
   booking: 'var(--teal)',
@@ -30,15 +30,16 @@ function formatTime(iso: string): string {
 }
 
 async function fetchFeedEvents(): Promise<BookingEvent[]> {
-  const url = `${API_BASE}/v1/admin/dashboard/feed`;
+  const url = apiUrl('/v1/admin/dashboard/feed');
   const res = await fetch(url, { credentials: 'include' });
-  if (!res.ok) return [];
+  if (!res.ok) throw new Error(`Live feed failed with HTTP ${res.status}`);
   const data = (await res.json()) as { events: BookingEvent[]; total: number };
   return data.events;
 }
 
 export function OrderFeed() {
   const [events, setEvents] = useState<BookingEvent[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const mergeEvents = useCallback((incoming: BookingEvent[]) => {
     setEvents((prev) => {
@@ -54,8 +55,17 @@ export function OrderFeed() {
     let cancelled = false;
 
     const poll = async () => {
-      const incoming = await fetchFeedEvents();
-      if (!cancelled) mergeEvents(incoming);
+      try {
+        const incoming = await fetchFeedEvents();
+        if (!cancelled) {
+          setLoadError(null);
+          mergeEvents(incoming);
+        }
+      } catch {
+        if (!cancelled) {
+          setLoadError('The live feed could not be loaded. Refresh or check API status.');
+        }
+      }
     };
 
     void poll();
@@ -84,7 +94,13 @@ export function OrderFeed() {
       >
         Live Feed
       </h2>
-      {events.length === 0 ? (
+      {loadError !== null ? (
+        <EmptyState
+          eyebrow="Live feed"
+          headline="Feed unavailable"
+          copy={loadError}
+        />
+      ) : events.length === 0 ? (
         <EmptyState
           eyebrow="Live feed"
           headline="The feed is quiet"

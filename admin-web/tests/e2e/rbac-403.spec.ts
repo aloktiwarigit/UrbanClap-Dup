@@ -1,16 +1,19 @@
 import { test, expect } from '@playwright/test';
+import { makeAccessJwt } from './helpers/make-token';
 
-test('finance role cannot access super-admin-only action', async ({ page }) => {
-  await page.route('**/admin-api/v1/admin/catalogue**', (route) =>
-    route.fulfill({
-      status: 403,
-      contentType: 'application/json',
-      body: JSON.stringify({ code: 'FORBIDDEN', requiredRoles: ['super-admin'] }),
-    }),
-  );
-  await page.goto('/dashboard');
-  const res = await page.evaluate(() =>
-    fetch('/admin-api/v1/admin/catalogue', { credentials: 'include' }).then((r) => r.status),
-  );
-  expect(res).toBe(403);
+test('finance role is redirected away from super-admin-only routes', async ({ page, context, baseURL }) => {
+  const jwt = await makeAccessJwt('finance-e2e', 'finance');
+  await context.addCookies([
+    {
+      name: 'hs_access',
+      value: jwt,
+      url: baseURL ?? 'http://localhost:3000',
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+  ]);
+
+  await page.goto('/audit-log');
+  await expect(page).toHaveURL(/\/not-authorized/);
+  await expect(page.getByRole('heading', { name: /do not have access/i })).toBeVisible();
 });

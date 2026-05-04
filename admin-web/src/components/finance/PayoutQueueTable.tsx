@@ -7,22 +7,34 @@ interface Props {
   entries: PayoutQueueEntry[];
   totalNetPayable: number;
   onApproveAll: () => void;
+  canApproveAll?: boolean;
 }
 
-export function PayoutQueueTable({ entries, totalNetPayable, onApproveAll }: Props) {
+export function PayoutQueueTable({
+  entries,
+  totalNetPayable,
+  onApproveAll,
+  canApproveAll = true,
+}: Props) {
   return (
     <div>
       <div className="flex items-center justify-between mb-[var(--space-3)]">
         <h2 className="text-[length:var(--text-lg)] font-semibold text-[var(--color-text)]">
           Payout Queue — {formatPaise(totalNetPayable)} total
         </h2>
-        <button
-          onClick={onApproveAll}
-          disabled={entries.length === 0}
-          className="px-4 py-2 rounded bg-[var(--color-brand)] text-[var(--color-brand-fg)] font-medium disabled:opacity-40"
-        >
-          Approve All
-        </button>
+        {canApproveAll ? (
+          <button
+            onClick={onApproveAll}
+            disabled={entries.length === 0}
+            className="px-4 py-2 rounded bg-[var(--color-brand)] text-[var(--color-brand-fg)] font-medium disabled:opacity-40"
+          >
+            Approve All
+          </button>
+        ) : (
+          <span className="text-xs text-[var(--color-text-muted)]">
+            Approval is restricted to super-admins.
+          </span>
+        )}
       </div>
 
       {entries.length === 0 ? (

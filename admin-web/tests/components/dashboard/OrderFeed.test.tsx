@@ -65,6 +65,14 @@ describe('OrderFeed', () => {
     expect(screen.getByText('Job completed')).toBeDefined();
   });
 
+  it('renders an unavailable state when the feed API fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('nope', { status: 500 })));
+    render(<OrderFeed />);
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /feed unavailable/i })).toBeDefined();
+    });
+  });
+
   it('has aria-live="polite" on the live region', async () => {
     render(<OrderFeed />);
     await waitFor(() => {

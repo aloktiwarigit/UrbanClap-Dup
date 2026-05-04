@@ -11,8 +11,10 @@ vi.mock('@/lib/serverApi', () => ({
 }));
 
 const listMock = vi.fn();
+const repeatMock = vi.fn();
 vi.mock('@/api/complaints', () => ({
   listComplaints: (...args: unknown[]) => listMock(...args),
+  getRepeatOffenders: (...args: unknown[]) => repeatMock(...args),
 }));
 
 // Capture the props the page passes to its client component.
@@ -29,11 +31,14 @@ import ComplaintsPage from '../app/(dashboard)/complaints/page';
 interface ClientProps {
   initialComplaints: ReadonlyArray<{ id: string }>;
   totalComplaints: number;
+  repeatOffenders: ReadonlyArray<{ technicianId: string; count: number }>;
 }
 
 describe('ComplaintsPage', () => {
   beforeEach(() => {
     listMock.mockReset();
+    repeatMock.mockReset();
+    repeatMock.mockResolvedValue([]);
     clientProps.current = undefined;
   });
 

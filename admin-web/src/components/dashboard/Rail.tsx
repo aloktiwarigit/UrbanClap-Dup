@@ -3,24 +3,13 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import type { Route } from 'next';
-
-interface NavItem {
-  label: string;
-  href: string;
-  icon: string;
-}
-
-const NAV_ITEMS: NavItem[] = [
-  { label: 'Live Ops', href: '/dashboard', icon: 'LO' },
-  { label: 'Orders', href: '/orders', icon: 'OR' },
-  { label: 'Catalogue', href: '/catalogue', icon: 'CA' },
-  { label: 'Finance', href: '/finance', icon: 'FI' },
-  { label: 'Complaints', href: '/complaints', icon: 'CO' },
-  { label: 'Audit Log', href: '/audit-log', icon: 'AU' },
-];
+import { navItemsForRole } from '@/admin/capabilities';
+import { useAdminAuth } from '@/lib/auth/context';
 
 export function Rail() {
   const pathname = usePathname();
+  const { auth } = useAdminAuth();
+  const navItems = navItemsForRole(auth?.role);
 
   return (
     <>
@@ -62,7 +51,7 @@ export function Rail() {
         >
           HS
         </div>
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
@@ -112,7 +101,7 @@ export function Rail() {
           zIndex: 50,
         }}
       >
-        {NAV_ITEMS.slice(0, 5).map((item) => {
+        {navItems.slice(0, 5).map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link

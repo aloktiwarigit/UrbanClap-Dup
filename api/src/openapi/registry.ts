@@ -28,6 +28,14 @@ import {
   ComplaintListResponseSchema,
   RepeatOffendersResponseSchema,
 } from '../schemas/complaint.js';
+import {
+  AdminErasurePatchBodySchema,
+  ErasureRequestDocSchema,
+} from '../schemas/erasure-request.js';
+import {
+  SscLevyDocSchema,
+  SscLevyStatusSchema,
+} from '../schemas/ssc-levy.js';
 
 extendZodWithOpenApi(z);
 
@@ -151,6 +159,30 @@ registry.register('AdminServiceCategory', AdminServiceCategory);
 registry.register('AdminService', AdminService);
 
 registry.registerPath({
+  method: 'get', path: '/v1/admin/catalogue/categories', operationId: 'adminListCategories',
+  tags: ['admin-catalogue'], summary: 'List service categories (admin, includes inactive)',
+  security: [{ cookieAuth: [] }],
+  responses: {
+    200: { description: 'Categories list', content: { 'application/json': { schema: z.object({ categories: z.array(AdminServiceCategory) }) } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+  },
+});
+
+registry.registerPath({
+  method: 'get', path: '/v1/admin/catalogue/categories/{id}', operationId: 'adminGetCategory',
+  tags: ['admin-catalogue'], summary: 'Get a service category',
+  security: [{ cookieAuth: [] }],
+  parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+  responses: {
+    200: { description: 'Category', content: { 'application/json': { schema: AdminServiceCategory } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+    404: { description: 'Not found' },
+  },
+});
+
+registry.registerPath({
   method: 'post', path: '/v1/admin/catalogue/categories', operationId: 'adminCreateCategory',
   tags: ['admin-catalogue'], summary: 'Create a service category',
   request: { body: { content: { 'application/json': { schema: CreateCategoryBodySchema } } } },
@@ -177,6 +209,19 @@ registry.registerPath({
   tags: ['admin-catalogue'], summary: 'List services (admin, includes inactive)',
   parameters: [{ name: 'categoryId', in: 'query', required: false, schema: { type: 'string' } }],
   responses: { 200: { description: 'Services list', content: { 'application/json': { schema: z.object({ services: z.array(AdminService) }) } } } },
+});
+
+registry.registerPath({
+  method: 'get', path: '/v1/admin/catalogue/services/{id}', operationId: 'adminGetService',
+  tags: ['admin-catalogue'], summary: 'Get a service',
+  security: [{ cookieAuth: [] }],
+  parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+  responses: {
+    200: { description: 'Service', content: { 'application/json': { schema: AdminService } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+    404: { description: 'Not found' },
+  },
 });
 
 registry.registerPath({
@@ -267,5 +312,129 @@ registry.registerPath({
     200: { description: 'Repeat offenders list', content: { 'application/json': { schema: RepeatOffendersResponseSchema } } },
     401: { description: 'Unauthenticated' },
     403: { description: 'Forbidden' },
+  },
+});
+
+// Admin users
+const AdminRoleSchema = z.enum(['super-admin', 'ops-manager', 'finance', 'support-agent']).openapi('AdminRole');
+const AdminUserListItemSchema = z.object({
+  adminId: z.string(),
+  email: z.string().email(),
+  role: AdminRoleSchema,
+  displayName: z.string().optional(),
+  totpEnrolled: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  deactivatedAt: z.string().nullable(),
+}).openapi('AdminUserListItem');
+const PatchAdminUserBodySchema = z.object({
+  role: AdminRoleSchema.optional(),
+  displayName: z.string().min(1).max(100).optional(),
+  deactivatedAt: z.string().nullable().optional(),
+}).strict().openapi('PatchAdminUserBody');
+
+registry.register('AdminRole', AdminRoleSchema);
+registry.register('AdminUserListItem', AdminUserListItemSchema);
+registry.register('PatchAdminUserBody', PatchAdminUserBodySchema);
+
+registry.registerPath({
+  method: 'get', path: '/v1/admin/users', operationId: 'adminListUsers',
+  tags: ['admin-users'], summary: 'List admin users without secrets',
+  security: [{ cookieAuth: [] }],
+  responses: {
+    200: { description: 'Admin users', content: { 'application/json': { schema: z.object({ users: z.array(AdminUserListItemSchema) }) } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+  },
+});
+
+registry.registerPath({
+  method: 'patch', path: '/v1/admin/users/{adminId}', operationId: 'adminPatchUser',
+  tags: ['admin-users'], summary: 'Patch admin user role, display name, or activation state',
+  security: [{ cookieAuth: [] }],
+  parameters: [{ name: 'adminId', in: 'path', required: true, schema: { type: 'string' } }],
+  request: { body: { content: { 'application/json': { schema: PatchAdminUserBodySchema } } } },
+  responses: {
+    200: { description: 'Patched', content: { 'application/json': { schema: z.object({ ok: z.literal(true) }) } } },
+    400: { description: 'Validation error' },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+    404: { description: 'Admin user not found' },
+  },
+});
+
+// Compliance
+const ErasureRequestDoc = ErasureRequestDocSchema.openapi('ErasureRequestDoc');
+const AdminErasurePatchBody = AdminErasurePatchBodySchema.openapi('AdminErasurePatchBody');
+const SscLevyDoc = SscLevyDocSchema.openapi('SscLevyDoc');
+const SscLevyApproveResponse = z.object({
+  levyId: z.string(),
+  quarter: z.string(),
+  transferId: z.string(),
+  status: z.literal('TRANSFERRED'),
+}).openapi('SscLevyApproveResponse');
+
+registry.register('ErasureRequestDoc', ErasureRequestDoc);
+registry.register('AdminErasurePatchBody', AdminErasurePatchBody);
+registry.register('SscLevyDoc', SscLevyDoc);
+registry.register('SscLevyApproveResponse', SscLevyApproveResponse);
+
+registry.registerPath({
+  method: 'get', path: '/v1/admin/erasure-requests', operationId: 'adminListErasureRequests',
+  tags: ['compliance'], summary: 'List erasure requests',
+  security: [{ cookieAuth: [] }],
+  parameters: [
+    { name: 'status', in: 'query', required: false, schema: { type: 'string' } },
+    { name: 'pageSize', in: 'query', required: false, schema: { type: 'integer', default: 50 } },
+  ],
+  responses: {
+    200: { description: 'Erasure requests', content: { 'application/json': { schema: z.object({ items: z.array(ErasureRequestDoc) }) } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+  },
+});
+
+registry.registerPath({
+  method: 'patch', path: '/v1/admin/erasure-requests/{id}', operationId: 'adminPatchErasureRequest',
+  tags: ['compliance'], summary: 'Execute or deny an erasure request',
+  security: [{ cookieAuth: [] }],
+  parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+  request: { body: { content: { 'application/json': { schema: AdminErasurePatchBody } } } },
+  responses: {
+    200: { description: 'Erasure action accepted' },
+    400: { description: 'Validation error' },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+    404: { description: 'Erasure request not found' },
+    409: { description: 'Request is not pending or cool-off has not elapsed' },
+  },
+});
+
+registry.registerPath({
+  method: 'get', path: '/v1/admin/compliance/ssc-levy', operationId: 'adminListSscLevies',
+  tags: ['compliance'], summary: 'List SSC levies',
+  security: [{ cookieAuth: [] }],
+  parameters: [
+    { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: SscLevyStatusSchema.options } },
+    { name: 'pageSize', in: 'query', required: false, schema: { type: 'integer', default: 50 } },
+  ],
+  responses: {
+    200: { description: 'SSC levies', content: { 'application/json': { schema: z.object({ levies: z.array(SscLevyDoc) }) } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+  },
+});
+
+registry.registerPath({
+  method: 'post', path: '/v1/admin/compliance/ssc-levy/{id}/approve', operationId: 'adminApproveSscLevy',
+  tags: ['compliance'], summary: 'Approve SSC levy transfer',
+  security: [{ cookieAuth: [] }],
+  parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+  responses: {
+    200: { description: 'Transfer created', content: { 'application/json': { schema: SscLevyApproveResponse } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+    404: { description: 'Levy not found' },
+    409: { description: 'Invalid levy status' },
   },
 });

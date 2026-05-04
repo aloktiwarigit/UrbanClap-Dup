@@ -21,6 +21,7 @@
     "test:coverage": "vitest run --coverage",
     "openapi:build": "tsx src/openapi/build.ts",
     "openapi:lint": "spectral lint openapi.json --fail-severity error",
+    "seed:admin": "tsx scripts/seed-admin.ts",
     "seed:technicians": "npx tsx scripts/seed-technicians.ts",
     "seed:catalogue": "tsx src/cosmos/seeds/catalogue.ts",
     "seed:complaints": "tsx src/cosmos/seeds/complaints.ts"

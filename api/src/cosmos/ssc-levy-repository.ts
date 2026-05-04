@@ -1,5 +1,10 @@
 import { getSscLeviesContainer } from './client.js';
-import type { SscLevyDoc } from '../schemas/ssc-levy.js';
+import type { SscLevyDoc, SscLevyStatus } from '../schemas/ssc-levy.js';
+
+export interface ListSscLeviesOptions {
+  status?: SscLevyStatus;
+  pageSize?: number;
+}
 
 export const sscLevyRepo = {
   /**
@@ -34,6 +39,26 @@ export const sscLevyRepo = {
       .item(id, id)
       .read<SscLevyDoc>();
     return resource ?? null;
+  },
+
+  async listLevies(options: ListSscLeviesOptions = {}): Promise<SscLevyDoc[]> {
+    const pageSize = options.pageSize ?? 50;
+    const parameters = [];
+    const where = options.status ? 'WHERE c.status = @status' : '';
+    if (options.status) parameters.push({ name: '@status', value: options.status });
+
+    const { resources } = await getSscLeviesContainer()
+      .items.query<SscLevyDoc>({
+        query: `
+          SELECT TOP ${pageSize} *
+          FROM c
+          ${where}
+          ORDER BY c.createdAt DESC
+        `,
+        parameters,
+      })
+      .fetchAll();
+    return resources;
   },
 
   async updateLevy(

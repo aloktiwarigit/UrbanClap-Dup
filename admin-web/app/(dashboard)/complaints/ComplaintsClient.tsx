@@ -4,14 +4,24 @@ import { useState, useCallback, useRef } from 'react';
 import { patchComplaintClient } from '@/api/complaints';
 import { ApiError } from '@/api/client';
 import { KanbanBoard } from '@/components/complaints/KanbanBoard';
-import type { Complaint, ComplaintResolutionCategory, ComplaintStatus } from '@/types/complaint';
+import type {
+  Complaint,
+  ComplaintResolutionCategory,
+  ComplaintStatus,
+  RepeatOffender,
+} from '@/types/complaint';
 
 interface ComplaintsClientProps {
   initialComplaints: Complaint[];
   totalComplaints: number;
+  repeatOffenders: RepeatOffender[];
 }
 
-export function ComplaintsClient({ initialComplaints, totalComplaints }: ComplaintsClientProps) {
+export function ComplaintsClient({
+  initialComplaints,
+  totalComplaints,
+  repeatOffenders,
+}: ComplaintsClientProps) {
   const [complaints, setComplaints] = useState<Complaint[]>(initialComplaints);
   const [error, setError] = useState<string | null>(null);
   // Always reflects the latest complaints state — updated on every render so
@@ -226,6 +236,38 @@ export function ComplaintsClient({ initialComplaints, totalComplaints }: Complai
       {error && (
         <p className="text-red-600 my-4 text-sm">{error}</p>
       )}
+
+      <section
+        aria-labelledby="repeat-offenders-heading"
+        className="mb-6 rounded border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 id="repeat-offenders-heading" className="text-sm font-semibold text-[var(--color-text)]">
+              Repeat Offenders
+            </h2>
+            <p className="text-xs text-[var(--color-text-muted)]">
+              Technicians with 3 or more resolved complaints in the last 30 days.
+            </p>
+          </div>
+          <span className="text-xs text-[var(--color-text-muted)]">
+            {repeatOffenders.length} flagged
+          </span>
+        </div>
+        {repeatOffenders.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {repeatOffenders.map((offender) => (
+              <span
+                key={offender.technicianId}
+                className="rounded border border-[var(--color-border)] px-3 py-2 text-xs text-[var(--color-text)]"
+              >
+                <span className="font-mono">{offender.technicianId}</span>
+                <span className="text-[var(--color-text-muted)]"> - {offender.count} complaints</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </section>
 
       <KanbanBoard
         complaints={complaints}

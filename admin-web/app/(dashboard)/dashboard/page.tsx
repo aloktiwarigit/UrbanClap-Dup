@@ -1,24 +1,35 @@
 export const dynamic = 'force-dynamic';
 
+import { redirect } from 'next/navigation';
+import { ApiError } from '@/api/client';
 import { getServerApiClient } from '@/lib/serverApi';
 import { CounterStrip } from '@/components/dashboard/CounterStrip';
 import { TechMap } from '@/components/dashboard/TechMap';
 import { OrderFeed } from '@/components/dashboard/OrderFeed';
 import { UtilStrip } from '@/components/dashboard/UtilStrip';
 import { PayoutQueue } from '@/components/dashboard/PayoutQueue';
-import type { components } from '@/api/generated/schema';
 
-type DashboardSummary = components['schemas']['DashboardSummary'];
-type TechLocation = components['schemas']['TechLocation'];
+function handleDashboardApiError(error: unknown): never {
+  if (error instanceof ApiError) {
+    if (error.status === 401) redirect('/login');
+    if (error.status === 403) redirect('/not-authorized');
+  }
 
-const FALLBACK_SUMMARY: DashboardSummary = {
-  bookingsToday: 0,
-  gmvToday: 0,
-  commissionToday: 0,
-  payoutsPending: 0,
-  complaintsOpen: 0,
-  techsOnDuty: 0,
-};
+  throw error;
+}
+
+function unwrapDashboardResult<TResponse, TValue>(
+  result: PromiseSettledResult<{ data?: TResponse }>,
+  readValue: (response: TResponse) => TValue,
+  label: string,
+): TValue {
+  if (result.status === 'rejected') handleDashboardApiError(result.reason);
+  if (result.value.data === undefined) {
+    throw new Error(`${label} response did not include data`);
+  }
+
+  return readValue(result.value.data);
+}
 
 export default async function LiveOpsDashboardPage() {
   const client = await getServerApiClient();
@@ -28,15 +39,17 @@ export default async function LiveOpsDashboardPage() {
     client.GET('/v1/admin/dashboard/tech-locations'),
   ]);
 
-  const summary: DashboardSummary =
-    summaryResult.status === 'fulfilled' && summaryResult.value.data
-      ? summaryResult.value.data.summary
-      : FALLBACK_SUMMARY;
+  const summary = unwrapDashboardResult(
+    summaryResult,
+    (data) => data.summary,
+    'Dashboard summary',
+  );
 
-  const techs: TechLocation[] =
-    techsResult.status === 'fulfilled' && techsResult.value.data
-      ? techsResult.value.data.techs
-      : [];
+  const techs = unwrapDashboardResult(
+    techsResult,
+    (data) => data.techs,
+    'Technician locations',
+  );
 
   return (
     <div
