@@ -6,6 +6,7 @@ import com.homeservices.technician.domain.kyc.model.KycStatus
 import com.homeservices.technician.domain.kyc.model.PanOcrResult
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.POST
 import javax.inject.Inject
 
@@ -13,6 +14,7 @@ internal interface KycApiService {
     @POST("v1/kyc/aadhaar")
     suspend fun submitAadhaar(
         @Body body: AadhaarRequest,
+        @Header("X-Integrity-Token") integrityToken: String? = null,
     ): AadhaarResponse
 
     @POST("v1/kyc/pan-ocr")
@@ -60,9 +62,10 @@ public class KycRepositoryImpl
         override suspend fun exchangeAadhaarCode(
             authCode: String,
             redirectUri: String,
+            integrityToken: String?,
         ): DigiLockerResult =
             try {
-                val r = api.submitAadhaar(AadhaarRequest(authCode, redirectUri))
+                val r = api.submitAadhaar(AadhaarRequest(authCode, redirectUri), integrityToken)
                 if (r.aadhaarVerified && r.aadhaarMaskedNumber != null) {
                     DigiLockerResult.AadhaarVerified(r.aadhaarMaskedNumber)
                 } else {

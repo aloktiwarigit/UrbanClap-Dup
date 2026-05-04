@@ -48,6 +48,7 @@ public class ActiveJobRepositoryImpl
         override suspend fun transitionStatus(
             bookingId: String,
             targetStatus: ActiveJobStatus,
+            integrityToken: String?,
         ): Result<ActiveJob> {
             return try {
                 val token =
@@ -67,6 +68,7 @@ public class ActiveJobRepositoryImpl
                                     .getOrNull()
                                     ?.toDto(),
                         ),
+                        integrityToken = integrityToken,
                     )
                 if (response.isSuccessful) {
                     Result.success(response.body()!!.toDomain())

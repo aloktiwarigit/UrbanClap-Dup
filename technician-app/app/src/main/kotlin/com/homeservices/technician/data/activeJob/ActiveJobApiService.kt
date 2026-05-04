@@ -19,6 +19,7 @@ internal interface ActiveJobApiService {
         @Header("Authorization") authHeader: String,
         @Path("bookingId") bookingId: String,
         @Body body: TransitionRequest,
+        @Header("X-Integrity-Token") integrityToken: String? = null,
     ): Response<ActiveJobResponse>
 }
 

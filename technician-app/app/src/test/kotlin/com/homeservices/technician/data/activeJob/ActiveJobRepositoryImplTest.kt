@@ -64,7 +64,7 @@ public class ActiveJobRepositoryImplTest {
     @Test
     public fun `transitionStatus success path — does NOT write PendingTransitionEntity`(): Unit =
         runTest {
-            coEvery { api.transitionStatus(any(), any(), any()) } returns Response.success(aResponse("EN_ROUTE"))
+            coEvery { api.transitionStatus(any(), any(), any(), any()) } returns Response.success(aResponse("EN_ROUTE"))
 
             val result = repo.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE)
 
@@ -76,7 +76,7 @@ public class ActiveJobRepositoryImplTest {
     public fun `transitionStatus includes current GPS when available`(): Unit =
         runTest {
             coEvery { currentLocationProvider.currentLocation() } returns LatLng(26.8, 82.2)
-            coEvery { api.transitionStatus(any(), any(), any()) } returns Response.success(aResponse("EN_ROUTE"))
+            coEvery { api.transitionStatus(any(), any(), any(), any()) } returns Response.success(aResponse("EN_ROUTE"))
 
             repo.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE)
 
@@ -88,6 +88,7 @@ public class ActiveJobRepositoryImplTest {
                         targetStatus = "EN_ROUTE",
                         currentLocation = LatLngDto(lat = 26.8, lng = 82.2),
                     ),
+                    integrityToken = null,
                 )
             }
         }
@@ -95,7 +96,7 @@ public class ActiveJobRepositoryImplTest {
     @Test
     public fun `transitionStatus network failure — writes PendingTransitionEntity to Room`(): Unit =
         runTest {
-            coEvery { api.transitionStatus(any(), any(), any()) } throws RuntimeException("network error")
+            coEvery { api.transitionStatus(any(), any(), any(), any()) } throws RuntimeException("network error")
 
             val result = repo.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE)
 
@@ -112,7 +113,7 @@ public class ActiveJobRepositoryImplTest {
                     PendingTransitionEntity("id-2", "bk-1", "REACHED", createdAt = 2000L),
                 )
             coEvery { dao.getPending() } returns entries
-            coEvery { api.transitionStatus(any(), any(), any()) } returns Response.success(aResponse("EN_ROUTE"))
+            coEvery { api.transitionStatus(any(), any(), any(), any()) } returns Response.success(aResponse("EN_ROUTE"))
 
             repo.syncPendingTransitions()
 
@@ -126,7 +127,7 @@ public class ActiveJobRepositoryImplTest {
         runTest {
             val entry = PendingTransitionEntity("id-1", "bk-1", "IN_PROGRESS", createdAt = 1000L)
             coEvery { dao.getPending() } returns listOf(entry)
-            coEvery { api.transitionStatus(any(), any(), any()) } returns
+            coEvery { api.transitionStatus(any(), any(), any(), any()) } returns
                 Response.error(409, "".toResponseBody(null))
 
             repo.syncPendingTransitions()
@@ -162,7 +163,7 @@ public class ActiveJobRepositoryImplTest {
     @Test
     public fun `transitionStatus HTTP error (non-exception) — returns failure without Room write`(): Unit =
         runTest {
-            coEvery { api.transitionStatus(any(), any(), any()) } returns
+            coEvery { api.transitionStatus(any(), any(), any(), any()) } returns
                 Response.error(400, "".toResponseBody(null))
 
             val result = repo.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE)
@@ -188,7 +189,7 @@ public class ActiveJobRepositoryImplTest {
 
             repo.syncPendingTransitions()
 
-            coVerify(exactly = 0) { api.transitionStatus(any(), any(), any()) }
+            coVerify(exactly = 0) { api.transitionStatus(any(), any(), any(), any()) }
         }
 
     @Test
@@ -196,7 +197,7 @@ public class ActiveJobRepositoryImplTest {
         runTest {
             val entry = PendingTransitionEntity("id-1", "bk-1", "EN_ROUTE", createdAt = 1000L)
             coEvery { dao.getPending() } returns listOf(entry)
-            coEvery { api.transitionStatus(any(), any(), any()) } throws RuntimeException("network")
+            coEvery { api.transitionStatus(any(), any(), any(), any()) } throws RuntimeException("network")
 
             repo.syncPendingTransitions()
 
@@ -208,7 +209,7 @@ public class ActiveJobRepositoryImplTest {
         runTest {
             val entry = PendingTransitionEntity("id-1", "bk-1", "EN_ROUTE", createdAt = 1000L)
             coEvery { dao.getPending() } returns listOf(entry)
-            coEvery { api.transitionStatus(any(), any(), any()) } returns
+            coEvery { api.transitionStatus(any(), any(), any(), any()) } returns
                 Response.error(500, "".toResponseBody(null))
 
             repo.syncPendingTransitions()

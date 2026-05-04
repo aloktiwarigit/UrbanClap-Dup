@@ -15,7 +15,7 @@ public class KycRepositoryImplTest {
     @Test
     public fun `exchangeAadhaarCode returns AadhaarVerified on success`(): Unit =
         runTest {
-            coEvery { api.submitAadhaar(any()) } returns
+            coEvery { api.submitAadhaar(any(), any()) } returns
                 AadhaarResponse(
                     kycStatus = "AADHAAR_DONE",
                     aadhaarMaskedNumber = "XXXX-XXXX-1234",
@@ -29,7 +29,7 @@ public class KycRepositoryImplTest {
     @Test
     public fun `exchangeAadhaarCode returns NetworkError on exception`(): Unit =
         runTest {
-            coEvery { api.submitAadhaar(any()) } throws RuntimeException("network")
+            coEvery { api.submitAadhaar(any(), any()) } throws RuntimeException("network")
             val result = sut.exchangeAadhaarCode("code", "https://redirect")
             assertThat(result).isInstanceOf(DigiLockerResult.NetworkError::class.java)
         }
@@ -37,7 +37,7 @@ public class KycRepositoryImplTest {
     @Test
     public fun `exchangeAadhaarCode returns ApiError when aadhaarVerified is false`(): Unit =
         runTest {
-            coEvery { api.submitAadhaar(any()) } returns
+            coEvery { api.submitAadhaar(any(), any()) } returns
                 AadhaarResponse(
                     kycStatus = "PENDING",
                     aadhaarMaskedNumber = null,

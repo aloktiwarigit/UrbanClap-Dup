@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { type HttpHandler, type InvocationContext, app } from '@azure/functions';
 import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
+import { requireIntegrity } from '../middleware/requireIntegrity.js';
 import { bookingRepo, updateBookingFields } from '../cosmos/booking-repository.js';
 import { bookingEventRepo } from '../cosmos/booking-event-repository.js';
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
@@ -155,5 +156,8 @@ app.http('getActiveJob', {
 app.http('transitionActiveJobStatus', {
   route: 'v1/technicians/active-job/{bookingId}/transition',
   methods: ['PATCH'],
-  handler: transitionStatusHandler,
+  // requireIntegrity is applied to the REACHED (and all) status transitions.
+  // Non-strict by default: absent/invalid token warns to Sentry but allows through.
+  // Set PLAY_INTEGRITY_STRICT=true in production to enforce rejection.
+  handler: requireIntegrity(transitionStatusHandler),
 });
