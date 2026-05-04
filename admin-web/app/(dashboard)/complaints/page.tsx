@@ -6,7 +6,7 @@ import { listComplaints } from '@/api/complaints';
 import type { Complaint } from '@/types/complaint';
 import { ComplaintsClient } from './ComplaintsClient';
 
-export const metadata: Metadata = { title: 'Complaints — Homeservices Admin' };
+export const metadata: Metadata = { title: 'Complaints — HomeHeroo Admin' };
 
 export default async function ComplaintsPage() {
   const client = await getServerApiClient();

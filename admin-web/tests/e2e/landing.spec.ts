@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test('landing page renders brand + tagline + CTA + footer build-info', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { level: 1, name: /homeservices/i })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /homeheroo/i })).toBeVisible();
   await expect(page.getByText(/live operations at a glance/i)).toBeVisible();
 
   const cta = page.getByRole('link', { name: /sign in to admin/i });

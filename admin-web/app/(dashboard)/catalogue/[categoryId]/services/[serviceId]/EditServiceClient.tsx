@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { apiUrl } from '@/api/base';
 import { ServiceForm } from '@/components/catalogue/ServiceForm';
 import type { components, operations } from '@/api/generated/schema';
 
@@ -23,8 +24,7 @@ export function EditServiceClient({ categoryId, service }: EditServiceClientProp
   const router = useRouter();
 
   async function handleSubmit(data: CreateServiceBody | UpdateServiceBody) {
-    const baseUrl = process.env['NEXT_PUBLIC_API_BASE_URL'] ?? '';
-    const res = await fetch(`${baseUrl}/v1/admin/catalogue/services/${service.id}`, {
+    const res = await fetch(apiUrl(`/v1/admin/catalogue/services/${service.id}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

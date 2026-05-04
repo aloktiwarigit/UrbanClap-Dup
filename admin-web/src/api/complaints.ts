@@ -1,4 +1,5 @@
 import { createApiClient, type ApiClient } from './client';
+import { BROWSER_API_BASE_URL } from './base';
 import type {
   Complaint,
   ComplaintListResponse,
@@ -6,9 +7,9 @@ import type {
   RepeatOffender,
 } from '../types/complaint';
 
-// Client-side base URL. When NEXT_PUBLIC_API_BASE_URL is unset the app proxies
-// backend calls through /api, so the openapi client's /v1/... paths resolve as /api/v1/...
-const CLIENT_BASE = process.env['NEXT_PUBLIC_API_BASE_URL'] ?? '/api';
+// Client-side base URL. When NEXT_PUBLIC_API_BASE_URL is unset, calls go through
+// the admin-web route-handler proxy so Free-tier SWA does not need linked backend.
+const CLIENT_BASE = BROWSER_API_BASE_URL;
 
 // Lazy singleton — created on first mutation call, reused for 401-refresh support.
 let _browserClient: ApiClient | undefined;

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { AuditLogClient } from '@/components/audit-log/AuditLogClient';
 
 export const metadata: Metadata = {
-  title: 'Audit Log — homeservices admin',
+  title: 'Audit Log — HomeHeroo admin',
 };
 
 export default function AuditLogPage() {

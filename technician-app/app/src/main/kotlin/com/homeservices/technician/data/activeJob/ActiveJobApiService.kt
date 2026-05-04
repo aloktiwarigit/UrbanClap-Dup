@@ -41,4 +41,5 @@ internal data class LatLngDto(
 
 internal data class TransitionRequest(
     val targetStatus: String,
+    val currentLocation: LatLngDto? = null,
 )

@@ -1,9 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import {
+  GoogleAuthProvider,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+} from 'firebase/auth';
 import { useRouter } from 'next/navigation';
+import { apiUrl } from '@/api/base';
 import { getFirebaseAuth } from '@/lib/auth/firebase';
+
+type LoginMethod = 'password' | 'google';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,48 +18,51 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [totpCode, setTotpCode] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<LoginMethod | null>(null);
+
+  async function completeAdminLogin(idToken: string) {
+    const res = await fetch(apiUrl('/v1/admin/auth/login'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ idToken, totpCode: totpCode || undefined }),
+      credentials: 'include',
+    });
+
+    const data = (await res.json()) as {
+      requiresSetup?: boolean;
+      setupToken?: string;
+      code?: string;
+    };
+
+    if (!res.ok) {
+      setError(
+        data.code === 'TOTP_INVALID'
+          ? 'Invalid authenticator code. Please try again.'
+          : data.code === 'TOTP_REQUIRED'
+            ? 'Please enter your 6-digit authenticator code.'
+            : 'Login failed. Check your credentials.',
+      );
+      return;
+    }
+
+    if (data.requiresSetup && data.setupToken) {
+      sessionStorage.setItem('setupToken', data.setupToken);
+      router.push('/setup');
+      return;
+    }
+
+    router.push('/dashboard');
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setLoading(true);
+    setLoading('password');
 
     try {
       const credential = await signInWithEmailAndPassword(getFirebaseAuth(), email, password);
       const idToken = await credential.user.getIdToken();
-
-      const res = await fetch('/api/v1/admin/auth/login', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ idToken, totpCode: totpCode || undefined }),
-        credentials: 'include',
-      });
-
-      const data = (await res.json()) as {
-        requiresSetup?: boolean;
-        setupToken?: string;
-        code?: string;
-      };
-
-      if (!res.ok) {
-        setError(
-          data.code === 'TOTP_INVALID'
-            ? 'Invalid authenticator code. Please try again.'
-            : data.code === 'TOTP_REQUIRED'
-              ? 'Please enter your 6-digit authenticator code.'
-              : 'Login failed. Check your credentials.',
-        );
-        return;
-      }
-
-      if (data.requiresSetup && data.setupToken) {
-        sessionStorage.setItem('setupToken', data.setupToken);
-        router.push('/setup');
-        return;
-      }
-
-      router.push('/dashboard');
+      await completeAdminLogin(idToken);
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code ?? '';
       setError(
@@ -61,7 +71,33 @@ export default function LoginPage() {
           : 'An error occurred. Please try again.',
       );
     } finally {
-      setLoading(false);
+      setLoading(null);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    setError(null);
+    setLoading('google');
+
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const credential = await signInWithPopup(getFirebaseAuth(), provider);
+      const idToken = await credential.user.getIdToken();
+      await completeAdminLogin(idToken);
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code ?? '';
+      setError(
+        code === 'auth/popup-closed-by-user'
+          ? 'Google sign-in was closed before it completed.'
+          : code === 'auth/popup-blocked'
+            ? 'Allow pop-ups for this admin site and try again.'
+            : code === 'auth/account-exists-with-different-credential'
+              ? 'This email uses a different sign-in method.'
+              : 'Google sign-in failed. Please try again.',
+      );
+    } finally {
+      setLoading(null);
     }
   }
 
@@ -74,7 +110,7 @@ export default function LoginPage() {
       >
         <div className="grid gap-[var(--space-2)]">
           <p className="text-[length:var(--text-sm)] font-semibold uppercase text-[var(--color-brand)]">
-            Homeservices admin
+            HomeHeroo admin
           </p>
           <h1 className="m-0 text-[length:var(--text-3xl)] font-bold">
             Sign in to operations
@@ -135,10 +171,25 @@ export default function LoginPage() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading !== null}
           className="min-h-12 rounded-[var(--radius-md)] bg-[var(--color-brand)] px-4 py-2 font-semibold text-[var(--color-brand-fg)] shadow-[var(--shadow-md)] disabled:opacity-50"
         >
-          {loading ? 'Signing in...' : 'Sign in'}
+          {loading === 'password' ? 'Signing in...' : 'Sign in'}
+        </button>
+
+        <div className="flex items-center gap-3 text-xs uppercase text-[var(--color-text-muted)]">
+          <span className="h-px flex-1 bg-[var(--color-border)]" />
+          <span>or</span>
+          <span className="h-px flex-1 bg-[var(--color-border)]" />
+        </div>
+
+        <button
+          type="button"
+          onClick={() => void handleGoogleSignIn()}
+          disabled={loading !== null}
+          className="min-h-12 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 font-semibold text-[var(--color-text)] shadow-[var(--shadow-sm)] disabled:opacity-50"
+        >
+          {loading === 'google' ? 'Opening Google...' : 'Continue with Google'}
         </button>
       </form>
     </main>

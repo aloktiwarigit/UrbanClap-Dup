@@ -47,7 +47,7 @@ test.describe('TOTP enrollment (first login)', () => {
       }),
     );
 
-    await page.route('**/api/v1/admin/auth/login', (route) =>
+    await page.route('**/admin-api/v1/admin/auth/login', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -55,7 +55,7 @@ test.describe('TOTP enrollment (first login)', () => {
       }),
     );
 
-    await page.route('**/api/v1/admin/auth/setup-totp', (route) => {
+    await page.route('**/admin-api/v1/admin/auth/setup-totp', (route) => {
       if (route.request().method() === 'GET') {
         return route.fulfill({
           status: 200,
@@ -87,7 +87,7 @@ test.describe('TOTP enrollment (first login)', () => {
     await page.addInitScript(() => {
       sessionStorage.setItem('setupToken', 'mock.setup.token');
     });
-    await page.route('**/api/v1/admin/auth/setup-totp', async (route) => {
+    await page.route('**/admin-api/v1/admin/auth/setup-totp', async (route) => {
       if (route.request().method() === 'GET') {
         return route.fulfill({
           status: 200, contentType: 'application/json',

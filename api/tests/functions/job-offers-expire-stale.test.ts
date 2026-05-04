@@ -9,6 +9,7 @@ const { capturedHandlers, mocks } = vi.hoisted(() => ({
     containerReplace: vi.fn(),
     updateBookingFields: vi.fn(),
     eventAppend: vi.fn(),
+    continueDispatchAfterOfferOutcome: vi.fn(),
   },
 }));
 
@@ -48,11 +49,15 @@ vi.mock('../../src/middleware/verifyTechnicianToken.js', () => ({
 }));
 
 vi.mock('../../src/cosmos/dispatch-attempt-repository.js', () => ({
-  dispatchAttemptRepo: { getByBookingId: vi.fn(), acceptAttempt: vi.fn() },
+  dispatchAttemptRepo: { getByBookingId: vi.fn(), acceptAttempt: vi.fn(), declineAttempt: vi.fn() },
 }));
 
 vi.mock('firebase-admin/messaging', () => ({
   getMessaging: vi.fn(() => ({ send: vi.fn() })),
+}));
+
+vi.mock('../../src/services/dispatcher.service.js', () => ({
+  dispatcherService: { continueDispatchAfterOfferOutcome: mocks.continueDispatchAfterOfferOutcome },
 }));
 
 // Side-effect import triggers app.timer() → capturedHandlers['expireStaleOffers'] is set
@@ -86,9 +91,10 @@ describe('expireStaleOffers timer', () => {
     mocks.updateBookingFields.mockResolvedValue({ id: 'bk-1', status: 'UNFULFILLED' });
     mocks.eventAppend.mockResolvedValue(undefined);
     mocks.containerReplace.mockResolvedValue({});
+    mocks.continueDispatchAfterOfferOutcome.mockResolvedValue(false);
   });
 
-  it('stale PENDING attempt (expiresAt < now) → replace to EXPIRED, booking UNFULFILLED, OFFER_EXPIRED event appended', async () => {
+  it('stale PENDING attempt (expiresAt < now) → replace to EXPIRED, append event, continue dispatch', async () => {
     const attempt = makeStaleAttempt();
     mocks.fetchAll.mockResolvedValue({ resources: [attempt] });
 
@@ -100,12 +106,11 @@ describe('expireStaleOffers timer', () => {
     expect(replaceOpts.accessCondition.type).toBe('IfMatch');
     expect(replaceOpts.accessCondition.condition).toBe('"etag-stale-001"');
 
-    expect(mocks.updateBookingFields).toHaveBeenCalledOnce();
-    expect(mocks.updateBookingFields.mock.calls[0]![0]).toBe('bk-1');
-    expect(mocks.updateBookingFields.mock.calls[0]![1]).toEqual({ status: 'UNFULFILLED' });
+    expect(mocks.updateBookingFields).not.toHaveBeenCalled();
 
     expect(mocks.eventAppend).toHaveBeenCalledOnce();
     expect(mocks.eventAppend.mock.calls[0]![0]).toMatchObject({ event: 'OFFER_EXPIRED', bookingId: 'bk-1' });
+    expect(mocks.continueDispatchAfterOfferOutcome).toHaveBeenCalledWith('bk-1', ['tech-1']);
   });
 
   it('no stale attempts → no-op, no writes', async () => {
@@ -125,12 +130,12 @@ describe('expireStaleOffers timer', () => {
       makeStaleAttempt({ id: 'da-3', bookingId: 'bk-3', _etag: '"e3"' }),
     ];
     mocks.fetchAll.mockResolvedValue({ resources: attempts });
-    mocks.updateBookingFields.mockResolvedValue({ id: 'bk-x', status: 'UNFULFILLED' });
+    mocks.continueDispatchAfterOfferOutcome.mockResolvedValue(false);
 
     await runExpiry();
 
     expect(mocks.containerReplace).toHaveBeenCalledTimes(3);
-    expect(mocks.updateBookingFields).toHaveBeenCalledTimes(3);
+    expect(mocks.continueDispatchAfterOfferOutcome).toHaveBeenCalledTimes(3);
     expect(mocks.eventAppend).toHaveBeenCalledTimes(3);
   });
 
@@ -147,23 +152,20 @@ describe('expireStaleOffers timer', () => {
 
     await expect(runExpiry()).resolves.not.toThrow();
 
-    // The successful attempt's booking must still have been updated
-    const updateCalls = mocks.updateBookingFields.mock.calls as string[][];
-    const updatedBookingIds = updateCalls.map(c => c[0]);
-    expect(updatedBookingIds).toContain('bk-ok');
-    expect(updatedBookingIds).not.toContain('bk-fail');
+    // The successful attempt must still continue dispatch.
+    const continuationCalls = mocks.continueDispatchAfterOfferOutcome.mock.calls as string[][];
+    const continuedBookingIds = continuationCalls.map(c => c[0]);
+    expect(continuedBookingIds).toContain('bk-ok');
+    expect(continuedBookingIds).not.toContain('bk-fail');
   });
 
-  it('regression-catch: UNFULFILLED write required — removing updateBookingFields call strands bookings in SEARCHING forever', async () => {
-    // If updateBookingFields is not called after replace, the booking stays in SEARCHING
-    // indefinitely. The dispatcher will keep retrying dispatch for a permanently failed offer.
+  it('regression-catch: continuation required after expiry', async () => {
     const attempt = makeStaleAttempt();
     mocks.fetchAll.mockResolvedValue({ resources: [attempt] });
 
     await runExpiry();
 
-    expect(mocks.updateBookingFields).toHaveBeenCalledOnce();
-    expect(mocks.updateBookingFields.mock.calls[0]![1]).toMatchObject({ status: 'UNFULFILLED' });
+    expect(mocks.continueDispatchAfterOfferOutcome).toHaveBeenCalledWith('bk-1', ['tech-1']);
   });
 
   it('already-EXPIRED attempts excluded by Cosmos query — no double-write on re-run', async () => {

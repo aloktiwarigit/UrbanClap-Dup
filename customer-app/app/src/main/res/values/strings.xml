@@ -30,7 +30,7 @@
     <string name="trust_dossier_error">Could not load technician profile.</string>
     <string name="trust_dossier_trained_by">Trained by %s</string>
     <string name="book_now">Book Now</string>
-    <string name="book_now_disabled_desc">Booking coming soon</string>
+    <string name="book_now_disabled_desc">Choose a slot to continue</string>
     <string name="service_price_label">Fixed price</string>
     <string name="service_detail_back_desc">Back</string>
     <string name="service_detail_eyebrow">Home-ready service</string>

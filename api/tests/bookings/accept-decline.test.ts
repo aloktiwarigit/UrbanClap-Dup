@@ -9,6 +9,7 @@ vi.mock('../../src/cosmos/dispatch-attempt-repository.js', () => ({
   dispatchAttemptRepo: {
     getByBookingId: vi.fn(),
     acceptAttempt: vi.fn(),
+    declineAttempt: vi.fn(),
   },
 }));
 
@@ -29,6 +30,16 @@ vi.mock('firebase-admin/messaging', () => ({
   getMessaging: vi.fn().mockReturnValue({
     send: vi.fn().mockResolvedValue('message-id'),
   }),
+}));
+
+vi.mock('../../src/services/dispatcher.service.js', () => ({
+  dispatcherService: {
+    continueDispatchAfterOfferOutcome: vi.fn(),
+  },
+}));
+
+vi.mock('../../src/services/fcm.service.js', () => ({
+  sendBookingStatusUpdatePush: vi.fn().mockResolvedValue(undefined),
 }));
 
 function makeReq(bookingId: string, suffix: string): HttpRequest {
@@ -66,6 +77,7 @@ describe('PATCH /v1/technicians/job-offers/:bookingId/accept', () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { dispatchAttemptRepo } = await import('../../src/cosmos/dispatch-attempt-repository.js');
     const { updateBookingFields } = await import('../../src/cosmos/booking-repository.js');
+    const { sendBookingStatusUpdatePush } = await import('../../src/services/fcm.service.js');
 
     (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
     (dispatchAttemptRepo.getByBookingId as MockFn).mockResolvedValue(pendingAttempt());
@@ -75,6 +87,11 @@ describe('PATCH /v1/technicians/job-offers/:bookingId/accept', () => {
     const res = await acceptHandler(makeReq('bk-1', 'accept'), new InvocationContext());
     expect(res.status).toBe(200);
     expect((res.jsonBody as { status: string }).status).toBe('ASSIGNED');
+    expect(sendBookingStatusUpdatePush).toHaveBeenCalledWith({
+      customerId: 'c1',
+      bookingId: 'bk-1',
+      status: 'ASSIGNED',
+    });
   });
 
   it('returns 409 when _etag race lost (acceptAttempt returns null)', async () => {
@@ -157,18 +174,24 @@ describe('PATCH /v1/technicians/job-offers/:bookingId/decline', () => {
     declineHandler = mod.declineJobOfferHandler;
   });
 
-  it('returns 200 DECLINED and does not modify booking or dispatch attempt', async () => {
+  it('returns 200 DECLINED, records attempt decline, and continues dispatch', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { updateBookingFields } = await import('../../src/cosmos/booking-repository.js');
     const { dispatchAttemptRepo } = await import('../../src/cosmos/dispatch-attempt-repository.js');
+    const { dispatcherService } = await import('../../src/services/dispatcher.service.js');
 
     (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+    (dispatchAttemptRepo.getByBookingId as MockFn).mockResolvedValue(pendingAttempt());
+    (dispatchAttemptRepo.declineAttempt as MockFn).mockResolvedValue({ ...pendingAttempt(), status: 'EXPIRED' });
+    (dispatcherService.continueDispatchAfterOfferOutcome as MockFn).mockResolvedValue(true);
 
     const res = await declineHandler(makeReq('bk-1', 'decline'), new InvocationContext());
     expect(res.status).toBe(200);
     expect((res.jsonBody as { status: string }).status).toBe('DECLINED');
     expect((updateBookingFields as MockFn).mock.calls).toHaveLength(0);
     expect((dispatchAttemptRepo.acceptAttempt as MockFn).mock.calls).toHaveLength(0);
+    expect(dispatchAttemptRepo.declineAttempt).toHaveBeenCalledWith('da-1', 'bk-1');
+    expect(dispatcherService.continueDispatchAfterOfferOutcome).toHaveBeenCalledWith('bk-1', ['tech-1', 'tech-2']);
   });
 
   it('appends TECH_DECLINED event with no ranking field', async () => {
@@ -176,6 +199,8 @@ describe('PATCH /v1/technicians/job-offers/:bookingId/decline', () => {
     const { bookingEventRepo } = await import('../../src/cosmos/booking-event-repository.js');
 
     (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+    const { dispatchAttemptRepo } = await import('../../src/cosmos/dispatch-attempt-repository.js');
+    (dispatchAttemptRepo.getByBookingId as MockFn).mockResolvedValue(null);
 
     await declineHandler(makeReq('bk-1', 'decline'), new InvocationContext());
     const appendCalls = (bookingEventRepo.append as MockFn).mock.calls;

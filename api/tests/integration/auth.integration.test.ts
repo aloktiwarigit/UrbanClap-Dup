@@ -7,7 +7,10 @@ vi.mock('../../src/services/firebaseAdmin.js', () => ({
   verifyFirebaseIdToken: vi.fn(),
 }));
 vi.mock('../../src/services/adminUser.service.js', () => ({
+  claimAdminInvite: vi.fn(),
+  getAdminUserByEmail: vi.fn(),
   getAdminUserById: vi.fn(),
+  isAdminInvite: vi.fn((user: { adminId: string }) => user.adminId.startsWith('invite:')),
   updateAdminUser: vi.fn(),
 }));
 vi.mock('../../src/services/adminSession.service.js', () => ({
@@ -20,7 +23,7 @@ vi.mock('../../src/services/auditLog.service.js', () => ({
 import { adminLoginHandler } from '../../src/functions/admin/auth/login.js';
 import { setupTotpGetHandler, setupTotpPostHandler } from '../../src/functions/admin/auth/setup-totp.js';
 import { verifyFirebaseIdToken } from '../../src/services/firebaseAdmin.js';
-import { getAdminUserById } from '../../src/services/adminUser.service.js';
+import { claimAdminInvite, getAdminUserByEmail, getAdminUserById } from '../../src/services/adminUser.service.js';
 import { updateAdminUser } from '../../src/services/adminUser.service.js';
 import { createAdminSession } from '../../src/services/adminSession.service.js';
 import { encryptSecret, generateSecret } from '../../src/services/totp.service.js';
@@ -40,7 +43,10 @@ function makeLoginReq(body: unknown): HttpRequest {
 }
 
 describe('POST /v1/admin/auth/login', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getAdminUserByEmail).mockResolvedValue(null);
+  });
 
   it('returns 400 for missing idToken', async () => {
     const res = await adminLoginHandler(makeLoginReq({}), fakeCtx);
@@ -73,6 +79,41 @@ describe('POST /v1/admin/auth/login', () => {
     expect(res.status).toBe(200);
     expect((res.jsonBody as any).requiresSetup).toBe(true);
     expect((res.jsonBody as any).setupToken).toBeDefined();
+  });
+
+  it('claims a verified email invite when the Firebase UID is new', async () => {
+    const invite = {
+      id: 'invite:anshutiwari183@gmail.com',
+      adminId: 'invite:anshutiwari183@gmail.com',
+      email: 'anshutiwari183@gmail.com',
+      role: 'super-admin',
+      totpEnrolled: false,
+      totpSecret: null,
+      totpSecretPending: null,
+      deactivatedAt: null,
+    };
+    vi.mocked(verifyFirebaseIdToken).mockResolvedValue({
+      uid: 'new-firebase-uid',
+      email: 'anshutiwari183@gmail.com',
+      email_verified: true,
+    } as any);
+    vi.mocked(getAdminUserById).mockResolvedValue(null);
+    vi.mocked(getAdminUserByEmail).mockResolvedValue(invite as any);
+    vi.mocked(claimAdminInvite).mockResolvedValue({
+      ...invite,
+      id: 'new-firebase-uid',
+      adminId: 'new-firebase-uid',
+    } as any);
+
+    const res = await adminLoginHandler(makeLoginReq({ idToken: 'tok' }), fakeCtx);
+
+    expect(res.status).toBe(200);
+    expect((res.jsonBody as any).requiresSetup).toBe(true);
+    expect(claimAdminInvite).toHaveBeenCalledWith(
+      invite,
+      'new-firebase-uid',
+      'anshutiwari183@gmail.com',
+    );
   });
 
   it('returns 422 when TOTP code is missing for enrolled user', async () => {

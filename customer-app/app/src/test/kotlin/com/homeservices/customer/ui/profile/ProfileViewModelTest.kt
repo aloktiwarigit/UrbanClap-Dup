@@ -52,4 +52,12 @@ public class ProfileViewModelTest {
             sut.signOut()
             coVerify { sessionManager.clearSession() }
         }
+
+    @Test
+    public fun `updateDisplayName trims and saves display name`(): Unit =
+        runTest(dispatcher) {
+            sut.updateDisplayName("  Sita Sharma  ")
+
+            coVerify { sessionManager.updateDisplayName("Sita Sharma") }
+        }
 }

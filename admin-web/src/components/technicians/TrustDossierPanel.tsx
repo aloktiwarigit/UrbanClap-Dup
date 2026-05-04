@@ -1,8 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { apiUrl } from '@/api/base';
 import type { TechnicianDossier } from '@/types/technician-dossier';
-
-const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
 
 interface TrustDossierPanelProps {
   technicianId: string | undefined;
@@ -18,7 +17,7 @@ export function TrustDossierPanel({ technicianId }: TrustDossierPanelProps) {
     if (!technicianId || !open) return;
     setLoading(true);
     setError(null);
-    fetch(`${BASE}/api/v1/technicians/${technicianId}/profile`)
+    fetch(apiUrl(`/v1/technicians/${technicianId}/profile`))
       .then((res) => {
         if (!res.ok) throw new Error(`${res.status}`);
         return res.json() as Promise<TechnicianDossier>;

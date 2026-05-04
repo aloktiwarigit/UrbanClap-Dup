@@ -4,7 +4,12 @@ import type { InvocationContext, HttpResponseInit } from '@azure/functions';
 
 vi.mock('../../../../src/cosmos/audit-log-repository.js', () => ({ appendAuditEntry: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('../../../../src/services/firebaseAdmin.js', () => ({ verifyFirebaseIdToken: vi.fn() }));
-vi.mock('../../../../src/services/adminUser.service.js', () => ({ getAdminUserById: vi.fn() }));
+vi.mock('../../../../src/services/adminUser.service.js', () => ({
+  claimAdminInvite: vi.fn(),
+  getAdminUserByEmail: vi.fn(),
+  getAdminUserById: vi.fn(),
+  isAdminInvite: vi.fn((user: { adminId: string }) => user.adminId.startsWith('invite:')),
+}));
 vi.mock('../../../../src/services/totp.service.js', () => ({
   decryptSecret: vi.fn().mockReturnValue('decrypted_secret'),
   verifyToken: vi.fn(),
@@ -21,7 +26,11 @@ vi.mock('../../../../src/services/auditLog.service.js', () => ({ auditLog: vi.fn
 import { adminLoginHandler } from '../../../../src/functions/admin/auth/login.js';
 import { appendAuditEntry } from '../../../../src/cosmos/audit-log-repository.js';
 import { verifyFirebaseIdToken } from '../../../../src/services/firebaseAdmin.js';
-import { getAdminUserById } from '../../../../src/services/adminUser.service.js';
+import {
+  claimAdminInvite,
+  getAdminUserByEmail,
+  getAdminUserById,
+} from '../../../../src/services/adminUser.service.js';
 import { verifyToken } from '../../../../src/services/totp.service.js';
 
 const mockCtx = {} as InvocationContext;
@@ -46,6 +55,7 @@ beforeEach(() => {
   vi.mocked(appendAuditEntry).mockResolvedValue(undefined);
   vi.mocked(verifyFirebaseIdToken).mockResolvedValue({ uid: 'admin-1' } as never);
   vi.mocked(getAdminUserById).mockResolvedValue(validAdmin as never);
+  vi.mocked(getAdminUserByEmail).mockResolvedValue(null);
   vi.mocked(verifyToken).mockReturnValue(true);
 });
 
@@ -77,5 +87,33 @@ describe('POST /v1/admin/auth/login', () => {
       ([doc]) => (doc as { action: string }).action === 'ADMIN_LOGIN_FAILED',
     );
     expect(failedCall).toBeUndefined();
+  });
+
+  it('claims a verified email invite and starts TOTP setup', async () => {
+    const invite = {
+      adminId: 'invite:anshutiwari183@gmail.com',
+      id: 'invite:anshutiwari183@gmail.com',
+      email: 'anshutiwari183@gmail.com',
+      role: 'super-admin' as const,
+      totpEnrolled: false,
+      totpSecret: null,
+      totpSecretPending: null,
+      deactivatedAt: null,
+    };
+    const claimed = { ...invite, id: 'firebase-uid', adminId: 'firebase-uid' };
+    vi.mocked(verifyFirebaseIdToken).mockResolvedValue({
+      uid: 'firebase-uid',
+      email: 'anshutiwari183@gmail.com',
+      email_verified: true,
+    } as never);
+    vi.mocked(getAdminUserById).mockResolvedValue(null);
+    vi.mocked(getAdminUserByEmail).mockResolvedValue(invite as never);
+    vi.mocked(claimAdminInvite).mockResolvedValue(claimed as never);
+
+    const res = await adminLoginHandler(loginReq({ idToken: 'id-tok' }), mockCtx) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect((res.jsonBody as { requiresSetup?: boolean }).requiresSetup).toBe(true);
+    expect(claimAdminInvite).toHaveBeenCalledWith(invite, 'firebase-uid', 'anshutiwari183@gmail.com');
   });
 });

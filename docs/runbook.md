@@ -343,10 +343,11 @@ az staticwebapp show \
 az staticwebapp appsettings set \
   --name swa-homeservices-admin-prod \
   --setting-names \
-    JWT_SECRET="$(openssl rand -hex 32)"
+    JWT_SECRET="$(openssl rand -hex 32)" \
+    API_BASE_URL="https://func-homeservices-prod.azurewebsites.net/api"
 ```
 
-`JWT_SECRET` is consumed by `admin-web/middleware.ts` to verify the `hs_access` access-token cookie on `/dashboard/*`.
+`JWT_SECRET` is consumed by `admin-web/middleware.ts` to verify the `hs_access` access-token cookie on `/dashboard/*`. `API_BASE_URL` points server-side admin-web calls and the `/admin-api/*` browser proxy at the Functions API while keeping Static Web Apps on the Free SKU.
 
 **Step 5 — First deploy:**
 

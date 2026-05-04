@@ -1,6 +1,7 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
+import { apiUrl } from '@/api/base';
 import { ServiceForm } from '@/components/catalogue/ServiceForm';
 import type { operations } from '@/api/generated/schema';
 
@@ -19,8 +20,7 @@ export default function NewServicePage() {
   const categoryId = typeof params['categoryId'] === 'string' ? params['categoryId'] : '';
 
   async function handleSubmit(data: CreateServiceBody | UpdateServiceBody) {
-    const baseUrl = process.env['NEXT_PUBLIC_API_BASE_URL'] ?? '';
-    const res = await fetch(`${baseUrl}/v1/admin/catalogue/services`, {
+    const res = await fetch(apiUrl('/v1/admin/catalogue/services'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
