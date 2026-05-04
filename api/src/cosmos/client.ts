@@ -61,6 +61,10 @@ export function getWebhookEventsContainer(): Container {
   return getCosmosClient().database(DB_NAME).container('webhook_events');
 }
 
+export function getSystemContainer(): Container {
+  return getCosmosClient().database(DB_NAME).container('system');
+}
+
 /** Inject a mock CosmosClient in tests. */
 export function _setCosmosClientForTest(mock: CosmosClient): void {
   _client = mock;
