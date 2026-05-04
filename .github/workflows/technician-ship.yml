@@ -20,6 +20,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 env:
   GIT_SHA: ${{ github.sha }}
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
@@ -65,6 +68,12 @@ jobs:
 
       - name: assemble debug APK (clean-room compile check)
         run: ./gradlew assembleDebug
+
+      - name: ktlint + detekt + android lint
+        run: ./gradlew ktlintCheck detekt lintDebug
+
+      - name: unit tests + coverage gate
+        run: ./gradlew testDebugUnitTest koverVerify
 
       - name: paparazzi screenshot diff
         run: ./gradlew verifyPaparazziDebug

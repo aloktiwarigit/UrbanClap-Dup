@@ -13,8 +13,8 @@ vi.mock('@/lib/serverApi', () => ({
 const listMock = vi.fn();
 const repeatMock = vi.fn();
 vi.mock('@/api/complaints', () => ({
-  listComplaints: (...args: unknown[]) => listMock(...args),
-  getRepeatOffenders: (...args: unknown[]) => repeatMock(...args),
+  listComplaints: (...args: unknown[]): unknown => listMock(...args),
+  getRepeatOffenders: (...args: unknown[]): unknown => repeatMock(...args),
 }));
 
 // Capture the props the page passes to its client component.
