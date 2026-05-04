@@ -82,11 +82,8 @@ async function completeTotpLogin(
       maxAge: 900,
     },
     {
-      // Format: "<sessionId>:<rawRefreshToken>" — sessionId is the partition key
-      // for O(1) lookup in the refresh handler; rawRefreshToken is the one-time
-      // credential rotated on each use.
       name: 'hs_refresh',
-      value: `${session.sessionId}:${session.rawRefreshToken}`,
+      value: session.sessionId,
       httpOnly: true,
       secure: true,
       sameSite: 'Strict',
