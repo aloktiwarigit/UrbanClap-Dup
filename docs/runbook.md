@@ -12,7 +12,7 @@
 **homeservices-mvp** is a three-app home-services marketplace for the Indian market — Customer Android, Technician Android, Owner Web Admin — running on Azure (Functions Consumption + Cosmos DB Serverless + Static Web Apps) and Firebase (FCM + Auth + Storage). Payments via Razorpay + Razorpay Route. KYC via DigiLocker. Maps via Google Maps Platform.
 
 **Dependents:**
-- End customers in the pilot city (Bengaluru per OQ-2) — need booking, payment, tracking, complaints.
+- End customers in the pilot city (Ayodhya, Uttar Pradesh — pivot per `project_pivot_ayodhya_hindi.md`; originally Bengaluru per OQ-2) — need booking, payment, tracking, complaints.
 - Active technicians — need job offers, earnings, payouts.
 - Owner operator (Alok) — needs live ops visibility, overrides, compliance reports.
 - Regulators (Karnataka Labour Department, Central government for SSC levy, GST authorities) — need compliance reports quarterly.
@@ -89,6 +89,8 @@
 ---
 
 ### INC-2: Payment failures (Razorpay capture success drops < 99%)
+
+> **⚠ Deferred — requires live Razorpay account.** This procedure is documented but cannot be executed until the Razorpay live account is provisioned. The procedure body is preserved here so it is ready to execute on Day 1 of go-live; do not remove.
 
 **Signals:**
 - Razorpay dashboard shows elevated failure rate
@@ -304,7 +306,7 @@ az staticwebapp create \
   --sku Free
 ```
 
-(Same RG as the API Function App. **`centralindia` is NOT available** for `Microsoft.Web/staticSites` — SWA Free is restricted to `westus2 / centralus / eastus2 / westeurope / eastasia`. `eastasia` is closest to Bengaluru at ~140 ms RTT.)
+(Same RG as the API Function App. **`centralindia` is NOT available** for `Microsoft.Web/staticSites` — SWA Free is restricted to `westus2 / centralus / eastus2 / westeurope / eastasia`. `eastasia` is closest to the Ayodhya/UP rural pilot region at ~140 ms RTT.)
 
 **Step 2 — Get the deployment token + public hostname:**
 
@@ -428,7 +430,6 @@ After every incident:
 
 ---
 
-<<<<<<< Updated upstream
 ## 10. DPDP 72-hour breach notification (added 2026-04-26)
 
 **Statutory basis:** Digital Personal Data Protection Act 2023 §10 +
@@ -686,6 +687,8 @@ FCM is Google-managed infrastructure.
 
 ### 5. Razorpay Route outage
 
+> **⚠ Deferred — requires live Razorpay account.** This procedure is documented but cannot be executed until the Razorpay live account is provisioned. The procedure body is preserved here so it is ready to execute on Day 1 of go-live; do not remove.
+
 **During outage:**
 - Payout disbursements via Route will fail
 - `trigger-booking-completed.ts` captures Route errors to Sentry (`RazorpayRoutePayoutFailed`)
@@ -699,8 +702,6 @@ FCM is Google-managed infrastructure.
 
 **Runbook v1.2 complete (E10-S04: Emergency rollback + DR drill + launch checklist).**
 Living document — update after every incident and every significant architectural change.
-=======
-**Runbook v1.0 complete.** Living document — update after every incident and every significant architectural change.
 
 ---
 
@@ -710,6 +711,8 @@ Living document — update after every incident and every significant architectu
 **Trigger:** Procedures missing from v1.0 that have become load-bearing after E02–E10 stories landed.
 
 ### OP-A1: Razorpay account compromise / signature key leaked
+
+> **⚠ Deferred — requires live Razorpay account.** This procedure is documented but cannot be executed until the Razorpay live account is provisioned. The procedure body is preserved here so it is ready to execute on Day 1 of go-live; do not remove.
 
 **Trigger:**
 - Razorpay sends a security advisory email
@@ -954,14 +957,246 @@ Living document — update after every incident and every significant architectu
 
 ---
 
+### OP-A8: GrowthBook config-server unreachable
+
+**Trigger:**
+- GrowthBook Cloud Free SDK fails to fetch feature flags (HTTP timeout or 5xx from `cdn.growthbook.io`)
+- Admin-web shows a degraded-mode banner ("Feature flags unavailable — some features may be limited")
+- Sentry alert: `GrowthBookFetchFailed` repeated > 3 times in 5 minutes
+
+**Severity:** P2 (non-critical — clients fall back to last cached evaluation; no data is written)
+
+**Immediate action (first 5 minutes):**
+1. Check [GrowthBook status](https://status.growthbook.io) — vendor-side outage?
+2. In admin-web: degraded-mode banner activates automatically (feature flags fall back to last SDK cache). No bookings are lost. New sessions that have no cache evaluate to default values (flags default to `false`; any gates that default-false are documented in `docs/feature-flags.md`).
+3. Mobile apps: GrowthBook React Native SDK caches the last successful fetch to local storage; existing sessions are unaffected.
+
+**Investigation:**
+- Confirm `GROWTHBOOK_API_HOST` in Azure Functions app settings is `https://cdn.growthbook.io` (or correct custom host). A misconfigured value would cause persistent failure.
+- Confirm `GROWTHBOOK_CLIENT_KEY` is the correct SDK key for the production environment (not staging).
+
+**Mitigation (if outage > 30 minutes):**
+- If a critical flag (e.g. `soft_launch_enabled`) must be toggled urgently during a GrowthBook outage, it can be forced via a direct API call to the Functions endpoint (endpoint to be added in a follow-up story — `PUT /api/v1/admin/flags/:name`). Until that endpoint exists, update the Azure Functions app setting `GROWTHBOOK_FALLBACK_FLAGS` with a JSON override and restart the Function App.
+
+**Recovery:**
+- Once GrowthBook CDN recovers, the next SDK evaluation cycle (every 60 s in the admin-web implementation) picks up fresh flags automatically. No restart needed.
+
+**Post-incident:**
+- If outage exceeded 2 hours, consider adding a local Redis cache or Azure Storage fallback for critical flags.
+
+**Owner / escalation:** GrowthBook OSS community / GitHub issues (self-hosted fallback is always an option — see ADR-0007).
+
+---
+
+### OP-A9: Rotate JWT_SECRET (admin-web)
+
+**Trigger:**
+- Routine rotation (every 90 days, calendar reminder)
+- Suspected leak (JWT_SECRET visible in logs, screenshots, git history, or a third-party tool)
+- Post-incident requirement from OP-A1 / OP-A2
+
+**Severity:** P1 on suspected leak; P2 on routine rotation
+
+**Effect of rotation:** All active admin sessions are immediately invalidated — the owner must re-login after the rotation. There is only one admin account in MVP; this is acceptable.
+
+**Procedure:**
+
+1. Generate a new 32-byte secret:
+   ```bash
+   openssl rand -hex 32
+   ```
+
+2. Update the SWA app setting:
+   ```bash
+   az staticwebapp appsettings set \
+     --name swa-homeservices-admin-prod \
+     --resource-group rg-homeservices-prod \
+     --setting-names JWT_SECRET="<new-value>"
+   ```
+
+3. Trigger a redeployment so the new secret takes effect in the server-side runtime (Static Web Apps picks up new app settings on the next request, but a restart ensures clean state):
+   ```bash
+   # Redeploy by pushing an empty commit or rerunning the last workflow:
+   gh workflow run admin-ship.yml
+   ```
+
+4. Verify: open admin-web → you should be redirected to `/login` (old session cookie rejected). Log in — confirms new secret is active.
+
+5. If rotation was due to a suspected leak: audit the admin access log for any sessions in the leak window. Sentry + App Insights → filter `admin` routes by timestamp.
+
+**Post-incident:**
+- Document rotation date in `docs/runbooks/key-rotation-log.md` (append-only).
+
+**Owner / escalation:** Founder only.
+
+---
+
+### OP-A10: TLS cert rotation on API custom domain
+
+**Trigger:**
+- Azure sends "certificate expiring in 30 days" email (auto-sent by Azure for managed certs)
+- Cert expiry alert in Azure Monitor
+- Manual rotation following a suspected CA compromise
+
+**Severity:** P1 (expired cert = customer-facing TLS errors; payment flows break)
+
+**Note — managed vs custom cert:**
+- If the API custom domain uses an **Azure-managed certificate** (free, recommended): Azure auto-rotates 30 days before expiry. No manual action needed unless the managed-cert service reports an error.
+- If using a **custom-uploaded certificate**: follow the procedure below.
+
+**Procedure (custom-uploaded cert):**
+
+1. Obtain the new cert (from your CA, e.g. ZeroSSL free 90-day or Let's Encrypt via Certbot):
+   ```bash
+   certbot certonly --standalone -d api.homeservices-mvp.in
+   # Produces fullchain.pem + privkey.pem
+   ```
+
+2. Convert to PFX for Azure:
+   ```bash
+   openssl pkcs12 -export \
+     -out api-cert.pfx \
+     -inkey privkey.pem \
+     -in fullchain.pem \
+     -passout pass:<pfx-password>
+   ```
+
+3. Upload to Azure:
+   ```bash
+   az functionapp config ssl upload \
+     --name func-homeservices-prod \
+     --resource-group rg-homeservices-prod \
+     --certificate-file api-cert.pfx \
+     --certificate-password <pfx-password>
+   ```
+
+4. Bind the new cert to the custom domain:
+   ```bash
+   THUMBPRINT=$(az functionapp config ssl list \
+     --resource-group rg-homeservices-prod \
+     --query "[?subjectName=='api.homeservices-mvp.in'].thumbprint | [0]" -o tsv)
+   az functionapp config ssl bind \
+     --name func-homeservices-prod \
+     --resource-group rg-homeservices-prod \
+     --certificate-thumbprint "$THUMBPRINT" \
+     --ssl-type SNI
+   ```
+
+5. Verify: `curl -I https://api.homeservices-mvp.in/api/health` — expect `HTTP/2 200` and confirm cert details via `openssl s_client -connect api.homeservices-mvp.in:443`.
+
+6. Delete the old cert from Azure Key Vault / Function App after confirming the new cert is serving.
+
+**Owner / escalation:** Azure support (Developer plan, free) for managed-cert issues. Let's Encrypt community for Certbot issues.
+
+---
+
+### OP-A11: Launch checklist tick-through (owner sign-off)
+
+**Trigger:**
+- All pre-launch stories are marked Done in the GitHub project board
+- Owner is ready to enable `soft_launch_enabled = true`
+- Run within 48 hours of the intended go-live
+
+**Severity:** P1 (skipping this gate risks exposing an unconfigured system to real customers)
+
+**Procedure (sequential — do not skip steps):**
+
+1. **Env var audit.** Confirm ALL items in the Launch Checklist table (§ above) are set to production values (not test/staging):
+   - `RAZORPAY_KEY_ID` — must start with `rzp_live_` not `rzp_test_`
+   - `COSMOS_PAN_ENCRYPTION_KEY` — 32-byte base64 generated at provisioning time; confirm it exists in Azure Key Vault
+   - `GROWTHBOOK_CLIENT_KEY` — production SDK key from GrowthBook Cloud console
+   - `JWT_SECRET` — confirm last rotation date is ≤ 90 days ago
+   - `ADMIN_SETUP_SECRET` — **remove** this after TOTP enrollment (see § 11)
+
+2. **TOTP enrollment.** Owner must have completed TOTP setup (§ 11) and verified a successful admin login.
+
+3. **Smoke test (production URLs):**
+   ```bash
+   curl https://api.homeservices-mvp.in/api/health       # expect {"status":"ok"}
+   curl https://admin.homeservices-mvp.in/                # expect 302 to /login
+   ```
+
+4. **GrowthBook sanity.** Log into GrowthBook Cloud → confirm `soft_launch_enabled` is set to `false` (will be toggled on after this checklist).
+
+5. **Sentry sanity.** Open Sentry → confirm zero unresolved issues tagged `production` (or review and close any known-benign ones).
+
+6. **Play Store.** Confirm customer-app and technician-app production APKs are in the `production` track (not just internal/beta).
+
+7. **F&F list.** Prepare the list of 5–10 F&F pilot users who will receive the first booking.
+
+8. **Go-live.** GrowthBook → `soft_launch_enabled` → set to `true`. Send invite to F&F users.
+
+9. **Post-go-live monitoring (first 2 hours):**
+   - Sentry: watch for new issues
+   - App Insights: confirm error rate < 2%
+   - Razorpay Dashboard: first test payment completed and captured
+   - Admin-web: first booking appears in live orders
+
+**Owner / escalation:** Founder. No code change should be merged during the 2-hour monitoring window without explicit owner decision.
+
+---
+
+### OP-A12: Rollback an Android release (Play Console halt + roll forward)
+
+**Trigger:**
+- Crash rate spike after a staged rollout (Firebase Crashlytics / Sentry spike)
+- Customer complaints referencing a specific app version
+- Play Console "rate alert" email for the new release
+
+**Severity:** P0 if crash rate > 1% on the new version; P1 otherwise
+
+**Important:** Google Play **does not support binary rollback** (you cannot push an older APK as a higher version code). The correct procedure is:
+1. Halt the staged rollout immediately to stop new users getting the bad version.
+2. Roll forward with a hotfix that has a higher `versionCode`.
+
+**Procedure:**
+
+1. **Halt the rollout (first 2 minutes):**
+   - Open [Play Console](https://play.google.com/console) → the affected app → Release → Production → find the staged rollout → **Halt rollout**.
+   - Users who have NOT yet updated are now protected. Users who already updated keep the bad version until the hotfix ships.
+
+2. **Triage.**
+   - Firebase Crashlytics → identify the crash signature.
+   - Reproduce locally on a device matching the affected device profile.
+   - Check if a quick code-fix is available or if a revert of the last merged story is cleaner.
+
+3. **Hotfix branch:**
+   ```bash
+   git checkout -b hotfix/<short-description> origin/main
+   # Apply the targeted fix
+   git commit -m "fix: <description>"
+   git push origin hotfix/<short-description>
+   # Open PR → CI → merge
+   ```
+
+4. **Bump `versionCode` in `app/build.gradle.kts`** (increment by 1; `versionName` patch bump, e.g. `1.2.0` → `1.2.1`).
+
+5. **Release via Play Console:**
+   - GitHub Actions `release.yml` workflow builds a signed APK on `main` merge.
+   - Alternatively, build locally and upload via Play Console → Create new release (upload AAB/APK).
+   - Start with a **10% staged rollout** → monitor crash rate for 1 hour → promote to 100% if clean.
+
+6. **Communicate:**
+   - FCM broadcast to `all_customers` or `all_technicians` topic: "We've released a fix for an issue affecting some users. Please update the app from the Play Store."
+
+7. **Post-incident:**
+   - Postmortem in `docs/postmortems/`.
+   - Add a regression test covering the crash scenario.
+   - Review whether the pre-release smoke gate (`tools/pre-codex-smoke.sh`) should have caught this.
+
+**Owner / escalation:** Founder. Play Store emergency review (if the hotfix needs expedited review) — contact Google Play developer support.
+
+---
+
 ### Cross-references to existing INCs
 
 - **OP-A1** complements **INC-2** (payment failures) — INC-2 is for outage / vendor side; OP-A1 is for compromise / our side.
 - **OP-A4** is upstream of every DPDP-relevant incident; INC-1 through INC-7 should escalate here on confirmation of PII exposure.
 - **OP-A6** complements **INC-9** — INC-9 is signal detection, OP-A6 is full response procedure.
+- **OP-A8** complements the GrowthBook soft-launch flag procedures in § Emergency Rollback — A8 is the vendor outage case; Emergency Rollback is the self-initiated kill-switch.
+- **OP-A12** complements § 5 Deploy Procedure → Rollback bullet — A12 is the detailed Play Store-specific flow.
 - **DR drill (E10-S04, planned)** — when implemented, this runbook's § 6 should reference the drill cadence enforcement (timer trigger or GitHub Action).
 
 ---
 
-**Operational Procedures 2026-04-26 complete. Total new procedures: 7.**
->>>>>>> Stashed changes
+**Operational Procedures 2026-04-26 complete. Total new procedures: 7 (OP-A1..A7) + 5 (OP-A8..A12) = 12.**
