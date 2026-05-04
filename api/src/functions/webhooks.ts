@@ -1,4 +1,4 @@
-import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import type { HttpHandler, Timer } from '@azure/functions';
 import { type InvocationContext, app } from '@azure/functions';
 import * as Sentry from '@sentry/node';
@@ -7,16 +7,7 @@ import { bookingRepo } from '../cosmos/booking-repository.js';
 import { dispatcherService } from '../services/dispatcher.service.js';
 import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
 import { getWebhookEventsContainer } from '../cosmos/client.js';
-
-// Compare buffer lengths (not string lengths) so non-hex chars in `provided`
-// that produce shorter buffers are caught without timingSafeEqual throwing.
-function isValidSignature(payload: string, provided: string, secret: string): boolean {
-  const expected = createHmac('sha256', secret).update(payload).digest('hex');
-  const expectedBuf = Buffer.from(expected, 'hex');
-  const providedBuf = Buffer.from(provided, 'hex');
-  if (expectedBuf.length !== providedBuf.length) return false;
-  return timingSafeEqual(expectedBuf, providedBuf);
-}
+import { equalsHexHmac } from '../shared/timing-safe.js';
 
 export const razorpayWebhookHandler: HttpHandler = async (req, _ctx) => {
   const secret = process.env['RAZORPAY_WEBHOOK_SECRET'];
@@ -25,7 +16,7 @@ export const razorpayWebhookHandler: HttpHandler = async (req, _ctx) => {
   const signature = req.headers.get('x-razorpay-signature') ?? '';
   const rawBody = await req.text();
 
-  if (!isValidSignature(rawBody, signature, secret)) {
+  if (!equalsHexHmac(secret, rawBody, signature)) {
     return { status: 400, jsonBody: { code: 'SIGNATURE_INVALID' } };
   }
 
