@@ -14,6 +14,8 @@ import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.ResponseBody.Companion.toResponseBody
 import retrofit2.HttpException
 import retrofit2.Response
 
@@ -68,7 +70,7 @@ public class VerifyTruecallerUseCaseTest {
         runTest {
             coEvery {
                 authApi.verifyTruecaller(any())
-            } throws HttpException(Response.error<TruecallerVerifyResponse>(400, okhttp3.ResponseBody.create(null, "")))
+            } throws HttpException(Response.error<TruecallerVerifyResponse>(400, "".toResponseBody("application/json".toMediaTypeOrNull())))
 
             val result = useCase.invoke(
                 payload = "payload-b64",

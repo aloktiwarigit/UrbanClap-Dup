@@ -1,5 +1,7 @@
 package com.homeservices.customer.domain.flags
 
+import javax.inject.Inject
+
 /**
  * Feature flag abstraction.
  *
@@ -25,7 +27,9 @@ public interface FeatureFlags {
  * Default implementation: reads BuildConfig flags. Returns `false` for all
  * flags until overridden. Safe for CI, unit tests, and the flag-OFF prod path.
  */
-public class BuildConfigFeatureFlags : FeatureFlags {
+public class BuildConfigFeatureFlags
+    @Inject
+    constructor() : FeatureFlags {
     override fun truecallerServerVerify(): Boolean = TRUECALLER_SERVER_VERIFY_V2_ENABLED
 
     private companion object {
