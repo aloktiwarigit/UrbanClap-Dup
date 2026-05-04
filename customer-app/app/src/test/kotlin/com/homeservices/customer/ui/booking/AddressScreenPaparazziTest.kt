@@ -18,7 +18,14 @@ public class AddressScreenPaparazziTest {
     public fun addressScreenEmpty_lightTheme() {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
-                AddressScreen(
+                AddressScreenContent(
+                    addressText = "",
+                    selectedLat = null,
+                    selectedLng = null,
+                    locationMessage = "Location not set",
+                    isLocating = false,
+                    onAddressTextChanged = {},
+                    onUseCurrentLocation = {},
                     onAddressConfirmed = { _, _, _ -> },
                     onBack = {},
                 )
@@ -30,7 +37,14 @@ public class AddressScreenPaparazziTest {
     public fun addressScreenEmpty_darkTheme() {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = true) {
-                AddressScreen(
+                AddressScreenContent(
+                    addressText = "",
+                    selectedLat = null,
+                    selectedLng = null,
+                    locationMessage = "Location not set",
+                    isLocating = false,
+                    onAddressTextChanged = {},
+                    onUseCurrentLocation = {},
                     onAddressConfirmed = { _, _, _ -> },
                     onBack = {},
                 )

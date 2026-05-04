@@ -38,6 +38,11 @@ val googleWebClientId =
         ?: googleServicesWebClientId()
         ?: ""
 
+val mapsApiKey =
+    System.getenv("MAPS_API_KEY")?.takeIf { it.isNotBlank() }
+        ?: localProperty("MAPS_API_KEY")
+        ?: ""
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -93,9 +98,9 @@ android {
         buildConfigField(
             "String",
             "MAPS_API_KEY",
-            "\"${System.getenv("MAPS_API_KEY") ?: ""}\"",
+            buildConfigString(mapsApiKey),
         )
-        manifestPlaceholders["MAPS_API_KEY"] = System.getenv("MAPS_API_KEY") ?: ""
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     buildTypes {
@@ -482,6 +487,7 @@ dependencies {
     implementation(libs.razorpay.checkout)
     implementation(libs.google.places)
     implementation(libs.play.services.maps)
+    implementation(libs.play.services.location)
     implementation(libs.maps.compose)
 
     testImplementation(libs.junit.jupiter)
