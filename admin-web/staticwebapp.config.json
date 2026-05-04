@@ -1,2 +1,10 @@
-{}
-
+{
+  "globalHeaders": {
+    "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+    "X-Frame-Options": "DENY",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Content-Security-Policy-Report-Only": "default-src 'self'; script-src 'self' 'strict-dynamic'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.sentry.io https://us.i.posthog.com https://*.applicationinsights.azure.com https://cdn.growthbook.io https://identitytoolkit.googleapis.com https://*.firebaseapp.com; img-src 'self' data: https://*.googleapis.com https://*.gstatic.com; font-src 'self' data:; frame-ancestors 'none'; report-uri /api/csp-report"
+  }
+}

@@ -17,3 +17,7 @@ lhr-result.json
 .lhci-tmp/
 storybook-static/
 next-env.d.ts
+*.pem
+localhost*.pem
+localhost-key.pem
+certificates/

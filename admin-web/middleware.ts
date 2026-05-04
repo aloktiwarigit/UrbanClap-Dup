@@ -8,6 +8,7 @@ import {
 } from './src/admin/capabilities';
 import type { AdminRole } from './src/lib/auth/types';
 import { getApiBaseUrl } from './src/lib/apiBase';
+import { getValidatedJwtSecret } from './src/lib/env';
 
 const ACCESS_COOKIE = 'hs_access';
 const REFRESH_COOKIE = 'hs_refresh';
@@ -190,11 +191,24 @@ function continueWithAccess(
 }
 
 export async function middleware(request: NextRequest) {
-  const jwtSecretEnv = process.env.JWT_SECRET;
-  if (!jwtSecretEnv) {
+  // Early-return for auth bootstrap paths — middleware must not gate its own
+  // token-refresh calls or the admin-login bootstrap flow.
+  const pathname = request.nextUrl.pathname;
+  if (
+    pathname.startsWith('/admin-api/v1/admin/auth/refresh') ||
+    pathname.startsWith('/admin-api/v1/admin/auth/login') ||
+    pathname.startsWith('/admin-api/v1/admin/auth/setup')
+  ) {
+    return NextResponse.next();
+  }
+
+  let jwtSecretStr: string;
+  try {
+    jwtSecretStr = getValidatedJwtSecret();
+  } catch {
     return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
   }
-  const JWT_SECRET = new TextEncoder().encode(jwtSecretEnv);
+  const JWT_SECRET = new TextEncoder().encode(jwtSecretStr);
 
   const token = request.cookies.get(ACCESS_COOKIE)?.value;
 
@@ -223,5 +237,6 @@ export const config = {
     '/admin-users/:path*',
     '/compliance/:path*',
     '/not-authorized',
+    '/admin-api/:path*',
   ],
 };

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getApiBaseUrl } from '@/lib/apiBase';
+import { verifyCsrf } from '@/lib/csrf';
 
 export const dynamic = 'force-dynamic';
 
@@ -90,6 +91,12 @@ function buildResponseHeaders(upstream: Response): Headers {
 }
 
 async function proxy(request: Request, context: ProxyContext): Promise<NextResponse> {
+  // CSRF double-submit cookie check — reject state-changing requests that
+  // don't carry a matching x-csrf-token header and hs_csrf cookie.
+  if (!verifyCsrf(request)) {
+    return NextResponse.json({ error: 'Invalid or missing CSRF token' }, { status: 403 });
+  }
+
   const { path = [] } = await context.params;
   const requestUrl = new URL(request.url);
   const apiPath = path.map((segment) => encodeURIComponent(segment)).join('/');
