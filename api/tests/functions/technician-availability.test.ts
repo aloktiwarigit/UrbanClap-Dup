@@ -8,6 +8,8 @@ vi.mock('../../src/middleware/verifyTechnicianToken.js', () => ({
 vi.mock('../../src/cosmos/technician-repository.js', () => ({
   getTechnicianAvailability: vi.fn(),
   patchTechnicianAvailability: vi.fn(),
+  getTechnicianServiceProfile: vi.fn(),
+  patchTechnicianServiceProfile: vi.fn(),
 }));
 
 type MockFn = ReturnType<typeof vi.fn>;

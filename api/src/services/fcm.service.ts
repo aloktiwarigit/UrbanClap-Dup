@@ -7,6 +7,44 @@ export async function sendPriceApprovalPush(customerId: string, bookingId: strin
   });
 }
 
+export async function sendBookingStatusUpdatePush(payload: {
+  customerId: string;
+  bookingId: string;
+  status: string;
+}): Promise<void> {
+  await getFirebaseAdmin().messaging().send({
+    topic: `customer_${payload.customerId}`,
+    data: {
+      type: 'BOOKING_STATUS_UPDATE',
+      bookingId: payload.bookingId,
+      status: payload.status,
+    },
+  });
+}
+
+export async function sendLocationUpdatePush(payload: {
+  customerId: string;
+  bookingId: string;
+  lat: number;
+  lng: number;
+  etaMinutes: number;
+  techName?: string;
+  techPhotoUrl?: string;
+}): Promise<void> {
+  await getFirebaseAdmin().messaging().send({
+    topic: `customer_${payload.customerId}`,
+    data: {
+      type: 'LOCATION_UPDATE',
+      bookingId: payload.bookingId,
+      lat: String(payload.lat),
+      lng: String(payload.lng),
+      etaMinutes: String(payload.etaMinutes),
+      techName: payload.techName ?? '',
+      techPhotoUrl: payload.techPhotoUrl ?? '',
+    },
+  });
+}
+
 export async function sendTechEarningsUpdate(
   technicianId: string,
   payload: { bookingId: string; techAmount: number },

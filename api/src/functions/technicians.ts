@@ -3,7 +3,13 @@ import { type HttpHandler, type HttpRequest, type HttpResponseInit, type Invocat
 import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
 import { requireCustomer } from '../middleware/requireCustomer.js';
 import { getCosmosClient, DB_NAME } from '../cosmos/client.js';
-import { getTechnicianAvailability, patchTechnicianAvailability } from '../cosmos/technician-repository.js';
+import {
+  getTechnicianAvailability,
+  getTechnicianServiceProfile,
+  patchTechnicianAvailability,
+  patchTechnicianServiceProfile,
+} from '../cosmos/technician-repository.js';
+import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { TechnicianDossierSchema } from '../schemas/technician-dossier.js';
 import { ConfidenceScoreQuerySchema } from '../schemas/confidence-score.js';
 import type { CustomerContext } from '../types/customer.js';
@@ -29,6 +35,28 @@ const PatchAvailabilityBodySchema = z.object({
 }).refine(body => Object.keys(body).length > 0, {
   message: 'At least one availability field is required',
 });
+
+const PatchServiceProfileBodySchema = z.object({
+  skills: z.array(z.string().min(1)).nonempty().superRefine((skills, ctx) => {
+    const seen = new Map<string, number>();
+    skills.forEach((skill, index) => {
+      const firstIndex = seen.get(skill);
+      if (firstIndex !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [index],
+          message: `skills must be unique; duplicate of index ${firstIndex}`,
+        });
+        return;
+      }
+      seen.set(skill, index);
+    });
+  }),
+  location: z.object({
+    lat: z.number().min(-90).max(90),
+    lng: z.number().min(-180).max(180),
+  }).optional(),
+}).strict();
 
 export const patchFcmTokenHandler: HttpHandler = async (req, _ctx: InvocationContext) => {
   let uid: string;
@@ -109,6 +137,79 @@ export const patchMyTechnicianAvailabilityHandler: HttpHandler = async (
   }
 };
 
+export const getMyTechnicianServiceProfileHandler: HttpHandler = async (
+  req: HttpRequest,
+  ctx: InvocationContext,
+) => {
+  let uid: string;
+  try {
+    ({ uid } = await verifyTechnicianToken(req));
+  } catch {
+    return { status: 401, jsonBody: { code: 'UNAUTHENTICATED' } };
+  }
+
+  try {
+    return { status: 200, jsonBody: await getTechnicianServiceProfile(uid) };
+  } catch (err: unknown) {
+    ctx.error('getMyTechnicianServiceProfile failed', err);
+    return { status: 500, jsonBody: { code: 'INTERNAL_ERROR' } };
+  }
+};
+
+export const patchMyTechnicianServiceProfileHandler: HttpHandler = async (
+  req: HttpRequest,
+  ctx: InvocationContext,
+) => {
+  let uid: string;
+  try {
+    ({ uid } = await verifyTechnicianToken(req));
+  } catch {
+    return { status: 401, jsonBody: { code: 'UNAUTHENTICATED' } };
+  }
+
+  let body: z.infer<typeof PatchServiceProfileBodySchema>;
+  try {
+    const raw: unknown = await req.json();
+    const parsed = PatchServiceProfileBodySchema.safeParse(raw);
+    if (!parsed.success) {
+      return { status: 400, jsonBody: { code: 'VALIDATION_ERROR', issues: parsed.error.issues } };
+    }
+    body = parsed.data;
+  } catch {
+    return { status: 400, jsonBody: { code: 'PARSE_ERROR' } };
+  }
+
+  let issues: z.ZodIssue[];
+  try {
+    const validationResults: Array<z.ZodIssue | null> = await Promise.all(body.skills.map(async (skill, index) => {
+      const service = await catalogueRepo.getServiceByIdCrossPartition(skill);
+      if (!service || service.isActive !== true) {
+        const issue: z.ZodIssue = {
+          code: z.ZodIssueCode.custom,
+          path: ['skills', index],
+          message: 'skill must reference an active catalogue service',
+        };
+        return issue;
+      }
+      return null;
+    }));
+    issues = validationResults.filter((issue): issue is z.ZodIssue => issue !== null);
+  } catch (err: unknown) {
+    ctx.error('patchMyTechnicianServiceProfile catalogue validation failed', err);
+    return { status: 500, jsonBody: { code: 'INTERNAL_ERROR' } };
+  }
+  if (issues.length > 0) {
+    return { status: 400, jsonBody: { code: 'VALIDATION_ERROR', issues } };
+  }
+
+  try {
+    return { status: 200, jsonBody: await patchTechnicianServiceProfile(uid, body) };
+  } catch (err: unknown) {
+    ctx.error('patchMyTechnicianServiceProfile failed', err);
+    return { status: 500, jsonBody: { code: 'INTERNAL_ERROR' } };
+  }
+};
+
 app.http('patchTechnicianFcmToken', {
   route: 'v1/technicians/fcm-token',
   methods: ['PATCH'],
@@ -127,6 +228,20 @@ app.http('patchMyTechnicianAvailability', {
   methods: ['PATCH'],
   authLevel: 'anonymous',
   handler: patchMyTechnicianAvailabilityHandler,
+});
+
+app.http('getMyTechnicianServiceProfile', {
+  route: 'v1/technicians/me/service-profile',
+  methods: ['GET'],
+  authLevel: 'anonymous',
+  handler: getMyTechnicianServiceProfileHandler,
+});
+
+app.http('patchMyTechnicianServiceProfile', {
+  route: 'v1/technicians/me/service-profile',
+  methods: ['PATCH'],
+  authLevel: 'anonymous',
+  handler: patchMyTechnicianServiceProfileHandler,
 });
 
 export const getTechnicianProfileHandler: HttpHandler = async (req, _ctx: InvocationContext) => {

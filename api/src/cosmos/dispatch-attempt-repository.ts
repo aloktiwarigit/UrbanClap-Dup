@@ -14,7 +14,45 @@ export const dispatchAttemptRepo = {
     return resources[0] ?? null;
   },
 
+  async getAttemptedTechnicianIds(bookingId: string): Promise<string[]> {
+    const { resources } = await getDispatchAttemptsContainer()
+      .items
+      .query<Pick<DispatchAttemptDoc, 'technicianIds'>>({
+        query: 'SELECT c.technicianIds FROM c WHERE c.bookingId = @bookingId',
+        parameters: [{ name: '@bookingId', value: bookingId }],
+      })
+      .fetchAll();
+    return [...new Set(resources.flatMap((attempt) => attempt.technicianIds))];
+  },
+
   async acceptAttempt(id: string, bookingId: string): Promise<DispatchAttemptDoc | null> {
+    const container = getDispatchAttemptsContainer();
+    const { resource } = await container.item(id, bookingId).read<DispatchAttemptDoc & Resource>();
+    if (!resource) return null;
+    if (resource.status !== 'PENDING') return null;
+
+    const updated: DispatchAttemptDoc = {
+      id: resource.id,
+      bookingId: resource.bookingId,
+      technicianIds: resource.technicianIds,
+      sentAt: resource.sentAt,
+      expiresAt: resource.expiresAt,
+      status: 'ACCEPTED',
+    };
+
+    try {
+      const { resource: replaced } = await container.item(id, bookingId).replace<DispatchAttemptDoc>(
+        updated,
+        { accessCondition: { type: 'IfMatch', condition: resource._etag } },
+      );
+      return replaced ?? null;
+    } catch (err: unknown) {
+      if (isCosmosConflict(err)) return null;
+      throw err;
+    }
+  },
+
+  async declineAttempt(id: string, bookingId: string): Promise<DispatchAttemptDoc | null> {
     const container = getDispatchAttemptsContainer();
     const { resource } = await container.item(id, bookingId).read<DispatchAttemptDoc & Resource>();
     if (!resource) return null;
@@ -27,7 +65,7 @@ export const dispatchAttemptRepo = {
       technicianIds: resource.technicianIds,
       sentAt: resource.sentAt,
       expiresAt: resource.expiresAt,
-      status: 'ACCEPTED',
+      status: 'EXPIRED',
     };
 
     try {

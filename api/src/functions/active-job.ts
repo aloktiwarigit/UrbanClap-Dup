@@ -4,9 +4,12 @@ import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
 import { bookingRepo, updateBookingFields } from '../cosmos/booking-repository.js';
 import { bookingEventRepo } from '../cosmos/booking-event-repository.js';
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
+import { haversine } from '../cosmos/geo.js';
+import { sendBookingStatusUpdatePush, sendLocationUpdatePush } from '../services/fcm.service.js';
 import type { BookingDoc } from '../schemas/booking.js';
 
 const TRANSITION_ORDER = ['ASSIGNED', 'EN_ROUTE', 'REACHED', 'IN_PROGRESS', 'COMPLETED'] as const;
+const AVG_CITY_SPEED_KMH = 20;
 type TransitionStatus = (typeof TRANSITION_ORDER)[number];
 
 function isLegalTransition(from: string, to: string): boolean {
@@ -17,6 +20,10 @@ function isLegalTransition(from: string, to: string): boolean {
 
 const TransitionBodySchema = z.object({
   targetStatus: z.enum(['EN_ROUTE', 'REACHED', 'IN_PROGRESS', 'COMPLETED']),
+  currentLocation: z.object({
+    lat: z.number().min(-90).max(90),
+    lng: z.number().min(-180).max(180),
+  }).optional(),
 });
 
 export const getActiveJobHandler: HttpHandler = async (req, _ctx: InvocationContext) => {
@@ -50,7 +57,7 @@ export const getActiveJobHandler: HttpHandler = async (req, _ctx: InvocationCont
   };
 };
 
-export const transitionStatusHandler: HttpHandler = async (req, _ctx: InvocationContext) => {
+export const transitionStatusHandler: HttpHandler = async (req, ctx: InvocationContext) => {
   let uid: string;
   try {
     ({ uid } = await verifyTechnicianToken(req));
@@ -63,7 +70,7 @@ export const transitionStatusHandler: HttpHandler = async (req, _ctx: Invocation
   if (!booking) return { status: 404, jsonBody: { code: 'BOOKING_NOT_FOUND' } };
   if (booking.technicianId !== uid) return { status: 403, jsonBody: { code: 'FORBIDDEN' } };
 
-  let body: { targetStatus: string };
+  let body: z.infer<typeof TransitionBodySchema>;
   try {
     const raw: unknown = await req.json();
     const result = TransitionBodySchema.safeParse(raw);
@@ -94,6 +101,32 @@ export const transitionStatusHandler: HttpHandler = async (req, _ctx: Invocation
     technicianId: uid,
     metadata: { from: booking.status, to: body.targetStatus },
   });
+
+  await sendBookingStatusUpdatePush({
+    customerId: updated.customerId,
+    bookingId,
+    status: updated.status,
+  }).catch((err: unknown) => ctx.error('FCM BOOKING_STATUS_UPDATE failed', err));
+  if (body.currentLocation) {
+    const etaMinutes = Math.max(
+      0,
+      Math.round(
+        (haversine(
+          body.currentLocation.lat,
+          body.currentLocation.lng,
+          updated.addressLatLng.lat,
+          updated.addressLatLng.lng,
+        ) / AVG_CITY_SPEED_KMH) * 60,
+      ),
+    );
+    await sendLocationUpdatePush({
+      customerId: updated.customerId,
+      bookingId,
+      lat: body.currentLocation.lat,
+      lng: body.currentLocation.lng,
+      etaMinutes,
+    }).catch((err: unknown) => ctx.error('FCM LOCATION_UPDATE failed', err));
+  }
 
   const service = await catalogueRepo.getServiceByIdCrossPartition(updated.serviceId);
 

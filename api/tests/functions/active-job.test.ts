@@ -18,6 +18,11 @@ vi.mock('../../src/cosmos/catalogue-repository.js', () => ({
   catalogueRepo: { getServiceByIdCrossPartition: vi.fn() },
 }));
 
+vi.mock('../../src/services/fcm.service.js', () => ({
+  sendBookingStatusUpdatePush: vi.fn().mockResolvedValue(undefined),
+  sendLocationUpdatePush: vi.fn().mockResolvedValue(undefined),
+}));
+
 type MockFn = ReturnType<typeof vi.fn>;
 
 const aBooking = (status = 'ASSIGNED') => ({
@@ -163,6 +168,7 @@ describe('PATCH /v1/technicians/active-job/:bookingId/transition', () => {
     const { bookingRepo, updateBookingFields } = await import('../../src/cosmos/booking-repository.js');
     const { bookingEventRepo } = await import('../../src/cosmos/booking-event-repository.js');
     const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
+    const { sendBookingStatusUpdatePush } = await import('../../src/services/fcm.service.js');
 
     (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
     (bookingRepo.getById as MockFn).mockResolvedValue(aBooking('EN_ROUTE'));
@@ -177,5 +183,39 @@ describe('PATCH /v1/technicians/active-job/:bookingId/transition', () => {
     expect(arg['event']).toBe('STATUS_TRANSITION');
     expect(arg['technicianId']).toBe('tech-1');
     expect(arg['metadata']).toEqual({ from: 'EN_ROUTE', to: 'REACHED' });
+    expect(sendBookingStatusUpdatePush).toHaveBeenCalledWith({
+      customerId: 'c-1',
+      bookingId: 'bk-1',
+      status: 'REACHED',
+    });
+  });
+
+  it('sends LOCATION_UPDATE when transition includes technician GPS', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { bookingRepo, updateBookingFields } = await import('../../src/cosmos/booking-repository.js');
+    const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
+    const { sendLocationUpdatePush } = await import('../../src/services/fcm.service.js');
+
+    (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+    (bookingRepo.getById as MockFn).mockResolvedValue(aBooking('ASSIGNED'));
+    (updateBookingFields as MockFn).mockResolvedValue(aBooking('EN_ROUTE'));
+    (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue(aService());
+
+    const res = await transitionHandler(
+      makePatchReq('bk-1', {
+        targetStatus: 'EN_ROUTE',
+        currentLocation: { lat: 12.91, lng: 77.61 },
+      }),
+      new InvocationContext(),
+    ) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(sendLocationUpdatePush).toHaveBeenCalledWith({
+      customerId: 'c-1',
+      bookingId: 'bk-1',
+      lat: 12.91,
+      lng: 77.61,
+      etaMinutes: expect.any(Number),
+    });
   });
 });

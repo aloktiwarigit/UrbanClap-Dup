@@ -65,6 +65,21 @@ export interface TechnicianAvailabilityPatch {
   availabilityWindows?: AvailabilityWindow[] | undefined;
 }
 
+export interface TechnicianServiceLocation {
+  lat: number;
+  lng: number;
+}
+
+export interface TechnicianServiceProfile {
+  skills: string[];
+  location: TechnicianServiceLocation | null;
+}
+
+export interface TechnicianServiceProfilePatch {
+  skills: string[];
+  location?: TechnicianServiceLocation | undefined;
+}
+
 const defaultAvailabilityWindows = (): AvailabilityWindow[] =>
   Array.from({ length: 7 }, (_, dayOfWeek) => [
     { dayOfWeek, startHour: 8, endHour: 12 },
@@ -109,6 +124,68 @@ export async function patchTechnicianAvailability(
   };
   await container.items.upsert(updated);
   return normalizeAvailability(updated);
+}
+
+async function readTechnicianDocument(technicianId: string): Promise<Record<string, unknown> | null> {
+  const container = getCosmosClient().database(DB_NAME).container(CONTAINER);
+  try {
+    const { resource } = await container.item(technicianId, technicianId).read<Record<string, unknown>>();
+    return resource ?? null;
+  } catch (err: unknown) {
+    if ((err as { code?: number }).code === 404) return null;
+    throw err;
+  }
+}
+
+function toServiceProfile(doc: Record<string, unknown> | null): TechnicianServiceProfile {
+  const skills = Array.isArray(doc?.skills) ? doc.skills.filter((skill): skill is string => typeof skill === 'string') : [];
+  const location = doc?.location as { coordinates?: unknown } | undefined;
+  const coordinates = location?.coordinates;
+  const hasCoordinates =
+    Array.isArray(coordinates) &&
+    coordinates.length >= 2 &&
+    typeof coordinates[0] === 'number' &&
+    typeof coordinates[1] === 'number';
+  return {
+    skills,
+    location: hasCoordinates ? { lat: coordinates[1], lng: coordinates[0] } : null,
+  };
+}
+
+export async function getTechnicianServiceProfile(
+  technicianId: string,
+): Promise<TechnicianServiceProfile> {
+  return toServiceProfile(await readTechnicianDocument(technicianId));
+}
+
+export async function patchTechnicianServiceProfile(
+  technicianId: string,
+  patch: TechnicianServiceProfilePatch,
+): Promise<TechnicianServiceProfile> {
+  const container = getCosmosClient().database(DB_NAME).container(CONTAINER);
+  const existing = await readTechnicianDocument(technicianId);
+  const existingKyc = existing?.kyc as { kycStatus?: unknown } | undefined;
+  const updatedAt = new Date().toISOString();
+  const updated: Record<string, unknown> = {
+    ...(existing ?? {}),
+    id: technicianId,
+    technicianId: typeof existing?.technicianId === 'string' ? existing.technicianId : technicianId,
+    skills: patch.skills,
+    availabilityWindows: Array.isArray(existing?.availabilityWindows) ? existing.availabilityWindows : [],
+    isOnline: typeof existing?.isOnline === 'boolean' ? existing.isOnline : false,
+    isAvailable: typeof existing?.isAvailable === 'boolean' ? existing.isAvailable : false,
+    kycStatus: typeof existing?.kycStatus === 'string'
+      ? existing.kycStatus
+      : typeof existingKyc?.kycStatus === 'string'
+        ? existingKyc.kycStatus
+        : 'PENDING',
+    updatedAt,
+  };
+  if (patch.location !== undefined) {
+    updated.location = { type: 'Point', coordinates: [patch.location.lng, patch.location.lat] };
+  }
+  await container.items.upsert(updated);
+  return toServiceProfile(updated);
 }
 
 export async function getTechniciansWithinRadius(

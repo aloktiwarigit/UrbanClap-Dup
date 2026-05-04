@@ -16,9 +16,22 @@ export interface AdminUser {
 }
 
 const CONTAINER = 'admin_users';
+const INVITE_PREFIX = 'invite:';
 
 function container() {
   return getCosmosClient().database(DB_NAME).container(CONTAINER);
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+export function getAdminInviteId(email: string): string {
+  return `${INVITE_PREFIX}${normalizeEmail(email)}`;
+}
+
+export function isAdminInvite(user: AdminUser): boolean {
+  return user.adminId.startsWith(INVITE_PREFIX);
 }
 
 export async function getAdminUserById(adminId: string): Promise<AdminUser | null> {
@@ -30,10 +43,31 @@ export async function getAdminUserByEmail(email: string): Promise<AdminUser | nu
   const { resources } = await container()
     .items.query<AdminUser>({
       query: 'SELECT * FROM c WHERE c.email = @email',
-      parameters: [{ name: '@email', value: email }],
+      parameters: [{ name: '@email', value: normalizeEmail(email) }],
     })
     .fetchAll();
   return resources[0] ?? null;
+}
+
+export async function claimAdminInvite(invite: AdminUser, firebaseUid: string, email: string): Promise<AdminUser> {
+  if (!isAdminInvite(invite)) throw new Error(`AdminUser ${invite.adminId} is not an invite`);
+
+  const now = new Date().toISOString();
+  const claimed: AdminUser = {
+    ...invite,
+    id: firebaseUid,
+    adminId: firebaseUid,
+    email: normalizeEmail(email),
+    totpEnrolled: false,
+    totpSecret: null,
+    totpSecretPending: null,
+    deactivatedAt: null,
+    updatedAt: now,
+  };
+
+  await container().items.create(claimed);
+  await container().item(invite.id, invite.adminId).delete();
+  return claimed;
 }
 
 export async function updateAdminUser(

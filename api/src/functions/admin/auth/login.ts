@@ -5,7 +5,12 @@ import type { HttpRequest, InvocationContext, HttpResponseInit, Cookie } from '@
 import * as Sentry from '@sentry/node';
 import { LoginRequestSchema } from '../../../schemas/admin-auth.js';
 import { verifyFirebaseIdToken } from '../../../services/firebaseAdmin.js';
-import { getAdminUserById } from '../../../services/adminUser.service.js';
+import {
+  claimAdminInvite,
+  getAdminUserByEmail,
+  getAdminUserById,
+  isAdminInvite,
+} from '../../../services/adminUser.service.js';
 import { decryptSecret, verifyToken } from '../../../services/totp.service.js';
 import { createAdminSession } from '../../../services/adminSession.service.js';
 import { signAccessToken, signSetupToken } from '../../../services/jwt.service.js';
@@ -41,14 +46,25 @@ export async function adminLoginHandler(
   const { idToken, totpCode } = parsed.data;
 
   let uid: string;
+  let verifiedEmail: string | null = null;
   try {
     const decoded = await verifyFirebaseIdToken(idToken);
     uid = decoded.uid;
+    if (decoded.email && decoded.email_verified === true) {
+      verifiedEmail = decoded.email.toLowerCase();
+    }
   } catch {
     return { status: 401, jsonBody: { code: 'FIREBASE_TOKEN_INVALID' } };
   }
 
-  const adminUser = await getAdminUserById(uid);
+  let adminUser = await getAdminUserById(uid);
+  if (!adminUser && verifiedEmail) {
+    const invite = await getAdminUserByEmail(verifiedEmail);
+    if (invite && isAdminInvite(invite) && !invite.deactivatedAt) {
+      adminUser = await claimAdminInvite(invite, uid, verifiedEmail);
+    }
+  }
+
   if (!adminUser || adminUser.deactivatedAt) {
     return { status: 401, jsonBody: { code: 'ADMIN_NOT_FOUND' } };
   }
