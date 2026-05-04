@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { createApiClient } from '@/api';
 import { landingCopy } from '@/content/landing';
+import { getApiBaseUrl } from '@/lib/apiBase';
 
 // Render on every request so /v1/health reflects the live API server.
 export const dynamic = 'force-dynamic';
@@ -8,7 +9,7 @@ export const dynamic = 'force-dynamic';
 type FooterBuildInfo = { version: string; commit: string; fallback: boolean };
 
 async function fetchBuildInfo(): Promise<FooterBuildInfo> {
-  const baseUrl = process.env['API_BASE_URL'] ?? 'http://localhost:7071/api';
+  const baseUrl = getApiBaseUrl();
   const fallbackVersion = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev';
   const rawSha = process.env['NEXT_PUBLIC_GIT_SHA'];
   const fallbackCommit =

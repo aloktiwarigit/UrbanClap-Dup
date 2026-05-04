@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { apiUrl } from '@/api/base';
 
 export default function SetupPage() {
   const router = useRouter();
@@ -17,7 +18,7 @@ export default function SetupPage() {
     if (!token) { router.replace('/login'); return; }
     setSetupToken(token);
 
-    fetch('/api/v1/admin/auth/setup-totp', {
+    fetch(apiUrl('/v1/admin/auth/setup-totp'), {
       headers: { authorization: `Bearer ${token}` },
       credentials: 'include',
     })
@@ -34,7 +35,7 @@ export default function SetupPage() {
     setError(null);
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/admin/auth/setup-totp', {
+      const res = await fetch(apiUrl('/v1/admin/auth/setup-totp'), {
         method: 'POST',
         headers: {
           'content-type': 'application/json',

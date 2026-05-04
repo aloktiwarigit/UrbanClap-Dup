@@ -5,14 +5,15 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Route } from 'next';
 import type { components } from '@/api/generated/schema';
+import { getApiBaseUrl } from '@/lib/apiBase';
 
 type AdminServiceCategory = components['schemas']['AdminServiceCategory'];
 type AdminService = components['schemas']['AdminService'];
 
 async function fetchCategory(id: string, token: string): Promise<AdminServiceCategory | null> {
-  const baseUrl = process.env['API_BASE_URL'] ?? 'http://localhost:7071/api';
+  const baseUrl = getApiBaseUrl();
   const res = await fetch(`${baseUrl}/v1/admin/catalogue/categories/${id}`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Cookie: `hs_access=${token}` },
     cache: 'no-store',
   });
   if (res.status === 404) return null;
@@ -21,11 +22,11 @@ async function fetchCategory(id: string, token: string): Promise<AdminServiceCat
 }
 
 async function fetchServices(categoryId: string, token: string): Promise<AdminService[]> {
-  const baseUrl = process.env['API_BASE_URL'] ?? 'http://localhost:7071/api';
+  const baseUrl = getApiBaseUrl();
   const res = await fetch(
     `${baseUrl}/v1/admin/catalogue/services?categoryId=${encodeURIComponent(categoryId)}`,
     {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Cookie: `hs_access=${token}` },
       cache: 'no-store',
     }
   );

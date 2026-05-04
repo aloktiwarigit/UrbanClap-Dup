@@ -25,8 +25,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'homeservices — admin',
-  description: 'Owner console for the homeservices field-operations platform.',
+  title: 'HomeHeroo — admin',
+  description: 'Owner console for the HomeHeroo field-operations platform.',
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

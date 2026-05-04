@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import { apiUrl } from '@/api/base';
 import type { AdminRole } from '@/lib/auth/types';
 
 export interface AuthState {
@@ -29,7 +30,7 @@ export function AdminAuthProvider({
   const [auth, setAuth] = useState<AuthState | null>(initialAuth);
 
   const logout = useCallback(async () => {
-    await fetch('/api/v1/admin/auth/logout', { method: 'POST', credentials: 'include' });
+    await fetch(apiUrl('/v1/admin/auth/logout'), { method: 'POST', credentials: 'include' });
     setAuth(null);
     router.push('/login');
   }, [router]);

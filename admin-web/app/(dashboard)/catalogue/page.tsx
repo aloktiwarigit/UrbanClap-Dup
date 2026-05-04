@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import Link from 'next/link';
 import type { components } from '@/api/generated/schema';
 import { EmptyState } from '@/components/EmptyState';
+import { getApiBaseUrl } from '@/lib/apiBase';
 import { CatalogueCategoryList } from './CatalogueCategoryList';
 
 type AdminServiceCategory = components['schemas']['AdminServiceCategory'];
@@ -11,7 +12,7 @@ type AdminServiceCategory = components['schemas']['AdminServiceCategory'];
 async function fetchAdminCategories(token: string): Promise<AdminServiceCategory[]> {
   // Raw fetch — the generated schema declares only POST for this path
   // (src/api/generated/schema.d.ts:119), so client.GET(...) does not typecheck.
-  const baseUrl = process.env['API_BASE_URL'] ?? 'http://localhost:7071/api';
+  const baseUrl = getApiBaseUrl();
   const [result] = await Promise.allSettled([
     fetch(`${baseUrl}/v1/admin/catalogue/categories`, {
       headers: { Cookie: `hs_access=${token}` },

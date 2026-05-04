@@ -35,7 +35,7 @@ describe('LandingPage — brand/tagline/CTA + fallback footer', () => {
     const jsx = await LandingPage();
     render(jsx);
 
-    expect(screen.getByRole('heading', { level: 1, name: /homeservices/i })).toBeDefined();
+    expect(screen.getByRole('heading', { level: 1, name: /homeheroo/i })).toBeDefined();
     expect(screen.getByText(/live operations at a glance/i)).toBeDefined();
 
     const cta = screen.getByRole('link', { name: /sign in to admin/i });

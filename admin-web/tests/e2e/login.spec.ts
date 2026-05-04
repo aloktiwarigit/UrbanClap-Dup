@@ -50,7 +50,7 @@ test.describe('Login flow', () => {
     );
 
     // Use addCookies() in the handler — more reliable than set-cookie header in route.fulfill()
-    await page.route('**/api/v1/admin/auth/login', async (route) => {
+    await page.route('**/admin-api/v1/admin/auth/login', async (route) => {
       await page.context().addCookies([{
         name: 'hs_access',
         value: cookieToken,
@@ -78,7 +78,7 @@ test.describe('Login flow', () => {
   });
 
   test('wrong TOTP shows inline error', async ({ page }) => {
-    await page.route('**/api/v1/admin/auth/login', (route) =>
+    await page.route('**/admin-api/v1/admin/auth/login', (route) =>
       route.fulfill({
         status: 422,
         contentType: 'application/json',

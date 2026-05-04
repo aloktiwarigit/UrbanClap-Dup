@@ -1,4 +1,5 @@
 import createClient, { type Middleware } from 'openapi-fetch';
+import { apiUrl } from './base';
 import type { paths } from './generated/schema';
 
 export class ApiError extends Error {
@@ -60,7 +61,7 @@ export function createApiClient(options: ApiClientOptions) {
       ) {
         isRefreshing = true;
         try {
-          const refreshRes = await fetch('/api/v1/admin/auth/refresh', {
+          const refreshRes = await fetch(apiUrl('/v1/admin/auth/refresh'), {
             method: 'POST',
             credentials: 'include',
           });

@@ -3,14 +3,15 @@ export const dynamic = 'force-dynamic';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import type { components } from '@/api/generated/schema';
+import { getApiBaseUrl } from '@/lib/apiBase';
 import { EditServiceClient } from './EditServiceClient';
 
 type AdminService = components['schemas']['AdminService'];
 
 async function fetchService(id: string, token: string): Promise<AdminService | null> {
-  const baseUrl = process.env['API_BASE_URL'] ?? 'http://localhost:7071/api';
+  const baseUrl = getApiBaseUrl();
   const res = await fetch(`${baseUrl}/v1/admin/catalogue/services/${id}`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Cookie: `hs_access=${token}` },
     cache: 'no-store',
   });
   if (res.status === 404) return null;
