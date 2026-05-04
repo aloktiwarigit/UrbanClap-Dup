@@ -816,6 +816,9 @@ export interface components {
         AdminLoginRequest: {
             idToken: string;
             totpCode?: string;
+        } | {
+            challengeToken: string;
+            totpCode: string;
         };
         AdminSetupTotpVerifyRequest: {
             totpCode: string;

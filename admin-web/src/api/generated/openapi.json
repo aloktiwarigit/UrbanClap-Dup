@@ -1409,19 +1409,40 @@
         ]
       },
       "AdminLoginRequest": {
-        "type": "object",
-        "properties": {
-          "idToken": {
-            "type": "string",
-            "minLength": 1
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "idToken": {
+                "type": "string",
+                "minLength": 1
+              },
+              "totpCode": {
+                "type": "string",
+                "pattern": "^\\d{6}$"
+              }
+            },
+            "required": [
+              "idToken"
+            ]
           },
-          "totpCode": {
-            "type": "string",
-            "pattern": "^\\d{6}$"
+          {
+            "type": "object",
+            "properties": {
+              "challengeToken": {
+                "type": "string",
+                "minLength": 1
+              },
+              "totpCode": {
+                "type": "string",
+                "pattern": "^\\d{6}$"
+              }
+            },
+            "required": [
+              "challengeToken",
+              "totpCode"
+            ]
           }
-        },
-        "required": [
-          "idToken"
         ]
       },
       "AdminSetupTotpVerifyRequest": {
