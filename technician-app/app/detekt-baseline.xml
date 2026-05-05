@@ -213,3 +213,4 @@
     <ID>UseCheckOrError:AcceptJobOfferUseCase.kt$AcceptJobOfferUseCase$throw IllegalStateException("No authenticated user for job offer acceptance")</ID>
   </CurrentIssues>
 </SmellBaseline>
+
