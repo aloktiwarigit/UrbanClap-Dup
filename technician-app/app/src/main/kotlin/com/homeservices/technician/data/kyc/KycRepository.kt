@@ -8,6 +8,7 @@ public interface KycRepository {
     public suspend fun exchangeAadhaarCode(
         authCode: String,
         redirectUri: String,
+        integrityToken: String? = null,
     ): DigiLockerResult
 
     public suspend fun submitPanOcr(firebaseStoragePath: String): PanOcrResult

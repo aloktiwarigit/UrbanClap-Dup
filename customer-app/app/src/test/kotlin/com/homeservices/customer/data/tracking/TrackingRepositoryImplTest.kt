@@ -29,6 +29,7 @@ public class TrackingRepositoryImplTest {
         override suspend fun confirmBooking(
             bookingId: String,
             body: ConfirmBookingRequestDto,
+            integrityToken: String?,
         ): ConfirmBookingResponseDto = error("not used")
 
         override suspend fun getBooking(bookingId: String): GetBookingResponseDto =

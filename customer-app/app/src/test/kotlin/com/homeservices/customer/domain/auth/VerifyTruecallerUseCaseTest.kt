@@ -11,11 +11,11 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.ResponseBody.Companion.toResponseBody
 import retrofit2.HttpException
 import retrofit2.Response
 
@@ -46,20 +46,22 @@ public class VerifyTruecallerUseCaseTest {
                         fcmToken = null,
                     ),
                 )
-            } returns TruecallerVerifyResponse(
-                firebaseCustomToken = "firebase-custom-token-xyz",
-                sessionExpiresAt = 9_999_999L,
-            )
+            } returns
+                TruecallerVerifyResponse(
+                    firebaseCustomToken = "firebase-custom-token-xyz",
+                    sessionExpiresAt = 9_999_999L,
+                )
 
             every {
                 firebaseAuth.signInWithCustomToken("firebase-custom-token-xyz")
             } returns Tasks.forResult(mockAuthResult)
 
-            val result = useCase.invoke(
-                payload = "payload-b64",
-                signature = "sig-b64",
-                signatureAlgorithm = "SHA512withRSA",
-            )
+            val result =
+                useCase.invoke(
+                    payload = "payload-b64",
+                    signature = "sig-b64",
+                    signatureAlgorithm = "SHA512withRSA",
+                )
 
             assertThat(result.isSuccess).isTrue()
             assertThat(result.getOrNull()).isSameAs(mockUser)
@@ -72,11 +74,12 @@ public class VerifyTruecallerUseCaseTest {
                 authApi.verifyTruecaller(any())
             } throws HttpException(Response.error<TruecallerVerifyResponse>(400, "".toResponseBody("application/json".toMediaTypeOrNull())))
 
-            val result = useCase.invoke(
-                payload = "payload-b64",
-                signature = "bad-sig",
-                signatureAlgorithm = "SHA512withRSA",
-            )
+            val result =
+                useCase.invoke(
+                    payload = "payload-b64",
+                    signature = "bad-sig",
+                    signatureAlgorithm = "SHA512withRSA",
+                )
 
             assertThat(result.isFailure).isTrue()
             assertThat(result.exceptionOrNull()).isInstanceOf(HttpException::class.java)
@@ -87,20 +90,22 @@ public class VerifyTruecallerUseCaseTest {
         runTest {
             coEvery {
                 authApi.verifyTruecaller(any())
-            } returns TruecallerVerifyResponse(
-                firebaseCustomToken = "custom-token",
-                sessionExpiresAt = 9_999_999L,
-            )
+            } returns
+                TruecallerVerifyResponse(
+                    firebaseCustomToken = "custom-token",
+                    sessionExpiresAt = 9_999_999L,
+                )
 
             every {
                 firebaseAuth.signInWithCustomToken("custom-token")
             } returns Tasks.forException(Exception("Firebase sign-in failed"))
 
-            val result = useCase.invoke(
-                payload = "p",
-                signature = "s",
-                signatureAlgorithm = "SHA512withRSA",
-            )
+            val result =
+                useCase.invoke(
+                    payload = "p",
+                    signature = "s",
+                    signatureAlgorithm = "SHA512withRSA",
+                )
 
             assertThat(result.isFailure).isTrue()
         }
@@ -108,10 +113,11 @@ public class VerifyTruecallerUseCaseTest {
     @Test
     public fun `invoke returns Failure when Firebase user is null after sign-in`(): Unit =
         runTest {
-            coEvery { authApi.verifyTruecaller(any()) } returns TruecallerVerifyResponse(
-                firebaseCustomToken = "ct",
-                sessionExpiresAt = 0L,
-            )
+            coEvery { authApi.verifyTruecaller(any()) } returns
+                TruecallerVerifyResponse(
+                    firebaseCustomToken = "ct",
+                    sessionExpiresAt = 0L,
+                )
 
             val mockAuthResult = mockk<AuthResult> { every { user } returns null }
             every { firebaseAuth.signInWithCustomToken("ct") } returns Tasks.forResult(mockAuthResult)

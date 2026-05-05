@@ -22,7 +22,7 @@ public class KycRepositoryTest {
     @Test
     public fun `exchangeAadhaarCode returns AadhaarVerified on success`(): Unit =
         runTest {
-            coEvery { api.submitAadhaar(AadhaarRequest("code", "uri")) } returns
+            coEvery { api.submitAadhaar(AadhaarRequest("code", "uri"), any()) } returns
                 AadhaarResponse("AADHAAR_DONE", "XXXX-XXXX-1234", true)
 
             val result = repo.exchangeAadhaarCode("code", "uri")

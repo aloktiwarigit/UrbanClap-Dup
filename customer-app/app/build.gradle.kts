@@ -423,6 +423,10 @@ kover {
                     // ProfileScreen — Compose UI composable, same rationale as other *Kt screen classes
                     "*.ProfileScreenKt",
                     "*.ProfileScreenKt\$*",
+                    // IntegrityModule — Hilt @Provides DI wiring for Play Integrity SDK setup
+                    "*.domain.integrity.di.*",
+                    // IntegrityApiService — Retrofit interface, methods invoked by Retrofit runtime
+                    "*.data.integrity.IntegrityApiService",
                 )
             }
         }
@@ -494,6 +498,9 @@ dependencies {
     implementation(libs.moshi.kotlin)
     ksp(libs.moshi.kotlin.codegen)
     implementation(libs.coil.compose)
+
+    // Play Integrity API
+    implementation(libs.play.integrity)
 
     // Payments + Maps
     implementation(libs.razorpay.checkout)

@@ -77,6 +77,11 @@ android {
         )
         buildConfigField(
             "String",
+            "API_BASE_URL",
+            "\"${System.getenv("API_BASE_URL") ?: "https://func-homeservices-prod.azurewebsites.net/api"}\"",
+        )
+        buildConfigField(
+            "String",
             "GIT_SHA",
             "\"${System.getenv("GIT_SHA") ?: "dev"}\"",
         )
@@ -421,6 +426,10 @@ kover {
                     // tests using mockk.
                     "*.PayoutCadenceViewModel\$saveCadence\$1",
                     "*.PayoutCadenceViewModel\$saveCadence\$1\$*",
+                    // IntegrityModule — Hilt @Provides DI wiring for Play Integrity SDK setup
+                    "*.domain.integrity.di.*",
+                    // IntegrityApiService — Retrofit interface, methods invoked by Retrofit runtime
+                    "*.data.integrity.IntegrityApiService",
                 )
             }
         }
@@ -482,6 +491,9 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.play.services.maps)
     implementation(libs.maps.compose)
+
+    // Play Integrity API
+    implementation(libs.play.integrity)
 
     // KYC networking + serialization
     implementation(libs.retrofit.core)

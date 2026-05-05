@@ -50,6 +50,7 @@ internal class BookingRepositoryImpl
             paymentId: String,
             orderId: String,
             signature: String,
+            integrityToken: String?,
         ): Flow<Result<String>> =
             flow {
                 emit(
@@ -62,6 +63,7 @@ internal class BookingRepositoryImpl
                                     razorpayOrderId = orderId,
                                     razorpaySignature = signature,
                                 ),
+                                integrityToken = integrityToken,
                             ).bookingId
                     },
                 )

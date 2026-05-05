@@ -10,6 +10,7 @@ import com.homeservices.customer.data.booking.remote.dto.CustomerBookingsRespons
 import com.homeservices.customer.data.booking.remote.dto.GetBookingResponseDto
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Path
 
@@ -23,6 +24,7 @@ public interface BookingApiService {
     public suspend fun confirmBooking(
         @Path("id") bookingId: String,
         @Body body: ConfirmBookingRequestDto,
+        @Header("X-Integrity-Token") integrityToken: String? = null,
     ): ConfirmBookingResponseDto
 
     @GET("v1/bookings/{id}")
