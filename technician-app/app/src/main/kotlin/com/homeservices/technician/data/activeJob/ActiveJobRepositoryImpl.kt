@@ -8,9 +8,11 @@ import com.homeservices.technician.domain.activeJob.model.ActiveJob
 import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
 import com.homeservices.technician.domain.activeJob.model.LatLng
 import com.homeservices.technician.domain.location.CurrentLocationProvider
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
@@ -26,21 +28,33 @@ public class ActiveJobRepositoryImpl
         private val firebaseAuth: FirebaseAuth,
         private val currentLocationProvider: CurrentLocationProvider,
     ) : ActiveJobRepository {
-        override fun getActiveJob(bookingId: String): Flow<ActiveJob> =
-            flow {
-                while (true) {
-                    val token =
-                        firebaseAuth.currentUser
-                            ?.getIdToken(false)
-                            ?.await()
-                            ?.token ?: break
-                    val response = api.getActiveJob("Bearer $token", bookingId)
-                    if (response.isSuccessful) {
-                        response.body()?.let { emit(it.toDomain()) }
-                    }
-                    delay(5_000L)
-                }
+        private val _activeJobState = MutableStateFlow<ActiveJob?>(null)
+
+        override val activeJobState: StateFlow<ActiveJob?> = _activeJobState.asStateFlow()
+
+        /**
+         * Returns a flow that emits each non-null value from [activeJobState].
+         * Calling [startObserving] before collecting ensures an initial fetch is performed.
+         */
+        override fun getActiveJob(bookingId: String): Flow<ActiveJob> = _activeJobState.filterNotNull()
+
+        /** One-shot HTTP fetch to prime [activeJobState]. Called by the foreground service on start. */
+        override suspend fun startObserving(bookingId: String) {
+            val token =
+                firebaseAuth.currentUser
+                    ?.getIdToken(false)
+                    ?.await()
+                    ?.token ?: return
+            val response = api.getActiveJob("Bearer $token", bookingId)
+            if (response.isSuccessful) {
+                response.body()?.let { _activeJobState.value = it.toDomain() }
             }
+        }
+
+        /** Updates the in-memory state from an FCM JOB_UPDATE payload. */
+        override fun updateFromFcm(job: ActiveJob) {
+            _activeJobState.value = job
+        }
 
         override val hasPendingTransitions: Flow<Boolean> =
             dao.getPendingFlow().map { it.isNotEmpty() }
@@ -71,7 +85,9 @@ public class ActiveJobRepositoryImpl
                         integrityToken = integrityToken,
                     )
                 if (response.isSuccessful) {
-                    Result.success(response.body()!!.toDomain())
+                    val job = response.body()!!.toDomain()
+                    _activeJobState.value = job
+                    Result.success(job)
                 } else {
                     Result.failure(RuntimeException("Transition failed: HTTP ${response.code()}"))
                 }

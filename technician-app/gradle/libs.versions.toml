@@ -141,6 +141,9 @@ play-services-location = { module = "com.google.android.gms:play-services-locati
 maps-compose          = { module = "com.google.maps.android:maps-compose",              version.ref = "mapsCompose" }
 play-integrity        = { module = "com.google.android.play:integrity",                 version.ref = "playIntegrity" }
 androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx",               version.ref = "workManager" }
+androidx-work-testing     = { module = "androidx.work:work-testing",                    version.ref = "workManager" }
+androidx-hilt-work        = { module = "androidx.hilt:hilt-work",                      version = "1.2.0" }
+androidx-hilt-compiler    = { module = "androidx.hilt:hilt-compiler",                  version = "1.2.0" }
 
 # Test
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit5" }
