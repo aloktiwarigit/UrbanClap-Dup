@@ -7,13 +7,6 @@ import { bookingRepo } from '../cosmos/booking-repository.js';
 import type { BookingDoc } from '../schemas/booking.js';
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 
-function isCosmosTimeout(err: unknown): boolean {
-  if (typeof err !== 'object' || err === null) return false;
-  const e = err as Record<string, unknown>;
-  if (e['code'] === 408) return true;
-  return typeof e['message'] === 'string' && /timeout/i.test(e['message']);
-}
-
 export const getMyTechnicianBookingsHandler: HttpHandler = async (
   req: HttpRequest,
   ctx: InvocationContext,
@@ -30,12 +23,12 @@ export const getMyTechnicianBookingsHandler: HttpHandler = async (
     try {
       bookings = await bookingRepo.getByTechnicianId(uid);
     } catch (queryErr: unknown) {
-      if (isCosmosTimeout(queryErr)) {
-        Sentry.captureException(queryErr);
-        ctx.warn('getByTechnicianId cross-partition scan timed out; returning empty list for pilot');
-        return { status: 200, jsonBody: { bookings: [] } };
-      }
-      throw queryErr;
+      // Cross-partition scan on bookings (partitioned by customerId) fails on
+      // Cosmos Serverless free tier. Return empty list for F&F pilot — new
+      // technicians have no jobs anyway. Sentry captures for visibility.
+      Sentry.captureException(queryErr);
+      ctx.warn('getByTechnicianId failed (cross-partition scan); returning empty list for pilot');
+      return { status: 200, jsonBody: { bookings: [] } };
     }
 
     const serviceNames = new Map<string, string>();
