@@ -3,17 +3,34 @@ export const dynamic = 'force-dynamic';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 import { redirect } from 'next/navigation';
+import { setRequestLocale } from 'next-intl/server';
 import { AdminAuthProvider, type AuthState } from '@/lib/auth/context';
 import { Rail } from '@/components/dashboard/Rail';
 import { Topbar } from '@/components/dashboard/Topbar';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
 import { normalizeAdminRole } from '@/admin/capabilities';
 import { GrowthBookClientProvider } from '@/components/providers/GrowthBookClientProvider';
+import { getValidatedJwtSecret } from '@/lib/env';
+import { routing } from '@/i18n/config';
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const jwtSecretEnv = process.env.JWT_SECRET;
-  if (!jwtSecretEnv) throw new Error('JWT_SECRET env var is required');
-  const JWT_SECRET = new TextEncoder().encode(jwtSecretEnv);
+export default async function DashboardLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
+  let jwtSecretStr: string;
+  try {
+    jwtSecretStr = getValidatedJwtSecret();
+  } catch {
+    throw new Error('JWT_SECRET env var is required');
+  }
+  const JWT_SECRET = new TextEncoder().encode(jwtSecretStr);
 
   const cookieStore = await cookies();
   const token = cookieStore.get('hs_access')?.value;
@@ -30,10 +47,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
         role,
       };
     } catch {
-      redirect('/login');
+      redirect(`/${locale}/login`);
     }
   } else {
-    redirect('/login');
+    redirect(`/${locale}/login`);
   }
 
   return (
@@ -49,11 +66,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
         >
           <Rail />
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-            <Topbar rightSlot={<ThemeToggle />} />
+            <Topbar rightSlot={<><LocaleSwitcher /><ThemeToggle /></>} />
             <main style={{ flex: 1, overflow: 'auto' }}>{children}</main>
           </div>
         </div>
       </AdminAuthProvider>
     </GrowthBookClientProvider>
   );
+}
+
+export function generateStaticParams() {
+  return routing.locales.map((locale) => ({ locale }));
 }
