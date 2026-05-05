@@ -106,7 +106,7 @@ public class MarkReachedUseCaseTest {
         }
 
     @Test
-    public fun `isMock is true when location provider reports mock location`(): Unit =
+    public fun `isMock true when provider reports mock location`(): Unit =
         runTest {
             coEvery { currentLocationProvider.currentLocation() } returns
                 LocationWithFidelity(
@@ -123,7 +123,7 @@ public class MarkReachedUseCaseTest {
         }
 
     @Test
-    public fun `isMock is false when location provider returns null (no GPS fix)`(): Unit =
+    public fun `isMock is false when provider returns null`(): Unit =
         runTest {
             coEvery { currentLocationProvider.currentLocation() } returns null
             coEvery {
@@ -136,7 +136,7 @@ public class MarkReachedUseCaseTest {
         }
 
     @Test
-    public fun `attestation with isMock=true is still forwarded to repository (fail-open)`(): Unit =
+    public fun `isMock true attestation still forwarded fail-open`(): Unit =
         runTest {
             coEvery { currentLocationProvider.currentLocation() } returns
                 LocationWithFidelity(

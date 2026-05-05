@@ -106,7 +106,7 @@ public class ActiveJobRepositoryImplTest {
         }
 
     @Test
-    public fun `transitionStatus includes mock attestation when location is spoofed`(): Unit =
+    public fun `transitionStatus includes mock attestation on spoof`(): Unit =
         runTest {
             coEvery { currentLocationProvider.currentLocation() } returns
                 LocationWithFidelity(

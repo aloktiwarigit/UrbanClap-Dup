@@ -439,7 +439,8 @@ public class ActiveJobViewModelTest {
         runTest(testDispatcher) {
             coEvery { uploadJobPhotoUseCase.execute("bk-1", "REACHED", "/cache/p.jpg") } returns
                 Result.success("https://storage/photo.jpg")
-            coEvery { markReachedUseCase("bk-1") } returns MarkReachedOutcome(Result.success(aJob(ActiveJobStatus.REACHED)), isMock = false)
+            coEvery { markReachedUseCase("bk-1") } returns
+                MarkReachedOutcome(Result.success(aJob(ActiveJobStatus.REACHED)), isMock = false)
 
             viewModel.onTransitionRequested("REACHED")
             viewModel.onPhotoConfirmed("/cache/p.jpg")

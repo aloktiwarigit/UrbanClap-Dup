@@ -102,7 +102,7 @@ public class FusedCurrentLocationProviderTest {
         }
 
     @Test
-    public fun `falls back to lastLocation when getCurrentLocation returns null`(): Unit =
+    public fun `falls back to lastLocation when primary returns null`(): Unit =
         runTest {
             val lastKnown = makeLocation(lat = 26.9, lng = 82.3, isMock = false)
             every { fusedClient.getCurrentLocation(any<Int>(), any()) } returns Tasks.forResult(null)
