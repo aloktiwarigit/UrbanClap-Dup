@@ -240,7 +240,17 @@ export async function middleware(request: NextRequest) {
     return notAuthResponse;
   }
 
-  // 7. Auth passed — apply i18n routing (handles locale prefix, NEXT_LOCALE cookie)
+  // 7. Admin API proxy requests — pass through after auth check, skip locale routing.
+  // next-intl with localePrefix:'always' would redirect /admin-api/v1/... to
+  // /{locale}/admin-api/v1/... which has no matching route and breaks proxy calls.
+  if (pathname.startsWith('/admin-api/')) {
+    if (setCookies.length === 0) return NextResponse.next();
+    const response = NextResponse.next();
+    appendSetCookies(response, setCookies);
+    return response;
+  }
+
+  // 8. Auth passed — apply i18n routing (handles locale prefix, NEXT_LOCALE cookie)
   if (setCookies.length > 0) {
     // Refreshed session: inject updated access token into request headers so
     // downstream server components receive it, then propagate Set-Cookie headers.

@@ -2,6 +2,7 @@
 
 import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { usePathname, useRouter } from '@/lib/i18n/navigation';
 import { routing, type Locale } from '@/i18n/config';
 
@@ -9,13 +10,16 @@ export function LocaleSwitcher() {
   const t = useTranslations('locale.switcher');
   const currentLocale = useLocale() as Locale;
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const [announcement, setAnnouncement] = useState('');
   const groupRef = useRef<HTMLDivElement>(null);
 
   function handleChange(newLocale: Locale) {
     if (newLocale === currentLocale) return;
-    router.replace(pathname, { locale: newLocale });
+    const search = searchParams.toString();
+    const href = search ? (`${pathname}?${search}` as typeof pathname) : pathname;
+    router.replace(href, { locale: newLocale });
     setAnnouncement(
       newLocale === 'hi' ? 'भाषा बदली — हिन्दी' : 'Language changed to English',
     );
