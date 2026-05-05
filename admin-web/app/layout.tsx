@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
-import { cookies } from 'next/headers';
 import { Fraunces, Geist, JetBrains_Mono, Noto_Sans_Devanagari } from 'next/font/google';
+import { getLocale } from 'next-intl/server';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import { readThemeCookie } from '@/lib/theme';
-import { routing } from '@/i18n/config';
 import './globals.css';
 
 const fraunces = Fraunces({
@@ -40,11 +39,7 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const theme = await readThemeCookie();
-  const cookieStore = await cookies();
-  const rawLocale = cookieStore.get('NEXT_LOCALE')?.value;
-  const lang = (routing.locales as readonly string[]).includes(rawLocale ?? '')
-    ? rawLocale!
-    : routing.defaultLocale;
+  const lang = await getLocale();
 
   return (
     <html
