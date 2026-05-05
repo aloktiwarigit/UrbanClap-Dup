@@ -13,6 +13,7 @@ import com.homeservices.customer.domain.auth.model.AuthResult
 import com.homeservices.customer.domain.auth.model.GoogleSignInResult
 import com.homeservices.customer.domain.auth.model.OtpSendResult
 import com.homeservices.customer.domain.auth.model.TruecallerAuthResult
+import com.homeservices.customer.domain.flags.FeatureFlags
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -33,6 +34,8 @@ public class AuthOrchestratorTest {
     private val googleSignInUseCase: GoogleSignInUseCase = mockk()
     private val emailPasswordUseCase: EmailPasswordUseCase = mockk()
     private val firebaseAuth: FirebaseAuth = mockk()
+    private val verifyTruecallerUseCase: VerifyTruecallerUseCase = mockk()
+    private val featureFlags: FeatureFlags = mockk()
     private lateinit var orchestrator: AuthOrchestrator
 
     @BeforeEach
@@ -40,6 +43,8 @@ public class AuthOrchestratorTest {
         truecallerUseCase = mockk(relaxed = true)
         firebaseOtpUseCase = mockk(relaxed = true)
         saveSessionUseCase = mockk(relaxed = true)
+        // Feature flag OFF by default — exercises the anonymous sign-in path
+        every { featureFlags.truecallerServerVerify() } returns false
         orchestrator =
             AuthOrchestrator(
                 truecallerUseCase = truecallerUseCase,
@@ -48,6 +53,8 @@ public class AuthOrchestratorTest {
                 googleSignInUseCase = googleSignInUseCase,
                 emailPasswordUseCase = emailPasswordUseCase,
                 firebaseAuth = firebaseAuth,
+                verifyTruecallerUseCase = verifyTruecallerUseCase,
+                featureFlags = featureFlags,
             )
     }
 
@@ -121,15 +128,64 @@ public class AuthOrchestratorTest {
     }
 
     @Test
-    public fun `completeWithTruecaller delegates to SaveSessionUseCase`(): Unit =
+    public fun `completeWithTruecaller — flag OFF — delegates to anonymous sign-in`(): Unit =
         runTest {
             val user = mockk<FirebaseUser>()
-            coEvery { saveSessionUseCase.saveAnonymousWithPhone("+91123") } returns AuthResult.Success(user)
+            every { featureFlags.truecallerServerVerify() } returns false
+            coEvery { saveSessionUseCase.saveAnonymousWithPhone("1234") } returns AuthResult.Success(user)
 
-            val result = orchestrator.completeWithTruecaller("+91123")
+            val success = TruecallerAuthResult.Success(
+                payload = "payload",
+                signature = "sig",
+                signatureAlgorithm = "SHA512withRSA",
+                phoneLastFour = "1234",
+            )
+            val result = orchestrator.completeWithTruecaller(success)
 
             assertThat(result).isInstanceOf(AuthResult.Success::class.java)
-            coVerify { saveSessionUseCase.saveAnonymousWithPhone("+91123") }
+            coVerify { saveSessionUseCase.saveAnonymousWithPhone("1234") }
+        }
+
+    @Test
+    public fun `completeWithTruecaller — flag ON — calls VerifyTruecallerUseCase and saves session`(): Unit =
+        runTest {
+            val user = mockk<FirebaseUser> { every { uid } returns "verified-uid" }
+            every { featureFlags.truecallerServerVerify() } returns true
+            coEvery {
+                verifyTruecallerUseCase.invoke("payload-b64", "sig-b64", "SHA512withRSA")
+            } returns Result.success(user)
+            coEvery { saveSessionUseCase.save(user, "5678") } returns Unit
+
+            val success = TruecallerAuthResult.Success(
+                payload = "payload-b64",
+                signature = "sig-b64",
+                signatureAlgorithm = "SHA512withRSA",
+                phoneLastFour = "5678",
+            )
+            val result = orchestrator.completeWithTruecaller(success)
+
+            assertThat(result).isInstanceOf(AuthResult.Success::class.java)
+            coVerify { verifyTruecallerUseCase.invoke("payload-b64", "sig-b64", "SHA512withRSA") }
+            coVerify { saveSessionUseCase.save(user, "5678") }
+        }
+
+    @Test
+    public fun `completeWithTruecaller — flag ON — returns Error when VerifyTruecallerUseCase fails`(): Unit =
+        runTest {
+            every { featureFlags.truecallerServerVerify() } returns true
+            coEvery {
+                verifyTruecallerUseCase.invoke(any(), any(), any())
+            } returns Result.failure(Exception("signature invalid"))
+
+            val success = TruecallerAuthResult.Success(
+                payload = "p",
+                signature = "s",
+                signatureAlgorithm = "SHA512withRSA",
+                phoneLastFour = "9999",
+            )
+            val result = orchestrator.completeWithTruecaller(success)
+
+            assertThat(result).isInstanceOf(AuthResult.Error.General::class.java)
         }
 
     @Test

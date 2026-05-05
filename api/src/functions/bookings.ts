@@ -112,12 +112,17 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     };
   }
 
+  // Pre-generate booking ID so we can embed it in Razorpay notes for the fast path.
+  // The webhook can then do a cheap point-read (getById) instead of a cross-partition scan.
+  const preGeneratedBookingId = randomUUID();
+
   let order: Awaited<ReturnType<typeof createRazorpayOrder>>;
   try {
     order = await createRazorpayOrder({
       amount: service.basePrice,
       currency: 'INR',
       receipt: makeRazorpayReceipt(customer.customerId),
+      notes: { bookingId: preGeneratedBookingId },
     });
   } catch (err) {
     Sentry.captureException(err);
@@ -141,6 +146,7 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     order.id,
     service.basePrice,
     bookingMetadata(customer, service.name),
+    preGeneratedBookingId,
   );
   return { status: 201, jsonBody: { bookingId: booking.id, razorpayOrderId: order.id, amount: order.amount, requiresPayment: true, paymentMethod: 'RAZORPAY' } };
 };

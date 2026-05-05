@@ -13,24 +13,51 @@ export default function SetupPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const token = sessionStorage.getItem('setupToken') ?? '';
-    sessionStorage.removeItem('setupToken');
-    if (!token) {
-      router.replace('/login');
-      return;
-    }
-    setSetupToken(token);
+    let cancelled = false;
 
-    fetch(apiUrl('/v1/admin/auth/setup-totp'), {
-      headers: { authorization: `Bearer ${token}` },
-      credentials: 'include',
-    })
-      .then((r) => r.json())
-      .then((d: { qrCodeDataUri?: string }) => {
-        if (d.qrCodeDataUri) setQrUri(d.qrCodeDataUri);
-        else router.replace('/login');
-      })
-      .catch(() => router.replace('/login'));
+    async function initSetup() {
+      // Exchange the HttpOnly hs_setup cookie for the setup token via the
+      // server-side bridge endpoint. The token is never in sessionStorage.
+      let token: string;
+      try {
+        const exchangeRes = await fetch('/api/setup-token/exchange');
+        if (!exchangeRes.ok) {
+          if (!cancelled) router.replace('/login');
+          return;
+        }
+        const exchangeData = (await exchangeRes.json()) as { token?: string };
+        token = exchangeData.token ?? '';
+        if (!token) {
+          if (!cancelled) router.replace('/login');
+          return;
+        }
+      } catch {
+        if (!cancelled) router.replace('/login');
+        return;
+      }
+
+      if (cancelled) return;
+      setSetupToken(token);
+
+      try {
+        const r = await fetch(apiUrl('/v1/admin/auth/setup-totp'), {
+          headers: { authorization: `Bearer ${token}` },
+          credentials: 'include',
+        });
+        const d = (await r.json()) as { qrCodeDataUri?: string };
+        if (!cancelled) {
+          if (d.qrCodeDataUri) setQrUri(d.qrCodeDataUri);
+          else router.replace('/login');
+        }
+      } catch {
+        if (!cancelled) router.replace('/login');
+      }
+    }
+
+    void initSetup();
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
