@@ -37,7 +37,7 @@ public class GrowthBookFeatureFlags
                 apiKey = BuildConfig.GROWTHBOOK_CLIENT_KEY.ifBlank { "placeholder" },
                 apiHost = "https://cdn.growthbook.io",
                 attributes = emptyMap<String, GBValue>(),
-                trackingCallback = { _, _ -> /* no-op — feature flags only, no experiments tracked */ },
+                trackingCallback = { _, _ -> },
                 networkDispatcher = GBNetworkDispatcherOkHttp(),
                 // Disable caching when key is blank so Android's CachingImpl never requires
                 // a Context (safe in unit tests and CI without a live key).
@@ -55,6 +55,5 @@ public class GrowthBookFeatureFlags
             if (keyPresent) sdk.refreshCache()
         }
 
-        override fun truecallerServerVerify(): Boolean =
-            sdk.isOn("truecaller_server_verify_v2") ?: false
+        override fun truecallerServerVerify(): Boolean = sdk.isOn("truecaller_server_verify_v2") ?: false
     }
