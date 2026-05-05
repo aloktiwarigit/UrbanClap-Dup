@@ -4,7 +4,15 @@ import type { HttpHandler, HttpRequest, InvocationContext } from '@azure/functio
 import * as Sentry from '@sentry/node';
 import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
 import { bookingRepo } from '../cosmos/booking-repository.js';
+import type { BookingDoc } from '../schemas/booking.js';
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
+
+function isCosmosTimeout(err: unknown): boolean {
+  if (typeof err !== 'object' || err === null) return false;
+  const e = err as Record<string, unknown>;
+  if (e['code'] === 408) return true;
+  return typeof e['message'] === 'string' && /timeout/i.test(e['message']);
+}
 
 export const getMyTechnicianBookingsHandler: HttpHandler = async (
   req: HttpRequest,
@@ -18,9 +26,19 @@ export const getMyTechnicianBookingsHandler: HttpHandler = async (
   }
 
   try {
-    const bookings = await bookingRepo.getByTechnicianId(uid);
-    const serviceNames = new Map<string, string>();
+    let bookings: BookingDoc[];
+    try {
+      bookings = await bookingRepo.getByTechnicianId(uid);
+    } catch (queryErr: unknown) {
+      if (isCosmosTimeout(queryErr)) {
+        Sentry.captureException(queryErr);
+        ctx.warn('getByTechnicianId cross-partition scan timed out; returning empty list for pilot');
+        return { status: 200, jsonBody: { bookings: [] } };
+      }
+      throw queryErr;
+    }
 
+    const serviceNames = new Map<string, string>();
     await Promise.all(
       [...new Set(bookings.map((booking) => booking.serviceId))].map(async (serviceId) => {
         const service = await catalogueRepo.getServiceByIdCrossPartition(serviceId);
@@ -47,9 +65,8 @@ export const getMyTechnicianBookingsHandler: HttpHandler = async (
     };
   } catch (err: unknown) {
     Sentry.captureException(err);
-    const detail = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
-    ctx.error('getMyTechnicianBookings failed', detail);
-    return { status: 500, jsonBody: { code: 'INTERNAL_ERROR', detail } };
+    ctx.error('getMyTechnicianBookings failed', err instanceof Error ? err.message : String(err));
+    return { status: 500, jsonBody: { code: 'INTERNAL_ERROR' } };
   }
 };
 
