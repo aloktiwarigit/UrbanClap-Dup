@@ -29,13 +29,14 @@ public class ConfirmBookingUseCase
                         integrityAttestor.attest(nonce).getOrThrow()
                     }.getOrNull()
 
-                val result = repo.confirmBooking(
-                    bookingId = bookingId,
-                    paymentId = paymentId,
-                    orderId = orderId,
-                    signature = signature,
-                    integrityToken = integrityToken,
-                )
+                val result =
+                    repo.confirmBooking(
+                        bookingId = bookingId,
+                        paymentId = paymentId,
+                        orderId = orderId,
+                        signature = signature,
+                        integrityToken = integrityToken,
+                    )
                 result.collect { emit(it) }
             }
     }

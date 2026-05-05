@@ -20,7 +20,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 public object IntegrityModule {
-
     @Provides
     @Singleton
     public fun providePlayIntegrityAttestor(

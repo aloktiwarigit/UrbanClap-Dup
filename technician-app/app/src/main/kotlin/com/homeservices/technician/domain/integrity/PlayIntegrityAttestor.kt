@@ -18,13 +18,13 @@ public class PlayIntegrityAttestor(
     private val context: Context,
     private val debugBypass: Boolean = false,
 ) : IntegrityAttestor {
-
     override suspend fun attest(nonce: String): Result<String> {
         if (debugBypass) return Result.success("debug-bypass")
         return runCatching {
             val manager = IntegrityManagerFactory.create(context)
             val request =
-                IntegrityTokenRequest.builder()
+                IntegrityTokenRequest
+                    .builder()
                     .setNonce(nonce)
                     .build()
             manager.requestIntegrityToken(request).await().token()

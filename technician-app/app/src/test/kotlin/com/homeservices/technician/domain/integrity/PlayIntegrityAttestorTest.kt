@@ -1,10 +1,10 @@
 package com.homeservices.technician.domain.integrity
 
 import android.content.Context
+import com.google.android.gms.tasks.Tasks
 import com.google.android.play.core.integrity.IntegrityManager
 import com.google.android.play.core.integrity.IntegrityTokenRequest
 import com.google.android.play.core.integrity.IntegrityTokenResponse
-import com.google.android.gms.tasks.Tasks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -16,7 +16,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 public class PlayIntegrityAttestorTest {
-
     private val context: Context = mockk(relaxed = true)
     private val manager: IntegrityManager = mockk()
 
@@ -24,7 +23,8 @@ public class PlayIntegrityAttestorTest {
     public fun setUp() {
         mockkStatic("com.google.android.play.core.integrity.IntegrityManagerFactory")
         every {
-            com.google.android.play.core.integrity.IntegrityManagerFactory.create(context)
+            com.google.android.play.core.integrity.IntegrityManagerFactory
+                .create(context)
         } returns manager
     }
 
@@ -37,9 +37,10 @@ public class PlayIntegrityAttestorTest {
     public fun `attest — success path — returns Result success with token`(): Unit =
         runTest {
             val fakeToken = "fake-integrity-token"
-            val response: IntegrityTokenResponse = mockk {
-                every { token() } returns fakeToken
-            }
+            val response: IntegrityTokenResponse =
+                mockk {
+                    every { token() } returns fakeToken
+                }
             every {
                 manager.requestIntegrityToken(any<IntegrityTokenRequest>())
             } returns Tasks.forResult(response)
