@@ -1,6 +1,7 @@
 package com.homeservices.technician.data.jobOffer.di
 
 import com.homeservices.technician.data.jobOffer.JobOfferApiService
+import com.homeservices.technician.data.network.defaultMoshi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -26,7 +27,7 @@ public object JobOfferModule {
             .Builder()
             .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
             .client(client)
-            .addConverterFactory(MoshiConverterFactory.create())
+            .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
             .build()
             .create(JobOfferApiService::class.java)
     }

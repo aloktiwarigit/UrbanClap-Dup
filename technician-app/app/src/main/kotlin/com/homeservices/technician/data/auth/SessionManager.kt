@@ -26,11 +26,21 @@ public class SessionManager
             const val KEY_EMAIL = "email"
             const val KEY_DISPLAY_NAME = "display_name"
             const val KEY_AUTH_PROVIDER = "auth_provider"
+            const val KEY_ONBOARDING_COMPLETE = "onboarding_complete"
             val SESSION_TTL_MS = TimeUnit.DAYS.toMillis(180)
         }
 
         private val _authState = MutableStateFlow(readInitialState())
         public val authState: StateFlow<AuthState> = _authState.asStateFlow()
+
+        public val isOnboardingComplete: Boolean
+            get() = prefs.getBoolean(KEY_ONBOARDING_COMPLETE, false)
+
+        public suspend fun setOnboardingComplete() {
+            withContext(Dispatchers.IO) {
+                prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETE, true).apply()
+            }
+        }
 
         private fun readInitialState(): AuthState {
             val uid = prefs.getString(KEY_UID, null)

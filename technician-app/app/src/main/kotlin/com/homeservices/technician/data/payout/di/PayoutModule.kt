@@ -1,5 +1,6 @@
 package com.homeservices.technician.data.payout.di
 
+import com.homeservices.technician.data.network.defaultMoshi
 import com.homeservices.technician.data.payout.PayoutRepositoryImpl
 import com.homeservices.technician.data.payout.remote.PayoutApiService
 import com.homeservices.technician.data.rating.di.AuthOkHttpClient
@@ -30,7 +31,7 @@ public abstract class PayoutModule {
                 .Builder()
                 .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
                 .client(client)
-                .addConverterFactory(MoshiConverterFactory.create())
+                .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
                 .build()
                 .create(PayoutApiService::class.java)
     }

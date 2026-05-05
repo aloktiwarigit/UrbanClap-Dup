@@ -5,6 +5,7 @@ import com.homeservices.technician.data.kyc.FirebaseStorageUploaderImpl
 import com.homeservices.technician.data.kyc.KycApiService
 import com.homeservices.technician.data.kyc.KycRepository
 import com.homeservices.technician.data.kyc.KycRepositoryImpl
+import com.homeservices.technician.data.network.defaultMoshi
 import com.homeservices.technician.domain.kyc.FirebaseStorageUploader
 import dagger.Binds
 import dagger.Module
@@ -41,7 +42,7 @@ public abstract class KycModule {
                 .Builder()
                 .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
                 .client(client)
-                .addConverterFactory(MoshiConverterFactory.create())
+                .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
                 .build()
                 .create(KycApiService::class.java)
         }

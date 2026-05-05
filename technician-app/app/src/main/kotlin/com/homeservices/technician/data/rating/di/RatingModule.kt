@@ -2,6 +2,7 @@ package com.homeservices.technician.data.rating.di
 
 import com.homeservices.technician.data.network.auth.FirebaseTokenAuthenticator
 import com.homeservices.technician.data.network.auth.IdTokenCache
+import com.homeservices.technician.data.network.defaultMoshi
 import com.homeservices.technician.data.rating.RatingRepository
 import com.homeservices.technician.data.rating.RatingRepositoryImpl
 import com.homeservices.technician.data.rating.remote.RatingApiService
@@ -69,7 +70,7 @@ public abstract class RatingModule {
                 .Builder()
                 .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
                 .client(client)
-                .addConverterFactory(MoshiConverterFactory.create())
+                .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
                 .build()
                 .create(RatingApiService::class.java)
     }

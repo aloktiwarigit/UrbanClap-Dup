@@ -2,6 +2,7 @@ package com.homeservices.technician.data.jobs.di
 
 import com.homeservices.technician.data.jobs.TechnicianJobsRepositoryImpl
 import com.homeservices.technician.data.jobs.remote.TechnicianJobsApiService
+import com.homeservices.technician.data.network.defaultMoshi
 import com.homeservices.technician.data.rating.di.AuthOkHttpClient
 import com.homeservices.technician.domain.jobs.TechnicianJobsRepository
 import dagger.Binds
@@ -30,7 +31,7 @@ public abstract class TechnicianJobsModule {
                 .Builder()
                 .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
                 .client(client)
-                .addConverterFactory(MoshiConverterFactory.create())
+                .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
                 .build()
                 .create(TechnicianJobsApiService::class.java)
     }

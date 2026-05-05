@@ -2,6 +2,7 @@ package com.homeservices.technician.data.availability.di
 
 import com.homeservices.technician.data.availability.TechnicianAvailabilityRepositoryImpl
 import com.homeservices.technician.data.availability.remote.TechnicianAvailabilityApiService
+import com.homeservices.technician.data.network.defaultMoshi
 import com.homeservices.technician.data.rating.di.AuthOkHttpClient
 import com.homeservices.technician.domain.availability.TechnicianAvailabilityRepository
 import dagger.Binds
@@ -30,7 +31,7 @@ internal abstract class TechnicianAvailabilityModule {
                 .Builder()
                 .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
                 .client(client)
-                .addConverterFactory(MoshiConverterFactory.create())
+                .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
                 .build()
                 .create(TechnicianAvailabilityApiService::class.java)
     }

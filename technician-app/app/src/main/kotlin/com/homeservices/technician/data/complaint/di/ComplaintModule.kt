@@ -3,6 +3,7 @@ package com.homeservices.technician.data.complaint.di
 import com.homeservices.technician.data.complaint.ComplaintRepository
 import com.homeservices.technician.data.complaint.ComplaintRepositoryImpl
 import com.homeservices.technician.data.complaint.remote.ComplaintApiService
+import com.homeservices.technician.data.network.defaultMoshi
 import com.homeservices.technician.data.rating.di.AuthOkHttpClient
 import dagger.Binds
 import dagger.Module
@@ -33,7 +34,7 @@ public abstract class ComplaintModule {
                 .Builder()
                 .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
                 .client(client)
-                .addConverterFactory(MoshiConverterFactory.create())
+                .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
                 .build()
                 .create(ComplaintApiService::class.java)
     }

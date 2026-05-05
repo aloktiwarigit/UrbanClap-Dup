@@ -1,5 +1,6 @@
 package com.homeservices.technician.data.photo.di
 
+import com.homeservices.technician.data.network.defaultMoshi
 import com.homeservices.technician.data.photo.JobPhotoRepositoryImpl
 import com.homeservices.technician.data.photo.PhotoApiService
 import com.homeservices.technician.domain.photo.JobPhotoRepository
@@ -39,7 +40,7 @@ public abstract class PhotoModule {
                                 level = HttpLoggingInterceptor.Level.BODY
                             },
                         ).build(),
-                ).addConverterFactory(MoshiConverterFactory.create())
+                ).addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
                 .build()
                 .create(PhotoApiService::class.java)
     }

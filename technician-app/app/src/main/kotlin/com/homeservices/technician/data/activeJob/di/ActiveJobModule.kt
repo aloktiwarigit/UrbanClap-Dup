@@ -6,6 +6,7 @@ import com.homeservices.technician.data.activeJob.ActiveJobApiService
 import com.homeservices.technician.data.activeJob.ActiveJobRepositoryImpl
 import com.homeservices.technician.data.activeJob.db.ActiveJobDao
 import com.homeservices.technician.data.activeJob.db.ActiveJobDatabase
+import com.homeservices.technician.data.network.defaultMoshi
 import com.homeservices.technician.domain.activeJob.ActiveJobRepository
 import dagger.Binds
 import dagger.Module
@@ -39,7 +40,7 @@ public abstract class ActiveJobModule {
                 .Builder()
                 .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
                 .client(client)
-                .addConverterFactory(MoshiConverterFactory.create())
+                .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
                 .build()
                 .create(ActiveJobApiService::class.java)
         }

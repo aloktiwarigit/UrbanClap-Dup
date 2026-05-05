@@ -2,6 +2,7 @@ package com.homeservices.technician.data.earnings.di
 
 import com.homeservices.technician.data.earnings.EarningsRepositoryImpl
 import com.homeservices.technician.data.earnings.remote.EarningsApiService
+import com.homeservices.technician.data.network.defaultMoshi
 import com.homeservices.technician.data.rating.di.AuthOkHttpClient
 import com.homeservices.technician.domain.earnings.EarningsRepository
 import dagger.Binds
@@ -30,7 +31,7 @@ public abstract class EarningsModule {
                 .Builder()
                 .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
                 .client(client)
-                .addConverterFactory(MoshiConverterFactory.create())
+                .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
                 .build()
                 .create(EarningsApiService::class.java)
     }

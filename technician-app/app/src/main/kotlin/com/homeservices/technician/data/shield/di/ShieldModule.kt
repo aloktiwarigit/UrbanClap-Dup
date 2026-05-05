@@ -1,5 +1,6 @@
 package com.homeservices.technician.data.shield.di
 
+import com.homeservices.technician.data.network.defaultMoshi
 import com.homeservices.technician.data.rating.di.AuthOkHttpClient
 import com.homeservices.technician.data.shield.ShieldRepositoryImpl
 import com.homeservices.technician.data.shield.remote.ShieldApiService
@@ -32,7 +33,7 @@ public abstract class ShieldModule {
                 .Builder()
                 .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
                 .client(client)
-                .addConverterFactory(MoshiConverterFactory.create())
+                .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
                 .build()
                 .create(ShieldApiService::class.java)
 
