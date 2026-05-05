@@ -209,6 +209,7 @@
     <ID>TooManyFunctions:AuthViewModel.kt$AuthViewModel : ViewModel</ID>
     <ID>TooManyFunctions:ServiceSelectionScreen.kt$com.homeservices.technician.ui.serviceprofile.ServiceSelectionScreen.kt</ID>
     <ID>TooManyFunctions:TechnicianHomeScreen.kt$com.homeservices.technician.ui.home.TechnicianHomeScreen.kt</ID>
+    <ID>UnusedParameter:PiiRedactorTest.kt$PiiRedactorTest$description: String</ID>
     <ID>UnusedPrivateProperty:ActiveJobViewModelTest.kt$ActiveJobViewModelTest$val stateWithPath = (viewModel.uiState.value as? ActiveJobUiState.Active) ?.copy(uploadedStoragePath = "bookings/bk-1/photos/uid/IN_PROGRESS/123.jpg") ?: return@runTest</ID>
     <ID>UseCheckOrError:AcceptJobOfferUseCase.kt$AcceptJobOfferUseCase$throw IllegalStateException("No authenticated user for job offer acceptance")</ID>
   </CurrentIssues>
