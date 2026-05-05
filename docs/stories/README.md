@@ -175,6 +175,20 @@
 
 ---
 
+## E12 — Admin-web Bilingual & Navigation IA
+
+**Epic goal:** Promote admin-web to bilingual EN/HI from MVP; redesign navigation IA to use real icons + localized labels; build missing screens for the Ayodhya ops operator persona.
+
+**ADR:** `docs/adr/0016-admin-web-bilingual-from-mvp.md` (supersedes architecture.md:56 exemption)
+
+| ID | Story | FR / NFR | Notes |
+|---|---|---|---|
+| **E12-S03a** | admin-web i18n infrastructure + locale switcher — next-intl wiring, route migration under `[locale]/`, Noto Devanagari font, `LocaleSwitcher` in Topbar | ADR-0016 | Foundation tier. Unblocks E09-S07 and E12-S03b. Default locale = `hi`. |
+| **E09-S07** | Navigation IA redesign + Tech Roster + Customer list — replace 2-letter rail abbreviations with lucide-react icons + always-visible localized labels; build `/[locale]/technicians` and `/[locale]/customers` screens | FR-7.5, ADR-0016 | Foundation tier. Depends on E12-S03a. |
+| **E12-S03b** | Hindi content population + devanagari visual polish — translate ~300 message keys, INR/date formatting, ICU plurals, typography tuning | ADR-0016 | Feature tier. Depends on E12-S03a + E09-S07. |
+
+---
+
 ## Dependency Graph (which stories must come before which)
 
 ```
@@ -208,6 +222,10 @@ E10-S01 — blocks E05-S02 merge to main (Karnataka test is MVP-gate)
 E10-S02 — independent (Phase 2 reasonable target; soft requirement)
 E10-S03 — independent (can ship after MVP)
 E10-S04 — final integration; blocks public launch
+
+E12-S03a — unblocks E09-S07 and E12-S03b
+E09-S07  — depends on E12-S03a (uses t() and Noto font)
+E12-S03b — depends on E12-S03a + E09-S07 (full string extraction)
 ```
 
 ---
@@ -259,6 +277,7 @@ An epic is "done" when:
 | E08 | ⬜ | ⬜ |
 | E09 | ⬜ | ⬜ |
 | E10 | ⬜ | ⬜ |
+| E12 | ⬜ | ⬜ |
 
 ---
 
