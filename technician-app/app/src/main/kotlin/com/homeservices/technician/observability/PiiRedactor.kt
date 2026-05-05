@@ -17,7 +17,6 @@ import io.sentry.protocol.SentryException
  *   - JWT tokens:             eyJ[A-Za-z0-9_\-]{21,}
  */
 public object PiiRedactor {
-
     private val PHONE_RE = Regex("""\b[6-9]\d{9}\b""")
     private val EMAIL_RE = Regex("""[\w._%+\-]+@[\w.\-]+\.\w{2,}""")
     private val AADHAAR_RE = Regex("""\b\d{4}\s?\d{4}\s?\d{4}\b""")
@@ -25,12 +24,13 @@ public object PiiRedactor {
     private val JWT_RE = Regex("""eyJ[A-Za-z0-9_\-]{21,}""")
 
     /** Redact all PII patterns in a single string. */
-    public fun redact(input: String): String = input
-        .replace(PHONE_RE, "[REDACTED_PHONE]")
-        .replace(EMAIL_RE, "[REDACTED_EMAIL]")
-        .replace(AADHAAR_RE, "[REDACTED_AADHAAR]")
-        .replace(PAN_RE, "[REDACTED_PAN]")
-        .replace(JWT_RE, "[REDACTED_JWT]")
+    public fun redact(input: String): String =
+        input
+            .replace(PHONE_RE, "[REDACTED_PHONE]")
+            .replace(EMAIL_RE, "[REDACTED_EMAIL]")
+            .replace(AADHAAR_RE, "[REDACTED_AADHAAR]")
+            .replace(PAN_RE, "[REDACTED_PAN]")
+            .replace(JWT_RE, "[REDACTED_JWT]")
 
     /**
      * Scrub a [SentryEvent] in place before it is transmitted.
