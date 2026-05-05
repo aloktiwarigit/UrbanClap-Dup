@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { signInWithPopup } from 'firebase/auth';
-import LoginPage from '../app/login/page';
+import LoginPage from '../app/[locale]/login/page';
 
 const pushMock = vi.fn();
 const replaceMock = vi.fn();

@@ -9,7 +9,7 @@ vi.mock('next/headers', () => ({
 const fetchMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
 
-import CataloguePage from '../app/(dashboard)/catalogue/page';
+import CataloguePage from '../app/[locale]/(dashboard)/catalogue/page';
 
 describe('CataloguePage', () => {
   beforeEach(() => fetchMock.mockReset());

@@ -26,7 +26,7 @@ vi.mock('../app/(dashboard)/complaints/ComplaintsClient', () => ({
   },
 }));
 
-import ComplaintsPage from '../app/(dashboard)/complaints/page';
+import ComplaintsPage from '../app/[locale]/(dashboard)/complaints/page';
 
 interface ClientProps {
   initialComplaints: ReadonlyArray<{ id: string }>;
