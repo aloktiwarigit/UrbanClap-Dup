@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test
 public class GrowthBookFeatureFlagsTest {
 
     @Test
-    public fun `truecallerServerVerify returns false when GrowthBook has no features loaded`() {
+    public fun `truecallerServerVerify defaults to false without features`() {
         // SUT constructed without a live SDK fetch — features map is empty.
         val sut = GrowthBookFeatureFlags()
 
