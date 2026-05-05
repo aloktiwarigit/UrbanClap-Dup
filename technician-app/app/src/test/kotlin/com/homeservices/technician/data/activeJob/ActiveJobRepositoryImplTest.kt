@@ -10,6 +10,8 @@ import com.homeservices.technician.domain.activeJob.model.ActiveJob
 import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
 import com.homeservices.technician.domain.activeJob.model.LatLng
 import com.homeservices.technician.domain.location.CurrentLocationProvider
+import com.homeservices.technician.domain.location.LocationFidelity
+import com.homeservices.technician.domain.location.LocationWithFidelity
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -80,7 +82,11 @@ public class ActiveJobRepositoryImplTest {
     @Test
     public fun `transitionStatus includes current GPS when available`(): Unit =
         runTest {
-            coEvery { currentLocationProvider.currentLocation() } returns LatLng(26.8, 82.2)
+            coEvery { currentLocationProvider.currentLocation() } returns
+                LocationWithFidelity(
+                    latLng = LatLng(26.8, 82.2),
+                    fidelity = LocationFidelity(isMock = false, accuracyMetres = 10f),
+                )
             coEvery { api.transitionStatus(any(), any(), any(), any()) } returns Response.success(aResponse("EN_ROUTE"))
 
             repo.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE)
@@ -92,6 +98,33 @@ public class ActiveJobRepositoryImplTest {
                     TransitionRequest(
                         targetStatus = "EN_ROUTE",
                         currentLocation = LatLngDto(lat = 26.8, lng = 82.2),
+                        attestation = LocationAttestationDto(isMock = false, gpsAccuracyM = 10f),
+                    ),
+                    integrityToken = null,
+                )
+            }
+        }
+
+    @Test
+    public fun `transitionStatus includes mock attestation on spoof`(): Unit =
+        runTest {
+            coEvery { currentLocationProvider.currentLocation() } returns
+                LocationWithFidelity(
+                    latLng = LatLng(26.8, 82.2),
+                    fidelity = LocationFidelity(isMock = true, accuracyMetres = 1f),
+                )
+            coEvery { api.transitionStatus(any(), any(), any(), any()) } returns Response.success(aResponse("REACHED"))
+
+            repo.transitionStatus("bk-1", ActiveJobStatus.REACHED)
+
+            coVerify {
+                api.transitionStatus(
+                    "Bearer test-token",
+                    "bk-1",
+                    TransitionRequest(
+                        targetStatus = "REACHED",
+                        currentLocation = LatLngDto(lat = 26.8, lng = 82.2),
+                        attestation = LocationAttestationDto(isMock = true, gpsAccuracyM = 1f),
                     ),
                     integrityToken = null,
                 )

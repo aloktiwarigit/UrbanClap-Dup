@@ -71,16 +71,22 @@ public class ActiveJobRepositoryImpl
                         ?.await()
                         ?.token
                         ?: return Result.failure(IllegalStateException("Not authenticated"))
+                val locationWithFidelity =
+                    runCatching { currentLocationProvider.currentLocation() }.getOrNull()
                 val response =
                     api.transitionStatus(
                         "Bearer $token",
                         bookingId,
                         TransitionRequest(
                             targetStatus = targetStatus.name,
-                            currentLocation =
-                                runCatching { currentLocationProvider.currentLocation() }
-                                    .getOrNull()
-                                    ?.toDto(),
+                            currentLocation = locationWithFidelity?.latLng?.toDto(),
+                            attestation =
+                                locationWithFidelity?.fidelity?.let {
+                                    LocationAttestationDto(
+                                        isMock = it.isMock,
+                                        gpsAccuracyM = it.accuracyMetres,
+                                    )
+                                },
                         ),
                         integrityToken = integrityToken,
                     )

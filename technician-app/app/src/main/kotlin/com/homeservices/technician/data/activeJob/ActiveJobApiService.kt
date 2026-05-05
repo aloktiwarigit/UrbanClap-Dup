@@ -40,7 +40,13 @@ internal data class LatLngDto(
     val lng: Double,
 )
 
+internal data class LocationAttestationDto(
+    val isMock: Boolean,
+    val gpsAccuracyM: Float,
+)
+
 internal data class TransitionRequest(
     val targetStatus: String,
     val currentLocation: LatLngDto? = null,
+    val attestation: LocationAttestationDto? = null,
 )

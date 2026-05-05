@@ -25,6 +25,8 @@ public sealed class ActiveJobUiState {
         val shieldReportInProgress: Boolean = false,
         val shieldReportSuccess: Boolean = false,
         val shieldReportError: String? = null,
+        /** True when the last MARK_REACHED call detected a mock/spoofed GPS location. */
+        val mockLocationWarning: Boolean = false,
     ) : ActiveJobUiState()
 
     public data class Completed(

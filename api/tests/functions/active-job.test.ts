@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { HttpRequest, InvocationContext, type HttpResponseInit } from '@azure/functions';
 
+vi.mock('@sentry/node', () => ({
+  captureMessage: vi.fn(),
+  withScope: vi.fn((cb: (scope: { setLevel: (l: string) => void; setExtras: (e: Record<string, unknown>) => void }) => void) => {
+    cb({ setLevel: vi.fn(), setExtras: vi.fn() });
+  }),
+}));
+
 vi.mock('../../src/middleware/verifyTechnicianToken.js', () => ({
   verifyTechnicianToken: vi.fn(),
 }));
@@ -217,5 +224,72 @@ describe('PATCH /v1/technicians/active-job/:bookingId/transition', () => {
       lng: 77.61,
       etaMinutes: expect.any(Number),
     });
+  });
+
+  it('returns 200 and fires Sentry warning when attestation.isMock is true', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { bookingRepo, updateBookingFields } = await import('../../src/cosmos/booking-repository.js');
+    const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
+    const Sentry = await import('@sentry/node');
+
+    (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+    (bookingRepo.getById as MockFn).mockResolvedValue(aBooking('EN_ROUTE'));
+    (updateBookingFields as MockFn).mockResolvedValue(aBooking('REACHED'));
+    (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue(aService());
+
+    const res = await transitionHandler(
+      makePatchReq('bk-1', {
+        targetStatus: 'REACHED',
+        attestation: { isMock: true, gpsAccuracyM: 1.0 },
+      }),
+      new InvocationContext(),
+    ) as HttpResponseInit;
+
+    // Non-blocking: transition succeeds even with mock GPS
+    expect(res.status).toBe(200);
+    expect(Sentry.captureMessage).toHaveBeenCalledWith('MARK_REACHED with mock location');
+  });
+
+  it('does NOT fire Sentry warning when attestation.isMock is false', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { bookingRepo, updateBookingFields } = await import('../../src/cosmos/booking-repository.js');
+    const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
+    const Sentry = await import('@sentry/node');
+
+    (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+    (bookingRepo.getById as MockFn).mockResolvedValue(aBooking('EN_ROUTE'));
+    (updateBookingFields as MockFn).mockResolvedValue(aBooking('REACHED'));
+    (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue(aService());
+
+    const res = await transitionHandler(
+      makePatchReq('bk-1', {
+        targetStatus: 'REACHED',
+        attestation: { isMock: false, gpsAccuracyM: 10.0 },
+      }),
+      new InvocationContext(),
+    ) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(Sentry.captureMessage).not.toHaveBeenCalled();
+  });
+
+  it('does NOT fire Sentry warning when attestation is absent', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { bookingRepo, updateBookingFields } = await import('../../src/cosmos/booking-repository.js');
+    const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
+    const Sentry = await import('@sentry/node');
+
+    (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+    (bookingRepo.getById as MockFn).mockResolvedValue(aBooking('EN_ROUTE'));
+    (updateBookingFields as MockFn).mockResolvedValue(aBooking('REACHED'));
+    (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue(aService());
+
+    const res = await transitionHandler(
+      makePatchReq('bk-1', { targetStatus: 'REACHED' }),
+      new InvocationContext(),
+    ) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(Sentry.captureMessage).not.toHaveBeenCalled();
   });
 });

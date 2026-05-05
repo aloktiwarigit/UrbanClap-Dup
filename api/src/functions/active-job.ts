@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import { z } from 'zod';
 import { type HttpHandler, type InvocationContext, app } from '@azure/functions';
 import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
@@ -24,6 +25,10 @@ const TransitionBodySchema = z.object({
   currentLocation: z.object({
     lat: z.number().min(-90).max(90),
     lng: z.number().min(-180).max(180),
+  }).optional(),
+  attestation: z.object({
+    isMock: z.boolean(),
+    gpsAccuracyM: z.number(),
   }).optional(),
 });
 
@@ -88,6 +93,16 @@ export const transitionStatusHandler: HttpHandler = async (req, ctx: InvocationC
       status: 409,
       jsonBody: { code: 'ILLEGAL_TRANSITION', from: booking.status, to: body.targetStatus },
     };
+  }
+
+  // Warn in Sentry if the technician's device reported a mock/spoofed GPS fix.
+  // Non-blocking: we allow the transition through and flag for investigation.
+  if (body.attestation?.isMock === true) {
+    Sentry.withScope((scope) => {
+      scope.setLevel('warning');
+      scope.setExtras({ bookingId, technicianId: uid, gpsAccuracyM: body.attestation!.gpsAccuracyM });
+      Sentry.captureMessage('MARK_REACHED with mock location');
+    });
   }
 
   const updated = await updateBookingFields(bookingId, {

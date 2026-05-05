@@ -67,6 +67,7 @@ internal class ActiveJobViewModel
                                 shieldReportInProgress = current?.shieldReportInProgress ?: false,
                                 shieldReportSuccess = current?.shieldReportSuccess ?: false,
                                 shieldReportError = current?.shieldReportError,
+                                mockLocationWarning = current?.mockLocationWarning ?: false,
                             )
                         }
                 }
@@ -96,7 +97,19 @@ internal class ActiveJobViewModel
         }
 
         public fun markReached(): Unit {
-            viewModelScope.launch { markReachedUseCase(bookingId) }
+            viewModelScope.launch {
+                val outcome = markReachedUseCase(bookingId)
+                if (outcome.isMock) {
+                    val current = _uiState.value as? ActiveJobUiState.Active ?: return@launch
+                    _uiState.value = current.copy(mockLocationWarning = true)
+                }
+            }
+        }
+
+        /** Consumes the mock-location warning Snackbar so it is not shown again on recomposition. */
+        public fun consumeMockLocationWarning() {
+            val current = _uiState.value as? ActiveJobUiState.Active ?: return
+            _uiState.value = current.copy(mockLocationWarning = false)
         }
 
         public fun startWork(): Unit {
@@ -179,6 +192,7 @@ internal class ActiveJobViewModel
 
         private fun fireTransition(stage: String) {
             viewModelScope.launch {
+                var isMock = false
                 val transitionResult =
                     when (stage) {
                         "EN_ROUTE" -> {
@@ -186,7 +200,11 @@ internal class ActiveJobViewModel
                             if (r.isSuccess && navEvent != null) _navigationEvents.emit(navEvent)
                             r
                         }
-                        "REACHED" -> markReachedUseCase(bookingId)
+                        "REACHED" -> {
+                            val outcome = markReachedUseCase(bookingId)
+                            isMock = outcome.isMock
+                            outcome.result
+                        }
                         "IN_PROGRESS" -> startWorkUseCase(bookingId)
                         "COMPLETED" -> completeJobUseCase(bookingId)
                         else -> return@launch
@@ -199,6 +217,7 @@ internal class ActiveJobViewModel
                             uploadedStoragePath = null,
                             photoUploadInProgress = false,
                             photoUploadError = null,
+                            mockLocationWarning = isMock,
                         )
                 } else {
                     // Transition failed — keep stage + uploadedStoragePath so user can retry
@@ -207,6 +226,7 @@ internal class ActiveJobViewModel
                         s.copy(
                             photoUploadInProgress = false,
                             photoUploadError = transitionResult.exceptionOrNull()?.message ?: "Transition failed — tap Retry",
+                            mockLocationWarning = isMock,
                         )
                 }
             }
