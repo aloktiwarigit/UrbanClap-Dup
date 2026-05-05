@@ -3,6 +3,7 @@
   <ManuallySuppressedIssues></ManuallySuppressedIssues>
   <CurrentIssues>
     <ID>ComplexCondition:RatingDtos.kt$status == "SUBMITTED" &amp;&amp; overall != null &amp;&amp; subScores != null &amp;&amp; submittedAt != null</ID>
+    <ID>FunctionMaxLength:ActiveJobRepositoryImplTest.kt$ActiveJobRepositoryImplTest$@Test public fun `startObserving no authenticated user — leaves activeJobState null`(): Unit</ID>
     <ID>FunctionMaxLength:ActiveJobRepositoryImplTest.kt$ActiveJobRepositoryImplTest$@Test public fun `syncPendingTransitions deletes entry on 409 — stale transition`(): Unit</ID>
     <ID>FunctionMaxLength:ActiveJobRepositoryImplTest.kt$ActiveJobRepositoryImplTest$@Test public fun `syncPendingTransitions no authenticated user — skips without processing`(): Unit</ID>
     <ID>FunctionMaxLength:ActiveJobRepositoryImplTest.kt$ActiveJobRepositoryImplTest$@Test public fun `syncPendingTransitions retries queued entries in createdAt order`(): Unit</ID>
@@ -43,6 +44,8 @@
     <ID>FunctionMaxLength:FirebaseOtpUseCaseTest.kt$FirebaseOtpUseCaseTest$@Test public fun `signInWithCredential emits General when FirebaseAuth errorCode is unrecognized`(): Unit</ID>
     <ID>FunctionMaxLength:FirebaseOtpUseCaseTest.kt$FirebaseOtpUseCaseTest$@Test public fun `signInWithCredential emits RateLimited when Firebase errorCode is TOO_MANY_REQUESTS`(): Unit</ID>
     <ID>FunctionMaxLength:FirebaseOtpUseCaseTest.kt$FirebaseOtpUseCaseTest$@Test public fun `signInWithCredential emits WrongCode when Firebase throws invalid credentials`(): Unit</ID>
+    <ID>FunctionMaxLength:HomeservicesFcmServiceJobOfferTest.kt$HomeservicesFcmServiceJobOfferTest$@Test public fun `JOB_OFFER with malformed expiresAt — does NOT emit to event bus`()</ID>
+    <ID>FunctionMaxLength:HomeservicesFcmServiceJobOfferTest.kt$HomeservicesFcmServiceJobOfferTest$@Test public fun `JOB_OFFER with missing bookingId — does NOT emit to event bus`()</ID>
     <ID>FunctionMaxLength:JobOfferViewModelTest.kt$JobOfferViewModelTest$@Test public fun `accept transitions to Expired when use case reports booking already taken`(): Unit</ID>
     <ID>FunctionMaxLength:JobOfferViewModelTest.kt$JobOfferViewModelTest$@Test public fun `offer arrives via bus — uiState becomes Offering with correct data and remaining seconds`(): Unit</ID>
     <ID>FunctionMaxLength:KycRepositoryImplTest.kt$KycRepositoryImplTest$@Test public fun `exchangeAadhaarCode returns ApiError when aadhaarVerified is false`(): Unit</ID>
@@ -56,6 +59,9 @@
     <ID>FunctionMaxLength:MainActivityNavTest.kt$MainActivityNavTest$@Test public fun `#138 unknown navigate_to value does not trigger rating navigation`()</ID>
     <ID>FunctionMaxLength:MyRatingsViewModelAppealTest.kt$MyRatingsViewModelAppealTest$@Test public fun `fileRatingAppeal quota exceeded transitions to QuotaExceeded`(): Unit</ID>
     <ID>FunctionMaxLength:MyRatingsViewModelAppealTest.kt$MyRatingsViewModelAppealTest$@Test public fun `fileRatingAppeal success transitions to AppealState Success`(): Unit</ID>
+    <ID>FunctionMaxLength:OutboxSyncWorkerTest.kt$OutboxSyncWorkerTest$@Test public fun `doWork exception at runAttemptCount=0 — returns Result retry`(): Unit</ID>
+    <ID>FunctionMaxLength:OutboxSyncWorkerTest.kt$OutboxSyncWorkerTest$@Test public fun `doWork exception at runAttemptCount=2 — returns Result retry`(): Unit</ID>
+    <ID>FunctionMaxLength:OutboxSyncWorkerTest.kt$OutboxSyncWorkerTest$@Test public fun `doWork exception at runAttemptCount=3 — returns Result failure`(): Unit</ID>
     <ID>FunctionMaxLength:PayoutCadenceViewModelTest.kt$PayoutCadenceViewModelTest$@Test public fun `saveCadence aborts when biometric is available but user cancels`(): Unit</ID>
     <ID>FunctionMaxLength:PayoutCadenceViewModelTest.kt$PayoutCadenceViewModelTest$@Test public fun `saveCadence proceeds when biometric not available (best-effort)`(): Unit</ID>
     <ID>FunctionMaxLength:RatingDtosTest.kt$RatingDtosTest$@Test public fun `toDomain customerSide defaults missing sub-score keys to zero`()</ID>
@@ -102,7 +108,6 @@
     <ID>LongParameterList:ActiveJobViewModel.kt$ActiveJobViewModel$( savedStateHandle: SavedStateHandle, private val repository: ActiveJobRepository, private val startTripUseCase: StartTripUseCase, private val markReachedUseCase: MarkReachedUseCase, private val startWorkUseCase: StartWorkUseCase, private val completeJobUseCase: CompleteJobUseCase, private val connectivityObserver: ConnectivityObserver, private val uploadJobPhotoUseCase: UploadJobPhotoUseCase, private val fileShieldReportUseCase: FileShieldReportUseCase, )</ID>
     <ID>MagicNumber:AcceptJobOfferUseCase.kt$AcceptJobOfferUseCase$410</ID>
     <ID>MagicNumber:ActiveJobRepositoryImpl.kt$ActiveJobRepositoryImpl$409</ID>
-    <ID>MagicNumber:ActiveJobRepositoryImpl.kt$ActiveJobRepositoryImpl$5_000L</ID>
     <ID>MagicNumber:AuthScreen.kt$0xFF1A73E8</ID>
     <ID>MagicNumber:AuthScreen.kt$6</ID>
     <ID>MagicNumber:AvailabilityViewModel.kt$AvailabilityViewModel$6</ID>
@@ -124,6 +129,7 @@
     <ID>MagicNumber:MyRatingsScreen.kt$0.6f</ID>
     <ID>MagicNumber:MyRatingsScreen.kt$5</ID>
     <ID>MagicNumber:MyRatingsScreen.kt$5.0</ID>
+    <ID>MagicNumber:OutboxSyncWorker.kt$OutboxSyncWorker$3</ID>
     <ID>MagicNumber:PhotoUploadUseCase.kt$PhotoUploadUseCase$1024</ID>
     <ID>MagicNumber:PhotoUploadUseCase.kt$PhotoUploadUseCase$80</ID>
     <ID>MagicNumber:RatingAppealSheet.kt$20</ID>
@@ -191,9 +197,11 @@
     <ID>SwallowedException:EmailPasswordUseCase.kt$EmailPasswordUseCase$e: FirebaseAuthWeakPasswordException</ID>
     <ID>SwallowedException:GoogleSignInUseCase.kt$GoogleSignInUseCase$e: GetCredentialCancellationException</ID>
     <ID>SwallowedException:GoogleSignInUseCase.kt$GoogleSignInUseCase$e: NoCredentialException</ID>
+    <ID>SwallowedException:OutboxSyncWorker.kt$OutboxSyncWorker$e: Exception</ID>
     <ID>SwallowedException:TruecallerLoginUseCase.kt$TruecallerLoginUseCase$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ActiveJobRepositoryImpl.kt$ActiveJobRepositoryImpl$e: Exception</ID>
     <ID>TooGenericExceptionCaught:KycRepositoryImpl.kt$KycRepositoryImpl$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:OutboxSyncWorker.kt$OutboxSyncWorker$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ShieldRepositoryImpl.kt$ShieldRepositoryImpl$e: Exception</ID>
     <ID>TooGenericExceptionThrown:AcceptJobOfferUseCase.kt$AcceptJobOfferUseCase$throw RuntimeException("Accept offer failed: HTTP ${response.code()}")</ID>
     <ID>TooManyFunctions:ActiveJobViewModel.kt$ActiveJobViewModel : ViewModel</ID>
