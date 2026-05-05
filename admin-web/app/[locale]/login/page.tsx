@@ -40,7 +40,6 @@ function getSafeNextPathFromUrl(role: AdminRole): string {
 }
 
 function routeTo(path: string): Parameters<ReturnType<typeof useRouter>['push']>[0] {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- typedRoutes:true makes RouteImpl<unknown> non-assignable from string; cast is load-bearing
   return path as Parameters<ReturnType<typeof useRouter>['push']>[0];
 }
 

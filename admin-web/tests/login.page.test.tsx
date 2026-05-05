@@ -12,7 +12,10 @@ vi.mock('firebase/auth', () => ({
   signInWithEmailAndPassword: vi.fn(),
   signInWithPopup: vi.fn(),
 }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: pushMock, replace: replaceMock }) }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: pushMock, replace: replaceMock }),
+  useParams: () => ({ locale: 'hi' }),
+}));
 
 describe('LoginPage', () => {
   beforeEach(() => {

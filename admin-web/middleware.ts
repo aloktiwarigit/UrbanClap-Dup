@@ -1,5 +1,4 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 import createMiddleware from 'next-intl/middleware';
 import {
@@ -200,8 +199,8 @@ export async function middleware(request: NextRequest) {
     return handleI18nRouting(request);
   }
 
-  // 4. API proxy and internal API routes — pass through
-  if (pathname.startsWith('/admin-api/') || pathname.startsWith('/api/')) {
+  // 4. Internal Next.js API routes (/api/) — pass through (no JWT proxy needed)
+  if (pathname.startsWith('/api/')) {
     return NextResponse.next();
   }
 
@@ -236,23 +235,27 @@ export async function middleware(request: NextRequest) {
 
   // 6. Capability check on the locale-stripped raw path
   if (!canAccessAdminPath(access.role, rawPath)) {
-    return redirectToNotAuthorized(request, access.role);
+    const notAuthResponse = redirectToNotAuthorized(request, access.role);
+    if (setCookies.length > 0) appendSetCookies(notAuthResponse, setCookies);
+    return notAuthResponse;
   }
 
   // 7. Auth passed — apply i18n routing (handles locale prefix, NEXT_LOCALE cookie)
-  const i18nResponse = handleI18nRouting(request);
-
-  // 8. Propagate any refreshed access token cookies
   if (setCookies.length > 0) {
+    // Refreshed session: inject updated access token into request headers so
+    // downstream server components receive it, then propagate Set-Cookie headers.
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set(
       'cookie',
       withRequestCookie(request.headers.get('cookie'), ACCESS_COOKIE, access.token),
     );
+    const refreshedRequest = new Request(request, { headers: requestHeaders });
+    const i18nResponse = handleI18nRouting(new NextRequest(refreshedRequest));
     appendSetCookies(i18nResponse, setCookies);
+    return i18nResponse;
   }
 
-  return i18nResponse;
+  return handleI18nRouting(request);
 }
 
 export const config = {

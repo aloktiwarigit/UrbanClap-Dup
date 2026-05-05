@@ -22,7 +22,7 @@ export function getLocaleFromRequest(
   }
 
   const cookie = request.cookies.get('NEXT_LOCALE')?.value;
-  if (cookie && (locales as readonly string[]).includes(cookie)) return cookie;
+  if (cookie && locales.includes(cookie)) return cookie;
 
   return defaultLocale;
 }
