@@ -33,6 +33,7 @@
     <string name="active_job_status_arrived">पहुँच गया</string>
     <string name="active_job_status_working">काम चल रहा है</string>
     <string name="active_job_status_done">पूरा हुआ</string>
+    <string name="mark_reached_mock_location_error">GPS लोकेशन नकली लग रही है। कृपया मॉक लोकेशन ऐप्स बंद करें और दोबारा कोशिश करें।</string>
     <!-- Earnings screen -->
     <string name="earnings_title">कमाई</string>
     <string name="earnings_error">कमाई लोड नहीं हो सकी</string>

@@ -31,6 +31,7 @@
     <string name="active_job_status_arrived">Arrived</string>
     <string name="active_job_status_working">Working</string>
     <string name="active_job_status_done">Done</string>
+    <string name="mark_reached_mock_location_error">GPS location appears to be spoofed. Please disable mock location apps and try again.</string>
     <!-- Earnings screen -->
     <string name="earnings_title">Earnings</string>
     <string name="earnings_error">Could not load earnings</string>
