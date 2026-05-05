@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import com.homeservices.technician.data.activeJob.ConnectivityObserver
 import com.homeservices.technician.domain.activeJob.ActiveJobRepository
 import com.homeservices.technician.domain.activeJob.CompleteJobUseCase
+import com.homeservices.technician.domain.activeJob.MarkReachedOutcome
 import com.homeservices.technician.domain.activeJob.MarkReachedUseCase
 import com.homeservices.technician.domain.activeJob.StartTripUseCase
 import com.homeservices.technician.domain.activeJob.StartWorkUseCase
@@ -438,7 +439,7 @@ public class ActiveJobViewModelTest {
         runTest(testDispatcher) {
             coEvery { uploadJobPhotoUseCase.execute("bk-1", "REACHED", "/cache/p.jpg") } returns
                 Result.success("https://storage/photo.jpg")
-            coEvery { markReachedUseCase("bk-1") } returns Result.success(aJob(ActiveJobStatus.REACHED))
+            coEvery { markReachedUseCase("bk-1") } returns MarkReachedOutcome(Result.success(aJob(ActiveJobStatus.REACHED)), isMock = false)
 
             viewModel.onTransitionRequested("REACHED")
             viewModel.onPhotoConfirmed("/cache/p.jpg")
