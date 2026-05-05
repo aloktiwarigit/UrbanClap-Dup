@@ -1,5 +1,10 @@
 package com.homeservices.technician.data.fcm
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Intent
+import android.os.Build
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.homeservices.technician.data.earnings.EarningsUpdateEventBus
@@ -8,6 +13,7 @@ import com.homeservices.technician.data.rating.RatingPromptEventBus
 import com.homeservices.technician.data.rating.RatingReceivedEventBus
 import com.homeservices.technician.domain.jobOffer.FcmTokenSyncUseCase
 import com.homeservices.technician.domain.jobOffer.model.JobOffer
+import com.homeservices.technician.ui.jobOffer.JobOfferFullScreenActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,8 +25,11 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 public class HomeservicesFcmService : FirebaseMessagingService() {
-    private companion object {
+    public companion object {
+        public const val CHANNEL_DISPATCH_OFFERS: String = "dispatch_offers"
         private const val REQUEST_CODE_RATING = 1001
+        private const val REQUEST_CODE_JOB_OFFER = 1002
+        private const val NOTIFICATION_ID_JOB_OFFER = 3001
     }
 
     @Inject
@@ -41,11 +50,19 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onMessageReceived(message: RemoteMessage): Unit {
-        val data = message.data
+        handleMessageData(message.data)
+    }
+
+    /**
+     * Extracted for testability — processes the FCM data payload without
+     * requiring a live [RemoteMessage].
+     */
+    public fun handleMessageData(data: Map<String, String>) {
         when (data["type"]) {
             "JOB_OFFER" -> {
                 val offer = parseJobOffer(data) ?: return
                 eventBus.tryEmit(offer)
+                showJobOfferNotification(offer)
             }
             "RATING_PROMPT_TECHNICIAN" -> {
                 val bookingId = data["bookingId"] ?: return
@@ -66,6 +83,66 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
                 ratingReceivedEventBus.post()
                 showAppealDecisionNotification(decision, ownerNote)
             }
+        }
+    }
+
+    private fun showJobOfferNotification(offer: JobOffer) {
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        createDispatchOffersChannel(nm)
+
+        val fullScreenIntent =
+            Intent(this, JobOfferFullScreenActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        val fullScreenPi =
+            PendingIntent.getActivity(
+                this,
+                REQUEST_CODE_JOB_OFFER,
+                fullScreenIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+
+        val tapIntent =
+            Intent(this, JobOfferFullScreenActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        val tapPi =
+            PendingIntent.getActivity(
+                this,
+                REQUEST_CODE_JOB_OFFER + 1,
+                tapIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+
+        val amountRs = offer.amountPaise / 100
+        val notification =
+            androidx.core.app.NotificationCompat
+                .Builder(this, CHANNEL_DISPATCH_OFFERS)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle("नया काम आया! ₹$amountRs")
+                .setContentText("${offer.serviceName} — ${offer.addressText}")
+                .setContentIntent(tapPi)
+                .setFullScreenIntent(fullScreenPi, true)
+                .setAutoCancel(true)
+                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+                .setCategory(androidx.core.app.NotificationCompat.CATEGORY_CALL)
+                .build()
+
+        nm.notify(NOTIFICATION_ID_JOB_OFFER, notification)
+    }
+
+    private fun createDispatchOffersChannel(nm: NotificationManager) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val existing = nm.getNotificationChannel(CHANNEL_DISPATCH_OFFERS)
+            if (existing != null) return
+            val channel =
+                NotificationChannel(
+                    CHANNEL_DISPATCH_OFFERS,
+                    "Dispatch Offers",
+                    NotificationManager.IMPORTANCE_HIGH,
+                ).apply {
+                    description = "Incoming job offers for technicians"
+                    setBypassDnd(true)
+                }
+            nm.createNotificationChannel(channel)
         }
     }
 

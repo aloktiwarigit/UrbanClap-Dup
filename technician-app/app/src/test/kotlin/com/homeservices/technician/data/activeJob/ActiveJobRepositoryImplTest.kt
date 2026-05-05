@@ -6,6 +6,7 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GetTokenResult
 import com.homeservices.technician.data.activeJob.db.ActiveJobDao
 import com.homeservices.technician.data.activeJob.db.PendingTransitionEntity
+import com.homeservices.technician.domain.activeJob.model.ActiveJob
 import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
 import com.homeservices.technician.domain.activeJob.model.LatLng
 import com.homeservices.technician.domain.location.CurrentLocationProvider
@@ -13,9 +14,12 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.assertj.core.api.Assertions.assertThat
@@ -23,6 +27,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import retrofit2.Response
 
+@OptIn(ExperimentalCoroutinesApi::class)
 public class ActiveJobRepositoryImplTest {
     private lateinit var api: ActiveJobApiService
     private lateinit var dao: ActiveJobDao
@@ -214,5 +219,82 @@ public class ActiveJobRepositoryImplTest {
             repo.syncPendingTransitions()
 
             coVerify(exactly = 0) { dao.delete(any()) }
+        }
+
+    @Test
+    public fun `startObserving primes activeJobState via one-shot fetch`(): Unit =
+        runTest {
+            coEvery { api.getActiveJob(any(), "bk-1") } returns Response.success(aResponse("ASSIGNED"))
+
+            repo.startObserving("bk-1")
+
+            assertThat(repo.activeJobState.value?.bookingId).isEqualTo("bk-1")
+            assertThat(repo.activeJobState.value?.status).isEqualTo(ActiveJobStatus.ASSIGNED)
+        }
+
+    @Test
+    public fun `startObserving no authenticated user — leaves activeJobState null`(): Unit =
+        runTest {
+            every { firebaseAuth.currentUser } returns null
+
+            repo.startObserving("bk-1")
+
+            assertThat(repo.activeJobState.value).isNull()
+        }
+
+    @Test
+    public fun `updateFromFcm — updates activeJobState immediately`(): Unit =
+        runTest {
+            val job =
+                ActiveJob(
+                    bookingId = "bk-1",
+                    customerId = "c-1",
+                    serviceId = "svc-1",
+                    serviceName = "AC Repair",
+                    addressText = "12 Main St",
+                    addressLatLng = LatLng(12.9, 77.6),
+                    status = ActiveJobStatus.EN_ROUTE,
+                    slotDate = "2026-05-01",
+                    slotWindow = "10:00-12:00",
+                )
+
+            repo.updateFromFcm(job)
+
+            assertThat(repo.activeJobState.value).isEqualTo(job)
+        }
+
+    @Test
+    public fun `getActiveJob emits from activeJobState after updateFromFcm`(): Unit =
+        runTest(UnconfinedTestDispatcher()) {
+            val job =
+                ActiveJob(
+                    bookingId = "bk-1",
+                    customerId = "c-1",
+                    serviceId = "svc-1",
+                    serviceName = "AC Repair",
+                    addressText = "12 Main St",
+                    addressLatLng = LatLng(12.9, 77.6),
+                    status = ActiveJobStatus.EN_ROUTE,
+                    slotDate = "2026-05-01",
+                    slotWindow = "10:00-12:00",
+                )
+
+            var emitted: ActiveJob? = null
+            val collectJob = launch { repo.getActiveJob("bk-1").first { true }.also { emitted = it } }
+
+            repo.updateFromFcm(job)
+            collectJob.join()
+
+            assertThat(emitted).isEqualTo(job)
+        }
+
+    @Test
+    public fun `transitionStatus success — updates activeJobState`(): Unit =
+        runTest {
+            coEvery { api.transitionStatus(any(), any(), any()) } returns Response.success(aResponse("EN_ROUTE"))
+
+            repo.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE)
+
+            assertThat(repo.activeJobState.value?.status).isEqualTo(ActiveJobStatus.EN_ROUTE)
         }
 }

@@ -9,6 +9,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,7 +19,8 @@ public class ConnectivityObserver
     internal constructor(
         @ApplicationContext private val context: Context,
     ) {
-        public val isConnected: Flow<Boolean> =
+        /** Emits `true` on network available, `false` on lost. De-duplicates consecutive identical values. */
+        public val isAvailable: Flow<Boolean> =
             callbackFlow {
                 val manager =
                     context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -39,5 +41,8 @@ public class ConnectivityObserver
                         .build()
                 manager.registerNetworkCallback(request, callback)
                 awaitClose { manager.unregisterNetworkCallback(callback) }
-            }
+            }.distinctUntilChanged()
+
+        /** Alias kept for backward-compatibility with callers using the old name. */
+        public val isConnected: Flow<Boolean> get() = isAvailable
     }

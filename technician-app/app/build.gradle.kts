@@ -309,9 +309,9 @@ kover {
                     "*.ActiveJobDatabase_Impl\$*",
                     "*.ActiveJobDao_Impl",
                     "*.ActiveJobDao_Impl\$*",
-                    // ActiveJobRepositoryImpl.getActiveJob() is a polling flow (while(true) + delay)
-                    // that calls Firebase token + Retrofit. Repository is mocked in all consumer
-                    // tests; the flow lambda itself requires a real network stack to exercise.
+                    // ActiveJobRepositoryImpl.getActiveJob() delegates to StateFlow.filterNotNull().
+                    // The filter lambda is a Kotlin stdlib internal; the repository itself is
+                    // covered by ActiveJobRepositoryImplTest.
                     "*.ActiveJobRepositoryImpl\$getActiveJob\$1",
                     // ActiveJobApiService is an internal Retrofit interface — methods invoked by
                     // the Retrofit runtime, not unit-testable directly.
@@ -421,6 +421,27 @@ kover {
                     // tests using mockk.
                     "*.PayoutCadenceViewModel\$saveCadence\$1",
                     "*.PayoutCadenceViewModel\$saveCadence\$1\$*",
+                    // ActiveJobForegroundService — @AndroidEntryPoint service with field injection;
+                    // foreground notification and WorkManager scheduling are OS-framework calls
+                    // not exercisable in JVM unit tests. Smoke test covers lifecycle.
+                    "*.ActiveJobForegroundService",
+                    "*.ActiveJobForegroundService\$*",
+                    // BootReceiver — goAsync() + Room call in a BroadcastReceiver; requires
+                    // a real Android runtime to exercise properly.
+                    "*.BootReceiver",
+                    "*.BootReceiver\$*",
+                    // JobOfferFullScreenActivity — Compose Activity wrapping JobOfferScreen;
+                    // identical rationale to MainActivity exclusion.
+                    "*.JobOfferFullScreenActivity",
+                    "*.JobOfferFullScreenActivity\$*",
+                    // OutboxSyncWorker is fully covered by OutboxSyncWorkerTest; the
+                    // @HiltWorker-generated factory is excluded here (same as other generated DI).
+                    "*.*_AssistedFactory",
+                    "*.*_AssistedFactory\$*",
+                    // HomeservicesTechnicianApplication.workManagerConfiguration — framework
+                    // Configuration.Provider wiring, tested indirectly via WorkManager integration.
+                    "*.HomeservicesTechnicianApplication",
+                    "*.HomeservicesTechnicianApplication\$*",
                 )
             }
         }
@@ -497,6 +518,11 @@ dependencies {
     implementation(libs.camera.lifecycle)
     implementation(libs.camera.view)
 
+    // WorkManager + Hilt-Worker integration (E11-S04)
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
+
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.jupiter.api)
     testRuntimeOnly(libs.junit.jupiter.engine)
@@ -509,6 +535,7 @@ dependencies {
     testImplementation(libs.hilt.testing)
     testImplementation(libs.kotlinx.coroutines.test)
     kspTest(libs.hilt.compiler)
+    kspTest(libs.androidx.hilt.compiler)
 
     androidTestImplementation(libs.hilt.testing)
     androidTestImplementation(libs.androidx.test.runner)
