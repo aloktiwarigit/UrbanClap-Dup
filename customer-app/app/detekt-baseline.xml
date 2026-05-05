@@ -73,7 +73,9 @@
     <ID>MatchingDeclarationName:AppNavigation.kt$LocaleRoutes</ID>
     <ID>MaxLineLength:ProfileScreen.kt$"आपका नाम, फ़ोन, पता और बुकिंग जानकारी सेवा देने, तकनीशियन असाइन करने, सपोर्ट और सुरक्षा समीक्षा के लिए इस्तेमाल होती है। पता केवल असाइन किए गए तकनीशियन और Owner support के साथ साझा किया जाता है।"</ID>
     <ID>MaxLineLength:TrustDossierCardPaparazziTest.kt$TrustDossierCardPaparazziTest$"HandlerDispatcher IllegalStateException — Coil async handler fires after Paparazzi Looper quits on Loaded state; fix with Coil test dispatcher before recording"</ID>
+    <ID>NestedBlockDepth:SessionPrefsMigrator.kt$SessionPrefsMigrator$internal fun migrateIfNeededInternal( context: Context, newPrefs: SharedPreferences, newPrefsName: String, legacyKeyPresent: Boolean, )</ID>
     <ID>ReturnCount:CustomerFirebaseMessagingService.kt$CustomerFirebaseMessagingService$override fun onMessageReceived(message: RemoteMessage)</ID>
+    <ID>ReturnCount:FirebaseTokenAuthenticator.kt$FirebaseTokenAuthenticator$override fun authenticate( route: Route?, response: Response, ): Request?</ID>
     <ID>SwallowedException:AuthOrchestrator.kt$AuthOrchestrator$e: FirebaseAuthUserCollisionException</ID>
     <ID>SwallowedException:AuthOrchestrator.kt$AuthOrchestrator$e: FirebaseAuthWeakPasswordException</ID>
     <ID>SwallowedException:EmailPasswordUseCase.kt$EmailPasswordUseCase$e: FirebaseAuthInvalidCredentialsException</ID>
@@ -83,11 +85,15 @@
     <ID>SwallowedException:GoogleSignInUseCase.kt$GoogleSignInUseCase$e: GetCredentialCancellationException</ID>
     <ID>SwallowedException:GoogleSignInUseCase.kt$GoogleSignInUseCase$e: NoCredentialException</ID>
     <ID>SwallowedException:TruecallerLoginUseCase.kt$TruecallerLoginUseCase$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:FirebaseTokenAuthenticator.kt$FirebaseTokenAuthenticator$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:IdTokenCache.kt$IdTokenCache$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:SessionPrefsMigrator.kt$SessionPrefsMigrator$e: Exception</ID>
     <ID>TooManyFunctions:AuthOrchestrator.kt$AuthOrchestrator</ID>
     <ID>TooManyFunctions:AuthViewModel.kt$AuthViewModel : ViewModel</ID>
     <ID>TooManyFunctions:CatalogueHomeScreen.kt$com.homeservices.customer.ui.catalogue.CatalogueHomeScreen.kt</ID>
     <ID>TooManyFunctions:RatingViewModel.kt$RatingViewModel : ViewModel</ID>
     <ID>TooManyFunctions:ServiceDetailScreen.kt$com.homeservices.customer.ui.catalogue.ServiceDetailScreen.kt</ID>
+    <ID>UnusedParameter:PiiRedactorTest.kt$PiiRedactorTest$description: String</ID>
     <ID>UnusedPrivateMember:ServiceListScreen.kt$@Composable private fun ServiceImageFallback( name: String, modifier: Modifier = Modifier, )</ID>
   </CurrentIssues>
 </SmellBaseline>
