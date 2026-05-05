@@ -33,4 +33,19 @@ describe('getSafeNextPath', () => {
   it('returns locale-prefixed path for /hi/catalogue/123', () => {
     expect(getSafeNextPath('/hi/catalogue/123', 'super-admin')).toBe('/hi/catalogue/123');
   });
+
+  it('blocks path traversal through allowed segment (security fix)', () => {
+    // /hi/dashboard/../admin-api/setup has `dashboard` as [1] before normalization
+    // but URL.pathname normalization resolves it to /admin-api/setup before validation
+    const result = getSafeNextPath('/hi/dashboard/../admin-api/setup', 'super-admin');
+    expect(result).not.toContain('admin-api');
+    expect(result).toMatch(/^\//);
+  });
+
+  it('strips query string from valid path (security fix)', () => {
+    // Query params in `next` must not be forwarded to prevent param injection
+    const result = getSafeNextPath('/hi/dashboard?injected=1&evil=2', 'super-admin');
+    expect(result).toBe('/hi/dashboard');
+    expect(result).not.toContain('injected');
+  });
 });
