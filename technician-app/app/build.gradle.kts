@@ -553,4 +553,3 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     kspAndroidTest(libs.hilt.compiler)
 }
-
