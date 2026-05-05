@@ -44,7 +44,8 @@ internal fun AppNavigation(
         val current = authState
         when (current) {
             is AuthState.Authenticated -> {
-                navController.navigate("main") {
+                val dest = if (sessionManager.isOnboardingComplete) "home" else "main"
+                navController.navigate(dest) {
                     popUpTo("auth") { inclusive = true }
                     launchSingleTop = true
                 }
@@ -124,7 +125,7 @@ internal fun AppNavigation(
             startDestination = "auth",
         ) {
             authGraph(navController, activity)
-            onboardingGraph(navController)
+            onboardingGraph(navController, sessionManager, scope)
             homeGraph(
                 navController = navController,
                 authState = authState,

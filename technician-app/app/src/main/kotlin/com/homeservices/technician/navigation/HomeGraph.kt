@@ -22,6 +22,7 @@ import com.homeservices.technician.ui.myratings.MyRatingsScreen
 import com.homeservices.technician.ui.payoutsettings.PayoutCadenceScreen
 import com.homeservices.technician.ui.rating.RatingRoutes
 import com.homeservices.technician.ui.rating.RatingScreen
+import com.homeservices.technician.ui.serviceprofile.ServiceSelectionScreen
 
 internal fun NavGraphBuilder.homeGraph(
     navController: NavController,
@@ -35,7 +36,13 @@ internal fun NavGraphBuilder.homeGraph(
                 onOpenJob = { bookingId -> navController.navigate("activeJob/$bookingId") },
                 onViewRatings = { navController.navigate("ratings_transparency") },
                 onPayoutSettings = { navController.navigate("payout_settings") },
+                onEditServices = { navController.navigate("edit_services") },
                 onSignOut = onSignOut,
+            )
+        }
+        composable("edit_services") {
+            ServiceSelectionScreen(
+                onComplete = { navController.popBackStack() },
             )
         }
         composable("payout_settings") {

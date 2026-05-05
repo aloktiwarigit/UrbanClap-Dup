@@ -102,6 +102,7 @@ internal fun TechnicianHomeScreen(
     onOpenJob: (String) -> Unit,
     onViewRatings: () -> Unit,
     onPayoutSettings: () -> Unit,
+    onEditServices: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: TechnicianHomeViewModel = hiltViewModel(),
@@ -185,6 +186,7 @@ internal fun TechnicianHomeScreen(
                         authState = authState,
                         onViewRatings = onViewRatings,
                         onPayoutSettings = onPayoutSettings,
+                        onEditServices = onEditServices,
                         onSignOut = onSignOut,
                     )
             }
@@ -897,6 +899,7 @@ private fun ProfileScreen(
     authState: AuthState,
     onViewRatings: () -> Unit,
     onPayoutSettings: () -> Unit,
+    onEditServices: () -> Unit,
     onSignOut: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -913,6 +916,14 @@ private fun ProfileScreen(
         }
         item {
             ProfileHero(authState = authState)
+        }
+        item {
+            SettingCard(
+                icon = Icons.Default.Tune,
+                title = "My services",
+                subtitle = "Update which services you offer",
+                onClick = onEditServices,
+            )
         }
         item {
             SettingCard(
