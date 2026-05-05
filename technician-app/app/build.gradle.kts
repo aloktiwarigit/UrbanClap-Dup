@@ -426,31 +426,28 @@ kover {
                     // tests using mockk.
                     "*.PayoutCadenceViewModel\$saveCadence\$1",
                     "*.PayoutCadenceViewModel\$saveCadence\$1\$*",
-                    // IntegrityModule — Hilt @Provides DI wiring for Play Integrity SDK setup
+                    // IntegrityModule + IntegrityApiService — Play Integrity SDK DI wiring (E11-S03)
                     "*.domain.integrity.di.*",
-                    // IntegrityApiService — Retrofit interface, methods invoked by Retrofit runtime
                     "*.data.integrity.IntegrityApiService",
-                    // ActiveJobForegroundService — @AndroidEntryPoint service with field injection;
-                    // foreground notification and WorkManager scheduling are OS-framework calls
-                    // not exercisable in JVM unit tests. Smoke test covers lifecycle.
+                    // Foreground service, BootReceiver, JobOfferFullScreenActivity (E11-S04)
                     "*.ActiveJobForegroundService",
                     "*.ActiveJobForegroundService\$*",
-                    // BootReceiver — goAsync() + Room call in a BroadcastReceiver; requires
-                    // a real Android runtime to exercise properly.
                     "*.BootReceiver",
                     "*.BootReceiver\$*",
-                    // JobOfferFullScreenActivity — Compose Activity wrapping JobOfferScreen;
-                    // identical rationale to MainActivity exclusion.
                     "*.JobOfferFullScreenActivity",
                     "*.JobOfferFullScreenActivity\$*",
-                    // OutboxSyncWorker is fully covered by OutboxSyncWorkerTest; the
-                    // @HiltWorker-generated factory is excluded here (same as other generated DI).
                     "*.*_AssistedFactory",
                     "*.*_AssistedFactory\$*",
-                    // HomeservicesTechnicianApplication.workManagerConfiguration — framework
-                    // Configuration.Provider wiring, tested indirectly via WorkManager integration.
                     "*.HomeservicesTechnicianApplication",
                     "*.HomeservicesTechnicianApplication\$*",
+                    // IdTokenCache, FirebaseTokenAuthenticator, SessionPrefsMigrator (E11-S02)
+                    "*.IdTokenCache",
+                    "*.IdTokenCache\$*",
+                    "*.FirebaseTokenAuthenticator",
+                    "*.FirebaseTokenAuthenticator\$*",
+                    "*.SessionPrefsMigrator",
+                    "*.SessionPrefsMigrator\$*",
+                    "*.data.network.auth.di.*",
                 )
             }
         }
@@ -519,6 +516,7 @@ dependencies {
     // KYC networking + serialization
     implementation(libs.retrofit.core)
     implementation(libs.retrofit.moshi)
+    implementation(libs.okhttp.core)
     implementation(libs.okhttp.logging)
     implementation(libs.moshi.kotlin)
     implementation(libs.androidx.browser)
