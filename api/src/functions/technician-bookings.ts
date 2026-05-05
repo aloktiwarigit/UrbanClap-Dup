@@ -47,8 +47,9 @@ export const getMyTechnicianBookingsHandler: HttpHandler = async (
     };
   } catch (err: unknown) {
     Sentry.captureException(err);
-    ctx.error('getMyTechnicianBookings failed', err);
-    return { status: 500, jsonBody: { code: 'INTERNAL_ERROR' } };
+    const detail = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    ctx.error('getMyTechnicianBookings failed', detail);
+    return { status: 500, jsonBody: { code: 'INTERNAL_ERROR', detail } };
   }
 };
 
