@@ -61,6 +61,7 @@ private val AuthHeroStart = Color(0xFF062A20)
 private val AuthHeroEnd = Color(0xFF0B3D2E)
 private const val AUTH_HERO_FRACTION = 0.38f
 private const val AUTH_FORM_FRACTION = 0.65f
+private const val SCROLL_HANDLE_ALPHA = 0.25f
 
 @Composable
 internal fun AuthScreen(
@@ -258,7 +259,7 @@ private fun AuthFrame(
                             .width(40.dp)
                             .height(2.dp)
                             .background(
-                                Color(0xFF0B3D2E).copy(alpha = 0.25f),
+                                Color(0xFF0B3D2E).copy(alpha = SCROLL_HANDLE_ALPHA),
                                 RoundedCornerShape(1.dp),
                             ).align(Alignment.CenterHorizontally),
                 )
