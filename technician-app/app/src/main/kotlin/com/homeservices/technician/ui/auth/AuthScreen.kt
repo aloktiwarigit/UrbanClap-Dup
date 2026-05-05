@@ -259,7 +259,7 @@ private fun AuthFrame(
                             .width(40.dp)
                             .height(2.dp)
                             .background(
-                                Color(0xFF0B3D2E).copy(alpha = SCROLL_HANDLE_ALPHA),
+                                AuthHeroEnd.copy(alpha = SCROLL_HANDLE_ALPHA),
                                 RoundedCornerShape(1.dp),
                             ).align(Alignment.CenterHorizontally),
                 )
