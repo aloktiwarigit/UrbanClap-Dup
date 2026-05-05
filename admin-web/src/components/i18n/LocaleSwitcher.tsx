@@ -18,7 +18,7 @@ export function LocaleSwitcher() {
   function handleChange(newLocale: Locale) {
     if (newLocale === currentLocale) return;
     const search = searchParams.toString();
-    const href = search ? (`${pathname}?${search}` as typeof pathname) : pathname;
+    const href = search ? `${pathname}?${search}` : pathname;
     router.replace(href, { locale: newLocale });
     setAnnouncement(
       newLocale === 'hi' ? 'भाषा बदली — हिन्दी' : 'Language changed to English',
