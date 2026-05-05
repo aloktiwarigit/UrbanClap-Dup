@@ -134,12 +134,13 @@ public class AuthOrchestratorTest {
             every { featureFlags.truecallerServerVerify() } returns false
             coEvery { saveSessionUseCase.saveAnonymousWithPhone("1234") } returns AuthResult.Success(user)
 
-            val success = TruecallerAuthResult.Success(
-                payload = "payload",
-                signature = "sig",
-                signatureAlgorithm = "SHA512withRSA",
-                phoneLastFour = "1234",
-            )
+            val success =
+                TruecallerAuthResult.Success(
+                    payload = "payload",
+                    signature = "sig",
+                    signatureAlgorithm = "SHA512withRSA",
+                    phoneLastFour = "1234",
+                )
             val result = orchestrator.completeWithTruecaller(success)
 
             assertThat(result).isInstanceOf(AuthResult.Success::class.java)
@@ -156,12 +157,13 @@ public class AuthOrchestratorTest {
             } returns Result.success(user)
             coEvery { saveSessionUseCase.save(user, "5678") } returns Unit
 
-            val success = TruecallerAuthResult.Success(
-                payload = "payload-b64",
-                signature = "sig-b64",
-                signatureAlgorithm = "SHA512withRSA",
-                phoneLastFour = "5678",
-            )
+            val success =
+                TruecallerAuthResult.Success(
+                    payload = "payload-b64",
+                    signature = "sig-b64",
+                    signatureAlgorithm = "SHA512withRSA",
+                    phoneLastFour = "5678",
+                )
             val result = orchestrator.completeWithTruecaller(success)
 
             assertThat(result).isInstanceOf(AuthResult.Success::class.java)
@@ -177,12 +179,13 @@ public class AuthOrchestratorTest {
                 verifyTruecallerUseCase.invoke(any(), any(), any())
             } returns Result.failure(Exception("signature invalid"))
 
-            val success = TruecallerAuthResult.Success(
-                payload = "p",
-                signature = "s",
-                signatureAlgorithm = "SHA512withRSA",
-                phoneLastFour = "9999",
-            )
+            val success =
+                TruecallerAuthResult.Success(
+                    payload = "p",
+                    signature = "s",
+                    signatureAlgorithm = "SHA512withRSA",
+                    phoneLastFour = "9999",
+                )
             val result = orchestrator.completeWithTruecaller(success)
 
             assertThat(result).isInstanceOf(AuthResult.Error.General::class.java)
