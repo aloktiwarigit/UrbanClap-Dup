@@ -181,8 +181,7 @@ private fun AuthFrame(
             modifier
                 .fillMaxSize()
                 .background(AuthHeroEnd)
-                .statusBarsPadding()
-                .imePadding(),
+                .statusBarsPadding(),
     ) {
         // Hero zone — fixed top portion with brand identity
         Box(
@@ -190,8 +189,11 @@ private fun AuthFrame(
                 Modifier
                     .fillMaxWidth()
                     .fillMaxHeight(AUTH_HERO_FRACTION)
-                    .background(Brush.verticalGradient(listOf(AuthHeroStart, AuthHeroEnd)))
                     .drawBehind {
+                        drawRect(
+                            brush = Brush.verticalGradient(listOf(AuthHeroStart, AuthHeroEnd)),
+                            size = size,
+                        )
                         drawCircle(
                             color = Color.White.copy(alpha = 0.06f),
                             radius = 140.dp.toPx(),
@@ -244,6 +246,7 @@ private fun AuthFrame(
                     Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
+                        .imePadding()
                         .padding(horizontal = 24.dp)
                         .padding(top = 28.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(spacing.space6),
