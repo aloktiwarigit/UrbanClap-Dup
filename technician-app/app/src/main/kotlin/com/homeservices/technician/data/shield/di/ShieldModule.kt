@@ -13,6 +13,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
+import com.homeservices.technician.data.network.defaultMoshi
 import retrofit2.converter.moshi.MoshiConverterFactory
 import javax.inject.Singleton
 
@@ -32,7 +33,7 @@ public abstract class ShieldModule {
                 .Builder()
                 .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
                 .client(client)
-                .addConverterFactory(MoshiConverterFactory.create())
+                .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
                 .build()
                 .create(ShieldApiService::class.java)
 

@@ -13,6 +13,7 @@ import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
+import com.homeservices.technician.data.network.defaultMoshi
 import retrofit2.converter.moshi.MoshiConverterFactory
 import javax.inject.Qualifier
 import javax.inject.Singleton
@@ -69,7 +70,7 @@ public abstract class RatingModule {
                 .Builder()
                 .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
                 .client(client)
-                .addConverterFactory(MoshiConverterFactory.create())
+                .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
                 .build()
                 .create(RatingApiService::class.java)
     }
