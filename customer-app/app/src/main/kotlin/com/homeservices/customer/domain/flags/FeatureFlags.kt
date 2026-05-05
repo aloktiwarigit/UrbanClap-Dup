@@ -30,14 +30,14 @@ public interface FeatureFlags {
 public class BuildConfigFeatureFlags
     @Inject
     constructor() : FeatureFlags {
-    override fun truecallerServerVerify(): Boolean = TRUECALLER_SERVER_VERIFY_V2_ENABLED
+        override fun truecallerServerVerify(): Boolean = TRUECALLER_SERVER_VERIFY_V2_ENABLED
 
-    private companion object {
-        /**
-         * Set via build.gradle `buildConfigField` when the flag should be hardcoded ON
-         * for testing builds. Production defaults to false; the live value comes from
-         * GrowthBook once E13-S05 wires the GrowthBook FeatureFlags impl.
-         */
-        const val TRUECALLER_SERVER_VERIFY_V2_ENABLED: Boolean = false
+        private companion object {
+            /**
+             * Set via build.gradle `buildConfigField` when the flag should be hardcoded ON
+             * for testing builds. Production defaults to false; the live value comes from
+             * GrowthBook once E13-S05 wires the GrowthBook FeatureFlags impl.
+             */
+            const val TRUECALLER_SERVER_VERIFY_V2_ENABLED: Boolean = false
+        }
     }
-}

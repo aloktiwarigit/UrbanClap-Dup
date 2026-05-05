@@ -87,11 +87,12 @@ public class AuthOrchestrator
         public suspend fun completeWithTruecaller(truecallerSuccess: TruecallerAuthResult.Success): AuthResult {
             if (featureFlags.truecallerServerVerify()) {
                 // Phase 2: server-side RSA verification → Firebase custom token
-                val result = verifyTruecallerUseCase.invoke(
-                    payload = truecallerSuccess.payload,
-                    signature = truecallerSuccess.signature,
-                    signatureAlgorithm = truecallerSuccess.signatureAlgorithm,
-                )
+                val result =
+                    verifyTruecallerUseCase.invoke(
+                        payload = truecallerSuccess.payload,
+                        signature = truecallerSuccess.signature,
+                        signatureAlgorithm = truecallerSuccess.signatureAlgorithm,
+                    )
                 return if (result.isSuccess) {
                     val user = result.getOrThrow()
                     saveSessionUseCase.save(user, truecallerSuccess.phoneLastFour)

@@ -1,6 +1,7 @@
 package com.homeservices.technician.data.rating.di
 
-import com.google.firebase.auth.FirebaseAuth
+import com.homeservices.technician.data.network.auth.FirebaseTokenAuthenticator
+import com.homeservices.technician.data.network.auth.IdTokenCache
 import com.homeservices.technician.data.rating.RatingRepository
 import com.homeservices.technician.data.rating.RatingRepositoryImpl
 import com.homeservices.technician.data.rating.remote.RatingApiService
@@ -9,8 +10,6 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.tasks.await
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -32,19 +31,17 @@ public abstract class RatingModule {
         @Provides
         @Singleton
         @AuthOkHttpClient
-        public fun provideAuthOkHttpClient(): OkHttpClient =
+        public fun provideAuthOkHttpClient(
+            idTokenCache: IdTokenCache,
+            authenticator: FirebaseTokenAuthenticator,
+        ): OkHttpClient =
             OkHttpClient
                 .Builder()
                 .addInterceptor { chain ->
-                    val token =
-                        runBlocking {
-                            FirebaseAuth
-                                .getInstance()
-                                .currentUser
-                                ?.getIdToken(false)
-                                ?.await()
-                                ?.token
-                        }
+                    // Non-blocking: reads the pre-fetched cached token.
+                    // IdTokenCache refreshes every 55 min in the background so
+                    // this read never blocks a dispatcher thread.
+                    val token = idTokenCache.cachedToken
                     val req =
                         if (token != null) {
                             chain
@@ -60,7 +57,8 @@ public abstract class RatingModule {
                     HttpLoggingInterceptor().apply {
                         level = HttpLoggingInterceptor.Level.BODY
                     },
-                ).build()
+                ).authenticator(authenticator)
+                .build()
 
         @Provides
         @Singleton

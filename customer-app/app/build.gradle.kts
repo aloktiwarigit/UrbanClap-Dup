@@ -427,6 +427,16 @@ kover {
                     "*.domain.integrity.di.*",
                     // IntegrityApiService — Retrofit interface, methods invoked by Retrofit runtime
                     "*.data.integrity.IntegrityApiService",
+                    // IdTokenCache — background CoroutineScope refreshLoop (while(true) + delay).
+                    "*.IdTokenCache",
+                    "*.IdTokenCache\$*",
+                    // FirebaseTokenAuthenticator — OkHttp Authenticator using Tasks.await on a worker thread.
+                    "*.FirebaseTokenAuthenticator",
+                    "*.FirebaseTokenAuthenticator\$*",
+                    // SessionPrefsMigrator — object with KeyStore + EncryptedSharedPreferences IO.
+                    "*.SessionPrefsMigrator",
+                    "*.SessionPrefsMigrator\$*",
+                    "*.data.network.auth.di.*",
                 )
             }
         }
