@@ -1,0 +1,36 @@
+import { describe, it, expect } from 'vitest';
+import { getSafeNextPath } from '@/lib/auth/safe-next-path';
+
+describe('getSafeNextPath', () => {
+  it('accepts bare allowed path', () => {
+    expect(getSafeNextPath('/dashboard', 'super-admin')).toBe('/dashboard');
+  });
+
+  it('accepts locale-prefixed allowed path', () => {
+    expect(getSafeNextPath('/hi/dashboard', 'super-admin')).toBe('/hi/dashboard');
+  });
+
+  it('accepts /en/ prefixed path', () => {
+    expect(getSafeNextPath('/en/orders', 'super-admin')).toBe('/en/orders');
+  });
+
+  it('rejects path to /setup (not in ALLOWED_PATHS)', () => {
+    const result = getSafeNextPath('/setup', 'super-admin');
+    expect(result).not.toBe('/setup');
+    expect(result).toMatch(/^\//);
+  });
+
+  it('rejects protocol-relative URLs', () => {
+    const result = getSafeNextPath('//evil.com', 'super-admin');
+    expect(result).not.toContain('evil.com');
+  });
+
+  it('rejects null', () => {
+    const result = getSafeNextPath(null, 'super-admin');
+    expect(result).toMatch(/^\//);
+  });
+
+  it('returns locale-prefixed path for /hi/catalogue/123', () => {
+    expect(getSafeNextPath('/hi/catalogue/123', 'super-admin')).toBe('/hi/catalogue/123');
+  });
+});
