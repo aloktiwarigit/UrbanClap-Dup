@@ -44,7 +44,6 @@ import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTimelineStep
-import com.homeservices.designsystem.components.HsTrustBadge
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
 import com.homeservices.technician.BuildConfig
 import com.homeservices.technician.domain.kyc.model.KycStatus
@@ -157,7 +156,17 @@ private fun KycFrame(
                 modifier = Modifier.padding(start = 28.dp, end = 28.dp, bottom = 28.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                HsTrustBadge(text = eyebrow)
+                Text(
+                    text = eyebrow,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.White.copy(alpha = 0.75f),
+                    modifier =
+                        Modifier
+                            .background(
+                                color = Color.White.copy(alpha = 0.15f),
+                                shape = MaterialTheme.shapes.extraLarge,
+                            ).padding(horizontal = 12.dp, vertical = 4.dp),
+                )
                 Text(
                     text = title,
                     style = MaterialTheme.typography.headlineSmall,
