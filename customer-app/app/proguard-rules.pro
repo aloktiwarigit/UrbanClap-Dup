@@ -47,3 +47,8 @@
 
 # Sentry
 -dontwarn io.sentry.**
+
+# GrowthBook SDK
+-keep class com.sdk.growthbook.** { *; }
+-dontwarn com.sdk.growthbook.**
+

@@ -1,7 +1,7 @@
-package com.homeservices.customer.domain.flags.di
+package com.homeservices.technician.domain.flags.di
 
-import com.homeservices.customer.domain.flags.FeatureFlags
-import com.homeservices.customer.domain.flags.GrowthBookFeatureFlags
+import com.homeservices.technician.domain.flags.FeatureFlags
+import com.homeservices.technician.domain.flags.GrowthBookFeatureFlags
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

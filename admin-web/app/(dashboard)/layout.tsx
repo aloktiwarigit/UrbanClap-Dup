@@ -8,6 +8,7 @@ import { Rail } from '@/components/dashboard/Rail';
 import { Topbar } from '@/components/dashboard/Topbar';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { normalizeAdminRole } from '@/admin/capabilities';
+import { GrowthBookClientProvider } from '@/components/providers/GrowthBookClientProvider';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const jwtSecretEnv = process.env.JWT_SECRET;
@@ -36,21 +37,23 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   return (
-    <AdminAuthProvider initialAuth={initialAuth}>
-      <div
-        style={{
-          display: 'flex',
-          minHeight: '100vh',
-          background: 'var(--ink-0)',
-          fontFamily: 'var(--font-body)',
-        }}
-      >
-        <Rail />
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          <Topbar rightSlot={<ThemeToggle />} />
-          <main style={{ flex: 1, overflow: 'auto' }}>{children}</main>
+    <GrowthBookClientProvider>
+      <AdminAuthProvider initialAuth={initialAuth}>
+        <div
+          style={{
+            display: 'flex',
+            minHeight: '100vh',
+            background: 'var(--ink-0)',
+            fontFamily: 'var(--font-body)',
+          }}
+        >
+          <Rail />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            <Topbar rightSlot={<ThemeToggle />} />
+            <main style={{ flex: 1, overflow: 'auto' }}>{children}</main>
+          </div>
         </div>
-      </div>
-    </AdminAuthProvider>
+      </AdminAuthProvider>
+    </GrowthBookClientProvider>
   );
 }

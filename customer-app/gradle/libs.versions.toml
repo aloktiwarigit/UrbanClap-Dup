@@ -25,6 +25,10 @@ firebaseBom = "33.9.0"
 googleServices = "4.4.2"
 googleIdentity = "1.1.1"
 
+# Feature flags
+growthbook = "7.1.1"
+growthbookOkHttp = "1.0.8"
+
 # Observability
 sentry = "7.17.0"
 
@@ -112,6 +116,10 @@ firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "fir
 firebase-auth-ktx = { module = "com.google.firebase:firebase-auth-ktx" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging-ktx" }
 firebase-storage = { module = "com.google.firebase:firebase-storage" }
+
+# Feature flags
+growthbook-android = { module = "io.growthbook.sdk:GrowthBook", version.ref = "growthbook" }
+growthbook-okhttp = { module = "io.growthbook.sdk:NetworkDispatcherOkHttp", version.ref = "growthbookOkHttp" }
 
 # Observability
 sentry-android = { module = "io.sentry:sentry-android", version.ref = "sentry" }
