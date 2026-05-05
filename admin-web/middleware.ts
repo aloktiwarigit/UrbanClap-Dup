@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
+import createMiddleware from 'next-intl/middleware';
 import {
   canAccessAdminPath,
   defaultPathForRole,
@@ -9,11 +10,15 @@ import {
 import type { AdminRole } from './src/lib/auth/types';
 import { getApiBaseUrl } from './src/lib/apiBase';
 import { getValidatedJwtSecret } from './src/lib/env';
+import { routing } from './src/i18n/config';
+import { stripLocalePrefix, getLocaleFromRequest } from './src/lib/i18n/helpers';
 
 const ACCESS_COOKIE = 'hs_access';
 const REFRESH_COOKIE = 'hs_refresh';
 const LEGACY_PROXY_REFRESH_PATH = '/admin-api/v1/admin/auth/refresh';
 const LEGACY_API_REFRESH_PATH = '/api/v1/admin/auth/refresh';
+
+const handleI18nRouting = createMiddleware(routing);
 
 type VerifiedAccess = {
   token: string;
@@ -24,6 +29,8 @@ type RefreshResult = {
   access: VerifiedAccess;
   setCookies: string[];
 };
+
+// ── Cookie utilities (unchanged from original) ────────────────────────────────
 
 function splitSetCookieHeader(value: string): string[] {
   return value
@@ -54,7 +61,6 @@ function rewriteSetCookie(cookie: string, requestUrl: string): string {
 function extractCookieValue(setCookie: string, name: string): string | null {
   const match = new RegExp(`^${name}=([^;]*)`, 'i').exec(setCookie.trim());
   if (!match) return null;
-
   const rawValue = match[1] ?? '';
   try {
     return decodeURIComponent(rawValue);
@@ -99,8 +105,11 @@ function clearAdminCookies(response: NextResponse): void {
   }
 }
 
+// ── Locale-aware redirect helpers ─────────────────────────────────────────────
+
 function redirectToLogin(request: NextRequest): NextResponse {
-  const loginUrl = new URL('/login', request.url);
+  const locale = getLocaleFromRequest(request, routing.defaultLocale, routing.locales);
+  const loginUrl = new URL(`/${locale}/login`, request.url);
   loginUrl.searchParams.set('next', request.nextUrl.pathname);
   const response = NextResponse.redirect(loginUrl);
   clearAdminCookies(response);
@@ -108,11 +117,15 @@ function redirectToLogin(request: NextRequest): NextResponse {
 }
 
 function redirectToNotAuthorized(request: NextRequest, role: AdminRole): NextResponse {
-  const url = new URL('/not-authorized', request.url);
+  const locale = getLocaleFromRequest(request, routing.defaultLocale, routing.locales);
+  const url = new URL(`/${locale}/not-authorized`, request.url);
   url.searchParams.set('from', request.nextUrl.pathname);
-  url.searchParams.set('next', defaultPathForRole(role));
+  const rawDefault = defaultPathForRole(role);
+  url.searchParams.set('next', `/${locale}${rawDefault}`);
   return NextResponse.redirect(url);
 }
+
+// ── JWT verification (unchanged logic) ───────────────────────────────────────
 
 async function verifyAccessToken(token: string, jwtSecret: Uint8Array): Promise<VerifiedAccess> {
   const { payload } = await jwtVerify(token, jwtSecret);
@@ -124,10 +137,7 @@ async function verifyAccessToken(token: string, jwtSecret: Uint8Array): Promise<
   if (typeof payload.sub !== 'string') throw new Error('invalid subject');
   if (typeof payload['sessionId'] !== 'string') throw new Error('invalid session');
 
-  return {
-    token,
-    role,
-  };
+  return { token, role };
 }
 
 async function refreshAccess(
@@ -167,33 +177,12 @@ async function refreshAccess(
   };
 }
 
-function continueWithAccess(
-  request: NextRequest,
-  access: VerifiedAccess,
-  setCookies: readonly string[] = [],
-): NextResponse {
-  if (!canAccessAdminPath(access.role, request.nextUrl.pathname)) {
-    const response = redirectToNotAuthorized(request, access.role);
-    appendSetCookies(response, setCookies);
-    return response;
-  }
-
-  if (setCookies.length === 0) return NextResponse.next();
-
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set(
-    'cookie',
-    withRequestCookie(request.headers.get('cookie'), ACCESS_COOKIE, access.token),
-  );
-  const response = NextResponse.next({ request: { headers: requestHeaders } });
-  appendSetCookies(response, setCookies);
-  return response;
-}
+// ── Main middleware ───────────────────────────────────────────────────────────
 
 export async function middleware(request: NextRequest) {
-  // Early-return for auth bootstrap paths — middleware must not gate its own
-  // token-refresh calls or the admin-login bootstrap flow.
   const pathname = request.nextUrl.pathname;
+
+  // 1. Auth API bypass — no locale routing, no JWT check
   if (
     pathname.startsWith('/admin-api/v1/admin/auth/refresh') ||
     pathname.startsWith('/admin-api/v1/admin/auth/login') ||
@@ -202,6 +191,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // 2. Strip locale prefix to get the underlying path for capability checks
+  const rawPath = stripLocalePrefix(pathname, routing.locales);
+
+  // 3. Public paths — locale routing only, no JWT required
+  const PUBLIC_PATHS = ['/', '/login', '/setup'];
+  if (PUBLIC_PATHS.some((p) => rawPath === p || rawPath.startsWith(p + '/'))) {
+    return handleI18nRouting(request);
+  }
+
+  // 4. API proxy and internal API routes — pass through
+  if (pathname.startsWith('/admin-api/') || pathname.startsWith('/api/')) {
+    return NextResponse.next();
+  }
+
+  // 5. Protected paths — JWT auth check
   let jwtSecretStr: string;
   try {
     jwtSecretStr = getValidatedJwtSecret();
@@ -212,31 +216,48 @@ export async function middleware(request: NextRequest) {
 
   const token = request.cookies.get(ACCESS_COOKIE)?.value;
 
+  let access: VerifiedAccess | null = null;
+  let setCookies: string[] = [];
+
   try {
     if (token) {
-      return continueWithAccess(request, await verifyAccessToken(token, JWT_SECRET));
+      access = await verifyAccessToken(token, JWT_SECRET);
     }
   } catch {
-    // Fall through to refresh below.
+    // Fall through to token refresh
   }
 
-  const refreshed = await refreshAccess(request, JWT_SECRET);
-  if (!refreshed) return redirectToLogin(request);
+  if (!access) {
+    const refreshed = await refreshAccess(request, JWT_SECRET);
+    if (!refreshed) return redirectToLogin(request);
+    access = refreshed.access;
+    setCookies = refreshed.setCookies;
+  }
 
-  return continueWithAccess(request, refreshed.access, refreshed.setCookies);
+  // 6. Capability check on the locale-stripped raw path
+  if (!canAccessAdminPath(access.role, rawPath)) {
+    return redirectToNotAuthorized(request, access.role);
+  }
+
+  // 7. Auth passed — apply i18n routing (handles locale prefix, NEXT_LOCALE cookie)
+  const i18nResponse = handleI18nRouting(request);
+
+  // 8. Propagate any refreshed access token cookies
+  if (setCookies.length > 0) {
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set(
+      'cookie',
+      withRequestCookie(request.headers.get('cookie'), ACCESS_COOKIE, access.token),
+    );
+    appendSetCookies(i18nResponse, setCookies);
+  }
+
+  return i18nResponse;
 }
 
 export const config = {
   matcher: [
-    '/dashboard/:path*',
-    '/orders/:path*',
-    '/finance/:path*',
-    '/catalogue/:path*',
-    '/complaints/:path*',
-    '/audit-log/:path*',
-    '/admin-users/:path*',
-    '/compliance/:path*',
-    '/not-authorized',
-    '/admin-api/:path*',
+    // Match all paths except Next.js static assets and image optimization
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
