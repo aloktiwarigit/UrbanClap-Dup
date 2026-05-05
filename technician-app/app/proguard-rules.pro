@@ -53,3 +53,7 @@
 # Keepattributes for reflection
 -keepattributes Signature
 -keepattributes *Annotation*
+
+# GrowthBook SDK
+-keep class com.sdk.growthbook.** { *; }
+-dontwarn com.sdk.growthbook.**

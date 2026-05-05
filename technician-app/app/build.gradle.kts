@@ -95,6 +95,11 @@ android {
             "MAPS_API_KEY",
             buildConfigString(mapsApiKey),
         )
+        buildConfigField(
+            "String",
+            "GROWTHBOOK_CLIENT_KEY",
+            "\"${System.getenv("GROWTHBOOK_CLIENT_KEY") ?: ""}\"",
+        )
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
@@ -255,6 +260,15 @@ kover {
                     "*.data.auth.di.*",
                     // Hilt DI module for job offer feature — @Provides methods are framework wiring
                     "*.data.jobOffer.di.*",
+                    // domain.flags.di — FeatureFlagsModule (@Binds), same rationale as other DI modules
+                    "*.domain.flags.di.*",
+                    // BuildConfigFeatureFlags — reads a compile-time constant; no branches to test
+                    "*.BuildConfigFeatureFlags",
+                    // GrowthBookFeatureFlags — SDK construction requires network (OkHttp); the
+                    // unit test covers the safe-off invariant via the no-arg constructor path;
+                    // the refreshAsync() fire-and-forget and SDK init branches need integration tests.
+                    "*.GrowthBookFeatureFlags",
+                    "*.GrowthBookFeatureFlags\$*",
                     // Stub onboarding screen — placeholder Compose composable, no logic
                     "*.ui.onboarding.*",
                     // BiometricGateUseCase.requestAuth requires FragmentActivity + BiometricPrompt
@@ -489,6 +503,8 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
 
     implementation(libs.sentry.android)
+    implementation(libs.growthbook.android)
+    implementation(libs.growthbook.okhttp)
 
     // Firebase (BOM manages all Firebase library versions)
     implementation(platform(libs.firebase.bom))

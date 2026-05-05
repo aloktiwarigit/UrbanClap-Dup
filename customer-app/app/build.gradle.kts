@@ -100,6 +100,11 @@ android {
             "MAPS_API_KEY",
             buildConfigString(mapsApiKey),
         )
+        buildConfigField(
+            "String",
+            "GROWTHBOOK_CLIENT_KEY",
+            "\"${System.getenv("GROWTHBOOK_CLIENT_KEY") ?: ""}\"",
+        )
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
@@ -356,6 +361,11 @@ kover {
                     "*.data.auth.remote.dto.*",
                     // BuildConfigFeatureFlags — reads a compile-time constant; no branches to test
                     "*.BuildConfigFeatureFlags",
+                    // GrowthBookFeatureFlags — SDK construction requires network (OkHttp); the
+                    // unit test covers the safe-off invariant via the no-arg constructor path;
+                    // the refreshAsync() fire-and-forget and SDK init branches need integration tests.
+                    "*.GrowthBookFeatureFlags",
+                    "*.GrowthBookFeatureFlags\$*",
                     // RazorpayPaymentUseCase.open() — uses callbackFlow + Razorpay Checkout SDK which
                     // requires a real Activity; same rationale as FirebaseOtpUseCase (callbackFlow + SDK)
                     "*.RazorpayPaymentUseCase",
@@ -477,6 +487,8 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
 
     implementation(libs.sentry.android)
+    implementation(libs.growthbook.android)
+    implementation(libs.growthbook.okhttp)
 
     // Firebase (BOM manages all Firebase library versions)
     implementation(platform(libs.firebase.bom))
