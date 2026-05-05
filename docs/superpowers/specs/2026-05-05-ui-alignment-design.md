@@ -89,6 +89,11 @@ Box(
 
     // ZONE 2: Form card — bottom FormFraction of screen height
     // FormFraction=0.65f → card starts at 35% from top, hero ends at 38% → 3% overlap (~24dp)
+    //
+    // TWO VARIANTS — chosen at call site:
+    //   scrollable=true  → Column + verticalScroll (auth screens: variable content length)
+    //   scrollable=false → Column + fillMaxSize (OnboardingScreen, FirstLaunchLanguageScreen:
+    //                       fixed-length content; Spacer(weight(1f)) only works in non-scroll Column)
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -98,6 +103,7 @@ Box(
         color = Color.White,
         shadowElevation = 8.dp,
     ) {
+        // scrollable=true variant (auth screens, KYC):
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -106,16 +112,17 @@ Box(
                 .padding(top = 28.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(spacing.space6),
         ) {
-            // Scroll handle indicator (shown only on scrollable states)
-            if (scrollable) {
-                Box(
-                    modifier = Modifier
-                        .width(40.dp).height(2.dp)
-                        .background(BrandGreen.copy(0.25f), RoundedCornerShape(1.dp))
-                        .align(Alignment.CenterHorizontally)
-                )
-                Spacer(Modifier.height(8.dp))
-            }
+            // Scroll handle indicator — shown only in auth screens where EmailEntry
+            // state can exceed the form card height. Omit in KYC, Onboarding, Language.
+            // In the auth AuthHeroFrame, pass showScrollHandle=true always; the handle
+            // is visually subtle enough to be harmless on short-content states.
+            Box(
+                modifier = Modifier
+                    .width(40.dp).height(2.dp)
+                    .background(BrandGreen.copy(0.25f), RoundedCornerShape(1.dp))
+                    .align(Alignment.CenterHorizontally)
+            )
+            Spacer(Modifier.height(8.dp))
 
             // Existing content: eyebrow badge + title + body + HsSectionCard{ content() } + SecurityNote
             Column(verticalArrangement = Arrangement.spacedBy(spacing.space3)) {
@@ -192,7 +199,9 @@ tagline    = "भाषा चुनें"
 subBadge   = null
 ```
 
-Form card interior: existing `LanguagePickerCard` + `Spacer(weight(1f))` + `HsPrimaryButton`. Weight spacer anchors button to bottom of form card.
+Form card interior: existing `LanguagePickerCard` + `Spacer(weight(1f))` + `HsPrimaryButton`.
+
+**Form card uses `scrollable=false` variant** — content is fixed-length (one picker card + one button). `Spacer(Modifier.weight(1f))` works only in a non-scrollable `Column(fillMaxSize)`; it would be zero-height inside a `verticalScroll` column. The weight spacer anchors the button to the bottom of the form card.
 
 ### technician-app `OnboardingScreen`
 
@@ -202,7 +211,9 @@ tagline    = "कमाई शुरू करें"
 subBadge   = "Quick setup · 3 steps"
 ```
 
-Form card interior: existing `HsSectionCard` with `HsTimelineStep` items + `Spacer(weight(1f))` + `HsPrimaryButton`. Existing `Spacer(weight(1f))` is kept — it now correctly anchors the button within the scrollable form card column.
+Form card interior: existing `HsSectionCard` with `HsTimelineStep` items + `Spacer(weight(1f))` + `HsPrimaryButton`.
+
+**Form card uses `scrollable=false` variant** — content is fixed-length (one section card with 3 steps + one button). Same `weight(1f)` constraint applies: the existing `Spacer(Modifier.weight(1f))` correctly anchors the button to the bottom of the form card only when the Column is non-scrollable.
 
 ---
 
