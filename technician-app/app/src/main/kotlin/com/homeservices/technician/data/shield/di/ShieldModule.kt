@@ -1,5 +1,6 @@
 package com.homeservices.technician.data.shield.di
 
+import com.homeservices.technician.data.network.defaultMoshi
 import com.homeservices.technician.data.rating.di.AuthOkHttpClient
 import com.homeservices.technician.data.shield.ShieldRepositoryImpl
 import com.homeservices.technician.data.shield.remote.ShieldApiService
@@ -13,7 +14,6 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
-import com.homeservices.technician.data.network.defaultMoshi
 import retrofit2.converter.moshi.MoshiConverterFactory
 import javax.inject.Singleton
 

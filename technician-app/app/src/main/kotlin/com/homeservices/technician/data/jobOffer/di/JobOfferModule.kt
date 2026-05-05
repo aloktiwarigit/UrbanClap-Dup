@@ -1,6 +1,7 @@
 package com.homeservices.technician.data.jobOffer.di
 
 import com.homeservices.technician.data.jobOffer.JobOfferApiService
+import com.homeservices.technician.data.network.defaultMoshi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -8,7 +9,6 @@ import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
-import com.homeservices.technician.data.network.defaultMoshi
 import retrofit2.converter.moshi.MoshiConverterFactory
 import javax.inject.Singleton
 

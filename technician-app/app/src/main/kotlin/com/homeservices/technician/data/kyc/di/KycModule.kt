@@ -5,6 +5,7 @@ import com.homeservices.technician.data.kyc.FirebaseStorageUploaderImpl
 import com.homeservices.technician.data.kyc.KycApiService
 import com.homeservices.technician.data.kyc.KycRepository
 import com.homeservices.technician.data.kyc.KycRepositoryImpl
+import com.homeservices.technician.data.network.defaultMoshi
 import com.homeservices.technician.domain.kyc.FirebaseStorageUploader
 import dagger.Binds
 import dagger.Module
@@ -14,7 +15,6 @@ import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
-import com.homeservices.technician.data.network.defaultMoshi
 import retrofit2.converter.moshi.MoshiConverterFactory
 import javax.inject.Singleton
 

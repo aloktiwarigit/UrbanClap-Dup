@@ -1,5 +1,6 @@
 package com.homeservices.technician.data.photo.di
 
+import com.homeservices.technician.data.network.defaultMoshi
 import com.homeservices.technician.data.photo.JobPhotoRepositoryImpl
 import com.homeservices.technician.data.photo.PhotoApiService
 import com.homeservices.technician.domain.photo.JobPhotoRepository
@@ -11,7 +12,6 @@ import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
-import com.homeservices.technician.data.network.defaultMoshi
 import retrofit2.converter.moshi.MoshiConverterFactory
 import javax.inject.Singleton
 

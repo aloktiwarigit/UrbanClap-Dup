@@ -2,6 +2,7 @@ package com.homeservices.technician.data.rating.di
 
 import com.homeservices.technician.data.network.auth.FirebaseTokenAuthenticator
 import com.homeservices.technician.data.network.auth.IdTokenCache
+import com.homeservices.technician.data.network.defaultMoshi
 import com.homeservices.technician.data.rating.RatingRepository
 import com.homeservices.technician.data.rating.RatingRepositoryImpl
 import com.homeservices.technician.data.rating.remote.RatingApiService
@@ -13,7 +14,6 @@ import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
-import com.homeservices.technician.data.network.defaultMoshi
 import retrofit2.converter.moshi.MoshiConverterFactory
 import javax.inject.Qualifier
 import javax.inject.Singleton

@@ -2,6 +2,7 @@ package com.homeservices.technician.data.availability.di
 
 import com.homeservices.technician.data.availability.TechnicianAvailabilityRepositoryImpl
 import com.homeservices.technician.data.availability.remote.TechnicianAvailabilityApiService
+import com.homeservices.technician.data.network.defaultMoshi
 import com.homeservices.technician.data.rating.di.AuthOkHttpClient
 import com.homeservices.technician.domain.availability.TechnicianAvailabilityRepository
 import dagger.Binds
@@ -11,7 +12,6 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
-import com.homeservices.technician.data.network.defaultMoshi
 import retrofit2.converter.moshi.MoshiConverterFactory
 import javax.inject.Singleton
 

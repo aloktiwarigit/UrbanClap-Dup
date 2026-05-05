@@ -2,6 +2,7 @@ package com.homeservices.technician.data.earnings.di
 
 import com.homeservices.technician.data.earnings.EarningsRepositoryImpl
 import com.homeservices.technician.data.earnings.remote.EarningsApiService
+import com.homeservices.technician.data.network.defaultMoshi
 import com.homeservices.technician.data.rating.di.AuthOkHttpClient
 import com.homeservices.technician.domain.earnings.EarningsRepository
 import dagger.Binds
@@ -11,7 +12,6 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
-import com.homeservices.technician.data.network.defaultMoshi
 import retrofit2.converter.moshi.MoshiConverterFactory
 import javax.inject.Singleton
 

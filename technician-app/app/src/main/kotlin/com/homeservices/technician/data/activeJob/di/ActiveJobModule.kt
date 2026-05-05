@@ -6,6 +6,7 @@ import com.homeservices.technician.data.activeJob.ActiveJobApiService
 import com.homeservices.technician.data.activeJob.ActiveJobRepositoryImpl
 import com.homeservices.technician.data.activeJob.db.ActiveJobDao
 import com.homeservices.technician.data.activeJob.db.ActiveJobDatabase
+import com.homeservices.technician.data.network.defaultMoshi
 import com.homeservices.technician.domain.activeJob.ActiveJobRepository
 import dagger.Binds
 import dagger.Module
@@ -16,7 +17,6 @@ import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
-import com.homeservices.technician.data.network.defaultMoshi
 import retrofit2.converter.moshi.MoshiConverterFactory
 import javax.inject.Singleton
 
