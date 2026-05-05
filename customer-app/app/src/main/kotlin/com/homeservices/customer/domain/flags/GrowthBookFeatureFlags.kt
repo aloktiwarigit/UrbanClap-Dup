@@ -56,5 +56,5 @@ public class GrowthBookFeatureFlags
         }
 
         override fun truecallerServerVerify(): Boolean =
-            sdk.isOn("truecaller_server_verify_v2")
+            sdk.isOn("truecaller_server_verify_v2") ?: false
     }

@@ -26,6 +26,8 @@ public class GrowthBookFeatureFlagsTest {
         val sut: FeatureFlags = GrowthBookFeatureFlags()
 
         // Interface contract: the result is a Boolean (non-null).
-        assertThat(sut.truecallerServerVerify()).isInstanceOf(Boolean::class.java)
+        // Boolean::class.javaObjectType resolves to java.lang.Boolean (the boxed type),
+        // which is what AssertJ sees at runtime on the JVM.
+        assertThat(sut.truecallerServerVerify()).isInstanceOf(Boolean::class.javaObjectType)
     }
 }
