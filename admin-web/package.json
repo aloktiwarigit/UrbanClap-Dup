@@ -26,6 +26,9 @@
     "openapi:client": "node scripts/openapi-sync.mjs && openapi-typescript src/api/generated/openapi.json -o src/api/generated/schema.d.ts"
   },
   "dependencies": {
+    "@azure/monitor-opentelemetry-exporter": "1.0.0-beta.32",
+    "@opentelemetry/resources": "^1",
+    "@opentelemetry/sdk-node": "^0.57",
     "@growthbook/growthbook-react": "^1",
     "@hello-pangea/dnd": "^18.0.1",
     "@sentry/nextjs": "^8",

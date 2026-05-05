@@ -8,6 +8,7 @@ import { dispatcherService } from '../services/dispatcher.service.js';
 import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
 import { getWebhookEventsContainer } from '../cosmos/client.js';
 import { equalsHexHmac } from '../shared/timing-safe.js';
+import { posthog } from '../observability/posthog.js';
 
 export const razorpayWebhookHandler: HttpHandler = async (req, _ctx) => {
   const secret = process.env['RAZORPAY_WEBHOOK_SECRET'];
@@ -63,6 +64,13 @@ export const razorpayWebhookHandler: HttpHandler = async (req, _ctx) => {
   if (!updated) {
     return { status: 200, jsonBody: { received: true } };
   }
+  try {
+    posthog.capture({
+      distinctId: booking.customerId,
+      event: 'booking-paid',
+      properties: { bookingId: booking.id, paymentId, orderId },
+    });
+  } catch { /* never break the webhook ack */ }
 
   // Event-ID replay defense written AFTER successful markPaid so a transient
   // Cosmos failure before this point does not permanently suppress Razorpay retries.

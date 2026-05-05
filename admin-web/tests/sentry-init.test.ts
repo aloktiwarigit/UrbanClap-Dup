@@ -19,7 +19,7 @@ describe('Sentry server config', () => {
     expect(initSpy).not.toHaveBeenCalled();
   });
 
-  it('calls Sentry.init once with tracesSampleRate 0.1 when SENTRY_DSN is set', async () => {
+  it('calls Sentry.init once with tracesSampleRate 0.1 + beforeSend when SENTRY_DSN is set', async () => {
     process.env.SENTRY_DSN = 'https://abc@o0.ingest.sentry.io/1';
     await import('../src/sentry.server.config');
     expect(initSpy).toHaveBeenCalledTimes(1);
@@ -27,6 +27,7 @@ describe('Sentry server config', () => {
       expect.objectContaining({
         dsn: 'https://abc@o0.ingest.sentry.io/1',
         tracesSampleRate: 0.1,
+        beforeSend: expect.any(Function),
       }),
     );
   });

@@ -15,6 +15,7 @@ import { sendPriceApprovalPush } from '../services/fcm.service.js';
 import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
 import { isSoftLaunchEnabled, isMarketingPaused } from '../services/featureFlags.service.js';
 import { dispatcherService } from '../services/dispatcher.service.js';
+import { posthog } from '../observability/posthog.js';
 
 function makeRazorpayReceipt(customerId: string): string {
   return `bk_${Date.now().toString(36)}_${customerId.slice(0, 20)}`;
@@ -69,6 +70,13 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     );
     const paid = await bookingRepo.markPaid(booking.id, 'cash_on_service_pending');
     if (!paid) return { status: 500, jsonBody: { code: 'BOOKING_CONFIRMATION_FAILED' } };
+    try {
+      posthog.capture({
+        distinctId: customer.customerId,
+        event: 'booking-created',
+        properties: { bookingId: booking.id, serviceId: parsed.data.serviceId, paymentMethod: 'CASH_ON_SERVICE' },
+      });
+    } catch { /* never break the main path */ }
     dispatcherService.triggerDispatch(booking.id).catch((err: unknown) => {
       Sentry.captureException(err);
       console.error('[createBooking] cash-on-service dispatch failed', { bookingId: booking.id, err });
@@ -149,6 +157,13 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     bookingMetadata(customer, service.name),
     preGeneratedBookingId,
   );
+  try {
+    posthog.capture({
+      distinctId: customer.customerId,
+      event: 'booking-created',
+      properties: { bookingId: booking.id, serviceId: parsed.data.serviceId, paymentMethod: 'RAZORPAY' },
+    });
+  } catch { /* never break the main path */ }
   return { status: 201, jsonBody: { bookingId: booking.id, razorpayOrderId: order.id, amount: order.amount, requiresPayment: true, paymentMethod: 'RAZORPAY' } };
 };
 
