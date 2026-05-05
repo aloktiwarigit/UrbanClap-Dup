@@ -19,10 +19,11 @@ export const bookingRepo = {
     paymentOrderId: string,
     amount: number,
     metadata: BookingCreateMetadata = {},
+    bookingId?: string,
   ): Promise<BookingDoc> {
     const paymentMethod = req.paymentMethod ?? 'RAZORPAY';
     const doc: BookingDoc = {
-      id: randomUUID(), customerId, ...req,
+      id: bookingId ?? randomUUID(), customerId, ...req,
       ...(metadata.customerName ? { customerName: metadata.customerName } : {}),
       ...(metadata.customerPhone ? { customerPhone: metadata.customerPhone } : {}),
       ...(metadata.customerEmail ? { customerEmail: metadata.customerEmail } : {}),

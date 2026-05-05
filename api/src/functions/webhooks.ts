@@ -39,7 +39,18 @@ export const razorpayWebhookHandler: HttpHandler = async (req, _ctx) => {
   const orderId = parsed.payload.payment.entity.order_id;
   const paymentId = parsed.payload.payment.entity.id;
 
-  const booking = await bookingRepo.getByPaymentOrderId(orderId);
+  // Fast path: use bookingId embedded in Razorpay order notes for a cheap point-read.
+  // Falls back to cross-partition scan for bookings created before this change.
+  // [ ] Razorpay-live-gate: verify notes.bookingId survives order → payment → webhook round-trip
+  const bookingIdFromNotes = parsed.payload.payment.entity.notes?.['bookingId'];
+  let booking = null;
+  if (bookingIdFromNotes) {
+    booking = await bookingRepo.getById(bookingIdFromNotes);
+  }
+  if (!booking) {
+    booking = await bookingRepo.getByPaymentOrderId(orderId);
+  }
+
   if (!booking) {
     return { status: 200, jsonBody: { received: true } };
   }

@@ -13,7 +13,12 @@ function getRazorpay(): Razorpay {
   return _rzp;
 }
 
-export async function createRazorpayOrder(opts: { amount: number; currency: string; receipt: string }) {
+export async function createRazorpayOrder(opts: {
+  amount: number;
+  currency: string;
+  receipt: string;
+  notes?: Record<string, string>;
+}) {
   const order = await getRazorpay().orders.create(opts);
   return { id: order.id, amount: order.amount, currency: order.currency };
 }

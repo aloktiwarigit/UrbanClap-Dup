@@ -15,7 +15,16 @@ vi.mock('../../../../src/services/totp.service.js', () => ({
   verifyToken: vi.fn(),
 }));
 vi.mock('../../../../src/services/adminSession.service.js', () => ({
-  createAdminSession: vi.fn().mockResolvedValue({ sessionId: 'sess-1' }),
+  createAdminSession: vi.fn().mockResolvedValue({
+    sessionId: 'sess-1',
+    rawRefreshToken: 'raw-refresh-token-1',
+    id: 'sess-1',
+    adminId: 'admin-1',
+    role: 'super-admin',
+    lastActivityAt: new Date().toISOString(),
+    hardExpiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
+    refreshTokenHash: 'hash-placeholder',
+  }),
 }));
 vi.mock('../../../../src/services/jwt.service.js', () => ({
   signAccessToken: vi.fn().mockResolvedValue('access-token'),
