@@ -72,6 +72,9 @@ jobs:
       - name: unit tests + coverage gate
         run: ./gradlew testDebugUnitTest koverVerify
 
+      - name: assemble release (verify R8 + ProGuard)
+        run: ./gradlew assembleRelease
+
       - name: ktlint + detekt + android lint
         run: ./gradlew ktlintCheck detekt lintDebug
 
