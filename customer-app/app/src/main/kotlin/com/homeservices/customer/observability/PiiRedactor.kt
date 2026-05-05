@@ -14,7 +14,7 @@ import io.sentry.protocol.SentryException
  *   - Email addresses:        [\w._%+\-]+@[\w.\-]+\.\w{2,}
  *   - Aadhaar numbers:        \b\d{4}\s?\d{4}\s?\d{4}\b
  *   - PAN card numbers:       \b[A-Z]{5}\d{4}[A-Z]\b
- *   - JWT tokens:             eyJ[A-Za-z0-9_\-]{20,}
+ *   - JWT tokens:             eyJ[A-Za-z0-9_\-]{21,}
  */
 public object PiiRedactor {
 
@@ -22,7 +22,7 @@ public object PiiRedactor {
     private val EMAIL_RE = Regex("""[\w._%+\-]+@[\w.\-]+\.\w{2,}""")
     private val AADHAAR_RE = Regex("""\b\d{4}\s?\d{4}\s?\d{4}\b""")
     private val PAN_RE = Regex("""\b[A-Z]{5}\d{4}[A-Z]\b""")
-    private val JWT_RE = Regex("""eyJ[A-Za-z0-9_\-]{20,}""")
+    private val JWT_RE = Regex("""eyJ[A-Za-z0-9_\-]{21,}""")
 
     /** Redact all PII patterns in a single string. */
     public fun redact(input: String): String = input
