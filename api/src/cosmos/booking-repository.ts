@@ -129,12 +129,16 @@ export const bookingRepo = {
                   AND c.status IN (
                     'ASSIGNED', 'EN_ROUTE', 'REACHED', 'IN_PROGRESS',
                     'AWAITING_PRICE_APPROVAL', 'COMPLETED', 'PAID', 'CLOSED'
-                  )
-                ORDER BY c.slotDate ASC, c.slotWindow ASC`,
+                  )`,
         parameters: [{ name: '@technicianId', value: technicianId }],
       })
       .fetchAll();
-    return resources;
+    // Sort in memory — ORDER BY on a cross-partition (non-PK) query requires
+    // a composite index that isn't provisioned on the bookings container.
+    return resources.sort(
+      (a, b) =>
+        a.slotDate.localeCompare(b.slotDate) || a.slotWindow.localeCompare(b.slotWindow),
+    );
   },
 
   async getByCustomerId(customerId: string): Promise<BookingDoc[]> {
