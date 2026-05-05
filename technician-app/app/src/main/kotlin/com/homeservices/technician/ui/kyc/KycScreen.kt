@@ -5,16 +5,21 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -25,6 +30,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -39,6 +48,11 @@ import com.homeservices.designsystem.components.HsTrustBadge
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
 import com.homeservices.technician.BuildConfig
 import com.homeservices.technician.domain.kyc.model.KycStatus
+
+private val KycHeroStart = Color(0xFF062A20)
+private val KycHeroEnd = Color(0xFF0B3D2E)
+private const val KYC_HERO_FRACTION = 0.32f
+private const val KYC_FORM_FRACTION = 0.70f
 
 @Composable
 internal fun KycScreen(
@@ -108,31 +122,79 @@ private fun KycFrame(
     content: @Composable () -> Unit,
 ) {
     val spacing = LocalHomeservicesSpacing.current
-    Column(
+    Box(
         modifier =
             modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .statusBarsPadding()
-                .padding(spacing.space6),
-        verticalArrangement = Arrangement.Top,
+                .background(KycHeroEnd)
+                .statusBarsPadding(),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(spacing.space3)) {
-            HsTrustBadge(text = eyebrow)
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = body,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        // Hero zone — shows step badge + step title in white
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(KYC_HERO_FRACTION)
+                    .drawBehind {
+                        drawRect(
+                            brush = Brush.verticalGradient(listOf(KycHeroStart, KycHeroEnd)),
+                            size = size,
+                        )
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.06f),
+                            radius = 140.dp.toPx(),
+                            center = Offset(size.width - 80.dp.toPx(), -60.dp.toPx()),
+                        )
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.09f),
+                            radius = 70.dp.toPx(),
+                            center = Offset(40.dp.toPx(), size.height - 20.dp.toPx()),
+                        )
+                    },
+            contentAlignment = Alignment.BottomStart,
+        ) {
+            Column(
+                modifier = Modifier.padding(start = 28.dp, end = 28.dp, bottom = 28.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                HsTrustBadge(text = eyebrow)
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                )
+            }
         }
-        Spacer(modifier = Modifier.height(spacing.space6))
-        HsSectionCard {
-            content()
+
+        // Form card — scrollable (PAN upload content can vary in height)
+        Surface(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .fillMaxHeight(KYC_FORM_FRACTION),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            color = Color.White,
+            shadowElevation = 8.dp,
+        ) {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .imePadding()
+                        .padding(horizontal = 24.dp)
+                        .padding(top = 28.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(spacing.space6),
+            ) {
+                Text(
+                    text = body,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                HsSectionCard { content() }
+            }
         }
     }
 }
@@ -291,19 +353,18 @@ internal fun KycLoadingContent(
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        KycFrame(
-            eyebrow = "Verification",
-            title = message,
-            body = "Keep this screen open while the secure check continues.",
+        Column(
+            modifier = Modifier.padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(text = "Please wait", style = MaterialTheme.typography.bodyMedium)
-            }
+            CircularProgressIndicator()
+            Text(
+                text = message,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }
