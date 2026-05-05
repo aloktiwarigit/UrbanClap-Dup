@@ -40,7 +40,7 @@ function getSafeNextPathFromUrl(role: AdminRole): string {
 }
 
 function routeTo(path: string): Parameters<ReturnType<typeof useRouter>['push']>[0] {
-  return path as Parameters<ReturnType<typeof useRouter>['push']>[0];
+  return path;
 }
 
 function normalizeLoginError(code: string | undefined): string {
