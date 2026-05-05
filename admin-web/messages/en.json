@@ -1,0 +1,25 @@
+{
+  "topbar": {
+    "title": "Operations Observatory",
+    "city": "Ayodhya",
+    "live": "LIVE",
+    "liveLabel": "System status: live"
+  },
+  "nav": {
+    "dashboard": "Live Ops",
+    "orders": "Orders",
+    "finance": "Finance",
+    "catalogue": "Catalogue",
+    "complaints": "Complaints",
+    "auditLog": "Audit Log",
+    "adminUsers": "Admin Users",
+    "compliance": "Compliance"
+  },
+  "locale": {
+    "switcher": {
+      "label": "Language",
+      "en": "English",
+      "hi": "हिन्दी"
+    }
+  }
+}
