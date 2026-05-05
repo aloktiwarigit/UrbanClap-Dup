@@ -97,3 +97,4 @@
     <ID>UnusedPrivateMember:ServiceListScreen.kt$@Composable private fun ServiceImageFallback( name: String, modifier: Modifier = Modifier, )</ID>
   </CurrentIssues>
 </SmellBaseline>
+
