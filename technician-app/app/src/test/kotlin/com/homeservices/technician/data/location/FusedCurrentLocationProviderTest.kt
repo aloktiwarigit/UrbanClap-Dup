@@ -48,18 +48,18 @@ public class FusedCurrentLocationProviderTest {
         unmockkStatic(LocationServices::class)
     }
 
+    @Suppress("DEPRECATION")
     private fun makeLocation(
         lat: Double = 26.8,
         lng: Double = 82.2,
         accuracy: Float = 10f,
         isMock: Boolean = false,
     ): Location {
-        val loc = Location("test")
-        loc.latitude = lat
-        loc.longitude = lng
-        loc.accuracy = accuracy
-        @Suppress("DEPRECATION")
-        loc.isFromMockProvider = isMock
+        val loc = mockk<Location>(relaxed = true)
+        every { loc.latitude } returns lat
+        every { loc.longitude } returns lng
+        every { loc.accuracy } returns accuracy
+        every { loc.isFromMockProvider } returns isMock
         return loc
     }
 
@@ -67,7 +67,7 @@ public class FusedCurrentLocationProviderTest {
     public fun `isMock is false when location is from real GPS`(): Unit =
         runTest {
             val realLocation = makeLocation(isMock = false)
-            every { fusedClient.getCurrentLocation(any(), any()) } returns Tasks.forResult(realLocation)
+            every { fusedClient.getCurrentLocation(any<Int>(), any()) } returns Tasks.forResult(realLocation)
 
             val result = provider.currentLocation()
 
@@ -81,7 +81,7 @@ public class FusedCurrentLocationProviderTest {
     public fun `isMock is true when isFromMockProvider is set on location`(): Unit =
         runTest {
             val mockLocation = makeLocation(accuracy = 1f, isMock = true)
-            every { fusedClient.getCurrentLocation(any(), any()) } returns Tasks.forResult(mockLocation)
+            every { fusedClient.getCurrentLocation(any<Int>(), any()) } returns Tasks.forResult(mockLocation)
 
             val result = provider.currentLocation()
 
@@ -93,7 +93,7 @@ public class FusedCurrentLocationProviderTest {
     @Test
     public fun `returns null when no location is available`(): Unit =
         runTest {
-            every { fusedClient.getCurrentLocation(any(), any()) } returns Tasks.forResult(null)
+            every { fusedClient.getCurrentLocation(any<Int>(), any()) } returns Tasks.forResult(null)
             every { fusedClient.lastLocation } returns Tasks.forResult(null)
 
             val result = provider.currentLocation()
@@ -105,7 +105,7 @@ public class FusedCurrentLocationProviderTest {
     public fun `falls back to lastLocation when getCurrentLocation returns null`(): Unit =
         runTest {
             val lastKnown = makeLocation(lat = 26.9, lng = 82.3, isMock = false)
-            every { fusedClient.getCurrentLocation(any(), any()) } returns Tasks.forResult(null)
+            every { fusedClient.getCurrentLocation(any<Int>(), any()) } returns Tasks.forResult(null)
             every { fusedClient.lastLocation } returns Tasks.forResult(lastKnown)
 
             val result = provider.currentLocation()
@@ -134,7 +134,7 @@ public class FusedCurrentLocationProviderTest {
     public fun `accuracyMetres is correctly propagated from location`(): Unit =
         runTest {
             val loc = makeLocation(accuracy = 25.5f, isMock = false)
-            every { fusedClient.getCurrentLocation(any(), any()) } returns Tasks.forResult(loc)
+            every { fusedClient.getCurrentLocation(any<Int>(), any()) } returns Tasks.forResult(loc)
 
             val result = provider.currentLocation()
 
