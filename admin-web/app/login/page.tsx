@@ -9,6 +9,8 @@ import {
 import { useRouter } from 'next/navigation';
 import { apiUrl } from '@/api/base';
 import { getFirebaseAuth } from '@/lib/auth/firebase';
+import { getSafeNextPath } from '@/lib/auth/safe-next-path';
+import type { AdminRole } from '@/lib/auth/types';
 
 type LoginMethod = 'password' | 'google' | 'mfa';
 
@@ -30,11 +32,10 @@ type MfaChallenge = {
   method: 'google' | 'password';
 };
 
-function getSafeNextPath(): string {
-  if (typeof window === 'undefined') return '/dashboard';
+function getSafeNextPathFromUrl(role: AdminRole): string {
+  if (typeof window === 'undefined') return getSafeNextPath(null, role);
   const next = new URLSearchParams(window.location.search).get('next');
-  if (!next || !next.startsWith('/') || next.startsWith('//')) return '/dashboard';
-  return next;
+  return getSafeNextPath(next, role);
 }
 
 function routeTo(path: string): Parameters<ReturnType<typeof useRouter>['push']>[0] {
@@ -82,7 +83,7 @@ export default function LoginPage() {
           credentials: 'include',
         });
         if (!cancelled && res.ok) {
-          router.replace(routeTo(getSafeNextPath()));
+          router.replace(routeTo(getSafeNextPathFromUrl('super-admin')));
         }
       } catch {
         // Stay on the login form when no valid refresh session is available.
@@ -111,8 +112,10 @@ export default function LoginPage() {
   }
 
   function handleLoginResponse(data: LoginResponse, method: MfaChallenge['method']) {
-    if (data.requiresSetup && data.setupToken) {
-      sessionStorage.setItem('setupToken', data.setupToken);
+    if (data.requiresSetup) {
+      // setupToken is now delivered as an HttpOnly `hs_setup` cookie by the API
+      // server. The client must not write it to sessionStorage. Navigate directly
+      // to /setup and let the exchange endpoint bridge the cookie → token.
       router.push('/setup');
       return;
     }
@@ -129,7 +132,8 @@ export default function LoginPage() {
     }
 
     setChallenge(null);
-    router.push(routeTo(getSafeNextPath()));
+    const role = (data.role ?? 'super-admin') as AdminRole;
+    router.push(routeTo(getSafeNextPathFromUrl(role)));
   }
 
   async function handlePasswordSubmit(e: React.FormEvent) {
