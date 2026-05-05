@@ -1,17 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { POST } from '../app/admin-api/[...path]/route';
 
-const CSRF_TOKEN = 'test-csrf-token-abc123';
-
-// Helper: build a request with matching hs_csrf cookie + x-csrf-token header
-// (satisfies the CSRF double-submit guard added in E12-S06).
+// Helper: build a POST request that passes the Origin allowlist CSRF guard
+// (i.e., either no Origin header, or an Origin matching NEXT_PUBLIC_APP_URL).
 function makePostRequest(url: string, extraHeaders: Record<string, string> = {}, body = '{}'): Request {
   return new Request(url, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      cookie: `hs_csrf=${CSRF_TOKEN}`,
-      'x-csrf-token': CSRF_TOKEN,
+      cookie: 'hs_access=access-token',
       ...extraHeaders,
     },
     body,
@@ -42,7 +39,7 @@ describe('admin API proxy route', () => {
 
     const request = makePostRequest(
       'https://admin.example.test/admin-api/v1/admin/auth/login?debug=1',
-      { cookie: `hs_access=access-token; hs_csrf=${CSRF_TOKEN}` },
+      { cookie: 'hs_access=access-token' },
       JSON.stringify({ idToken: 'firebase-token' }),
     );
 
@@ -107,27 +104,49 @@ describe('admin API proxy route', () => {
     expect(setCookie).not.toContain('Secure');
   });
 
-  it('returns 403 for POST without CSRF tokens', async () => {
-    const request = new Request('http://localhost:3000/admin-api/v1/admin/orders', {
-      method: 'POST',
-      body: '{}',
-    });
-
-    const response = await POST(request, context(['v1', 'admin', 'orders']));
-    expect(response.status).toBe(403);
-  });
-
-  it('returns 403 for POST with mismatched CSRF cookie and header', async () => {
-    const request = new Request('http://localhost:3000/admin-api/v1/admin/orders', {
+  it('returns 403 for POST from a cross-origin Origin', async () => {
+    // Origin allowlist CSRF guard: cross-origin POST must be rejected before
+    // reaching the upstream API — no fetch mock needed.
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://admin.homeservices.app');
+    const request = new Request('https://admin.homeservices.app/admin-api/v1/admin/orders', {
       method: 'POST',
       headers: {
-        cookie: 'hs_csrf=token-a',
-        'x-csrf-token': 'token-b',
+        'content-type': 'application/json',
+        // Simulate a cross-site request by setting a foreign Origin
+        origin: 'https://evil.example.com',
       },
       body: '{}',
     });
 
     const response = await POST(request, context(['v1', 'admin', 'orders']));
     expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({ error: expect.stringContaining('Cross-origin') });
+  });
+
+  it('allows POST from the same origin (no CSRF block)', async () => {
+    // A request from the matching Origin must pass the guard and reach upstream.
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://admin.homeservices.app');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    );
+
+    const request = new Request('https://admin.homeservices.app/admin-api/v1/admin/orders', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        origin: 'https://admin.homeservices.app',
+      },
+      body: '{}',
+    });
+
+    const response = await POST(request, context(['v1', 'admin', 'orders']));
+    expect(response.status).toBe(200);
+    expect(vi.mocked(fetch)).toHaveBeenCalledOnce();
   });
 });

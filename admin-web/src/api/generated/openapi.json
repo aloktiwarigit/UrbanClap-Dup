@@ -23,6 +23,52 @@
   ],
   "components": {
     "schemas": {
+      "TruecallerVerifyRequest": {
+        "type": "object",
+        "properties": {
+          "payload": {
+            "type": "string",
+            "minLength": 1,
+            "example": "base64encodedPayload=="
+          },
+          "signature": {
+            "type": "string",
+            "minLength": 1,
+            "example": "base64encodedSignature=="
+          },
+          "signatureAlgorithm": {
+            "type": "string",
+            "minLength": 1,
+            "example": "SHA512withRSA"
+          },
+          "fcmToken": {
+            "type": "string",
+            "example": "fcm-token-abc123"
+          }
+        },
+        "required": [
+          "payload",
+          "signature",
+          "signatureAlgorithm"
+        ]
+      },
+      "TruecallerVerifyResponse": {
+        "type": "object",
+        "properties": {
+          "firebaseCustomToken": {
+            "type": "string",
+            "example": "eyJhbGci..."
+          },
+          "sessionExpiresAt": {
+            "type": "number",
+            "example": 1700000000000
+          }
+        },
+        "required": [
+          "firebaseCustomToken",
+          "sessionExpiresAt"
+        ]
+      },
       "HealthResponse": {
         "type": "object",
         "properties": {
@@ -1480,6 +1526,40 @@
     "parameters": {}
   },
   "paths": {
+    "/v1/auth/truecaller/verify": {
+      "post": {
+        "operationId": "verifyTruecaller",
+        "tags": [
+          "auth"
+        ],
+        "summary": "Verify Truecaller profile signature and mint Firebase custom token",
+        "description": "Verifies the Truecaller SDK RSA payload/signature against the Truecaller public key API (cached 24h in Cosmos). On success, mints a Firebase custom token for the verified phone number. Called by customer-app when truecaller_server_verify_v2 flag is ON.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TruecallerVerifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signature valid — Firebase custom token issued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TruecallerVerifyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error or invalid signature"
+          }
+        }
+      }
+    },
     "/v1/health": {
       "get": {
         "operationId": "getHealth",
