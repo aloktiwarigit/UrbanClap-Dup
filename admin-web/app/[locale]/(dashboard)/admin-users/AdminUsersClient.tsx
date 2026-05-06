@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useLocale } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { patchAdminUser } from '@/api/adminUsers';
 import { formatDate as intlFormatDate } from '@/lib/format/intl';
 import type { AdminUserListItem } from '@/types/admin-user';
@@ -14,6 +14,7 @@ interface AdminUsersClientProps {
 }
 
 export function AdminUsersClient({ initialUsers }: AdminUsersClientProps) {
+  const t = useTranslations('adminUsers');
   const locale = useLocale();
   const [users, setUsers] = useState(initialUsers);
   const [draftNames, setDraftNames] = useState<Record<string, string>>(() =>
@@ -43,9 +44,9 @@ export function AdminUsersClient({ initialUsers }: AdminUsersClientProps) {
             : user,
         ),
       );
-      setToast({ type: 'success', message: 'Admin user updated.' });
+      setToast({ type: 'success', message: t('toastSuccess') });
     } catch {
-      setToast({ type: 'error', message: 'Admin user update failed.' });
+      setToast({ type: 'error', message: t('toastError') });
     } finally {
       setPendingId(null);
     }
@@ -54,12 +55,12 @@ export function AdminUsersClient({ initialUsers }: AdminUsersClientProps) {
   return (
     <div className="p-[var(--space-6)] space-y-[var(--space-5)]">
       <div>
-        <p className="eyebrow m-0 mb-[var(--space-1)]">Identity and access</p>
+        <p className="eyebrow m-0 mb-[var(--space-1)]">{t('eyebrow')}</p>
         <h1 className="text-[length:var(--text-2xl)] font-bold text-[var(--color-text)]">
-          Admin Users
+          {t('title')}
         </h1>
         <p className="text-sm text-[var(--color-text-muted)] mt-[var(--space-1)]">
-          {activeCount} active of {users.length} admin accounts.
+          {t('subtitle', { activeCount, total: users.length })}
         </p>
       </div>
 
@@ -77,20 +78,18 @@ export function AdminUsersClient({ initialUsers }: AdminUsersClientProps) {
       )}
 
       {users.length === 0 ? (
-        <p className="text-sm text-[var(--color-text-muted)]">
-          No admin users returned by the API.
-        </p>
+        <p className="text-sm text-[var(--color-text-muted)]">{t('emptyState')}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="text-left text-[var(--color-text-muted)] border-b border-[var(--color-border)]">
-                <th className="pb-2 pr-4 font-medium">Admin</th>
-                <th className="pb-2 pr-4 font-medium">Display Name</th>
-                <th className="pb-2 pr-4 font-medium">Role</th>
-                <th className="pb-2 pr-4 font-medium">TOTP</th>
-                <th className="pb-2 pr-4 font-medium">Status</th>
-                <th className="pb-2 font-medium text-right">Actions</th>
+                <th className="pb-2 pr-4 font-medium">{t('columns.admin')}</th>
+                <th className="pb-2 pr-4 font-medium">{t('columns.displayName')}</th>
+                <th className="pb-2 pr-4 font-medium">{t('columns.role')}</th>
+                <th className="pb-2 pr-4 font-medium">{t('columns.totp')}</th>
+                <th className="pb-2 pr-4 font-medium">{t('columns.status')}</th>
+                <th className="pb-2 font-medium text-right">{t('columns.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -103,7 +102,7 @@ export function AdminUsersClient({ initialUsers }: AdminUsersClientProps) {
                       <p className="font-medium text-[var(--color-text)] m-0">{user.email}</p>
                       <p className="font-mono text-xs text-[var(--color-text-muted)] m-0">{user.adminId}</p>
                       <p className="text-xs text-[var(--color-text-muted)] m-0">
-                        Updated {user.updatedAt ? intlFormatDate(user.updatedAt, locale) : '-'}
+                        {t('updatedLabel', { date: user.updatedAt ? intlFormatDate(user.updatedAt, locale) : '-' })}
                       </p>
                     </td>
                     <td className="py-3 pr-4">
@@ -117,7 +116,7 @@ export function AdminUsersClient({ initialUsers }: AdminUsersClientProps) {
                               [user.adminId]: event.target.value,
                             }))
                           }
-                          aria-label={`Display name for ${user.email}`}
+                          aria-label={t('displayNameAriaLabel', { email: user.email })}
                         />
                         <button
                           type="button"
@@ -129,7 +128,7 @@ export function AdminUsersClient({ initialUsers }: AdminUsersClientProps) {
                             })
                           }
                         >
-                          Save
+                          {t('saveButton')}
                         </button>
                       </div>
                     </td>
@@ -141,22 +140,22 @@ export function AdminUsersClient({ initialUsers }: AdminUsersClientProps) {
                         onChange={(event) =>
                           void updateUser(user.adminId, { role: event.target.value as AdminRole })
                         }
-                        aria-label={`Role for ${user.email}`}
+                        aria-label={t('roleAriaLabel', { email: user.email })}
                       >
                         {ROLE_OPTIONS.map((role) => (
                           <option key={role} value={role}>
-                            {role}
+                            {t(`roles.${role}`)}
                           </option>
                         ))}
                       </select>
                     </td>
-                    <td className="py-3 pr-4">{user.totpEnrolled ? 'Enrolled' : 'Pending'}</td>
+                    <td className="py-3 pr-4">{user.totpEnrolled ? t('totpEnrolled') : t('totpPending')}</td>
                     <td className="py-3 pr-4">
                       {isActive ? (
-                        <span className="text-[var(--color-success)] font-medium">Active</span>
+                        <span className="text-[var(--color-success)] font-medium">{t('statusActive')}</span>
                       ) : (
                         <span className="text-[var(--color-danger)] font-medium">
-                          Deactivated {user.deactivatedAt ? intlFormatDate(user.deactivatedAt, locale) : '-'}
+                          {t('statusDeactivated', { date: user.deactivatedAt ? intlFormatDate(user.deactivatedAt, locale) : '-' })}
                         </span>
                       )}
                     </td>
@@ -171,7 +170,7 @@ export function AdminUsersClient({ initialUsers }: AdminUsersClientProps) {
                           })
                         }
                       >
-                        {isActive ? 'Deactivate' : 'Reactivate'}
+                        {isActive ? t('deactivateButton') : t('reactivateButton')}
                       </button>
                     </td>
                   </tr>
