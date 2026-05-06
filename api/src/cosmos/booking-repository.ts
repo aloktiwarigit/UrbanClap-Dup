@@ -135,6 +135,10 @@ export const bookingRepo = {
       .fetchAll();
     // Sort in memory — ORDER BY on a cross-partition (non-PK) query requires
     // a composite index that isn't provisioned on the bookings container.
+    // Sort in-memory after the composite index is provisioned (see
+    // scripts/provision-cosmos-indexes.ts). The index covers [/technicianId,
+    // /slotDate, /slotWindow] so ORDER BY in the query is also valid, but
+    // in-memory sort keeps this function safe even before the first index rebuild.
     return resources.sort(
       (a, b) =>
         a.slotDate.localeCompare(b.slotDate) || a.slotWindow.localeCompare(b.slotWindow),

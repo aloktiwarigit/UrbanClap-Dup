@@ -25,7 +25,8 @@
     "invite:admin": "tsx scripts/invite-admin.ts",
     "seed:technicians": "npx tsx scripts/seed-technicians.ts",
     "seed:catalogue": "tsx src/cosmos/seeds/catalogue.ts",
-    "seed:complaints": "tsx src/cosmos/seeds/complaints.ts"
+    "seed:complaints": "tsx src/cosmos/seeds/complaints.ts",
+    "provision:indexes": "tsx scripts/provision-cosmos-indexes.ts"
   },
   "dependencies": {
     "@azure/monitor-opentelemetry-exporter": "1.0.0-beta.32",
