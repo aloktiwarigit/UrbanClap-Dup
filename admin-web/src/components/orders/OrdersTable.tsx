@@ -1,6 +1,7 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
+import { formatINR, formatDateTime } from '@/lib/format/intl';
 import type { Order } from '@/types/order';
 import { StatusBadge } from './StatusBadge';
 
@@ -15,18 +16,11 @@ interface OrdersTableProps {
   onPageChange: (p: number) => void;
 }
 
-function formatAmount(paise: number): string {
-  return `₹${(paise / 100).toLocaleString('en-IN')}`;
-}
-
-function formatScheduled(iso: string): string {
-  return new Date(iso).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
-}
-
 export function OrdersTable({ orders, total, page, pageSize, totalPages, isLoading, onRowClick, onPageChange }: OrdersTableProps) {
   void pageSize;
   void isLoading;
   const t = useTranslations('orders');
+  const locale = useLocale();
   const columns = [
     t('table.columns.orderId'),
     t('table.columns.customer'),
@@ -60,8 +54,8 @@ export function OrdersTable({ orders, total, page, pageSize, totalPages, isLoadi
                 <td className="px-4 py-3">{order.technicianName ?? '—'}</td>
                 <td className="px-4 py-3"><StatusBadge status={order.status} /></td>
                 <td className="px-4 py-3">{order.city}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{formatScheduled(order.scheduledAt)}</td>
-                <td className="px-4 py-3 font-medium">{formatAmount(order.amount)}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{formatDateTime(order.scheduledAt, locale)}</td>
+                <td className="px-4 py-3 font-medium">{formatINR(order.amount, locale)}</td>
                 <td className="px-4 py-3 text-[var(--marigold)]">{t('table.viewAction')}</td>
               </tr>
             ))}

@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { OrderSlideOver } from '../src/components/orders/OrderSlideOver';
 
 vi.mock('next-intl', () => ({
+  useLocale: () => 'en',
   useTranslations: () => (key: string, params?: Record<string, unknown>) => {
     const map: Record<string, string> = {
       'detail.title': params?.orderId ? `Order ${params.orderId}` : 'Order',
@@ -85,9 +86,10 @@ describe('OrderSlideOver', () => {
     expect(screen.getByText('Rajesh Kumar')).toBeDefined();
   });
 
-  it('renders formatted amount', () => {
+  it('renders formatted amount via locale-aware formatINR', () => {
     render(<OrderSlideOver order={order} onClose={vi.fn()} />);
-    expect(screen.getByText('₹799')).toBeDefined();
+    // formatINR(79900, 'en') → "₹799.00" (Intl currency adds 2-decimal precision).
+    expect(screen.getByText(/₹\s?799/)).toBeDefined();
   });
 
   it('close button calls onClose', () => {

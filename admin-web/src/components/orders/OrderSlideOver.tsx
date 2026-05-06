@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
+import { formatINR, formatDateTime } from '@/lib/format/intl';
 import type { Order } from '@/types/order';
 import { StatusBadge } from './StatusBadge';
 import { OverridePanel } from './OverridePanel';
@@ -16,15 +17,6 @@ interface OrderSlideOverProps {
 
 type Toast = { message: string; type: 'success' | 'error' };
 
-function formatAmount(paise: number): string {
-  const inr = paise / 100;
-  return `₹${inr.toLocaleString('en-IN')}`;
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
-}
-
 export function OrderSlideOver({
   order,
   onClose,
@@ -33,6 +25,7 @@ export function OrderSlideOver({
   canFinancialOverride,
 }: OrderSlideOverProps) {
   const t = useTranslations('orders');
+  const locale = useLocale();
   const [currentOrder, setCurrentOrder] = useState<Order>(order);
   const [toast, setToast] = useState<Toast | null>(null);
 
@@ -55,9 +48,9 @@ export function OrderSlideOver({
           </section>
           <section><h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.service')}</h3><p>{currentOrder.serviceName ?? '—'}</p></section>
           <section><h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.location')}</h3><p>{currentOrder.city}</p></section>
-          <section><h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.scheduled')}</h3><p>{formatDate(currentOrder.scheduledAt)}</p></section>
-          <section><h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.payment')}</h3><p className="text-lg font-semibold">{formatAmount(currentOrder.amount)}</p></section>
-          <section><h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.created')}</h3><p>{formatDate(currentOrder.createdAt)}</p></section>
+          <section><h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.scheduled')}</h3><p>{formatDateTime(currentOrder.scheduledAt, locale)}</p></section>
+          <section><h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.payment')}</h3><p className="text-lg font-semibold">{formatINR(currentOrder.amount, locale)}</p></section>
+          <section><h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.created')}</h3><p>{formatDateTime(currentOrder.createdAt, locale)}</p></section>
 
           {toast && (
             <p role="status" className={`alert ${toast.type === 'success' ? 'alert-success' : 'alert-danger'}`}>

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
+import { formatDateTime } from '@/lib/format/intl';
 import type { Complaint, ComplaintStatus, ComplaintResolutionCategory } from '@/types/complaint';
 
 interface ComplaintSlideOverProps {
@@ -25,14 +26,6 @@ const RESOLUTION_CATEGORIES: ComplaintResolutionCategory[] = [
 // RESOLVED is excluded — use the resolve section below to supply the required resolutionCategory.
 const STATUS_OPTIONS: ComplaintStatus[] = ['NEW', 'INVESTIGATING'];
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString('en-IN', {
-    timeZone: 'Asia/Kolkata',
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
-}
-
 export function ComplaintSlideOver({
   complaint,
   onClose,
@@ -42,6 +35,7 @@ export function ComplaintSlideOver({
   onReassign,
 }: ComplaintSlideOverProps) {
   const t = useTranslations('complaints');
+  const locale = useLocale();
   const [noteText, setNoteText] = useState('');
   const [resolutionCategory, setResolutionCategory] = useState<ComplaintResolutionCategory>('OTHER');
   const [reassignInput, setReassignInput] = useState(complaint.assigneeAdminId ?? '');
@@ -149,7 +143,7 @@ export function ComplaintSlideOver({
                   <li key={i} className="bg-gray-50 rounded p-2">
                     <p className="text-gray-700">{n.note}</p>
                     <p className="text-xs text-gray-400 mt-0.5 font-mono">
-                      {n.adminId} &middot; {formatDate(n.createdAt)}
+                      {n.adminId} &middot; {formatDateTime(n.createdAt, locale)}
                     </p>
                   </li>
                 ))}
