@@ -74,6 +74,13 @@ export const ADMIN_NAV_ITEMS = [
   { label: 'Customers',   href: '/customers',     icon: 'users-2',                capability: 'customers.manage' },
 ] as const satisfies readonly AdminNavItem[];
 
+/**
+ * hrefs that are hidden from the primary rail but remain directly linkable
+ * (capability + route guard intact). Use this to declutter without losing
+ * access — e.g., audit log is reached via deep links from other surfaces.
+ */
+export const PRIMARY_NAV_HIDDEN = new Set<string>(['/audit-log']);
+
 interface RouteCapability {
   prefix: string;
   capability: Capability | null;
@@ -129,7 +136,9 @@ export function hasAllCapabilities(
 }
 
 export function navItemsForRole(role: AdminRole | null | undefined): readonly AdminNavItem[] {
-  return ADMIN_NAV_ITEMS.filter((item) => hasCapability(role, item.capability));
+  return ADMIN_NAV_ITEMS.filter(
+    (item) => hasCapability(role, item.capability) && !PRIMARY_NAV_HIDDEN.has(item.href),
+  );
 }
 
 export function defaultPathForRole(role: AdminRole | null | undefined): string {

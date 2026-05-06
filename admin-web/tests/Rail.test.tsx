@@ -40,13 +40,20 @@ function renderRail(role: AdminRole) {
 }
 
 describe('Rail capability filtering', () => {
-  it('shows super-admin enterprise nav items', () => {
+  it('hides Audit Log from primary nav for super-admin (route still reachable directly)', () => {
     pathname = '/dashboard';
     renderRail('super-admin');
-    // Rail now renders visible text labels (not aria-label attributes)
-    expect(screen.getAllByText('Audit Log').length).toBeGreaterThan(0);
+    // Audit Log no longer appears in the rail — operators reach it via deep link or
+    // the capability-gated entry point we keep around for future surfacing.
+    expect(screen.queryByText('Audit Log')).not.toBeInTheDocument();
+    // Other super-admin nav items still present
     expect(screen.getAllByText('Admin Users').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Compliance').length).toBeGreaterThan(0);
+  });
+
+  it('still grants super-admin the audit.read capability for /audit-log route', async () => {
+    const { canAccessAdminPath } = await import('../src/admin/capabilities');
+    expect(canAccessAdminPath('super-admin', '/audit-log')).toBe(true);
   });
 
   it('hides super-admin-only nav from ops-manager', () => {
