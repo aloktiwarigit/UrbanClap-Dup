@@ -202,7 +202,15 @@
       }
     },
     "filters": {
-      "status": { "label": "Status" },
+      "status": {
+        "label": "Status",
+        "buttonAllSelected": "All statuses",
+        "buttonNoneSelected": "No status filter",
+        "buttonNSelected": "{count, plural, one {# status} other {# statuses}}",
+        "applyButton": "Apply",
+        "clearButton": "Clear all",
+        "menuLabel": "Filter by status"
+      },
       "city": { "placeholder": "City" },
       "phone": { "placeholder": "Phone" },
       "technicianId": { "placeholder": "Technician ID" },

@@ -202,7 +202,15 @@
       }
     },
     "filters": {
-      "status": { "label": "स्थिति" },
+      "status": {
+        "label": "स्थिति",
+        "buttonAllSelected": "सभी स्थितियाँ",
+        "buttonNoneSelected": "कोई स्थिति फ़िल्टर नहीं",
+        "buttonNSelected": "{count, plural, one {# स्थिति} other {# स्थितियाँ}}",
+        "applyButton": "लागू करें",
+        "clearButton": "सब हटाएँ",
+        "menuLabel": "स्थिति के अनुसार फ़िल्टर करें"
+      },
       "city": { "placeholder": "शहर" },
       "phone": { "placeholder": "फ़ोन" },
       "technicianId": { "placeholder": "तकनीशियन ID" },
