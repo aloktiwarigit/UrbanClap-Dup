@@ -34,8 +34,15 @@ export const getMyTechnicianBookingsHandler: HttpHandler = async (
     const serviceNames = new Map<string, string>();
     await Promise.all(
       [...new Set(bookings.map((booking) => booking.serviceId))].map(async (serviceId) => {
-        const service = await catalogueRepo.getServiceByIdCrossPartition(serviceId);
-        serviceNames.set(serviceId, service?.name ?? serviceId);
+        try {
+          const service = await catalogueRepo.getServiceByIdCrossPartition(serviceId);
+          if (service?.name) {
+            serviceNames.set(serviceId, service.name);
+          }
+        } catch (catalogueErr: unknown) {
+          Sentry.captureException(catalogueErr);
+          ctx.warn(`getServiceByIdCrossPartition failed for ${serviceId}; using booking fallback`);
+        }
       }),
     );
 
@@ -46,7 +53,7 @@ export const getMyTechnicianBookingsHandler: HttpHandler = async (
           bookingId: booking.id,
           customerId: booking.customerId,
           serviceId: booking.serviceId,
-          serviceName: serviceNames.get(booking.serviceId) ?? booking.serviceId,
+          serviceName: serviceNames.get(booking.serviceId) ?? booking.serviceName ?? booking.serviceId,
           addressText: booking.addressText,
           addressLatLng: booking.addressLatLng,
           status: booking.status,

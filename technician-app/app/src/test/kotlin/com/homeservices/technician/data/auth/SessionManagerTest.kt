@@ -47,13 +47,33 @@ public class SessionManagerTest {
         }
 
     @Test
-    public fun `clearSession removes all prefs and transitions to Unauthenticated`(): Unit =
+    @Suppress("FunctionMaxLength")
+    public fun `clearSession removes active session prefs and transitions to Unauthenticated`(): Unit =
         runTest {
             sessionManager.saveSession("uid-abc", "5678")
             sessionManager.clearSession()
 
             assertThat(sessionManager.authState.value).isEqualTo(AuthState.Unauthenticated)
             assertThat(prefs.getString("uid", null)).isNull()
+        }
+
+    @Test
+    @Suppress("FunctionMaxLength")
+    public fun `onboarding completion survives sign out for same technician only`(): Unit =
+        runTest {
+            sessionManager.saveSession("uid-abc", "5678")
+            sessionManager.setOnboardingComplete()
+            assertThat(sessionManager.isOnboardingComplete).isTrue()
+
+            sessionManager.clearSession()
+            sessionManager.saveSession("uid-abc", "5678")
+
+            assertThat(sessionManager.isOnboardingComplete).isTrue()
+
+            sessionManager.clearSession()
+            sessionManager.saveSession("uid-other", "1111")
+
+            assertThat(sessionManager.isOnboardingComplete).isFalse()
         }
 
     @Test

@@ -666,7 +666,7 @@ private fun JobsScreen(
                 }
             is TechnicianHomeUiState.Error ->
                 item {
-                    ErrorCard(onRefresh = onRefresh)
+                    ErrorCard(message = uiState.message, onRefresh = onRefresh)
                 }
             is TechnicianHomeUiState.Ready ->
                 if (uiState.bookings.isEmpty()) {
@@ -696,7 +696,7 @@ private fun JobsPreview(
 ) {
     when (uiState) {
         is TechnicianHomeUiState.Loading -> LoadingCard()
-        is TechnicianHomeUiState.Error -> ErrorCard(onRefresh = onRefresh)
+        is TechnicianHomeUiState.Error -> ErrorCard(message = uiState.message, onRefresh = onRefresh)
         is TechnicianHomeUiState.Ready -> {
             val jobs = uiState.bookings.take(maxItems)
             if (jobs.isEmpty()) {
@@ -1184,7 +1184,10 @@ private fun LoadingCard() {
 }
 
 @Composable
-private fun ErrorCard(onRefresh: () -> Unit) {
+private fun ErrorCard(
+    message: String,
+    onRefresh: () -> Unit,
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -1202,7 +1205,7 @@ private fun ErrorCard(onRefresh: () -> Unit) {
                 color = Ink,
             )
             Text(
-                text = "Your active offer popups still work. Retry when the network is stable.",
+                text = message,
                 style = MaterialTheme.typography.bodyMedium,
                 color = Muted,
             )
