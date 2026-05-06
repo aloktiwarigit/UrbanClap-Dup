@@ -41,12 +41,19 @@ internal class TechnicianHomeViewModel
             when (this) {
                 is HttpException ->
                     when (code()) {
-                        401 -> "Session expired. Sign out and sign in again to refresh jobs."
-                        403 -> "This account is not enabled for technician jobs."
-                        in 500..599 -> "Jobs service is unavailable. Retry in a few minutes."
+                        HTTP_UNAUTHORIZED -> "Session expired. Sign out and sign in again to refresh jobs."
+                        HTTP_FORBIDDEN -> "This account is not enabled for technician jobs."
+                        in HTTP_SERVER_ERROR_MIN..HTTP_SERVER_ERROR_MAX -> "Jobs service is unavailable. Retry in a few minutes."
                         else -> "Could not refresh jobs. Server returned ${code()}."
                     }
                 is IOException -> "Network unavailable. Check your connection and retry."
                 else -> "Could not refresh jobs. Retry in a moment."
             }
+
+        private companion object {
+            const val HTTP_UNAUTHORIZED = 401
+            const val HTTP_FORBIDDEN = 403
+            const val HTTP_SERVER_ERROR_MIN = 500
+            const val HTTP_SERVER_ERROR_MAX = 599
+        }
     }
