@@ -91,7 +91,7 @@ export function Rail() {
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = NAV_ICON_MAP[item.icon] ?? Activity;
-          const labelKey = NAV_I18N_KEY[item.href] ?? item.href.replace('/', '');
+          const labelKey = NAV_I18N_KEY[item.href] ?? item.label;
           return (
             <Link
               key={item.href}
@@ -143,7 +143,7 @@ export function Rail() {
         {navItems.slice(0, 5).map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = NAV_ICON_MAP[item.icon] ?? Activity;
-          const labelKey = NAV_I18N_KEY[item.href] ?? item.href.replace('/', '');
+          const labelKey = NAV_I18N_KEY[item.href] ?? item.label;
           return (
             <Link
               key={item.href}
