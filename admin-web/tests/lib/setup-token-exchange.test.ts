@@ -54,6 +54,7 @@ describe('GET /api/setup-token/exchange', () => {
     const res = await GET(req);
     const setCookie = res.headers.get('set-cookie') ?? '';
     expect(setCookie).toMatch(/hs_setup=;/);
+    expect(setCookie).toMatch(/Path=\//i);
     expect(setCookie).toMatch(/Max-Age=0/i);
   });
 });

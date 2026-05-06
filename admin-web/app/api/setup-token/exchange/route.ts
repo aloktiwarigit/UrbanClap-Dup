@@ -25,7 +25,7 @@ export function GET(request: NextRequest): NextResponse {
   // Clear the one-shot cookie immediately after it has been read.
   response.headers.set(
     'set-cookie',
-    'hs_setup=; Path=/setup; Max-Age=0; HttpOnly; SameSite=Strict',
+    'hs_setup=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict',
   );
 
   return response;
