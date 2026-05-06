@@ -252,18 +252,35 @@ export async function middleware(request: NextRequest) {
 
   // 8. Auth passed — apply i18n routing (handles locale prefix, NEXT_LOCALE cookie)
   if (setCookies.length > 0) {
-    // Refreshed session: inject updated access token into request headers so
-    // downstream server components receive it, then propagate Set-Cookie headers.
+    // Refreshed session: pass original `request` to handleI18nRouting to preserve
+    // nextUrl (wrapping a plain Request in new NextRequest() loses nextUrl and breaks
+    // locale detection). Forward the refreshed cookie via NextResponse.next's request
+    // headers so downstream server components receive the updated access token.
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set(
       'cookie',
       withRequestCookie(request.headers.get('cookie'), ACCESS_COOKIE, access.token),
     );
-    const refreshedRequest = new Request(request, { headers: requestHeaders });
-    const i18nResponse = handleI18nRouting(new NextRequest(refreshedRequest));
-    appendSetCookies(i18nResponse, setCookies);
-    return i18nResponse;
+    const i18nResponse = handleI18nRouting(request);
+    if (i18nResponse.status >= 300 && i18nResponse.status < 400) {
+      // i18n is redirecting for locale normalization — carry Set-Cookie on redirect
+      appendSetCookies(i18nResponse, setCookies);
+      return i18nResponse;
+    }
+    // i18n returned next() — rebuild with refreshed request headers so server
+    // components see the updated access token, then copy i18n response headers
+    // (e.g. NEXT_LOCALE set-cookie) but skip x-middleware-* which Next.js already
+    // set correctly on the new response for the refreshed cookie.
+    const response = NextResponse.next({ request: { headers: requestHeaders } });
+    i18nResponse.headers.forEach((value, key) => {
+      if (!key.startsWith('x-middleware-')) response.headers.set(key, value);
+    });
+    appendSetCookies(response, setCookies);
+    return response;
   }
+  // TODO(ADR needed): /api/* bypass and /setup/* public-path behaviour should be
+  // reviewed in a dedicated ADR before changing — altering them could break the
+  // setup flow and the API edge-network routing.
 
   return handleI18nRouting(request);
 }
