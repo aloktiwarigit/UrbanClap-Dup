@@ -22,6 +22,8 @@ describe('admin capability matrix', () => {
       'catalogue.manage',
       'finance.read',
       'complaints.manage',
+      'technicians.manage',
+      'customers.manage',
     ]);
     expect(hasCapability('ops-manager', 'orders.financialOverride')).toBe(false);
     expect(hasCapability('ops-manager', 'audit.read')).toBe(false);

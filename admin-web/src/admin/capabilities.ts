@@ -18,7 +18,9 @@ export type Capability =
   | 'complaints.manage'
   | 'audit.read'
   | 'adminUsers.manage'
-  | 'compliance.manage';
+  | 'compliance.manage'
+  | 'technicians.manage'
+  | 'customers.manage';
 
 export const ALL_CAPABILITIES = [
   'liveOps.read',
@@ -32,6 +34,8 @@ export const ALL_CAPABILITIES = [
   'audit.read',
   'adminUsers.manage',
   'compliance.manage',
+  'technicians.manage',
+  'customers.manage',
 ] as const satisfies readonly Capability[];
 
 export const ROLE_CAPABILITIES: Record<AdminRole, readonly Capability[]> = {
@@ -43,6 +47,8 @@ export const ROLE_CAPABILITIES: Record<AdminRole, readonly Capability[]> = {
     'catalogue.manage',
     'finance.read',
     'complaints.manage',
+    'technicians.manage',
+    'customers.manage',
   ],
   finance: ['finance.read'],
   'support-agent': [],
@@ -56,14 +62,16 @@ export interface AdminNavItem {
 }
 
 export const ADMIN_NAV_ITEMS = [
-  { label: 'Live Ops', href: '/dashboard', icon: 'LO', capability: 'liveOps.read' },
-  { label: 'Orders', href: '/orders', icon: 'OR', capability: 'orders.read' },
-  { label: 'Catalogue', href: '/catalogue', icon: 'CA', capability: 'catalogue.manage' },
-  { label: 'Finance', href: '/finance', icon: 'FI', capability: 'finance.read' },
-  { label: 'Complaints', href: '/complaints', icon: 'CO', capability: 'complaints.manage' },
-  { label: 'Audit Log', href: '/audit-log', icon: 'AU', capability: 'audit.read' },
-  { label: 'Admin Users', href: '/admin-users', icon: 'AD', capability: 'adminUsers.manage' },
-  { label: 'Compliance', href: '/compliance', icon: 'CP', capability: 'compliance.manage' },
+  { label: 'Live Ops',    href: '/dashboard',    icon: 'activity',               capability: 'liveOps.read' },
+  { label: 'Orders',      href: '/orders',        icon: 'clipboard-list',         capability: 'orders.read' },
+  { label: 'Catalogue',   href: '/catalogue',     icon: 'layout-grid',            capability: 'catalogue.manage' },
+  { label: 'Finance',     href: '/finance',       icon: 'indian-rupee',           capability: 'finance.read' },
+  { label: 'Complaints',  href: '/complaints',    icon: 'message-circle-warning', capability: 'complaints.manage' },
+  { label: 'Audit Log',   href: '/audit-log',     icon: 'scroll-text',            capability: 'audit.read' },
+  { label: 'Admin Users', href: '/admin-users',   icon: 'shield-user',            capability: 'adminUsers.manage' },
+  { label: 'Compliance',  href: '/compliance',    icon: 'scale',                  capability: 'compliance.manage' },
+  { label: 'Technicians', href: '/technicians',   icon: 'wrench',                 capability: 'technicians.manage' },
+  { label: 'Customers',   href: '/customers',     icon: 'users-2',                capability: 'customers.manage' },
 ] as const satisfies readonly AdminNavItem[];
 
 interface RouteCapability {
@@ -81,6 +89,8 @@ export const ADMIN_ROUTE_CAPABILITIES = [
   { prefix: '/audit-log', capability: 'audit.read' },
   { prefix: '/admin-users', capability: 'adminUsers.manage' },
   { prefix: '/compliance', capability: 'compliance.manage' },
+  { prefix: '/technicians', capability: 'technicians.manage' },
+  { prefix: '/customers',   capability: 'customers.manage' },
 ] as const satisfies readonly RouteCapability[];
 
 export function isAdminRole(value: unknown): value is AdminRole {
