@@ -3,6 +3,44 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OverridePanel } from '../src/components/orders/OverridePanel';
 import type { Order } from '../src/types/order';
 
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string, params?: Record<string, unknown>) => {
+    const map: Record<string, string> = {
+      'detail.sections.actions.heading': 'Actions',
+      'detail.sections.actions.noPermission': 'Your role can review this order but cannot run operational overrides.',
+      'actions.reassign.title': 'Re-assign Technician',
+      'actions.reassign.buttonLabel': 'Re-assign Tech',
+      'actions.reassign.selectLabel': 'Technician',
+      'actions.reassign.loadingPlaceholder': 'Loading technicians…',
+      'actions.reassign.noEligibleTechs': 'No eligible technicians found for this service area.',
+      'actions.reassign.fetchError': 'Could not load technicians for this area.',
+      'actions.complete.title': 'Mark Order Complete',
+      'actions.complete.buttonLabel': 'Mark Complete',
+      'actions.refund.title': 'Issue Refund (stub)',
+      'actions.refund.buttonLabel': 'Issue Refund',
+      'actions.waiveFee.title': 'Waive Fee',
+      'actions.waiveFee.buttonLabel': 'Waive Fee',
+      'actions.escalate.title': params?.priority ? `Escalate (${params.priority})` : 'Escalate',
+      'actions.escalate.buttonLabel': 'Escalate',
+      'actions.escalate.priorityLabel': 'Escalate priority:',
+      'actions.escalate.priorities.HIGH': 'HIGH',
+      'actions.escalate.priorities.CRITICAL': 'CRITICAL',
+      'actions.note.title': 'Add Internal Note',
+      'actions.note.buttonLabel': 'Add Note',
+      'actions.note.label': 'Note',
+      'actions.error': 'Action failed. Please try again.',
+      // ConfirmModal keys
+      'confirmModal.reasonLabel': 'Reason',
+      'confirmModal.selectPlaceholder': params?.label ? `Select ${params.label}` : 'Select',
+      'confirmModal.minCharactersHint': params?.min ? `Min ${params.min} characters` : 'Min characters',
+      'confirmModal.cancelButton': 'Cancel',
+      'confirmModal.submitButton.label': 'Confirm',
+      'confirmModal.submitButton.loading': 'Processing…',
+    };
+    return map[key] ?? key;
+  },
+}));
+
 vi.mock('../src/api/orders', () => ({
   reassignOrder: vi.fn(),
   completeOrder: vi.fn(),

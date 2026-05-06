@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import type { Order } from '@/types/order';
 import { StatusBadge } from './StatusBadge';
 
@@ -23,20 +26,32 @@ function formatScheduled(iso: string): string {
 export function OrdersTable({ orders, total, page, pageSize, totalPages, isLoading, onRowClick, onPageChange }: OrdersTableProps) {
   void pageSize;
   void isLoading;
+  const t = useTranslations('orders');
+  const columns = [
+    t('table.columns.orderId'),
+    t('table.columns.customer'),
+    t('table.columns.service'),
+    t('table.columns.technician'),
+    t('table.columns.status'),
+    t('table.columns.city'),
+    t('table.columns.scheduled'),
+    t('table.columns.amount'),
+    t('table.columns.action'),
+  ];
   return (
     <div className="mt-4">
       <div className="overflow-x-auto rounded border border-gray-200">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-50">
             <tr>
-              {['Order ID','Customer','Service','Technician','Status','City','Scheduled','Amount','Action'].map(h => (
+              {columns.map(h => (
                 <th key={h} className="px-4 py-3 text-left font-medium text-gray-600">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 bg-white">
             {orders.length === 0 ? (
-              <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">No orders found</td></tr>
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">{t('table.emptyState')}</td></tr>
             ) : orders.map(order => (
               <tr key={order.id} onClick={() => onRowClick(order)} className="cursor-pointer hover:bg-gray-50">
                 <td className="px-4 py-3 font-mono">{order.id.slice(0, 8)}</td>
@@ -47,7 +62,7 @@ export function OrdersTable({ orders, total, page, pageSize, totalPages, isLoadi
                 <td className="px-4 py-3">{order.city}</td>
                 <td className="px-4 py-3 whitespace-nowrap">{formatScheduled(order.scheduledAt)}</td>
                 <td className="px-4 py-3 font-medium">{formatAmount(order.amount)}</td>
-                <td className="px-4 py-3 text-[var(--marigold)]">View →</td>
+                <td className="px-4 py-3 text-[var(--marigold)]">{t('table.viewAction')}</td>
               </tr>
             ))}
           </tbody>
@@ -57,9 +72,9 @@ export function OrdersTable({ orders, total, page, pageSize, totalPages, isLoadi
         <span>{total} total · page {page} of {totalPages}</span>
         <div className="flex gap-2">
           <button aria-label="Previous page" disabled={page <= 1} onClick={() => onPageChange(page - 1)}
-            className="px-3 py-1 rounded border disabled:opacity-40 hover:bg-gray-100">Prev</button>
+            className="px-3 py-1 rounded border disabled:opacity-40 hover:bg-gray-100">{t('table.pagination.prev')}</button>
           <button aria-label="Next page" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}
-            className="px-3 py-1 rounded border disabled:opacity-40 hover:bg-gray-100">Next</button>
+            className="px-3 py-1 rounded border disabled:opacity-40 hover:bg-gray-100">{t('table.pagination.next')}</button>
         </div>
       </div>
     </div>

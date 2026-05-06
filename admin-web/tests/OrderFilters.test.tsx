@@ -2,6 +2,20 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { OrderFilters, type FiltersState } from '../src/components/orders/OrderFilters';
 
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => {
+    const map: Record<string, string> = {
+      'filters.status.label': 'Status',
+      'filters.city.placeholder': 'City',
+      'filters.phone.placeholder': 'Phone',
+      'filters.technicianId.placeholder': 'Technician ID',
+      'filters.minAmount.placeholder': 'Min ₹',
+      'filters.maxAmount.placeholder': 'Max ₹',
+    };
+    return map[key] ?? key;
+  },
+}));
+
 const defaultFilters: FiltersState = {
   status: '', city: '', categoryId: '', technicianId: '',
   dateFrom: '', dateTo: '', minAmount: '', maxAmount: '',
