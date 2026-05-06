@@ -20,20 +20,20 @@ test.describe('admin completion role matrix', () => {
     await signInAs(context, baseURL, 'super-admin');
     await page.goto('/dashboard');
 
-    await expect(page.getByLabel('Audit Log').first()).toBeVisible();
-    await expect(page.getByLabel('Admin Users').first()).toBeVisible();
-    await expect(page.getByLabel('Compliance').first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /audit log/i }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /admin users/i }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /compliance/i }).first()).toBeVisible();
   });
 
   test('ops-manager cannot see or directly open super-admin sections', async ({ page, context, baseURL }) => {
     await signInAs(context, baseURL, 'ops-manager');
     await page.goto('/dashboard');
 
-    await expect(page.getByLabel('Orders').first()).toBeVisible();
-    await expect(page.getByLabel('Catalogue').first()).toBeVisible();
-    await expect(page.getByLabel('Audit Log')).toHaveCount(0);
-    await expect(page.getByLabel('Admin Users')).toHaveCount(0);
-    await expect(page.getByLabel('Compliance')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /^orders$/i }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /^catalogue$/i }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /audit log/i })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /admin users/i })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /^compliance$/i })).toHaveCount(0);
 
     await page.goto('/audit-log');
     await expect(page).toHaveURL(/\/not-authorized/);
