@@ -1,5 +1,6 @@
 import groovy.json.JsonSlurper
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.File
 import java.util.Properties
 
 val localProperties =
@@ -32,6 +33,63 @@ fun googleServicesWebClientId(): String? {
 
 fun buildConfigString(value: String): String = "\"${value.replace("\\", "\\\\").replace("\"", "\\\"")}\""
 
+data class ReleaseSigning(
+    val storeFile: File,
+    val storePassword: String,
+    val keyAlias: String,
+    val keyPassword: String,
+)
+
+fun envOrLocalProperty(name: String): String? =
+    System.getenv(name)?.takeIf { it.isNotBlank() }
+        ?: localProperty(name)
+
+fun releaseSigningProperty(name: String): String? =
+    envOrLocalProperty("TECHNICIAN_$name")
+        ?: envOrLocalProperty(name)
+
+fun resolveReleaseFile(path: String): File {
+    val candidate = File(path)
+    return if (candidate.isAbsolute) candidate else rootProject.file(path)
+}
+
+fun loadReleaseSigning(): ReleaseSigning? {
+    val storeFilePath = releaseSigningProperty("RELEASE_STORE_FILE")
+    val storePassword = releaseSigningProperty("RELEASE_STORE_PASSWORD")
+    val keyAlias = releaseSigningProperty("RELEASE_KEY_ALIAS")
+    val keyPassword = releaseSigningProperty("RELEASE_KEY_PASSWORD")
+
+    if (listOf(storeFilePath, storePassword, keyAlias, keyPassword).all { it == null }) {
+        return null
+    }
+
+    val storeFile =
+        resolveReleaseFile(
+            requireNotNull(storeFilePath) {
+                "Missing RELEASE_STORE_FILE for release signing."
+            },
+        )
+    require(storeFile.isFile) {
+        "Release signing store file not found at ${storeFile.absolutePath}."
+    }
+
+    return ReleaseSigning(
+        storeFile = storeFile,
+        storePassword =
+            requireNotNull(storePassword) {
+                "Missing RELEASE_STORE_PASSWORD for release signing."
+            },
+        keyAlias =
+            requireNotNull(keyAlias) {
+                "Missing RELEASE_KEY_ALIAS for release signing."
+            },
+        keyPassword =
+            requireNotNull(keyPassword) {
+                "Missing RELEASE_KEY_PASSWORD for release signing."
+            },
+    )
+}
+
 val googleWebClientId =
     System.getenv("GOOGLE_WEB_CLIENT_ID")?.takeIf { it.isNotBlank() }
         ?: localProperty("GOOGLE_WEB_CLIENT_ID")
@@ -42,6 +100,8 @@ val mapsApiKey =
     System.getenv("MAPS_API_KEY")?.takeIf { it.isNotBlank() }
         ?: localProperty("MAPS_API_KEY")
         ?: ""
+
+val releaseSigning = loadReleaseSigning()
 
 plugins {
     alias(libs.plugins.android.application)
@@ -61,12 +121,23 @@ android {
     namespace = "com.homeservices.technician"
     compileSdk = 35
 
+    if (releaseSigning != null) {
+        signingConfigs {
+            create("release") {
+                storeFile = releaseSigning.storeFile
+                storePassword = releaseSigning.storePassword
+                keyAlias = releaseSigning.keyAlias
+                keyPassword = releaseSigning.keyPassword
+            }
+        }
+    }
+
     defaultConfig {
-        applicationId = "com.homeservices.technician"
+        applicationId = "in.homeheroo.technician"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 4
+        versionName = "0.1.3"
 
         testInstrumentationRunner = "com.homeservices.technician.TestRunner"
 
@@ -110,11 +181,13 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            if (releaseSigning != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            // NOTE: signing config will be added in E13-S09 (Android release pipeline)
         }
     }
 

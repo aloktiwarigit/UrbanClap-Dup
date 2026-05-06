@@ -25,8 +25,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -46,6 +49,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.homeservices.designsystem.components.HsActionButton
@@ -54,6 +58,7 @@ import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTrustBadge
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
+import com.homeservices.technician.domain.auth.PhoneNumberNormalizer
 
 private const val PHONE_LAST_DIGITS = 4
 
@@ -401,6 +406,7 @@ private fun EmailEntryContent(
 ) {
     var email by remember(state.prefillEmail) { mutableStateOf(state.prefillEmail) }
     var password by remember(state.mode) { mutableStateOf("") }
+    var passwordVisible by remember(state.mode) { mutableStateOf(false) }
     val isSignUp = state.mode == AuthUiState.EmailEntry.Mode.SignUp
     val isValidEmail = email.trim().matches(Regex("""^[^@\s]+@[^@\s]+\.[^@\s]+$"""))
     val isReady = isValidEmail && password.length >= 6
@@ -433,8 +439,17 @@ private fun EmailEntryContent(
             onValueChange = { password = it },
             label = { Text("Password") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            visualTransformation = PasswordVisualTransformation(),
+            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             singleLine = true,
+            trailingIcon = {
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(
+                        imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(20.dp))
@@ -513,7 +528,7 @@ private fun PhoneEntryContent(
     onPhoneSubmitted: (String) -> Unit,
 ) {
     var phone by remember { mutableStateOf(initialPhone) }
-    val isValidPhone = phone.trim().matches(Regex("""^\+[1-9]\d{9,14}$"""))
+    val normalizedPhone = PhoneNumberNormalizer.normalize(phone)
 
     AuthFrame(
         eyebrow = "Homeservices Partner",
@@ -538,8 +553,8 @@ private fun PhoneEntryContent(
         Spacer(modifier = Modifier.height(20.dp))
         HsPrimaryButton(
             text = "Get OTP",
-            onClick = { onPhoneSubmitted(phone.trim()) },
-            enabled = isValidPhone,
+            onClick = { normalizedPhone?.let(onPhoneSubmitted) },
+            enabled = normalizedPhone != null,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(12.dp))

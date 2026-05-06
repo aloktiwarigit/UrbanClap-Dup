@@ -45,7 +45,6 @@ import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTimelineStep
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
-import com.homeservices.technician.BuildConfig
 import com.homeservices.technician.domain.kyc.model.KycStatus
 
 private val KycHeroStart = Color(0xFF062A20)
@@ -235,14 +234,12 @@ internal fun KycStepAadhaar(
             onClick = onStartKyc,
             modifier = Modifier.fillMaxWidth(),
         )
-        if (BuildConfig.DEBUG) {
-            Spacer(modifier = Modifier.height(12.dp))
-            HsSecondaryButton(
-                text = "Skip KYC (debug only)",
-                onClick = onSkip,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
+        Spacer(modifier = Modifier.height(12.dp))
+        HsSecondaryButton(
+            text = "Skip for now, complete later",
+            onClick = onSkip,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 

@@ -48,13 +48,10 @@ describe('GET /api/setup-token/exchange', () => {
     expect(res.status).toBe(401);
   });
 
-  it('clears the hs_setup cookie in the response (set Max-Age=0)', async () => {
+  it('keeps hs_setup available for setup retries and remounts', async () => {
     const { GET } = await loadExchange();
     const req = makeRequest({ hs_setup: 'mock.setup.token.abc' });
     const res = await GET(req);
-    const setCookie = res.headers.get('set-cookie') ?? '';
-    expect(setCookie).toMatch(/hs_setup=;/);
-    expect(setCookie).toMatch(/Path=\//i);
-    expect(setCookie).toMatch(/Max-Age=0/i);
+    expect(res.headers.get('set-cookie')).toBeNull();
   });
 });

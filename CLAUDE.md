@@ -23,9 +23,13 @@ Each sub-project has its own `CLAUDE.md` with stack-specific rules. **This root 
 
 ## Production deployment ownership
 
-- **Admin web canonical production frontend:** Azure Static Web Apps resource `swa-homeservices-admin-prod`, public URL `https://black-river-0af326a00.7.azurestaticapps.net`, deployed by `.github/workflows/admin-ship.yml` from `main`.
-- **Do not use the old admin Azure Container App URL** (`aca-admin-homeservices-prod...azurecontainerapps.io`) for validation, screenshots, or customer/admin access. It is a legacy/stale endpoint from the pre-SWA migration path and is not kept in sync with `main`.
-- Do not add a new ACA admin deploy path, redirect users to ACA, or treat ACA as canonical unless the user explicitly approves a migration ADR and a single-source-of-truth cutover plan.
+- **Admin web canonical production frontend:** Azure Container Apps resource `aca-admin-homeservices-prod` in `rg-homeservices-prod`.
+- **Canonical admin URL:** `https://aca-admin-homeservices-prod.icybush-b2e9c876.centralindia.azurecontainerapps.io`.
+- **Canonical admin image registry:** GHCR image `ghcr.io/aloktiwarigit/urbanclap-dup-admin-web:<tag>`, updated on the ACA resource.
+- **Admin API production backend:** Azure Functions resource `func-homeservices-prod`; admin-web must call it through same-origin `/admin-api/*` unless a task explicitly says otherwise.
+- **Do not use Azure Static Web Apps for production admin validation or access.** Any `swa-homeservices-admin-prod`, `black-river-*.azurestaticapps.net`, or `.github/workflows/admin-ship.yml` references are legacy unless the user explicitly approves a new cutover.
+- If admin deployment instructions conflict, ACA wins. Update the conflicting doc before proceeding.
+- **Admin-web deploy runbook:** use `admin-web/CLAUDE.md` -> "Production deployment" for the exact Docker/GHCR/ACA PowerShell sequence and smoke checks. Do not deploy admin-web from `.github/workflows/admin-ship.yml`; that workflow is legacy SWA-oriented.
 
 ## Phase gate (enforced across all sub-projects)
 
@@ -174,7 +178,7 @@ Summary of the ₹0 stack:
 | Messaging / real-time | FCM (Firebase Cloud Messaging) | Unlimited forever |
 | Auth | Firebase Phone Auth + Truecaller SDK + Google Sign-In | <100 SMS/mo at steady state |
 | Photo storage | Firebase Storage | 5 GB + 1 GB/day download |
-| Web admin hosting | Azure Static Web Apps | 100 GB bandwidth/mo |
+| Web admin hosting | Azure Container Apps (Consumption) + GHCR | Keep min replicas 0 / max replicas 1 for pilot cost control |
 | Maps | Google Maps Platform | $200/mo recurring credit |
 | Payments | Razorpay | ₹0 onboarding (2% of GMV txn fee) |
 | KYC | DigiLocker (Govt of India) | Free Aadhaar consent |

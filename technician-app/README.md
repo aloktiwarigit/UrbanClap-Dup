@@ -9,6 +9,10 @@ Technician-facing Android app for the homeservices-mvp platform. Kotlin 2 + Jetp
 ./gradlew :app:installDebug        # build + install on connected device/emulator
 ```
 
+## Release
+
+Play Store release signing and AAB upload steps are documented in `../docs/play-store-release.md`.
+
 ## Test
 
 ```bash
