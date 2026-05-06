@@ -16,7 +16,7 @@ export async function getCustomerMetadata(
   customerIds: string[],
 ): Promise<Map<string, CustomerMetadataDoc>> {
   if (customerIds.length === 0) return new Map();
-  const container = await getContainer();
+  const container = getContainer();
   const ids = customerIds.slice(0, 200);
   const { resources } = await container.items
     .query<CustomerMetadataDoc>({
@@ -31,7 +31,7 @@ export async function patchCustomerMetadata(
   customerId: string,
   patch: { flagged?: boolean },
 ): Promise<void> {
-  const container = await getContainer();
+  const container = getContainer();
   let resource: CustomerMetadataDoc | undefined;
   try {
     const result = await container.item(customerId, customerId).read<CustomerMetadataDoc>();
@@ -51,7 +51,7 @@ export async function addCustomerNote(
   customerId: string,
   note: { text: string; createdAt: string; authorName: string },
 ): Promise<void> {
-  const container = await getContainer();
+  const container = getContainer();
   let resource: CustomerMetadataDoc | undefined;
   try {
     const result = await container.item(customerId, customerId).read<CustomerMetadataDoc>();
