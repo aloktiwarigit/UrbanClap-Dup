@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import { PnLChart } from '@/components/finance/PnLChart';
 import { PayoutQueueTable } from '@/components/finance/PayoutQueueTable';
 import { ApproveAllModal } from '@/components/finance/ApproveAllModal';
@@ -29,6 +30,8 @@ function defaultRange(): { from: string; to: string } {
 type Toast = { message: string; type: 'success' | 'error' };
 
 export function FinanceClient() {
+  const t = useTranslations('finance');
+  const locale = useLocale();
   const { auth } = useAdminAuth();
   const canApprovePayouts = hasCapability(auth?.role, 'finance.approvePayouts');
   const initial = defaultRange();
@@ -47,7 +50,7 @@ export function FinanceClient() {
     try {
       setSummary(await fetchFinanceSummary(from, to));
     } catch {
-      setToast({ message: 'Failed to load P&L summary.', type: 'error' });
+      setToast({ message: t('errors.loadSummaryFailed'), type: 'error' });
     } finally {
       setSummaryLoading(false);
     }
@@ -58,7 +61,7 @@ export function FinanceClient() {
     try {
       setQueue(await fetchPayoutQueue());
     } catch {
-      setToast({ message: 'Failed to load payout queue.', type: 'error' });
+      setToast({ message: t('errors.loadQueueFailed'), type: 'error' });
     } finally {
       setQueueLoading(false);
     }
@@ -72,11 +75,15 @@ export function FinanceClient() {
     try {
       const result = await approveAllPayouts();
       setShowModal(false);
-      const msg = `Approved ${result.approved} payout(s).${result.failed > 0 ? ` Failed: ${result.failed}.` : ''}`;
+      const msg = t('messages.approveSuccess', {
+        approved: result.approved,
+        hasFailed: result.failed > 0 ? 'true' : 'other',
+        failed: result.failed,
+      });
       setToast({ message: msg, type: result.failed > 0 ? 'error' : 'success' });
       void loadQueue();
     } catch {
-      setToast({ message: 'Approve payouts failed. Please try again.', type: 'error' });
+      setToast({ message: t('errors.approveFailed'), type: 'error' });
     } finally {
       setApproving(false);
     }
@@ -85,8 +92,8 @@ export function FinanceClient() {
   return (
     <div className="p-[var(--space-6)] space-y-[var(--space-8)]">
       <div>
-        <h1 className="text-[length:var(--text-2xl)] font-bold text-[var(--color-text)]">Finance</h1>
-        <p className="text-sm text-[var(--color-text-muted)] mt-[var(--space-1)]">Daily P&amp;L and weekly payout queue.</p>
+        <h1 className="text-[length:var(--text-2xl)] font-bold text-[var(--color-text)]">{t('title')}</h1>
+        <p className="text-sm text-[var(--color-text-muted)] mt-[var(--space-1)]">{t('subtitle')}</p>
       </div>
 
       {toast && (
@@ -103,10 +110,10 @@ export function FinanceClient() {
       )}
 
       <section aria-labelledby="pnl-heading">
-        <h2 id="pnl-heading" className="sr-only">Profit &amp; Loss</h2>
+        <h2 id="pnl-heading" className="sr-only">{t('sections.pnl')}</h2>
         <div className="flex flex-wrap gap-[var(--space-3)] items-end mb-[var(--space-4)]">
           <label className="flex flex-col gap-1 text-xs text-[var(--color-text-muted)]">
-            From
+            {t('dateRange.from')}
             <input
               type="date"
               value={from}
@@ -115,7 +122,7 @@ export function FinanceClient() {
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-[var(--color-text-muted)]">
-            To
+            {t('dateRange.to')}
             <input
               type="date"
               value={to}
@@ -126,26 +133,26 @@ export function FinanceClient() {
         </div>
 
         {summaryLoading && (
-          <p className="text-sm text-[var(--color-text-muted)]">Loading P&amp;L…</p>
+          <p className="text-sm text-[var(--color-text-muted)]">{t('loading.summary')}</p>
         )}
 
         {!summaryLoading && summary && (
           <>
             <div className="grid grid-cols-3 gap-[var(--space-4)] mb-[var(--space-4)]">
               <div className="rounded p-[var(--space-4)] bg-[var(--color-surface-alt)]">
-                <p className="text-xs text-[var(--color-text-muted)]">Gross Revenue</p>
+                <p className="text-xs text-[var(--color-text-muted)]">{t('summary.grossRevenue')}</p>
                 <p className="text-[length:var(--text-xl)] font-bold text-[var(--color-text)]">{formatPaise(summary.totalGross)}</p>
               </div>
               <div className="rounded p-[var(--space-4)] bg-[var(--color-surface-alt)]">
-                <p className="text-xs text-[var(--color-text-muted)]">Commission</p>
+                <p className="text-xs text-[var(--color-text-muted)]">{t('summary.commission')}</p>
                 <p className="text-[length:var(--text-xl)] font-bold text-[var(--color-warn)]">{formatPaise(summary.totalCommission)}</p>
               </div>
               <div className="rounded p-[var(--space-4)] bg-[var(--color-surface-alt)]">
-                <p className="text-xs text-[var(--color-text-muted)]">Net to Owner</p>
+                <p className="text-xs text-[var(--color-text-muted)]">{t('summary.netToOwner')}</p>
                 <p className="text-[length:var(--text-xl)] font-bold text-[var(--color-success)]">{formatPaise(summary.totalNet)}</p>
               </div>
             </div>
-            <PnLChart data={summary.dailyPnL} />
+            <PnLChart data={summary.dailyPnL} locale={locale} />
           </>
         )}
       </section>
@@ -153,7 +160,7 @@ export function FinanceClient() {
       <section aria-labelledby="payout-heading">
         <h2 id="payout-heading" className="sr-only">Payout Queue</h2>
         {queueLoading && (
-          <p className="text-sm text-[var(--color-text-muted)]">Loading payout queue…</p>
+          <p className="text-sm text-[var(--color-text-muted)]">{t('loading.queue')}</p>
         )}
         {!queueLoading && queue && (
           <PayoutQueueTable
