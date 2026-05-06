@@ -95,7 +95,7 @@ export function Rail() {
           return (
             <Link
               key={item.href}
-              href={item.href as Parameters<typeof Link>[0]['href']}
+              href={item.href}
               aria-current={isActive ? 'page' : undefined}
               style={{
                 display: 'flex',
@@ -148,7 +148,7 @@ export function Rail() {
           return (
             <Link
               key={item.href}
-              href={item.href as Parameters<typeof Link>[0]['href']}
+              href={item.href}
               aria-current={isActive ? 'page' : undefined}
               style={{
                 display: 'flex',

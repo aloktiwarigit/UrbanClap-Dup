@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import type { Route } from 'next';
 import type { components } from '@/api/generated/schema';
 import { getApiBaseUrl } from '@/lib/apiBase';
 import { handleAdminFetchError } from '@/lib/serverFetch';
@@ -92,7 +91,7 @@ export default async function CategoryDetailPage({ params }: PageProps) {
           </p>
         </div>
         <Link
-          href={`/catalogue/${categoryId}/edit` as Route}
+          href={`/catalogue/${categoryId}/edit`}
           className="btn btn-ghost"
           style={{ textDecoration: 'none' }}
         >
@@ -111,7 +110,7 @@ export default async function CategoryDetailPage({ params }: PageProps) {
         >
           <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 600, margin: 0 }}>Services</h2>
           <Link
-            href={`/catalogue/${categoryId}/services/new` as Route}
+            href={`/catalogue/${categoryId}/services/new`}
             className="btn btn-primary"
             style={{ textDecoration: 'none' }}
           >
