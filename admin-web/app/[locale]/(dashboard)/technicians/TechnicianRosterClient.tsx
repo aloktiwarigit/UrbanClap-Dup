@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAdminAuth } from '@/lib/auth/context';
-import { patchTechnicianClient } from '@/api/technicians';
+import { patchTechnician } from '@/api/technicians';
 import type { AdminTechnician, TechnicianStatus } from '@/types/technician-admin';
 
 interface Props {
@@ -50,7 +50,7 @@ export function TechnicianRosterClient({ initialTechnicians }: Props) {
   async function handleStatusChange(id: string, newStatus: TechnicianStatus) {
     setLoading(id);
     try {
-      await patchTechnicianClient(id, { status: newStatus });
+      await patchTechnician(id, { status: newStatus });
       setTechnicians((prev) =>
         prev.map((tech) => (tech.id === id ? { ...tech, status: newStatus } : tech)),
       );
@@ -64,7 +64,7 @@ export function TechnicianRosterClient({ initialTechnicians }: Props) {
     if (isNaN(pct) || pct < 0 || pct > 100) return;
     setLoading(id);
     try {
-      await patchTechnicianClient(id, { commissionPct: pct });
+      await patchTechnician(id, { commissionPct: pct });
       setTechnicians((prev) =>
         prev.map((tech) => (tech.id === id ? { ...tech, commissionPct: pct } : tech)),
       );

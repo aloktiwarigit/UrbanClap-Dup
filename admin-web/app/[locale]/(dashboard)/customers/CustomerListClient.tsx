@@ -3,9 +3,9 @@
 import { useState, useMemo } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import {
-  patchCustomerClient,
-  addCustomerNoteClient,
-  refundCreditClient,
+  patchCustomer,
+  addCustomerNote,
+  refundCredit,
 } from '@/api/customers';
 import type { AdminCustomer, CustomerStatus } from '@/types/customer-admin';
 
@@ -97,7 +97,7 @@ export function CustomerListClient({ initialCustomers }: Props) {
     );
     setExpandedState((s) => ({ ...s, saving: 'flag' }));
     try {
-      await patchCustomerClient(customer.id, newStatus);
+      await patchCustomer(customer.id, newStatus);
     } catch {
       // Rollback on failure
       setCustomers((prev) =>
@@ -115,7 +115,7 @@ export function CustomerListClient({ initialCustomers }: Props) {
     if (!text) return;
     setExpandedState((s) => ({ ...s, saving: 'note' }));
     try {
-      await addCustomerNoteClient(customerId, text);
+      await addCustomerNote(customerId, text);
       // Optimistic: append note
       setCustomers((prev) =>
         prev.map((c) =>
@@ -148,7 +148,7 @@ export function CustomerListClient({ initialCustomers }: Props) {
     if (!reason) return;
     setExpandedState((s) => ({ ...s, saving: 'refund' }));
     try {
-      await refundCreditClient(customerId, amount, reason);
+      await refundCredit(customerId, amount, reason);
       setExpandedState((s) => ({
         ...s,
         refundAmount: '',
