@@ -9,6 +9,7 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const config: NextConfig = {
   reactStrictMode: true,
+  output: 'standalone',
   // typedRoutes: disabled during E12-S03a — all dashboard routes now under [locale]/
   // but existing catalogue navigation still uses bare paths (/catalogue/...).
   // Re-enable in E12-S03b when all navigation calls are updated to locale-aware paths.
