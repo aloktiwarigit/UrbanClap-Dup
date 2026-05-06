@@ -32,6 +32,14 @@ Hooks in `.claude/settings.json` enforce this.
 - Vitest + Playwright
 - CI: type, lint, test (≥80% coverage), Semgrep, axe-core, Lighthouse CI, Codex review
 
+## Production deployment
+
+- Canonical production admin frontend is Azure Static Web Apps resource `swa-homeservices-admin-prod`.
+- Public SWA URL: `https://black-river-0af326a00.7.azurestaticapps.net`.
+- Deploy workflow: `.github/workflows/admin-ship.yml` on `main`.
+- The old Azure Container App `aca-admin-homeservices-prod` is a legacy/stale admin endpoint and must not be used for validation or access unless a user-approved migration ADR makes ACA canonical again.
+- Firebase client auth config is baked into the SWA build from GitHub Actions secrets `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, and `NEXT_PUBLIC_FIREBASE_PROJECT_ID`. If login shows `auth/api-key-not-valid`, check those repo secrets before changing code.
+
 ## Override
 
 Set `CLAUDE_OVERRIDE_REASON="<reason>"` to bypass a hook. Logged to `~/.claude/override-log.jsonl`.

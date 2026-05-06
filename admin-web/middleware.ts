@@ -47,6 +47,28 @@ function getSetCookieHeaders(headers: Headers): string[] {
   return combined ? splitSetCookieHeader(combined) : [];
 }
 
+function firstForwardedValue(value: string | null): string | null {
+  return value?.split(',')[0]?.trim() || null;
+}
+
+function externalUrl(request: NextRequest, pathname: string): URL {
+  const protocol =
+    firstForwardedValue(request.headers.get('x-forwarded-proto')) ??
+    request.nextUrl.protocol.replace(/:$/, '');
+  const host =
+    firstForwardedValue(request.headers.get('x-forwarded-host')) ??
+    firstForwardedValue(request.headers.get('host')) ??
+    request.nextUrl.host;
+
+  const url = new URL(`${protocol}://${host}`);
+  if (url.protocol === 'https:' && url.port === '8080') {
+    url.port = '';
+  }
+  url.pathname = pathname;
+  url.search = '';
+  return url;
+}
+
 function isLocalhost(requestUrl: string): boolean {
   const hostname = new URL(requestUrl).hostname;
   return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
@@ -108,7 +130,7 @@ function clearAdminCookies(response: NextResponse): void {
 
 function redirectToLogin(request: NextRequest): NextResponse {
   const locale = getLocaleFromRequest(request, routing.defaultLocale, routing.locales);
-  const loginUrl = new URL(`/${locale}/login`, request.url);
+  const loginUrl = externalUrl(request, `/${locale}/login`);
   loginUrl.searchParams.set('next', request.nextUrl.pathname);
   const response = NextResponse.redirect(loginUrl);
   clearAdminCookies(response);
@@ -117,7 +139,7 @@ function redirectToLogin(request: NextRequest): NextResponse {
 
 function redirectToNotAuthorized(request: NextRequest, role: AdminRole): NextResponse {
   const locale = getLocaleFromRequest(request, routing.defaultLocale, routing.locales);
-  const url = new URL(`/${locale}/not-authorized`, request.url);
+  const url = externalUrl(request, `/${locale}/not-authorized`);
   url.searchParams.set('from', request.nextUrl.pathname);
   const rawDefault = defaultPathForRole(role);
   url.searchParams.set('next', `/${locale}${rawDefault}`);
@@ -192,6 +214,25 @@ export async function middleware(request: NextRequest) {
 
   // 2. Strip locale prefix to get the underlying path for capability checks
   const rawPath = stripLocalePrefix(pathname, routing.locales);
+  const hasLocalePrefix = routing.locales.some(
+    (locale) => pathname === `/${locale}` || pathname.startsWith(`/${locale}/`),
+  );
+
+  if (rawPath === '/') {
+    const locale = getLocaleFromRequest(request, routing.defaultLocale, routing.locales);
+    return NextResponse.redirect(externalUrl(request, `/${locale}/login`));
+  }
+
+  if (
+    !hasLocalePrefix &&
+    (rawPath === '/login' ||
+      rawPath.startsWith('/login/') ||
+      rawPath === '/setup' ||
+      rawPath.startsWith('/setup/'))
+  ) {
+    const locale = getLocaleFromRequest(request, routing.defaultLocale, routing.locales);
+    return NextResponse.redirect(externalUrl(request, `/${locale}${rawPath}`));
+  }
 
   // 3. Public paths — locale routing only, no JWT required
   const PUBLIC_PATHS = ['/', '/login', '/setup'];
@@ -287,7 +328,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match all paths except Next.js static assets and image optimization
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Match all paths except SWA health checks, Next.js static assets, and image optimization
+    '/((?!\\.swa|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

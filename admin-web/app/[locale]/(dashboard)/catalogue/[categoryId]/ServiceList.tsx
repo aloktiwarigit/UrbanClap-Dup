@@ -87,7 +87,7 @@ export function ServiceList({ categoryId, services: initialServices }: ServiceLi
                 {isPending ? t('serviceList.updatingButton') : service.isActive ? t('serviceList.unpublishButton') : t('serviceList.publishButton')}
               </button>
               <Link
-                href={`/catalogue/${categoryId}/services/${service.id}` as Route}
+                href={`/catalogue/${categoryId}/services/${service.id}`}
                 style={{
                   fontSize: 'var(--text-sm)',
                   color: 'var(--color-brand)',

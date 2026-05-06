@@ -7,7 +7,7 @@ const BASE = BROWSER_API_BASE_URL;
 export async function listTechnicians(client: ApiClient): Promise<AdminTechnicianListResponse> {
   const { data, error } = await client.GET('/v1/admin/technicians' as never, {} as never);
   if (error !== undefined || data === undefined) throw new Error('listTechnicians: request failed');
-  return data as AdminTechnicianListResponse;
+  return data;
 }
 
 export async function patchTechnician(id: string, body: PatchTechnicianBody): Promise<void> {

@@ -7,7 +7,7 @@ const BASE = BROWSER_API_BASE_URL;
 export async function listCustomers(client: ApiClient): Promise<AdminCustomerListResponse> {
   const { data, error } = await client.GET('/v1/admin/customers' as never, {} as never);
   if (error !== undefined || data === undefined) throw new Error('listCustomers: request failed');
-  return data as AdminCustomerListResponse;
+  return data;
 }
 
 export async function patchCustomer(id: string, accountStatus: CustomerStatus): Promise<void> {
