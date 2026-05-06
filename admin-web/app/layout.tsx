@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import type { Metadata } from 'next';
 import { Fraunces, Geist, JetBrains_Mono, Noto_Sans_Devanagari } from 'next/font/google';
-import { getLocale } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import { readThemeCookie } from '@/lib/theme';
 import './globals.css';
@@ -34,10 +34,13 @@ const notoSansDevanagari = Noto_Sans_Devanagari({
   weight: ['400', '500', '600'],
 });
 
-export const metadata: Metadata = {
-  title: 'HomeHeroo — admin',
-  description: 'Owner console for the HomeHeroo field-operations platform.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('meta');
+  return {
+    title: t('title'),
+    description: 'Owner console for the HomeHeroo field-operations platform.',
+  };
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const theme = await readThemeCookie();
