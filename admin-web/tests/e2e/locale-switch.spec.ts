@@ -67,8 +67,9 @@ test.describe('locale routing', () => {
   test('unknown locale /fr/login redirects to a valid locale login page', async ({ page }) => {
     await page.context().clearCookies();
     await page.goto('/fr/login');
-    await page.waitForLoadState('networkidle');
-    // Middleware redirects unknown locales to /{defaultLocale}/login — never 404
+    // Wait for the middleware redirect to complete — don't use networkidle since
+    // the login page makes a background session-restore fetch that hangs in CI.
+    await page.waitForURL(/\/(hi|en)\/login/, { timeout: 10000 });
     expect(page.url()).toMatch(/\/(hi|en)\/login/);
   });
 });
