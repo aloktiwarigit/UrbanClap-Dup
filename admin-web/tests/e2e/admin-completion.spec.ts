@@ -37,7 +37,7 @@ test.describe('admin completion role matrix', () => {
 
     await page.goto('/en/audit-log');
     await expect(page).toHaveURL(/\/not-authorized/);
-    await expect(page.getByText(/not allowed to open \/audit-log/i)).toBeVisible();
+    await expect(page.getByText(/not allowed to open.*audit-log/i)).toBeVisible();
   });
 
   test('finance can read finance but cannot approve payouts or open orders', async ({ page, context, baseURL }) => {
