@@ -1,6 +1,5 @@
 import { app } from '@azure/functions';
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import * as Sentry from '@sentry/node';
 import { requireAdmin } from '../../../middleware/requireAdmin.js';
 import type { AdminContext } from '../../../types/admin.js';
 import { listAllTechniciansForAdmin } from '../../../cosmos/technician-repository.js';

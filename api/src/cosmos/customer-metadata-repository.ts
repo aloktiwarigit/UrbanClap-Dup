@@ -8,7 +8,7 @@ interface CustomerMetadataDoc {
   notes?: Array<{ text: string; createdAt: string; authorName: string }>;
 }
 
-async function getContainer() {
+function getContainer() {
   return getCosmosClient().database(DB_NAME).container(CONTAINER);
 }
 
