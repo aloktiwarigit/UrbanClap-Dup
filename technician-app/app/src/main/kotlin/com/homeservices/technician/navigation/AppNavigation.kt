@@ -13,6 +13,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.homeservices.technician.data.auth.SessionManager
 import com.homeservices.technician.data.fcm.FcmTopicSubscriber
@@ -44,7 +45,7 @@ internal fun AppNavigation(
         val current = authState
         when (current) {
             is AuthState.Authenticated -> {
-                val dest = if (sessionManager.isOnboardingComplete) "home" else "main"
+                val dest = if (sessionManager.isOnboardingComplete) "home" else "onboarding_gate"
                 navController.navigate(dest) {
                     popUpTo("auth") { inclusive = true }
                     launchSingleTop = true
@@ -125,6 +126,25 @@ internal fun AppNavigation(
             startDestination = "auth",
         ) {
             authGraph(navController, activity)
+            composable("onboarding_gate") {
+                OnboardingGateScreen(
+                    onComplete = {
+                        scope.launch {
+                            sessionManager.setOnboardingComplete()
+                            navController.navigate("home") {
+                                popUpTo("onboarding_gate") { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    },
+                    onNeedsOnboarding = {
+                        navController.navigate("main") {
+                            popUpTo("onboarding_gate") { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
+                )
+            }
             onboardingGraph(navController, sessionManager, scope)
             homeGraph(
                 navController = navController,

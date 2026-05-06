@@ -26,11 +26,14 @@ internal fun NavGraphBuilder.onboardingGraph(
         composable("service_selection") {
             ServiceSelectionScreen(
                 onComplete = {
-                    scope.launch { sessionManager.setOnboardingComplete() }
-                    navController.navigate("home") {
-                        popUpTo("main") { inclusive = true }
+                    scope.launch {
+                        sessionManager.setOnboardingComplete()
+                        navController.navigate("home") {
+                            popUpTo("main") { inclusive = true }
+                        }
                     }
                 },
+                autoCompleteExistingProfile = true,
             )
         }
     }
