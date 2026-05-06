@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { patchComplaintClient } from '@/api/complaints';
 import { ApiError } from '@/api/client';
 import { KanbanBoard } from '@/components/complaints/KanbanBoard';
@@ -22,6 +23,7 @@ export function ComplaintsClient({
   totalComplaints,
   repeatOffenders,
 }: ComplaintsClientProps) {
+  const t = useTranslations('complaints');
   const [complaints, setComplaints] = useState<Complaint[]>(initialComplaints);
   const [error, setError] = useState<string | null>(null);
   // Always reflects the latest complaints state — updated on every render so
@@ -225,11 +227,11 @@ export function ComplaintsClient({
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Complaints</h1>
+        <h1 className="text-2xl font-semibold">{t('list.title')}</h1>
         <span className="text-sm text-gray-500">
           {totalComplaints > complaints.length
-            ? `${complaints.length} of ${totalComplaints} loaded`
-            : `${totalComplaints} total`}
+            ? t('list.pagination.loadedCount', { count: complaints.length, total: totalComplaints })
+            : t('list.pagination.totalCount', { total: totalComplaints })}
         </span>
       </div>
 
@@ -244,14 +246,14 @@ export function ComplaintsClient({
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 id="repeat-offenders-heading" className="text-sm font-semibold text-[var(--color-text)]">
-              Repeat Offenders
+              {t('repeatOffenders.title')}
             </h2>
             <p className="text-xs text-[var(--color-text-muted)]">
-              Technicians with 3 or more resolved complaints in the last 30 days.
+              {t('repeatOffenders.description')}
             </p>
           </div>
           <span className="text-xs text-[var(--color-text-muted)]">
-            {repeatOffenders.length} flagged
+            {t('repeatOffenders.flaggedCount', { count: repeatOffenders.length })}
           </span>
         </div>
         {repeatOffenders.length > 0 && (
@@ -262,7 +264,7 @@ export function ComplaintsClient({
                 className="rounded border border-[var(--color-border)] px-3 py-2 text-xs text-[var(--color-text)]"
               >
                 <span className="font-mono">{offender.technicianId}</span>
-                <span className="text-[var(--color-text-muted)]"> - {offender.count} complaints</span>
+                <span className="text-[var(--color-text-muted)]"> - {t('repeatOffenders.complaintCount', { count: offender.count })}</span>
               </span>
             ))}
           </div>

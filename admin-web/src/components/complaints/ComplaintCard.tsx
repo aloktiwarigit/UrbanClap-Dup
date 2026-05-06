@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl';
 import type { Complaint } from '@/types/complaint';
 
 interface ComplaintCardProps {
@@ -6,28 +7,49 @@ interface ComplaintCardProps {
   onClick: () => void;
 }
 
-function formatSlaCountdown(slaDeadlineAt: string): { label: string; urgent: boolean } {
+interface SlaCountdown {
+  hours: number;
+  minutes: number;
+  overdue: boolean;
+  urgent: boolean;
+  resolved?: boolean;
+}
+
+function computeSlaCountdown(slaDeadlineAt: string): SlaCountdown {
   const msRemaining = new Date(slaDeadlineAt).getTime() - Date.now();
   const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
   if (msRemaining <= 0) {
-    return { label: 'Overdue', urgent: true };
+    return { hours: 0, minutes: 0, overdue: true, urgent: true };
   }
 
   const totalMinutes = Math.floor(msRemaining / 60000);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
 
-  const label = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-  return { label, urgent: msRemaining < TWO_HOURS_MS };
+  return { hours, minutes, overdue: false, urgent: msRemaining < TWO_HOURS_MS };
 }
 
 export function ComplaintCard({ complaint, tick: _tick, onClick }: ComplaintCardProps) {
+  const t = useTranslations('complaints');
   const isResolved = complaint.status === 'RESOLVED';
 
-  const { label: slaLabel, urgent } = isResolved
-    ? { label: 'Resolved', urgent: false }
-    : formatSlaCountdown(complaint.slaDeadlineAt);
+  const slaCountdown = isResolved ? null : computeSlaCountdown(complaint.slaDeadlineAt);
+
+  let slaLabel: string;
+  let urgent: boolean;
+  if (isResolved) {
+    slaLabel = t('card.sla.resolved');
+    urgent = false;
+  } else if (slaCountdown!.overdue) {
+    slaLabel = t('card.sla.overdue');
+    urgent = true;
+  } else {
+    slaLabel = slaCountdown!.hours > 0
+      ? t('card.sla.countdown.hm', { h: slaCountdown!.hours, m: slaCountdown!.minutes })
+      : t('card.sla.countdown.m', { m: slaCountdown!.minutes });
+    urgent = slaCountdown!.urgent;
+  }
 
   return (
     <button
@@ -51,7 +73,7 @@ export function ComplaintCard({ complaint, tick: _tick, onClick }: ComplaintCard
             {slaLabel}
           </span>
           {complaint.escalated && (
-            <span className="chip chip-danger">escalated</span>
+            <span className="chip chip-danger">{t('card.badge.escalated')}</span>
           )}
         </div>
       </div>
