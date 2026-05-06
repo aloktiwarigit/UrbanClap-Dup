@@ -115,7 +115,8 @@ export function Rail() {
               }}
             >
               <Icon size={18} aria-hidden="true" strokeWidth={1.75} />
-              <span>{t(labelKey as Parameters<typeof t>[0])}</span>
+              
+              <span>{t(labelKey)}</span>
             </Link>
           );
         })}
@@ -164,7 +165,8 @@ export function Rail() {
               }}
             >
               <Icon size={18} aria-hidden="true" strokeWidth={1.75} />
-              <span>{t(labelKey as Parameters<typeof t>[0])}</span>
+              
+              <span>{t(labelKey)}</span>
             </Link>
           );
         })}
