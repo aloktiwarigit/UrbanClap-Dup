@@ -1,4 +1,78 @@
 {
+  "meta": {
+    "title": "HomeHeroo — admin"
+  },
+  "login": {
+    "brand": {
+      "eyebrow": "HomeHeroo admin"
+    },
+    "hero": {
+      "title": "Secure operations access",
+      "subtitle": "Google or password proves identity. Microsoft Authenticator approves admin access."
+    },
+    "steps": {
+      "one": {
+        "title": "Verify identity",
+        "description": "Continue with Google or admin email and password."
+      },
+      "two": {
+        "title": "Approve with Microsoft Authenticator",
+        "description": "Use the 6-digit code for HomeHeroo admin. It is not a Gmail OTP."
+      }
+    },
+    "form": {
+      "ariaLabel": "Admin sign-in",
+      "eyebrow": {
+        "signIn": "Step 1 of 2",
+        "mfa": "Step 2 of 2"
+      },
+      "heading": {
+        "signIn": "Choose how to sign in",
+        "mfa": "Open Microsoft Authenticator"
+      },
+      "description": {
+        "signIn": "Start with Google sign-in or admin email and password. The Microsoft Authenticator step appears next.",
+        "mfa": "Enter the 6-digit code shown for HomeHeroo admin. Do not use a Gmail email code."
+      },
+      "identityCard": {
+        "label": "Signed in identity",
+        "fallback": "Verified admin"
+      },
+      "mfa": {
+        "codeLabel": "Microsoft Authenticator code",
+        "codePlaceholder": "6-digit code",
+        "verifyingButton": "Verifying…",
+        "verifyButton": "Verify Microsoft Authenticator",
+        "switchMethodButton": "Use a different sign-in"
+      },
+      "google": {
+        "openingButton": "Opening Google…",
+        "continueButton": "Continue with Google"
+      },
+      "divider": "or use admin password",
+      "emailLabel": "Email address",
+      "passwordLabel": "Password",
+      "password": {
+        "submittingButton": "Signing in…",
+        "submitButton": "Sign in with password"
+      }
+    },
+    "errors": {
+      "adminNotFound": "This Google account or email address is not an active admin user.",
+      "firebaseTokenInvalid": "Google could not verify this sign-in. Try again.",
+      "mfaChallengeInvalid": "The Microsoft Authenticator step expired. Sign in again.",
+      "totpInvalid": "That Microsoft Authenticator code did not match. Try the next 6-digit code.",
+      "totpNotConfigured": "Microsoft Authenticator is not set up for this admin user. Sign in again to finish setup.",
+      "fallback": "Login failed. Check your credentials and try again.",
+      "invalidCredential": "Invalid email or password.",
+      "genericPassword": "An error occurred. Please try again.",
+      "googlePopupClosed": "Google sign-in was closed before it completed.",
+      "googlePopupBlocked": "Allow pop-ups for this admin site and try again.",
+      "googleAccountExists": "This email uses a different sign-in method.",
+      "googleFallback": "Google sign-in failed. Please try again.",
+      "mfaVerificationFallback": "Verification failed. Try again."
+    }
+  },
   "topbar": {
     "title": "Operations Observatory",
     "city": "Ayodhya",

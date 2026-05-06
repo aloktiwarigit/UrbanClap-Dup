@@ -1,4 +1,78 @@
 {
+  "meta": {
+    "title": "HomeHeroo — एडमिन"
+  },
+  "login": {
+    "brand": {
+      "eyebrow": "HomeHeroo एडमिन"
+    },
+    "hero": {
+      "title": "सुरक्षित संचालन एक्सेस",
+      "subtitle": "Google या पासवर्ड पहचान सिद्ध करता है। Microsoft Authenticator एडमिन एक्सेस को मंज़ूरी देता है।"
+    },
+    "steps": {
+      "one": {
+        "title": "पहचान सत्यापित करें",
+        "description": "Google या एडमिन ईमेल और पासवर्ड से जारी रखें।"
+      },
+      "two": {
+        "title": "Microsoft Authenticator से मंज़ूरी दें",
+        "description": "HomeHeroo एडमिन के लिए दिखाया गया 6-अंकीय कोड डालें। यह Gmail OTP नहीं है।"
+      }
+    },
+    "form": {
+      "ariaLabel": "एडमिन साइन-इन",
+      "eyebrow": {
+        "signIn": "चरण 1 / 2",
+        "mfa": "चरण 2 / 2"
+      },
+      "heading": {
+        "signIn": "साइन-इन का तरीक़ा चुनें",
+        "mfa": "Microsoft Authenticator खोलें"
+      },
+      "description": {
+        "signIn": "Google साइन-इन या एडमिन ईमेल और पासवर्ड से शुरू करें। Microsoft Authenticator चरण इसके बाद आएगा।",
+        "mfa": "HomeHeroo एडमिन के लिए दिखाया गया 6-अंकीय कोड डालें। Gmail ईमेल कोड का उपयोग न करें।"
+      },
+      "identityCard": {
+        "label": "साइन-इन पहचान",
+        "fallback": "सत्यापित एडमिन"
+      },
+      "mfa": {
+        "codeLabel": "Microsoft Authenticator कोड",
+        "codePlaceholder": "6-अंकीय कोड",
+        "verifyingButton": "सत्यापित कर रहे हैं…",
+        "verifyButton": "Microsoft Authenticator सत्यापित करें",
+        "switchMethodButton": "दूसरा साइन-इन तरीक़ा चुनें"
+      },
+      "google": {
+        "openingButton": "Google खोल रहे हैं…",
+        "continueButton": "Google से जारी रखें"
+      },
+      "divider": "या एडमिन पासवर्ड का उपयोग करें",
+      "emailLabel": "ईमेल पता",
+      "passwordLabel": "पासवर्ड",
+      "password": {
+        "submittingButton": "साइन-इन हो रहे हैं…",
+        "submitButton": "पासवर्ड से साइन-इन करें"
+      }
+    },
+    "errors": {
+      "adminNotFound": "यह Google खाता या ईमेल पता सक्रिय एडमिन उपयोगकर्ता नहीं है।",
+      "firebaseTokenInvalid": "Google इस साइन-इन को सत्यापित नहीं कर सका। फिर से कोशिश करें।",
+      "mfaChallengeInvalid": "Microsoft Authenticator चरण समाप्त हो गया। फिर से साइन-इन करें।",
+      "totpInvalid": "वह Microsoft Authenticator कोड मेल नहीं खाया। अगला 6-अंकीय कोड आज़माएँ।",
+      "totpNotConfigured": "इस एडमिन उपयोगकर्ता के लिए Microsoft Authenticator सेटअप नहीं है। सेटअप पूरा करने के लिए फिर से साइन-इन करें।",
+      "fallback": "साइन-इन विफल। अपनी क्रेडेंशियल जाँचें और फिर से कोशिश करें।",
+      "invalidCredential": "ईमेल या पासवर्ड अमान्य है।",
+      "genericPassword": "एक त्रुटि हुई। कृपया फिर से कोशिश करें।",
+      "googlePopupClosed": "पूरा होने से पहले Google साइन-इन बंद हो गया।",
+      "googlePopupBlocked": "इस एडमिन साइट के लिए पॉप-अप अनुमति दें और फिर से कोशिश करें।",
+      "googleAccountExists": "यह ईमेल किसी और साइन-इन तरीक़े का उपयोग करता है।",
+      "googleFallback": "Google साइन-इन विफल। कृपया फिर से कोशिश करें।",
+      "mfaVerificationFallback": "सत्यापन विफल। फिर से कोशिश करें।"
+    }
+  },
   "topbar": {
     "title": "ऑपरेशंस ऑब्ज़र्वेटरी",
     "city": "अयोध्या",
