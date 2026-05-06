@@ -98,6 +98,7 @@ public class TechnicianHomeViewModelTest {
         }
 
     private fun httpException(code: Int): HttpException {
-        return HttpException(Response.error<Unit>(code, "".toResponseBody(null)))
+        val body = "".toResponseBody(null)
+        return HttpException(Response.error<Unit>(code, body))
     }
 }
