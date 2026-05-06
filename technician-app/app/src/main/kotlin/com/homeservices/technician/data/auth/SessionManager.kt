@@ -138,8 +138,10 @@ public class SessionManager
             _authState.value = AuthState.Unauthenticated
         }
 
-        private fun currentUid(): String? =
-            (authState.value as? AuthState.Authenticated)?.uid ?: prefs.getString(KEY_UID, null)
+        private fun currentUid(): String? {
+            val fromState = (authState.value as? AuthState.Authenticated)?.uid
+            return fromState ?: prefs.getString(KEY_UID, null)
+        }
 
         private fun onboardingCompleteKey(uid: String): String = "$KEY_ONBOARDING_COMPLETE_PREFIX$uid"
 
