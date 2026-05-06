@@ -1,6 +1,8 @@
 'use client';
 
 import { Fragment, useState } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
+import { formatDate } from '@/lib/format/intl';
 import type { AuditLogEntry } from '@/types/audit-log';
 
 interface Props {
@@ -8,6 +10,8 @@ interface Props {
 }
 
 export function AuditLogTable({ entries }: Props) {
+  const t = useTranslations('auditLog');
+  const locale = useLocale();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   function toggle(id: string) {
@@ -17,7 +21,7 @@ export function AuditLogTable({ entries }: Props) {
   if (entries.length === 0) {
     return (
       <p className="py-[var(--space-4)] text-sm text-[var(--color-text-muted)]">
-        No entries found.
+        {t('emptyStates.noEntries')}
       </p>
     );
   }
@@ -27,11 +31,11 @@ export function AuditLogTable({ entries }: Props) {
       <table className="w-full text-sm text-left text-[var(--color-text)]">
         <thead className="bg-[var(--color-surface-alt)]">
           <tr>
-            <th scope="col" className="px-3 py-2 font-medium">Timestamp</th>
-            <th scope="col" className="px-3 py-2 font-medium">Admin ID</th>
-            <th scope="col" className="px-3 py-2 font-medium">Action</th>
-            <th scope="col" className="px-3 py-2 font-medium">Resource Type</th>
-            <th scope="col" className="px-3 py-2 font-medium">Resource ID</th>
+            <th scope="col" className="px-3 py-2 font-medium">{t('table.columns.timestamp')}</th>
+            <th scope="col" className="px-3 py-2 font-medium">{t('table.columns.adminId')}</th>
+            <th scope="col" className="px-3 py-2 font-medium">{t('table.columns.action')}</th>
+            <th scope="col" className="px-3 py-2 font-medium">{t('table.columns.resourceType')}</th>
+            <th scope="col" className="px-3 py-2 font-medium">{t('table.columns.resourceId')}</th>
           </tr>
         </thead>
         <tbody>
@@ -42,7 +46,7 @@ export function AuditLogTable({ entries }: Props) {
                 className="border-t border-[var(--color-border)] cursor-pointer hover:bg-[var(--color-surface-alt)]"
               >
                 <td className="px-3 py-2 whitespace-nowrap">
-                  {new Date(entry.timestamp).toLocaleString()}
+                  {formatDate(entry.timestamp, locale)}
                 </td>
                 <td className="px-3 py-2">{entry.adminId}</td>
                 <td className="px-3 py-2 font-mono">{entry.action}</td>

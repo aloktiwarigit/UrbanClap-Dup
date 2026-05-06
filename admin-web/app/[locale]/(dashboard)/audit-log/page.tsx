@@ -1,15 +1,20 @@
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { AuditLogClient } from '@/components/audit-log/AuditLogClient';
 
-export const metadata: Metadata = {
-  title: 'Audit Log — HomeHeroo admin',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('auditLog');
+  return {
+    title: t('metadata.title'),
+  };
+}
 
-export default function AuditLogPage() {
+export default async function AuditLogPage() {
+  const t = await getTranslations('auditLog');
   return (
     <div className="p-[var(--space-6)]">
       <h1 className="text-[length:var(--text-2xl)] font-bold text-[var(--color-text)] mb-[var(--space-4)]">
-        Audit Log
+        {t('title')}
       </h1>
       <AuditLogClient />
     </div>

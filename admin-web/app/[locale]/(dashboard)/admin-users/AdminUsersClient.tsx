@@ -1,7 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useLocale } from 'next-intl';
 import { patchAdminUser } from '@/api/adminUsers';
+import { formatDate as intlFormatDate } from '@/lib/format/intl';
 import type { AdminUserListItem } from '@/types/admin-user';
 import type { AdminRole } from '@/lib/auth/types';
 
@@ -11,16 +13,8 @@ interface AdminUsersClientProps {
   initialUsers: AdminUserListItem[];
 }
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) return '-';
-  return new Date(value).toLocaleString('en-IN', {
-    timeZone: 'Asia/Kolkata',
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
-}
-
 export function AdminUsersClient({ initialUsers }: AdminUsersClientProps) {
+  const locale = useLocale();
   const [users, setUsers] = useState(initialUsers);
   const [draftNames, setDraftNames] = useState<Record<string, string>>(() =>
     Object.fromEntries(initialUsers.map((user) => [user.adminId, user.displayName ?? ''])),
@@ -109,7 +103,7 @@ export function AdminUsersClient({ initialUsers }: AdminUsersClientProps) {
                       <p className="font-medium text-[var(--color-text)] m-0">{user.email}</p>
                       <p className="font-mono text-xs text-[var(--color-text-muted)] m-0">{user.adminId}</p>
                       <p className="text-xs text-[var(--color-text-muted)] m-0">
-                        Updated {formatDate(user.updatedAt)}
+                        Updated {user.updatedAt ? intlFormatDate(user.updatedAt, locale) : '-'}
                       </p>
                     </td>
                     <td className="py-3 pr-4">
@@ -162,7 +156,7 @@ export function AdminUsersClient({ initialUsers }: AdminUsersClientProps) {
                         <span className="text-[var(--color-success)] font-medium">Active</span>
                       ) : (
                         <span className="text-[var(--color-danger)] font-medium">
-                          Deactivated {formatDate(user.deactivatedAt)}
+                          Deactivated {user.deactivatedAt ? intlFormatDate(user.deactivatedAt, locale) : '-'}
                         </span>
                       )}
                     </td>
