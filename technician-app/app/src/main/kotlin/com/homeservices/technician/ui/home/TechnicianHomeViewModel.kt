@@ -43,7 +43,8 @@ internal class TechnicianHomeViewModel
                     when (code()) {
                         HTTP_UNAUTHORIZED -> "Session expired. Sign out and sign in again to refresh jobs."
                         HTTP_FORBIDDEN -> "This account is not enabled for technician jobs."
-                        in HTTP_SERVER_ERROR_MIN..HTTP_SERVER_ERROR_MAX -> "Jobs service is unavailable. Retry in a few minutes."
+                        in HTTP_SERVER_ERROR_MIN..HTTP_SERVER_ERROR_MAX ->
+                            "Jobs service is unavailable. Retry in a few minutes."
                         else -> "Could not refresh jobs. Server returned ${code()}."
                     }
                 is IOException -> "Network unavailable. Check your connection and retry."

@@ -97,6 +97,7 @@ public class TechnicianHomeViewModelTest {
             coVerify(exactly = 2) { getBookings.invoke() }
         }
 
-    private fun httpException(code: Int): HttpException =
-        HttpException(Response.error<Unit>(code, "".toResponseBody(null)))
+    private fun httpException(code: Int): HttpException {
+        return HttpException(Response.error<Unit>(code, "".toResponseBody(null)))
+    }
 }
