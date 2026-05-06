@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { apiUrl } from '@/api/base';
 import { ServiceForm } from '@/components/catalogue/ServiceForm';
 import type { components, operations } from '@/api/generated/schema';
@@ -21,6 +22,7 @@ interface EditServiceClientProps {
 }
 
 export function EditServiceClient({ categoryId, service }: EditServiceClientProps) {
+  const t = useTranslations('catalogue');
   const router = useRouter();
 
   async function handleSubmit(data: CreateServiceBody | UpdateServiceBody) {
@@ -44,7 +46,7 @@ export function EditServiceClient({ categoryId, service }: EditServiceClientProp
   return (
     <div style={{ padding: 'var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
       <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>
-        Edit Service
+        {t('serviceEdit.title')}
       </h1>
       <ServiceForm
         categoryId={categoryId}

@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { apiUrl } from '@/api/base';
 import { CategoryForm } from '@/components/catalogue/CategoryForm';
 import type { operations } from '@/api/generated/schema';
@@ -15,6 +16,7 @@ type UpdateCategoryBody = NonNullable<
 >['content']['application/json'];
 
 export default function NewCategoryPage() {
+  const t = useTranslations('catalogue');
   const router = useRouter();
 
   async function handleSubmit(data: CreateCategoryBody | UpdateCategoryBody) {
@@ -45,10 +47,10 @@ export default function NewCategoryPage() {
         href="/catalogue"
         style={{ fontSize: 'var(--text-sm)', color: 'var(--color-brand)', textDecoration: 'underline' }}
       >
-        Back to catalogue
+        {t('new.backLink')}
       </Link>
       <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>
-        New Category
+        {t('new.title')}
       </h1>
       <CategoryForm onSubmit={handleSubmit} onCancel={() => router.push('/catalogue')} />
     </div>
