@@ -530,8 +530,10 @@
       },
       "statuses": {
         "PENDING": "Pending",
+        "EXECUTING": "Executing",
         "EXECUTED": "Executed",
         "DENIED": "Denied",
+        "REVOKED": "Revoked",
         "FAILED": "Failed"
       }
     },

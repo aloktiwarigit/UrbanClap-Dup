@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatINR, formatDate } from '@/lib/format/intl';
+import { formatINR, formatDate, formatDateTime } from '@/lib/format/intl';
 
 describe('formatINR', () => {
   it('formats with hi-IN lakh grouping', () => {
@@ -30,5 +30,16 @@ describe('formatDate', () => {
     const result = formatDate('2026-05-05T00:00:00Z', 'hi');
     expect(typeof result).toBe('string');
     expect(result.length).toBeGreaterThan(0);
+  });
+});
+
+describe('formatDateTime', () => {
+  it('includes time component in output', () => {
+    const result = formatDateTime(new Date('2026-05-05T10:30:00Z'), 'en');
+    expect(result).toMatch(/\d+:\d+/);
+  });
+  it('formats hi-IN date-time with Hindi month', () => {
+    const result = formatDateTime(new Date('2026-05-05T10:30:00Z'), 'hi');
+    expect(result).toMatch(/मई/);
   });
 });

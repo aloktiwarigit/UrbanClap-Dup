@@ -530,8 +530,10 @@
       },
       "statuses": {
         "PENDING": "लंबित",
+        "EXECUTING": "निष्पादन जारी",
         "EXECUTED": "निष्पादित",
         "DENIED": "अस्वीकृत",
+        "REVOKED": "रद्द किया",
         "FAILED": "विफल"
       }
     },

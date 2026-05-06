@@ -2,7 +2,7 @@
 
 import { Fragment, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
-import { formatDate } from '@/lib/format/intl';
+import { formatDateTime } from '@/lib/format/intl';
 import type { AuditLogEntry } from '@/types/audit-log';
 
 interface Props {
@@ -46,7 +46,7 @@ export function AuditLogTable({ entries }: Props) {
                 className="border-t border-[var(--color-border)] cursor-pointer hover:bg-[var(--color-surface-alt)]"
               >
                 <td className="px-3 py-2 whitespace-nowrap">
-                  {formatDate(entry.timestamp, locale)}
+                  {formatDateTime(entry.timestamp, locale)}
                 </td>
                 <td className="px-3 py-2">{entry.adminId}</td>
                 <td className="px-3 py-2 font-mono">{entry.action}</td>
