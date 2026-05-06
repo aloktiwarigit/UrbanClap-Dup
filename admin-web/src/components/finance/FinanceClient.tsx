@@ -54,7 +54,7 @@ export function FinanceClient() {
     } finally {
       setSummaryLoading(false);
     }
-  }, [from, to]);
+  }, [from, to, t]);
 
   const loadQueue = useCallback(async () => {
     setQueueLoading(true);
@@ -65,7 +65,7 @@ export function FinanceClient() {
     } finally {
       setQueueLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => { void loadSummary(); }, [loadSummary]);
   useEffect(() => { void loadQueue(); }, [loadQueue]);

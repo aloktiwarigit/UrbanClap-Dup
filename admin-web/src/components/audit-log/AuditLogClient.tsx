@@ -45,7 +45,7 @@ export function AuditLogClient() {
         setLoading(false);
       }
     },
-    [filters],
+    [filters, t],
   );
 
   useEffect(() => {
