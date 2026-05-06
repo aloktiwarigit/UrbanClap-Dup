@@ -97,5 +97,465 @@
       "submit": "रिफंड भेजें"
     },
     "filterByStatus": "स्थिति के अनुसार फ़िल्टर करें"
+  },
+  "orders": {
+    "list": {
+      "title": "ऑर्डर",
+      "subtitle": "सभी बुकिंग — आज और पहले की",
+      "exportButton": {
+        "label": "CSV निर्यात करें",
+        "loading": "निर्यात हो रहा है…"
+      }
+    },
+    "table": {
+      "columns": {
+        "orderId": "ऑर्डर ID",
+        "customer": "ग्राहक",
+        "service": "सेवा",
+        "technician": "तकनीशियन",
+        "status": "स्थिति",
+        "city": "शहर",
+        "scheduled": "निर्धारित समय",
+        "amount": "राशि",
+        "action": "कार्रवाई"
+      },
+      "emptyState": "कोई ऑर्डर नहीं मिला",
+      "viewAction": "देखें →",
+      "pagination": {
+        "info": "{total} कुल · पृष्ठ {page} / {pageCount}",
+        "prev": "पिछला",
+        "next": "अगला"
+      }
+    },
+    "filters": {
+      "status": { "label": "स्थिति" },
+      "city": { "placeholder": "शहर" },
+      "phone": { "placeholder": "फ़ोन" },
+      "technicianId": { "placeholder": "तकनीशियन ID" },
+      "minAmount": { "placeholder": "न्यूनतम ₹" },
+      "maxAmount": { "placeholder": "अधिकतम ₹" }
+    },
+    "detail": {
+      "title": "ऑर्डर {orderId}",
+      "closeButton": { "ariaLabel": "पैनल बंद करें" },
+      "sections": {
+        "status": "स्थिति",
+        "customer": "ग्राहक",
+        "technician": "तकनीशियन",
+        "service": "सेवा",
+        "location": "स्थान",
+        "scheduled": "निर्धारित समय",
+        "payment": "भुगतान",
+        "created": "बनाया गया",
+        "actions": {
+          "heading": "कार्रवाइयां",
+          "noPermission": "आपकी भूमिका इस ऑर्डर की समीक्षा कर सकती है लेकिन परिचालन बदलाव नहीं कर सकती।"
+        }
+      },
+      "toast": { "success": "कार्रवाई सफलतापूर्वक पूरी हुई।" }
+    },
+    "actions": {
+      "reassign": {
+        "title": "तकनीशियन बदलें",
+        "buttonLabel": "तकनीशियन बदलें",
+        "selectLabel": "तकनीशियन",
+        "loadingPlaceholder": "तकनीशियन लोड हो रहे हैं…",
+        "noEligibleTechs": "इस क्षेत्र में कोई उपयुक्त तकनीशियन उपलब्ध नहीं है।",
+        "fetchError": "इस क्षेत्र के तकनीशियन लोड नहीं हो सके।"
+      },
+      "complete": {
+        "title": "ऑर्डर पूर्ण करें",
+        "buttonLabel": "पूर्ण करें"
+      },
+      "refund": {
+        "title": "रिफंड जारी करें",
+        "buttonLabel": "रिफंड करें"
+      },
+      "waiveFee": {
+        "title": "शुल्क माफ़ करें",
+        "buttonLabel": "शुल्क माफ़ करें"
+      },
+      "escalate": {
+        "title": "एस्केलेट करें ({priority})",
+        "buttonLabel": "एस्केलेट करें",
+        "priorityLabel": "एस्केलेशन प्राथमिकता:",
+        "priorities": {
+          "HIGH": "उच्च",
+          "CRITICAL": "अत्यंत गंभीर"
+        }
+      },
+      "note": {
+        "title": "आंतरिक नोट जोड़ें",
+        "buttonLabel": "नोट जोड़ें",
+        "label": "नोट"
+      },
+      "error": "कार्रवाई विफल हुई। कृपया पुनः प्रयास करें।"
+    },
+    "confirmModal": {
+      "reasonLabel": "कारण",
+      "selectPlaceholder": "{label} चुनें",
+      "minCharactersHint": "न्यूनतम {min} अक्षर",
+      "cancelButton": "रद्द करें",
+      "submitButton": {
+        "label": "पुष्टि करें",
+        "loading": "प्रक्रिया हो रही है…"
+      }
+    },
+    "csv": {
+      "headers": {
+        "orderId": "ऑर्डर ID",
+        "customerName": "ग्राहक का नाम",
+        "customerPhone": "ग्राहक का फ़ोन",
+        "serviceName": "सेवा का नाम",
+        "technicianName": "तकनीशियन का नाम",
+        "status": "स्थिति",
+        "city": "शहर",
+        "scheduledAt": "निर्धारित समय",
+        "amount": "राशि (INR)",
+        "createdAt": "बनाया गया"
+      }
+    },
+    "statuses": {
+      "NEW": "नया",
+      "PENDING_PAYMENT": "भुगतान प्रतीक्षित",
+      "SEARCHING": "खोज जारी",
+      "ACCEPTED": "स्वीकृत",
+      "EN_ROUTE": "रास्ते में",
+      "ARRIVED": "पहुंच गए",
+      "IN_PROGRESS": "प्रगति में",
+      "COMPLETED": "पूर्ण",
+      "CANCELLED": "रद्द",
+      "REFUNDED": "रिफंड किया"
+    }
+  },
+  "complaints": {
+    "list": {
+      "title": "शिकायतें",
+      "pagination": {
+        "loadedCount": "{count} / {total} लोड",
+        "totalCount": "{total} कुल"
+      }
+    },
+    "repeatOffenders": {
+      "title": "बार-बार शिकायत",
+      "description": "पिछले 30 दिनों में 3 या अधिक शिकायत वाले तकनीशियन।",
+      "flaggedCount": "{count} चिह्नित",
+      "complaintCount": "{count, plural, one {# शिकायत} other {# शिकायतें}}"
+    },
+    "card": {
+      "sla": {
+        "overdue": "समय सीमा पार",
+        "resolved": "हल किया",
+        "countdown": {
+          "hm": "{h}घ {m}मि",
+          "m": "{m}मि"
+        }
+      },
+      "badge": { "escalated": "एस्केलेटेड" }
+    },
+    "detail": {
+      "title": "शिकायत {complaintId}",
+      "closeButton": { "ariaLabel": "पैनल बंद करें" },
+      "sections": {
+        "description": "विवरण",
+        "status": "स्थिति",
+        "assignee": {
+          "label": "असाइनी",
+          "placeholder": "एडमिन ID"
+        },
+        "internalNotes": {
+          "label": "आंतरिक नोट्स",
+          "empty": "अभी तक कोई नोट नहीं।"
+        },
+        "addNote": {
+          "label": "नोट जोड़ें",
+          "placeholder": "आंतरिक नोट लिखें…"
+        },
+        "resolve": "शिकायत हल करें"
+      },
+      "actions": {
+        "reassignButton": "पुनः असाइन करें",
+        "addNoteButton": "नोट जोड़ें",
+        "resolveButton": "हल करें"
+      },
+      "toast": { "error": "कार्रवाई विफल हुई। कृपया पुनः प्रयास करें।" }
+    },
+    "kanban": {
+      "column": {
+        "NEW": "नई",
+        "INVESTIGATING": "जांच में",
+        "RESOLVED": "हल की गई"
+      },
+      "columnCount": "{count, plural, one {# शिकायत} other {# शिकायतें}}"
+    },
+    "resolutionCategories": {
+      "TECHNICIAN_MISCONDUCT": "तकनीशियन दुर्व्यवहार",
+      "SERVICE_QUALITY": "सेवा गुणवत्ता",
+      "BILLING_DISPUTE": "बिलिंग विवाद",
+      "LATE_ARRIVAL": "देरी से आना",
+      "NO_SHOW": "नहीं आए",
+      "OTHER": "अन्य"
+    },
+    "statuses": {
+      "NEW": "नई",
+      "INVESTIGATING": "जांच में",
+      "RESOLVED": "हल की गई"
+    }
+  },
+  "finance": {
+    "title": "वित्त",
+    "subtitle": "दैनिक P&L और साप्ताहिक भुगतान कतार।",
+    "metadata": { "title": "वित्त — HomeHeroo एडमिन" },
+    "sections": { "pnl": "लाभ और हानि" },
+    "dateRange": { "from": "से", "to": "तक" },
+    "loading": {
+      "summary": "P&L लोड हो रहा है…",
+      "queue": "भुगतान कतार लोड हो रही है…"
+    },
+    "summary": {
+      "grossRevenue": "कुल राजस्व",
+      "commission": "कमीशन",
+      "netToOwner": "मालिक को शुद्ध"
+    },
+    "payoutQueue": {
+      "title": "भुगतान कतार — {total} कुल",
+      "columns": {
+        "technician": "तकनीशियन",
+        "jobs": "काम",
+        "gross": "सकल",
+        "commission": "कमीशन",
+        "netPayable": "देय राशि"
+      }
+    },
+    "emptyStates": { "noPayouts": "इस सप्ताह कोई भुगतान बकाया नहीं।" },
+    "chart": {
+      "legend": {
+        "grossRevenue": "कुल राजस्व",
+        "commission": "कमीशन",
+        "netToOwner": "मालिक को शुद्ध"
+      }
+    },
+    "buttons": {
+      "approveAll": "सभी स्वीकृत करें",
+      "cancel": "रद्द करें",
+      "confirm": "पुष्टि करें",
+      "processing": "प्रक्रिया हो रही है…"
+    },
+    "permissions": { "approvalRestricted": "अनुमोदन केवल सुपर-एडमिन के लिए।" },
+    "errors": {
+      "loadSummaryFailed": "P&L सारांश लोड नहीं हुआ।",
+      "loadQueueFailed": "भुगतान कतार लोड नहीं हुई।",
+      "approveFailed": "भुगतान स्वीकृत करने में विफल। कृपया पुनः प्रयास करें।"
+    },
+    "messages": {
+      "approveSuccess": "{approved} भुगतान स्वीकृत {approved, plural, one {हुआ} other {हुए}}।{hasFailed, select, true { विफल: {failed}.} other {}}"
+    },
+    "modal": {
+      "confirmPayouts": {
+        "title": "भुगतान की पुष्टि करें",
+        "description": "यह सप्ताह की भुगतान कतार में सभी तकनीशियनों को Razorpay Route के माध्यम से {amount} ट्रांसफर करेगा। यह कार्रवाई पूर्ववत नहीं की जा सकती।"
+      }
+    }
+  },
+  "auditLog": {
+    "title": "ऑडिट लॉग",
+    "metadata": { "title": "ऑडिट लॉग — HomeHeroo एडमिन" },
+    "filters": {
+      "adminId": "एडमिन ID",
+      "action": "कार्रवाई",
+      "resourceType": "संसाधन प्रकार",
+      "resourceId": "संसाधन ID",
+      "dateFrom": "से",
+      "dateTo": "तक"
+    },
+    "buttons": { "clearFilters": "साफ़ करें" },
+    "table": {
+      "columns": {
+        "timestamp": "समय",
+        "adminId": "एडमिन ID",
+        "action": "कार्रवाई",
+        "resourceType": "संसाधन प्रकार",
+        "resourceId": "संसाधन ID"
+      }
+    },
+    "pagination": {
+      "previous": "← पिछला",
+      "next": "अगला →"
+    },
+    "loading": "लोड हो रहा है…",
+    "errors": { "loadFailed": "ऑडिट लॉग लोड नहीं हुआ। कृपया पुनः प्रयास करें।" },
+    "emptyStates": { "noEntries": "कोई प्रविष्टि नहीं मिली।" }
+  },
+  "catalogue": {
+    "list": {
+      "title": "सेवा कैटलॉग",
+      "newButton": "नई श्रेणी"
+    },
+    "emptyState": {
+      "eyebrow": "कैटलॉग",
+      "headline": "कैटलॉग खाली है",
+      "description": "अभी तक कोई श्रेणी नहीं बनाई गई। शुरू करने के लिए एक बनाएं।"
+    },
+    "categoryCard": { "viewServices": "सेवाएं देखें" },
+    "new": {
+      "backLink": "कैटलॉग पर वापस",
+      "title": "नई श्रेणी"
+    },
+    "detail": {
+      "backLink": "सभी श्रेणियों पर वापस",
+      "statusActive": "सक्रिय",
+      "statusInactive": "निष्क्रिय",
+      "editButton": "श्रेणी संपादित करें",
+      "servicesHeading": "सेवाएं",
+      "addServiceButton": "सेवा जोड़ें"
+    },
+    "edit": { "title": "श्रेणी संपादित करें" },
+    "card": {
+      "statusActive": "सक्रिय",
+      "statusInactive": "निष्क्रिय",
+      "activateButton": "सक्रिय करें",
+      "deactivateButton": "निष्क्रिय करें"
+    },
+    "form": {
+      "idLabel": "ID (slug)",
+      "idPlaceholder": "जैसे: ac-repair",
+      "nameLabel": "नाम",
+      "namePlaceholder": "जैसे: AC Repair",
+      "heroImageLabel": "हीरो इमेज URL",
+      "heroImagePlaceholder": "https://…",
+      "sortOrderLabel": "क्रम संख्या",
+      "sortOrderPlaceholder": "10",
+      "sortOrderError": "क्रम संख्या एक गैर-ऋणात्मक पूर्णांक होना चाहिए।",
+      "submissionError": "सबमिशन विफल हुआ।",
+      "savingState": "सहेजा जा रहा है…",
+      "createButton": "श्रेणी बनाएं",
+      "updateButton": "श्रेणी अपडेट करें",
+      "cancelButton": "रद्द करें"
+    },
+    "serviceList": {
+      "empty": "इस श्रेणी में अभी तक कोई सेवा नहीं।",
+      "toggleError": "{name} को {action} करने में विफल।",
+      "statusPublished": "प्रकाशित",
+      "statusUnpublished": "अप्रकाशित",
+      "updatingButton": "अपडेट हो रहा है…",
+      "publishButton": "प्रकाशित करें",
+      "unpublishButton": "अप्रकाशित करें",
+      "editLink": "संपादित करें"
+    },
+    "serviceNew": { "title": "सेवा जोड़ें" },
+    "serviceEdit": { "title": "सेवा संपादित करें" },
+    "serviceForm": {
+      "idLabel": "ID (slug)",
+      "idPlaceholder": "जैसे: ac-deep-clean",
+      "nameLabel": "नाम",
+      "namePlaceholder": "जैसे: AC Deep Clean",
+      "descriptionLabel": "संक्षिप्त विवरण",
+      "descriptionPlaceholder": "एक-पंक्ति सारांश",
+      "heroImageLabel": "हीरो इमेज URL",
+      "heroImagePlaceholder": "https://…",
+      "priceLabel": "आधार मूल्य (पैसे — INR 599 = 59900)",
+      "pricePlaceholder": "59900",
+      "durationLabel": "अवधि (मिनट)",
+      "durationPlaceholder": "60",
+      "commissionLabel": "कमीशन (basis points — 2250 = 22.5%, सीमा 1500–3500)",
+      "commissionPlaceholder": "2250",
+      "validationError": "मूल्य, अवधि और कमीशन वैध संख्याएं होनी चाहिए।",
+      "commissionRangeError": "कमीशन 1500 और 3500 basis points के बीच होना चाहिए।",
+      "submissionError": "सबमिशन विफल हुआ।",
+      "savingState": "सहेजा जा रहा है…",
+      "createButton": "सेवा बनाएं",
+      "updateButton": "सेवा अपडेट करें",
+      "cancelButton": "रद्द करें"
+    }
+  },
+  "adminUsers": {
+    "eyebrow": "पहचान और पहुंच",
+    "title": "एडमिन उपयोगकर्ता",
+    "subtitle": "{total} एडमिन खातों में से {activeCount} सक्रिय।",
+    "emptyState": "API से कोई एडमिन उपयोगकर्ता नहीं मिला।",
+    "columns": {
+      "admin": "एडमिन",
+      "displayName": "प्रदर्शन नाम",
+      "role": "भूमिका",
+      "totp": "TOTP",
+      "status": "स्थिति",
+      "actions": "कार्रवाई"
+    },
+    "updatedLabel": "अपडेट: {date}",
+    "displayNameAriaLabel": "{email} का प्रदर्शन नाम",
+    "roleAriaLabel": "{email} की भूमिका",
+    "saveButton": "सहेजें",
+    "deactivateButton": "निष्क्रिय करें",
+    "reactivateButton": "पुनः सक्रिय करें",
+    "totpEnrolled": "नामांकित",
+    "totpPending": "लंबित",
+    "statusActive": "सक्रिय",
+    "statusDeactivated": "निष्क्रिय: {date}",
+    "toastSuccess": "एडमिन उपयोगकर्ता अपडेट हुआ।",
+    "toastError": "एडमिन उपयोगकर्ता अपडेट विफल।",
+    "roles": {
+      "super-admin": "सुपर एडमिन",
+      "ops-manager": "ऑप्स मैनेजर",
+      "finance": "वित्त",
+      "support-agent": "सहायता एजेंट"
+    }
+  },
+  "compliance": {
+    "eyebrow": "अनुपालन संचालन",
+    "title": "अनुपालन",
+    "erasure": {
+      "heading": "डेटा मिटाने के अनुरोध",
+      "description": "DPDP के तहत लंबित मिटाने के अनुरोध जो समीक्षा या अस्वीकृति का इंतजार कर रहे हैं।",
+      "emptyState": "कोई मिटाने का अनुरोध नहीं मिला।",
+      "columns": {
+        "request": "अनुरोध",
+        "user": "उपयोगकर्ता",
+        "schedule": "समय-सारणी",
+        "status": "स्थिति",
+        "actions": "कार्रवाई"
+      },
+      "requestedLabel": "अनुरोध: {date}",
+      "closedLabel": "बंद: {date}",
+      "denyReasonAriaLabel": "{requestId} के लिए अस्वीकृति कारण",
+      "executeButton": "निष्पादित करें",
+      "denyButton": "अस्वीकार करें",
+      "toastExecuteSuccess": "मिटाने का अनुरोध निष्पादित हुआ।",
+      "toastExecuteFailed": "मिटाने का निष्पादन विफल।",
+      "toastDenySuccess": "मिटाने का अनुरोध अस्वीकृत।",
+      "toastDenyFailed": "अस्वीकृति विफल।",
+      "denialReasons": {
+        "legal-hold": "कानूनी रोक",
+        "regulatory-retention-conflict": "नियामक प्रतिधारण विरोध",
+        "fraud-investigation": "धोखाधड़ी जांच"
+      },
+      "statuses": {
+        "PENDING": "लंबित",
+        "EXECUTED": "निष्पादित",
+        "DENIED": "अस्वीकृत",
+        "FAILED": "विफल"
+      }
+    },
+    "sscLevy": {
+      "heading": "SSC शुल्क अनुमोदन",
+      "description": "त्रैमासिक वैधानिक शुल्क हस्तांतरण के लिए सुपर-एडमिन अनुमोदन आवश्यक।",
+      "emptyState": "कोई SSC शुल्क नहीं मिला।",
+      "columns": {
+        "quarter": "तिमाही",
+        "gmv": "GMV",
+        "levy": "शुल्क",
+        "status": "स्थिति",
+        "action": "कार्रवाई"
+      },
+      "approveButton": "ट्रांसफर स्वीकृत करें",
+      "noAction": "कोई कार्रवाई नहीं",
+      "toastSuccess": "SSC शुल्क {quarter} ट्रांसफर हुआ।",
+      "toastError": "SSC शुल्क अनुमोदन विफल।",
+      "statuses": {
+        "PENDING_APPROVAL": "अनुमोदन प्रतीक्षित",
+        "FAILED": "विफल",
+        "APPROVED": "स्वीकृत",
+        "TRANSFERRED": "ट्रांसफर हुआ"
+      }
+    }
   }
 }
