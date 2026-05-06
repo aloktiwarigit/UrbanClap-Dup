@@ -4,6 +4,8 @@ import { useTranslations, useLocale } from 'next-intl';
 import { formatINR, formatDateTime } from '@/lib/format/intl';
 import type { Order } from '@/types/order';
 import { StatusBadge } from './StatusBadge';
+import { CustomerCell } from './CustomerCell';
+import { TechnicianCell } from './TechnicianCell';
 
 interface OrdersTableProps {
   orders: Order[];
@@ -53,9 +55,13 @@ export function OrdersTable({ orders, total, page, pageSize, totalPages, isLoadi
                 className="cursor-pointer hover:bg-[var(--color-surface-alt)] text-[var(--color-text)]"
               >
                 <td className="px-4 py-3 font-mono">{order.id.slice(0, 8)}</td>
-                <td className="px-4 py-3">{order.customerName}</td>
+                <td className="px-4 py-3">
+                  <CustomerCell name={order.customerName} phone={order.customerPhone} />
+                </td>
                 <td className="px-4 py-3">{order.serviceName ?? '—'}</td>
-                <td className="px-4 py-3">{order.technicianName ?? '—'}</td>
+                <td className="px-4 py-3">
+                  <TechnicianCell name={order.technicianName} id={order.technicianId} />
+                </td>
                 <td className="px-4 py-3"><StatusBadge status={order.status} /></td>
                 <td className="px-4 py-3">{order.city}</td>
                 <td className="px-4 py-3 whitespace-nowrap">{formatDateTime(order.scheduledAt, locale)}</td>

@@ -273,6 +273,10 @@
       },
       "error": "कार्रवाई विफल हुई। कृपया पुनः प्रयास करें।"
     },
+    "cells": {
+      "customer": { "noName": "नाम उपलब्ध नहीं" },
+      "technician": { "unassigned": "अनुसौंपा गया" }
+    },
     "confirmModal": {
       "reasonLabel": "कारण",
       "selectPlaceholder": "{label} चुनें",

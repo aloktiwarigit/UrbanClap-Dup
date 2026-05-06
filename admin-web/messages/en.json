@@ -273,6 +273,10 @@
       },
       "error": "Action failed. Please try again."
     },
+    "cells": {
+      "customer": { "noName": "No name" },
+      "technician": { "unassigned": "Unassigned" }
+    },
     "confirmModal": {
       "reasonLabel": "Reason",
       "selectPlaceholder": "Select {label}",
