@@ -47,6 +47,7 @@ public class SessionManagerTest {
         }
 
     @Test
+    @Suppress("FunctionMaxLength")
     public fun `clearSession removes active session prefs and transitions to Unauthenticated`(): Unit =
         runTest {
             sessionManager.saveSession("uid-abc", "5678")
@@ -57,6 +58,7 @@ public class SessionManagerTest {
         }
 
     @Test
+    @Suppress("FunctionMaxLength")
     public fun `onboarding completion survives sign out for same technician only`(): Unit =
         runTest {
             sessionManager.saveSession("uid-abc", "5678")
