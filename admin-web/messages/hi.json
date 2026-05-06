@@ -13,13 +13,77 @@
     "complaints": "शिकायतें",
     "auditLog": "ऑडिट लॉग",
     "adminUsers": "एडमिन उपयोगकर्ता",
-    "compliance": "अनुपालन"
+    "compliance": "अनुपालन",
+    "technicians": "तकनीशियन",
+    "customers": "ग्राहक"
   },
   "locale": {
     "switcher": {
       "label": "भाषा",
       "en": "English",
       "hi": "हिन्दी"
+    }
+  },
+  "technicians": {
+    "title": "तकनीशियन रोस्टर",
+    "searchPlaceholder": "नाम या फ़ोन से खोजें",
+    "filterAll": "सभी स्थितियां",
+    "columns": {
+      "name": "नाम",
+      "phone": "फ़ोन",
+      "categories": "श्रेणियाँ",
+      "status": "स्थिति",
+      "kyc": "KYC",
+      "commission": "कमीशन %",
+      "activeJobs": "सक्रिय काम",
+      "actions": "कार्रवाई"
+    },
+    "status": {
+      "ON_DUTY": "ऑन ड्यूटी",
+      "OFF_DUTY": "ऑफ ड्यूटी",
+      "SUSPENDED": "निलंबित"
+    },
+    "kyc": {
+      "VERIFIED": "सत्यापित",
+      "PENDING": "लंबित",
+      "REJECTED": "अस्वीकृत"
+    },
+    "actions": {
+      "goOnDuty": "ऑन ड्यूटी करें",
+      "goOffDuty": "ऑफ ड्यूटी करें",
+      "suspend": "निलंबित करें",
+      "reactivate": "पुनः सक्रिय करें",
+      "viewKyc": "KYC देखें"
+    }
+  },
+  "customers": {
+    "title": "ग्राहक सूची",
+    "searchPlaceholder": "नाम या फ़ोन से खोजें",
+    "filterAll": "सभी स्थितियां",
+    "columns": {
+      "name": "नाम",
+      "phone": "फ़ोन",
+      "city": "शहर",
+      "bookings": "बुकिंग",
+      "lastBooking": "अंतिम बुकिंग",
+      "openComplaints": "खुली शिकायतें",
+      "status": "स्थिति",
+      "actions": "कार्रवाई"
+    },
+    "status": {
+      "ACTIVE": "सक्रिय",
+      "FLAGGED": "चिह्नित"
+    },
+    "actions": {
+      "flag": "चिह्नित करें",
+      "unflag": "चिह्न हटाएं",
+      "addNote": "नोट जोड़ें",
+      "refundCredit": "रिफंड क्रेडिट"
+    },
+    "expandedSection": {
+      "recentBookings": "हालिया बुकिंग",
+      "recentComplaints": "हालिया शिकायतें",
+      "notes": "नोट्स"
     }
   }
 }

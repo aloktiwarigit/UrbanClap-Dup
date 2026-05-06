@@ -13,13 +13,77 @@
     "complaints": "Complaints",
     "auditLog": "Audit Log",
     "adminUsers": "Admin Users",
-    "compliance": "Compliance"
+    "compliance": "Compliance",
+    "technicians": "Technicians",
+    "customers": "Customers"
   },
   "locale": {
     "switcher": {
       "label": "Language",
       "en": "English",
       "hi": "हिन्दी"
+    }
+  },
+  "technicians": {
+    "title": "Technician Roster",
+    "searchPlaceholder": "Search by name or phone",
+    "filterAll": "All Statuses",
+    "columns": {
+      "name": "Name",
+      "phone": "Phone",
+      "categories": "Categories",
+      "status": "Status",
+      "kyc": "KYC",
+      "commission": "Commission %",
+      "activeJobs": "Active Jobs",
+      "actions": "Actions"
+    },
+    "status": {
+      "ON_DUTY": "On Duty",
+      "OFF_DUTY": "Off Duty",
+      "SUSPENDED": "Suspended"
+    },
+    "kyc": {
+      "VERIFIED": "Verified",
+      "PENDING": "Pending",
+      "REJECTED": "Rejected"
+    },
+    "actions": {
+      "goOnDuty": "Go On Duty",
+      "goOffDuty": "Go Off Duty",
+      "suspend": "Suspend",
+      "reactivate": "Reactivate",
+      "viewKyc": "View KYC"
+    }
+  },
+  "customers": {
+    "title": "Customer List",
+    "searchPlaceholder": "Search by name or phone",
+    "filterAll": "All Statuses",
+    "columns": {
+      "name": "Name",
+      "phone": "Phone",
+      "city": "City",
+      "bookings": "Bookings",
+      "lastBooking": "Last Booking",
+      "openComplaints": "Open Complaints",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "FLAGGED": "Flagged"
+    },
+    "actions": {
+      "flag": "Flag",
+      "unflag": "Unflag",
+      "addNote": "Add Note",
+      "refundCredit": "Refund Credit"
+    },
+    "expandedSection": {
+      "recentBookings": "Recent Bookings",
+      "recentComplaints": "Recent Complaints",
+      "notes": "Notes"
     }
   }
 }
