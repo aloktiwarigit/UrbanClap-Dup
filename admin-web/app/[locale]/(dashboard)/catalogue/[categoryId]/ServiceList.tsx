@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
-import type { Route } from 'next';
 import type { components } from '@/api/generated/schema';
 import { toggleServiceAction } from '../actions';
 
@@ -85,7 +84,7 @@ export function ServiceList({ categoryId, services: initialServices }: ServiceLi
                 {isPending ? 'Updating...' : service.isActive ? 'Unpublish' : 'Publish'}
               </button>
               <Link
-                href={`/catalogue/${categoryId}/services/${service.id}` as Route}
+                href={`/catalogue/${categoryId}/services/${service.id}`}
                 style={{
                   fontSize: 'var(--text-sm)',
                   color: 'var(--color-brand)',

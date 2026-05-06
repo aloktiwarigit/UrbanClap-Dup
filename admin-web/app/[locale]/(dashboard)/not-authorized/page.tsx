@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import type { Route } from 'next';
 
 export const metadata: Metadata = {
   title: 'Not authorized - HomeHeroo admin',
@@ -71,7 +70,7 @@ export default async function NotAuthorizedPage({ searchParams }: NotAuthorizedP
         </p>
         {nextPath && nextPath !== '/not-authorized' && (
           <Link
-            href={nextPath as Route}
+            href={nextPath}
             className="btn btn-primary"
             style={{ display: 'inline-flex', marginTop: 'var(--space-4)' }}
           >
