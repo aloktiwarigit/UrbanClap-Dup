@@ -98,6 +98,53 @@ describe('GET /v1/technicians/me/bookings', () => {
     expect(res.jsonBody).toEqual({ bookings: [] });
   });
 
+  it('returns empty bookings when the repository returns an invalid result shape', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { bookingRepo } = await import('../../src/cosmos/booking-repository.js');
+    (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+    (bookingRepo.getByTechnicianId as MockFn).mockResolvedValue(null);
+
+    const res = (await handler(makeReq(), ctx)) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(res.jsonBody).toEqual({ bookings: [] });
+  });
+
+  it('skips malformed booking rows and defaults missing optional response fields', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { bookingRepo } = await import('../../src/cosmos/booking-repository.js');
+    const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
+    (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+    (bookingRepo.getByTechnicianId as MockFn).mockResolvedValue([
+      null,
+      {
+        id: 'bk-1',
+        serviceId: 'ac-deep-clean',
+      },
+    ]);
+    (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue({ name: 'AC deep clean' });
+
+    const res = (await handler(makeReq(), ctx)) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(res.jsonBody).toEqual({
+      bookings: [
+        {
+          bookingId: 'bk-1',
+          customerId: '',
+          serviceId: 'ac-deep-clean',
+          serviceName: 'AC deep clean',
+          addressText: '',
+          addressLatLng: { lat: 0, lng: 0 },
+          status: 'UNKNOWN',
+          slotDate: '',
+          slotWindow: '',
+          amount: 0,
+        },
+      ],
+    });
+  });
+
   it('uses booking serviceName fallback when catalogue lookup fails', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { bookingRepo } = await import('../../src/cosmos/booking-repository.js');
