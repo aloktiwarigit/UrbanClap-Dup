@@ -78,7 +78,8 @@
       "flag": "चिह्नित करें",
       "unflag": "चिह्न हटाएं",
       "addNote": "नोट जोड़ें",
-      "refundCredit": "रिफंड क्रेडिट"
+      "refundCredit": "रिफंड क्रेडिट",
+      "cancel": "रद्द करें"
     },
     "expandedSection": {
       "recentBookings": "हालिया बुकिंग",

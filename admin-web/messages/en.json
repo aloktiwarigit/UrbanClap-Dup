@@ -78,7 +78,8 @@
       "flag": "Flag",
       "unflag": "Unflag",
       "addNote": "Add Note",
-      "refundCredit": "Refund Credit"
+      "refundCredit": "Refund Credit",
+      "cancel": "Cancel"
     },
     "expandedSection": {
       "recentBookings": "Recent Bookings",

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   patchCustomerClient,
   addCustomerNoteClient,
@@ -20,16 +20,19 @@ const STATUS_COLORS: Record<CustomerStatus, string> = {
   FLAGGED: 'var(--rose)',
 };
 
-function relativeDate(iso?: string): string {
+function relativeDate(iso: string | undefined, locale: string): string {
   if (!iso) return '—';
   const diff = Date.now() - new Date(iso).getTime();
-  const days = Math.floor(diff / 86_400_000);
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  if (days < 30) return `${days}d ago`;
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) {
+    const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+    return rtf.format(0, 'day');
+  }
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+  if (days < 30) return rtf.format(-days, 'day');
   const months = Math.floor(days / 30);
-  if (months < 12) return `${months}mo ago`;
-  return `${Math.floor(months / 12)}yr ago`;
+  if (months < 12) return rtf.format(-months, 'month');
+  return rtf.format(-Math.floor(months / 12), 'year');
 }
 
 interface ExpandedState {
@@ -43,6 +46,7 @@ interface ExpandedState {
 
 export function CustomerListClient({ initialCustomers }: Props) {
   const t = useTranslations('customers');
+  const locale = useLocale();
 
   const [customers, setCustomers] = useState<AdminCustomer[]>(initialCustomers);
   const [search, setSearch] = useState('');
@@ -325,7 +329,7 @@ export function CustomerListClient({ initialCustomers }: Props) {
 
                       {/* Last booking */}
                       <td style={{ padding: '10px 12px', color: 'var(--fog-0)' }}>
-                        {relativeDate(customer.lastBookingDate)}
+                        {relativeDate(customer.lastBookingDate, locale)}
                       </td>
 
                       {/* Open complaints */}
@@ -458,7 +462,7 @@ export function CustomerListClient({ initialCustomers }: Props) {
                                       >
                                         {b.service}
                                       </span>{' '}
-                                      · {b.techName} · {relativeDate(b.date)} ·{' '}
+                                      · {b.techName} · {relativeDate(b.date, locale)} ·{' '}
                                       <span
                                         style={{
                                           color:
@@ -520,7 +524,7 @@ export function CustomerListClient({ initialCustomers }: Props) {
                                       >
                                         {c.category}
                                       </span>{' '}
-                                      · {relativeDate(c.date)} · {c.resolution}
+                                      · {relativeDate(c.date, locale)} · {c.resolution}
                                     </div>
                                   ))}
                                 </div>
@@ -566,7 +570,7 @@ export function CustomerListClient({ initialCustomers }: Props) {
                                       }}
                                     >
                                       <span style={{ color: 'var(--fog-0)' }}>
-                                        {n.authorName} · {relativeDate(n.createdAt)}
+                                        {n.authorName} · {relativeDate(n.createdAt, locale)}
                                       </span>
                                       <br />
                                       {n.text}
@@ -622,6 +626,7 @@ export function CustomerListClient({ initialCustomers }: Props) {
                                           noteText: '',
                                         }))
                                       }
+                                      aria-label={t('actions.cancel')}
                                       style={{
                                         padding: '4px 8px',
                                         background: 'transparent',
@@ -735,6 +740,7 @@ export function CustomerListClient({ initialCustomers }: Props) {
                                           refundReason: '',
                                         }))
                                       }
+                                      aria-label={t('actions.cancel')}
                                       style={{
                                         padding: '4px 8px',
                                         background: 'transparent',
