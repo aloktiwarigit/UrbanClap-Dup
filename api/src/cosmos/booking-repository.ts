@@ -249,3 +249,54 @@ export async function getActiveBookingCountForTechnician(technicianId: string): 
     .fetchAll();
   return resources[0] ?? 0;
 }
+
+// ── Customer roster helpers (E09-S07a A4) ─────────────────────────────────────
+
+export interface CustomerBookingSummary {
+  customerId: string;
+  bookingCount: number;
+  lastBookingDate?: string;
+  lastCity?: string;
+  recentBookings: Array<{
+    date: string; serviceId: string; technicianId: string; status: string;
+  }>;
+}
+
+export async function getCustomerSummaries(): Promise<CustomerBookingSummary[]> {
+  const { resources } = await getBookingsContainer()
+    .items.query<{
+      customerId: string; slotDate: string; serviceId: string;
+      technicianId: string; status: string; addressText: string;
+    }>(`SELECT c.customerId, c.slotDate, c.serviceId, c.technicianId,
+              c.status, c.addressText
+        FROM c`)
+    .fetchAll();
+
+  const map = new Map<string, CustomerBookingSummary>();
+  for (const r of resources) {
+    const cid = r.customerId;
+    if (!cid) continue;
+    if (!map.has(cid)) {
+      const rawCity = typeof r.addressText === 'string' ? r.addressText.split(',').pop()?.trim() : undefined;
+      const entry: CustomerBookingSummary = {
+        customerId: cid,
+        bookingCount: 0,
+        recentBookings: [],
+      };
+      if (r.slotDate) entry.lastBookingDate = r.slotDate;
+      if (rawCity) entry.lastCity = rawCity;
+      map.set(cid, entry);
+    }
+    const entry = map.get(cid)!;
+    entry.bookingCount++;
+    if (entry.recentBookings.length < 5) {
+      entry.recentBookings.push({
+        date: r.slotDate,
+        serviceId: r.serviceId,
+        technicianId: r.technicianId ?? '',
+        status: r.status,
+      });
+    }
+  }
+  return [...map.values()];
+}
