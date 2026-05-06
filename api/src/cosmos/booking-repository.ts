@@ -235,3 +235,17 @@ export async function updateBookingFields(
   const { resource } = await getBookingsContainer().item(id, id).replace<BookingDoc>(updated);
   return resource ?? null;
 }
+
+// ── Admin roster helpers (E09-S07a) ───────────────────────────────────────────
+
+export async function getActiveBookingCountForTechnician(technicianId: string): Promise<number> {
+  const { resources } = await getBookingsContainer()
+    .items.query<number>({
+      query: `SELECT VALUE COUNT(1) FROM c
+              WHERE c.technicianId = @technicianId
+                AND c.status IN ('ASSIGNED', 'EN_ROUTE', 'REACHED', 'IN_PROGRESS', 'AWAITING_PRICE_APPROVAL')`,
+      parameters: [{ name: '@technicianId', value: technicianId }],
+    })
+    .fetchAll();
+  return resources[0] ?? 0;
+}

@@ -428,3 +428,45 @@ export async function getTechnicianForReport(
   if (!resource) return null;
   return { displayName: resource.displayName ?? 'Technician', rating: resource.rating ?? 0 };
 }
+
+// ── Admin roster helpers (E09-S07a) ───────────────────────────────────────────
+
+export interface TechnicianAdminDoc {
+  id: string;
+  displayName?: string;
+  name?: string;
+  isOnline?: boolean;
+  suspended?: boolean;
+  kycStatus?: string;
+  skills?: string[];
+  commissionPct?: number;
+  updatedAt?: string;
+}
+
+export async function listAllTechniciansForAdmin(): Promise<TechnicianAdminDoc[]> {
+  const client = getCosmosClient();
+  const container = client.database(DB_NAME).container(CONTAINER);
+  const { resources } = await container.items
+    .query<TechnicianAdminDoc>('SELECT * FROM c')
+    .fetchAll();
+  return resources;
+}
+
+export async function patchTechnicianAdminFields(
+  id: string,
+  patch: { isOnline?: boolean; suspended?: boolean; commissionPct?: number; skills?: string[] },
+): Promise<void> {
+  const client = getCosmosClient();
+  const container = client.database(DB_NAME).container(CONTAINER);
+  const { resource } = await container.item(id, id).read<Record<string, unknown>>();
+  const updated = {
+    ...(resource ?? { id }),
+    id,
+    ...(patch.isOnline !== undefined ? { isOnline: patch.isOnline } : {}),
+    ...(patch.suspended !== undefined ? { suspended: patch.suspended } : {}),
+    ...(patch.commissionPct !== undefined ? { commissionPct: patch.commissionPct } : {}),
+    ...(patch.skills !== undefined ? { skills: patch.skills } : {}),
+    updatedAt: new Date().toISOString(),
+  };
+  await container.items.upsert(updated);
+}
