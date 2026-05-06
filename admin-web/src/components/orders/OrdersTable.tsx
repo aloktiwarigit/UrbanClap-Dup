@@ -34,20 +34,24 @@ export function OrdersTable({ orders, total, page, pageSize, totalPages, isLoadi
   ];
   return (
     <div className="mt-4">
-      <div className="overflow-x-auto rounded border border-gray-200">
-        <table className="min-w-full divide-y divide-gray-200 text-sm">
-          <thead className="bg-gray-50">
+      <div className="overflow-x-auto rounded border border-[var(--color-border)]">
+        <table className="min-w-full divide-y divide-[var(--color-border)] text-sm">
+          <thead className="bg-[var(--color-surface-alt)]">
             <tr>
               {columns.map(h => (
-                <th key={h} className="px-4 py-3 text-left font-medium text-gray-600">{h}</th>
+                <th key={h} className="px-4 py-3 text-left font-medium text-[var(--color-text-muted)]">{h}</th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 bg-white">
+          <tbody className="divide-y divide-[var(--color-border)]">
             {orders.length === 0 ? (
-              <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">{t('table.emptyState')}</td></tr>
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-[var(--color-text-faint)]">{t('table.emptyState')}</td></tr>
             ) : orders.map(order => (
-              <tr key={order.id} onClick={() => onRowClick(order)} className="cursor-pointer hover:bg-gray-50">
+              <tr
+                key={order.id}
+                onClick={() => onRowClick(order)}
+                className="cursor-pointer hover:bg-[var(--color-surface-alt)] text-[var(--color-text)]"
+              >
                 <td className="px-4 py-3 font-mono">{order.id.slice(0, 8)}</td>
                 <td className="px-4 py-3">{order.customerName}</td>
                 <td className="px-4 py-3">{order.serviceName ?? '—'}</td>
@@ -62,13 +66,13 @@ export function OrdersTable({ orders, total, page, pageSize, totalPages, isLoadi
           </tbody>
         </table>
       </div>
-      <div className="flex items-center justify-between mt-3 text-sm text-gray-600">
+      <div className="flex items-center justify-between mt-3 text-sm text-[var(--color-text-muted)]">
         <span>{total} total · page {page} of {totalPages}</span>
         <div className="flex gap-2">
           <button aria-label="Previous page" disabled={page <= 1} onClick={() => onPageChange(page - 1)}
-            className="px-3 py-1 rounded border disabled:opacity-40 hover:bg-gray-100">{t('table.pagination.prev')}</button>
+            className="px-3 py-1 rounded border border-[var(--color-border)] text-[var(--color-text)] disabled:opacity-40 hover:bg-[var(--color-surface-alt)]">{t('table.pagination.prev')}</button>
           <button aria-label="Next page" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}
-            className="px-3 py-1 rounded border disabled:opacity-40 hover:bg-gray-100">{t('table.pagination.next')}</button>
+            className="px-3 py-1 rounded border border-[var(--color-border)] text-[var(--color-text)] disabled:opacity-40 hover:bg-[var(--color-surface-alt)]">{t('table.pagination.next')}</button>
         </div>
       </div>
     </div>
