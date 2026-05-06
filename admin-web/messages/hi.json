@@ -84,6 +84,17 @@
       "recentBookings": "हालिया बुकिंग",
       "recentComplaints": "हालिया शिकायतें",
       "notes": "नोट्स"
-    }
+    },
+    "emptyState": "कोई ग्राहक नहीं मिला।",
+    "noteForm": {
+      "placeholder": "नोट लिखें…",
+      "save": "सहेजें"
+    },
+    "refundForm": {
+      "amountLabel": "राशि (₹)",
+      "reasonLabel": "कारण",
+      "submit": "रिफंड भेजें"
+    },
+    "filterByStatus": "स्थिति के अनुसार फ़िल्टर करें"
   }
 }

@@ -199,7 +199,7 @@ export function CustomerListClient({ initialCustomers }: Props) {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-            aria-label="Filter by status"
+            aria-label={t('filterByStatus')}
             style={{
               padding: '6px 10px',
               borderRadius: 'var(--radius-sm)',
@@ -219,7 +219,7 @@ export function CustomerListClient({ initialCustomers }: Props) {
       {/* Table */}
       {filtered.length === 0 ? (
         <p style={{ color: 'var(--fog-0)', textAlign: 'center', padding: '3rem 0' }}>
-          No customers found.
+          {t('emptyState')}
         </p>
       ) : (
         <div style={{ overflowX: 'auto' }}>
@@ -587,7 +587,7 @@ export function CustomerListClient({ initialCustomers }: Props) {
                                         noteText: e.target.value,
                                       }))
                                     }
-                                    placeholder="Type a note…"
+                                    placeholder={t('noteForm.placeholder')}
                                     style={{
                                       resize: 'vertical',
                                       padding: '6px 8px',
@@ -612,7 +612,7 @@ export function CustomerListClient({ initialCustomers }: Props) {
                                         fontSize: '0.75rem',
                                       }}
                                     >
-                                      Save
+                                      {t('noteForm.save')}
                                     </button>
                                     <button
                                       onClick={() =>
@@ -681,7 +681,7 @@ export function CustomerListClient({ initialCustomers }: Props) {
                                         refundAmount: e.target.value,
                                       }))
                                     }
-                                    placeholder="Amount (₹)"
+                                    placeholder={t('refundForm.amountLabel')}
                                     style={{
                                       padding: '6px 8px',
                                       background: 'var(--ink-1)',
@@ -700,7 +700,7 @@ export function CustomerListClient({ initialCustomers }: Props) {
                                         refundReason: e.target.value,
                                       }))
                                     }
-                                    placeholder="Reason"
+                                    placeholder={t('refundForm.reasonLabel')}
                                     style={{
                                       padding: '6px 8px',
                                       background: 'var(--ink-1)',
@@ -724,7 +724,7 @@ export function CustomerListClient({ initialCustomers }: Props) {
                                         fontSize: '0.75rem',
                                       }}
                                     >
-                                      Send Refund
+                                      {t('refundForm.submit')}
                                     </button>
                                     <button
                                       onClick={() =>

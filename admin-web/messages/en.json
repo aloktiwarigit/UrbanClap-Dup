@@ -84,6 +84,17 @@
       "recentBookings": "Recent Bookings",
       "recentComplaints": "Recent Complaints",
       "notes": "Notes"
-    }
+    },
+    "emptyState": "No customers found.",
+    "noteForm": {
+      "placeholder": "Type a note…",
+      "save": "Save"
+    },
+    "refundForm": {
+      "amountLabel": "Amount (₹)",
+      "reasonLabel": "Reason",
+      "submit": "Send Refund"
+    },
+    "filterByStatus": "Filter by status"
   }
 }
