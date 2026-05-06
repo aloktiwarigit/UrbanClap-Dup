@@ -1,10 +1,17 @@
 // @vitest-environment node
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { SignJWT } from 'jose';
-import { middleware } from '../middleware';
 import type { AdminRole } from '@/lib/auth/types';
+
+// next-intl/middleware imports next/server without .js extension which fails in
+// Vitest's node environment. Mock it to return a pass-through middleware.
+vi.mock('next-intl/middleware', () => ({
+  default: () => (req: NextRequest) => NextResponse.next({ request: req }),
+}));
+
+import { middleware } from '../middleware';
 
 const JWT_SECRET = 'test-secret-that-is-long-enough-for-hs256-minimum-32-chars!!';
 
@@ -87,7 +94,8 @@ describe('admin middleware session refresh', () => {
     const location = response.headers.get('location') ?? '';
     const setCookie = response.headers.get('set-cookie') ?? '';
 
-    expect(location).toBe('http://localhost:3000/login?next=%2Forders');
+    // After locale migration: redirect is to /{defaultLocale}/login
+    expect(location).toMatch(/\/hi\/login\?next=%2Forders/);
     expect(setCookie).toContain('hs_access=');
     expect(setCookie).toContain('hs_refresh=');
     expect(setCookie).toContain('Path=/admin-api/v1/admin/auth/refresh');
@@ -112,9 +120,8 @@ describe('admin middleware session refresh', () => {
     const response = await middleware(makeRequest('/orders', 'hs_refresh=sess-1'));
     const location = response.headers.get('location') ?? '';
 
-    expect(location).toBe(
-      'http://localhost:3000/not-authorized?from=%2Forders&next=%2Ffinance',
-    );
+    // After locale migration: not-authorized is now /{locale}/not-authorized
+    expect(location).toMatch(/\/hi\/not-authorized\?from=%2Forders&next=%2Fhi%2Ffinance/);
     expect(response.headers.get('set-cookie')).toContain(`hs_access=${accessToken}`);
   });
 });

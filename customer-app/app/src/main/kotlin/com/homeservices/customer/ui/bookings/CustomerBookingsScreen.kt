@@ -1,6 +1,8 @@
 package com.homeservices.customer.ui.bookings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -32,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -105,7 +108,14 @@ internal fun CustomerBookingsContent(
             CustomerBookingsUiState.Error -> item { ErrorCard(onRefresh = onRefresh) }
             is CustomerBookingsUiState.Ready ->
                 if (uiState.bookings.isEmpty()) {
-                    item { EmptyBookingsCard() }
+                    item {
+                        Box(
+                            modifier = Modifier.fillParentMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            EmptyBookingsCard()
+                        }
+                    }
                 } else {
                     items(uiState.bookings, key = { it.bookingId }) { booking ->
                         BookingCard(booking = booking, onTrackBooking = onTrackBooking)
@@ -254,29 +264,37 @@ private fun ErrorCard(onRefresh: () -> Unit) {
 
 @Composable
 private fun EmptyBookingsCard() {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = Color.White,
-        tonalElevation = 1.dp,
+    Column(
+        modifier = Modifier.padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+        Box(
+            modifier =
+                Modifier
+                    .size(56.dp)
+                    .background(SoftGreen, RoundedCornerShape(20.dp)),
+            contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Default.BookOnline, contentDescription = null, tint = DeepGreen)
-            Text(
-                text = "No bookings yet",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Ink,
-            )
-            Text(
-                text = "Confirmed bookings will appear here with service date, status, and tracking access.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Muted,
+            Icon(
+                imageVector = Icons.Default.BookOnline,
+                contentDescription = null,
+                tint = DeepGreen,
+                modifier = Modifier.size(28.dp),
             )
         }
+        Text(
+            text = "No bookings yet",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = Ink,
+        )
+        Text(
+            text = "Confirmed bookings will appear here with service date, status, and tracking access.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Muted,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 

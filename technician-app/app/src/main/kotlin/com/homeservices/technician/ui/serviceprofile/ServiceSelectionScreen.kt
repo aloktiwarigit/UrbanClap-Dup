@@ -63,12 +63,13 @@ import com.homeservices.technician.BuildConfig
 internal fun ServiceSelectionScreen(
     onComplete: () -> Unit,
     modifier: Modifier = Modifier,
+    autoCompleteExistingProfile: Boolean = false,
     viewModel: ServiceSelectionViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(uiState.saved) {
-        if (uiState.saved) onComplete()
+    LaunchedEffect(uiState.saved, uiState.existingCompleteProfileLoaded, autoCompleteExistingProfile) {
+        if (uiState.saved || (autoCompleteExistingProfile && uiState.existingCompleteProfileLoaded)) onComplete()
     }
 
     ServiceSelectionContent(

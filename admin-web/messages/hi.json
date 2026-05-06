@@ -1,0 +1,25 @@
+{
+  "topbar": {
+    "title": "ऑपरेशंस ऑब्ज़र्वेटरी",
+    "city": "अयोध्या",
+    "live": "लाइव",
+    "liveLabel": "सिस्टम स्थिति: लाइव"
+  },
+  "nav": {
+    "dashboard": "लाइव ऑप्स",
+    "orders": "ऑर्डर",
+    "finance": "वित्त",
+    "catalogue": "कैटलॉग",
+    "complaints": "शिकायतें",
+    "auditLog": "ऑडिट लॉग",
+    "adminUsers": "एडमिन उपयोगकर्ता",
+    "compliance": "अनुपालन"
+  },
+  "locale": {
+    "switcher": {
+      "label": "भाषा",
+      "en": "English",
+      "hi": "हिन्दी"
+    }
+  }
+}

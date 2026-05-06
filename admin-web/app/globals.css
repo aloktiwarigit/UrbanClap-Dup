@@ -59,6 +59,10 @@
   --rail-border: var(--ink-4);
 }
 
+:lang(hi) {
+  --font-body: var(--font-devanagari), sans-serif;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

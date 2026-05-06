@@ -6,10 +6,11 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
 } from 'firebase/auth';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { apiUrl } from '@/api/base';
 import { getFirebaseAuth } from '@/lib/auth/firebase';
 import { getSafeNextPath } from '@/lib/auth/safe-next-path';
+import { routing } from '@/i18n/config';
 import type { AdminRole } from '@/lib/auth/types';
 
 type LoginMethod = 'password' | 'google' | 'mfa';
@@ -39,8 +40,7 @@ function getSafeNextPathFromUrl(role: AdminRole): string {
 }
 
 function routeTo(path: string): Parameters<ReturnType<typeof useRouter>['push']>[0] {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- typedRoutes:true makes RouteImpl<unknown> non-assignable from string; cast is load-bearing
-  return path as Parameters<ReturnType<typeof useRouter>['push']>[0];
+  return path;
 }
 
 function normalizeLoginError(code: string | undefined): string {
@@ -63,6 +63,8 @@ function normalizeLoginError(code: string | undefined): string {
 
 export default function LoginPage() {
   const router = useRouter();
+  const params = useParams<{ locale: string }>();
+  const locale = params.locale ?? routing.defaultLocale;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mfaCode, setMfaCode] = useState('');
@@ -116,7 +118,7 @@ export default function LoginPage() {
       // setupToken is now delivered as an HttpOnly `hs_setup` cookie by the API
       // server. The client must not write it to sessionStorage. Navigate directly
       // to /setup and let the exchange endpoint bridge the cookie → token.
-      router.push('/setup');
+      router.push(routeTo(`/${locale}/setup`));
       return;
     }
 

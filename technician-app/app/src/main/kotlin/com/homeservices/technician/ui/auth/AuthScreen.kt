@@ -1,18 +1,24 @@
 package com.homeservices.technician.ui.auth
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -33,6 +39,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -47,6 +56,12 @@ import com.homeservices.designsystem.components.HsTrustBadge
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
 
 private const val PHONE_LAST_DIGITS = 4
+
+private val AuthHeroStart = Color(0xFF062A20)
+private val AuthHeroEnd = Color(0xFF0B3D2E)
+private const val AUTH_HERO_FRACTION = 0.38f
+private const val AUTH_FORM_FRACTION = 0.65f
+private const val SCROLL_HANDLE_ALPHA = 0.25f
 
 @Composable
 internal fun AuthScreen(
@@ -74,7 +89,6 @@ internal fun AuthScreen(
         when (uiState) {
             is AuthUiState.Idle, is AuthUiState.TruecallerLoading ->
                 LoadingContent(
-                    eyebrow = "Partner sign in",
                     title = "Checking Truecaller",
                     message = "We are verifying your partner number before falling back to OTP.",
                 )
@@ -88,7 +102,6 @@ internal fun AuthScreen(
 
             is AuthUiState.GoogleSigningIn ->
                 LoadingContent(
-                    eyebrow = "Google sign-in",
                     title = "Signing in with Google",
                     message = "Choose your Google account to continue.",
                 )
@@ -105,7 +118,6 @@ internal fun AuthScreen(
 
             is AuthUiState.EmailSubmitting ->
                 LoadingContent(
-                    eyebrow = "Email sign in",
                     title =
                         if (uiState.mode == AuthUiState.EmailEntry.Mode.SignUp) {
                             "Creating account"
@@ -140,14 +152,12 @@ internal fun AuthScreen(
 
             is AuthUiState.OtpSending ->
                 LoadingContent(
-                    eyebrow = "OTP verification",
                     title = "Sending OTP",
                     message = "Keep this screen open while we send your secure code.",
                 )
 
             is AuthUiState.OtpVerifying ->
                 LoadingContent(
-                    eyebrow = "OTP verification",
                     title = "Verifying code",
                     message = "This usually takes a few seconds.",
                 )
@@ -167,33 +177,111 @@ private fun AuthFrame(
     content: @Composable () -> Unit,
 ) {
     val spacing = LocalHomeservicesSpacing.current
-    Column(
+    Box(
         modifier =
             modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = spacing.space6, vertical = spacing.space8),
-        verticalArrangement = Arrangement.spacedBy(spacing.space6),
+                .background(AuthHeroEnd)
+                .statusBarsPadding(),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(spacing.space3)) {
-            HsTrustBadge(text = eyebrow)
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = body,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        // Hero zone — fixed top portion with brand identity
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(AUTH_HERO_FRACTION)
+                    .drawBehind {
+                        drawRect(
+                            brush = Brush.verticalGradient(listOf(AuthHeroStart, AuthHeroEnd)),
+                            size = size,
+                        )
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.06f),
+                            radius = 140.dp.toPx(),
+                            center = Offset(size.width - 80.dp.toPx(), -60.dp.toPx()),
+                        )
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.09f),
+                            radius = 70.dp.toPx(),
+                            center = Offset(40.dp.toPx(), size.height - 20.dp.toPx()),
+                        )
+                    },
+            contentAlignment = Alignment.BottomStart,
+        ) {
+            Column(
+                modifier = Modifier.padding(start = 28.dp, end = 28.dp, bottom = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = "HomeHeroo Partner",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White,
+                )
+                Text(
+                    text = "रोज़ काम, रोज़ कमाई",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White.copy(alpha = 0.82f),
+                )
+                Text(
+                    text = "सत्यापित पार्टनर प्रोग्राम",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.65f),
+                )
+            }
         }
-        HsSectionCard {
-            content()
+
+        // Form card — scrollable, overlaps hero by ~24 dp
+        Surface(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .fillMaxHeight(AUTH_FORM_FRACTION),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            color = Color.White,
+            shadowElevation = 8.dp,
+        ) {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .imePadding()
+                        .padding(horizontal = 24.dp)
+                        .padding(top = 28.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(spacing.space6),
+            ) {
+                // Scroll-handle pill
+                Box(
+                    modifier =
+                        Modifier
+                            .width(40.dp)
+                            .height(2.dp)
+                            .background(
+                                AuthHeroEnd.copy(alpha = SCROLL_HANDLE_ALPHA),
+                                RoundedCornerShape(1.dp),
+                            ).align(Alignment.CenterHorizontally),
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(spacing.space3)) {
+                    HsTrustBadge(text = eyebrow)
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = body,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                HsSectionCard { content() }
+                SecurityNote(
+                    text = "Secure partner sign-in. Job offers, payouts, and documents stay protected.",
+                )
+            }
         }
-        SecurityNote(
-            text = "Secure partner sign-in. Job offers, payouts, and documents stay protected.",
-        )
     }
 }
 
@@ -502,19 +590,32 @@ private fun OtpCodeContent(
 
 @Composable
 private fun LoadingContent(
-    eyebrow: String,
     title: String,
     message: String,
 ) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        AuthFrame(eyebrow = eyebrow, title = title, body = message) {
+        Column(
+            modifier = Modifier.padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            CircularProgressIndicator()
             Column(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(text = "Please wait", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
             }
         }
     }

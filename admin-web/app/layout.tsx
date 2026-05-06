@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { Fraunces, Geist, JetBrains_Mono } from 'next/font/google';
+import { Fraunces, Geist, JetBrains_Mono, Noto_Sans_Devanagari } from 'next/font/google';
+import { getLocale } from 'next-intl/server';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import { readThemeCookie } from '@/lib/theme';
 import './globals.css';
@@ -24,6 +25,13 @@ const jetbrainsMono = JetBrains_Mono({
   display: 'swap',
 });
 
+const notoSansDevanagari = Noto_Sans_Devanagari({
+  subsets: ['devanagari'],
+  variable: '--font-devanagari',
+  display: 'swap',
+  weight: ['400', '500', '600'],
+});
+
 export const metadata: Metadata = {
   title: 'HomeHeroo — admin',
   description: 'Owner console for the HomeHeroo field-operations platform.',
@@ -31,11 +39,13 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const theme = await readThemeCookie();
+  const lang = await getLocale();
+
   return (
     <html
-      lang="en"
+      lang={lang}
       data-theme={theme}
-      className={`${fraunces.variable} ${geist.variable} ${jetbrainsMono.variable}`}
+      className={`${fraunces.variable} ${geist.variable} ${jetbrainsMono.variable} ${notoSansDevanagari.variable}`}
     >
       <body>
         <ThemeProvider initialTheme={theme}>{children}</ThemeProvider>

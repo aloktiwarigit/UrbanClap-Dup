@@ -73,6 +73,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -665,11 +666,18 @@ private fun JobsScreen(
                 }
             is TechnicianHomeUiState.Error ->
                 item {
-                    ErrorCard(onRefresh = onRefresh)
+                    ErrorCard(message = uiState.message, onRefresh = onRefresh)
                 }
             is TechnicianHomeUiState.Ready ->
                 if (uiState.bookings.isEmpty()) {
-                    item { EmptyJobsCard() }
+                    item {
+                        Box(
+                            modifier = Modifier.fillParentMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            EmptyJobsCard()
+                        }
+                    }
                 } else {
                     items(uiState.bookings, key = { it.bookingId }) { booking ->
                         JobCard(job = booking, onOpenJob = onOpenJob)
@@ -688,7 +696,7 @@ private fun JobsPreview(
 ) {
     when (uiState) {
         is TechnicianHomeUiState.Loading -> LoadingCard()
-        is TechnicianHomeUiState.Error -> ErrorCard(onRefresh = onRefresh)
+        is TechnicianHomeUiState.Error -> ErrorCard(message = uiState.message, onRefresh = onRefresh)
         is TechnicianHomeUiState.Ready -> {
             val jobs = uiState.bookings.take(maxItems)
             if (jobs.isEmpty()) {
@@ -1176,7 +1184,10 @@ private fun LoadingCard() {
 }
 
 @Composable
-private fun ErrorCard(onRefresh: () -> Unit) {
+private fun ErrorCard(
+    message: String,
+    onRefresh: () -> Unit,
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -1194,7 +1205,7 @@ private fun ErrorCard(onRefresh: () -> Unit) {
                 color = Ink,
             )
             Text(
-                text = "Your active offer popups still work. Retry when the network is stable.",
+                text = message,
                 style = MaterialTheme.typography.bodyMedium,
                 color = Muted,
             )
@@ -1209,29 +1220,37 @@ private fun ErrorCard(onRefresh: () -> Unit) {
 
 @Composable
 private fun EmptyJobsCard() {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = Color.White,
-        tonalElevation = 1.dp,
+    Column(
+        modifier = Modifier.padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+        Box(
+            modifier =
+                Modifier
+                    .size(56.dp)
+                    .background(SoftGreen, RoundedCornerShape(20.dp)),
+            contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Default.Badge, contentDescription = null, tint = DeepGreen)
-            Text(
-                text = "No assigned jobs right now",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Ink,
-            )
-            Text(
-                text = "New requests arrive as full-screen offers with accept and decline actions.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Muted,
+            Icon(
+                imageVector = Icons.Default.Badge,
+                contentDescription = null,
+                tint = DeepGreen,
+                modifier = Modifier.size(28.dp),
             )
         }
+        Text(
+            text = "No assigned jobs right now",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = Ink,
+        )
+        Text(
+            text = "New requests arrive as full-screen offers with accept and decline actions.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Muted,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 

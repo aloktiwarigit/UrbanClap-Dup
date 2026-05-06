@@ -28,8 +28,8 @@ describe('getSafeNextPath — allowlist enforcement', () => {
     expect(getSafeNextPath('/orders/123', 'super-admin')).toBe('/orders/123');
   });
 
-  it('allows an allowed path with query string', () => {
-    expect(getSafeNextPath('/dashboard?foo=bar', 'super-admin')).toBe('/dashboard?foo=bar');
+  it('allows an allowed path but strips query string (security: prevents param injection)', () => {
+    expect(getSafeNextPath('/dashboard?foo=bar', 'super-admin')).toBe('/dashboard');
   });
 
   it('redirects /setup to role default (open-redirect block)', () => {

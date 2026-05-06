@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { signInWithPopup } from 'firebase/auth';
-import LoginPage from '../app/login/page';
+import LoginPage from '../app/[locale]/login/page';
 
 const pushMock = vi.fn();
 const replaceMock = vi.fn();
@@ -12,7 +12,10 @@ vi.mock('firebase/auth', () => ({
   signInWithEmailAndPassword: vi.fn(),
   signInWithPopup: vi.fn(),
 }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: pushMock, replace: replaceMock }) }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: pushMock, replace: replaceMock }),
+  useParams: () => ({ locale: 'hi' }),
+}));
 
 describe('LoginPage', () => {
   beforeEach(() => {

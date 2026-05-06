@@ -9,5 +9,7 @@ internal sealed class TechnicianHomeUiState {
         val bookings: List<TechnicianBooking>,
     ) : TechnicianHomeUiState()
 
-    data object Error : TechnicianHomeUiState()
+    data class Error(
+        val message: String,
+    ) : TechnicianHomeUiState()
 }
