@@ -21,6 +21,12 @@
 
 Each sub-project has its own `CLAUDE.md` with stack-specific rules. **This root file governs cross-cutting concerns only.**
 
+## Production deployment ownership
+
+- **Admin web canonical production frontend:** Azure Static Web Apps resource `swa-homeservices-admin-prod`, public URL `https://black-river-0af326a00.7.azurestaticapps.net`, deployed by `.github/workflows/admin-ship.yml` from `main`.
+- **Do not use the old admin Azure Container App URL** (`aca-admin-homeservices-prod...azurecontainerapps.io`) for validation, screenshots, or customer/admin access. It is a legacy/stale endpoint from the pre-SWA migration path and is not kept in sync with `main`.
+- Do not add a new ACA admin deploy path, redirect users to ACA, or treat ACA as canonical unless the user explicitly approves a migration ADR and a single-source-of-truth cutover plan.
+
 ## Phase gate (enforced across all sub-projects)
 
 **No `src/` or `app/src/` edits in any sub-project** until ALL of the following exist and are committed:
