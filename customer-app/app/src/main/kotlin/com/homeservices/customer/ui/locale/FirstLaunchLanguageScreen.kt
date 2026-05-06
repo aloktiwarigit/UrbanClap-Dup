@@ -37,6 +37,39 @@ private const val LANG_HERO_FRACTION = 0.30f
 private const val LANG_FORM_FRACTION = 0.72f
 
 @Composable
+private fun LangHeroZone() {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(LANG_HERO_FRACTION)
+                .drawBehind {
+                    drawRect(brush = Brush.verticalGradient(listOf(LangHeroStart, LangHeroEnd)), size = size)
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.06f),
+                        radius = 140.dp.toPx(),
+                        center = Offset(size.width - 80.dp.toPx(), -60.dp.toPx()),
+                    )
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.09f),
+                        radius = 70.dp.toPx(),
+                        center =
+                            Offset(
+                                40.dp.toPx(),
+                                size.height - 20.dp.toPx(),
+                            ),
+                    )
+                },
+        contentAlignment = Alignment.BottomStart,
+    ) {
+        Column(modifier = Modifier.padding(start = 28.dp, end = 28.dp, bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(text = "HomeHeroo", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = Color.White)
+            Text(text = "भाषा चुनें", style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.82f))
+        }
+    }
+}
+
+@Composable
 public fun FirstLaunchLanguageScreen(
     onConfirmed: () -> Unit,
     viewModel: FirstLaunchLanguageViewModel = hiltViewModel(),
@@ -51,72 +84,16 @@ public fun FirstLaunchLanguageScreen(
         }
     }
 
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(LangHeroEnd)
-                .statusBarsPadding(),
-    ) {
-        // Hero zone — gradient + decorative circles via single drawBehind
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(LANG_HERO_FRACTION)
-                    .drawBehind {
-                        drawRect(
-                            brush = Brush.verticalGradient(listOf(LangHeroStart, LangHeroEnd)),
-                            size = size,
-                        )
-                        drawCircle(
-                            color = Color.White.copy(alpha = 0.06f),
-                            radius = 140.dp.toPx(),
-                            center = Offset(size.width - 80.dp.toPx(), -60.dp.toPx()),
-                        )
-                        drawCircle(
-                            color = Color.White.copy(alpha = 0.09f),
-                            radius = 70.dp.toPx(),
-                            center = Offset(40.dp.toPx(), size.height - 20.dp.toPx()),
-                        )
-                    },
-            contentAlignment = Alignment.BottomStart,
-        ) {
-            Column(
-                modifier = Modifier.padding(start = 28.dp, end = 28.dp, bottom = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text = "HomeHeroo",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                )
-                Text(
-                    text = "भाषा चुनें",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color.White.copy(alpha = 0.82f),
-                )
-            }
-        }
-
-        // Form card — NON-scrollable so Spacer(weight(1f)) anchors the button to bottom
+    Box(modifier = Modifier.fillMaxSize().background(LangHeroEnd).statusBarsPadding()) {
+        LangHeroZone()
         Surface(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .fillMaxHeight(LANG_FORM_FRACTION),
+            modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).fillMaxHeight(LANG_FORM_FRACTION),
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             color = MaterialTheme.colorScheme.background,
             shadowElevation = 8.dp,
         ) {
             Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 24.dp)
-                        .padding(top = 28.dp, bottom = 24.dp),
+                modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp).padding(top = 28.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(
@@ -129,17 +106,9 @@ public fun FirstLaunchLanguageScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                LanguagePickerCard(
-                    options = DefaultLanguageOptions,
-                    selectedTag = selected,
-                    onSelect = viewModel::onSelect,
-                )
+                LanguagePickerCard(options = DefaultLanguageOptions, selectedTag = selected, onSelect = viewModel::onSelect)
                 Spacer(modifier = Modifier.weight(1f))
-                HsPrimaryButton(
-                    text = "Continue",
-                    onClick = viewModel::onConfirm,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                HsPrimaryButton(text = "Continue", onClick = viewModel::onConfirm, modifier = Modifier.fillMaxWidth())
             }
         }
     }

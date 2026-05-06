@@ -169,6 +169,46 @@ internal fun AuthScreen(
 }
 
 @Composable
+private fun AuthHeroZone() {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(AUTH_HERO_FRACTION)
+                .drawBehind {
+                    drawRect(
+                        brush = Brush.verticalGradient(listOf(AuthHeroStart, AuthHeroEnd)),
+                        size = size,
+                    )
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.06f),
+                        radius = 140.dp.toPx(),
+                        center = Offset(size.width - 80.dp.toPx(), -60.dp.toPx()),
+                    )
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.09f),
+                        radius = 70.dp.toPx(),
+                        center = Offset(40.dp.toPx(), size.height - 20.dp.toPx()),
+                    )
+                },
+        contentAlignment = Alignment.BottomStart,
+    ) {
+        Column(
+            modifier = Modifier.padding(start = 28.dp, end = 28.dp, bottom = 36.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(text = "HomeHeroo", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, color = Color.White)
+            Text(text = "घर पर भरोसेमंद सेवा", style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.82f))
+            Text(
+                text = "आधार सत्यापित · 30 दिन गारंटी",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.65f),
+            )
+        }
+    }
+}
+
+@Composable
 private fun AuthFrame(
     eyebrow: String,
     title: String,
@@ -184,60 +224,9 @@ private fun AuthFrame(
                 .background(AuthHeroEnd)
                 .statusBarsPadding(),
     ) {
-        // Hero zone — fixed top portion with brand identity
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(AUTH_HERO_FRACTION)
-                    .drawBehind {
-                        drawRect(
-                            brush = Brush.verticalGradient(listOf(AuthHeroStart, AuthHeroEnd)),
-                            size = size,
-                        )
-                        drawCircle(
-                            color = Color.White.copy(alpha = 0.06f),
-                            radius = 140.dp.toPx(),
-                            center = Offset(size.width - 80.dp.toPx(), -60.dp.toPx()),
-                        )
-                        drawCircle(
-                            color = Color.White.copy(alpha = 0.09f),
-                            radius = 70.dp.toPx(),
-                            center = Offset(40.dp.toPx(), size.height - 20.dp.toPx()),
-                        )
-                    },
-            contentAlignment = Alignment.BottomStart,
-        ) {
-            Column(
-                modifier = Modifier.padding(start = 28.dp, end = 28.dp, bottom = 36.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text = "HomeHeroo",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.White,
-                )
-                Text(
-                    text = "घर पर भरोसेमंद सेवा",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color.White.copy(alpha = 0.82f),
-                )
-                Text(
-                    text = "आधार सत्यापित · 30 दिन गारंटी",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.65f),
-                )
-            }
-        }
-
-        // Form card — scrollable, overlaps hero by ~24 dp
+        AuthHeroZone()
         Surface(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .fillMaxHeight(AUTH_FORM_FRACTION),
+            modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).fillMaxHeight(AUTH_FORM_FRACTION),
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             color = Color.White,
             shadowElevation = 8.dp,
@@ -252,34 +241,21 @@ private fun AuthFrame(
                         .padding(top = 28.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(spacing.space6),
             ) {
-                // Scroll-handle pill
                 Box(
                     modifier =
                         Modifier
                             .width(40.dp)
                             .height(2.dp)
-                            .background(
-                                AuthHeroEnd.copy(alpha = SCROLL_HANDLE_ALPHA),
-                                RoundedCornerShape(1.dp),
-                            ).align(Alignment.CenterHorizontally),
+                            .background(AuthHeroEnd.copy(alpha = SCROLL_HANDLE_ALPHA), RoundedCornerShape(1.dp))
+                            .align(Alignment.CenterHorizontally),
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(spacing.space3)) {
                     HsTrustBadge(text = eyebrow)
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Text(
-                        text = body,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Text(text = title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Text(text = body, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 HsSectionCard { content() }
-                SecurityNote(
-                    text = "Secure sign-in. Booking and payment actions always need your confirmation.",
-                )
+                SecurityNote(text = "Secure sign-in. Booking and payment actions always need your confirmation.")
             }
         }
     }
