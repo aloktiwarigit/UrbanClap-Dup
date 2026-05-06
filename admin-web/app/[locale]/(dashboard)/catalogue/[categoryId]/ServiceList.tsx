@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
+import type { Route } from 'next';
+import { useTranslations } from 'next-intl';
 import type { components } from '@/api/generated/schema';
 import { toggleServiceAction } from '../actions';
 
@@ -17,6 +19,7 @@ function formatPaise(paise: number): string {
 }
 
 export function ServiceList({ categoryId, services: initialServices }: ServiceListProps) {
+  const t = useTranslations('catalogue');
   const [services, setServices] = useState(initialServices);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +32,7 @@ export function ServiceList({ categoryId, services: initialServices }: ServiceLi
       const updated = await toggleServiceAction(service.id);
       setPendingId(null);
       if (!updated) {
-        setError(`Failed to ${service.isActive ? 'unpublish' : 'publish'} ${service.name}.`);
+        setError(t('serviceList.toggleError', { action: service.isActive ? 'unpublish' : 'publish', name: service.name }));
         return;
       }
       setServices((current) =>
@@ -39,7 +42,7 @@ export function ServiceList({ categoryId, services: initialServices }: ServiceLi
   }
 
   if (services.length === 0) {
-    return <p style={{ color: 'var(--color-text-muted)' }}>No services in this category yet.</p>;
+    return <p style={{ color: 'var(--color-text-muted)' }}>{t('serviceList.empty')}</p>;
   }
 
   return (
@@ -70,7 +73,7 @@ export function ServiceList({ categoryId, services: initialServices }: ServiceLi
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', margin: 0 }}>
                 {formatPaise(service.basePrice)} -{' '}
                 <span style={{ color: service.isActive ? 'var(--color-success)' : 'var(--color-danger)' }}>
-                  {service.isActive ? 'Published' : 'Unpublished'}
+                  {service.isActive ? t('serviceList.statusPublished') : t('serviceList.statusUnpublished')}
                 </span>
               </p>
             </div>
@@ -81,7 +84,7 @@ export function ServiceList({ categoryId, services: initialServices }: ServiceLi
                 onClick={() => handleToggle(service)}
                 disabled={isPending}
               >
-                {isPending ? 'Updating...' : service.isActive ? 'Unpublish' : 'Publish'}
+                {isPending ? t('serviceList.updatingButton') : service.isActive ? t('serviceList.unpublishButton') : t('serviceList.publishButton')}
               </button>
               <Link
                 href={`/catalogue/${categoryId}/services/${service.id}`}
@@ -91,7 +94,7 @@ export function ServiceList({ categoryId, services: initialServices }: ServiceLi
                   textDecoration: 'underline',
                 }}
               >
-                Edit
+                {t('serviceList.editLink')}
               </Link>
             </div>
           </div>

@@ -1,4 +1,78 @@
 {
+  "meta": {
+    "title": "HomeHeroo — admin"
+  },
+  "login": {
+    "brand": {
+      "eyebrow": "HomeHeroo admin"
+    },
+    "hero": {
+      "title": "Secure operations access",
+      "subtitle": "Google or password proves identity. Microsoft Authenticator approves admin access."
+    },
+    "steps": {
+      "one": {
+        "title": "Verify identity",
+        "description": "Continue with Google or admin email and password."
+      },
+      "two": {
+        "title": "Approve with Microsoft Authenticator",
+        "description": "Use the 6-digit code for HomeHeroo admin. It is not a Gmail OTP."
+      }
+    },
+    "form": {
+      "ariaLabel": "Admin sign-in",
+      "eyebrow": {
+        "signIn": "Step 1 of 2",
+        "mfa": "Step 2 of 2"
+      },
+      "heading": {
+        "signIn": "Choose how to sign in",
+        "mfa": "Open Microsoft Authenticator"
+      },
+      "description": {
+        "signIn": "Start with Google sign-in or admin email and password. The Microsoft Authenticator step appears next.",
+        "mfa": "Enter the 6-digit code shown for HomeHeroo admin. Do not use a Gmail email code."
+      },
+      "identityCard": {
+        "label": "Signed in identity",
+        "fallback": "Verified admin"
+      },
+      "mfa": {
+        "codeLabel": "Microsoft Authenticator code",
+        "codePlaceholder": "6-digit code",
+        "verifyingButton": "Verifying…",
+        "verifyButton": "Verify Microsoft Authenticator",
+        "switchMethodButton": "Use a different sign-in"
+      },
+      "google": {
+        "openingButton": "Opening Google…",
+        "continueButton": "Continue with Google"
+      },
+      "divider": "or use admin password",
+      "emailLabel": "Email address",
+      "passwordLabel": "Password",
+      "password": {
+        "submittingButton": "Signing in…",
+        "submitButton": "Sign in with password"
+      }
+    },
+    "errors": {
+      "adminNotFound": "This Google account or email address is not an active admin user.",
+      "firebaseTokenInvalid": "Google could not verify this sign-in. Try again.",
+      "mfaChallengeInvalid": "The Microsoft Authenticator step expired. Sign in again.",
+      "totpInvalid": "That Microsoft Authenticator code did not match. Try the next 6-digit code.",
+      "totpNotConfigured": "Microsoft Authenticator is not set up for this admin user. Sign in again to finish setup.",
+      "fallback": "Login failed. Check your credentials and try again.",
+      "invalidCredential": "Invalid email or password.",
+      "genericPassword": "An error occurred. Please try again.",
+      "googlePopupClosed": "Google sign-in was closed before it completed.",
+      "googlePopupBlocked": "Allow pop-ups for this admin site and try again.",
+      "googleAccountExists": "This email uses a different sign-in method.",
+      "googleFallback": "Google sign-in failed. Please try again.",
+      "mfaVerificationFallback": "Verification failed. Try again."
+    }
+  },
   "topbar": {
     "title": "Operations Observatory",
     "city": "Ayodhya",
@@ -97,5 +171,479 @@
       "submit": "Send Refund"
     },
     "filterByStatus": "Filter by status"
+  },
+  "orders": {
+    "list": {
+      "title": "Orders",
+      "subtitle": "All bookings — today & back",
+      "exportButton": {
+        "label": "Export CSV",
+        "loading": "Exporting…"
+      }
+    },
+    "table": {
+      "columns": {
+        "orderId": "Order ID",
+        "customer": "Customer",
+        "service": "Service",
+        "technician": "Technician",
+        "status": "Status",
+        "city": "City",
+        "scheduled": "Scheduled",
+        "amount": "Amount",
+        "action": "Action"
+      },
+      "emptyState": "No orders found",
+      "viewAction": "View →",
+      "pagination": {
+        "info": "{total} total · page {page} of {pageCount}",
+        "prev": "Prev",
+        "next": "Next"
+      }
+    },
+    "filters": {
+      "status": {
+        "label": "Status",
+        "buttonAllSelected": "All statuses",
+        "buttonNoneSelected": "No status filter",
+        "buttonNSelected": "{count, plural, one {# status} other {# statuses}}",
+        "applyButton": "Apply",
+        "clearButton": "Clear all",
+        "menuLabel": "Filter by status"
+      },
+      "city": { "placeholder": "City" },
+      "phone": { "placeholder": "Phone" },
+      "technicianId": { "placeholder": "Technician ID" },
+      "minAmount": { "placeholder": "Min ₹" },
+      "maxAmount": { "placeholder": "Max ₹" }
+    },
+    "detail": {
+      "title": "Order {orderId}",
+      "closeButton": { "ariaLabel": "Close slide-over" },
+      "sections": {
+        "status": "Status",
+        "customer": "Customer",
+        "technician": "Technician",
+        "service": "Service",
+        "location": "Location",
+        "scheduled": "Scheduled",
+        "payment": "Payment",
+        "created": "Created",
+        "actions": {
+          "heading": "Actions",
+          "noPermission": "Your role can review this order but cannot run operational overrides."
+        }
+      },
+      "toast": { "success": "Action completed successfully." }
+    },
+    "actions": {
+      "reassign": {
+        "title": "Re-assign Technician",
+        "buttonLabel": "Re-assign Tech",
+        "selectLabel": "Technician",
+        "loadingPlaceholder": "Loading technicians…",
+        "noEligibleTechs": "No eligible technicians found for this service area.",
+        "fetchError": "Could not load technicians for this area."
+      },
+      "complete": {
+        "title": "Mark Order Complete",
+        "buttonLabel": "Mark Complete"
+      },
+      "refund": {
+        "title": "Issue Refund (stub)",
+        "buttonLabel": "Issue Refund"
+      },
+      "waiveFee": {
+        "title": "Waive Fee",
+        "buttonLabel": "Waive Fee"
+      },
+      "escalate": {
+        "title": "Escalate ({priority})",
+        "buttonLabel": "Escalate",
+        "priorityLabel": "Escalate priority:",
+        "priorities": {
+          "HIGH": "HIGH",
+          "CRITICAL": "CRITICAL"
+        }
+      },
+      "note": {
+        "title": "Add Internal Note",
+        "buttonLabel": "Add Note",
+        "label": "Note"
+      },
+      "error": "Action failed. Please try again."
+    },
+    "cells": {
+      "customer": { "noName": "No name" },
+      "technician": { "unassigned": "Unassigned" }
+    },
+    "confirmModal": {
+      "reasonLabel": "Reason",
+      "selectPlaceholder": "Select {label}",
+      "minCharactersHint": "Min {min} characters",
+      "cancelButton": "Cancel",
+      "submitButton": {
+        "label": "Confirm",
+        "loading": "Processing…"
+      }
+    },
+    "csv": {
+      "headers": {
+        "orderId": "Order ID",
+        "customerName": "Customer Name",
+        "customerPhone": "Customer Phone",
+        "serviceName": "Service Name",
+        "technicianName": "Technician Name",
+        "status": "Status",
+        "city": "City",
+        "scheduledAt": "Scheduled At",
+        "amount": "Amount (INR)",
+        "createdAt": "Created At"
+      }
+    },
+    "statuses": {
+      "NEW": "New",
+      "PENDING_PAYMENT": "Pending Payment",
+      "SEARCHING": "Searching",
+      "ACCEPTED": "Accepted",
+      "EN_ROUTE": "En Route",
+      "ARRIVED": "Arrived",
+      "IN_PROGRESS": "In Progress",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled",
+      "REFUNDED": "Refunded"
+    }
+  },
+  "complaints": {
+    "list": {
+      "title": "Complaints",
+      "pagination": {
+        "loadedCount": "{count} of {total} loaded",
+        "totalCount": "{total} total"
+      }
+    },
+    "repeatOffenders": {
+      "title": "Repeat Offenders",
+      "description": "Technicians with 3 or more resolved complaints in the last 30 days.",
+      "flaggedCount": "{count} flagged",
+      "complaintCount": "{count, plural, one {# complaint} other {# complaints}}"
+    },
+    "card": {
+      "sla": {
+        "overdue": "Overdue",
+        "resolved": "Resolved",
+        "countdown": {
+          "hm": "{h}h {m}m",
+          "m": "{m}m"
+        }
+      },
+      "badge": { "escalated": "escalated" }
+    },
+    "detail": {
+      "title": "Complaint {complaintId}",
+      "closeButton": { "ariaLabel": "Close slide-over" },
+      "sections": {
+        "description": "Description",
+        "status": "Status",
+        "assignee": {
+          "label": "Assignee",
+          "placeholder": "admin ID"
+        },
+        "internalNotes": {
+          "label": "Internal Notes",
+          "empty": "No notes yet."
+        },
+        "addNote": {
+          "label": "Add Note",
+          "placeholder": "Enter internal note…"
+        },
+        "resolve": "Resolve Complaint"
+      },
+      "actions": {
+        "reassignButton": "Reassign",
+        "addNoteButton": "Add Note",
+        "resolveButton": "Resolve"
+      },
+      "toast": { "error": "Operation failed. Please try again." }
+    },
+    "kanban": {
+      "column": {
+        "NEW": "New",
+        "INVESTIGATING": "Investigating",
+        "RESOLVED": "Resolved"
+      },
+      "columnCount": "{count, plural, one {# complaint} other {# complaints}}"
+    },
+    "resolutionCategories": {
+      "TECHNICIAN_MISCONDUCT": "Technician Misconduct",
+      "SERVICE_QUALITY": "Service Quality",
+      "BILLING_DISPUTE": "Billing Dispute",
+      "LATE_ARRIVAL": "Late Arrival",
+      "NO_SHOW": "No Show",
+      "OTHER": "Other"
+    },
+    "statuses": {
+      "NEW": "New",
+      "INVESTIGATING": "Investigating",
+      "RESOLVED": "Resolved"
+    }
+  },
+  "finance": {
+    "title": "Finance",
+    "subtitle": "Daily P&L and weekly payout queue.",
+    "metadata": { "title": "Finance — HomeHeroo admin" },
+    "sections": { "pnl": "Profit & Loss" },
+    "dateRange": { "from": "From", "to": "To" },
+    "loading": {
+      "summary": "Loading P&L…",
+      "queue": "Loading payout queue…"
+    },
+    "summary": {
+      "grossRevenue": "Gross Revenue",
+      "commission": "Commission",
+      "netToOwner": "Net to Owner"
+    },
+    "payoutQueue": {
+      "title": "Payout Queue — {total} total",
+      "columns": {
+        "technician": "Technician",
+        "jobs": "Jobs",
+        "gross": "Gross",
+        "commission": "Commission",
+        "netPayable": "Net Payable"
+      }
+    },
+    "emptyStates": { "noPayouts": "No payouts due this week." },
+    "chart": {
+      "legend": {
+        "grossRevenue": "Gross Revenue",
+        "commission": "Commission",
+        "netToOwner": "Net to Owner"
+      }
+    },
+    "buttons": {
+      "approveAll": "Approve All",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "processing": "Processing…"
+    },
+    "permissions": { "approvalRestricted": "Approval is restricted to super-admins." },
+    "errors": {
+      "loadSummaryFailed": "Failed to load P&L summary.",
+      "loadQueueFailed": "Failed to load payout queue.",
+      "approveFailed": "Approve payouts failed. Please try again."
+    },
+    "messages": {
+      "approveSuccess": "Approved {approved} {approved, plural, one {payout} other {payouts}}.{hasFailed, select, true { Failed: {failed}.} other {}}"
+    },
+    "modal": {
+      "confirmPayouts": {
+        "title": "Confirm Payouts",
+        "description": "This will transfer {amount} to all technicians in this week's payout queue via Razorpay Route. This action cannot be undone."
+      }
+    }
+  },
+  "auditLog": {
+    "title": "Audit Log",
+    "metadata": { "title": "Audit Log — HomeHeroo admin" },
+    "filters": {
+      "adminId": "Admin ID",
+      "action": "Action",
+      "resourceType": "Resource Type",
+      "resourceId": "Resource ID",
+      "dateFrom": "From",
+      "dateTo": "To"
+    },
+    "buttons": { "clearFilters": "Clear" },
+    "table": {
+      "columns": {
+        "timestamp": "Timestamp",
+        "adminId": "Admin ID",
+        "action": "Action",
+        "resourceType": "Resource Type",
+        "resourceId": "Resource ID"
+      }
+    },
+    "pagination": {
+      "previous": "← Previous",
+      "next": "Next →"
+    },
+    "loading": "Loading…",
+    "errors": { "loadFailed": "Failed to load audit log. Please try again." },
+    "emptyStates": { "noEntries": "No entries found." }
+  },
+  "catalogue": {
+    "list": {
+      "title": "Service Catalogue",
+      "newButton": "New Category"
+    },
+    "emptyState": {
+      "eyebrow": "Catalogue",
+      "headline": "The catalogue is empty",
+      "description": "No categories have been provisioned yet. Create one to get started."
+    },
+    "categoryCard": { "viewServices": "View services" },
+    "new": {
+      "backLink": "Back to catalogue",
+      "title": "New Category"
+    },
+    "detail": {
+      "backLink": "Back to all categories",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "editButton": "Edit Category",
+      "servicesHeading": "Services",
+      "addServiceButton": "Add Service"
+    },
+    "edit": { "title": "Edit Category" },
+    "card": {
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "activateButton": "Activate",
+      "deactivateButton": "Deactivate"
+    },
+    "form": {
+      "idLabel": "ID (slug)",
+      "idPlaceholder": "e.g. ac-repair",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. AC Repair",
+      "heroImageLabel": "Hero Image URL",
+      "heroImagePlaceholder": "https://…",
+      "sortOrderLabel": "Sort Order",
+      "sortOrderPlaceholder": "10",
+      "sortOrderError": "Sort order must be a non-negative integer.",
+      "submissionError": "Submission failed.",
+      "savingState": "Saving…",
+      "createButton": "Create Category",
+      "updateButton": "Update Category",
+      "cancelButton": "Cancel"
+    },
+    "serviceList": {
+      "empty": "No services in this category yet.",
+      "toggleError": "Failed to {action} {name}.",
+      "statusPublished": "Published",
+      "statusUnpublished": "Unpublished",
+      "updatingButton": "Updating…",
+      "publishButton": "Publish",
+      "unpublishButton": "Unpublish",
+      "editLink": "Edit"
+    },
+    "serviceNew": { "title": "Add Service" },
+    "serviceEdit": { "title": "Edit Service" },
+    "serviceForm": {
+      "idLabel": "ID (slug)",
+      "idPlaceholder": "e.g. ac-deep-clean",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. AC Deep Clean",
+      "descriptionLabel": "Short Description",
+      "descriptionPlaceholder": "One-liner summary",
+      "heroImageLabel": "Hero Image URL",
+      "heroImagePlaceholder": "https://…",
+      "priceLabel": "Base Price (paise — INR 599 = 59900)",
+      "pricePlaceholder": "59900",
+      "durationLabel": "Duration (minutes)",
+      "durationPlaceholder": "60",
+      "commissionLabel": "Commission (basis points — 2250 = 22.5%, range 1500–3500)",
+      "commissionPlaceholder": "2250",
+      "validationError": "Price, duration, and commission must be valid numbers.",
+      "commissionRangeError": "Commission must be between 1500 and 3500 basis points.",
+      "submissionError": "Submission failed.",
+      "savingState": "Saving…",
+      "createButton": "Create Service",
+      "updateButton": "Update Service",
+      "cancelButton": "Cancel"
+    }
+  },
+  "adminUsers": {
+    "eyebrow": "Identity and access",
+    "title": "Admin Users",
+    "subtitle": "{activeCount} active of {total} admin accounts.",
+    "emptyState": "No admin users returned by the API.",
+    "columns": {
+      "admin": "Admin",
+      "displayName": "Display Name",
+      "role": "Role",
+      "totp": "TOTP",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "updatedLabel": "Updated {date}",
+    "displayNameAriaLabel": "Display name for {email}",
+    "roleAriaLabel": "Role for {email}",
+    "saveButton": "Save",
+    "deactivateButton": "Deactivate",
+    "reactivateButton": "Reactivate",
+    "totpEnrolled": "Enrolled",
+    "totpPending": "Pending",
+    "statusActive": "Active",
+    "statusDeactivated": "Deactivated {date}",
+    "toastSuccess": "Admin user updated.",
+    "toastError": "Admin user update failed.",
+    "roles": {
+      "super-admin": "Super Admin",
+      "ops-manager": "Ops Manager",
+      "finance": "Finance",
+      "support-agent": "Support Agent"
+    }
+  },
+  "compliance": {
+    "eyebrow": "Compliance operations",
+    "title": "Compliance",
+    "erasure": {
+      "heading": "Erasure Requests",
+      "description": "Pending DPDP erasure requests awaiting cool-off review or denial.",
+      "emptyState": "No erasure requests returned.",
+      "columns": {
+        "request": "Request",
+        "user": "User",
+        "schedule": "Schedule",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "requestedLabel": "Requested {date}",
+      "closedLabel": "Closed {date}",
+      "denyReasonAriaLabel": "Deny reason for {requestId}",
+      "executeButton": "Execute",
+      "denyButton": "Deny",
+      "toastExecuteSuccess": "Erasure request executed.",
+      "toastExecuteFailed": "Erasure execution failed.",
+      "toastDenySuccess": "Erasure request denied.",
+      "toastDenyFailed": "Erasure denial failed.",
+      "denialReasons": {
+        "legal-hold": "Legal Hold",
+        "regulatory-retention-conflict": "Regulatory Retention Conflict",
+        "fraud-investigation": "Fraud Investigation"
+      },
+      "statuses": {
+        "PENDING": "Pending",
+        "EXECUTING": "Executing",
+        "EXECUTED": "Executed",
+        "DENIED": "Denied",
+        "REVOKED": "Revoked",
+        "FAILED": "Failed"
+      }
+    },
+    "sscLevy": {
+      "heading": "SSC Levy Approval",
+      "description": "Quarterly statutory levy transfers require super-admin approval.",
+      "emptyState": "No SSC levies returned.",
+      "columns": {
+        "quarter": "Quarter",
+        "gmv": "GMV",
+        "levy": "Levy",
+        "status": "Status",
+        "action": "Action"
+      },
+      "approveButton": "Approve Transfer",
+      "noAction": "No action",
+      "toastSuccess": "SSC levy {quarter} transferred.",
+      "toastError": "SSC levy approval failed.",
+      "statuses": {
+        "PENDING_APPROVAL": "Pending Approval",
+        "FAILED": "Failed",
+        "APPROVED": "Approved",
+        "TRANSFERRED": "Transferred"
+      }
+    }
   }
 }

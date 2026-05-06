@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import type { components } from '@/api/generated/schema';
 
 export type AdminServiceCategory = components['schemas']['AdminServiceCategory'];
@@ -10,6 +11,7 @@ export interface CategoryCardProps {
 }
 
 export function CategoryCard({ category, onToggle }: CategoryCardProps) {
+  const t = useTranslations('catalogue');
   return (
     <div
       style={{
@@ -44,7 +46,7 @@ export function CategoryCard({ category, onToggle }: CategoryCardProps) {
             color: '#fff',
           }}
         >
-          {category.isActive ? 'Active' : 'Inactive'}
+          {category.isActive ? t('card.statusActive') : t('card.statusInactive')}
         </span>
       </div>
 
@@ -70,7 +72,7 @@ export function CategoryCard({ category, onToggle }: CategoryCardProps) {
           border: 'none',
         }}
       >
-        {category.isActive ? 'Deactivate' : 'Activate'}
+        {category.isActive ? t('card.deactivateButton') : t('card.activateButton')}
       </button>
     </div>
   );

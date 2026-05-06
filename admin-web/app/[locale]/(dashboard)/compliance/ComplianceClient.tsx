@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import {
   approveSscLevy,
   denyErasureRequest,
@@ -24,15 +25,6 @@ interface ComplianceClientProps {
   initialSscLevies: SscLevy[];
 }
 
-function formatDate(value: string | undefined): string {
-  if (!value) return '-';
-  return new Date(value).toLocaleString('en-IN', {
-    timeZone: 'Asia/Kolkata',
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
-}
-
 function formatPaise(paise: number): string {
   return `INR ${(paise / 100).toLocaleString('en-IN', {
     minimumFractionDigits: 2,
@@ -44,6 +36,19 @@ export function ComplianceClient({
   initialErasureRequests,
   initialSscLevies,
 }: ComplianceClientProps) {
+  const t = useTranslations('compliance');
+  const locale = useLocale();
+
+  function formatDate(value: string | undefined): string {
+    if (!value) return '-';
+    const dateLocale = locale === 'hi' ? 'hi-IN' : 'en-IN';
+    return new Date(value).toLocaleString(dateLocale, {
+      timeZone: 'Asia/Kolkata',
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  }
+
   const [erasureRequests, setErasureRequests] = useState(initialErasureRequests);
   const [sscLevies, setSscLevies] = useState(initialSscLevies);
   const [denialReasons, setDenialReasons] = useState<Record<string, ErasureDenialReason>>(() =>
@@ -66,9 +71,9 @@ export function ComplianceClient({
           return { ...item, ...patch };
         }),
       );
-      setToast({ type: 'success', message: 'Erasure request executed.' });
+      setToast({ type: 'success', message: t('erasure.toastExecuteSuccess') });
     } catch {
-      setToast({ type: 'error', message: 'Erasure execution failed.' });
+      setToast({ type: 'error', message: t('erasure.toastExecuteFailed') });
     } finally {
       setPendingKey(null);
     }
@@ -89,9 +94,9 @@ export function ComplianceClient({
           return { ...item, ...patch };
         }),
       );
-      setToast({ type: 'success', message: 'Erasure request denied.' });
+      setToast({ type: 'success', message: t('erasure.toastDenySuccess') });
     } catch {
-      setToast({ type: 'error', message: 'Erasure denial failed.' });
+      setToast({ type: 'error', message: t('erasure.toastDenyFailed') });
     } finally {
       setPendingKey(null);
     }
@@ -114,9 +119,9 @@ export function ComplianceClient({
             : item,
         ),
       );
-      setToast({ type: 'success', message: `SSC levy ${result.quarter} transferred.` });
+      setToast({ type: 'success', message: t('sscLevy.toastSuccess', { quarter: result.quarter }) });
     } catch {
-      setToast({ type: 'error', message: 'SSC levy approval failed.' });
+      setToast({ type: 'error', message: t('sscLevy.toastError') });
     } finally {
       setPendingKey(null);
     }
@@ -125,9 +130,9 @@ export function ComplianceClient({
   return (
     <div className="p-[var(--space-6)] space-y-[var(--space-8)]">
       <div>
-        <p className="eyebrow m-0 mb-[var(--space-1)]">Compliance operations</p>
+        <p className="eyebrow m-0 mb-[var(--space-1)]">{t('eyebrow')}</p>
         <h1 className="text-[length:var(--text-2xl)] font-bold text-[var(--color-text)]">
-          Compliance
+          {t('title')}
         </h1>
       </div>
 
@@ -147,25 +152,25 @@ export function ComplianceClient({
       <section aria-labelledby="erasure-heading" className="space-y-[var(--space-3)]">
         <div>
           <h2 id="erasure-heading" className="text-[length:var(--text-lg)] font-semibold text-[var(--color-text)]">
-            Erasure Requests
+            {t('erasure.heading')}
           </h2>
           <p className="text-sm text-[var(--color-text-muted)]">
-            Pending DPDP erasure requests awaiting cool-off review or denial.
+            {t('erasure.description')}
           </p>
         </div>
 
         {erasureRequests.length === 0 ? (
-          <p className="text-sm text-[var(--color-text-muted)]">No erasure requests returned.</p>
+          <p className="text-sm text-[var(--color-text-muted)]">{t('erasure.emptyState')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="text-left text-[var(--color-text-muted)] border-b border-[var(--color-border)]">
-                  <th className="pb-2 pr-4 font-medium">Request</th>
-                  <th className="pb-2 pr-4 font-medium">User</th>
-                  <th className="pb-2 pr-4 font-medium">Schedule</th>
-                  <th className="pb-2 pr-4 font-medium">Status</th>
-                  <th className="pb-2 font-medium text-right">Actions</th>
+                  <th className="pb-2 pr-4 font-medium">{t('erasure.columns.request')}</th>
+                  <th className="pb-2 pr-4 font-medium">{t('erasure.columns.user')}</th>
+                  <th className="pb-2 pr-4 font-medium">{t('erasure.columns.schedule')}</th>
+                  <th className="pb-2 pr-4 font-medium">{t('erasure.columns.status')}</th>
+                  <th className="pb-2 font-medium text-right">{t('erasure.columns.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -177,7 +182,7 @@ export function ComplianceClient({
                       <td className="py-3 pr-4">
                         <p className="font-mono text-xs m-0">{request.id}</p>
                         <p className="text-xs text-[var(--color-text-muted)] m-0">
-                          Requested {formatDate(request.requestedAt)}
+                          {t('erasure.requestedLabel', { date: formatDate(request.requestedAt) })}
                         </p>
                       </td>
                       <td className="py-3 pr-4">
@@ -185,7 +190,7 @@ export function ComplianceClient({
                         <p className="font-mono text-xs text-[var(--color-text-muted)] m-0">{request.userId}</p>
                       </td>
                       <td className="py-3 pr-4">{formatDate(request.scheduledDeletionAt)}</td>
-                      <td className="py-3 pr-4">{request.status}</td>
+                      <td className="py-3 pr-4">{t(`erasure.statuses.${request.status}`)}</td>
                       <td className="py-3 text-right">
                         {isPending ? (
                           <div className="flex justify-end gap-2">
@@ -195,7 +200,7 @@ export function ComplianceClient({
                               disabled={pendingKey !== null || executionBlocked}
                               onClick={() => void handleExecute(request)}
                             >
-                              Execute
+                              {t('erasure.executeButton')}
                             </button>
                             <select
                               className="input"
@@ -206,11 +211,11 @@ export function ComplianceClient({
                                   [request.id]: event.target.value as ErasureDenialReason,
                                 }))
                               }
-                              aria-label={`Deny reason for ${request.id}`}
+                              aria-label={t('erasure.denyReasonAriaLabel', { requestId: request.id })}
                             >
                               {DENIAL_REASONS.map((reason) => (
                                 <option key={reason} value={reason}>
-                                  {reason}
+                                  {t(`erasure.denialReasons.${reason}`)}
                                 </option>
                               ))}
                             </select>
@@ -220,12 +225,12 @@ export function ComplianceClient({
                               disabled={pendingKey !== null}
                               onClick={() => void handleDeny(request)}
                             >
-                              Deny
+                              {t('erasure.denyButton')}
                             </button>
                           </div>
                         ) : (
                           <span className="text-xs text-[var(--color-text-muted)]">
-                            Closed {formatDate(request.executedAt ?? request.deniedAt ?? request.failedAt)}
+                            {t('erasure.closedLabel', { date: formatDate(request.executedAt ?? request.deniedAt ?? request.failedAt) })}
                           </span>
                         )}
                       </td>
@@ -241,25 +246,25 @@ export function ComplianceClient({
       <section aria-labelledby="ssc-heading" className="space-y-[var(--space-3)]">
         <div>
           <h2 id="ssc-heading" className="text-[length:var(--text-lg)] font-semibold text-[var(--color-text)]">
-            SSC Levy Approval
+            {t('sscLevy.heading')}
           </h2>
           <p className="text-sm text-[var(--color-text-muted)]">
-            Quarterly statutory levy transfers require super-admin approval.
+            {t('sscLevy.description')}
           </p>
         </div>
 
         {sscLevies.length === 0 ? (
-          <p className="text-sm text-[var(--color-text-muted)]">No SSC levies returned.</p>
+          <p className="text-sm text-[var(--color-text-muted)]">{t('sscLevy.emptyState')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="text-left text-[var(--color-text-muted)] border-b border-[var(--color-border)]">
-                  <th className="pb-2 pr-4 font-medium">Quarter</th>
-                  <th className="pb-2 pr-4 font-medium text-right">GMV</th>
-                  <th className="pb-2 pr-4 font-medium text-right">Levy</th>
-                  <th className="pb-2 pr-4 font-medium">Status</th>
-                  <th className="pb-2 font-medium text-right">Action</th>
+                  <th className="pb-2 pr-4 font-medium">{t('sscLevy.columns.quarter')}</th>
+                  <th className="pb-2 pr-4 font-medium text-right">{t('sscLevy.columns.gmv')}</th>
+                  <th className="pb-2 pr-4 font-medium text-right">{t('sscLevy.columns.levy')}</th>
+                  <th className="pb-2 pr-4 font-medium">{t('sscLevy.columns.status')}</th>
+                  <th className="pb-2 font-medium text-right">{t('sscLevy.columns.action')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -273,7 +278,7 @@ export function ComplianceClient({
                       </td>
                       <td className="py-3 pr-4 text-right">{formatPaise(levy.gmv)}</td>
                       <td className="py-3 pr-4 text-right">{formatPaise(levy.levyAmount)}</td>
-                      <td className="py-3 pr-4">{levy.status}</td>
+                      <td className="py-3 pr-4">{t(`sscLevy.statuses.${levy.status}`)}</td>
                       <td className="py-3 text-right">
                         {canApprove ? (
                           <button
@@ -282,11 +287,11 @@ export function ComplianceClient({
                             disabled={pendingKey !== null}
                             onClick={() => void handleApproveLevy(levy)}
                           >
-                            Approve Transfer
+                            {t('sscLevy.approveButton')}
                           </button>
                         ) : (
                           <span className="text-xs text-[var(--color-text-muted)]">
-                            {levy.razorpayTransferId ?? 'No action'}
+                            {levy.razorpayTransferId ?? t('sscLevy.noAction')}
                           </span>
                         )}
                       </td>

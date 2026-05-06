@@ -59,8 +59,47 @@
   --rail-border: var(--ink-4);
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Devanagari typography — E12-S03b
+   Architect verdict locked 2026-05-06. Scoped to :lang(hi) — EN styles untouched.
+   ───────────────────────────────────────────────────────────────────────── */
+
 :lang(hi) {
-  --font-body: var(--font-devanagari), sans-serif;
+  --font-body: var(--font-devanagari), "Noto Sans Devanagari", sans-serif;
+
+  /* Tighten line-height: Devanagari has no descenders; 1.45 matches visual
+     density of Geist at 1.55 while giving matras (ि ी े) room to breathe. */
+  line-height: 1.45;
+
+  /* Override Geist-specific features (ss01, cv11) with Devanagari-correct set.
+     calt + clig are required for correct conjunct shaping (क्ष त्र ज्ञ). */
+  font-feature-settings: "kern" 1, "calt" 1, "liga" 1, "clig" 1;
+
+  /* Prevent browser from synthesizing bold/italic — Noto ships real 500/600
+     weights; synthesized bold produces double-stroke on the shirorekha. */
+  font-synthesis: none;
+
+  text-rendering: optimizeLegibility;
+}
+
+/* Table cells: reset tracking, fix alignment for mixed Latin+Devanagari rows */
+:lang(hi) table td,
+:lang(hi) table th {
+  letter-spacing: 0;
+  vertical-align: baseline;
+  line-height: 1.45;
+  /* tnum + lnum keep ₹ amounts tabular-aligned next to Devanagari status text */
+  font-feature-settings: "kern" 1, "calt" 1, "liga" 1, "clig" 1, "tnum" 1, "lnum" 1;
+}
+
+:lang(hi) table th {
+  font-weight: 500;
+}
+
+/* Nav labels: reset letter-spacing so matra spacing isn't disrupted */
+:lang(hi) nav[aria-label="Primary navigation"] a span,
+:lang(hi) nav[aria-label="Primary navigation (mobile)"] a span {
+  letter-spacing: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

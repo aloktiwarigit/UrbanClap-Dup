@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   GoogleAuthProvider,
   signInWithEmailAndPassword,
@@ -33,6 +34,8 @@ type MfaChallenge = {
   method: 'google' | 'password';
 };
 
+type LoginErrorTranslator = (key: string) => string;
+
 function getSafeNextPathFromUrl(role: AdminRole): string {
   if (typeof window === 'undefined') return getSafeNextPath(null, role);
   const next = new URLSearchParams(window.location.search).get('next');
@@ -43,21 +46,28 @@ function routeTo(path: string): Parameters<ReturnType<typeof useRouter>['push']>
   return path;
 }
 
-function normalizeLoginError(code: string | undefined): string {
+function withLocalePrefix(path: string, locale: string): string {
+  if (routing.locales.some((value) => path === `/${value}` || path.startsWith(`/${value}/`))) {
+    return path;
+  }
+  return `/${locale}${path}`;
+}
+
+function normalizeLoginError(code: string | undefined, t: LoginErrorTranslator): string {
   switch (code) {
     case 'ADMIN_NOT_FOUND':
-      return 'This Google account or email address is not an active admin user.';
+      return t('adminNotFound');
     case 'FIREBASE_TOKEN_INVALID':
-      return 'Google could not verify this sign-in. Try again.';
+      return t('firebaseTokenInvalid');
     case 'MFA_CHALLENGE_INVALID':
-      return 'The Microsoft Authenticator step expired. Sign in again.';
+      return t('mfaChallengeInvalid');
     case 'TOTP_INVALID':
-      return 'That Microsoft Authenticator code did not match. Try the next 6-digit code.';
+      return t('totpInvalid');
     case 'TOTP_NOT_CONFIGURED':
     case 'TOTP_NOT_ENROLLED':
-      return 'Microsoft Authenticator is not set up for this admin user. Sign in again to finish setup.';
+      return t('totpNotConfigured');
     default:
-      return 'Login failed. Check your credentials and try again.';
+      return t('fallback');
   }
 }
 
@@ -65,6 +75,8 @@ export default function LoginPage() {
   const router = useRouter();
   const params = useParams<{ locale: string }>();
   const locale = params.locale ?? routing.defaultLocale;
+  const t = useTranslations('login');
+  const tErr = useTranslations('login.errors');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mfaCode, setMfaCode] = useState('');
@@ -85,7 +97,7 @@ export default function LoginPage() {
           credentials: 'include',
         });
         if (!cancelled && res.ok) {
-          router.replace(routeTo(getSafeNextPathFromUrl('super-admin')));
+          router.replace(routeTo(withLocalePrefix(getSafeNextPathFromUrl('super-admin'), locale)));
         }
       } catch {
         // Stay on the login form when no valid refresh session is available.
@@ -96,7 +108,7 @@ export default function LoginPage() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [locale, router]);
 
   async function postAdminLogin(body: Record<string, string | undefined>): Promise<LoginResponse> {
     const res = await fetch(apiUrl('/v1/admin/auth/login'), {
@@ -108,7 +120,7 @@ export default function LoginPage() {
 
     const data = (await res.json()) as LoginResponse;
     if (!res.ok) {
-      throw Object.assign(new Error(normalizeLoginError(data.code)), { code: data.code });
+      throw Object.assign(new Error(normalizeLoginError(data.code, tErr)), { code: data.code });
     }
     return data;
   }
@@ -135,7 +147,7 @@ export default function LoginPage() {
 
     setChallenge(null);
     const role = (data.role ?? 'super-admin') as AdminRole;
-    router.push(routeTo(getSafeNextPathFromUrl(role)));
+    router.push(routeTo(withLocalePrefix(getSafeNextPathFromUrl(role), locale)));
   }
 
   async function handlePasswordSubmit(e: React.FormEvent) {
@@ -152,10 +164,10 @@ export default function LoginPage() {
       const code = (err as { code?: string })?.code ?? '';
       setError(
         code === 'auth/invalid-credential' || code === 'auth/wrong-password'
-          ? 'Invalid email or password.'
+          ? tErr('invalidCredential')
           : err instanceof Error
             ? err.message
-            : 'An error occurred. Please try again.',
+            : tErr('genericPassword'),
       );
     } finally {
       setLoading(null);
@@ -177,14 +189,14 @@ export default function LoginPage() {
       const code = (err as { code?: string })?.code ?? '';
       setError(
         code === 'auth/popup-closed-by-user'
-          ? 'Google sign-in was closed before it completed.'
+          ? tErr('googlePopupClosed')
           : code === 'auth/popup-blocked'
-            ? 'Allow pop-ups for this admin site and try again.'
+            ? tErr('googlePopupBlocked')
             : code === 'auth/account-exists-with-different-credential'
-              ? 'This email uses a different sign-in method.'
+              ? tErr('googleAccountExists')
               : err instanceof Error
                 ? err.message
-                : 'Google sign-in failed. Please try again.',
+                : tErr('googleFallback'),
       );
     } finally {
       setLoading(null);
@@ -204,7 +216,7 @@ export default function LoginPage() {
       });
       handleLoginResponse(data, challenge.method);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Verification failed. Try again.');
+      setError(err instanceof Error ? err.message : tErr('mfaVerificationFallback'));
     } finally {
       setLoading(null);
     }
@@ -220,12 +232,12 @@ export default function LoginPage() {
     <main className="min-h-[100dvh] grid place-items-center bg-[var(--color-surface)] px-[var(--space-5)] py-[var(--space-8)] text-[var(--color-text)]">
       <section className="grid w-full max-w-[64rem] grid-cols-1 overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface-alt)] shadow-[var(--shadow-lg)] md:grid-cols-[0.9fr_1.1fr]">
         <aside className="border-b border-[var(--color-border)] bg-[var(--ink-1)] p-[var(--space-6)] md:border-b-0 md:border-r">
-          <p className="eyebrow m-0">HomeHeroo admin</p>
+          <p className="eyebrow m-0">{t('brand.eyebrow')}</p>
           <h1 className="display m-0 mt-[var(--space-4)] text-[clamp(2rem,4vw,3.5rem)]">
-            Secure operations access
+            {t('hero.title')}
           </h1>
           <p className="m-0 mt-[var(--space-5)] max-w-[26rem] text-sm text-[var(--color-text-muted)]">
-            Google or password proves identity. Microsoft Authenticator approves admin access.
+            {t('hero.subtitle')}
           </p>
 
           <div className="mt-[var(--space-8)] grid gap-[var(--space-3)] text-sm">
@@ -237,9 +249,9 @@ export default function LoginPage() {
                 1
               </span>
               <div>
-                <p className="m-0 font-semibold text-[var(--color-text)]">Verify identity</p>
+                <p className="m-0 font-semibold text-[var(--color-text)]">{t('steps.one.title')}</p>
                 <p className="m-0 text-xs text-[var(--color-text-muted)]">
-                  Continue with Google or admin email and password.
+                  {t('steps.one.description')}
                 </p>
               </div>
             </div>
@@ -251,9 +263,9 @@ export default function LoginPage() {
                 2
               </span>
               <div>
-                <p className="m-0 font-semibold text-[var(--color-text)]">Approve with Microsoft Authenticator</p>
+                <p className="m-0 font-semibold text-[var(--color-text)]">{t('steps.two.title')}</p>
                 <p className="m-0 text-xs text-[var(--color-text-muted)]">
-                  Use the 6-digit code for HomeHeroo admin. It is not a Gmail OTP.
+                  {t('steps.two.description')}
                 </p>
               </div>
             </div>
@@ -263,17 +275,17 @@ export default function LoginPage() {
         <form
           onSubmit={(e) => void (challenge ? handleMfaSubmit(e) : handlePasswordSubmit(e))}
           className="grid gap-[var(--space-5)] p-[var(--space-6)]"
-          aria-label="Admin sign-in"
+          aria-label={t('form.ariaLabel')}
         >
           <div className="grid gap-[var(--space-2)]">
-            <p className="eyebrow m-0">{isMfaStep ? 'Step 2 of 2' : 'Step 1 of 2'}</p>
+            <p className="eyebrow m-0">
+              {isMfaStep ? t('form.eyebrow.mfa') : t('form.eyebrow.signIn')}
+            </p>
             <h2 className="m-0 text-[length:var(--text-2xl)] font-semibold">
-              {isMfaStep ? 'Open Microsoft Authenticator' : 'Choose how to sign in'}
+              {isMfaStep ? t('form.heading.mfa') : t('form.heading.signIn')}
             </h2>
             <p className="m-0 text-sm text-[var(--color-text-muted)]">
-              {isMfaStep
-                ? 'Enter the 6-digit code shown for HomeHeroo admin. Do not use a Gmail email code.'
-                : 'Start with Google sign-in or admin email and password. The Microsoft Authenticator step appears next.'}
+              {isMfaStep ? t('form.description.mfa') : t('form.description.signIn')}
             </p>
           </div>
 
@@ -287,15 +299,15 @@ export default function LoginPage() {
             <>
               <div className="border border-[var(--color-border)] bg-[var(--color-surface)] p-[var(--space-4)]">
                 <p className="m-0 text-xs uppercase tracking-[0.12em] text-[var(--color-text-faint)]">
-                  Signed in identity
+                  {t('form.identityCard.label')}
                 </p>
                 <p className="m-0 mt-1 break-all text-sm font-semibold text-[var(--color-text)]">
-                  {challenge.email || 'Verified admin'}
+                  {challenge.email || t('form.identityCard.fallback')}
                 </p>
               </div>
 
               <label className="grid gap-2 text-sm font-medium text-[var(--color-text)]">
-                Microsoft Authenticator code
+                {t('form.mfa.codeLabel')}
                 <input
                   type="text"
                   inputMode="numeric"
@@ -303,7 +315,7 @@ export default function LoginPage() {
                   maxLength={6}
                   value={mfaCode}
                   onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
-                  placeholder="6-digit code"
+                  placeholder={t('form.mfa.codePlaceholder')}
                   autoComplete="one-time-code"
                   required
                   className="min-h-12 text-center font-mono text-[length:var(--text-lg)] tracking-[0.18em]"
@@ -315,7 +327,7 @@ export default function LoginPage() {
                 disabled={loading !== null || mfaCode.length !== 6}
                 className="btn btn-primary min-h-12 w-full"
               >
-                {loading === 'mfa' ? 'Verifying...' : 'Verify Microsoft Authenticator'}
+                {loading === 'mfa' ? t('form.mfa.verifyingButton') : t('form.mfa.verifyButton')}
               </button>
 
               <button
@@ -324,7 +336,7 @@ export default function LoginPage() {
                 disabled={loading !== null}
                 className="btn btn-ghost min-h-12 w-full"
               >
-                Use a different sign-in
+                {t('form.mfa.switchMethodButton')}
               </button>
             </>
           ) : (
@@ -335,17 +347,19 @@ export default function LoginPage() {
                 disabled={loading !== null}
                 className="btn btn-primary min-h-12 w-full"
               >
-                {loading === 'google' ? 'Opening Google...' : 'Continue with Google'}
+                {loading === 'google'
+                  ? t('form.google.openingButton')
+                  : t('form.google.continueButton')}
               </button>
 
               <div className="flex items-center gap-3 text-xs uppercase text-[var(--color-text-muted)]">
                 <span className="h-px flex-1 bg-[var(--color-border)]" />
-                <span>or use admin password</span>
+                <span>{t('form.divider')}</span>
                 <span className="h-px flex-1 bg-[var(--color-border)]" />
               </div>
 
               <label className="grid gap-2 text-sm font-medium text-[var(--color-text)]">
-                Email address
+                {t('form.emailLabel')}
                 <input
                   type="email"
                   value={email}
@@ -357,7 +371,7 @@ export default function LoginPage() {
               </label>
 
               <label className="grid gap-2 text-sm font-medium text-[var(--color-text)]">
-                Password
+                {t('form.passwordLabel')}
                 <input
                   type="password"
                   value={password}
@@ -373,7 +387,9 @@ export default function LoginPage() {
                 disabled={loading !== null}
                 className="btn btn-ghost min-h-12 w-full"
               >
-                {loading === 'password' ? 'Signing in...' : 'Sign in with password'}
+                {loading === 'password'
+                  ? t('form.password.submittingButton')
+                  : t('form.password.submitButton')}
               </button>
             </>
           )}

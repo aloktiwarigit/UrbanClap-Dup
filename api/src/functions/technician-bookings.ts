@@ -91,17 +91,7 @@ export const getMyTechnicianBookingsHandler: HttpHandler = async (
   }
 
   try {
-    let bookings: BookingDoc[];
-    try {
-      bookings = await bookingRepo.getByTechnicianId(uid);
-    } catch (queryErr: unknown) {
-      // Cross-partition scan on bookings (partitioned by customerId) fails on
-      // Cosmos Serverless free tier. Return empty list for F&F pilot — new
-      // technicians have no jobs anyway. Sentry captures for visibility.
-      Sentry.captureException(queryErr);
-      safeWarn(ctx, 'getByTechnicianId failed (cross-partition scan); returning empty list for pilot');
-      return { status: 200, jsonBody: { bookings: [] } };
-    }
+    const bookings = await bookingRepo.getByTechnicianId(uid);
 
     if (!Array.isArray(bookings)) {
       Sentry.captureException(new Error('getByTechnicianId returned a non-array result'));
@@ -156,8 +146,8 @@ export const getMyTechnicianBookingsHandler: HttpHandler = async (
     };
   } catch (err: unknown) {
     Sentry.captureException(err);
-    safeError(ctx, 'getMyTechnicianBookings failed; returning empty list', err instanceof Error ? err.message : String(err));
-    return { status: 200, jsonBody: { bookings: [] } };
+    safeError(ctx, 'getMyTechnicianBookings failed', err instanceof Error ? err.message : String(err));
+    return { status: 500, jsonBody: { code: 'INTERNAL_ERROR' } };
   }
 };
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { AuditLogTable } from './AuditLogTable';
 import { AuditLogFilters } from './AuditLogFilters';
 import { EMPTY_FILTERS } from '@/types/audit-log';
@@ -8,6 +9,7 @@ import { apiUrl } from '@/api/base';
 import type { AuditLogListResponse, AuditLogFiltersState } from '@/types/audit-log';
 
 export function AuditLogClient() {
+  const t = useTranslations('auditLog');
   const [filters, setFilters] = useState<AuditLogFiltersState>(EMPTY_FILTERS);
   const [data, setData] = useState<AuditLogListResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -38,12 +40,12 @@ export function AuditLogClient() {
         const json = (await res.json()) as AuditLogListResponse;
         setData(json);
       } catch {
-        setError('Failed to load audit log. Please try again.');
+        setError(t('errors.loadFailed'));
       } finally {
         setLoading(false);
       }
     },
-    [filters],
+    [filters, t],
   );
 
   useEffect(() => {
@@ -70,7 +72,7 @@ export function AuditLogClient() {
       <AuditLogFilters filters={filters} onChange={setFilters} />
 
       {loading && (
-        <p className="text-sm text-[var(--color-text-muted)] mb-[var(--space-3)]">Loading…</p>
+        <p className="text-sm text-[var(--color-text-muted)] mb-[var(--space-3)]">{t('loading')}</p>
       )}
       {error && (
         <p role="alert" className="text-sm text-[var(--color-danger)] mb-[var(--space-3)]">
@@ -86,7 +88,7 @@ export function AuditLogClient() {
           disabled={continuationStack.length === 0}
           className="px-3 py-1 text-sm rounded border border-[var(--color-border)] disabled:opacity-40"
         >
-          ← Previous
+          {t('pagination.previous')}
         </button>
         <button
           type="button"
@@ -94,7 +96,7 @@ export function AuditLogClient() {
           disabled={!data?.continuationToken}
           className="px-3 py-1 text-sm rounded border border-[var(--color-border)] disabled:opacity-40"
         >
-          Next →
+          {t('pagination.next')}
         </button>
       </div>
     </div>

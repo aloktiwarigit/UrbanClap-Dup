@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { apiUrl } from '@/api/base';
 import { CategoryForm } from '@/components/catalogue/CategoryForm';
 import type { components, operations } from '@/api/generated/schema';
@@ -20,6 +21,7 @@ interface EditCategoryClientProps {
 }
 
 export function EditCategoryClient({ category }: EditCategoryClientProps) {
+  const t = useTranslations('catalogue');
   const router = useRouter();
 
   async function handleSubmit(data: CreateCategoryBody | UpdateCategoryBody) {
@@ -47,7 +49,7 @@ export function EditCategoryClient({ category }: EditCategoryClientProps) {
       }}
     >
       <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>
-        Edit Category
+        {t('edit.title')}
       </h1>
       <CategoryForm
         initial={category}

@@ -126,6 +126,78 @@ function clearAdminCookies(response: NextResponse): void {
   }
 }
 
+function hostnameFromHeader(value: string | null): string | null {
+  const first = value?.split(',')[0]?.trim();
+  if (!first) return null;
+  return first.replace(/:\d+$/, '');
+}
+
+function isAbsoluteUrl(value: string): boolean {
+  return /^[a-z][a-z\d+\-.]*:/i.test(value);
+}
+
+function publicRedirectOrigin(request: NextRequest): string {
+  const appUrl = process.env['NEXT_PUBLIC_APP_URL'];
+  if (appUrl) {
+    try {
+      return new URL(appUrl).origin;
+    } catch {
+      // Ignore invalid configuration here; env validation handles hard failures.
+    }
+  }
+
+  const forwardedProto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
+  const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
+  const host = forwardedHost || request.headers.get('host') || request.nextUrl.host;
+  const protocol = forwardedProto || request.nextUrl.protocol.replace(/:$/, '');
+  return `${protocol}://${host}`;
+}
+
+export function normalizeSameHostRedirect(
+  response: NextResponse,
+  request: NextRequest,
+): NextResponse {
+  const location = response.headers.get('location');
+  if (!location || !isAbsoluteUrl(location)) return response;
+
+  let redirectUrl: URL;
+  try {
+    redirectUrl = new URL(location);
+  } catch {
+    return response;
+  }
+
+  const sameHostCandidates = new Set<string>([request.nextUrl.hostname]);
+
+  const host = hostnameFromHeader(request.headers.get('host'));
+  if (host) sameHostCandidates.add(host);
+
+  const forwardedHost = hostnameFromHeader(request.headers.get('x-forwarded-host'));
+  if (forwardedHost) sameHostCandidates.add(forwardedHost);
+
+  const appUrl = process.env['NEXT_PUBLIC_APP_URL'];
+  if (appUrl) {
+    try {
+      sameHostCandidates.add(new URL(appUrl).hostname);
+    } catch {
+      // Ignore invalid configuration here; env validation handles hard failures.
+    }
+  }
+
+  if (!sameHostCandidates.has(redirectUrl.hostname)) return response;
+
+  const publicUrl = new URL(
+    `${redirectUrl.pathname}${redirectUrl.search}${redirectUrl.hash}`,
+    publicRedirectOrigin(request),
+  );
+  response.headers.set('location', publicUrl.toString());
+  return response;
+}
+
+function handleI18n(request: NextRequest): NextResponse {
+  return normalizeSameHostRedirect(handleI18nRouting(request), request);
+}
+
 // ── Locale-aware redirect helpers ─────────────────────────────────────────────
 
 function redirectToLogin(request: NextRequest): NextResponse {
@@ -134,7 +206,7 @@ function redirectToLogin(request: NextRequest): NextResponse {
   loginUrl.searchParams.set('next', request.nextUrl.pathname);
   const response = NextResponse.redirect(loginUrl);
   clearAdminCookies(response);
-  return response;
+  return normalizeSameHostRedirect(response, request);
 }
 
 function redirectToNotAuthorized(request: NextRequest, role: AdminRole): NextResponse {
@@ -143,7 +215,7 @@ function redirectToNotAuthorized(request: NextRequest, role: AdminRole): NextRes
   url.searchParams.set('from', request.nextUrl.pathname);
   const rawDefault = defaultPathForRole(role);
   url.searchParams.set('next', `/${locale}${rawDefault}`);
-  return NextResponse.redirect(url);
+  return normalizeSameHostRedirect(NextResponse.redirect(url), request);
 }
 
 // ── JWT verification (unchanged logic) ───────────────────────────────────────
@@ -237,7 +309,7 @@ export async function middleware(request: NextRequest) {
   // 3. Public paths — locale routing only, no JWT required
   const PUBLIC_PATHS = ['/', '/login', '/setup'];
   if (PUBLIC_PATHS.some((p) => rawPath === p || rawPath.startsWith(p + '/'))) {
-    return handleI18nRouting(request);
+    return handleI18n(request);
   }
 
   // 4. Internal Next.js API routes (/api/) — pass through (no JWT proxy needed)
@@ -293,20 +365,37 @@ export async function middleware(request: NextRequest) {
 
   // 8. Auth passed — apply i18n routing (handles locale prefix, NEXT_LOCALE cookie)
   if (setCookies.length > 0) {
-    // Refreshed session: inject updated access token into request headers so
-    // downstream server components receive it, then propagate Set-Cookie headers.
+    // Refreshed session: pass original `request` to handleI18nRouting to preserve
+    // nextUrl (wrapping a plain Request in new NextRequest() loses nextUrl and breaks
+    // locale detection). Forward the refreshed cookie via NextResponse.next's request
+    // headers so downstream server components receive the updated access token.
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set(
       'cookie',
       withRequestCookie(request.headers.get('cookie'), ACCESS_COOKIE, access.token),
     );
-    const refreshedRequest = new Request(request, { headers: requestHeaders });
-    const i18nResponse = handleI18nRouting(new NextRequest(refreshedRequest));
-    appendSetCookies(i18nResponse, setCookies);
-    return i18nResponse;
+    const i18nResponse = handleI18n(request);
+    if (i18nResponse.status >= 300 && i18nResponse.status < 400) {
+      // i18n is redirecting for locale normalization — carry Set-Cookie on redirect
+      appendSetCookies(i18nResponse, setCookies);
+      return i18nResponse;
+    }
+    // i18n returned next() — rebuild with refreshed request headers so server
+    // components see the updated access token, then copy i18n response headers
+    // (e.g. NEXT_LOCALE set-cookie) but skip x-middleware-* which Next.js already
+    // set correctly on the new response for the refreshed cookie.
+    const response = NextResponse.next({ request: { headers: requestHeaders } });
+    i18nResponse.headers.forEach((value, key) => {
+      if (!key.startsWith('x-middleware-')) response.headers.set(key, value);
+    });
+    appendSetCookies(response, setCookies);
+    return response;
   }
+  // TODO(ADR needed): /api/* bypass and /setup/* public-path behaviour should be
+  // reviewed in a dedicated ADR before changing — altering them could break the
+  // setup flow and the API edge-network routing.
 
-  return handleI18nRouting(request);
+  return handleI18n(request);
 }
 
 export const config = {

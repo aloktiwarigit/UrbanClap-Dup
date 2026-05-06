@@ -3,6 +3,8 @@ export const dynamic = 'force-dynamic';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import type { Route } from 'next';
+import { getTranslations } from 'next-intl/server';
 import type { components } from '@/api/generated/schema';
 import { getApiBaseUrl } from '@/lib/apiBase';
 import { handleAdminFetchError } from '@/lib/serverFetch';
@@ -46,9 +48,10 @@ export default async function CategoryDetailPage({ params }: PageProps) {
   const cookieStore = await cookies();
   const token = cookieStore.get('hs_access')?.value ?? '';
 
-  const [category, services] = await Promise.all([
+  const [category, services, t] = await Promise.all([
     fetchCategory(categoryId, token),
     fetchServices(categoryId, token),
+    getTranslations('catalogue'),
   ]);
 
   if (category === null) {
@@ -70,7 +73,7 @@ export default async function CategoryDetailPage({ params }: PageProps) {
             href="/catalogue"
             style={{ fontSize: 'var(--text-sm)', color: 'var(--color-brand)', textDecoration: 'underline' }}
           >
-            Back to all categories
+            {t('detail.backLink')}
           </Link>
           <h1
             style={{
@@ -86,7 +89,7 @@ export default async function CategoryDetailPage({ params }: PageProps) {
           <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)', margin: 'var(--space-1) 0 0 0' }}>
             ID: {category.id} - Sort order: {category.sortOrder} -{' '}
             <span style={{ color: category.isActive ? 'var(--color-success)' : 'var(--color-danger)', fontWeight: 600 }}>
-              {category.isActive ? 'Active' : 'Inactive'}
+              {category.isActive ? t('detail.statusActive') : t('detail.statusInactive')}
             </span>
           </p>
         </div>
@@ -95,7 +98,7 @@ export default async function CategoryDetailPage({ params }: PageProps) {
           className="btn btn-ghost"
           style={{ textDecoration: 'none' }}
         >
-          Edit Category
+          {t('detail.editButton')}
         </Link>
       </div>
 
@@ -108,13 +111,13 @@ export default async function CategoryDetailPage({ params }: PageProps) {
             marginBottom: 'var(--space-3)',
           }}
         >
-          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 600, margin: 0 }}>Services</h2>
+          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 600, margin: 0 }}>{t('detail.servicesHeading')}</h2>
           <Link
             href={`/catalogue/${categoryId}/services/new`}
             className="btn btn-primary"
             style={{ textDecoration: 'none' }}
           >
-            Add Service
+            {t('detail.addServiceButton')}
           </Link>
         </div>
 
