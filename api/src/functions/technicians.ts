@@ -204,7 +204,7 @@ export const patchMyTechnicianServiceProfileHandler: HttpHandler = async (
   }
 
   try {
-    return { status: 200, jsonBody: await patchTechnicianServiceProfile(uid, body) };
+    return { status: 200, jsonBody: await patchTechnicianServiceProfile(uid, { ...body, location: body.location ?? undefined }) };
   } catch (err: unknown) {
     ctx.error('patchMyTechnicianServiceProfile failed', err);
     return { status: 500, jsonBody: { code: 'INTERNAL_ERROR' } };
