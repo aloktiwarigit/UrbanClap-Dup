@@ -172,6 +172,7 @@ export const patchMyTechnicianServiceProfileHandler: HttpHandler = async (
     const raw: unknown = await req.json();
     const parsed = PatchServiceProfileBodySchema.safeParse(raw);
     if (!parsed.success) {
+      ctx.warn('patchMyTechnicianServiceProfile body validation failed', JSON.stringify(parsed.error.issues));
       return { status: 400, jsonBody: { code: 'VALIDATION_ERROR', issues: parsed.error.issues } };
     }
     body = parsed.data;
