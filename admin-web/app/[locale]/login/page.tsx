@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   GoogleAuthProvider,
+  getRedirectResult,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
 } from 'firebase/auth';
 import { useRouter, useParams } from 'next/navigation';
 import { apiUrl } from '@/api/base';
@@ -35,6 +37,11 @@ type MfaChallenge = {
 };
 
 type LoginErrorTranslator = (key: string) => string;
+
+function isMobileBrowser(): boolean {
+  if (typeof window === 'undefined') return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
 
 function getSafeNextPathFromUrl(role: AdminRole): string {
   if (typeof window === 'undefined') return getSafeNextPath(null, role);
@@ -110,6 +117,38 @@ export default function LoginPage() {
     };
   }, [locale, router]);
 
+  // Handle returning from mobile Google sign-in redirect.
+  useEffect(() => {
+    let cancelled = false;
+    async function handleGoogleRedirectResult() {
+      try {
+        const result = await getRedirectResult(getFirebaseAuth());
+        if (!result || cancelled) return;
+        setLoading('google');
+        const idToken = await result.user.getIdToken();
+        const data = await postAdminLogin({ idToken });
+        if (!cancelled) handleLoginResponse(data, 'google');
+      } catch (err: unknown) {
+        if (cancelled) return;
+        const code = (err as { code?: string })?.code ?? '';
+        setError(
+          code === 'auth/account-exists-with-different-credential'
+            ? tErr('googleAccountExists')
+            : err instanceof Error
+              ? err.message
+              : tErr('googleFallback'),
+        );
+      } finally {
+        if (!cancelled) setLoading(null);
+      }
+    }
+    void handleGoogleRedirectResult();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function postAdminLogin(body: Record<string, string | undefined>): Promise<LoginResponse> {
     const res = await fetch(apiUrl('/v1/admin/auth/login'), {
       method: 'POST',
@@ -178,9 +217,22 @@ export default function LoginPage() {
     setError(null);
     setLoading('google');
 
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+
+    if (isMobileBrowser()) {
+      // Mobile browsers block popups. Use redirect flow instead — the page
+      // navigates to Google and returns; getRedirectResult() handles the result.
+      try {
+        await signInWithRedirect(getFirebaseAuth(), provider);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : tErr('googleFallback'));
+        setLoading(null);
+      }
+      return;
+    }
+
     try {
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: 'select_account' });
       const credential = await signInWithPopup(getFirebaseAuth(), provider);
       const idToken = await credential.user.getIdToken();
       const data = await postAdminLogin({ idToken });
