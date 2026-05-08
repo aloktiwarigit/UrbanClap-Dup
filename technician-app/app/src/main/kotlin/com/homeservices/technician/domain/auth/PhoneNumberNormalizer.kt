@@ -2,8 +2,8 @@ package com.homeservices.technician.domain.auth
 
 internal object PhoneNumberNormalizer {
     private const val INDIA_COUNTRY_CODE = "91"
-    private const val STD_DIALLED_LENGTH = 11  // "0" prefix + 10-digit mobile
-    private const val ISD_DIALLED_LENGTH = 12  // "91" prefix + 10-digit mobile
+    private const val STD_DIALLED_LENGTH = 11 // "0" prefix + 10-digit mobile
+    private const val ISD_DIALLED_LENGTH = 12 // "91" prefix + 10-digit mobile
     private val e164Pattern = Regex("""^\+[1-9]\d{9,14}$""")
     private val indianMobilePattern = Regex("""^[6-9]\d{9}$""")
 

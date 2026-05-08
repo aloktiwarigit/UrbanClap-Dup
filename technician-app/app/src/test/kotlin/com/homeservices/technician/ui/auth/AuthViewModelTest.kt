@@ -129,7 +129,7 @@ public class AuthViewModelTest {
         }
 
     @Test
-    public fun `onPhoneSubmitted normalizes Indian mobile to E164 before OTP`(): Unit =
+    public fun `onPhoneSubmitted normalizes Indian mobile to E164`(): Unit =
         runTest(testDispatcher) {
             val activity = mockk<FragmentActivity>()
             val resendToken = mockk<PhoneAuthProvider.ForceResendingToken>()
