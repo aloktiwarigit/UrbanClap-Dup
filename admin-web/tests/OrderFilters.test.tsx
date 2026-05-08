@@ -5,7 +5,7 @@ import { OrderFilters, type FiltersState } from '../src/components/orders/OrderF
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string, params?: Record<string, unknown>) => {
     if (key === 'buttonNSelected' && params?.count !== undefined) {
-      return `${params.count} selected`;
+      return `${params.count as string} selected`;
     }
     const map: Record<string, string> = {
       'filters.status.label': 'Status',

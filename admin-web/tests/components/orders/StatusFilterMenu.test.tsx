@@ -5,7 +5,7 @@ import React from 'react';
 vi.mock('next-intl', () => ({
   useTranslations: (ns: string) => (key: string, params?: Record<string, unknown>) => {
     if (key === 'buttonNSelected' && params?.count !== undefined) {
-      return `[${ns}.${key}:${params.count}]`;
+      return `[${ns}.${key}:${params.count as string}]`;
     }
     return `[${ns}.${key}]`;
   },
