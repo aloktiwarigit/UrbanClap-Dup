@@ -5,7 +5,6 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.homeservices.technician.data.jobOffer.FcmTokenRequest
 import com.homeservices.technician.data.jobOffer.JobOfferApiService
 import kotlinx.coroutines.tasks.await
-import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,7 +20,7 @@ public class FcmTokenSyncUseCase
             try {
                 val fcmToken = FirebaseMessaging.getInstance().token.await()
                 invokeWithFcmToken(fcmToken)
-            } catch (_: IOException) {
+            } catch (_: Exception) {
                 // Token sync is best-effort; failures are non-fatal
             }
         }
@@ -38,8 +37,9 @@ public class FcmTokenSyncUseCase
                         ?.await()
                         ?.token
                         .orEmpty()
+                if (idToken.isBlank()) return
                 api.syncFcmToken("Bearer $idToken", FcmTokenRequest(fcmToken))
-            } catch (_: IOException) {
+            } catch (_: Exception) {
                 // Token sync is best-effort; failures are non-fatal
             }
         }

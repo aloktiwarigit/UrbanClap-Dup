@@ -82,7 +82,10 @@ describe('GET /v1/technicians/active-job/:bookingId', () => {
     const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
 
     (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
-    (bookingRepo.getById as MockFn).mockResolvedValue(aBooking());
+    (bookingRepo.getById as MockFn).mockResolvedValue({
+      ...aBooking(),
+      addressText: '12%20Main%20St',
+    });
     (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue(aService());
 
     const res = await getActiveJobHandler(makeGetReq('bk-1'), new InvocationContext()) as HttpResponseInit;
@@ -91,6 +94,7 @@ describe('GET /v1/technicians/active-job/:bookingId', () => {
     const body = res.jsonBody as Record<string, unknown>;
     expect(body['status']).toBe('ASSIGNED');
     expect(body['serviceName']).toBe('AC Repair');
+    expect(body['addressText']).toBe('12 Main St');
   });
 
   it('returns 403 if booking.technicianId !== caller uid', async () => {

@@ -177,7 +177,10 @@ describe('dispatcherService.triggerDispatch', () => {
 
   it('creates dispatch attempt and sends FCM to all found techs (1 tech)', async () => {
     const tech = makeTech('t1', 0.05);
-    vi.mocked(bookingRepo.getById).mockResolvedValue(BASE_BOOKING);
+    vi.mocked(bookingRepo.getById).mockResolvedValue({
+      ...BASE_BOOKING,
+      addressText: '100%20MG%20Road%2C%20Bangalore',
+    });
     vi.mocked(getTechniciansWithinRadius).mockResolvedValue([tech]);
 
     await dispatcherService.triggerDispatch('bk-1');
@@ -194,6 +197,7 @@ describe('dispatcherService.triggerDispatch', () => {
     expect(msg.data.type).toBe('JOB_OFFER');
     expect(msg.data.bookingId).toBe('bk-1');
     expect(msg.data.serviceName).toBe('Plumbing');
+    expect(msg.data.addressText).toBe('100 MG Road, Bangalore');
   });
 
   it('dispatches only to the nearest ranked technician per attempt', async () => {

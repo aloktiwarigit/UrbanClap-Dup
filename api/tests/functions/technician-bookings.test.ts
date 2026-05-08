@@ -53,7 +53,7 @@ describe('GET /v1/technicians/me/bookings', () => {
         id: 'bk-1',
         customerId: 'cust-1',
         serviceId: 'ac-deep-clean',
-        addressText: '101 Ayodhya',
+        addressText: '101%20Ayodhya',
         addressLatLng: { lat: 12.9, lng: 77.6 },
         status: 'IN_PROGRESS',
         slotDate: '2026-05-03',

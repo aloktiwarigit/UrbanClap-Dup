@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { getBookingsContainer } from './client.js';
 import type { BookingDoc, CreateBookingRequest } from '../schemas/booking.js';
 import type { PendingAddOn, AddOnDecision } from '../schemas/addon-approval.js';
+import { normalizeAddressText } from '../shared/address-text.js';
 
 function now() { return new Date().toISOString(); }
 
@@ -24,6 +25,7 @@ export const bookingRepo = {
     const paymentMethod = req.paymentMethod ?? 'RAZORPAY';
     const doc: BookingDoc = {
       id: bookingId ?? randomUUID(), customerId, ...req,
+      addressText: normalizeAddressText(req.addressText),
       ...(metadata.customerName ? { customerName: metadata.customerName } : {}),
       ...(metadata.customerPhone ? { customerPhone: metadata.customerPhone } : {}),
       ...(metadata.customerEmail ? { customerEmail: metadata.customerEmail } : {}),

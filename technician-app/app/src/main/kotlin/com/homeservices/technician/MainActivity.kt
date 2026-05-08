@@ -11,6 +11,7 @@ import com.homeservices.technician.data.kyc.DigiLockerCallbackBus
 import com.homeservices.technician.data.rating.RatingPromptEventBus
 import com.homeservices.technician.data.rating.RatingReceivedEventBus
 import com.homeservices.technician.di.BuildInfoProvider
+import com.homeservices.technician.domain.jobOffer.FcmTokenSyncUseCase
 import com.homeservices.technician.navigation.AppNavigation
 import com.truecaller.android.sdk.legacy.TruecallerSDK
 import dagger.hilt.android.AndroidEntryPoint
@@ -28,6 +29,8 @@ public class MainActivity : FragmentActivity() {
 
     @Inject public lateinit var fcmTopicSubscriber: FcmTopicSubscriber
 
+    @Inject public lateinit var fcmTokenSyncUseCase: FcmTokenSyncUseCase
+
     @Inject public lateinit var digiLockerCallbackBus: DigiLockerCallbackBus
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,6 +44,7 @@ public class MainActivity : FragmentActivity() {
                     ratingPromptEventBus = ratingPromptEventBus,
                     ratingReceivedEventBus = ratingReceivedEventBus,
                     fcmTopicSubscriber = fcmTopicSubscriber,
+                    fcmTokenSyncUseCase = fcmTokenSyncUseCase,
                 )
             }
         }
