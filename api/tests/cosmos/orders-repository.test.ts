@@ -19,10 +19,15 @@ vi.mock('../../src/services/firebaseAdmin.js', () => ({
   getFirebaseAdmin: vi.fn(),
 }));
 
+vi.mock('../../src/firebase/admin.js', () => ({
+  getStorageDownloadUrl: vi.fn(),
+}));
+
 import { getCosmosClient } from '../../src/cosmos/client.js';
 import { catalogueRepo } from '../../src/cosmos/catalogue-repository.js';
 import { getTechniciansByIds } from '../../src/cosmos/technician-repository.js';
 import { getFirebaseAdmin } from '../../src/services/firebaseAdmin.js';
+import { getStorageDownloadUrl } from '../../src/firebase/admin.js';
 import { queryOrders, getOrderById } from '../../src/cosmos/orders-repository.js';
 
 const sampleOrder = {
@@ -57,6 +62,7 @@ describe('queryOrders', () => {
     vi.mocked(getFirebaseAdmin).mockImplementation(() => {
       throw new Error('Firebase unavailable');
     });
+    vi.mocked(getStorageDownloadUrl).mockReset();
   });
 
   it('returns paginated response with items', async () => {
@@ -227,6 +233,41 @@ describe('getOrderById', () => {
       city: 'Ayodhya',
       scheduledAt: '2026-05-04T10:00:00+05:30',
     });
+  });
+
+  it('adds signed job photo urls on order detail only', async () => {
+    vi.mocked(getStorageDownloadUrl)
+      .mockResolvedValueOnce('https://signed.example/en-route')
+      .mockResolvedValueOnce('https://signed.example/completed');
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({
+        container: () => ({
+          items: {
+            query: () => ({
+              fetchAll: vi.fn().mockResolvedValue({
+                resources: [
+                  {
+                    ...customerCreatedBooking,
+                    photos: {
+                      COMPLETED: ['bookings/booking_1/photos/tech_1/COMPLETED/2.jpg'],
+                      EN_ROUTE: ['bookings/booking_1/photos/tech_1/EN_ROUTE/1.jpg'],
+                    },
+                  },
+                ],
+              }),
+            }),
+          },
+        }),
+      }),
+    });
+
+    const result = await getOrderById('booking_1');
+
+    expect(getStorageDownloadUrl).toHaveBeenCalledWith('bookings/booking_1/photos/tech_1/EN_ROUTE/1.jpg');
+    expect(result?.jobPhotoSets).toEqual([
+      { stage: 'EN_ROUTE', urls: ['https://signed.example/en-route'] },
+      { stage: 'COMPLETED', urls: ['https://signed.example/completed'] },
+    ]);
   });
 
   it('returns null when order not found', async () => {

@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
@@ -18,6 +19,7 @@ import com.homeservices.technician.ui.activeJob.ActiveJobViewModel
 import com.homeservices.technician.ui.complaint.ComplaintRoutes
 import com.homeservices.technician.ui.complaint.ComplaintScreen
 import com.homeservices.technician.ui.home.TechnicianHomeScreen
+import com.homeservices.technician.ui.home.TechnicianHomeViewModel
 import com.homeservices.technician.ui.myratings.MyRatingsScreen
 import com.homeservices.technician.ui.payoutsettings.PayoutCadenceScreen
 import com.homeservices.technician.ui.rating.RatingRoutes
@@ -31,7 +33,17 @@ internal fun NavGraphBuilder.homeGraph(
     onSignOut: () -> Unit,
 ) {
     navigation(startDestination = "home_dashboard", route = "home") {
-        composable("home_dashboard") {
+        composable("home_dashboard") { backStackEntry ->
+            val viewModel: TechnicianHomeViewModel = hiltViewModel()
+            val refreshJobs = backStackEntry.savedStateHandle
+                .getStateFlow("refreshJobs", false)
+                .collectAsStateWithLifecycle()
+            LaunchedEffect(refreshJobs.value) {
+                if (refreshJobs.value) {
+                    viewModel.refresh()
+                    backStackEntry.savedStateHandle["refreshJobs"] = false
+                }
+            }
             TechnicianHomeScreen(
                 authState = authState,
                 onOpenJob = { bookingId -> navController.navigate("activeJob/$bookingId") },
@@ -39,6 +51,7 @@ internal fun NavGraphBuilder.homeGraph(
                 onPayoutSettings = { navController.navigate("payout_settings") },
                 onEditServices = { navController.navigate("edit_services") },
                 onSignOut = onSignOut,
+                viewModel = viewModel,
             )
         }
         composable("edit_services") {
@@ -72,6 +85,17 @@ internal fun NavGraphBuilder.homeGraph(
             }
             ActiveJobScreen(
                 viewModel = viewModel,
+                onBackToDashboard = {
+                    runCatching {
+                        navController.getBackStackEntry("home_dashboard").savedStateHandle["refreshJobs"] = true
+                    }
+                    if (!navController.popBackStack("home_dashboard", inclusive = false)) {
+                        navController.navigate("home_dashboard") {
+                            popUpTo("home") { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    }
+                },
             )
         }
         composable(

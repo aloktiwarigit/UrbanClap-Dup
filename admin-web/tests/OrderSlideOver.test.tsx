@@ -16,6 +16,7 @@ vi.mock('next-intl', () => ({
       'detail.sections.scheduled': 'Scheduled',
       'detail.sections.payment': 'Payment',
       'detail.sections.created': 'Created',
+      'detail.sections.evidencePhotos': 'Job Photos',
       'detail.sections.actions.heading': 'Actions',
       'detail.sections.actions.noPermission': 'Your role can review this order but cannot run operational overrides.',
       'detail.toast.success': 'Action completed successfully.',
@@ -90,6 +91,20 @@ describe('OrderSlideOver', () => {
     render(<OrderSlideOver order={order} onClose={vi.fn()} />);
     // formatINR(79900, 'en') → "₹799.00" (Intl currency adds 2-decimal precision).
     expect(screen.getByText(/₹\s?799/)).toBeDefined();
+  });
+
+  it('renders evidence photo thumbnails when present', () => {
+    render(
+      <OrderSlideOver
+        order={{
+          ...order,
+          jobPhotoSets: [{ stage: 'EN_ROUTE', urls: ['https://signed.example/photo.jpg'] }],
+        }}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('Job Photos')).toBeDefined();
+    expect(screen.getByAltText('Start trip evidence 1')).toBeDefined();
   });
 
   it('close button calls onClose', () => {

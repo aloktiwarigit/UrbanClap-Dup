@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+/* eslint-disable @next/next/no-img-element */
+import { useEffect, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { formatINR, formatDateTime } from '@/lib/format/intl';
 import type { Order } from '@/types/order';
@@ -17,6 +18,17 @@ interface OrderSlideOverProps {
 
 type Toast = { message: string; type: 'success' | 'error' };
 
+const PHOTO_STAGE_LABELS: Record<string, string> = {
+  EN_ROUTE: 'Start trip',
+  REACHED: 'Arrived',
+  IN_PROGRESS: 'Work started',
+  COMPLETED: 'Completed',
+};
+
+function photoStageLabel(stage: string): string {
+  return PHOTO_STAGE_LABELS[stage] ?? stage.replaceAll('_', ' ');
+}
+
 export function OrderSlideOver({
   order,
   onClose,
@@ -28,6 +40,10 @@ export function OrderSlideOver({
   const locale = useLocale();
   const [currentOrder, setCurrentOrder] = useState<Order>(order);
   const [toast, setToast] = useState<Toast | null>(null);
+
+  useEffect(() => {
+    setCurrentOrder(order);
+  }, [order]);
 
   return (
     <>
@@ -51,6 +67,36 @@ export function OrderSlideOver({
           <section><h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.scheduled')}</h3><p>{formatDateTime(currentOrder.scheduledAt, locale)}</p></section>
           <section><h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.payment')}</h3><p className="text-lg font-semibold">{formatINR(currentOrder.amount, locale)}</p></section>
           <section><h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.created')}</h3><p>{formatDateTime(currentOrder.createdAt, locale)}</p></section>
+          {currentOrder.jobPhotoSets && currentOrder.jobPhotoSets.length > 0 && (
+            <section>
+              <h3 className="text-xs text-gray-500 font-medium mb-2">{t('detail.sections.evidencePhotos')}</h3>
+              <div className="space-y-3">
+                {currentOrder.jobPhotoSets.map(photoSet => (
+                  <div key={photoSet.stage}>
+                    <p className="mb-2 text-xs font-medium text-gray-700">{photoStageLabel(photoSet.stage)}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {photoSet.urls.map((url, index) => (
+                        <a
+                          key={`${photoSet.stage}-${url}`}
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block overflow-hidden rounded border border-gray-200 bg-gray-50"
+                        >
+                          <img
+                            src={url}
+                            alt={`${photoStageLabel(photoSet.stage)} evidence ${index + 1}`}
+                            className="h-28 w-full object-cover"
+                            loading="lazy"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {toast && (
             <p role="status" className={`alert ${toast.type === 'success' ? 'alert-success' : 'alert-danger'}`}>

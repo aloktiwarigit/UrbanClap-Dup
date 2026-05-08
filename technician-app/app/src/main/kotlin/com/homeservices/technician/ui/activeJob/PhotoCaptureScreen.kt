@@ -2,6 +2,8 @@ package com.homeservices.technician.ui.activeJob
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
@@ -10,6 +12,7 @@ import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,8 +20,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +40,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -153,6 +160,7 @@ internal fun PhotoCaptureScreen(
                 modifier =
                     Modifier
                         .align(Alignment.TopCenter)
+                        .statusBarsPadding()
                         .background(Color.Black.copy(alpha = 0.55f))
                         .fillMaxWidth()
                         .padding(16.dp),
@@ -177,28 +185,68 @@ internal fun PhotoCaptureScreen(
                         },
                     )
                 },
-                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 48.dp),
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(bottom = 48.dp),
             ) { Text("Capture") }
 
             TextButton(
                 onClick = onDismiss,
-                modifier = Modifier.align(Alignment.BottomStart).padding(16.dp),
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .navigationBarsPadding()
+                        .padding(16.dp),
             ) { Text("Cancel", color = Color.White) }
         } else {
-            Text(
-                text = "Photo captured",
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.White,
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 48.dp),
-            )
+            val previewBitmap =
+                remember(capturedPath) {
+                    capturedPath?.let(::decodePreviewBitmap)?.asImageBitmap()
+                }
+            if (previewBitmap != null) {
+                Image(
+                    bitmap = previewBitmap,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+
+            Column(
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .statusBarsPadding()
+                        .background(Color.Black.copy(alpha = 0.55f))
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = stagePrompt(stage),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                )
+                Text(
+                    text = "Photo captured",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White,
+                )
+            }
 
             if (uploadError != null) {
                 Column(
-                    modifier = Modifier.align(Alignment.Center).padding(24.dp),
+                    modifier =
+                        Modifier
+                            .align(Alignment.Center)
+                            .background(Color.Black.copy(alpha = 0.65f))
+                            .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Text("Upload failed: $uploadError", color = MaterialTheme.colorScheme.error)
+                    Text("Upload failed: $uploadError", color = Color.White)
                     Button(onClick = onRetry) { Text("Retry Upload") }
                     TextButton(onClick = {
                         capturedPath = null
@@ -209,7 +257,12 @@ internal fun PhotoCaptureScreen(
                 }
             } else {
                 Row(
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 48.dp),
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .navigationBarsPadding()
+                            .background(Color.Black.copy(alpha = 0.55f))
+                            .padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     OutlinedButton(onClick = { capturedPath = null }) {
@@ -254,9 +307,41 @@ private fun PermissionDeniedContent(
 
 private fun stagePrompt(stage: String): String =
     when (stage) {
-        "EN_ROUTE" -> "Starting Trip — Take a photo of your transport"
-        "REACHED" -> "Arrived — Take a photo of the site"
-        "IN_PROGRESS" -> "Starting Work — Take a photo of the work area"
-        "COMPLETED" -> "Completing — Take a photo of the finished work"
+        "EN_ROUTE" -> "Starting Trip - Take a photo of your transport"
+        "REACHED" -> "Arrived - Take a photo of the site"
+        "IN_PROGRESS" -> "Starting Work - Take a photo of the work area"
+        "COMPLETED" -> "Completing - Take a photo of the finished work"
         else -> "Take a photo to continue"
     }
+
+private fun decodePreviewBitmap(filePath: String): Bitmap? {
+    val bounds =
+        BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
+        }
+    BitmapFactory.decodeFile(filePath, bounds)
+    val sampleSize = calculateSampleSize(bounds.outWidth, bounds.outHeight, 1080, 1920)
+    return BitmapFactory.decodeFile(
+        filePath,
+        BitmapFactory.Options().apply {
+            inSampleSize = sampleSize
+        },
+    )
+}
+
+private fun calculateSampleSize(
+    width: Int,
+    height: Int,
+    targetWidth: Int,
+    targetHeight: Int,
+): Int {
+    var sampleSize = 1
+    if (height > targetHeight || width > targetWidth) {
+        val halfHeight = height / 2
+        val halfWidth = width / 2
+        while (halfHeight / sampleSize >= targetHeight && halfWidth / sampleSize >= targetWidth) {
+            sampleSize *= 2
+        }
+    }
+    return sampleSize
+}

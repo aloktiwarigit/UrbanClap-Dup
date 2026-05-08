@@ -121,8 +121,8 @@ private val promoBanners =
         PromoBanner(
             Color(0xFF0B3D2E),
             Color(0xFF062A20),
-            "आधार सत्यापित प्रोफेशनल",
-            "हर तकनीशियन बैकग्राउंड चेक्ड · 30 दिन गारंटी",
+            "कुशल प्रोफेशनल",
+            "स्किल, दूरी और उपलब्धता के आधार पर मैच · 30 दिन गारंटी",
             "और जानें",
             imageRes = com.homeservices.customer.R.drawable.banner_image_2,
         ),
@@ -482,7 +482,7 @@ private fun TrustStrip() {
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 2.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        TrustChip(icon = Icons.Default.VerifiedUser, label = "आधार सत्यापित", modifier = Modifier.weight(1f))
+        TrustChip(icon = Icons.Default.VerifiedUser, label = "स्किल मैच", modifier = Modifier.weight(1f))
         TrustChip(icon = Icons.Default.Star, label = "4.8★ रेटिंग", modifier = Modifier.weight(1f))
         TrustChip(icon = Icons.Default.Shield, label = "30 दिन गारंटी", modifier = Modifier.weight(1f))
     }
@@ -769,7 +769,7 @@ private fun SupportHero() {
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SupportPill("30 दिन गारंटी")
-                SupportPill("सत्यापित तकनीशियन")
+                SupportPill("कुशल तकनीशियन")
             }
         }
     }

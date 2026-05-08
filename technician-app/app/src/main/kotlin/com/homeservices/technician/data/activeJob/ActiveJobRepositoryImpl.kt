@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
@@ -36,7 +37,10 @@ public class ActiveJobRepositoryImpl
          * Returns a flow that emits each non-null value from [activeJobState].
          * Calling [startObserving] before collecting ensures an initial fetch is performed.
          */
-        override fun getActiveJob(bookingId: String): Flow<ActiveJob> = _activeJobState.filterNotNull()
+        override fun getActiveJob(bookingId: String): Flow<ActiveJob> =
+            _activeJobState
+                .filterNotNull()
+                .filter { it.bookingId == bookingId }
 
         /** One-shot HTTP fetch to prime [activeJobState]. Called by the foreground service on start. */
         override suspend fun startObserving(bookingId: String) {

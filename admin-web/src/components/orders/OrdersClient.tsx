@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { Order, OrderListResponse, OrdersQueryParams } from '@/types/order';
-import { fetchOrders, fetchAllOrdersForExport } from '@/api/orders';
+import { fetchOrders, fetchOrderById, fetchAllOrdersForExport } from '@/api/orders';
 import { OrdersTable } from './OrdersTable';
 import { OrderFilters, type FiltersState } from './OrderFilters';
 import { OrderSlideOver } from './OrderSlideOver';
@@ -102,6 +102,17 @@ export function OrdersClient() {
     }
   };
 
+  const openOrder = useCallback((order: Order) => {
+    setSelectedOrder(order);
+    fetchOrderById(order.id)
+      .then(detail => {
+        setSelectedOrder(current => current?.id === order.id ? detail : current);
+      })
+      .catch(() => {
+        // The list-row snapshot is still useful if the detail call fails.
+      });
+  }, []);
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
@@ -135,7 +146,7 @@ export function OrdersClient() {
           pageSize={data.pageSize}
           totalPages={data.totalPages}
           isLoading={false}
-          onRowClick={setSelectedOrder}
+          onRowClick={openOrder}
           onPageChange={(p) => updateUrl({ page: p })}
         />
       )}

@@ -4,6 +4,8 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.Address
+import android.location.Geocoder
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -33,6 +35,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -56,6 +59,10 @@ import com.homeservices.customer.R
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,23 +71,37 @@ internal fun AddressScreen(
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var addressText by rememberSaveable { mutableStateOf("") }
     var selectedLat by rememberSaveable { mutableStateOf<Double?>(null) }
     var selectedLng by rememberSaveable { mutableStateOf<Double?>(null) }
     var locationMessage by rememberSaveable { mutableStateOf("Location not set") }
     var isLocating by rememberSaveable { mutableStateOf(false) }
+    val onLocationCaptured: (Double, Double) -> Unit = { lat, lng ->
+        selectedLat = lat
+        selectedLng = lng
+        locationMessage = "Current location captured"
+        scope.launch {
+            val resolvedAddress =
+                withContext(Dispatchers.IO) {
+                    reverseGeocodeAddress(context, lat, lng)
+                }
+            if (resolvedAddress != null) {
+                addressText = resolvedAddress
+                locationMessage = "Current location captured"
+            } else {
+                locationMessage = "Current location captured. Enter the address manually."
+            }
+            isLocating = false
+        }
+    }
     val locationLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
             if (permissions.hasAnyLocationGrant()) {
                 isLocating = true
                 captureCurrentLocation(
                     context = context,
-                    onLocation = { lat, lng ->
-                        selectedLat = lat
-                        selectedLng = lng
-                        isLocating = false
-                        locationMessage = "Current location captured"
-                    },
+                    onLocation = onLocationCaptured,
                     onError = {
                         isLocating = false
                         locationMessage = it
@@ -95,12 +116,7 @@ internal fun AddressScreen(
             isLocating = true
             captureCurrentLocation(
                 context = context,
-                onLocation = { lat, lng ->
-                    selectedLat = lat
-                    selectedLng = lng
-                    isLocating = false
-                    locationMessage = "Current location captured"
-                },
+                onLocation = onLocationCaptured,
                 onError = {
                     isLocating = false
                     locationMessage = it
@@ -367,3 +383,30 @@ private fun captureCurrentLocation(
         onError("Could not find your location. Check GPS and try again.")
     }
 }
+
+@Suppress("DEPRECATION")
+private fun reverseGeocodeAddress(
+    context: Context,
+    lat: Double,
+    lng: Double,
+): String? =
+    runCatching {
+        if (!Geocoder.isPresent()) return@runCatching null
+        Geocoder(context, Locale.getDefault())
+            .getFromLocation(lat, lng, 1)
+            .orEmpty()
+            .firstOrNull()
+            ?.formattedAddress()
+    }.getOrNull()
+
+private fun Address.formattedAddress(): String? =
+    getAddressLine(0)?.takeIf { it.isNotBlank() }
+        ?: listOfNotNull(
+            subThoroughfare,
+            thoroughfare,
+            subLocality,
+            locality,
+            adminArea,
+            postalCode,
+            countryName,
+        ).joinToString(", ").takeIf { it.isNotBlank() }

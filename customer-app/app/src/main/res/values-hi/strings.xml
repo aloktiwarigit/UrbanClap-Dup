@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="catalogue_home_title">विश्वसनीय होम सर्विस बुक करें</string>
-    <string name="catalogue_home_subtitle">सत्यापित तकनीशियन, साफ कीमतें, और बुकिंग से पूरा होने तक लाइव अपडेट।</string>
-    <string name="catalogue_trust_chip">आधार सत्यापित प्रोफेशनल</string>
+    <string name="catalogue_home_subtitle">कुशल तकनीशियन, साफ कीमतें, और बुकिंग से पूरा होने तक लाइव अपडेट।</string>
+    <string name="catalogue_trust_chip">कुशल प्रोफेशनल</string>
     <string name="category_image_desc">%s श्रेणी</string>
     <string name="category_service_count">%d सेवाएं</string>
     <string name="catalogue_loading">लोड हो रहा है...</string>
@@ -17,7 +17,7 @@
     <string name="service_rating_placeholder">रेटिंग बाकी है</string>
     <string name="includes_label">क्या शामिल है</string>
     <string name="addons_label">ऐड-ऑन</string>
-    <string name="trust_dossier_stub">सत्यापित प्रोफेशनल</string>
+    <string name="trust_dossier_stub">प्रोफेशनल प्रोफाइल</string>
     <string name="book_now">अभी बुक करें</string>
     <string name="book_now_disabled_desc">आगे बढ़ने के लिए स्लॉट चुनें</string>
     <string name="service_price_label">फिक्स्ड कीमत</string>
@@ -32,10 +32,10 @@
     <string name="trust_dossier_title">प्रोफेशनल ट्रस्ट डॉसियर</string>
     <string name="trust_dossier_loading_title">ट्रस्ट डॉसियर तैयार हो रहा है</string>
     <string name="trust_dossier_error_title">ट्रस्ट प्रोफाइल उपलब्ध नहीं</string>
-    <string name="trust_dossier_unavailable_title">कन्फर्मेशन से पहले सत्यापित प्रोफेशनल असाइन होगा</string>
-    <string name="trust_dossier_unavailable_body">तकनीशियन आपके घर पहुंचे उससे पहले हम पहचान चेक, बैकग्राउंड स्टेटस, काम का इतिहास और रिव्यू दिखाते हैं।</string>
+    <string name="trust_dossier_unavailable_title">कन्फर्मेशन से पहले प्रोफेशनल असाइन होगा</string>
+    <string name="trust_dossier_unavailable_body">तकनीशियन आपके घर पहुंचे उससे पहले हम उपलब्ध पहचान चेक, बैकग्राउंड स्टेटस, काम का इतिहास और रिव्यू दिखाते हैं।</string>
     <string name="trust_dossier_signal_identity">पहचान चेक की गई</string>
-    <string name="trust_dossier_signal_background">बैकग्राउंड चेक किया गया</string>
+    <string name="trust_dossier_signal_background">बैकग्राउंड स्टेटस</string>
     <string name="trust_dossier_signal_reviews">रिव्यू किए गए जॉब</string>
     <string name="address_screen_title">आपका पता</string>
     <string name="address_heading">तकनीशियन कहां आए?</string>
@@ -63,7 +63,7 @@
     <string name="booking_summary_book_cash">कैश के साथ बुक करें</string>
     <string name="booking_error_title">बुकिंग आगे नहीं बढ़ सकी</string>
     <string name="booking_confirmed_title">बुकिंग कन्फर्म हो गई!</string>
-    <string name="booking_confirmed_body">हम आपके स्लॉट के लिए सत्यापित तकनीशियन असाइन कर रहे हैं।</string>
+    <string name="booking_confirmed_body">हम आपके स्लॉट के लिए तकनीशियन असाइन कर रहे हैं।</string>
     <string name="booking_confirmed_id_label">बुकिंग ID: %s</string>
     <string name="booking_confirmed_track">सर्विस ट्रैक करें</string>
     <string name="booking_confirmed_home">होम पर जाएं</string>
@@ -104,7 +104,7 @@
     <string name="trust_dossier_jobs">%d जॉब</string>
     <string name="trust_dossier_languages_label">भाषाएं</string>
     <string name="trust_dossier_loading">तकनीशियन प्रोफाइल लोड हो रही है...</string>
-    <string name="trust_dossier_promise">हमारे सभी तकनीशियन आधार सत्यापित और पुलिस वेरिफाइड हैं।</string>
+    <string name="trust_dossier_promise">तकनीशियन ने जो चेक पूरे किए हैं, उनके बैज प्रोफाइल में दिखेंगे।</string>
     <string name="trust_dossier_reviews_label">हाल के रिव्यू</string>
     <string name="trust_dossier_trained_by">%s द्वारा प्रशिक्षित</string>
     <string name="trust_dossier_years">%d साल अनुभव</string>
