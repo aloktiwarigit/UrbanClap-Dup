@@ -303,6 +303,37 @@ describe('dispatcherService.triggerDispatch', () => {
     expect(dispatchContainer.items.create).toHaveBeenCalledOnce();
   });
 
+  it('does not re-offer the same awaiting-dispatch booking to an already attempted technician', async () => {
+    const futureBooking = { ...BASE_BOOKING, slotDate: '2099-01-01' };
+    vi.mocked(bookingRepo.getBookingsAwaitingDispatch).mockResolvedValue([futureBooking]);
+    vi.mocked(dispatchAttemptRepo.getAttemptedTechnicianIds).mockResolvedValue(['t1']);
+    vi.mocked(getTechniciansWithinRadius).mockResolvedValue([makeTech('t1', 0.05)]);
+
+    const result = await dispatcherService.retryAwaitingDispatch();
+
+    expect(result).toEqual({ checked: 1, dispatched: 0 });
+    expect(dispatchContainer.items.create).not.toHaveBeenCalled();
+    expect(messaging.send).not.toHaveBeenCalled();
+  });
+
+  it('retries awaiting-dispatch bookings only for technicians not previously attempted', async () => {
+    const futureBooking = { ...BASE_BOOKING, slotDate: '2099-01-01' };
+    vi.mocked(bookingRepo.getBookingsAwaitingDispatch).mockResolvedValue([futureBooking]);
+    vi.mocked(dispatchAttemptRepo.getAttemptedTechnicianIds).mockResolvedValue(['t1']);
+    vi.mocked(getTechniciansWithinRadius).mockResolvedValue([
+      makeTech('t1', 0.01),
+      makeTech('t2', 0.05),
+    ]);
+
+    const result = await dispatcherService.retryAwaitingDispatch();
+
+    expect(result).toEqual({ checked: 1, dispatched: 1 });
+    expect(dispatchContainer.items.create).toHaveBeenCalledOnce();
+    expect(dispatchContainer.items.create).toHaveBeenCalledWith(
+      expect.objectContaining({ technicianIds: ['t2'] }),
+    );
+  });
+
   it('retries future unfulfilled bookings that were waiting for an online technician', async () => {
     const futureBooking = { ...BASE_BOOKING, status: 'UNFULFILLED' as const, slotDate: '2099-01-01' };
     vi.mocked(bookingRepo.getBookingsAwaitingDispatch).mockResolvedValue([futureBooking]);

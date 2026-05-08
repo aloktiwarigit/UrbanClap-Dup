@@ -5,6 +5,7 @@
     <string name="job_offer_accepted">ऑफर स्वीकार किया!</string>
     <string name="job_offer_declined">ऑफर अस्वीकार किया</string>
     <string name="job_offer_expired">ऑफर समाप्त हो गया</string>
+    <string name="job_offer_unavailable">ऑफर उपलब्ध नहीं है</string>
     <string name="job_offer_new_request">नया जॉब अनुरोध</string>
     <string name="job_offer_seconds">सेकंड</string>
     <string name="job_offer_why_you">कौशल, दूरी और उपलब्धता के आधार पर आपसे मिलान किया गया।</string>

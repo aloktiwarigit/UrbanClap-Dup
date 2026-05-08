@@ -3,7 +3,6 @@ package com.homeservices.technician.data.fcm
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.Intent
 import android.os.Build
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -90,9 +89,7 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         createDispatchOffersChannel(nm)
 
-        val fullScreenIntent =
-            Intent(this, JobOfferFullScreenActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        val fullScreenIntent = JobOfferFullScreenActivity.intentFor(this, offer)
         val fullScreenPi =
             PendingIntent.getActivity(
                 this,
@@ -101,9 +98,7 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
 
-        val tapIntent =
-            Intent(this, JobOfferFullScreenActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        val tapIntent = JobOfferFullScreenActivity.intentFor(this, offer)
         val tapPi =
             PendingIntent.getActivity(
                 this,

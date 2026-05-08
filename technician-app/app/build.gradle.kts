@@ -136,8 +136,8 @@ android {
         applicationId = "in.homeheroo.technician"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "0.1.5"
+        versionCode = 9
+        versionName = "0.1.8"
 
         testInstrumentationRunner = "com.homeservices.technician.TestRunner"
 
