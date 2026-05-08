@@ -27,9 +27,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.designsystem.components.HsInfoRow
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsSkeletonBlock
-import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsTrustBadge
 import com.homeservices.technician.R
 import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
@@ -59,8 +59,8 @@ internal fun ActiveJobScreenContent(
     onPhotoCancelled: () -> Unit,
     onPhotoConfirmed: (filePath: String) -> Unit,
     onPhotoRetake: () -> Unit,
-    onBackToDashboard: () -> Unit = {},
     modifier: Modifier = Modifier,
+    onBackToDashboard: () -> Unit = {},
 ): Unit {
     Surface(
         modifier = modifier.fillMaxSize(),

@@ -50,6 +50,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import java.io.File
 import java.util.concurrent.Executors
 
+private const val PREVIEW_TARGET_WIDTH = 1080
+private const val PREVIEW_TARGET_HEIGHT = 1920
+
 /**
  * Full-screen CameraX capture overlay shown before each active-job stage transition.
  *
@@ -320,7 +323,13 @@ private fun decodePreviewBitmap(filePath: String): Bitmap? {
             inJustDecodeBounds = true
         }
     BitmapFactory.decodeFile(filePath, bounds)
-    val sampleSize = calculateSampleSize(bounds.outWidth, bounds.outHeight, 1080, 1920)
+    val sampleSize =
+        calculateSampleSize(
+            bounds.outWidth,
+            bounds.outHeight,
+            PREVIEW_TARGET_WIDTH,
+            PREVIEW_TARGET_HEIGHT,
+        )
     return BitmapFactory.decodeFile(
         filePath,
         BitmapFactory.Options().apply {
