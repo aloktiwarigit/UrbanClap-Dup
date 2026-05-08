@@ -1,5 +1,6 @@
 package com.homeservices.technician.data.photo
 
+import com.squareup.moshi.JsonClass
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.Header
@@ -15,6 +16,7 @@ internal interface PhotoApiService {
     ): Response<Unit>
 }
 
+@JsonClass(generateAdapter = true)
 internal data class RecordPhotoBody(
     val stage: String,
     val storagePath: String,

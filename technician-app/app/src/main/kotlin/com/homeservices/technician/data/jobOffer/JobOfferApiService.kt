@@ -1,5 +1,6 @@
 package com.homeservices.technician.data.jobOffer
 
+import com.squareup.moshi.JsonClass
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.Header
@@ -26,6 +27,7 @@ internal interface JobOfferApiService {
     ): Response<Unit>
 }
 
+@JsonClass(generateAdapter = true)
 internal data class FcmTokenRequest(
     val fcmToken: String,
 )

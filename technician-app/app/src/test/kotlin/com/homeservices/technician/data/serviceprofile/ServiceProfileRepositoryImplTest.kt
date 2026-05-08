@@ -1,5 +1,6 @@
 package com.homeservices.technician.data.serviceprofile
 
+import com.homeservices.technician.data.network.defaultMoshi
 import com.homeservices.technician.data.serviceprofile.remote.ServiceProfileApiService
 import com.homeservices.technician.data.serviceprofile.remote.dto.ServiceLocationDto
 import com.homeservices.technician.data.serviceprofile.remote.dto.ServiceProfileDto
@@ -63,4 +64,24 @@ public class ServiceProfileRepositoryImplTest {
                 )
             }
         }
+
+    @Test
+    public fun `service profile patch serializes stable json keys`(): Unit {
+        val adapter = defaultMoshi.adapter(UpdateServiceProfileRequestDto::class.java)
+
+        val json =
+            adapter.toJson(
+                UpdateServiceProfileRequestDto(
+                    skills = listOf("water-pump-repair"),
+                    location = ServiceLocationDto(lat = 40.512, lng = -74.412),
+                ),
+            )
+
+        assertThat(json).contains("\"skills\"")
+        assertThat(json).contains("\"location\"")
+        assertThat(json).contains("\"lat\"")
+        assertThat(json).contains("\"lng\"")
+        assertThat(json).doesNotContain("\"a\"")
+        assertThat(json).doesNotContain("\"b\"")
+    }
 }

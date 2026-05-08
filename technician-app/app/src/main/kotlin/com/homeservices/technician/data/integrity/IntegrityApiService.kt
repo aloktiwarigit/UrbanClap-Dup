@@ -1,5 +1,6 @@
 package com.homeservices.technician.data.integrity
 
+import com.squareup.moshi.JsonClass
 import retrofit2.http.GET
 import retrofit2.http.Header
 
@@ -10,6 +11,7 @@ public interface IntegrityApiService {
     ): IntegrityNonceResponseDto
 }
 
+@JsonClass(generateAdapter = true)
 public data class IntegrityNonceResponseDto(
     val nonce: String,
 )

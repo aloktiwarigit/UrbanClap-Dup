@@ -4,6 +4,7 @@ import com.homeservices.technician.domain.kyc.model.DigiLockerResult
 import com.homeservices.technician.domain.kyc.model.KycState
 import com.homeservices.technician.domain.kyc.model.KycStatus
 import com.homeservices.technician.domain.kyc.model.PanOcrResult
+import com.squareup.moshi.JsonClass
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
@@ -26,26 +27,31 @@ internal interface KycApiService {
     suspend fun getKycStatus(): KycStatusResponse
 }
 
+@JsonClass(generateAdapter = true)
 internal data class AadhaarRequest(
     val authCode: String,
     val redirectUri: String,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class AadhaarResponse(
     val kycStatus: String,
     val aadhaarMaskedNumber: String?,
     val aadhaarVerified: Boolean,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class PanOcrRequest(
     val firebaseStoragePath: String,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class PanOcrResponse(
     val kycStatus: String,
     val panNumber: String?,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class KycStatusResponse(
     val technicianId: String,
     val kycStatus: String,

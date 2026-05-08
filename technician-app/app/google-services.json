@@ -165,6 +165,14 @@
           }
         },
         {
+          "client_id": "1044159357347-stmjucaljgso9rov2dkdkc9kj2gskba2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "in.homeheroo.technician",
+            "certificate_hash": "fc42bdde53ecde71f2bde2d49bb4b2db70d102dc"
+          }
+        },
+        {
           "client_id": "1044159357347-1kgmgij2id6amirv1u9f2i2929g11pvh.apps.googleusercontent.com",
           "client_type": 3
         }

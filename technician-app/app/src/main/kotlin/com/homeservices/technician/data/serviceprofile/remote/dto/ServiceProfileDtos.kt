@@ -3,7 +3,9 @@ package com.homeservices.technician.data.serviceprofile.remote.dto
 import com.homeservices.technician.domain.serviceprofile.model.ServiceLocation
 import com.homeservices.technician.domain.serviceprofile.model.ServiceProfile
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 
+@JsonClass(generateAdapter = true)
 internal data class ServiceLocationDto(
     @Json(name = "lat") val lat: Double,
     @Json(name = "lng") val lng: Double,
@@ -12,9 +14,10 @@ internal data class ServiceLocationDto(
         ServiceLocation(
             lat = lat,
             lng = lng,
-        )
+    )
 }
 
+@JsonClass(generateAdapter = true)
 internal data class ServiceProfileDto(
     @Json(name = "skills") val skills: List<String>,
     @Json(name = "location") val location: ServiceLocationDto?,
@@ -23,9 +26,10 @@ internal data class ServiceProfileDto(
         ServiceProfile(
             skills = skills,
             location = location?.toDomain(),
-        )
+    )
 }
 
+@JsonClass(generateAdapter = true)
 internal data class UpdateServiceProfileRequestDto(
     @Json(name = "skills") val skills: List<String>,
     @Json(name = "location") val location: ServiceLocationDto?,
