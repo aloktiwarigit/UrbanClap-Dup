@@ -6,6 +6,7 @@ import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { dispatchAttemptRepo } from '../cosmos/dispatch-attempt-repository.js';
 import { haversine } from '../cosmos/geo.js';
 import { getDispatchAttemptsContainer } from '../cosmos/client.js';
+import { getFirebaseAdmin } from './firebaseAdmin.js';
 import type { TechnicianProfile } from '../schemas/technician.js';
 import type { DispatchAttemptDoc } from '../schemas/dispatch-attempt.js';
 import type { BookingDoc } from '../schemas/booking.js';
@@ -104,6 +105,7 @@ async function dispatchBookingToTechs(
   } catch (err: unknown) {
     console.error('DISPATCH_SERVICE_LOOKUP_FAILED', err);
   }
+  getFirebaseAdmin();
   const messaging = getMessaging();
   if (selected.fcmToken) {
     try {
