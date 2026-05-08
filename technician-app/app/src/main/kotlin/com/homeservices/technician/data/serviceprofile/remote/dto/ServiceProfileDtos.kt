@@ -14,7 +14,7 @@ internal data class ServiceLocationDto(
         ServiceLocation(
             lat = lat,
             lng = lng,
-    )
+        )
 }
 
 @JsonClass(generateAdapter = true)
@@ -26,7 +26,7 @@ internal data class ServiceProfileDto(
         ServiceProfile(
             skills = skills,
             location = location?.toDomain(),
-    )
+        )
 }
 
 @JsonClass(generateAdapter = true)

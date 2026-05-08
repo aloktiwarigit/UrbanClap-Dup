@@ -15,7 +15,7 @@ internal data class AvailabilityWindowDto(
             dayOfWeek = dayOfWeek,
             startHour = startHour,
             endHour = endHour,
-    )
+        )
 }
 
 @JsonClass(generateAdapter = true)
@@ -29,7 +29,7 @@ internal data class TechnicianAvailabilityDto(
             isOnline = isOnline,
             isAvailable = isAvailable,
             availabilityWindows = availabilityWindows.map { it.toDomain() },
-    )
+        )
 }
 
 @JsonClass(generateAdapter = true)
