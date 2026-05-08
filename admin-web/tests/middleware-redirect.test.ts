@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
 
 vi.mock('next-intl/middleware', () => ({
@@ -10,6 +10,11 @@ vi.mock('next-intl/middleware', () => ({
 import { normalizeSameHostRedirect } from '../middleware';
 
 describe('normalizeSameHostRedirect', () => {
+  // NEXT_PUBLIC_APP_URL at CI job level would cause publicRedirectOrigin() to always
+  // return http://localhost:3000, breaking assertions against production host URLs.
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
   it('removes ACA internal port from same-host absolute redirects', () => {
     const req = new NextRequest(
       'https://aca-admin-homeservices-prod.icybush-b2e9c876.centralindia.azurecontainerapps.io/dashboard',
