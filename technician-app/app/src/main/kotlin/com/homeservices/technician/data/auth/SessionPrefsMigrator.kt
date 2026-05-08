@@ -52,8 +52,13 @@ public object SessionPrefsMigrator {
         newPrefsName: String,
         legacyKeyPresent: Boolean,
     ) {
+        if (newPrefsName == LEGACY_PREFS_NAME) {
+            Log.d(TAG, "Active prefs already use $LEGACY_PREFS_NAME - skipping migration")
+            return
+        }
+
         if (!legacyKeyPresent) {
-            Log.d(TAG, "No legacy key found — skipping migration for $newPrefsName")
+            Log.d(TAG, "No legacy key found - skipping migration for $newPrefsName")
             return
         }
 
