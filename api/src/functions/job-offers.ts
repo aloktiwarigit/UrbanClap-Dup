@@ -109,7 +109,7 @@ async function expireStaleOffers(_timer: Timer, _ctx: InvocationContext): Promis
   await Promise.allSettled(
     resources.map(async attempt => {
       try {
-        await container.item(attempt.id, attempt.bookingId).replace(
+        await container.item(attempt.id, attempt.id).replace(
           { ...attempt, status: 'EXPIRED' },
           { accessCondition: { type: 'IfMatch', condition: attempt._etag } },
         );
