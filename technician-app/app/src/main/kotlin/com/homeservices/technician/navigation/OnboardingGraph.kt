@@ -15,7 +15,7 @@ internal fun NavGraphBuilder.onboardingGraph(
     sessionManager: SessionManager,
     scope: CoroutineScope,
 ) {
-    navigation(startDestination = "kyc", route = "main") {
+    navigation(startDestination = "service_selection", route = "main") {
         composable("kyc") {
             KycScreen(
                 onComplete = {

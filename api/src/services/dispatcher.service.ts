@@ -12,6 +12,22 @@ import type { BookingDoc } from '../schemas/booking.js';
 
 const DISPATCH_RADIUS_KM = 10;
 const OFFER_WINDOW_MS = 30_000;
+const SLOT_GRACE_WINDOW_MS = 30 * 60 * 1_000;
+
+function slotStartUtcMs(slotDate: string, slotWindow: string): number {
+  const startTime = slotWindow.split('-')[0];
+  const ms = new Date(`${slotDate}T${startTime}:00+05:30`).getTime();
+  if (isNaN(ms)) throw new Error(`invalid slotWindow "${slotWindow}" on slotDate "${slotDate}"`);
+  return ms;
+}
+
+function isStillDispatchable(booking: BookingDoc, nowMs = Date.now()): boolean {
+  try {
+    return nowMs < slotStartUtcMs(booking.slotDate, booking.slotWindow) + SLOT_GRACE_WINDOW_MS;
+  } catch {
+    return false;
+  }
+}
 
 export function rankTechnicians(
   techs: TechnicianProfile[],
@@ -52,6 +68,13 @@ async function dispatchBookingToTechs(
     .filter((t) => !(t.blockedCustomerIds ?? []).includes(booking.customerId));
 
   if (candidates.length === 0) {
+    if (isStillDispatchable(booking)) {
+      console.log(`DISPATCH_WAITING_FOR_TECHS bookingId=${bookingId}`);
+      if (booking.status !== 'PAID') {
+        await updateBookingFields(bookingId, { status: 'PAID' });
+      }
+      return false;
+    }
     console.log(`DISPATCH_NO_TECHS bookingId=${bookingId}`);
     await updateBookingFields(bookingId, { status: 'UNFULFILLED' });
     return false;
@@ -119,6 +142,15 @@ export const dispatcherService = {
       return;
     }
     await dispatchBookingToTechs(bookingId, booking, DISPATCH_RADIUS_KM);
+  },
+
+  async retryAwaitingDispatch(limit = 100): Promise<{ checked: number; dispatched: number }> {
+    const bookings = await bookingRepo.getBookingsAwaitingDispatch(limit);
+    let dispatched = 0;
+    for (const booking of bookings.filter((b) => isStillDispatchable(b))) {
+      if (await dispatchBookingToTechs(booking.id, booking, DISPATCH_RADIUS_KM)) dispatched += 1;
+    }
+    return { checked: bookings.length, dispatched };
   },
 
   /**

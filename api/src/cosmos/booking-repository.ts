@@ -111,6 +111,16 @@ export const bookingRepo = {
     return resources;
   },
 
+  async getBookingsAwaitingDispatch(limit = 100): Promise<BookingDoc[]> {
+    const { resources } = await getBookingsContainer().items.query<BookingDoc>({
+      query: `SELECT * FROM c
+              WHERE c.status IN ('PAID', 'UNFULFILLED')
+                AND (NOT IS_DEFINED(c.technicianId) OR IS_NULL(c.technicianId))`,
+      parameters: [],
+    }).fetchAll();
+    return resources.slice(0, limit);
+  },
+
   async getAssignedBookingsBefore(slotDateCutoff: string): Promise<BookingDoc[]> {
     const { resources } = await getBookingsContainer()
       .items.query<BookingDoc>({
