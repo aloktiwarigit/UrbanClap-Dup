@@ -23,6 +23,10 @@ vi.mock('firebase-admin/messaging', () => ({
   getMessaging: vi.fn(),
 }));
 
+vi.mock('../../src/services/firebaseAdmin.js', () => ({
+  getFirebaseAdmin: vi.fn(),
+}));
+
 vi.mock('../../src/cosmos/client.js', () => ({
   getDispatchAttemptsContainer: vi.fn(),
   DB_NAME: 'homeservices',

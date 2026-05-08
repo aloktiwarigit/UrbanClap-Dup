@@ -5,6 +5,11 @@ let _app: admin.app.App | null = null;
 
 export function getFirebaseAdmin(): admin.app.App {
   if (!_app) {
+    const existingApp = admin.apps[0];
+    if (existingApp) {
+      _app = existingApp;
+      return _app;
+    }
     _app = admin.initializeApp({
       credential: admin.credential.cert({
         projectId: process.env.FIREBASE_PROJECT_ID!,
