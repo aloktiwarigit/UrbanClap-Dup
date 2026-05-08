@@ -77,6 +77,10 @@ jobs:
 
       - name: typecheck + unit tests (with coverage gate)
         run: pnpm typecheck && pnpm test:coverage
+        env:
+          # vitest --coverage instruments every module; default Node heap (1.5 GB) OOMs on
+          # the full admin-web suite. 3 GB fits comfortably within the 7 GB Actions runner.
+          NODE_OPTIONS: --max-old-space-size=3072
 
       - name: build (clean-room compile check)
         run: pnpm build
