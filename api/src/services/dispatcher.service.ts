@@ -10,6 +10,7 @@ import { getFirebaseAdmin } from './firebaseAdmin.js';
 import type { TechnicianProfile } from '../schemas/technician.js';
 import type { DispatchAttemptDoc } from '../schemas/dispatch-attempt.js';
 import type { BookingDoc } from '../schemas/booking.js';
+import { normalizeAddressText } from '../shared/address-text.js';
 
 const DISPATCH_RADIUS_KM = 10;
 const OFFER_WINDOW_MS = 30_000;
@@ -116,7 +117,7 @@ async function dispatchBookingToTechs(
           bookingId,
           serviceId: booking.serviceId,
           serviceName,
-          addressText: booking.addressText,
+          addressText: normalizeAddressText(booking.addressText),
           slotDate: booking.slotDate,
           slotWindow: booking.slotWindow,
           amount: String(booking.amount),

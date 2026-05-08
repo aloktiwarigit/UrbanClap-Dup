@@ -1,5 +1,11 @@
 package com.homeservices.customer.navigation
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -7,6 +13,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
@@ -35,6 +43,7 @@ internal fun AppNavigation(
     isFirstLaunch: IsFirstLaunchUseCase,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     val authState by sessionManager.authState.collectAsStateWithLifecycle()
 
     // Initial value is null (loading) so returning users with first_launch_completed=true
@@ -50,6 +59,10 @@ internal fun AppNavigation(
         else -> {
             val navController = rememberNavController()
             val startDestination = if (firstLaunchPending) LocaleRoutes.FIRST_LAUNCH else "auth"
+            val notificationPermissionLauncher =
+                rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+                    // Android owns notification display once the customer grants or denies this.
+                }
 
             LaunchedEffect(authState, firstLaunchPending) {
                 if (firstLaunchPending) return@LaunchedEffect
@@ -66,6 +79,11 @@ internal fun AppNavigation(
                         com.google.firebase.messaging.FirebaseMessaging
                             .getInstance()
                             .subscribeToTopic("customer_${currentAuth.uid}")
+                        if (!context.hasNotificationPermission()) {
+                            notificationPermissionLauncher.launch(
+                                Manifest.permission.POST_NOTIFICATIONS,
+                            )
+                        }
                     }
                     is AuthState.Unauthenticated -> {
                         com.google.firebase.messaging.FirebaseMessaging
@@ -117,3 +135,10 @@ internal fun AppNavigation(
         }
     }
 }
+
+private fun Context.hasNotificationPermission(): Boolean =
+    Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS,
+        ) == PackageManager.PERMISSION_GRANTED

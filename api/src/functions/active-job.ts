@@ -9,6 +9,7 @@ import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { haversine } from '../cosmos/geo.js';
 import { sendBookingStatusUpdatePush, sendLocationUpdatePush } from '../services/fcm.service.js';
 import type { BookingDoc } from '../schemas/booking.js';
+import { normalizeAddressText } from '../shared/address-text.js';
 
 const TRANSITION_ORDER = ['ASSIGNED', 'EN_ROUTE', 'REACHED', 'IN_PROGRESS', 'COMPLETED'] as const;
 const AVG_CITY_SPEED_KMH = 20;
@@ -54,7 +55,7 @@ export const getActiveJobHandler: HttpHandler = async (req, _ctx: InvocationCont
       customerId: booking.customerId,
       serviceId: booking.serviceId,
       serviceName: service?.name ?? '',
-      addressText: booking.addressText,
+      addressText: normalizeAddressText(booking.addressText),
       addressLatLng: booking.addressLatLng,
       status: booking.status,
       slotDate: booking.slotDate,
@@ -153,7 +154,7 @@ export const transitionStatusHandler: HttpHandler = async (req, ctx: InvocationC
       customerId: updated.customerId,
       serviceId: updated.serviceId,
       serviceName: service?.name ?? '',
-      addressText: updated.addressText,
+      addressText: normalizeAddressText(updated.addressText),
       addressLatLng: updated.addressLatLng,
       status: updated.status,
       slotDate: updated.slotDate,

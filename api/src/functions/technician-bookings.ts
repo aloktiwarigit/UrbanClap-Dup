@@ -6,6 +6,7 @@ import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
 import { bookingRepo } from '../cosmos/booking-repository.js';
 import type { BookingDoc } from '../schemas/booking.js';
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
+import { normalizeAddressText } from '../shared/address-text.js';
 
 type BookingRecord = Partial<BookingDoc> & Record<string, unknown>;
 
@@ -70,7 +71,7 @@ function toTechnicianBookingDto(
     customerId: safeString(booking.customerId, ''),
     serviceId,
     serviceName: serviceNames.get(serviceId) ?? safeString(booking.serviceName, serviceId),
-    addressText: safeString(booking.addressText, ''),
+    addressText: normalizeAddressText(safeString(booking.addressText, '')),
     addressLatLng: safeLatLng(booking.addressLatLng),
     status: safeString(booking.status, 'UNKNOWN'),
     slotDate: safeString(booking.slotDate, ''),

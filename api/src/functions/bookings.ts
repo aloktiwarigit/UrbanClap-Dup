@@ -16,6 +16,7 @@ import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
 import { isSoftLaunchEnabled, isMarketingPaused } from '../services/featureFlags.service.js';
 import { dispatcherService } from '../services/dispatcher.service.js';
 import { posthog } from '../observability/posthog.js';
+import { normalizeAddressText } from '../shared/address-text.js';
 
 function makeRazorpayReceipt(customerId: string): string {
   return `bk_${Date.now().toString(36)}_${customerId.slice(0, 20)}`;
@@ -235,7 +236,7 @@ const getMyBookingsInner: CustomerHttpHandler = async (_req, ctx, customer) => {
           bookingId: booking.id,
           serviceId: booking.serviceId,
           serviceName: serviceNames.get(booking.serviceId) ?? booking.serviceId,
-          addressText: booking.addressText,
+          addressText: normalizeAddressText(booking.addressText),
           addressLatLng: booking.addressLatLng,
           status: booking.status,
           slotDate: booking.slotDate,
