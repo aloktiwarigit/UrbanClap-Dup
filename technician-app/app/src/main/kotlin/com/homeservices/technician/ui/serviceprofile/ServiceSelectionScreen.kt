@@ -89,6 +89,7 @@ internal fun ServiceSelectionScreen(
 @Composable
 internal fun ServiceSelectionContent(
     uiState: ServiceSelectionUiState,
+    modifier: Modifier = Modifier,
     mode: ServiceSelectionMode = ServiceSelectionMode.Onboarding,
     onSkillToggle: (String) -> Unit,
     onLocateStarted: () -> Unit,
@@ -96,7 +97,6 @@ internal fun ServiceSelectionContent(
     onLocateFailed: (String) -> Unit,
     onRetry: () -> Unit,
     onSubmit: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     val spacing = LocalHomeservicesSpacing.current
     val context = LocalContext.current
