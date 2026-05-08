@@ -1029,7 +1029,7 @@ private fun ProfileHero(authState: AuthState) {
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            StatusPill(label = "Verified", active = true)
+            StatusPill(label = "Active", active = true)
         }
     }
 }

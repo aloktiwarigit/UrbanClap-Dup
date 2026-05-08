@@ -202,7 +202,6 @@ export async function getTechniciansWithinRadius(
     query: `SELECT * FROM c
             WHERE ST_WITHIN(c.location, @polygon)
             AND ARRAY_CONTAINS(c.skills, @serviceId)
-            AND c.kycStatus = "APPROVED"
             AND c.isOnline = true
             AND c.isAvailable = true`,
     parameters: [

@@ -22,6 +22,7 @@ import com.homeservices.technician.ui.myratings.MyRatingsScreen
 import com.homeservices.technician.ui.payoutsettings.PayoutCadenceScreen
 import com.homeservices.technician.ui.rating.RatingRoutes
 import com.homeservices.technician.ui.rating.RatingScreen
+import com.homeservices.technician.ui.serviceprofile.ServiceSelectionMode
 import com.homeservices.technician.ui.serviceprofile.ServiceSelectionScreen
 
 internal fun NavGraphBuilder.homeGraph(
@@ -43,6 +44,7 @@ internal fun NavGraphBuilder.homeGraph(
         composable("edit_services") {
             ServiceSelectionScreen(
                 onComplete = { navController.popBackStack() },
+                mode = ServiceSelectionMode.Edit,
             )
         }
         composable("payout_settings") {
