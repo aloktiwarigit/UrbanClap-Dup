@@ -6,7 +6,7 @@ vi.mock('next-intl', () => ({
   useLocale: () => 'en',
   useTranslations: () => (key: string, params?: Record<string, unknown>) => {
     const map: Record<string, string> = {
-      'detail.title': params?.orderId ? `Order ${params.orderId}` : 'Order',
+      'detail.title': params?.orderId ? `Order ${params.orderId as string}` : 'Order',
       'detail.closeButton.ariaLabel': 'Close slide-over',
       'detail.sections.status': 'Status',
       'detail.sections.customer': 'Customer',
@@ -16,6 +16,7 @@ vi.mock('next-intl', () => ({
       'detail.sections.scheduled': 'Scheduled',
       'detail.sections.payment': 'Payment',
       'detail.sections.created': 'Created',
+      'detail.sections.evidencePhotos': 'Job Photos',
       'detail.sections.actions.heading': 'Actions',
       'detail.sections.actions.noPermission': 'Your role can review this order but cannot run operational overrides.',
       'detail.toast.success': 'Action completed successfully.',
@@ -32,7 +33,7 @@ vi.mock('next-intl', () => ({
       'actions.refund.buttonLabel': 'Issue Refund',
       'actions.waiveFee.title': 'Waive Fee',
       'actions.waiveFee.buttonLabel': 'Waive Fee',
-      'actions.escalate.title': params?.priority ? `Escalate (${params.priority})` : 'Escalate',
+      'actions.escalate.title': params?.priority ? `Escalate (${params.priority as string})` : 'Escalate',
       'actions.escalate.buttonLabel': 'Escalate',
       'actions.escalate.priorityLabel': 'Escalate priority:',
       'actions.escalate.priorities.HIGH': 'HIGH',
@@ -43,8 +44,8 @@ vi.mock('next-intl', () => ({
       'actions.error': 'Action failed. Please try again.',
       // ConfirmModal keys
       'confirmModal.reasonLabel': 'Reason',
-      'confirmModal.selectPlaceholder': params?.label ? `Select ${params.label}` : 'Select',
-      'confirmModal.minCharactersHint': params?.min ? `Min ${params.min} characters` : 'Min characters',
+      'confirmModal.selectPlaceholder': params?.label ? `Select ${params.label as string}` : 'Select',
+      'confirmModal.minCharactersHint': params?.min ? `Min ${params.min as string} characters` : 'Min characters',
       'confirmModal.cancelButton': 'Cancel',
       'confirmModal.submitButton.label': 'Confirm',
       'confirmModal.submitButton.loading': 'Processing…',
@@ -90,6 +91,20 @@ describe('OrderSlideOver', () => {
     render(<OrderSlideOver order={order} onClose={vi.fn()} />);
     // formatINR(79900, 'en') → "₹799.00" (Intl currency adds 2-decimal precision).
     expect(screen.getByText(/₹\s?799/)).toBeDefined();
+  });
+
+  it('renders evidence photo thumbnails when present', () => {
+    render(
+      <OrderSlideOver
+        order={{
+          ...order,
+          jobPhotoSets: [{ stage: 'EN_ROUTE', urls: ['https://signed.example/photo.jpg'] }],
+        }}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('Job Photos')).toBeDefined();
+    expect(screen.getByAltText('Start trip evidence 1')).toBeDefined();
   });
 
   it('close button calls onClose', () => {

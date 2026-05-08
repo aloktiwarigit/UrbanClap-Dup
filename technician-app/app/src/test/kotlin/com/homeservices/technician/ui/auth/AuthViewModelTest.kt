@@ -129,7 +129,7 @@ public class AuthViewModelTest {
         }
 
     @Test
-    public fun `onPhoneNumberSubmitted normalizes Indian local mobile before sending OTP`(): Unit =
+    public fun `onPhoneSubmitted normalizes Indian mobile to E164`(): Unit =
         runTest(testDispatcher) {
             val activity = mockk<FragmentActivity>()
             val resendToken = mockk<PhoneAuthProvider.ForceResendingToken>()
@@ -160,7 +160,7 @@ public class AuthViewModelTest {
         }
 
     @Test
-    public fun `onPhoneNumberSubmitted surfaces Play signing authorization error`(): Unit =
+    public fun `onPhoneSubmitted surfaces Play signing authorization error`(): Unit =
         runTest(testDispatcher) {
             val activity = mockk<FragmentActivity>()
             every {
@@ -181,7 +181,8 @@ public class AuthViewModelTest {
             assertThat(state).isInstanceOf(AuthUiState.Error::class.java)
             assertThat((state as AuthUiState.Error).message)
                 .isEqualTo(
-                    "This Play Store build is not authorised for OTP. Add the Play signing SHA-1 and SHA-256 in Firebase.",
+                    "This Play Store build is not authorised for OTP. " +
+                        "Add the Play signing SHA-1 and SHA-256 in Firebase.",
                 )
         }
 

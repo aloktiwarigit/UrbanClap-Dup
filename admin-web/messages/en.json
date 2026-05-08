@@ -229,6 +229,7 @@
         "scheduled": "Scheduled",
         "payment": "Payment",
         "created": "Created",
+        "evidencePhotos": "Job Photos",
         "actions": {
           "heading": "Actions",
           "noPermission": "Your role can review this order but cannot run operational overrides."

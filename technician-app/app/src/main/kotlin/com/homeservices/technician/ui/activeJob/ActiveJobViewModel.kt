@@ -47,6 +47,9 @@ internal class ActiveJobViewModel
 
         init {
             viewModelScope.launch {
+                repository.startObserving(bookingId)
+            }
+            viewModelScope.launch {
                 repository.getActiveJob(bookingId).collect { job ->
                     val current = _uiState.value as? ActiveJobUiState.Active
                     _uiState.value =

@@ -409,7 +409,8 @@ public class AuthViewModel
                 is FirebaseAuthException ->
                     when (cause.errorCode) {
                         "ERROR_APP_NOT_AUTHORIZED" ->
-                            "This Play Store build is not authorised for OTP. Add the Play signing SHA-1 and SHA-256 in Firebase."
+                            "This Play Store build is not authorised for OTP. " +
+                                "Add the Play signing SHA-1 and SHA-256 in Firebase."
                         "ERROR_OPERATION_NOT_ALLOWED" ->
                             "Phone sign-in is not enabled in Firebase Authentication."
                         "ERROR_QUOTA_EXCEEDED" ->

@@ -18,6 +18,7 @@
     <!-- Active job -->
     <string name="active_job_complete_title">जॉब पूरी हुई</string>
     <string name="active_job_complete_body">आपकी पूर्णता दर्ज की गई। कमाई जल्द ही अपडेट होगी।</string>
+    <string name="active_job_back_to_dashboard">&#x921;&#x948;&#x936;&#x92C;&#x94B;&#x930;&#x94D;&#x921; &#x92A;&#x930; &#x935;&#x93E;&#x92A;&#x938; &#x91C;&#x93E;&#x90F;&#x902;</string>
     <string name="active_job_error_title">जॉब लोड नहीं हो सकी</string>
     <string name="active_job_address">ग्राहक का पता</string>
     <string name="active_job_slot">सेवा स्लॉट</string>

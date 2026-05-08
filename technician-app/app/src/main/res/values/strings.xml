@@ -16,6 +16,7 @@
     <string name="job_offer_decline">Decline</string>
     <string name="active_job_complete_title">Job complete</string>
     <string name="active_job_complete_body">Your completion is recorded. Earnings will update shortly.</string>
+    <string name="active_job_back_to_dashboard">Back to dashboard</string>
     <string name="active_job_error_title">Could not load job</string>
     <string name="active_job_address">Customer address</string>
     <string name="active_job_slot">Service slot</string>

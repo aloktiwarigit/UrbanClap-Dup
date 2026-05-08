@@ -27,6 +27,7 @@ vi.mock('@/lib/i18n/navigation', () => ({
 // Mock API calls
 vi.mock('@/api/orders', () => ({
   fetchOrders: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 50, totalPages: 1 }),
+  fetchOrderById: vi.fn(),
   fetchAllOrdersForExport: vi.fn().mockResolvedValue([]),
   reassignOrder: vi.fn(),
   completeOrder: vi.fn(),

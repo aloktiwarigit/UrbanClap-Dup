@@ -205,7 +205,7 @@ private fun AuthHeroZone() {
             Text(text = "HomeHeroo", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, color = Color.White)
             Text(text = "घर पर भरोसेमंद सेवा", style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.82f))
             Text(
-                text = "आधार सत्यापित · 30 दिन गारंटी",
+                text = "भरोसेमंद सेवा · 30 दिन गारंटी",
                 style = MaterialTheme.typography.labelSmall,
                 color = Color.White.copy(alpha = 0.65f),
             )

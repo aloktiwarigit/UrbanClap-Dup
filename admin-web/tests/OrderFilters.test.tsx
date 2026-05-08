@@ -5,7 +5,7 @@ import { OrderFilters, type FiltersState } from '../src/components/orders/OrderF
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string, params?: Record<string, unknown>) => {
     if (key === 'buttonNSelected' && params?.count !== undefined) {
-      return `${params.count} selected`;
+      return `${params.count as string} selected`;
     }
     const map: Record<string, string> = {
       'filters.status.label': 'Status',
@@ -66,6 +66,21 @@ describe('OrderFilters', () => {
     render(<OrderFilters filters={defaultFilters} onChange={onChange} />);
     fireEvent.change(screen.getByPlaceholderText('City'), { target: { value: 'Bengaluru' } });
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ city: 'Bengaluru' }));
+  });
+
+  it.each([
+    { title: 'phone', query: 'Phone', key: 'customerPhone', value: '9999999999', byLabel: false },
+    { title: 'technician ID', query: 'Technician ID', key: 'technicianId', value: 'tech-7', byLabel: false },
+    { title: 'date from', query: 'Date from', key: 'dateFrom', value: '2026-05-08', byLabel: true },
+    { title: 'date to', query: 'Date to', key: 'dateTo', value: '2026-05-09', byLabel: true },
+    { title: 'minimum amount', query: /^Min/, key: 'minAmount', value: '100', byLabel: false },
+    { title: 'maximum amount', query: /^Max/, key: 'maxAmount', value: '900', byLabel: false },
+  ])('calls onChange when $title changes', ({ query, key, value, byLabel }) => {
+    const onChange = vi.fn();
+    render(<OrderFilters filters={defaultFilters} onChange={onChange} />);
+    const input = byLabel ? screen.getByLabelText(query) : screen.getByPlaceholderText(query);
+    fireEvent.change(input, { target: { value } });
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ [key]: value }));
   });
 
   it('calls onChange with comma-joined statuses when the menu is applied', () => {

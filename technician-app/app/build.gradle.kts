@@ -537,6 +537,16 @@ kover {
                     "*.SessionPrefsMigrator",
                     "*.SessionPrefsMigrator\$*",
                     "*.data.network.auth.di.*",
+                    // Moshi KSP-generated JSON adapters — code-gen output, same rationale as
+                    // Hilt/Room-generated classes above. Each @JsonClass(generateAdapter = true)
+                    // annotation causes Moshi KSP to emit a *JsonAdapter class with 30-50 JVM
+                    // branches (null checks, token-switch statements, field-loop logic) that are
+                    // invoked only by the Retrofit/Moshi runtime, not by JVM unit tests.
+                    // Excluding these restores the branch metric to reflect actual domain-logic
+                    // coverage rather than generated serialisation plumbing.
+                    // Pattern covers all generated adapter names: ClassNameJsonAdapter.
+                    "*.*JsonAdapter",
+                    "*.*JsonAdapter\$*",
                 )
             }
         }
@@ -610,6 +620,7 @@ dependencies {
     implementation(libs.okhttp.core)
     implementation(libs.okhttp.logging)
     implementation(libs.moshi.kotlin)
+    ksp(libs.moshi.kotlin.codegen)
     implementation(libs.androidx.browser)
     implementation(libs.firebase.storage)
 

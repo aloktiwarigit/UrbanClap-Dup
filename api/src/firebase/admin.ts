@@ -1,7 +1,12 @@
 import { getStorage } from 'firebase-admin/storage';
+import { getFirebaseAdmin } from '../services/firebaseAdmin.js';
+
+function defaultBucket() {
+  return getStorage(getFirebaseAdmin()).bucket();
+}
 
 export async function getStorageDownloadUrl(storagePath: string): Promise<string> {
-  const bucket = getStorage().bucket();
+  const bucket = defaultBucket();
   const file = bucket.file(storagePath);
   const [url] = await file.getSignedUrl({
     action: 'read',
@@ -11,7 +16,7 @@ export async function getStorageDownloadUrl(storagePath: string): Promise<string
 }
 
 export async function checkStorageFileExists(storagePath: string): Promise<boolean> {
-  const [exists] = await getStorage().bucket().file(storagePath).exists();
+  const [exists] = await defaultBucket().file(storagePath).exists();
   return exists;
 }
 
@@ -20,10 +25,10 @@ export async function uploadBufferToStorage(
   buffer: Buffer,
   contentType: string,
 ): Promise<void> {
-  await getStorage().bucket().file(storagePath).save(buffer, { contentType, resumable: false });
+  await defaultBucket().file(storagePath).save(buffer, { contentType, resumable: false });
 }
 
 export async function downloadStorageFile(storagePath: string): Promise<Buffer> {
-  const [contents] = await getStorage().bucket().file(storagePath).download();
+  const [contents] = await defaultBucket().file(storagePath).download();
   return contents;
 }

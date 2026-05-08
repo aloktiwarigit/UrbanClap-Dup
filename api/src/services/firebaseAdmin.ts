@@ -10,12 +10,14 @@ export function getFirebaseAdmin(): admin.app.App {
       _app = existingApp;
       return _app;
     }
+    const projectId = process.env.FIREBASE_PROJECT_ID!;
     _app = admin.initializeApp({
       credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID!,
+        projectId,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
         privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
       }),
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET ?? `${projectId}.firebasestorage.app`,
     });
   }
   return _app;

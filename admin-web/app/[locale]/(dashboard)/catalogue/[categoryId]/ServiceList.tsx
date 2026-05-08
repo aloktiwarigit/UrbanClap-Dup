@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
-import type { Route } from 'next';
 import { useTranslations } from 'next-intl';
 import type { components } from '@/api/generated/schema';
 import { toggleServiceAction } from '../actions';

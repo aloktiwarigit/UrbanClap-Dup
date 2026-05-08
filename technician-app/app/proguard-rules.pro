@@ -46,6 +46,10 @@
 # OkHttp / Retrofit
 -dontwarn okhttp3.**
 -dontwarn retrofit2.**
+# Retrofit services are instantiated through dynamic proxies. Keep the app's
+# service interfaces and members so release shrinking cannot remove or rewrite
+# methods that Retrofit needs to inspect at runtime.
+-keep,allowobfuscation interface com.homeservices.technician.**.*ApiService { *; }
 
 # Sentry
 -dontwarn io.sentry.**

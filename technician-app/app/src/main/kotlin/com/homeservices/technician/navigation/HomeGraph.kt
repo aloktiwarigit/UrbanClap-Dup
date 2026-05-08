@@ -2,9 +2,12 @@ package com.homeservices.technician.navigation
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
@@ -18,6 +21,7 @@ import com.homeservices.technician.ui.activeJob.ActiveJobViewModel
 import com.homeservices.technician.ui.complaint.ComplaintRoutes
 import com.homeservices.technician.ui.complaint.ComplaintScreen
 import com.homeservices.technician.ui.home.TechnicianHomeScreen
+import com.homeservices.technician.ui.home.TechnicianHomeViewModel
 import com.homeservices.technician.ui.myratings.MyRatingsScreen
 import com.homeservices.technician.ui.payoutsettings.PayoutCadenceScreen
 import com.homeservices.technician.ui.rating.RatingRoutes
@@ -25,20 +29,21 @@ import com.homeservices.technician.ui.rating.RatingScreen
 import com.homeservices.technician.ui.serviceprofile.ServiceSelectionMode
 import com.homeservices.technician.ui.serviceprofile.ServiceSelectionScreen
 
+private const val HOME_GRAPH_ROUTE = "home"
+private const val HOME_DASHBOARD_ROUTE = "home_dashboard"
+
 internal fun NavGraphBuilder.homeGraph(
     navController: NavController,
     authState: AuthState,
     onSignOut: () -> Unit,
 ) {
-    navigation(startDestination = "home_dashboard", route = "home") {
-        composable("home_dashboard") {
-            TechnicianHomeScreen(
+    navigation(startDestination = HOME_DASHBOARD_ROUTE, route = HOME_GRAPH_ROUTE) {
+        composable(HOME_DASHBOARD_ROUTE) { backStackEntry ->
+            HomeDashboardRoute(
+                navController = navController,
                 authState = authState,
-                onOpenJob = { bookingId -> navController.navigate("activeJob/$bookingId") },
-                onViewRatings = { navController.navigate("ratings_transparency") },
-                onPayoutSettings = { navController.navigate("payout_settings") },
-                onEditServices = { navController.navigate("edit_services") },
                 onSignOut = onSignOut,
+                backStackEntry = backStackEntry,
             )
         }
         composable("edit_services") {
@@ -57,22 +62,7 @@ internal fun NavGraphBuilder.homeGraph(
             route = "activeJob/{bookingId}",
             arguments = listOf(navArgument("bookingId") { type = NavType.StringType }),
         ) {
-            val viewModel: ActiveJobViewModel = hiltViewModel()
-            val context = LocalContext.current
-            LaunchedEffect(Unit) {
-                viewModel.navigationEvents.collect { event ->
-                    if (event is NavigationEvent.Maps) {
-                        context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse(event.uri)).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            },
-                        )
-                    }
-                }
-            }
-            ActiveJobScreen(
-                viewModel = viewModel,
-            )
+            ActiveJobRoute(navController = navController)
         }
         composable(
             route = RatingRoutes.ROUTE,
@@ -88,6 +78,68 @@ internal fun NavGraphBuilder.homeGraph(
         ) { backStackEntry ->
             val bookingId = backStackEntry.arguments?.getString("bookingId") ?: ""
             ComplaintScreen(bookingId = bookingId, onBack = { navController.popBackStack() })
+        }
+    }
+}
+
+@Composable
+private fun HomeDashboardRoute(
+    navController: NavController,
+    authState: AuthState,
+    onSignOut: () -> Unit,
+    backStackEntry: NavBackStackEntry,
+) {
+    val viewModel: TechnicianHomeViewModel = hiltViewModel()
+    val refreshJobs =
+        backStackEntry.savedStateHandle
+            .getStateFlow("refreshJobs", false)
+            .collectAsStateWithLifecycle()
+    LaunchedEffect(refreshJobs.value) {
+        if (refreshJobs.value) {
+            viewModel.refresh()
+            backStackEntry.savedStateHandle["refreshJobs"] = false
+        }
+    }
+    TechnicianHomeScreen(
+        authState = authState,
+        onOpenJob = { bookingId -> navController.navigate("activeJob/$bookingId") },
+        onViewRatings = { navController.navigate("ratings_transparency") },
+        onPayoutSettings = { navController.navigate("payout_settings") },
+        onEditServices = { navController.navigate("edit_services") },
+        onSignOut = onSignOut,
+        viewModel = viewModel,
+    )
+}
+
+@Composable
+private fun ActiveJobRoute(navController: NavController) {
+    val viewModel: ActiveJobViewModel = hiltViewModel()
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        viewModel.navigationEvents.collect { event ->
+            if (event is NavigationEvent.Maps) {
+                context.startActivity(
+                    Intent(Intent.ACTION_VIEW, Uri.parse(event.uri)).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    },
+                )
+            }
+        }
+    }
+    ActiveJobScreen(
+        viewModel = viewModel,
+        onBackToDashboard = { navController.returnToDashboard() },
+    )
+}
+
+private fun NavController.returnToDashboard() {
+    runCatching {
+        getBackStackEntry(HOME_DASHBOARD_ROUTE).savedStateHandle["refreshJobs"] = true
+    }
+    if (!popBackStack(HOME_DASHBOARD_ROUTE, inclusive = false)) {
+        navigate(HOME_DASHBOARD_ROUTE) {
+            popUpTo(HOME_GRAPH_ROUTE) { inclusive = false }
+            launchSingleTop = true
         }
     }
 }

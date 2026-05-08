@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import type { Route } from 'next';
 import { getTranslations } from 'next-intl/server';
 import type { components } from '@/api/generated/schema';
 import { getApiBaseUrl } from '@/lib/apiBase';

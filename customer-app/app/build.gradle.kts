@@ -374,8 +374,12 @@ kover {
                     // BookingUiState sealed class — data holders, no logic branches
                     "*.BookingUiState",
                     "*.BookingUiState\$*",
-                    // Moshi KSP-generated JSON adapters — code-gen output, same rationale as Hilt factories
-                    "*.*DtoJsonAdapter",
+                    // Moshi KSP-generated JSON adapters — code-gen output, same rationale as Hilt factories.
+                    // Broadened from *.*DtoJsonAdapter to *.*JsonAdapter to cover non-Dto-suffixed classes
+                    // (e.g. NonceResponse, TruecallerVerifyRequest) whose generated adapters previously
+                    // leaked uncovered JVM branches into the coverage denominator.
+                    "*.*JsonAdapter",
+                    "*.*JsonAdapter\$*",
                     // BiometricResult sealed class — data holders, no logic branches
                     "*.domain.auth.model.BiometricResult",
                     "*.domain.auth.model.BiometricResult\$*",

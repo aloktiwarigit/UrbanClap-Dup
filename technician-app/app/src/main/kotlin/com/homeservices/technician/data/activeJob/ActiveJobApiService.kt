@@ -1,5 +1,6 @@
 package com.homeservices.technician.data.activeJob
 
+import com.squareup.moshi.JsonClass
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -23,6 +24,7 @@ internal interface ActiveJobApiService {
     ): Response<ActiveJobResponse>
 }
 
+@JsonClass(generateAdapter = true)
 internal data class ActiveJobResponse(
     val bookingId: String,
     val customerId: String,
@@ -35,16 +37,19 @@ internal data class ActiveJobResponse(
     val slotWindow: String,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class LatLngDto(
     val lat: Double,
     val lng: Double,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class LocationAttestationDto(
     val isMock: Boolean,
     val gpsAccuracyM: Float,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class TransitionRequest(
     val targetStatus: String,
     val currentLocation: LatLngDto? = null,
