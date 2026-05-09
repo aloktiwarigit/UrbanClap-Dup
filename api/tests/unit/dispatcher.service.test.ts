@@ -217,7 +217,7 @@ describe('dispatcherService.triggerDispatch', () => {
     expect(vi.mocked(messaging.send).mock.calls[0]![0].token).toBe('fcm-token-t1');
   });
 
-  it('sets expiresAt to sentAt + 30 seconds', async () => {
+  it('sets expiresAt to sentAt + 90 seconds', async () => {
     vi.mocked(bookingRepo.getById).mockResolvedValue(BASE_BOOKING);
     vi.mocked(getTechniciansWithinRadius).mockResolvedValue([makeTech('t1', 0.05)]);
 
@@ -231,7 +231,7 @@ describe('dispatcherService.triggerDispatch', () => {
 
     expect(sentAt).toBeGreaterThanOrEqual(before);
     expect(sentAt).toBeLessThanOrEqual(after);
-    expect(expiresAt - sentAt).toBe(30_000);
+    expect(expiresAt - sentAt).toBe(90_000);
 
     // expiresAt also propagated to FCM payload
     const msg = vi.mocked(messaging.send).mock.calls[0]![0] as any;

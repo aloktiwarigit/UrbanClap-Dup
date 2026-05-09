@@ -5,6 +5,37 @@ import type { AdminContext } from '../../../types/admin.js';
 import { getCosmosClient, DB_NAME } from '../../../cosmos/client.js';
 import { TechLocationsResponseSchema } from '../../../schemas/dashboard.js';
 
+interface TechnicianLocationDoc {
+  id?: string;
+  technicianId?: string;
+  displayName?: string;
+  name?: string;
+  serviceType?: string;
+  skills?: string[];
+  lat?: number;
+  lng?: number;
+  location?: { coordinates?: [number, number] };
+  state?: 'active' | 'enroute' | 'idle' | 'alert';
+  isAvailable?: boolean;
+  updatedAt?: string;
+}
+
+function toTechLocation(doc: TechnicianLocationDoc) {
+  const lng = typeof doc.lng === 'number' ? doc.lng : doc.location?.coordinates?.[0];
+  const lat = typeof doc.lat === 'number' ? doc.lat : doc.location?.coordinates?.[1];
+  if (typeof lat !== 'number' || typeof lng !== 'number') return null;
+
+  return {
+    technicianId: doc.technicianId ?? doc.id ?? 'unknown',
+    ...(doc.displayName ?? doc.name ? { name: doc.displayName ?? doc.name } : {}),
+    ...(doc.serviceType ?? doc.skills?.[0] ? { serviceType: doc.serviceType ?? doc.skills?.[0] } : {}),
+    lat,
+    lng,
+    state: doc.state ?? (doc.isAvailable === false ? 'enroute' : 'active'),
+    updatedAt: doc.updatedAt ?? new Date().toISOString(),
+  };
+}
+
 export async function techLocationsHandler(
   _req: HttpRequest,
   ctx: InvocationContext,
@@ -17,12 +48,14 @@ export async function techLocationsHandler(
       .container('technicians')
       .items.query({
         query:
-          'SELECT c.technicianId, c.name, c.serviceType, c.lat, c.lng, c.state, c.updatedAt FROM c WHERE c.isOnDuty = true',
+          'SELECT c.id, c.technicianId, c.displayName, c.name, c.serviceType, c.skills, c.lat, c.lng, c.location, c.state, c.isAvailable, c.updatedAt FROM c WHERE c.isOnline = true AND (NOT IS_DEFINED(c.suspended) OR c.suspended = false)',
         parameters: [],
       })
       .fetchAll();
 
-    const techs = result.resources;
+    const techs = (result.resources as TechnicianLocationDoc[])
+      .map(toTechLocation)
+      .filter((tech): tech is NonNullable<ReturnType<typeof toTechLocation>> => tech !== null);
 
     return {
       status: 200,

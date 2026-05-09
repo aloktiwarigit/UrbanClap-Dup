@@ -4,6 +4,7 @@ import { requireAdmin } from '../../../middleware/requireAdmin.js';
 import type { AdminContext } from '../../../types/admin.js';
 import { listAllTechniciansForAdmin } from '../../../cosmos/technician-repository.js';
 import { getActiveBookingCountForTechnician } from '../../../cosmos/booking-repository.js';
+import { getFirebaseAdmin } from '../../../services/firebaseAdmin.js';
 import type { AdminTechnician } from '../../../schemas/admin-technician.js';
 
 function maskPhone(phone: string): string {
@@ -31,12 +32,14 @@ export async function adminListTechniciansHandler(
   const docs = await listAllTechniciansForAdmin();
   if (docs.length === 0) return { status: 200, jsonBody: { technicians: [] } };
 
-  // Import firebase-admin lazily to avoid cold-start cost when list is empty
-  const firebaseAdmin = await import('firebase-admin');
-  const firebaseApp = firebaseAdmin.app();
-  const { users } = await firebaseApp.auth().getUsers(
-    docs.map((d) => ({ uid: d.id })),
-  );
+  let users: Array<{ uid: string; displayName?: string; phoneNumber?: string }> = [];
+  try {
+    ({ users } = await getFirebaseAdmin().auth().getUsers(
+      docs.map((d) => ({ uid: d.id })),
+    ));
+  } catch {
+    // Firebase Auth metadata is best-effort for the roster; Cosmos remains authoritative.
+  }
   const authMap = new Map(users.map((u) => [u.uid, u]));
 
   const counts = await Promise.all(

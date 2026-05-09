@@ -13,8 +13,14 @@ vi.mock('../../../../src/services/adminSession.service.js', () => ({
   touchAndGetSession: vi.fn(),
 }));
 
+vi.mock('../../../../src/cosmos/finance-repository.js', () => ({
+  getWeekSnapshot: vi.fn(),
+  getPayoutQueue: vi.fn(),
+}));
+
 import { summaryHandler } from '../../../../src/functions/admin/dashboard/summary.js';
 import { getCosmosClient } from '../../../../src/cosmos/client.js';
+import { getPayoutQueue, getWeekSnapshot } from '../../../../src/cosmos/finance-repository.js';
 import { touchAndGetSession } from '../../../../src/services/adminSession.service.js';
 import { requireAdmin } from '../../../../src/middleware/requireAdmin.js';
 import { signAccessToken } from '../../../../src/services/jwt.service.js';
@@ -43,6 +49,13 @@ const makeContainer = (queryValue: number) => ({
 describe('GET /v1/admin/dashboard/summary', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getWeekSnapshot).mockResolvedValue(null);
+    vi.mocked(getPayoutQueue).mockResolvedValue({
+      weekStart: '2026-05-02',
+      weekEnd: '2026-05-08',
+      entries: [],
+      totalNetPayable: 59_900,
+    });
   });
 
   it('returns 401 when unauthenticated', async () => {
