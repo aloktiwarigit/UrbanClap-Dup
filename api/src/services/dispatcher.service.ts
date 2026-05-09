@@ -13,7 +13,7 @@ import type { BookingDoc } from '../schemas/booking.js';
 import { normalizeAddressText } from '../shared/address-text.js';
 
 const DISPATCH_RADIUS_KM = 10;
-const OFFER_WINDOW_MS = 30_000;
+const OFFER_WINDOW_MS = 90_000;
 const SLOT_GRACE_WINDOW_MS = 30 * 60 * 1_000;
 
 function slotStartUtcMs(slotDate: string, slotWindow: string): number {
