@@ -95,9 +95,13 @@ public class ActiveJobRepositoryImpl
                         integrityToken = integrityToken,
                     )
                 if (response.isSuccessful) {
-                    val job = response.body()!!.toDomain()
-                    _activeJobState.value = job
-                    Result.success(job)
+                    response.body()?.let { body ->
+                        val job = body.toDomain()
+                        _activeJobState.value = job
+                        Result.success(job)
+                    } ?: Result.failure(
+                        IllegalStateException("Empty body on successful transition for $bookingId"),
+                    )
                 } else {
                     Result.failure(RuntimeException("Transition failed: HTTP ${response.code()}"))
                 }
