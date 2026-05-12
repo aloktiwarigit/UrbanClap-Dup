@@ -87,14 +87,14 @@ public class PendingActionDaoTest {
     // ── upsertAll ─────────────────────────────────────────────────────────────
 
     @Test
-    public fun `upsertAll inserts new rows`() = runTest {
+    public fun `upsertAll inserts new rows`(): Unit = runTest {
         dao.upsertAll(listOf(entity(id = "a"), entity(id = "b")))
         val all = dao.observeActive("user-1").first()
         assertThat(all).hasSize(2)
     }
 
     @Test
-    public fun `upsertAll replaces existing row with same id`() = runTest {
+    public fun `upsertAll replaces existing row with same id`(): Unit = runTest {
         dao.upsertAll(listOf(entity(id = "a", version = 1L, priority = "HIGH")))
         dao.upsertAll(listOf(entity(id = "a", version = 2L, priority = "LOW")))
         val all = dao.observeActive("user-1").first()
@@ -106,7 +106,7 @@ public class PendingActionDaoTest {
     // ── observeActive ─────────────────────────────────────────────────────────
 
     @Test
-    public fun `observeActive returns only ACTIVE rows for user`() = runTest {
+    public fun `observeActive returns only ACTIVE rows for user`(): Unit = runTest {
         dao.upsertAll(
             listOf(
                 entity(id = "active-1", status = "ACTIVE"),
@@ -120,7 +120,7 @@ public class PendingActionDaoTest {
     }
 
     @Test
-    public fun `observeActive excludes rows for different userId`() = runTest {
+    public fun `observeActive excludes rows for different userId`(): Unit = runTest {
         dao.upsertAll(
             listOf(
                 entity(id = "u1-action", userId = "user-1"),
@@ -133,7 +133,7 @@ public class PendingActionDaoTest {
     }
 
     @Test
-    public fun `observeActive orders by priority DESC then createdAt ASC`() = runTest {
+    public fun `observeActive orders by priority DESC then createdAt ASC`(): Unit = runTest {
         dao.upsertAll(
             listOf(
                 entity(id = "low-old", priority = "LOW", createdAt = 100L),
@@ -155,7 +155,7 @@ public class PendingActionDaoTest {
     // ── markMissingAsResolved ─────────────────────────────────────────────────
 
     @Test
-    public fun `markMissingAsResolved tombstones rows absent from server snapshot`() = runTest {
+    public fun `markMissingAsResolved tombstones rows absent from server snapshot`(): Unit = runTest {
         dao.upsertAll(
             listOf(
                 entity(id = "keep-1"),
@@ -181,7 +181,7 @@ public class PendingActionDaoTest {
     }
 
     @Test
-    public fun `markMissingAsResolved does not touch already RESOLVED rows`() = runTest {
+    public fun `markMissingAsResolved does not touch already RESOLVED rows`(): Unit = runTest {
         val originalResolvedAt = 1_000L
         dao.upsertAll(
             listOf(
@@ -197,7 +197,7 @@ public class PendingActionDaoTest {
     // ── findById ──────────────────────────────────────────────────────────────
 
     @Test
-    public fun `findById returns row when it exists`() = runTest {
+    public fun `findById returns row when it exists`(): Unit = runTest {
         dao.upsertAll(listOf(entity(id = "find-me")))
         val found = dao.findById("find-me")
         assertThat(found).isNotNull
@@ -205,7 +205,7 @@ public class PendingActionDaoTest {
     }
 
     @Test
-    public fun `findById returns null for missing id`() = runTest {
+    public fun `findById returns null for missing id`(): Unit = runTest {
         val found = dao.findById("no-such-id")
         assertThat(found).isNull()
     }
@@ -213,7 +213,7 @@ public class PendingActionDaoTest {
     // ── markResolved ──────────────────────────────────────────────────────────
 
     @Test
-    public fun `markResolved sets status to RESOLVED and sets resolvedAt`() = runTest {
+    public fun `markResolved sets status to RESOLVED and sets resolvedAt`(): Unit = runTest {
         dao.upsertAll(listOf(entity(id = "resolve-me")))
         val now = 7_777L
         dao.markResolved("resolve-me", now)
@@ -225,7 +225,7 @@ public class PendingActionDaoTest {
     // ── purgeExpired ──────────────────────────────────────────────────────────
 
     @Test
-    public fun `purgeExpired removes ACTIVE rows whose TTL has passed`() = runTest {
+    public fun `purgeExpired removes ACTIVE rows whose TTL has passed`(): Unit = runTest {
         dao.upsertAll(
             listOf(
                 entity(id = "expired-ttl", expiresAt = 500L),
@@ -240,7 +240,7 @@ public class PendingActionDaoTest {
     }
 
     @Test
-    public fun `purgeExpired does not delete RESOLVED rows with expiresAt in the past`() = runTest {
+    public fun `purgeExpired does not delete RESOLVED rows with expiresAt in the past`(): Unit = runTest {
         // RESOLVED tombstones are protected — purgeTombstones handles them, not purgeExpired
         dao.upsertAll(
             listOf(
@@ -255,7 +255,7 @@ public class PendingActionDaoTest {
     // ── purgeTombstones ───────────────────────────────────────────────────────
 
     @Test
-    public fun `purgeTombstones deletes RESOLVED rows older than cutoff`() = runTest {
+    public fun `purgeTombstones deletes RESOLVED rows older than cutoff`(): Unit = runTest {
         val thirtyDaysMs = 30L * 24 * 60 * 60 * 1_000
         val now = 100_000_000L
         val cutoff = now - thirtyDaysMs
@@ -286,7 +286,7 @@ public class PendingActionDaoTest {
     }
 
     @Test
-    public fun `purgeTombstones does not delete RESOLVED rows with null resolvedAt`() = runTest {
+    public fun `purgeTombstones does not delete RESOLVED rows with null resolvedAt`(): Unit = runTest {
         // Edge case: RESOLVED row with no resolvedAt timestamp should not be deleted
         dao.upsertAll(
             listOf(
@@ -300,7 +300,7 @@ public class PendingActionDaoTest {
     // ── clearAll ──────────────────────────────────────────────────────────────
 
     @Test
-    public fun `clearAll removes every row`() = runTest {
+    public fun `clearAll removes every row`(): Unit = runTest {
         dao.upsertAll(
             listOf(
                 entity(id = "row-1"),

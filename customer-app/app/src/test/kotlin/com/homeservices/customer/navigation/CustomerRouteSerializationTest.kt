@@ -24,7 +24,7 @@ public class CustomerRouteSerializationTest {
     // ── Spike target: BookingPriceApprovalRoute (arg route) ───────────────────
 
     @Nested
-    inner class BookingPriceApprovalRouteTests {
+    public inner class BookingPriceApprovalRouteTests {
 
         @Test
         public fun `BookingPriceApprovalRoute round-trips through JSON serialization`() {
@@ -55,7 +55,7 @@ public class CustomerRouteSerializationTest {
     // ── Simple no-arg route: AuthRoute ────────────────────────────────────────
 
     @Nested
-    inner class AuthRouteTests {
+    public inner class AuthRouteTests {
 
         @Test
         public fun `AuthRoute round-trips through JSON serialization`() {
@@ -75,7 +75,7 @@ public class CustomerRouteSerializationTest {
     // ── ServiceTrackingRoute ──────────────────────────────────────────────────
 
     @Nested
-    inner class ServiceTrackingRouteTests {
+    public inner class ServiceTrackingRouteTests {
 
         @Test
         public fun `ServiceTrackingRoute round-trips through JSON`() {
@@ -90,7 +90,7 @@ public class CustomerRouteSerializationTest {
     // ── ComplaintRoute with nullable arg ──────────────────────────────────────
 
     @Nested
-    inner class ComplaintRouteTests {
+    public inner class ComplaintRouteTests {
 
         @Test
         public fun `ComplaintRoute with null complaintId round-trips`() {
