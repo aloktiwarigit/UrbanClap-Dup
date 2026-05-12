@@ -72,6 +72,38 @@ export async function isServiceAreaGatingEnabled(userId?: string, client?: Featu
 }
 
 /**
+ * E13-S01: Returns true when wallet credit application is enabled.
+ *
+ * When false: `applyCredit: true` in the booking request is silently ignored
+ * (no credit applied, no error) — safe fail-closed so credit spend is controlled.
+ * When true: credit is applied up to min(balance, bookingAmount), a CREDIT_APPLIED
+ * ledger entry is written, and `appliedCreditAmount` is returned.
+ *
+ * Flag name: `customer.wallet-credit.enabled`
+ * GrowthBook default: false. Flip after E13-S02 (WalletScreen) is live.
+ * See ADR-0017.
+ *
+ * Fail-closed contracts (credit = money — never silently spend):
+ *   - init() resolves with success=false → return false
+ *   - init() throws → return false
+ *   - Empty GROWTHBOOK_CLIENT_KEY (local dev) → return false
+ *
+ * @param userId  - Firebase UID; used for F&F targeting.
+ * @param client  - Injectable for testing.
+ */
+export async function isWalletCreditEnabled(userId?: string, client?: FeatureFlagClient): Promise<boolean> {
+  if (!process.env['GROWTHBOOK_CLIENT_KEY']) return false; // local dev — never spend credit
+  const gb = client ?? createRequestClient(userId);
+  try {
+    const result = await gb.init({ timeout: 1000 });
+    if (!result.success) return false; // timeout → fail closed
+    return gb.isOn('customer.wallet-credit.enabled');
+  } catch {
+    return false; // unexpected SDK throw → fail closed
+  }
+}
+
+/**
  * Returns true when the owner has manually paused new bookings (e.g. surge / incident).
  *
  * Fail-open contracts:
