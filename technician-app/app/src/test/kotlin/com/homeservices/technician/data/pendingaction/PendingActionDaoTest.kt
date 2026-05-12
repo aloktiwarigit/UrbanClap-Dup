@@ -34,10 +34,8 @@ public class PendingActionDaoTest {
     @Before
     public fun setUp() {
         val ctx = ApplicationProvider.getApplicationContext<Context>()
-        db =
-            Room.inMemoryDatabaseBuilder(ctx, PendingActionsDatabase::class.java)
-                .allowMainThreadQueries()
-                .build()
+        val builder = Room.inMemoryDatabaseBuilder(ctx, PendingActionsDatabase::class.java)
+        db = builder.allowMainThreadQueries().build()
         dao = db.pendingActionDao()
     }
 
