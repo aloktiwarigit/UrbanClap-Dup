@@ -276,11 +276,17 @@ internal fun PhotoCaptureScreen(
                             .padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    OutlinedButton(onClick = {
-                        // Delete the abandoned filesDir capture so it doesn't accumulate.
-                        capturedPath?.let { runCatching { File(it).delete() } }
-                        capturedPath = null
-                    }) {
+                    OutlinedButton(
+                        onClick = {
+                            // Delete the abandoned filesDir capture so it doesn't accumulate.
+                            capturedPath?.let { runCatching { File(it).delete() } }
+                            capturedPath = null
+                        },
+                        // Disabled while uploading: deleting capturedPath mid-upload races
+                        // UploadJobPhotoUseCase's BitmapFactory.decodeFile and surfaces as
+                        // "Cannot decode image" instead of completing.
+                        enabled = !isUploading,
+                    ) {
                         Text(stringResource(R.string.photo_retake), color = Color.White)
                     }
                     Button(
