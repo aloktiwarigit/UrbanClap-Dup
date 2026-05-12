@@ -13,10 +13,12 @@ import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
 import { sendPriceApprovalPush } from '../services/fcm.service.js';
 import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
-import { isSoftLaunchEnabled, isMarketingPaused } from '../services/featureFlags.service.js';
+import { isSoftLaunchEnabled, isMarketingPaused, isServiceAreaGatingEnabled } from '../services/featureFlags.service.js';
 import { dispatcherService } from '../services/dispatcher.service.js';
 import { posthog } from '../observability/posthog.js';
 import { normalizeAddressText } from '../shared/address-text.js';
+import { isLatLngInServiceArea } from '../services/service-area.service.js';
+import { AYODHYA_SERVICE_AREA } from '../data/service-area-ayodhya.js';
 
 function makeRazorpayReceipt(customerId: string): string {
   return `bk_${Date.now().toString(36)}_${customerId.slice(0, 20)}`;
@@ -56,6 +58,34 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
   const body = await req.json().catch(() => null);
   const parsed = CreateBookingRequestSchema.safeParse(body);
   if (!parsed.success) return { status: 422, jsonBody: { code: 'VALIDATION_ERROR', issues: parsed.error.issues } };
+
+  // Service-area polygon gating — E16-S01 / ADR-0020 / Threat-model T-B1
+  // Zod already guarantees lat ∈ [-90,90] and lng ∈ [-180,180]; this is the
+  // geographic business rule enforcing the Ayodhya pilot boundary.
+  const { lat, lng } = parsed.data.addressLatLng;
+  const insideServiceArea = isLatLngInServiceArea(lat, lng, AYODHYA_SERVICE_AREA);
+  const gatingEnabled = await isServiceAreaGatingEnabled(customer.customerId);
+  // Structured log — always emitted (for observability in both warn-only and fail modes).
+  // Alert annotation: >5 rejections/min/customer is a recon signal (T-B1).
+  const gatingMode = gatingEnabled ? 'fail' : 'warn-only';
+  console.info('service_area_check', {
+    customerId: customer.customerId,
+    lat,
+    lng,
+    inside: insideServiceArea,
+    mode: gatingMode,
+  });
+  if (!insideServiceArea && gatingEnabled) {
+    return {
+      status: 400,
+      jsonBody: {
+        error: 'SERVICE_NOT_AVAILABLE_AT_LOCATION',
+        message: 'We currently only serve the Ayodhya region. We hope to expand soon.',
+        suggestedAction: 'join_waitlist',
+      },
+    };
+  }
+  // When flag is off (warn-only), an out-of-area coordinate is logged above but allowed through.
 
   const service = await catalogueRepo.getServiceByIdCrossPartition(parsed.data.serviceId);
   if (!service || !service.isActive) return { status: 404, jsonBody: { code: 'SERVICE_NOT_FOUND' } };

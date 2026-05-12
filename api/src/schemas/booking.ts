@@ -10,7 +10,10 @@ const BOOKING_STATUSES = [
 const PAYMENT_METHODS = ['RAZORPAY', 'CASH_ON_SERVICE'] as const;
 const CASH_COLLECTION_STATUSES = ['PENDING', 'COLLECTED'] as const;
 
-export const LatLngSchema = z.object({ lat: z.number(), lng: z.number() });
+export const LatLngSchema = z.object({
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+});
 export const PaymentMethodSchema = z.enum(PAYMENT_METHODS);
 export const CashCollectionStatusSchema = z.enum(CASH_COLLECTION_STATUSES);
 
