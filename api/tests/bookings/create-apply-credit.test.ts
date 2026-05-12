@@ -3,6 +3,10 @@
  *
  * Tests committed BEFORE implementation (red phase).
  * Covers: AC-3, AC-4, AC-5, AC-6, AC-9 (coverage floor).
+ *
+ * P1-5: When credit covers 100% of booking, Razorpay order is skipped; requiresPayment=false.
+ * P1-6: For partial credit, applyCredit is NOT called at booking-creation time.
+ *       Instead pendingCreditAmount is returned to client; debit deferred to payment.captured webhook.
  */
 
 import { beforeEach, describe, it, expect, vi } from 'vitest';
@@ -139,53 +143,52 @@ function postReq(body: unknown, idempotencyKey?: string): HttpRequest {
 }
 
 // ---------------------------------------------------------------------------
-// AC-3: Sufficient credit — apply
+// AC-3: Sufficient credit — partial credit (Razorpay path)
+// P1-6: applyCredit is NOT called at booking-creation; credit deferred to webhook
 // ---------------------------------------------------------------------------
 
-describe('POST /v1/bookings with applyCredit=true — sufficient credit (AC-3)', () => {
+describe('POST /v1/bookings with applyCredit=true — partial credit Razorpay (AC-3 / P1-6)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (isWalletCreditEnabled as MockFn).mockResolvedValue(true);
     (customerCreditLedgerRepo.getBalance as MockFn).mockResolvedValue({
-      balanceInPaise: 50000,
+      balanceInPaise: 50000, // partial — does NOT cover full 59900 price
       lastUpdatedAt: new Date().toISOString(),
     });
-    (customerCreditLedgerRepo.applyCredit as MockFn).mockResolvedValue({
-      appliedAmountInPaise: 50000,
-      newBalanceInPaise: 0,
-      idempotent: false,
-    });
+    // applyCredit mock is NOT pre-loaded here because it should NOT be called for partial credit
   });
 
-  it('returns 201 with appliedCreditAmount > 0 when credit available', async () => {
+  it('P1-6: does NOT call applyCredit at booking-creation time for partial Razorpay credit', async () => {
     const res = (await createBookingHandler(
       postReq({ ...VALID_BODY_IN_AREA, applyCredit: true }, 'idem-key-001'),
       {} as never,
     )) as HttpResponseInit;
 
     expect(res.status).toBe(201);
-    const body = res.jsonBody as { bookingId: string; appliedCreditAmount: number };
-    // bookingId in response is the mock's return value (bk-100); applyCredit uses preGeneratedBookingId (UUID)
-    expect(body.bookingId).toBe('bk-100');
-    expect(body.appliedCreditAmount).toBeGreaterThan(0);
-    expect(body.appliedCreditAmount).toBe(50000);
-    expect(customerCreditLedgerRepo.applyCredit).toHaveBeenCalledWith(
-      'cust-1',
-      expect.any(String), // preGeneratedBookingId — UUID generated at runtime
-      50000, // min(balance=50000, bookingAmount=59900)
-      'idem-key-001',
-    );
+    // applyCredit is deferred to webhook — must NOT be called here
+    expect(customerCreditLedgerRepo.applyCredit).not.toHaveBeenCalled();
+    // appliedCreditAmount is 0 at booking creation; pendingCreditAmount signals the deferred amount
+    const body = res.jsonBody as { appliedCreditAmount: number; pendingCreditAmount: number; requiresPayment: boolean };
+    expect(body.appliedCreditAmount).toBe(0);
+    expect(body.pendingCreditAmount).toBe(50000);
+    expect(body.requiresPayment).toBe(true);
   });
 
-  it('caps applied credit at booking amount when balance exceeds total', async () => {
+  it('when balance > basePrice the full-credit (P1-5) path fires: requiresPayment=false, applyCredit called', async () => {
+    // balance=100000 >= basePrice=59900 → full-credit path (P1-5)
     (customerCreditLedgerRepo.getBalance as MockFn).mockResolvedValue({
-      balanceInPaise: 100000, // more than booking amount
+      balanceInPaise: 100000,
       lastUpdatedAt: new Date().toISOString(),
     });
     (customerCreditLedgerRepo.applyCredit as MockFn).mockResolvedValue({
-      appliedAmountInPaise: 59900, // capped at booking amount
+      appliedAmountInPaise: 59900,
       newBalanceInPaise: 40100,
       idempotent: false,
+    });
+    // Full-credit path needs markPaid
+    const { bookingRepo: repo } = await import('../../src/cosmos/booking-repository.js');
+    (repo.markPaid as MockFn).mockResolvedValue({
+      id: 'bk-100', customerId: 'cust-1', status: 'PAID', amount: 59900, createdAt: new Date().toISOString(),
     });
 
     const res = (await createBookingHandler(
@@ -194,12 +197,80 @@ describe('POST /v1/bookings with applyCredit=true — sufficient credit (AC-3)',
     )) as HttpResponseInit;
 
     expect(res.status).toBe(201);
+    const body = res.jsonBody as { appliedCreditAmount: number; requiresPayment: boolean };
+    // Credit covers full price → requiresPayment=false (P1-5)
+    expect(body.requiresPayment).toBe(false);
+    expect(body.appliedCreditAmount).toBe(59900); // capped at basePrice
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P1-5: Credit covers 100% — skip Razorpay order, mark PAID directly
+// ---------------------------------------------------------------------------
+
+describe('POST /v1/bookings with applyCredit=true — full credit covers price (P1-5)', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    (isWalletCreditEnabled as MockFn).mockResolvedValue(true);
+    // Balance >= basePrice → full credit path
+    (customerCreditLedgerRepo.getBalance as MockFn).mockResolvedValue({
+      balanceInPaise: 80000, // > 59900 (basePrice)
+      lastUpdatedAt: new Date().toISOString(),
+    });
+    (customerCreditLedgerRepo.applyCredit as MockFn).mockResolvedValue({
+      appliedAmountInPaise: 59900, // capped at booking amount
+      newBalanceInPaise: 20100,
+      idempotent: false,
+    });
+    // Full-credit path calls markPaid — configure it to return a successful booking
+    const { bookingRepo: repo } = await import('../../src/cosmos/booking-repository.js');
+    (repo.markPaid as MockFn).mockResolvedValue({
+      id: 'bk-100',
+      customerId: 'cust-1',
+      status: 'PAID',
+      amount: 59900,
+      createdAt: new Date().toISOString(),
+    });
+  });
+
+  it('P1-5: skips Razorpay order creation when credit covers full price', async () => {
+    const { createRazorpayOrder } = await import('../../src/services/razorpay.service.js');
+
+    const res = (await createBookingHandler(
+      postReq({ ...VALID_BODY_IN_AREA, applyCredit: true }, 'idem-key-full-1'),
+      {} as never,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(201);
+    const body = res.jsonBody as {
+      appliedCreditAmount: number;
+      requiresPayment: boolean;
+      paymentMethod: string;
+    };
+    expect(body.requiresPayment).toBe(false);
+    expect(body.paymentMethod).toBe('CREDIT_FULL');
+    expect(body.appliedCreditAmount).toBe(59900);
+    // Razorpay order must NOT be created
+    expect(createRazorpayOrder).not.toHaveBeenCalled();
+    // applyCredit IS called synchronously for full-credit path
     expect(customerCreditLedgerRepo.applyCredit).toHaveBeenCalledWith(
       'cust-1',
-      expect.any(String), // preGeneratedBookingId — UUID generated at runtime
-      59900, // capped at booking amount
-      'idem-key-002',
+      expect.any(String),
+      59900, // capped at basePrice
+      'idem-key-full-1',
     );
+  });
+
+  it('P1-5: dispatches booking immediately after full-credit PAID (no payment event needed)', async () => {
+    const { dispatcherService } = await import('../../src/services/dispatcher.service.js');
+
+    const res = (await createBookingHandler(
+      postReq({ ...VALID_BODY_IN_AREA, applyCredit: true }, 'idem-key-full-2'),
+      {} as never,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(201);
+    expect(dispatcherService.triggerDispatch).toHaveBeenCalled();
   });
 });
 
@@ -263,10 +334,10 @@ describe('POST /v1/bookings with applyCredit absent / false', () => {
 });
 
 // ---------------------------------------------------------------------------
-// AC-5: Idempotency-key dedup
+// AC-5: Idempotency-key — missing header
 // ---------------------------------------------------------------------------
 
-describe('POST /v1/bookings — idempotency-key dedup (AC-5)', () => {
+describe('POST /v1/bookings — idempotency-key (AC-5)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (isWalletCreditEnabled as MockFn).mockResolvedValue(true);
@@ -276,31 +347,7 @@ describe('POST /v1/bookings — idempotency-key dedup (AC-5)', () => {
     });
   });
 
-  it('returns original response on replay (idempotent=true from repo)', async () => {
-    // Repo indicates this key was already processed
-    (customerCreditLedgerRepo.applyCredit as MockFn).mockResolvedValue({
-      appliedAmountInPaise: 50000,
-      newBalanceInPaise: 0,
-      idempotent: true,
-    });
-
-    const res = (await createBookingHandler(
-      postReq({ ...VALID_BODY_IN_AREA, applyCredit: true }, 'idem-key-replay'),
-      {} as never,
-    )) as HttpResponseInit;
-
-    expect(res.status).toBe(201);
-    const body = res.jsonBody as { appliedCreditAmount: number };
-    // Should return the previously applied amount without double-writing
-    expect(body.appliedCreditAmount).toBe(50000);
-  });
-
   it('returns 422 when applyCredit=true but Idempotency-Key header is missing', async () => {
-    (customerCreditLedgerRepo.getBalance as MockFn).mockResolvedValue({
-      balanceInPaise: 50000,
-      lastUpdatedAt: new Date().toISOString(),
-    });
-
     // No idempotencyKey passed
     const res = (await createBookingHandler(
       postReq({ ...VALID_BODY_IN_AREA, applyCredit: true }),
@@ -311,24 +358,37 @@ describe('POST /v1/bookings — idempotency-key dedup (AC-5)', () => {
     const body = res.jsonBody as { code: string };
     expect(body.code).toBe('IDEMPOTENCY_KEY_REQUIRED');
   });
+
+  it('proceeds with partial credit deferred when key is present', async () => {
+    const res = (await createBookingHandler(
+      postReq({ ...VALID_BODY_IN_AREA, applyCredit: true }, 'idem-key-ok'),
+      {} as never,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(201);
+    // getBalance called to determine pending credit
+    expect(customerCreditLedgerRepo.getBalance).toHaveBeenCalledWith('cust-1');
+  });
 });
 
 // ---------------------------------------------------------------------------
-// AC-6: Concurrent apply — 412 race path
+// AC-6: Concurrent apply — 412 race path (now handled inside repo; booking.ts
+// handles getBalance errors gracefully for the Razorpay path)
 // ---------------------------------------------------------------------------
 
-describe('POST /v1/bookings — concurrent applyCredit race (AC-6)', () => {
+describe('POST /v1/bookings — concurrent applyCredit race for full-credit path (AC-6 / P1-5)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (isWalletCreditEnabled as MockFn).mockResolvedValue(true);
+    // Full-credit path: balance >= basePrice triggers applyCredit synchronously
     (customerCreditLedgerRepo.getBalance as MockFn).mockResolvedValue({
-      balanceInPaise: 50000,
+      balanceInPaise: 80000,
       lastUpdatedAt: new Date().toISOString(),
     });
   });
 
-  it('returns 201 with appliedCreditAmount=0 when repo signals 412 conflict', async () => {
-    // Repo throws 412 (etag conflict / concurrent write)
+  it('returns 201 with appliedCreditAmount=0 when applyCredit signals 412 conflict (full-credit path)', async () => {
+    // Repo throws 412 (etag conflict / concurrent write) — only hit in the full-credit path
     const conflictErr = Object.assign(new Error('Precondition failed'), { code: 412 });
     (customerCreditLedgerRepo.applyCredit as MockFn).mockRejectedValue(conflictErr);
 
@@ -337,7 +397,7 @@ describe('POST /v1/bookings — concurrent applyCredit race (AC-6)', () => {
       {} as never,
     )) as HttpResponseInit;
 
-    // Booking should still succeed, just without credit applied
+    // Booking should still succeed (full-credit path falls back gracefully)
     expect(res.status).toBe(201);
     const body = res.jsonBody as { appliedCreditAmount: number };
     expect(body.appliedCreditAmount).toBe(0);

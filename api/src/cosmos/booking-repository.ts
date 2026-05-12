@@ -13,6 +13,17 @@ export interface BookingCreateMetadata {
   serviceName?: string;
 }
 
+export interface BookingCreateCreditOptions {
+  /**
+   * E13-S01 (P1-6): When set, the wallet credit debit is DEFERRED to the Razorpay webhook.
+   * Stored on the booking doc so the webhook can apply the credit after payment.captured.
+   * Not applicable to CASH_ON_SERVICE bookings (those apply credit synchronously).
+   */
+  pendingCreditAmountInPaise?: number;
+  /** Idempotency key for the deferred credit debit (required when pendingCreditAmountInPaise > 0). */
+  pendingCreditIdempotencyKey?: string;
+}
+
 export const bookingRepo = {
   async createPending(
     req: CreateBookingRequest,
@@ -21,6 +32,7 @@ export const bookingRepo = {
     amount: number,
     metadata: BookingCreateMetadata = {},
     bookingId?: string,
+    creditOptions?: BookingCreateCreditOptions,
   ): Promise<BookingDoc> {
     const paymentMethod = req.paymentMethod ?? 'RAZORPAY';
     const doc: BookingDoc = {
@@ -35,6 +47,13 @@ export const bookingRepo = {
       ...(paymentMethod === 'CASH_ON_SERVICE' ? { cashCollectionStatus: 'PENDING' as const } : {}),
       paymentId: null, paymentSignature: null,
       amount, createdAt: now(),
+      // E13-S01 (P1-6): Store pending credit info for deferred debit in webhook
+      ...(creditOptions?.pendingCreditAmountInPaise && creditOptions.pendingCreditAmountInPaise > 0
+        ? {
+            pendingCreditAmountInPaise: creditOptions.pendingCreditAmountInPaise,
+            pendingCreditIdempotencyKey: creditOptions.pendingCreditIdempotencyKey,
+          }
+        : {}),
     };
     const { resource } = await getBookingsContainer().items.create<BookingDoc>(doc);
     return resource!;

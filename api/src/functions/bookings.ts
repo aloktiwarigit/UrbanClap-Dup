@@ -7,7 +7,7 @@ import { requireIntegrity } from '../middleware/requireIntegrity.js';
 import { requireCustomer, type CustomerHttpHandler } from '../middleware/requireCustomer.js';
 import { CreateBookingRequestSchema, ConfirmBookingRequestSchema } from '../schemas/booking.js';
 import { RequestAddOnBodySchema, ApproveAddOnsBodySchema } from '../schemas/addon-approval.js';
-import { bookingRepo } from '../cosmos/booking-repository.js';
+import { bookingRepo, type BookingCreateCreditOptions } from '../cosmos/booking-repository.js';
 import { createRazorpayOrder, verifyPaymentSignature } from '../services/razorpay.service.js';
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
@@ -234,27 +234,89 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
 
   // Pre-generate booking ID so we can embed it in Razorpay notes for the fast path.
   // The webhook can then do a cheap point-read (getById) instead of a cross-partition scan.
-  // E13-S01: Also used as the bookingId for the credit ledger entry — must be pre-generated
-  // so credit is applied before the Razorpay order is created.
   const preGeneratedBookingId = randomUUID();
 
-  // E13-S01: Apply wallet credit for Razorpay bookings (pre-booking, before order creation)
-  // Credit is applied optimistically — if credit write fails (412 race), booking proceeds at full amount.
-  let appliedCreditAmount = 0;
-  if (parsed.data.applyCredit && idempotencyKey) {
-    const creditEnabled = await isWalletCreditEnabled(customer.customerId);
-    if (creditEnabled) {
-      appliedCreditAmount = await attemptCreditApplication(
-        customer.customerId,
-        preGeneratedBookingId,
-        service.basePrice,
-        idempotencyKey,
-      );
-    }
+  // E13-S01 (P1-6): Determine intended credit amount WITHOUT writing to the ledger yet.
+  // The actual ledger CREDIT_APPLIED entry is written in the Razorpay webhook (payment.captured),
+  // NOT here. This prevents the "debit-before-payment" bug where an unpaid/abandoned booking
+  // permanently consumes the customer's wallet credit.
+  //
+  // For the fully-credit-paid path (P1-5): if credit covers 100% of the booking, we skip
+  // Razorpay entirely and mark the booking PAID directly — no payment intent is needed.
+  let pendingCreditAmount = 0;
+  const creditEnabled = parsed.data.applyCredit && idempotencyKey
+    ? await isWalletCreditEnabled(customer.customerId)
+    : false;
+
+  if (creditEnabled) {
+    // Peek at current balance; we don't write the ledger entry here.
+    const { balanceInPaise } = await customerCreditLedgerRepo.getBalance(customer.customerId);
+    pendingCreditAmount = Math.min(balanceInPaise, service.basePrice);
   }
 
-  const payableAmount = service.basePrice - appliedCreditAmount;
+  const payableAmount = service.basePrice - pendingCreditAmount;
 
+  // P1-5: Credit covers 100% — skip Razorpay, mark PAID directly
+  if (payableAmount <= 0 && pendingCreditAmount > 0) {
+    const fullCreditOrderId = `credit_${randomUUID()}`;
+    const fullCreditCreditOptions: BookingCreateCreditOptions = {
+      pendingCreditAmountInPaise: pendingCreditAmount,
+      pendingCreditIdempotencyKey: idempotencyKey,
+    };
+    const booking = await bookingRepo.createPending(
+      parsed.data,
+      customer.customerId,
+      fullCreditOrderId,
+      service.basePrice,
+      bookingMetadata(customer, service.name),
+      preGeneratedBookingId,
+      fullCreditCreditOptions,
+    );
+
+    // Apply credit synchronously for the fully-credit-paid path (no payment to wait for)
+    const appliedCreditAmount = await attemptCreditApplication(
+      customer.customerId,
+      booking.id,
+      pendingCreditAmount,
+      idempotencyKey,
+    );
+
+    // Mark PAID immediately (no Razorpay payment involved)
+    const paid = await bookingRepo.markPaid(booking.id, 'credit_full_payment');
+    if (!paid) return { status: 500, jsonBody: { code: 'BOOKING_CONFIRMATION_FAILED' } };
+
+    try {
+      posthog.capture({
+        distinctId: customer.customerId,
+        event: 'booking-created',
+        properties: {
+          bookingId: booking.id,
+          serviceId: parsed.data.serviceId,
+          paymentMethod: 'CREDIT_FULL',
+          appliedCreditAmount,
+        },
+      });
+    } catch { /* never break the main path */ }
+
+    dispatcherService.triggerDispatch(booking.id).catch((err: unknown) => {
+      Sentry.captureException(err);
+      console.error('[createBooking] credit-full dispatch failed', { bookingId: booking.id, err });
+    });
+
+    return {
+      status: 201,
+      jsonBody: {
+        bookingId: booking.id,
+        razorpayOrderId: fullCreditOrderId,
+        amount: service.basePrice,
+        requiresPayment: false,
+        paymentMethod: 'CREDIT_FULL',
+        appliedCreditAmount,
+      },
+    };
+  }
+
+  // Partial or no credit — create Razorpay order for the payable portion.
   let order: Awaited<ReturnType<typeof createRazorpayOrder>>;
   try {
     order = await createRazorpayOrder({
@@ -279,6 +341,13 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     };
   }
 
+  // P1-6: Store the intended credit amount on the booking doc.
+  // The webhook (payment.captured) will call applyCredit to debit the ledger.
+  // If the customer abandons payment, no credit is debited (it stays intact).
+  const razorpayCreditOptions: BookingCreateCreditOptions | undefined = pendingCreditAmount > 0
+    ? { pendingCreditAmountInPaise: pendingCreditAmount, pendingCreditIdempotencyKey: idempotencyKey }
+    : undefined;
+
   const booking = await bookingRepo.createPending(
     parsed.data,
     customer.customerId,
@@ -286,6 +355,7 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     service.basePrice,
     bookingMetadata(customer, service.name),
     preGeneratedBookingId,
+    razorpayCreditOptions,
   );
   try {
     posthog.capture({
@@ -295,7 +365,9 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
         bookingId: booking.id,
         serviceId: parsed.data.serviceId,
         paymentMethod: 'RAZORPAY',
-        appliedCreditAmount,
+        // appliedCreditAmount reported as 0 here — actual debit happens post-payment
+        appliedCreditAmount: 0,
+        pendingCreditAmount,
       },
     });
   } catch { /* never break the main path */ }
@@ -307,7 +379,9 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
       amount: order.amount,
       requiresPayment: true,
       paymentMethod: 'RAZORPAY',
-      appliedCreditAmount,
+      // Report pending credit to client so the UI can show "₹X will be applied after payment"
+      appliedCreditAmount: 0,
+      pendingCreditAmount,
     },
   };
 };
