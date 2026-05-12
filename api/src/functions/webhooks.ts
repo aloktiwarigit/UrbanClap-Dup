@@ -4,6 +4,7 @@ import { type InvocationContext, app } from '@azure/functions';
 import * as Sentry from '@sentry/node';
 import { RazorpayWebhookPayloadSchema } from '../schemas/webhook.js';
 import { bookingRepo } from '../cosmos/booking-repository.js';
+import { customerCreditLedgerRepo } from '../cosmos/customer-credit-ledger-repository.js';
 import { dispatcherService } from '../services/dispatcher.service.js';
 import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
 import { getWebhookEventsContainer } from '../cosmos/client.js';
@@ -64,11 +65,62 @@ export const razorpayWebhookHandler: HttpHandler = async (req, _ctx) => {
   if (!updated) {
     return { status: 200, jsonBody: { received: true } };
   }
+
+  // E13-S01 (P1-6): Apply deferred wallet credit AFTER payment confirmation.
+  // The credit amount was stored on the booking doc at creation time to avoid the
+  // "debit-before-payment" bug. Now that payment is confirmed, debit the ledger.
+  // Non-fatal: if credit application fails, the booking is already PAID — log and continue.
+  if (
+    booking.pendingCreditAmountInPaise &&
+    booking.pendingCreditAmountInPaise > 0 &&
+    booking.pendingCreditIdempotencyKey
+  ) {
+    try {
+      await customerCreditLedgerRepo.applyCredit(
+        booking.customerId,
+        booking.id,
+        booking.pendingCreditAmountInPaise,
+        booking.pendingCreditIdempotencyKey,
+      );
+      const _creditTs = new Date().toISOString();
+      void appendAuditEntry({
+        id: randomUUID(),
+        adminId: 'system',
+        role: 'system',
+        action: 'WALLET_CREDIT_APPLIED_ON_PAYMENT',
+        resourceType: 'booking',
+        resourceId: booking.id,
+        payload: {
+          bookingId: booking.id,
+          creditAmountInPaise: booking.pendingCreditAmountInPaise,
+          idempotencyKey: booking.pendingCreditIdempotencyKey,
+        },
+        timestamp: _creditTs,
+        partitionKey: _creditTs.slice(0, 7),
+      }).catch(Sentry.captureException);
+    } catch (creditErr: unknown) {
+      // Credit application failure is non-fatal — booking is already PAID.
+      // The pending credit fields remain on the booking doc for manual reconciliation.
+      Sentry.captureException(creditErr);
+      console.error('[razorpayWebhook] deferred credit application failed', {
+        bookingId: booking.id,
+        pendingCreditAmountInPaise: booking.pendingCreditAmountInPaise,
+        idempotencyKey: booking.pendingCreditIdempotencyKey,
+        err: creditErr,
+      });
+    }
+  }
+
   try {
     posthog.capture({
       distinctId: booking.customerId,
       event: 'booking-paid',
-      properties: { bookingId: booking.id, paymentId, orderId },
+      properties: {
+        bookingId: booking.id,
+        paymentId,
+        orderId,
+        creditAppliedInPaise: booking.pendingCreditAmountInPaise ?? 0,
+      },
     });
   } catch { /* never break the webhook ack */ }
 

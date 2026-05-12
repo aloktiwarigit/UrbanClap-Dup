@@ -64,6 +64,18 @@ export const BookingDocSchema = z.object({
    * the booking's original createdAt (which may be >24h in the past for advance bookings).
    */
   pendingAddOnsUpdatedAt: z.string().optional(),
+  /**
+   * E13-S01 (P1-6): Wallet credit amount in paise that is PENDING debit for a Razorpay booking.
+   * Written at booking creation time (before Razorpay order); deducted from the ledger only
+   * after payment.captured is received from the Razorpay webhook. Absent = no credit pending.
+   * Once the webhook debits the credit, this field should be removed (or left as a historical record).
+   */
+  pendingCreditAmountInPaise: z.number().int().nonnegative().optional(),
+  /**
+   * E13-S01 (P1-6): Idempotency key for the pending credit debit above.
+   * Stored so the webhook can call applyCredit idempotently on re-delivery.
+   */
+  pendingCreditIdempotencyKey: z.string().optional(),
 });
 
 export const CreateBookingRequestSchema = z.object({
@@ -74,6 +86,13 @@ export const CreateBookingRequestSchema = z.object({
   addressText: z.string().min(1),
   addressLatLng: LatLngSchema,
   paymentMethod: PaymentMethodSchema.default('RAZORPAY'),
+  /**
+   * E13-S01: If true, the server will attempt to apply the customer's wallet
+   * credit balance against this booking's amount. The actual applied amount is
+   * returned as `appliedCreditAmount` in the response (may be 0 if no balance).
+   * Requires an `Idempotency-Key: <uuid>` header for replay protection.
+   */
+  applyCredit: z.boolean().optional().default(false),
 });
 
 export const ConfirmBookingRequestSchema = z.object({

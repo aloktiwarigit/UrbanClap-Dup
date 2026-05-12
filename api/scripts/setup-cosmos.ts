@@ -19,7 +19,14 @@ const containers = [
   { id: 'ssc_levies',        partitionKey: '/quarter',      ttl: undefined },
   // E07-S04: customer credit wallet for no-show compensation — partitioned by /id
   // (one document per bookingId, idempotency-safe via conflict on duplicate /id)
+  // NOTE (P1-1): this container is partitioned by /id, NOT /customerId.
+  // Balance queries must use cross-partition execution (see customer-credit-ledger-repository.ts).
+  // TODO: future migration to partition by /customerId for single-partition balance queries.
   { id: 'customer_credits',  partitionKey: '/id',           ttl: undefined },
+  // E13-S01 (P2-7): applied-credit idempotency dedup — 24h TTL per idempotency-key.
+  // Partitioned by /customerId so reads by (idempotencyKey, customerId) are single-partition.
+  // Container name: applied_credit_idempotency
+  { id: 'applied_credit_idempotency', partitionKey: '/customerId', ttl: 86400 },
 ] as const;
 
 async function main() {

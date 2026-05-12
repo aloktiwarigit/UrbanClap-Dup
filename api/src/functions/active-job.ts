@@ -8,6 +8,7 @@ import { bookingEventRepo } from '../cosmos/booking-event-repository.js';
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { haversine } from '../cosmos/geo.js';
 import { sendBookingStatusUpdatePush, sendLocationUpdatePush } from '../services/fcm.service.js';
+import type { BookingDoc as _BookingDoc } from '../schemas/booking.js';
 import { normalizeAddressText } from '../shared/address-text.js';
 
 const TRANSITION_ORDER = ['ASSIGNED', 'EN_ROUTE', 'REACHED', 'IN_PROGRESS', 'COMPLETED'] as const;

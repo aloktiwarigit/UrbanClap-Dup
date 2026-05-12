@@ -100,6 +100,25 @@ export function getPendingActionsContainer(): Container {
   return getCosmosClient().database(DB_NAME).container('pending_actions');
 }
 
+/**
+ * E13-S01: Customer credit ledger entries (issued / applied / refunded).
+ * Stored in the existing `customer_credits` container, partitioned by /customerId.
+ * No new container — the original `CustomerCreditDoc` records remain; we add
+ * new `CustomerCreditLedgerDoc` records alongside them with type='CREDIT_APPLIED'.
+ */
+export function getCustomerCreditLedgerContainer(): Container {
+  return getCosmosClient().database(DB_NAME).container('customer_credits');
+}
+
+/**
+ * E13-S01: Applied-credit idempotency dedup.
+ * Separate container so TTL can be set at the container level (86400 s = 24h).
+ * Partitioned by /customerId (same access pattern as credits).
+ */
+export function getAppliedCreditIdempotencyContainer(): Container {
+  return getCosmosClient().database(DB_NAME).container('applied_credit_idempotency');
+}
+
 /** Inject a mock CosmosClient in tests. */
 export function _setCosmosClientForTest(mock: CosmosClient): void {
   _client = mock;
