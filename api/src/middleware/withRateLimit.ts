@@ -48,7 +48,7 @@ export function withRateLimit(options: RateLimitOptions) {
       const isCustomExempt = options.exempt ? options.exempt(req) : false;
 
       if (isWebhookPath || isCustomExempt) {
-        return handler(req, ctx) as Promise<HttpResponseInit>;
+        return handler(req, ctx);
       }
 
       // ── Derive IP key ─────────────────────────────────────────────────────
@@ -70,7 +70,7 @@ export function withRateLimit(options: RateLimitOptions) {
           scope.setLevel('warning');
           Sentry.captureException(err);
         });
-        return handler(req, ctx) as Promise<HttpResponseInit>;
+        return handler(req, ctx);
       }
 
       if (!result.allowed) {
@@ -88,7 +88,7 @@ export function withRateLimit(options: RateLimitOptions) {
         };
       }
 
-      return handler(req, ctx) as Promise<HttpResponseInit>;
+      return handler(req, ctx);
     };
 
     // Return as T so the caller keeps the original handler type

@@ -178,6 +178,10 @@ export const bookingRepo = {
       ...existing,
       status: 'AWAITING_PRICE_APPROVAL',
       pendingAddOns: [...(existing.pendingAddOns ?? []), addOn],
+      // Stable anchor for the ADDON_APPROVAL_REQUESTED pending-action expiry.
+      // Written atomically with the status transition so the change-feed projector
+      // can derive 24h from the actual request time (not the booking createdAt).
+      pendingAddOnsUpdatedAt: new Date().toISOString(),
     };
     const { resource } = await getBookingsContainer().item(id, id).replace<BookingDoc>(updated);
     return resource!;
