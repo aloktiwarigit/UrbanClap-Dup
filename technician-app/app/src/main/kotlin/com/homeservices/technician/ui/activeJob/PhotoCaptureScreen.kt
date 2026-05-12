@@ -173,9 +173,13 @@ internal fun PhotoCaptureScreen(
 
             Button(
                 onClick = {
+                    // filesDir (not cacheDir): the OS may evict cacheDir under storage
+                    // pressure between capture and the user tapping "Confirm & Upload",
+                    // losing the evidence photo. JobPhotoRepositoryImpl.uploadPhoto deletes
+                    // the file after a successful upload to keep filesDir from growing.
                     val file =
                         File(
-                            context.cacheDir,
+                            context.filesDir,
                             "photo_${stage}_${System.currentTimeMillis()}.jpg",
                         )
                     imageCapture.takePicture(
