@@ -59,14 +59,25 @@ public class JobOfferFullScreenActivity : ComponentActivity() {
             val amount = intent.getLongExtra(EXTRA_AMOUNT_PAISE, Long.MIN_VALUE)
             val distance = intent.getDoubleExtra(EXTRA_DISTANCE_KM, Double.NaN)
             val expiresAt = intent.getLongExtra(EXTRA_EXPIRES_AT_MS, Long.MIN_VALUE)
-            if (amount == Long.MIN_VALUE || distance.isNaN() || expiresAt == Long.MIN_VALUE) return null
+            val bookingId = intent.getStringExtra(EXTRA_BOOKING_ID)
+            val serviceId = intent.getStringExtra(EXTRA_SERVICE_ID)
+            val serviceName = intent.getStringExtra(EXTRA_SERVICE_NAME)
+            val addressText = intent.getStringExtra(EXTRA_ADDRESS_TEXT)
+            val slotDate = intent.getStringExtra(EXTRA_SLOT_DATE)
+            val slotWindow = intent.getStringExtra(EXTRA_SLOT_WINDOW)
+            if (amount == Long.MIN_VALUE || distance.isNaN() || expiresAt == Long.MIN_VALUE ||
+                bookingId == null || serviceId == null || serviceName == null ||
+                addressText == null || slotDate == null || slotWindow == null
+            ) {
+                return null
+            }
             return JobOffer(
-                bookingId = intent.getStringExtra(EXTRA_BOOKING_ID) ?: return null,
-                serviceId = intent.getStringExtra(EXTRA_SERVICE_ID) ?: return null,
-                serviceName = intent.getStringExtra(EXTRA_SERVICE_NAME) ?: return null,
-                addressText = intent.getStringExtra(EXTRA_ADDRESS_TEXT) ?: return null,
-                slotDate = intent.getStringExtra(EXTRA_SLOT_DATE) ?: return null,
-                slotWindow = intent.getStringExtra(EXTRA_SLOT_WINDOW) ?: return null,
+                bookingId = bookingId,
+                serviceId = serviceId,
+                serviceName = serviceName,
+                addressText = addressText,
+                slotDate = slotDate,
+                slotWindow = slotWindow,
                 amountPaise = amount,
                 distanceKm = distance,
                 expiresAtMs = expiresAt,

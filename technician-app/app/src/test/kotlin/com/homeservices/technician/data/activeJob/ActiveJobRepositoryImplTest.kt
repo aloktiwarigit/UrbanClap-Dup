@@ -211,7 +211,7 @@ public class ActiveJobRepositoryImplTest {
         }
 
     @Test
-    public fun `transitionStatus 2xx success with null body — returns failure WITHOUT writing to outbox`(): Unit =
+    public fun `transitionStatus 2xx null body fails without outbox write`(): Unit =
         runTest {
             // Server contract violation: 2xx response with empty body. Pre-fix this NPE'd inside
             // the try block, was caught, and incorrectly enqueued a PendingTransitionEntity —

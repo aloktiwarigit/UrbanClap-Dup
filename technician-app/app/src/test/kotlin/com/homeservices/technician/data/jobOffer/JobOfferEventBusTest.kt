@@ -35,7 +35,7 @@ public class JobOfferEventBusTest {
         }
 
     @Test
-    public fun `clearing current offer removes replayed notification payload`(): Unit =
+    public fun `clearCurrentOffer wipes replayed payload`(): Unit =
         runTest {
             val eventBus = JobOfferEventBus()
             eventBus.tryEmit(offer())
