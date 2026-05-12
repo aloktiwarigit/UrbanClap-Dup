@@ -23,10 +23,14 @@ package com.homeservices.corenav
  * Karnataka dispatch isolation invariant (ADR-0006/0011) is not affected by this module.
  */
 public object TierLadder {
-
     private val T2_TECH_STATUSES = setOf("ASSIGNED", "EN_ROUTE", "REACHED", "IN_PROGRESS")
     private const val T2_CUSTOMER_PRICE_APPROVAL = "AWAITING_PRICE_APPROVAL"
     private val T1_BLOCKING_KYC = setOf("NOT_STARTED", "INCOMPLETE")
+
+    // Named tier constants — avoids MagicNumber detekt violation in tierOf()
+    private const val HIGH_TIER = 3
+    private const val NORMAL_TIER = 2
+    private const val LOW_TIER = 1
 
     /**
      * Resolve the initial route for the given [RouteContext].
@@ -34,6 +38,7 @@ public object TierLadder {
      * Returns a [CommonRouteSpec] value. Per-app [RouteResolver] implementations
      * map these to concrete Compose navigation routes.
      */
+    @Suppress("ReturnCount") // guard-clause pattern: each early return is a distinct priority tier
     public fun resolve(ctx: RouteContext): CommonRouteSpec {
         // T0: Authentication gate — overrides everything
         if (ctx.authState !is AuthState.Authenticated) {
@@ -53,9 +58,10 @@ public object TierLadder {
             }
         }
         if (ctx.role == "customer") {
-            val priceApproval = ctx.customerActiveBookings.firstOrNull {
-                it.status == T2_CUSTOMER_PRICE_APPROVAL
-            }
+            val priceApproval =
+                ctx.customerActiveBookings.firstOrNull {
+                    it.status == T2_CUSTOMER_PRICE_APPROVAL
+                }
             if (priceApproval != null) {
                 return CommonRouteSpec.CustomerPriceApproval(priceApproval.bookingId)
             }
@@ -64,8 +70,9 @@ public object TierLadder {
         // T3–T5: Pending action tier routing
         val activeActions = ctx.activeActions.filter { it.status == PendingActionStatus.ACTIVE }
 
-        val highestAction = activeActions
-            .maxWithOrNull(actionTierComparator())
+        val highestAction =
+            activeActions
+                .maxWithOrNull(actionTierComparator())
 
         if (highestAction != null) {
             return routeForAction(highestAction, ctx.role)
@@ -89,6 +96,7 @@ public object TierLadder {
      *
      * Returns the comparator in descending order so `maxWithOrNull` picks the winner.
      */
+    @Suppress("ReturnCount") // guard-clause pattern: each early return is an independent sort dimension
     private fun actionTierComparator(): Comparator<PendingAction> =
         Comparator { a, b ->
             // 1. Priority (HIGH wins)
@@ -110,9 +118,9 @@ public object TierLadder {
     /** Higher return value = higher priority. */
     private fun tierOf(action: PendingAction): Int =
         when (action.priority) {
-            PendingActionPriority.HIGH -> 3
-            PendingActionPriority.NORMAL -> 2
-            PendingActionPriority.LOW -> 1
+            PendingActionPriority.HIGH -> HIGH_TIER
+            PendingActionPriority.NORMAL -> NORMAL_TIER
+            PendingActionPriority.LOW -> LOW_TIER
         }
 
     /**
@@ -120,12 +128,15 @@ public object TierLadder {
      * Returns positive if [a] should win (expires sooner), negative if [b] should win.
      * Non-null expires sooner than null (null = no expiry = less urgent).
      */
-    private fun compareExpiry(a: Long?, b: Long?): Int =
+    private fun compareExpiry(
+        a: Long?,
+        b: Long?,
+    ): Int =
         when {
             a == null && b == null -> 0
-            a == null -> -1  // b expires sooner → b wins; a loses
-            b == null -> 1   // a expires sooner → a wins
-            else -> b.compareTo(a)  // smaller expiresAt = expires sooner = wins
+            a == null -> -1 // b expires sooner → b wins; a loses
+            b == null -> 1 // a expires sooner → a wins
+            else -> b.compareTo(a) // smaller expiresAt = expires sooner = wins
         }
 
     /**
@@ -133,7 +144,10 @@ public object TierLadder {
      * For HIGH-priority JOB_OFFER → TechnicianJobOffer; everything else falls through
      * to the default dashboard for the role.
      */
-    private fun routeForAction(action: PendingAction, role: String): CommonRouteSpec =
+    private fun routeForAction(
+        action: PendingAction,
+        role: String,
+    ): CommonRouteSpec =
         when {
             action.priority == PendingActionPriority.HIGH &&
                 action.type == PendingActionType.JOB_OFFER ->

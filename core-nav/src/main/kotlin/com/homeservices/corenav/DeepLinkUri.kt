@@ -18,7 +18,6 @@ import java.net.URLEncoder
  * All arg values are URL-encoded to handle special characters (spaces, &, =, unicode).
  */
 public object DeepLinkUri {
-
     private const val SCHEME = "homeservices"
     private const val HOST = "action"
     private const val ENTITY_ID_KEY = "entityId"
@@ -50,6 +49,7 @@ public object DeepLinkUri {
      * - The path segment does not match any [PendingActionType] value
      * - The `entityId` query parameter is missing or empty
      */
+    @Suppress("ReturnCount") // guard-clause pattern: each early return handles a distinct malformed-URI case
     public fun parse(uri: String): NotificationIntent? {
         if (uri.isBlank()) return null
         return try {
@@ -97,7 +97,6 @@ public object DeepLinkUri {
                 val key = decode(pair.substring(0, idx))
                 val value = decode(pair.substring(idx + 1))
                 key to value
-            }
-            .toMap()
+            }.toMap()
     }
 }

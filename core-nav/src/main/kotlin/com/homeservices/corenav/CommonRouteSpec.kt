@@ -23,7 +23,9 @@ public sealed class CommonRouteSpec : RouteSpec {
     // ── Technician routes ─────────────────────────────────────────────────────
 
     /** T2: technician has an active job in one of the live-ops statuses. */
-    public data class TechnicianActiveJob(public val bookingId: String) : CommonRouteSpec() {
+    public data class TechnicianActiveJob(
+        public val bookingId: String,
+    ) : CommonRouteSpec() {
         override val name: String get() = "TechnicianActiveJob"
     }
 
@@ -33,14 +35,18 @@ public sealed class CommonRouteSpec : RouteSpec {
     }
 
     /** T3: technician has an unresolved HIGH-priority JOB_OFFER. */
-    public data class TechnicianJobOffer(public val offerId: String) : CommonRouteSpec() {
+    public data class TechnicianJobOffer(
+        public val offerId: String,
+    ) : CommonRouteSpec() {
         override val name: String get() = "TechnicianJobOffer"
     }
 
     // ── Customer routes ───────────────────────────────────────────────────────
 
     /** T2: customer has a booking AWAITING_PRICE_APPROVAL. */
-    public data class CustomerPriceApproval(public val bookingId: String) : CommonRouteSpec() {
+    public data class CustomerPriceApproval(
+        public val bookingId: String,
+    ) : CommonRouteSpec() {
         override val name: String get() = "CustomerPriceApproval"
     }
 
