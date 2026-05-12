@@ -23,22 +23,20 @@ public object PendingActionsModule {
     @Singleton
     public fun providePendingActionsDatabase(
         @ApplicationContext context: Context,
-    ): PendingActionsDatabase =
-        Room
-            .databaseBuilder(
-                context,
-                PendingActionsDatabase::class.java,
-                "pending_actions.db",
-            )
-            .build()
+    ): PendingActionsDatabase {
+        val builder = Room.databaseBuilder(
+            context,
+            PendingActionsDatabase::class.java,
+            "pending_actions.db",
+        )
+        return builder.build()
+    }
 
     @Provides
     @Singleton
-    public fun providePendingActionDao(database: PendingActionsDatabase): PendingActionDao =
-        database.pendingActionDao()
+    public fun providePendingActionDao(database: PendingActionsDatabase): PendingActionDao = database.pendingActionDao()
 
     @Provides
     @Singleton
-    public fun providePendingActionStore(dao: PendingActionDao): PendingActionStore =
-        PendingActionStore(dao)
+    public fun providePendingActionStore(dao: PendingActionDao): PendingActionStore = PendingActionStore(dao)
 }

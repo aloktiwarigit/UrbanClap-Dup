@@ -8,25 +8,23 @@ import com.homeservices.technician.data.pendingaction.db.PendingActionDao
 import com.homeservices.technician.data.pendingaction.db.PendingActionEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import javax.inject.Inject
 
 /**
  * Local persistence abstraction for pending actions — technician-app.
  * Mirrors the customer-app [com.homeservices.customer.data.pendingaction.PendingActionStore].
  *
+ * Provided by [com.homeservices.technician.data.pendingaction.di.PendingActionsModule].
  * detekt: deliberate facade over store + DAO; splitting would invert call sites unnecessarily
  */
 @Suppress("TooManyFunctions")
-public class PendingActionStore
-@Inject
-constructor(
+public class PendingActionStore(
     private val dao: PendingActionDao,
 ) {
-    public fun observeActive(userId: String): Flow<List<PendingAction>> =
-        dao.observeActive(userId).map { entities -> entities.map { it.toDomain() } }
+    public fun observeActive(userId: String): Flow<List<PendingAction>> {
+        return dao.observeActive(userId).map { entities -> entities.map { it.toDomain() } }
+    }
 
-    public suspend fun findById(id: String): PendingAction? =
-        dao.findById(id)?.toDomain()
+    public suspend fun findById(id: String): PendingAction? = dao.findById(id)?.toDomain()
 
     public suspend fun upsertAll(actions: List<PendingAction>) {
         dao.upsertAll(actions.map { it.toEntity() })
@@ -44,7 +42,10 @@ constructor(
         dao.markMissingAsResolved(userId = userId, keep = keepIds, now = now)
     }
 
-    public suspend fun markResolved(id: String, now: Long) {
+    public suspend fun markResolved(
+        id: String,
+        now: Long,
+    ) {
         dao.markResolved(id = id, now = now)
     }
 

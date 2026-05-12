@@ -8,7 +8,6 @@ import com.homeservices.customer.data.pendingaction.db.PendingActionDao
 import com.homeservices.customer.data.pendingaction.db.PendingActionEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import javax.inject.Inject
 
 /**
  * Local persistence abstraction for pending actions — customer-app.
@@ -19,23 +18,22 @@ import javax.inject.Inject
  * This class has no network calls and no Android framework dependencies beyond Room.
  * All public methods are [suspend] to allow callers to run them on any dispatcher.
  *
+ * Provided by [com.homeservices.customer.data.pendingaction.di.PendingActionsModule].
  * detekt: deliberate facade over store + DAO; splitting would invert call sites unnecessarily
  */
 @Suppress("TooManyFunctions")
-public class PendingActionStore
-@Inject
-constructor(
+public class PendingActionStore(
     private val dao: PendingActionDao,
 ) {
     // ── Reads ─────────────────────────────────────────────────────────────────
 
     /** Observe ACTIVE pending actions for [userId] as a reactive Flow. */
-    public fun observeActive(userId: String): Flow<List<PendingAction>> =
-        dao.observeActive(userId).map { entities -> entities.map { it.toDomain() } }
+    public fun observeActive(userId: String): Flow<List<PendingAction>> {
+        return dao.observeActive(userId).map { entities -> entities.map { it.toDomain() } }
+    }
 
     /** Find a single pending action by its deterministic [id]. Returns null if absent. */
-    public suspend fun findById(id: String): PendingAction? =
-        dao.findById(id)?.toDomain()
+    public suspend fun findById(id: String): PendingAction? = dao.findById(id)?.toDomain()
 
     // ── Writes ────────────────────────────────────────────────────────────────
 
@@ -65,7 +63,10 @@ constructor(
      * Mark a specific action as resolved (e.g. on FCM "action_resolved" receipt).
      * Sets status = RESOLVED and resolvedAt = [now].
      */
-    public suspend fun markResolved(id: String, now: Long) {
+    public suspend fun markResolved(
+        id: String,
+        now: Long,
+    ) {
         dao.markResolved(id = id, now = now)
     }
 
