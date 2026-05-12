@@ -256,6 +256,8 @@ internal fun PhotoCaptureScreen(
                     Text("Upload failed: $uploadError", color = Color.White)
                     Button(onClick = onRetry) { Text("Retry Upload") }
                     TextButton(onClick = {
+                        // Delete the abandoned filesDir capture so it doesn't accumulate.
+                        capturedPath?.let { runCatching { File(it).delete() } }
                         capturedPath = null
                         onRetake()
                     }) {
@@ -272,7 +274,11 @@ internal fun PhotoCaptureScreen(
                             .padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    OutlinedButton(onClick = { capturedPath = null }) {
+                    OutlinedButton(onClick = {
+                        // Delete the abandoned filesDir capture so it doesn't accumulate.
+                        capturedPath?.let { runCatching { File(it).delete() } }
+                        capturedPath = null
+                    }) {
                         Text("Retake", color = Color.White)
                     }
                     Button(
