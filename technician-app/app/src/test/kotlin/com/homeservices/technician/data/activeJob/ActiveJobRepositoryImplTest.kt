@@ -211,6 +211,23 @@ public class ActiveJobRepositoryImplTest {
         }
 
     @Test
+    public fun `transitionStatus 2xx null body fails without outbox write`(): Unit =
+        runTest {
+            // Server contract violation: 2xx response with empty body. Pre-fix this NPE'd inside
+            // the try block, was caught, and incorrectly enqueued a PendingTransitionEntity —
+            // corrupting the offline outbox and triggering duplicate-replay storms.
+            val emptyBodyResponse = mockk<Response<ActiveJobResponse>>()
+            every { emptyBodyResponse.isSuccessful } returns true
+            every { emptyBodyResponse.body() } returns null
+            coEvery { api.transitionStatus(any(), any(), any(), any()) } returns emptyBodyResponse
+
+            val result = repo.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE)
+
+            assertThat(result.isFailure).isTrue()
+            coVerify(exactly = 0) { dao.insert(any()) }
+        }
+
+    @Test
     public fun `transitionStatus no authenticated user — returns failure`(): Unit =
         runTest {
             every { firebaseAuth.currentUser } returns null
