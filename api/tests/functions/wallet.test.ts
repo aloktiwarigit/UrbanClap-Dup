@@ -67,7 +67,7 @@ describe('GET /v1/wallet/balance', () => {
     });
   });
 
-  it('AC-1a: returns 200 with balanceInPaise and lastUpdatedAt for auth'd customer', async () => {
+  it('AC-1a: returns 200 with balanceInPaise and lastUpdatedAt for authed customer', async () => {
     const res = (await getWalletBalanceHandler(
       makeGetReq('http://localhost/api/v1/wallet/balance'),
       {} as never,

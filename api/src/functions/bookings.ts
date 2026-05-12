@@ -13,7 +13,8 @@ import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
 import { sendPriceApprovalPush } from '../services/fcm.service.js';
 import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
-import { isSoftLaunchEnabled, isMarketingPaused, isServiceAreaGatingEnabled } from '../services/featureFlags.service.js';
+import { isSoftLaunchEnabled, isMarketingPaused, isServiceAreaGatingEnabled, isWalletCreditEnabled } from '../services/featureFlags.service.js';
+import { customerCreditLedgerRepo } from '../cosmos/customer-credit-ledger-repository.js';
 import { dispatcherService } from '../services/dispatcher.service.js';
 import { posthog } from '../observability/posthog.js';
 import { normalizeAddressText } from '../shared/address-text.js';
@@ -47,6 +48,54 @@ function bookingMetadata(
   };
 }
 
+/**
+ * E13-S01: Attempt to apply wallet credit for a booking.
+ *
+ * Returns the applied amount (0 if none, or on any non-fatal error).
+ * 412 from Cosmos (etag conflict = concurrent apply) is treated as zero-credit:
+ * the booking still succeeds, credit just wasn't applied this time.
+ *
+ * @param customerId     - customer's UID
+ * @param bookingId      - pre-generated or created booking ID (used in ledger entry)
+ * @param bookingAmount  - booking total in paise (credit capped at this)
+ * @param idempotencyKey - UUID from Idempotency-Key header (caller must validate present)
+ */
+async function attemptCreditApplication(
+  customerId: string,
+  bookingId: string,
+  bookingAmount: number,
+  idempotencyKey: string,
+): Promise<number> {
+  try {
+    const { balanceInPaise } = await customerCreditLedgerRepo.getBalance(customerId);
+    if (balanceInPaise <= 0) return 0;
+
+    const amountToApply = Math.min(balanceInPaise, bookingAmount);
+    const result = await customerCreditLedgerRepo.applyCredit(
+      customerId,
+      bookingId,
+      amountToApply,
+      idempotencyKey,
+    );
+    return result.appliedAmountInPaise;
+  } catch (err: unknown) {
+    const code = (err as { code?: number }).code;
+    if (code === 412) {
+      // Optimistic concurrency conflict — concurrent write, safe to return 0
+      console.warn('[createBooking] applyCredit 412 conflict — proceeding without credit', {
+        customerId, bookingId,
+      });
+      return 0;
+    }
+    // Non-412 unexpected errors — log and continue (never block the booking)
+    Sentry.captureException(err);
+    console.error('[createBooking] applyCredit unexpected error — proceeding without credit', {
+      customerId, bookingId, err,
+    });
+    return 0;
+  }
+}
+
 const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
   if (!(await isSoftLaunchEnabled(customer.customerId))) {
     return { status: 503, jsonBody: { code: 'SERVICE_UNAVAILABLE', message: 'Launch coming soon' } };
@@ -58,6 +107,15 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
   const body = await req.json().catch(() => null);
   const parsed = CreateBookingRequestSchema.safeParse(body);
   if (!parsed.success) return { status: 422, jsonBody: { code: 'VALIDATION_ERROR', issues: parsed.error.issues } };
+
+  // E13-S01: Validate Idempotency-Key is present when applyCredit=true
+  const idempotencyKey = req.headers.get('idempotency-key') ?? '';
+  if (parsed.data.applyCredit) {
+    const creditEnabled = await isWalletCreditEnabled(customer.customerId);
+    if (creditEnabled && !idempotencyKey) {
+      return { status: 422, jsonBody: { code: 'IDEMPOTENCY_KEY_REQUIRED', message: 'Idempotency-Key header is required when applyCredit=true' } };
+    }
+  }
 
   // Service-area polygon gating — E16-S01 / ADR-0020 / Threat-model T-B1
   // Zod already guarantees lat ∈ [-90,90] and lng ∈ [-180,180]; this is the
@@ -101,11 +159,31 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     );
     const paid = await bookingRepo.markPaid(booking.id, 'cash_on_service_pending');
     if (!paid) return { status: 500, jsonBody: { code: 'BOOKING_CONFIRMATION_FAILED' } };
+
+    // E13-S01: Apply wallet credit for cash bookings
+    let appliedCreditAmount = 0;
+    if (parsed.data.applyCredit && idempotencyKey) {
+      const creditEnabled = await isWalletCreditEnabled(customer.customerId);
+      if (creditEnabled) {
+        appliedCreditAmount = await attemptCreditApplication(
+          customer.customerId,
+          booking.id,
+          service.basePrice,
+          idempotencyKey,
+        );
+      }
+    }
+
     try {
       posthog.capture({
         distinctId: customer.customerId,
         event: 'booking-created',
-        properties: { bookingId: booking.id, serviceId: parsed.data.serviceId, paymentMethod: 'CASH_ON_SERVICE' },
+        properties: {
+          bookingId: booking.id,
+          serviceId: parsed.data.serviceId,
+          paymentMethod: 'CASH_ON_SERVICE',
+          appliedCreditAmount,
+        },
       });
     } catch { /* never break the main path */ }
     dispatcherService.triggerDispatch(booking.id).catch((err: unknown) => {
@@ -120,6 +198,7 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
         amount: service.basePrice,
         requiresPayment: false,
         paymentMethod: 'CASH_ON_SERVICE',
+        appliedCreditAmount,
       },
     };
   }
@@ -148,18 +227,38 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
         amount: service.basePrice,
         requiresPayment: false,
         paymentMethod: 'CASH_ON_SERVICE',
+        appliedCreditAmount: 0,
       },
     };
   }
 
   // Pre-generate booking ID so we can embed it in Razorpay notes for the fast path.
   // The webhook can then do a cheap point-read (getById) instead of a cross-partition scan.
+  // E13-S01: Also used as the bookingId for the credit ledger entry — must be pre-generated
+  // so credit is applied before the Razorpay order is created.
   const preGeneratedBookingId = randomUUID();
+
+  // E13-S01: Apply wallet credit for Razorpay bookings (pre-booking, before order creation)
+  // Credit is applied optimistically — if credit write fails (412 race), booking proceeds at full amount.
+  let appliedCreditAmount = 0;
+  if (parsed.data.applyCredit && idempotencyKey) {
+    const creditEnabled = await isWalletCreditEnabled(customer.customerId);
+    if (creditEnabled) {
+      appliedCreditAmount = await attemptCreditApplication(
+        customer.customerId,
+        preGeneratedBookingId,
+        service.basePrice,
+        idempotencyKey,
+      );
+    }
+  }
+
+  const payableAmount = service.basePrice - appliedCreditAmount;
 
   let order: Awaited<ReturnType<typeof createRazorpayOrder>>;
   try {
     order = await createRazorpayOrder({
-      amount: service.basePrice,
+      amount: payableAmount > 0 ? payableAmount : service.basePrice,
       currency: 'INR',
       receipt: makeRazorpayReceipt(customer.customerId),
       notes: { bookingId: preGeneratedBookingId },
@@ -192,10 +291,25 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     posthog.capture({
       distinctId: customer.customerId,
       event: 'booking-created',
-      properties: { bookingId: booking.id, serviceId: parsed.data.serviceId, paymentMethod: 'RAZORPAY' },
+      properties: {
+        bookingId: booking.id,
+        serviceId: parsed.data.serviceId,
+        paymentMethod: 'RAZORPAY',
+        appliedCreditAmount,
+      },
     });
   } catch { /* never break the main path */ }
-  return { status: 201, jsonBody: { bookingId: booking.id, razorpayOrderId: order.id, amount: order.amount, requiresPayment: true, paymentMethod: 'RAZORPAY' } };
+  return {
+    status: 201,
+    jsonBody: {
+      bookingId: booking.id,
+      razorpayOrderId: order.id,
+      amount: order.amount,
+      requiresPayment: true,
+      paymentMethod: 'RAZORPAY',
+      appliedCreditAmount,
+    },
+  };
 };
 
 const confirmHandler: CustomerHttpHandler = async (req, _ctx, customer) => {

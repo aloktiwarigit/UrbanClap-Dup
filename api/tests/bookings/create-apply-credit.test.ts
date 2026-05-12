@@ -165,12 +165,13 @@ describe('POST /v1/bookings with applyCredit=true — sufficient credit (AC-3)',
 
     expect(res.status).toBe(201);
     const body = res.jsonBody as { bookingId: string; appliedCreditAmount: number };
+    // bookingId in response is the mock's return value (bk-100); applyCredit uses preGeneratedBookingId (UUID)
     expect(body.bookingId).toBe('bk-100');
     expect(body.appliedCreditAmount).toBeGreaterThan(0);
     expect(body.appliedCreditAmount).toBe(50000);
     expect(customerCreditLedgerRepo.applyCredit).toHaveBeenCalledWith(
       'cust-1',
-      'bk-100',
+      expect.any(String), // preGeneratedBookingId — UUID generated at runtime
       50000, // min(balance=50000, bookingAmount=59900)
       'idem-key-001',
     );
@@ -195,7 +196,7 @@ describe('POST /v1/bookings with applyCredit=true — sufficient credit (AC-3)',
     expect(res.status).toBe(201);
     expect(customerCreditLedgerRepo.applyCredit).toHaveBeenCalledWith(
       'cust-1',
-      'bk-100',
+      expect.any(String), // preGeneratedBookingId — UUID generated at runtime
       59900, // capped at booking amount
       'idem-key-002',
     );
