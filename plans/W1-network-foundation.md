@@ -81,11 +81,31 @@ Migration is "done" when this test goes from red on Tier-1 ApiServices to green 
 
 WS-A is sequential and lands first. WS-B subagents depend on WS-A's committed state.
 
-### Task A1: Snapshot current state, confirm worktree
+### Task A1: Rebase onto latest origin/main + snapshot current state
 
-**Files:** None (read-only).
+**Files:** None (read-only + rebase).
 
-- [ ] **Step 1: Verify worktree + branch**
+- [ ] **Step 1: Fetch + rebase onto latest origin/main**
+
+PR #205 (W3-3D Photo + FCM hygiene) merged to main on 2026-05-12 and touched three files that overlap with WS-B2's surface area:
+- `technician-app/app/src/main/kotlin/com/homeservices/technician/data/photo/JobPhotoRepositoryImpl.kt` (added `deleteLocalPhoto()` method)
+- `technician-app/app/src/main/kotlin/com/homeservices/technician/domain/photo/JobPhotoRepository.kt` (added `deleteLocalPhoto` interface method)
+- `technician-app/app/src/main/kotlin/com/homeservices/technician/domain/photo/UploadJobPhotoUseCase.kt`
+
+PR #205's changes do NOT overlap with W1's planned modifications (W1 only touches the `getIdToken` callsite + the `recordPhoto` API call signature in `JobPhotoRepositoryImpl.kt`; PR #205 added an unrelated cleanup method). But they share files. Rebase brings the new surface into the branch before WS-B2 dispatches; if a textual conflict surfaces, the new `deleteLocalPhoto()` method MUST be preserved — only the `getIdToken` block changes per W1's spec.
+
+Run:
+```bash
+cd "C:/Alok/Business Projects/Urbanclap-dup-w1"
+git fetch origin main
+git rebase origin/main
+git log --oneline origin/main..HEAD
+```
+Expected: rebase completes cleanly OR with conflicts ONLY in unrelated files (the spec + plan markdown won't conflict). If the rebase reports `Successfully rebased`, the two W1 commits (`cbededca` + `b09b382b`) now sit on top of the latest main. The `git log` should show 2 commits ahead of `origin/main`.
+
+If conflicts surface in any technician-app file, resolve preserving PR #205's additions; only Tier-1 code changes are W1's territory.
+
+- [ ] **Step 2: Verify worktree + branch state**
 
 Run:
 ```bash
@@ -93,9 +113,9 @@ cd "C:/Alok/Business Projects/Urbanclap-dup-w1"
 git status
 git rev-parse --abbrev-ref HEAD
 ```
-Expected: clean working tree on branch `feat/w1-network-foundation`, ahead of `origin/feat/w1-network-foundation` by 1 commit (the spec commit `cbededca`).
+Expected: clean working tree on branch `feat/w1-network-foundation`.
 
-- [ ] **Step 2: Confirm baseline build is green before any edits**
+- [ ] **Step 3: Confirm baseline build is green before any edits**
 
 Run:
 ```bash
@@ -104,7 +124,7 @@ cd "C:/Alok/Business Projects/Urbanclap-dup-w1/technician-app"
 ```
 Expected: `BUILD SUCCESSFUL`.
 
-If this fails, STOP — there is a pre-existing issue on `feat/w1-network-foundation` (which was branched from `origin/main` at `da1269bf`). Investigate before continuing.
+If this fails, STOP — there is a pre-existing issue on the rebased branch tip. Investigate before continuing.
 
 ---
 
@@ -329,17 +349,37 @@ public class AuthInterceptorCoverageTest {
         }
 
     /**
-     * Reflectively invokes the first suspend method declared on the ApiService interface
-     * with default-value args. This is enough to exercise the OkHttp interceptor chain
-     * — we are NOT testing the method's response handling.
+     * Reflectively invokes a deterministically-chosen HTTP-annotated method on the
+     * ApiService interface. JVM `declaredMethods` ordering is undefined and varies by
+     * JVM version, so we:
+     *
+     *   1. Filter for methods that carry a Retrofit HTTP-verb annotation (@GET, @POST,
+     *      @PATCH, @PUT, @DELETE, @HEAD, @OPTIONS) — these are the only methods that
+     *      will actually emit an HTTP request through the interceptor.
+     *   2. Sort by method name to make selection deterministic across JVM versions.
+     *   3. Pick the first.
+     *
+     * This is enough to exercise the OkHttp interceptor chain — we are NOT testing the
+     * method's response handling, just that the Authorization header lands on the wire.
      */
     private fun <T : Any> invokeFirstMethod(
         api: T,
         apiClass: KClass<T>,
     ) {
-        val method = apiClass.java.declaredMethods.first { m ->
-            m.name != "equals" && m.name != "hashCode" && m.name != "toString"
-        }
+        val httpAnnotations = setOf(
+            retrofit2.http.GET::class.java,
+            retrofit2.http.POST::class.java,
+            retrofit2.http.PATCH::class.java,
+            retrofit2.http.PUT::class.java,
+            retrofit2.http.DELETE::class.java,
+            retrofit2.http.HEAD::class.java,
+            retrofit2.http.OPTIONS::class.java,
+        )
+        val method = apiClass.java.declaredMethods
+            .filter { m -> m.annotations.any { it.annotationClass.java in httpAnnotations } }
+            .sortedBy { it.name }
+            .firstOrNull()
+            ?: error("ApiService ${apiClass.simpleName} has no HTTP-annotated methods")
         val args =
             method.parameterTypes.map { type ->
                 when (type) {
@@ -1473,16 +1513,30 @@ If nothing changed: do not create an empty commit. Report "WS-B4: no stragglers 
 
 After all 4 subagents report done, the parent session verifies the consolidated state.
 
-- [ ] **Step 1: Inspect commit graph**
+- [ ] **Step 1: Precondition — verify ALL 4 WS-B stream commits exist**
+
+```bash
+cd "C:/Alok/Business Projects/Urbanclap-dup-w1"
+git log --oneline origin/main..HEAD --grep='W1-B' --extended-regexp
+```
+Expected: at least 3 commits (B1, B2, B3) — B4 may be absent if no stragglers existed (legitimate per WS-B4.3). Verify each expected tag appears in the commit-message grep:
+
+```bash
+git log --oneline origin/main..HEAD | grep -E 'W1-B1|W1-B2|W1-B3'
+```
+Expected: 3 matching lines.
+
+If any of B1/B2/B3 is missing, STOP and investigate the corresponding subagent's report — do NOT proceed to step 2 with an incomplete merge. (Re-dispatching the missing subagent is the correct recovery.)
+
+- [ ] **Step 2: Inspect full commit graph**
 
 Run:
 ```bash
-cd "C:/Alok/Business Projects/Urbanclap-dup-w1"
 git log --oneline origin/main..HEAD
 ```
-Expected: WS-A commit + B1 + B2 + B3 + (B4 if non-empty). 4 or 5 commits ahead of `origin/main`.
+Expected: 4 or 5 commits — WS-A + B1 + B2 + B3 + (optionally) B4.
 
-- [ ] **Step 2: Run AuthInterceptorCoverageTest — must be FULLY green now**
+- [ ] **Step 3: Run AuthInterceptorCoverageTest — must be FULLY green now**
 
 Run:
 ```bash
@@ -1491,7 +1545,7 @@ cd "C:/Alok/Business Projects/Urbanclap-dup-w1/technician-app"
 ```
 Expected: 12 dynamic tests, ALL PASS.
 
-- [ ] **Step 3: Full unit-test sweep**
+- [ ] **Step 4: Full unit-test sweep**
 
 Run:
 ```bash
@@ -1499,7 +1553,7 @@ Run:
 ```
 Expected: `BUILD SUCCESSFUL`.
 
-- [ ] **Step 4: DoD grep checks**
+- [ ] **Step 5: DoD grep checks**
 
 Run:
 ```bash
@@ -2035,9 +2089,11 @@ Expected: pushes 4–5 commits to `origin/feat/w1-network-foundation`. CI fires;
 
 ---
 
-### Task E3: Codex review + /security-review (parallel)
+### Task E3: Codex review + /security-review (parallel, max 2 Codex rounds)
 
-- [ ] **Step 1: Codex review**
+**Round budget:** Codex CLI is open as of 2026-05-12. Hard cap at 2 Codex rounds — if round 2 still surfaces P0/P1, push and let CI gate it (do not iterate beyond round 2). Per `~/.claude/memory/feedback_cross_model_review.md`. Recent PR #205 used 2 rounds and Codex caught real correctness bugs each round, so 2 is a real budget, not theoretical.
+
+- [ ] **Step 1: Codex review round 1**
 
 In a terminal:
 ```bash
@@ -2045,24 +2101,28 @@ cd "C:/Alok/Business Projects/Urbanclap-dup-w1"
 codex review --base main
 ```
 
-- [ ] **Step 2: /security-review (parallel)**
+- [ ] **Step 2: /security-review (parallel with round 1)**
 
 In Claude Code, in the same session:
 ```
 /security-review
 ```
 
-Both surface findings into the session. The Codex output is the authoritative gate per project CLAUDE.md.
+Both surface findings into the session. Codex output is the authoritative gate per project CLAUDE.md.
 
 ---
 
-### Task E4: Address findings (if any)
+### Task E4: Address findings (if any) — at most ONE re-run
 
-If Codex or `/security-review` flag P0 / P1:
+If round 1 (Codex or `/security-review`) flagged P0 / P1:
 
-- [ ] Fix in this session (Opus for synthesis, Sonnet for edits).
+- [ ] Fix in this session (Opus for synthesis if findings are contradictory, Sonnet for routine edits).
 - [ ] Re-run `tools/pre-codex-smoke.sh technician-app`.
-- [ ] Re-run `codex review --base main` ONCE. If it still surfaces P0/P1, stop and surface to user for direction (do not loop indefinitely).
+- [ ] Codex review round 2: `codex review --base main`.
+
+**If round 2 STILL surfaces P0/P1:** stop iterating. Push the branch, let CI gate, and surface to user for direction. Do NOT run Codex round 3.
+
+**If round 2 clean:** proceed to Task E5 (PR open).
 
 Acceptable Codex P2 / P3 findings: address inline if quick (<10 min), defer to a follow-up issue if not.
 
