@@ -41,6 +41,8 @@ import {
   rawReplacePendingAction,
 } from '../../src/cosmos/pending-action-repository.js';
 
+import { getFirebaseAdmin } from '../../src/services/firebaseAdmin.js';
+
 import type { PendingActionDoc } from '../../src/schemas/pendingActions.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -281,5 +283,215 @@ describe('FCM strict ordering', () => {
   it('emitFcmForAction with technician role also resolves', async () => {
     const doc = makeDoc({ role: 'technician' });
     await expect(emitFcmForAction(doc, 'dispatch_attempts')).resolves.not.toThrow();
+  });
+
+  it('emitFcmForAction swallows Error thrown by FCM send (err instanceof Error branch)', async () => {
+    // Override the FCM send mock to throw an Error instance
+    vi.mocked(getFirebaseAdmin).mockReturnValue({
+      messaging: () => ({
+        send: vi.fn().mockRejectedValue(new Error('FCM_QUOTA_EXCEEDED')),
+      }),
+    } as never);
+
+    const doc = makeDoc({ role: 'customer', payload: { bookingId: 'b-1' } });
+    // Must NOT throw — the catch block swallows FCM errors
+    await expect(emitFcmForAction(doc, 'bookings')).resolves.toBeUndefined();
+  });
+
+  it('emitFcmForAction swallows non-Error thrown by FCM send (String(err) branch)', async () => {
+    // Override to throw a non-Error string (covers the String(err) branch of the catch)
+    vi.mocked(getFirebaseAdmin).mockReturnValue({
+      messaging: () => ({
+        send: vi.fn().mockRejectedValue('network-timeout'),
+      }),
+    } as never);
+
+    const doc = makeDoc({ role: 'technician' });
+    await expect(emitFcmForAction(doc, 'dispatch_attempts')).resolves.toBeUndefined();
+  });
+
+  it('emitFcmForAction omits payload key in FCM data when doc.payload is undefined', async () => {
+    // Covers the `doc.payload ? { payload: ... } : {}` false branch (no payload spread)
+    const sendMock = vi.fn().mockResolvedValue('msg-id');
+    vi.mocked(getFirebaseAdmin).mockReturnValue({
+      messaging: () => ({ send: sendMock }),
+    } as never);
+
+    const doc = makeDoc({ payload: undefined });
+    await emitFcmForAction(doc, 'bookings');
+
+    expect(sendMock).toHaveBeenCalledOnce();
+    const callArg = sendMock.mock.calls[0]![0] as { data: Record<string, unknown> };
+    expect(callArg.data).not.toHaveProperty('payload');
+  });
+});
+
+describe('isSemanticNoOp — early-exit branches', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('is NOT a no-op when existing status is RESOLVED (status !== ACTIVE branch)', async () => {
+    // existing has status=RESOLVED → isSemanticNoOp returns false immediately → real write happens
+    const existing = makeDoc({ status: 'RESOLVED', version: 1, payload: { bookingId: 'b-1' } });
+    vi.mocked(getPendingActionById).mockResolvedValue(existing);
+    vi.mocked(rawReplacePendingAction).mockResolvedValue({
+      ...existing,
+      status: 'ACTIVE', // upsert can re-activate
+      version: 2,
+    });
+
+    const result = await upsertAction({
+      id: existing.id,
+      userId: existing.userId,
+      type: existing.type,
+      role: existing.role,
+      sourceId: existing.sourceId,
+      expiresAt: existing.expiresAt,
+      priority: existing.priority,
+      payload: { bookingId: 'b-1' },
+    });
+
+    expect(rawReplacePendingAction).toHaveBeenCalledOnce();
+    expect(result.noOp).toBe(false);
+  });
+
+  it('is NOT a no-op when type changes (type !== input.type branch)', async () => {
+    const existing = makeDoc({ type: 'ADDON_APPROVAL_REQUESTED', status: 'ACTIVE', version: 2, payload: { bookingId: 'b-1' } });
+    vi.mocked(getPendingActionById).mockResolvedValue(existing);
+    vi.mocked(rawReplacePendingAction).mockResolvedValue({
+      ...existing,
+      type: 'RATING_PROMPT_CUSTOMER',
+      version: 3,
+    });
+
+    const result = await upsertAction({
+      id: existing.id,
+      userId: existing.userId,
+      type: 'RATING_PROMPT_CUSTOMER', // changed
+      role: existing.role,
+      sourceId: existing.sourceId,
+      expiresAt: existing.expiresAt,
+      priority: existing.priority,
+      payload: { bookingId: 'b-1' },
+    });
+
+    expect(rawReplacePendingAction).toHaveBeenCalledOnce();
+    expect(result.noOp).toBe(false);
+  });
+
+  it('is NOT a no-op when expiresAt changes (expiresAt !== input.expiresAt branch)', async () => {
+    const existing = makeDoc({ status: 'ACTIVE', version: 1, payload: { bookingId: 'b-1' } });
+    vi.mocked(getPendingActionById).mockResolvedValue(existing);
+    const newExpiry = new Date(Date.now() + 7_200_000).toISOString();
+    vi.mocked(rawReplacePendingAction).mockResolvedValue({
+      ...existing,
+      expiresAt: newExpiry,
+      version: 2,
+    });
+
+    const result = await upsertAction({
+      id: existing.id,
+      userId: existing.userId,
+      type: existing.type,
+      role: existing.role,
+      sourceId: existing.sourceId,
+      expiresAt: newExpiry, // changed
+      priority: existing.priority,
+      payload: { bookingId: 'b-1' },
+    });
+
+    expect(rawReplacePendingAction).toHaveBeenCalledOnce();
+    expect(result.noOp).toBe(false);
+  });
+
+  it('is NOT a no-op when priority changes (priority !== input.priority branch)', async () => {
+    const existing = makeDoc({ status: 'ACTIVE', priority: 5, version: 1, payload: { bookingId: 'b-1' } });
+    vi.mocked(getPendingActionById).mockResolvedValue(existing);
+    vi.mocked(rawReplacePendingAction).mockResolvedValue({
+      ...existing,
+      priority: 1,
+      version: 2,
+    });
+
+    const result = await upsertAction({
+      id: existing.id,
+      userId: existing.userId,
+      type: existing.type,
+      role: existing.role,
+      sourceId: existing.sourceId,
+      expiresAt: existing.expiresAt,
+      priority: 1, // changed
+      payload: { bookingId: 'b-1' },
+    });
+
+    expect(rawReplacePendingAction).toHaveBeenCalledOnce();
+    expect(result.noOp).toBe(false);
+  });
+
+  it('treats missing payload on both sides as equal (payload ?? {} branch)', async () => {
+    // Both existing.payload and input.payload are absent → JSON.stringify({}) === JSON.stringify({}) → noOp
+    const existing = makeDoc({ status: 'ACTIVE', version: 2 });
+    // Remove payload to simulate absent field (makeDoc sets payload by default)
+    const existingWithoutPayload = { ...existing } as typeof existing & { payload?: Record<string, unknown> };
+    delete existingWithoutPayload.payload;
+    vi.mocked(getPendingActionById).mockResolvedValue(existingWithoutPayload);
+
+    const result = await upsertAction({
+      id: existingWithoutPayload.id,
+      userId: existingWithoutPayload.userId,
+      type: existingWithoutPayload.type,
+      role: existingWithoutPayload.role,
+      sourceId: existingWithoutPayload.sourceId,
+      expiresAt: existingWithoutPayload.expiresAt,
+      priority: existingWithoutPayload.priority,
+      // No payload key → same as existing having no payload → noOp
+    });
+
+    expect(rawReplacePendingAction).not.toHaveBeenCalled();
+    expect(result.noOp).toBe(true);
+  });
+});
+
+describe('_transitionStatus — ETag fallback and retry exhaustion', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('falls back to empty etag string when _etag is undefined on resolveAction', async () => {
+    // existing has no _etag field → existing._etag ?? '' should fall back to ''
+    const existing = makeDoc({ status: 'ACTIVE', version: 1 });
+    delete (existing as Record<string, unknown>)['_etag']; // strip the _etag field
+
+    vi.mocked(getPendingActionById).mockResolvedValue(existing);
+    vi.mocked(rawReplacePendingAction).mockResolvedValue({
+      ...existing,
+      status: 'RESOLVED',
+      version: 2,
+    });
+
+    await resolveAction(existing.id, existing.userId);
+
+    // Verify rawReplace was called with '' as the etag
+    const [, etag] = vi.mocked(rawReplacePendingAction).mock.calls[0]!;
+    expect(etag).toBe('');
+  });
+
+  it('throws after 3 failed 412 retries in _transitionStatus (resolveAction)', async () => {
+    const existing = makeDoc({ status: 'ACTIVE', version: 0 });
+    vi.mocked(getPendingActionById).mockResolvedValue(existing);
+    vi.mocked(rawReplacePendingAction).mockResolvedValue(null); // always 412
+
+    await expect(resolveAction(existing.id, existing.userId)).rejects.toThrow(/max retries exhausted/i);
+    expect(rawReplacePendingAction).toHaveBeenCalledTimes(3);
+  });
+
+  it('throws after 3 failed 412 retries in _transitionStatus (expireAction)', async () => {
+    const existing = makeDoc({ status: 'ACTIVE', version: 0 });
+    vi.mocked(getPendingActionById).mockResolvedValue(existing);
+    vi.mocked(rawReplacePendingAction).mockResolvedValue(null); // always 412
+
+    await expect(expireAction(existing.id, existing.userId)).rejects.toThrow(/max retries exhausted/i);
+    expect(rawReplacePendingAction).toHaveBeenCalledTimes(3);
   });
 });
