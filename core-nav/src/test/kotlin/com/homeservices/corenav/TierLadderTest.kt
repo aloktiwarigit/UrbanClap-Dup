@@ -61,7 +61,7 @@ public class TierLadderTest {
     // ── T0 Gate ───────────────────────────────────────────────────────────────
 
     @Nested
-    inner class T0GateTests {
+    public inner class T0GateTests {
 
         @Test
         public fun `unauthenticated returns AuthRoute`() {
@@ -85,7 +85,7 @@ public class TierLadderTest {
     // ── T1 Blocking ───────────────────────────────────────────────────────────
 
     @Nested
-    inner class T1BlockingTests {
+    public inner class T1BlockingTests {
 
         @Test
         public fun `tech KYC NOT_STARTED returns KycRoute`() {
@@ -163,7 +163,7 @@ public class TierLadderTest {
     // ── T2 Live Ops ───────────────────────────────────────────────────────────
 
     @Nested
-    inner class T2LiveOpsTests {
+    public inner class T2LiveOpsTests {
 
         @Test
         public fun `tech ASSIGNED status routes to ActiveJob`() {
@@ -241,7 +241,7 @@ public class TierLadderTest {
     // ── T3 High Action ────────────────────────────────────────────────────────
 
     @Nested
-    inner class T3HighActionTests {
+    public inner class T3HighActionTests {
 
         @Test
         public fun `HIGH priority JOB_OFFER routes to TechnicianJobOffer`() {
@@ -286,7 +286,7 @@ public class TierLadderTest {
     // ── T4 Normal Action ──────────────────────────────────────────────────────
 
     @Nested
-    inner class T4NormalActionTests {
+    public inner class T4NormalActionTests {
 
         @Test
         public fun `KYC_RESUME (NORMAL priority) routes to KycResume`() {
@@ -325,7 +325,7 @@ public class TierLadderTest {
     // ── T5 Low Action ─────────────────────────────────────────────────────────
 
     @Nested
-    inner class T5LowActionTests {
+    public inner class T5LowActionTests {
 
         @Test
         public fun `RATING_PROMPT_TECHNICIAN (LOW) routes to dashboard`() {
@@ -363,7 +363,7 @@ public class TierLadderTest {
     // ── T6 Default ────────────────────────────────────────────────────────────
 
     @Nested
-    inner class T6DefaultTests {
+    public inner class T6DefaultTests {
 
         @Test
         public fun `authenticated customer with no actions returns CustomerHome`() {
@@ -387,7 +387,7 @@ public class TierLadderTest {
     // ── Tie-break Tests ───────────────────────────────────────────────────────
 
     @Nested
-    inner class TieBreakTests {
+    public inner class TieBreakTests {
 
         @Test
         public fun `among same tier tie-breaks by earliest expiresAt`() {
@@ -517,7 +517,7 @@ public class TierLadderTest {
     // ── RESOLVED / EXPIRED Actions Ignored ───────────────────────────────────
 
     @Nested
-    inner class ResolvedExpiredFilterTests {
+    public inner class ResolvedExpiredFilterTests {
 
         @Test
         public fun `RESOLVED actions are ignored`() {

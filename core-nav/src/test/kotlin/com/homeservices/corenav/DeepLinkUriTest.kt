@@ -25,7 +25,7 @@ public class DeepLinkUriTest {
     // ── Build → Parse round-trips ─────────────────────────────────────────────
 
     @Nested
-    inner class RoundTripTests {
+    public inner class RoundTripTests {
 
         @Test
         public fun `simple intent with no args round-trips`() {
@@ -83,7 +83,7 @@ public class DeepLinkUriTest {
     // ── URL Encoding ──────────────────────────────────────────────────────────
 
     @Nested
-    inner class UrlEncodingTests {
+    public inner class UrlEncodingTests {
 
         @Test
         public fun `arg value with spaces round-trips via percent encoding`() {
@@ -141,7 +141,7 @@ public class DeepLinkUriTest {
     // ── URI Schema Validation ─────────────────────────────────────────────────
 
     @Nested
-    inner class SchemaValidationTests {
+    public inner class SchemaValidationTests {
 
         @Test
         public fun `built URI starts with homeservices scheme`() {
@@ -159,7 +159,7 @@ public class DeepLinkUriTest {
     // ── Parse Error Handling ──────────────────────────────────────────────────
 
     @Nested
-    inner class ParseErrorTests {
+    public inner class ParseErrorTests {
 
         @Test
         public fun `parse returns null for completely malformed URI`() {
