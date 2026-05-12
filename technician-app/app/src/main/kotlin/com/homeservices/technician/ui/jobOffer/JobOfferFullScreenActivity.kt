@@ -55,6 +55,7 @@ public class JobOfferFullScreenActivity : ComponentActivity() {
                 .putExtra(EXTRA_DISTANCE_KM, offer.distanceKm)
                 .putExtra(EXTRA_EXPIRES_AT_MS, offer.expiresAtMs)
 
+        @Suppress("ComplexCondition")
         internal fun offerFromIntent(intent: Intent): JobOffer? {
             val amount = intent.getLongExtra(EXTRA_AMOUNT_PAISE, Long.MIN_VALUE)
             val distance = intent.getDoubleExtra(EXTRA_DISTANCE_KM, Double.NaN)
@@ -65,9 +66,15 @@ public class JobOfferFullScreenActivity : ComponentActivity() {
             val addressText = intent.getStringExtra(EXTRA_ADDRESS_TEXT)
             val slotDate = intent.getStringExtra(EXTRA_SLOT_DATE)
             val slotWindow = intent.getStringExtra(EXTRA_SLOT_WINDOW)
-            if (amount == Long.MIN_VALUE || distance.isNaN() || expiresAt == Long.MIN_VALUE ||
-                bookingId == null || serviceId == null || serviceName == null ||
-                addressText == null || slotDate == null || slotWindow == null
+            if (amount == Long.MIN_VALUE ||
+                distance.isNaN() ||
+                expiresAt == Long.MIN_VALUE ||
+                bookingId == null ||
+                serviceId == null ||
+                serviceName == null ||
+                addressText == null ||
+                slotDate == null ||
+                slotWindow == null
             ) {
                 return null
             }
