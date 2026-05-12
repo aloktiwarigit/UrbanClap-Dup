@@ -96,6 +96,10 @@ export function getSystemContainer(): Container {
   return getCosmosClient().database(DB_NAME).container('system');
 }
 
+export function getPendingActionsContainer(): Container {
+  return getCosmosClient().database(DB_NAME).container('pending_actions');
+}
+
 /** Inject a mock CosmosClient in tests. */
 export function _setCosmosClientForTest(mock: CosmosClient): void {
   _client = mock;

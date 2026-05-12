@@ -55,6 +55,47 @@ rules:
     languages: [typescript]
     severity: ERROR
 
+  # E11-S02 — FCM ordering invariant for pending-action projectors.
+  #
+  # In any trigger-projector-*.ts file, sendFcm (emitFcmForAction) MUST be
+  # called AFTER upsertAction. This rule catches the inverted call order:
+  # emitFcmForAction(...) appearing BEFORE upsertAction(...) in the same
+  # function body.
+  #
+  # The correct pattern is:
+  #   const { doc } = await upsertAction(...);
+  #   await emitFcmForAction(doc, ...);   // <-- always second
+  #
+  # References: E11 spec §S02, docs/stories/E11-S02-backend-pending-actions.md
+  - id: pending-action-fcm-ordering
+    patterns:
+      - pattern: |
+          async function $FUNC(...) {
+            ...
+            await emitFcmForAction(...);
+            ...
+            await upsertAction(...);
+            ...
+          }
+      - pattern-not: |
+          async function $FUNC(...) {
+            ...
+            await upsertAction(...);
+            ...
+            await emitFcmForAction(...);
+            ...
+          }
+    paths:
+      include:
+        - "api/src/functions/trigger-projector-*.ts"
+    message: |
+      FCM send MUST happen after upsertAction in projector files (E11-S02 ordering invariant).
+      emitFcmForAction() is called before upsertAction() in $FUNC.
+      Fix: await upsertAction(...) first, then await emitFcmForAction(...).
+      See: docs/stories/E11-S02-backend-pending-actions.md
+    languages: [typescript]
+    severity: ERROR
+
   - id: audit-log-immutable
     pattern-either:
       - pattern: $X.container("audit_log").items.upsert(...)

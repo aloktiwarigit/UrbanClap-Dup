@@ -271,7 +271,7 @@ export async function getTechnicianCandidatesForBooking(
   return candidates
     .map((tech) => {
       const distanceKm = haversine(lat, lng, tech.location.coordinates[1], tech.location.coordinates[0]);
-      return { tech: tech as TechnicianProfile & Record<string, unknown>, distanceKm };
+      return { tech: tech, distanceKm };
     })
     .filter(({ tech, distanceKm }) =>
       distanceKm <= radiusKm &&
