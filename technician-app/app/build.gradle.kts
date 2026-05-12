@@ -115,6 +115,7 @@ plugins {
     alias(libs.plugins.kover)
     alias(libs.plugins.android.junit5)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -547,6 +548,16 @@ kover {
                     // Pattern covers all generated adapter names: ClassNameJsonAdapter.
                     "*.*JsonAdapter",
                     "*.*JsonAdapter\$*",
+                    // PendingActionsModule — Hilt @Provides wiring for Room database construction (E11-S01a)
+                    "*.data.pendingaction.di.*",
+                    // PendingActionsDatabase — Room database singleton; generated _Impl has no unit-testable logic
+                    "*.PendingActionsDatabase",
+                    "*.PendingActionsDatabase\$*",
+                    // Room KSP-generated DAO/DB implementation classes (anonymous Runnable/Callable on Room executor)
+                    "*.PendingActionsDatabase_Impl",
+                    "*.PendingActionsDatabase_Impl\$*",
+                    "*.PendingActionDao_Impl",
+                    "*.PendingActionDao_Impl\$*",
                 )
             }
         }
@@ -577,6 +588,8 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.compose.material.icons.extended)
     implementation(libs.homeservices.design.system)
+    implementation(libs.homeservices.core.nav)
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
