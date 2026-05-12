@@ -43,11 +43,37 @@ const ACTIVE_STATUSES = new Set([
   'ASSIGNED', 'EN_ROUTE', 'REACHED', 'IN_PROGRESS', 'AWAITING_PRICE_APPROVAL',
 ]);
 
-const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // UTC+5:30 in milliseconds
 
 function getIndiaToday(): string {
   const shifted = new Date(Date.now() + IST_OFFSET_MS);
   return shifted.toISOString().slice(0, 10);
+}
+
+/**
+ * Compute UTC bounds for a calendar date expressed in IST (UTC+5:30).
+ *
+ * Problem with naive UTC bounds: `YYYY-MM-DDT00:00:00Z` = 05:30 IST, so ratings
+ * submitted between 00:00–05:29 IST are omitted and ratings from early next-day UTC
+ * are incorrectly included.
+ *
+ * Correct bounds:
+ *   IST midnight = UTC 00:00 − 5h30m = previous UTC day at 18:30:00.
+ *   IST next midnight = UTC next-day at 18:30:00.
+ *
+ * @param istDate  YYYY-MM-DD string representing the date in IST (from getIndiaToday())
+ * @returns { start, end } as UTC ISO strings covering the full IST calendar day.
+ */
+export function istMidnightUtcBounds(istDate: string): { start: string; end: string } {
+  // Parse the IST date parts to avoid locale-sensitive Date parsing.
+  const [year, month, day] = istDate.split('-').map(Number) as [number, number, number];
+  // Construct the IST midnight as a UTC Date by subtracting IST offset.
+  // new Date(Date.UTC(y, m-1, d)) = YYYY-MM-DDT00:00:00.000Z (UTC midnight)
+  // IST midnight = that UTC time minus 5h30m
+  const istMidnightUtcMs = Date.UTC(year, month - 1, day) - IST_OFFSET_MS;
+  const start = new Date(istMidnightUtcMs).toISOString();
+  const end   = new Date(istMidnightUtcMs + 24 * 60 * 60 * 1_000).toISOString();
+  return { start, end };
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
@@ -126,8 +152,10 @@ async function fetchTodayRatings(
 ): Promise<{ count: number; average: number | null }> {
   try {
     const db = getCosmosClient().database(DB_NAME);
-    const todayStart = new Date(`${todayDate}T00:00:00.000Z`).toISOString();
-    const todayEnd = new Date(`${todayDate}T23:59:59.999Z`).toISOString();
+    // Use IST-aligned UTC bounds so ratings submitted between 00:00–05:29 IST
+    // (which fall on the previous UTC date) are correctly included, and early
+    // next-day UTC ratings are correctly excluded. See istMidnightUtcBounds().
+    const { start: todayStart, end: todayEnd } = istMidnightUtcBounds(todayDate);
 
     const { resources } = await db
       .container('ratings')

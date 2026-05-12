@@ -54,6 +54,13 @@ export const BookingDocSchema = z.object({
   sosActivatedAt: z.string().optional(),
   /** ISO timestamp written after sendOwnerSosAlert() succeeds. Absent = alert pending retry. */
   sosAlertSentAt: z.string().optional(),
+  /**
+   * ISO timestamp written atomically when the booking transitions to AWAITING_PRICE_APPROVAL
+   * (i.e. when the technician requests an add-on). Used by the bookings change-feed projector
+   * to anchor the ADDON_APPROVAL_REQUESTED expiresAt from the actual request time, not from
+   * the booking's original createdAt (which may be >24h in the past for advance bookings).
+   */
+  pendingAddOnsUpdatedAt: z.string().optional(),
 });
 
 export const CreateBookingRequestSchema = z.object({

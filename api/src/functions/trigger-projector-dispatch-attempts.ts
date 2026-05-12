@@ -61,13 +61,21 @@ export async function processDispatchAttemptChangeFeedDoc(
       }),
     );
   } else if (status === 'EXPIRED' || status === 'ACCEPTED') {
-    // Expire JOB_OFFER for all technicians in this attempt
+    // Expire JOB_OFFER for all technicians in this attempt.
+    // Retryable Cosmos errors (429, 503 etc.) from expireAction are rethrown so the
+    // Azure Functions runtime retries the batch and the change-feed checkpoint does NOT
+    // advance — preventing a stale JOB_OFFER from staying ACTIVE indefinitely.
+    // Non-retryable errors (404, 409) are swallowed (action may already be expired).
     await Promise.all(
       technicianIds.map(async (technicianId) => {
         const actionId = buildPendingActionId('JOB_OFFER', technicianId, attemptId);
         try {
           await expireAction(actionId, technicianId);
         } catch (err) {
+          if (isRetryableCosmosError(err)) {
+            // Propagate up — the outer handler rethrows so the runtime retries.
+            throw err;
+          }
           ctx?.warn(`[trigger-projector-dispatch-attempts] Could not expire JOB_OFFER for tech ${technicianId}: ${String(err)}`);
         }
       }),

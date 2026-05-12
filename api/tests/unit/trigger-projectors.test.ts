@@ -172,16 +172,17 @@ describe('trigger-projector-ratings', () => {
   });
 });
 
-// ── KYC adapter ───────────────────────────────────────────────────────────────
+// ── KYC adapter (technicians container) ───────────────────────────────────────
 
 describe('trigger-projector-kyc', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it('emits KYC_RESUME when KYC status is PENDING_MANUAL', async () => {
+  it('emits KYC_RESUME when doc.kyc.kycStatus is PENDING_MANUAL (technician doc shape)', async () => {
+    // The KYC projector now receives TechnicianDoc change events (kyc is a nested object).
+    // The userId is doc.id (the technicianId in the technicians container).
     const doc = {
-      id: 'kyc-1',
-      technicianId: 'tech-3',
-      kycStatus: 'PENDING_MANUAL',
+      id: 'tech-3',
+      kyc: { kycStatus: 'PENDING_MANUAL', updatedAt: '2026-05-10T10:00:00.000Z' },
     };
 
     await processKycChangeFeedDoc(doc as never);
@@ -195,8 +196,8 @@ describe('trigger-projector-kyc', () => {
     );
   });
 
-  it('does not emit KYC_RESUME when KYC is already COMPLETE', async () => {
-    const doc = { id: 'kyc-2', technicianId: 'tech-4', kycStatus: 'COMPLETE' };
+  it('does not emit KYC_RESUME when doc.kyc.kycStatus is COMPLETE', async () => {
+    const doc = { id: 'tech-4', kyc: { kycStatus: 'COMPLETE', updatedAt: '2026-05-10T10:00:00.000Z' } };
 
     await processKycChangeFeedDoc(doc as never);
 
@@ -287,40 +288,156 @@ describe('trigger-projector-complaints', () => {
   });
 });
 
-// ── P1-2: Stable expiresAt derivation ────────────────────────────────────────
+// ── P1-1: 429 + 449 classification ───────────────────────────────────────────
 
-describe('P1-2: projectors derive stable expiresAt from source timestamps', () => {
+describe('P1-1: isRetryableCosmosError classifies 429/449 as retryable', () => {
+  it('429 (throttling — SDK retries exhausted) is retryable', async () => {
+    const { isRetryableCosmosError } = await import('../../src/shared/cosmos-errors.js');
+    expect(isRetryableCosmosError({ code: 429 })).toBe(true);
+    expect(isRetryableCosmosError({ statusCode: 429 })).toBe(true);
+  });
+
+  it('449 (CONCURRENCY_RETRY) is retryable', async () => {
+    const { isRetryableCosmosError } = await import('../../src/shared/cosmos-errors.js');
+    expect(isRetryableCosmosError({ code: 449 })).toBe(true);
+    expect(isRetryableCosmosError({ statusCode: 449 })).toBe(true);
+  });
+
+  it('5xx codes remain retryable', async () => {
+    const { isRetryableCosmosError } = await import('../../src/shared/cosmos-errors.js');
+    expect(isRetryableCosmosError({ code: 500 })).toBe(true);
+    expect(isRetryableCosmosError({ code: 503 })).toBe(true);
+  });
+
+  it('other 4xx codes (400/404/409) remain non-retryable', async () => {
+    const { isRetryableCosmosError } = await import('../../src/shared/cosmos-errors.js');
+    expect(isRetryableCosmosError({ code: 400 })).toBe(false);
+    expect(isRetryableCosmosError({ code: 404 })).toBe(false);
+    expect(isRetryableCosmosError({ code: 409 })).toBe(false);
+  });
+
+  it('ECONNRESET message is retryable', async () => {
+    const { isRetryableCosmosError } = await import('../../src/shared/cosmos-errors.js');
+    expect(isRetryableCosmosError(new Error('ECONNRESET from socket'))).toBe(true);
+  });
+
+  it('non-Error string is non-retryable', async () => {
+    const { isRetryableCosmosError } = await import('../../src/shared/cosmos-errors.js');
+    expect(isRetryableCosmosError('bad request')).toBe(false);
+  });
+});
+
+// ── P1-2: Stable expiresAt derivation (anchored to approval request time) ────
+
+describe('P1-2: ADDON_APPROVAL_REQUESTED expiry anchored to approval request time', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it('bookings: ADDON_APPROVAL_REQUESTED expiresAt is derived from doc.createdAt (not Date.now)', async () => {
-    const STABLE_CREATED_AT = '2026-01-01T00:00:00.000Z';
+  it('prefers pendingAddOnsUpdatedAt over createdAt for the expiry anchor', async () => {
+    const ADDON_REQUESTED_AT = '2026-05-10T14:00:00.000Z'; // add-on requested >24h after booking creation
+    const BOOKING_CREATED_AT = '2026-05-01T10:00:00.000Z'; // booking created 9 days earlier
     const ADDON_EXPIRY_MS = 24 * 60 * 60 * 1_000;
-    const expectedExpiry = new Date(new Date(STABLE_CREATED_AT).getTime() + ADDON_EXPIRY_MS).toISOString();
+    // Expected: 24h from the add-on request, not from booking creation
+    const expectedExpiry = new Date(new Date(ADDON_REQUESTED_AT).getTime() + ADDON_EXPIRY_MS).toISOString();
+    // Would be wrong if anchored to createdAt (already in the past relative to ADDON_REQUESTED_AT)
+    const wrongExpiry = new Date(new Date(BOOKING_CREATED_AT).getTime() + ADDON_EXPIRY_MS).toISOString();
 
     const doc = {
-      id: 'booking-stable-1',
-      customerId: 'customer-stable',
+      id: 'booking-advance-1',
+      customerId: 'customer-advance',
       status: 'AWAITING_PRICE_APPROVAL',
-      createdAt: STABLE_CREATED_AT,
+      createdAt: BOOKING_CREATED_AT,
+      pendingAddOnsUpdatedAt: ADDON_REQUESTED_AT,
+      pendingAddOns: [{ name: 'pipe_replace', price: 1500 }],
+    };
+
+    await processBookingChangeFeedDoc(doc as never);
+
+    expect(upsertAction).toHaveBeenCalledWith(
+      expect.objectContaining({ expiresAt: expectedExpiry }),
+    );
+    // Ensure the stale booking.createdAt is NOT used
+    expect(upsertAction).not.toHaveBeenCalledWith(
+      expect.objectContaining({ expiresAt: wrongExpiry }),
+    );
+  });
+
+  it('falls back to createdAt when pendingAddOnsUpdatedAt is absent (legacy doc)', async () => {
+    const BOOKING_CREATED_AT = '2026-05-10T09:00:00.000Z';
+    const ADDON_EXPIRY_MS = 24 * 60 * 60 * 1_000;
+    const expectedExpiry = new Date(new Date(BOOKING_CREATED_AT).getTime() + ADDON_EXPIRY_MS).toISOString();
+
+    const doc = {
+      id: 'booking-legacy-1',
+      customerId: 'customer-legacy',
+      status: 'AWAITING_PRICE_APPROVAL',
+      createdAt: BOOKING_CREATED_AT,
+      // No pendingAddOnsUpdatedAt (legacy document)
       pendingAddOns: [],
     };
 
     await processBookingChangeFeedDoc(doc as never);
 
     expect(upsertAction).toHaveBeenCalledWith(
-      expect.objectContaining({
-        expiresAt: expectedExpiry,
-      }),
+      expect.objectContaining({ expiresAt: expectedExpiry }),
     );
   });
 
+  it('add-on requested ≤24h after booking creation → action expiry still in the future', async () => {
+    const now = new Date('2026-05-10T10:00:00.000Z');
+    const ADDON_EXPIRY_MS = 24 * 60 * 60 * 1_000;
+    const addonRequestedAt = now.toISOString(); // requested now
+    const expectedExpiry = new Date(now.getTime() + ADDON_EXPIRY_MS).toISOString();
+
+    const doc = {
+      id: 'booking-same-day-1',
+      customerId: 'customer-same-day',
+      status: 'AWAITING_PRICE_APPROVAL',
+      createdAt: new Date(now.getTime() - 3600_000).toISOString(), // created 1h ago
+      pendingAddOnsUpdatedAt: addonRequestedAt,
+      pendingAddOns: [],
+    };
+
+    await processBookingChangeFeedDoc(doc as never);
+
+    const call = vi.mocked(upsertAction).mock.calls[0]![0];
+    // expiry must be in the future (24h from request)
+    expect(new Date(call.expiresAt).getTime()).toBeGreaterThan(now.getTime());
+    expect(call.expiresAt).toBe(expectedExpiry);
+  });
+
+  it('add-on requested >24h after booking creation → action still visible for 24h from request', async () => {
+    // Scenario: booking was created 48h ago, add-on requested now.
+    const bookingCreatedAt = new Date('2026-05-08T10:00:00.000Z').toISOString(); // 48h ago
+    const addonRequestedAt = new Date('2026-05-10T10:00:00.000Z').toISOString(); // now
+    const ADDON_EXPIRY_MS = 24 * 60 * 60 * 1_000;
+    const expectedExpiry = new Date(new Date(addonRequestedAt).getTime() + ADDON_EXPIRY_MS).toISOString();
+
+    const doc = {
+      id: 'booking-advance-48h',
+      customerId: 'customer-advance-48h',
+      status: 'AWAITING_PRICE_APPROVAL',
+      createdAt: bookingCreatedAt,
+      pendingAddOnsUpdatedAt: addonRequestedAt,
+      pendingAddOns: [{ name: 'extra_filter', price: 800 }],
+    };
+
+    await processBookingChangeFeedDoc(doc as never);
+
+    const call = vi.mocked(upsertAction).mock.calls[0]![0];
+    expect(call.expiresAt).toBe(expectedExpiry);
+    // Confirm it's NOT anchored to the stale createdAt (which would be in the past)
+    const staleExpiry = new Date(new Date(bookingCreatedAt).getTime() + ADDON_EXPIRY_MS).toISOString();
+    expect(call.expiresAt).not.toBe(staleExpiry);
+  });
+
   it('bookings: same change-feed event delivered twice produces identical expiresAt (replay is a no-op)', async () => {
-    const STABLE_CREATED_AT = '2026-01-15T12:00:00.000Z';
+    const ADDON_REQUESTED_AT = '2026-01-15T12:00:00.000Z';
     const doc = {
       id: 'booking-replay-1',
       customerId: 'customer-replay',
       status: 'AWAITING_PRICE_APPROVAL',
-      createdAt: STABLE_CREATED_AT,
+      createdAt: '2026-01-14T08:00:00.000Z',
+      pendingAddOnsUpdatedAt: ADDON_REQUESTED_AT,
       pendingAddOns: [],
     };
 
@@ -361,7 +478,171 @@ describe('P1-2: projectors derive stable expiresAt from source timestamps', () =
   });
 });
 
-// ── P2-4: Retryable error rethrow ────────────────────────────────────────────
+// ── P1-3: KYC projector reads from technicians container ─────────────────────
+
+describe('P1-3: KYC projector reads kyc.kycStatus from TechnicianDoc', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('emits KYC_RESUME when doc.kyc.kycStatus is PENDING_MANUAL', async () => {
+    const doc = {
+      id: 'tech-kyc-1',
+      kyc: { kycStatus: 'PENDING_MANUAL', updatedAt: '2026-05-10T10:00:00.000Z' },
+    };
+
+    await processKycChangeFeedDoc(doc as never);
+
+    expect(upsertAction).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'KYC_RESUME', userId: 'tech-kyc-1', role: 'technician' }),
+    );
+  });
+
+  it('emits KYC_RESUME when doc.kyc.kycStatus is MANUAL_REVIEW', async () => {
+    const doc = {
+      id: 'tech-kyc-2',
+      kyc: { kycStatus: 'MANUAL_REVIEW', updatedAt: '2026-05-10T11:00:00.000Z' },
+    };
+
+    await processKycChangeFeedDoc(doc as never);
+
+    expect(upsertAction).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'KYC_RESUME', userId: 'tech-kyc-2' }),
+    );
+  });
+
+  it('emits KYC_RESUME when doc.kyc.kycStatus is PENDING', async () => {
+    const doc = {
+      id: 'tech-kyc-3',
+      kyc: { kycStatus: 'PENDING', updatedAt: '2026-05-10T12:00:00.000Z' },
+    };
+
+    await processKycChangeFeedDoc(doc as never);
+
+    expect(upsertAction).toHaveBeenCalledOnce();
+    expect(upsertAction).toHaveBeenCalledWith(expect.objectContaining({ type: 'KYC_RESUME' }));
+  });
+
+  it('resolves KYC_RESUME when doc.kyc.kycStatus is COMPLETE', async () => {
+    const doc = {
+      id: 'tech-kyc-4',
+      kyc: { kycStatus: 'COMPLETE', updatedAt: '2026-05-10T13:00:00.000Z' },
+    };
+
+    await processKycChangeFeedDoc(doc as never);
+
+    expect(upsertAction).not.toHaveBeenCalled();
+    // resolveAction is imported via the mock
+    const { resolveAction: resolveActionFn } = await import('../../src/services/pending-action-projector.js');
+    expect(resolveActionFn).toHaveBeenCalledWith(
+      expect.stringContaining('KYC_RESUME'),
+      'tech-kyc-4',
+    );
+  });
+
+  it('skips document with no kyc sub-object (e.g. profile-only update)', async () => {
+    const doc = { id: 'tech-profile-only' }; // no kyc field
+
+    await processKycChangeFeedDoc(doc as never);
+
+    expect(upsertAction).not.toHaveBeenCalled();
+  });
+
+  it('skips document where kyc.kycStatus is absent', async () => {
+    const doc = { id: 'tech-no-status', kyc: { aadhaarVerified: true } };
+
+    await processKycChangeFeedDoc(doc as never);
+
+    expect(upsertAction).not.toHaveBeenCalled();
+  });
+});
+
+// ── P2-4: expireAction retry propagation ─────────────────────────────────────
+
+describe('P2-4: dispatch-attempts projector rethrows retryable expireAction errors', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('rethrows 429 from expireAction so the runtime retries the batch', async () => {
+    const throttleError = Object.assign(new Error('TooManyRequests'), { code: 429 });
+    const { expireAction: expireActionFn } = await import('../../src/services/pending-action-projector.js');
+    vi.mocked(expireActionFn).mockRejectedValue(throttleError);
+
+    const doc = {
+      id: 'attempt-retry-1',
+      bookingId: 'bk-retry',
+      technicianIds: ['tech-retry'],
+      status: 'EXPIRED',
+      expiresAt: new Date(Date.now() - 1000).toISOString(),
+    };
+
+    await expect(processDispatchAttemptChangeFeedDoc(doc as never)).rejects.toThrow('TooManyRequests');
+  });
+
+  it('swallows non-retryable 404 from expireAction (action already removed)', async () => {
+    const notFoundError = Object.assign(new Error('NotFound'), { code: 404 });
+    const { expireAction: expireActionFn } = await import('../../src/services/pending-action-projector.js');
+    vi.mocked(expireActionFn).mockRejectedValue(notFoundError);
+
+    const doc = {
+      id: 'attempt-swallow-1',
+      bookingId: 'bk-swallow',
+      technicianIds: ['tech-swallow'],
+      status: 'ACCEPTED',
+      expiresAt: new Date(Date.now() - 1000).toISOString(),
+    };
+
+    // Must NOT throw — 404 is non-retryable; action was already removed/expired
+    await expect(processDispatchAttemptChangeFeedDoc(doc as never)).resolves.toBeUndefined();
+  });
+});
+
+// ── P2-5: RATING_PROMPT_CUSTOMER resolution ───────────────────────────────────
+
+describe('P2-5: ratings projector resolves RATING_PROMPT_CUSTOMER on submission', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('resolves RATING_PROMPT_CUSTOMER when customer submits a rating', async () => {
+    const doc = {
+      id: 'rating-p25-1',
+      technicianId: 'tech-p25',
+      customerId: 'customer-p25',
+      bookingId: 'booking-p25',
+      customerOverall: 4,
+      customerSubmittedAt: '2026-05-10T10:00:00.000Z',
+    };
+
+    await processRatingChangeFeedDoc(doc as never);
+
+    // RATING_RECEIVED for the technician must be created
+    expect(upsertAction).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'RATING_RECEIVED', userId: 'tech-p25' }),
+    );
+
+    // RATING_PROMPT_CUSTOMER for the customer must be resolved
+    const { resolveAction: resolveActionFn } = await import('../../src/services/pending-action-projector.js');
+    expect(resolveActionFn).toHaveBeenCalledWith(
+      expect.stringContaining('RATING_PROMPT_CUSTOMER'),
+      'customer-p25',
+    );
+  });
+
+  it('does NOT call resolveAction when bookingId is absent from the rating doc', async () => {
+    const doc = {
+      id: 'rating-p25-no-booking',
+      technicianId: 'tech-p25b',
+      customerId: 'customer-p25b',
+      // no bookingId
+      customerOverall: 5,
+      customerSubmittedAt: '2026-05-10T11:00:00.000Z',
+    };
+
+    await processRatingChangeFeedDoc(doc as never);
+
+    expect(upsertAction).toHaveBeenCalled(); // RATING_RECEIVED still emitted
+    const { resolveAction: resolveActionFn } = await import('../../src/services/pending-action-projector.js');
+    expect(resolveActionFn).not.toHaveBeenCalled(); // no bookingId → cannot resolve
+  });
+});
+
+// ── P2-4 (legacy): Retryable error rethrow (kept for backward compat) ────────
 
 describe('P2-4: projectors rethrow retryable Cosmos errors', () => {
   it('isRetryableCosmosError: 503 status code is retryable', async () => {

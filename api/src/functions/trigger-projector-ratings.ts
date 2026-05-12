@@ -12,6 +12,7 @@ import { app } from '@azure/functions';
 import type { InvocationContext } from '@azure/functions';
 import {
   upsertAction,
+  resolveAction,
   emitFcmForAction,
   buildPendingActionId,
 } from '../services/pending-action-projector.js';
@@ -35,7 +36,7 @@ export async function processRatingChangeFeedDoc(
   doc: Partial<RatingDoc> & { id: string },
   _ctx?: InvocationContext,
 ): Promise<void> {
-  const { id: ratingId, technicianId, customerId, customerOverall, customerSubmittedAt } = doc;
+  const { id: ratingId, technicianId, customerId, bookingId, customerOverall, customerSubmittedAt } = doc;
 
   if (!technicianId || !customerId || !customerOverall || !customerSubmittedAt) {
     // Rating not yet submitted by customer — skip
@@ -65,6 +66,14 @@ export async function processRatingChangeFeedDoc(
   if (!noOp) {
     // STRICT: upsertAction THEN emitFcmForAction
     await emitFcmForAction(upserted, 'ratings');
+  }
+
+  // Resolve the customer's RATING_PROMPT_CUSTOMER action so they no longer see the
+  // rating prompt after they have already submitted their rating. The action id is
+  // deterministically keyed on the bookingId (same scheme as the bookings projector).
+  if (bookingId) {
+    const promptActionId = buildPendingActionId('RATING_PROMPT_CUSTOMER', customerId, bookingId);
+    await resolveAction(promptActionId, customerId);
   }
 }
 

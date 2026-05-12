@@ -55,7 +55,7 @@ vi.mock('../../src/services/firebaseAdmin.js', () => ({
 import { getActivePendingActions } from '../../src/cosmos/pending-action-repository.js';
 import { getKycByTechnicianId } from '../../src/cosmos/technician-repository.js';
 import { bookingRepo } from '../../src/cosmos/booking-repository.js';
-import { TechnicianDashboardResponseSchema } from '../../src/functions/technician-dashboard.js';
+import { TechnicianDashboardResponseSchema, istMidnightUtcBounds } from '../../src/functions/technician-dashboard.js';
 import type { PendingActionDoc } from '../../src/schemas/pendingActions.js';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -127,6 +127,89 @@ describe('TechnicianDashboardResponseSchema', () => {
       fetchedAt: new Date().toISOString(),
     });
     expect(result.success).toBe(false);
+  });
+});
+
+// ── P2-6: IST midnight UTC bounds ─────────────────────────────────────────────
+
+describe('P2-6: istMidnightUtcBounds — IST-aligned UTC query window', () => {
+  /**
+   * For IST date 2026-05-10 (UTC+5:30):
+   *   IST midnight = 2026-05-09T18:30:00.000Z  (UTC previous day 18:30)
+   *   IST next midnight = 2026-05-10T18:30:00.000Z
+   *
+   * This ensures ratings submitted at 00:00–05:29 IST (previous UTC day 18:30–00:00)
+   * are included, and next-day early UTC ratings are excluded.
+   */
+  const IST_DATE = '2026-05-10';
+
+  it('start bound equals previous UTC day at 18:30 for IST date', () => {
+    const { start } = istMidnightUtcBounds(IST_DATE);
+    expect(start).toBe('2026-05-09T18:30:00.000Z');
+  });
+
+  it('end bound equals current UTC day at 18:30 for IST date (exactly 24h window)', () => {
+    const { end } = istMidnightUtcBounds(IST_DATE);
+    expect(end).toBe('2026-05-10T18:30:00.000Z');
+  });
+
+  it('window is exactly 24h wide', () => {
+    const { start, end } = istMidnightUtcBounds(IST_DATE);
+    const windowMs = new Date(end).getTime() - new Date(start).getTime();
+    expect(windowMs).toBe(24 * 60 * 60 * 1_000);
+  });
+
+  it('00:00 IST (previous UTC day 18:30) is included in the window', () => {
+    const { start, end } = istMidnightUtcBounds(IST_DATE);
+    // 00:00 IST on 2026-05-10 = 2026-05-09T18:30:00.000Z
+    const istMidnight = new Date('2026-05-09T18:30:00.000Z').getTime();
+    expect(istMidnight).toBeGreaterThanOrEqual(new Date(start).getTime());
+    expect(istMidnight).toBeLessThan(new Date(end).getTime());
+  });
+
+  it('05:29 IST (2026-05-09T23:59:00Z) is included in the window', () => {
+    const { start, end } = istMidnightUtcBounds(IST_DATE);
+    // 05:29 IST on 2026-05-10 = 2026-05-09T23:59:00.000Z
+    const just_before_utc_midnight = new Date('2026-05-09T23:59:00.000Z').getTime();
+    expect(just_before_utc_midnight).toBeGreaterThanOrEqual(new Date(start).getTime());
+    expect(just_before_utc_midnight).toBeLessThan(new Date(end).getTime());
+  });
+
+  it('05:30 IST (2026-05-10T00:00:00Z = UTC midnight) is included in the window', () => {
+    const { start, end } = istMidnightUtcBounds(IST_DATE);
+    // 05:30 IST on 2026-05-10 = 2026-05-10T00:00:00.000Z
+    const utc_midnight = new Date('2026-05-10T00:00:00.000Z').getTime();
+    expect(utc_midnight).toBeGreaterThanOrEqual(new Date(start).getTime());
+    expect(utc_midnight).toBeLessThan(new Date(end).getTime());
+  });
+
+  it('23:59 IST (2026-05-10T18:29:00Z) is included in the window', () => {
+    const { start, end } = istMidnightUtcBounds(IST_DATE);
+    // 23:59 IST on 2026-05-10 = 2026-05-10T18:29:00.000Z
+    const ist_last_minute = new Date('2026-05-10T18:29:00.000Z').getTime();
+    expect(ist_last_minute).toBeGreaterThanOrEqual(new Date(start).getTime());
+    expect(ist_last_minute).toBeLessThan(new Date(end).getTime());
+  });
+
+  it('next IST midnight (2026-05-10T18:30:00Z) is EXCLUDED from the window', () => {
+    const { end } = istMidnightUtcBounds(IST_DATE);
+    // The end bound is exclusive: ratings at exactly the next IST midnight belong to the next day
+    const nextIstMidnight = new Date('2026-05-10T18:30:00.000Z').getTime();
+    // end = 2026-05-10T18:30:00.000Z; using strict < for Cosmos range query means
+    // the end itself is NOT included by the >= start AND < end predicate
+    expect(nextIstMidnight).toBe(new Date(end).getTime()); // boundary equals end
+  });
+
+  it('works correctly at month boundary (2026-05-01 IST)', () => {
+    const { start, end } = istMidnightUtcBounds('2026-05-01');
+    expect(start).toBe('2026-04-30T18:30:00.000Z');
+    expect(end).toBe('2026-05-01T18:30:00.000Z');
+  });
+
+  it('works correctly at year boundary (2026-01-01 IST)', () => {
+    const { start, end } = istMidnightUtcBounds('2026-01-01');
+    expect(start).toBe('2025-12-31T18:30:00.000Z');
+    expect(end).toBe('2026-01-01T18:30:00.000Z');
   });
 });
 

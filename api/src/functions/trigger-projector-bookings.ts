@@ -57,9 +57,15 @@ export async function processBookingChangeFeedDoc(
 
   if (status === 'AWAITING_PRICE_APPROVAL') {
     // Emit ADDON_APPROVAL_REQUESTED
-    // expiresAt is derived from booking.createdAt (stable source timestamp) so that
-    // replayed change-feed events produce the same value and are correctly identified
-    // as no-ops by isSemanticNoOp(), preventing spurious version bumps and FCM resends.
+    // expiresAt is derived from booking.pendingAddOnsUpdatedAt (the timestamp written atomically
+    // when the technician requested the add-on) so that:
+    //   1. For advance bookings where the technician requests add-ons >24h after booking creation,
+    //      the expiry is correctly anchored to the request time — not the stale booking.createdAt.
+    //   2. Replayed change-feed events produce the same expiresAt value (pendingAddOnsUpdatedAt is
+    //      stable per source-doc version) and are correctly identified as no-ops by isSemanticNoOp().
+    // Falls back to booking.createdAt (legacy docs written before pendingAddOnsUpdatedAt was added)
+    // and ultimately Date.now() (unknown creation time).
+    const addonRequestedAt = doc.pendingAddOnsUpdatedAt ?? doc.createdAt;
     const actionId = buildPendingActionId('ADDON_APPROVAL_REQUESTED', customerId, bookingId);
     const { doc: upserted, noOp } = await upsertAction({
       id: actionId,
@@ -67,7 +73,7 @@ export async function processBookingChangeFeedDoc(
       type: 'ADDON_APPROVAL_REQUESTED',
       role: 'customer',
       sourceId: bookingId,
-      expiresAt: stableExpiryFrom(doc.createdAt, ADDON_EXPIRY_MS),
+      expiresAt: stableExpiryFrom(addonRequestedAt, ADDON_EXPIRY_MS),
       priority: 1, // highest priority — blocks booking progress
       payload: {
         bookingId,
