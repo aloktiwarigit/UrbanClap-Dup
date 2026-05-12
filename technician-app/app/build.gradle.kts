@@ -694,6 +694,7 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.hilt.testing)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.okhttp.mockwebserver)
     kspTest(libs.hilt.compiler)
     kspTest(libs.androidx.hilt.compiler)
 
