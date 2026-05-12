@@ -22,4 +22,11 @@ public interface JobPhotoRepository {
         stage: String,
         storagePath: String,
     ): Result<Unit>
+
+    /**
+     * Best-effort delete of a local capture file (e.g. after a successful end-to-end
+     * upload, or when the user explicitly Retakes / Cancels). Silent on failure —
+     * callers must not treat this as a recoverable error path.
+     */
+    public fun deleteLocalPhoto(localFilePath: String)
 }

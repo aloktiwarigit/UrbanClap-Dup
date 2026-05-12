@@ -258,6 +258,8 @@ internal fun PhotoCaptureScreen(
                     Text(stringResource(R.string.photo_upload_failed, uploadError), color = Color.White)
                     Button(onClick = onRetry) { Text(stringResource(R.string.photo_retry_upload)) }
                     TextButton(onClick = {
+                        // Delete the abandoned filesDir capture so it doesn't accumulate.
+                        capturedPath?.let { runCatching { File(it).delete() } }
                         capturedPath = null
                         onRetake()
                     }) {
@@ -274,7 +276,11 @@ internal fun PhotoCaptureScreen(
                             .padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    OutlinedButton(onClick = { capturedPath = null }) {
+                    OutlinedButton(onClick = {
+                        // Delete the abandoned filesDir capture so it doesn't accumulate.
+                        capturedPath?.let { runCatching { File(it).delete() } }
+                        capturedPath = null
+                    }) {
                         Text(stringResource(R.string.photo_retake), color = Color.White)
                     }
                     Button(
