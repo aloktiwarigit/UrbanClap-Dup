@@ -20,9 +20,8 @@ import kotlinx.coroutines.flow.map
 public class PendingActionStore(
     private val dao: PendingActionDao,
 ) {
-    public fun observeActive(userId: String): Flow<List<PendingAction>> = dao
-        .observeActive(userId)
-        .map { entities ->
+    public fun observeActive(userId: String): Flow<List<PendingAction>> =
+        dao.observeActive(userId = userId).map { entities ->
             entities.map { it.toDomain() }
         }
 
