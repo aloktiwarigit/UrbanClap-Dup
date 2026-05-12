@@ -20,5 +20,5 @@ private val INR_FORMAT_LOCAL: ThreadLocal<NumberFormat> =
  */
 public fun formatInr(paise: Long): String {
     val rupees = paise / 100.0
-    return INR_FORMAT_LOCAL.get()?.format(rupees) ?: "₹${rupees}"
+    return INR_FORMAT_LOCAL.get()?.format(rupees) ?: "₹$rupees"
 }

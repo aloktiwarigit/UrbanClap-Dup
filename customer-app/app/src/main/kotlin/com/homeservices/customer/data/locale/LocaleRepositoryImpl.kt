@@ -22,6 +22,7 @@ public class LocaleRepositoryImpl
         private companion object {
             val KEY_LOCALE_TAG = stringPreferencesKey("locale_tag")
             val KEY_FIRST_LAUNCH_COMPLETED = booleanPreferencesKey("first_launch_completed")
+
             // ADR-0018: Hindi is the default for the Ayodhya/UP rural pilot.
             const val DEFAULT_LOCALE = "hi"
         }

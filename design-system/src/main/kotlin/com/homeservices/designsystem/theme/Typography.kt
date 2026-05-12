@@ -57,6 +57,104 @@ public val HomeservicesFontFamily: FontFamily =
     )
 
 /**
+ * Noto Sans Devanagari fallback font family for Hindi (hi) locale rendering.
+ *
+ * Compose resolves font families per-glyph: when [HomeservicesFontFamily] has no
+ * glyph for a Devanagari codepoint (which Geist Sans does not), the runtime
+ * falls through to the next entry in the combined family. Registering four weight
+ * buckets here mirrors [HomeservicesFontFamily] so Bold/SemiBold Devanagari text
+ * receives an appropriate visual weight rather than falling back to Roboto.
+ *
+ * Asset location: design-system/src/main/res/font/noto_sans_devanagari.ttf
+ * License: OFL-1.1 (see design-system/src/main/res/font/LICENSE_NOTO_SANS_DEVANAGARI.txt)
+ */
+@OptIn(ExperimentalTextApi::class)
+public val NotoSansDevanagariFontFamily: FontFamily =
+    FontFamily(
+        Font(
+            resId = R.font.noto_sans_devanagari,
+            weight = FontWeight.Normal,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
+        ),
+        Font(
+            resId = R.font.noto_sans_devanagari,
+            weight = FontWeight.Medium,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
+        ),
+        Font(
+            resId = R.font.noto_sans_devanagari,
+            weight = FontWeight.SemiBold,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
+        ),
+        Font(
+            resId = R.font.noto_sans_devanagari,
+            weight = FontWeight.Bold,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
+        ),
+    )
+
+/**
+ * Combined font family: Geist Sans (Latin + symbols) with Noto Devanagari fallback.
+ *
+ * Applied to headline and title text styles so that mixed-script strings
+ * (e.g. "My Services" rendered in Hindi locale) render without falling back to
+ * the system default Roboto. Body-level styles also inherit this family so that
+ * all app text uses the correct Devanagari glyphs when the locale is Hindi.
+ */
+@OptIn(ExperimentalTextApi::class)
+public val HomeservicesDevanagariFontFamily: FontFamily =
+    FontFamily(
+        Font(
+            resId = R.font.geist_sans_variable,
+            weight = FontWeight.Normal,
+            style = FontStyle.Normal,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
+            variationSettings = FontVariation.Settings(FontVariation.weight(400)),
+        ),
+        Font(
+            resId = R.font.geist_sans_variable,
+            weight = FontWeight.Medium,
+            style = FontStyle.Normal,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
+            variationSettings = FontVariation.Settings(FontVariation.weight(500)),
+        ),
+        Font(
+            resId = R.font.geist_sans_variable,
+            weight = FontWeight.SemiBold,
+            style = FontStyle.Normal,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
+            variationSettings = FontVariation.Settings(FontVariation.weight(600)),
+        ),
+        Font(
+            resId = R.font.geist_sans_variable,
+            weight = FontWeight.Bold,
+            style = FontStyle.Normal,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
+            variationSettings = FontVariation.Settings(FontVariation.weight(700)),
+        ),
+        Font(
+            resId = R.font.noto_sans_devanagari,
+            weight = FontWeight.Normal,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
+        ),
+        Font(
+            resId = R.font.noto_sans_devanagari,
+            weight = FontWeight.Medium,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
+        ),
+        Font(
+            resId = R.font.noto_sans_devanagari,
+            weight = FontWeight.SemiBold,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
+        ),
+        Font(
+            resId = R.font.noto_sans_devanagari,
+            weight = FontWeight.Bold,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
+        ),
+    )
+
+/**
  * Homeservices M3 typography scale mapped to UX §5.2 tokens.
  *
  * Mapped slots (10 total):
@@ -81,70 +179,70 @@ public val HomeservicesTypography: Typography =
     Typography(
         displayLarge =
             TextStyle(
-                fontFamily = HomeservicesFontFamily,
+                fontFamily = HomeservicesDevanagariFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 48.sp,
                 lineHeight = 56.sp,
             ),
         displayMedium =
             TextStyle(
-                fontFamily = HomeservicesFontFamily,
+                fontFamily = HomeservicesDevanagariFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 40.sp,
                 lineHeight = 48.sp,
             ),
         headlineLarge =
             TextStyle(
-                fontFamily = HomeservicesFontFamily,
+                fontFamily = HomeservicesDevanagariFontFamily,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 28.sp,
                 lineHeight = 36.sp,
             ),
         headlineMedium =
             TextStyle(
-                fontFamily = HomeservicesFontFamily,
+                fontFamily = HomeservicesDevanagariFontFamily,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 22.sp,
                 lineHeight = 30.sp,
             ),
         titleLarge =
             TextStyle(
-                fontFamily = HomeservicesFontFamily,
+                fontFamily = HomeservicesDevanagariFontFamily,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 18.sp,
                 lineHeight = 26.sp,
             ),
         bodyLarge =
             TextStyle(
-                fontFamily = HomeservicesFontFamily,
+                fontFamily = HomeservicesDevanagariFontFamily,
                 fontWeight = FontWeight.Normal,
                 fontSize = 16.sp,
                 lineHeight = 24.sp,
             ),
         bodyMedium =
             TextStyle(
-                fontFamily = HomeservicesFontFamily,
+                fontFamily = HomeservicesDevanagariFontFamily,
                 fontWeight = FontWeight.Normal,
                 fontSize = 14.sp,
                 lineHeight = 22.sp,
             ),
         bodySmall =
             TextStyle(
-                fontFamily = HomeservicesFontFamily,
+                fontFamily = HomeservicesDevanagariFontFamily,
                 fontWeight = FontWeight.Medium,
                 fontSize = 12.sp,
                 lineHeight = 18.sp,
             ),
         labelLarge =
             TextStyle(
-                fontFamily = HomeservicesFontFamily,
+                fontFamily = HomeservicesDevanagariFontFamily,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
             ),
         labelSmall =
             TextStyle(
-                fontFamily = HomeservicesFontFamily,
+                fontFamily = HomeservicesDevanagariFontFamily,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 11.sp,
                 lineHeight = 16.sp,
