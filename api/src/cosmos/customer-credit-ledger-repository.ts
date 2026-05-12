@@ -133,6 +133,15 @@ interface SentinelDoc {
   customerId: string;
   balanceInPaise: number;
   lastUpdatedAt: string;
+  /**
+   * P1-4 (sentinel reconciliation): ISO timestamp of the last reconciliation.
+   * Credits issued AFTER this timestamp (CREDIT_ISSUED docs) have NOT yet been
+   * folded into balanceInPaise and must be added on next applyCredit read.
+   *
+   * Absent on sentinels created before this field was introduced; in that case
+   * treat as epoch (all CREDIT_ISSUED docs need reconciliation).
+   */
+  lastReconciledAt?: string;
 }
 
 /** Read the sentinel doc; returns null if it doesn't exist yet. */
@@ -236,27 +245,26 @@ export const customerCreditLedgerRepo = {
   ): Promise<{ entries: CustomerCreditLedgerDoc[]; total: number }> {
     const container = getCustomerCreditLedgerContainer();
 
-    // Count query (no ORDER BY — cheaper). Cross-partition, no partitionKey option.
+    // P2-5: Filter sentinel docs (id starts with 'sentinel:') BEFORE counting and
+    // paginating. Using NOT STARTSWITH in both queries ensures:
+    //   (a) A customer with only CREDIT_ISSUED docs (no sentinel) gets accurate total.
+    //   (b) OFFSET/LIMIT applies only to real ledger entries; the page is never short
+    //       because a sentinel fell into the window.
     const { resources: countRes } = await container.items
       .query<number>(
         {
-          query: `SELECT VALUE COUNT(1) FROM c WHERE c.customerId = @cid`,
+          query: `SELECT VALUE COUNT(1) FROM c WHERE c.customerId = @cid AND NOT STARTSWITH(c.id, 'sentinel:')`,
           parameters: [{ name: '@cid', value: customerId }],
         },
       )
       .fetchAll();
-    // The COUNT includes sentinel docs — subtract them. Since sentinel is 1 doc per customer
-    // (or 0), we can't use COUNT directly without filtering. Re-compute by fetching all IDs.
-    // For pilot scale this is acceptable; at scale use a dedicated index.
-    const rawCount: number = typeof countRes[0] === 'number' ? countRes[0] : 0;
-    // Sentinel contributes at most 1 doc; adjust conservatively.
-    const total = Math.max(0, rawCount - 1); // sentinel is 1 doc per customer at most
+    const total: number = typeof countRes[0] === 'number' ? countRes[0] : 0;
 
     const offset = (page - 1) * limit;
     const { resources } = await container.items
       .query<RawCreditDoc>(
         {
-          query: `SELECT * FROM c WHERE c.customerId = @cid
+          query: `SELECT * FROM c WHERE c.customerId = @cid AND NOT STARTSWITH(c.id, 'sentinel:')
                   ORDER BY c.createdAt DESC
                   OFFSET @offset LIMIT @limit`,
           parameters: [
@@ -273,25 +281,104 @@ export const customerCreditLedgerRepo = {
   },
 
   /**
+   * P1-2: Reserve credit for the Razorpay partial-credit path.
+   *
+   * Writes a RESERVED idempotency doc BEFORE the Razorpay order is created.
+   * This prevents two failure modes:
+   *   (a) Idempotency-key replay creating a second discounted Razorpay order.
+   *   (b) Webhook applying credit when the wallet balance was spent elsewhere
+   *       between booking creation and payment.captured.
+   *
+   * The reservation does NOT debit the wallet. The actual debit happens in
+   * applyCredit (called from the payment.captured webhook), which recognizes a
+   * RESERVED status and proceeds with the sentinel debit rather than returning
+   * the cached 0 amount.
+   *
+   * On abandonment (no payment): TTL (24h) auto-expires the reservation — the
+   * wallet balance stays intact and can be used for the next booking.
+   *
+   * @param customerId        - customer UID
+   * @param bookingId         - pre-generated booking ID
+   * @param reservedAmountInPaise - amount to reserve (= pendingCreditAmount)
+   * @param idempotencyKey    - UUID from the original Idempotency-Key header
+   * @returns 'reserved' | 'already_reserved' (same key, same booking — idempotent)
+   * @throws 409 if the key was already used for a different booking
+   */
+  async reserveCredit(
+    customerId: string,
+    bookingId: string,
+    reservedAmountInPaise: number,
+    idempotencyKey: string,
+  ): Promise<'reserved' | 'already_reserved'> {
+    const idempotencyContainer = getAppliedCreditIdempotencyContainer();
+    const now = new Date().toISOString();
+
+    const reservationDoc: AppliedCreditIdempotencyDoc = {
+      id: idempotencyKey,
+      customerId,
+      bookingId,
+      appliedAmountInPaise: 0, // not yet debited
+      reservedAmountInPaise,
+      status: 'RESERVED',
+      createdAt: now,
+      ttl: IDEMPOTENCY_TTL_SECONDS,
+    };
+
+    try {
+      await idempotencyContainer.items.create<AppliedCreditIdempotencyDoc>(reservationDoc, {
+        ifNoneMatch: '*',
+      } as Parameters<typeof idempotencyContainer.items.create>[1]);
+      return 'reserved';
+    } catch (err: unknown) {
+      if ((err as { code?: number }).code === 409) {
+        // Conflict — read the existing record
+        const { resource: existing } = await idempotencyContainer
+          .item(idempotencyKey, customerId)
+          .read<AppliedCreditIdempotencyDoc>();
+        if (existing) {
+          if (existing.bookingId === bookingId) {
+            // Same booking — idempotent; reservation already exists
+            return 'already_reserved';
+          }
+          // Different bookingId → key reuse abuse
+          const abuse = new Error('IDEMPOTENCY_KEY_ALREADY_USED') as Error & { code: number };
+          abuse.code = 409;
+          throw abuse;
+        }
+      }
+      throw err;
+    }
+  },
+
+  /**
    * Atomically applies credit to a booking.
    *
-   * P1-1: Cross-partition query for balance recompute.
-   * P1-2: Normalizes legacy no-show credit docs.
-   * P1-3: Idempotency record is tied to bookingId — replay with different bookingId → 409.
-   * P1-4: ETag-based optimistic concurrency on per-customer sentinel doc prevents double-debit.
+   * P1-3 (idempotency-first): The idempotency record is written FIRST with IfNoneMatch: *.
+   *   If the write succeeds, we own this key and proceed to debit.
+   *   If the write fails with 409 (concurrent request raced us):
+   *     - Read the existing record; if same bookingId → return cached result (idempotent).
+   *     - If different bookingId → throw 409 IDEMPOTENCY_KEY_ALREADY_USED (abuse).
+   *   This prevents two concurrent calls with the same key from BOTH reading "no existing idem"
+   *   and BOTH debiting the wallet before either has written the idem record.
+   *
+   * P1-4 (sentinel reconciliation): When a sentinel exists, query for any CREDIT_ISSUED /
+   *   REFUND docs created after sentinel.lastReconciledAt. If found, add their amounts to the
+   *   sentinel balance before computing the debit. Update lastReconciledAt on each debit.
+   *   Rationale: the no-show detector writes CREDIT_ISSUED ledger docs but does NOT update the
+   *   sentinel. Without reconciliation, credits granted after the first debit cannot be spent.
    *
    * Algorithm:
-   *  1. Check idempotency-key dedup:
-   *     - Same bookingId → return cached result (idempotent).
-   *     - Different bookingId → throw { code: 409, message: 'IDEMPOTENCY_KEY_ALREADY_USED' }.
+   *  1. Write idempotency record with IfNoneMatch: * (P1-3 — idempotency-first).
+   *     On 409: check existing record for same/different bookingId.
    *  2. If amountInPaise === 0, return immediately.
-   *  3. Read sentinel (ETag). If absent, create with IfNoneMatch.
-   *  4. Recompute balance from ledger (cross-partition).
-   *  5. Cap applied amount = min(balance, amountInPaise).
-   *  6. If applied === 0, return immediately.
-   *  7. Write sentinel with new balance using IfMatch(etag). On 412 → retry (max 3 times).
-   *  8. Write CREDIT_APPLIED ledger entry.
-   *  9. Write idempotency record.
+   *  3. ETag concurrency loop (max 3 retries):
+   *     a. Read sentinel (ETag).
+   *     b. If no sentinel: computeBalance from ledger (cross-partition).
+   *     c. If sentinel: reconcile balance with CREDIT_ISSUED docs newer than lastReconciledAt (P1-4).
+   *     d. Cap applied = min(balance, amountInPaise). If 0, return.
+   *     e. Write sentinel with new balance + lastReconciledAt using IfMatch/IfNoneMatch.
+   *     f. Write CREDIT_APPLIED ledger entry.
+   *  4. On 412/409 conflict: retry with back-off. After max retries: return 0 (caller decides fallback).
    */
   async applyCredit(
     customerId: string,
@@ -300,86 +387,155 @@ export const customerCreditLedgerRepo = {
     idempotencyKey: string,
   ): Promise<ApplyCreditResult> {
     const idempotencyContainer = getAppliedCreditIdempotencyContainer();
+    const now = new Date().toISOString();
 
-    // Step 1: idempotency-key dedup (P1-3)
-    const { resource: existingIdem } = await idempotencyContainer
-      .item(idempotencyKey, customerId)
-      .read<AppliedCreditIdempotencyDoc>();
-    if (existingIdem) {
-      if (existingIdem.bookingId === bookingId) {
-        // Same booking → idempotent replay, return cached result
-        return {
-          appliedAmountInPaise: existingIdem.appliedAmountInPaise,
-          newBalanceInPaise: 0, // balance already decremented — recompute if needed
-          idempotent: true,
-        };
+    // Step 1: P1-3 — idempotency-first: write the record BEFORE touching the wallet.
+    // This guarantees that two concurrent calls with the same key cannot BOTH debit.
+    const idemDoc: AppliedCreditIdempotencyDoc = {
+      id: idempotencyKey,
+      customerId,
+      bookingId,
+      // appliedAmountInPaise is filled in after the debit succeeds; 0 is a placeholder.
+      // If the process crashes before updating, the next replay will see bookingId match
+      // and return 0 (conservative — the booking creation path handles this gracefully).
+      appliedAmountInPaise: 0,
+      createdAt: now,
+      ttl: IDEMPOTENCY_TTL_SECONDS,
+    };
+    try {
+      await idempotencyContainer.items.create<AppliedCreditIdempotencyDoc>(idemDoc, {
+        ifNoneMatch: '*',
+      } as Parameters<typeof idempotencyContainer.items.create>[1]);
+    } catch (idemErr: unknown) {
+      if ((idemErr as { code?: number }).code === 409) {
+        // Conflict: another request already wrote this idempotency key.
+        // Read the existing record to determine the correct action.
+        const { resource: existingIdem } = await idempotencyContainer
+          .item(idempotencyKey, customerId)
+          .read<AppliedCreditIdempotencyDoc>();
+        if (existingIdem) {
+          if (existingIdem.bookingId !== bookingId) {
+            // Different bookingId → replay abuse; same key used for a new booking.
+            const err = new Error('IDEMPOTENCY_KEY_ALREADY_USED') as Error & { code: number };
+            err.code = 409;
+            throw err;
+          }
+          // Same bookingId — check status:
+          if (!existingIdem.status || existingIdem.status === 'APPLIED') {
+            // Already fully applied → idempotent replay; return cached amount.
+            return {
+              appliedAmountInPaise: existingIdem.appliedAmountInPaise,
+              newBalanceInPaise: 0, // balance already decremented
+              idempotent: true,
+            };
+          }
+          // status === 'RESERVED' → P1-2: this key was written by reserveCredit before
+          // the Razorpay order creation. The actual wallet debit has NOT happened yet.
+          // Proceed past this block to execute the sentinel debit loop below.
+          // (We own the debit slot because the reservation is for our bookingId.)
+        } else {
+          // If we can't read back the record (very unlikely race), surface as conflict.
+          const err = new Error('IDEMPOTENCY_KEY_ALREADY_USED') as Error & { code: number };
+          err.code = 409;
+          throw err;
+        }
+      } else {
+        // Unexpected error writing idempotency record — propagate.
+        throw idemErr;
       }
-      // Different bookingId → replay abuse: same key, different booking attempt
-      const err = new Error('IDEMPOTENCY_KEY_ALREADY_USED') as Error & { code: number };
-      err.code = 409;
-      throw err;
     }
 
-    // Step 2: nothing to write
+    // Step 2: nothing to write (amount is 0).
     if (amountInPaise <= 0) {
       return { appliedAmountInPaise: 0, newBalanceInPaise: 0, idempotent: false };
     }
 
     const creditContainer = getCustomerCreditLedgerContainer();
 
-    // Steps 3–7: ETag concurrency loop (P1-4)
+    // Steps 3–6: ETag concurrency loop (P1-4 sentinel + reconciliation).
     let appliedAmount = 0;
     for (let attempt = 0; attempt < MAX_CONCURRENCY_RETRIES; attempt++) {
-      // Step 3: read or initialize sentinel
       const sentinelId = `${SENTINEL_ID_PREFIX}${customerId}`;
       const sentinelResult = await readSentinel(customerId);
 
       let currentBalance: number;
       let existingEtag: string | null;
+      let reconciledAt: string = now;
 
       if (sentinelResult === null) {
-        // No sentinel yet — compute from ledger and create
+        // No sentinel yet — compute from ledger (cross-partition, all docs).
         currentBalance = await computeBalance(customerId);
         existingEtag = null;
       } else {
-        currentBalance = sentinelResult.doc.balanceInPaise;
+        // P1-4: Sentinel exists. Reconcile with any CREDIT_ISSUED / REFUND docs
+        // written AFTER the sentinel was last reconciled. This accounts for credits
+        // issued by the no-show detector (which writes ledger docs but not the sentinel).
+        //
+        // NOTE: Future migration — update no-show detector to also update the sentinel
+        // directly, then remove this reconciliation query. Tracked as:
+        // TODO(E13-S02): migrate no-show detector to write sentinel directly.
+        const sinceTimestamp = sentinelResult.doc.lastReconciledAt ?? '1970-01-01T00:00:00.000Z';
+        const { resources: newCredits } = await creditContainer.items
+          .query<RawCreditDoc>(
+            {
+              query: `SELECT * FROM c WHERE c.customerId = @cid
+                      AND (c.type = 'CREDIT_ISSUED' OR c.type = 'REFUND')
+                      AND c.createdAt > @since`,
+              parameters: [
+                { name: '@cid', value: customerId },
+                { name: '@since', value: sinceTimestamp },
+              ],
+            },
+            // Cross-partition (no partitionKey option) — same as other queries in this repo.
+          )
+          .fetchAll();
+
+        let reconciledExtra = 0;
+        for (const raw of newCredits) {
+          const entry = normalizeDoc(raw);
+          if (entry && (entry.type === 'CREDIT_ISSUED' || entry.type === 'REFUND')) {
+            reconciledExtra += entry.amountInPaise;
+          }
+        }
+        currentBalance = sentinelResult.doc.balanceInPaise + reconciledExtra;
         existingEtag = sentinelResult.etag;
+        reconciledAt = now;
       }
 
-      // Step 5: cap
+      // Cap applied amount to balance.
       const toApply = Math.min(currentBalance, amountInPaise);
       if (toApply <= 0) {
         return { appliedAmountInPaise: 0, newBalanceInPaise: currentBalance, idempotent: false };
       }
 
       const newBalance = currentBalance - toApply;
-      const now = new Date().toISOString();
 
       const newSentinel: SentinelDoc = {
         id: sentinelId,
         customerId,
         balanceInPaise: newBalance,
         lastUpdatedAt: now,
+        lastReconciledAt: reconciledAt,
       };
 
       try {
         if (existingEtag === null) {
-          // Create sentinel with IfNoneMatch: * (fails if concurrent request already created it)
+          // Create sentinel with IfNoneMatch: * (fails 409 if concurrent request already created it).
           await creditContainer.items.create<SentinelDoc>(newSentinel, {
             ifNoneMatch: '*',
           } as Parameters<typeof creditContainer.items.create>[1]);
         } else {
-          // Replace sentinel with ETag — throws 412 if another writer won
+          // Replace sentinel with IfMatch(etag) — throws 412 if another writer won.
           await creditContainer.item(sentinelId, sentinelId).replace<SentinelDoc>(
             newSentinel,
             { accessCondition: { type: 'IfMatch', condition: existingEtag } },
           );
         }
 
-        // Sentinel written successfully — we own this debit slot
+        // Sentinel written successfully — we own this debit slot.
         appliedAmount = toApply;
 
-        // Step 8: write CREDIT_APPLIED ledger entry
+        // Write CREDIT_APPLIED ledger entry.
         const ledgerEntry: CustomerCreditLedgerDoc = {
           id: randomUUID(),
           customerId,
@@ -392,36 +548,29 @@ export const customerCreditLedgerRepo = {
         };
         await creditContainer.items.create<CustomerCreditLedgerDoc>(ledgerEntry);
 
-        // Step 9: write idempotency-key dedup record (P1-3)
-        const idemDoc: AppliedCreditIdempotencyDoc = {
-          id: idempotencyKey,
-          customerId,
-          bookingId,
-          appliedAmountInPaise: toApply,
-          createdAt: now,
-          ttl: IDEMPOTENCY_TTL_SECONDS,
-        };
+        // Update idempotency record with the actual applied amount (was 0 placeholder).
+        // Best-effort: if this write fails the next replay returns 0 (conservative but safe —
+        // the booking was already created, and 0 credit is the safe fallback for the caller).
         try {
-          await idempotencyContainer.items.create<AppliedCreditIdempotencyDoc>(idemDoc);
-        } catch (err: unknown) {
-          // 409 = concurrent request already wrote this key — idempotent outcome; not a problem
-          if ((err as { code?: number }).code !== 409) throw err;
-        }
+          await idempotencyContainer.item(idempotencyKey, customerId).replace<AppliedCreditIdempotencyDoc>(
+            { ...idemDoc, appliedAmountInPaise: toApply },
+          );
+        } catch { /* best-effort; next replay returns 0 which is safe */ }
 
         return { appliedAmountInPaise: toApply, newBalanceInPaise: newBalance, idempotent: false };
       } catch (err: unknown) {
         const code = (err as { code?: number }).code;
         if ((code === 412 || code === 409) && attempt < MAX_CONCURRENCY_RETRIES - 1) {
-          // Optimistic concurrency conflict — another writer won; retry after brief back-off
+          // Optimistic concurrency conflict — another writer won; retry after brief back-off.
           await new Promise((res) => setTimeout(res, 50 * (attempt + 1)));
           continue;
         }
-        // Final retry exhausted or unexpected error — propagate so caller can handle
+        // Final retry exhausted or unexpected error — propagate so caller can handle.
         throw err;
       }
     }
 
-    // If all retries exhausted with 412, return 0 (caller treats this as non-fatal)
+    // All retries exhausted with 412 — return 0 (caller decides whether to fallback to Razorpay).
     return { appliedAmountInPaise: appliedAmount, newBalanceInPaise: 0, idempotent: false };
   },
 };

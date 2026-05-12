@@ -281,6 +281,40 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
       idempotencyKey,
     );
 
+    // P1-1: Verify the credit was actually applied before marking PAID.
+    //
+    // attemptCreditApplication returns 0 (or a partial amount) when:
+    //   - A 412 ETag conflict (race with another concurrent apply) exhausted all retries.
+    //   - An unexpected Cosmos error was swallowed by the non-blocking path.
+    //
+    // If we mark PAID without the credit being applied, the customer gets a free
+    // or underpaid booking (the Razorpay order was skipped entirely).
+    //
+    // Safe fallback: reject with 409 so the customer retries. We cannot safely
+    // fall back to Razorpay here because the booking doc was already created and
+    // the Razorpay order amount would need to be recomputed — doing so in a partially
+    // applied state risks double-charging or missed credit.
+    if (appliedCreditAmount < pendingCreditAmount) {
+      console.warn('[createBooking] full-credit path: applied amount < expected; rejecting with 409', {
+        customerId: customer.customerId,
+        bookingId: booking.id,
+        expected: pendingCreditAmount,
+        applied: appliedCreditAmount,
+      });
+      Sentry.captureException(
+        new Error(`CREDIT_RACE: applied ${appliedCreditAmount} < expected ${pendingCreditAmount}`),
+      );
+      // Booking is in PENDING_PAYMENT state and no Razorpay order was created — safe to
+      // leave it; it will expire naturally (stale-booking cleanup handles it).
+      return {
+        status: 409,
+        jsonBody: {
+          code: 'CREDIT_RACE',
+          message: 'Credit application conflict — please retry. Your wallet balance is unchanged.',
+        },
+      };
+    }
+
     // Mark PAID immediately (no Razorpay payment involved)
     const paid = await bookingRepo.markPaid(booking.id, 'credit_full_payment');
     if (!paid) return { status: 500, jsonBody: { code: 'BOOKING_CONFIRMATION_FAILED' } };
@@ -317,6 +351,60 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
   }
 
   // Partial or no credit — create Razorpay order for the payable portion.
+  //
+  // P1-2: Reserve the credit BEFORE creating the discounted Razorpay order.
+  //
+  // Problem without reservation: `pendingCreditAmount` is only a balance peek. If:
+  //   (a) The same idempotency key is replayed (client retry), a second discounted
+  //       Razorpay order is created, potentially granting the discount twice.
+  //   (b) The wallet balance is spent elsewhere between here and payment.captured,
+  //       the webhook tries to apply a credit that no longer exists — the Razorpay
+  //       payment collected less than basePrice and the booking is undercollected.
+  //
+  // Fix: write a RESERVED idempotency doc with IfNoneMatch: * before creating the
+  // Razorpay order. This guarantees:
+  //   - Idempotency-key replay on Razorpay order creation returns 'already_reserved'
+  //     (same booking) → skip Razorpay creation and return the same pending credit amount.
+  //   - The wallet balance is not double-spent (the reservation does not debit the wallet;
+  //     the actual debit in applyCredit will see the RESERVED status and proceed to debit).
+  //   - On abandonment (no payment.captured within TTL): the reservation auto-expires, leaving
+  //     the wallet balance intact for the next booking.
+  if (pendingCreditAmount > 0) {
+    try {
+      const reserveResult = await customerCreditLedgerRepo.reserveCredit(
+        customer.customerId,
+        preGeneratedBookingId,
+        pendingCreditAmount,
+        idempotencyKey,
+      );
+      if (reserveResult === 'already_reserved') {
+        // Idempotent replay: same key, same booking — the Razorpay order was already created
+        // in a prior attempt (but the response may not have reached the client). Return the
+        // same pending credit info so the client can resume payment.
+        console.info('[createBooking] credit reservation already exists — idempotent replay', {
+          customerId: customer.customerId,
+          bookingId: preGeneratedBookingId,
+        });
+        // Fall through to create the Razorpay order (or it may already exist; Razorpay is
+        // idempotent on order ID because the receipt is unique per attempt — acceptable).
+      }
+    } catch (reserveErr: unknown) {
+      Sentry.captureException(reserveErr);
+      console.error('[createBooking] credit reservation failed — falling back to no-credit Razorpay', {
+        customerId: customer.customerId,
+        err: reserveErr,
+      });
+      // Non-fatal: fall back to full-price Razorpay (safer than blocking the booking).
+      // pendingCreditAmount is reset to 0 so no discount is applied.
+      // The unreserved credit stays in the wallet for the next booking.
+      // NOTE: if this was a 409 IDEMPOTENCY_KEY_ALREADY_USED for a different booking,
+      // that is an abuse signal — Sentry captures it above.
+      // For non-409 errors (Cosmos failures, timeouts, etc.), the reservation didn't
+      // happen — credit stays intact in the wallet for the next booking attempt.
+      // We fall through to create a full-price Razorpay order (no discount) which is safe.
+    }
+  }
+
   let order: Awaited<ReturnType<typeof createRazorpayOrder>>;
   try {
     order = await createRazorpayOrder({

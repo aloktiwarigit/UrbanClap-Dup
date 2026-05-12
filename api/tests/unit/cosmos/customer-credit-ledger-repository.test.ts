@@ -4,8 +4,10 @@
  * Covers Codex P1 financial-correctness fixes:
  *   P1-1: Cross-partition query (container partitioned by /id, not /customerId)
  *   P1-2: Legacy no-show credit doc shape normalization (amount → amountInPaise)
- *   P1-3: Idempotency replay tied to bookingId (different bookingId → 409)
+ *   P1-3: Idempotency record written FIRST (idempotency-first) — prevent same-key races
  *   P1-4: ETag-based optimistic concurrency on sentinel doc (prevent double-debit)
+ *          + sentinel reconciliation with later CREDIT_ISSUED docs
+ *   P2-5: Filter sentinel docs in SQL before count and paginate (WHERE NOT STARTSWITH)
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -160,82 +162,266 @@ describe('P1-2: legacy no-show credit doc normalization', () => {
 });
 
 // ---------------------------------------------------------------------------
-// P1-3: Idempotency replay tied to bookingId
+// P2-5: getLedgerPage filters sentinels via NOT STARTSWITH in SQL
 // ---------------------------------------------------------------------------
 
-describe('P1-3: idempotency key is tied to bookingId', () => {
+describe('P2-5: getLedgerPage uses NOT STARTSWITH(c.id, "sentinel:") in SQL', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it('returns cached result on replay with the SAME bookingId (idempotent)', async () => {
-    // Existing idempotency record for the same booking
+  it('count query includes NOT STARTSWITH filter so sentinel is excluded before counting', async () => {
+    mockLedgerItems.query
+      .mockReturnValueOnce(mockQuery([1])) // count = 1 (already excludes sentinel from SQL)
+      .mockReturnValueOnce(mockQuery([])); // page = empty
+
+    await customerCreditLedgerRepo.getLedgerPage('cust-p25', 1, 20);
+
+    // Verify the count query SQL contains the sentinel filter
+    const countQueryArgs = mockLedgerItems.query.mock.calls[0]?.[0] as { query: string } | undefined;
+    expect(countQueryArgs?.query).toMatch(/NOT STARTSWITH\(c\.id,\s*'sentinel:'\)/i);
+  });
+
+  it('page query includes NOT STARTSWITH filter so sentinel cannot land in a page window', async () => {
+    mockLedgerItems.query
+      .mockReturnValueOnce(mockQuery([2])) // count
+      .mockReturnValueOnce(mockQuery([])); // page
+
+    await customerCreditLedgerRepo.getLedgerPage('cust-p25b', 1, 20);
+
+    // Verify the page query SQL also contains the sentinel filter
+    const pageQueryArgs = mockLedgerItems.query.mock.calls[1]?.[0] as { query: string } | undefined;
+    expect(pageQueryArgs?.query).toMatch(/NOT STARTSWITH\(c\.id,\s*'sentinel:'\)/i);
+  });
+
+  it('customer with only CREDIT_ISSUED docs (no sentinel) gets correct total without -1 correction', async () => {
+    // With the old code (rawCount - 1), a customer who has never debited would get total = 0
+    // even with 1 credit. The new SQL filter returns the true count.
+    mockLedgerItems.query
+      .mockReturnValueOnce(mockQuery([3])) // count = 3 real ledger entries, no sentinel
+      .mockReturnValueOnce(mockQuery([
+        { id: 'c1', customerId: 'cust-new', type: 'CREDIT_ISSUED', amountInPaise: 50000, reason: 'no-show', createdAt: '2026-01-01T00:00:00.000Z' },
+        { id: 'c2', customerId: 'cust-new', type: 'CREDIT_ISSUED', amountInPaise: 50000, reason: 'no-show', createdAt: '2026-01-02T00:00:00.000Z' },
+        { id: 'c3', customerId: 'cust-new', type: 'CREDIT_ISSUED', amountInPaise: 50000, reason: 'no-show', createdAt: '2026-01-03T00:00:00.000Z' },
+      ]));
+
+    const result = await customerCreditLedgerRepo.getLedgerPage('cust-new', 1, 20);
+    // Total must be 3 (not 2 as the old -1 correction would give)
+    expect(result.total).toBe(3);
+    expect(result.entries).toHaveLength(3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P1-3: Idempotency-first — write record BEFORE sentinel debit
+// ---------------------------------------------------------------------------
+
+describe('P1-3: idempotency-first prevents same-key concurrent double-debit', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('writes idempotency doc FIRST (IfNoneMatch: *) before touching the sentinel', async () => {
+    // applyCredit should attempt to create the idempotency doc BEFORE any sentinel read/write.
+    // We verify this by checking create is called on the idempotency container BEFORE the
+    // sentinel container (sentinel is in the ledger container, idem is in idempotency container).
+    const createOrder: string[] = [];
+
+    mockIdempotencyItems.create.mockImplementation(() => {
+      createOrder.push('idem');
+      return Promise.resolve({});
+    });
+    mockLedgerItems.create.mockImplementation(() => {
+      createOrder.push('ledger');
+      return Promise.resolve({});
+    });
+
+    // No existing sentinel
+    mockLedgerItem.mockImplementation((id: string) => {
+      if (id.startsWith('sentinel:')) {
+        return { read: vi.fn().mockResolvedValue({ resource: undefined, etag: undefined }), replace: vi.fn() };
+      }
+      return { read: vi.fn().mockResolvedValue({ resource: undefined }) };
+    });
+    // computeBalance query
+    mockLedgerItems.query.mockReturnValue(
+      mockQuery([{ id: 'bk-x', customerId: 'cust-idem-first', amount: 80000, reason: 'NO_SHOW', createdAt: '2026-01-01T00:00:00.000Z' }]),
+    );
+
+    await customerCreditLedgerRepo.applyCredit('cust-idem-first', 'bk-idem-f', 50000, 'key-idem-f');
+
+    // idempotency write must precede any ledger write
+    expect(createOrder[0]).toBe('idem');
+    expect(createOrder).toContain('ledger');
+  });
+
+  it('returns cached result on APPLIED replay with the SAME bookingId (idempotent)', async () => {
+    // applyCredit tries IfNoneMatch create → 409 → read existing → status APPLIED, same bookingId → return cached
     const existingIdem = {
       id: 'idem-key-1',
       customerId: 'cust-6',
       bookingId: 'bk-same',
       appliedAmountInPaise: 50000,
+      status: 'APPLIED',
       createdAt: new Date().toISOString(),
       ttl: 86400,
     };
+    mockIdempotencyItems.create.mockRejectedValue({ code: 409 }); // simulate concurrent write
     mockIdempotencyItem.mockReturnValue({
       read: vi.fn().mockResolvedValue({ resource: existingIdem }),
+      replace: vi.fn().mockResolvedValue({}),
     });
 
     const result = await customerCreditLedgerRepo.applyCredit(
       'cust-6',
-      'bk-same', // same bookingId as stored
+      'bk-same',
       50000,
       'idem-key-1',
     );
 
     expect(result.idempotent).toBe(true);
     expect(result.appliedAmountInPaise).toBe(50000);
-    // No ledger write should happen
+    // No ledger write should happen (idempotent early return)
     expect(mockLedgerItems.create).not.toHaveBeenCalled();
   });
 
-  it('throws 409 on replay with a DIFFERENT bookingId (replay abuse)', async () => {
-    // Existing idempotency record for a DIFFERENT booking
-    const existingIdem = {
-      id: 'idem-key-2',
-      customerId: 'cust-7',
-      bookingId: 'bk-original',  // original booking
-      appliedAmountInPaise: 50000,
+  it('proceeds with debit when existing idempotency doc has status RESERVED (P1-2 reservation)', async () => {
+    // Reservation was pre-written by reserveCredit before the Razorpay order.
+    // applyCredit in the webhook should see RESERVED and proceed with the actual debit.
+    const reservedIdem = {
+      id: 'idem-reserved',
+      customerId: 'cust-res',
+      bookingId: 'bk-res',
+      appliedAmountInPaise: 0,
+      reservedAmountInPaise: 50000,
+      status: 'RESERVED',
       createdAt: new Date().toISOString(),
       ttl: 86400,
     };
+    mockIdempotencyItems.create.mockRejectedValue({ code: 409 }); // reservation already exists
     mockIdempotencyItem.mockReturnValue({
-      read: vi.fn().mockResolvedValue({ resource: existingIdem }),
+      read: vi.fn().mockResolvedValue({ resource: reservedIdem }),
+      replace: vi.fn().mockResolvedValue({}),
     });
 
-    // Replay with a different bookingId — should be rejected
+    // Sentinel with balance
+    mockLedgerItem.mockImplementation((id: string) => {
+      if (id.startsWith('sentinel:')) {
+        return {
+          read: vi.fn().mockResolvedValue({
+            resource: { id: 'sentinel:cust-res', customerId: 'cust-res', balanceInPaise: 70000, lastUpdatedAt: '', lastReconciledAt: '2026-01-01T00:00:00.000Z' },
+            etag: 'etag-res',
+          }),
+          replace: vi.fn().mockResolvedValue({}),
+        };
+      }
+      return { read: vi.fn().mockResolvedValue({ resource: undefined }) };
+    });
+    // No new credits after lastReconciledAt
+    mockLedgerItems.query.mockReturnValue(mockQuery([]));
+    mockLedgerItems.create.mockResolvedValue({});
+
+    const result = await customerCreditLedgerRepo.applyCredit('cust-res', 'bk-res', 50000, 'idem-reserved');
+
+    // Should have proceeded with actual debit (not returned 0 idempotent)
+    expect(result.appliedAmountInPaise).toBe(50000);
+    expect(result.idempotent).toBe(false);
+    // Ledger entry (CREDIT_APPLIED) should have been written
+    expect(mockLedgerItems.create).toHaveBeenCalled();
+  });
+
+  it('throws 409 on replay with a DIFFERENT bookingId (replay abuse)', async () => {
+    const existingIdem = {
+      id: 'idem-key-2',
+      customerId: 'cust-7',
+      bookingId: 'bk-original',
+      appliedAmountInPaise: 50000,
+      status: 'APPLIED',
+      createdAt: new Date().toISOString(),
+      ttl: 86400,
+    };
+    mockIdempotencyItems.create.mockRejectedValue({ code: 409 });
+    mockIdempotencyItem.mockReturnValue({
+      read: vi.fn().mockResolvedValue({ resource: existingIdem }),
+      replace: vi.fn().mockResolvedValue({}),
+    });
+
     await expect(
-      customerCreditLedgerRepo.applyCredit(
-        'cust-7',
-        'bk-different', // DIFFERENT bookingId
-        50000,
-        'idem-key-2',
-      ),
+      customerCreditLedgerRepo.applyCredit('cust-7', 'bk-different', 50000, 'idem-key-2'),
     ).rejects.toMatchObject({ code: 409 });
+  });
+
+  it('two concurrent same-key calls: only one debits (idempotency-first race protection)', async () => {
+    // Simulate: call A writes idem doc successfully; call B sees 409 on idem write,
+    // reads existing record with same bookingId and status APPLIED → returns cached.
+    let idemCreateCalled = 0;
+    mockIdempotencyItems.create.mockImplementation(() => {
+      idemCreateCalled++;
+      if (idemCreateCalled === 1) {
+        // Call A succeeds
+        return Promise.resolve({});
+      }
+      // Call B fails with 409 (A already wrote it)
+      return Promise.reject(Object.assign(new Error('Conflict'), { code: 409 }));
+    });
+
+    const appliedIdem = {
+      id: 'race-key',
+      customerId: 'cust-race',
+      bookingId: 'bk-race',
+      appliedAmountInPaise: 50000,
+      status: 'APPLIED',
+      createdAt: new Date().toISOString(),
+      ttl: 86400,
+    };
+
+    const readMock = vi.fn().mockResolvedValue({ resource: appliedIdem });
+    const replaceMock = vi.fn().mockResolvedValue({});
+    mockIdempotencyItem.mockReturnValue({ read: readMock, replace: replaceMock });
+
+    // Sentinel for call A
+    mockLedgerItem.mockImplementation((id: string) => {
+      if (id.startsWith('sentinel:')) {
+        return {
+          read: vi.fn().mockResolvedValue({
+            resource: { id: 'sentinel:cust-race', customerId: 'cust-race', balanceInPaise: 80000, lastUpdatedAt: '', lastReconciledAt: '2026-01-01T00:00:00.000Z' },
+            etag: 'etag-race',
+          }),
+          replace: vi.fn().mockResolvedValue({}),
+        };
+      }
+      return { read: vi.fn().mockResolvedValue({ resource: undefined }) };
+    });
+    mockLedgerItems.query.mockReturnValue(mockQuery([]));
+    mockLedgerItems.create.mockResolvedValue({});
+
+    // Call A succeeds: debits wallet
+    const resultA = await customerCreditLedgerRepo.applyCredit('cust-race', 'bk-race', 50000, 'race-key');
+    expect(resultA.appliedAmountInPaise).toBe(50000);
+    expect(resultA.idempotent).toBe(false);
+
+    // Call B: returns cached (idempotent); does NOT debit again
+    const resultB = await customerCreditLedgerRepo.applyCredit('cust-race', 'bk-race', 50000, 'race-key');
+    expect(resultB.idempotent).toBe(true);
+    expect(resultB.appliedAmountInPaise).toBe(50000);
   });
 });
 
 // ---------------------------------------------------------------------------
-// P1-4: ETag-based optimistic concurrency
+// P1-4: ETag-based optimistic concurrency + sentinel reconciliation
 // ---------------------------------------------------------------------------
 
-describe('P1-4: sentinel-based ETag concurrency', () => {
+describe('P1-4: sentinel-based ETag concurrency + reconciliation with later CREDIT_ISSUED', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it('creates sentinel with IfNoneMatch when no sentinel exists, then writes ledger entry', async () => {
-    // No existing idempotency record
+    // idempotency-first: create succeeds (no prior record)
+    mockIdempotencyItems.create.mockResolvedValue({});
     mockIdempotencyItem.mockReturnValue({
       read: vi.fn().mockResolvedValue({ resource: undefined }),
+      replace: vi.fn().mockResolvedValue({}),
     });
 
     // No sentinel doc exists yet
     mockLedgerItem.mockImplementation((id: string) => {
       if (id.startsWith('sentinel:')) {
-        return { read: vi.fn().mockResolvedValue({ resource: undefined, etag: undefined }) };
+        return { read: vi.fn().mockResolvedValue({ resource: undefined, etag: undefined }), replace: vi.fn() };
       }
       return { read: vi.fn().mockResolvedValue({ resource: undefined }) };
     });
@@ -251,9 +437,8 @@ describe('P1-4: sentinel-based ETag concurrency', () => {
       }]),
     );
 
-    // Sentinel create succeeds; ledger entry create succeeds; idempotency create succeeds
+    // Sentinel create succeeds; ledger entry create succeeds
     mockLedgerItems.create.mockResolvedValue({});
-    mockIdempotencyItems.create.mockResolvedValue({});
 
     const result = await customerCreditLedgerRepo.applyCredit(
       'cust-8',
@@ -264,20 +449,22 @@ describe('P1-4: sentinel-based ETag concurrency', () => {
 
     expect(result.appliedAmountInPaise).toBe(50000);
     expect(result.idempotent).toBe(false);
-    // Should have created sentinel + ledger entry
+    // Should have created sentinel + ledger entry (2 writes to ledger container)
     expect(mockLedgerItems.create).toHaveBeenCalledTimes(2);
   });
 
   it('retries after 412 conflict on sentinel write and succeeds on second attempt', async () => {
-    // No existing idempotency record
+    // idempotency-first: create succeeds
+    mockIdempotencyItems.create.mockResolvedValue({});
     mockIdempotencyItem.mockReturnValue({
       read: vi.fn().mockResolvedValue({ resource: undefined }),
+      replace: vi.fn().mockResolvedValue({}),
     });
 
-    // Sentinel exists with etag
+    // Sentinel exists with etag. On retry (second read), the balance is the same.
     const sentinelReadMock = vi.fn()
-      .mockResolvedValueOnce({ resource: { id: 'sentinel:cust-9', customerId: 'cust-9', balanceInPaise: 70000, lastUpdatedAt: '' }, etag: 'etag-v1' })
-      .mockResolvedValueOnce({ resource: { id: 'sentinel:cust-9', customerId: 'cust-9', balanceInPaise: 70000, lastUpdatedAt: '' }, etag: 'etag-v2' });
+      .mockResolvedValueOnce({ resource: { id: 'sentinel:cust-9', customerId: 'cust-9', balanceInPaise: 70000, lastUpdatedAt: '', lastReconciledAt: '2026-01-01T00:00:00.000Z' }, etag: 'etag-v1' })
+      .mockResolvedValueOnce({ resource: { id: 'sentinel:cust-9', customerId: 'cust-9', balanceInPaise: 70000, lastUpdatedAt: '', lastReconciledAt: '2026-01-01T00:00:00.000Z' }, etag: 'etag-v2' });
 
     const sentinelReplaceMock = vi.fn()
       .mockRejectedValueOnce({ code: 412 }) // first attempt fails
@@ -290,8 +477,9 @@ describe('P1-4: sentinel-based ETag concurrency', () => {
       return { read: vi.fn().mockResolvedValue({ resource: undefined }) };
     });
 
+    // Reconciliation queries: no new credits after lastReconciledAt (both attempts)
+    mockLedgerItems.query.mockReturnValue(mockQuery([]));
     mockLedgerItems.create.mockResolvedValue({});
-    mockIdempotencyItems.create.mockResolvedValue({});
 
     const result = await customerCreditLedgerRepo.applyCredit(
       'cust-9',
@@ -302,29 +490,32 @@ describe('P1-4: sentinel-based ETag concurrency', () => {
 
     expect(result.appliedAmountInPaise).toBe(50000);
     expect(sentinelReplaceMock).toHaveBeenCalledTimes(2); // 1 failure + 1 success
-    // Ledger entry + idempotency record written after successful sentinel
+    // Ledger entry written after successful sentinel
     expect(mockLedgerItems.create).toHaveBeenCalledTimes(1);
     expect(mockIdempotencyItems.create).toHaveBeenCalledTimes(1);
   });
 
   it('returns 0 applied amount when balance is 0 (no ledger write)', async () => {
-    // No existing idempotency record
+    mockIdempotencyItems.create.mockResolvedValue({});
     mockIdempotencyItem.mockReturnValue({
       read: vi.fn().mockResolvedValue({ resource: undefined }),
+      replace: vi.fn().mockResolvedValue({}),
     });
 
-    // Sentinel exists with 0 balance
+    // Sentinel exists with 0 balance; no new credits after lastReconciledAt
     mockLedgerItem.mockImplementation((id: string) => {
       if (id.startsWith('sentinel:')) {
         return {
           read: vi.fn().mockResolvedValue({
-            resource: { id: 'sentinel:cust-10', customerId: 'cust-10', balanceInPaise: 0, lastUpdatedAt: '' },
+            resource: { id: 'sentinel:cust-10', customerId: 'cust-10', balanceInPaise: 0, lastUpdatedAt: '', lastReconciledAt: '2026-01-01T00:00:00.000Z' },
             etag: 'etag-zero',
           }),
+          replace: vi.fn(),
         };
       }
       return { read: vi.fn().mockResolvedValue({ resource: undefined }) };
     });
+    mockLedgerItems.query.mockReturnValue(mockQuery([]));
 
     const result = await customerCreditLedgerRepo.applyCredit(
       'cust-10',
@@ -335,5 +526,102 @@ describe('P1-4: sentinel-based ETag concurrency', () => {
 
     expect(result.appliedAmountInPaise).toBe(0);
     expect(mockLedgerItems.create).not.toHaveBeenCalled();
+  });
+
+  it('P1-4 reconciliation: credits issued after sentinel.lastReconciledAt are folded in before debit', async () => {
+    // Scenario: sentinel has balanceInPaise=0 but a CREDIT_ISSUED doc was created AFTER
+    // lastReconciledAt by the no-show detector. Without reconciliation, applyCredit would
+    // see balance=0 and return 0 (credit cannot be spent). With reconciliation, it adds
+    // the new credit and correctly debits 50000.
+    mockIdempotencyItems.create.mockResolvedValue({});
+    mockIdempotencyItem.mockReturnValue({
+      read: vi.fn().mockResolvedValue({ resource: undefined }),
+      replace: vi.fn().mockResolvedValue({}),
+    });
+
+    const lastReconciledAt = '2026-04-01T10:00:00.000Z';
+    mockLedgerItem.mockImplementation((id: string) => {
+      if (id.startsWith('sentinel:')) {
+        return {
+          read: vi.fn().mockResolvedValue({
+            resource: {
+              id: 'sentinel:cust-recon',
+              customerId: 'cust-recon',
+              balanceInPaise: 0, // spent; sentinel thinks balance is 0
+              lastUpdatedAt: lastReconciledAt,
+              lastReconciledAt,
+            },
+            etag: 'etag-recon',
+          }),
+          replace: vi.fn().mockResolvedValue({}),
+        };
+      }
+      return { read: vi.fn().mockResolvedValue({ resource: undefined }) };
+    });
+
+    // Reconciliation query returns a new CREDIT_ISSUED doc (from no-show detector, after lastReconciledAt)
+    mockLedgerItems.query.mockReturnValue(
+      mockQuery([{
+        id: 'bk-noshow-after',
+        customerId: 'cust-recon',
+        type: 'CREDIT_ISSUED',
+        amountInPaise: 50000,
+        reason: 'No-show credit',
+        createdAt: '2026-04-02T08:00:00.000Z', // after lastReconciledAt
+      }]),
+    );
+    mockLedgerItems.create.mockResolvedValue({});
+
+    const result = await customerCreditLedgerRepo.applyCredit(
+      'cust-recon',
+      'bk-after-noshow',
+      50000,
+      'idem-recon',
+    );
+
+    // Without reconciliation this would return 0; with reconciliation it returns 50000
+    expect(result.appliedAmountInPaise).toBe(50000);
+    expect(result.newBalanceInPaise).toBe(0);
+  });
+
+  it('P1-4 reconciliation: sentinel written with updated lastReconciledAt after successful debit', async () => {
+    mockIdempotencyItems.create.mockResolvedValue({});
+    mockIdempotencyItem.mockReturnValue({
+      read: vi.fn().mockResolvedValue({ resource: undefined }),
+      replace: vi.fn().mockResolvedValue({}),
+    });
+
+    const oldReconciledAt = '2026-03-01T00:00:00.000Z';
+    const sentinelReplaceMock = vi.fn().mockResolvedValue({});
+    mockLedgerItem.mockImplementation((id: string) => {
+      if (id.startsWith('sentinel:')) {
+        return {
+          read: vi.fn().mockResolvedValue({
+            resource: {
+              id: 'sentinel:cust-ts',
+              customerId: 'cust-ts',
+              balanceInPaise: 30000,
+              lastUpdatedAt: oldReconciledAt,
+              lastReconciledAt: oldReconciledAt,
+            },
+            etag: 'etag-ts',
+          }),
+          replace: sentinelReplaceMock,
+        };
+      }
+      return { read: vi.fn().mockResolvedValue({ resource: undefined }) };
+    });
+
+    // No new credits after lastReconciledAt
+    mockLedgerItems.query.mockReturnValue(mockQuery([]));
+    mockLedgerItems.create.mockResolvedValue({});
+
+    await customerCreditLedgerRepo.applyCredit('cust-ts', 'bk-ts', 20000, 'idem-ts');
+
+    // Verify sentinel was replaced with a lastReconciledAt newer than oldReconciledAt
+    const replacedDoc = sentinelReplaceMock.mock.calls[0]?.[0] as { lastReconciledAt?: string } | undefined;
+    const reconciledAt = replacedDoc?.lastReconciledAt;
+    expect(reconciledAt).toBeDefined();
+    expect(typeof reconciledAt === 'string' && reconciledAt > oldReconciledAt).toBe(true);
   });
 });

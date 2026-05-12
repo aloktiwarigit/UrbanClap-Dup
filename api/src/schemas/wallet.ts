@@ -80,6 +80,23 @@ export type CustomerCreditLedgerDoc = z.infer<typeof CustomerCreditLedgerDocSche
 // (stored in applied_credit_idempotency container, TTL 24h)
 // ---------------------------------------------------------------------------
 
+/**
+ * P1-2 (credit reservation): status lifecycle for idempotency docs.
+ *
+ * RESERVED → written BEFORE the Razorpay order is created (partial credit path).
+ *   Prevents a second discounted Razorpay order from being created with the same
+ *   idempotency key if the first request is replayed before payment completes.
+ *   On payment.captured webhook → applyCredit transitions to APPLIED.
+ *   On abandonment → TTL (24h) auto-expires the reservation.
+ *
+ * APPLIED → written atomically after the sentinel debit + ledger entry succeed.
+ *   All subsequent replays with the same key return the cached appliedAmountInPaise.
+ *
+ * Absent (legacy) → pre-P1-2 records have no status field; treated as APPLIED.
+ */
+export const CREDIT_IDEMPOTENCY_STATUS = ['RESERVED', 'APPLIED'] as const;
+export type CreditIdempotencyStatus = typeof CREDIT_IDEMPOTENCY_STATUS[number];
+
 export const AppliedCreditIdempotencyDocSchema = z.object({
   id: z.string(),           // idempotencyKey (UUID from client header)
   customerId: z.string(),   // partition key
@@ -88,6 +105,16 @@ export const AppliedCreditIdempotencyDocSchema = z.object({
   createdAt: z.string(),
   /** Cosmos TTL in seconds — 86400 (24h) */
   ttl: z.number().int().positive(),
+  /**
+   * P1-2: Lifecycle status. RESERVED = credit amount held but not yet debited.
+   * APPLIED = wallet debit completed. Legacy docs without this field = APPLIED.
+   */
+  status: z.enum(CREDIT_IDEMPOTENCY_STATUS).optional(),
+  /**
+   * P1-2: Amount reserved for Razorpay partial-credit path. Set at reservation time.
+   * On APPLIED transition the actual appliedAmountInPaise is written.
+   */
+  reservedAmountInPaise: z.number().int().nonnegative().optional(),
 });
 
 export type AppliedCreditIdempotencyDoc = z.infer<typeof AppliedCreditIdempotencyDocSchema>;

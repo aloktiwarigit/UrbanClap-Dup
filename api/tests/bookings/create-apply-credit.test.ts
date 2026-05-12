@@ -81,6 +81,7 @@ vi.mock('../../src/cosmos/customer-credit-ledger-repository.js', () => ({
   customerCreditLedgerRepo: {
     getBalance: vi.fn(),
     applyCredit: vi.fn(),
+    reserveCredit: vi.fn().mockResolvedValue('reserved'),
   },
 }));
 
@@ -372,12 +373,13 @@ describe('POST /v1/bookings — idempotency-key (AC-5)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// AC-6: Concurrent apply — 412 race path (now handled inside repo; booking.ts
-// handles getBalance errors gracefully for the Razorpay path)
+// AC-6: Concurrent apply — 412 race path
+// P1-1: Full-credit race now returns 409 CREDIT_RACE (not 201) because marking
+// PAID with unapplied credit would result in a free booking.
 // ---------------------------------------------------------------------------
 
-describe('POST /v1/bookings — concurrent applyCredit race for full-credit path (AC-6 / P1-5)', () => {
-  beforeEach(() => {
+describe('POST /v1/bookings — concurrent applyCredit race for full-credit path (AC-6 / P1-1 / P1-5)', () => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     (isWalletCreditEnabled as MockFn).mockResolvedValue(true);
     // Full-credit path: balance >= basePrice triggers applyCredit synchronously
@@ -385,10 +387,18 @@ describe('POST /v1/bookings — concurrent applyCredit race for full-credit path
       balanceInPaise: 80000,
       lastUpdatedAt: new Date().toISOString(),
     });
+    // Re-setup service area mock after clearAllMocks
+    const { isLatLngInServiceArea } = await import('../../src/services/service-area.service.js');
+    (isLatLngInServiceArea as MockFn).mockReturnValue(true);
+    const { isServiceAreaGatingEnabled, isSoftLaunchEnabled, isMarketingPaused } = await import('../../src/services/featureFlags.service.js');
+    (isServiceAreaGatingEnabled as MockFn).mockResolvedValue(false);
+    (isSoftLaunchEnabled as MockFn).mockResolvedValue(true);
+    (isMarketingPaused as MockFn).mockResolvedValue(false);
   });
 
-  it('returns 201 with appliedCreditAmount=0 when applyCredit signals 412 conflict (full-credit path)', async () => {
-    // Repo throws 412 (etag conflict / concurrent write) — only hit in the full-credit path
+  it('P1-1: returns 409 CREDIT_RACE when applyCredit throws 412 (etag conflict — full-credit path)', async () => {
+    // Repo throws 412 (etag conflict). attemptCreditApplication catches it and returns 0.
+    // P1-1: applied=0 < pendingCreditAmount=59900 → 409 CREDIT_RACE (not 201 free booking).
     const conflictErr = Object.assign(new Error('Precondition failed'), { code: 412 });
     (customerCreditLedgerRepo.applyCredit as MockFn).mockRejectedValue(conflictErr);
 
@@ -397,10 +407,10 @@ describe('POST /v1/bookings — concurrent applyCredit race for full-credit path
       {} as never,
     )) as HttpResponseInit;
 
-    // Booking should still succeed (full-credit path falls back gracefully)
-    expect(res.status).toBe(201);
-    const body = res.jsonBody as { appliedCreditAmount: number };
-    expect(body.appliedCreditAmount).toBe(0);
+    // P1-1: Must NOT return 201 — that would mean the booking was marked PAID with 0 credit applied.
+    expect(res.status).toBe(409);
+    const body = res.jsonBody as { code: string };
+    expect(body.code).toBe('CREDIT_RACE');
   });
 });
 
@@ -445,5 +455,183 @@ describe('POST /v1/bookings — service-area gating (E16-S01 regression guard)',
 
     expect(res.status).toBe(400);
     expect((res.jsonBody as { error: string }).error).toBe('SERVICE_NOT_AVAILABLE_AT_LOCATION');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P1-1: Verify credit was actually applied before marking booking PAID
+// ---------------------------------------------------------------------------
+
+describe('POST /v1/bookings — P1-1 verify-before-PAID (full-credit path)', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    (isWalletCreditEnabled as MockFn).mockResolvedValue(true);
+    // Full-credit path: balance >= basePrice
+    (customerCreditLedgerRepo.getBalance as MockFn).mockResolvedValue({
+      balanceInPaise: 80000, // > 59900
+      lastUpdatedAt: new Date().toISOString(),
+    });
+    const { bookingRepo: repo } = await import('../../src/cosmos/booking-repository.js');
+    (repo.markPaid as MockFn).mockResolvedValue({
+      id: 'bk-100', customerId: 'cust-1', status: 'PAID', amount: 59900, createdAt: new Date().toISOString(),
+    });
+    // Re-setup service area mock after clearAllMocks
+    const { isLatLngInServiceArea } = await import('../../src/services/service-area.service.js');
+    (isLatLngInServiceArea as MockFn).mockReturnValue(true);
+    const { isServiceAreaGatingEnabled } = await import('../../src/services/featureFlags.service.js');
+    (isServiceAreaGatingEnabled as MockFn).mockResolvedValue(false);
+    const { isSoftLaunchEnabled, isMarketingPaused } = await import('../../src/services/featureFlags.service.js');
+    (isSoftLaunchEnabled as MockFn).mockResolvedValue(true);
+    (isMarketingPaused as MockFn).mockResolvedValue(false);
+  });
+
+  it('P1-1a: marks PAID and dispatches when applied amount equals expected credit', async () => {
+    // applyCredit returns full amount — all good
+    (customerCreditLedgerRepo.applyCredit as MockFn).mockResolvedValue({
+      appliedAmountInPaise: 59900,
+      newBalanceInPaise: 20100,
+      idempotent: false,
+    });
+
+    const res = (await createBookingHandler(
+      postReq({ ...VALID_BODY_IN_AREA, applyCredit: true }, 'idem-key-p11a'),
+      {} as never,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(201);
+    const body = res.jsonBody as { requiresPayment: boolean; appliedCreditAmount: number };
+    expect(body.requiresPayment).toBe(false);
+    expect(body.appliedCreditAmount).toBe(59900);
+  });
+
+  it('P1-1b: returns 409 CREDIT_RACE when applyCredit returns 0 (all retries exhausted)', async () => {
+    // Simulate race: all sentinel write retries failed, applied = 0
+    (customerCreditLedgerRepo.applyCredit as MockFn).mockResolvedValue({
+      appliedAmountInPaise: 0,
+      newBalanceInPaise: 0,
+      idempotent: false,
+    });
+
+    const res = (await createBookingHandler(
+      postReq({ ...VALID_BODY_IN_AREA, applyCredit: true }, 'idem-key-p11b'),
+      {} as never,
+    )) as HttpResponseInit;
+
+    // Must NOT mark PAID — booking is blocked with 409
+    expect(res.status).toBe(409);
+    const body = res.jsonBody as { code: string };
+    expect(body.code).toBe('CREDIT_RACE');
+  });
+
+  it('P1-1c: returns 409 CREDIT_RACE when applyCredit returns partial amount (balance shifted)', async () => {
+    // Simulate partial race: applied = 40000 < expected 59900
+    (customerCreditLedgerRepo.applyCredit as MockFn).mockResolvedValue({
+      appliedAmountInPaise: 40000,
+      newBalanceInPaise: 0,
+      idempotent: false,
+    });
+
+    const res = (await createBookingHandler(
+      postReq({ ...VALID_BODY_IN_AREA, applyCredit: true }, 'idem-key-p11c'),
+      {} as never,
+    )) as HttpResponseInit;
+
+    // Partial credit should also reject — booking would be underpaid
+    expect(res.status).toBe(409);
+    const body = res.jsonBody as { code: string };
+    expect(body.code).toBe('CREDIT_RACE');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P1-2: Reserve credit BEFORE creating Razorpay order (partial credit path)
+// ---------------------------------------------------------------------------
+
+describe('POST /v1/bookings — P1-2 reserve-before-Razorpay (partial credit path)', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    (isWalletCreditEnabled as MockFn).mockResolvedValue(true);
+    // Partial credit: balance < basePrice so we go to Razorpay path
+    (customerCreditLedgerRepo.getBalance as MockFn).mockResolvedValue({
+      balanceInPaise: 30000, // < 59900 → partial credit, Razorpay for the rest
+      lastUpdatedAt: new Date().toISOString(),
+    });
+    (customerCreditLedgerRepo.reserveCredit as MockFn).mockResolvedValue('reserved');
+    // Re-setup service area mock after clearAllMocks
+    const { isLatLngInServiceArea } = await import('../../src/services/service-area.service.js');
+    (isLatLngInServiceArea as MockFn).mockReturnValue(true);
+    const { isServiceAreaGatingEnabled, isSoftLaunchEnabled, isMarketingPaused } = await import('../../src/services/featureFlags.service.js');
+    (isServiceAreaGatingEnabled as MockFn).mockResolvedValue(false);
+    (isSoftLaunchEnabled as MockFn).mockResolvedValue(true);
+    (isMarketingPaused as MockFn).mockResolvedValue(false);
+  });
+
+  it('P1-2a: calls reserveCredit BEFORE creating the Razorpay order', async () => {
+    const { createRazorpayOrder } = await import('../../src/services/razorpay.service.js');
+    const callOrder: string[] = [];
+
+    (customerCreditLedgerRepo.reserveCredit as MockFn).mockImplementation(() => {
+      callOrder.push('reserve');
+      return Promise.resolve('reserved');
+    });
+    (createRazorpayOrder as MockFn).mockImplementation(() => {
+      callOrder.push('razorpay');
+      return Promise.resolve({ id: 'order_partial', amount: 29900, currency: 'INR' });
+    });
+
+    const res = (await createBookingHandler(
+      postReq({ ...VALID_BODY_IN_AREA, applyCredit: true }, 'idem-key-p12a'),
+      {} as never,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(201);
+    // reserve must come before razorpay
+    expect(callOrder[0]).toBe('reserve');
+    expect(callOrder[1]).toBe('razorpay');
+  });
+
+  it('P1-2b: reserveCredit called with correct customerId, bookingId, and amount', async () => {
+    const res = (await createBookingHandler(
+      postReq({ ...VALID_BODY_IN_AREA, applyCredit: true }, 'idem-key-p12b'),
+      {} as never,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(201);
+    expect(customerCreditLedgerRepo.reserveCredit).toHaveBeenCalledWith(
+      'cust-1',
+      expect.any(String), // preGeneratedBookingId
+      30000,              // pendingCreditAmount = min(balance, basePrice)
+      'idem-key-p12b',
+    );
+  });
+
+  it('P1-2c: idempotent replay (already_reserved) still proceeds to create Razorpay order', async () => {
+    (customerCreditLedgerRepo.reserveCredit as MockFn).mockResolvedValue('already_reserved');
+    const { createRazorpayOrder } = await import('../../src/services/razorpay.service.js');
+
+    const res = (await createBookingHandler(
+      postReq({ ...VALID_BODY_IN_AREA, applyCredit: true }, 'idem-key-p12c'),
+      {} as never,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(201);
+    // Razorpay order still created on idempotent replay
+    expect(createRazorpayOrder).toHaveBeenCalled();
+  });
+
+  it('P1-2d: reserveCredit NOT called when pendingCreditAmount is 0', async () => {
+    // Zero balance → no reservation needed
+    (customerCreditLedgerRepo.getBalance as MockFn).mockResolvedValue({
+      balanceInPaise: 0,
+      lastUpdatedAt: new Date().toISOString(),
+    });
+
+    const res = (await createBookingHandler(
+      postReq({ ...VALID_BODY_IN_AREA, applyCredit: true }, 'idem-key-p12d'),
+      {} as never,
+    )) as HttpResponseInit;
+
+    expect(res.status).toBe(201);
+    expect(customerCreditLedgerRepo.reserveCredit).not.toHaveBeenCalled();
   });
 });
