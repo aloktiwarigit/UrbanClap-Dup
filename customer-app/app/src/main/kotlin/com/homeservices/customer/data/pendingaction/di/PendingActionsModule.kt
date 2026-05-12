@@ -28,11 +28,12 @@ public object PendingActionsModule {
     public fun providePendingActionsDatabase(
         @ApplicationContext context: Context,
     ): PendingActionsDatabase {
-        val builder = Room.databaseBuilder(
-            context,
-            PendingActionsDatabase::class.java,
-            "pending_actions.db",
-        )
+        val builder =
+            Room.databaseBuilder(
+                context,
+                PendingActionsDatabase::class.java,
+                "pending_actions.db",
+            )
         return builder.build()
     }
 

@@ -20,9 +20,11 @@ import kotlinx.coroutines.flow.map
 public class PendingActionStore(
     private val dao: PendingActionDao,
 ) {
-    public fun observeActive(userId: String): Flow<List<PendingAction>> {
-        return dao.observeActive(userId).map { entities -> entities.map { it.toDomain() } }
-    }
+    public fun observeActive(userId: String): Flow<List<PendingAction>> = dao
+        .observeActive(userId)
+        .map { entities ->
+            entities.map { it.toDomain() }
+        }
 
     public suspend fun findById(id: String): PendingAction? = dao.findById(id)?.toDomain()
 
