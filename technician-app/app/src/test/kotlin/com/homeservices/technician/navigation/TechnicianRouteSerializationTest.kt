@@ -18,7 +18,7 @@ public class TechnicianRouteSerializationTest {
     // ── Spike target: JobOfferRoute (arg route) ───────────────────────────────
 
     @Nested
-    inner class JobOfferRouteTests {
+    public inner class JobOfferRouteTests {
 
         @Test
         public fun `JobOfferRoute round-trips through JSON serialization`() {
@@ -40,7 +40,7 @@ public class TechnicianRouteSerializationTest {
     // ── Simple no-arg route: TechnicianAuthRoute ──────────────────────────────
 
     @Nested
-    inner class TechnicianAuthRouteTests {
+    public inner class TechnicianAuthRouteTests {
 
         @Test
         public fun `TechnicianAuthRoute round-trips through JSON serialization`() {
@@ -60,7 +60,7 @@ public class TechnicianRouteSerializationTest {
     // ── ActiveJobRoute ────────────────────────────────────────────────────────
 
     @Nested
-    inner class ActiveJobRouteTests {
+    public inner class ActiveJobRouteTests {
 
         @Test
         public fun `ActiveJobRoute round-trips through JSON`() {
@@ -75,7 +75,7 @@ public class TechnicianRouteSerializationTest {
     // ── TechnicianComplaintRoute with nullable complaintId ────────────────────
 
     @Nested
-    inner class TechnicianComplaintRouteTests {
+    public inner class TechnicianComplaintRouteTests {
 
         @Test
         public fun `TechnicianComplaintRoute with null complaintId round-trips`() {
