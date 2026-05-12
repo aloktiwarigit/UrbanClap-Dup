@@ -115,6 +115,7 @@ plugins {
     alias(libs.plugins.kover)
     alias(libs.plugins.android.junit5)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -525,6 +526,16 @@ kover {
                     "*.SessionPrefsMigrator",
                     "*.SessionPrefsMigrator\$*",
                     "*.data.network.auth.di.*",
+                    // PendingActionsModule — Hilt @Provides wiring for Room database construction
+                    "*.data.pendingaction.di.*",
+                    // PendingActionsDatabase — Room database singleton; generated _Impl has no unit-testable logic
+                    "*.PendingActionsDatabase",
+                    "*.PendingActionsDatabase\$*",
+                    // Room KSP-generated DAO/DB implementation classes (anonymous Runnable/Callable on Room executor)
+                    "*.PendingActionsDatabase_Impl",
+                    "*.PendingActionsDatabase_Impl\$*",
+                    "*.PendingActionDao_Impl",
+                    "*.PendingActionDao_Impl\$*",
                 )
             }
         }
@@ -558,6 +569,8 @@ dependencies {
     implementation(libs.compose.material.icons.core)
     implementation(libs.compose.material.icons.extended)
     implementation(libs.homeservices.design.system)
+    implementation(libs.homeservices.core.nav)
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
@@ -598,6 +611,11 @@ dependencies {
     implementation(libs.moshi.kotlin)
     ksp(libs.moshi.kotlin.codegen)
     implementation(libs.coil.compose)
+
+    // Room (local persistence — pending_actions table introduced in E11-S01a)
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
 
     // Play Integrity API
     implementation(libs.play.integrity)
