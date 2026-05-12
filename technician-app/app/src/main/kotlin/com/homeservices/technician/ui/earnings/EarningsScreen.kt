@@ -52,9 +52,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.technician.R
+import com.homeservices.technician.domain.earnings.model.BaseEarningsPeriod
 import com.homeservices.technician.domain.earnings.model.DailyEarnings
-import com.homeservices.technician.domain.earnings.model.EarningsPeriod
 import com.homeservices.technician.domain.earnings.model.EarningsSummary
+import com.homeservices.technician.domain.earnings.model.MonthEarningsPeriod
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -249,7 +250,7 @@ private fun EarningsSuccess(
                 PeriodCard(stringResource(R.string.earnings_period_lifetime), summary.lifetime, modifier = Modifier.weight(1f))
             }
         }
-        item { GoalProgressCard(summary.month.techAmountPaise) }
+        item { GoalProgressCard(summary.month) }
         item { SparklineCard(summary.lastSevenDays) }
         item {
             OutlinedButton(onClick = onViewRatings, modifier = Modifier.fillMaxWidth()) {
@@ -267,7 +268,7 @@ private fun EarningsSuccess(
 @Composable
 private fun PeriodCard(
     label: String,
-    period: EarningsPeriod,
+    period: BaseEarningsPeriod,
     modifier: Modifier = Modifier,
 ) {
     HsSectionCard(modifier = modifier) {
@@ -293,19 +294,17 @@ private fun PeriodCard(
     }
 }
 
-private val MONTHLY_GOAL_PAISE = 3_500_000L
-
 @Composable
-private fun GoalProgressCard(monthAmountPaise: Long) {
+private fun GoalProgressCard(month: MonthEarningsPeriod) {
     HsSectionCard(title = stringResource(R.string.earnings_monthly_goal)) {
         LinearProgressIndicator(
-            progress = { (monthAmountPaise.toFloat() / MONTHLY_GOAL_PAISE).coerceIn(0f, 1f) },
+            progress = { (month.techAmountPaise.toFloat() / month.goalPaise).coerceIn(0f, 1f) },
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)),
             color = BrandGreen,
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            "${formatRupees(monthAmountPaise)} / ${formatRupees(MONTHLY_GOAL_PAISE)}",
+            "${formatRupees(month.techAmountPaise)} / ${formatRupees(month.goalPaise)}",
             style = MaterialTheme.typography.bodySmall,
             color = TextSecondary,
         )
