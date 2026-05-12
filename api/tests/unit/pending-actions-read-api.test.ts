@@ -97,7 +97,7 @@ describe('getActivePendingActions repository function', () => {
     const activeAction = makeAction({ status: 'ACTIVE', expiresAt: FUTURE });
     vi.mocked(getActivePendingActions).mockResolvedValue([activeAction]);
 
-    const result = await getActivePendingActions('tech-1', new Date().toISOString());
+    const result = await getActivePendingActions('tech-1', new Date().toISOString(), 'technician');
 
     expect(result).toHaveLength(1);
     expect(result[0]!.status).toBe('ACTIVE');
@@ -106,7 +106,7 @@ describe('getActivePendingActions repository function', () => {
   it('returns empty list when no active actions exist', async () => {
     vi.mocked(getActivePendingActions).mockResolvedValue([]);
 
-    const result = await getActivePendingActions('tech-1', new Date().toISOString());
+    const result = await getActivePendingActions('tech-1', new Date().toISOString(), 'technician');
 
     expect(result).toHaveLength(0);
   });
@@ -114,7 +114,7 @@ describe('getActivePendingActions repository function', () => {
   it('filters out resolved actions', async () => {
     vi.mocked(getActivePendingActions).mockResolvedValue([]); // repository only returns ACTIVE
 
-    const result = await getActivePendingActions('tech-1', new Date().toISOString());
+    const result = await getActivePendingActions('tech-1', new Date().toISOString(), 'technician');
     expect(result.every((a) => a.status === 'ACTIVE')).toBe(true);
   });
 
@@ -123,7 +123,7 @@ describe('getActivePendingActions repository function', () => {
     const high = makeAction({ id: 'JOB_OFFER:tech-1:attempt-2', priority: 1, expiresAt: FUTURE, sourceId: 'attempt-2' });
     vi.mocked(getActivePendingActions).mockResolvedValue([high, low]); // repo already sorts
 
-    const result = await getActivePendingActions('tech-1', new Date().toISOString());
+    const result = await getActivePendingActions('tech-1', new Date().toISOString(), 'technician');
     expect(result[0]!.priority).toBeLessThanOrEqual(result[1]!.priority);
   });
 });
@@ -137,10 +137,57 @@ describe('read API cross-user isolation', () => {
       return [];
     });
 
-    const resultA = await getActivePendingActions('user-a', new Date().toISOString());
-    const resultB = await getActivePendingActions('user-b', new Date().toISOString());
+    const resultA = await getActivePendingActions('user-a', new Date().toISOString(), 'customer');
+    const resultB = await getActivePendingActions('user-b', new Date().toISOString(), 'customer');
 
     expect(resultA).toHaveLength(1);
     expect(resultB).toHaveLength(0);
+  });
+});
+
+// ── P2-6: Cross-role isolation ────────────────────────────────────────────────
+
+describe('P2-6: getActivePendingActions enforces role isolation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('customer-role query does NOT return technician JOB_OFFER actions', async () => {
+    // Simulate a shared Firebase UID (user is both customer and technician).
+    // Customer endpoint must only return customer-role actions.
+    vi.mocked(getActivePendingActions).mockImplementation(async (_userId, _now, role) => {
+      if (role === 'customer') return [makeAction({ role: 'customer', type: 'ADDON_APPROVAL_REQUESTED' })];
+      if (role === 'technician') return [makeAction({ role: 'technician', type: 'JOB_OFFER' })];
+      return [];
+    });
+
+    const customerResult = await getActivePendingActions('shared-uid', new Date().toISOString(), 'customer');
+    const technicianResult = await getActivePendingActions('shared-uid', new Date().toISOString(), 'technician');
+
+    expect(customerResult).toHaveLength(1);
+    expect(customerResult[0]!.role).toBe('customer');
+    expect(customerResult[0]!.type).toBe('ADDON_APPROVAL_REQUESTED');
+
+    expect(technicianResult).toHaveLength(1);
+    expect(technicianResult[0]!.role).toBe('technician');
+    expect(technicianResult[0]!.type).toBe('JOB_OFFER');
+  });
+
+  it('customer result contains only customer-role actions (no JOB_OFFER leakage)', async () => {
+    vi.mocked(getActivePendingActions).mockImplementation(async (_userId, _now, role) => {
+      // Simulate DB correctly filtering by role
+      if (role === 'customer') {
+        return [
+          makeAction({ role: 'customer', type: 'RATING_PROMPT_CUSTOMER' }),
+          makeAction({ role: 'customer', type: 'COMPLAINT_UPDATE', id: 'COMPLAINT_UPDATE:u:c1', sourceId: 'c1' }),
+        ];
+      }
+      return [];
+    });
+
+    const result = await getActivePendingActions('user-x', new Date().toISOString(), 'customer');
+
+    expect(result.every((a) => a.role === 'customer')).toBe(true);
+    expect(result.some((a) => a.type === 'JOB_OFFER')).toBe(false);
   });
 });

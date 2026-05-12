@@ -33,6 +33,7 @@ const getCustomerPendingActionsHandler: CustomerHttpHandler = async (
     const items = await getActivePendingActions(
       customer.customerId,
       new Date().toISOString(),
+      'customer', // DPDP role scope: prevent cross-role data leak
     );
     const body = PendingActionsListResponseSchema.parse({
       items,
@@ -69,7 +70,7 @@ const getTechnicianPendingActionsHandler = async (
   }
 
   try {
-    const items = await getActivePendingActions(uid, new Date().toISOString());
+    const items = await getActivePendingActions(uid, new Date().toISOString(), 'technician'); // DPDP role scope
     const body = PendingActionsListResponseSchema.parse({
       items,
       fetchedAt: new Date().toISOString(),

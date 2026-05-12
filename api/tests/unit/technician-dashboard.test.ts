@@ -144,7 +144,7 @@ describe('dashboard data aggregation', () => {
     vi.mocked(getKycByTechnicianId).mockResolvedValue({ kycStatus: 'COMPLETE', aadhaarVerified: true, aadhaarMaskedNumber: '****', panNumber: null, panImagePath: null, updatedAt: new Date().toISOString() });
     vi.mocked(bookingRepo.getByTechnicianId).mockResolvedValue([]);
 
-    const actions = await getActivePendingActions('tech-1', new Date().toISOString());
+    const actions = await getActivePendingActions('tech-1', new Date().toISOString(), 'technician');
     const pendingOfferCount = actions.filter((a) => a.type === 'JOB_OFFER' && a.status === 'ACTIVE').length;
     expect(pendingOfferCount).toBe(2);
   });

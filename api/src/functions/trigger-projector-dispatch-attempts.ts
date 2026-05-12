@@ -19,6 +19,7 @@ import {
   buildPendingActionId,
 } from '../services/pending-action-projector.js';
 import type { DispatchAttemptDoc } from '../schemas/dispatch-attempt.js';
+import { isRetryableCosmosError } from '../shared/cosmos-errors.js';
 
 /**
  * Exported for unit testing without Azure Functions runtime.
@@ -88,7 +89,12 @@ app.cosmosDB('triggerProjectorDispatchAttempts', {
       try {
         await processDispatchAttemptChangeFeedDoc(doc, ctx);
       } catch (err) {
-        ctx.error('[trigger-projector-dispatch-attempts] Error processing doc', String(err));
+        // Rethrow retryable Cosmos errors so runtime retries and checkpoint doesn't advance.
+        if (isRetryableCosmosError(err)) {
+          ctx.error('[trigger-projector-dispatch-attempts] Retryable error — rethrowing for runtime retry', String(err));
+          throw err;
+        }
+        ctx.error('[trigger-projector-dispatch-attempts] Non-retryable error — swallowing to advance checkpoint', String(err));
       }
     }
   },

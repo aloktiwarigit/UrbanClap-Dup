@@ -18,11 +18,17 @@ import {
   emitFcmForAction,
   buildPendingActionId,
 } from '../services/pending-action-projector.js';
+import { isRetryableCosmosError } from '../shared/cosmos-errors.js';
 
 const COMPLAINT_UPDATE_EXPIRY_MS = 14 * 24 * 60 * 60 * 1_000; // 14 days
 
-function isoFromNow(ms: number): string {
-  return new Date(Date.now() + ms).toISOString();
+/**
+ * Derive a stable expiry from a source ISO timestamp + window.
+ * Same source state → same expiresAt → isSemanticNoOp correctly identifies replays.
+ */
+function stableExpiryFrom(sourceIso: string | undefined, windowMs: number): string {
+  const base = sourceIso ? new Date(sourceIso).getTime() : Date.now();
+  return new Date(base + windowMs).toISOString();
 }
 
 interface ComplaintDoc {
@@ -31,6 +37,7 @@ interface ComplaintDoc {
   technicianId?: string;
   bookingId: string;
   status: 'NEW' | 'INVESTIGATING' | 'RESOLVED' | 'CLOSED';
+  createdAt?: string;
 }
 
 /** Statuses that warrant a customer notification */
@@ -55,13 +62,15 @@ export async function processComplaintChangeFeedDoc(
   const actionId = buildPendingActionId('COMPLAINT_UPDATE', customerId, complaintId);
 
   if (ACTIVE_STATUSES.has(status)) {
+    // expiresAt derived from complaint.createdAt so replays produce the same value
+    // and are correctly identified as no-ops by isSemanticNoOp().
     const { doc: upserted, noOp } = await upsertAction({
       id: actionId,
       userId: customerId,
       type: 'COMPLAINT_UPDATE',
       role: 'customer',
       sourceId: complaintId,
-      expiresAt: isoFromNow(COMPLAINT_UPDATE_EXPIRY_MS),
+      expiresAt: stableExpiryFrom(doc.createdAt, COMPLAINT_UPDATE_EXPIRY_MS),
       priority: 8,
       payload: {
         complaintId,
@@ -95,7 +104,13 @@ app.cosmosDB('triggerProjectorComplaints', {
       try {
         await processComplaintChangeFeedDoc(doc, ctx);
       } catch (err) {
-        ctx.error('[trigger-projector-complaints] Error processing doc', String(err));
+        // Rethrow retryable Cosmos errors (503/5xx) so the runtime retries the batch
+        // and the change-feed checkpoint does NOT advance past a failed document.
+        if (isRetryableCosmosError(err)) {
+          ctx.error('[trigger-projector-complaints] Retryable error — rethrowing for runtime retry', String(err));
+          throw err;
+        }
+        ctx.error('[trigger-projector-complaints] Non-retryable error — swallowing to advance checkpoint', String(err));
       }
     }
   },

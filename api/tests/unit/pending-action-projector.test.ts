@@ -453,6 +453,163 @@ describe('isSemanticNoOp — early-exit branches', () => {
   });
 });
 
+// ── P2-5: Reactivation ────────────────────────────────────────────────────────
+
+describe('P2-5: upsertAction reactivates RESOLVED/EXPIRED actions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('sets status=ACTIVE when upserting into an existing RESOLVED action', async () => {
+    const existing = makeDoc({ status: 'RESOLVED', version: 3, payload: { bookingId: 'b-1' } });
+    vi.mocked(getPendingActionById).mockResolvedValue(existing);
+    const reactivated = { ...existing, status: 'ACTIVE' as const, version: 4, payload: { bookingId: 'b-1', addonTotal: 999 } };
+    vi.mocked(rawReplacePendingAction).mockResolvedValue(reactivated);
+
+    const result = await upsertAction({
+      id: existing.id,
+      userId: existing.userId,
+      type: existing.type,
+      role: existing.role,
+      sourceId: existing.sourceId,
+      expiresAt: existing.expiresAt,
+      priority: existing.priority,
+      payload: { bookingId: 'b-1', addonTotal: 999 }, // changed → not a no-op
+    });
+
+    expect(rawReplacePendingAction).toHaveBeenCalledOnce();
+    const [written] = vi.mocked(rawReplacePendingAction).mock.calls[0]!;
+    // The written doc MUST have status=ACTIVE regardless of existing status
+    expect(written.status).toBe('ACTIVE');
+    expect(result.noOp).toBe(false);
+  });
+
+  it('sets status=ACTIVE when upserting into an existing EXPIRED action', async () => {
+    const existing = makeDoc({ status: 'EXPIRED', version: 2, payload: { bookingId: 'b-2' } });
+    vi.mocked(getPendingActionById).mockResolvedValue(existing);
+    vi.mocked(rawReplacePendingAction).mockResolvedValue({ ...existing, status: 'ACTIVE', version: 3 });
+
+    await upsertAction({
+      id: existing.id,
+      userId: existing.userId,
+      type: existing.type,
+      role: existing.role,
+      sourceId: existing.sourceId,
+      expiresAt: existing.expiresAt,
+      priority: existing.priority,
+      payload: { bookingId: 'b-2', renewed: true },
+    });
+
+    const [written] = vi.mocked(rawReplacePendingAction).mock.calls[0]!;
+    expect(written.status).toBe('ACTIVE');
+  });
+});
+
+// ── P1-3: FCM legacy-client compat fields ────────────────────────────────────
+
+describe('P1-3: emitFcmForAction includes legacy-client compat fields', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('includes bookingId top-level for ADDON_APPROVAL_REQUESTED', async () => {
+    const sendMock = vi.fn().mockResolvedValue('msg-id');
+    vi.mocked(getFirebaseAdmin).mockReturnValue({
+      messaging: () => ({ send: sendMock }),
+    } as never);
+
+    const doc = makeDoc({
+      type: 'ADDON_APPROVAL_REQUESTED',
+      role: 'customer',
+      payload: { bookingId: 'booking-xyz', addOnCount: 2 },
+    });
+    await emitFcmForAction(doc, 'bookings');
+
+    const callArg = sendMock.mock.calls[0]![0] as { data: Record<string, string> };
+    expect(callArg.data['bookingId']).toBe('booking-xyz');
+  });
+
+  it('includes bookingId top-level for RATING_PROMPT_CUSTOMER', async () => {
+    const sendMock = vi.fn().mockResolvedValue('msg-id');
+    vi.mocked(getFirebaseAdmin).mockReturnValue({
+      messaging: () => ({ send: sendMock }),
+    } as never);
+
+    const doc = makeDoc({
+      type: 'RATING_PROMPT_CUSTOMER',
+      role: 'customer',
+      payload: { bookingId: 'booking-abc', technicianId: 'tech-1' },
+    });
+    await emitFcmForAction(doc, 'bookings');
+
+    const callArg = sendMock.mock.calls[0]![0] as { data: Record<string, string> };
+    expect(callArg.data['bookingId']).toBe('booking-abc');
+  });
+
+  it('includes overall top-level (as string) for RATING_RECEIVED', async () => {
+    const sendMock = vi.fn().mockResolvedValue('msg-id');
+    vi.mocked(getFirebaseAdmin).mockReturnValue({
+      messaging: () => ({ send: sendMock }),
+    } as never);
+
+    const doc = makeDoc({
+      type: 'RATING_RECEIVED',
+      role: 'technician',
+      payload: { ratingId: 'rating-1', customerId: 'cust-1', overall: 4, submittedAt: new Date().toISOString() },
+    });
+    await emitFcmForAction(doc, 'ratings');
+
+    const callArg = sendMock.mock.calls[0]![0] as { data: Record<string, string> };
+    // FCM data values must be strings; overall must be present
+    expect(callArg.data['overall']).toBe('4');
+  });
+
+  it('does NOT add bookingId for action types that do not need it', async () => {
+    const sendMock = vi.fn().mockResolvedValue('msg-id');
+    vi.mocked(getFirebaseAdmin).mockReturnValue({
+      messaging: () => ({ send: sendMock }),
+    } as never);
+
+    const doc = makeDoc({
+      type: 'KYC_RESUME',
+      role: 'technician',
+      payload: { kycId: 'kyc-1', kycStatus: 'PENDING' },
+    });
+    await emitFcmForAction(doc, 'kyc');
+
+    const callArg = sendMock.mock.calls[0]![0] as { data: Record<string, string> };
+    expect(callArg.data).not.toHaveProperty('bookingId');
+    expect(callArg.data).not.toHaveProperty('overall');
+  });
+
+  it('same change-feed event delivered twice → no version bump', async () => {
+    // Test P1-2 at the upsertAction level: identical state = no-op
+    const existing = makeDoc({
+      status: 'ACTIVE',
+      version: 1,
+      expiresAt: FUTURE,
+      payload: { bookingId: 'b-1' },
+    });
+    vi.mocked(getPendingActionById).mockResolvedValue(existing);
+
+    // Replay with identical state
+    const result = await upsertAction({
+      id: existing.id,
+      userId: existing.userId,
+      type: existing.type,
+      role: existing.role,
+      sourceId: existing.sourceId,
+      expiresAt: FUTURE, // same stable timestamp
+      priority: existing.priority,
+      payload: { bookingId: 'b-1' }, // same payload
+    });
+
+    expect(rawReplacePendingAction).not.toHaveBeenCalled();
+    expect(result.noOp).toBe(true);
+    expect(result.doc.version).toBe(1); // unchanged
+  });
+});
+
 describe('_transitionStatus — ETag fallback and retry exhaustion', () => {
   beforeEach(() => {
     vi.clearAllMocks();

@@ -70,7 +70,7 @@ async function getTechnicianDashboardHandler(
     const [kyc, bookings, pendingActions, todayRatings] = await Promise.all([
       getKycByTechnicianId(uid).catch(() => null),
       bookingRepo.getByTechnicianId(uid).catch(() => []),
-      getActivePendingActions(uid, new Date().toISOString()).catch(() => []),
+      getActivePendingActions(uid, new Date().toISOString(), 'technician').catch(() => []),
       fetchTodayRatings(uid, todayDate, ctx),
     ]);
 

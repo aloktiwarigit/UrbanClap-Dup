@@ -48,6 +48,46 @@ async function main() {
     },
   });
   console.log(`Container 'complaints' ready.`);
+
+  // ── E11-S02: pending_actions + 5 new lease containers ────────────────────────
+  // The pending_actions container stores projected actions for customer + technician apps.
+  await database.containers.createIfNotExists({
+    id: 'pending_actions',
+    partitionKey: { paths: ['/userId'] },
+    // Composite index to support priority + expiresAt sort without cross-partition scans
+    indexingPolicy: {
+      indexingMode: 'consistent',
+      includedPaths: [{ path: '/*' }],
+      compositeIndexes: [
+        [
+          { path: '/userId', order: 'ascending' },
+          { path: '/status', order: 'ascending' },
+          { path: '/priority', order: 'ascending' },
+          { path: '/expiresAt', order: 'ascending' },
+        ],
+      ],
+    },
+  });
+  console.log(`Container 'pending_actions' ready.`);
+
+  // Lease containers for 5 change-feed projectors.
+  // Convention matches existing leases: booking_completed_leases, booking_rating_prompt_leases,
+  // booking_report_leases — all partitioned /id.
+  // createLeaseContainerIfNotExists=false in each trigger, so these MUST be pre-provisioned.
+  const leaseContainers = [
+    'pending_actions_bookings_leases',
+    'pending_actions_complaints_leases',
+    'pending_actions_dispatch_leases',
+    'pending_actions_kyc_leases',
+    'pending_actions_ratings_leases',
+  ];
+  for (const leaseId of leaseContainers) {
+    await database.containers.createIfNotExists({
+      id: leaseId,
+      partitionKey: { paths: ['/id'] },
+    });
+    console.log(`Container '${leaseId}' ready.`);
+  }
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

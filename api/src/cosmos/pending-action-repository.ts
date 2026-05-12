@@ -20,19 +20,29 @@ export async function getPendingActionById(
   return resource ?? null;
 }
 
-/** Query ACTIVE pending actions for a user, ordered by priority asc, expiresAt asc. */
+/**
+ * Query ACTIVE pending actions for a user scoped by role, ordered by priority asc, expiresAt asc.
+ *
+ * The `role` filter is mandatory (DPDP isolation): a user whose Firebase UID is shared
+ * across customer and technician contexts must NOT receive actions intended for the
+ * other role. Without this filter, a customer-app call could surface technician JOB_OFFER
+ * actions and vice versa.
+ */
 export async function getActivePendingActions(
   userId: string,
   nowIso: string,
+  role: 'customer' | 'technician',
 ): Promise<PendingActionDoc[]> {
   const { resources } = await getPendingActionsContainer()
     .items.query<PendingActionDoc>({
       query: `SELECT * FROM c
               WHERE c.userId = @userId
+                AND c.role = @role
                 AND c.status = 'ACTIVE'
                 AND c.expiresAt > @now`,
       parameters: [
         { name: '@userId', value: userId },
+        { name: '@role', value: role },
         { name: '@now', value: nowIso },
       ],
     })

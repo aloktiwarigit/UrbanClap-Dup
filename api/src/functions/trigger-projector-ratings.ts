@@ -16,11 +16,16 @@ import {
   buildPendingActionId,
 } from '../services/pending-action-projector.js';
 import type { RatingDoc } from '../schemas/rating.js';
+import { isRetryableCosmosError } from '../shared/cosmos-errors.js';
 
 const RATING_RECEIVED_EXPIRY_MS = 7 * 24 * 60 * 60 * 1_000; // 7 days
 
-function isoFromNow(ms: number): string {
-  return new Date(Date.now() + ms).toISOString();
+/**
+ * Derive stable expiry from a source ISO timestamp + window.
+ * customerSubmittedAt is stable: same rating replay → same expiresAt → no-op.
+ */
+function stableExpiryFrom(sourceIso: string, windowMs: number): string {
+  return new Date(new Date(sourceIso).getTime() + windowMs).toISOString();
 }
 
 /**
@@ -37,7 +42,9 @@ export async function processRatingChangeFeedDoc(
     return;
   }
 
-  // Emit RATING_RECEIVED to the technician
+  // Emit RATING_RECEIVED to the technician.
+  // expiresAt derived from customerSubmittedAt (stable source timestamp) so replays
+  // produce the same value and are correctly identified as no-ops.
   const actionId = buildPendingActionId('RATING_RECEIVED', technicianId, ratingId);
   const { doc: upserted, noOp } = await upsertAction({
     id: actionId,
@@ -45,7 +52,7 @@ export async function processRatingChangeFeedDoc(
     type: 'RATING_RECEIVED',
     role: 'technician',
     sourceId: ratingId,
-    expiresAt: isoFromNow(RATING_RECEIVED_EXPIRY_MS),
+    expiresAt: stableExpiryFrom(customerSubmittedAt, RATING_RECEIVED_EXPIRY_MS),
     priority: 10,
     payload: {
       ratingId,
@@ -75,7 +82,12 @@ app.cosmosDB('triggerProjectorRatings', {
       try {
         await processRatingChangeFeedDoc(doc, ctx);
       } catch (err) {
-        ctx.error('[trigger-projector-ratings] Error processing doc', String(err));
+        // Rethrow retryable Cosmos errors so runtime retries and checkpoint doesn't advance.
+        if (isRetryableCosmosError(err)) {
+          ctx.error('[trigger-projector-ratings] Retryable error — rethrowing for runtime retry', String(err));
+          throw err;
+        }
+        ctx.error('[trigger-projector-ratings] Non-retryable error — swallowing to advance checkpoint', String(err));
       }
     }
   },

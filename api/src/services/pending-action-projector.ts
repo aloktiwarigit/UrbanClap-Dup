@@ -129,6 +129,14 @@ export async function upsertAction(input: UpsertActionInput): Promise<UpsertActi
     const updated: PendingActionDoc = {
       ...existing,
       type: input.type,
+      // Force status back to ACTIVE on any real upsert.
+      // If the action was previously RESOLVED or EXPIRED (e.g., second add-on
+      // request for the same booking, or a complaint moving back to INVESTIGATING),
+      // we must reactivate it so the read API (which filters status='ACTIVE') can
+      // surface it again. isSemanticNoOp() guards against false positives by
+      // returning false when existing.status !== 'ACTIVE', so we only reach here
+      // when a real mutation is warranted.
+      status: 'ACTIVE',
       expiresAt: input.expiresAt,
       priority: input.priority,
       payload: input.payload,
@@ -208,6 +216,13 @@ export async function emitFcmForAction(
         type: doc.type,
         actionId: doc.id,
         sourceId: doc.sourceId,
+        // Legacy-client compatibility fields.
+        // Customer app (CustomerFirebaseMessagingService) returns early on
+        // ADDON_APPROVAL_REQUESTED and RATING_PROMPT_CUSTOMER without bookingId.
+        // Technician app (HomeservicesFcmService) defaults missing `overall` to 1
+        // for RATING_RECEIVED (wrong content). We hoist these top-level so existing
+        // clients can parse them directly without touching the payload JSON blob.
+        ..._fcmCompatFields(doc),
         ...(doc.payload ? { payload: JSON.stringify(doc.payload) } : {}),
       },
     });
@@ -267,6 +282,41 @@ async function _transitionStatus(
   throw new Error(
     `_transitionStatus(${targetStatus}): max retries exhausted for id=${id}`,
   );
+}
+
+/**
+ * Build legacy-client compatibility fields for the FCM data payload.
+ *
+ * Existing Android apps (CustomerFirebaseMessagingService and
+ * HomeservicesFcmService) parse specific top-level keys from FCM data:
+ *
+ *   ADDON_APPROVAL_REQUESTED → needs `bookingId` at top level or app returns early
+ *   RATING_PROMPT_CUSTOMER   → needs `bookingId` at top level or app returns early
+ *   RATING_RECEIVED          → needs `overall` (string) at top level; defaults to "1" if absent
+ *
+ * These are hoisted from doc.payload so legacy clients can read them directly
+ * without parsing the `payload` JSON blob. New clients should read from `payload`.
+ */
+function _fcmCompatFields(doc: PendingActionDoc): Record<string, string> {
+  const p = doc.payload ?? {};
+  switch (doc.type) {
+    case 'ADDON_APPROVAL_REQUESTED':
+    case 'RATING_PROMPT_CUSTOMER':
+      // bookingId is required — apps return early without it
+      return typeof p['bookingId'] === 'string' ? { bookingId: p['bookingId'] } : {};
+    case 'RATING_RECEIVED': {
+      // overall must be a string (FCM data values are always strings)
+      const overall = p['overall'];
+      if (overall === undefined) return {};
+      // Narrow to a JSON-safe primitive before converting to avoid [object Object]
+      const overallStr = typeof overall === 'number' || typeof overall === 'string' || typeof overall === 'boolean'
+        ? String(overall)
+        : JSON.stringify(overall);
+      return { overall: overallStr };
+    }
+    default:
+      return {};
+  }
 }
 
 /**

@@ -286,3 +286,105 @@ describe('trigger-projector-complaints', () => {
     expect(upsertAction).not.toHaveBeenCalled();
   });
 });
+
+// ── P1-2: Stable expiresAt derivation ────────────────────────────────────────
+
+describe('P1-2: projectors derive stable expiresAt from source timestamps', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('bookings: ADDON_APPROVAL_REQUESTED expiresAt is derived from doc.createdAt (not Date.now)', async () => {
+    const STABLE_CREATED_AT = '2026-01-01T00:00:00.000Z';
+    const ADDON_EXPIRY_MS = 24 * 60 * 60 * 1_000;
+    const expectedExpiry = new Date(new Date(STABLE_CREATED_AT).getTime() + ADDON_EXPIRY_MS).toISOString();
+
+    const doc = {
+      id: 'booking-stable-1',
+      customerId: 'customer-stable',
+      status: 'AWAITING_PRICE_APPROVAL',
+      createdAt: STABLE_CREATED_AT,
+      pendingAddOns: [],
+    };
+
+    await processBookingChangeFeedDoc(doc as never);
+
+    expect(upsertAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expiresAt: expectedExpiry,
+      }),
+    );
+  });
+
+  it('bookings: same change-feed event delivered twice produces identical expiresAt (replay is a no-op)', async () => {
+    const STABLE_CREATED_AT = '2026-01-15T12:00:00.000Z';
+    const doc = {
+      id: 'booking-replay-1',
+      customerId: 'customer-replay',
+      status: 'AWAITING_PRICE_APPROVAL',
+      createdAt: STABLE_CREATED_AT,
+      pendingAddOns: [],
+    };
+
+    // First delivery
+    await processBookingChangeFeedDoc(doc as never);
+    const firstCall = vi.mocked(upsertAction).mock.calls[0]![0];
+    const firstExpiry = firstCall.expiresAt;
+
+    vi.clearAllMocks();
+    // Second delivery (replay)
+    await processBookingChangeFeedDoc(doc as never);
+    const secondCall = vi.mocked(upsertAction).mock.calls[0]![0];
+    const secondExpiry = secondCall.expiresAt;
+
+    expect(firstExpiry).toBe(secondExpiry);
+  });
+
+  it('ratings: RATING_RECEIVED expiresAt is derived from customerSubmittedAt (not Date.now)', async () => {
+    const SUBMITTED_AT = '2026-02-10T08:30:00.000Z';
+    const RATING_EXPIRY_MS = 7 * 24 * 60 * 60 * 1_000;
+    const expectedExpiry = new Date(new Date(SUBMITTED_AT).getTime() + RATING_EXPIRY_MS).toISOString();
+
+    const doc = {
+      id: 'rating-stable-1',
+      technicianId: 'tech-stable',
+      customerId: 'customer-stable',
+      customerOverall: 5,
+      customerSubmittedAt: SUBMITTED_AT,
+    };
+
+    await processRatingChangeFeedDoc(doc as never);
+
+    expect(upsertAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expiresAt: expectedExpiry,
+      }),
+    );
+  });
+});
+
+// ── P2-4: Retryable error rethrow ────────────────────────────────────────────
+
+describe('P2-4: projectors rethrow retryable Cosmos errors', () => {
+  it('isRetryableCosmosError: 503 status code is retryable', async () => {
+    // Import the shared helper to verify the classification logic
+    const { isRetryableCosmosError } = await import('../../src/shared/cosmos-errors.js');
+    expect(isRetryableCosmosError({ code: 503 })).toBe(true);
+    expect(isRetryableCosmosError({ statusCode: 500 })).toBe(true);
+  });
+
+  it('isRetryableCosmosError: 400/404/409 status codes are non-retryable', async () => {
+    const { isRetryableCosmosError } = await import('../../src/shared/cosmos-errors.js');
+    expect(isRetryableCosmosError({ code: 400 })).toBe(false);
+    expect(isRetryableCosmosError({ code: 404 })).toBe(false);
+    expect(isRetryableCosmosError({ code: 409 })).toBe(false);
+  });
+
+  it('isRetryableCosmosError: ECONNRESET message is retryable', async () => {
+    const { isRetryableCosmosError } = await import('../../src/shared/cosmos-errors.js');
+    expect(isRetryableCosmosError(new Error('ECONNRESET from socket'))).toBe(true);
+  });
+
+  it('isRetryableCosmosError: non-Error string is non-retryable', async () => {
+    const { isRetryableCosmosError } = await import('../../src/shared/cosmos-errors.js');
+    expect(isRetryableCosmosError('bad request')).toBe(false);
+  });
+});

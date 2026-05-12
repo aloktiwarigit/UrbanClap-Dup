@@ -17,11 +17,18 @@ import {
   buildPendingActionId,
 } from '../services/pending-action-projector.js';
 import type { TechnicianKyc } from '../schemas/kyc.js';
+import { isRetryableCosmosError } from '../shared/cosmos-errors.js';
 
 const KYC_RESUME_EXPIRY_MS = 30 * 24 * 60 * 60 * 1_000; // 30 days
 
-function isoFromNow(ms: number): string {
-  return new Date(Date.now() + ms).toISOString();
+/**
+ * Derive stable expiry from the KYC doc's updatedAt timestamp.
+ * updatedAt changes exactly when the KYC status transitions, so same-status
+ * replays produce the same expiresAt and are correctly identified as no-ops.
+ */
+function stableExpiryFrom(sourceIso: string | undefined, windowMs: number): string {
+  const base = sourceIso ? new Date(sourceIso).getTime() : Date.now();
+  return new Date(base + windowMs).toISOString();
 }
 
 type KycDoc = TechnicianKyc & { id: string; technicianId: string };
@@ -48,13 +55,15 @@ export async function processKycChangeFeedDoc(
   const actionId = buildPendingActionId('KYC_RESUME', technicianId, technicianId); // sourceId = technicianId (1 KYC per tech)
 
   if (ACTION_REQUIRED_STATUSES.has(kycStatus)) {
+    // expiresAt derived from the KYC doc's updatedAt (stable source timestamp).
+    // Same kycStatus + same updatedAt → same expiresAt → replay is a no-op.
     const { doc: upserted, noOp } = await upsertAction({
       id: actionId,
       userId: technicianId,
       type: 'KYC_RESUME',
       role: 'technician',
       sourceId: technicianId,
-      expiresAt: isoFromNow(KYC_RESUME_EXPIRY_MS),
+      expiresAt: stableExpiryFrom(doc.updatedAt, KYC_RESUME_EXPIRY_MS),
       priority: 2, // high priority — blocks earning
       payload: { kycId, kycStatus },
     });
@@ -83,7 +92,12 @@ app.cosmosDB('triggerProjectorKyc', {
       try {
         await processKycChangeFeedDoc(doc, ctx);
       } catch (err) {
-        ctx.error('[trigger-projector-kyc] Error processing doc', String(err));
+        // Rethrow retryable Cosmos errors so runtime retries and checkpoint doesn't advance.
+        if (isRetryableCosmosError(err)) {
+          ctx.error('[trigger-projector-kyc] Retryable error — rethrowing for runtime retry', String(err));
+          throw err;
+        }
+        ctx.error('[trigger-projector-kyc] Non-retryable error — swallowing to advance checkpoint', String(err));
       }
     }
   },
