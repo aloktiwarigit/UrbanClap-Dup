@@ -19,6 +19,8 @@ import javax.inject.Inject
  * This class has no network calls and no Android framework dependencies beyond Room.
  * All public methods are [suspend] to allow callers to run them on any dispatcher.
  */
+// detekt: deliberate facade over store + DAO; splitting would invert call sites unnecessarily
+@Suppress("TooManyFunctions")
 public class PendingActionStore @Inject constructor(
     private val dao: PendingActionDao,
 ) {

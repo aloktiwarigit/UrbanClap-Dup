@@ -41,9 +41,10 @@ public class PendingActionDaoTest {
     @Before
     public fun setUp() {
         val ctx = ApplicationProvider.getApplicationContext<Context>()
-        db = Room.inMemoryDatabaseBuilder(ctx, PendingActionsDatabase::class.java)
-            .allowMainThreadQueries()
-            .build()
+        db =
+            Room.inMemoryDatabaseBuilder(ctx, PendingActionsDatabase::class.java)
+                .allowMainThreadQueries()
+                .build()
         dao = db.pendingActionDao()
     }
 
@@ -54,6 +55,8 @@ public class PendingActionDaoTest {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
+    // detekt: test fixture factory, parameters intentional
+    @Suppress("LongParameterList")
     private fun entity(
         id: String = "action-1",
         userId: String = "user-1",
@@ -159,7 +162,7 @@ public class PendingActionDaoTest {
     // ── markMissingAsResolved ─────────────────────────────────────────────────
 
     @Test
-    public fun `markMissingAsResolved tombstones rows absent from server snapshot`(): Unit =
+    public fun `markMissingAsResolved tombstones absent rows`(): Unit =
         runTest {
             dao.upsertAll(
                 listOf(
@@ -250,7 +253,7 @@ public class PendingActionDaoTest {
         }
 
     @Test
-    public fun `purgeExpired does not delete RESOLVED rows with expiresAt in the past`(): Unit =
+    public fun `purgeExpired skips RESOLVED rows with past expiresAt`(): Unit =
         runTest {
             // RESOLVED tombstones are protected — purgeTombstones handles them, not purgeExpired
             dao.upsertAll(
@@ -298,7 +301,7 @@ public class PendingActionDaoTest {
         }
 
     @Test
-    public fun `purgeTombstones does not delete RESOLVED rows with null resolvedAt`(): Unit =
+    public fun `purgeTombstones skips RESOLVED rows with null resolvedAt`(): Unit =
         runTest {
             // Edge case: RESOLVED row with no resolvedAt timestamp should not be deleted
             dao.upsertAll(

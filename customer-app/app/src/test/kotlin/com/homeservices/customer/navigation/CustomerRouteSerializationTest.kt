@@ -18,14 +18,12 @@ import org.junit.jupiter.api.Test
  * See E11 spec §E11-S01a acceptance criterion AC-3.
  */
 public class CustomerRouteSerializationTest {
-
     private val json = Json { ignoreUnknownKeys = true }
 
     // ── Spike target: BookingPriceApprovalRoute (arg route) ───────────────────
 
     @Nested
     public inner class BookingPriceApprovalRouteTests {
-
         @Test
         public fun `BookingPriceApprovalRoute round-trips through JSON serialization`() {
             val original = BookingPriceApprovalRoute(bookingId = "bk123")
@@ -56,7 +54,6 @@ public class CustomerRouteSerializationTest {
 
     @Nested
     public inner class AuthRouteTests {
-
         @Test
         public fun `AuthRoute round-trips through JSON serialization`() {
             val original = AuthRoute
@@ -76,7 +73,6 @@ public class CustomerRouteSerializationTest {
 
     @Nested
     public inner class ServiceTrackingRouteTests {
-
         @Test
         public fun `ServiceTrackingRoute round-trips through JSON`() {
             val original = ServiceTrackingRoute(bookingId = "tracking-bk-42")
@@ -91,7 +87,6 @@ public class CustomerRouteSerializationTest {
 
     @Nested
     public inner class ComplaintRouteTests {
-
         @Test
         public fun `ComplaintRoute with null complaintId round-trips`() {
             val original = ComplaintRoute(bookingId = "bk-1", complaintId = null)

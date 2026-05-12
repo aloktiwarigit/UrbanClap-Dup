@@ -34,9 +34,10 @@ public class PendingActionDaoTest {
     @Before
     public fun setUp() {
         val ctx = ApplicationProvider.getApplicationContext<Context>()
-        db = Room.inMemoryDatabaseBuilder(ctx, PendingActionsDatabase::class.java)
-            .allowMainThreadQueries()
-            .build()
+        db =
+            Room.inMemoryDatabaseBuilder(ctx, PendingActionsDatabase::class.java)
+                .allowMainThreadQueries()
+                .build()
         dao = db.pendingActionDao()
     }
 
@@ -47,6 +48,8 @@ public class PendingActionDaoTest {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
+    // detekt: test fixture factory, parameters intentional
+    @Suppress("LongParameterList")
     private fun entity(
         id: String = "action-1",
         userId: String = "tech-1",
@@ -137,7 +140,7 @@ public class PendingActionDaoTest {
     // ── markMissingAsResolved ─────────────────────────────────────────────────
 
     @Test
-    public fun `markMissingAsResolved tombstones rows absent from server snapshot`(): Unit =
+    public fun `markMissingAsResolved tombstones absent rows`(): Unit =
         runTest {
             dao.upsertAll(
                 listOf(

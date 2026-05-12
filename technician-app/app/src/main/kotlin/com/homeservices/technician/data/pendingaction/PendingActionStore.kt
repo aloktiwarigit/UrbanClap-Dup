@@ -14,6 +14,8 @@ import javax.inject.Inject
  * Local persistence abstraction for pending actions — technician-app.
  * Mirrors the customer-app [com.homeservices.customer.data.pendingaction.PendingActionStore].
  */
+// detekt: deliberate facade over store + DAO; splitting would invert call sites unnecessarily
+@Suppress("TooManyFunctions")
 public class PendingActionStore @Inject constructor(
     private val dao: PendingActionDao,
 ) {

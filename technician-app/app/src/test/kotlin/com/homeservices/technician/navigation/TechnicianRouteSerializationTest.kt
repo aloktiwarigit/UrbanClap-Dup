@@ -12,14 +12,12 @@ import org.junit.jupiter.api.Test
  * through Json encode/decode, proving kotlinx-serialization is wired correctly.
  */
 public class TechnicianRouteSerializationTest {
-
     private val json = Json { ignoreUnknownKeys = true }
 
     // ── Spike target: JobOfferRoute (arg route) ───────────────────────────────
 
     @Nested
     public inner class JobOfferRouteTests {
-
         @Test
         public fun `JobOfferRoute round-trips through JSON serialization`() {
             val original = JobOfferRoute(offerId = "offer-123")
@@ -41,7 +39,6 @@ public class TechnicianRouteSerializationTest {
 
     @Nested
     public inner class TechnicianAuthRouteTests {
-
         @Test
         public fun `TechnicianAuthRoute round-trips through JSON serialization`() {
             val original = TechnicianAuthRoute
@@ -61,7 +58,6 @@ public class TechnicianRouteSerializationTest {
 
     @Nested
     public inner class ActiveJobRouteTests {
-
         @Test
         public fun `ActiveJobRoute round-trips through JSON`() {
             val original = ActiveJobRoute(bookingId = "job-bk-77")
@@ -76,7 +72,6 @@ public class TechnicianRouteSerializationTest {
 
     @Nested
     public inner class TechnicianComplaintRouteTests {
-
         @Test
         public fun `TechnicianComplaintRoute with null complaintId round-trips`() {
             val original = TechnicianComplaintRoute(bookingId = "bk-3", complaintId = null)

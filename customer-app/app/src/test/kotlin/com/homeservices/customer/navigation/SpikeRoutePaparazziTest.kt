@@ -1,7 +1,5 @@
 package com.homeservices.customer.navigation
 
-import app.cash.paparazzi.DeviceConfig
-import app.cash.paparazzi.Paparazzi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -9,6 +7,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import app.cash.paparazzi.DeviceConfig
+import app.cash.paparazzi.Paparazzi
 import com.homeservices.designsystem.theme.HomeservicesTheme
 import org.junit.Rule
 import org.junit.Test
@@ -26,12 +26,12 @@ import org.junit.Test
  * This test corresponds to E11 spec §S01a AC-3 and AC-5.
  */
 public class SpikeRoutePaparazziTest {
-
     @get:Rule
-    public val paparazzi: Paparazzi = Paparazzi(
-        deviceConfig = DeviceConfig.PIXEL_5,
-        theme = "android:Theme.Material3.DayNight.NoActionBar",
-    )
+    public val paparazzi: Paparazzi =
+        Paparazzi(
+            deviceConfig = DeviceConfig.PIXEL_5,
+            theme = "android:Theme.Material3.DayNight.NoActionBar",
+        )
 
     /**
      * Spike: simple no-arg route [AuthRoute] renders as expected.
