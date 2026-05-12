@@ -318,3 +318,20 @@ The four-layer protection landed in commit `f52e6ca` (E10-S01) — Semgrep rule 
 ---
 
 **Addendum 2026-04-26 complete. Total new STRIDE entries: 16 (S:3, T:3, R:2, I:4, D:2, E:3, plus design-mitigated re-walks).**
+
+---
+
+## Addendum 2026-05-12 — E16-S01 Service-Area Polygon Gating
+
+**Author:** Alok Tiwari + Claude (architect persona)
+**Trigger:** E16-S01 landed server-side Turf.js polygon gating in `POST /v1/bookings`. New attack surface: client-spoofed geographic coordinates.
+
+Convention for `Status` column: `mitigated` | `partial` | `not-yet-mitigated` | `accepted`.
+
+### New Threat: Booking Input Tampering (Geographic Bypass)
+
+| # | Threat | Code path | Likelihood | Impact | Mitigation | Residual risk | Status |
+|---|---|---|---|---|---|---|---|
+| **T-B1** | **Service-area bypass via client-spoofed lat/lng** — A customer outside the Ayodhya pilot area submits `addressLatLng: { lat: 26.7958, lng: 82.1947 }` (Ramkot coordinates) in `POST /v1/bookings` while physically located in Delhi or abroad. The booking is accepted and dispatched to a technician in Ayodhya who cannot reach the customer. Repeated systematic attempts (recon pattern) indicate the attacker is probing the polygon boundary or enumerating valid coordinates. | `api/src/functions/bookings.ts` — `isLatLngInServiceArea()` check + GrowthBook flag `customer.service-area-gating.enabled`; `api/src/schemas/booking.ts` — `LatLngSchema` with `lat.min(-90).max(90)` + `lng.min(-180).max(180)` range guard | M (3) | M-H (3) — wasted dispatch capacity, failed bookings, tech-side frustration; H if systematic booking fraud | **Server-side Turf.js polygon check** in `POST /v1/bookings` using `@turf/boolean-point-in-polygon` against 25 km Ayodhya polygon. Out-of-range coords rejected at Zod layer (422); out-of-polygon coords rejected at service layer (400 `SERVICE_NOT_AVAILABLE_AT_LOCATION`) when flag `customer.service-area-gating.enabled = true`. Structured log `service_area_check { inside, mode }` always emitted. **Alert trigger:** >5 rejections/min/customer → recon signal. ADR-0020. | Medium — no phone-home API to verify physical device location; a determined attacker with knowledge of the polygon can always spoof a valid inside-polygon coordinate. Mitigated post-soft-launch by cross-checking address against confirmed tech locations (Phase 2). | mitigated (server-side; AC-5 also mitigates out-of-range spoofing via Zod) |
+
+**Addendum 2026-05-12 complete. New STRIDE entry: T-B1 (Tampering).**
