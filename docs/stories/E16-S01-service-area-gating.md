@@ -1,5 +1,5 @@
 ---
-status: pr_open
+status: in_progress
 epic: E16
 story: S01
 tier: Foundation
