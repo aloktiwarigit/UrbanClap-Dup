@@ -19,7 +19,8 @@ public class FirstLaunchLanguageViewModel
         private val getCurrentLocale: GetCurrentLocaleUseCase,
         private val setAppLocale: SetAppLocaleUseCase,
     ) : ViewModel() {
-        private val _selectedTag = MutableStateFlow("en")
+        // ADR-0018: pre-select Hindi for the Ayodhya/UP pilot first-launch picker.
+        private val _selectedTag = MutableStateFlow("hi")
         public val selectedTag: StateFlow<String> = _selectedTag.asStateFlow()
 
         public val confirmedFlow: MutableStateFlow<Boolean> = MutableStateFlow(false)

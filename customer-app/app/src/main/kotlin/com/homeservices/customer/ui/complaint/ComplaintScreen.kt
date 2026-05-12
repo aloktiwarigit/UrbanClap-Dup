@@ -29,10 +29,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.homeservices.customer.R
 import com.homeservices.customer.domain.complaint.ComplaintReason
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSecondaryButton
@@ -93,20 +95,24 @@ internal fun ComplaintContent(
                     modifier = Modifier.fillMaxSize().padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    HsTrustBadge(text = "Customer support")
-                    Text("File a complaint", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    HsTrustBadge(text = stringResource(R.string.complaint_eyebrow))
                     Text(
-                        "Tell us what went wrong. Owner support will review the booking and follow up.",
+                        stringResource(R.string.complaint_title),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        stringResource(R.string.complaint_body),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     HsSectionCard {
                         ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
                             OutlinedTextField(
-                                value = state.selectedReason?.displayLabel() ?: "Select reason",
+                                value = state.selectedReason?.displayLabel() ?: stringResource(R.string.complaint_select_reason),
                                 onValueChange = {},
                                 readOnly = true,
-                                label = { Text("Issue type") },
+                                label = { Text(stringResource(R.string.complaint_issue_type)) },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                                 modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth(),
                             )
@@ -126,7 +132,7 @@ internal fun ComplaintContent(
                         OutlinedTextField(
                             value = state.description,
                             onValueChange = onDescriptionChanged,
-                            label = { Text("What happened?") },
+                            label = { Text(stringResource(R.string.complaint_what_happened)) },
                             supportingText = { Text("${state.description.length}/2000") },
                             minLines = 4,
                             maxLines = 8,
@@ -134,14 +140,19 @@ internal fun ComplaintContent(
                         )
                         Spacer(Modifier.height(14.dp))
                         HsSecondaryButton(
-                            text = if (state.photoStoragePath != null) "Photo attached" else "Attach photo (optional)",
+                            text =
+                                if (state.photoStoragePath != null) {
+                                    stringResource(R.string.complaint_photo_attached)
+                                } else {
+                                    stringResource(R.string.complaint_attach_photo)
+                                },
                             onClick = onPhotoClick,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
                     Spacer(Modifier.weight(1f))
                     HsPrimaryButton(
-                        text = "Submit complaint",
+                        text = stringResource(R.string.complaint_submit),
                         onClick = onSubmit,
                         enabled = state.submitEnabled,
                         modifier = Modifier.fillMaxWidth(),
@@ -162,11 +173,19 @@ private fun SuccessState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("Complaint received", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(
+            stringResource(R.string.complaint_received),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
         Spacer(Modifier.height(8.dp))
-        Text(statusMessage(state.status), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            statusMessage(state.status),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Spacer(Modifier.height(24.dp))
-        HsPrimaryButton(text = "Back to booking", onClick = onBack)
+        HsPrimaryButton(text = stringResource(R.string.complaint_back), onClick = onBack)
     }
 }
 
@@ -179,7 +198,7 @@ private fun LoadingState() {
     ) {
         CircularProgressIndicator()
         Spacer(Modifier.height(12.dp))
-        Text("Submitting complaint", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.complaint_submitting), color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -189,27 +208,33 @@ private fun ErrorState(
     onRetry: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
-        Text("Something went wrong", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(
+            stringResource(R.string.complaint_error_title),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
         Spacer(Modifier.height(8.dp))
         Text(message, color = MaterialTheme.colorScheme.error)
         Spacer(Modifier.height(16.dp))
-        HsPrimaryButton(text = "Try again", onClick = onRetry)
+        HsPrimaryButton(text = stringResource(R.string.complaint_retry), onClick = onRetry)
     }
 }
 
+@Composable
 private fun statusMessage(status: String): String =
     when (status) {
-        "INVESTIGATING" -> "Owner support is reviewing your complaint."
-        "RESOLVED" -> "This complaint has been resolved."
-        else -> "Owner support will respond within 2 hours."
+        "INVESTIGATING" -> stringResource(R.string.complaint_status_investigating)
+        "RESOLVED" -> stringResource(R.string.complaint_status_resolved)
+        else -> stringResource(R.string.complaint_status_default)
     }
 
+@Composable
 private fun ComplaintReason.displayLabel(): String =
     when (this) {
-        ComplaintReason.SERVICE_QUALITY -> "Service quality"
-        ComplaintReason.LATE_ARRIVAL -> "Late arrival"
-        ComplaintReason.NO_SHOW -> "Technician did not arrive"
-        ComplaintReason.TECHNICIAN_BEHAVIOUR -> "Technician behaviour"
-        ComplaintReason.BILLING_DISPUTE -> "Billing dispute"
-        ComplaintReason.OTHER -> "Other"
+        ComplaintReason.SERVICE_QUALITY -> stringResource(R.string.complaint_reason_service_quality)
+        ComplaintReason.LATE_ARRIVAL -> stringResource(R.string.complaint_reason_late_arrival)
+        ComplaintReason.NO_SHOW -> stringResource(R.string.complaint_reason_no_show)
+        ComplaintReason.TECHNICIAN_BEHAVIOUR -> stringResource(R.string.complaint_reason_technician_behaviour)
+        ComplaintReason.BILLING_DISPUTE -> stringResource(R.string.complaint_reason_billing_dispute)
+        ComplaintReason.OTHER -> stringResource(R.string.complaint_reason_other)
     }

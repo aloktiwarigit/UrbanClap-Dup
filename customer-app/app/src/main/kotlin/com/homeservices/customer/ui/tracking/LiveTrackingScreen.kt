@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -44,6 +45,7 @@ import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.homeservices.customer.R
 import com.homeservices.customer.domain.tracking.model.BookingStatus
 import com.homeservices.designsystem.components.HsSecondaryButton
 
@@ -62,14 +64,20 @@ internal fun LiveTrackingScreen(
         uiState is LiveTrackingUiState.Tracking &&
             (uiState as LiveTrackingUiState.Tracking).status is BookingStatus.InProgress
 
+    val sosConfirmedMsg = stringResource(R.string.tracking_sos_confirmed)
+    val sosErrorMsg = stringResource(R.string.tracking_sos_error)
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Track service") },
+                title = { Text(stringResource(R.string.tracking_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.tracking_back_desc),
+                        )
                     }
                 },
                 actions = {
@@ -77,7 +85,7 @@ internal fun LiveTrackingScreen(
                         IconButton(onClick = { sosViewModel.onSosTapped() }) {
                             Icon(
                                 Icons.Filled.Warning,
-                                contentDescription = "Safety alert",
+                                contentDescription = stringResource(R.string.tracking_sos_desc),
                                 tint = MaterialTheme.colorScheme.error,
                             )
                         }
@@ -106,10 +114,10 @@ internal fun LiveTrackingScreen(
                 onConfirmNow = { sosViewModel.onSendNow() },
             )
         is SosUiState.SosConfirmed -> {
-            LaunchedEffect(sos) { snackbarHostState.showSnackbar("Safety alert sent to owner support.") }
+            LaunchedEffect(sos) { snackbarHostState.showSnackbar(sosConfirmedMsg) }
         }
         is SosUiState.SosError -> {
-            LaunchedEffect(sos) { snackbarHostState.showSnackbar("Could not send alert. Please try again.") }
+            LaunchedEffect(sos) { snackbarHostState.showSnackbar(sosErrorMsg) }
         }
         else -> Unit
     }
@@ -138,21 +146,23 @@ private fun TrackingBody(
     state: LiveTrackingUiState.Tracking,
     onFileComplaint: (bookingId: String) -> Unit,
 ) {
+    val defaultTechName = stringResource(R.string.tracking_your_technician)
     Column(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
-                text = state.techName.ifBlank { "Your technician" },
+                text = state.techName.ifBlank { defaultTechName },
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 AssistChip(onClick = {}, label = { Text(statusLabel(state.status)) })
-                state.etaMinutes?.let { AssistChip(onClick = {}, label = { Text("ETA $it min") }) }
+                state.etaMinutes?.let { AssistChip(onClick = {}, label = { Text(stringResource(R.string.tracking_eta_chip, it)) }) }
             }
         }
 
         state.location?.let { loc ->
             val techLatLng = LatLng(loc.lat, loc.lng)
+            val techNameForMarker = state.techName.ifBlank { defaultTechName }
             val cameraPositionState =
                 rememberCameraPositionState {
                     position = CameraPosition.fromLatLngZoom(techLatLng, 15f)
@@ -163,7 +173,7 @@ private fun TrackingBody(
             ) {
                 Marker(
                     state = MarkerState(position = techLatLng),
-                    title = state.techName.ifBlank { "Technician" },
+                    title = techNameForMarker,
                 )
             }
         } ?: MapPlaceholder()
@@ -179,13 +189,17 @@ private fun TrackingBody(
                 tonalElevation = 1.dp,
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Service progress", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        stringResource(R.string.tracking_service_progress),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                     StatusTimeline(currentStatus = state.status)
                 }
             }
             if (state.status is BookingStatus.Closed) {
                 HsSecondaryButton(
-                    text = "File a complaint",
+                    text = stringResource(R.string.tracking_file_complaint),
                     onClick = { onFileComplaint(state.bookingId) },
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -206,7 +220,7 @@ private fun MapPlaceholder() {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
             Text(
-                text = "Live location will appear here",
+                text = stringResource(R.string.tracking_map_placeholder_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -214,7 +228,7 @@ private fun MapPlaceholder() {
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "We update the technician position as soon as tracking starts.",
+                text = stringResource(R.string.tracking_map_placeholder_body),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                 textAlign = TextAlign.Center,
@@ -227,10 +241,10 @@ private fun MapPlaceholder() {
 private fun StatusTimeline(currentStatus: BookingStatus) {
     val stages =
         listOf(
-            BookingStatus.EnRoute to "En route",
-            BookingStatus.Reached to "Arrived",
-            BookingStatus.InProgress to "Working",
-            BookingStatus.Completed to "Done",
+            BookingStatus.EnRoute to stringResource(R.string.status_en_route),
+            BookingStatus.Reached to stringResource(R.string.status_reached),
+            BookingStatus.InProgress to stringResource(R.string.status_in_progress),
+            BookingStatus.Completed to stringResource(R.string.status_done),
         )
     val activeIndex = stages.indexOfFirst { (status, _) -> status == currentStatus }
 
@@ -257,6 +271,10 @@ private fun StatusTimeline(currentStatus: BookingStatus) {
     }
 }
 
+// NOTE: statusLabel is a non-composable function retained for backward-compat with callers
+// that cannot access stringResource. Composable callers (like TrackingBody) should use
+// the composable overload above (StatusTimeline / label chip) instead.
+// TODO(E12-S02a): convert status enum labels fully in E18 when all callers are composable.
 private fun statusLabel(status: BookingStatus): String =
     when (status) {
         BookingStatus.PendingPayment -> "Payment pending"

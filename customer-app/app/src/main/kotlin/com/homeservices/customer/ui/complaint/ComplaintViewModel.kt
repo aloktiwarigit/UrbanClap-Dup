@@ -36,6 +36,8 @@ public sealed class ComplaintUiState {
     ) : ComplaintUiState()
 }
 
+private const val UNKNOWN_ERROR_FALLBACK = "Unknown error"
+
 @HiltViewModel
 public class ComplaintViewModel
     @Inject
@@ -118,7 +120,8 @@ public class ComplaintViewModel
                                     )
                                 },
                                 onFailure = { e ->
-                                    ComplaintUiState.Error(e.message ?: "Unknown error")
+                                    // error message surfaced via R.string.complaint_error_unknown in the UI layer
+                                    ComplaintUiState.Error(e.message ?: UNKNOWN_ERROR_FALLBACK)
                                 },
                             )
                     }

@@ -75,12 +75,19 @@ internal fun AddressScreen(
     var addressText by rememberSaveable { mutableStateOf("") }
     var selectedLat by rememberSaveable { mutableStateOf<Double?>(null) }
     var selectedLng by rememberSaveable { mutableStateOf<Double?>(null) }
-    var locationMessage by rememberSaveable { mutableStateOf("Location not set") }
+    // null = show default "Location not set" string from resources
+    var locationMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var isLocating by rememberSaveable { mutableStateOf(false) }
+
+    val locationCapturedMsg = stringResource(R.string.address_location_captured)
+    val locationCapturedManualMsg = stringResource(R.string.address_location_captured_manual)
+    val locationErrorMsg = stringResource(R.string.address_location_error)
+    val locationPermissionDeniedMsg = stringResource(R.string.address_location_permission_denied)
+
     val onLocationCaptured: (Double, Double) -> Unit = { lat, lng ->
         selectedLat = lat
         selectedLng = lng
-        locationMessage = "Current location captured"
+        locationMessage = locationCapturedMsg
         scope.launch {
             val resolvedAddress =
                 withContext(Dispatchers.IO) {
@@ -88,9 +95,9 @@ internal fun AddressScreen(
                 }
             if (resolvedAddress != null) {
                 addressText = resolvedAddress
-                locationMessage = "Current location captured"
+                locationMessage = locationCapturedMsg
             } else {
-                locationMessage = "Current location captured. Enter the address manually."
+                locationMessage = locationCapturedManualMsg
             }
             isLocating = false
         }
@@ -104,11 +111,11 @@ internal fun AddressScreen(
                     onLocation = onLocationCaptured,
                     onError = {
                         isLocating = false
-                        locationMessage = it
+                        locationMessage = locationErrorMsg
                     },
                 )
             } else {
-                locationMessage = "Allow location access to find nearby technicians."
+                locationMessage = locationPermissionDeniedMsg
             }
         }
     val requestLocation = {
@@ -119,7 +126,7 @@ internal fun AddressScreen(
                 onLocation = onLocationCaptured,
                 onError = {
                     isLocating = false
-                    locationMessage = it
+                    locationMessage = locationErrorMsg
                 },
             )
         } else {
@@ -151,7 +158,7 @@ internal fun AddressScreenContent(
     addressText: String,
     selectedLat: Double?,
     selectedLng: Double?,
-    locationMessage: String,
+    locationMessage: String?,
     isLocating: Boolean,
     onAddressTextChanged: (String) -> Unit,
     onUseCurrentLocation: () -> Unit,
@@ -266,7 +273,7 @@ internal fun AddressScreenContent(
 private fun LocationCapturePanel(
     lat: Double?,
     lng: Double?,
-    message: String,
+    message: String?,
     isLocating: Boolean,
     onUseCurrentLocation: () -> Unit,
 ) {
@@ -274,7 +281,12 @@ private fun LocationCapturePanel(
         LocationPreview(lat, lng, message, isLocating)
         Spacer(Modifier.height(10.dp))
         HsSecondaryButton(
-            text = if (isLocating) "Finding your location" else "Use current location",
+            text =
+                if (isLocating) {
+                    stringResource(R.string.address_finding_location)
+                } else {
+                    stringResource(R.string.address_use_current_location)
+                },
             onClick = onUseCurrentLocation,
             enabled = !isLocating,
             modifier = Modifier.fillMaxWidth(),
@@ -286,7 +298,7 @@ private fun LocationCapturePanel(
 private fun LocationPreview(
     lat: Double?,
     lng: Double?,
-    message: String,
+    message: String?,
     isLocating: Boolean,
 ) {
     if (lat != null && lng != null && BuildConfig.MAPS_API_KEY.isNotBlank()) {
@@ -301,7 +313,7 @@ private fun LocationPreview(
         ) {
             Marker(
                 state = MarkerState(position = point),
-                title = "Service location",
+                title = stringResource(R.string.address_service_location),
             )
         }
         return
@@ -322,20 +334,20 @@ private fun LocationPreview(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator()
                     Spacer(Modifier.width(12.dp))
-                    Text("Finding your service location")
+                    Text(stringResource(R.string.address_finding_service_location))
                 }
             } else {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.MyLocation, contentDescription = null)
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = message,
+                        text = message ?: stringResource(R.string.address_location_not_set),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         textAlign = TextAlign.Center,
                     )
                     Text(
-                        text = "This helps assign the nearest available technician.",
+                        text = stringResource(R.string.address_location_assign_help),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
@@ -371,16 +383,16 @@ private fun captureCurrentLocation(
                 if (lastLocation != null) {
                     onLocation(lastLocation.latitude, lastLocation.longitude)
                 } else {
-                    onError("Could not find your location. Check GPS and try again.")
+                    onError("GPS_ERROR")
                 }
             }
             lastLocationTask.addOnFailureListener {
-                onError("Could not find your location. Check GPS and try again.")
+                onError("GPS_ERROR")
             }
         }
     }
     currentLocationTask.addOnFailureListener {
-        onError("Could not find your location. Check GPS and try again.")
+        onError("GPS_ERROR")
     }
 }
 

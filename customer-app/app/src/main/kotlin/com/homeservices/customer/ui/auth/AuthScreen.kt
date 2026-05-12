@@ -46,12 +46,14 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.homeservices.customer.R
 import com.homeservices.customer.domain.auth.PhoneNumberNormalizer
 import com.homeservices.designsystem.components.HsActionButton
 import com.homeservices.designsystem.components.HsPrimaryButton
@@ -94,8 +96,8 @@ internal fun AuthScreen(
         when (uiState) {
             is AuthUiState.Idle, is AuthUiState.TruecallerLoading ->
                 LoadingContent(
-                    title = "Checking Truecaller",
-                    message = "We are verifying your number before falling back to OTP.",
+                    title = stringResource(R.string.auth_checking_truecaller),
+                    message = stringResource(R.string.auth_checking_truecaller_body),
                 )
 
             is AuthUiState.MethodSelection ->
@@ -107,8 +109,8 @@ internal fun AuthScreen(
 
             is AuthUiState.GoogleSigningIn ->
                 LoadingContent(
-                    title = "Signing in with Google",
-                    message = "Choose your Google account to continue.",
+                    title = stringResource(R.string.auth_signing_in_google),
+                    message = stringResource(R.string.auth_signing_in_google_body),
                 )
 
             is AuthUiState.EmailEntry ->
@@ -125,11 +127,11 @@ internal fun AuthScreen(
                 LoadingContent(
                     title =
                         if (uiState.mode == AuthUiState.EmailEntry.Mode.SignUp) {
-                            "Creating account"
+                            stringResource(R.string.auth_creating_account)
                         } else {
-                            "Signing in"
+                            stringResource(R.string.auth_signing_in)
                         },
-                    message = "Keep this screen open while we verify ${uiState.email}.",
+                    message = stringResource(R.string.auth_submitting_email_body, uiState.email),
                 )
 
             is AuthUiState.EmailVerificationSent ->
@@ -157,14 +159,14 @@ internal fun AuthScreen(
 
             is AuthUiState.OtpSending ->
                 LoadingContent(
-                    title = "Sending OTP",
-                    message = "Keep this screen open while we send your secure code.",
+                    title = stringResource(R.string.auth_sending_otp),
+                    message = stringResource(R.string.auth_sending_otp_body),
                 )
 
             is AuthUiState.OtpVerifying ->
                 LoadingContent(
-                    title = "Verifying code",
-                    message = "This usually takes a few seconds.",
+                    title = stringResource(R.string.auth_verifying_code),
+                    message = stringResource(R.string.auth_verifying_code_body),
                 )
 
             is AuthUiState.Error ->
@@ -260,7 +262,7 @@ private fun AuthFrame(
                     Text(text = body, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 HsSectionCard { content() }
-                SecurityNote(text = "Secure sign-in. Booking and payment actions always need your confirmation.")
+                SecurityNote(text = stringResource(R.string.auth_security_note))
             }
         }
     }
@@ -273,19 +275,19 @@ private fun MethodSelectionContent(
     onPhoneSelected: () -> Unit,
 ) {
     AuthFrame(
-        eyebrow = "Homeservices",
-        title = "Sign in to book services",
-        body = "Use Google, email, or phone to manage bookings, service updates, and support cases.",
+        eyebrow = stringResource(R.string.auth_method_eyebrow),
+        title = stringResource(R.string.auth_method_title),
+        body = stringResource(R.string.auth_method_body),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             HsActionButton(
-                text = "Continue with Google",
+                text = stringResource(R.string.auth_continue_google),
                 onClick = onGoogleSelected,
                 modifier = Modifier.fillMaxWidth(),
                 leadingContent = { GoogleMark() },
             )
             HsActionButton(
-                text = "Continue with email",
+                text = stringResource(R.string.auth_continue_email),
                 onClick = onEmailSelected,
                 modifier = Modifier.fillMaxWidth(),
                 leadingContent = {
@@ -298,7 +300,7 @@ private fun MethodSelectionContent(
                 },
             )
             HsActionButton(
-                text = "Continue with phone",
+                text = stringResource(R.string.auth_continue_phone),
                 onClick = onPhoneSelected,
                 modifier = Modifier.fillMaxWidth(),
                 leadingContent = {
@@ -313,14 +315,14 @@ private fun MethodSelectionContent(
         }
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "Email sign-up requires verification before booking access.",
+            text = stringResource(R.string.auth_email_verification_note),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
         )
         Text(
-            text = "By continuing, you agree to the Terms of Service and Privacy Policy.",
+            text = stringResource(R.string.auth_terms_note),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -388,23 +390,23 @@ private fun EmailEntryContent(
     val isReady = isValidEmail && password.length >= 6
 
     AuthFrame(
-        eyebrow = if (isSignUp) "Create account" else "Email sign in",
-        title = if (isSignUp) "Create your email login" else "Sign in with email",
+        eyebrow = if (isSignUp) stringResource(R.string.auth_email_create_eyebrow) else stringResource(R.string.auth_email_signin_eyebrow),
+        title = if (isSignUp) stringResource(R.string.auth_email_create_title) else stringResource(R.string.auth_email_signin_title),
         body =
             if (isSignUp) {
-                "We will send a verification email before enabling bookings."
+                stringResource(R.string.auth_email_create_body)
             } else {
-                "Use your verified email and password to continue."
+                stringResource(R.string.auth_email_signin_body)
             },
     ) {
         TextButton(onClick = onBackToMethodSelection, modifier = Modifier.fillMaxWidth()) {
-            Text("Back to sign-in options")
+            Text(stringResource(R.string.auth_back_to_options))
         }
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Email") },
-            placeholder = { Text("you@example.com") },
+            label = { Text(stringResource(R.string.auth_email_label)) },
+            placeholder = { Text(stringResource(R.string.auth_email_placeholder)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -413,7 +415,7 @@ private fun EmailEntryContent(
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Password") },
+            label = { Text(stringResource(R.string.auth_password_label)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             singleLine = true,
@@ -421,7 +423,12 @@ private fun EmailEntryContent(
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                     Icon(
                         imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                        contentDescription =
+                            if (passwordVisible) {
+                                stringResource(R.string.auth_password_hide)
+                            } else {
+                                stringResource(R.string.auth_password_show)
+                            },
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -430,7 +437,7 @@ private fun EmailEntryContent(
         )
         Spacer(modifier = Modifier.height(20.dp))
         HsPrimaryButton(
-            text = if (isSignUp) "Create account" else "Sign in",
+            text = if (isSignUp) stringResource(R.string.auth_create_account_btn) else stringResource(R.string.auth_signin_btn),
             onClick = {
                 if (isSignUp) {
                     onEmailSignUp(email.trim(), password)
@@ -445,7 +452,7 @@ private fun EmailEntryContent(
             onClick = { onEmailModeToggle(email.trim()) },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(if (isSignUp) "Already have an account? Sign in" else "New here? Create account")
+            Text(if (isSignUp) stringResource(R.string.auth_have_account) else stringResource(R.string.auth_no_account))
         }
         if (!isSignUp) {
             TextButton(
@@ -453,7 +460,7 @@ private fun EmailEntryContent(
                 enabled = isValidEmail,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Forgot password?")
+                Text(stringResource(R.string.auth_forgot_password))
             }
         }
     }
@@ -467,9 +474,9 @@ private fun EmailVerificationSentContent(
     onBackToMethodSelection: () -> Unit,
 ) {
     AuthFrame(
-        eyebrow = "Email verification",
-        title = "Check your inbox",
-        body = "We sent a verification link to ${state.email}. Open it, then return here to continue.",
+        eyebrow = stringResource(R.string.auth_verify_eyebrow),
+        title = stringResource(R.string.auth_verify_title),
+        body = stringResource(R.string.auth_verify_body, state.email),
     ) {
         if (state.message != null) {
             Text(
@@ -482,18 +489,18 @@ private fun EmailVerificationSentContent(
             Spacer(modifier = Modifier.height(16.dp))
         }
         HsPrimaryButton(
-            text = "I verified, continue",
+            text = stringResource(R.string.auth_i_verified),
             onClick = { onContinue(state.email) },
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(12.dp))
         HsSecondaryButton(
-            text = "Resend email",
+            text = stringResource(R.string.auth_resend_email),
             onClick = { onResend(state.email) },
             modifier = Modifier.fillMaxWidth(),
         )
         TextButton(onClick = onBackToMethodSelection, modifier = Modifier.fillMaxWidth()) {
-            Text("Use another sign-in method")
+            Text(stringResource(R.string.auth_use_other_method))
         }
     }
 }
@@ -507,35 +514,35 @@ private fun PhoneEntryContent(
     val normalizedPhone = PhoneNumberNormalizer.normalize(phone)
 
     AuthFrame(
-        eyebrow = "Homeservices",
-        title = "Book trusted home services",
-        body = "Sign in once to manage bookings, track your professional, approve prices, and raise support requests.",
+        eyebrow = stringResource(R.string.auth_method_eyebrow),
+        title = stringResource(R.string.auth_phone_title),
+        body = stringResource(R.string.auth_phone_body),
     ) {
         OutlinedTextField(
             value = phone,
             onValueChange = { phone = it },
-            label = { Text("Mobile number") },
-            placeholder = { Text("+91 98765 43210") },
+            label = { Text(stringResource(R.string.auth_mobile_label)) },
+            placeholder = { Text(stringResource(R.string.auth_mobile_placeholder)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "Use the number you want linked to service updates and invoices.",
+            text = stringResource(R.string.auth_mobile_note),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.height(20.dp))
         HsPrimaryButton(
-            text = "Get OTP",
+            text = stringResource(R.string.auth_get_otp),
             onClick = { normalizedPhone?.let(onPhoneSubmitted) },
             enabled = normalizedPhone != null,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "By continuing, you agree to the Terms of Service and Privacy Policy.",
+            text = stringResource(R.string.auth_terms_note),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -551,30 +558,30 @@ private fun OtpCodeContent(
     onResendRequested: () -> Unit,
 ) {
     var otp by remember { mutableStateOf("") }
-    val lastFour = phoneNumber.takeLast(PHONE_LAST_DIGITS).ifEmpty { "your number" }
+    val lastFour = phoneNumber.takeLast(PHONE_LAST_DIGITS).ifEmpty { stringResource(R.string.auth_otp_label) }
 
     AuthFrame(
-        eyebrow = "Verification",
-        title = "Enter your 6-digit code",
-        body = "We sent an OTP to the mobile number ending in $lastFour.",
+        eyebrow = stringResource(R.string.auth_otp_eyebrow),
+        title = stringResource(R.string.auth_otp_title),
+        body = stringResource(R.string.auth_otp_body, lastFour),
     ) {
         OutlinedTextField(
             value = otp,
             onValueChange = { if (it.length <= 6) otp = it.filter(Char::isDigit) },
-            label = { Text("6-digit code") },
+            label = { Text(stringResource(R.string.auth_otp_label)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(20.dp))
         HsPrimaryButton(
-            text = "Verify and continue",
+            text = stringResource(R.string.auth_verify_continue),
             onClick = { onOtpEntered(otp.trim()) },
             enabled = otp.length == 6,
             modifier = Modifier.fillMaxWidth(),
         )
         TextButton(onClick = onResendRequested, modifier = Modifier.fillMaxWidth()) {
-            Text("Resend code")
+            Text(stringResource(R.string.auth_resend_code))
         }
     }
 }
@@ -618,13 +625,19 @@ private fun ErrorContent(
     onRetry: () -> Unit,
 ) {
     AuthFrame(
-        eyebrow = "Action needed",
-        title = "We could not sign you in",
+        eyebrow = stringResource(R.string.auth_error_eyebrow),
+        title = stringResource(R.string.auth_error_title),
         body = state.message,
     ) {
         if (state.retriesLeft > 0) {
+            val attemptsText =
+                if (state.retriesLeft == 1) {
+                    stringResource(R.string.auth_attempts_remaining_one, state.retriesLeft)
+                } else {
+                    stringResource(R.string.auth_attempts_remaining_other, state.retriesLeft)
+                }
             Text(
-                text = "${state.retriesLeft} attempt${if (state.retriesLeft == 1) "" else "s"} remaining",
+                text = attemptsText,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth(),
@@ -633,7 +646,7 @@ private fun ErrorContent(
             Spacer(modifier = Modifier.height(16.dp))
         }
         HsPrimaryButton(
-            text = "Try again",
+            text = stringResource(R.string.auth_retry),
             onClick = onRetry,
             modifier = Modifier.fillMaxWidth(),
         )
