@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.Flow
  */
 @Dao
 public interface PendingActionDao {
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     public suspend fun upsertAll(rows: List<PendingActionEntity>)
 
@@ -25,7 +24,11 @@ public interface PendingActionDao {
           AND status = 'ACTIVE'
         """,
     )
-    public suspend fun markMissingAsResolved(userId: String, keep: Set<String>, now: Long)
+    public suspend fun markMissingAsResolved(
+        userId: String,
+        keep: Set<String>,
+        now: Long,
+    )
 
     @Query(
         """
@@ -54,7 +57,10 @@ public interface PendingActionDao {
         WHERE id = :id
         """,
     )
-    public suspend fun markResolved(id: String, now: Long)
+    public suspend fun markResolved(
+        id: String,
+        now: Long,
+    )
 
     @Query(
         """

@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.Flow
  */
 @Dao
 public interface PendingActionDao {
-
     /**
      * Insert or replace rows. On id conflict, the existing row is fully replaced.
      * Used during reconcile (full server snapshot) and ingest (single FCM payload).
@@ -40,7 +39,11 @@ public interface PendingActionDao {
           AND status = 'ACTIVE'
         """,
     )
-    public suspend fun markMissingAsResolved(userId: String, keep: Set<String>, now: Long)
+    public suspend fun markMissingAsResolved(
+        userId: String,
+        keep: Set<String>,
+        now: Long,
+    )
 
     /**
      * Observe ACTIVE rows for [userId], ordered by priority DESC then createdAt ASC.
@@ -87,7 +90,10 @@ public interface PendingActionDao {
         WHERE id = :id
         """,
     )
-    public suspend fun markResolved(id: String, now: Long)
+    public suspend fun markResolved(
+        id: String,
+        now: Long,
+    )
 
     /**
      * Purge ACTIVE rows whose TTL has passed. RESOLVED tombstones are protected — use

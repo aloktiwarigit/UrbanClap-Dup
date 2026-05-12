@@ -13,13 +13,15 @@ import javax.inject.Inject
 /**
  * Local persistence abstraction for pending actions — technician-app.
  * Mirrors the customer-app [com.homeservices.customer.data.pendingaction.PendingActionStore].
+ *
+ * detekt: deliberate facade over store + DAO; splitting would invert call sites unnecessarily
  */
-// detekt: deliberate facade over store + DAO; splitting would invert call sites unnecessarily
 @Suppress("TooManyFunctions")
-public class PendingActionStore @Inject constructor(
+public class PendingActionStore
+@Inject
+constructor(
     private val dao: PendingActionDao,
 ) {
-
     public fun observeActive(userId: String): Flow<List<PendingAction>> =
         dao.observeActive(userId).map { entities -> entities.map { it.toDomain() } }
 
@@ -34,7 +36,11 @@ public class PendingActionStore @Inject constructor(
         upsertAll(listOf(action))
     }
 
-    public suspend fun markMissingAsResolved(userId: String, keepIds: Set<String>, now: Long) {
+    public suspend fun markMissingAsResolved(
+        userId: String,
+        keepIds: Set<String>,
+        now: Long,
+    ) {
         dao.markMissingAsResolved(userId = userId, keep = keepIds, now = now)
     }
 
@@ -56,40 +62,42 @@ public class PendingActionStore @Inject constructor(
 
     // ── Mapping helpers ───────────────────────────────────────────────────────
 
-    private fun PendingActionEntity.toDomain(): PendingAction = PendingAction(
-        id = id,
-        userId = userId,
-        role = role,
-        type = PendingActionType.valueOf(type),
-        entityType = entityType,
-        entityId = entityId,
-        routeUri = routeUri,
-        priority = PendingActionPriority.valueOf(priority),
-        status = PendingActionStatus.valueOf(status),
-        sourceStatus = sourceStatus,
-        version = version,
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-        expiresAt = expiresAt,
-        resolvedAt = resolvedAt,
-    )
+    private fun PendingActionEntity.toDomain(): PendingAction =
+        PendingAction(
+            id = id,
+            userId = userId,
+            role = role,
+            type = PendingActionType.valueOf(type),
+            entityType = entityType,
+            entityId = entityId,
+            routeUri = routeUri,
+            priority = PendingActionPriority.valueOf(priority),
+            status = PendingActionStatus.valueOf(status),
+            sourceStatus = sourceStatus,
+            version = version,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            expiresAt = expiresAt,
+            resolvedAt = resolvedAt,
+        )
 
-    private fun PendingAction.toEntity(): PendingActionEntity = PendingActionEntity(
-        id = id,
-        userId = userId,
-        role = role,
-        type = type.name,
-        entityType = entityType,
-        entityId = entityId,
-        routeUri = routeUri,
-        priority = priority.name,
-        status = status.name,
-        sourceStatus = sourceStatus,
-        version = version,
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-        expiresAt = expiresAt,
-        resolvedAt = resolvedAt,
-        lastFetchedAt = System.currentTimeMillis(),
-    )
+    private fun PendingAction.toEntity(): PendingActionEntity =
+        PendingActionEntity(
+            id = id,
+            userId = userId,
+            role = role,
+            type = type.name,
+            entityType = entityType,
+            entityId = entityId,
+            routeUri = routeUri,
+            priority = priority.name,
+            status = status.name,
+            sourceStatus = sourceStatus,
+            version = version,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            expiresAt = expiresAt,
+            resolvedAt = resolvedAt,
+            lastFetchedAt = System.currentTimeMillis(),
+        )
 }

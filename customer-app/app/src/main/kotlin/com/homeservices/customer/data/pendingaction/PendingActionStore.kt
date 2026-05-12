@@ -18,13 +18,15 @@ import javax.inject.Inject
  *
  * This class has no network calls and no Android framework dependencies beyond Room.
  * All public methods are [suspend] to allow callers to run them on any dispatcher.
+ *
+ * detekt: deliberate facade over store + DAO; splitting would invert call sites unnecessarily
  */
-// detekt: deliberate facade over store + DAO; splitting would invert call sites unnecessarily
 @Suppress("TooManyFunctions")
-public class PendingActionStore @Inject constructor(
+public class PendingActionStore
+@Inject
+constructor(
     private val dao: PendingActionDao,
 ) {
-
     // ── Reads ─────────────────────────────────────────────────────────────────
 
     /** Observe ACTIVE pending actions for [userId] as a reactive Flow. */
@@ -51,7 +53,11 @@ public class PendingActionStore @Inject constructor(
      * Tombstone ACTIVE rows absent from [keepIds] for [userId].
      * Called during reconcile after the full server snapshot has been upserted.
      */
-    public suspend fun markMissingAsResolved(userId: String, keepIds: Set<String>, now: Long) {
+    public suspend fun markMissingAsResolved(
+        userId: String,
+        keepIds: Set<String>,
+        now: Long,
+    ) {
         dao.markMissingAsResolved(userId = userId, keep = keepIds, now = now)
     }
 
@@ -89,40 +95,42 @@ public class PendingActionStore @Inject constructor(
 
     // ── Mapping helpers ───────────────────────────────────────────────────────
 
-    private fun PendingActionEntity.toDomain(): PendingAction = PendingAction(
-        id = id,
-        userId = userId,
-        role = role,
-        type = PendingActionType.valueOf(type),
-        entityType = entityType,
-        entityId = entityId,
-        routeUri = routeUri,
-        priority = PendingActionPriority.valueOf(priority),
-        status = PendingActionStatus.valueOf(status),
-        sourceStatus = sourceStatus,
-        version = version,
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-        expiresAt = expiresAt,
-        resolvedAt = resolvedAt,
-    )
+    private fun PendingActionEntity.toDomain(): PendingAction =
+        PendingAction(
+            id = id,
+            userId = userId,
+            role = role,
+            type = PendingActionType.valueOf(type),
+            entityType = entityType,
+            entityId = entityId,
+            routeUri = routeUri,
+            priority = PendingActionPriority.valueOf(priority),
+            status = PendingActionStatus.valueOf(status),
+            sourceStatus = sourceStatus,
+            version = version,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            expiresAt = expiresAt,
+            resolvedAt = resolvedAt,
+        )
 
-    private fun PendingAction.toEntity(): PendingActionEntity = PendingActionEntity(
-        id = id,
-        userId = userId,
-        role = role,
-        type = type.name,
-        entityType = entityType,
-        entityId = entityId,
-        routeUri = routeUri,
-        priority = priority.name,
-        status = status.name,
-        sourceStatus = sourceStatus,
-        version = version,
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-        expiresAt = expiresAt,
-        resolvedAt = resolvedAt,
-        lastFetchedAt = System.currentTimeMillis(),
-    )
+    private fun PendingAction.toEntity(): PendingActionEntity =
+        PendingActionEntity(
+            id = id,
+            userId = userId,
+            role = role,
+            type = type.name,
+            entityType = entityType,
+            entityId = entityId,
+            routeUri = routeUri,
+            priority = priority.name,
+            status = status.name,
+            sourceStatus = sourceStatus,
+            version = version,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            expiresAt = expiresAt,
+            resolvedAt = resolvedAt,
+            lastFetchedAt = System.currentTimeMillis(),
+        )
 }

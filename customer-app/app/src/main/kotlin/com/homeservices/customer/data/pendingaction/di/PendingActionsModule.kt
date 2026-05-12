@@ -23,27 +23,26 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 public object PendingActionsModule {
-
     @Provides
     @Singleton
     public fun providePendingActionsDatabase(
         @ApplicationContext context: Context,
     ): PendingActionsDatabase =
-        Room.databaseBuilder(
-            context,
-            PendingActionsDatabase::class.java,
-            "pending_actions.db",
-        ).build()
+        Room
+            .databaseBuilder(
+                context,
+                PendingActionsDatabase::class.java,
+                "pending_actions.db",
+            )
+            .build()
 
     @Provides
     @Singleton
-    public fun providePendingActionDao(
-        database: PendingActionsDatabase,
-    ): PendingActionDao = database.pendingActionDao()
+    public fun providePendingActionDao(database: PendingActionsDatabase): PendingActionDao =
+        database.pendingActionDao()
 
     @Provides
     @Singleton
-    public fun providePendingActionStore(
-        dao: PendingActionDao,
-    ): PendingActionStore = PendingActionStore(dao)
+    public fun providePendingActionStore(dao: PendingActionDao): PendingActionStore =
+        PendingActionStore(dao)
 }
