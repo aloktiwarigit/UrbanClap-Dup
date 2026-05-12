@@ -94,9 +94,10 @@ export const customerCreditLedgerRepo = {
   ): Promise<{ entries: CustomerCreditLedgerDoc[]; total: number }> {
     const container = getCustomerCreditLedgerContainer();
 
-    // Count query (no ORDER BY — cheaper)
+    // Count query (no ORDER BY — cheaper).
+    // SELECT VALUE COUNT(1) returns a scalar number per Cosmos JS SDK.
     const { resources: countRes } = await container.items
-      .query<{ count: number }>(
+      .query<number>(
         {
           query: `SELECT VALUE COUNT(1) FROM c WHERE c.customerId = @customerId`,
           parameters: [{ name: '@customerId', value: customerId }],
@@ -104,7 +105,7 @@ export const customerCreditLedgerRepo = {
         { partitionKey: pk(customerId) },
       )
       .fetchAll();
-    const total = countRes[0] ?? 0;
+    const total: number = typeof countRes[0] === 'number' ? countRes[0] : 0;
 
     const offset = (page - 1) * limit;
     const { resources } = await container.items
@@ -187,9 +188,7 @@ export const customerCreditLedgerRepo = {
     };
     // Cosmos create is atomic — concurrent writes with same id would 409; we use randomUUID so
     // the idempotency dedup below is the real guard.
-    await creditContainer.items.create<CustomerCreditLedgerDoc>(ledgerEntry, {
-      accessCondition: undefined,
-    });
+    await creditContainer.items.create<CustomerCreditLedgerDoc>(ledgerEntry);
 
     // Step 4: Write idempotency-key dedup record
     const idemDoc: AppliedCreditIdempotencyDoc = {
