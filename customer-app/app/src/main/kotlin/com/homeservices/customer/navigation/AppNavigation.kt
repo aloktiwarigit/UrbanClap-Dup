@@ -123,44 +123,16 @@ private fun AppNavigationContent(
         },
     )
 
-    LaunchedEffect(priceApprovalEventBus) {
-        priceApprovalEventBus.events.collect { bookingId ->
-            navController.navigate(BookingRoutes.priceApprovalRoute(bookingId)) {
-                launchSingleTop = true
-            }
-        }
-    }
+    EventBusNavigationEffects(
+        priceApprovalEventBus = priceApprovalEventBus,
+        ratingPromptEventBus = ratingPromptEventBus,
+        navController = navController,
+    )
 
-    LaunchedEffect(ratingPromptEventBus) {
-        ratingPromptEventBus.events.collect { bookingId ->
-            navController.navigate(RatingRoutes.route(bookingId)) { launchSingleTop = true }
-        }
-    }
-
-    // E18-S06: Sentry user-context — bind hashed uid on auth-state changes.
-    // Runs as a separate effect so it does NOT interfere with navigation logic above.
-    // Stream 2.1 (E11-S01b-1) also touches AppNavigation; this block is purely additive
-    // and does not change the composable signature.
-    LaunchedEffect(sessionManager) {
-        SentryContextBinder.bindAuthState(sessionManager.authState)
-    }
-
-    // E18-S06: Sentry navigation breadcrumbs — record every route transition.
-    // DisposableEffect ensures the listener is removed when the composable leaves
-    // composition, preventing a leaked reference to NavController.
-    DisposableEffect(navController) {
-        var previousRoute: String? = null
-        val listener =
-            NavController.OnDestinationChangedListener { _, destination, _ ->
-                SentryContextBinder.recordNavigationBreadcrumb(
-                    from = previousRoute,
-                    to = destination.route,
-                )
-                previousRoute = destination.route
-            }
-        navController.addOnDestinationChangedListener(listener)
-        onDispose { navController.removeOnDestinationChangedListener(listener) }
-    }
+    SentryObservabilityEffects(
+        sessionManager = sessionManager,
+        navController = navController,
+    )
 
     NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
         composable(LocaleRoutes.FIRST_LAUNCH) {
@@ -176,6 +148,52 @@ private fun AppNavigationContent(
         authGraph(navController, activity)
         mainGraph(navController)
         settingsGraph(navController, featureFlags)
+    }
+}
+
+@Composable
+private fun EventBusNavigationEffects(
+    priceApprovalEventBus: PriceApprovalEventBus,
+    ratingPromptEventBus: RatingPromptEventBus,
+    navController: NavController,
+) {
+    LaunchedEffect(priceApprovalEventBus) {
+        priceApprovalEventBus.events.collect { bookingId ->
+            navController.navigate(BookingRoutes.priceApprovalRoute(bookingId)) {
+                launchSingleTop = true
+            }
+        }
+    }
+
+    LaunchedEffect(ratingPromptEventBus) {
+        ratingPromptEventBus.events.collect { bookingId ->
+            navController.navigate(RatingRoutes.route(bookingId)) { launchSingleTop = true }
+        }
+    }
+}
+
+// E18-S06: Sentry user-context + breadcrumbs. Extracted as one helper so AppNavigationContent
+// stays under detekt's LongMethod threshold without losing the additive intent.
+@Composable
+private fun SentryObservabilityEffects(
+    sessionManager: SessionManager,
+    navController: NavController,
+) {
+    LaunchedEffect(sessionManager) {
+        SentryContextBinder.bindAuthState(sessionManager.authState)
+    }
+    DisposableEffect(navController) {
+        var previousRoute: String? = null
+        val listener =
+            NavController.OnDestinationChangedListener { _, destination, _ ->
+                SentryContextBinder.recordNavigationBreadcrumb(
+                    from = previousRoute,
+                    to = destination.route,
+                )
+                previousRoute = destination.route
+            }
+        navController.addOnDestinationChangedListener(listener)
+        onDispose { navController.removeOnDestinationChangedListener(listener) }
     }
 }
 
