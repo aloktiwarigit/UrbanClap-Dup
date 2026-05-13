@@ -113,6 +113,7 @@ internal fun TechnicianHomeScreen(
     earningsViewModel: EarningsViewModel = hiltViewModel(),
     availabilityViewModel: AvailabilityViewModel = hiltViewModel(),
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val earningsState by earningsViewModel.uiState.collectAsStateWithLifecycle()
     val availabilityState by availabilityViewModel.uiState.collectAsStateWithLifecycle()
@@ -150,9 +151,9 @@ internal fun TechnicianHomeScreen(
                             scope.launch {
                                 snackbarHostState.showSnackbar(
                                     if (it) {
-                                        "Availability synced: online for new jobs"
+                                        context.getString(R.string.home_availability_online)
                                     } else {
-                                        "Availability synced: offline"
+                                        context.getString(R.string.home_availability_offline)
                                     },
                                 )
                             }
@@ -410,7 +411,7 @@ private fun NextJobHero(
                         ) {
                             Icon(Icons.Default.Route, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text("Open job")
+                            Text(stringResource(R.string.home_open_job))
                         }
                     } else {
                         StatusPill(
@@ -635,7 +636,7 @@ private fun EarningsErrorCard(onRetry: () -> Unit) {
             OutlinedButton(onClick = onRetry) {
                 Icon(Icons.Default.Refresh, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Retry")
+                Text(stringResource(R.string.home_retry))
             }
         }
     }
@@ -755,7 +756,7 @@ private fun JobCard(
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = DeepGreen),
                 ) {
-                    Text("Continue job")
+                    Text(stringResource(R.string.home_continue_job))
                 }
             }
         }
@@ -899,7 +900,7 @@ private fun AvailabilitySyncCard(
                 OutlinedButton(onClick = onRetry) {
                     Icon(Icons.Default.Refresh, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Retry")
+                    Text(stringResource(R.string.home_retry))
                 }
             }
         }
@@ -1225,7 +1226,7 @@ private fun ErrorCard(
             OutlinedButton(onClick = onRefresh) {
                 Icon(Icons.Default.Refresh, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Retry")
+                Text(stringResource(R.string.home_retry))
             }
         }
     }

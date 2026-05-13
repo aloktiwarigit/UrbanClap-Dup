@@ -50,6 +50,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.res.stringResource
+import com.homeservices.technician.R
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.homeservices.designsystem.components.HsActionButton
@@ -422,13 +424,13 @@ private fun EmailEntryContent(
             },
     ) {
         TextButton(onClick = onBackToMethodSelection, modifier = Modifier.fillMaxWidth()) {
-            Text("Back to sign-in options")
+            Text(stringResource(R.string.auth_back_to_sign_in))
         }
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Email") },
-            placeholder = { Text("you@example.com") },
+            label = { Text(stringResource(R.string.auth_email_label)) },
+            placeholder = { Text(stringResource(R.string.auth_email_placeholder)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -437,7 +439,7 @@ private fun EmailEntryContent(
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Password") },
+            label = { Text(stringResource(R.string.auth_password_label)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             singleLine = true,
@@ -477,7 +479,7 @@ private fun EmailEntryContent(
                 enabled = isValidEmail,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Forgot password?")
+                Text(stringResource(R.string.auth_forgot_password))
             }
         }
     }
@@ -517,7 +519,7 @@ private fun EmailVerificationSentContent(
             modifier = Modifier.fillMaxWidth(),
         )
         TextButton(onClick = onBackToMethodSelection, modifier = Modifier.fillMaxWidth()) {
-            Text("Use another sign-in method")
+            Text(stringResource(R.string.auth_use_another_method))
         }
     }
 }
@@ -538,8 +540,8 @@ private fun PhoneEntryContent(
         OutlinedTextField(
             value = phone,
             onValueChange = { phone = it },
-            label = { Text("Mobile number") },
-            placeholder = { Text("+91 98765 43210") },
+            label = { Text(stringResource(R.string.auth_mobile_label)) },
+            placeholder = { Text(stringResource(R.string.auth_mobile_placeholder)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -585,7 +587,7 @@ private fun OtpCodeContent(
         OutlinedTextField(
             value = otp,
             onValueChange = { if (it.length <= 6) otp = it.filter(Char::isDigit) },
-            label = { Text("6-digit code") },
+            label = { Text(stringResource(R.string.auth_otp_label)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -598,7 +600,7 @@ private fun OtpCodeContent(
             modifier = Modifier.fillMaxWidth(),
         )
         TextButton(onClick = onResendRequested, modifier = Modifier.fillMaxWidth()) {
-            Text("Resend code")
+            Text(stringResource(R.string.auth_resend_code))
         }
     }
 }

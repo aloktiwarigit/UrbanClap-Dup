@@ -13,6 +13,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.homeservices.technician.R
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,7 +67,7 @@ internal fun RatingAppealSheet(
                         .fillMaxWidth()
                         .height(140.dp),
                 maxLines = 5,
-                placeholder = { Text("कारण लिखें…") },
+                placeholder = { Text(stringResource(R.string.rating_appeal_reason_placeholder)) },
                 enabled = !isSubmitting,
             )
             Text(

@@ -25,11 +25,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.technician.R
 
 private data class CadenceOption(
     val value: String,
@@ -70,7 +72,7 @@ internal fun PayoutCadenceScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("पेमेंट सेटिंग") }) },
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.payout_settings_title)) }) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier,
     ) { padding ->
@@ -113,7 +115,7 @@ private fun ReadyContent(
         modifier = modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("पेमेंट कब चाहिए?", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.payout_when_question), style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(4.dp))
 
         CADENCE_OPTIONS.forEach { option ->

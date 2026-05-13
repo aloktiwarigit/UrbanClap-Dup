@@ -64,4 +64,68 @@
     <string name="settings_language_subtitle">Switch between English and Hindi</string>
     <string name="settings_language_save">Save language</string>
     <string name="action_back">Back</string>
+
+    <!-- Photo capture screen (E06-S02-Codemod) -->
+    <string name="photo_no_back_camera">No back camera available on this device</string>
+    <string name="photo_go_back">Go back</string>
+    <string name="photo_capture">Capture</string>
+    <string name="photo_cancel">Cancel</string>
+    <string name="photo_upload_failed">Upload failed: %s</string>
+    <string name="photo_retry_upload">Retry Upload</string>
+    <string name="photo_retake_photo">Retake Photo</string>
+    <string name="photo_retake">Retake</string>
+    <string name="photo_confirm_upload">Confirm &amp; Upload</string>
+    <string name="photo_camera_permission_required">Camera permission required</string>
+    <string name="photo_grant_permission">Grant Permission</string>
+
+    <!-- Shield report sheet (E06-S02-Codemod) -->
+    <string name="shield_description_placeholder">Description…</string>
+
+    <!-- Ratings screens -->
+    <string name="my_ratings_title">My ratings</string>
+    <string name="my_ratings_load_error">Could not load ratings</string>
+    <string name="my_ratings_empty">No ratings yet</string>
+    <string name="rating_punctuality_chip">Punctuality %s</string>
+    <string name="rating_skill_chip">Skill %s</string>
+    <string name="rating_appeal_reason_placeholder">Write reason…</string>
+    <string name="rating_comment_label">Comment (optional, ≤500 chars)</string>
+    <string name="rating_overall">Overall: %s ★</string>
+    <string name="rating_behaviour">Behaviour: %s ★</string>
+    <string name="rating_communication">Communication: %s ★</string>
+    <string name="rating_punctuality">Punctuality: %s ★</string>
+    <string name="rating_skill">Skill: %s ★</string>
+    <string name="rating_comment">Comment: %s</string>
+
+    <!-- Complaint screen -->
+    <string name="complaint_report_title">Report an issue</string>
+    <string name="complaint_issue_type_label">Issue type</string>
+    <string name="complaint_describe_label">Describe the issue</string>
+    <string name="complaint_char_count">%d/2000</string>
+    <string name="complaint_received_title">Issue received</string>
+    <string name="complaint_submitting">Submitting issue</string>
+    <string name="complaint_error_title">Something went wrong</string>
+
+    <!-- Home screen -->
+    <string name="home_open_job">Open job</string>
+    <string name="home_retry">Retry</string>
+    <string name="home_continue_job">Continue job</string>
+    <string name="home_availability_online">Availability synced: online for new jobs</string>
+    <string name="home_availability_offline">Availability synced: offline</string>
+
+    <!-- Payout settings + Service selection -->
+    <string name="payout_settings_title">Payment settings</string>
+    <string name="payout_when_question">When do you want payment?</string>
+    <string name="service_finding_area">Finding your current area</string>
+
+    <!-- Auth screen -->
+    <string name="auth_back_to_sign_in">Back to sign-in options</string>
+    <string name="auth_email_label">Email</string>
+    <string name="auth_email_placeholder">you@example.com</string>
+    <string name="auth_password_label">Password</string>
+    <string name="auth_forgot_password">Forgot password?</string>
+    <string name="auth_use_another_method">Use another sign-in method</string>
+    <string name="auth_mobile_label">Mobile number</string>
+    <string name="auth_mobile_placeholder">+91 98765 43210</string>
+    <string name="auth_otp_label">6-digit code</string>
+    <string name="auth_resend_code">Resend code</string>
 </resources>
