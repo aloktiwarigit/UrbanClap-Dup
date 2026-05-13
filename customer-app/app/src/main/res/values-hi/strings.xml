@@ -345,33 +345,8 @@
     <string name="settings_language_current">हिंदी</string>
     <string name="settings_language_title">भाषा चुनें</string>
     <string name="settings_language_save">सेव करें</string>
-    <string name="settings_privacy_and_data">गोपनीयता और डेटा</string>
-    <string name="settings_privacy_data_export_title">मेरा डेटा डाउनलोड करें</string>
-    <string name="settings_privacy_data_delete_title">खाता हटाएं</string>
 
-    <!-- Delete account / DPDP erasure (E15-S02) -->
-    <string name="delete_account_title">खाता हटाएं</string>
-    <string name="delete_account_warning">आपका खाता और सभी संबंधित डेटा 7 दिन की कूल-ऑफ अवधि के बाद स्थायी रूप से हटा दिया जाएगा। इस दौरान आप कभी भी हटाने को रद्द कर सकते हैं।</string>
-    <string name="delete_account_what_deleted_label">क्या हटाया जाएगा</string>
-    <string name="delete_account_item_bookings">बुकिंग इतिहास</string>
-    <string name="delete_account_item_addresses">सहेजे गए पते</string>
-    <string name="delete_account_item_payment_methods">भुगतान के तरीके</string>
-    <string name="delete_account_item_preferences">ऐप प्राथमिकताएं और सेटिंग्स</string>
-    <string name="delete_account_continue_cta">हटाने के लिए आगे बढ़ें</string>
-    <string name="delete_account_confirm_title">हटाने की पुष्टि करें</string>
-    <string name="delete_account_confirm_instruction">खाता हटाने की पुष्टि करने के लिए नीचे दिया गया वाक्यांश ठीक वैसे ही टाइप करें।</string>
-    <string name="delete_account_phrase_label">पुष्टि वाक्यांश</string>
-    <string name="delete_my_account_confirmation_phrase">मेरा खाता हटाएं</string>
-    <string name="delete_account_phrase_mismatch">वाक्यांश मेल नहीं खाता। कृपया इसे ठीक वैसे ही टाइप करें।</string>
-    <string name="delete_account_pin_label">अपने पंजीकृत फोन नंबर के अंतिम 4 अंक</string>
-    <string name="delete_account_submit_cta">मेरा खाता हटाएं</string>
-    <string name="delete_account_cancel_cta">रद्द करें</string>
-    <string name="delete_account_coolOff_title">हटाना निर्धारित किया गया</string>
-    <string name="delete_account_coolOff_subtitle">आपका खाता स्थायी रूप से हटने तक आप इसे रद्द कर सकते हैं।</string>
-    <string name="delete_account_coolOff_countdown_format">खाता %1$s में हटाया जाएगा</string>
-    <string name="delete_account_coolOff_pending_no_date">हटाना लंबित है — सटीक तारीख उपलब्ध नहीं</string>
-    <string name="delete_account_revoke_cta">हटाना रद्द करें</string>
-    <string name="delete_account_revoke_success">हटाना रद्द किया गया। आपका खाता सुरक्षित है।</string>
-    <string name="delete_account_close_cta">बंद करें</string>
-    <string name="delete_account_error_unknown">कुछ गलत हो गया। कृपया पुनः प्रयास करें।</string>
+    <!-- Notification permission rationale (E11-S01b-1) -->
+    <string name="notification_permission_rationale_title">सूचनाएं अनुमति दें</string>
+    <string name="notification_permission_rationale_body">बुकिंग अपडेट, ऐड-ऑन अनुरोध और सेवा अनुस्मारक पाने के लिए सूचनाएं अनुमति दें।</string>
 </resources>

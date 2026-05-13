@@ -3,6 +3,7 @@ package com.homeservices.technician
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.homeservices.technician.data.fcm.HomeservicesFcmService
 import com.homeservices.technician.domain.flags.GrowthBookFeatureFlags
 import com.homeservices.technician.observability.SentryInitializer
 import dagger.hilt.EntryPoint
@@ -32,6 +33,7 @@ public class HomeservicesTechnicianApplication :
     override fun onCreate() {
         super.onCreate()
         SentryInitializer.init(this)
+        HomeservicesFcmService.registerChannels(this)
 
         // Best-effort async flag refresh — non-blocking, fire-and-forget.
         // Uses a SupervisorJob so a failure here never propagates to sibling coroutines.
