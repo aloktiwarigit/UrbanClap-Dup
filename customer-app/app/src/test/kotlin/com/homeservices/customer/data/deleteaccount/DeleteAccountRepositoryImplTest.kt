@@ -15,6 +15,11 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Test
 import retrofit2.Response
 
+// NOTE: Tests for getActiveErasureRequest() (POST-probe) have been removed.
+// That method was deleted as part of the DPDP-CRITICAL P1 fix — the POST-probe
+// created an erasure request on screen entry, before user confirmation.
+// The 409 conflict path is now handled in submitErasureRequest() via
+// ErasureAlreadyPendingException; see the test below.
 public class DeleteAccountRepositoryImplTest {
     private val api: ErasureApiService = mockk()
     private val moshi: Moshi =
@@ -55,6 +60,20 @@ public class DeleteAccountRepositoryImplTest {
             assertThat(result.exceptionOrNull()).isInstanceOf(ErasureAlreadyPendingException::class.java)
             val ex = result.exceptionOrNull() as ErasureAlreadyPendingException
             assertThat(ex.erasureId).isEqualTo("pending:uid-1")
+        }
+
+    @Test
+    public fun `submitErasureRequest returns ErasureAlreadyPendingException with unknown id when 409 body is unparseable`(): Unit =
+        runTest {
+            // Guard: malformed 409 body — erasureId falls back to "unknown".
+            val errorBody = "not-json".toResponseBody()
+            coEvery { api.submitErasureRequest(any()) } returns Response.error(409, errorBody)
+
+            val result = sut.submitErasureRequest()
+            assertThat(result.isFailure).isTrue()
+            val ex = result.exceptionOrNull() as? ErasureAlreadyPendingException
+            assertThat(ex).isNotNull()
+            assertThat(ex!!.erasureId).isEqualTo("unknown")
         }
 
     @Test
@@ -106,62 +125,6 @@ public class DeleteAccountRepositoryImplTest {
             coEvery { api.revokeErasureRequest() } returns Response.error(500, errorBody)
 
             val result = sut.revokeErasureRequest()
-            assertThat(result.isFailure).isTrue()
-        }
-
-    // ─── getActiveErasureRequest ─────────────────────────────────────────────
-
-    @Test
-    public fun `getActiveErasureRequest returns ErasureRequest when 201 (probe created new)`(): Unit =
-        runTest {
-            val dto =
-                SubmitErasureResponseDto(
-                    erasureId = "pending:uid-1",
-                    scheduledDeletionAt = "2026-05-19T12:00:00Z",
-                    status = "PENDING",
-                )
-            coEvery { api.submitErasureRequest(any()) } returns Response.success(201, dto)
-
-            val result = sut.getActiveErasureRequest()
-            assertThat(result.isSuccess).isTrue()
-            val erasure = result.getOrThrow()
-            assertThat(erasure).isNotNull()
-            assertThat(erasure!!.requestId).isEqualTo("pending:uid-1")
-        }
-
-    @Test
-    public fun `getActiveErasureRequest returns ErasureRequest with empty scheduledAt on 409 PENDING`(): Unit =
-        runTest {
-            val errorJson = """{"code":"ERASURE_REQUEST_PENDING","erasureId":"pending:uid-1"}"""
-            val errorBody = errorJson.toResponseBody()
-            coEvery { api.submitErasureRequest(any()) } returns Response.error(409, errorBody)
-
-            val result = sut.getActiveErasureRequest()
-            assertThat(result.isSuccess).isTrue()
-            val erasure = result.getOrThrow()
-            assertThat(erasure).isNotNull()
-            assertThat(erasure!!.requestId).isEqualTo("pending:uid-1")
-            assertThat(erasure.scheduledDeletionAt).isEmpty()
-        }
-
-    @Test
-    public fun `getActiveErasureRequest returns null on 409 USER_ALREADY_ERASED`(): Unit =
-        runTest {
-            val errorJson = """{"code":"USER_ALREADY_ERASED","erasureId":null}"""
-            val errorBody = errorJson.toResponseBody()
-            coEvery { api.submitErasureRequest(any()) } returns Response.error(409, errorBody)
-
-            val result = sut.getActiveErasureRequest()
-            assertThat(result.isSuccess).isTrue()
-            assertThat(result.getOrThrow()).isNull()
-        }
-
-    @Test
-    public fun `getActiveErasureRequest returns failure on network exception`(): Unit =
-        runTest {
-            coEvery { api.submitErasureRequest(any()) } throws RuntimeException("timeout")
-
-            val result = sut.getActiveErasureRequest()
             assertThat(result.isFailure).isTrue()
         }
 

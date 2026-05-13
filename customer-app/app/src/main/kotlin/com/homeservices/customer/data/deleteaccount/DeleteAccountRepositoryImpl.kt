@@ -54,53 +54,10 @@ internal class DeleteAccountRepositoryImpl
                 }
             }
 
-        /**
-         * The API does not expose a dedicated GET active endpoint in this milestone.
-         *
-         * Strategy: attempt a POST with no reason.
-         * - 201 → a new request was created (no active one existed); we parse and return it.
-         *   Note: This side-effects a new erasure request. Callers must use this method
-         *   ONLY on the entry screen if no prior requestId is cached locally.
-         * - 409 → existing pending request; parse the conflict body to get the erasureId.
-         *   We cannot recover `scheduledDeletionAt` from this response — return `null`
-         *   for that field and let the UI prompt the user to wait.
-         *
-         * This workaround will be replaced when the GET endpoint ships (tracked in backlog).
-         */
-        override suspend fun getActiveErasureRequest(): Result<ErasureRequest?> =
-            runCatching {
-                val response = api.submitErasureRequest(SubmitErasureRequestDto(reason = null))
-                when (response.code()) {
-                    201 -> {
-                        // No prior active request — one was just created.
-                        val body =
-                            checkNotNull(response.body()) {
-                                "Empty body on 201 erasure response"
-                            }
-                        ErasureRequest(
-                            requestId = body.erasureId,
-                            scheduledDeletionAt = body.scheduledDeletionAt,
-                            status = body.status,
-                        )
-                    }
-                    409 -> {
-                        val rawError = response.errorBody()?.string() ?: ""
-                        val conflictDto = parseConflict(rawError)
-                        if (conflictDto?.code == "ERASURE_REQUEST_PENDING") {
-                            // Active pending request exists; scheduledDeletionAt unknown from 409.
-                            ErasureRequest(
-                                requestId = conflictDto.erasureId ?: "unknown",
-                                scheduledDeletionAt = "",
-                                status = "PENDING",
-                            )
-                        } else {
-                            // USER_ALREADY_ERASED or other non-pending conflict — treat as none.
-                            null
-                        }
-                    }
-                    else -> error("Unexpected HTTP ${response.code()} from erasure-request GET-active probe")
-                }
-            }
+        // NOTE: getActiveErasureRequest() (POST-probe strategy) has been intentionally removed.
+        // It caused a DPDP-critical defect: the POST returned 201 on first entry, creating an
+        // erasure request before the user confirmed anything. The ViewModel now always starts
+        // in Idle state. A server-side GET endpoint is tracked for a future sprint.
 
         private fun parseConflict(raw: String): ErasureConflictDto? =
             runCatching {

@@ -7,6 +7,14 @@ import com.homeservices.customer.domain.deleteaccount.model.ErasureRequest
  *
  * All functions are suspend and return [Result] so callers never need to
  * catch — the impl maps all network exceptions to [Result.failure].
+ *
+ * NOTE: The old [getActiveErasureRequest] method that used a POST-probe strategy
+ * (calling POST and intercepting the response code) has been removed.
+ * That approach caused a DPDP-critical defect: viewing the delete-account entry screen
+ * created an erasure request (via 201 response) before the user confirmed anything.
+ * A proper server-side GET /v1/users/me/erasure-request/active endpoint is tracked
+ * in the backlog. When it ships, add a new method here rather than restoring the
+ * POST-probe workaround.
  */
 public interface DeleteAccountRepository {
     /**
@@ -30,23 +38,6 @@ public interface DeleteAccountRepository {
      * - Any other error: returns [Result.failure] wrapping the raw exception.
      */
     public suspend fun revokeErasureRequest(): Result<Unit>
-
-    /**
-     * Fetch the active erasure request for the signed-in user.
-     *
-     * NOTE: The API does NOT expose a dedicated `GET /erasure-request/active` endpoint
-     * in this milestone. This method uses a POST-and-intercept strategy: it calls POST
-     * and if it receives `409 ERASURE_REQUEST_PENDING`, it returns the embedded
-     * `erasureId` + a synthetic [ErasureRequest] with `scheduledDeletionAt` unknown
-     * (the UI must handle an empty `scheduledDeletionAt` gracefully).
-     *
-     * If a dedicated GET endpoint is added in a later sprint, replace this impl
-     * without changing callers.
-     *
-     * - Returns `null` when there is no active request.
-     * - Returns [ErasureRequest] when a PENDING request exists.
-     */
-    public suspend fun getActiveErasureRequest(): Result<ErasureRequest?>
 }
 
 /** Thrown when attempting to submit while a request is already pending. */

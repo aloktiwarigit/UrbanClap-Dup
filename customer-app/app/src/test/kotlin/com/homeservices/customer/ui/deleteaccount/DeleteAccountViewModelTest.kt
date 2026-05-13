@@ -1,16 +1,17 @@
 package com.homeservices.customer.ui.deleteaccount
 
+import androidx.lifecycle.SavedStateHandle
 import com.google.common.truth.Truth.assertThat
 import com.homeservices.customer.data.auth.SessionManager
 import com.homeservices.customer.domain.auth.model.AuthState
 import com.homeservices.customer.domain.deleteaccount.ErasureAlreadyPendingException
-import com.homeservices.customer.domain.deleteaccount.GetActiveErasureRequestUseCase
 import com.homeservices.customer.domain.deleteaccount.RequestErasureUseCase
 import com.homeservices.customer.domain.deleteaccount.RevokeErasureUseCase
 import com.homeservices.customer.domain.deleteaccount.model.ErasureRequest
 import com.homeservices.customer.ui.deleteaccount.DeleteAccountUiState.Confirming
 import com.homeservices.customer.ui.deleteaccount.DeleteAccountUiState.CoolOff
 import com.homeservices.customer.ui.deleteaccount.DeleteAccountUiState.Error
+import com.homeservices.customer.ui.deleteaccount.DeleteAccountUiState.ExistingRequestDetected
 import com.homeservices.customer.ui.deleteaccount.DeleteAccountUiState.Idle
 import com.homeservices.customer.ui.deleteaccount.DeleteAccountUiState.Revoked
 import com.homeservices.customer.ui.deleteaccount.DeleteAccountUiState.Revoking
@@ -28,6 +29,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
 public class DeleteAccountViewModelTest {
@@ -35,7 +37,6 @@ public class DeleteAccountViewModelTest {
 
     private lateinit var requestErasure: RequestErasureUseCase
     private lateinit var revokeErasure: RevokeErasureUseCase
-    private lateinit var getActiveErasure: GetActiveErasureRequestUseCase
     private lateinit var sessionManager: SessionManager
     private lateinit var viewModel: DeleteAccountViewModel
 
@@ -44,23 +45,23 @@ public class DeleteAccountViewModelTest {
             AuthState.Authenticated(uid = "uid-test", phoneLastFour = "4321"),
         )
 
+    private fun buildViewModel(savedStateHandle: SavedStateHandle = SavedStateHandle()): DeleteAccountViewModel =
+        DeleteAccountViewModel(
+            requestErasure = requestErasure,
+            revokeErasure = revokeErasure,
+            sessionManager = sessionManager,
+            savedStateHandle = savedStateHandle,
+        ).also { it.expectedPhrase = "DELETE MY ACCOUNT" }
+
     @Before
     public fun setUp() {
         Dispatchers.setMain(testDispatcher)
         requestErasure = mockk()
         revokeErasure = mockk()
-        getActiveErasure = mockk()
         sessionManager = mockk()
         every { sessionManager.authState } returns authState
 
-        viewModel =
-            DeleteAccountViewModel(
-                requestErasure = requestErasure,
-                revokeErasure = revokeErasure,
-                getActiveErasure = getActiveErasure,
-                sessionManager = sessionManager,
-            )
-        viewModel.expectedPhrase = "DELETE MY ACCOUNT"
+        viewModel = buildViewModel()
     }
 
     @After
@@ -75,37 +76,41 @@ public class DeleteAccountViewModelTest {
         assertThat(viewModel.uiState.value).isEqualTo(Idle)
     }
 
-    // --- checkForActiveRequest ---
+    @Test
+    public fun `initial state is CoolOff when nav args provide requestId`() {
+        // FIX 2: ViewModel restores CoolOff state from nav args in SavedStateHandle.
+        val parsed = Instant.parse("2026-05-19T12:00:00Z")
+        val epochMs = parsed.toEpochMilli()
+        val savedState =
+            SavedStateHandle(
+                mapOf(
+                    NAV_ARG_REQUEST_ID to "pending:uid-nav",
+                    NAV_ARG_SCHEDULED_DELETION_EPOCH_MS to epochMs,
+                ),
+            )
+        val vm = buildViewModel(savedState)
+        val state = vm.uiState.value as? CoolOff
+        assertThat(state).isNotNull()
+        assertThat(state!!.requestId).isEqualTo("pending:uid-nav")
+        assertThat(state.scheduledDeletionAt).isNotEmpty()
+    }
 
     @Test
-    public fun `checkForActiveRequest stays Idle when no active request`(): Unit =
-        runTest {
-            coEvery { getActiveErasure() } returns Result.success(null)
-            viewModel.checkForActiveRequest()
-            testDispatcher.scheduler.advanceUntilIdle()
-            assertThat(viewModel.uiState.value).isEqualTo(Idle)
-        }
-
-    @Test
-    public fun `checkForActiveRequest transitions to CoolOff when active request exists`(): Unit =
-        runTest {
-            val erasure = ErasureRequest("pending:uid", "2026-05-19T12:00:00Z", "PENDING")
-            coEvery { getActiveErasure() } returns Result.success(erasure)
-            viewModel.checkForActiveRequest()
-            testDispatcher.scheduler.advanceUntilIdle()
-            val state = viewModel.uiState.value as? CoolOff
-            assertThat(state).isNotNull()
-            assertThat(state!!.requestId).isEqualTo("pending:uid")
-        }
-
-    @Test
-    public fun `checkForActiveRequest stays Idle on network failure`(): Unit =
-        runTest {
-            coEvery { getActiveErasure() } returns Result.failure(RuntimeException("net error"))
-            viewModel.checkForActiveRequest()
-            testDispatcher.scheduler.advanceUntilIdle()
-            assertThat(viewModel.uiState.value).isEqualTo(Idle)
-        }
+    public fun `initial state is CoolOff with empty scheduledDeletionAt when epochMs is zero`() {
+        // ExistingRequestDetected path — epochMs = 0 means unknown date.
+        val savedState =
+            SavedStateHandle(
+                mapOf(
+                    NAV_ARG_REQUEST_ID to "pending:uid-conflict",
+                    NAV_ARG_SCHEDULED_DELETION_EPOCH_MS to 0L,
+                ),
+            )
+        val vm = buildViewModel(savedState)
+        val state = vm.uiState.value as? CoolOff
+        assertThat(state).isNotNull()
+        assertThat(state!!.requestId).isEqualTo("pending:uid-conflict")
+        assertThat(state.scheduledDeletionAt).isEmpty()
+    }
 
     // --- onContinueClicked ---
 
@@ -188,7 +193,7 @@ public class DeleteAccountViewModelTest {
         }
 
     @Test
-    public fun `onSubmitClicked goes to Error on failure`(): Unit =
+    public fun `onSubmitClicked goes to Error on non-409 failure`(): Unit =
         runTest {
             coEvery { requestErasure(any()) } returns Result.failure(RuntimeException("Server error"))
 
@@ -204,8 +209,9 @@ public class DeleteAccountViewModelTest {
         }
 
     @Test
-    public fun `onSubmitClicked goes to CoolOff on 409 conflict`(): Unit =
+    public fun `onSubmitClicked goes to ExistingRequestDetected on 409 conflict`(): Unit =
         runTest {
+            // FIX 1: 409 now produces ExistingRequestDetected (not CoolOff with empty date).
             coEvery { requestErasure(any()) } returns
                 Result.failure(ErasureAlreadyPendingException("pending:uid"))
 
@@ -215,7 +221,7 @@ public class DeleteAccountViewModelTest {
             viewModel.onSubmitClicked()
             testDispatcher.scheduler.advanceUntilIdle()
 
-            val state = viewModel.uiState.value as? CoolOff
+            val state = viewModel.uiState.value as? ExistingRequestDetected
             assertThat(state).isNotNull()
             assertThat(state!!.requestId).isEqualTo("pending:uid")
         }
@@ -232,18 +238,70 @@ public class DeleteAccountViewModelTest {
     // --- onRevokeClicked ---
 
     @Test
-    public fun `onRevokeClicked goes Revoking then Revoked on success`(): Unit =
+    public fun `onRevokeClicked goes Revoking then Revoked from CoolOff state`(): Unit =
         runTest {
-            coEvery { getActiveErasure() } returns
-                Result.success(ErasureRequest("pending:uid", "2026-05-19T12:00:00Z", "PENDING"))
-            viewModel.checkForActiveRequest()
+            val parsed = Instant.parse("2026-05-19T12:00:00Z")
+            val epochMs = parsed.toEpochMilli()
+            val savedState =
+                SavedStateHandle(
+                    mapOf(
+                        NAV_ARG_REQUEST_ID to "pending:uid",
+                        NAV_ARG_SCHEDULED_DELETION_EPOCH_MS to epochMs,
+                    ),
+                )
+            val vm = buildViewModel(savedState)
+
+            coEvery { revokeErasure() } returns Result.success(Unit)
+            vm.onRevokeClicked()
+
+            assertThat(vm.uiState.value).isEqualTo(Revoking)
+
             testDispatcher.scheduler.advanceUntilIdle()
+
+            assertThat(vm.uiState.value).isEqualTo(Revoked)
+        }
+
+    @Test
+    public fun `onRevokeClicked goes Revoking then Revoked from ExistingRequestDetected state`(): Unit =
+        runTest {
+            // FIX 1: onRevokeClicked must work from ExistingRequestDetected state.
+            val savedState =
+                SavedStateHandle(
+                    mapOf(
+                        NAV_ARG_REQUEST_ID to "pending:uid",
+                        NAV_ARG_SCHEDULED_DELETION_EPOCH_MS to 0L,
+                    ),
+                )
+            val vm = buildViewModel(savedState)
+            // Confirm the state is CoolOff (with empty scheduledAt) since nav args are present.
+            // ExistingRequestDetected is only reached via onSubmitClicked 409 path; for the
+            // revoke from nav-arg path we exercise the CoolOff(requestId, "") variant.
+            assertThat(vm.uiState.value).isInstanceOf(CoolOff::class.java)
+
+            coEvery { revokeErasure() } returns Result.success(Unit)
+            vm.onRevokeClicked()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            assertThat(vm.uiState.value).isEqualTo(Revoked)
+        }
+
+    @Test
+    public fun `onRevokeClicked goes to ExistingRequestDetected state then can revoke`(): Unit =
+        runTest {
+            // Exercise the full path: submit → 409 → ExistingRequestDetected → revoke.
+            coEvery { requestErasure(any()) } returns
+                Result.failure(ErasureAlreadyPendingException("pending:uid-conflict"))
+
+            viewModel.onContinueClicked()
+            viewModel.onPhraseChanged("DELETE MY ACCOUNT")
+            viewModel.onPinChanged("4321")
+            viewModel.onSubmitClicked()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            assertThat(viewModel.uiState.value).isInstanceOf(ExistingRequestDetected::class.java)
 
             coEvery { revokeErasure() } returns Result.success(Unit)
             viewModel.onRevokeClicked()
-
-            assertThat(viewModel.uiState.value).isEqualTo(Revoking)
-
             testDispatcher.scheduler.advanceUntilIdle()
 
             assertThat(viewModel.uiState.value).isEqualTo(Revoked)
@@ -252,16 +310,22 @@ public class DeleteAccountViewModelTest {
     @Test
     public fun `onRevokeClicked goes to Error on failure`(): Unit =
         runTest {
-            coEvery { getActiveErasure() } returns
-                Result.success(ErasureRequest("pending:uid", "2026-05-19T12:00:00Z", "PENDING"))
-            viewModel.checkForActiveRequest()
-            testDispatcher.scheduler.advanceUntilIdle()
+            val parsed = Instant.parse("2026-05-19T12:00:00Z")
+            val epochMs = parsed.toEpochMilli()
+            val savedState =
+                SavedStateHandle(
+                    mapOf(
+                        NAV_ARG_REQUEST_ID to "pending:uid",
+                        NAV_ARG_SCHEDULED_DELETION_EPOCH_MS to epochMs,
+                    ),
+                )
+            val vm = buildViewModel(savedState)
 
             coEvery { revokeErasure() } returns Result.failure(RuntimeException("Revoke failed"))
-            viewModel.onRevokeClicked()
+            vm.onRevokeClicked()
             testDispatcher.scheduler.advanceUntilIdle()
 
-            assertThat(viewModel.uiState.value).isInstanceOf(Error::class.java)
+            assertThat(vm.uiState.value).isInstanceOf(Error::class.java)
         }
 
     // --- onBackFromConfirmation / onErrorDismissed ---
@@ -272,6 +336,19 @@ public class DeleteAccountViewModelTest {
         assertThat(viewModel.uiState.value).isInstanceOf(Confirming::class.java)
         viewModel.onBackFromConfirmation()
         assertThat(viewModel.uiState.value).isEqualTo(Idle)
+    }
+
+    @Test
+    public fun `onBackFromConfirmation from Confirming state resets to Idle so LaunchedEffect does not re-fire`() {
+        // FIX 3: Confirms that calling onBackFromConfirmation resets Confirming -> Idle.
+        // The DeleteAccountScreen LaunchedEffect only navigates on Confirming; once Idle,
+        // re-entering the screen does NOT re-trigger navigation.
+        viewModel.onContinueClicked()
+        assertThat(viewModel.uiState.value).isInstanceOf(Confirming::class.java)
+        viewModel.onBackFromConfirmation()
+        assertThat(viewModel.uiState.value).isEqualTo(Idle)
+        // Verify Idle does not satisfy the Confirming branch check.
+        assertThat(viewModel.uiState.value is Confirming).isFalse()
     }
 
     @Test

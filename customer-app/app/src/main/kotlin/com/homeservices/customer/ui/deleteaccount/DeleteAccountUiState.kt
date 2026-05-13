@@ -4,12 +4,19 @@ package com.homeservices.customer.ui.deleteaccount
  * Complete state machine for the delete-account / DPDP erasure flow.
  *
  * Transitions (happy path):
- *   Idle → Validating → Submitting → CoolOff → Revoking → Revoked
+ *   Idle → Confirming → Submitting → CoolOff → Revoking → Revoked
  *
  * Error transitions:
  *   Submitting → Error
  *   Revoking   → Error
- *   Idle       → CoolOff  (when an active request already exists on entry)
+ *
+ * Conflict (409 on submit — existing pending request detected):
+ *   Submitting → ExistingRequestDetected
+ *
+ * NOTE: The old POST-probe active-check (which created an erasure request on screen entry)
+ * has been removed (DPDP-CRITICAL P1 fix). The screen always starts in [Idle].
+ * A server-side GET /v1/users/me/erasure-request/active endpoint is tracked in the backlog
+ * and will replace the 409-detection path when implemented.
  */
 public sealed interface DeleteAccountUiState {
     /** Initial state before any user action. Entry screen shown. */
@@ -39,14 +46,30 @@ public sealed interface DeleteAccountUiState {
     public data object Submitting : DeleteAccountUiState
 
     /**
-     * Erasure request accepted or already existed; cool-off period running.
+     * Erasure request accepted; cool-off period running.
      *
      * @param requestId Server-assigned erasure id (used for the revoke call).
-     * @param scheduledDeletionAt ISO-8601 string; may be empty if recovered via 409 probe.
+     * @param scheduledDeletionAt ISO-8601 string from the server 201 response.
      */
     public data class CoolOff(
         val requestId: String,
         val scheduledDeletionAt: String,
+    ) : DeleteAccountUiState
+
+    /**
+     * A 409 conflict was returned on submit — a pending request already exists
+     * but we do not have [scheduledDeletionAt] because the server's 409 body
+     * does not include it. The cool-off countdown is unavailable.
+     *
+     * UX limitation: the countdown is not shown. The user can still tap "Revoke"
+     * (server finds the request by UID). A follow-up task tracks adding a
+     * dedicated GET /v1/users/me/erasure-request/active endpoint so this state
+     * can be upgraded to a full [CoolOff] with a visible countdown.
+     *
+     * @param requestId The erasure ID parsed from the 409 conflict body (or "unknown").
+     */
+    public data class ExistingRequestDetected(
+        val requestId: String,
     ) : DeleteAccountUiState
 
     /** Revoke call in flight (DELETE erasure-request). */

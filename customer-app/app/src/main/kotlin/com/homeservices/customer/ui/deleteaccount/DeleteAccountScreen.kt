@@ -58,17 +58,22 @@ private val TextSecondary = Color(0xFF5F6C66)
  * Entry point for the delete-account flow.
  *
  * Shows a warning card, a list of what gets deleted, and a "Continue" CTA.
- * If an active erasure request already exists, navigates directly to [onNavigateToCoolOff].
+ * Always starts in Idle state — the old POST-probe active-check has been removed
+ * (DPDP-CRITICAL P1 fix; see DeleteAccountViewModel for details).
+ *
+ * If a pre-existing pending request is detected (409 on submit), the ViewModel
+ * transitions to [DeleteAccountUiState.ExistingRequestDetected] and navigation
+ * routes to the cool-off screen via [onNavigateToCoolOff].
  *
  * @param onBack Navigate back to Privacy & data settings.
  * @param onContinue Navigate to [DeleteAccountConfirmScreen].
- * @param onNavigateToCoolOff Navigate directly to [DeleteAccountCoolOffScreen] (active request found).
+ * @param onNavigateToCoolOff Navigate to [DeleteAccountCoolOffScreen]; receives (requestId, scheduledDeletionAt).
  */
 @Composable
 public fun DeleteAccountScreen(
     onBack: () -> Unit,
     onContinue: () -> Unit,
-    onNavigateToCoolOff: () -> Unit,
+    onNavigateToCoolOff: (requestId: String, scheduledDeletionAt: String) -> Unit,
     viewModel: DeleteAccountViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -79,16 +84,16 @@ public fun DeleteAccountScreen(
         viewModel.expectedPhrase = confirmationPhrase
     }
 
-    // On first composition, probe for an existing active erasure request.
-    LaunchedEffect(Unit) {
-        viewModel.checkForActiveRequest()
-    }
-
     // Route side-effects: navigate when state changes.
+    // FIX 3 (P2): onBackFromConfirmation() resets state to Idle before popping from the
+    // confirmation screen, so the Confirming branch here does not re-fire on re-entry.
     LaunchedEffect(uiState) {
-        when (uiState) {
+        when (val s = uiState) {
             is DeleteAccountUiState.Confirming -> onContinue()
-            is DeleteAccountUiState.CoolOff -> onNavigateToCoolOff()
+            is DeleteAccountUiState.CoolOff ->
+                onNavigateToCoolOff(s.requestId, s.scheduledDeletionAt)
+            is DeleteAccountUiState.ExistingRequestDetected ->
+                onNavigateToCoolOff(s.requestId, "")
             else -> Unit
         }
     }

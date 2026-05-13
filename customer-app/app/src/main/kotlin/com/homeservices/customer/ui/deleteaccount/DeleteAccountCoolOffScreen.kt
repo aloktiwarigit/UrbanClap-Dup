@@ -97,7 +97,10 @@ public fun DeleteAccountCoolOffScreen(
     }
 
     val coolOff = uiState as? DeleteAccountUiState.CoolOff
+    val existingDetected = uiState as? DeleteAccountUiState.ExistingRequestDetected
     val isRevoking = uiState is DeleteAccountUiState.Revoking
+    // Both CoolOff and ExistingRequestDetected are "active request" states — revoke is available.
+    val hasActiveRequest = coolOff != null || existingDetected != null
 
     // Periodic tick every 60 s to refresh the countdown display.
     var tickMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -108,11 +111,15 @@ public fun DeleteAccountCoolOffScreen(
         }
     }
 
+    // For ExistingRequestDetected, scheduledDeletionAt is unavailable (not in 409 body).
+    // Show an empty countdown — the UI renders a "pending deletion" placeholder message.
     val countdownText by remember(coolOff, tickMs) {
         derivedStateOf {
             formatCountdown(coolOff?.scheduledDeletionAt, tickMs)
         }
     }
+    // True when we have an active request but no scheduledDeletionAt (409-detected path).
+    val countdownUnavailable = existingDetected != null && coolOff == null
 
     Surface(modifier = Modifier.fillMaxSize(), color = WarmIvory) {
         Column(
@@ -172,15 +179,30 @@ public fun DeleteAccountCoolOffScreen(
                             }
                         }
                     }
-                    Text(
-                        text = countdownText,
-                        style =
-                            MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                            ),
-                        color = ErrorRed,
-                        textAlign = TextAlign.Center,
-                    )
+                    if (countdownUnavailable) {
+                        // ExistingRequestDetected path: 409 response did not include scheduledDeletionAt.
+                        // Show a generic "pending deletion" message. A follow-up task adds a server-side
+                        // GET endpoint to recover the exact date.
+                        Text(
+                            text = stringResource(R.string.delete_account_coolOff_pending_no_date),
+                            style =
+                                MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                ),
+                            color = ErrorRed,
+                            textAlign = TextAlign.Center,
+                        )
+                    } else {
+                        Text(
+                            text = countdownText,
+                            style =
+                                MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                ),
+                            color = ErrorRed,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                     Text(
                         text = stringResource(R.string.delete_account_coolOff_subtitle),
                         style = MaterialTheme.typography.bodyMedium,
@@ -218,7 +240,7 @@ public fun DeleteAccountCoolOffScreen(
             // Revoke CTA
             Button(
                 onClick = { viewModel.onRevokeClicked() },
-                enabled = !isRevoking && coolOff != null,
+                enabled = !isRevoking && hasActiveRequest,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors =

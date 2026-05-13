@@ -366,6 +366,7 @@
     <string name="delete_account_coolOff_title">Deletion scheduled</string>
     <string name="delete_account_coolOff_subtitle">You can still revoke this deletion until your account is permanently removed.</string>
     <string name="delete_account_coolOff_countdown_format">Account will be deleted in %1$s</string>
+    <string name="delete_account_coolOff_pending_no_date">Deletion pending — exact date unavailable</string>
     <string name="delete_account_revoke_cta">Revoke deletion</string>
     <string name="delete_account_revoke_success">Deletion cancelled. Your account is safe.</string>
     <string name="delete_account_close_cta">Close</string>

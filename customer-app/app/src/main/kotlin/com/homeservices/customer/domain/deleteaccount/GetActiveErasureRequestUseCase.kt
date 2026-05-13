@@ -4,18 +4,26 @@ import com.homeservices.customer.domain.deleteaccount.model.ErasureRequest
 import javax.inject.Inject
 
 /**
- * Retrieve the active erasure request for the signed-in user, if any.
+ * DEPRECATED — no longer in active use.
  *
- * Returns `null` (inside the [Result]) when there is no active request.
- * Returns a [ErasureRequest] when the user already has a PENDING deletion in flight.
+ * This use case previously called [DeleteAccountRepository.getActiveErasureRequest], which
+ * used a POST-probe strategy that created erasure requests on screen entry (DPDP-CRITICAL
+ * defect). The method has been removed from the repository interface.
  *
- * Used by the delete-account entry screen to route directly to the cool-off
- * screen when re-entering settings after a prior submission.
+ * This class is kept as a historical marker only. It now always returns `null` (no active
+ * request). A future sprint will add a proper server-side GET endpoint and introduce a
+ * replacement use case at that time.
+ *
+ * TODO(follow-up): remove this class once the GET endpoint ships and a proper
+ *   GetActiveErasureRequestUseCase v2 is implemented.
  */
+@Deprecated("POST-probe removed; always returns null. See DeleteAccountRepository for context.")
 public class GetActiveErasureRequestUseCase
     @Inject
     constructor(
+        @Suppress("UnusedPrivateMember")
         private val repository: DeleteAccountRepository,
     ) {
-        public suspend operator fun invoke(): Result<ErasureRequest?> = repository.getActiveErasureRequest()
+        @Suppress("RedundantSuspendModifier")
+        public suspend operator fun invoke(): Result<ErasureRequest?> = Result.success(null)
     }

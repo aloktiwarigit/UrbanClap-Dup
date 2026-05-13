@@ -369,6 +369,7 @@
     <string name="delete_account_coolOff_title">हटाना निर्धारित किया गया</string>
     <string name="delete_account_coolOff_subtitle">आपका खाता स्थायी रूप से हटने तक आप इसे रद्द कर सकते हैं।</string>
     <string name="delete_account_coolOff_countdown_format">खाता %1$s में हटाया जाएगा</string>
+    <string name="delete_account_coolOff_pending_no_date">हटाना लंबित है — सटीक तारीख उपलब्ध नहीं</string>
     <string name="delete_account_revoke_cta">हटाना रद्द करें</string>
     <string name="delete_account_revoke_success">हटाना रद्द किया गया। आपका खाता सुरक्षित है।</string>
     <string name="delete_account_close_cta">बंद करें</string>

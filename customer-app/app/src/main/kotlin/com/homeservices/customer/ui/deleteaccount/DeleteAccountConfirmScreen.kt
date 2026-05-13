@@ -67,13 +67,15 @@ private val TextSecondary = Color(0xFF5F6C66)
  *
  * Only when both match is the Submit button enabled.
  *
- * @param onBack Navigate back to the entry screen.
- * @param onConfirmed Navigate to the cool-off screen after successful submission.
+ * @param onBack Navigate back to the entry screen. The nav layer calls
+ *   [DeleteAccountViewModel.onBackFromConfirmation] before invoking this callback (FIX 3 / P2).
+ * @param onConfirmed Navigate to the cool-off screen after successful submission;
+ *   receives (requestId, scheduledDeletionAt) from [DeleteAccountUiState.CoolOff].
  */
 @Composable
 public fun DeleteAccountConfirmScreen(
     onBack: () -> Unit,
-    onConfirmed: () -> Unit,
+    onConfirmed: (requestId: String, scheduledDeletionAt: String) -> Unit,
     viewModel: DeleteAccountViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -81,12 +83,13 @@ public fun DeleteAccountConfirmScreen(
 
     val errorUnknown = stringResource(R.string.delete_account_error_unknown)
 
-    // Navigate away when submission succeeds.
+    // Navigate away when submission succeeds or a pre-existing request is detected.
     LaunchedEffect(uiState) {
-        when (uiState) {
-            is DeleteAccountUiState.CoolOff -> onConfirmed()
+        when (val s = uiState) {
+            is DeleteAccountUiState.CoolOff -> onConfirmed(s.requestId, s.scheduledDeletionAt)
+            is DeleteAccountUiState.ExistingRequestDetected -> onConfirmed(s.requestId, "")
             is DeleteAccountUiState.Error -> {
-                val err = uiState as DeleteAccountUiState.Error
+                val err = s
                 snackbarHostState.showSnackbar(err.message.ifEmpty { errorUnknown })
                 viewModel.onErrorDismissed()
             }
