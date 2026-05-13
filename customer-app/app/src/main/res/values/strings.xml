@@ -102,7 +102,6 @@
     <string name="payment_error_payment_cancelled">Payment cancelled by user. Please try again.</string>
     <string name="payment_error_network_error">Network issue during payment. Please check your connection and retry.</string>
     <string name="payment_error_bad_request_error">Payment failed. Please try a different method.</string>
-    <string name="payment_error_server_error">Payment service is temporarily unavailable. Please try again in a moment.</string>
     <string name="payment_error_default">Payment failed. Please try again.</string>
     <string name="booking_confirmed_title">Booking Confirmed!</string>
     <string name="booking_confirmed_body">We are assigning a technician for your slot.</string>

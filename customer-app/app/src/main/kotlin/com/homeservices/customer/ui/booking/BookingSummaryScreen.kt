@@ -370,7 +370,6 @@ private fun paymentErrorStringRes(errorCode: String): Int =
         RazorpayErrorCode.PAYMENT_CANCELLED -> R.string.payment_error_payment_cancelled
         RazorpayErrorCode.NETWORK_ERROR -> R.string.payment_error_network_error
         RazorpayErrorCode.BAD_REQUEST_ERROR -> R.string.payment_error_bad_request_error
-        RazorpayErrorCode.SERVER_ERROR -> R.string.payment_error_server_error
         else -> R.string.payment_error_default
     }
 

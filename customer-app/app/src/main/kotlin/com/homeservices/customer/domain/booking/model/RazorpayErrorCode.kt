@@ -4,15 +4,18 @@ package com.homeservices.customer.domain.booking.model
  * Stable Razorpay Android SDK error code strings derived from the integer code
  * returned by [com.razorpay.PaymentResultWithDataListener.onPaymentError].
  *
- * Razorpay SDK integer → string mapping:
- *  0 = BAD_REQUEST_ERROR (covers bad-request failures)
- *  1 = NETWORK_ERROR     (covers network timeouts / no connectivity)
- *  2 = SERVER_ERROR      (Razorpay server-side error)
+ * Razorpay SDK (com.razorpay:checkout:1.6.x) integer constants
+ * from [com.razorpay.Checkout]:
  *
- * PAYMENT_CANCELLED is a logical sub-case of BAD_REQUEST_ERROR (code 0) where
- * the description indicates the user dismissed the checkout sheet. We detect it
- * by examining the description string — the Razorpay SDK does not provide a
- * separate integer constant for user-initiated cancellation.
+ *   Checkout.PAYMENT_CANCELED = 0  — user dismissed the checkout sheet
+ *   Checkout.INVALID_OPTIONS  = 1  — bad merchant config / invalid Razorpay options
+ *   Checkout.NETWORK_ERROR    = 2  — network timeout / no connectivity
+ *   Checkout.TLS_ERROR        = 6  — TLS handshake failure (network-adjacent)
+ *
+ * Note: the Android SDK does NOT surface a SERVER_ERROR integer in onPaymentError.
+ * Razorpay gateway outages are reported via webhook on the backend, not in-app.
+ * SERVER_ERROR has therefore been removed to keep this model tight to actual SDK
+ * behavior (see commit: fix(E18-S04): use real Razorpay SDK error codes).
  *
  * References:
  *  - https://razorpay.com/docs/payments/payment-gateway/android-integration/standard/#handle-payment-success-failure
@@ -21,48 +24,55 @@ public object RazorpayErrorCode {
     public const val PAYMENT_CANCELLED: String = "PAYMENT_CANCELLED"
     public const val NETWORK_ERROR: String = "NETWORK_ERROR"
     public const val BAD_REQUEST_ERROR: String = "BAD_REQUEST_ERROR"
-    public const val SERVER_ERROR: String = "SERVER_ERROR"
-
-    /** Razorpay SDK integer code for network failures. */
-    private const val SDK_CODE_NETWORK: Int = 1
-
-    /** Razorpay SDK integer code for server-side errors (gateway outages, 5xx from Razorpay). */
-    private const val SDK_CODE_SERVER: Int = 2
 
     /**
-     * Resolves a [code] + [description] pair from the Razorpay SDK into a stable
-     * error-code string that can be used for string-resource look-up.
+     * Checkout.PAYMENT_CANCELED = 0
+     * User dismissed the checkout sheet (SDK's own cancellation constant).
+     */
+    private const val SDK_CODE_PAYMENT_CANCELED: Int = 0
+
+    /**
+     * Checkout.INVALID_OPTIONS = 1
+     * Bad merchant configuration or invalid options passed to Razorpay.
+     */
+    private const val SDK_CODE_INVALID_OPTIONS: Int = 1
+
+    /**
+     * Checkout.NETWORK_ERROR = 2
+     * Network timeout or no connectivity during payment.
+     */
+    private const val SDK_CODE_NETWORK: Int = 2
+
+    /**
+     * Checkout.TLS_ERROR = 6
+     * TLS handshake failure — treated as a network-adjacent retryable error.
+     */
+    private const val SDK_CODE_TLS: Int = 6
+
+    /**
+     * Resolves a [code] from the Razorpay SDK into a stable error-code string
+     * that can be used for string-resource look-up.
      *
-     * Mapping:
-     *   code 1              → NETWORK_ERROR
-     *   code 2 + cancelled  → PAYMENT_CANCELLED  (user dismissed the sheet mid-auth)
-     *   code 2              → SERVER_ERROR        (Razorpay gateway outage)
-     *   code 0 + cancelled  → PAYMENT_CANCELLED
-     *   code 0 (other)      → BAD_REQUEST_ERROR
+     * Mapping (aligned to Checkout constants):
+     *   code 0 (PAYMENT_CANCELED)  → PAYMENT_CANCELLED
+     *   code 1 (INVALID_OPTIONS)   → BAD_REQUEST_ERROR
+     *   code 2 (NETWORK_ERROR)     → NETWORK_ERROR
+     *   code 6 (TLS_ERROR)         → NETWORK_ERROR  (retryable, network-adjacent)
+     *   other                      → BAD_REQUEST_ERROR
+     *
+     * The [description] parameter is retained for logging purposes but is NOT
+     * used for error-code resolution. Cancellation is detected via SDK code 0,
+     * not by string-matching the description.
      */
     public fun resolve(
         code: Int,
-        description: String,
+        @Suppress("UNUSED_PARAMETER") description: String,
     ): String =
-        when {
-            code == SDK_CODE_NETWORK -> NETWORK_ERROR
-            code == SDK_CODE_SERVER && isCancellation(description) -> PAYMENT_CANCELLED
-            code == SDK_CODE_SERVER -> SERVER_ERROR
-            isCancellation(description) -> PAYMENT_CANCELLED
+        when (code) {
+            SDK_CODE_PAYMENT_CANCELED -> PAYMENT_CANCELLED
+            SDK_CODE_NETWORK -> NETWORK_ERROR
+            SDK_CODE_TLS -> NETWORK_ERROR
+            SDK_CODE_INVALID_OPTIONS -> BAD_REQUEST_ERROR
             else -> BAD_REQUEST_ERROR
         }
-
-    /**
-     * Returns true when the description text indicates the user actively dismissed
-     * the Razorpay checkout sheet rather than a system/network error.
-     *
-     * Razorpay SDK v1.6.x emits one of these descriptions on manual dismissal:
-     *   "Payment cancelled by user."
-     *   "Payment cancelled."
-     *   The sentence is stable across SDK versions per the Razorpay changelog.
-     */
-    private fun isCancellation(description: String): Boolean {
-        val lower = description.lowercase()
-        return lower.contains("cancelled") || lower.contains("canceled")
-    }
 }
