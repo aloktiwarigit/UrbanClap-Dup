@@ -13,6 +13,11 @@ import org.junit.jupiter.api.Test
  * 4. Raw UID is not present in the output (PII safety gate).
  */
 public class SentryIdentityTest {
+    // mirrors SentryIdentity.SENTRY_USER_ID_HEX_LENGTH
+    private companion object {
+        const val EXPECTED_HASH_LENGTH = 16
+    }
+
     @Test
     public fun `sentryUserId is deterministic for same uid`() {
         val uid = "firebase-uid-abc123XYZ"
@@ -25,14 +30,14 @@ public class SentryIdentityTest {
     public fun `sentryUserId returns exactly 16 characters`() {
         val uid = "some-user-id"
         val result = SentryIdentity.sentryUserId(uid)
-        assertThat(result).hasSize(16)
+        assertThat(result).hasSize(EXPECTED_HASH_LENGTH)
     }
 
     @Test
     public fun `sentryUserId returns only hex characters`() {
         val uid = "test-uid-for-hex-check"
         val result = SentryIdentity.sentryUserId(uid)
-        assertThat(result).matches("[0-9a-f]{16}")
+        assertThat(result).matches("[0-9a-f]{$EXPECTED_HASH_LENGTH}")
     }
 
     @Test
@@ -55,7 +60,7 @@ public class SentryIdentityTest {
     @Test
     public fun `sentryUserId handles empty string without throwing`() {
         val result = SentryIdentity.sentryUserId("")
-        assertThat(result).hasSize(16)
-        assertThat(result).matches("[0-9a-f]{16}")
+        assertThat(result).hasSize(EXPECTED_HASH_LENGTH)
+        assertThat(result).matches("[0-9a-f]{$EXPECTED_HASH_LENGTH}")
     }
 }

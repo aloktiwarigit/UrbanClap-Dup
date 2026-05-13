@@ -25,6 +25,11 @@ import org.junit.jupiter.api.Test
  * 3. recordNavigationBreadcrumb → Breadcrumb with correct from/to.
  */
 public class SentryContextBinderTest {
+    // mirrors SentryIdentity.SENTRY_USER_ID_HEX_LENGTH
+    private companion object {
+        const val EXPECTED_HASH_LENGTH = 16
+    }
+
     @BeforeEach
     public fun setUp() {
         mockkStatic(Sentry::class)
@@ -52,9 +57,9 @@ public class SentryContextBinderTest {
 
             verify(exactly = 1) { Sentry.setUser(any<User>()) }
             val sentryUser = userSlot.captured
-            // Must be 16 hex chars (hashed)
-            assertThat(sentryUser.id).hasSize(16)
-            assertThat(sentryUser.id).matches("[0-9a-f]{16}")
+            // Must be EXPECTED_HASH_LENGTH hex chars (hashed)
+            assertThat(sentryUser.id).hasSize(EXPECTED_HASH_LENGTH)
+            assertThat(sentryUser.id).matches("[0-9a-f]{$EXPECTED_HASH_LENGTH}")
             // Raw UID must not appear in the Sentry user id
             assertThat(sentryUser.id).doesNotContain(uid)
         }
