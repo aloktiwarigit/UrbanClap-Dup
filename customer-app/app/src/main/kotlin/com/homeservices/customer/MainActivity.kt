@@ -64,6 +64,8 @@ public class MainActivity :
 
     @Inject public lateinit var isFirstLaunch: IsFirstLaunchUseCase
 
+    @Inject public lateinit var featureFlags: FeatureFlags
+
     /** Injected to support cold-start tier-ladder route resolution (E11-S01b-1). */
     @Inject public lateinit var routeResolver: CustomerRouteResolver
 
@@ -103,6 +105,7 @@ public class MainActivity :
                     priceApprovalEventBus = priceApprovalEventBus,
                     ratingPromptEventBus = ratingPromptEventBus,
                     isFirstLaunch = isFirstLaunch,
+                    featureFlags = featureFlags,
                     routeResolver = routeResolver,
                     initialDeepLink = currentDeepLink,
                 )

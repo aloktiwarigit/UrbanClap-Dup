@@ -85,6 +85,7 @@ internal fun AppNavigation(
                 priceApprovalEventBus = priceApprovalEventBus,
                 ratingPromptEventBus = ratingPromptEventBus,
                 firstLaunchPending = firstLaunchPending,
+                featureFlags = featureFlags,
                 modifier = modifier,
                 routeResolver = routeResolver,
                 initialDeepLink = initialDeepLink,
@@ -105,6 +106,7 @@ private fun AppNavigationReady(
     priceApprovalEventBus: PriceApprovalEventBus,
     ratingPromptEventBus: RatingPromptEventBus,
     firstLaunchPending: Boolean,
+    featureFlags: FeatureFlags,
     modifier: Modifier,
     routeResolver: CustomerRouteResolver?,
     initialDeepLink: String?,
@@ -138,21 +140,13 @@ private fun AppNavigationReady(
         )
     }
 
-    NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
-        composable(LocaleRoutes.FIRST_LAUNCH) {
-            FirstLaunchLanguageScreen(
-                onConfirmed = {
-                    navController.navigate("auth") {
-                        popUpTo(LocaleRoutes.FIRST_LAUNCH) { inclusive = true }
-                        launchSingleTop = true
-                    }
-                },
-            )
-        }
-        authGraph(navController, activity)
-        mainGraph(navController)
-        settingsGraph(navController)
-    }
+    AppNavHost(
+        navController = navController,
+        startDestination = startDestination,
+        activity = activity,
+        featureFlags = featureFlags,
+        modifier = modifier,
+    )
 }
 
 /**
@@ -269,91 +263,6 @@ private fun DeepLinkEffect(
                 navController.navigate(RatingRoutes.route(intent.entityId)) { launchSingleTop = true }
             else -> Unit // home is the default; no explicit nav needed
         }
-    }
-
-    LaunchedEffect(ratingPromptEventBus) {
-        ratingPromptEventBus.events.collect { bookingId ->
-            navController.navigate(RatingRoutes.route(bookingId)) { launchSingleTop = true }
-        }
-    }
-
-    SentryObservers(sessionManager = sessionManager, navController = navController)
-
-    AppNavHost(
-        navController = navController,
-        startDestination = startDestination,
-        activity = activity,
-        featureFlags = featureFlags,
-        modifier = modifier,
-    )
-}
-
-/** Handles auth-state driven navigation and notification permission. */
-@Composable
-private fun AuthStateEffect(
-    navController: NavController,
-    authState: AuthState,
-    firstLaunchPending: Boolean,
-    context: Context,
-    requestNotificationPermission: () -> Unit,
-) {
-    LaunchedEffect(authState, firstLaunchPending) {
-        if (firstLaunchPending) return@LaunchedEffect
-        when (val currentAuth = authState) {
-            is AuthState.Authenticated -> {
-                navController.navigate("main") {
-                    // Single pop target: by the time this fires, firstLaunchPending is
-                    // false (guarded above) and FirstLaunchLanguageScreen.onConfirmed
-                    // has already popped first_launch on its way to auth. Stack: [auth].
-                    popUpTo("auth") { inclusive = true }
-                    launchSingleTop = true
-                }
-                com.google.firebase.messaging.FirebaseMessaging
-                    .getInstance()
-                    .subscribeToTopic("customer_${currentAuth.uid}")
-                if (!context.hasNotificationPermission()) {
-                    requestNotificationPermission()
-                }
-            }
-            is AuthState.Unauthenticated -> {
-                com.google.firebase.messaging.FirebaseMessaging
-                    .getInstance()
-                    .deleteToken()
-                navController.navigate("auth") {
-                    // Single pop target: logout from main means stack is [main];
-                    // first_launch is never on the stack at this point.
-                    popUpTo("main") { inclusive = true }
-                    launchSingleTop = true
-                }
-            }
-        }
-    }
-}
-
-/** E18-S06: Sentry user-context binding and navigation breadcrumb recording. */
-@Composable
-private fun SentryObservers(
-    sessionManager: SessionManager,
-    navController: NavController,
-) {
-    LaunchedEffect(sessionManager) {
-        SentryContextBinder.bindAuthState(sessionManager.authState)
-    }
-
-    // DisposableEffect ensures the listener is removed when the composable leaves
-    // composition, preventing a leaked reference to NavController.
-    DisposableEffect(navController) {
-        var previousRoute: String? = null
-        val listener =
-            NavController.OnDestinationChangedListener { _, destination, _ ->
-                SentryContextBinder.recordNavigationBreadcrumb(
-                    from = previousRoute,
-                    to = destination.route,
-                )
-                previousRoute = destination.route
-            }
-        navController.addOnDestinationChangedListener(listener)
-        onDispose { navController.removeOnDestinationChangedListener(listener) }
     }
 }
 
