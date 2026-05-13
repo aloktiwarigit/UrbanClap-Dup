@@ -392,6 +392,21 @@ kover {
                     "*.BookingUiState\$*",
                     // RazorpayErrorCode — pure mapping object, covered by BookingViewModelTest indirectly
                     "*.RazorpayErrorCode",
+                    // Delete-account (DPDP) Compose screens — same rationale as other *ScreenKt files.
+                    // Paparazzi covers rendering paths (currently @Ignored — Linux-only via workflow_dispatch).
+                    "*.DeleteAccountScreenKt",
+                    "*.DeleteAccountScreenKt\$*",
+                    "*.DeleteAccountConfirmScreenKt",
+                    "*.DeleteAccountConfirmScreenKt\$*",
+                    "*.DeleteAccountCoolOffScreenKt",
+                    "*.DeleteAccountCoolOffScreenKt\$*",
+                    "*.PrivacyDataScreenKt",
+                    "*.PrivacyDataScreenKt\$*",
+                    // DeleteAccountUiState sealed class — data holders
+                    "*.DeleteAccountUiState",
+                    "*.DeleteAccountUiState\$*",
+                    // DeleteAccountModule — Hilt @Provides wiring
+                    "*.data.deleteaccount.di.*",
                     // Moshi KSP-generated JSON adapters — code-gen output, same rationale as Hilt factories.
                     // Broadened from *.*DtoJsonAdapter to *.*JsonAdapter to cover non-Dto-suffixed classes
                     // (e.g. NonceResponse, TruecallerVerifyRequest) whose generated adapters previously

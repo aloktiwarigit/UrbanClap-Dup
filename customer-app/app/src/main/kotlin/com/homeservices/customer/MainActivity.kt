@@ -66,6 +66,8 @@ public class MainActivity :
 
     @Inject public lateinit var isFirstLaunch: IsFirstLaunchUseCase
 
+    @Inject public lateinit var featureFlags: FeatureFlags
+
     /** Injected to support cold-start tier-ladder route resolution (E11-S01b-1). */
     @Inject public lateinit var routeResolver: CustomerRouteResolver
 
