@@ -645,3 +645,53 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     kspAndroidTest(libs.hilt.compiler)
 }
+
+// ---------------------------------------------------------------------------
+// English-literal Text() gate — E12-S02a Hindi sweep
+// ---------------------------------------------------------------------------
+// Catches any Compose Text("Uppercase...") literals in main sources that were
+// not extracted to strings.xml.  Uppercase-initial is used as the heuristic
+// because Hindi string-resource keys are lower_snake_case; any raw English
+// sentence starting with a capital letter is almost certainly a hardcoded UI
+// literal that belongs in strings.xml / strings-hi.xml.
+//
+// Zero violations are expected after the E12-S02a sweep.  The rule is wired
+// into the `check` task so it runs on every CI build.
+// ---------------------------------------------------------------------------
+tasks.register("verifyNoEnglishTextLiterals") {
+    description = "Fail the build if any Compose Text() calls contain hardcoded English literals."
+    group = "verification"
+    // Configuration-cache compatible: capture only File references at config time, then use
+    // plain java.io / kotlin.io.path traversal at execution time. Avoid Gradle DSL helpers
+    // (fileTree, files) inside doLast — they capture script-object references that can't be
+    // serialized into the configuration cache.
+    val projectDir = layout.projectDirectory.asFile
+    val ktSourceDirs: List<java.io.File> =
+        listOf("src/main/kotlin", "src/main/java")
+            .map { projectDir.resolve(it) }
+            .filter { it.exists() }
+    val ktFiles: List<java.io.File> =
+        ktSourceDirs.flatMap { dir ->
+            dir.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
+        }
+    inputs.files(ktFiles)
+    doLast {
+        val pattern = Regex("""Text\("[A-Z][^"]*"""")
+        val violations =
+            ktFiles.flatMap { file ->
+                file
+                    .readLines()
+                    .withIndex()
+                    .filter { (_, line) -> pattern.containsMatchIn(line) }
+                    .map { (idx, line) -> "${file.relativeTo(projectDir)}:${idx + 1}: $line" }
+            }
+        if (violations.isNotEmpty()) {
+            throw GradleException(
+                "Forbidden English-literal Text() found — extract to strings.xml:\n" +
+                    violations.joinToString("\n"),
+            )
+        }
+    }
+}
+
+tasks.named("check") { dependsOn("verifyNoEnglishTextLiterals") }

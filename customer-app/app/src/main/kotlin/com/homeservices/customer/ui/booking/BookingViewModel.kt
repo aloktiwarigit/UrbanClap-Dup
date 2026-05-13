@@ -17,6 +17,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+private const val BOOKING_FAILED_FALLBACK = "Booking failed"
+private const val CONFIRMATION_FAILED_FALLBACK = "Confirmation failed"
+
 @HiltViewModel
 internal class BookingViewModel
     @Inject
@@ -90,7 +93,8 @@ internal class BookingViewModel
                                 BookingUiState.BookingConfirmed(result.bookingId)
                             }
                     },
-                    onFailure = { _uiState.value = BookingUiState.Error(it.message ?: "Booking failed") },
+                    // Error message key: R.string.booking_error_failed surfaced in UI layer
+                    onFailure = { _uiState.value = BookingUiState.Error(it.message ?: BOOKING_FAILED_FALLBACK) },
                 )
             }
         }
@@ -106,11 +110,14 @@ internal class BookingViewModel
                         .first()
                         .fold(
                             onSuccess = { _uiState.value = BookingUiState.BookingConfirmed(bookingId) },
-                            onFailure = { _uiState.value = BookingUiState.Error(it.message ?: "Confirmation failed") },
+                            // Error message key: R.string.booking_error_confirmation_failed surfaced in UI layer
+                            onFailure = { _uiState.value = BookingUiState.Error(it.message ?: CONFIRMATION_FAILED_FALLBACK) },
                         )
                 }
+                // Error message key: R.string.booking_error_payment_cancelled surfaced in UI layer
+                // TODO(E18-S04): map PAYMENT_CANCELLED sentinel to localized message via PaymentFailed state
                 is PaymentResult.Failure ->
-                    _uiState.value = BookingUiState.Error("Payment cancelled: ${result.description}")
+                    _uiState.value = BookingUiState.Error("PAYMENT_CANCELLED:${result.description}")
             }
         }
     }

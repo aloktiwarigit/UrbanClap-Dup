@@ -31,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.booking.model.AddOnDecision
 import com.homeservices.customer.domain.booking.model.PendingAddOn
+import com.homeservices.customer.ui.util.formatInr
 import com.homeservices.designsystem.components.HsPriceText
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSecondaryButton
@@ -170,7 +171,7 @@ private fun TotalDecisionSummary(
     addOns: List<PendingAddOn>,
     decisions: Map<String, Boolean>,
 ) {
-    val approvedTotal = addOns.filter { decisions[it.name] == true }.sumOf { it.price }
+    val approvedTotal = addOns.filter { decisions[it.name] == true }.sumOf { it.price.toLong() }
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
@@ -184,7 +185,7 @@ private fun TotalDecisionSummary(
                 modifier = Modifier.weight(1f),
             )
             Text(
-                text = "Rs ${approvedTotal / 100}",
+                text = formatInr(approvedTotal),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,

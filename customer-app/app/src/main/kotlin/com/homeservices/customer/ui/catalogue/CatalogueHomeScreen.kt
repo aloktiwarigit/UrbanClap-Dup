@@ -85,6 +85,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.catalogue.model.Category
 import com.homeservices.customer.ui.bookings.CustomerBookingsScreen
+import com.homeservices.customer.ui.util.formatInr
 import kotlinx.coroutines.delay
 
 // ── Colour tokens (Codex-refined) ────────────────────────────────────────────
@@ -153,7 +154,8 @@ private fun categoryStyle(id: String): CategoryStyle =
         else -> CategoryStyle(MutedGreen, BrandGreen, Icons.Default.Build)
     }
 
-private fun formatPrice(paise: Int): String = if (paise > 0) "से ₹${paise / 100}" else ""
+// formatPrice removed — price label is now built at the call site using stringResource
+// so the localized "from %s" prefix is included (FIX Codex P2: restore starting-price label).
 
 // ── Nav items ─────────────────────────────────────────────────────────────────
 private data class NavItem(
@@ -223,7 +225,7 @@ internal fun CatalogueHomeContent(
                         is CatalogueHomeUiState.Success -> {
                             item {
                                 Text(
-                                    text = "हमारी सेवाएं",
+                                    text = stringResource(R.string.catalogue_our_services),
                                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, fontSize = 19.sp),
                                     color = TextPrimary,
                                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
@@ -292,7 +294,7 @@ private fun StickyHero(onSettingsClick: () -> Unit) {
                     Icon(Icons.Default.LocationOn, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(15.dp))
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        text = "अयोध्या, उत्तर प्रदेश",
+                        text = stringResource(R.string.catalogue_location_display),
                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
                         color = TextSecondary,
                         maxLines = 1,
@@ -321,7 +323,7 @@ private fun StickyHero(onSettingsClick: () -> Unit) {
             onValueChange = { query = it },
             placeholder = {
                 Text(
-                    "AC, प्लंबर, इलेक्ट्रीशियन खोजें...",
+                    stringResource(R.string.catalogue_search_hint),
                     style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
                     color = TextSecondary,
                 )
@@ -582,7 +584,11 @@ private fun CategoryCard(
             if (category.minPricePaise > 0) {
                 Spacer(Modifier.height(3.dp))
                 Text(
-                    text = formatPrice(category.minPricePaise),
+                    text =
+                        stringResource(
+                            R.string.catalogue_starting_price,
+                            formatInr(category.minPricePaise.toLong()),
+                        ),
                     style =
                         MaterialTheme.typography.labelLarge.copy(
                             fontSize = 13.sp,

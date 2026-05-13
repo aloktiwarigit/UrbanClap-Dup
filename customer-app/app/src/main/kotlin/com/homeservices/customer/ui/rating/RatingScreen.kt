@@ -28,9 +28,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.homeservices.customer.R
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
@@ -105,50 +108,99 @@ internal fun RatingContent(
             when (state) {
                 is RatingUiState.AwaitingPartner ->
                     StatusMessage(
-                        "Rating submitted",
-                        "We will reveal both ratings after the technician responds.",
+                        stringResource(R.string.rating_awaiting_title),
+                        stringResource(R.string.rating_awaiting_body),
                     )
-                is RatingUiState.Revealed -> StatusMessage("Ratings revealed", "Thanks for keeping the service marketplace fair.")
-                is RatingUiState.Error -> StatusMessage("Could not load rating", state.message)
-                is RatingUiState.Loading -> StatusMessage("Loading rating", "Preparing your service feedback form.")
-                else -> {
-                    HsTrustBadge(text = "Service feedback")
-                    Text("Rate your service", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                    Text(
-                        "Your rating helps improve technician quality and customer support follow-up.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                is RatingUiState.Revealed ->
+                    StatusMessage(
+                        stringResource(R.string.rating_revealed_title),
+                        stringResource(R.string.rating_revealed_body),
                     )
-                    HsSectionCard {
-                        StarRow("Overall experience", overall, onOverallChange)
-                        Spacer(Modifier.height(12.dp))
-                        StarRow("Punctuality", punctuality, onPunctualityChange)
-                        Spacer(Modifier.height(12.dp))
-                        StarRow("Skill quality", skill, onSkillChange)
-                        Spacer(Modifier.height(12.dp))
-                        StarRow("Behaviour", behaviour, onBehaviourChange)
-                    }
-                    OutlinedTextField(
-                        value = comment,
-                        onValueChange = onCommentChange,
-                        label = { Text("Comment (optional)") },
-                        supportingText = { Text("${comment.length}/500") },
-                        minLines = 3,
-                        modifier = Modifier.fillMaxWidth(),
+                is RatingUiState.Error ->
+                    StatusMessage(stringResource(R.string.rating_error_title), state.message)
+                is RatingUiState.Loading ->
+                    StatusMessage(
+                        stringResource(R.string.rating_loading_title),
+                        stringResource(R.string.rating_loading_body),
                     )
-                    if (shieldState is RatingShieldState.Escalated) {
-                        CountdownChip(expiresAtMs = shieldState.expiresAtMs, onPostAnyway = onPostAnyway)
-                    } else {
-                        Spacer(Modifier.weight(1f))
-                        HsPrimaryButton(
-                            text = "Submit rating",
-                            onClick = onSubmit,
-                            enabled = canSubmit,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
+                else ->
+                    RatingForm(
+                        shieldState = shieldState,
+                        overall = overall,
+                        punctuality = punctuality,
+                        skill = skill,
+                        behaviour = behaviour,
+                        comment = comment,
+                        canSubmit = canSubmit,
+                        onOverallChange = onOverallChange,
+                        onPunctualityChange = onPunctualityChange,
+                        onSkillChange = onSkillChange,
+                        onBehaviourChange = onBehaviourChange,
+                        onCommentChange = onCommentChange,
+                        onSubmit = onSubmit,
+                        onPostAnyway = onPostAnyway,
+                    )
             }
+        }
+    }
+}
+
+@Composable
+private fun RatingForm(
+    shieldState: RatingShieldState,
+    overall: Int,
+    punctuality: Int,
+    skill: Int,
+    behaviour: Int,
+    comment: String,
+    canSubmit: Boolean,
+    onOverallChange: (Int) -> Unit,
+    onPunctualityChange: (Int) -> Unit,
+    onSkillChange: (Int) -> Unit,
+    onBehaviourChange: (Int) -> Unit,
+    onCommentChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onPostAnyway: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        HsTrustBadge(text = stringResource(R.string.rating_eyebrow))
+        Text(
+            stringResource(R.string.rating_title),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            stringResource(R.string.rating_body),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        HsSectionCard {
+            StarRow(stringResource(R.string.rating_overall), overall, onOverallChange)
+            Spacer(Modifier.height(12.dp))
+            StarRow(stringResource(R.string.rating_punctuality), punctuality, onPunctualityChange)
+            Spacer(Modifier.height(12.dp))
+            StarRow(stringResource(R.string.rating_skill), skill, onSkillChange)
+            Spacer(Modifier.height(12.dp))
+            StarRow(stringResource(R.string.rating_behaviour), behaviour, onBehaviourChange)
+        }
+        OutlinedTextField(
+            value = comment,
+            onValueChange = onCommentChange,
+            label = { Text(stringResource(R.string.rating_comment_label)) },
+            supportingText = { Text("${comment.length}/500") },
+            minLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (shieldState is RatingShieldState.Escalated) {
+            CountdownChip(expiresAtMs = shieldState.expiresAtMs, onPostAnyway = onPostAnyway)
+        } else {
+            Spacer(Modifier.weight(1f))
+            HsPrimaryButton(
+                text = stringResource(R.string.rating_submit),
+                onClick = onSubmit,
+                enabled = canSubmit,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
@@ -180,23 +232,27 @@ private fun ShieldBottomSheet(
     val sheetState = rememberModalBottomSheetState()
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
-            Text("Share this privately first?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                stringResource(R.string.rating_shield_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
             Spacer(Modifier.height(8.dp))
             Text(
-                "Low ratings can be sent to owner support before posting publicly.",
+                stringResource(R.string.rating_shield_body),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(16.dp))
             HsPrimaryButton(
-                text = "Send to support first",
+                text = stringResource(R.string.rating_shield_send_support),
                 onClick = onEscalate,
                 enabled = !isEscalating,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(8.dp))
             HsSecondaryButton(
-                text = "Post rating now",
+                text = stringResource(R.string.rating_shield_post_now),
                 onClick = onSkip,
                 enabled = !isEscalating,
                 modifier = Modifier.fillMaxWidth(),
@@ -221,10 +277,14 @@ private fun CountdownChip(
     }
     val hours = (remainingMs / 3_600_000).coerceAtLeast(0)
     val minutes = ((remainingMs % 3_600_000) / 60_000).coerceAtLeast(0)
+    val timeString = "$hours:${minutes.toString().padStart(2, '0')}"
     Row(modifier = Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        SuggestionChip(onClick = {}, label = { Text("Private review: $hours:${minutes.toString().padStart(2, '0')} left") })
+        SuggestionChip(
+            onClick = {},
+            label = { Text(stringResource(R.string.rating_private_review_countdown, timeString)) },
+        )
         Spacer(Modifier.width(8.dp))
-        TextButton(onClick = onPostAnyway) { Text("Post anyway") }
+        TextButton(onClick = onPostAnyway) { Text(stringResource(R.string.rating_post_anyway)) }
     }
 }
 
@@ -239,10 +299,13 @@ private fun StarRow(
         Row {
             for (i in 1..5) {
                 Text(
-                    text = if (i <= value) "\u2605" else "\u2606",
+                    text = if (i <= value) "★" else "☆",
                     style = MaterialTheme.typography.headlineSmall,
                     color = if (i <= value) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(end = 6.dp).clickable(onClickLabel = "rate $i stars") { onChange(i) },
+                    modifier =
+                        Modifier
+                            .padding(end = 6.dp)
+                            .clickable(onClickLabel = pluralStringResource(R.plurals.rating_star_label, i, i)) { onChange(i) },
                 )
             }
         }

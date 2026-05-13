@@ -75,12 +75,19 @@ internal fun AddressScreen(
     var addressText by rememberSaveable { mutableStateOf("") }
     var selectedLat by rememberSaveable { mutableStateOf<Double?>(null) }
     var selectedLng by rememberSaveable { mutableStateOf<Double?>(null) }
-    var locationMessage by rememberSaveable { mutableStateOf("Location not set") }
+    // null = show default "Location not set" string from resources
+    var locationMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var isLocating by rememberSaveable { mutableStateOf(false) }
+
+    val locationCapturedMsg = stringResource(R.string.address_location_captured)
+    val locationCapturedManualMsg = stringResource(R.string.address_location_captured_manual)
+    val locationErrorMsg = stringResource(R.string.address_location_error)
+    val locationPermissionDeniedMsg = stringResource(R.string.address_location_permission_denied)
+
     val onLocationCaptured: (Double, Double) -> Unit = { lat, lng ->
         selectedLat = lat
         selectedLng = lng
-        locationMessage = "Current location captured"
+        locationMessage = locationCapturedMsg
         scope.launch {
             val resolvedAddress =
                 withContext(Dispatchers.IO) {
@@ -88,9 +95,9 @@ internal fun AddressScreen(
                 }
             if (resolvedAddress != null) {
                 addressText = resolvedAddress
-                locationMessage = "Current location captured"
+                locationMessage = locationCapturedMsg
             } else {
-                locationMessage = "Current location captured. Enter the address manually."
+                locationMessage = locationCapturedManualMsg
             }
             isLocating = false
         }
@@ -104,11 +111,11 @@ internal fun AddressScreen(
                     onLocation = onLocationCaptured,
                     onError = {
                         isLocating = false
-                        locationMessage = it
+                        locationMessage = locationErrorMsg
                     },
                 )
             } else {
-                locationMessage = "Allow location access to find nearby technicians."
+                locationMessage = locationPermissionDeniedMsg
             }
         }
     val requestLocation = {
@@ -119,7 +126,7 @@ internal fun AddressScreen(
                 onLocation = onLocationCaptured,
                 onError = {
                     isLocating = false
-                    locationMessage = it
+                    locationMessage = locationErrorMsg
                 },
             )
         } else {
@@ -151,7 +158,7 @@ internal fun AddressScreenContent(
     addressText: String,
     selectedLat: Double?,
     selectedLng: Double?,
-    locationMessage: String,
+    locationMessage: String?,
     isLocating: Boolean,
     onAddressTextChanged: (String) -> Unit,
     onUseCurrentLocation: () -> Unit,
@@ -180,93 +187,136 @@ internal fun AddressScreenContent(
                     .padding(innerPadding)
                     .padding(16.dp),
         ) {
-            Text(
-                text = stringResource(R.string.address_heading),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
+            AddressScreenHeading()
+            AddressLocationCard(
+                addressText = addressText,
+                selectedLat = selectedLat,
+                selectedLng = selectedLng,
+                locationMessage = locationMessage,
+                isLocating = isLocating,
+                onAddressTextChanged = onAddressTextChanged,
+                onUseCurrentLocation = onUseCurrentLocation,
             )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = stringResource(R.string.address_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(18.dp))
-            HsSectionCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        shape = MaterialTheme.shapes.small,
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.LocationOn,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(8.dp),
-                        )
-                    }
-                    Column(modifier = Modifier.padding(start = 12.dp)) {
-                        Text(
-                            text = stringResource(R.string.address_service_location),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Text(
-                            text = stringResource(R.string.address_location_note),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                Spacer(Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = addressText,
-                    onValueChange = onAddressTextChanged,
-                    label = { Text(stringResource(R.string.address_hint)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 4,
-                )
-                Spacer(Modifier.height(14.dp))
-                LocationCapturePanel(
-                    lat = selectedLat,
-                    lng = selectedLng,
-                    message = locationMessage,
-                    isLocating = isLocating,
-                    onUseCurrentLocation = onUseCurrentLocation,
-                )
-            }
             Spacer(Modifier.weight(1f))
-            Text(
-                text = stringResource(R.string.address_privacy_note),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(12.dp))
-            HsPrimaryButton(
-                text = stringResource(R.string.address_next),
-                onClick = {
-                    val lat = selectedLat
-                    val lng = selectedLng
-                    if (addressText.isNotBlank() && lat != null && lng != null) {
-                        onAddressConfirmed(addressText.trim(), lat, lng)
-                    }
-                },
-                enabled = addressText.isNotBlank() && selectedLat != null && selectedLng != null && !isLocating,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .height(56.dp),
+            AddressConfirmSection(
+                addressText = addressText,
+                selectedLat = selectedLat,
+                selectedLng = selectedLng,
+                isLocating = isLocating,
+                onAddressConfirmed = onAddressConfirmed,
             )
         }
     }
 }
 
 @Composable
+private fun AddressScreenHeading() {
+    Text(
+        text = stringResource(R.string.address_heading),
+        style = MaterialTheme.typography.headlineSmall,
+        fontWeight = FontWeight.Bold,
+    )
+    Spacer(Modifier.height(6.dp))
+    Text(
+        text = stringResource(R.string.address_subtitle),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(Modifier.height(18.dp))
+}
+
+@Composable
+private fun AddressLocationCard(
+    addressText: String,
+    selectedLat: Double?,
+    selectedLng: Double?,
+    locationMessage: String?,
+    isLocating: Boolean,
+    onAddressTextChanged: (String) -> Unit,
+    onUseCurrentLocation: () -> Unit,
+) {
+    HsSectionCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.primaryContainer,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.LocationOn,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(8.dp),
+                )
+            }
+            Column(modifier = Modifier.padding(start = 12.dp)) {
+                Text(
+                    text = stringResource(R.string.address_service_location),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = stringResource(R.string.address_location_note),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        OutlinedTextField(
+            value = addressText,
+            onValueChange = onAddressTextChanged,
+            label = { Text(stringResource(R.string.address_hint)) },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 4,
+        )
+        Spacer(Modifier.height(14.dp))
+        LocationCapturePanel(
+            lat = selectedLat,
+            lng = selectedLng,
+            message = locationMessage,
+            isLocating = isLocating,
+            onUseCurrentLocation = onUseCurrentLocation,
+        )
+    }
+}
+
+@Composable
+private fun AddressConfirmSection(
+    addressText: String,
+    selectedLat: Double?,
+    selectedLng: Double?,
+    isLocating: Boolean,
+    onAddressConfirmed: (addressText: String, lat: Double, lng: Double) -> Unit,
+) {
+    Text(
+        text = stringResource(R.string.address_privacy_note),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(Modifier.height(12.dp))
+    HsPrimaryButton(
+        text = stringResource(R.string.address_next),
+        onClick = {
+            val lat = selectedLat
+            val lng = selectedLng
+            if (addressText.isNotBlank() && lat != null && lng != null) {
+                onAddressConfirmed(addressText.trim(), lat, lng)
+            }
+        },
+        enabled = addressText.isNotBlank() && selectedLat != null && selectedLng != null && !isLocating,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .height(56.dp),
+    )
+}
+
+@Composable
 private fun LocationCapturePanel(
     lat: Double?,
     lng: Double?,
-    message: String,
+    message: String?,
     isLocating: Boolean,
     onUseCurrentLocation: () -> Unit,
 ) {
@@ -274,7 +324,12 @@ private fun LocationCapturePanel(
         LocationPreview(lat, lng, message, isLocating)
         Spacer(Modifier.height(10.dp))
         HsSecondaryButton(
-            text = if (isLocating) "Finding your location" else "Use current location",
+            text =
+                if (isLocating) {
+                    stringResource(R.string.address_finding_location)
+                } else {
+                    stringResource(R.string.address_use_current_location)
+                },
             onClick = onUseCurrentLocation,
             enabled = !isLocating,
             modifier = Modifier.fillMaxWidth(),
@@ -286,7 +341,7 @@ private fun LocationCapturePanel(
 private fun LocationPreview(
     lat: Double?,
     lng: Double?,
-    message: String,
+    message: String?,
     isLocating: Boolean,
 ) {
     if (lat != null && lng != null && BuildConfig.MAPS_API_KEY.isNotBlank()) {
@@ -301,7 +356,7 @@ private fun LocationPreview(
         ) {
             Marker(
                 state = MarkerState(position = point),
-                title = "Service location",
+                title = stringResource(R.string.address_service_location),
             )
         }
         return
@@ -322,20 +377,20 @@ private fun LocationPreview(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator()
                     Spacer(Modifier.width(12.dp))
-                    Text("Finding your service location")
+                    Text(stringResource(R.string.address_finding_service_location))
                 }
             } else {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.MyLocation, contentDescription = null)
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = message,
+                        text = message ?: stringResource(R.string.address_location_not_set),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         textAlign = TextAlign.Center,
                     )
                     Text(
-                        text = "This helps assign the nearest available technician.",
+                        text = stringResource(R.string.address_location_assign_help),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
@@ -371,16 +426,16 @@ private fun captureCurrentLocation(
                 if (lastLocation != null) {
                     onLocation(lastLocation.latitude, lastLocation.longitude)
                 } else {
-                    onError("Could not find your location. Check GPS and try again.")
+                    onError("GPS_ERROR")
                 }
             }
             lastLocationTask.addOnFailureListener {
-                onError("Could not find your location. Check GPS and try again.")
+                onError("GPS_ERROR")
             }
         }
     }
     currentLocationTask.addOnFailureListener {
-        onError("Could not find your location. Check GPS and try again.")
+        onError("GPS_ERROR")
     }
 }
 

@@ -8,7 +8,7 @@
         errorLine2="    ~~~~~~~~">
         <location
             file="src/main/kotlin/com/homeservices/customer/ui/auth/AuthScreen.kt"
-            line="88"
+            line="91"
             column="5"/>
     </issue>
 
@@ -103,7 +103,7 @@
     <issue
         id="UnusedResources"
         message="The resource `R.string.catalogue_home_subtitle` appears to be unused"
-        errorLine1="    &lt;string name=&quot;catalogue_home_subtitle&quot;>Verified technicians, clear prices, and live updates from booking to completion.&lt;/string>"
+        errorLine1="    &lt;string name=&quot;catalogue_home_subtitle&quot;>Skilled technicians, clear prices, and live updates from booking to completion.&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
@@ -114,7 +114,7 @@
     <issue
         id="UnusedResources"
         message="The resource `R.string.catalogue_trust_chip` appears to be unused"
-        errorLine1="    &lt;string name=&quot;catalogue_trust_chip&quot;>Aadhaar verified pros&lt;/string>"
+        errorLine1="    &lt;string name=&quot;catalogue_trust_chip&quot;>Skilled pros&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
@@ -169,7 +169,7 @@
     <issue
         id="UnusedResources"
         message="The resource `R.string.trust_dossier_promise` appears to be unused"
-        errorLine1="    &lt;string name=&quot;trust_dossier_promise&quot;>All our technicians are Aadhaar-verified and background-checked.&lt;/string>"
+        errorLine1="    &lt;string name=&quot;trust_dossier_promise&quot;>Verification badges appear when a technician has completed those checks.&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
@@ -212,12 +212,199 @@
 
     <issue
         id="UnusedResources"
+        message="The resource `R.string.booking_error_failed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;booking_error_failed&quot;>Booking failed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="95"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.booking_error_confirmation_failed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;booking_error_confirmation_failed&quot;>Confirmation failed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="96"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.booking_error_payment_cancelled` appears to be unused"
+        errorLine1="    &lt;string name=&quot;booking_error_payment_cancelled&quot;>Payment cancelled: %s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="97"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
         message="The resource `R.string.booking_error_retry` appears to be unused"
         errorLine1="    &lt;string name=&quot;booking_error_retry&quot;>Retry&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="97"
+            line="109"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_payment_pending` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_payment_pending&quot;>Payment pending&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="202"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_booking_confirmed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_booking_confirmed&quot;>Booking confirmed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="203"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_finding_technician` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_finding_technician&quot;>Finding technician&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="204"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_technician_assigned` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_technician_assigned&quot;>Technician assigned&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="205"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_technician_on_way` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_technician_on_way&quot;>Technician on the way&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="206"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_technician_arrived` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_technician_arrived&quot;>Technician arrived&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="207"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_work_in_progress` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_work_in_progress&quot;>Work in progress&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="208"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_price_approval_needed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_price_approval_needed&quot;>Price approval needed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="209"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_service_completed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_service_completed&quot;>Service completed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="210"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_booking_closed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_booking_closed&quot;>Booking closed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="211"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_booking_cancelled` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_booking_cancelled&quot;>Booking cancelled&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="212"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_technician_unavailable` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_technician_unavailable&quot;>Technician unavailable&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="213"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_unavailable` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_unavailable&quot;>Status unavailable&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="214"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.complaint_error_unknown` appears to be unused"
+        errorLine1="    &lt;string name=&quot;complaint_error_unknown&quot;>Unknown error&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="250"
             column="13"/>
     </issue>
 
@@ -228,7 +415,7 @@
         errorLine2="                                     ~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-hi/strings.xml"
-            line="8"
+            line="9"
             column="38"/>
     </issue>
 
@@ -251,17 +438,6 @@
         <location
             file="src/main/res/values/strings.xml"
             line="31"
-            column="42"/>
-    </issue>
-
-    <issue
-        id="TypographyEllipsis"
-        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
-        errorLine1="    &lt;string name=&quot;trust_dossier_loading&quot;>तकनीशियन प्रोफाइल लोड हो रही है...&lt;/string>"
-        errorLine2="                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values-hi/strings.xml"
-            line="106"
             column="42"/>
     </issue>
 

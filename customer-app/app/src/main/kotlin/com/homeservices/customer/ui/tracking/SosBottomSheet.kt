@@ -13,9 +13,12 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.homeservices.customer.R
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSecondaryButton
 
@@ -32,25 +35,37 @@ internal fun SosBottomSheet(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("Safety alert", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(
+                stringResource(R.string.sos_safety_alert),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "Sending in $secondsLeft sec",
+                text = pluralStringResource(R.plurals.sos_sending_in, secondsLeft, secondsLeft),
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.error,
                 fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "Owner support will be notified silently. The technician will not see this alert.",
+                text = stringResource(R.string.sos_send_body),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(24.dp))
-            HsPrimaryButton(text = "Send now", onClick = onConfirmNow, modifier = Modifier.fillMaxWidth())
+            HsPrimaryButton(
+                text = stringResource(R.string.sos_send_now),
+                onClick = onConfirmNow,
+                modifier = Modifier.fillMaxWidth(),
+            )
             Spacer(Modifier.height(8.dp))
-            HsSecondaryButton(text = "Cancel alert", onClick = onCancel, modifier = Modifier.fillMaxWidth())
+            HsSecondaryButton(
+                text = stringResource(R.string.sos_cancel_alert),
+                onClick = onCancel,
+                modifier = Modifier.fillMaxWidth(),
+            )
             Spacer(Modifier.height(16.dp))
         }
     }
