@@ -29,7 +29,7 @@ import com.homeservices.customer.ui.tracking.LiveTrackingScreen
 import com.homeservices.customer.ui.tracking.LiveTrackingViewModel
 
 internal fun NavGraphBuilder.mainGraph(navController: NavController) {
-    navigation(startDestination = CatalogueRoutes.HOME, route = "main") {
+    navigation(startDestination = CatalogueRoutes.HOME, route = ROUTE_MAIN) {
         composable(CatalogueRoutes.HOME) {
             val vm: CatalogueHomeViewModel = hiltViewModel()
             CatalogueHomeScreen(

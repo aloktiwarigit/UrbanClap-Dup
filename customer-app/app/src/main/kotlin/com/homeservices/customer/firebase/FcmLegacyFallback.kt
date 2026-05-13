@@ -13,9 +13,14 @@ package com.homeservices.customer.firebase
  * RATING_PROMPT_CUSTOMER. Rather than silently dropping those notifications, the
  * service falls through to the legacy event-bus path.
  *
- * TODO (follow-up): Once the backend adds `userId` to projector FCM payloads,
- * [shouldPostLegacyEvent] will always return false when [actionBuiltSuccessfully]
- * is true and can be removed in E11-S01b-2.
+ * TODO(E11-S01b-3): Once api/src/services/pending-action-projector.ts adds `userId`
+ * to the FCM data payload (field name: "userId"), [shouldPostLegacyEvent] will always
+ * return false when [actionBuiltSuccessfully] is true. At that point:
+ *   1. Remove FcmLegacyFallback.kt.
+ *   2. Delete the legacy event-bus injection (@Inject priceApprovalEventBus,
+ *      ratingPromptEventBus) from CustomerFirebaseMessagingService.
+ *   3. Delete PriceApprovalEventBus and RatingPromptEventBus classes.
+ * AppNavigation already uses Room observation (E11-S01b-2) and is unaffected.
  *
  * @param fcmType the raw `type` string from the FCM data payload, or null if absent.
  * @param actionBuiltSuccessfully true if the new router/ingestor path succeeded

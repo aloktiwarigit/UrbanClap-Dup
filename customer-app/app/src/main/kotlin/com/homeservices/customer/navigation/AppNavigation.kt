@@ -24,9 +24,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.homeservices.corenav.DeepLinkUri
+import com.homeservices.corenav.PendingActionStatus
 import com.homeservices.customer.data.auth.SessionManager
-import com.homeservices.customer.data.booking.PriceApprovalEventBus
-import com.homeservices.customer.data.rating.RatingPromptEventBus
+import com.homeservices.customer.data.pendingaction.PendingActionStore
 import com.homeservices.customer.domain.auth.model.AuthState
 import com.homeservices.customer.domain.flags.FeatureFlags
 import com.homeservices.customer.domain.locale.IsFirstLaunchUseCase
@@ -58,6 +58,12 @@ public object LocaleRoutes {
  *     the launching Intent by [MainActivity]. Consumed on first composition to navigate
  *     to the action's destination after auth check.
  *
+ * E11-S01b-2: PriceApprovalEventBus and RatingPromptEventBus parameters removed.
+ * Navigation is now driven by Room-observed [PendingActionStore] rows via
+ * [PendingActionsNavEffect]. The FCM service still posts to the legacy event buses
+ * as a fallback (see [CustomerFirebaseMessagingService]), but AppNavigation no
+ * longer depends on them — it observes the Room table directly.
+ *
  * Stream 2.6 (Sentry breadcrumbs) note: signature extended with named parameters with
  * defaults — existing call sites compile unchanged.
  */
@@ -65,8 +71,7 @@ public object LocaleRoutes {
 internal fun AppNavigation(
     sessionManager: SessionManager,
     activity: FragmentActivity,
-    priceApprovalEventBus: PriceApprovalEventBus,
-    ratingPromptEventBus: RatingPromptEventBus,
+    pendingActionStore: PendingActionStore,
     isFirstLaunch: IsFirstLaunchUseCase,
     featureFlags: FeatureFlags,
     modifier: Modifier = Modifier,
@@ -85,8 +90,7 @@ internal fun AppNavigation(
             AppNavigationReady(
                 sessionManager = sessionManager,
                 activity = activity,
-                priceApprovalEventBus = priceApprovalEventBus,
-                ratingPromptEventBus = ratingPromptEventBus,
+                pendingActionStore = pendingActionStore,
                 featureFlags = featureFlags,
                 firstLaunchPending = firstLaunchPending,
                 modifier = modifier,
@@ -106,8 +110,7 @@ internal fun AppNavigation(
 private fun AppNavigationReady(
     sessionManager: SessionManager,
     activity: FragmentActivity,
-    priceApprovalEventBus: PriceApprovalEventBus,
-    ratingPromptEventBus: RatingPromptEventBus,
+    pendingActionStore: PendingActionStore,
     featureFlags: FeatureFlags,
     firstLaunchPending: Boolean,
     modifier: Modifier,
@@ -117,7 +120,7 @@ private fun AppNavigationReady(
     val context = LocalContext.current
     val authState by sessionManager.authState.collectAsStateWithLifecycle()
     val navController = rememberNavController()
-    val startDestination = if (firstLaunchPending) LocaleRoutes.FIRST_LAUNCH else "auth"
+    val startDestination = if (firstLaunchPending) LocaleRoutes.FIRST_LAUNCH else ROUTE_AUTH
     val notificationPermissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
@@ -128,9 +131,9 @@ private fun AppNavigationReady(
         navController = navController,
         notificationPermissionLauncher = notificationPermissionLauncher,
     )
-    EventBusEffects(
-        priceApprovalEventBus = priceApprovalEventBus,
-        ratingPromptEventBus = ratingPromptEventBus,
+    PendingActionsNavEffect(
+        authState = authState,
+        pendingActionStore = pendingActionStore,
         navController = navController,
     )
     SentryEffects(sessionManager = sessionManager, navController = navController)
@@ -147,7 +150,7 @@ private fun AppNavigationReady(
         composable(LocaleRoutes.FIRST_LAUNCH) {
             FirstLaunchLanguageScreen(
                 onConfirmed = {
-                    navController.navigate("auth") {
+                    navController.navigate(ROUTE_AUTH) {
                         popUpTo(LocaleRoutes.FIRST_LAUNCH) { inclusive = true }
                         launchSingleTop = true
                     }
@@ -176,11 +179,11 @@ private fun AuthStateEffect(
         if (firstLaunchPending) return@LaunchedEffect
         when (val currentAuth = authState) {
             is AuthState.Authenticated -> {
-                navController.navigate("main") {
+                navController.navigate(ROUTE_MAIN) {
                     // Single pop target: by the time this fires, firstLaunchPending is
                     // false (guarded above) and FirstLaunchLanguageScreen.onConfirmed
                     // has already popped first_launch on its way to auth. Stack: [auth].
-                    popUpTo("auth") { inclusive = true }
+                    popUpTo(ROUTE_AUTH) { inclusive = true }
                     launchSingleTop = true
                 }
                 com.google.firebase.messaging.FirebaseMessaging
@@ -194,10 +197,10 @@ private fun AuthStateEffect(
                 com.google.firebase.messaging.FirebaseMessaging
                     .getInstance()
                     .deleteToken()
-                navController.navigate("auth") {
+                navController.navigate(ROUTE_AUTH) {
                     // Single pop target: logout from main means stack is [main];
                     // first_launch is never on the stack at this point.
-                    popUpTo("main") { inclusive = true }
+                    popUpTo(ROUTE_MAIN) { inclusive = true }
                     launchSingleTop = true
                 }
             }
@@ -206,22 +209,39 @@ private fun AuthStateEffect(
 }
 
 /**
- * Collects price-approval and rating-prompt event buses and navigates to their routes.
+ * Observes ACTIVE pending actions from Room for the authenticated user and
+ * navigates to the appropriate screen when an ADDON_APPROVAL_REQUESTED or
+ * RATING_PROMPT_CUSTOMER action is present.
+ *
+ * E11-S01b-2: Replaces [EventBusEffects] (removed). Navigation is now driven by
+ * the Room table rather than in-process event buses. The FCM service continues
+ * to post legacy events for backward compat, but AppNavigation no longer depends
+ * on them — it observes the store directly.
+ *
+ * Design note: We track a `Set<String>` of already-navigated action IDs so that
+ * re-compositions and config changes do not trigger duplicate navigation.
+ * The set is cleared when the user ID changes (new login).
  */
 @Composable
-private fun EventBusEffects(
-    priceApprovalEventBus: PriceApprovalEventBus,
-    ratingPromptEventBus: RatingPromptEventBus,
+private fun PendingActionsNavEffect(
+    authState: AuthState,
+    pendingActionStore: PendingActionStore,
     navController: NavController,
 ) {
-    LaunchedEffect(priceApprovalEventBus) {
-        priceApprovalEventBus.events.collect { bookingId ->
-            navController.navigate(BookingRoutes.priceApprovalRoute(bookingId)) { launchSingleTop = true }
-        }
-    }
-    LaunchedEffect(ratingPromptEventBus) {
-        ratingPromptEventBus.events.collect { bookingId ->
-            navController.navigate(RatingRoutes.route(bookingId)) { launchSingleTop = true }
+    val authenticatedUid = (authState as? AuthState.Authenticated)?.uid ?: return
+
+    LaunchedEffect(authenticatedUid) {
+        val navigatedIds = mutableSetOf<String>()
+        pendingActionStore.observeActive(authenticatedUid).collect { actions ->
+            actions
+                .filter { it.status == PendingActionStatus.ACTIVE && it.id !in navigatedIds }
+                .forEach { action ->
+                    val route = pendingActionNavRoute(action.type, action.entityId)
+                    if (route != null) {
+                        navigatedIds += action.id
+                        navController.navigate(route) { launchSingleTop = true }
+                    }
+                }
         }
     }
 }

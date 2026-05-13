@@ -1,6 +1,7 @@
 package com.homeservices.customer.navigation
 
 import com.homeservices.corenav.PendingActionType
+import com.homeservices.customer.ui.rating.RatingRoutes
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -16,7 +17,6 @@ import org.junit.jupiter.api.Test
  * Per docs/patterns/hilt-module-android-test-scope.md.
  */
 public class PendingActionNavObserverTest {
-
     @Test
     public fun `ADDON_APPROVAL_REQUESTED maps to price-approval route for bookingId`() {
         val bookingId = "bk-test-1"
@@ -28,7 +28,7 @@ public class PendingActionNavObserverTest {
     public fun `RATING_PROMPT_CUSTOMER maps to rating route for bookingId`() {
         val bookingId = "bk-test-2"
         val route = pendingActionNavRoute(PendingActionType.RATING_PROMPT_CUSTOMER, bookingId)
-        assertThat(route).isEqualTo(com.homeservices.customer.ui.rating.RatingRoutes.route(bookingId))
+        assertThat(route).isEqualTo(RatingRoutes.route(bookingId))
     }
 
     @Test

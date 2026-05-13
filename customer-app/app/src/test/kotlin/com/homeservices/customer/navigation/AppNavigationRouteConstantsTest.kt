@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test
  * breaking navigation regression.
  */
 public class AppNavigationRouteConstantsTest {
-
     @Test
     public fun `ROUTE_AUTH constant equals the legacy auth nav-graph route string`() {
         assertThat(ROUTE_AUTH).isEqualTo("auth")
