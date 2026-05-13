@@ -28,6 +28,7 @@ import com.homeservices.technician.ui.rating.RatingRoutes
 import com.homeservices.technician.ui.rating.RatingScreen
 import com.homeservices.technician.ui.serviceprofile.ServiceSelectionMode
 import com.homeservices.technician.ui.serviceprofile.ServiceSelectionScreen
+import com.homeservices.technician.ui.settings.LanguageSettingsScreen
 
 private const val HOME_GRAPH_ROUTE = "home"
 private const val HOME_DASHBOARD_ROUTE = "home_dashboard"
@@ -54,6 +55,9 @@ internal fun NavGraphBuilder.homeGraph(
         }
         composable("payout_settings") {
             PayoutCadenceScreen(onBack = { navController.popBackStack() })
+        }
+        composable("language_settings") {
+            LanguageSettingsScreen(onBack = { navController.popBackStack() })
         }
         composable("ratings_transparency") {
             MyRatingsScreen(onBack = { navController.popBackStack() })
@@ -105,6 +109,7 @@ private fun HomeDashboardRoute(
         onOpenJob = { bookingId -> navController.navigate("activeJob/$bookingId") },
         onViewRatings = { navController.navigate("ratings_transparency") },
         onPayoutSettings = { navController.navigate("payout_settings") },
+        onLanguageSettings = { navController.navigate("language_settings") },
         onEditServices = { navController.navigate("edit_services") },
         onSignOut = onSignOut,
         viewModel = viewModel,

@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -58,6 +59,7 @@ import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTrustBadge
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
 import com.homeservices.technician.BuildConfig
+import com.homeservices.technician.R
 
 @Composable
 internal fun ServiceSelectionScreen(
@@ -355,7 +357,7 @@ private fun EmptyLocationPreview(state: ServiceSelectionUiState) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator()
                     Spacer(Modifier.width(12.dp))
-                    Text("Finding your current area")
+                    Text(stringResource(R.string.service_finding_area))
                 }
             } else {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {

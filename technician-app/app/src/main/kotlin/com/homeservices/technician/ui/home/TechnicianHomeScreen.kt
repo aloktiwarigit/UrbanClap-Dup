@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
@@ -72,6 +73,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -103,6 +105,7 @@ internal fun TechnicianHomeScreen(
     onOpenJob: (String) -> Unit,
     onViewRatings: () -> Unit,
     onPayoutSettings: () -> Unit,
+    onLanguageSettings: () -> Unit,
     onEditServices: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
@@ -110,6 +113,7 @@ internal fun TechnicianHomeScreen(
     earningsViewModel: EarningsViewModel = hiltViewModel(),
     availabilityViewModel: AvailabilityViewModel = hiltViewModel(),
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val earningsState by earningsViewModel.uiState.collectAsStateWithLifecycle()
     val availabilityState by availabilityViewModel.uiState.collectAsStateWithLifecycle()
@@ -147,9 +151,9 @@ internal fun TechnicianHomeScreen(
                             scope.launch {
                                 snackbarHostState.showSnackbar(
                                     if (it) {
-                                        "Availability synced: online for new jobs"
+                                        context.getString(R.string.home_availability_online)
                                     } else {
-                                        "Availability synced: offline"
+                                        context.getString(R.string.home_availability_offline)
                                     },
                                 )
                             }
@@ -187,6 +191,7 @@ internal fun TechnicianHomeScreen(
                         authState = authState,
                         onViewRatings = onViewRatings,
                         onPayoutSettings = onPayoutSettings,
+                        onLanguageSettings = onLanguageSettings,
                         onEditServices = onEditServices,
                         onSignOut = onSignOut,
                     )
@@ -406,7 +411,7 @@ private fun NextJobHero(
                         ) {
                             Icon(Icons.Default.Route, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text("Open job")
+                            Text(stringResource(R.string.home_open_job))
                         }
                     } else {
                         StatusPill(
@@ -631,7 +636,7 @@ private fun EarningsErrorCard(onRetry: () -> Unit) {
             OutlinedButton(onClick = onRetry) {
                 Icon(Icons.Default.Refresh, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Retry")
+                Text(stringResource(R.string.home_retry))
             }
         }
     }
@@ -751,7 +756,7 @@ private fun JobCard(
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = DeepGreen),
                 ) {
-                    Text("Continue job")
+                    Text(stringResource(R.string.home_continue_job))
                 }
             }
         }
@@ -895,7 +900,7 @@ private fun AvailabilitySyncCard(
                 OutlinedButton(onClick = onRetry) {
                     Icon(Icons.Default.Refresh, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Retry")
+                    Text(stringResource(R.string.home_retry))
                 }
             }
         }
@@ -907,6 +912,7 @@ private fun ProfileScreen(
     authState: AuthState,
     onViewRatings: () -> Unit,
     onPayoutSettings: () -> Unit,
+    onLanguageSettings: () -> Unit,
     onEditServices: () -> Unit,
     onSignOut: () -> Unit,
 ) {
@@ -947,6 +953,14 @@ private fun ProfileScreen(
                 title = "Payout settings",
                 subtitle = "Choose weekly, next-day or instant payout",
                 onClick = onPayoutSettings,
+            )
+        }
+        item {
+            SettingCard(
+                icon = Icons.Default.Language,
+                title = stringResource(R.string.settings_language_title),
+                subtitle = stringResource(R.string.settings_language_subtitle),
+                onClick = onLanguageSettings,
             )
         }
         item {
@@ -1212,7 +1226,7 @@ private fun ErrorCard(
             OutlinedButton(onClick = onRefresh) {
                 Icon(Icons.Default.Refresh, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Retry")
+                Text(stringResource(R.string.home_retry))
             }
         }
     }

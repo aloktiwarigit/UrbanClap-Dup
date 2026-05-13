@@ -18,8 +18,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.technician.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,7 +67,7 @@ internal fun RatingAppealSheet(
                         .fillMaxWidth()
                         .height(140.dp),
                 maxLines = 5,
-                placeholder = { Text("कारण लिखें…") },
+                placeholder = { Text(stringResource(R.string.rating_appeal_reason_placeholder)) },
                 enabled = !isSubmitting,
             )
             Text(

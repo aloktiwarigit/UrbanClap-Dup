@@ -356,7 +356,7 @@ private fun EarningsSparkline(
             days.forEach { day ->
                 val label =
                     try {
-                        LocalDate.parse(day.date).dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
+                        LocalDate.parse(day.date).dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
                     } catch (_: Exception) {
                         "?"
                     }

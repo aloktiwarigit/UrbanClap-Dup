@@ -31,12 +31,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSectionCard
+import com.homeservices.technician.R
 import com.homeservices.technician.domain.rating.model.RatingWeekTrend
 import com.homeservices.technician.domain.rating.model.ReceivedRating
 import com.homeservices.technician.domain.rating.model.TechRatingSummary
@@ -56,7 +58,7 @@ internal fun MyRatingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("My ratings") },
+                title = { Text(stringResource(R.string.my_ratings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -81,7 +83,11 @@ internal fun MyRatingsContent(
             is MyRatingsUiState.Loading -> CenterState { CircularProgressIndicator() }
             is MyRatingsUiState.Error ->
                 CenterState {
-                    Text("Could not load ratings", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        stringResource(R.string.my_ratings_load_error),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                     HsPrimaryButton(text = "Try again", onClick = onRetry)
                 }
             is MyRatingsUiState.Success -> RatingsSuccess(summary = state.summary)
@@ -130,7 +136,7 @@ private fun RatingsSuccess(summary: TechRatingSummary) {
         if (summary.items.isEmpty()) {
             item {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text("No ratings yet", style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(R.string.my_ratings_empty), style = MaterialTheme.typography.bodyLarge)
                 }
             }
         } else {
@@ -179,7 +185,7 @@ private fun RatingTrendChart(
     }
 }
 
-private val DATE_FORMATTER = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH)
+// Not cached — Locale.getDefault() must be read at format-time to respect runtime locale switches.
 
 @Composable
 private fun RatingItemCard(rating: ReceivedRating) {
@@ -200,8 +206,8 @@ private fun RatingItemCard(rating: ReceivedRating) {
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            SuggestionChip(onClick = {}, label = { Text("Punctuality ${rating.punctuality}") })
-            SuggestionChip(onClick = {}, label = { Text("Skill ${rating.skill}") })
+            SuggestionChip(onClick = {}, label = { Text(stringResource(R.string.rating_punctuality_chip, rating.punctuality)) })
+            SuggestionChip(onClick = {}, label = { Text(stringResource(R.string.rating_skill_chip, rating.skill)) })
         }
         if (!rating.comment.isNullOrBlank()) {
             Text(rating.comment, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -223,7 +229,7 @@ private fun CenterState(content: @Composable ColumnScope.() -> Unit) {
 private fun formatDate(isoString: String): String =
     try {
         val instant = Instant.parse(isoString)
-        DATE_FORMATTER.format(instant.atZone(ZoneId.systemDefault()))
+        DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.getDefault()).format(instant.atZone(ZoneId.systemDefault()))
     } catch (_: Exception) {
         isoString
     }
