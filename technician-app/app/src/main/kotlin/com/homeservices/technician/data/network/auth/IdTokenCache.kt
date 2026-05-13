@@ -54,10 +54,21 @@ public class IdTokenCache
         public suspend fun freshToken(): String? {
             return try {
                 val user = firebaseAuth.currentUser ?: return null
+                val startUid = user.uid
                 val result = user.getIdToken(false).await()
                 val token = result?.token
-                cachedToken = token
-                token
+                // Fence: if the signed-in user changed while we were awaiting the
+                // token fetch, discard this result rather than overwriting the cache
+                // with a stale bearer. The AuthStateListener will have already
+                // launched a fresh freshToken() for the new user; we'd be racing
+                // against it (Codex review W1 round 2 [P2]).
+                if (firebaseAuth.currentUser?.uid == startUid) {
+                    cachedToken = token
+                    token
+                } else {
+                    Log.w(TAG, "IdToken result discarded: user changed during fetch")
+                    null
+                }
             } catch (e: Exception) {
                 Log.w(TAG, "IdToken fetch failed", e)
                 null
