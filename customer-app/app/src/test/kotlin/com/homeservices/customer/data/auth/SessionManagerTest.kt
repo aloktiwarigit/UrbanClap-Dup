@@ -3,9 +3,6 @@ package com.homeservices.customer.data.auth
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.messaging.FirebaseMessaging
-import com.homeservices.customer.data.network.auth.IdTokenCache
 import com.homeservices.customer.domain.auth.model.AuthProvider
 import com.homeservices.customer.domain.auth.model.AuthState
 import io.mockk.mockk

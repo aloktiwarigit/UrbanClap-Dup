@@ -148,9 +148,10 @@ public class SessionManager
          */
         public suspend fun signOut() {
             val uid =
-                (prefs.getString(KEY_UID, null)
-                    ?: (_authState.value as? AuthState.Authenticated)?.uid)
-                    ?: return
+                (
+                    prefs.getString(KEY_UID, null)
+                        ?: (_authState.value as? AuthState.Authenticated)?.uid
+                ) ?: return
 
             // Step 1 — Firebase Auth sign-out
             runCatching { firebaseAuth.signOut() }

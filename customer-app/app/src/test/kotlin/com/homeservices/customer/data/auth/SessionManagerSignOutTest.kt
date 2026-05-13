@@ -1,12 +1,11 @@
 package com.homeservices.customer.data.auth
 
 import android.content.SharedPreferences
+import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessaging
 import com.homeservices.customer.data.network.auth.IdTokenCache
 import com.homeservices.customer.domain.auth.model.AuthState
-import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -56,10 +55,9 @@ public class SessionManagerSignOutTest {
         every { editor.apply() } just runs
         every { idTokenCache.cancelScope() } just runs
 
-        // FCM tasks return immediately (simulate Task<Void> success via relaxed mockk).
-        // coEvery covers the .await() coroutine extension used in signOut.
-        coEvery { firebaseMessaging.unsubscribeFromTopic(any()).await() } returns null
-        coEvery { firebaseMessaging.deleteToken().await() } returns null
+        // FCM methods return real completed Tasks so .await() resolves correctly in coroutines.
+        every { firebaseMessaging.unsubscribeFromTopic(any()) } returns Tasks.forResult(null)
+        every { firebaseMessaging.deleteToken() } returns Tasks.forResult(null)
 
         sessionManager =
             SessionManager(
@@ -83,7 +81,7 @@ public class SessionManagerSignOutTest {
         runTest {
             sessionManager.signOut()
 
-            coVerify { firebaseMessaging.unsubscribeFromTopic("customer_user-42").await() }
+            verify { firebaseMessaging.unsubscribeFromTopic("customer_user-42") }
         }
 
     @Test
@@ -91,7 +89,7 @@ public class SessionManagerSignOutTest {
         runTest {
             sessionManager.signOut()
 
-            coVerify { firebaseMessaging.deleteToken().await() }
+            verify { firebaseMessaging.deleteToken() }
         }
 
     @Test
@@ -124,8 +122,8 @@ public class SessionManagerSignOutTest {
             sessionManager.signOut()
 
             // All remaining steps should still have executed
-            coVerify { firebaseMessaging.unsubscribeFromTopic(any()).await() }
-            coVerify { firebaseMessaging.deleteToken().await() }
+            verify { firebaseMessaging.unsubscribeFromTopic(any()) }
+            verify { firebaseMessaging.deleteToken() }
             verify { idTokenCache.cancelScope() }
             assertThat(sessionManager.authState.value).isEqualTo(AuthState.Unauthenticated)
         }
@@ -133,14 +131,14 @@ public class SessionManagerSignOutTest {
     @Test
     public fun `signOut completes even if FCM unsubscribe throws`(): Unit =
         runTest {
-            coEvery {
-                firebaseMessaging.unsubscribeFromTopic(any()).await()
+            every {
+                firebaseMessaging.unsubscribeFromTopic(any())
             } throws RuntimeException("FCM timeout")
 
             sessionManager.signOut()
 
             // deleteToken and subsequent steps must still run
-            coVerify { firebaseMessaging.deleteToken().await() }
+            verify { firebaseMessaging.deleteToken() }
             verify { idTokenCache.cancelScope() }
             assertThat(sessionManager.authState.value).isEqualTo(AuthState.Unauthenticated)
         }
@@ -162,6 +160,6 @@ public class SessionManagerSignOutTest {
 
             // Firebase and FCM operations must NOT be called when no uid
             verify(exactly = 0) { firebaseAuth.signOut() }
-            coVerify(exactly = 0) { firebaseMessaging.unsubscribeFromTopic(any()).await() }
+            verify(exactly = 0) { firebaseMessaging.unsubscribeFromTopic(any()) }
         }
 }
