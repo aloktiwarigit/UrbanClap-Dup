@@ -20,7 +20,18 @@ public sealed class DataExportUiState {
     ) : DataExportUiState()
 
     /**
-     * Export failed.
+     * SAF write completed successfully.
+     *
+     * [filePath] is the URI string of the file that was written, useful for
+     * snackbar confirmation or analytics.  The screen shows a success snackbar
+     * then resets to [Idle].
+     */
+    public data class Saved(
+        val filePath: String,
+    ) : DataExportUiState()
+
+    /**
+     * Export failed — either the network request or the SAF write.
      *
      * [message] is a localised or technical description of the failure,
      * surfaced in the UI via [R.string.data_export_error_unknown].

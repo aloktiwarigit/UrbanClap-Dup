@@ -35,7 +35,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -49,7 +48,6 @@ import com.homeservices.customer.R
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -76,21 +74,32 @@ public fun DataExportScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
 
     val successMessage = stringResource(R.string.data_export_success_toast)
     val filenamePrefix = stringResource(R.string.data_export_filename_prefix)
 
-    // SAF launcher — opens only when state is Ready
+    // SAF launcher — opens only when state is Ready.
+    // Cancel path: uri == null → call onSaveCancelled() so the screen returns to Idle
+    //              and the user can tap "Download" again instead of seeing a stuck spinner.
+    // Write path:  delegate to viewModel.saveToUri() which runs on Dispatchers.IO and
+    //              handles null output stream (permission revoked) and write failures.
     val safLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
-            if (uri != null) {
-                val bytes = (uiState as? DataExportUiState.Ready)?.jsonBytes ?: return@rememberLauncherForActivityResult
-                context.contentResolver.openOutputStream(uri)?.use { out -> out.write(bytes) }
-                viewModel.onSaved()
-                scope.launch { snackbarHostState.showSnackbar(successMessage) }
+            if (uri == null) {
+                viewModel.onSaveCancelled()
+                return@rememberLauncherForActivityResult
             }
+            val bytes = (uiState as? DataExportUiState.Ready)?.jsonBytes ?: return@rememberLauncherForActivityResult
+            viewModel.saveToUri(context, uri, bytes)
         }
+
+    // Show snackbar when SAF write succeeds, then reset to Idle.
+    LaunchedEffect(uiState) {
+        if (uiState is DataExportUiState.Saved) {
+            snackbarHostState.showSnackbar(successMessage)
+            viewModel.onSaved()
+        }
+    }
 
     // When state becomes Ready, auto-launch the SAF picker
     LaunchedEffect(uiState) {
@@ -244,6 +253,24 @@ public fun DataExportContent(
             is DataExportUiState.Ready -> {
                 // SAF picker is launched via LaunchedEffect in DataExportScreen.
                 // This state is transient; show a loading indicator while the picker opens.
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    CircularProgressIndicator(color = BrandGreen)
+                    Text(
+                        text = stringResource(R.string.data_export_loading),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary,
+                    )
+                }
+            }
+
+            is DataExportUiState.Saved -> {
+                // Transient: DataExportScreen's LaunchedEffect shows a snackbar then calls
+                // onSaved() to reset to Idle. Show the same loading indicator during the
+                // brief window while the snackbar is being displayed.
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,

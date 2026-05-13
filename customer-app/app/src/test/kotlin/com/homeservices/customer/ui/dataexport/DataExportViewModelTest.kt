@@ -14,6 +14,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.io.ByteArrayOutputStream
+import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 public class DataExportViewModelTest {
@@ -25,6 +27,9 @@ public class DataExportViewModelTest {
     public fun setUp() {
         Dispatchers.setMain(dispatcher)
         viewModel = DataExportViewModel(repository)
+        // Override ioDispatcher so withContext(ioDispatcher) in saveToUri is driven
+        // by the test scheduler (advanceUntilIdle() waits for it correctly).
+        viewModel.ioDispatcher = dispatcher
     }
 
     @AfterEach
@@ -106,5 +111,68 @@ public class DataExportViewModelTest {
             viewModel.onSaved()
 
             assertThat(viewModel.uiState.value).isInstanceOf(DataExportUiState.Idle::class.java)
+        }
+
+    @Test
+    public fun `onSaveCancelled transitions to Idle so user can retry`(): Unit =
+        runTest {
+            val bytes = """{"profile":{"uid":"u-1"}}""".toByteArray()
+            coEvery { repository.fetchExport() } returns flowOf(Result.success(bytes))
+            viewModel.requestExport()
+            dispatcher.scheduler.advanceUntilIdle()
+            // SAF picker opened (Ready); user presses back in the picker
+            assertThat(viewModel.uiState.value).isInstanceOf(DataExportUiState.Ready::class.java)
+
+            viewModel.onSaveCancelled()
+
+            // Must return to Idle (not stay as Ready/Loading) so the Download button is visible
+            assertThat(viewModel.uiState.value).isInstanceOf(DataExportUiState.Idle::class.java)
+        }
+
+    @Test
+    public fun `saveToUri transitions to Saved on successful write`(): Unit =
+        runTest {
+            val bytes = """{"profile":{"uid":"u-1"}}""".toByteArray()
+            val uriString = "content://media/external/downloads/data.json"
+            val outputStream = ByteArrayOutputStream()
+
+            // Internal overload: avoids Android framework classes (Uri, ContentResolver)
+            // which are unavailable in JVM unit tests.
+            viewModel.saveToUri(uriString, bytes) { outputStream }
+            dispatcher.scheduler.advanceUntilIdle()
+
+            assertThat(viewModel.uiState.value).isInstanceOf(DataExportUiState.Saved::class.java)
+            assertThat((viewModel.uiState.value as DataExportUiState.Saved).filePath)
+                .isEqualTo(uriString)
+        }
+
+    @Test
+    public fun `saveToUri transitions to Error when output stream is null`(): Unit =
+        runTest {
+            val bytes = """{"profile":{"uid":"u-1"}}""".toByteArray()
+            val uriString = "content://media/external/downloads/data.json"
+
+            // opener returns null — simulates a revoked storage provider
+            viewModel.saveToUri(uriString, bytes) { null }
+            dispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertThat(state).isInstanceOf(DataExportUiState.Error::class.java)
+            assertThat((state as DataExportUiState.Error).message).isNotBlank
+        }
+
+    @Test
+    public fun `saveToUri transitions to Error when write throws IOException`(): Unit =
+        runTest {
+            val bytes = """{"profile":{"uid":"u-1"}}""".toByteArray()
+            val uriString = "content://media/external/downloads/data.json"
+
+            // opener throws — simulates "no space left on device"
+            viewModel.saveToUri(uriString, bytes) { throw IOException("No space left on device") }
+            dispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertThat(state).isInstanceOf(DataExportUiState.Error::class.java)
+            assertThat((state as DataExportUiState.Error).message).contains("No space")
         }
 }

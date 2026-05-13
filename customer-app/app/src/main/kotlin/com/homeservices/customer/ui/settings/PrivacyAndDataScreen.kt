@@ -47,7 +47,10 @@ private val PrivacyTextSecondary = Color(0xFF5F6C66)
  *
  * Contains two list items:
  *  - "Download my data" (routes to DataExportScreen, E15-S01)
- *  - "Delete account" (TODO Stream 2.4 — E15-S02 wires this)
+ *  - "Delete account" — visible only when [onDeleteAccountClick] is non-null.
+ *    Pass a non-null lambda only when `featureFlags.dpdpSelfServiceEnabled()` is
+ *    true (wired in SettingsGraph).  Default is OFF until Play Store submission
+ *    (per project DPDP policy).  E15-S02 (Stream 2.4) wires the actual route.
  *
  * Whichever of E15-S01 or E15-S02 merges first wins the scaffold. The other
  * branch should rebase rather than re-creating this composable.
@@ -55,7 +58,13 @@ private val PrivacyTextSecondary = Color(0xFF5F6C66)
 @Composable
 public fun PrivacyAndDataScreen(
     onDownloadDataClick: () -> Unit,
-    onDeleteAccountClick: () -> Unit,
+    /**
+     * Callback for the "Delete account" row.
+     *
+     * Pass `null` when `featureFlags.dpdpSelfServiceEnabled()` is `false` — the
+     * row is hidden entirely so users on the flag-OFF path never see a broken stub.
+     */
+    onDeleteAccountClick: (() -> Unit)?,
     onBack: () -> Unit,
 ) {
     Surface(modifier = Modifier.fillMaxSize(), color = PrivacyWarmIvory) {
@@ -94,13 +103,16 @@ public fun PrivacyAndDataScreen(
                 onClick = onDownloadDataClick,
             )
 
-            // Delete account — TODO(E15-S02 / Stream 2.4): wire delete-account flow here.
-            // The onClick stub navigates to the delete-account screen added by that story.
-            PrivacyListItem(
-                icon = Icons.Default.DeleteForever,
-                title = stringResource(R.string.settings_privacy_data_delete_title),
-                onClick = onDeleteAccountClick,
-            )
+            // Delete account — hidden when flag is OFF (onDeleteAccountClick == null).
+            // E15-S02 (Stream 2.4) wires the actual delete-account route; this gating
+            // remains in place so the row is only visible when the flag is flipped ON.
+            if (onDeleteAccountClick != null) {
+                PrivacyListItem(
+                    icon = Icons.Default.DeleteForever,
+                    title = stringResource(R.string.settings_privacy_data_delete_title),
+                    onClick = onDeleteAccountClick,
+                )
+            }
         }
     }
 }

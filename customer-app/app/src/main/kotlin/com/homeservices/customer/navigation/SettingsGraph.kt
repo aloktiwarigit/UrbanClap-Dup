@@ -12,11 +12,12 @@ import com.homeservices.customer.ui.settings.SettingsScreen
 /**
  * Settings sub-graph.
  *
- * [featureFlags] is accepted here so the signature is stable when E15-S02
- * (delete-account / Stream 2.4) adds feature-flag gating for the delete-account
- * route. Whichever PR merges first wins the scaffold; the other rebases.
+ * [featureFlags] gates the "Delete account" row in PrivacyAndDataScreen.
+ * When [FeatureFlags.dpdpSelfServiceEnabled] is false (the default) the row is
+ * hidden so users never see an unwired stub.  E15-S02 (Stream 2.4) wires the
+ * actual delete-account navigation; this gating stays even after that PR merges
+ * until the flag is flipped ON for Play Store submission.
  */
-@Suppress("UNUSED_PARAMETER")
 internal fun NavGraphBuilder.settingsGraph(
     navController: NavController,
     featureFlags: FeatureFlags,
@@ -36,8 +37,15 @@ internal fun NavGraphBuilder.settingsGraph(
     composable(LocaleRoutes.PRIVACY_AND_DATA) {
         PrivacyAndDataScreen(
             onDownloadDataClick = { navController.navigate(LocaleRoutes.DATA_EXPORT) },
-            // TODO(E15-S02 / Stream 2.4): replace stub with delete-account route
-            onDeleteAccountClick = { /* stub — wired by E15-S02 */ },
+            // Pass a non-null lambda only when the DPDP self-service flag is ON.
+            // Null → PrivacyAndDataScreen hides the row entirely (no visible stub).
+            // TODO(E15-S02 / Stream 2.4): replace the lambda body with the real route.
+            onDeleteAccountClick =
+                if (featureFlags.dpdpSelfServiceEnabled()) {
+                    { /* TODO E15-S02 wires delete-account route */ }
+                } else {
+                    null
+                },
             onBack = { navController.popBackStack() },
         )
     }
