@@ -60,4 +60,10 @@
     <!-- Notification permission rationale (E11-S01b-1) -->
     <string name="notification_permission_rationale_title">सूचनाएं अनुमति दें</string>
     <string name="notification_permission_rationale_body">जॉब ऑफर, बुकिंग अपडेट और भुगतान सूचनाएं पाने के लिए सूचनाएं अनुमति दें।</string>
+
+    <!-- Language settings -->
+    <string name="settings_language_title">ऐप भाषा</string>
+    <string name="settings_language_subtitle">अंग्रेज़ी और हिंदी के बीच बदलें</string>
+    <string name="settings_language_save">भाषा सहेजें</string>
+    <string name="action_back">वापस जाएं</string>
 </resources>

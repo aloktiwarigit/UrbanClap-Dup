@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
@@ -72,6 +73,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -103,6 +105,7 @@ internal fun TechnicianHomeScreen(
     onOpenJob: (String) -> Unit,
     onViewRatings: () -> Unit,
     onPayoutSettings: () -> Unit,
+    onLanguageSettings: () -> Unit,
     onEditServices: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
@@ -187,6 +190,7 @@ internal fun TechnicianHomeScreen(
                         authState = authState,
                         onViewRatings = onViewRatings,
                         onPayoutSettings = onPayoutSettings,
+                        onLanguageSettings = onLanguageSettings,
                         onEditServices = onEditServices,
                         onSignOut = onSignOut,
                     )
@@ -907,6 +911,7 @@ private fun ProfileScreen(
     authState: AuthState,
     onViewRatings: () -> Unit,
     onPayoutSettings: () -> Unit,
+    onLanguageSettings: () -> Unit,
     onEditServices: () -> Unit,
     onSignOut: () -> Unit,
 ) {
@@ -947,6 +952,14 @@ private fun ProfileScreen(
                 title = "Payout settings",
                 subtitle = "Choose weekly, next-day or instant payout",
                 onClick = onPayoutSettings,
+            )
+        }
+        item {
+            SettingCard(
+                icon = Icons.Default.Language,
+                title = stringResource(R.string.settings_language_title),
+                subtitle = stringResource(R.string.settings_language_subtitle),
+                onClick = onLanguageSettings,
             )
         }
         item {

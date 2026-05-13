@@ -58,4 +58,10 @@
     <!-- Notification permission rationale (E11-S01b-1) -->
     <string name="notification_permission_rationale_title">Allow notifications</string>
     <string name="notification_permission_rationale_body">Allow notifications to receive job offers, booking updates, and payout alerts.</string>
+
+    <!-- Language settings -->
+    <string name="settings_language_title">App language</string>
+    <string name="settings_language_subtitle">Switch between English and Hindi</string>
+    <string name="settings_language_save">Save language</string>
+    <string name="action_back">Back</string>
 </resources>
