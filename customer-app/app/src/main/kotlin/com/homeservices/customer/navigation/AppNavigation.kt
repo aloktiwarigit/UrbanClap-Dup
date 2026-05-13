@@ -23,6 +23,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.homeservices.corenav.DeepLinkUri
 import com.homeservices.customer.data.auth.SessionManager
 import com.homeservices.customer.data.booking.PriceApprovalEventBus
 import com.homeservices.customer.data.rating.RatingPromptEventBus
@@ -46,6 +47,19 @@ public object LocaleRoutes {
     public const val DELETE_ACCOUNT_COOL_OFF: String = "delete_account_cool_off"
 }
 
+/**
+ * Root navigation composable for the customer-app.
+ *
+ * E11-S01b-1 additive parameters:
+ *   - [routeResolver]: used by future deep-link handling; currently wired but not yet
+ *     consumed in the composable body (full consumption in E11-S01b-2 route migration).
+ *   - [initialDeepLink]: `homeservices://action/<TYPE>?entityId=<id>` URI extracted from
+ *     the launching Intent by [MainActivity]. Consumed on first composition to navigate
+ *     to the action's destination after auth check.
+ *
+ * Stream 2.6 (Sentry breadcrumbs) note: signature extended with named parameters with
+ * defaults — existing call sites compile unchanged.
+ */
 @Composable
 internal fun AppNavigation(
     sessionManager: SessionManager,
@@ -55,10 +69,9 @@ internal fun AppNavigation(
     isFirstLaunch: IsFirstLaunchUseCase,
     featureFlags: FeatureFlags,
     modifier: Modifier = Modifier,
+    routeResolver: CustomerRouteResolver? = null,
+    initialDeepLink: String? = null,
 ) {
-    val context = LocalContext.current
-    val authState by sessionManager.authState.collectAsStateWithLifecycle()
-
     // Initial value is null (loading) so returning users with first_launch_completed=true
     // never see the picker on cold start. We render a blank Surface until DataStore emits.
     // Per Codex P2: avoid showing onboarding to returning users while the preference loads.
@@ -66,73 +79,66 @@ internal fun AppNavigation(
         isFirstLaunch().collectAsStateWithLifecycle(initialValue = null as Boolean?).value
 
     when (firstLaunchPending) {
-        null -> {
-            Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {}
-        }
-        else -> {
-            AppNavigationContent(
+        null -> Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {}
+        else ->
+            AppNavigationReady(
                 sessionManager = sessionManager,
                 activity = activity,
                 priceApprovalEventBus = priceApprovalEventBus,
                 ratingPromptEventBus = ratingPromptEventBus,
-                featureFlags = featureFlags,
                 firstLaunchPending = firstLaunchPending,
-                authState = authState,
-                context = context,
                 modifier = modifier,
+                routeResolver = routeResolver,
+                initialDeepLink = initialDeepLink,
             )
-        }
     }
 }
 
+/**
+ * Inner composable rendered once [firstLaunchPending] has emitted a non-null value.
+ *
+ * Extracted from [AppNavigation] to satisfy detekt LongMethod and CyclomaticComplexMethod
+ * limits — the outer function handles the loading gate only; all navigation wiring lives here.
+ */
 @Composable
-private fun AppNavigationContent(
+private fun AppNavigationReady(
     sessionManager: SessionManager,
     activity: FragmentActivity,
     priceApprovalEventBus: PriceApprovalEventBus,
     ratingPromptEventBus: RatingPromptEventBus,
-    featureFlags: FeatureFlags,
     firstLaunchPending: Boolean,
-    authState: AuthState,
-    context: Context,
     modifier: Modifier,
+    routeResolver: CustomerRouteResolver?,
+    initialDeepLink: String?,
 ) {
+    val context = LocalContext.current
+    val authState by sessionManager.authState.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     val startDestination = if (firstLaunchPending) LocaleRoutes.FIRST_LAUNCH else "auth"
     val notificationPermissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-            // Android owns notification display once the customer grants or denies this.
-        }
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
-    AuthNavigationEffect(
+    AuthStateEffect(
         authState = authState,
         firstLaunchPending = firstLaunchPending,
         context = context,
+        navController = navController,
         notificationPermissionLauncher = notificationPermissionLauncher,
-        onNavigateToMain = {
-            navController.navigate("main") {
-                popUpTo("auth") { inclusive = true }
-                launchSingleTop = true
-            }
-        },
-        onNavigateToAuth = {
-            navController.navigate("auth") {
-                popUpTo("main") { inclusive = true }
-                launchSingleTop = true
-            }
-        },
     )
-
-    EventBusNavigationEffects(
+    EventBusEffects(
         priceApprovalEventBus = priceApprovalEventBus,
         ratingPromptEventBus = ratingPromptEventBus,
         navController = navController,
     )
-
-    SentryObservabilityEffects(
-        sessionManager = sessionManager,
-        navController = navController,
-    )
+    SentryEffects(sessionManager = sessionManager, navController = navController)
+    if (initialDeepLink != null && !firstLaunchPending) {
+        DeepLinkEffect(
+            initialDeepLink = initialDeepLink,
+            authState = authState,
+            routeResolver = routeResolver,
+            navController = navController,
+        )
+    }
 
     NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
         composable(LocaleRoutes.FIRST_LAUNCH) {
@@ -147,70 +153,33 @@ private fun AppNavigationContent(
         }
         authGraph(navController, activity)
         mainGraph(navController)
-        settingsGraph(navController, featureFlags)
+        settingsGraph(navController)
     }
 }
 
+/**
+ * Reacts to [authState] changes: navigates to main/auth, subscribes/unsubscribes FCM topic,
+ * and requests notification permission on first sign-in.
+ */
 @Composable
-private fun EventBusNavigationEffects(
-    priceApprovalEventBus: PriceApprovalEventBus,
-    ratingPromptEventBus: RatingPromptEventBus,
-    navController: NavController,
-) {
-    LaunchedEffect(priceApprovalEventBus) {
-        priceApprovalEventBus.events.collect { bookingId ->
-            navController.navigate(BookingRoutes.priceApprovalRoute(bookingId)) {
-                launchSingleTop = true
-            }
-        }
-    }
-
-    LaunchedEffect(ratingPromptEventBus) {
-        ratingPromptEventBus.events.collect { bookingId ->
-            navController.navigate(RatingRoutes.route(bookingId)) { launchSingleTop = true }
-        }
-    }
-}
-
-// E18-S06: Sentry user-context + breadcrumbs. Extracted as one helper so AppNavigationContent
-// stays under detekt's LongMethod threshold without losing the additive intent.
-@Composable
-private fun SentryObservabilityEffects(
-    sessionManager: SessionManager,
-    navController: NavController,
-) {
-    LaunchedEffect(sessionManager) {
-        SentryContextBinder.bindAuthState(sessionManager.authState)
-    }
-    DisposableEffect(navController) {
-        var previousRoute: String? = null
-        val listener =
-            NavController.OnDestinationChangedListener { _, destination, _ ->
-                SentryContextBinder.recordNavigationBreadcrumb(
-                    from = previousRoute,
-                    to = destination.route,
-                )
-                previousRoute = destination.route
-            }
-        navController.addOnDestinationChangedListener(listener)
-        onDispose { navController.removeOnDestinationChangedListener(listener) }
-    }
-}
-
-@Composable
-private fun AuthNavigationEffect(
+private fun AuthStateEffect(
     authState: AuthState,
     firstLaunchPending: Boolean,
     context: Context,
+    navController: NavController,
     notificationPermissionLauncher: ActivityResultLauncher<String>,
-    onNavigateToMain: () -> Unit,
-    onNavigateToAuth: () -> Unit,
 ) {
     LaunchedEffect(authState, firstLaunchPending) {
         if (firstLaunchPending) return@LaunchedEffect
         when (val currentAuth = authState) {
             is AuthState.Authenticated -> {
-                onNavigateToMain()
+                navController.navigate("main") {
+                    // Single pop target: by the time this fires, firstLaunchPending is
+                    // false (guarded above) and FirstLaunchLanguageScreen.onConfirmed
+                    // has already popped first_launch on its way to auth. Stack: [auth].
+                    popUpTo("auth") { inclusive = true }
+                    launchSingleTop = true
+                }
                 com.google.firebase.messaging.FirebaseMessaging
                     .getInstance()
                     .subscribeToTopic("customer_${currentAuth.uid}")
@@ -222,8 +191,85 @@ private fun AuthNavigationEffect(
                 com.google.firebase.messaging.FirebaseMessaging
                     .getInstance()
                     .deleteToken()
-                onNavigateToAuth()
+                navController.navigate("auth") {
+                    // Single pop target: logout from main means stack is [main];
+                    // first_launch is never on the stack at this point.
+                    popUpTo("main") { inclusive = true }
+                    launchSingleTop = true
+                }
             }
+        }
+    }
+}
+
+/**
+ * Collects price-approval and rating-prompt event buses and navigates to their routes.
+ */
+@Composable
+private fun EventBusEffects(
+    priceApprovalEventBus: PriceApprovalEventBus,
+    ratingPromptEventBus: RatingPromptEventBus,
+    navController: NavController,
+) {
+    LaunchedEffect(priceApprovalEventBus) {
+        priceApprovalEventBus.events.collect { bookingId ->
+            navController.navigate(BookingRoutes.priceApprovalRoute(bookingId)) { launchSingleTop = true }
+        }
+    }
+    LaunchedEffect(ratingPromptEventBus) {
+        ratingPromptEventBus.events.collect { bookingId ->
+            navController.navigate(RatingRoutes.route(bookingId)) { launchSingleTop = true }
+        }
+    }
+}
+
+/**
+ * E18-S06: Binds the Sentry user context and records navigation breadcrumbs.
+ * Separate from auth navigation so the two concerns do not interfere.
+ */
+@Composable
+private fun SentryEffects(
+    sessionManager: SessionManager,
+    navController: NavController,
+) {
+    LaunchedEffect(sessionManager) {
+        SentryContextBinder.bindAuthState(sessionManager.authState)
+    }
+    DisposableEffect(navController) {
+        var previousRoute: String? = null
+        val listener =
+            NavController.OnDestinationChangedListener { _, destination, _ ->
+                SentryContextBinder.recordNavigationBreadcrumb(from = previousRoute, to = destination.route)
+                previousRoute = destination.route
+            }
+        navController.addOnDestinationChangedListener(listener)
+        onDispose { navController.removeOnDestinationChangedListener(listener) }
+    }
+}
+
+/**
+ * E11-S01b-1: Cold-start deep-link routing for `homeservices://action/<TYPE>?entityId=<id>`.
+ * Navigates to the resolved route once the user is authenticated and firstLaunch is done.
+ */
+@Composable
+private fun DeepLinkEffect(
+    initialDeepLink: String,
+    authState: AuthState,
+    routeResolver: CustomerRouteResolver?,
+    navController: NavController,
+) {
+    LaunchedEffect(initialDeepLink, authState) {
+        val currentAuth = authState
+        if (currentAuth !is AuthState.Authenticated) return@LaunchedEffect
+        val intent = DeepLinkUri.parse(initialDeepLink) ?: return@LaunchedEffect
+        when (routeResolver?.routeFor(intent)) {
+            CustomerRouteSpec.BookingPriceApproval ->
+                navController.navigate(BookingRoutes.priceApprovalRoute(intent.entityId)) {
+                    launchSingleTop = true
+                }
+            CustomerRouteSpec.Rating ->
+                navController.navigate(RatingRoutes.route(intent.entityId)) { launchSingleTop = true }
+            else -> Unit // home is the default; no explicit nav needed
         }
     }
 }

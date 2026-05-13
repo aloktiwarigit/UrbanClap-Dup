@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import com.homeservices.customer.domain.flags.GrowthBookFeatureFlags
 import com.homeservices.customer.domain.locale.LocaleRepository
+import com.homeservices.customer.firebase.CustomerFirebaseMessagingService
 import com.homeservices.customer.observability.SentryInitializer
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -34,6 +35,7 @@ public class HomeservicesCustomerApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         SentryInitializer.init(this)
+        CustomerFirebaseMessagingService.registerChannels(this)
 
         // Best-effort async flag refresh — non-blocking, fire-and-forget.
         // Uses a SupervisorJob so a failure here never propagates to sibling coroutines.

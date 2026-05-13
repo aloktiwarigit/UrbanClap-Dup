@@ -56,4 +56,8 @@
     <string name="earnings_last_seven_days">पिछले 7 दिन</string>
     <string name="earnings_sparkline_empty">पहली जॉब के बाद यहाँ गतिविधि दिखेगी</string>
     <string name="earnings_view_ratings">रेटिंग देखें</string>
+
+    <!-- Notification permission rationale (E11-S01b-1) -->
+    <string name="notification_permission_rationale_title">सूचनाएं अनुमति दें</string>
+    <string name="notification_permission_rationale_body">जॉब ऑफर, बुकिंग अपडेट और भुगतान सूचनाएं पाने के लिए सूचनाएं अनुमति दें।</string>
 </resources>

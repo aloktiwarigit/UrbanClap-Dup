@@ -382,4 +382,8 @@
     <string name="delete_account_close_cta">Close</string>
     <string name="delete_account_error_unknown">Something went wrong. Please try again.</string>
 
+    <!-- Notification permission rationale (E11-S01b-1) -->
+    <string name="notification_permission_rationale_title">Allow notifications</string>
+    <string name="notification_permission_rationale_body">Allow notifications to receive booking updates, add-on requests, and service reminders.</string>
+
 </resources>

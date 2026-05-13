@@ -44,6 +44,7 @@ complexity:
   TooManyFunctions:
     active: true
     thresholdInFiles: 15
+    thresholdInClasses: 12
 
 naming:
   FunctionNaming:
