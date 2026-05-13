@@ -14,6 +14,7 @@ import com.homeservices.customer.di.BuildInfoProvider
 import com.homeservices.customer.domain.booking.model.PaymentResult
 import com.homeservices.customer.domain.locale.IsFirstLaunchUseCase
 import com.homeservices.customer.navigation.AppNavigation
+import com.homeservices.customer.navigation.CustomerRouteResolver
 import com.homeservices.designsystem.theme.HomeservicesTheme
 import com.razorpay.PaymentData
 import com.razorpay.PaymentResultWithDataListener
@@ -21,6 +22,22 @@ import com.truecaller.android.sdk.legacy.TruecallerSDK
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
+/**
+ * Entry-point Activity for the customer-app.
+ *
+ * E11-S01b-1 additions:
+ *   - [CustomerRouteResolver] injected to support cold-start tier-ladder navigation.
+ *     The resolver is passed to [AppNavigation] which reads [RouteContext] and calls
+ *     [TierLadder.resolve] on first composition.
+ *   - The cold-start deep-link URI (from the launching [Intent]) is extracted before
+ *     [setContent] and forwarded to [AppNavigation] as [initialDeepLink].
+ *   - POST_NOTIFICATIONS runtime permission flow is handled inside [AppNavigation]
+ *     via [rememberLauncherForActivityResult] — see AppNavigation.kt.
+ *
+ * AppNavigation composable signature is NOT changed — [routeResolver] and
+ * [initialDeepLink] are added as new named parameters with defaults so
+ * Stream 2.6 (Sentry breadcrumbs) can rebase without conflicts.
+ */
 @AndroidEntryPoint
 public class MainActivity :
     AppCompatActivity(),
@@ -37,12 +54,24 @@ public class MainActivity :
 
     @Inject public lateinit var isFirstLaunch: IsFirstLaunchUseCase
 
+    /** Injected to support cold-start tier-ladder route resolution (E11-S01b-1). */
+    @Inject public lateinit var routeResolver: CustomerRouteResolver
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
         }
         super.onCreate(savedInstanceState)
+
+        // Extract cold-start deep-link URI before setContent.
+        // homeservices://action/<TYPE>?entityId=<id> deep links from notification tray
+        // are forwarded to AppNavigation for TierLadder-aware routing.
+        val initialDeepLink: String? =
+            intent?.data
+                ?.takeIf { it.scheme == "homeservices" && it.host == "action" }
+                ?.toString()
+
         setContent {
             HomeservicesTheme {
                 AppNavigation(
@@ -51,6 +80,8 @@ public class MainActivity :
                     priceApprovalEventBus = priceApprovalEventBus,
                     ratingPromptEventBus = ratingPromptEventBus,
                     isFirstLaunch = isFirstLaunch,
+                    routeResolver = routeResolver,
+                    initialDeepLink = initialDeepLink,
                 )
             }
         }

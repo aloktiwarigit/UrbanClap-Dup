@@ -27,6 +27,7 @@ import com.homeservices.customer.domain.auth.model.AuthState
 import com.homeservices.customer.domain.locale.IsFirstLaunchUseCase
 import com.homeservices.customer.ui.locale.FirstLaunchLanguageScreen
 import com.homeservices.customer.ui.rating.RatingRoutes
+import com.homeservices.corenav.DeepLinkUri
 
 public object LocaleRoutes {
     public const val FIRST_LAUNCH: String = "first_launch_language"
@@ -34,6 +35,19 @@ public object LocaleRoutes {
     public const val LANGUAGE_SETTINGS: String = "language_settings"
 }
 
+/**
+ * Root navigation composable for the customer-app.
+ *
+ * E11-S01b-1 additive parameters:
+ *   - [routeResolver]: used by future deep-link handling; currently wired but not yet
+ *     consumed in the composable body (full consumption in E11-S01b-2 route migration).
+ *   - [initialDeepLink]: `homeservices://action/<TYPE>?entityId=<id>` URI extracted from
+ *     the launching Intent by [MainActivity]. Consumed on first composition to navigate
+ *     to the action's destination after auth check.
+ *
+ * Stream 2.6 (Sentry breadcrumbs) note: signature extended with named parameters with
+ * defaults — existing call sites compile unchanged.
+ */
 @Composable
 internal fun AppNavigation(
     sessionManager: SessionManager,
@@ -42,6 +56,8 @@ internal fun AppNavigation(
     ratingPromptEventBus: RatingPromptEventBus,
     isFirstLaunch: IsFirstLaunchUseCase,
     modifier: Modifier = Modifier,
+    routeResolver: CustomerRouteResolver? = null,
+    initialDeepLink: String? = null,
 ) {
     val context = LocalContext.current
     val authState by sessionManager.authState.collectAsStateWithLifecycle()
@@ -110,6 +126,33 @@ internal fun AppNavigation(
             LaunchedEffect(ratingPromptEventBus) {
                 ratingPromptEventBus.events.collect { bookingId ->
                     navController.navigate(RatingRoutes.route(bookingId)) { launchSingleTop = true }
+                }
+            }
+
+            // Cold-start deep-link: homeservices://action/<TYPE>?entityId=<id>
+            // Navigate to the action route only when authenticated and firstLaunch is done.
+            if (initialDeepLink != null && !firstLaunchPending) {
+                LaunchedEffect(initialDeepLink, authState) {
+                    val currentAuth = authState
+                    if (currentAuth is AuthState.Authenticated) {
+                        val intent = DeepLinkUri.parse(initialDeepLink)
+                        if (intent != null) {
+                            val route = routeResolver?.routeFor(intent)
+                            if (route != null) {
+                                when (route) {
+                                    com.homeservices.customer.navigation.CustomerRouteSpec.BookingPriceApproval ->
+                                        navController.navigate(
+                                            BookingRoutes.priceApprovalRoute(intent.entityId),
+                                        ) { launchSingleTop = true }
+                                    com.homeservices.customer.navigation.CustomerRouteSpec.Rating ->
+                                        navController.navigate(
+                                            RatingRoutes.route(intent.entityId),
+                                        ) { launchSingleTop = true }
+                                    else -> Unit // home is the default; no explicit nav needed
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
