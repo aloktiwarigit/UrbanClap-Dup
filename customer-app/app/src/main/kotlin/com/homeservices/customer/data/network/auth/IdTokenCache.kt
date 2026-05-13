@@ -163,38 +163,42 @@ public class IdTokenCache
         public suspend fun freshToken(): String? {
             val gen = signOutGeneration.get()
             return try {
-                val user = firebaseAuth.currentUser ?: return null
-                val result = user.getIdToken(false).await()
-                val token = result?.token
-                // Discard if a sign-out (or new sign-in) happened during the await.
-                if (signOutGeneration.get() != gen) return null
-                cachedToken = token
-                token
+                fetchAndStoreToken(gen)
             } catch (e: Exception) {
                 Log.w(TAG, "IdToken fetch failed", e)
                 null
             }
         }
 
+        // Performs the await + generation check + cache write in one place so both freshToken()
+        // and the refresh loop share the same generation guard. Returns null when there's no
+        // current user OR the generation moved during the await (signOut/signIn happened).
+        private suspend fun fetchAndStoreToken(expectedGen: Int): String? {
+            val user = firebaseAuth.currentUser ?: return null
+            val token = user.getIdToken(false).await()?.token
+            return if (signOutGeneration.get() == expectedGen) {
+                cachedToken = token
+                token
+            } else {
+                null
+            }
+        }
+
         private suspend fun refreshLoop() {
             while (true) {
-                if (refreshEnabled.get()) {
-                    val gen = signOutGeneration.get()
-                    val user = firebaseAuth.currentUser
-                    if (user != null) {
-                        try {
-                            val result = user.getIdToken(false).await()
-                            val token = result?.token
-                            // Discard if generation changed during the await.
-                            if (signOutGeneration.get() == gen) {
-                                cachedToken = token
-                            }
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Refresh loop token fetch failed", e)
-                        }
-                    }
-                }
+                runRefreshIteration()
                 delay(REFRESH_INTERVAL_MS)
+            }
+        }
+
+        // Single iteration of the refresh loop, factored out so the loop body stays shallow.
+        private suspend fun runRefreshIteration() {
+            if (!refreshEnabled.get()) return
+            val gen = signOutGeneration.get()
+            try {
+                fetchAndStoreToken(gen)
+            } catch (e: Exception) {
+                Log.w(TAG, "Refresh loop token fetch failed", e)
             }
         }
 
