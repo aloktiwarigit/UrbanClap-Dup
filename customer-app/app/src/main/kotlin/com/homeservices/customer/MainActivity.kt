@@ -12,6 +12,7 @@ import com.homeservices.customer.data.booking.PriceApprovalEventBus
 import com.homeservices.customer.data.rating.RatingPromptEventBus
 import com.homeservices.customer.di.BuildInfoProvider
 import com.homeservices.customer.domain.booking.model.PaymentResult
+import com.homeservices.customer.domain.flags.FeatureFlags
 import com.homeservices.customer.domain.locale.IsFirstLaunchUseCase
 import com.homeservices.customer.navigation.AppNavigation
 import com.homeservices.designsystem.theme.HomeservicesTheme
@@ -37,6 +38,8 @@ public class MainActivity :
 
     @Inject public lateinit var isFirstLaunch: IsFirstLaunchUseCase
 
+    @Inject public lateinit var featureFlags: FeatureFlags
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -51,6 +54,7 @@ public class MainActivity :
                     priceApprovalEventBus = priceApprovalEventBus,
                     ratingPromptEventBus = ratingPromptEventBus,
                     isFirstLaunch = isFirstLaunch,
+                    featureFlags = featureFlags,
                 )
             }
         }

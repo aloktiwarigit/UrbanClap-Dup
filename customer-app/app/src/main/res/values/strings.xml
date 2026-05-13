@@ -331,7 +331,47 @@
     <!-- Settings -->
     <string name="settings_title">सेटिंग्स</string>
     <string name="settings_language">भाषा</string>
+    <string name="settings_language_current">हिंदी</string>
     <string name="settings_language_title">भाषा चुनें</string>
     <string name="settings_language_save">सेव करें</string>
+    <string name="settings_privacy_and_data">Privacy &amp; data</string>
+    <string name="settings_privacy_data_export_title">Download my data</string>
+    <string name="settings_privacy_data_delete_title">Delete account</string>
+
+    <!-- Data export / DPDP §11 self-service data access (E15-S01) -->
+    <string name="data_export_title">Download my data</string>
+    <string name="data_export_description">Your complete account data — profile, bookings, ratings, and complaints — will be downloaded as a JSON file to a location of your choice.</string>
+    <string name="data_export_privacy_note">Your data is downloaded directly to your device. It is never stored or processed by third parties.</string>
+    <string name="data_export_button">Download my data</string>
+    <string name="data_export_loading">Preparing your data export&#8230;</string>
+    <string name="data_export_success_toast">Data saved successfully</string>
+    <string name="data_export_error_unknown">Something went wrong. Please check your connection and try again.</string>
+    <string name="data_export_retry">Try again</string>
+    <string name="data_export_filename_prefix">homeservices-data-export</string>
+
+    <!-- Delete account / DPDP erasure (E15-S02) -->
+    <string name="delete_account_title">Delete account</string>
+    <string name="delete_account_warning">Your account and all associated data will be permanently deleted after a 7-day cool-off period. You can cancel the deletion any time during this window.</string>
+    <string name="delete_account_what_deleted_label">What will be deleted</string>
+    <string name="delete_account_item_bookings">Bookings history</string>
+    <string name="delete_account_item_addresses">Saved addresses</string>
+    <string name="delete_account_item_payment_methods">Payment methods</string>
+    <string name="delete_account_item_preferences">App preferences &amp; settings</string>
+    <string name="delete_account_continue_cta">Continue to delete</string>
+    <string name="delete_account_confirm_title">Confirm deletion</string>
+    <string name="delete_account_confirm_instruction">Type the phrase below exactly to confirm you want to delete your account.</string>
+    <string name="delete_account_phrase_label">Confirmation phrase</string>
+    <string name="delete_my_account_confirmation_phrase">DELETE MY ACCOUNT</string>
+    <string name="delete_account_phrase_mismatch">Phrase does not match. Please type it exactly.</string>
+    <string name="delete_account_pin_label">Last 4 digits of your registered phone number</string>
+    <string name="delete_account_submit_cta">Delete my account</string>
+    <string name="delete_account_cancel_cta">Cancel</string>
+    <string name="delete_account_coolOff_title">Deletion scheduled</string>
+    <string name="delete_account_coolOff_subtitle">You can still revoke this deletion until your account is permanently removed.</string>
+    <string name="delete_account_coolOff_countdown_format">Account will be deleted in %1$s</string>
+    <string name="delete_account_revoke_cta">Revoke deletion</string>
+    <string name="delete_account_revoke_success">Deletion cancelled. Your account is safe.</string>
+    <string name="delete_account_close_cta">Close</string>
+    <string name="delete_account_error_unknown">Something went wrong. Please try again.</string>
 
 </resources>

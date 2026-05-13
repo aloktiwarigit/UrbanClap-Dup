@@ -334,6 +334,46 @@
     <!-- Settings -->
     <string name="settings_title">सेटिंग्स</string>
     <string name="settings_language">भाषा</string>
+    <string name="settings_language_current">हिंदी</string>
     <string name="settings_language_title">भाषा चुनें</string>
     <string name="settings_language_save">सेव करें</string>
+    <string name="settings_privacy_and_data">गोपनीयता और डेटा</string>
+    <string name="settings_privacy_data_export_title">मेरा डेटा डाउनलोड करें</string>
+    <string name="settings_privacy_data_delete_title">खाता हटाएं</string>
+
+    <!-- Data export / DPDP §11 self-service data access (E15-S01) -->
+    <string name="data_export_title">&#2350;&#2375;&#2352;&#2366; &#2337;&#2375;&#2335;&#2366; &#2337;&#2366;&#2313;&#2344;&#2354;&#2379;&#2337; &#2325;&#2352;&#2375;&#2306;</string>
+    <string name="data_export_description">&#2310;&#2346;&#2325;&#2366; &#2346;&#2370;&#2352;&#2366; &#2326;&#2366;&#2340;&#2366; &#2337;&#2375;&#2335;&#2366; &#8212; &#2346;&#2381;&#2352;&#2379;&#2347;&#2366;&#2311;&#2354;, &#2348;&#2369;&#2325;&#2367;&#2306;&#2327;, &#2352;&#2375;&#2335;&#2367;&#2306;&#2327; &#2319;&#2357;&#2306; &#2358;&#2367;&#2325;&#2366;&#2351;&#2340;&#2375;&#2306; &#8212; &#2310;&#2346;&#2325;&#2368; &#2346;&#2360;&#2306;&#2342; &#2325;&#2368; &#2332;&#2327;&#2361; JSON &#2347;&#2366;&#2311;&#2354; &#2350;&#2375;&#2306; &#2337;&#2366;&#2313;&#2344;&#2354;&#2379;&#2337; &#2361;&#2379;&#2327;&#2366;&#2404;</string>
+    <string name="data_export_privacy_note">&#2310;&#2346;&#2325;&#2366; &#2337;&#2375;&#2335;&#2366; &#2360;&#2368;&#2343;&#2375; &#2310;&#2346;&#2325;&#2375; &#2337;&#2367;&#2357;&#2366;&#2311;&#2360; &#2346;&#2352; &#2337;&#2366;&#2313;&#2344;&#2354;&#2379;&#2337; &#2361;&#2379;&#2340;&#2366; &#2361;&#2376;&#2404; &#2311;&#2360;&#2375; &#2325;&#2367;&#2360;&#2368; &#2340;&#2368;&#2360;&#2352;&#2375; &#2346;&#2325;&#2381;&#2359; &#2342;&#2381;&#2357;&#2366;&#2352;&#2366; &#2360;&#2306;&#2327;&#2381;&#2352;&#2361;&#2367;&#2340; &#2351;&#2366; &#2346;&#2381;&#2352;&#2360;&#2306;&#2360;&#2381;&#2325;&#2371;&#2340; &#2344;&#2361;&#2368;&#2306; &#2325;&#2367;&#2351;&#2366; &#2332;&#2366;&#2340;&#2366;&#2404;</string>
+    <string name="data_export_button">&#2350;&#2375;&#2352;&#2366; &#2337;&#2375;&#2335;&#2366; &#2337;&#2366;&#2313;&#2344;&#2354;&#2379;&#2337; &#2325;&#2352;&#2375;&#2306;</string>
+    <string name="data_export_loading">&#2310;&#2346;&#2325;&#2366; &#2337;&#2375;&#2335;&#2366; &#2319;&#2325;&#2381;&#2360;&#2346;&#2379;&#2352;&#2381;&#2335; &#2340;&#2376;&#2351;&#2366;&#2352; &#2361;&#2379; &#2352;&#2361;&#2366; &#2361;&#2376;&#8230;</string>
+    <string name="data_export_success_toast">&#2337;&#2375;&#2335;&#2366; &#2360;&#2347;&#2354;&#2340;&#2366;&#2346;&#2370;&#2352;&#2381;&#2357;&#2325; &#2360;&#2375;&#2357; &#2361;&#2379; &#2327;&#2351;&#2366;</string>
+    <string name="data_export_error_unknown">&#2325;&#2369;&#2331; &#2327;&#2354;&#2340; &#2361;&#2379; &#2327;&#2351;&#2366;&#2404; &#2325;&#2367;&#2352;&#2346;&#2351;&#2366; &#2309;&#2346;&#2344;&#2366; &#2325;&#2344;&#2375;&#2325;&#2381;&#2358;&#2344; &#2332;&#2366;&#2306;&#2330;&#2375;&#2306; &#2324;&#2352; &#2347;&#2367;&#2352; &#2325;&#2379;&#2358;&#2367;&#2358; &#2325;&#2352;&#2375;&#2306;&#2404;</string>
+    <string name="data_export_retry">&#2347;&#2367;&#2352; &#2325;&#2379;&#2358;&#2367;&#2358; &#2325;&#2352;&#2375;&#2306;</string>
+    <string name="data_export_filename_prefix">homeservices-data-export</string>
+
+    <!-- Delete account / DPDP erasure (E15-S02) -->
+    <string name="delete_account_title">खाता हटाएं</string>
+    <string name="delete_account_warning">आपका खाता और सभी संबंधित डेटा 7 दिन की कूल-ऑफ अवधि के बाद स्थायी रूप से हटा दिया जाएगा। इस दौरान आप कभी भी हटाने को रद्द कर सकते हैं।</string>
+    <string name="delete_account_what_deleted_label">क्या हटाया जाएगा</string>
+    <string name="delete_account_item_bookings">बुकिंग इतिहास</string>
+    <string name="delete_account_item_addresses">सहेजे गए पते</string>
+    <string name="delete_account_item_payment_methods">भुगतान के तरीके</string>
+    <string name="delete_account_item_preferences">ऐप प्राथमिकताएं और सेटिंग्स</string>
+    <string name="delete_account_continue_cta">हटाने के लिए आगे बढ़ें</string>
+    <string name="delete_account_confirm_title">हटाने की पुष्टि करें</string>
+    <string name="delete_account_confirm_instruction">खाता हटाने की पुष्टि करने के लिए नीचे दिया गया वाक्यांश ठीक वैसे ही टाइप करें।</string>
+    <string name="delete_account_phrase_label">पुष्टि वाक्यांश</string>
+    <string name="delete_my_account_confirmation_phrase">मेरा खाता हटाएं</string>
+    <string name="delete_account_phrase_mismatch">वाक्यांश मेल नहीं खाता। कृपया इसे ठीक वैसे ही टाइप करें।</string>
+    <string name="delete_account_pin_label">अपने पंजीकृत फोन नंबर के अंतिम 4 अंक</string>
+    <string name="delete_account_submit_cta">मेरा खाता हटाएं</string>
+    <string name="delete_account_cancel_cta">रद्द करें</string>
+    <string name="delete_account_coolOff_title">हटाना निर्धारित किया गया</string>
+    <string name="delete_account_coolOff_subtitle">आपका खाता स्थायी रूप से हटने तक आप इसे रद्द कर सकते हैं।</string>
+    <string name="delete_account_coolOff_countdown_format">खाता %1$s में हटाया जाएगा</string>
+    <string name="delete_account_revoke_cta">हटाना रद्द करें</string>
+    <string name="delete_account_revoke_success">हटाना रद्द किया गया। आपका खाता सुरक्षित है।</string>
+    <string name="delete_account_close_cta">बंद करें</string>
+    <string name="delete_account_error_unknown">कुछ गलत हो गया। कृपया पुनः प्रयास करें।</string>
 </resources>
