@@ -64,9 +64,6 @@ internal fun LiveTrackingScreen(
         uiState is LiveTrackingUiState.Tracking &&
             (uiState as LiveTrackingUiState.Tracking).status is BookingStatus.InProgress
 
-    val sosConfirmedMsg = stringResource(R.string.tracking_sos_confirmed)
-    val sosErrorMsg = stringResource(R.string.tracking_sos_error)
-
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -101,6 +98,17 @@ internal fun LiveTrackingScreen(
         )
     }
 
+    SosOverlay(sosUiState = sosUiState, sosViewModel = sosViewModel, snackbarHostState = snackbarHostState)
+}
+
+@Composable
+private fun SosOverlay(
+    sosUiState: SosUiState,
+    sosViewModel: SosViewModel,
+    snackbarHostState: SnackbarHostState,
+) {
+    val sosConfirmedMsg = stringResource(R.string.tracking_sos_confirmed)
+    val sosErrorMsg = stringResource(R.string.tracking_sos_error)
     when (val sos = sosUiState) {
         is SosUiState.ShowConsent ->
             SosConsentDialog(
@@ -178,32 +186,40 @@ private fun TrackingBody(
             }
         } ?: MapPlaceholder()
 
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+        TrackingServiceProgressCard(state = state, onFileComplaint = onFileComplaint)
+    }
+}
+
+@Composable
+private fun TrackingServiceProgressCard(
+    state: LiveTrackingUiState.Tracking,
+    onFileComplaint: (bookingId: String) -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 1.dp,
         ) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 1.dp,
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        stringResource(R.string.tracking_service_progress),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    StatusTimeline(currentStatus = state.status)
-                }
-            }
-            if (state.status is BookingStatus.Closed) {
-                HsSecondaryButton(
-                    text = stringResource(R.string.tracking_file_complaint),
-                    onClick = { onFileComplaint(state.bookingId) },
-                    modifier = Modifier.fillMaxWidth(),
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    stringResource(R.string.tracking_service_progress),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
                 )
+                StatusTimeline(currentStatus = state.status)
             }
+        }
+        if (state.status is BookingStatus.Closed) {
+            HsSecondaryButton(
+                text = stringResource(R.string.tracking_file_complaint),
+                onClick = { onFileComplaint(state.bookingId) },
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }

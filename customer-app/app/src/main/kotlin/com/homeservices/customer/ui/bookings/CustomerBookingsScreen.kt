@@ -335,23 +335,27 @@ private fun EmptyBookingsCard() {
 }
 
 @Composable
-private fun CustomerBookingStatus.labelRes(): String =
-    when (this) {
-        CustomerBookingStatus.PENDING_PAYMENT -> stringResource(R.string.booking_status_pending_payment)
-        CustomerBookingStatus.PAID -> stringResource(R.string.booking_status_paid)
-        CustomerBookingStatus.SEARCHING -> stringResource(R.string.booking_status_searching)
-        CustomerBookingStatus.ASSIGNED -> stringResource(R.string.booking_status_assigned)
-        CustomerBookingStatus.EN_ROUTE -> stringResource(R.string.booking_status_en_route)
-        CustomerBookingStatus.REACHED -> stringResource(R.string.booking_status_reached)
-        CustomerBookingStatus.IN_PROGRESS -> stringResource(R.string.booking_status_in_progress)
-        CustomerBookingStatus.AWAITING_PRICE_APPROVAL -> stringResource(R.string.booking_status_awaiting_price_approval)
-        CustomerBookingStatus.COMPLETED -> stringResource(R.string.booking_status_completed)
-        CustomerBookingStatus.CLOSED -> stringResource(R.string.booking_status_closed)
-        CustomerBookingStatus.UNFULFILLED -> stringResource(R.string.booking_status_unfulfilled)
-        CustomerBookingStatus.CUSTOMER_CANCELLED -> stringResource(R.string.booking_status_cancelled)
-        CustomerBookingStatus.NO_SHOW_REDISPATCH -> stringResource(R.string.booking_status_reassigning)
-        CustomerBookingStatus.UNKNOWN -> stringResource(R.string.booking_status_updated)
-    }
+private fun CustomerBookingStatus.labelRes(): String = stringResource(bookingStatusResId())
+
+private fun CustomerBookingStatus.bookingStatusResId(): Int = BOOKING_STATUS_RES_IDS.getOrDefault(this, R.string.booking_status_updated)
+
+private val BOOKING_STATUS_RES_IDS: Map<CustomerBookingStatus, Int> =
+    mapOf(
+        CustomerBookingStatus.PENDING_PAYMENT to R.string.booking_status_pending_payment,
+        CustomerBookingStatus.PAID to R.string.booking_status_paid,
+        CustomerBookingStatus.SEARCHING to R.string.booking_status_searching,
+        CustomerBookingStatus.ASSIGNED to R.string.booking_status_assigned,
+        CustomerBookingStatus.EN_ROUTE to R.string.booking_status_en_route,
+        CustomerBookingStatus.REACHED to R.string.booking_status_reached,
+        CustomerBookingStatus.IN_PROGRESS to R.string.booking_status_in_progress,
+        CustomerBookingStatus.AWAITING_PRICE_APPROVAL to R.string.booking_status_awaiting_price_approval,
+        CustomerBookingStatus.COMPLETED to R.string.booking_status_completed,
+        CustomerBookingStatus.CLOSED to R.string.booking_status_closed,
+        CustomerBookingStatus.UNFULFILLED to R.string.booking_status_unfulfilled,
+        CustomerBookingStatus.CUSTOMER_CANCELLED to R.string.booking_status_cancelled,
+        CustomerBookingStatus.NO_SHOW_REDISPATCH to R.string.booking_status_reassigning,
+        CustomerBookingStatus.UNKNOWN to R.string.booking_status_updated,
+    )
 
 private fun CustomerBookingStatus.canOpenTracking(): Boolean =
     this in

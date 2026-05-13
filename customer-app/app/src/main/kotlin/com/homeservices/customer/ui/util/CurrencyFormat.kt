@@ -18,7 +18,9 @@ private val INR_FORMAT_LOCAL: ThreadLocal<NumberFormat> =
  *
  * AC-2 of E12-S02a: replaces all `formatRupees` / `"Rs ..."` literals.
  */
+private const val PAISE_PER_RUPEE = 100.0
+
 public fun formatInr(paise: Long): String {
-    val rupees = paise / 100.0
+    val rupees = paise / PAISE_PER_RUPEE
     return INR_FORMAT_LOCAL.get()?.format(rupees) ?: "₹$rupees"
 }

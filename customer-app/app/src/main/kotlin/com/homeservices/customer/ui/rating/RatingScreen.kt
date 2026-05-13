@@ -122,48 +122,84 @@ internal fun RatingContent(
                         stringResource(R.string.rating_loading_title),
                         stringResource(R.string.rating_loading_body),
                     )
-                else -> {
-                    HsTrustBadge(text = stringResource(R.string.rating_eyebrow))
-                    Text(
-                        stringResource(R.string.rating_title),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
+                else ->
+                    RatingForm(
+                        shieldState = shieldState,
+                        overall = overall,
+                        punctuality = punctuality,
+                        skill = skill,
+                        behaviour = behaviour,
+                        comment = comment,
+                        canSubmit = canSubmit,
+                        onOverallChange = onOverallChange,
+                        onPunctualityChange = onPunctualityChange,
+                        onSkillChange = onSkillChange,
+                        onBehaviourChange = onBehaviourChange,
+                        onCommentChange = onCommentChange,
+                        onSubmit = onSubmit,
+                        onPostAnyway = onPostAnyway,
                     )
-                    Text(
-                        stringResource(R.string.rating_body),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    HsSectionCard {
-                        StarRow(stringResource(R.string.rating_overall), overall, onOverallChange)
-                        Spacer(Modifier.height(12.dp))
-                        StarRow(stringResource(R.string.rating_punctuality), punctuality, onPunctualityChange)
-                        Spacer(Modifier.height(12.dp))
-                        StarRow(stringResource(R.string.rating_skill), skill, onSkillChange)
-                        Spacer(Modifier.height(12.dp))
-                        StarRow(stringResource(R.string.rating_behaviour), behaviour, onBehaviourChange)
-                    }
-                    OutlinedTextField(
-                        value = comment,
-                        onValueChange = onCommentChange,
-                        label = { Text(stringResource(R.string.rating_comment_label)) },
-                        supportingText = { Text("${comment.length}/500") },
-                        minLines = 3,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    if (shieldState is RatingShieldState.Escalated) {
-                        CountdownChip(expiresAtMs = shieldState.expiresAtMs, onPostAnyway = onPostAnyway)
-                    } else {
-                        Spacer(Modifier.weight(1f))
-                        HsPrimaryButton(
-                            text = stringResource(R.string.rating_submit),
-                            onClick = onSubmit,
-                            enabled = canSubmit,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
             }
+        }
+    }
+}
+
+@Composable
+private fun RatingForm(
+    shieldState: RatingShieldState,
+    overall: Int,
+    punctuality: Int,
+    skill: Int,
+    behaviour: Int,
+    comment: String,
+    canSubmit: Boolean,
+    onOverallChange: (Int) -> Unit,
+    onPunctualityChange: (Int) -> Unit,
+    onSkillChange: (Int) -> Unit,
+    onBehaviourChange: (Int) -> Unit,
+    onCommentChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onPostAnyway: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        HsTrustBadge(text = stringResource(R.string.rating_eyebrow))
+        Text(
+            stringResource(R.string.rating_title),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            stringResource(R.string.rating_body),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        HsSectionCard {
+            StarRow(stringResource(R.string.rating_overall), overall, onOverallChange)
+            Spacer(Modifier.height(12.dp))
+            StarRow(stringResource(R.string.rating_punctuality), punctuality, onPunctualityChange)
+            Spacer(Modifier.height(12.dp))
+            StarRow(stringResource(R.string.rating_skill), skill, onSkillChange)
+            Spacer(Modifier.height(12.dp))
+            StarRow(stringResource(R.string.rating_behaviour), behaviour, onBehaviourChange)
+        }
+        OutlinedTextField(
+            value = comment,
+            onValueChange = onCommentChange,
+            label = { Text(stringResource(R.string.rating_comment_label)) },
+            supportingText = { Text("${comment.length}/500") },
+            minLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (shieldState is RatingShieldState.Escalated) {
+            CountdownChip(expiresAtMs = shieldState.expiresAtMs, onPostAnyway = onPostAnyway)
+        } else {
+            Spacer(Modifier.weight(1f))
+            HsPrimaryButton(
+                text = stringResource(R.string.rating_submit),
+                onClick = onSubmit,
+                enabled = canSubmit,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
