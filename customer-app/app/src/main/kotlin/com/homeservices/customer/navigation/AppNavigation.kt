@@ -86,6 +86,7 @@ internal fun AppNavigation(
                 activity = activity,
                 priceApprovalEventBus = priceApprovalEventBus,
                 ratingPromptEventBus = ratingPromptEventBus,
+                featureFlags = featureFlags,
                 firstLaunchPending = firstLaunchPending,
                 modifier = modifier,
                 routeResolver = routeResolver,
@@ -106,6 +107,7 @@ private fun AppNavigationReady(
     activity: FragmentActivity,
     priceApprovalEventBus: PriceApprovalEventBus,
     ratingPromptEventBus: RatingPromptEventBus,
+    featureFlags: FeatureFlags,
     firstLaunchPending: Boolean,
     modifier: Modifier,
     routeResolver: CustomerRouteResolver?,
@@ -153,7 +155,7 @@ private fun AppNavigationReady(
         }
         authGraph(navController, activity)
         mainGraph(navController)
-        settingsGraph(navController)
+        settingsGraph(navController, featureFlags)
     }
 }
 
