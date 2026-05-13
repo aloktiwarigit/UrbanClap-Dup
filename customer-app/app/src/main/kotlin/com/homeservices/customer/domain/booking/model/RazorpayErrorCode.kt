@@ -26,9 +26,19 @@ public object RazorpayErrorCode {
     /** Razorpay SDK integer code for network failures. */
     private const val SDK_CODE_NETWORK: Int = 1
 
+    /** Razorpay SDK integer code for server-side errors (gateway outages, 5xx from Razorpay). */
+    private const val SDK_CODE_SERVER: Int = 2
+
     /**
      * Resolves a [code] + [description] pair from the Razorpay SDK into a stable
      * error-code string that can be used for string-resource look-up.
+     *
+     * Mapping:
+     *   code 1              → NETWORK_ERROR
+     *   code 2 + cancelled  → PAYMENT_CANCELLED  (user dismissed the sheet mid-auth)
+     *   code 2              → SERVER_ERROR        (Razorpay gateway outage)
+     *   code 0 + cancelled  → PAYMENT_CANCELLED
+     *   code 0 (other)      → BAD_REQUEST_ERROR
      */
     public fun resolve(
         code: Int,
@@ -36,6 +46,8 @@ public object RazorpayErrorCode {
     ): String =
         when {
             code == SDK_CODE_NETWORK -> NETWORK_ERROR
+            code == SDK_CODE_SERVER && isCancellation(description) -> PAYMENT_CANCELLED
+            code == SDK_CODE_SERVER -> SERVER_ERROR
             isCancellation(description) -> PAYMENT_CANCELLED
             else -> BAD_REQUEST_ERROR
         }

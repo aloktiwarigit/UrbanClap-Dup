@@ -194,24 +194,20 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            // Fail release builds if RAZORPAY_KEY_ID env var is blank.
-            // Production must always have a real Razorpay key — a blank key silently
-            // produces a no-op Razorpay checkout that swallows payments.
-            // Debug builds are exempt; they show a runtime Snackbar warning instead.
-            val razorpayKeyForRelease = System.getenv("RAZORPAY_KEY_ID") ?: ""
-            if (razorpayKeyForRelease.isBlank()) {
-                tasks
-                    .matching {
-                        it.name.contains("Release", ignoreCase = true) &&
-                            it.name.contains("assemble", ignoreCase = true)
-                    }.configureEach {
-                        doFirst {
-                            throw GradleException(
-                                "Cannot build release: RAZORPAY_KEY_ID env var is blank. " +
-                                    "Set it before building.",
-                            )
-                        }
+            // Guard RAZORPAY_KEY_ID only on bundleRelease (the Play Store publishing path).
+            // assembleRelease is intentionally NOT guarded so CI smoke builds and local APK
+            // builds work without a real Razorpay key. Only the Play Store AAB upload path
+            // (tools/build-play-bundles.ps1) requires the live key.
+            tasks.matching { it.name == "bundleRelease" }.configureEach {
+                doFirst {
+                    val key = System.getenv("RAZORPAY_KEY_ID") ?: ""
+                    if (key.isBlank()) {
+                        throw GradleException(
+                            "Cannot build release bundle: RAZORPAY_KEY_ID env var is blank. " +
+                                "Set it before publishing to Play.",
+                        )
                     }
+                }
             }
         }
     }

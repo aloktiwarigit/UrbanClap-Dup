@@ -221,7 +221,7 @@ public class BookingViewModelTest {
         }
 
     @Test
-    public fun `cancelPaymentFailed transitions from PaymentFailed to Idle`(): Unit =
+    public fun `cancelPaymentFailed transitions from PaymentFailed back to Ready preserving slot and address`(): Unit =
         runTest(dispatcher) {
             every { createBooking(any()) } returns
                 flowOf(
@@ -235,7 +235,30 @@ public class BookingViewModelTest {
 
             vm.cancelPaymentFailed()
 
-            assertThat(vm.uiState.value).isEqualTo(BookingUiState.Idle)
+            val state = vm.uiState.value
+            assertThat(state).isInstanceOf(BookingUiState.Ready::class.java)
+            with(state as BookingUiState.Ready) {
+                assertThat(this.slot).isEqualTo(slot)
+                assertThat(addressText).isEqualTo("123 Main St")
+                assertThat(lat).isEqualTo(12.9716)
+                assertThat(lng).isEqualTo(77.5946)
+            }
+        }
+
+    @Test
+    public fun `paymentResultFailure with code 2 and non-cancellation description maps to SERVER_ERROR`(): Unit =
+        runTest(dispatcher) {
+            every { createBooking(any()) } returns
+                flowOf(
+                    Result.success(BookingResult("bk1", "order_1", 50000)),
+                )
+            val vm = makeVm()
+            vm.setSlotAndAddress(slot, "123 Main St", 12.9716, 77.5946)
+            vm.startPayment("svc1", "cat1")
+            // SDK code 2 with a non-cancellation description → SERVER_ERROR (Razorpay gateway outage)
+            bus.post(PaymentResult.Failure(code = 2, description = "Server error occurred"))
+            val state = vm.uiState.value as BookingUiState.PaymentFailed
+            assertThat(state.errorCode).isEqualTo(RazorpayErrorCode.SERVER_ERROR)
         }
 
     @Test

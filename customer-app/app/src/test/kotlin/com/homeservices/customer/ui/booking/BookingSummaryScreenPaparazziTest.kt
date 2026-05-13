@@ -61,6 +61,10 @@ public class BookingSummaryScreenPaparazziTest {
                 amount = 50000,
                 reason = "Payment cancelled by user.",
                 errorCode = RazorpayErrorCode.PAYMENT_CANCELLED,
+                slot = BookingSlot("2026-05-01", "10:00-12:00"),
+                addressText = "123 MG Road, Bengaluru",
+                lat = 12.9716,
+                lng = 77.5946,
             )
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
@@ -82,6 +86,10 @@ public class BookingSummaryScreenPaparazziTest {
                 amount = 50000,
                 reason = "Payment cancelled by user.",
                 errorCode = RazorpayErrorCode.PAYMENT_CANCELLED,
+                slot = BookingSlot("2026-05-01", "10:00-12:00"),
+                addressText = "123 MG Road, Bengaluru",
+                lat = 12.9716,
+                lng = 77.5946,
             )
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = true) {
