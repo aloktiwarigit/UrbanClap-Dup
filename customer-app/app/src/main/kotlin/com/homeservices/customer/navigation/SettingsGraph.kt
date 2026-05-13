@@ -1,5 +1,6 @@
 package com.homeservices.customer.navigation
 
+import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
@@ -97,7 +98,11 @@ private fun NavGraphBuilder.deleteAccountGraph(navController: NavController) {
     }
     composable(LocaleRoutes.DELETE_ACCOUNT_CONFIRM) { entry ->
         // Re-use the ViewModel from the DELETE_ACCOUNT entry so state (phrase, pin) is shared.
-        val parentEntry = navController.getBackStackEntry(LocaleRoutes.DELETE_ACCOUNT)
+        // remember(entry) — required by androidx.navigation.compose UnrememberedGetBackStackEntry
+        // lint check: getBackStackEntry must be cached against the current NavBackStackEntry so
+        // the resolved entry stays stable across recompositions.
+        val parentEntry =
+            remember(entry) { navController.getBackStackEntry(LocaleRoutes.DELETE_ACCOUNT) }
         val vm: DeleteAccountViewModel = hiltViewModel(parentEntry)
         DeleteAccountConfirmScreen(
             onBack = {
