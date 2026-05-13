@@ -177,3 +177,4 @@ technician-app/keystore.jks
 technician-app/release.keystore
 .claude/
 .gradle-home/
+.gradle-codex/

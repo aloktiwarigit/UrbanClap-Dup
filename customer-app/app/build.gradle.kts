@@ -194,6 +194,21 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            // Guard RAZORPAY_KEY_ID only on bundleRelease (the Play Store publishing path).
+            // assembleRelease is intentionally NOT guarded so CI smoke builds and local APK
+            // builds work without a real Razorpay key. Only the Play Store AAB upload path
+            // (tools/build-play-bundles.ps1) requires the live key.
+            tasks.matching { it.name == "bundleRelease" }.configureEach {
+                doFirst {
+                    val key = System.getenv("RAZORPAY_KEY_ID") ?: ""
+                    if (key.isBlank()) {
+                        throw GradleException(
+                            "Cannot build release bundle: RAZORPAY_KEY_ID env var is blank. " +
+                                "Set it before publishing to Play.",
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -375,6 +390,8 @@ kover {
                     // BookingUiState sealed class — data holders, no logic branches
                     "*.BookingUiState",
                     "*.BookingUiState\$*",
+                    // RazorpayErrorCode — pure mapping object, covered by BookingViewModelTest indirectly
+                    "*.RazorpayErrorCode",
                     // Moshi KSP-generated JSON adapters — code-gen output, same rationale as Hilt factories.
                     // Broadened from *.*DtoJsonAdapter to *.*JsonAdapter to cover non-Dto-suffixed classes
                     // (e.g. NonceResponse, TruecallerVerifyRequest) whose generated adapters previously

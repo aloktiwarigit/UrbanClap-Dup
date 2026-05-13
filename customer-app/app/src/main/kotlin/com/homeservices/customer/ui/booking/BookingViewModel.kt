@@ -9,6 +9,7 @@ import com.homeservices.customer.domain.booking.model.BookingPaymentMethod
 import com.homeservices.customer.domain.booking.model.BookingRequest
 import com.homeservices.customer.domain.booking.model.BookingSlot
 import com.homeservices.customer.domain.booking.model.PaymentResult
+import com.homeservices.customer.domain.booking.model.RazorpayErrorCode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -88,6 +89,10 @@ internal class BookingViewModel
                                     bookingId = result.bookingId,
                                     razorpayOrderId = result.razorpayOrderId,
                                     amount = result.amount,
+                                    slot = state.slot,
+                                    addressText = state.addressText,
+                                    lat = state.lat,
+                                    lng = state.lng,
                                 )
                             } else {
                                 BookingUiState.BookingConfirmed(result.bookingId)
@@ -97,6 +102,43 @@ internal class BookingViewModel
                     onFailure = { _uiState.value = BookingUiState.Error(it.message ?: BOOKING_FAILED_FALLBACK) },
                 )
             }
+        }
+
+        /**
+         * Re-opens the Razorpay checkout for the same order.
+         * Razorpay supports retrying payment on the same [orderId] until the server captures it.
+         * The UI (BookingSummaryScreen) must trigger the actual checkout open via a LaunchedEffect
+         * that reacts to [BookingUiState.AwaitingPayment].
+         */
+        public fun retryPayment() {
+            val failed = _uiState.value as? BookingUiState.PaymentFailed ?: return
+            _uiState.value =
+                BookingUiState.AwaitingPayment(
+                    bookingId = pendingBookingId ?: return,
+                    razorpayOrderId = failed.orderId,
+                    amount = failed.amount,
+                    slot = failed.slot,
+                    addressText = failed.addressText,
+                    lat = failed.lat,
+                    lng = failed.lng,
+                )
+        }
+
+        /**
+         * Cancels from [BookingUiState.PaymentFailed] back to [BookingUiState.Ready] so the user
+         * can change payment method (e.g. switch to Cash on Service).
+         * The slot/address snapshot is embedded in [BookingUiState.PaymentFailed] (forwarded from
+         * [BookingUiState.AwaitingPayment]) so we restore it directly — no navigation re-entry needed.
+         */
+        public fun cancelPaymentFailed() {
+            val failed = _uiState.value as? BookingUiState.PaymentFailed ?: return
+            _uiState.value =
+                BookingUiState.Ready(
+                    slot = failed.slot,
+                    addressText = failed.addressText,
+                    lat = failed.lat,
+                    lng = failed.lng,
+                )
         }
 
         private suspend fun handlePaymentResult(
@@ -114,10 +156,25 @@ internal class BookingViewModel
                             onFailure = { _uiState.value = BookingUiState.Error(it.message ?: CONFIRMATION_FAILED_FALLBACK) },
                         )
                 }
-                // Error message key: R.string.booking_error_payment_cancelled surfaced in UI layer
-                // TODO(E18-S04): map PAYMENT_CANCELLED sentinel to localized message via PaymentFailed state
-                is PaymentResult.Failure ->
-                    _uiState.value = BookingUiState.Error("PAYMENT_CANCELLED:${result.description}")
+                is PaymentResult.Failure -> {
+                    // Resolve a stable error-code string from the SDK integer code + description.
+                    // The prior AwaitingPayment state holds the orderId, amount, and the Ready
+                    // snapshot (slot/address) — forward all into PaymentFailed so cancelPaymentFailed()
+                    // can restore Ready without losing the user's booking context.
+                    val awaitingSnapshot = _uiState.value as? BookingUiState.AwaitingPayment
+                    val errorCode = RazorpayErrorCode.resolve(result.code, result.description)
+                    _uiState.value =
+                        BookingUiState.PaymentFailed(
+                            orderId = awaitingSnapshot?.razorpayOrderId ?: "",
+                            amount = awaitingSnapshot?.amount ?: 0,
+                            reason = result.description,
+                            errorCode = errorCode,
+                            slot = awaitingSnapshot?.slot ?: BookingSlot("", ""),
+                            addressText = awaitingSnapshot?.addressText ?: "",
+                            lat = awaitingSnapshot?.lat ?: 0.0,
+                            lng = awaitingSnapshot?.lng ?: 0.0,
+                        )
+                }
             }
         }
     }
