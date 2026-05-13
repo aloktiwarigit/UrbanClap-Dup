@@ -18,6 +18,7 @@ public class LocaleRepositoryImpl
     constructor(@LocalePrefs private val dataStore: DataStore<Preferences>) : LocaleRepository {
         private companion object {
             val KEY_LOCALE_TAG = stringPreferencesKey("locale_tag")
+            const val DEFAULT_LOCALE = "hi" // ADR-0018: Hindi default for Ayodhya/UP pilot
         }
 
         override val currentLocale: Flow<String> =
@@ -30,6 +31,6 @@ public class LocaleRepositoryImpl
         private fun deviceSupportedLocale(): String =
             when (Locale.getDefault().language) {
                 "hi" -> "hi"
-                else -> "en"
+                else -> DEFAULT_LOCALE
             }
     }

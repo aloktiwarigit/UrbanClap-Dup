@@ -23,13 +23,12 @@ public class LocaleRepositoryImplTest {
     }
 
     @Test
-    public fun `currentLocale defaults to en or hi based on device`(@TempDir dir: File): Unit = runTest {
+    public fun `currentLocale defaults to hi when no stored tag`(@TempDir dir: File): Unit = runTest {
         val ds = PreferenceDataStoreFactory.create(scope = backgroundScope) {
             File(dir, "b.preferences_pb")
         }
         val r = LocaleRepositoryImpl(ds)
-        val result = r.currentLocale.first()
-        assert(result == "en" || result == "hi") { "Expected 'en' or 'hi', got '$result'" }
+        assertEquals("hi", r.currentLocale.first())
     }
 
     @Test
