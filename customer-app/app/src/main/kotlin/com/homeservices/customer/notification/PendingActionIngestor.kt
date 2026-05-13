@@ -41,21 +41,29 @@ public class PendingActionIngestor
          */
         public suspend fun ingest(incoming: PendingAction) {
             val nowMs = clock.millis()
-
-            // Rule 3: Age gate — drop events older than MAX_EVENT_AGE_MS
-            if (isStaleByAge(incoming, nowMs)) return
-
             val existing = store.findById(incoming.id)
-
-            // Rule 1: RESOLVED tombstone drop — never resurrect tombstoned actions
-            if (existing?.status == PendingActionStatus.RESOLVED) return
-
-            // Rule 2: Version stale drop — no new information
-            if (existing != null && incoming.version <= existing.version) return
-
-            // Rules 4 & 5: Fresh upsert or version upgrade
+            if (shouldDrop(incoming, existing, nowMs)) return
             store.upsert(incoming)
         }
+
+        /**
+         * Returns true when the incoming action must be dropped without persisting.
+         *
+         * Rule 3: Age gate — event older than MAX_EVENT_AGE_MS.
+         * Rule 1: RESOLVED tombstone — never resurrect a resolved action.
+         * Rule 2: Version stale — incoming version carries no new information.
+         */
+        private fun shouldDrop(
+            incoming: PendingAction,
+            existing: PendingAction?,
+            nowMs: Long,
+        ): Boolean =
+            when {
+                isStaleByAge(incoming, nowMs) -> true
+                existing?.status == PendingActionStatus.RESOLVED -> true
+                existing != null && incoming.version <= existing.version -> true
+                else -> false
+            }
 
         /**
          * Reconcile the local Room table with a full server snapshot.

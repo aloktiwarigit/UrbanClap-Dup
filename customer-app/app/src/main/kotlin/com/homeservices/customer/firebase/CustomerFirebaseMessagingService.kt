@@ -73,28 +73,26 @@ public class CustomerFirebaseMessagingService : FirebaseMessagingService() {
         // TODO (follow-up): Once the backend adds `userId` to projector FCM payloads,
         // the null check on buildPendingActionFromIntent will always pass and the
         // legacy fallback below can be removed in E11-S01b-2.
+        //
+        // NestedBlockDepth fix: combine the two null-checks into a single `if` to stay
+        // within the allowed depth (default: 4). The `?.let` call for buildPendingAction
+        // returns null if userId is absent, producing the same fallthrough as before.
         val intent = router.parseFcmData(data)
-        if (intent != null) {
-            val action = buildPendingActionFromIntent(intent, data)
-            if (action != null) {
-                serviceScope.launch {
-                    ingestor.ingest(action)
-                }
-                showNotificationForIntent(intent, data)
-                // New-router path succeeded — also do legacy post for types that
-                // foreground UI observes, so both paths are satisfied simultaneously.
-                val bookingId = data["bookingId"]
-                if (bookingId != null) {
-                    when (data["type"]) {
-                        "ADDON_APPROVAL_REQUESTED" -> priceApprovalEventBus.post(bookingId)
-                        "RATING_PROMPT_CUSTOMER" -> ratingPromptEventBus.post(bookingId)
-                    }
-                }
-                return
+        val action = intent?.let { buildPendingActionFromIntent(it, data) }
+        if (intent != null && action != null) {
+            serviceScope.launch { ingestor.ingest(action) }
+            showNotificationForIntent(intent, data)
+            // New-router path succeeded — also do legacy post for types that
+            // foreground UI observes, so both paths are satisfied simultaneously.
+            val bookingId = data["bookingId"]
+            when (data["type"]) {
+                "ADDON_APPROVAL_REQUESTED" -> if (bookingId != null) priceApprovalEventBus.post(bookingId)
+                "RATING_PROMPT_CUSTOMER" -> if (bookingId != null) ratingPromptEventBus.post(bookingId)
             }
-            // action is null (userId missing from FCM payload for this type) — fall
-            // through to legacy event-bus routing below so the foreground UI is not dropped.
+            return
         }
+        // intent is null, or action is null (userId missing from FCM payload) —
+        // fall through to legacy event-bus routing so the foreground UI is not dropped.
 
         // Legacy in-process routing (unchanged; removed in E11-S01b-2).
         // Also reached as a fallback when router parsed an intent but userId was absent.

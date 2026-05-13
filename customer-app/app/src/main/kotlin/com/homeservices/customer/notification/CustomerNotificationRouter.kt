@@ -50,18 +50,25 @@ public class CustomerNotificationRouter
          * - `type` key is absent or maps to a non-customer [PendingActionType]
          * - No entity ID can be resolved from either shape
          */
-        override fun parseFcmData(data: Map<String, String>): NotificationIntent? {
+        override fun parseFcmData(data: Map<String, String>): NotificationIntent? =
+            resolveTypeAndEntityId(data)?.let { (type, entityId) ->
+                NotificationIntent(
+                    type = type,
+                    entityId = entityId,
+                    rawArgs = data.filterKeys { it != "type" },
+                )
+            }
+
+        /**
+         * Resolve the [PendingActionType] and entity ID from the raw FCM data map.
+         *
+         * Returns null if `type` is absent/unknown or no entity ID can be resolved.
+         * Extracted to satisfy detekt ReturnCount limit on [parseFcmData].
+         */
+        private fun resolveTypeAndEntityId(data: Map<String, String>): Pair<PendingActionType, String>? {
             val typeName = data["type"] ?: return null
-            val type = runCatching { PendingActionType.valueOf(typeName) }.getOrNull() ?: return null
-
-            val entityId = resolveEntityId(type, data) ?: return null
-            val rawArgs = data.filterKeys { it != "type" }
-
-            return NotificationIntent(
-                type = type,
-                entityId = entityId,
-                rawArgs = rawArgs,
-            )
+            val type = runCatching { PendingActionType.valueOf(typeName) }.getOrNull()
+            return type?.let { t -> resolveEntityId(t, data)?.let { id -> t to id } }
         }
 
         /**
