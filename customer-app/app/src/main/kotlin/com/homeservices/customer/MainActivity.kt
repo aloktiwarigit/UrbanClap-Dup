@@ -53,6 +53,7 @@ public class MainActivity :
     AppCompatActivity(),
     PaymentResultWithDataListener {
     @Inject public lateinit var featureFlags: FeatureFlags
+
     @Inject public lateinit var buildInfo: BuildInfoProvider
 
     @Inject public lateinit var sessionManager: SessionManager
