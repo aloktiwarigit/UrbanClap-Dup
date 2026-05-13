@@ -52,6 +52,7 @@ import javax.inject.Inject
 public class MainActivity :
     AppCompatActivity(),
     PaymentResultWithDataListener {
+    @Inject public lateinit var featureFlags: FeatureFlags
     @Inject public lateinit var buildInfo: BuildInfoProvider
 
     @Inject public lateinit var sessionManager: SessionManager
@@ -103,6 +104,7 @@ public class MainActivity :
                     priceApprovalEventBus = priceApprovalEventBus,
                     ratingPromptEventBus = ratingPromptEventBus,
                     isFirstLaunch = isFirstLaunch,
+                    featureFlags = featureFlags,
                     routeResolver = routeResolver,
                     initialDeepLink = currentDeepLink,
                 )
