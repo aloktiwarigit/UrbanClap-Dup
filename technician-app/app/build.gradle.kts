@@ -558,6 +558,9 @@ kover {
                     "*.PendingActionsDatabase_Impl\$*",
                     "*.PendingActionDao_Impl",
                     "*.PendingActionDao_Impl\$*",
+                    // Locale DI module — @Provides + @Binds methods are framework wiring, same rationale
+                    // as data.auth.di.* / data.activeJob.di.* / data.jobOffer.di.* / data.photo.di.*.
+                    "*.data.locale.di.*",
                 )
             }
         }
@@ -578,8 +581,10 @@ ksp {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.datastore.preferences)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
