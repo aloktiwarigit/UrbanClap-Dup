@@ -80,6 +80,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.homeservices.designsystem.theme.HomeservicesColors
 import com.homeservices.technician.R
 import com.homeservices.technician.domain.auth.model.AuthState
 import com.homeservices.technician.domain.availability.model.TechnicianAvailability
@@ -90,14 +91,7 @@ import com.homeservices.technician.ui.earnings.EarningsUiState
 import com.homeservices.technician.ui.earnings.EarningsViewModel
 import kotlinx.coroutines.launch
 
-private val WorkBackground = Color(0xFFFBF7EF)
-private val Ink = Color(0xFF18231F)
-private val Muted = Color(0xFF5F6C66)
-private val DeepGreen = Color(0xFF0B3D2E)
-private val SoftGreen = Color(0xFFE8F1EC)
-private val Warning = Color(0xFFB68A2C)
-private val WarningSoft = Color(0xFFF2E7CF)
-private val Line = Color(0xFFDED8CD)
+// WarningSoft (0xFFF2E7CF) has no DS equivalent — kept as-is
 
 @Composable
 internal fun TechnicianHomeScreen(
@@ -124,7 +118,7 @@ internal fun TechnicianHomeScreen(
 
     Scaffold(
         modifier = modifier,
-        containerColor = WorkBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             TechnicianBottomBar(
@@ -244,11 +238,11 @@ private fun TechnicianBottomBar(
                     label = { Text(tab.label, maxLines = 1) },
                     colors =
                         NavigationBarItemDefaults.colors(
-                            selectedIconColor = DeepGreen,
-                            selectedTextColor = Ink,
-                            indicatorColor = SoftGreen,
-                            unselectedIconColor = Muted,
-                            unselectedTextColor = Muted,
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.onBackground,
+                            indicatorColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         ),
                 )
             }
@@ -330,12 +324,12 @@ private fun PartnerHeader(
                 text = "HomeHeroo Partner",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.ExtraBold,
-                color = Ink,
+                color = MaterialTheme.colorScheme.onBackground,
             )
             Text(
                 text = displayName(authState),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Muted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         StatusPill(
@@ -366,7 +360,7 @@ private fun NextJobHero(
                         .matchParentSize()
                         .background(
                             Brush.linearGradient(
-                                listOf(Color(0xFFFFFFFF), Color(0xFFF0ECE2)),
+                                listOf(Color.White, Color(0xFFF0ECE2)),
                             ),
                         ),
             )
@@ -380,14 +374,14 @@ private fun NextJobHero(
                         text = "Next job",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
-                        color = DeepGreen,
+                        color = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text = job?.serviceName ?: "No active job",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
-                        color = Ink,
+                        color = MaterialTheme.colorScheme.onBackground,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -401,15 +395,15 @@ private fun NextJobHero(
                                     "Go online when you are ready for requests."
                                 },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Muted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(14.dp))
                     if (job != null) {
                         Button(
                             onClick = { onOpenJob(job.bookingId) },
-                            colors = ButtonDefaults.buttonColors(containerColor = DeepGreen),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                         ) {
-                            Icon(Icons.Default.Route, contentDescription = null)
+                            Icon(Icons.Default.Route, contentDescription = "Open job")
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.home_open_job))
                         }
@@ -489,19 +483,19 @@ private fun StatTile(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            Icon(icon, contentDescription = null, tint = DeepGreen, modifier = Modifier.size(20.dp))
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp)) // decorative — label provided by adjacent text
             Column {
                 Text(
                     text = value,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Ink,
+                    color = MaterialTheme.colorScheme.onBackground,
                     maxLines = 1,
                 )
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelMedium,
-                    color = Muted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                 )
             }
@@ -587,14 +581,14 @@ private fun PayHero(summary: EarningsSummary) {
             Text(
                 text = "Today's earnings",
                 style = MaterialTheme.typography.labelLarge,
-                color = DeepGreen,
+                color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
                 text = formatRupees(summary.today.techAmountPaise),
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.ExtraBold,
-                color = Ink,
+                color = MaterialTheme.colorScheme.onBackground,
             )
             Text(
                 text =
@@ -604,7 +598,7 @@ private fun PayHero(summary: EarningsSummary) {
                         "${summary.today.count} completed jobs today"
                     },
                 style = MaterialTheme.typography.bodyMedium,
-                color = Muted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -626,15 +620,15 @@ private fun EarningsErrorCard(onRetry: () -> Unit) {
                 text = "Could not load pay details",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Ink,
+                color = MaterialTheme.colorScheme.onBackground,
             )
             Text(
                 text = "Completed jobs still count. Retry when the API is reachable.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Muted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             OutlinedButton(onClick = onRetry) {
-                Icon(Icons.Default.Refresh, contentDescription = null)
+                Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.home_retry))
             }
@@ -737,14 +731,14 @@ private fun JobCard(
                     text = formatRupees(job.amountPaise),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Ink,
+                    color = MaterialTheme.colorScheme.onBackground,
                 )
             }
             Text(
                 text = job.serviceName,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = Ink,
+                color = MaterialTheme.colorScheme.onBackground,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -754,7 +748,7 @@ private fun JobCard(
                 Button(
                     onClick = { onOpenJob(job.bookingId) },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = DeepGreen),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 ) {
                     Text(stringResource(R.string.home_continue_job))
                 }
@@ -772,11 +766,11 @@ private fun InfoLine(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Icon(icon, contentDescription = null, tint = Muted, modifier = Modifier.size(18.dp))
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp)) // decorative — label provided by adjacent text
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
-            color = Muted,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
@@ -816,7 +810,7 @@ private fun AvailabilityScreen(
                 text = "Work windows",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Ink,
+                color = MaterialTheme.colorScheme.onBackground,
             )
         }
         item {
@@ -879,7 +873,7 @@ private fun AvailabilitySyncCard(
 ) {
     Surface(
         shape = RoundedCornerShape(18.dp),
-        color = if (state.errorMessage == null) SoftGreen else WarningSoft,
+        color = if (state.errorMessage == null) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF2E7CF),
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(14.dp),
@@ -894,11 +888,11 @@ private fun AvailabilitySyncCard(
                         else -> "Availability is synced with dispatch for future job matching."
                     },
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (state.errorMessage == null) DeepGreen else Ink,
+                color = if (state.errorMessage == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
             )
             if (state.errorMessage != null) {
                 OutlinedButton(onClick = onRetry) {
-                    Icon(Icons.Default.Refresh, contentDescription = null)
+                    Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.home_retry))
                 }
@@ -1018,7 +1012,7 @@ private fun ProfileHero(authState: AuthState) {
                     Modifier
                         .size(58.dp)
                         .clip(CircleShape)
-                        .background(DeepGreen),
+                        .background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -1033,12 +1027,12 @@ private fun ProfileHero(authState: AuthState) {
                     text = displayName(authState),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Ink,
+                    color = MaterialTheme.colorScheme.onBackground,
                 )
                 Text(
                     text = accountSubtitle(authState),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Muted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -1077,13 +1071,13 @@ private fun SettingCard(
                     Modifier
                         .size(42.dp)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(if (destructive) Color(0xFFFBEAEA) else SoftGreen),
+                        .background(if (destructive) Color(0xFFFBEAEA) else MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     icon,
-                    contentDescription = null,
-                    tint = if (destructive) MaterialTheme.colorScheme.error else DeepGreen,
+                    contentDescription = null, // decorative — label provided by adjacent text
+                    tint = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
@@ -1091,12 +1085,12 @@ private fun SettingCard(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = if (destructive) MaterialTheme.colorScheme.error else Ink,
+                    color = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground,
                 )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Muted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -1122,13 +1116,13 @@ private fun SectionHeader(
                 text = title,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
-                color = Ink,
+                color = MaterialTheme.colorScheme.onBackground,
             )
             if (subtitle != null) {
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Muted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -1143,14 +1137,14 @@ private fun StatusPill(
 ) {
     Surface(
         shape = RoundedCornerShape(999.dp),
-        color = if (active) SoftGreen else WarningSoft,
+        color = if (active) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF2E7CF),
     ) {
         Text(
             text = label,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
-            color = if (active) DeepGreen else Warning,
+            color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
         )
     }
 }
@@ -1166,11 +1160,11 @@ private fun FieldSwitch(
         colors =
             SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
-                checkedTrackColor = DeepGreen,
-                checkedBorderColor = DeepGreen,
+                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                checkedBorderColor = MaterialTheme.colorScheme.primary,
                 uncheckedThumbColor = Color.White,
-                uncheckedTrackColor = Line,
-                uncheckedBorderColor = Line,
+                uncheckedTrackColor = MaterialTheme.colorScheme.outline,
+                uncheckedBorderColor = MaterialTheme.colorScheme.outline,
             ),
     )
 }
@@ -1190,7 +1184,7 @@ private fun LoadingCard() {
                 Surface(
                     modifier = Modifier.fillMaxWidth().height(18.dp),
                     shape = RoundedCornerShape(8.dp),
-                    color = Line,
+                    color = MaterialTheme.colorScheme.outline,
                 ) {}
             }
         }
@@ -1216,15 +1210,15 @@ private fun ErrorCard(
                 text = "Could not refresh jobs",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Ink,
+                color = MaterialTheme.colorScheme.onBackground,
             )
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Muted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             OutlinedButton(onClick = onRefresh) {
-                Icon(Icons.Default.Refresh, contentDescription = null)
+                Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.home_retry))
             }
@@ -1243,13 +1237,13 @@ private fun EmptyJobsCard() {
             modifier =
                 Modifier
                     .size(56.dp)
-                    .background(SoftGreen, RoundedCornerShape(20.dp)),
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(20.dp)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = Icons.Default.Badge,
-                contentDescription = null,
-                tint = DeepGreen,
+                contentDescription = null, // decorative
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(28.dp),
             )
         }
@@ -1257,12 +1251,12 @@ private fun EmptyJobsCard() {
             text = "No assigned jobs right now",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = Ink,
+            color = MaterialTheme.colorScheme.onBackground,
         )
         Text(
             text = "New requests arrive as full-screen offers with accept and decline actions.",
             style = MaterialTheme.typography.bodyMedium,
-            color = Muted,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
     }

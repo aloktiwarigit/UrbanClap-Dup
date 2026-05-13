@@ -17,6 +17,13 @@ public class ActiveJobScreenPaparazziTest {
             theme = "android:Theme.Material3.DayNight.NoActionBar",
         )
 
+    @get:Rule
+    public val paparazziHi: Paparazzi =
+        Paparazzi(
+            deviceConfig = DeviceConfig.PIXEL_5.copy(locale = "hi"),
+            theme = "android:Theme.Material3.DayNight.NoActionBar",
+        )
+
     private fun aJob(status: ActiveJobStatus) =
         ActiveJob(
             bookingId = "bk-1",
@@ -63,6 +70,39 @@ public class ActiveJobScreenPaparazziTest {
     @Test
     public fun activeJobScreen_inProgress(): Unit {
         paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                ActiveJobScreenContent(
+                    uiState = ActiveJobUiState.Active(aJob(ActiveJobStatus.IN_PROGRESS), ActiveJobAction.COMPLETE_JOB),
+                    onTransitionRequested = {},
+                    onPhotoCancelled = {},
+                    onPhotoConfirmed = {},
+                    onPhotoRetake = {},
+                )
+            }
+        }
+    }
+
+    // ── hi-locale variants ────────────────────────────────────────────────────
+    // Goldens recorded on CI Linux via paparazzi-record.yml; never locally on Windows.
+
+    @Test
+    public fun activeJobScreen_enRoute_hi(): Unit {
+        paparazziHi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                ActiveJobScreenContent(
+                    uiState = ActiveJobUiState.Active(aJob(ActiveJobStatus.EN_ROUTE), ActiveJobAction.MARK_ARRIVED),
+                    onTransitionRequested = {},
+                    onPhotoCancelled = {},
+                    onPhotoConfirmed = {},
+                    onPhotoRetake = {},
+                )
+            }
+        }
+    }
+
+    @Test
+    public fun activeJobScreen_inProgress_hi(): Unit {
+        paparazziHi.snapshot {
             HomeservicesTheme(darkTheme = false) {
                 ActiveJobScreenContent(
                     uiState = ActiveJobUiState.Active(aJob(ActiveJobStatus.IN_PROGRESS), ActiveJobAction.COMPLETE_JOB),

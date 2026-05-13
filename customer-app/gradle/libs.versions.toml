@@ -31,6 +31,8 @@ growthbookOkHttp = "1.0.8"
 
 # Observability
 sentry = "7.17.0"
+crashlyticsGradle = "3.0.2"
+posthog = "3.13.0"
 
 # Third-party auth (Maven Central: latest stable; 3.0.3 never published, using 3.2.1)
 truecallerSdk = "3.2.1"
@@ -121,6 +123,9 @@ firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "fir
 firebase-auth-ktx = { module = "com.google.firebase:firebase-auth-ktx" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging-ktx" }
 firebase-storage = { module = "com.google.firebase:firebase-storage" }
+firebase-crashlytics-ktx = { module = "com.google.firebase:firebase-crashlytics-ktx" }
+firebase-appcheck-playintegrity = { module = "com.google.firebase:firebase-appcheck-playintegrity" }
+firebase-appcheck-debug = { module = "com.google.firebase:firebase-appcheck-debug" }
 
 # Feature flags
 growthbook-android = { module = "io.growthbook.sdk:GrowthBook", version.ref = "growthbook" }
@@ -128,6 +133,7 @@ growthbook-okhttp = { module = "io.growthbook.sdk:NetworkDispatcherOkHttp", vers
 
 # Observability
 sentry-android = { module = "io.sentry:sentry-android", version.ref = "sentry" }
+posthog-android = { module = "com.posthog.android:posthog", version.ref = "posthog" }
 
 # Credential Manager + Google Identity
 androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "credentials" }
@@ -193,4 +199,5 @@ paparazzi = { id = "app.cash.paparazzi", version.ref = "paparazzi" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 android-junit5 = { id = "de.mannodermaus.android-junit5", version.ref = "androidJunit5" }
 google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
+crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "crashlyticsGradle" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

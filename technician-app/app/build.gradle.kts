@@ -115,6 +115,7 @@ plugins {
     alias(libs.plugins.kover)
     alias(libs.plugins.android.junit5)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.crashlytics)
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -171,6 +172,16 @@ android {
             "String",
             "GROWTHBOOK_CLIENT_KEY",
             "\"${System.getenv("GROWTHBOOK_CLIENT_KEY") ?: ""}\"",
+        )
+        buildConfigField(
+            "String",
+            "POSTHOG_API_KEY",
+            "\"${System.getenv("POSTHOG_API_KEY") ?: ""}\"",
+        )
+        buildConfigField(
+            "String",
+            "POSTHOG_HOST",
+            "\"${System.getenv("POSTHOG_HOST") ?: "https://us.i.posthog.com"}\"",
         )
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
@@ -561,6 +572,14 @@ kover {
                     // Locale DI module — @Provides + @Binds methods are framework wiring, same rationale
                     // as data.auth.di.* / data.activeJob.di.* / data.jobOffer.di.* / data.photo.di.*.
                     "*.data.locale.di.*",
+                    // CrashlyticsInitializer / AppCheckInitializer / PostHogInitializer wrap Firebase + PostHog
+                    // Android SDK calls; not unit-testable without a live Firebase project / device.
+                    "*.CrashlyticsInitializer",
+                    "*.CrashlyticsInitializer\$*",
+                    "*.AppCheckInitializer",
+                    "*.AppCheckInitializer\$*",
+                    "*.PostHogInitializer",
+                    "*.PostHogInitializer\$*",
                 )
             }
         }
@@ -604,6 +623,7 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
 
     implementation(libs.sentry.android)
+    implementation(libs.posthog.android)
     implementation(libs.growthbook.android)
     implementation(libs.growthbook.okhttp)
 
@@ -611,6 +631,9 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.messaging)
+    implementation(libs.firebase.crashlytics.ktx)
+    implementation(libs.firebase.appcheck.playintegrity)
+    debugImplementation(libs.firebase.appcheck.debug)
 
     // Credential Manager + Google Identity Library
     implementation(libs.androidx.credentials)

@@ -14,6 +14,13 @@ public class AuthScreenPaparazziTest {
             theme = "android:Theme.Material3.DayNight.NoActionBar",
         )
 
+    @get:Rule
+    public val paparazziHi: Paparazzi =
+        Paparazzi(
+            deviceConfig = DeviceConfig.PIXEL_5.copy(locale = "hi"),
+            theme = "android:Theme.Material3.DayNight.NoActionBar",
+        )
+
     @Test
     public fun authScreen_idle() {
         paparazzi.snapshot {
@@ -133,6 +140,39 @@ public class AuthScreenPaparazziTest {
             HomeservicesTheme(darkTheme = false) {
                 AuthScreen(
                     uiState = AuthUiState.OtpVerifying,
+                    onPhoneSubmitted = {},
+                    onOtpEntered = {},
+                    onResendRequested = {},
+                    onRetry = {},
+                )
+            }
+        }
+    }
+
+    // ── hi-locale variants ────────────────────────────────────────────────────
+    // Goldens recorded on CI Linux via paparazzi-record.yml; never locally on Windows.
+
+    @Test
+    public fun authScreen_idle_hi() {
+        paparazziHi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                AuthScreen(
+                    uiState = AuthUiState.Idle,
+                    onPhoneSubmitted = {},
+                    onOtpEntered = {},
+                    onResendRequested = {},
+                    onRetry = {},
+                )
+            }
+        }
+    }
+
+    @Test
+    public fun authScreen_otpEntry_hi() {
+        paparazziHi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                AuthScreen(
+                    uiState = AuthUiState.OtpEntry(phoneNumber = "+919876543210", verificationId = "ver-id-123"),
                     onPhoneSubmitted = {},
                     onOtpEntered = {},
                     onResendRequested = {},

@@ -15,6 +15,13 @@ public class JobOfferScreenPaparazziTest {
             theme = "android:Theme.Material3.DayNight.NoActionBar",
         )
 
+    @get:Rule
+    public val paparazziHi: Paparazzi =
+        Paparazzi(
+            deviceConfig = DeviceConfig.PIXEL_5.copy(locale = "hi"),
+            theme = "android:Theme.Material3.DayNight.NoActionBar",
+        )
+
     private fun anOffer(): JobOffer =
         JobOffer(
             bookingId = "booking-123",
@@ -70,6 +77,35 @@ public class JobOfferScreenPaparazziTest {
     @Test
     public fun jobOfferScreen_expired(): Unit {
         paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                JobOfferScreenContent(
+                    uiState = JobOfferUiState.Expired,
+                    onAccept = {},
+                    onDecline = {},
+                )
+            }
+        }
+    }
+
+    // ── hi-locale variants ────────────────────────────────────────────────────
+    // Goldens recorded on CI Linux via paparazzi-record.yml; never locally on Windows.
+
+    @Test
+    public fun jobOfferScreen_offerArrived_hi(): Unit {
+        paparazziHi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                JobOfferScreenContent(
+                    uiState = JobOfferUiState.Offering(offer = anOffer(), remainingSeconds = 28),
+                    onAccept = {},
+                    onDecline = {},
+                )
+            }
+        }
+    }
+
+    @Test
+    public fun jobOfferScreen_expired_hi(): Unit {
+        paparazziHi.snapshot {
             HomeservicesTheme(darkTheme = false) {
                 JobOfferScreenContent(
                     uiState = JobOfferUiState.Expired,
