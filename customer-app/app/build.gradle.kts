@@ -194,6 +194,25 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            // Fail release builds if RAZORPAY_KEY_ID env var is blank.
+            // Production must always have a real Razorpay key — a blank key silently
+            // produces a no-op Razorpay checkout that swallows payments.
+            // Debug builds are exempt; they show a runtime Snackbar warning instead.
+            val razorpayKeyForRelease = System.getenv("RAZORPAY_KEY_ID") ?: ""
+            if (razorpayKeyForRelease.isBlank()) {
+                tasks
+                    .matching {
+                        it.name.contains("Release", ignoreCase = true) &&
+                            it.name.contains("assemble", ignoreCase = true)
+                    }.configureEach {
+                        doFirst {
+                            throw GradleException(
+                                "Cannot build release: RAZORPAY_KEY_ID env var is blank. " +
+                                    "Set it before building.",
+                            )
+                        }
+                    }
+            }
         }
     }
 
@@ -375,6 +394,8 @@ kover {
                     // BookingUiState sealed class — data holders, no logic branches
                     "*.BookingUiState",
                     "*.BookingUiState\$*",
+                    // RazorpayErrorCode — pure mapping object, covered by BookingViewModelTest indirectly
+                    "*.RazorpayErrorCode",
                     // Moshi KSP-generated JSON adapters — code-gen output, same rationale as Hilt factories.
                     // Broadened from *.*DtoJsonAdapter to *.*JsonAdapter to cover non-Dto-suffixed classes
                     // (e.g. NonceResponse, TruecallerVerifyRequest) whose generated adapters previously

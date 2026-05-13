@@ -26,6 +26,23 @@ public sealed class BookingUiState {
         val bookingId: String,
     ) : BookingUiState()
 
+    /**
+     * Emitted when the Razorpay callback returns a failure.
+     * The [orderId] and [amount] are preserved from [AwaitingPayment] so the UI can re-open
+     * Razorpay checkout on the same order (Razorpay supports retry until server-side capture).
+     *
+     * @param orderId     Razorpay order ID — unchanged for retry
+     * @param amount      Amount in paise (same as original checkout)
+     * @param reason      Localised, user-facing reason string (resolved by ViewModel)
+     * @param errorCode   Stable Razorpay error code string (e.g. "PAYMENT_CANCELLED")
+     */
+    public data class PaymentFailed(
+        val orderId: String,
+        val amount: Int,
+        val reason: String,
+        val errorCode: String,
+    ) : BookingUiState()
+
     public data class Error(
         val message: String,
     ) : BookingUiState()
