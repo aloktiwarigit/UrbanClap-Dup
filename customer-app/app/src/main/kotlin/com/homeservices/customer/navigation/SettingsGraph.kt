@@ -6,22 +6,33 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.homeservices.customer.domain.flags.FeatureFlags
-import com.homeservices.customer.ui.dataexport.DataExportScreen
+import com.homeservices.customer.ui.deleteaccount.DeleteAccountConfirmScreen
+import com.homeservices.customer.ui.deleteaccount.DeleteAccountCoolOffScreen
+import com.homeservices.customer.ui.deleteaccount.DeleteAccountScreen
+import com.homeservices.customer.ui.deleteaccount.DeleteAccountViewModel
+import com.homeservices.customer.ui.deleteaccount.EPOCH_MS_EXISTING_REQUEST_SENTINEL
+import com.homeservices.customer.ui.deleteaccount.NAV_ARG_REQUEST_ID
+import com.homeservices.customer.ui.deleteaccount.NAV_ARG_SCHEDULED_DELETION_EPOCH_MS
 import com.homeservices.customer.ui.settings.LanguageSettingsScreen
-import com.homeservices.customer.ui.settings.PrivacyAndDataScreen
+import com.homeservices.customer.ui.settings.PrivacyDataScreen
 import com.homeservices.customer.ui.settings.SettingsScreen
 import java.time.Instant
 
 /**
- * Settings sub-graph.
- *
- * [featureFlags] gates the "Delete account" row in PrivacyAndDataScreen.
- * When [FeatureFlags.dpdpSelfServiceEnabled] is false (the default) the row is
- * hidden so users never see an unwired stub.  E15-S02 (Stream 2.4) wires the
- * actual delete-account navigation; this gating stays even after that PR merges
- * until the flag is flipped ON for Play Store submission.
+ * Route pattern for the cool-off destination with nav args.
+ * Format: delete_account_cool_off/{requestId}/{scheduledDeletionEpochMs}
  */
+private fun coolOffRoute(
+    requestId: String,
+    scheduledDeletionEpochMs: Long,
+): String = "${LocaleRoutes.DELETE_ACCOUNT_COOL_OFF}/$requestId/$scheduledDeletionEpochMs"
+
+/** Template with literal placeholders for NavGraphBuilder composable() declaration. */
+private const val COOL_OFF_ROUTE_TEMPLATE: String =
+    "${LocaleRoutes.DELETE_ACCOUNT_COOL_OFF}/{$NAV_ARG_REQUEST_ID}/{$NAV_ARG_SCHEDULED_DELETION_EPOCH_MS}"
+
 internal fun NavGraphBuilder.settingsGraph(
     navController: NavController,
     featureFlags: FeatureFlags,
@@ -29,7 +40,7 @@ internal fun NavGraphBuilder.settingsGraph(
     composable(LocaleRoutes.SETTINGS) {
         SettingsScreen(
             onLanguageClick = { navController.navigate(LocaleRoutes.LANGUAGE_SETTINGS) },
-            onPrivacyDataClick = { navController.navigate(LocaleRoutes.PRIVACY_AND_DATA) },
+            onPrivacyDataClick = { navController.navigate(LocaleRoutes.PRIVACY_DATA) },
             onBack = { navController.popBackStack() },
         )
     }
@@ -38,26 +49,18 @@ internal fun NavGraphBuilder.settingsGraph(
             onSaved = { navController.popBackStack() },
         )
     }
-    composable(LocaleRoutes.PRIVACY_AND_DATA) {
-        PrivacyAndDataScreen(
-            onDownloadDataClick = { navController.navigate(LocaleRoutes.DATA_EXPORT) },
-            // Pass a non-null lambda only when the DPDP self-service flag is ON.
-            // Null → PrivacyAndDataScreen hides the row entirely (no visible stub).
-            // TODO(E15-S02 / Stream 2.4): replace the lambda body with the real route.
-            onDeleteAccountClick =
-                if (featureFlags.dpdpSelfServiceEnabled()) {
-                    { /* TODO E15-S02 wires delete-account route */ }
-                } else {
-                    null
-                },
+    composable(LocaleRoutes.PRIVACY_DATA) {
+        PrivacyDataScreen(
             onBack = { navController.popBackStack() },
+            // FIX 3 (P2): Pass null until Stream 2.3 / PR #211 merges and wires the actual route.
+            // PrivacyDataScreen hides the row when the callback is null — no no-op tap possible.
+            onDownloadData = null,
+            onDeleteAccount = { navController.navigate(LocaleRoutes.DELETE_ACCOUNT) },
+            showDeleteAccount = featureFlags.dpdpSelfServiceEnabled(),
         )
     }
-    composable(LocaleRoutes.DATA_EXPORT) {
-        DataExportScreen(
-            onBack = { navController.popBackStack() },
-        )
-    }
+
+    deleteAccountGraph(navController)
 }
 
 /**
