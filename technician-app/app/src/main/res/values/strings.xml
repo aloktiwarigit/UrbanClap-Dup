@@ -54,4 +54,8 @@
     <string name="earnings_last_seven_days">Last 7 days</string>
     <string name="earnings_sparkline_empty">Activity will appear here after your first job</string>
     <string name="earnings_view_ratings">View ratings</string>
+
+    <!-- Notification permission rationale (E11-S01b-1) -->
+    <string name="notification_permission_rationale_title">Allow notifications</string>
+    <string name="notification_permission_rationale_body">Allow notifications to receive job offers, booking updates, and payout alerts.</string>
 </resources>

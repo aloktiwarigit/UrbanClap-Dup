@@ -1,4 +1,4 @@
-package com.homeservices.customer.notification
+﻿package com.homeservices.customer.notification
 
 import com.homeservices.corenav.PendingAction
 import com.homeservices.corenav.PendingActionPriority
@@ -48,136 +48,149 @@ public class PendingActionIngestorTest {
     // ── 1. RESOLVED tombstone drop ────────────────────────────────────────────
 
     @Test
-    public fun `ingest drops action whose existing row is RESOLVED`() = runTest {
-        val action = buildAction(id = "PA:RATING_PROMPT_CUSTOMER:customer:u1:booking:bk1", version = 2L)
-        val existing = action.copy(status = PendingActionStatus.RESOLVED, resolvedAt = fixedNow.toEpochMilli() - 100)
-        coEvery { store.findById(action.id) } returns existing
+    public fun `ingest drops action whose existing row is RESOLVED`(): Unit =
+        runTest {
+            val action = buildAction(id = "PA:RATING_PROMPT_CUSTOMER:customer:u1:booking:bk1", version = 2L)
+            val existing = action.copy(status = PendingActionStatus.RESOLVED, resolvedAt = fixedNow.toEpochMilli() - 100)
+            coEvery { store.findById(action.id) } returns existing
 
-        ingestor.ingest(action)
+            ingestor.ingest(action)
 
-        coVerify(exactly = 0) { store.upsert(any()) }
-    }
+            coVerify(exactly = 0) { store.upsert(any()) }
+        }
 
     // ── 2. Version stale drop ─────────────────────────────────────────────────
 
     @Test
-    public fun `ingest drops action when incoming version is less than existing version`() = runTest {
-        val existing = buildAction(id = "PA:COMPLAINT_UPDATE:customer:u1:complaint:c1", version = 5L)
-        val staleIncoming = existing.copy(version = 3L)
-        coEvery { store.findById(existing.id) } returns existing
+    public fun `ingest drops action when incoming version is less than existing version`(): Unit =
+        runTest {
+            val existing = buildAction(id = "PA:COMPLAINT_UPDATE:customer:u1:complaint:c1", version = 5L)
+            val staleIncoming = existing.copy(version = 3L)
+            coEvery { store.findById(existing.id) } returns existing
 
-        ingestor.ingest(staleIncoming)
+            ingestor.ingest(staleIncoming)
 
-        coVerify(exactly = 0) { store.upsert(any()) }
-    }
+            coVerify(exactly = 0) { store.upsert(any()) }
+        }
 
     @Test
-    public fun `ingest drops action when incoming version equals existing version`() = runTest {
-        val existing = buildAction(id = "PA:COMPLAINT_UPDATE:customer:u1:complaint:c1", version = 5L)
-        val sameVersion = existing.copy(status = PendingActionStatus.ACTIVE)
-        coEvery { store.findById(existing.id) } returns existing
+    public fun `ingest drops action when incoming version equals existing version`(): Unit =
+        runTest {
+            val existing = buildAction(id = "PA:COMPLAINT_UPDATE:customer:u1:complaint:c1", version = 5L)
+            val sameVersion = existing.copy(status = PendingActionStatus.ACTIVE)
+            coEvery { store.findById(existing.id) } returns existing
 
-        ingestor.ingest(sameVersion)
+            ingestor.ingest(sameVersion)
 
-        coVerify(exactly = 0) { store.upsert(any()) }
-    }
+            coVerify(exactly = 0) { store.upsert(any()) }
+        }
 
     // ── 3. 7-day age drop ─────────────────────────────────────────────────────
 
     @Test
-    public fun `ingest drops action older than 7 days`() = runTest {
-        val sevenDaysAgoMs = fixedNow.toEpochMilli() - (8L * 24 * 60 * 60 * 1000)
-        val staleAction = buildAction(
-            id = "PA:RATING_PROMPT_CUSTOMER:customer:u1:booking:bk2",
-            version = 1L,
-            createdAt = sevenDaysAgoMs,
-            updatedAt = sevenDaysAgoMs,
-        )
-        coEvery { store.findById(staleAction.id) } returns null
+    public fun `ingest drops action older than 7 days`(): Unit =
+        runTest {
+            val sevenDaysAgoMs = fixedNow.toEpochMilli() - (8L * 24 * 60 * 60 * 1000)
+            val staleAction =
+                buildAction(
+                    id = "PA:RATING_PROMPT_CUSTOMER:customer:u1:booking:bk2",
+                    version = 1L,
+                    createdAt = sevenDaysAgoMs,
+                    updatedAt = sevenDaysAgoMs,
+                )
+            coEvery { store.findById(staleAction.id) } returns null
 
-        ingestor.ingest(staleAction)
+            ingestor.ingest(staleAction)
 
-        coVerify(exactly = 0) { store.upsert(any()) }
-    }
+            coVerify(exactly = 0) { store.upsert(any()) }
+        }
 
     @Test
-    public fun `ingest accepts action exactly at 7-day boundary`() = runTest {
-        val exactlySevenDaysAgoMs = fixedNow.toEpochMilli() - (7L * 24 * 60 * 60 * 1000)
-        val boundaryAction = buildAction(
-            id = "PA:COMPLAINT_UPDATE:customer:u1:complaint:c2",
-            version = 1L,
-            createdAt = exactlySevenDaysAgoMs,
-            updatedAt = exactlySevenDaysAgoMs,
-        )
-        coEvery { store.findById(boundaryAction.id) } returns null
+    public fun `ingest accepts action exactly at 7-day boundary`(): Unit =
+        runTest {
+            val exactlySevenDaysAgoMs = fixedNow.toEpochMilli() - (7L * 24 * 60 * 60 * 1000)
+            val boundaryAction =
+                buildAction(
+                    id = "PA:COMPLAINT_UPDATE:customer:u1:complaint:c2",
+                    version = 1L,
+                    createdAt = exactlySevenDaysAgoMs,
+                    updatedAt = exactlySevenDaysAgoMs,
+                )
+            coEvery { store.findById(boundaryAction.id) } returns null
 
-        ingestor.ingest(boundaryAction)
+            ingestor.ingest(boundaryAction)
 
-        coVerify(exactly = 1) { store.upsert(any()) }
-    }
+            coVerify(exactly = 1) { store.upsert(any()) }
+        }
 
     // ── 4. Fresh upsert ───────────────────────────────────────────────────────
 
     @Test
-    public fun `ingest persists fresh action with no existing row`() = runTest {
-        val action = buildAction(id = "PA:NEW_BOOKING:customer:u1:booking:bk3", version = 1L)
-        coEvery { store.findById(action.id) } returns null
+    public fun `ingest persists fresh action with no existing row`(): Unit =
+        runTest {
+            val action = buildAction(id = "PA:NEW_BOOKING:customer:u1:booking:bk3", version = 1L)
+            coEvery { store.findById(action.id) } returns null
 
-        ingestor.ingest(action)
+            ingestor.ingest(action)
 
-        val slot = slot<PendingAction>()
-        coVerify(exactly = 1) { store.upsert(capture(slot)) }
-        assertThat(slot.captured.id).isEqualTo(action.id)
-    }
+            val slot = slot<PendingAction>()
+            coVerify(exactly = 1) { store.upsert(capture(slot)) }
+            assertThat(slot.captured.id).isEqualTo(action.id)
+        }
 
     // ── 5. Version upgrade upsert ─────────────────────────────────────────────
 
     @Test
-    public fun `ingest persists action when incoming version is greater than existing`() = runTest {
-        val existing = buildAction(id = "PA:COMPLAINT_UPDATE:customer:u1:complaint:c3", version = 2L)
-        val newerIncoming = existing.copy(version = 3L, sourceStatus = "OPEN")
-        coEvery { store.findById(existing.id) } returns existing
+    public fun `ingest persists action when incoming version is greater than existing`(): Unit =
+        runTest {
+            val existing = buildAction(id = "PA:COMPLAINT_UPDATE:customer:u1:complaint:c3", version = 2L)
+            val newerIncoming = existing.copy(version = 3L, sourceStatus = "OPEN")
+            coEvery { store.findById(existing.id) } returns existing
 
-        ingestor.ingest(newerIncoming)
+            ingestor.ingest(newerIncoming)
 
-        val slot = slot<PendingAction>()
-        coVerify(exactly = 1) { store.upsert(capture(slot)) }
-        assertThat(slot.captured.version).isEqualTo(3L)
-    }
+            val slot = slot<PendingAction>()
+            coVerify(exactly = 1) { store.upsert(capture(slot)) }
+            assertThat(slot.captured.version).isEqualTo(3L)
+        }
 
     // ── 6. Reconcile: marks missing as resolved + purges expired/tombstones ───
 
     @Test
-    public fun `reconcile calls markMissingAsResolved with correct keepIds`() = runTest {
-        val actions = listOf(
-            buildAction(id = "PA:COMPLAINT_UPDATE:customer:u1:complaint:c4", version = 1L),
-            buildAction(id = "PA:RATING_PROMPT_CUSTOMER:customer:u1:booking:bk4", version = 1L),
-        )
+    public fun `reconcile calls markMissingAsResolved with correct keepIds`(): Unit =
+        runTest {
+            val actions =
+                listOf(
+                    buildAction(id = "PA:COMPLAINT_UPDATE:customer:u1:complaint:c4", version = 1L),
+                    buildAction(id = "PA:RATING_PROMPT_CUSTOMER:customer:u1:booking:bk4", version = 1L),
+                )
 
-        ingestor.reconcile(userId = "u1", serverSnapshot = actions)
+            ingestor.reconcile(userId = "u1", serverSnapshot = actions)
 
-        coVerify(exactly = 1) {
-            store.upsertAll(actions)
+            coVerify(exactly = 1) {
+                store.upsertAll(actions)
+            }
+            coVerify(exactly = 1) {
+                store.markMissingAsResolved(
+                    userId = "u1",
+                    keepIds =
+                        setOf(
+                            "PA:COMPLAINT_UPDATE:customer:u1:complaint:c4",
+                            "PA:RATING_PROMPT_CUSTOMER:customer:u1:booking:bk4",
+                        ),
+                    now = fixedNow.toEpochMilli(),
+                )
+            }
         }
-        coVerify(exactly = 1) {
-            store.markMissingAsResolved(
-                userId = "u1",
-                keepIds = setOf(
-                    "PA:COMPLAINT_UPDATE:customer:u1:complaint:c4",
-                    "PA:RATING_PROMPT_CUSTOMER:customer:u1:booking:bk4",
-                ),
-                now = fixedNow.toEpochMilli(),
-            )
-        }
-    }
 
     @Test
-    public fun `reconcile calls purgeExpired and purgeTombstones`() = runTest {
-        ingestor.reconcile(userId = "u1", serverSnapshot = emptyList())
+    public fun `reconcile calls purgeExpired and purgeTombstones`(): Unit =
+        runTest {
+            ingestor.reconcile(userId = "u1", serverSnapshot = emptyList())
 
-        coVerify(exactly = 1) { store.purgeExpired(fixedNow.toEpochMilli()) }
-        coVerify(exactly = 1) { store.purgeTombstones(fixedNow.toEpochMilli() - THIRTY_DAYS_MS) }
-    }
+            coVerify(exactly = 1) { store.purgeExpired(fixedNow.toEpochMilli()) }
+            coVerify(exactly = 1) { store.purgeTombstones(fixedNow.toEpochMilli() - THIRTY_DAYS_MS) }
+        }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 

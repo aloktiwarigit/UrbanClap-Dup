@@ -1,13 +1,13 @@
 package com.homeservices.customer.navigation
 
 import com.homeservices.corenav.CommonRouteSpec
+import com.homeservices.corenav.NotificationIntent
 import com.homeservices.corenav.PendingAction
+import com.homeservices.corenav.PendingActionType
 import com.homeservices.corenav.RouteContext
 import com.homeservices.corenav.RouteResolver
 import com.homeservices.corenav.RouteSpec
 import com.homeservices.corenav.TierLadder
-import com.homeservices.corenav.NotificationIntent
-import com.homeservices.corenav.PendingActionType
 import javax.inject.Inject
 import javax.inject.Singleton
 

@@ -1,9 +1,9 @@
 package com.homeservices.customer.notification.di
 
 import com.homeservices.corenav.NotificationRouter
+import com.homeservices.customer.data.pendingaction.PendingActionStore
 import com.homeservices.customer.notification.CustomerNotificationRouter
 import com.homeservices.customer.notification.PendingActionIngestor
-import com.homeservices.customer.data.pendingaction.PendingActionStore
 import dagger.Binds
 import dagger.Module
 import dagger.Provides

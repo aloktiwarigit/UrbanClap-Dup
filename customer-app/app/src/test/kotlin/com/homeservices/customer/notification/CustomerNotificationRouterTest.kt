@@ -1,6 +1,5 @@
-package com.homeservices.customer.notification
+﻿package com.homeservices.customer.notification
 
-import com.homeservices.corenav.NotificationIntent
 import com.homeservices.corenav.PendingActionType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
@@ -85,12 +84,13 @@ public class CustomerNotificationRouterTest {
 
     @Test
     public fun `parseFcmData preserves rawArgs from FCM payload`() {
-        val data = mapOf(
-            "type" to "COMPLAINT_UPDATE",
-            "complaintId" to "cmp2",
-            "sourceStatus" to "OPEN",
-            "version" to "3",
-        )
+        val data =
+            mapOf(
+                "type" to "COMPLAINT_UPDATE",
+                "complaintId" to "cmp2",
+                "sourceStatus" to "OPEN",
+                "version" to "3",
+            )
         val result = router.parseFcmData(data)
 
         assertThat(result).isNotNull

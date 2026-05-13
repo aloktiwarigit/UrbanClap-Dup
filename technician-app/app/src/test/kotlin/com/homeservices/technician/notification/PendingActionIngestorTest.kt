@@ -1,4 +1,4 @@
-package com.homeservices.technician.notification
+﻿package com.homeservices.technician.notification
 
 import com.homeservices.corenav.PendingAction
 import com.homeservices.corenav.PendingActionPriority
@@ -43,97 +43,105 @@ public class PendingActionIngestorTest {
     // ── 1. RESOLVED tombstone drop ────────────────────────────────────────────
 
     @Test
-    public fun `ingest drops action whose existing row is RESOLVED`() = runTest {
-        val action = buildAction(id = "PA:JOB_OFFER:technician:t1:booking:bk1", version = 2L)
-        val existing = action.copy(status = PendingActionStatus.RESOLVED, resolvedAt = fixedNow.toEpochMilli() - 100)
-        coEvery { store.findById(action.id) } returns existing
+    public fun `ingest drops action whose existing row is RESOLVED`(): Unit =
+        runTest {
+            val action = buildAction(id = "PA:JOB_OFFER:technician:t1:booking:bk1", version = 2L)
+            val existing = action.copy(status = PendingActionStatus.RESOLVED, resolvedAt = fixedNow.toEpochMilli() - 100)
+            coEvery { store.findById(action.id) } returns existing
 
-        ingestor.ingest(action)
+            ingestor.ingest(action)
 
-        coVerify(exactly = 0) { store.upsert(any()) }
-    }
+            coVerify(exactly = 0) { store.upsert(any()) }
+        }
 
     // ── 2. Version stale drop ─────────────────────────────────────────────────
 
     @Test
-    public fun `ingest drops action when incoming version is less than existing`() = runTest {
-        val existing = buildAction(id = "PA:JOB_OFFER:technician:t1:booking:bk2", version = 5L)
-        val staleIncoming = existing.copy(version = 3L)
-        coEvery { store.findById(existing.id) } returns existing
+    public fun `ingest drops action when incoming version is less than existing`(): Unit =
+        runTest {
+            val existing = buildAction(id = "PA:JOB_OFFER:technician:t1:booking:bk2", version = 5L)
+            val staleIncoming = existing.copy(version = 3L)
+            coEvery { store.findById(existing.id) } returns existing
 
-        ingestor.ingest(staleIncoming)
+            ingestor.ingest(staleIncoming)
 
-        coVerify(exactly = 0) { store.upsert(any()) }
-    }
+            coVerify(exactly = 0) { store.upsert(any()) }
+        }
 
     // ── 3. 7-day age drop ─────────────────────────────────────────────────────
 
     @Test
-    public fun `ingest drops action older than 7 days`() = runTest {
-        val eightDaysAgoMs = fixedNow.toEpochMilli() - (8L * 24 * 60 * 60 * 1000)
-        val staleAction = buildAction(
-            id = "PA:EARNINGS_UPDATE:technician:t1:earnings:e1",
-            version = 1L,
-            createdAt = eightDaysAgoMs,
-            updatedAt = eightDaysAgoMs,
-        )
-        coEvery { store.findById(staleAction.id) } returns null
+    public fun `ingest drops action older than 7 days`(): Unit =
+        runTest {
+            val eightDaysAgoMs = fixedNow.toEpochMilli() - (8L * 24 * 60 * 60 * 1000)
+            val staleAction =
+                buildAction(
+                    id = "PA:EARNINGS_UPDATE:technician:t1:earnings:e1",
+                    version = 1L,
+                    createdAt = eightDaysAgoMs,
+                    updatedAt = eightDaysAgoMs,
+                )
+            coEvery { store.findById(staleAction.id) } returns null
 
-        ingestor.ingest(staleAction)
+            ingestor.ingest(staleAction)
 
-        coVerify(exactly = 0) { store.upsert(any()) }
-    }
+            coVerify(exactly = 0) { store.upsert(any()) }
+        }
 
     // ── 4. Fresh upsert ───────────────────────────────────────────────────────
 
     @Test
-    public fun `ingest persists fresh action with no existing row`() = runTest {
-        val action = buildAction(id = "PA:JOB_OFFER:technician:t1:booking:bk3", version = 1L)
-        coEvery { store.findById(action.id) } returns null
+    public fun `ingest persists fresh action with no existing row`(): Unit =
+        runTest {
+            val action = buildAction(id = "PA:JOB_OFFER:technician:t1:booking:bk3", version = 1L)
+            coEvery { store.findById(action.id) } returns null
 
-        ingestor.ingest(action)
+            ingestor.ingest(action)
 
-        val slot = slot<PendingAction>()
-        coVerify(exactly = 1) { store.upsert(capture(slot)) }
-        assertThat(slot.captured.id).isEqualTo(action.id)
-    }
+            val slot = slot<PendingAction>()
+            coVerify(exactly = 1) { store.upsert(capture(slot)) }
+            assertThat(slot.captured.id).isEqualTo(action.id)
+        }
 
     // ── 5. Version upgrade upsert ─────────────────────────────────────────────
 
     @Test
-    public fun `ingest persists action when incoming version is greater than existing`() = runTest {
-        val existing = buildAction(id = "PA:JOB_OFFER:technician:t1:booking:bk4", version = 2L)
-        val newerIncoming = existing.copy(version = 4L, sourceStatus = "ASSIGNED")
-        coEvery { store.findById(existing.id) } returns existing
+    public fun `ingest persists action when incoming version is greater than existing`(): Unit =
+        runTest {
+            val existing = buildAction(id = "PA:JOB_OFFER:technician:t1:booking:bk4", version = 2L)
+            val newerIncoming = existing.copy(version = 4L, sourceStatus = "ASSIGNED")
+            coEvery { store.findById(existing.id) } returns existing
 
-        ingestor.ingest(newerIncoming)
+            ingestor.ingest(newerIncoming)
 
-        val slot = slot<PendingAction>()
-        coVerify(exactly = 1) { store.upsert(capture(slot)) }
-        assertThat(slot.captured.version).isEqualTo(4L)
-    }
+            val slot = slot<PendingAction>()
+            coVerify(exactly = 1) { store.upsert(capture(slot)) }
+            assertThat(slot.captured.version).isEqualTo(4L)
+        }
 
     // ── 6. Reconcile ─────────────────────────────────────────────────────────
 
     @Test
-    public fun `reconcile upserts all server actions and marks missing as resolved`() = runTest {
-        val actions = listOf(
-            buildAction(id = "PA:JOB_OFFER:technician:t1:booking:bk5", version = 1L),
-        )
+    public fun `reconcile upserts all server actions and marks missing as resolved`(): Unit =
+        runTest {
+            val actions =
+                listOf(
+                    buildAction(id = "PA:JOB_OFFER:technician:t1:booking:bk5", version = 1L),
+                )
 
-        ingestor.reconcile(userId = "t1", serverSnapshot = actions)
+            ingestor.reconcile(userId = "t1", serverSnapshot = actions)
 
-        coVerify(exactly = 1) { store.upsertAll(actions) }
-        coVerify(exactly = 1) {
-            store.markMissingAsResolved(
-                userId = "t1",
-                keepIds = setOf("PA:JOB_OFFER:technician:t1:booking:bk5"),
-                now = fixedNow.toEpochMilli(),
-            )
+            coVerify(exactly = 1) { store.upsertAll(actions) }
+            coVerify(exactly = 1) {
+                store.markMissingAsResolved(
+                    userId = "t1",
+                    keepIds = setOf("PA:JOB_OFFER:technician:t1:booking:bk5"),
+                    now = fixedNow.toEpochMilli(),
+                )
+            }
+            coVerify(exactly = 1) { store.purgeExpired(fixedNow.toEpochMilli()) }
+            coVerify(exactly = 1) { store.purgeTombstones(fixedNow.toEpochMilli() - THIRTY_DAYS_MS) }
         }
-        coVerify(exactly = 1) { store.purgeExpired(fixedNow.toEpochMilli()) }
-        coVerify(exactly = 1) { store.purgeTombstones(fixedNow.toEpochMilli() - THIRTY_DAYS_MS) }
-    }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 

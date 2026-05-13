@@ -1,9 +1,9 @@
 package com.homeservices.technician.notification.di
 
 import com.homeservices.corenav.NotificationRouter
-import com.homeservices.technician.notification.TechnicianNotificationRouter
-import com.homeservices.technician.notification.PendingActionIngestor
 import com.homeservices.technician.data.pendingaction.PendingActionStore
+import com.homeservices.technician.notification.PendingActionIngestor
+import com.homeservices.technician.notification.TechnicianNotificationRouter
 import dagger.Binds
 import dagger.Module
 import dagger.Provides

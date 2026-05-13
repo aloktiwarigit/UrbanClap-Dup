@@ -20,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.homeservices.corenav.DeepLinkUri
 import com.homeservices.customer.data.auth.SessionManager
 import com.homeservices.customer.data.booking.PriceApprovalEventBus
 import com.homeservices.customer.data.rating.RatingPromptEventBus
@@ -27,7 +28,6 @@ import com.homeservices.customer.domain.auth.model.AuthState
 import com.homeservices.customer.domain.locale.IsFirstLaunchUseCase
 import com.homeservices.customer.ui.locale.FirstLaunchLanguageScreen
 import com.homeservices.customer.ui.rating.RatingRoutes
-import com.homeservices.corenav.DeepLinkUri
 
 public object LocaleRoutes {
     public const val FIRST_LAUNCH: String = "first_launch_language"

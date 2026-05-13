@@ -1,4 +1,4 @@
-package com.homeservices.technician.notification
+﻿package com.homeservices.technician.notification
 
 import com.homeservices.corenav.PendingActionType
 import org.assertj.core.api.Assertions.assertThat
@@ -106,12 +106,13 @@ public class TechnicianNotificationRouterTest {
 
     @Test
     public fun `parseFcmData preserves rawArgs from FCM payload`() {
-        val data = mapOf(
-            "type" to "JOB_OFFER",
-            "bookingId" to "bk4",
-            "amountPaise" to "50000",
-            "expiresAt" to "2026-05-01T13:00:00Z",
-        )
+        val data =
+            mapOf(
+                "type" to "JOB_OFFER",
+                "bookingId" to "bk4",
+                "amountPaise" to "50000",
+                "expiresAt" to "2026-05-01T13:00:00Z",
+            )
         val result = router.parseFcmData(data)
 
         assertThat(result).isNotNull

@@ -68,7 +68,8 @@ public class MainActivity :
         // homeservices://action/<TYPE>?entityId=<id> deep links from notification tray
         // are forwarded to AppNavigation for TierLadder-aware routing.
         val initialDeepLink: String? =
-            intent?.data
+            intent
+                ?.data
                 ?.takeIf { it.scheme == "homeservices" && it.host == "action" }
                 ?.toString()
 

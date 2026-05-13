@@ -1,11 +1,13 @@
 package com.homeservices.technician.data.fcm
 
+import com.homeservices.corenav.NotificationRouter
 import com.homeservices.technician.data.earnings.EarningsUpdateEventBus
 import com.homeservices.technician.data.jobOffer.JobOfferEventBus
 import com.homeservices.technician.data.rating.RatingPromptEventBus
 import com.homeservices.technician.data.rating.RatingReceivedEventBus
 import com.homeservices.technician.domain.jobOffer.FcmTokenSyncUseCase
 import com.homeservices.technician.domain.jobOffer.model.JobOffer
+import com.homeservices.technician.notification.PendingActionIngestor
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -35,6 +37,8 @@ public class HomeservicesFcmServiceJobOfferTest {
     private lateinit var earningsUpdateEventBus: EarningsUpdateEventBus
     private lateinit var ratingReceivedEventBus: RatingReceivedEventBus
     private lateinit var fcmTokenSyncUseCase: FcmTokenSyncUseCase
+    private lateinit var router: NotificationRouter
+    private lateinit var ingestor: PendingActionIngestor
 
     private val validJobOfferData: Map<String, String>
         get() {
@@ -60,6 +64,9 @@ public class HomeservicesFcmServiceJobOfferTest {
         earningsUpdateEventBus = mockk(relaxed = true)
         ratingReceivedEventBus = mockk(relaxed = true)
         fcmTokenSyncUseCase = mockk(relaxed = true)
+        // router returns null for all FCM data by default (relaxed = true → null for nullable returns)
+        router = mockk(relaxed = true)
+        ingestor = mockk(relaxed = true)
 
         every { eventBus.tryEmit(any()) } returns Unit
 
@@ -73,6 +80,8 @@ public class HomeservicesFcmServiceJobOfferTest {
                 it.ratingPromptEventBus = ratingPromptEventBus
                 it.earningsUpdateEventBus = earningsUpdateEventBus
                 it.ratingReceivedEventBus = ratingReceivedEventBus
+                it.router = router
+                it.ingestor = ingestor
             }
     }
 

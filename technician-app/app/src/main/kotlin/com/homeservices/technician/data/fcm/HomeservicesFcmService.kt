@@ -323,21 +323,27 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
         data: Map<String, String>,
     ): com.homeservices.corenav.PendingAction? {
         val userId = data["userId"] ?: return null
-        val actionId = data["actionId"]
-            ?: "${intent.type.name}:technician:$userId:${intent.type.name.lowercase()}:${intent.entityId}"
+        val actionId =
+            data["actionId"]
+                ?: "${intent.type.name}:technician:$userId:${intent.type.name.lowercase()}:${intent.entityId}"
         val version = data["version"]?.toLongOrNull() ?: 1L
-        val priority = runCatching {
-            com.homeservices.corenav.PendingActionPriority.valueOf(data["priority"] ?: "NORMAL")
-        }.getOrDefault(com.homeservices.corenav.PendingActionPriority.NORMAL)
+        val priority =
+            runCatching {
+                com.homeservices.corenav.PendingActionPriority
+                    .valueOf(data["priority"] ?: "NORMAL")
+            }.getOrDefault(com.homeservices.corenav.PendingActionPriority.NORMAL)
         val entityType = data["entityType"] ?: intent.type.name.lowercase()
         val nowMs = System.currentTimeMillis()
         val createdAt = data["createdAt"]?.toLongOrNull() ?: nowMs
         val updatedAt = data["updatedAt"]?.toLongOrNull() ?: nowMs
-        val expiresAt = data["expiresAt"]?.let {
-            runCatching { Instant.parse(it).toEpochMilli() }.getOrNull()
-                ?: it.toLongOrNull()
-        }
-        val deepLinkUri = com.homeservices.corenav.DeepLinkUri.build(intent)
+        val expiresAt =
+            data["expiresAt"]?.let {
+                runCatching { Instant.parse(it).toEpochMilli() }.getOrNull()
+                    ?: it.toLongOrNull()
+            }
+        val deepLinkUri =
+            com.homeservices.corenav.DeepLinkUri
+                .build(intent)
 
         return com.homeservices.corenav.PendingAction(
             id = actionId,

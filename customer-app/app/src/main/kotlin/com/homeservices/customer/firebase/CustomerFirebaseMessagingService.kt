@@ -98,7 +98,9 @@ public class CustomerFirebaseMessagingService : FirebaseMessagingService() {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channelId = channelIdFor(intent.type)
 
-        val deepLinkUri = com.homeservices.corenav.DeepLinkUri.build(intent)
+        val deepLinkUri =
+            com.homeservices.corenav.DeepLinkUri
+                .build(intent)
         val tapIntent =
             Intent(Intent.ACTION_VIEW).apply {
                 setData(android.net.Uri.parse(deepLinkUri))
@@ -224,18 +226,23 @@ public class CustomerFirebaseMessagingService : FirebaseMessagingService() {
         data: Map<String, String>,
     ): com.homeservices.corenav.PendingAction? {
         val userId = data["userId"] ?: return null
-        val actionId = data["actionId"]
-            ?: "${intent.type.name}:customer:$userId:${intent.type.name.lowercase()}:${intent.entityId}"
+        val actionId =
+            data["actionId"]
+                ?: "${intent.type.name}:customer:$userId:${intent.type.name.lowercase()}:${intent.entityId}"
         val version = data["version"]?.toLongOrNull() ?: 1L
-        val priority = runCatching {
-            com.homeservices.corenav.PendingActionPriority.valueOf(data["priority"] ?: "NORMAL")
-        }.getOrDefault(com.homeservices.corenav.PendingActionPriority.NORMAL)
+        val priority =
+            runCatching {
+                com.homeservices.corenav.PendingActionPriority
+                    .valueOf(data["priority"] ?: "NORMAL")
+            }.getOrDefault(com.homeservices.corenav.PendingActionPriority.NORMAL)
         val entityType = data["entityType"] ?: intent.type.name.lowercase()
         val nowMs = System.currentTimeMillis()
         val createdAt = data["createdAt"]?.toLongOrNull() ?: nowMs
         val updatedAt = data["updatedAt"]?.toLongOrNull() ?: nowMs
         val expiresAt = data["expiresAt"]?.toLongOrNull()
-        val deepLinkUri = com.homeservices.corenav.DeepLinkUri.build(intent)
+        val deepLinkUri =
+            com.homeservices.corenav.DeepLinkUri
+                .build(intent)
 
         return com.homeservices.corenav.PendingAction(
             id = actionId,
