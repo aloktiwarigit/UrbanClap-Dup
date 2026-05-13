@@ -5,7 +5,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -294,9 +293,10 @@ public class CustomerFirebaseMessagingService : FirebaseMessagingService() {
         public const val CHANNEL_CREDITS: String = "credits"
         public const val CHANNEL_SYSTEM: String = "system"
 
-        /** Register all 5 notification channels. Call from Application.onCreate. */
+        /** Register all 5 notification channels. Call from Application.onCreate.
+         *  Notification channels are an Oreo+ API; the project's minSdk is 26 so the
+         *  pre-Oreo guard is unnecessary (lint flags it as ObsoleteSdkInt). */
         public fun registerChannels(context: Context) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.createNotificationChannels(
                 listOf(
