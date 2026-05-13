@@ -342,4 +342,8 @@
     <string name="settings_language_title">भाषा चुनें</string>
     <string name="settings_language_save">सेव करें</string>
 
+    <!-- Notification permission rationale (E11-S01b-1) -->
+    <string name="notification_permission_rationale_title">Allow notifications</string>
+    <string name="notification_permission_rationale_body">Allow notifications to receive booking updates, add-on requests, and service reminders.</string>
+
 </resources>

@@ -176,4 +176,5 @@ technician-app/app/release/keystore.properties
 technician-app/keystore.jks
 technician-app/release.keystore
 .claude/
+.gradle-home/
 .gradle-codex/
