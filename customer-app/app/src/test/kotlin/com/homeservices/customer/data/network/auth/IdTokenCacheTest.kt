@@ -22,6 +22,8 @@ import org.robolectric.RobolectricTestRunner
  * 1. Cold start — cache returns null before first token is fetched.
  * 2. After first token arrives via [IdTokenCache.freshToken], cache returns it.
  * 3. Cache refreshes every 55 minutes (3_300_000 ms) automatically.
+ * 4. [IdTokenCache.signalSignOut] clears [IdTokenCache.cachedToken] without cancelling the scope.
+ * 5. After [signalSignOut] + [signalSignIn], [freshToken] resumes fetching tokens normally.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -105,5 +107,43 @@ public class IdTokenCacheTest {
             val token = cache.freshToken()
             // On exception, returns null without crashing
             assertThat(token).isNull()
+        }
+
+    @Test
+    public fun `signalSignOut clears cachedToken without cancelling scope`(): Unit =
+        runTest {
+            val cache = IdTokenCache(firebaseAuth)
+            // Prime the cache with a token
+            cache.freshToken()
+            assertThat(cache.cachedToken).isEqualTo("test-token-123")
+
+            // Signal sign-out: token must be cleared
+            cache.signalSignOut()
+            assertThat(cache.cachedToken).isNull()
+
+            // The CoroutineScope must still be alive — freshToken() should succeed
+            // (scope cancellation would throw CancellationException here)
+            val tokenAfterSignOut = cache.freshToken()
+            assertThat(tokenAfterSignOut).isEqualTo("test-token-123")
+        }
+
+    @Test
+    public fun `refresh resumes after signalSignOut and signalSignIn`(): Unit =
+        runTest {
+            val cache = IdTokenCache(firebaseAuth)
+            cache.freshToken()
+            assertThat(cache.cachedToken).isEqualTo("test-token-123")
+
+            // Sign out: clears token and pauses refresh
+            cache.signalSignOut()
+            assertThat(cache.cachedToken).isNull()
+
+            // Sign in again: re-enables refresh
+            cache.signalSignIn()
+
+            // freshToken() must work normally — simulates what the refresh loop does
+            val token = cache.freshToken()
+            assertThat(token).isEqualTo("test-token-123")
+            assertThat(cache.cachedToken).isEqualTo("test-token-123")
         }
 }

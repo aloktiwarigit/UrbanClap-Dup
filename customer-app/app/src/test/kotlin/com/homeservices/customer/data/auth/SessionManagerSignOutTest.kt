@@ -19,17 +19,17 @@ import org.junit.Test
 /**
  * Unit tests for [SessionManager.signOut] orchestration.
  *
- * These tests exercise the 6-step sign-out sequence with MockK mocks for
+ * These tests exercise the local-state-first sign-out sequence with MockK mocks for
  * FirebaseAuth, FirebaseMessaging, and IdTokenCache. The existing
  * [SessionManagerTest] covers the prefs + AuthState round-trips via Robolectric.
  *
- * Sign-out contract:
- * 1. firebaseAuth.signOut() is called
- * 2. firebaseMessaging.unsubscribeFromTopic("customer_<uid>") is called
- * 3. firebaseMessaging.deleteToken() is called
- * 4. idTokenCache.cancelScope() is called
- * 5. prefs are cleared
- * 6. authState transitions to Unauthenticated
+ * Sign-out contract (local-state-first ordering):
+ * 1. prefs are cleared FIRST (survives process kill; prevents stale-uid auth on cold start)
+ * 2. authState transitions to Unauthenticated BEFORE remote cleanup
+ * 3. idTokenCache.signalSignOut() clears cached token and pauses refresh loop (no scope cancel)
+ * 4. firebaseAuth.signOut() is called (best-effort)
+ * 5. firebaseMessaging.unsubscribeFromTopic("customer_<uid>") is called (best-effort)
+ * 6. firebaseMessaging.deleteToken() is called (best-effort)
  * 7. The sequence completes even if individual steps throw (runCatching resilience)
  */
 public class SessionManagerSignOutTest {
@@ -53,7 +53,8 @@ public class SessionManagerSignOutTest {
         every { prefs.edit() } returns editor
         every { editor.clear() } returns editor
         every { editor.apply() } just runs
-        every { idTokenCache.cancelScope() } just runs
+        every { idTokenCache.signalSignOut() } just runs
+        every { idTokenCache.signalSignIn() } just runs
 
         // FCM methods return real completed Tasks so .await() resolves correctly in coroutines.
         every { firebaseMessaging.unsubscribeFromTopic(any()) } returns Tasks.forResult(null)
@@ -93,11 +94,11 @@ public class SessionManagerSignOutTest {
         }
 
     @Test
-    public fun `signOut cancels idTokenCache scope`(): Unit =
+    public fun `signOut signals IdTokenCache to clear cached token`(): Unit =
         runTest {
             sessionManager.signOut()
 
-            verify { idTokenCache.cancelScope() }
+            verify { idTokenCache.signalSignOut() }
         }
 
     @Test
@@ -115,17 +116,35 @@ public class SessionManagerSignOutTest {
         }
 
     @Test
-    public fun `signOut completes even if firebaseAuth signOut throws`(): Unit =
+    public fun `signOut clears prefs and emits Unauthenticated even when firebaseAuth signOut throws`(): Unit =
         runTest {
             every { firebaseAuth.signOut() } throws RuntimeException("Firebase Auth unavailable")
 
             sessionManager.signOut()
 
-            // All remaining steps should still have executed
+            // Local state must be cleared regardless of Firebase failure
+            verify { prefs.edit() }
+            assertThat(sessionManager.authState.value).isEqualTo(AuthState.Unauthenticated)
+            // FCM cleanup should still have been attempted after Firebase failure
             verify { firebaseMessaging.unsubscribeFromTopic(any()) }
             verify { firebaseMessaging.deleteToken() }
-            verify { idTokenCache.cancelScope() }
-            assertThat(sessionManager.authState.value).isEqualTo(AuthState.Unauthenticated)
+        }
+
+    @Test
+    public fun `signOut emits Unauthenticated synchronously before FCM cleanup completes`(): Unit =
+        runTest {
+            // FCM unsubscribe suspends (simulated by a completed task — enough to verify ordering
+            // because our signOut inverts the sequence so authState is set before .await() calls)
+            var authStateAtFcmCall: AuthState? = null
+            every { firebaseMessaging.unsubscribeFromTopic(any()) } answers {
+                // Capture authState at the moment FCM is called — must already be Unauthenticated
+                authStateAtFcmCall = sessionManager.authState.value
+                Tasks.forResult(null)
+            }
+
+            sessionManager.signOut()
+
+            assertThat(authStateAtFcmCall).isEqualTo(AuthState.Unauthenticated)
         }
 
     @Test
@@ -137,9 +156,8 @@ public class SessionManagerSignOutTest {
 
             sessionManager.signOut()
 
-            // deleteToken and subsequent steps must still run
+            // deleteToken must still run after FCM unsubscribe failure
             verify { firebaseMessaging.deleteToken() }
-            verify { idTokenCache.cancelScope() }
             assertThat(sessionManager.authState.value).isEqualTo(AuthState.Unauthenticated)
         }
 
@@ -161,5 +179,17 @@ public class SessionManagerSignOutTest {
             // Firebase and FCM operations must NOT be called when no uid
             verify(exactly = 0) { firebaseAuth.signOut() }
             verify(exactly = 0) { firebaseMessaging.unsubscribeFromTopic(any()) }
+        }
+
+    @Test
+    public fun `subsequent saveSession after signOut restores token-fetch behavior`(): Unit =
+        runTest {
+            sessionManager.signOut()
+
+            // signalSignIn should be called when saveSession is called after sign-out
+            sessionManager.saveSession(uid = "user-99", authProvider = com.homeservices.customer.domain.auth.model.AuthProvider.Phone)
+
+            verify { idTokenCache.signalSignIn() }
+            assertThat(sessionManager.authState.value).isInstanceOf(AuthState.Authenticated::class.java)
         }
 }

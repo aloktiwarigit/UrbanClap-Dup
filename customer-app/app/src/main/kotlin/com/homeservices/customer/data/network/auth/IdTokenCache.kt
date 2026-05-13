@@ -5,11 +5,11 @@ import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -36,6 +36,12 @@ import javax.inject.Singleton
  * The [FirebaseTokenAuthenticator] handles force-refresh on 401 responses and does not
  * use this cache — it calls `getIdToken(true)` directly via `Tasks.await` on the OkHttp
  * worker thread.
+ *
+ * Sign-out / sign-in lifecycle:
+ * - [signalSignOut] clears [cachedToken] and pauses the refresh loop without cancelling
+ *   the [CoroutineScope]. The scope is permanently alive for the lifetime of the singleton.
+ * - [signalSignIn] re-enables the refresh loop so the next iteration fetches a fresh token.
+ *   Call this from [SessionManager.saveSession] after a successful sign-in.
  */
 @Singleton
 public class IdTokenCache
@@ -44,6 +50,12 @@ public class IdTokenCache
         private val firebaseAuth: FirebaseAuth,
     ) {
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+        /**
+         * Controls whether the refresh loop actively fetches tokens.
+         * `true` = active (signed in); `false` = paused (signed out).
+         */
+        private val refreshEnabled = AtomicBoolean(true)
 
         /**
          * The latest cached Firebase ID token, or `null` if no token has been fetched yet
@@ -56,20 +68,36 @@ public class IdTokenCache
             private set
 
         init {
-            // Start background refresh loop
+            // Start background refresh loop. The loop runs for the lifetime of the singleton
+            // and self-pauses when refreshEnabled is false (i.e. user is signed out).
             scope.launch { refreshLoop() }
         }
 
         /**
-         * Cancels the background token-refresh loop.
+         * Clears [cachedToken] and pauses the background refresh loop.
          *
          * Called by [com.homeservices.customer.data.auth.SessionManager.signOut] as part of
          * the sign-out cleanup sequence so stale tokens are never served after sign-out.
-         * A new [IdTokenCache] instance (or app restart) is required to resume refreshing.
+         *
+         * Unlike the previous [cancelScope] approach, this does NOT cancel the coroutine
+         * scope. The singleton remains alive across sign-out → sign-in cycles in the same
+         * process, so a subsequent [signalSignIn] call resumes refreshing without requiring
+         * an app restart.
          */
-        public fun cancelScope() {
-            scope.cancel()
+        public fun signalSignOut() {
             cachedToken = null
+            refreshEnabled.set(false)
+        }
+
+        /**
+         * Re-enables the background refresh loop after a sign-in.
+         *
+         * Call this from [com.homeservices.customer.data.auth.SessionManager.saveSession]
+         * so the interceptor can serve a bearer token for the first API request made
+         * immediately after sign-in.
+         */
+        public fun signalSignIn() {
+            refreshEnabled.set(true)
         }
 
         /**
@@ -93,7 +121,9 @@ public class IdTokenCache
 
         private suspend fun refreshLoop() {
             while (true) {
-                freshToken()
+                if (refreshEnabled.get()) {
+                    freshToken()
+                }
                 delay(REFRESH_INTERVAL_MS)
             }
         }
