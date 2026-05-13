@@ -6,7 +6,9 @@ import javax.inject.Inject
 
 public class SetAppLocaleUseCase
     @Inject
-    constructor(private val repo: LocaleRepository) {
+    constructor(
+        private val repo: LocaleRepository,
+    ) {
         public suspend operator fun invoke(tag: String) {
             // NOTE: technician-app has no first-launch language picker.
             // LocaleRepository intentionally omits firstLaunchPending / markFirstLaunchCompleted.

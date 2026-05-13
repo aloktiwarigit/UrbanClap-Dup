@@ -27,7 +27,9 @@ public class LanguageSettingsViewModel
             viewModelScope.launch { _selectedTag.value = getCurrentLocale().first() }
         }
 
-        public fun onSelect(tag: String) { _selectedTag.value = tag }
+        public fun onSelect(tag: String) {
+            _selectedTag.value = tag
+        }
 
         public fun onSave() {
             viewModelScope.launch {

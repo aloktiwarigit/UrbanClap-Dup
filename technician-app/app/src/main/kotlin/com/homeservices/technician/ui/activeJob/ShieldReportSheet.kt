@@ -21,9 +21,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import com.homeservices.technician.R
 import androidx.compose.ui.unit.dp
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.technician.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -46,12 +46,11 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.res.stringResource
-import com.homeservices.technician.R
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.homeservices.designsystem.components.HsActionButton
@@ -60,6 +59,7 @@ import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTrustBadge
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
+import com.homeservices.technician.R
 import com.homeservices.technician.domain.auth.PhoneNumberNormalizer
 
 private const val PHONE_LAST_DIGITS = 4

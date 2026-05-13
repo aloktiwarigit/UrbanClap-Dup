@@ -12,8 +12,13 @@ public class StringsParityTest {
         val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file)
         val nodes = doc.getElementsByTagName("string")
         return (0 until nodes.length)
-            .map { nodes.item(it).attributes.getNamedItem("name").nodeValue }
-            .toSet()
+            .map {
+                nodes
+                    .item(it)
+                    .attributes
+                    .getNamedItem("name")
+                    .nodeValue
+            }.toSet()
     }
 
     @Test

@@ -5,6 +5,8 @@ import javax.inject.Inject
 
 public class GetCurrentLocaleUseCase
     @Inject
-    constructor(private val repo: LocaleRepository) {
+    constructor(
+        private val repo: LocaleRepository,
+    ) {
         public operator fun invoke(): Flow<String> = repo.currentLocale
     }

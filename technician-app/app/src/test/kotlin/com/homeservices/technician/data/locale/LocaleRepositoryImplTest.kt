@@ -11,33 +11,43 @@ import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 public class LocaleRepositoryImplTest {
-
     @Test
-    public fun `currentLocale emits stored tag`(@TempDir dir: File): Unit = runTest {
-        val ds = PreferenceDataStoreFactory.create(scope = backgroundScope) {
-            File(dir, "a.preferences_pb")
+    public fun `currentLocale emits stored tag`(
+        @TempDir dir: File,
+    ): Unit =
+        runTest {
+            val ds =
+                PreferenceDataStoreFactory.create(scope = backgroundScope) {
+                    File(dir, "a.preferences_pb")
+                }
+            val r = LocaleRepositoryImpl(ds)
+            r.setLocale("hi")
+            assertEquals("hi", r.currentLocale.first())
         }
-        val r = LocaleRepositoryImpl(ds)
-        r.setLocale("hi")
-        assertEquals("hi", r.currentLocale.first())
-    }
 
     @Test
-    public fun `currentLocale defaults to hi when no stored tag`(@TempDir dir: File): Unit = runTest {
-        val ds = PreferenceDataStoreFactory.create(scope = backgroundScope) {
-            File(dir, "b.preferences_pb")
+    public fun `currentLocale defaults to hi when no stored tag`(
+        @TempDir dir: File,
+    ): Unit =
+        runTest {
+            val ds =
+                PreferenceDataStoreFactory.create(scope = backgroundScope) {
+                    File(dir, "b.preferences_pb")
+                }
+            val r = LocaleRepositoryImpl(ds)
+            assertEquals("hi", r.currentLocale.first())
         }
-        val r = LocaleRepositoryImpl(ds)
-        assertEquals("hi", r.currentLocale.first())
-    }
 
     @Test
-    public fun `setLocale persists across repo instances`(@TempDir dir: File): Unit = runTest {
-        val file = File(dir, "c.preferences_pb")
-        // Write with first instance
-        val ds1 = PreferenceDataStoreFactory.create(scope = backgroundScope) { file }
-        LocaleRepositoryImpl(ds1).setLocale("hi")
-        // Read back — same file, same scope, so no "multiple DataStores" conflict
-        assertEquals("hi", LocaleRepositoryImpl(ds1).currentLocale.first())
-    }
+    public fun `setLocale persists across repo instances`(
+        @TempDir dir: File,
+    ): Unit =
+        runTest {
+            val file = File(dir, "c.preferences_pb")
+            // Write with first instance
+            val ds1 = PreferenceDataStoreFactory.create(scope = backgroundScope) { file }
+            LocaleRepositoryImpl(ds1).setLocale("hi")
+            // Read back — same file, same scope, so no "multiple DataStores" conflict
+            assertEquals("hi", LocaleRepositoryImpl(ds1).currentLocale.first())
+        }
 }

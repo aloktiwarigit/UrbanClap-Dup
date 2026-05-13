@@ -28,17 +28,17 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.res.stringResource
-import com.homeservices.technician.R
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSectionCard
+import com.homeservices.technician.R
 import com.homeservices.technician.domain.rating.model.RatingWeekTrend
 import com.homeservices.technician.domain.rating.model.ReceivedRating
 import com.homeservices.technician.domain.rating.model.TechRatingSummary
@@ -83,7 +83,11 @@ internal fun MyRatingsContent(
             is MyRatingsUiState.Loading -> CenterState { CircularProgressIndicator() }
             is MyRatingsUiState.Error ->
                 CenterState {
-                    Text(stringResource(R.string.my_ratings_load_error), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        stringResource(R.string.my_ratings_load_error),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                     HsPrimaryButton(text = "Try again", onClick = onRetry)
                 }
             is MyRatingsUiState.Success -> RatingsSuccess(summary = state.summary)

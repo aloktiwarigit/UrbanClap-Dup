@@ -21,7 +21,6 @@ import com.homeservices.technician.ui.activeJob.ActiveJobViewModel
 import com.homeservices.technician.ui.complaint.ComplaintRoutes
 import com.homeservices.technician.ui.complaint.ComplaintScreen
 import com.homeservices.technician.ui.home.TechnicianHomeScreen
-import com.homeservices.technician.ui.settings.LanguageSettingsScreen
 import com.homeservices.technician.ui.home.TechnicianHomeViewModel
 import com.homeservices.technician.ui.myratings.MyRatingsScreen
 import com.homeservices.technician.ui.payoutsettings.PayoutCadenceScreen
@@ -29,6 +28,7 @@ import com.homeservices.technician.ui.rating.RatingRoutes
 import com.homeservices.technician.ui.rating.RatingScreen
 import com.homeservices.technician.ui.serviceprofile.ServiceSelectionMode
 import com.homeservices.technician.ui.serviceprofile.ServiceSelectionScreen
+import com.homeservices.technician.ui.settings.LanguageSettingsScreen
 
 private const val HOME_GRAPH_ROUTE = "home"
 private const val HOME_DASHBOARD_ROUTE = "home_dashboard"

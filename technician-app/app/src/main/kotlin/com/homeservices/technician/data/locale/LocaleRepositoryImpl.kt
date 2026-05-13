@@ -15,7 +15,9 @@ import javax.inject.Singleton
 @Singleton
 public class LocaleRepositoryImpl
     @Inject
-    constructor(@LocalePrefs private val dataStore: DataStore<Preferences>) : LocaleRepository {
+    constructor(
+        @LocalePrefs private val dataStore: DataStore<Preferences>,
+    ) : LocaleRepository {
         private companion object {
             val KEY_LOCALE_TAG = stringPreferencesKey("locale_tag")
             const val DEFAULT_LOCALE = "hi" // ADR-0018: Hindi default for Ayodhya/UP pilot

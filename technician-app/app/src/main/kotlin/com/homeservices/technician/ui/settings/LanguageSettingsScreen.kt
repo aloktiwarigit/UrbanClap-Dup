@@ -36,7 +36,7 @@ public fun LanguageSettingsScreen(
     viewModel: LanguageSettingsViewModel = hiltViewModel(),
 ) {
     val selected by viewModel.selectedTag.collectAsStateWithLifecycle()
-    val saved   by viewModel.savedFlow.collectAsStateWithLifecycle()
+    val saved by viewModel.savedFlow.collectAsStateWithLifecycle()
 
     // Per Codex P2 pattern (ported from customer-app): locale change can recreate the Activity
     // while savedFlow is still true. Reset before navigating so the restored composition does
@@ -65,9 +65,10 @@ public fun LanguageSettingsScreen(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
             )
         },
         bottomBar = {
@@ -77,9 +78,10 @@ public fun LanguageSettingsScreen(
             ) {
                 Button(
                     onClick = viewModel::onSave,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 18.dp, vertical = 14.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 18.dp, vertical = 14.dp),
                 ) {
                     Text(stringResource(R.string.settings_language_save))
                 }
@@ -88,10 +90,11 @@ public fun LanguageSettingsScreen(
         containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 18.dp, vertical = 20.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 18.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(

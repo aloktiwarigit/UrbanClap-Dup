@@ -92,7 +92,11 @@ internal fun ComplaintContent(
                 var expanded by remember { mutableStateOf(false) }
                 Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     HsTrustBadge(text = "Partner support")
-                    Text(stringResource(R.string.complaint_report_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Text(
+                        stringResource(R.string.complaint_report_title),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
                     Text(
                         "Use this when a customer, payout, or safety issue needs owner support review.",
                         style = MaterialTheme.typography.bodyMedium,
@@ -160,7 +164,11 @@ private fun SuccessState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(stringResource(R.string.complaint_received_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(
+            stringResource(R.string.complaint_received_title),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
         Spacer(Modifier.height(8.dp))
         Text(statusMessage(state.status), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp))

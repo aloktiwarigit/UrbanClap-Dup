@@ -16,17 +16,23 @@ public class SetAppLocaleUseCaseTest {
     private val repo: LocaleRepository = mockk()
     private val useCase: SetAppLocaleUseCase = SetAppLocaleUseCase(repo)
 
-    @BeforeEach public fun setUp() { mockkStatic(AppCompatDelegate::class) }
-    @AfterEach public fun tearDown() { unmockkAll() }
+    @BeforeEach public fun setUp() {
+        mockkStatic(AppCompatDelegate::class)
+    }
+
+    @AfterEach public fun tearDown() {
+        unmockkAll()
+    }
 
     @Test
-    public fun `persist is called before setApplicationLocales`(): Unit = runTest {
-        coEvery { repo.setLocale(any()) } returns Unit
-        every { AppCompatDelegate.setApplicationLocales(any()) } returns Unit
-        useCase("hi")
-        coVerifyOrder {
-            repo.setLocale("hi")
-            AppCompatDelegate.setApplicationLocales(any())
+    public fun `persist is called before setApplicationLocales`(): Unit =
+        runTest {
+            coEvery { repo.setLocale(any()) } returns Unit
+            every { AppCompatDelegate.setApplicationLocales(any()) } returns Unit
+            useCase("hi")
+            coVerifyOrder {
+                repo.setLocale("hi")
+                AppCompatDelegate.setApplicationLocales(any())
+            }
         }
-    }
 }

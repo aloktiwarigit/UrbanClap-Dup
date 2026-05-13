@@ -37,16 +37,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.android.gms.location.LocationServices
-import com.homeservices.technician.R
 import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -60,6 +59,7 @@ import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTrustBadge
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
 import com.homeservices.technician.BuildConfig
+import com.homeservices.technician.R
 
 @Composable
 internal fun ServiceSelectionScreen(

@@ -24,11 +24,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.homeservices.technician.R
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTrustBadge
+import com.homeservices.technician.R
 import com.homeservices.technician.domain.rating.model.CustomerRating
 import com.homeservices.technician.domain.rating.model.RatingSnapshot
 import com.homeservices.technician.domain.rating.model.SideState

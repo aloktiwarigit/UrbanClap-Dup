@@ -12,8 +12,9 @@ public class GetCurrentLocaleUseCaseTest {
     private val repo: LocaleRepository = mockk()
 
     @Test
-    public fun `returns repo currentLocale flow`(): Unit = runTest {
-        every { repo.currentLocale } returns flowOf("hi")
-        assertEquals("hi", GetCurrentLocaleUseCase(repo)().first())
-    }
+    public fun `returns repo currentLocale flow`(): Unit =
+        runTest {
+            every { repo.currentLocale } returns flowOf("hi")
+            assertEquals("hi", GetCurrentLocaleUseCase(repo)().first())
+        }
 }
