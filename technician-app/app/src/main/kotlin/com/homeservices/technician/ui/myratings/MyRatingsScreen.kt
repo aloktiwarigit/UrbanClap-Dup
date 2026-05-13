@@ -185,7 +185,7 @@ private fun RatingTrendChart(
     }
 }
 
-private val DATE_FORMATTER = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.getDefault())
+// Not cached — Locale.getDefault() must be read at format-time to respect runtime locale switches.
 
 @Composable
 private fun RatingItemCard(rating: ReceivedRating) {
@@ -229,7 +229,7 @@ private fun CenterState(content: @Composable ColumnScope.() -> Unit) {
 private fun formatDate(isoString: String): String =
     try {
         val instant = Instant.parse(isoString)
-        DATE_FORMATTER.format(instant.atZone(ZoneId.systemDefault()))
+        DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.getDefault()).format(instant.atZone(ZoneId.systemDefault()))
     } catch (_: Exception) {
         isoString
     }
