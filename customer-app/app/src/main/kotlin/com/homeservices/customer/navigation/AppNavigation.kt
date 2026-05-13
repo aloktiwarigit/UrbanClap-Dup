@@ -20,6 +20,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -28,6 +29,7 @@ import com.homeservices.customer.data.auth.SessionManager
 import com.homeservices.customer.data.booking.PriceApprovalEventBus
 import com.homeservices.customer.data.rating.RatingPromptEventBus
 import com.homeservices.customer.domain.auth.model.AuthState
+import com.homeservices.customer.domain.flags.FeatureFlags
 import com.homeservices.customer.domain.locale.IsFirstLaunchUseCase
 import com.homeservices.customer.observability.SentryContextBinder
 import com.homeservices.customer.ui.locale.FirstLaunchLanguageScreen
@@ -37,6 +39,10 @@ public object LocaleRoutes {
     public const val FIRST_LAUNCH: String = "first_launch_language"
     public const val SETTINGS: String = "settings"
     public const val LANGUAGE_SETTINGS: String = "language_settings"
+    public const val PRIVACY_DATA: String = "privacy_data"
+    public const val DELETE_ACCOUNT: String = "delete_account"
+    public const val DELETE_ACCOUNT_CONFIRM: String = "delete_account_confirm"
+    public const val DELETE_ACCOUNT_COOL_OFF: String = "delete_account_cool_off"
 }
 
 /**
@@ -59,6 +65,7 @@ internal fun AppNavigation(
     priceApprovalEventBus: PriceApprovalEventBus,
     ratingPromptEventBus: RatingPromptEventBus,
     isFirstLaunch: IsFirstLaunchUseCase,
+    featureFlags: FeatureFlags,
     modifier: Modifier = Modifier,
     routeResolver: CustomerRouteResolver? = null,
     initialDeepLink: String? = null,
@@ -78,6 +85,7 @@ internal fun AppNavigation(
                 priceApprovalEventBus = priceApprovalEventBus,
                 ratingPromptEventBus = ratingPromptEventBus,
                 firstLaunchPending = firstLaunchPending,
+                featureFlags = featureFlags,
                 modifier = modifier,
                 routeResolver = routeResolver,
                 initialDeepLink = initialDeepLink,
@@ -98,6 +106,7 @@ private fun AppNavigationReady(
     priceApprovalEventBus: PriceApprovalEventBus,
     ratingPromptEventBus: RatingPromptEventBus,
     firstLaunchPending: Boolean,
+    featureFlags: FeatureFlags,
     modifier: Modifier,
     routeResolver: CustomerRouteResolver?,
     initialDeepLink: String?,
@@ -131,21 +140,13 @@ private fun AppNavigationReady(
         )
     }
 
-    NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
-        composable(LocaleRoutes.FIRST_LAUNCH) {
-            FirstLaunchLanguageScreen(
-                onConfirmed = {
-                    navController.navigate("auth") {
-                        popUpTo(LocaleRoutes.FIRST_LAUNCH) { inclusive = true }
-                        launchSingleTop = true
-                    }
-                },
-            )
-        }
-        authGraph(navController, activity)
-        mainGraph(navController)
-        settingsGraph(navController)
-    }
+    AppNavHost(
+        navController = navController,
+        startDestination = startDestination,
+        activity = activity,
+        featureFlags = featureFlags,
+        modifier = modifier,
+    )
 }
 
 /**
@@ -262,6 +263,32 @@ private fun DeepLinkEffect(
                 navController.navigate(RatingRoutes.route(intent.entityId)) { launchSingleTop = true }
             else -> Unit // home is the default; no explicit nav needed
         }
+    }
+}
+
+/** Hosts the [NavHost] with all top-level graph registrations. */
+@Composable
+private fun AppNavHost(
+    navController: NavHostController,
+    startDestination: String,
+    activity: FragmentActivity,
+    featureFlags: FeatureFlags,
+    modifier: Modifier = Modifier,
+) {
+    NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
+        composable(LocaleRoutes.FIRST_LAUNCH) {
+            FirstLaunchLanguageScreen(
+                onConfirmed = {
+                    navController.navigate("auth") {
+                        popUpTo(LocaleRoutes.FIRST_LAUNCH) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
+        authGraph(navController, activity)
+        mainGraph(navController)
+        settingsGraph(navController, featureFlags)
     }
 }
 

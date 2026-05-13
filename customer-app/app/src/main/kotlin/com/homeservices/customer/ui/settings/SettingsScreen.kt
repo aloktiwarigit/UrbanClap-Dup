@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +44,7 @@ private val TextSecondary = Color(0xFF5F6C66)
 @Composable
 public fun SettingsScreen(
     onLanguageClick: () -> Unit,
+    onPrivacyDataClick: () -> Unit,
     onBack: () -> Unit,
 ) {
     Surface(modifier = Modifier.fillMaxSize(), color = WarmIvory) {
@@ -61,41 +63,74 @@ public fun SettingsScreen(
                     color = TextPrimary,
                 )
             }
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = Color.White,
-                border = BorderStroke(1.dp, CardBorder),
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(88.dp)
-                        .clickable(onClick = onLanguageClick),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+            // Language row
+            SettingsRow(
+                icon = {
                     Surface(shape = RoundedCornerShape(14.dp), color = MutedGreen) {
                         Box(modifier = Modifier.size(52.dp), contentAlignment = Alignment.Center) {
                             Icon(Icons.Default.Language, contentDescription = null, tint = BrandGreen)
                         }
                     }
-                    Spacer(Modifier.width(14.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.settings_language),
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                            color = TextPrimary,
-                        )
-                        Text(
-                            text = "हिंदी",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary,
-                        )
+                },
+                title = stringResource(R.string.settings_language),
+                subtitle = stringResource(R.string.settings_language_current),
+                onClick = onLanguageClick,
+            )
+            // Privacy & data row
+            SettingsRow(
+                icon = {
+                    Surface(shape = RoundedCornerShape(14.dp), color = MutedGreen) {
+                        Box(modifier = Modifier.size(52.dp), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Shield, contentDescription = null, tint = BrandGreen)
+                        }
                     }
-                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = TextSecondary)
+                },
+                title = stringResource(R.string.settings_privacy_and_data),
+                subtitle = null,
+                onClick = onPrivacyDataClick,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsRow(
+    icon: @Composable () -> Unit,
+    title: String,
+    subtitle: String?,
+    onClick: () -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = Color.White,
+        border = BorderStroke(1.dp, CardBorder),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(88.dp)
+                .clickable(onClick = onClick),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            icon()
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = TextPrimary,
+                )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary,
+                    )
                 }
             }
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = TextSecondary)
         }
     }
 }
