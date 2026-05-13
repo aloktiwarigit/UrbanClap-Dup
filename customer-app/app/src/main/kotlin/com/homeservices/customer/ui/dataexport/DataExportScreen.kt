@@ -60,6 +60,9 @@ private val TextPrimary = Color(0xFF18231F)
 private val TextSecondary = Color(0xFF5F6C66)
 private val ErrorRed = Color(0xFFB00020)
 
+private const val ERROR_SURFACE_COLOR = 0xFFFFF0F0
+private const val ERROR_BORDER_COLOR = 0xFFFFCDD2
+
 /**
  * Entry-point composable wired into the nav graph.
  *
@@ -144,182 +147,188 @@ public fun DataExportContent(
                 .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        // Top bar
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (onBack != null) {
-                IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = null,
-                        tint = TextPrimary,
-                    )
+        DataExportHeader(onBack = onBack)
+        Spacer(Modifier.weight(1f))
+        DataExportStateArea(state = state, onDownloadClick = onDownloadClick, onRetry = onRetry)
+        Spacer(Modifier.height(16.dp))
+    }
+}
+
+/** Top bar, hero info card, and privacy note — stateless. */
+@Composable
+private fun DataExportHeader(onBack: (() -> Unit)?) {
+    // Top bar
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (onBack != null) {
+            IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = null,
+                    tint = TextPrimary,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+        }
+        Text(
+            text = stringResource(R.string.data_export_title),
+            style =
+                MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                ),
+            color = TextPrimary,
+        )
+    }
+    DataExportHeroCard()
+    DataExportPrivacyNote()
+}
+
+@Composable
+private fun DataExportHeroCard() {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = Color.White,
+        border = BorderStroke(1.dp, CardBorder),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(shape = RoundedCornerShape(14.dp), color = MutedGreen) {
+                    Box(modifier = Modifier.size(52.dp), contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.CloudDownload,
+                            contentDescription = null,
+                            tint = BrandGreen,
+                        )
+                    }
                 }
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(14.dp))
+                Text(
+                    text = stringResource(R.string.data_export_title),
+                    style =
+                        MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                        ),
+                    color = TextPrimary,
+                )
             }
             Text(
-                text = stringResource(R.string.data_export_title),
-                style =
-                    MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                    ),
-                color = TextPrimary,
+                text = stringResource(R.string.data_export_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextSecondary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DataExportPrivacyNote() {
+    HsSectionCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                Icons.Default.Lock,
+                contentDescription = null,
+                tint = BrandGreen,
+                modifier = Modifier.size(20.dp),
+            )
+            Text(
+                text = stringResource(R.string.data_export_privacy_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary,
+            )
+        }
+    }
+}
+
+/** State-specific bottom area — CTA button, loading spinner, or error panel. */
+@Composable
+private fun DataExportStateArea(
+    state: DataExportUiState,
+    onDownloadClick: () -> Unit,
+    onRetry: () -> Unit,
+) {
+    when (state) {
+        is DataExportUiState.Idle -> {
+            HsPrimaryButton(
+                text = stringResource(R.string.data_export_button),
+                onClick = onDownloadClick,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
 
-        // Hero info card
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = Color.White,
-            border = BorderStroke(1.dp, CardBorder),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(shape = RoundedCornerShape(14.dp), color = MutedGreen) {
-                        Box(modifier = Modifier.size(52.dp), contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Default.CloudDownload,
-                                contentDescription = null,
-                                tint = BrandGreen,
-                            )
-                        }
-                    }
-                    Spacer(Modifier.width(14.dp))
-                    Text(
-                        text = stringResource(R.string.data_export_title),
-                        style =
-                            MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                            ),
-                        color = TextPrimary,
-                    )
-                }
-                Text(
-                    text = stringResource(R.string.data_export_description),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
-                )
-            }
+        is DataExportUiState.Loading -> {
+            DataExportLoadingIndicator()
         }
 
-        // Privacy note
-        HsSectionCard(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.Top,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Icon(
-                    Icons.Default.Lock,
-                    contentDescription = null,
-                    tint = BrandGreen,
-                    modifier = Modifier.size(20.dp),
-                )
-                Text(
-                    text = stringResource(R.string.data_export_privacy_note),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
-                )
-            }
+        is DataExportUiState.Ready -> {
+            // SAF picker is launched via LaunchedEffect in DataExportScreen.
+            // This state is transient; show a loading indicator while the picker opens.
+            DataExportLoadingIndicator()
         }
 
-        Spacer(Modifier.weight(1f))
-
-        // State-specific bottom area
-        when (state) {
-            is DataExportUiState.Idle -> {
-                HsPrimaryButton(
-                    text = stringResource(R.string.data_export_button),
-                    onClick = onDownloadClick,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-
-            is DataExportUiState.Loading -> {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    CircularProgressIndicator(color = BrandGreen)
-                    Text(
-                        text = stringResource(R.string.data_export_loading),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary,
-                    )
-                }
-            }
-
-            is DataExportUiState.Ready -> {
-                // SAF picker is launched via LaunchedEffect in DataExportScreen.
-                // This state is transient; show a loading indicator while the picker opens.
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    CircularProgressIndicator(color = BrandGreen)
-                    Text(
-                        text = stringResource(R.string.data_export_loading),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary,
-                    )
-                }
-            }
-
-            is DataExportUiState.Saved -> {
-                // Transient: DataExportScreen's LaunchedEffect shows a snackbar then calls
-                // onSaved() to reset to Idle. Show the same loading indicator during the
-                // brief window while the snackbar is being displayed.
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    CircularProgressIndicator(color = BrandGreen)
-                    Text(
-                        text = stringResource(R.string.data_export_loading),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary,
-                    )
-                }
-            }
-
-            is DataExportUiState.Error -> {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color(0xFFFFF0F0),
-                    border = BorderStroke(1.dp, Color(0xFFFFCDD2)),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.Top,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Icon(
-                            Icons.Default.ErrorOutline,
-                            contentDescription = null,
-                            tint = ErrorRed,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Text(
-                            text = stringResource(R.string.data_export_error_unknown),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = ErrorRed,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                }
-                Spacer(Modifier.height(12.dp))
-                HsSecondaryButton(
-                    text = stringResource(R.string.data_export_retry),
-                    onClick = onRetry,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+        is DataExportUiState.Saved -> {
+            // Transient: DataExportScreen's LaunchedEffect shows a snackbar then calls
+            // onSaved() to reset to Idle. Show the same loading indicator during the
+            // brief window while the snackbar is being displayed.
+            DataExportLoadingIndicator()
         }
 
-        Spacer(Modifier.height(16.dp))
+        is DataExportUiState.Error -> {
+            DataExportErrorPanel(onRetry = onRetry)
+        }
     }
+}
+
+@Composable
+private fun DataExportLoadingIndicator() {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        CircularProgressIndicator(color = BrandGreen)
+        Text(
+            text = stringResource(R.string.data_export_loading),
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextSecondary,
+        )
+    }
+}
+
+@Composable
+private fun DataExportErrorPanel(onRetry: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = Color(ERROR_SURFACE_COLOR),
+        border = BorderStroke(1.dp, Color(ERROR_BORDER_COLOR)),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                Icons.Default.ErrorOutline,
+                contentDescription = null,
+                tint = ErrorRed,
+                modifier = Modifier.size(20.dp),
+            )
+            Text(
+                text = stringResource(R.string.data_export_error_unknown),
+                style = MaterialTheme.typography.bodyMedium,
+                color = ErrorRed,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+    Spacer(Modifier.height(12.dp))
+    HsSecondaryButton(
+        text = stringResource(R.string.data_export_retry),
+        onClick = onRetry,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }

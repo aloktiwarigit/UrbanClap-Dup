@@ -76,7 +76,7 @@ public class DataExportViewModelTest {
     @Test
     public fun `requestExport transitions to Error when repository throws`(): Unit =
         runTest {
-            coEvery { repository.fetchExport() } throws RuntimeException("unexpected exception")
+            coEvery { repository.fetchExport() } throws IOException("unexpected exception")
 
             viewModel.requestExport()
             dispatcher.scheduler.advanceUntilIdle()

@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -66,80 +67,111 @@ internal fun AppNavigation(
             Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {}
         }
         else -> {
-            val navController = rememberNavController()
-            val startDestination = if (firstLaunchPending) LocaleRoutes.FIRST_LAUNCH else "auth"
-            val notificationPermissionLauncher =
-                rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-                    // Android owns notification display once the customer grants or denies this.
-                }
+            AppNavigationContent(
+                activity = activity,
+                priceApprovalEventBus = priceApprovalEventBus,
+                ratingPromptEventBus = ratingPromptEventBus,
+                featureFlags = featureFlags,
+                firstLaunchPending = firstLaunchPending,
+                authState = authState,
+                context = context,
+                modifier = modifier,
+            )
+        }
+    }
+}
 
-            LaunchedEffect(authState, firstLaunchPending) {
-                if (firstLaunchPending) return@LaunchedEffect
-                val currentAuth = authState
-                when (currentAuth) {
-                    is AuthState.Authenticated -> {
-                        navController.navigate("main") {
-                            // Single pop target: by the time this fires, firstLaunchPending is
-                            // false (guarded above) and FirstLaunchLanguageScreen.onConfirmed
-                            // has already popped first_launch on its way to auth. Stack: [auth].
-                            popUpTo("auth") { inclusive = true }
-                            launchSingleTop = true
-                        }
-                        com.google.firebase.messaging.FirebaseMessaging
-                            .getInstance()
-                            .subscribeToTopic("customer_${currentAuth.uid}")
-                        if (!context.hasNotificationPermission()) {
-                            notificationPermissionLauncher.launch(
-                                Manifest.permission.POST_NOTIFICATIONS,
-                            )
-                        }
-                    }
-                    is AuthState.Unauthenticated -> {
-                        com.google.firebase.messaging.FirebaseMessaging
-                            .getInstance()
-                            .deleteToken()
-                        navController.navigate("auth") {
-                            // Single pop target: logout from main means stack is [main];
-                            // first_launch is never on the stack at this point.
-                            popUpTo("main") { inclusive = true }
-                            launchSingleTop = true
-                        }
-                    }
-                }
+@Composable
+private fun AppNavigationContent(
+    activity: FragmentActivity,
+    priceApprovalEventBus: PriceApprovalEventBus,
+    ratingPromptEventBus: RatingPromptEventBus,
+    featureFlags: FeatureFlags,
+    firstLaunchPending: Boolean,
+    authState: AuthState,
+    context: Context,
+    modifier: Modifier,
+) {
+    val navController = rememberNavController()
+    val startDestination = if (firstLaunchPending) LocaleRoutes.FIRST_LAUNCH else "auth"
+    val notificationPermissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+            // Android owns notification display once the customer grants or denies this.
+        }
+
+    AuthNavigationEffect(
+        authState = authState,
+        firstLaunchPending = firstLaunchPending,
+        context = context,
+        notificationPermissionLauncher = notificationPermissionLauncher,
+        onNavigateToMain = {
+            navController.navigate("main") {
+                popUpTo("auth") { inclusive = true }
+                launchSingleTop = true
             }
-
-            LaunchedEffect(priceApprovalEventBus) {
-                priceApprovalEventBus.events.collect { bookingId ->
-                    navController.navigate(BookingRoutes.priceApprovalRoute(bookingId)) {
+        },
+        onNavigateToAuth = {
+            navController.navigate("auth") {
+                popUpTo("main") { inclusive = true }
+                launchSingleTop = true
+            }
+        },
+    )
+    LaunchedEffect(priceApprovalEventBus) {
+        priceApprovalEventBus.events.collect { bookingId ->
+            navController.navigate(BookingRoutes.priceApprovalRoute(bookingId)) {
+                launchSingleTop = true
+            }
+        }
+    }
+    LaunchedEffect(ratingPromptEventBus) {
+        ratingPromptEventBus.events.collect { bookingId ->
+            navController.navigate(RatingRoutes.route(bookingId)) { launchSingleTop = true }
+        }
+    }
+    NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
+        composable(LocaleRoutes.FIRST_LAUNCH) {
+            FirstLaunchLanguageScreen(
+                onConfirmed = {
+                    navController.navigate("auth") {
+                        popUpTo(LocaleRoutes.FIRST_LAUNCH) { inclusive = true }
                         launchSingleTop = true
                     }
+                },
+            )
+        }
+        authGraph(navController, activity)
+        mainGraph(navController)
+        settingsGraph(navController, featureFlags)
+    }
+}
+
+@Composable
+private fun AuthNavigationEffect(
+    authState: AuthState,
+    firstLaunchPending: Boolean,
+    context: Context,
+    notificationPermissionLauncher: ActivityResultLauncher<String>,
+    onNavigateToMain: () -> Unit,
+    onNavigateToAuth: () -> Unit,
+) {
+    LaunchedEffect(authState, firstLaunchPending) {
+        if (firstLaunchPending) return@LaunchedEffect
+        when (val currentAuth = authState) {
+            is AuthState.Authenticated -> {
+                onNavigateToMain()
+                com.google.firebase.messaging.FirebaseMessaging
+                    .getInstance()
+                    .subscribeToTopic("customer_${currentAuth.uid}")
+                if (!context.hasNotificationPermission()) {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
             }
-
-            LaunchedEffect(ratingPromptEventBus) {
-                ratingPromptEventBus.events.collect { bookingId ->
-                    navController.navigate(RatingRoutes.route(bookingId)) { launchSingleTop = true }
-                }
-            }
-
-            NavHost(
-                navController = navController,
-                startDestination = startDestination,
-                modifier = modifier,
-            ) {
-                composable(LocaleRoutes.FIRST_LAUNCH) {
-                    FirstLaunchLanguageScreen(
-                        onConfirmed = {
-                            navController.navigate("auth") {
-                                popUpTo(LocaleRoutes.FIRST_LAUNCH) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        },
-                    )
-                }
-                authGraph(navController, activity)
-                mainGraph(navController)
-                settingsGraph(navController, featureFlags)
+            is AuthState.Unauthenticated -> {
+                com.google.firebase.messaging.FirebaseMessaging
+                    .getInstance()
+                    .deleteToken()
+                onNavigateToAuth()
             }
         }
     }

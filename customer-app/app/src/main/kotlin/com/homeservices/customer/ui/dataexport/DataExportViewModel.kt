@@ -69,7 +69,7 @@ public class DataExportViewModel
                                 onFailure = { e -> DataExportUiState.Error(e.message ?: UNKNOWN_ERROR) },
                             )
                     }
-                } catch (e: Exception) {
+                } catch (e: IOException) {
                     _uiState.value = DataExportUiState.Error(e.message ?: UNKNOWN_ERROR)
                 }
             }
