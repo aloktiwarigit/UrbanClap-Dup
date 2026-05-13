@@ -3,8 +3,12 @@ package com.homeservices.customer.data.auth
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.messaging.FirebaseMessaging
+import com.homeservices.customer.data.network.auth.IdTokenCache
 import com.homeservices.customer.domain.auth.model.AuthProvider
 import com.homeservices.customer.domain.auth.model.AuthState
+import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -22,13 +26,22 @@ public class SessionManagerTest {
     public fun setUp() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         prefs = context.getSharedPreferences("test_auth_session", Context.MODE_PRIVATE)
-        sessionManager = SessionManager(prefs)
+        sessionManager = buildSessionManager(prefs)
     }
 
     @After
     public fun tearDown() {
         prefs.edit().clear().apply()
     }
+
+    /** Convenience factory to avoid repeating relaxed mock boilerplate across tests. */
+    private fun buildSessionManager(sharedPrefs: SharedPreferences): SessionManager =
+        SessionManager(
+            prefs = sharedPrefs,
+            firebaseAuth = mockk(relaxed = true),
+            firebaseMessaging = mockk(relaxed = true),
+            idTokenCache = mockk(relaxed = true),
+        )
 
     @Test
     public fun `initial state is Unauthenticated when prefs are empty`() {
@@ -64,7 +77,7 @@ public class SessionManagerTest {
             .putString("phone_last_four", "1234")
             .putLong("session_created_at_epoch_ms", System.currentTimeMillis())
             .apply()
-        val freshManager = SessionManager(prefs)
+        val freshManager = buildSessionManager(prefs)
 
         assertThat(freshManager.authState.value)
             .isEqualTo(AuthState.Authenticated(uid = "uid-xyz", phoneLastFour = "1234"))
@@ -79,7 +92,7 @@ public class SessionManagerTest {
             .putString("phone_last_four", "9999")
             .putLong("session_created_at_epoch_ms", expiredTs)
             .apply()
-        val freshManager = SessionManager(prefs)
+        val freshManager = buildSessionManager(prefs)
 
         assertThat(freshManager.authState.value).isEqualTo(AuthState.Unauthenticated)
         assertThat(prefs.getString("uid", null)).isNull()
@@ -94,7 +107,7 @@ public class SessionManagerTest {
             .putString("phone_last_four", "1111")
             .putLong("session_created_at_epoch_ms", 0L)
             .apply()
-        val freshManager = SessionManager(prefs)
+        val freshManager = buildSessionManager(prefs)
 
         assertThat(freshManager.authState.value).isEqualTo(AuthState.Unauthenticated)
         assertThat(prefs.getString("uid", null)).isNull()
@@ -109,7 +122,7 @@ public class SessionManagerTest {
             // intentionally not setting phone_last_four — defaults to empty string
             .putLong("session_created_at_epoch_ms", System.currentTimeMillis())
             .apply()
-        val freshManager = SessionManager(prefs)
+        val freshManager = buildSessionManager(prefs)
 
         val state = freshManager.authState.value
         assertThat(state).isInstanceOf(AuthState.Authenticated::class.java)
@@ -155,7 +168,7 @@ public class SessionManagerTest {
             .putLong("session_created_at_epoch_ms", System.currentTimeMillis())
             .apply()
         // Create fresh SessionManager to trigger readInitialState()
-        val freshSut = SessionManager(prefs)
+        val freshSut = buildSessionManager(prefs)
         val state = freshSut.authState.value as AuthState.Authenticated
         assertThat(state.authProvider).isEqualTo(AuthProvider.Phone)
         assertThat(state.email).isNull()
