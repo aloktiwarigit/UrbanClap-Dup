@@ -20,7 +20,6 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -275,32 +274,6 @@ private fun DeepLinkEffect(
                 navController.navigate(RatingRoutes.route(intent.entityId)) { launchSingleTop = true }
             else -> Unit // home is the default; no explicit nav needed
         }
-    }
-}
-
-/** Hosts the [NavHost] with all top-level graph registrations. */
-@Composable
-private fun AppNavHost(
-    navController: NavHostController,
-    startDestination: String,
-    activity: FragmentActivity,
-    featureFlags: FeatureFlags,
-    modifier: Modifier = Modifier,
-) {
-    NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
-        composable(LocaleRoutes.FIRST_LAUNCH) {
-            FirstLaunchLanguageScreen(
-                onConfirmed = {
-                    navController.navigate("auth") {
-                        popUpTo(LocaleRoutes.FIRST_LAUNCH) { inclusive = true }
-                        launchSingleTop = true
-                    }
-                },
-            )
-        }
-        authGraph(navController, activity)
-        mainGraph(navController)
-        settingsGraph(navController, featureFlags)
     }
 }
 
