@@ -144,11 +144,16 @@ public class SessionManager
          * 1. Capture UID (needed for FCM topic name — must happen before prefs are cleared)
          * 2. Clear persisted session prefs (commit-local, synchronous via [apply])
          * 3. Transition [authState] to [AuthState.Unauthenticated] (UI immediately reflects sign-out)
-         * 4. [IdTokenCache.signalSignOut] — clears cached token and pauses the refresh loop
-         *    without cancelling the singleton scope (preserves refresh capability for next sign-in)
+         * 4. [IdTokenCache.signalSignOut] — clears cached token, pauses the refresh loop,
+         *    and increments signOutGeneration; capture the generation for FCM guards below.
+         *    Does NOT cancel the singleton scope so the next sign-in can resume.
          * 5. Best-effort [FirebaseAuth.signOut] (local-only SDK call; safe after prefs are cleared)
          * 6. Best-effort FCM cleanup — [FirebaseMessaging.unsubscribeFromTopic] and
-         *    [FirebaseMessaging.deleteToken] (may hang or fail offline; never block sign-out)
+         *    [FirebaseMessaging.deleteToken] (may hang or fail offline; never block sign-out).
+         *    Each FCM step is guarded by the sign-out generation: if the user signs back in
+         *    while an FCM await is in-flight, the generation will have changed (via
+         *    [signalSignIn] → incrementAndGet) and the remaining FCM operations are skipped
+         *    to avoid deleting the new session's FCM token.
          *
          * Each step after step 1 is wrapped in [runCatching] so failures are logged as
          * Sentry breadcrumbs but never thrown — sign-out always completes.
@@ -170,7 +175,8 @@ public class SessionManager
             _authState.value = AuthState.Unauthenticated
 
             // Step 4 — Signal IdTokenCache to clear cached token and pause refresh loop.
-            //           Does NOT cancel the singleton scope so the next sign-in can resume.
+            //           signalSignOut() increments signOutGeneration; capture it here so the
+            //           FCM steps below can detect a concurrent sign-in and bail out.
             runCatching { idTokenCache.signalSignOut() }
                 .onFailure { e ->
                     Sentry.addBreadcrumb(
@@ -181,6 +187,9 @@ public class SessionManager
                         },
                     )
                 }
+            // Read the generation AFTER signalSignOut (which bumps it) so any concurrent
+            // signalSignIn (via saveSession) will produce a different value.
+            val signOutGen = idTokenCache.currentSignOutGeneration()
 
             // Step 5 — Best-effort Firebase Auth sign-out (local SDK call; safe after prefs cleared)
             runCatching { firebaseAuth.signOut() }
@@ -194,29 +203,35 @@ public class SessionManager
                     )
                 }
 
-            // Step 6a — Best-effort FCM topic unsubscribe (may hang offline; does not affect local auth)
-            runCatching { firebaseMessaging.unsubscribeFromTopic("customer_$uid").await() }
-                .onFailure { e ->
-                    Sentry.addBreadcrumb(
-                        io.sentry.Breadcrumb().apply {
-                            category = "auth.signout"
-                            message = "FCM unsubscribeFromTopic failed: ${e.message}"
-                            level = SentryLevel.WARNING
-                        },
-                    )
-                }
+            // Step 6a — Best-effort FCM topic unsubscribe (may hang offline; does not affect local auth).
+            //            Guard: skip if generation changed (new sign-in raced the FCM await).
+            runCatching {
+                if (idTokenCache.currentSignOutGeneration() != signOutGen) return@runCatching
+                firebaseMessaging.unsubscribeFromTopic("customer_$uid").await()
+            }.onFailure { e ->
+                Sentry.addBreadcrumb(
+                    io.sentry.Breadcrumb().apply {
+                        category = "auth.signout"
+                        message = "FCM unsubscribeFromTopic failed: ${e.message}"
+                        level = SentryLevel.WARNING
+                    },
+                )
+            }
 
-            // Step 6b — Best-effort FCM token deletion (rotates registration token)
-            runCatching { firebaseMessaging.deleteToken().await() }
-                .onFailure { e ->
-                    Sentry.addBreadcrumb(
-                        io.sentry.Breadcrumb().apply {
-                            category = "auth.signout"
-                            message = "FCM deleteToken failed: ${e.message}"
-                            level = SentryLevel.WARNING
-                        },
-                    )
-                }
+            // Step 6b — Best-effort FCM token deletion (rotates registration token).
+            //            Guard: skip if generation changed (new sign-in raced the FCM await).
+            runCatching {
+                if (idTokenCache.currentSignOutGeneration() != signOutGen) return@runCatching
+                firebaseMessaging.deleteToken().await()
+            }.onFailure { e ->
+                Sentry.addBreadcrumb(
+                    io.sentry.Breadcrumb().apply {
+                        category = "auth.signout"
+                        message = "FCM deleteToken failed: ${e.message}"
+                        level = SentryLevel.WARNING
+                    },
+                )
+            }
         }
 
         /**

@@ -31,6 +31,7 @@ import org.junit.Test
  * 5. firebaseMessaging.unsubscribeFromTopic("customer_<uid>") is called (best-effort)
  * 6. firebaseMessaging.deleteToken() is called (best-effort)
  * 7. The sequence completes even if individual steps throw (runCatching resilience)
+ * 8. FCM cleanup is skipped if generation changes mid-flight (concurrent sign-in guard)
  */
 public class SessionManagerSignOutTest {
     private lateinit var prefs: SharedPreferences
@@ -55,6 +56,8 @@ public class SessionManagerSignOutTest {
         every { editor.apply() } just runs
         every { idTokenCache.signalSignOut() } just runs
         every { idTokenCache.signalSignIn() } just runs
+        // currentSignOutGeneration returns a stable value (simulates the generation after signalSignOut)
+        every { idTokenCache.currentSignOutGeneration() } returns 1
 
         // FCM methods return real completed Tasks so .await() resolves correctly in coroutines.
         every { firebaseMessaging.unsubscribeFromTopic(any()) } returns Tasks.forResult(null)
@@ -191,5 +194,44 @@ public class SessionManagerSignOutTest {
 
             verify { idTokenCache.signalSignIn() }
             assertThat(sessionManager.authState.value).isInstanceOf(AuthState.Authenticated::class.java)
+        }
+
+    // -------------------------------------------------------------------------
+    // NEW: FIX 3 — FCM cleanup is a no-op when a new sign-in has happened
+    // -------------------------------------------------------------------------
+
+    /**
+     * FIX 3: signOut FCM cleanup steps are skipped when a concurrent sign-in has bumped
+     * the signOutGeneration before the FCM awaits run.
+     *
+     * Scenario:
+     * - signOut() calls idTokenCache.signalSignOut() (generation becomes 1)
+     * - signOut() captures signOutGen = 1
+     * - A concurrent sign-in calls idTokenCache.signalSignIn() which bumps generation to 2
+     * - signOut() checks idTokenCache.currentSignOutGeneration() before FCM ops → 2 ≠ 1 → skip
+     *
+     * We simulate this by making currentSignOutGeneration() return a different value
+     * (2) after signalSignOut() has been called (simulating the race with saveSession).
+     */
+    @Test
+    public fun `signOut FCM cleanup is no-op when a new sign-in has changed signOutGeneration`(): Unit =
+        runTest {
+            // signalSignOut increments generation to 1; capture returns 1
+            var generationCallCount = 0
+            every { idTokenCache.currentSignOutGeneration() } answers {
+                generationCallCount++
+                // First call (after signalSignOut, to capture signOutGen) → 1
+                // Subsequent calls (inside FCM guard checks) → 2 (simulates concurrent signalSignIn)
+                if (generationCallCount <= 1) 1 else 2
+            }
+
+            sessionManager.signOut()
+
+            // FCM operations must NOT be called since generation changed before the guards ran
+            verify(exactly = 0) { firebaseMessaging.unsubscribeFromTopic(any()) }
+            verify(exactly = 0) { firebaseMessaging.deleteToken() }
+            // Auth state and prefs must still be cleaned up (local state is unaffected)
+            assertThat(sessionManager.authState.value).isEqualTo(AuthState.Unauthenticated)
+            verify { firebaseAuth.signOut() }
         }
 }
