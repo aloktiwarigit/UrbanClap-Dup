@@ -21,6 +21,19 @@ import javax.inject.Singleton
  *   - (location/tracking types are handled by TrackingEventBus — not persisted as pending actions)
  *
  * Per E11 spec §2.8: NotificationRouter is a pure parser — no persistence, no network.
+ *
+ * ## Dual-shape payload support (E11-S01b-1 fix)
+ *
+ * The backend projector emits two overlapping shapes in the same FCM data map:
+ *
+ * ### Shape 1 — projector shape (always present for projector-delivered events):
+ *   `type`, `actionId`, `sourceId`, `payload` (JSON string of PendingActionDoc.payload)
+ *
+ * ### Shape 2 — legacy per-type top-level IDs (compat fields, present for some types):
+ *   `bookingId`, `complaintId`, `ticketId` (hoisted from payload for customer types)
+ *
+ * Entity ID resolution prefers the per-type legacy field when present (Shape 2), then
+ * falls back to `sourceId` from the projector shape (Shape 1).
  */
 @Singleton
 public class CustomerNotificationRouter
@@ -29,14 +42,13 @@ public class CustomerNotificationRouter
         /**
          * Parse a raw FCM data payload into a [NotificationIntent].
          *
-         * Entity ID resolution priority:
-         *   - COMPLAINT_UPDATE → `complaintId`
-         *   - SUPPORT_FOLLOWUP → `ticketId`
-         *   - All booking types → `bookingId`
+         * Entity ID resolution priority (see class-level KDoc for shape details):
+         *   1. Per-type legacy top-level key (bookingId / complaintId / ticketId)
+         *   2. `sourceId` (projector shape fallback)
          *
          * Returns null if:
          * - `type` key is absent or maps to a non-customer [PendingActionType]
-         * - The required entity ID key is absent or empty
+         * - No entity ID can be resolved from either shape
          */
         override fun parseFcmData(data: Map<String, String>): NotificationIntent? {
             val typeName = data["type"] ?: return null
@@ -60,16 +72,33 @@ public class CustomerNotificationRouter
 
         // ── Private helpers ───────────────────────────────────────────────────
 
+        /**
+         * Resolve the entity ID for a given FCM type from the raw data map.
+         *
+         * Tries per-type legacy top-level keys first (Shape 2). If absent, falls back
+         * to the projector `sourceId` field (Shape 1). Returns null only if both are
+         * absent or empty.
+         */
         private fun resolveEntityId(
             type: PendingActionType,
             data: Map<String, String>,
-        ): String? =
-            when (type) {
-                PendingActionType.COMPLAINT_UPDATE ->
-                    data["complaintId"]?.takeIf { it.isNotEmpty() }
-                PendingActionType.SUPPORT_FOLLOWUP ->
-                    data["ticketId"]?.takeIf { it.isNotEmpty() }
-                else ->
-                    data["bookingId"]?.takeIf { it.isNotEmpty() }
-            }
+        ): String? {
+            // Shape 2: per-type legacy top-level key (hoisted by _fcmCompatFields in
+            // pending-action-projector.ts for types that older clients need).
+            val legacyId =
+                when (type) {
+                    PendingActionType.COMPLAINT_UPDATE ->
+                        data["complaintId"]?.takeIf { it.isNotEmpty() }
+                    PendingActionType.SUPPORT_FOLLOWUP ->
+                        data["ticketId"]?.takeIf { it.isNotEmpty() }
+                    else ->
+                        data["bookingId"]?.takeIf { it.isNotEmpty() }
+                }
+
+            if (legacyId != null) return legacyId
+
+            // Shape 1 fallback: projector sourceId (present for all projector-delivered
+            // events where no legacy compat key is hoisted).
+            return data["sourceId"]?.takeIf { it.isNotEmpty() }
+        }
     }

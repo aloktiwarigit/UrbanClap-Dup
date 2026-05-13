@@ -60,18 +60,44 @@ public class CustomerFirebaseMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         val data = message.data
 
-        // Delegate pending-action types to Ingestor — parsed via NotificationRouter
+        // Delegate pending-action types to Ingestor — parsed via NotificationRouter.
+        // Strategy (A) additive fallback: run both the new router path AND the legacy
+        // event-bus path for ADDON_APPROVAL_REQUESTED and RATING_PROMPT_CUSTOMER.
+        //
+        // Background: the backend projector FCM payload does not yet include `userId`
+        // at the top level, so buildPendingActionFromIntent() returns null for these
+        // two types. Rather than silently dropping the notification, we fall through
+        // to the legacy event-bus post so foreground UI (price-approval sheet,
+        // rating prompt) still navigates correctly.
+        //
+        // TODO (follow-up): Once the backend adds `userId` to projector FCM payloads,
+        // the null check on buildPendingActionFromIntent will always pass and the
+        // legacy fallback below can be removed in E11-S01b-2.
         val intent = router.parseFcmData(data)
         if (intent != null) {
-            val action = buildPendingActionFromIntent(intent, data) ?: return
-            serviceScope.launch {
-                ingestor.ingest(action)
+            val action = buildPendingActionFromIntent(intent, data)
+            if (action != null) {
+                serviceScope.launch {
+                    ingestor.ingest(action)
+                }
+                showNotificationForIntent(intent, data)
+                // New-router path succeeded — also do legacy post for types that
+                // foreground UI observes, so both paths are satisfied simultaneously.
+                val bookingId = data["bookingId"]
+                if (bookingId != null) {
+                    when (data["type"]) {
+                        "ADDON_APPROVAL_REQUESTED" -> priceApprovalEventBus.post(bookingId)
+                        "RATING_PROMPT_CUSTOMER" -> ratingPromptEventBus.post(bookingId)
+                    }
+                }
+                return
             }
-            showNotificationForIntent(intent, data)
-            return
+            // action is null (userId missing from FCM payload for this type) — fall
+            // through to legacy event-bus routing below so the foreground UI is not dropped.
         }
 
-        // Legacy in-process routing (unchanged; removed in E11-S01b-2)
+        // Legacy in-process routing (unchanged; removed in E11-S01b-2).
+        // Also reached as a fallback when router parsed an intent but userId was absent.
         val bookingId = data["bookingId"] ?: return
         when (data["type"]) {
             "ADDON_APPROVAL_REQUESTED" -> priceApprovalEventBus.post(bookingId)

@@ -120,6 +120,72 @@ public class TechnicianNotificationRouterTest {
         assertThat(result.rawArgs["expiresAt"]).isEqualTo("2026-05-01T13:00:00Z")
     }
 
+    // ── Dual-shape payload (FIX 2 — projector shape) ─────────────────────────
+
+    @Test
+    public fun `parseFcmData with projector actionId+sourceId shape resolves JOB_OFFER via sourceId`() {
+        // Projector shape — no bookingId hoisted because JOB_OFFER has no legacy compat key
+        val data =
+            mapOf(
+                "type" to "JOB_OFFER",
+                "actionId" to "JOB_OFFER:technician:t1:booking:bk10",
+                "sourceId" to "bk10",
+                "payload" to """{"amountPaise":75000}""",
+            )
+        val result = router.parseFcmData(data)
+
+        assertThat(result).isNotNull
+        assertThat(result!!.type).isEqualTo(PendingActionType.JOB_OFFER)
+        assertThat(result.entityId).isEqualTo("bk10")
+        assertThat(result.rawArgs["actionId"])
+            .isEqualTo("JOB_OFFER:technician:t1:booking:bk10")
+    }
+
+    @Test
+    public fun `parseFcmData with projector actionId+sourceId shape resolves KYC_RESUME via sourceId`() {
+        // KYC_RESUME: legacy key is `techId` — backend does NOT hoist it, so sourceId fallback used
+        val data =
+            mapOf(
+                "type" to "KYC_RESUME",
+                "actionId" to "KYC_RESUME:technician:t2:technician:t2",
+                "sourceId" to "t2",
+            )
+        val result = router.parseFcmData(data)
+
+        assertThat(result).isNotNull
+        assertThat(result!!.type).isEqualTo(PendingActionType.KYC_RESUME)
+        assertThat(result.entityId).isEqualTo("t2")
+    }
+
+    @Test
+    public fun `parseFcmData legacy bookingId payload takes precedence over sourceId for JOB_OFFER`() {
+        // Both legacy and projector keys present — legacy wins
+        val data =
+            mapOf(
+                "type" to "JOB_OFFER",
+                "bookingId" to "bk-legacy",
+                "actionId" to "JOB_OFFER:technician:t3:booking:bk-proj",
+                "sourceId" to "bk-proj",
+            )
+        val result = router.parseFcmData(data)
+
+        assertThat(result).isNotNull
+        assertThat(result!!.entityId).isEqualTo("bk-legacy")
+    }
+
+    @Test
+    public fun `parseFcmData with projector payload missing sourceId returns null`() {
+        // Malformed projector payload — no legacy key and no sourceId
+        val data =
+            mapOf(
+                "type" to "JOB_OFFER",
+                "actionId" to "JOB_OFFER:technician:t4:booking:bkX",
+                // bookingId and sourceId both absent
+            )
+        val result = router.parseFcmData(data)
+        assertThat(result).isNull()
+    }
+
     // ── parseDeepLink ─────────────────────────────────────────────────────────
 
     @Test

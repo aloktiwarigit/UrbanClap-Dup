@@ -98,6 +98,56 @@ public class CustomerNotificationRouterTest {
         assertThat(result.rawArgs["version"]).isEqualTo("3")
     }
 
+    // ── Dual-shape payload (FIX 2 — projector shape) ─────────────────────────
+
+    @Test
+    public fun `parseFcmData with projector actionId+sourceId shape resolves entityId from sourceId`() {
+        // Projector shape for ADDON_APPROVAL_REQUESTED without legacy bookingId hoisted
+        val data =
+            mapOf(
+                "type" to "ADDON_APPROVAL_REQUESTED",
+                "actionId" to "ADDON_APPROVAL_REQUESTED:customer:u1:booking:bk99",
+                "sourceId" to "bk99",
+                "payload" to """{"price":500}""",
+            )
+        val result = router.parseFcmData(data)
+
+        assertThat(result).isNotNull
+        assertThat(result!!.type).isEqualTo(PendingActionType.ADDON_APPROVAL_REQUESTED)
+        assertThat(result.entityId).isEqualTo("bk99")
+        assertThat(result.rawArgs["actionId"])
+            .isEqualTo("ADDON_APPROVAL_REQUESTED:customer:u1:booking:bk99")
+    }
+
+    @Test
+    public fun `parseFcmData legacy bookingId payload takes precedence over sourceId`() {
+        // Both legacy and projector keys present — legacy wins (Shape 2 priority)
+        val data =
+            mapOf(
+                "type" to "RATING_PROMPT_CUSTOMER",
+                "bookingId" to "bk-legacy",
+                "actionId" to "RATING_PROMPT_CUSTOMER:customer:u2:booking:bk-proj",
+                "sourceId" to "bk-proj",
+            )
+        val result = router.parseFcmData(data)
+
+        assertThat(result).isNotNull
+        assertThat(result!!.entityId).isEqualTo("bk-legacy")
+    }
+
+    @Test
+    public fun `parseFcmData with projector payload missing sourceId returns null`() {
+        // Malformed projector payload — no legacy key and no sourceId
+        val data =
+            mapOf(
+                "type" to "COMPLAINT_UPDATE",
+                "actionId" to "COMPLAINT_UPDATE:customer:u3:complaint:cmpX",
+                // sourceId and complaintId both absent
+            )
+        val result = router.parseFcmData(data)
+        assertThat(result).isNull()
+    }
+
     // ── parseDeepLink ─────────────────────────────────────────────────────────
 
     @Test
