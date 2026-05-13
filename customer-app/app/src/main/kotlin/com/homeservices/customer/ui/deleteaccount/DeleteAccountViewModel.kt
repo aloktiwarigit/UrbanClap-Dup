@@ -31,10 +31,24 @@ public const val NAV_ARG_REQUEST_ID: String = "requestId"
 
 /**
  * Key for the scheduledDeletionAt nav argument passed to the cool-off destination.
- * Stored as epoch-millis long (0 = unknown / no countdown available).
+ * Stored as epoch-millis long.
+ *
+ * Sentinel values:
+ *  -1L = ExistingRequestDetected (409-conflict path; no scheduled date available from server)
+ *   0L = CoolOff with empty scheduledDeletionAt (legacy / unknown; treated same as no date)
+ *  >0L = CoolOff with a valid epoch-millis timestamp
+ *
  * Matches the argument declared in [com.homeservices.customer.navigation.SettingsGraph].
  */
 public const val NAV_ARG_SCHEDULED_DELETION_EPOCH_MS: String = "scheduledDeletionEpochMs"
+
+/**
+ * Sentinel value for [NAV_ARG_SCHEDULED_DELETION_EPOCH_MS] that signals the
+ * "no scheduled date" case from a 409 conflict response.
+ * The ViewModel init reads this and emits [DeleteAccountUiState.ExistingRequestDetected]
+ * rather than [DeleteAccountUiState.CoolOff].
+ */
+public const val EPOCH_MS_EXISTING_REQUEST_SENTINEL: Long = -1L
 
 @HiltViewModel
 public class DeleteAccountViewModel
@@ -59,20 +73,25 @@ public class DeleteAccountViewModel
             _uiState =
                 if (!navRequestId.isNullOrBlank()) {
                     // Navigated to cool-off screen; restore state from nav args.
-                    val scheduledAt =
-                        if (navEpochMs != null && navEpochMs > 0L) {
-                            java.time.Instant
-                                .ofEpochMilli(navEpochMs)
-                                .toString()
-                        } else {
-                            ""
+                    //
+                    // FIX 2 (P2 — cool-off blank state on existing-request 409):
+                    // epochMs == -1L is the sentinel for "no date available" (409-detected path).
+                    // In this case we emit ExistingRequestDetected so the CoolOffScreen renders
+                    // the "pending — exact date unavailable" message instead of a blank countdown.
+                    when {
+                        navEpochMs == EPOCH_MS_EXISTING_REQUEST_SENTINEL ->
+                            MutableStateFlow(ExistingRequestDetected(requestId = navRequestId))
+                        navEpochMs != null && navEpochMs > 0L -> {
+                            val scheduledAt =
+                                java.time.Instant
+                                    .ofEpochMilli(navEpochMs)
+                                    .toString()
+                            MutableStateFlow(CoolOff(requestId = navRequestId, scheduledDeletionAt = scheduledAt))
                         }
-                    MutableStateFlow(
-                        CoolOff(
-                            requestId = navRequestId,
-                            scheduledDeletionAt = scheduledAt,
-                        ),
-                    )
+                        else ->
+                            // epochMs == 0 or null: legacy / unknown date, show CoolOff with empty scheduledAt.
+                            MutableStateFlow(CoolOff(requestId = navRequestId, scheduledDeletionAt = ""))
+                    }
                 } else {
                     // Normal entry screen — always start Idle.
                     // DPDP-CRITICAL FIX (P1): The old POST-probe checkForActiveRequest() call

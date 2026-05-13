@@ -1,5 +1,6 @@
 package com.homeservices.customer.ui.deleteaccount
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -80,6 +81,12 @@ public fun DeleteAccountConfirmScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // FIX 1 (P2 — system back bypasses onBackFromConfirmation):
+    // System back gesture / button bypasses the in-app back control wired to [onBack].
+    // BackHandler intercepts it and routes through the same lambda so
+    // SettingsGraph's wrapper calls viewModel.onBackFromConfirmation() before popping.
+    BackHandler { onBack() }
 
     val errorUnknown = stringResource(R.string.delete_account_error_unknown)
 

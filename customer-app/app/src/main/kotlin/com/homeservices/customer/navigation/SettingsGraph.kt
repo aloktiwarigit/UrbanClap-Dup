@@ -11,6 +11,7 @@ import com.homeservices.customer.ui.deleteaccount.DeleteAccountConfirmScreen
 import com.homeservices.customer.ui.deleteaccount.DeleteAccountCoolOffScreen
 import com.homeservices.customer.ui.deleteaccount.DeleteAccountScreen
 import com.homeservices.customer.ui.deleteaccount.DeleteAccountViewModel
+import com.homeservices.customer.ui.deleteaccount.EPOCH_MS_EXISTING_REQUEST_SENTINEL
 import com.homeservices.customer.ui.deleteaccount.NAV_ARG_REQUEST_ID
 import com.homeservices.customer.ui.deleteaccount.NAV_ARG_SCHEDULED_DELETION_EPOCH_MS
 import com.homeservices.customer.ui.settings.LanguageSettingsScreen
@@ -50,7 +51,9 @@ internal fun NavGraphBuilder.settingsGraph(
     composable(LocaleRoutes.PRIVACY_DATA) {
         PrivacyDataScreen(
             onBack = { navController.popBackStack() },
-            onDownloadData = { /* Stream 2.3 — placeholder until PR merges */ },
+            // FIX 3 (P2): Pass null until Stream 2.3 / PR #211 merges and wires the actual route.
+            // PrivacyDataScreen hides the row when the callback is null — no no-op tap possible.
+            onDownloadData = null,
             onDeleteAccount = { navController.navigate(LocaleRoutes.DELETE_ACCOUNT) },
             showDeleteAccount = featureFlags.dpdpSelfServiceEnabled(),
         )
@@ -77,13 +80,14 @@ internal fun NavGraphBuilder.settingsGraph(
                 navController.navigate(LocaleRoutes.DELETE_ACCOUNT_CONFIRM)
             },
             onNavigateToCoolOff = { requestId, scheduledDeletionAt ->
-                // Parse ISO-8601 to epoch millis for the nav arg; 0 if empty/unknown.
+                // FIX 2 (P2): Use -1L sentinel for the 409 path (empty scheduledDeletionAt)
+                // so ViewModel.init emits ExistingRequestDetected instead of CoolOff("", "").
                 val epochMs =
                     if (scheduledDeletionAt.isNotEmpty()) {
                         runCatching { Instant.parse(scheduledDeletionAt).toEpochMilli() }
                             .getOrDefault(0L)
                     } else {
-                        0L
+                        EPOCH_MS_EXISTING_REQUEST_SENTINEL
                     }
                 navController.navigate(coolOffRoute(requestId, epochMs)) {
                     popUpTo(LocaleRoutes.DELETE_ACCOUNT) { inclusive = true }
@@ -104,12 +108,13 @@ internal fun NavGraphBuilder.settingsGraph(
                 navController.popBackStack()
             },
             onConfirmed = { requestId, scheduledDeletionAt ->
+                // FIX 2 (P2): Use -1L sentinel for the 409 path (empty scheduledDeletionAt).
                 val epochMs =
                     if (scheduledDeletionAt.isNotEmpty()) {
                         runCatching { Instant.parse(scheduledDeletionAt).toEpochMilli() }
                             .getOrDefault(0L)
                     } else {
-                        0L
+                        EPOCH_MS_EXISTING_REQUEST_SENTINEL
                     }
                 navController.navigate(coolOffRoute(requestId, epochMs)) {
                     popUpTo(LocaleRoutes.DELETE_ACCOUNT) { inclusive = true }

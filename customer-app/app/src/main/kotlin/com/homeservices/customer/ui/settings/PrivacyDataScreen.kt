@@ -49,24 +49,29 @@ private val TextSecondary = Color(0xFF5F6C66)
  * Settings → Privacy & data sub-screen.
  *
  * Minimal scaffold with two list items:
- *  - Download my data (DPDP data-export — Stream 2.3)
+ *  - Download my data (DPDP data-export — Stream 2.3 / PR #211)
  *  - Delete account   (DPDP self-service erasure — Stream 2.4, this story)
  *
  * The delete-account row is gated behind [showDeleteAccount] (feature flag
  * `customer.dpdp-self-service.enabled`, default OFF).
  *
+ * **Download row gating (FIX 3 / P2):** The "Download my data" row is only rendered
+ * when [onDownloadData] is non-null. Stream 2.3 (PR #211) wires the actual route;
+ * until that PR merges the callback is null here and the row is hidden. When PR #211
+ * merges both the row and the route light up without further changes here.
+ *
  * **Collision note (Stream 2.3):** Stream 2.3 (data-export UI) also adds this
  * sub-screen. Whichever PR merges first wins; the other rebases on top.
  *
  * @param onBack Navigate back to Settings root.
- * @param onDownloadData Navigate to the data-export screen (Stream 2.3).
+ * @param onDownloadData Navigate to the data-export screen (Stream 2.3). Pass null to hide the row.
  * @param onDeleteAccount Navigate to the delete-account entry screen.
  * @param showDeleteAccount Whether to show the delete-account row (feature flag).
  */
 @Composable
 public fun PrivacyDataScreen(
     onBack: () -> Unit,
-    onDownloadData: () -> Unit,
+    onDownloadData: (() -> Unit)?,
     onDeleteAccount: () -> Unit,
     showDeleteAccount: Boolean,
 ) {
@@ -99,14 +104,16 @@ public fun PrivacyDataScreen(
                 )
             }
 
-            // Download my data row
-            PrivacyListItem(
-                icon = Icons.Default.CloudDownload,
-                iconBg = MutedGreen,
-                iconTint = BrandGreen,
-                label = stringResource(R.string.settings_privacy_data_export_title),
-                onClick = onDownloadData,
-            )
+            // Download my data row — hidden until Stream 2.3 (PR #211) wires the actual route.
+            if (onDownloadData != null) {
+                PrivacyListItem(
+                    icon = Icons.Default.CloudDownload,
+                    iconBg = MutedGreen,
+                    iconTint = BrandGreen,
+                    label = stringResource(R.string.settings_privacy_data_export_title),
+                    onClick = onDownloadData,
+                )
+            }
 
             // Delete account row (feature-flagged)
             if (showDeleteAccount) {

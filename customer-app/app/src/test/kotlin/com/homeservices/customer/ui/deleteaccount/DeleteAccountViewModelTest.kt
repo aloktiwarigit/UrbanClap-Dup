@@ -97,7 +97,7 @@ public class DeleteAccountViewModelTest {
 
     @Test
     public fun `initial state is CoolOff with empty scheduledDeletionAt when epochMs is zero`() {
-        // ExistingRequestDetected path — epochMs = 0 means unknown date.
+        // Legacy/unknown date path — epochMs = 0 falls through to CoolOff("", "").
         val savedState =
             SavedStateHandle(
                 mapOf(
@@ -110,6 +110,41 @@ public class DeleteAccountViewModelTest {
         assertThat(state).isNotNull()
         assertThat(state!!.requestId).isEqualTo("pending:uid-conflict")
         assertThat(state.scheduledDeletionAt).isEmpty()
+    }
+
+    @Test
+    public fun `initial state is ExistingRequestDetected when epochMs is -1 sentinel (409 path)`() {
+        // FIX 2 (P2 — cool-off blank state on existing-request 409):
+        // epochMs = -1L is the sentinel written by SettingsGraph for the 409 conflict path.
+        // The ViewModel must emit ExistingRequestDetected so the CoolOffScreen renders
+        // the "pending — exact date unavailable" message instead of a blank countdown.
+        val savedState =
+            SavedStateHandle(
+                mapOf(
+                    NAV_ARG_REQUEST_ID to "pending:uid-409",
+                    NAV_ARG_SCHEDULED_DELETION_EPOCH_MS to EPOCH_MS_EXISTING_REQUEST_SENTINEL,
+                ),
+            )
+        val vm = buildViewModel(savedState)
+        val state = vm.uiState.value as? ExistingRequestDetected
+        assertThat(state).isNotNull()
+        assertThat(state!!.requestId).isEqualTo("pending:uid-409")
+    }
+
+    @Test
+    public fun `system back calls onBackFromConfirmation — Confirming resets to Idle`() {
+        // FIX 1 (P2 — system back bypasses onBackFromConfirmation):
+        // The BackHandler in DeleteAccountConfirmScreen calls the same onBack lambda
+        // as the in-app back button. SettingsGraph's wrapper calls vm.onBackFromConfirmation()
+        // before popping. This test verifies the ViewModel side: onBackFromConfirmation
+        // from Confirming state must reset to Idle.
+        viewModel.onContinueClicked()
+        assertThat(viewModel.uiState.value).isInstanceOf(Confirming::class.java)
+        // Simulate system back → BackHandler → onBack lambda → onBackFromConfirmation()
+        viewModel.onBackFromConfirmation()
+        assertThat(viewModel.uiState.value).isEqualTo(Idle)
+        // Re-entering the screen must NOT re-navigate (state is Idle, not Confirming).
+        assertThat(viewModel.uiState.value is Confirming).isFalse()
     }
 
     // --- onContinueClicked ---
