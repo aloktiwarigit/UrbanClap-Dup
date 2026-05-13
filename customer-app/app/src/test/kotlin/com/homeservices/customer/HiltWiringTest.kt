@@ -24,6 +24,9 @@ public class HiltWiringTest {
     @Inject
     public lateinit var localeRepository: com.homeservices.customer.domain.locale.LocaleRepository
 
+    @Inject
+    public lateinit var deleteAccountRepository: com.homeservices.customer.domain.deleteaccount.DeleteAccountRepository
+
     @org.junit.Test
     public fun hiltGraphResolvesBuildInfoProvider(): Unit {
         hiltRule.inject()
@@ -35,5 +38,11 @@ public class HiltWiringTest {
     public fun hiltGraphResolvesLocaleRepository(): Unit {
         hiltRule.inject()
         assertThat(localeRepository).isNotNull
+    }
+
+    @org.junit.Test
+    public fun hiltGraphResolvesDeleteAccountRepository(): Unit {
+        hiltRule.inject()
+        assertThat(deleteAccountRepository).isNotNull
     }
 }

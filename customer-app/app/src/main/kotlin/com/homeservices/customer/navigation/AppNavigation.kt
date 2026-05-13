@@ -26,6 +26,7 @@ import com.homeservices.customer.data.auth.SessionManager
 import com.homeservices.customer.data.booking.PriceApprovalEventBus
 import com.homeservices.customer.data.rating.RatingPromptEventBus
 import com.homeservices.customer.domain.auth.model.AuthState
+import com.homeservices.customer.domain.flags.FeatureFlags
 import com.homeservices.customer.domain.locale.IsFirstLaunchUseCase
 import com.homeservices.customer.observability.SentryContextBinder
 import com.homeservices.customer.ui.locale.FirstLaunchLanguageScreen
@@ -35,6 +36,10 @@ public object LocaleRoutes {
     public const val FIRST_LAUNCH: String = "first_launch_language"
     public const val SETTINGS: String = "settings"
     public const val LANGUAGE_SETTINGS: String = "language_settings"
+    public const val PRIVACY_DATA: String = "privacy_data"
+    public const val DELETE_ACCOUNT: String = "delete_account"
+    public const val DELETE_ACCOUNT_CONFIRM: String = "delete_account_confirm"
+    public const val DELETE_ACCOUNT_COOL_OFF: String = "delete_account_cool_off"
 }
 
 @Composable
@@ -44,6 +49,7 @@ internal fun AppNavigation(
     priceApprovalEventBus: PriceApprovalEventBus,
     ratingPromptEventBus: RatingPromptEventBus,
     isFirstLaunch: IsFirstLaunchUseCase,
+    featureFlags: FeatureFlags,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -158,7 +164,7 @@ internal fun AppNavigation(
                 }
                 authGraph(navController, activity)
                 mainGraph(navController)
-                settingsGraph(navController)
+                settingsGraph(navController, featureFlags)
             }
         }
     }

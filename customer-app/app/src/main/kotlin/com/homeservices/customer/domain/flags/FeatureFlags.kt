@@ -21,6 +21,16 @@ public interface FeatureFlags {
      * Default: OFF (false)
      */
     public fun truecallerServerVerify(): Boolean
+
+    /**
+     * When `true`, the DPDP self-service delete-account flow is visible
+     * in Settings → Privacy & data. When `false`, the entry point is hidden
+     * (the code is compiled in but unreachable from the UI).
+     *
+     * Flag name: `customer.dpdp-self-service.enabled`
+     * Default: OFF (false) — flipped ON after Week 2 exit / Play Store submission.
+     */
+    public fun dpdpSelfServiceEnabled(): Boolean
 }
 
 /**
@@ -31,6 +41,8 @@ public class BuildConfigFeatureFlags
     @Inject
     constructor() : FeatureFlags {
         override fun truecallerServerVerify(): Boolean = TRUECALLER_SERVER_VERIFY_V2_ENABLED
+
+        override fun dpdpSelfServiceEnabled(): Boolean = false
 
         private companion object {
             /**
