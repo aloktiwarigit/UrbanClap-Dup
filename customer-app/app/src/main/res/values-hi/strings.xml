@@ -75,6 +75,14 @@
     <string name="booking_error_failed">बुकिंग नहीं हो सकी</string>
     <string name="booking_error_confirmation_failed">पुष्टि नहीं हो सकी</string>
     <string name="booking_error_payment_cancelled">पेमेंट रद्द: %s</string>
+    <!-- Payment failure strings (E18-S04) — mapped from Razorpay error codes -->
+    <string name="payment_failed_title">पेमेंट पूरा नहीं हुआ</string>
+    <string name="payment_failed_retry">पेमेंट फिर करें</string>
+    <string name="payment_failed_cancel">पेमेंट तरीका बदलें</string>
+    <string name="payment_error_payment_cancelled">पेमेंट आपने रद्द किया। कृपया फिर कोशिश करें।</string>
+    <string name="payment_error_network_error">पेमेंट के दौरान नेटवर्क समस्या हुई। अपना कनेक्शन जांचें और फिर कोशिश करें।</string>
+    <string name="payment_error_bad_request_error">पेमेंट नहीं हो सका। कृपया दूसरा तरीका आजमाएं।</string>
+    <string name="payment_error_default">पेमेंट नहीं हो सका। कृपया फिर कोशिश करें।</string>
     <string name="booking_confirmed_title">बुकिंग कन्फर्म हो गई!</string>
     <string name="booking_confirmed_body">हम आपके स्लॉट के लिए तकनीशियन असाइन कर रहे हैं।</string>
     <string name="booking_confirmed_id_label">बुकिंग ID: %s</string>

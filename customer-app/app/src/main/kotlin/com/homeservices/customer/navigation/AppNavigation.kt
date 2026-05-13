@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -18,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -27,6 +29,7 @@ import com.homeservices.customer.data.rating.RatingPromptEventBus
 import com.homeservices.customer.domain.auth.model.AuthState
 import com.homeservices.customer.domain.flags.FeatureFlags
 import com.homeservices.customer.domain.locale.IsFirstLaunchUseCase
+import com.homeservices.customer.observability.SentryContextBinder
 import com.homeservices.customer.ui.locale.FirstLaunchLanguageScreen
 import com.homeservices.customer.ui.rating.RatingRoutes
 
@@ -68,6 +71,7 @@ internal fun AppNavigation(
         }
         else -> {
             AppNavigationContent(
+                sessionManager = sessionManager,
                 activity = activity,
                 priceApprovalEventBus = priceApprovalEventBus,
                 ratingPromptEventBus = ratingPromptEventBus,
@@ -83,6 +87,7 @@ internal fun AppNavigation(
 
 @Composable
 private fun AppNavigationContent(
+    sessionManager: SessionManager,
     activity: FragmentActivity,
     priceApprovalEventBus: PriceApprovalEventBus,
     ratingPromptEventBus: RatingPromptEventBus,
@@ -117,6 +122,7 @@ private fun AppNavigationContent(
             }
         },
     )
+
     LaunchedEffect(priceApprovalEventBus) {
         priceApprovalEventBus.events.collect { bookingId ->
             navController.navigate(BookingRoutes.priceApprovalRoute(bookingId)) {
@@ -124,11 +130,38 @@ private fun AppNavigationContent(
             }
         }
     }
+
     LaunchedEffect(ratingPromptEventBus) {
         ratingPromptEventBus.events.collect { bookingId ->
             navController.navigate(RatingRoutes.route(bookingId)) { launchSingleTop = true }
         }
     }
+
+    // E18-S06: Sentry user-context — bind hashed uid on auth-state changes.
+    // Runs as a separate effect so it does NOT interfere with navigation logic above.
+    // Stream 2.1 (E11-S01b-1) also touches AppNavigation; this block is purely additive
+    // and does not change the composable signature.
+    LaunchedEffect(sessionManager) {
+        SentryContextBinder.bindAuthState(sessionManager.authState)
+    }
+
+    // E18-S06: Sentry navigation breadcrumbs — record every route transition.
+    // DisposableEffect ensures the listener is removed when the composable leaves
+    // composition, preventing a leaked reference to NavController.
+    DisposableEffect(navController) {
+        var previousRoute: String? = null
+        val listener =
+            NavController.OnDestinationChangedListener { _, destination, _ ->
+                SentryContextBinder.recordNavigationBreadcrumb(
+                    from = previousRoute,
+                    to = destination.route,
+                )
+                previousRoute = destination.route
+            }
+        navController.addOnDestinationChangedListener(listener)
+        onDispose { navController.removeOnDestinationChangedListener(listener) }
+    }
+
     NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
         composable(LocaleRoutes.FIRST_LAUNCH) {
             FirstLaunchLanguageScreen(

@@ -10,6 +10,7 @@ import com.homeservices.customer.domain.booking.model.BookingRequest
 import com.homeservices.customer.domain.booking.model.BookingResult
 import com.homeservices.customer.domain.booking.model.BookingSlot
 import com.homeservices.customer.domain.booking.model.PaymentResult
+import com.homeservices.customer.domain.booking.model.RazorpayErrorCode
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -129,7 +130,7 @@ public class BookingViewModelTest {
         }
 
     @Test
-    public fun `payment Failure sets Error`(): Unit =
+    public fun `payment Failure transitions to PaymentFailed`(): Unit =
         runTest(dispatcher) {
             every { createBooking(any()) } returns
                 flowOf(
@@ -138,10 +139,142 @@ public class BookingViewModelTest {
             val vm = makeVm()
             vm.setSlotAndAddress(slot, "123 Main St", 12.9716, 77.5946)
             vm.startPayment("svc1", "cat1")
-            bus.post(PaymentResult.Failure(code = 2, description = "cancelled"))
+            // SDK code 0 = Checkout.PAYMENT_CANCELED — user dismissed the sheet
+            bus.post(PaymentResult.Failure(code = 0, description = "Payment cancelled by user."))
             val state = vm.uiState.value
-            assertThat(state).isInstanceOf(BookingUiState.Error::class.java)
-            assertThat((state as BookingUiState.Error).message).contains("cancelled")
+            assertThat(state).isInstanceOf(BookingUiState.PaymentFailed::class.java)
+            with(state as BookingUiState.PaymentFailed) {
+                assertThat(errorCode).isEqualTo(RazorpayErrorCode.PAYMENT_CANCELLED)
+                assertThat(reason).isEqualTo("Payment cancelled by user.")
+            }
+        }
+
+    @Test
+    public fun `payment Failure preserves orderId and amount from AwaitingPayment`(): Unit =
+        runTest(dispatcher) {
+            every { createBooking(any()) } returns
+                flowOf(
+                    Result.success(BookingResult("bk1", "order_1", 75000)),
+                )
+            val vm = makeVm()
+            vm.setSlotAndAddress(slot, "123 Main St", 12.9716, 77.5946)
+            vm.startPayment("svc1", "cat1")
+            // SDK code 0 = Checkout.PAYMENT_CANCELED — use cancellation code for this state-preservation test
+            bus.post(PaymentResult.Failure(code = 0, description = "Payment cancelled by user."))
+            val state = vm.uiState.value as BookingUiState.PaymentFailed
+            assertThat(state.orderId).isEqualTo("order_1")
+            assertThat(state.amount).isEqualTo(75000)
+        }
+
+    @Test
+    public fun `payment Failure with network code maps to NETWORK_ERROR`(): Unit =
+        runTest(dispatcher) {
+            every { createBooking(any()) } returns
+                flowOf(
+                    Result.success(BookingResult("bk1", "order_1", 50000)),
+                )
+            val vm = makeVm()
+            vm.setSlotAndAddress(slot, "123 Main St", 12.9716, 77.5946)
+            vm.startPayment("svc1", "cat1")
+            // SDK code 2 = Checkout.NETWORK_ERROR regardless of description
+            bus.post(PaymentResult.Failure(code = 2, description = "Connection timed out"))
+            val state = vm.uiState.value as BookingUiState.PaymentFailed
+            assertThat(state.errorCode).isEqualTo(RazorpayErrorCode.NETWORK_ERROR)
+        }
+
+    @Test
+    public fun `payment Failure with unknown code maps to BAD_REQUEST_ERROR`(): Unit =
+        runTest(dispatcher) {
+            every { createBooking(any()) } returns
+                flowOf(
+                    Result.success(BookingResult("bk1", "order_1", 50000)),
+                )
+            val vm = makeVm()
+            vm.setSlotAndAddress(slot, "123 Main St", 12.9716, 77.5946)
+            vm.startPayment("svc1", "cat1")
+            // code 99 (unknown/future SDK code) → BAD_REQUEST_ERROR via else branch
+            bus.post(PaymentResult.Failure(code = 99, description = "Something went wrong"))
+            val state = vm.uiState.value as BookingUiState.PaymentFailed
+            assertThat(state.errorCode).isEqualTo(RazorpayErrorCode.BAD_REQUEST_ERROR)
+        }
+
+    @Test
+    public fun `retryPayment transitions from PaymentFailed back to AwaitingPayment with same orderId`(): Unit =
+        runTest(dispatcher) {
+            every { createBooking(any()) } returns
+                flowOf(
+                    Result.success(BookingResult("bk1", "order_1", 50000)),
+                )
+            val vm = makeVm()
+            vm.setSlotAndAddress(slot, "123 Main St", 12.9716, 77.5946)
+            vm.startPayment("svc1", "cat1")
+            // SDK code 0 = Checkout.PAYMENT_CANCELED
+            bus.post(PaymentResult.Failure(code = 0, description = "Payment cancelled by user."))
+            assertThat(vm.uiState.value).isInstanceOf(BookingUiState.PaymentFailed::class.java)
+
+            vm.retryPayment()
+
+            val state = vm.uiState.value
+            assertThat(state).isInstanceOf(BookingUiState.AwaitingPayment::class.java)
+            with(state as BookingUiState.AwaitingPayment) {
+                assertThat(razorpayOrderId).isEqualTo("order_1")
+                assertThat(bookingId).isEqualTo("bk1")
+                assertThat(amount).isEqualTo(50000)
+            }
+        }
+
+    @Test
+    public fun `cancelPaymentFailed transitions from PaymentFailed back to Ready preserving slot and address`(): Unit =
+        runTest(dispatcher) {
+            every { createBooking(any()) } returns
+                flowOf(
+                    Result.success(BookingResult("bk1", "order_1", 50000)),
+                )
+            val vm = makeVm()
+            vm.setSlotAndAddress(slot, "123 Main St", 12.9716, 77.5946)
+            vm.startPayment("svc1", "cat1")
+            // SDK code 0 = Checkout.PAYMENT_CANCELED
+            bus.post(PaymentResult.Failure(code = 0, description = "Payment cancelled by user."))
+            assertThat(vm.uiState.value).isInstanceOf(BookingUiState.PaymentFailed::class.java)
+
+            vm.cancelPaymentFailed()
+
+            val state = vm.uiState.value
+            assertThat(state).isInstanceOf(BookingUiState.Ready::class.java)
+            with(state as BookingUiState.Ready) {
+                assertThat(this.slot).isEqualTo(slot)
+                assertThat(addressText).isEqualTo("123 Main St")
+                assertThat(lat).isEqualTo(12.9716)
+                assertThat(lng).isEqualTo(77.5946)
+            }
+        }
+
+    @Test
+    public fun `paymentResultFailure with code 2 NETWORK_ERROR maps to NETWORK_ERROR not SERVER_ERROR`(): Unit =
+        runTest(dispatcher) {
+            every { createBooking(any()) } returns
+                flowOf(
+                    Result.success(BookingResult("bk1", "order_1", 50000)),
+                )
+            val vm = makeVm()
+            vm.setSlotAndAddress(slot, "123 Main St", 12.9716, 77.5946)
+            vm.startPayment("svc1", "cat1")
+            // Regression: SDK code 2 = Checkout.NETWORK_ERROR — must map to NETWORK_ERROR (retryable),
+            // NOT to the now-removed SERVER_ERROR. Flaky-connection users must see the retry prompt.
+            bus.post(PaymentResult.Failure(code = 2, description = "Server error occurred"))
+            val state = vm.uiState.value as BookingUiState.PaymentFailed
+            assertThat(state.errorCode).isEqualTo(RazorpayErrorCode.NETWORK_ERROR)
+        }
+
+    @Test
+    public fun `retryPayment is no-op when state is not PaymentFailed`(): Unit =
+        runTest(dispatcher) {
+            val vm = makeVm()
+            vm.setSlotAndAddress(slot, "123 Main St", 12.9716, 77.5946)
+            // State is Ready, not PaymentFailed
+            vm.retryPayment()
+            // Should remain Ready without crashing
+            assertThat(vm.uiState.value).isInstanceOf(BookingUiState.Ready::class.java)
         }
 
     @Test
