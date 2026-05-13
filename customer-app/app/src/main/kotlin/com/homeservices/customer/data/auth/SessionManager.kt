@@ -1,13 +1,19 @@
 package com.homeservices.customer.data.auth
 
 import android.content.SharedPreferences
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.messaging.FirebaseMessaging
 import com.homeservices.customer.data.auth.di.AuthPrefs
+import com.homeservices.customer.data.network.auth.IdTokenCache
 import com.homeservices.customer.domain.auth.model.AuthProvider
 import com.homeservices.customer.domain.auth.model.AuthState
+import io.sentry.Sentry
+import io.sentry.SentryLevel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -18,6 +24,9 @@ public class SessionManager
     @Inject
     constructor(
         @AuthPrefs private val prefs: SharedPreferences,
+        private val firebaseAuth: FirebaseAuth,
+        private val firebaseMessaging: FirebaseMessaging,
+        private val idTokenCache: IdTokenCache,
     ) {
         private companion object {
             const val KEY_UID = "uid"
@@ -120,6 +129,91 @@ public class SessionManager
             )
         }
 
+        /**
+         * Full sign-out orchestration.
+         *
+         * Executes the following sequence, each step wrapped in [runCatching] so that
+         * a failure in any one step (e.g. FCM unsubscribe timing out while offline) does
+         * not prevent the remaining steps from running. Failures are logged as Sentry
+         * breadcrumbs but never thrown — sign-out always completes.
+         *
+         * 1. [FirebaseAuth.signOut] — invalidates the Firebase session on-device
+         * 2. [FirebaseMessaging.unsubscribeFromTopic] — removes the customer-topic binding
+         * 3. [FirebaseMessaging.deleteToken] — rotates the FCM registration token
+         * 4. [IdTokenCache.cancelScope] — stops background ID-token refresh
+         * 5. Clear prefs — removes all persisted session data
+         * 6. Transition [authState] to [AuthState.Unauthenticated]
+         *
+         * If there is no current UID the function returns immediately (idempotent).
+         */
+        public suspend fun signOut() {
+            val uid =
+                (prefs.getString(KEY_UID, null)
+                    ?: (_authState.value as? AuthState.Authenticated)?.uid)
+                    ?: return
+
+            // Step 1 — Firebase Auth sign-out
+            runCatching { firebaseAuth.signOut() }
+                .onFailure { e ->
+                    Sentry.addBreadcrumb(
+                        io.sentry.Breadcrumb().apply {
+                            category = "auth.signout"
+                            message = "firebaseAuth.signOut() failed: ${e.message}"
+                            level = SentryLevel.WARNING
+                        },
+                    )
+                }
+
+            // Step 2 — FCM topic unsubscribe
+            runCatching { firebaseMessaging.unsubscribeFromTopic("customer_$uid").await() }
+                .onFailure { e ->
+                    Sentry.addBreadcrumb(
+                        io.sentry.Breadcrumb().apply {
+                            category = "auth.signout"
+                            message = "FCM unsubscribeFromTopic failed: ${e.message}"
+                            level = SentryLevel.WARNING
+                        },
+                    )
+                }
+
+            // Step 3 — FCM token deletion
+            runCatching { firebaseMessaging.deleteToken().await() }
+                .onFailure { e ->
+                    Sentry.addBreadcrumb(
+                        io.sentry.Breadcrumb().apply {
+                            category = "auth.signout"
+                            message = "FCM deleteToken failed: ${e.message}"
+                            level = SentryLevel.WARNING
+                        },
+                    )
+                }
+
+            // Step 4 — Cancel IdTokenCache background refresh
+            runCatching { idTokenCache.cancelScope() }
+                .onFailure { e ->
+                    Sentry.addBreadcrumb(
+                        io.sentry.Breadcrumb().apply {
+                            category = "auth.signout"
+                            message = "idTokenCache.cancelScope() failed: ${e.message}"
+                            level = SentryLevel.WARNING
+                        },
+                    )
+                }
+
+            // Step 5 — Clear persisted session prefs
+            clearPrefs()
+
+            // Step 6 — Transition to Unauthenticated
+            _authState.value = AuthState.Unauthenticated
+        }
+
+        /**
+         * Clears prefs and transitions to Unauthenticated without touching Firebase or FCM.
+         *
+         * Kept for backward-compatibility with internal callers that do not need full
+         * Firebase cleanup (e.g. TTL-expired session eviction on cold start).
+         * For user-initiated sign-out, prefer [signOut].
+         */
         public suspend fun clearSession() {
             withContext(Dispatchers.IO) { clearPrefs() }
             _authState.value = AuthState.Unauthenticated

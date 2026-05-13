@@ -5,6 +5,7 @@ import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -57,6 +58,18 @@ public class IdTokenCache
         init {
             // Start background refresh loop
             scope.launch { refreshLoop() }
+        }
+
+        /**
+         * Cancels the background token-refresh loop.
+         *
+         * Called by [com.homeservices.customer.data.auth.SessionManager.signOut] as part of
+         * the sign-out cleanup sequence so stale tokens are never served after sign-out.
+         * A new [IdTokenCache] instance (or app restart) is required to resume refreshing.
+         */
+        public fun cancelScope() {
+            scope.cancel()
+            cachedToken = null
         }
 
         /**
