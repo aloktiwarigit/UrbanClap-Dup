@@ -345,13 +345,13 @@
     <string name="settings_language_current">हिंदी</string>
     <string name="settings_language_title">भाषा चुनें</string>
     <string name="settings_language_save">सेव करें</string>
+    <string name="settings_privacy_and_data">गोपनीयता और डेटा</string>
+    <string name="settings_privacy_data_export_title">मेरा डेटा डाउनलोड करें</string>
+    <string name="settings_privacy_data_delete_title">खाता हटाएं</string>
 
     <!-- Notification permission rationale (E11-S01b-1) -->
     <string name="notification_permission_rationale_title">सूचनाएं अनुमति दें</string>
     <string name="notification_permission_rationale_body">बुकिंग अपडेट, ऐड-ऑन अनुरोध और सेवा अनुस्मारक पाने के लिए सूचनाएं अनुमति दें।</string>
-    <string name="settings_privacy_and_data">गोपनीयता और डेटा</string>
-    <string name="settings_privacy_data_export_title">मेरा डेटा डाउनलोड करें</string>
-    <string name="settings_privacy_data_delete_title">खाता हटाएं</string>
 
     <!-- Delete account / DPDP erasure (E15-S02) -->
     <string name="delete_account_title">खाता हटाएं</string>

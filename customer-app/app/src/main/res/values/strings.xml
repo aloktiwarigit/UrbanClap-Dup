@@ -346,6 +346,17 @@
     <string name="settings_privacy_data_export_title">Download my data</string>
     <string name="settings_privacy_data_delete_title">Delete account</string>
 
+    <!-- Data export / DPDP §11 self-service data access (E15-S01) -->
+    <string name="data_export_title">Download my data</string>
+    <string name="data_export_description">Your complete account data — profile, bookings, ratings, and complaints — will be downloaded as a JSON file to a location of your choice.</string>
+    <string name="data_export_privacy_note">Your data is downloaded directly to your device. It is never stored or processed by third parties.</string>
+    <string name="data_export_button">Download my data</string>
+    <string name="data_export_loading">Preparing your data export&#8230;</string>
+    <string name="data_export_success_toast">Data saved successfully</string>
+    <string name="data_export_error_unknown">Something went wrong. Please check your connection and try again.</string>
+    <string name="data_export_retry">Try again</string>
+    <string name="data_export_filename_prefix">homeservices-data-export</string>
+
     <!-- Delete account / DPDP erasure (E15-S02) -->
     <string name="delete_account_title">Delete account</string>
     <string name="delete_account_warning">Your account and all associated data will be permanently deleted after a 7-day cool-off period. You can cancel the deletion any time during this window.</string>

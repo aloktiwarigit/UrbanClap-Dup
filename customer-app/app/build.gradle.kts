@@ -568,6 +568,23 @@ kover {
                     "*.PendingActionsDatabase_Impl\$*",
                     "*.PendingActionDao_Impl",
                     "*.PendingActionDao_Impl\$*",
+                    // DataExportScreen + PrivacyAndDataScreen — Compose UI composables,
+                    // same rationale as other *Kt screen classes.
+                    // Paparazzi @Ignored tests are recorded on CI; JVM unit tests cover ViewModel.
+                    "*.DataExportScreenKt",
+                    "*.DataExportScreenKt\$*",
+                    "*.PrivacyAndDataScreenKt",
+                    "*.PrivacyAndDataScreenKt\$*",
+                    // DataExportUiState — sealed class data holders, no logic branches
+                    "*.DataExportUiState",
+                    "*.DataExportUiState\$*",
+                    // DataExportRepositoryImpl — thin Retrofit/ResponseBody wrapper,
+                    // integration-tested via API layer (same rationale as BookingRepositoryImpl)
+                    "*.DataExportRepositoryImpl",
+                    "*.DataExportRepositoryImpl\$*",
+                    // DataExportModule — Hilt @Provides Retrofit construction + @Binds,
+                    // same rationale as data.booking.di.*
+                    "*.data.dataexport.di.*",
                 )
             }
         }
