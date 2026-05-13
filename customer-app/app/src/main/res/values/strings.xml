@@ -177,8 +177,10 @@
     <string name="auth_error_eyebrow">Action needed</string>
     <string name="auth_error_title">We could not sign you in</string>
     <string name="auth_retry">Try again</string>
-    <string name="auth_attempts_remaining_one">%d attempt remaining</string>
-    <string name="auth_attempts_remaining_other">%d attempts remaining</string>
+    <plurals name="auth_attempts_remaining">
+        <item quantity="one">%d attempt remaining</item>
+        <item quantity="other">%d attempts remaining</item>
+    </plurals>
 
     <!-- Live tracking screen (E12-S02a) -->
     <string name="tracking_title">Track service</string>
@@ -213,7 +215,10 @@
 
     <!-- SOS bottom sheet (E12-S02a) -->
     <string name="sos_safety_alert">Safety alert</string>
-    <string name="sos_sending_in">Sending in %d sec</string>
+    <plurals name="sos_sending_in">
+        <item quantity="one">Sending in %d sec</item>
+        <item quantity="other">Sending in %d sec</item>
+    </plurals>
     <string name="sos_send_body">Owner support will be notified silently. The technician will not see this alert.</string>
     <string name="sos_send_now">Send now</string>
     <string name="sos_cancel_alert">Cancel alert</string>
@@ -268,7 +273,10 @@
     <string name="rating_behaviour">Behaviour</string>
     <string name="rating_comment_label">Comment (optional)</string>
     <string name="rating_submit">Submit rating</string>
-    <string name="rating_star_label">rate %d stars</string>
+    <plurals name="rating_star_label">
+        <item quantity="one">rate %d star</item>
+        <item quantity="other">rate %d stars</item>
+    </plurals>
     <string name="rating_private_review_countdown">Private review: %s left</string>
     <string name="rating_post_anyway">Post anyway</string>
     <string name="rating_shield_title">Share this privately first?</string>
@@ -313,7 +321,7 @@
     <string name="catalogue_starting_price">From %1$s</string>
 
     <!-- Confidence score row (E12-S02a) -->
-    <string name="confidence_new_area">New in your area -- building track record</string>
+    <string name="confidence_new_area">New in your area &#8212; building track record</string>
     <string name="confidence_on_time">%d%% on-time</string>
     <string name="confidence_area_rating">%.1f area rating</string>
     <string name="confidence_eta">~%d min away</string>

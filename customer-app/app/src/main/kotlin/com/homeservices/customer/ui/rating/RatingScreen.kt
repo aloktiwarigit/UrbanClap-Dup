@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -304,7 +305,7 @@ private fun StarRow(
                     modifier =
                         Modifier
                             .padding(end = 6.dp)
-                            .clickable(onClickLabel = stringResource(R.string.rating_star_label, i)) { onChange(i) },
+                            .clickable(onClickLabel = pluralStringResource(R.plurals.rating_star_label, i, i)) { onChange(i) },
                 )
             }
         }

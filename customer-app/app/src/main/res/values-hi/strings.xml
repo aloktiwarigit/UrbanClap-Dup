@@ -157,8 +157,10 @@
     <string name="auth_error_eyebrow">कार्रवाई जरूरी</string>
     <string name="auth_error_title">साइन इन नहीं हो सका</string>
     <string name="auth_retry">फिर कोशिश करें</string>
-    <string name="auth_attempts_remaining_one">%d प्रयास बचा है</string>
-    <string name="auth_attempts_remaining_other">%d प्रयास बचे हैं</string>
+    <plurals name="auth_attempts_remaining">
+        <item quantity="one">%d प्रयास बचा है</item>
+        <item quantity="other">%d प्रयास बचे हैं</item>
+    </plurals>
 
     <!-- Live tracking screen (E12-S02a) -->
     <string name="tracking_title">सर्विस ट्रैक करें</string>
@@ -193,7 +195,10 @@
 
     <!-- SOS bottom sheet (E12-S02a) -->
     <string name="sos_safety_alert">सुरक्षा अलर्ट</string>
-    <string name="sos_sending_in">%d सेकंड में भेज रहे हैं</string>
+    <plurals name="sos_sending_in">
+        <item quantity="one">%d सेकंड में भेज रहे हैं</item>
+        <item quantity="other">%d सेकंड में भेज रहे हैं</item>
+    </plurals>
     <string name="sos_send_body">Owner support को चुपके से सूचित किया जाएगा। तकनीशियन को यह अलर्ट नहीं दिखेगा।</string>
     <string name="sos_send_now">अभी भेजें</string>
     <string name="sos_cancel_alert">अलर्ट रद्द करें</string>
@@ -248,7 +253,10 @@
     <string name="rating_behaviour">व्यवहार</string>
     <string name="rating_comment_label">टिप्पणी (वैकल्पिक)</string>
     <string name="rating_submit">रेटिंग सबमिट करें</string>
-    <string name="rating_star_label">%d स्टार रेट करें</string>
+    <plurals name="rating_star_label">
+        <item quantity="one">%d स्टार रेट करें</item>
+        <item quantity="other">%d स्टार रेट करें</item>
+    </plurals>
     <string name="rating_private_review_countdown">निजी समीक्षा: %s बचा है</string>
     <string name="rating_post_anyway">अभी पोस्ट करें</string>
     <string name="rating_shield_title">पहले निजी तौर पर शेयर करें?</string>
@@ -288,12 +296,12 @@
 
     <!-- Catalogue home screen (E12-S02a) -->
     <string name="catalogue_our_services">हमारी सेवाएं</string>
-    <string name="catalogue_search_hint">AC, प्लंबर, इलेक्ट्रीशियन खोजें...</string>
+    <string name="catalogue_search_hint">AC, प्लंबर, इलेक्ट्रीशियन खोजें&#8230;</string>
     <string name="catalogue_location_display">अयोध्या, उत्तर प्रदेश</string>
     <string name="catalogue_starting_price">%1$s से</string>
 
     <!-- Confidence score row (E12-S02a) -->
-    <string name="confidence_new_area">आपके क्षेत्र में नए हैं -- ट्रैक रिकॉर्ड बना रहे हैं</string>
+    <string name="confidence_new_area">आपके क्षेत्र में नए हैं &#8212; ट्रैक रिकॉर्ड बना रहे हैं</string>
     <string name="confidence_on_time">%d%% समय पर</string>
     <string name="confidence_area_rating">%.1f क्षेत्र रेटिंग</string>
     <string name="confidence_eta">~%d मिनट दूर</string>
@@ -317,7 +325,7 @@
     <string name="trust_dossier_error">तकनीशियन प्रोफाइल लोड नहीं हो सका।</string>
     <string name="trust_dossier_jobs">%d जॉब</string>
     <string name="trust_dossier_languages_label">भाषाएं</string>
-    <string name="trust_dossier_loading">तकनीशियन प्रोफाइल लोड हो रही है...</string>
+    <string name="trust_dossier_loading">तकनीशियन प्रोफाइल लोड हो रही है&#8230;</string>
     <string name="trust_dossier_promise">तकनीशियन ने जो चेक पूरे किए हैं, उनके बैज प्रोफाइल में दिखेंगे।</string>
     <string name="trust_dossier_reviews_label">हाल के रिव्यू</string>
     <string name="trust_dossier_trained_by">%s द्वारा प्रशिक्षित</string>

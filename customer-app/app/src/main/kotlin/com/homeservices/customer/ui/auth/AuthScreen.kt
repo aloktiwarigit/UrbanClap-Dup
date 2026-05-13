@@ -46,6 +46,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -631,11 +632,11 @@ private fun ErrorContent(
     ) {
         if (state.retriesLeft > 0) {
             val attemptsText =
-                if (state.retriesLeft == 1) {
-                    stringResource(R.string.auth_attempts_remaining_one, state.retriesLeft)
-                } else {
-                    stringResource(R.string.auth_attempts_remaining_other, state.retriesLeft)
-                }
+                pluralStringResource(
+                    R.plurals.auth_attempts_remaining,
+                    state.retriesLeft,
+                    state.retriesLeft,
+                )
             Text(
                 text = attemptsText,
                 style = MaterialTheme.typography.bodyMedium,
