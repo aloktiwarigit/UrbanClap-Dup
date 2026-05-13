@@ -26,8 +26,7 @@ public abstract class ActiveJobModule {
     public companion object {
         @Provides
         @Singleton
-        internal fun provideActiveJobApiService(retrofit: Retrofit): ActiveJobApiService =
-            retrofit.create(ActiveJobApiService::class.java)
+        internal fun provideActiveJobApiService(retrofit: Retrofit): ActiveJobApiService = retrofit.create(ActiveJobApiService::class.java)
 
         @Provides
         @Singleton

@@ -28,6 +28,5 @@ public object IntegrityModule {
 
     @Provides
     @Singleton
-    public fun provideIntegrityApiService(retrofit: Retrofit): IntegrityApiService =
-        retrofit.create(IntegrityApiService::class.java)
+    public fun provideIntegrityApiService(retrofit: Retrofit): IntegrityApiService = retrofit.create(IntegrityApiService::class.java)
 }

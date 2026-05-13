@@ -59,8 +59,8 @@ public class ActiveJobRepositoryImpl
             bookingId: String,
             targetStatus: ActiveJobStatus,
             integrityToken: String?,
-        ): Result<ActiveJob> {
-            return try {
+        ): Result<ActiveJob> =
+            try {
                 val locationWithFidelity =
                     runCatching { currentLocationProvider.currentLocation() }.getOrNull()
                 val response =
@@ -101,7 +101,6 @@ public class ActiveJobRepositoryImpl
                 )
                 Result.failure(e)
             }
-        }
 
         override suspend fun syncPendingTransitions() {
             val pending = dao.getPending()

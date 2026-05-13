@@ -15,8 +15,7 @@ import javax.inject.Singleton
 public object PhotoModule {
     @Provides
     @Singleton
-    internal fun providePhotoApiService(retrofit: Retrofit): PhotoApiService =
-        retrofit.create(PhotoApiService::class.java)
+    internal fun providePhotoApiService(retrofit: Retrofit): PhotoApiService = retrofit.create(PhotoApiService::class.java)
 
     @Provides
     @Singleton

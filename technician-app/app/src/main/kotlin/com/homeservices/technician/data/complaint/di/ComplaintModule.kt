@@ -23,7 +23,6 @@ public abstract class ComplaintModule {
 
         @Provides
         @Singleton
-        public fun provideComplaintApiService(retrofit: Retrofit): ComplaintApiService =
-            retrofit.create(ComplaintApiService::class.java)
+        public fun provideComplaintApiService(retrofit: Retrofit): ComplaintApiService = retrofit.create(ComplaintApiService::class.java)
     }
 }

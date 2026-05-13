@@ -13,6 +13,5 @@ import javax.inject.Singleton
 public object JobOfferModule {
     @Provides
     @Singleton
-    internal fun provideJobOfferApiService(retrofit: Retrofit): JobOfferApiService =
-        retrofit.create(JobOfferApiService::class.java)
+    internal fun provideJobOfferApiService(retrofit: Retrofit): JobOfferApiService = retrofit.create(JobOfferApiService::class.java)
 }

@@ -28,8 +28,7 @@ public abstract class KycModule {
     public companion object {
         @Provides
         @Singleton
-        internal fun provideKycApiService(retrofit: Retrofit): KycApiService =
-            retrofit.create(KycApiService::class.java)
+        internal fun provideKycApiService(retrofit: Retrofit): KycApiService = retrofit.create(KycApiService::class.java)
 
         @Provides
         @Singleton

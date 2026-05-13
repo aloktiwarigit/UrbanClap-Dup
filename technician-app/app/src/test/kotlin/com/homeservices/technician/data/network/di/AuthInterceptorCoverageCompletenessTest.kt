@@ -60,7 +60,15 @@ public class AuthInterceptorCoverageCompletenessTest {
                         ?: error("AUTH_BEARING_APIS not found on Companion class")
                 }
         field.isAccessible = true
-        val owner: Any? = if (java.lang.reflect.Modifier.isStatic(field.modifiers)) null else null
+        val owner: Any? =
+            if (java.lang.reflect.Modifier
+                    .isStatic(field.modifiers)
+            ) {
+                null
+            } else {
+                null
+            }
+
         @Suppress("UNCHECKED_CAST")
         val kClasses = field.get(owner) as List<kotlin.reflect.KClass<*>>
         return kClasses.mapNotNull { it.simpleName }.toSet()

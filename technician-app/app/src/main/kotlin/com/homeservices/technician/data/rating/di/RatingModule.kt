@@ -20,7 +20,6 @@ public abstract class RatingModule {
     public companion object {
         @Provides
         @Singleton
-        public fun provideRatingApiService(retrofit: Retrofit): RatingApiService =
-            retrofit.create(RatingApiService::class.java)
+        public fun provideRatingApiService(retrofit: Retrofit): RatingApiService = retrofit.create(RatingApiService::class.java)
     }
 }

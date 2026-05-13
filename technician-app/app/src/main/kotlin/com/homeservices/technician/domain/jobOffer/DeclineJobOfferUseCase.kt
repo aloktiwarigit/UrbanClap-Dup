@@ -15,8 +15,8 @@ public class DeclineJobOfferUseCase
     internal constructor(
         private val api: JobOfferApiService,
     ) {
-        public suspend operator fun invoke(bookingId: String): JobOfferResult {
-            return try {
+        public suspend operator fun invoke(bookingId: String): JobOfferResult =
+            try {
                 api.declineOffer(bookingId)
                 // Response code is intentionally ignored — user intention to decline is the source of truth
                 JobOfferResult.Declined(bookingId)
@@ -24,5 +24,4 @@ public class DeclineJobOfferUseCase
                 // Network error on decline — user intention is known; return Declined anyway
                 JobOfferResult.Declined(bookingId)
             }
-        }
     }
