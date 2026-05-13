@@ -345,6 +345,7 @@
     <string name="settings_language_current">हिंदी</string>
     <string name="settings_language_title">भाषा चुनें</string>
     <string name="settings_language_save">सेव करें</string>
+    <string name="settings_privacy_and_data">गोपनीयता और डेटा</string>
 
     <!-- Notification permission rationale (E11-S01b-1) -->
     <string name="notification_permission_rationale_title">सूचनाएं अनुमति दें</string>
