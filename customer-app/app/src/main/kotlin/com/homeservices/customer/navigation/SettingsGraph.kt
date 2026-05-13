@@ -59,19 +59,24 @@ internal fun NavGraphBuilder.settingsGraph(
         )
     }
 
-    // Delete-account flow — three screens.
-    //
-    // FIX 2 (P1 — cool-off state preservation):
-    // The cool-off screen now receives requestId and scheduledDeletionEpochMs as nav arguments.
-    // This replaces the old pattern where the cool-off composable used hiltViewModel(entry) on
-    // the DELETE_ACCOUNT back-stack entry (which was destroyed by popInclusive = true, causing
-    // the ViewModel to be recreated with blank state on the cool-off screen).
-    //
-    // FIX 3 (P2 — confirmation back-trap):
-    // The DELETE_ACCOUNT_CONFIRM back handler now calls viewModel.onBackFromConfirmation()
-    // before popping, resetting the ViewModel state to Idle so the LaunchedEffect in
-    // DeleteAccountScreen does not re-navigate to confirmation when the entry screen resurfaces.
+    deleteAccountGraph(navController)
+}
 
+/**
+ * Delete-account flow — three screens registered as composable destinations.
+ *
+ * FIX 2 (P1 — cool-off state preservation):
+ * The cool-off screen now receives requestId and scheduledDeletionEpochMs as nav arguments.
+ * This replaces the old pattern where the cool-off composable used hiltViewModel(entry) on
+ * the DELETE_ACCOUNT back-stack entry (which was destroyed by popInclusive = true, causing
+ * the ViewModel to be recreated with blank state on the cool-off screen).
+ *
+ * FIX 3 (P2 — confirmation back-trap):
+ * The DELETE_ACCOUNT_CONFIRM back handler now calls viewModel.onBackFromConfirmation()
+ * before popping, resetting the ViewModel state to Idle so the LaunchedEffect in
+ * DeleteAccountScreen does not re-navigate to confirmation when the entry screen resurfaces.
+ */
+private fun NavGraphBuilder.deleteAccountGraph(navController: NavController) {
     composable(LocaleRoutes.DELETE_ACCOUNT) { entry ->
         val vm: DeleteAccountViewModel = hiltViewModel(entry)
         DeleteAccountScreen(
@@ -82,13 +87,7 @@ internal fun NavGraphBuilder.settingsGraph(
             onNavigateToCoolOff = { requestId, scheduledDeletionAt ->
                 // FIX 2 (P2): Use -1L sentinel for the 409 path (empty scheduledDeletionAt)
                 // so ViewModel.init emits ExistingRequestDetected instead of CoolOff("", "").
-                val epochMs =
-                    if (scheduledDeletionAt.isNotEmpty()) {
-                        runCatching { Instant.parse(scheduledDeletionAt).toEpochMilli() }
-                            .getOrDefault(0L)
-                    } else {
-                        EPOCH_MS_EXISTING_REQUEST_SENTINEL
-                    }
+                val epochMs = resolveEpochMs(scheduledDeletionAt)
                 navController.navigate(coolOffRoute(requestId, epochMs)) {
                     popUpTo(LocaleRoutes.DELETE_ACCOUNT) { inclusive = true }
                 }
@@ -109,13 +108,7 @@ internal fun NavGraphBuilder.settingsGraph(
             },
             onConfirmed = { requestId, scheduledDeletionAt ->
                 // FIX 2 (P2): Use -1L sentinel for the 409 path (empty scheduledDeletionAt).
-                val epochMs =
-                    if (scheduledDeletionAt.isNotEmpty()) {
-                        runCatching { Instant.parse(scheduledDeletionAt).toEpochMilli() }
-                            .getOrDefault(0L)
-                    } else {
-                        EPOCH_MS_EXISTING_REQUEST_SENTINEL
-                    }
+                val epochMs = resolveEpochMs(scheduledDeletionAt)
                 navController.navigate(coolOffRoute(requestId, epochMs)) {
                     popUpTo(LocaleRoutes.DELETE_ACCOUNT) { inclusive = true }
                 }
@@ -143,3 +136,14 @@ internal fun NavGraphBuilder.settingsGraph(
         )
     }
 }
+
+/**
+ * Converts an ISO-8601 [scheduledDeletionAt] string to epoch-milliseconds.
+ * Returns [EPOCH_MS_EXISTING_REQUEST_SENTINEL] when the string is empty (409-detected path).
+ */
+private fun resolveEpochMs(scheduledDeletionAt: String): Long =
+    if (scheduledDeletionAt.isNotEmpty()) {
+        runCatching { Instant.parse(scheduledDeletionAt).toEpochMilli() }.getOrDefault(0L)
+    } else {
+        EPOCH_MS_EXISTING_REQUEST_SENTINEL
+    }

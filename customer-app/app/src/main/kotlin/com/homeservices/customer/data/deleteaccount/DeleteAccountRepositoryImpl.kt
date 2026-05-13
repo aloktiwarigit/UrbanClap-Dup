@@ -10,6 +10,11 @@ import com.homeservices.customer.domain.deleteaccount.model.ErasureRequest
 import com.squareup.moshi.Moshi
 import javax.inject.Inject
 
+private const val HTTP_CREATED = 201
+private const val HTTP_NO_CONTENT = 204
+private const val HTTP_CONFLICT = 409
+private const val HTTP_NOT_FOUND = 404
+
 internal class DeleteAccountRepositoryImpl
     @Inject
     constructor(
@@ -20,7 +25,7 @@ internal class DeleteAccountRepositoryImpl
             runCatching {
                 val response = api.submitErasureRequest(SubmitErasureRequestDto(reason = reason))
                 when (response.code()) {
-                    201 -> {
+                    HTTP_CREATED -> {
                         val body =
                             checkNotNull(response.body()) {
                                 "Empty body on 201 erasure response"
@@ -31,7 +36,7 @@ internal class DeleteAccountRepositoryImpl
                             status = body.status,
                         )
                     }
-                    409 -> {
+                    HTTP_CONFLICT -> {
                         val rawError = response.errorBody()?.string() ?: ""
                         val conflictDto = parseConflict(rawError)
                         throw ErasureAlreadyPendingException(
@@ -48,8 +53,8 @@ internal class DeleteAccountRepositoryImpl
             runCatching {
                 val response = api.revokeErasureRequest()
                 when (response.code()) {
-                    204 -> Unit
-                    404 -> throw NoActiveErasureRequestException()
+                    HTTP_NO_CONTENT -> Unit
+                    HTTP_NOT_FOUND -> throw NoActiveErasureRequestException()
                     else -> error("Unexpected HTTP ${response.code()} from erasure-request DELETE")
                 }
             }

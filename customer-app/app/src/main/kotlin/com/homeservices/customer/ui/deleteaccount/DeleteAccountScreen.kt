@@ -47,7 +47,6 @@ import com.homeservices.customer.R
 
 // Design tokens — consistent with SettingsScreen palette
 private val WarmIvory = Color(0xFFFBF7EF)
-private val BrandGreen = Color(0xFF0B3D2E)
 private val ErrorRed = Color(0xFFB3261E)
 private val ErrorRedSurface = Color(0xFFFFF0EE)
 private val CardBorder = Color(0xFFDED8CD)
@@ -108,115 +107,131 @@ public fun DeleteAccountScreen(
                     .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            // Top bar
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = null,
-                        tint = TextPrimary,
-                    )
-                }
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.delete_account_title),
-                    style =
-                        MaterialTheme.typography.headlineMedium.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                        ),
-                    color = TextPrimary,
-                )
-            }
+            DeleteAccountTopBar(onBack = onBack)
 
-            // Warning card
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = ErrorRedSurface,
-                border = BorderStroke(1.dp, ErrorRed.copy(alpha = 0.3f)),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.Top,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Icon(
-                        Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = ErrorRed,
-                        modifier = Modifier.size(24.dp),
-                    )
-                    Text(
-                        text = stringResource(R.string.delete_account_warning),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = ErrorRed,
-                    )
-                }
-            }
+            DeleteAccountWarningCard()
 
-            // What gets deleted card
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = Color.White,
-                border = BorderStroke(1.dp, CardBorder),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = stringResource(R.string.delete_account_what_deleted_label),
-                        style =
-                            MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                            ),
-                        color = TextPrimary,
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    DeletionItem(
-                        icon = Icons.Default.Bookmark,
-                        labelRes = R.string.delete_account_item_bookings,
-                    )
-                    HorizontalDivider(color = CardBorder, modifier = Modifier.padding(vertical = 8.dp))
-                    DeletionItem(
-                        icon = Icons.Default.Home,
-                        labelRes = R.string.delete_account_item_addresses,
-                    )
-                    HorizontalDivider(color = CardBorder, modifier = Modifier.padding(vertical = 8.dp))
-                    DeletionItem(
-                        icon = Icons.Default.CreditCard,
-                        labelRes = R.string.delete_account_item_payment_methods,
-                    )
-                    HorizontalDivider(color = CardBorder, modifier = Modifier.padding(vertical = 8.dp))
-                    DeletionItem(
-                        icon = Icons.Default.Settings,
-                        labelRes = R.string.delete_account_item_preferences,
-                    )
-                }
-            }
+            DeleteAccountWhatDeletedCard()
 
             Spacer(Modifier.weight(1f))
 
-            // CTA
-            Button(
-                onClick = { viewModel.onContinueClicked() },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = ErrorRed,
-                        contentColor = Color.White,
-                    ),
-            ) {
-                Icon(Icons.Default.DeleteForever, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.delete_account_continue_cta),
-                    style =
-                        MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                        ),
-                )
-            }
+            DeleteAccountContinueButton(onContinueClicked = { viewModel.onContinueClicked() })
         }
+    }
+}
+
+@Composable
+private fun DeleteAccountTopBar(onBack: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = null,
+                tint = TextPrimary,
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = stringResource(R.string.delete_account_title),
+            style =
+                MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                ),
+            color = TextPrimary,
+        )
+    }
+}
+
+@Composable
+private fun DeleteAccountWarningCard() {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = ErrorRedSurface,
+        border = BorderStroke(1.dp, ErrorRed.copy(alpha = 0.3f)),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                Icons.Default.Warning,
+                contentDescription = null,
+                tint = ErrorRed,
+                modifier = Modifier.size(24.dp),
+            )
+            Text(
+                text = stringResource(R.string.delete_account_warning),
+                style = MaterialTheme.typography.bodyMedium,
+                color = ErrorRed,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DeleteAccountWhatDeletedCard() {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = Color.White,
+        border = BorderStroke(1.dp, CardBorder),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringResource(R.string.delete_account_what_deleted_label),
+                style =
+                    MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                    ),
+                color = TextPrimary,
+            )
+            Spacer(Modifier.height(12.dp))
+            DeletionItem(
+                icon = Icons.Default.Bookmark,
+                labelRes = R.string.delete_account_item_bookings,
+            )
+            HorizontalDivider(color = CardBorder, modifier = Modifier.padding(vertical = 8.dp))
+            DeletionItem(
+                icon = Icons.Default.Home,
+                labelRes = R.string.delete_account_item_addresses,
+            )
+            HorizontalDivider(color = CardBorder, modifier = Modifier.padding(vertical = 8.dp))
+            DeletionItem(
+                icon = Icons.Default.CreditCard,
+                labelRes = R.string.delete_account_item_payment_methods,
+            )
+            HorizontalDivider(color = CardBorder, modifier = Modifier.padding(vertical = 8.dp))
+            DeletionItem(
+                icon = Icons.Default.Settings,
+                labelRes = R.string.delete_account_item_preferences,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DeleteAccountContinueButton(onContinueClicked: () -> Unit) {
+    Button(
+        onClick = onContinueClicked,
+        modifier = Modifier.fillMaxWidth().height(56.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = ErrorRed,
+                contentColor = Color.White,
+            ),
+    ) {
+        Icon(Icons.Default.DeleteForever, contentDescription = null)
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = stringResource(R.string.delete_account_continue_cta),
+            style =
+                MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                ),
+        )
     }
 }
 

@@ -63,6 +63,11 @@ private val CardBorder = Color(0xFFDED8CD)
 private val TextPrimary = Color(0xFF18231F)
 private val TextSecondary = Color(0xFF5F6C66)
 
+// Magic-number constants
+private const val TICK_INTERVAL_MS = 60_000L
+private const val HOURS_PER_DAY = 24L
+private const val COUNTDOWN_ICON_SIZE = 64
+
 /**
  * Cool-off countdown screen.
  *
@@ -80,210 +85,240 @@ public fun DeleteAccountCoolOffScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-
     val errorUnknown = stringResource(R.string.delete_account_error_unknown)
+    val coolOff = uiState as? DeleteAccountUiState.CoolOff
+    val existingDetected = uiState as? DeleteAccountUiState.ExistingRequestDetected
+    val isRevoking = uiState is DeleteAccountUiState.Revoking
+    val hasActiveRequest = coolOff != null || existingDetected != null
+    val countdownUnavailable = existingDetected != null && coolOff == null
 
-    // Navigate away when revoke succeeds.
+    CoolOffSideEffects(
+        uiState = uiState,
+        snackbarHostState = snackbarHostState,
+        errorUnknown = errorUnknown,
+        onRevoked = onRevoked,
+        onErrorDismissed = { viewModel.onErrorDismissed() },
+    )
+
+    val countdownText = rememberCountdownText(coolOff)
+
+    Surface(modifier = Modifier.fillMaxSize(), color = WarmIvory) {
+        Column(
+            modifier = Modifier.fillMaxSize().statusBarsPadding().padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            DeleteAccountCoolOffTopBar(onBack = onBack)
+            Spacer(Modifier.height(8.dp))
+            DeleteAccountCoolOffCountdownCard(
+                countdownText = countdownText,
+                countdownUnavailable = countdownUnavailable,
+            )
+            DeleteAccountCoolOffRevokedBanner(uiState = uiState)
+            Spacer(Modifier.weight(1f))
+            DeleteAccountCoolOffActions(
+                isRevoking = isRevoking,
+                hasActiveRequest = hasActiveRequest,
+                onRevokeClicked = { viewModel.onRevokeClicked() },
+                onBack = onBack,
+            )
+        }
+        SnackbarHost(hostState = snackbarHostState, modifier = Modifier.padding(16.dp)) { data ->
+            Snackbar(snackbarData = data, containerColor = ErrorRed)
+        }
+    }
+}
+
+/** Handles side-effects: navigate on revoke/error, dismiss error on ack. */
+@Composable
+private fun CoolOffSideEffects(
+    uiState: DeleteAccountUiState,
+    snackbarHostState: SnackbarHostState,
+    errorUnknown: String,
+    onRevoked: () -> Unit,
+    onErrorDismissed: () -> Unit,
+) {
     LaunchedEffect(uiState) {
         when (uiState) {
             is DeleteAccountUiState.Revoked -> onRevoked()
             is DeleteAccountUiState.Error -> {
-                val err = uiState as DeleteAccountUiState.Error
-                snackbarHostState.showSnackbar(err.message.ifEmpty { errorUnknown })
-                viewModel.onErrorDismissed()
+                snackbarHostState.showSnackbar(uiState.message.ifEmpty { errorUnknown })
+                onErrorDismissed()
             }
             else -> Unit
         }
     }
+}
 
-    val coolOff = uiState as? DeleteAccountUiState.CoolOff
-    val existingDetected = uiState as? DeleteAccountUiState.ExistingRequestDetected
-    val isRevoking = uiState is DeleteAccountUiState.Revoking
-    // Both CoolOff and ExistingRequestDetected are "active request" states — revoke is available.
-    val hasActiveRequest = coolOff != null || existingDetected != null
-
-    // Periodic tick every 60 s to refresh the countdown display.
+/** Ticks every [TICK_INTERVAL_MS] and returns the formatted countdown string. */
+@Composable
+private fun rememberCountdownText(coolOff: DeleteAccountUiState.CoolOff?): String {
     var tickMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
         while (true) {
-            delay(60_000L)
+            delay(TICK_INTERVAL_MS)
             tickMs = System.currentTimeMillis()
         }
     }
-
-    // For ExistingRequestDetected, scheduledDeletionAt is unavailable (not in 409 body).
-    // Show an empty countdown — the UI renders a "pending deletion" placeholder message.
     val countdownText by remember(coolOff, tickMs) {
-        derivedStateOf {
-            formatCountdown(coolOff?.scheduledDeletionAt, tickMs)
+        derivedStateOf { formatCountdown(coolOff?.scheduledDeletionAt, tickMs) }
+    }
+    return countdownText
+}
+
+@Composable
+private fun DeleteAccountCoolOffTopBar(onBack: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = null,
+                tint = TextPrimary,
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = stringResource(R.string.delete_account_coolOff_title),
+            style =
+                MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                ),
+            color = TextPrimary,
+        )
+    }
+}
+
+@Composable
+private fun DeleteAccountCoolOffCountdownCard(
+    countdownText: String,
+    countdownUnavailable: Boolean,
+) {
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = ErrorRedSurface,
+        border = BorderStroke(1.dp, ErrorRed.copy(alpha = 0.3f)),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            DeleteAccountCoolOffCountdownIcon()
+            if (countdownUnavailable) {
+                // ExistingRequestDetected path: 409 response did not include scheduledDeletionAt.
+                Text(
+                    text = stringResource(R.string.delete_account_coolOff_pending_no_date),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = ErrorRed,
+                    textAlign = TextAlign.Center,
+                )
+            } else {
+                Text(
+                    text = countdownText,
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = ErrorRed,
+                    textAlign = TextAlign.Center,
+                )
+            }
+            Text(
+                text = stringResource(R.string.delete_account_coolOff_subtitle),
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextSecondary,
+                textAlign = TextAlign.Center,
+            )
         }
     }
-    // True when we have an active request but no scheduledDeletionAt (409-detected path).
-    val countdownUnavailable = existingDetected != null && coolOff == null
+}
 
-    Surface(modifier = Modifier.fillMaxSize(), color = WarmIvory) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+@Composable
+private fun DeleteAccountCoolOffCountdownIcon() {
+    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(COUNTDOWN_ICON_SIZE.dp)) {
+        Surface(shape = RoundedCornerShape(20.dp), color = ErrorRed.copy(alpha = 0.12f)) {
+            Box(modifier = Modifier.size(COUNTDOWN_ICON_SIZE.dp), contentAlignment = Alignment.Center) {
+                Icon(
+                    Icons.Default.HourglassTop,
+                    contentDescription = null,
+                    tint = ErrorRed,
+                    modifier = Modifier.size(36.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DeleteAccountCoolOffRevokedBanner(uiState: DeleteAccountUiState) {
+    // Revoked confirmation card (shown briefly during Revoked state before nav)
+    if (uiState is DeleteAccountUiState.Revoked) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = MutedGreen,
+            border = BorderStroke(1.dp, BrandGreen.copy(alpha = 0.3f)),
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            // Top bar
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = null,
-                        tint = TextPrimary,
-                    )
-                }
-                Spacer(Modifier.width(8.dp))
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = BrandGreen)
                 Text(
-                    text = stringResource(R.string.delete_account_coolOff_title),
-                    style =
-                        MaterialTheme.typography.headlineMedium.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                        ),
-                    color = TextPrimary,
+                    text = stringResource(R.string.delete_account_revoke_success),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = BrandGreen,
                 )
             }
+        }
+    }
+}
 
-            Spacer(Modifier.height(8.dp))
-
-            // Countdown card
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = ErrorRedSurface,
-                border = BorderStroke(1.dp, ErrorRed.copy(alpha = 0.3f)),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(64.dp)) {
-                        Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = ErrorRed.copy(alpha = 0.12f),
-                        ) {
-                            Box(modifier = Modifier.size(64.dp), contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Default.HourglassTop,
-                                    contentDescription = null,
-                                    tint = ErrorRed,
-                                    modifier = Modifier.size(36.dp),
-                                )
-                            }
-                        }
-                    }
-                    if (countdownUnavailable) {
-                        // ExistingRequestDetected path: 409 response did not include scheduledDeletionAt.
-                        // Show a generic "pending deletion" message. A follow-up task adds a server-side
-                        // GET endpoint to recover the exact date.
-                        Text(
-                            text = stringResource(R.string.delete_account_coolOff_pending_no_date),
-                            style =
-                                MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                ),
-                            color = ErrorRed,
-                            textAlign = TextAlign.Center,
-                        )
-                    } else {
-                        Text(
-                            text = countdownText,
-                            style =
-                                MaterialTheme.typography.titleLarge.copy(
-                                    fontWeight = FontWeight.Bold,
-                                ),
-                            color = ErrorRed,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
-                    Text(
-                        text = stringResource(R.string.delete_account_coolOff_subtitle),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            }
-
-            // Revoked confirmation card (shown briefly during Revoked state before nav)
-            if (uiState is DeleteAccountUiState.Revoked) {
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = MutedGreen,
-                    border = BorderStroke(1.dp, BrandGreen.copy(alpha = 0.3f)),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = BrandGreen)
-                        Text(
-                            text = stringResource(R.string.delete_account_revoke_success),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = BrandGreen,
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.weight(1f))
-
-            // Revoke CTA
-            Button(
-                onClick = { viewModel.onRevokeClicked() },
-                enabled = !isRevoking && hasActiveRequest,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = BrandGreen,
-                        contentColor = Color.White,
-                        disabledContainerColor = BrandGreen.copy(alpha = 0.38f),
-                        disabledContentColor = Color.White.copy(alpha = 0.6f),
+@Composable
+private fun DeleteAccountCoolOffActions(
+    isRevoking: Boolean,
+    hasActiveRequest: Boolean,
+    onRevokeClicked: () -> Unit,
+    onBack: () -> Unit,
+) {
+    Button(
+        onClick = onRevokeClicked,
+        enabled = !isRevoking && hasActiveRequest,
+        modifier = Modifier.fillMaxWidth().height(56.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = BrandGreen,
+                contentColor = Color.White,
+                disabledContainerColor = BrandGreen.copy(alpha = 0.38f),
+                disabledContentColor = Color.White.copy(alpha = 0.6f),
+            ),
+    ) {
+        if (isRevoking) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(22.dp),
+                color = Color.White,
+                strokeWidth = 2.dp,
+            )
+        } else {
+            Text(
+                text = stringResource(R.string.delete_account_revoke_cta),
+                style =
+                    MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
                     ),
-            ) {
-                if (isRevoking) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(22.dp),
-                        color = Color.White,
-                        strokeWidth = 2.dp,
-                    )
-                } else {
-                    Text(
-                        text = stringResource(R.string.delete_account_revoke_cta),
-                        style =
-                            MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                            ),
-                    )
-                }
-            }
-
-            OutlinedButton(
-                onClick = onBack,
-                modifier = Modifier.fillMaxWidth().height(48.dp),
-                shape = RoundedCornerShape(14.dp),
-                border = BorderStroke(1.dp, CardBorder),
-            ) {
-                Text(
-                    text = stringResource(R.string.delete_account_close_cta),
-                    color = TextSecondary,
-                )
-            }
+            )
         }
+    }
 
-        SnackbarHost(hostState = snackbarHostState, modifier = Modifier.padding(16.dp)) { data ->
-            Snackbar(snackbarData = data, containerColor = ErrorRed)
-        }
+    OutlinedButton(
+        onClick = onBack,
+        modifier = Modifier.fillMaxWidth().height(48.dp),
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, CardBorder),
+    ) {
+        Text(
+            text = stringResource(R.string.delete_account_close_cta),
+            color = TextSecondary,
+        )
     }
 }
 
@@ -301,17 +336,21 @@ private fun formatCountdown(
     return try {
         val target = Instant.parse(scheduledDeletionAt).atZone(ZoneId.systemDefault())
         val now = ZonedDateTime.ofInstant(Instant.ofEpochMilli(nowMs), ZoneId.systemDefault())
-        if (target.isBefore(now)) return ""
-        val totalHours = ChronoUnit.HOURS.between(now, target)
-        val days = totalHours / 24
-        val hours = totalHours % 24
-        buildString {
-            if (days > 0) {
-                append("$days day${if (days != 1L) "s" else ""}")
-                if (hours > 0) append(", ")
-            }
-            if (hours > 0 || days == 0L) {
-                append("$hours hour${if (hours != 1L) "s" else ""}")
+        when {
+            target.isBefore(now) -> ""
+            else -> {
+                val totalHours = ChronoUnit.HOURS.between(now, target)
+                val days = totalHours / HOURS_PER_DAY
+                val hours = totalHours % HOURS_PER_DAY
+                buildString {
+                    if (days > 0) {
+                        append("$days day${if (days != 1L) "s" else ""}")
+                        if (hours > 0) append(", ")
+                    }
+                    if (hours > 0 || days == 0L) {
+                        append("$hours hour${if (hours != 1L) "s" else ""}")
+                    }
+                }
             }
         }
     } catch (_: Exception) {

@@ -59,6 +59,9 @@ private val CardBorder = Color(0xFFDED8CD)
 private val TextPrimary = Color(0xFF18231F)
 private val TextSecondary = Color(0xFF5F6C66)
 
+// Identity gate: last-4 digits of registered phone number.
+private const val PIN_LENGTH = 4
+
 /**
  * Confirmation screen for account deletion.
  *
@@ -122,198 +125,237 @@ public fun DeleteAccountConfirmScreen(
                         .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
-                // Top bar
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = null,
-                            tint = TextPrimary,
-                        )
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.delete_account_confirm_title),
-                        style =
-                            MaterialTheme.typography.headlineMedium.copy(
-                                fontWeight = FontWeight.ExtraBold,
-                            ),
-                        color = TextPrimary,
-                    )
-                }
+                DeleteAccountConfirmTopBar(onBack = onBack)
 
-                // Phrase instruction card
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = ErrorRedSurface,
-                    border = BorderStroke(1.dp, ErrorRed.copy(alpha = 0.3f)),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.Top,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Icon(
-                            Icons.Default.Warning,
-                            contentDescription = null,
-                            tint = ErrorRed,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Text(
-                            text = stringResource(R.string.delete_account_confirm_instruction),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = ErrorRed,
-                        )
-                    }
-                }
+                DeleteAccountConfirmInstructionCard()
 
-                // Phrase text field
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        text = stringResource(R.string.delete_account_phrase_label),
-                        style =
-                            MaterialTheme.typography.labelLarge.copy(
-                                fontWeight = FontWeight.SemiBold,
-                            ),
-                        color = TextPrimary,
-                    )
-                    // Show the expected phrase so the user knows what to type.
-                    Text(
-                        text = "\"${confirming?.phraseExpected ?: ""}\"",
-                        style =
-                            MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                            ),
-                        color = ErrorRed,
-                    )
-                    OutlinedTextField(
-                        value = confirming?.typedPhrase ?: "",
-                        onValueChange = { viewModel.onPhraseChanged(it) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors =
-                            OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = ErrorRed,
-                                unfocusedBorderColor = CardBorder,
-                                focusedContainerColor = Color.White,
-                                unfocusedContainerColor = Color.White,
-                            ),
-                        isError =
-                            confirming != null &&
-                                confirming.typedPhrase.isNotEmpty() &&
-                                confirming.typedPhrase != confirming.phraseExpected,
-                        supportingText =
-                            if (confirming != null &&
-                                confirming.typedPhrase.isNotEmpty() &&
-                                confirming.typedPhrase != confirming.phraseExpected
-                            ) {
-                                {
-                                    Text(
-                                        stringResource(R.string.delete_account_phrase_mismatch),
-                                        color = ErrorRed,
-                                    )
-                                }
-                            } else {
-                                null
-                            },
-                        singleLine = true,
-                        enabled = !isSubmitting,
-                    )
-                }
+                DeleteAccountConfirmPhraseField(
+                    confirming = confirming,
+                    isSubmitting = isSubmitting,
+                    onPhraseChanged = { viewModel.onPhraseChanged(it) },
+                )
 
-                // PIN / last4 field
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Icon(
-                            Icons.Default.Lock,
-                            contentDescription = null,
-                            tint = TextSecondary,
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Text(
-                            text = stringResource(R.string.delete_account_pin_label),
-                            style =
-                                MaterialTheme.typography.labelLarge.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                ),
-                            color = TextPrimary,
-                        )
-                    }
-                    OutlinedTextField(
-                        value = confirming?.typedPin ?: "",
-                        onValueChange = { if (it.length <= 4) viewModel.onPinChanged(it) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors =
-                            OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = ErrorRed,
-                                unfocusedBorderColor = CardBorder,
-                                focusedContainerColor = Color.White,
-                                unfocusedContainerColor = Color.White,
-                            ),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                        isError =
-                            confirming != null &&
-                                confirming.typedPin.length == 4 &&
-                                confirming.typedPin != confirming.last4Expected,
-                        singleLine = true,
-                        enabled = !isSubmitting,
-                    )
-                }
+                DeleteAccountConfirmPinField(
+                    confirming = confirming,
+                    isSubmitting = isSubmitting,
+                    onPinChanged = { if (it.length <= PIN_LENGTH) viewModel.onPinChanged(it) },
+                )
             }
 
-            // Sticky submit button
-            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-                Button(
-                    onClick = { viewModel.onSubmitClicked() },
-                    enabled = (confirming?.isSubmitEnabled == true) && !isSubmitting,
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = ErrorRed,
-                            contentColor = Color.White,
-                            disabledContainerColor = ErrorRed.copy(alpha = 0.38f),
-                            disabledContentColor = Color.White.copy(alpha = 0.6f),
-                        ),
-                ) {
-                    if (isSubmitting) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(22.dp),
-                            color = Color.White,
-                            strokeWidth = 2.dp,
-                        )
-                    } else {
-                        Icon(Icons.Default.DeleteForever, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = stringResource(R.string.delete_account_submit_cta),
-                            style =
-                                MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                ),
-                        )
-                    }
-                }
-
-                TextButton(
-                    onClick = onBack,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        text = stringResource(R.string.delete_account_cancel_cta),
-                        color = TextSecondary,
-                    )
-                }
-            }
+            DeleteAccountConfirmSubmitBar(
+                confirming = confirming,
+                isSubmitting = isSubmitting,
+                onSubmitClicked = { viewModel.onSubmitClicked() },
+                onBack = onBack,
+            )
 
             SnackbarHost(hostState = snackbarHostState) { data ->
                 Snackbar(snackbarData = data, containerColor = ErrorRed)
             }
+        }
+    }
+}
+
+@Composable
+private fun DeleteAccountConfirmTopBar(onBack: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = null,
+                tint = TextPrimary,
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = stringResource(R.string.delete_account_confirm_title),
+            style =
+                MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                ),
+            color = TextPrimary,
+        )
+    }
+}
+
+@Composable
+private fun DeleteAccountConfirmInstructionCard() {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = ErrorRedSurface,
+        border = BorderStroke(1.dp, ErrorRed.copy(alpha = 0.3f)),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                Icons.Default.Warning,
+                contentDescription = null,
+                tint = ErrorRed,
+                modifier = Modifier.size(20.dp),
+            )
+            Text(
+                text = stringResource(R.string.delete_account_confirm_instruction),
+                style = MaterialTheme.typography.bodyMedium,
+                color = ErrorRed,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DeleteAccountConfirmPhraseField(
+    confirming: DeleteAccountUiState.Confirming?,
+    isSubmitting: Boolean,
+    onPhraseChanged: (String) -> Unit,
+) {
+    val phraseTyped = confirming?.typedPhrase ?: ""
+    val phraseExpected = confirming?.phraseExpected ?: ""
+    val isPhraseError = confirming != null && phraseTyped.isNotEmpty() && phraseTyped != phraseExpected
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            text = stringResource(R.string.delete_account_phrase_label),
+            style =
+                MaterialTheme.typography.labelLarge.copy(
+                    fontWeight = FontWeight.SemiBold,
+                ),
+            color = TextPrimary,
+        )
+        // Show the expected phrase so the user knows what to type.
+        Text(
+            text = "\"$phraseExpected\"",
+            style =
+                MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                ),
+            color = ErrorRed,
+        )
+        OutlinedTextField(
+            value = phraseTyped,
+            onValueChange = onPhraseChanged,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = ErrorRed,
+                    unfocusedBorderColor = CardBorder,
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                ),
+            isError = isPhraseError,
+            supportingText =
+                if (isPhraseError) {
+                    { Text(stringResource(R.string.delete_account_phrase_mismatch), color = ErrorRed) }
+                } else {
+                    null
+                },
+            singleLine = true,
+            enabled = !isSubmitting,
+        )
+    }
+}
+
+@Composable
+private fun DeleteAccountConfirmPinField(
+    confirming: DeleteAccountUiState.Confirming?,
+    isSubmitting: Boolean,
+    onPinChanged: (String) -> Unit,
+) {
+    val pinTyped = confirming?.typedPin ?: ""
+    val isPinError = confirming != null && pinTyped.length == PIN_LENGTH && pinTyped != confirming.last4Expected
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Icon(
+                Icons.Default.Lock,
+                contentDescription = null,
+                tint = TextSecondary,
+                modifier = Modifier.size(16.dp),
+            )
+            Text(
+                text = stringResource(R.string.delete_account_pin_label),
+                style =
+                    MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.SemiBold,
+                    ),
+                color = TextPrimary,
+            )
+        }
+        OutlinedTextField(
+            value = pinTyped,
+            onValueChange = onPinChanged,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = ErrorRed,
+                    unfocusedBorderColor = CardBorder,
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                ),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+            isError = isPinError,
+            singleLine = true,
+            enabled = !isSubmitting,
+        )
+    }
+}
+
+@Composable
+private fun DeleteAccountConfirmSubmitBar(
+    confirming: DeleteAccountUiState.Confirming?,
+    isSubmitting: Boolean,
+    onSubmitClicked: () -> Unit,
+    onBack: () -> Unit,
+) {
+    Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+        Button(
+            onClick = onSubmitClicked,
+            enabled = (confirming?.isSubmitEnabled == true) && !isSubmitting,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = ErrorRed,
+                    contentColor = Color.White,
+                    disabledContainerColor = ErrorRed.copy(alpha = 0.38f),
+                    disabledContentColor = Color.White.copy(alpha = 0.6f),
+                ),
+        ) {
+            if (isSubmitting) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(22.dp),
+                    color = Color.White,
+                    strokeWidth = 2.dp,
+                )
+            } else {
+                Icon(Icons.Default.DeleteForever, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.delete_account_submit_cta),
+                    style =
+                        MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                        ),
+                )
+            }
+        }
+
+        TextButton(
+            onClick = onBack,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                text = stringResource(R.string.delete_account_cancel_cta),
+                color = TextSecondary,
+            )
         }
     }
 }
