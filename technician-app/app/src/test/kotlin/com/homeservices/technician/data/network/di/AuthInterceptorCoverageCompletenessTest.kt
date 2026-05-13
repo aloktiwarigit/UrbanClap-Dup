@@ -80,7 +80,13 @@ public class AuthInterceptorCoverageCompletenessTest {
     }
 
     private companion object {
-        /** ApiServices explicitly excluded from the @AuthOkHttpClient interceptor (e.g. Play Integrity). */
-        val UNAUTH_API_SIMPLE_NAMES = setOf("IntegrityApiService")
+        /**
+         * ApiServices explicitly excluded from the @AuthOkHttpClient interceptor.
+         * Currently empty — ADR-0021's revised design routes IntegrityApiService
+         * through @AuthOkHttpClient as well (Firebase ID token is required by the
+         * nonce endpoint). Reserved for any future unauth ApiService (e.g. health
+         * probes, public catalog, etc.).
+         */
+        val UNAUTH_API_SIMPLE_NAMES: Set<String> = emptySet()
     }
 }

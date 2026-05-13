@@ -556,6 +556,9 @@ kover {
                     "*.SessionPrefsMigrator",
                     "*.SessionPrefsMigrator\$*",
                     "*.data.network.auth.di.*",
+                    // W1: NetworkModule @Provides — framework wiring (OkHttp/Retrofit/Moshi
+                    // construction), same rationale as other data.*.di.* exclusions.
+                    "*.data.network.di.*",
                     // Moshi KSP-generated JSON adapters — code-gen output, same rationale as
                     // Hilt/Room-generated classes above. Each @JsonClass(generateAdapter = true)
                     // annotation causes Moshi KSP to emit a *JsonAdapter class with 30-50 JVM
