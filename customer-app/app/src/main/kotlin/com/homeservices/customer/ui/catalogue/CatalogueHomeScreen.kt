@@ -154,7 +154,8 @@ private fun categoryStyle(id: String): CategoryStyle =
         else -> CategoryStyle(MutedGreen, BrandGreen, Icons.Default.Build)
     }
 
-private fun formatPrice(paise: Int): String = if (paise > 0) formatInr(paise.toLong()) else ""
+// formatPrice removed — price label is now built at the call site using stringResource
+// so the localized "from %s" prefix is included (FIX Codex P2: restore starting-price label).
 
 // ── Nav items ─────────────────────────────────────────────────────────────────
 private data class NavItem(
@@ -583,7 +584,11 @@ private fun CategoryCard(
             if (category.minPricePaise > 0) {
                 Spacer(Modifier.height(3.dp))
                 Text(
-                    text = formatPrice(category.minPricePaise),
+                    text =
+                        stringResource(
+                            R.string.catalogue_starting_price,
+                            formatInr(category.minPricePaise.toLong()),
+                        ),
                     style =
                         MaterialTheme.typography.labelLarge.copy(
                             fontSize = 13.sp,

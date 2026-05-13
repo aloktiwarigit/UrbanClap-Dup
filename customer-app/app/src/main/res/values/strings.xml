@@ -310,6 +310,7 @@
     <string name="catalogue_our_services">Our services</string>
     <string name="catalogue_search_hint">Search AC, plumber, electrician…</string>
     <string name="catalogue_location_display">Ayodhya, Uttar Pradesh</string>
+    <string name="catalogue_starting_price">From %1$s</string>
 
     <!-- Confidence score row (E12-S02a) -->
     <string name="confidence_new_area">New in your area -- building track record</string>

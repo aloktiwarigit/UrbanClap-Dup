@@ -643,19 +643,29 @@ dependencies {
 tasks.register("verifyNoEnglishTextLiterals") {
     description = "Fail the build if any Compose Text() calls contain hardcoded English literals."
     group = "verification"
+    // Configuration-cache compatible: capture only File references at config time, then use
+    // plain java.io / kotlin.io.path traversal at execution time. Avoid Gradle DSL helpers
+    // (fileTree, files) inside doLast — they capture script-object references that can't be
+    // serialized into the configuration cache.
+    val projectDir = layout.projectDirectory.asFile
+    val ktSourceDirs: List<java.io.File> =
+        listOf("src/main/kotlin", "src/main/java")
+            .map { projectDir.resolve(it) }
+            .filter { it.exists() }
+    val ktFiles: List<java.io.File> =
+        ktSourceDirs.flatMap { dir ->
+            dir.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
+        }
+    inputs.files(ktFiles)
     doLast {
+        val pattern = Regex("""Text\("[A-Z][^"]*"""")
         val violations =
-            fileTree("src/main/java") {
-                include("**/*.kt")
-            }.files.flatMap { file ->
+            ktFiles.flatMap { file ->
                 file
                     .readLines()
                     .withIndex()
-                    .filter { (_, line) ->
-                        Regex("""Text\("[A-Z][^"]*"""").containsMatchIn(line)
-                    }.map { (idx, line) ->
-                        "${file.relativeTo(project.projectDir)}:${idx + 1}: $line"
-                    }
+                    .filter { (_, line) -> pattern.containsMatchIn(line) }
+                    .map { (idx, line) -> "${file.relativeTo(projectDir)}:${idx + 1}: $line" }
             }
         if (violations.isNotEmpty()) {
             throw GradleException(

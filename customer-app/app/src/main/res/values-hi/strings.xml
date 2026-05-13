@@ -290,6 +290,7 @@
     <string name="catalogue_our_services">हमारी सेवाएं</string>
     <string name="catalogue_search_hint">AC, प्लंबर, इलेक्ट्रीशियन खोजें...</string>
     <string name="catalogue_location_display">अयोध्या, उत्तर प्रदेश</string>
+    <string name="catalogue_starting_price">%1$s से</string>
 
     <!-- Confidence score row (E12-S02a) -->
     <string name="confidence_new_area">आपके क्षेत्र में नए हैं -- ट्रैक रिकॉर्ड बना रहे हैं</string>

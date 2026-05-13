@@ -115,6 +115,7 @@ internal class BookingViewModel
                         )
                 }
                 // Error message key: R.string.booking_error_payment_cancelled surfaced in UI layer
+                // TODO(E18-S04): map PAYMENT_CANCELLED sentinel to localized message via PaymentFailed state
                 is PaymentResult.Failure ->
                     _uiState.value = BookingUiState.Error("PAYMENT_CANCELLED:${result.description}")
             }
