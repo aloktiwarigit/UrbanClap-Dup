@@ -39,7 +39,8 @@ public object LocaleRoutes {
     public const val FIRST_LAUNCH: String = "first_launch_language"
     public const val SETTINGS: String = "settings"
     public const val LANGUAGE_SETTINGS: String = "language_settings"
-    public const val PRIVACY_AND_DATA: String = "privacy_and_data"
+    public const val PRIVACY_AND_DATA: String = "privacy_data"
+    public const val PRIVACY_DATA: String = "privacy_data"
     public const val DATA_EXPORT: String = "data_export"
 
     // DELETE_ACCOUNT routes added by E15-S02 (Stream 2.4) — populated by that branch.
