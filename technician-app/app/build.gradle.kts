@@ -222,6 +222,8 @@ android {
 
     sourceSets {
         getByName("main").kotlin.srcDirs("src/main/kotlin")
+        getByName("debug").kotlin.srcDirs("src/debug/kotlin")
+        getByName("release").kotlin.srcDirs("src/release/kotlin")
         getByName("test").kotlin.srcDirs("src/test/kotlin")
         getByName("androidTest").kotlin.srcDirs("src/androidTest/kotlin")
     }
