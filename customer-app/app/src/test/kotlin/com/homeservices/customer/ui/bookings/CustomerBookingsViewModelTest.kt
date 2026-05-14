@@ -60,10 +60,11 @@ public class CustomerBookingsViewModelTest {
     @Test
     public fun `completed booking with ratingSubmitted false survives in ui state`(): Unit =
         runTest {
-            val booking = sampleBooking(
-                status = CustomerBookingStatus.COMPLETED,
-                ratingSubmitted = false,
-            )
+            val booking =
+                sampleBooking(
+                    status = CustomerBookingStatus.COMPLETED,
+                    ratingSubmitted = false,
+                )
             every { getBookings() } returns flowOf(Result.success(listOf(booking)))
 
             val vm = CustomerBookingsViewModel(getBookings)
@@ -76,10 +77,11 @@ public class CustomerBookingsViewModelTest {
     @Test
     public fun `completed booking with ratingSubmitted true survives in ui state`(): Unit =
         runTest {
-            val booking = sampleBooking(
-                status = CustomerBookingStatus.COMPLETED,
-                ratingSubmitted = true,
-            )
+            val booking =
+                sampleBooking(
+                    status = CustomerBookingStatus.COMPLETED,
+                    ratingSubmitted = true,
+                )
             every { getBookings() } returns flowOf(Result.success(listOf(booking)))
 
             val vm = CustomerBookingsViewModel(getBookings)
@@ -92,10 +94,11 @@ public class CustomerBookingsViewModelTest {
     @Test
     public fun `closed booking with ratingSubmitted false survives in ui state`(): Unit =
         runTest {
-            val booking = sampleBooking(
-                status = CustomerBookingStatus.CLOSED,
-                ratingSubmitted = false,
-            )
+            val booking =
+                sampleBooking(
+                    status = CustomerBookingStatus.CLOSED,
+                    ratingSubmitted = false,
+                )
             every { getBookings() } returns flowOf(Result.success(listOf(booking)))
 
             val vm = CustomerBookingsViewModel(getBookings)

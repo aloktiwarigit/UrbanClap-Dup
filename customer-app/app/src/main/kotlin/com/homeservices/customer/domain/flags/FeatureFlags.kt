@@ -71,18 +71,4 @@ public class BuildConfigFeatureFlags
         }
     }
 
-/**
- * GrowthBook-backed feature flag implementation (stub — wired in E13-S05 Wave 2).
- * All flags default to `false` until GrowthBook SDK is initialised.
- */
-public class GrowthBookFeatureFlags
-    @Inject
-    constructor() : FeatureFlags {
-        override fun truecallerServerVerify(): Boolean = false
-
-        override fun dpdpSelfServiceEnabled(): Boolean = false
-
-        override fun walletVisible(): Boolean = false
-
-        override fun photoFirstCatalogueEnabled(): Boolean = false
-    }
+// GrowthBookFeatureFlags is defined in GrowthBookFeatureFlags.kt — stub removed to avoid redeclaration.

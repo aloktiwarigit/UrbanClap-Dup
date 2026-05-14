@@ -1,7 +1,6 @@
 package com.homeservices.customer.ui.catalogue
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -152,46 +151,59 @@ private fun PhotoServiceInfoBlock(
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.height(10.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+        PhotoServiceActionRow(
+            durationMinutes = service.durationMinutes,
+            basePrice = service.basePrice,
+            onClick = onClick,
+        )
+    }
+}
+
+@Composable
+private fun PhotoServiceActionRow(
+    durationMinutes: Int,
+    basePrice: Int,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        PhotoServiceDurationChip(
+            durationMinutes = durationMinutes,
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = formatServicePrice(basePrice),
+            color = PhotoServiceBrandGreen,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+        )
+        Spacer(Modifier.width(10.dp))
+        Button(
+            onClick = onClick,
+            modifier = Modifier.height(36.dp),
+            shape = PhotoServicePillShape,
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = PhotoServiceBrandGreen,
+                    contentColor = Color.White,
+                ),
+            elevation =
+                ButtonDefaults.buttonElevation(
+                    defaultElevation = 0.dp,
+                    pressedElevation = 0.dp,
+                ),
+            contentPadding = PaddingValues(horizontal = 16.dp),
         ) {
-            PhotoServiceDurationChip(
-                durationMinutes = service.durationMinutes,
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(Modifier.width(8.dp))
             Text(
-                text = formatServicePrice(service.basePrice),
-                color = PhotoServiceBrandGreen,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
+                text = stringResource(R.string.book_now),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
             )
-            Spacer(Modifier.width(10.dp))
-            Button(
-                onClick = onClick,
-                modifier = Modifier.height(36.dp),
-                shape = PhotoServicePillShape,
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = PhotoServiceBrandGreen,
-                        contentColor = Color.White,
-                    ),
-                elevation =
-                    ButtonDefaults.buttonElevation(
-                        defaultElevation = 0.dp,
-                        pressedElevation = 0.dp,
-                    ),
-                contentPadding = PaddingValues(horizontal = 16.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.book_now),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                )
-            }
         }
     }
 }
@@ -227,4 +239,6 @@ private fun PhotoServiceDurationChip(
     }
 }
 
-private fun formatServicePrice(pricePaise: Int): String = "₹${pricePaise / 100}"
+private const val PAISE_PER_RUPEE = 100
+
+private fun formatServicePrice(pricePaise: Int): String = "₹${pricePaise / PAISE_PER_RUPEE}"

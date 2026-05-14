@@ -23,6 +23,7 @@ import com.homeservices.customer.ui.catalogue.ServiceDetailScreen
 import com.homeservices.customer.ui.catalogue.ServiceDetailViewModel
 import com.homeservices.customer.ui.catalogue.ServiceListScreen
 import com.homeservices.customer.ui.catalogue.ServiceListViewModel
+import com.homeservices.customer.ui.complaint.ComplaintListScreen
 import com.homeservices.customer.ui.complaint.ComplaintRoutes
 import com.homeservices.customer.ui.complaint.ComplaintScreen
 import com.homeservices.customer.ui.rating.RatingRoutes
@@ -53,6 +54,13 @@ private fun NavGraphBuilder.catalogueGraph(
         walletDestination(navController)
         serviceListDestination(navController)
         serviceDetailDestination(navController)
+        // Complaint list — accessible from Settings → My Complaints
+        composable(route = ComplaintRoutes.LIST) {
+            ComplaintListScreen(
+                onComplaintClick = { bookingId -> navController.navigate(ComplaintRoutes.route(bookingId)) },
+                onBack = { navController.popBackStack() },
+            )
+        }
     }
 }
 

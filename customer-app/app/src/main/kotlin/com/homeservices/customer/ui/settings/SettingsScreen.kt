@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.SupportAgent
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +47,7 @@ public fun SettingsScreen(
     onLanguageClick: () -> Unit,
     onPrivacyDataClick: () -> Unit,
     onBack: () -> Unit,
+    onMyComplaintsClick: (() -> Unit)? = null,
 ) {
     Surface(modifier = Modifier.fillMaxSize(), color = WarmIvory) {
         Column(
@@ -89,6 +91,21 @@ public fun SettingsScreen(
                 subtitle = null,
                 onClick = onPrivacyDataClick,
             )
+            // My Complaints row — shown when the callback is wired
+            if (onMyComplaintsClick != null) {
+                SettingsRow(
+                    icon = {
+                        Surface(shape = RoundedCornerShape(14.dp), color = MutedGreen) {
+                            Box(modifier = Modifier.size(52.dp), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.SupportAgent, contentDescription = null, tint = BrandGreen)
+                            }
+                        }
+                    },
+                    title = stringResource(R.string.complaint_list_title),
+                    subtitle = null,
+                    onClick = onMyComplaintsClick,
+                )
+            }
         }
     }
 }

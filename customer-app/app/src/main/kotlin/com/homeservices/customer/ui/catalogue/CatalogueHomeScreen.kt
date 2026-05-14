@@ -266,43 +266,12 @@ private fun HomeTabs(
 ) {
     when (selectedNav) {
         0 ->
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
-                contentPadding = PaddingValues(bottom = 16.dp),
-            ) {
-                item { PromoSlider() }
-                item { TrustStrip() }
-                when (uiState) {
-                    is CatalogueHomeUiState.Loading -> item { LoadingState() }
-                    is CatalogueHomeUiState.Error -> item { ErrorState() }
-                    is CatalogueHomeUiState.Success -> {
-                        item {
-                            Text(
-                                text = stringResource(R.string.catalogue_our_services),
-                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, fontSize = 19.sp),
-                                color = TextPrimary,
-                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-                            )
-                        }
-                        val rows = uiState.categories.chunked(2)
-                        items(rows) { row ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                row.forEach { cat ->
-                                    if (photoFirstCatalogueEnabled) {
-                                        PhotoFirstCategoryCard(category = cat, onClick = { onCategoryClick(cat.id) }, modifier = Modifier.weight(1f))
-                                    } else {
-                                        CategoryCard(category = cat, onClick = { onCategoryClick(cat.id) }, modifier = Modifier.weight(1f))
-                                    }
-                                }
-                                if (row.size == 1) Spacer(Modifier.weight(1f))
-                            }
-                        }
-                    }
-                }
-            }
+            CatalogueTab(
+                uiState = uiState,
+                scaffoldPadding = scaffoldPadding,
+                photoFirstCatalogueEnabled = photoFirstCatalogueEnabled,
+                onCategoryClick = onCategoryClick,
+            )
         1 ->
             CustomerBookingsScreen(
                 onTrackBooking = onTrackBooking,
@@ -322,6 +291,56 @@ private fun HomeTabs(
                 onLanguageClick = onProfileLanguageClick,
                 onBookingsClick = { onSelectNav(1) },
             )
+    }
+}
+
+@Composable
+private fun CatalogueTab(
+    uiState: CatalogueHomeUiState,
+    scaffoldPadding: PaddingValues,
+    photoFirstCatalogueEnabled: Boolean,
+    onCategoryClick: (String) -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
+        contentPadding = PaddingValues(bottom = 16.dp),
+    ) {
+        item { PromoSlider() }
+        item { TrustStrip() }
+        when (uiState) {
+            is CatalogueHomeUiState.Loading -> item { LoadingState() }
+            is CatalogueHomeUiState.Error -> item { ErrorState() }
+            is CatalogueHomeUiState.Success -> {
+                item {
+                    Text(
+                        text = stringResource(R.string.catalogue_our_services),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, fontSize = 19.sp),
+                        color = TextPrimary,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                    )
+                }
+                val rows = uiState.categories.chunked(2)
+                items(rows) { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        row.forEach { cat ->
+                            if (photoFirstCatalogueEnabled) {
+                                PhotoFirstCategoryCard(
+                                    category = cat,
+                                    onClick = { onCategoryClick(cat.id) },
+                                    modifier = Modifier.weight(1f),
+                                )
+                            } else {
+                                CategoryCard(category = cat, onClick = { onCategoryClick(cat.id) }, modifier = Modifier.weight(1f))
+                            }
+                        }
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+            }
+        }
     }
 }
 

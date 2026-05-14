@@ -7,7 +7,10 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 public class CustomerBookingDtoTest {
-    private fun dto(status: String = "COMPLETED", ratingSubmitted: Boolean = false): CustomerBookingDto =
+    private fun dto(
+        status: String = "COMPLETED",
+        ratingSubmitted: Boolean = false,
+    ): CustomerBookingDto =
         CustomerBookingDto(
             bookingId = "b1",
             serviceId = "s1",

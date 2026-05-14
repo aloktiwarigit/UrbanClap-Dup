@@ -60,4 +60,6 @@ public class GrowthBookFeatureFlags
         override fun dpdpSelfServiceEnabled(): Boolean = sdk.isOn("customer.dpdp-self-service.enabled") ?: false
 
         override fun walletVisible(): Boolean = sdk.isOn("customer.wallet.visible") ?: false
+
+        override fun photoFirstCatalogueEnabled(): Boolean = sdk.isOn("customer.photo-first-catalogue.enabled") ?: false
     }

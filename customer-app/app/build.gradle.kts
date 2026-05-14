@@ -624,6 +624,32 @@ kover {
                     "*.LanguageSettingsViewModel\$*",
                     // LocaleModule — Hilt @Provides wiring, same rationale as other DI modules.
                     "*.data.locale.di.*",
+                    // ComplaintListScreen — Compose UI; Paparazzi covers rendering paths.
+                    "*.ComplaintListScreenKt",
+                    "*.ComplaintListScreenKt\$*",
+                    // CountdownChip — standalone Compose chip; no logic beyond time formatting.
+                    "*.CountdownChipKt",
+                    "*.CountdownChipKt\$*",
+                    // NoShowCreditBanner + NoShowCreditViewModel — FCM/event bus UI,
+                    // same rationale as WalletScreenKt.
+                    "*.NoShowCreditBannerKt",
+                    "*.NoShowCreditBannerKt\$*",
+                    "*.NoShowCreditViewModel",
+                    "*.NoShowCreditViewModel\$*",
+                    // PhotoFirstCategoryCard + PhotoFirstServiceCard — Compose UI photo-first cards.
+                    "*.PhotoFirstCategoryCardKt",
+                    "*.PhotoFirstCategoryCardKt\$*",
+                    "*.PhotoFirstServiceCardKt",
+                    "*.PhotoFirstServiceCardKt\$*",
+                    // CatalogueHomeScreen refactor — CatalogueTab extracted composable.
+                    "*.CatalogueHomeScreenKt\$CatalogueTab\$*",
+                    // NoShowCreditHandler — calls NotificationCompat.Builder; integration-tested
+                    // via CustomerFirebaseMessagingServiceNoShowTest with Robolectric.
+                    "*.NoShowCreditHandler",
+                    "*.NoShowCreditHandler\$*",
+                    // SettingsScreen — Compose UI updated with onMyComplaintsClick; Paparazzi covers.
+                    "*.SettingsScreenKt",
+                    "*.SettingsScreenKt\$*",
                 )
             }
         }
@@ -727,6 +753,7 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.hilt.testing)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.turbine)
     kspTest(libs.hilt.compiler)
 
     androidTestImplementation(libs.hilt.testing)

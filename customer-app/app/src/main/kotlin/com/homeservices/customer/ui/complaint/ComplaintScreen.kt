@@ -36,6 +36,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.complaint.ComplaintReason
+import com.homeservices.customer.ui.components.CountdownChip
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
@@ -69,6 +70,7 @@ public fun ComplaintScreen(
         onDescriptionChanged = viewModel::onDescriptionChanged,
         onPhotoClick = { photoPicker.launch("image/*") },
         onSubmit = { viewModel.onSubmit(bookingId) },
+        onReopen = viewModel::onReopen,
     )
 }
 
@@ -82,84 +84,118 @@ internal fun ComplaintContent(
     onDescriptionChanged: (String) -> Unit,
     onPhotoClick: () -> Unit,
     onSubmit: () -> Unit,
+    onReopen: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (state) {
-            is ComplaintUiState.Success -> SuccessState(state = state, onBack = onBack)
+            is ComplaintUiState.Success -> SuccessState(state = state, onBack = onBack, onReopen = onReopen)
             is ComplaintUiState.PhotoUploading, ComplaintUiState.Submitting -> LoadingState()
             is ComplaintUiState.Error -> ErrorState(message = state.message, onRetry = onRetry)
-            is ComplaintUiState.Idle -> {
-                var expanded by remember { mutableStateOf(false) }
-                Column(
-                    modifier = Modifier.fillMaxSize().padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    HsTrustBadge(text = stringResource(R.string.complaint_eyebrow))
-                    Text(
-                        stringResource(R.string.complaint_title),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Text(
-                        stringResource(R.string.complaint_body),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    HsSectionCard {
-                        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-                            OutlinedTextField(
-                                value = state.selectedReason?.displayLabel() ?: stringResource(R.string.complaint_select_reason),
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text(stringResource(R.string.complaint_issue_type)) },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth(),
-                            )
-                            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                                ComplaintReason.entries.forEach { reason ->
-                                    DropdownMenuItem(
-                                        text = { Text(reason.displayLabel()) },
-                                        onClick = {
-                                            onReasonSelected(reason)
-                                            expanded = false
-                                        },
-                                    )
-                                }
-                            }
-                        }
-                        Spacer(Modifier.height(14.dp))
-                        OutlinedTextField(
-                            value = state.description,
-                            onValueChange = onDescriptionChanged,
-                            label = { Text(stringResource(R.string.complaint_what_happened)) },
-                            supportingText = { Text("${state.description.length}/2000") },
-                            minLines = 4,
-                            maxLines = 8,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        Spacer(Modifier.height(14.dp))
-                        HsSecondaryButton(
-                            text =
-                                if (state.photoStoragePath != null) {
-                                    stringResource(R.string.complaint_photo_attached)
-                                } else {
-                                    stringResource(R.string.complaint_attach_photo)
-                                },
-                            onClick = onPhotoClick,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                    Spacer(Modifier.weight(1f))
-                    HsPrimaryButton(
-                        text = stringResource(R.string.complaint_submit),
-                        onClick = onSubmit,
-                        enabled = state.submitEnabled,
-                        modifier = Modifier.fillMaxWidth(),
+            is ComplaintUiState.Idle ->
+                IdleState(
+                    state = state,
+                    onReasonSelected = onReasonSelected,
+                    onDescriptionChanged = onDescriptionChanged,
+                    onPhotoClick = onPhotoClick,
+                    onSubmit = onSubmit,
+                )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun IdleState(
+    state: ComplaintUiState.Idle,
+    onReasonSelected: (ComplaintReason) -> Unit,
+    onDescriptionChanged: (String) -> Unit,
+    onPhotoClick: () -> Unit,
+    onSubmit: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        HsTrustBadge(text = stringResource(R.string.complaint_eyebrow))
+        Text(
+            stringResource(R.string.complaint_title),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            stringResource(R.string.complaint_body),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        ComplaintFormCard(
+            state = state,
+            onReasonSelected = onReasonSelected,
+            onDescriptionChanged = onDescriptionChanged,
+            onPhotoClick = onPhotoClick,
+        )
+        Spacer(Modifier.weight(1f))
+        HsPrimaryButton(
+            text = stringResource(R.string.complaint_submit),
+            onClick = onSubmit,
+            enabled = state.submitEnabled,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ComplaintFormCard(
+    state: ComplaintUiState.Idle,
+    onReasonSelected: (ComplaintReason) -> Unit,
+    onDescriptionChanged: (String) -> Unit,
+    onPhotoClick: () -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    HsSectionCard {
+        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+            OutlinedTextField(
+                value = state.selectedReason?.displayLabel() ?: stringResource(R.string.complaint_select_reason),
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(stringResource(R.string.complaint_issue_type)) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth(),
+            )
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                ComplaintReason.entries.forEach { reason ->
+                    DropdownMenuItem(
+                        text = { Text(reason.displayLabel()) },
+                        onClick = {
+                            onReasonSelected(reason)
+                            expanded = false
+                        },
                     )
                 }
             }
         }
+        Spacer(Modifier.height(14.dp))
+        OutlinedTextField(
+            value = state.description,
+            onValueChange = onDescriptionChanged,
+            label = { Text(stringResource(R.string.complaint_what_happened)) },
+            supportingText = { Text("${state.description.length}/2000") },
+            minLines = 4,
+            maxLines = 8,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(14.dp))
+        HsSecondaryButton(
+            text =
+                if (state.photoStoragePath != null) {
+                    stringResource(R.string.complaint_photo_attached)
+                } else {
+                    stringResource(R.string.complaint_attach_photo)
+                },
+            onClick = onPhotoClick,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -167,6 +203,7 @@ internal fun ComplaintContent(
 private fun SuccessState(
     state: ComplaintUiState.Success,
     onBack: () -> Unit,
+    onReopen: () -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
@@ -184,8 +221,19 @@ private fun SuccessState(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (state.isAcknowledged && state.acknowledgeDeadlineAt != null) {
+            Spacer(Modifier.height(12.dp))
+            CountdownChip(deadlineIso = state.acknowledgeDeadlineAt)
+        }
         Spacer(Modifier.height(24.dp))
         HsPrimaryButton(text = stringResource(R.string.complaint_back), onClick = onBack)
+        if (state.isResolved) {
+            Spacer(Modifier.height(12.dp))
+            HsSecondaryButton(
+                text = stringResource(R.string.complaint_reopen),
+                onClick = onReopen,
+            )
+        }
     }
 }
 
