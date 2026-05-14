@@ -37,4 +37,17 @@ internal class ComplaintRepositoryImpl
             flow {
                 emit(runCatching { api.getComplaintsForBooking(bookingId).complaints })
             }
+
+        override fun reopenComplaint(id: String): Flow<Result<ComplaintResponseDto>> =
+            flow {
+                emit(runCatching { api.reopenComplaint(id) })
+            }
+
+        override fun getComplaints(
+            page: Int,
+            limit: Int,
+        ): Flow<Result<List<ComplaintResponseDto>>> =
+            flow {
+                emit(runCatching { api.getComplaints(page = page, limit = limit).complaints })
+            }
     }

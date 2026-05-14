@@ -196,7 +196,10 @@ private fun BookingCard(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                StatusPill(label = booking.status.labelRes(), active = booking.status.isTrackable())
+                StatusPill(
+                    label = booking.status.labelRes(),
+                    active = booking.status in TRACKABLE_STATUSES,
+                )
                 Spacer(Modifier.weight(1f))
                 Text(
                     text = formatInr(booking.amountPaise),
@@ -217,33 +220,48 @@ private fun BookingCard(
             InfoLine(icon = Icons.Default.Schedule, text = booking.slotWindow)
             InfoLine(icon = Icons.Default.LocationOn, text = booking.addressText)
             InfoLine(icon = Icons.Default.Payments, text = booking.paymentMethod.labelRes())
-            if (booking.status.canOpenTracking()) {
-                HsPrimaryButton(
-                    text =
-                        if (booking.status.isLiveTracking()) {
-                            stringResource(R.string.bookings_track_technician)
-                        } else {
-                            stringResource(R.string.bookings_view_status)
-                        },
-                    onClick = { onTrackBooking(booking.bookingId) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            if (booking.status.isPostService()) {
-                if (!booking.ratingSubmitted) {
-                    HsPrimaryButton(
-                        text = stringResource(R.string.bookings_rate_booking),
-                        onClick = { onRateBooking(booking.bookingId) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                HsSecondaryButton(
-                    text = stringResource(R.string.bookings_file_complaint),
-                    onClick = { onComplainBooking(booking.bookingId) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+            BookingCardActions(
+                booking = booking,
+                onTrackBooking = onTrackBooking,
+                onRateBooking = onRateBooking,
+                onComplainBooking = onComplainBooking,
+            )
         }
+    }
+}
+
+@Composable
+private fun BookingCardActions(
+    booking: CustomerBooking,
+    onTrackBooking: (String) -> Unit,
+    onRateBooking: (String) -> Unit,
+    onComplainBooking: (String) -> Unit,
+) {
+    if (booking.status.canOpenTracking()) {
+        HsPrimaryButton(
+            text =
+                if (booking.status.isLiveTracking()) {
+                    stringResource(R.string.bookings_track_technician)
+                } else {
+                    stringResource(R.string.bookings_view_status)
+                },
+            onClick = { onTrackBooking(booking.bookingId) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+    if (booking.status.isPostService()) {
+        if (!booking.ratingSubmitted) {
+            HsPrimaryButton(
+                text = stringResource(R.string.bookings_rate_booking),
+                onClick = { onRateBooking(booking.bookingId) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        HsSecondaryButton(
+            text = stringResource(R.string.bookings_file_complaint),
+            onClick = { onComplainBooking(booking.bookingId) },
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -377,9 +395,8 @@ private fun EmptyBookingsCard() {
 }
 
 @Composable
-private fun CustomerBookingStatus.labelRes(): String = stringResource(bookingStatusResId())
-
-private fun CustomerBookingStatus.bookingStatusResId(): Int = BOOKING_STATUS_RES_IDS.getOrDefault(this, R.string.booking_status_updated)
+private fun CustomerBookingStatus.labelRes(): String =
+    stringResource(BOOKING_STATUS_RES_IDS.getOrDefault(this, R.string.booking_status_updated))
 
 private val BOOKING_STATUS_RES_IDS: Map<CustomerBookingStatus, Int> =
     mapOf(
@@ -412,15 +429,14 @@ private fun CustomerBookingStatus.canOpenTracking(): Boolean =
             CustomerBookingStatus.NO_SHOW_REDISPATCH,
         )
 
-private fun CustomerBookingStatus.isTrackable(): Boolean =
-    this in
-        setOf(
-            CustomerBookingStatus.ASSIGNED,
-            CustomerBookingStatus.EN_ROUTE,
-            CustomerBookingStatus.REACHED,
-            CustomerBookingStatus.IN_PROGRESS,
-            CustomerBookingStatus.AWAITING_PRICE_APPROVAL,
-        )
+private val TRACKABLE_STATUSES: Set<CustomerBookingStatus> =
+    setOf(
+        CustomerBookingStatus.ASSIGNED,
+        CustomerBookingStatus.EN_ROUTE,
+        CustomerBookingStatus.REACHED,
+        CustomerBookingStatus.IN_PROGRESS,
+        CustomerBookingStatus.AWAITING_PRICE_APPROVAL,
+    )
 
 private fun CustomerBookingStatus.isLiveTracking(): Boolean =
     this in
@@ -430,8 +446,7 @@ private fun CustomerBookingStatus.isLiveTracking(): Boolean =
             CustomerBookingStatus.IN_PROGRESS,
         )
 
-private fun CustomerBookingStatus.isPostService(): Boolean =
-    this == CustomerBookingStatus.COMPLETED || this == CustomerBookingStatus.CLOSED
+private fun CustomerBookingStatus.isPostService(): Boolean = this == CustomerBookingStatus.COMPLETED || this == CustomerBookingStatus.CLOSED
 
 @Composable
 private fun BookingPaymentMethod.labelRes(): String =

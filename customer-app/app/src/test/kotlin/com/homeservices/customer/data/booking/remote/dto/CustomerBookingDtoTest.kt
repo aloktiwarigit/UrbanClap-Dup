@@ -6,7 +6,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
 public class CustomerBookingDtoTest {
-
     private fun sampleDto(ratingSubmitted: Boolean = false): CustomerBookingDto =
         CustomerBookingDto(
             bookingId = "bk-test",
@@ -36,19 +35,20 @@ public class CustomerBookingDtoTest {
 
     @Test
     public fun `ratingSubmitted defaults to false when not provided`() {
-        val dto = CustomerBookingDto(
-            bookingId = "bk-default",
-            serviceId = "svc-1",
-            serviceName = "Plumbing",
-            addressText = "202 Faizabad",
-            status = CustomerBookingStatus.CLOSED.name,
-            slotDate = "2026-05-14",
-            slotWindow = "14:00-16:00",
-            amount = 29900L,
-            paymentMethod = null,
-            createdAt = "2026-05-11T10:00:00.000Z",
-            // ratingSubmitted omitted — default should be false
-        )
+        val dto =
+            CustomerBookingDto(
+                bookingId = "bk-default",
+                serviceId = "svc-1",
+                serviceName = "Plumbing",
+                addressText = "202 Faizabad",
+                status = CustomerBookingStatus.CLOSED.name,
+                slotDate = "2026-05-14",
+                slotWindow = "14:00-16:00",
+                amount = 29900L,
+                paymentMethod = null,
+                createdAt = "2026-05-11T10:00:00.000Z",
+                // ratingSubmitted omitted — default should be false
+            )
         assertThat(dto.toDomain().ratingSubmitted).isFalse()
     }
 

@@ -151,6 +151,11 @@ public class CustomerFirebaseMessagingService : FirebaseMessagingService() {
         val title = data["title"] ?: notificationTitle(intent.type)
         val body = data["body"] ?: notificationBody(intent.type)
 
+        val priority =
+            when (channelId) {
+                CHANNEL_BOOKINGS, CHANNEL_OFFERS -> NotificationCompat.PRIORITY_HIGH
+                else -> NotificationCompat.PRIORITY_DEFAULT
+            }
         val notification =
             NotificationCompat
                 .Builder(this, channelId)
@@ -159,7 +164,7 @@ public class CustomerFirebaseMessagingService : FirebaseMessagingService() {
                 .setContentText(body)
                 .setContentIntent(tapPi)
                 .setAutoCancel(true)
-                .setPriority(priorityFor(channelId))
+                .setPriority(priority)
                 .build()
 
         nm.notify(deepLinkUri.hashCode(), notification)
@@ -178,12 +183,6 @@ public class CustomerFirebaseMessagingService : FirebaseMessagingService() {
             ->
                 CHANNEL_COMPLAINTS
             else -> CHANNEL_SYSTEM
-        }
-
-    private fun priorityFor(channelId: String): Int =
-        when (channelId) {
-            CHANNEL_BOOKINGS, CHANNEL_OFFERS -> NotificationCompat.PRIORITY_HIGH
-            else -> NotificationCompat.PRIORITY_DEFAULT
         }
 
     private fun notificationTitle(type: com.homeservices.corenav.PendingActionType): String =
