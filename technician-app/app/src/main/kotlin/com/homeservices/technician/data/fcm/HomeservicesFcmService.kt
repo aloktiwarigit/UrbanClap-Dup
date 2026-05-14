@@ -157,6 +157,7 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
      *      full-screen offer UI (EventBus removal deferred to E11-S01b-2).
      *   3. Legacy event-bus types not yet in core-nav schema fall through to the existing switch.
      */
+    @Suppress("CyclomaticComplexMethod") // FCM type dispatcher — each branch is a distinct message type; extraction would obscure intent
     public fun handleMessageData(data: Map<String, String>) {
         // Attempt to ingest via NotificationRouter (pending-action types)
         val intent = router.parseFcmData(data)
@@ -312,10 +313,8 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
     private fun showErasureFinalNoticeNotification(daysRemaining: Int) {
         val channelId = CHANNEL_ERASURE_NOTICES
         val nm = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
-        // Channel registered eagerly by NotificationChannelInitializer at app start.
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O &&
-            nm.getNotificationChannel(channelId) == null
-        ) {
+        // Channel registered eagerly by registerChannels at app start; guard is defense-in-depth.
+        if (nm.getNotificationChannel(channelId) == null) {
             nm.createNotificationChannel(
                 android.app
                     .NotificationChannel(

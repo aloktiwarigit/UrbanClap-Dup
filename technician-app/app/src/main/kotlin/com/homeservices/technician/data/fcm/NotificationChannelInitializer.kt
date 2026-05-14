@@ -3,7 +3,6 @@ package com.homeservices.technician.data.fcm
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
-import android.os.Build
 
 /**
  * Registers every FCM notification channel at app start.
@@ -21,7 +20,7 @@ import android.os.Build
  */
 public object NotificationChannelInitializer {
     public fun initializeChannels(context: Context) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        // minSdk = 26 = API O; SDK_INT < O check is always false and intentionally omitted.
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         registerIfMissing(
             nm = nm,
@@ -57,6 +56,7 @@ public object NotificationChannelInitializer {
         )
     }
 
+    @Suppress("LongParameterList") // channel registration utility — all params are required Android API fields
     private fun registerIfMissing(
         nm: NotificationManager,
         id: String,
