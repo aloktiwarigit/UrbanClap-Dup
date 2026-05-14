@@ -221,6 +221,11 @@ private fun AuthStateEffect(
  * Design note: We track a `Set<String>` of already-navigated action IDs so that
  * re-compositions and config changes do not trigger duplicate navigation.
  * The set is cleared when the user ID changes (new login).
+ *
+ * P2 fix (E11-S01b-2 Codex review): Only navigate to the single highest-priority
+ * (first) action that has a mappable route per emission. Iterating all actions
+ * and calling navigate for each caused lower-priority destinations to land on top
+ * of higher-priority ones in the back stack.
  */
 @Composable
 private fun PendingActionsNavEffect(
@@ -233,15 +238,15 @@ private fun PendingActionsNavEffect(
     LaunchedEffect(authenticatedUid) {
         val navigatedIds = mutableSetOf<String>()
         pendingActionStore.observeActive(authenticatedUid).collect { actions ->
-            actions
-                .filter { it.status == PendingActionStatus.ACTIVE && it.id !in navigatedIds }
-                .forEach { action ->
-                    val route = pendingActionNavRoute(action.type, action.entityId)
-                    if (route != null) {
-                        navigatedIds += action.id
-                        navController.navigate(route) { launchSingleTop = true }
-                    }
-                }
+            val topAction =
+                actions
+                    .filter { it.status == PendingActionStatus.ACTIVE && it.id !in navigatedIds }
+                    .firstOrNull { pendingActionNavRoute(it.type, it.entityId) != null }
+            if (topAction != null) {
+                val route = pendingActionNavRoute(topAction.type, topAction.entityId)!!
+                navigatedIds += topAction.id
+                navController.navigate(route) { launchSingleTop = true }
+            }
         }
     }
 }

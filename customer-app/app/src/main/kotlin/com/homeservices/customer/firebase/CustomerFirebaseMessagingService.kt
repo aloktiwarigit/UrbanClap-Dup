@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.homeservices.corenav.NotificationRouter
@@ -42,6 +43,7 @@ import javax.inject.Inject
  * [MainActivity] with `homeservices://action/<actionId>` as a data URI.
  * MainActivity + AppNavigation handle route resolution via TierLadder.
  */
+@Suppress("TooManyFunctions") // P1 fix (E11-S01b-2): dataWithAuthUid is the 12th function needed for the projector-userId fallback
 @AndroidEntryPoint
 public class CustomerFirebaseMessagingService : FirebaseMessagingService() {
     @Inject public lateinit var priceApprovalEventBus: PriceApprovalEventBus
@@ -60,29 +62,16 @@ public class CustomerFirebaseMessagingService : FirebaseMessagingService() {
         val data = message.data
 
         // Delegate pending-action types to Ingestor — parsed via NotificationRouter.
-        // Strategy (A) additive fallback: run both the new router path AND the legacy
-        // event-bus path for ADDON_APPROVAL_REQUESTED and RATING_PROMPT_CUSTOMER.
         //
-        // Background: the backend projector FCM payload does not yet include `userId`
-        // at the top level, so buildPendingActionFromIntent() returns null for these
-        // two types. Rather than silently dropping the notification, we fall through
-        // to the legacy event-bus post so foreground UI (price-approval sheet,
-        // rating prompt) still navigates correctly.
-        //
-        // TODO (follow-up): Once the backend adds `userId` to projector FCM payloads,
-        // the null check on buildPendingActionFromIntent will always pass and the
-        // legacy fallback below can be removed in E11-S01b-2.
-        //
-        // NestedBlockDepth fix: combine the two null-checks into a single `if` to stay
-        // within the allowed depth (default: 4). The `?.let` call for buildPendingAction
-        // returns null if userId is absent, producing the same fallthrough as before.
+        // P1 fix (E11-S01b-2 Codex): AppNavigation no longer observes legacy event buses.
+        // When the backend FCM payload lacks `userId` (projector gap), use the authenticated
+        // Firebase UID so buildPendingActionFromIntent can succeed and Room emits for nav.
+        // If FirebaseAuth is also null (signed-out), the legacy path fires instead.
         val intent = router.parseFcmData(data)
-        val action = intent?.let { buildPendingActionFromIntent(it, data) }
-        if (intent != null && action != null) {
+        val action = intent?.let { buildPendingActionFromIntent(it, dataWithAuthUid(data)) }
+        if (action != null) {
             serviceScope.launch { ingestor.ingest(action) }
-            showNotificationForIntent(intent, data)
-            // New-router path succeeded — also do legacy post for types that
-            // foreground UI observes, so both paths are satisfied simultaneously.
+            showNotificationForIntent(intent!!, data)
             val bookingId = data["bookingId"]
             when (data["type"]) {
                 "ADDON_APPROVAL_REQUESTED" -> if (bookingId != null) priceApprovalEventBus.post(bookingId)
@@ -90,11 +79,9 @@ public class CustomerFirebaseMessagingService : FirebaseMessagingService() {
             }
             return
         }
-        // intent is null, or action is null (userId missing from FCM payload) —
-        // fall through to legacy event-bus routing so the foreground UI is not dropped.
-
-        // Legacy in-process routing (unchanged; removed in E11-S01b-2).
-        // Also reached as a fallback when router parsed an intent but userId was absent.
+        // Legacy in-process routing — reached when the new path could not build a
+        // PendingAction: intent null, or signed-out (FirebaseAuth returned null).
+        // LOCATION_UPDATE/BOOKING_STATUS_UPDATE always arrive here.
         val bookingId = data["bookingId"] ?: return
         when (data["type"]) {
             "ADDON_APPROVAL_REQUESTED" -> priceApprovalEventBus.post(bookingId)
@@ -102,6 +89,22 @@ public class CustomerFirebaseMessagingService : FirebaseMessagingService() {
             "LOCATION_UPDATE" -> handleLocationUpdate(data, bookingId)
             "BOOKING_STATUS_UPDATE" -> handleBookingStatusUpdate(data, bookingId)
         }
+    }
+
+    /**
+     * Returns a copy of [data] with a `userId` entry, using the FCM-supplied value if
+     * present, otherwise substituting [FirebaseAuth.currentUser] uid.
+     *
+     * P1 fix: Backend projector FCM payloads for ADDON_APPROVAL_REQUESTED and
+     * RATING_PROMPT_CUSTOMER omit `userId`. Without a userId, [buildPendingActionFromIntent]
+     * returns null and Room never persists the action, silently breaking foreground nav.
+     * If FirebaseAuth also returns null (signed-out), the original map is returned
+     * unchanged — [buildPendingActionFromIntent] will still return null, and the
+     * legacy event-bus path fires as a final fallback.
+     */
+    private fun dataWithAuthUid(data: Map<String, String>): Map<String, String> {
+        val authUid = if (data.containsKey("userId")) null else FirebaseAuth.getInstance().currentUser?.uid
+        return if (authUid != null) data.toMutableMap().also { it["userId"] = authUid } else data
     }
 
     // Token rotation handled via FCM topic subscription — no server-side storage needed.

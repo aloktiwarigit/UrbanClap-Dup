@@ -6,10 +6,15 @@ import org.junit.Test
 /**
  * JVM unit tests for [shouldPostLegacyEvent].
  *
- * Validates the FIX 1 logic: legacy event-bus posts continue for
- * ADDON_APPROVAL_REQUESTED and RATING_PROMPT_CUSTOMER when the new
- * router/ingestor path cannot build a PendingAction (userId missing from
- * backend FCM payload).
+ * Validates the P1 fix (E11-S01b-2 Codex review): when the FCM payload lacks `userId`
+ * (backend projector gap), the service gates on [shouldPostLegacyEvent] returning true
+ * to attempt a FirebaseAuth uid fallback. If FirebaseAuth has a current user, a synthetic
+ * PendingAction is built and ingested into Room — no event-bus post is needed.
+ * If FirebaseAuth is null (signed out), the event-bus post still fires for backward compat.
+ *
+ * These tests cover the pure-function helper. The auth-uid fallback itself lives in
+ * [CustomerFirebaseMessagingService.onMessageReceived] and is tested via the integration
+ * path (requires mocking FirebaseAuth).
  *
  * No Hilt / Android runtime required — pure function tests.
  */
