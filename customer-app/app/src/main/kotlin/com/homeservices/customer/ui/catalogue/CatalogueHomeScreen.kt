@@ -86,6 +86,7 @@ import com.homeservices.customer.R
 import com.homeservices.customer.domain.catalogue.model.Category
 import com.homeservices.customer.ui.bookings.CustomerBookingsScreen
 import com.homeservices.customer.ui.util.formatInr
+import com.homeservices.customer.ui.wallet.WalletBalanceChip
 import kotlinx.coroutines.delay
 
 // ── Colour tokens (Codex-refined) ────────────────────────────────────────────
@@ -179,6 +180,9 @@ internal fun CatalogueHomeScreen(
     onSettingsClick: () -> Unit,
     onProfileLanguageClick: () -> Unit,
     onTrackBooking: (String) -> Unit,
+    showWalletChip: Boolean = false,
+    walletBalanceInPaise: Long = 0L,
+    onWalletClick: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     CatalogueHomeContent(
@@ -187,6 +191,9 @@ internal fun CatalogueHomeScreen(
         onSettingsClick = onSettingsClick,
         onProfileLanguageClick = onProfileLanguageClick,
         onTrackBooking = onTrackBooking,
+        showWalletChip = showWalletChip,
+        walletBalanceInPaise = walletBalanceInPaise,
+        onWalletClick = onWalletClick,
     )
 }
 
@@ -197,6 +204,9 @@ internal fun CatalogueHomeContent(
     onSettingsClick: () -> Unit,
     onProfileLanguageClick: () -> Unit,
     onTrackBooking: (String) -> Unit,
+    showWalletChip: Boolean = false,
+    walletBalanceInPaise: Long = 0L,
+    onWalletClick: () -> Unit = {},
 ) {
     var selectedNav by remember { mutableIntStateOf(0) }
 
@@ -204,7 +214,13 @@ internal fun CatalogueHomeContent(
         containerColor = WarmIvory,
         topBar = {
             when (selectedNav) {
-                0 -> StickyHero(onSettingsClick = onSettingsClick)
+                0 ->
+                    StickyHero(
+                        onSettingsClick = onSettingsClick,
+                        showWalletChip = showWalletChip,
+                        walletBalanceInPaise = walletBalanceInPaise,
+                        onWalletClick = onWalletClick,
+                    )
                 1, 2 -> CompactTabBar(title = navItems[selectedNav].label)
                 else -> Unit
             }
@@ -269,7 +285,12 @@ internal fun CatalogueHomeContent(
 
 // ── Home header ───────────────────────────────────────────────────────────────
 @Composable
-private fun StickyHero(onSettingsClick: () -> Unit) {
+private fun StickyHero(
+    onSettingsClick: () -> Unit,
+    showWalletChip: Boolean = false,
+    walletBalanceInPaise: Long = 0L,
+    onWalletClick: () -> Unit = {},
+) {
     Column(
         modifier =
             Modifier
@@ -349,6 +370,13 @@ private fun StickyHero(onSettingsClick: () -> Unit) {
                     .height(52.dp)
                     .border(1.dp, CardBorder, RoundedCornerShape(18.dp)),
         )
+        if (showWalletChip && walletBalanceInPaise > 0L) {
+            Spacer(Modifier.height(8.dp))
+            WalletBalanceChip(
+                balanceInPaise = walletBalanceInPaise,
+                onClick = onWalletClick,
+            )
+        }
     }
 }
 

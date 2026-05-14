@@ -31,6 +31,15 @@ public interface FeatureFlags {
      * Default: OFF (false) — flipped ON after Week 2 exit / Play Store submission.
      */
     public fun dpdpSelfServiceEnabled(): Boolean
+
+    /**
+     * When `true`, the wallet balance chip on HomeScreen and the WalletScreen
+     * are visible to the customer. When `false`, the entry point is hidden.
+     *
+     * Flag name: `customer.wallet.visible`
+     * Default: OFF (false) — flipped ON after E13-S02 rollout.
+     */
+    public fun walletVisible(): Boolean
 }
 
 /**
@@ -43,6 +52,8 @@ public class BuildConfigFeatureFlags
         override fun truecallerServerVerify(): Boolean = TRUECALLER_SERVER_VERIFY_V2_ENABLED
 
         override fun dpdpSelfServiceEnabled(): Boolean = false
+
+        override fun walletVisible(): Boolean = false
 
         private companion object {
             /**
