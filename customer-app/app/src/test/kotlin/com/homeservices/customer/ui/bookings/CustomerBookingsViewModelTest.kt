@@ -57,17 +57,69 @@ public class CustomerBookingsViewModelTest {
             assertThat(vm.uiState.value).isEqualTo(CustomerBookingsUiState.Error)
         }
 
-    private fun sampleBooking(): CustomerBooking =
+    @Test
+    public fun `completed booking with ratingSubmitted false survives in ui state`(): Unit =
+        runTest {
+            val booking = sampleBooking(
+                status = CustomerBookingStatus.COMPLETED,
+                ratingSubmitted = false,
+            )
+            every { getBookings() } returns flowOf(Result.success(listOf(booking)))
+
+            val vm = CustomerBookingsViewModel(getBookings)
+            advanceUntilIdle()
+
+            val state = vm.uiState.value as CustomerBookingsUiState.Ready
+            assertThat(state.bookings.first().ratingSubmitted).isFalse()
+        }
+
+    @Test
+    public fun `completed booking with ratingSubmitted true survives in ui state`(): Unit =
+        runTest {
+            val booking = sampleBooking(
+                status = CustomerBookingStatus.COMPLETED,
+                ratingSubmitted = true,
+            )
+            every { getBookings() } returns flowOf(Result.success(listOf(booking)))
+
+            val vm = CustomerBookingsViewModel(getBookings)
+            advanceUntilIdle()
+
+            val state = vm.uiState.value as CustomerBookingsUiState.Ready
+            assertThat(state.bookings.first().ratingSubmitted).isTrue()
+        }
+
+    @Test
+    public fun `closed booking with ratingSubmitted false survives in ui state`(): Unit =
+        runTest {
+            val booking = sampleBooking(
+                status = CustomerBookingStatus.CLOSED,
+                ratingSubmitted = false,
+            )
+            every { getBookings() } returns flowOf(Result.success(listOf(booking)))
+
+            val vm = CustomerBookingsViewModel(getBookings)
+            advanceUntilIdle()
+
+            val state = vm.uiState.value as CustomerBookingsUiState.Ready
+            assertThat(state.bookings.first().ratingSubmitted).isFalse()
+        }
+
+    private fun sampleBooking(
+        status: CustomerBookingStatus = CustomerBookingStatus.ASSIGNED,
+        ratingSubmitted: Boolean = false,
+    ): CustomerBooking =
         CustomerBooking(
             bookingId = "bk-1",
             serviceId = "svc-1",
             serviceName = "AC repair",
             addressText = "101 Ayodhya",
-            status = CustomerBookingStatus.ASSIGNED,
+            status = status,
             slotDate = "2026-05-05",
             slotWindow = "10:00-12:00",
             amountPaise = 59900,
             paymentMethod = BookingPaymentMethod.CASH_ON_SERVICE,
             createdAt = "2026-05-03T10:00:00.000Z",
+            ratingSubmitted = ratingSubmitted,
         )
 }
