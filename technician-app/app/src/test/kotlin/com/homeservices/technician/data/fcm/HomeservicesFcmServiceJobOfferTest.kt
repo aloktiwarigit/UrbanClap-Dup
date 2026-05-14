@@ -155,4 +155,41 @@ public class HomeservicesFcmServiceJobOfferTest {
     public fun `CHANNEL_DISPATCH_OFFERS constant has expected value`() {
         assertThat(HomeservicesFcmService.CHANNEL_DISPATCH_OFFERS).isEqualTo("dispatch_offers")
     }
+
+    @Test
+    public fun `ERASURE_FINAL_NOTICE — does not trigger any unrelated event bus`() {
+        // Pre-fix, this message type fell through the when block silently and was dropped.
+        // Post-fix, it routes to showErasureFinalNoticeNotification(daysRemaining) which
+        // posts to a dedicated notification channel. The OS-level NotificationManager call
+        // throws an NPE in this unit context (no Android service) — runCatching absorbs it,
+        // same pattern as the JOB_OFFER test. The meaningful assertion here is the absence
+        // of cross-talk: no other event bus should receive this message type.
+        val data = mapOf("type" to "ERASURE_FINAL_NOTICE", "daysRemaining" to "3")
+
+        runCatching { service.handleMessageData(data) }
+
+        verify(exactly = 0) { eventBus.tryEmit(any()) }
+        verify(exactly = 0) { ratingPromptEventBus.post(any()) }
+        verify(exactly = 0) { earningsUpdateEventBus.notifyEarningsUpdate() }
+        verify(exactly = 0) { ratingReceivedEventBus.post() }
+    }
+
+    @Test
+    public fun `ERASURE_FINAL_NOTICE — missing daysRemaining defaults to zero`() {
+        // Defensive parsing: a malformed/absent daysRemaining field must not crash the
+        // handler. The notification path renders the "last day" copy when 0.
+        val data = mapOf("type" to "ERASURE_FINAL_NOTICE")
+
+        runCatching { service.handleMessageData(data) }
+
+        verify(exactly = 0) { eventBus.tryEmit(any()) }
+        verify(exactly = 0) { ratingPromptEventBus.post(any()) }
+        verify(exactly = 0) { earningsUpdateEventBus.notifyEarningsUpdate() }
+        verify(exactly = 0) { ratingReceivedEventBus.post() }
+    }
+
+    @Test
+    public fun `CHANNEL_ERASURE_NOTICES constant has expected value`() {
+        assertThat(HomeservicesFcmService.CHANNEL_ERASURE_NOTICES).isEqualTo("erasure_notices")
+    }
 }

@@ -392,6 +392,11 @@ kover {
                     // onMessageReceived requires a live FCM connection, not unit-testable
                     "*.HomeservicesFcmService",
                     "*.HomeservicesFcmService\$*",
+                    // NotificationChannelInitializer — all framework calls (NotificationChannel,
+                    // NotificationManager). Same rationale as HomeservicesFcmService: requires
+                    // Robolectric or instrumented test to exercise. Wired into Application.onCreate.
+                    "*.NotificationChannelInitializer",
+                    "*.NotificationChannelInitializer\$*",
                     // JobOfferScreen composable file generates *Kt JVM wrapper with framework branches
                     "*.JobOfferScreenKt",
                     "*.JobOfferScreenKt\$*",

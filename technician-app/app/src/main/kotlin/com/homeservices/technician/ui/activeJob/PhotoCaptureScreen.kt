@@ -173,9 +173,13 @@ internal fun PhotoCaptureScreen(
 
             Button(
                 onClick = {
+                    // filesDir (not cacheDir): the OS may evict cacheDir under storage
+                    // pressure between capture and the user tapping "Confirm & Upload",
+                    // losing the evidence photo. JobPhotoRepositoryImpl.uploadPhoto deletes
+                    // the file after a successful upload to keep filesDir from growing.
                     val file =
                         File(
-                            context.cacheDir,
+                            context.filesDir,
                             "photo_${stage}_${System.currentTimeMillis()}.jpg",
                         )
                     imageCapture.takePicture(
@@ -254,6 +258,8 @@ internal fun PhotoCaptureScreen(
                     Text(stringResource(R.string.photo_upload_failed, uploadError), color = Color.White)
                     Button(onClick = onRetry) { Text(stringResource(R.string.photo_retry_upload)) }
                     TextButton(onClick = {
+                        // Delete the abandoned filesDir capture so it doesn't accumulate.
+                        capturedPath?.let { runCatching { File(it).delete() } }
                         capturedPath = null
                         onRetake()
                     }) {
@@ -270,7 +276,17 @@ internal fun PhotoCaptureScreen(
                             .padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    OutlinedButton(onClick = { capturedPath = null }) {
+                    OutlinedButton(
+                        onClick = {
+                            // Delete the abandoned filesDir capture so it doesn't accumulate.
+                            capturedPath?.let { runCatching { File(it).delete() } }
+                            capturedPath = null
+                        },
+                        // Disabled while uploading: deleting capturedPath mid-upload races
+                        // UploadJobPhotoUseCase's BitmapFactory.decodeFile and surfaces as
+                        // "Cannot decode image" instead of completing.
+                        enabled = !isUploading,
+                    ) {
                         Text(stringResource(R.string.photo_retake), color = Color.White)
                     }
                     Button(

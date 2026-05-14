@@ -51,12 +51,16 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
 
         // Preserved for backward compat — maps to CHANNEL_OFFERS
         public const val CHANNEL_DISPATCH_OFFERS: String = "dispatch_offers"
-
+        public const val CHANNEL_APPEAL_DECISION: String = "appeal_decision"
+        public const val CHANNEL_RATING_RECEIVED: String = "rating_received"
+        public const val CHANNEL_ERASURE_NOTICES: String = "erasure_notices"
         private const val REQUEST_CODE_RATING = 1001
         private const val REQUEST_CODE_JOB_OFFER = 1002
+        private const val REQUEST_CODE_ERASURE = 1003
         private const val NOTIFICATION_ID_JOB_OFFER = 3001
+        private const val NOTIFICATION_ID_ERASURE_NOTICE = 3002
 
-        /** Register all 4 notification channels. Call from Application.onCreate.
+        /** Register all notification channels. Call from Application.onCreate.
          *  Notification channels are an Oreo+ API; the project's minSdk is 26 so the
          *  pre-Oreo guard is unnecessary (lint flags it as ObsoleteSdkInt). */
         public fun registerChannels(context: Context) {
@@ -95,6 +99,21 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
                         "System",
                         NotificationManager.IMPORTANCE_LOW,
                     ).apply { description = "System messages" },
+                    NotificationChannel(
+                        CHANNEL_APPEAL_DECISION,
+                        "Appeal Decisions",
+                        NotificationManager.IMPORTANCE_DEFAULT,
+                    ).apply { description = "Rating appeal outcomes" },
+                    NotificationChannel(
+                        CHANNEL_RATING_RECEIVED,
+                        "Rating Notifications",
+                        NotificationManager.IMPORTANCE_DEFAULT,
+                    ).apply { description = "Customer ratings for completed jobs" },
+                    NotificationChannel(
+                        CHANNEL_ERASURE_NOTICES,
+                        "Data Erasure Notices",
+                        NotificationManager.IMPORTANCE_DEFAULT,
+                    ).apply { description = "GDPR/DPDP erasure final notices" },
                 ),
             )
         }
@@ -138,6 +157,7 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
      *      full-screen offer UI (EventBus removal deferred to E11-S01b-2).
      *   3. Legacy event-bus types not yet in core-nav schema fall through to the existing switch.
      */
+    @Suppress("CyclomaticComplexMethod") // FCM type dispatcher — each branch is a distinct message type; extraction would obscure intent
     public fun handleMessageData(data: Map<String, String>) {
         // Attempt to ingest via NotificationRouter (pending-action types)
         val intent = router.parseFcmData(data)
@@ -175,6 +195,10 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
                 val ownerNote = data["ownerNote"] ?: ""
                 ratingReceivedEventBus.post()
                 showAppealDecisionNotification(decision, ownerNote)
+            }
+            "ERASURE_FINAL_NOTICE" -> {
+                val daysRemaining = data["daysRemaining"]?.toIntOrNull() ?: 0
+                showErasureFinalNoticeNotification(daysRemaining)
             }
         }
     }
@@ -221,7 +245,7 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
         decision: String,
         ownerNote: String,
     ) {
-        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         val intent =
             Intent(this, MainActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -247,7 +271,7 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
             }
         val notification =
             NotificationCompat
-                .Builder(this, CHANNEL_PAYOUTS)
+                .Builder(this, CHANNEL_APPEAL_DECISION)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentTitle("अपील का फैसला आया")
                 .setContentText("$baseBody$noteSnippet")
@@ -261,7 +285,7 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
         overall: Int,
         comment: String,
     ) {
-        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         val intent =
             Intent(this, MainActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -276,7 +300,7 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
         val truncatedComment = if (comment.length > 100) comment.take(97) + "…" else comment
         val notification =
             NotificationCompat
-                .Builder(this, CHANNEL_PAYOUTS)
+                .Builder(this, CHANNEL_RATING_RECEIVED)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentTitle("रेटिंग प्राप्त हुई")
                 .setContentText("आपको $overall★ मिले। टिप्पणी: $truncatedComment")
@@ -284,6 +308,55 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
                 .setAutoCancel(true)
                 .build()
         nm.notify(System.currentTimeMillis().toInt(), notification)
+    }
+
+    private fun showErasureFinalNoticeNotification(daysRemaining: Int) {
+        val channelId = CHANNEL_ERASURE_NOTICES
+        val nm = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
+        // Channel registered eagerly by registerChannels at app start; guard is defense-in-depth.
+        if (nm.getNotificationChannel(channelId) == null) {
+            nm.createNotificationChannel(
+                android.app
+                    .NotificationChannel(
+                        channelId,
+                        "Account Erasure Notices",
+                        android.app.NotificationManager.IMPORTANCE_HIGH,
+                    ).apply { setBypassDnd(true) },
+            )
+        }
+        val intent =
+            android.content
+                .Intent(this, com.homeservices.technician.MainActivity::class.java)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        val pi =
+            android.app.PendingIntent.getActivity(
+                this,
+                REQUEST_CODE_ERASURE,
+                intent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
+            )
+        val title = "खाता हटाने की अंतिम चेतावनी"
+        val body =
+            if (daysRemaining > 0) {
+                "आपका खाता $daysRemaining दिनों में स्थायी रूप से हटाया जाएगा। यदि यह गलती से हो रहा है, तुरंत सहायता से संपर्क करें।"
+            } else {
+                "आपके खाते को स्थायी रूप से हटाया जा रहा है। तुरंत सहायता से संपर्क करें।"
+            }
+        val notification =
+            androidx.core.app.NotificationCompat
+                .Builder(this, channelId)
+                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setContentTitle(title)
+                .setContentText(body)
+                .setStyle(
+                    androidx.core.app.NotificationCompat
+                        .BigTextStyle()
+                        .bigText(body),
+                ).setContentIntent(pi)
+                .setAutoCancel(true)
+                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+                .build()
+        nm.notify(NOTIFICATION_ID_ERASURE_NOTICE, notification)
     }
 
     override fun onNewToken(token: String): Unit {
