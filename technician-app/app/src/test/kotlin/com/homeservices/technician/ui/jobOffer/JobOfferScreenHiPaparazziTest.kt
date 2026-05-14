@@ -7,11 +7,11 @@ import com.homeservices.technician.domain.jobOffer.model.JobOffer
 import org.junit.Rule
 import org.junit.Test
 
-public class JobOfferScreenPaparazziTest {
+public class JobOfferScreenHiPaparazziTest {
     @get:Rule
     public val paparazzi: Paparazzi =
         Paparazzi(
-            deviceConfig = DeviceConfig.PIXEL_5,
+            deviceConfig = DeviceConfig.PIXEL_5.copy(locale = "hi"),
             theme = "android:Theme.Material3.DayNight.NoActionBar",
         )
 
@@ -28,8 +28,10 @@ public class JobOfferScreenPaparazziTest {
             expiresAtMs = System.currentTimeMillis() + 30_000L,
         )
 
+    // Goldens recorded on CI Linux via paparazzi-record.yml; never locally on Windows.
+
     @Test
-    public fun jobOfferScreen_offerArrived_lightTheme(): Unit {
+    public fun jobOfferScreen_offerArrived_hi(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
                 JobOfferScreenContent(
@@ -42,33 +44,7 @@ public class JobOfferScreenPaparazziTest {
     }
 
     @Test
-    public fun jobOfferScreen_offerArrived_darkTheme(): Unit {
-        paparazzi.snapshot {
-            HomeservicesTheme(darkTheme = true) {
-                JobOfferScreenContent(
-                    uiState = JobOfferUiState.Offering(offer = anOffer(), remainingSeconds = 28),
-                    onAccept = {},
-                    onDecline = {},
-                )
-            }
-        }
-    }
-
-    @Test
-    public fun jobOfferScreen_lastFiveSeconds(): Unit {
-        paparazzi.snapshot {
-            HomeservicesTheme(darkTheme = false) {
-                JobOfferScreenContent(
-                    uiState = JobOfferUiState.Offering(offer = anOffer(), remainingSeconds = 4),
-                    onAccept = {},
-                    onDecline = {},
-                )
-            }
-        }
-    }
-
-    @Test
-    public fun jobOfferScreen_expired(): Unit {
+    public fun jobOfferScreen_expired_hi(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
                 JobOfferScreenContent(
@@ -79,5 +55,4 @@ public class JobOfferScreenPaparazziTest {
             }
         }
     }
-
 }

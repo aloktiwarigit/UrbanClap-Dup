@@ -10,11 +10,11 @@ import com.homeservices.technician.domain.earnings.model.MonthEarningsPeriod
 import org.junit.Rule
 import org.junit.Test
 
-public class EarningsScreenPaparazziTest {
+public class EarningsScreenHiPaparazziTest {
     @get:Rule
     public val paparazzi: Paparazzi =
         Paparazzi(
-            deviceConfig = DeviceConfig.PIXEL_5,
+            deviceConfig = DeviceConfig.PIXEL_5.copy(locale = "hi"),
             theme = "android:Theme.Material3.DayNight.NoActionBar",
         )
 
@@ -36,8 +36,10 @@ public class EarningsScreenPaparazziTest {
                 ),
         )
 
+    // Goldens recorded on CI Linux via paparazzi-record.yml; never locally on Windows.
+
     @Test
-    public fun earningsScreen_success(): Unit {
+    public fun earningsScreen_success_hi(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
                 EarningsContent(
@@ -51,25 +53,11 @@ public class EarningsScreenPaparazziTest {
     }
 
     @Test
-    public fun earningsScreen_loading(): Unit {
+    public fun earningsScreen_loading_hi(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
                 EarningsContent(
                     uiState = EarningsUiState.Loading,
-                    onRetry = {},
-                    onViewRatings = {},
-                    onPayoutSettings = {},
-                )
-            }
-        }
-    }
-
-    @Test
-    public fun earningsScreen_error(): Unit {
-        paparazzi.snapshot {
-            HomeservicesTheme(darkTheme = false) {
-                EarningsContent(
-                    uiState = EarningsUiState.Error,
                     onRetry = {},
                     onViewRatings = {},
                     onPayoutSettings = {},
