@@ -1,5 +1,6 @@
 package com.homeservices.technician.data.payout.di
 
+import com.homeservices.technician.BuildConfig
 import com.homeservices.technician.data.network.defaultMoshi
 import com.homeservices.technician.data.payout.PayoutRepositoryImpl
 import com.homeservices.technician.data.payout.remote.PayoutApiService
@@ -29,7 +30,7 @@ public abstract class PayoutModule {
         ): PayoutApiService =
             Retrofit
                 .Builder()
-                .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
+                .baseUrl(BuildConfig.API_BASE_URL.trimEnd('/') + "/")
                 .client(client)
                 .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
                 .build()

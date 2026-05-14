@@ -1,5 +1,6 @@
 package com.homeservices.technician.data.shield.di
 
+import com.homeservices.technician.BuildConfig
 import com.homeservices.technician.data.network.defaultMoshi
 import com.homeservices.technician.data.rating.di.AuthOkHttpClient
 import com.homeservices.technician.data.shield.ShieldRepositoryImpl
@@ -31,7 +32,7 @@ public abstract class ShieldModule {
         ): ShieldApiService =
             Retrofit
                 .Builder()
-                .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
+                .baseUrl(BuildConfig.API_BASE_URL.trimEnd('/') + "/")
                 .client(client)
                 .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
                 .build()

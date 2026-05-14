@@ -1,5 +1,6 @@
 package com.homeservices.technician.data.rating.di
 
+import com.homeservices.technician.BuildConfig
 import com.homeservices.technician.data.network.auth.FirebaseTokenAuthenticator
 import com.homeservices.technician.data.network.auth.IdTokenCache
 import com.homeservices.technician.data.network.defaultMoshi
@@ -68,7 +69,7 @@ public abstract class RatingModule {
         ): RatingApiService =
             Retrofit
                 .Builder()
-                .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
+                .baseUrl(BuildConfig.API_BASE_URL.trimEnd('/') + "/")
                 .client(client)
                 .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
                 .build()

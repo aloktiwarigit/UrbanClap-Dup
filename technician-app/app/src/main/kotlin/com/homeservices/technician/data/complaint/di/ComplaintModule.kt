@@ -1,5 +1,6 @@
 package com.homeservices.technician.data.complaint.di
 
+import com.homeservices.technician.BuildConfig
 import com.homeservices.technician.data.complaint.ComplaintRepository
 import com.homeservices.technician.data.complaint.ComplaintRepositoryImpl
 import com.homeservices.technician.data.complaint.remote.ComplaintApiService
@@ -32,7 +33,7 @@ public abstract class ComplaintModule {
         ): ComplaintApiService =
             Retrofit
                 .Builder()
-                .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
+                .baseUrl(BuildConfig.API_BASE_URL.trimEnd('/') + "/")
                 .client(client)
                 .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
                 .build()

@@ -1,5 +1,6 @@
 package com.homeservices.technician.data.serviceprofile.di
 
+import com.homeservices.technician.BuildConfig
 import com.homeservices.technician.data.rating.di.AuthOkHttpClient
 import com.homeservices.technician.data.serviceprofile.ServiceProfileRepositoryImpl
 import com.homeservices.technician.data.serviceprofile.remote.ServiceProfileApiService
@@ -31,7 +32,7 @@ internal abstract class ServiceProfileModule {
             val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
             return Retrofit
                 .Builder()
-                .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
+                .baseUrl(BuildConfig.API_BASE_URL.trimEnd('/') + "/")
                 .client(client)
                 .addConverterFactory(MoshiConverterFactory.create(moshi))
                 .build()

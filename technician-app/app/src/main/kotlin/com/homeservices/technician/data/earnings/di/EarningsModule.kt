@@ -1,5 +1,6 @@
 package com.homeservices.technician.data.earnings.di
 
+import com.homeservices.technician.BuildConfig
 import com.homeservices.technician.data.earnings.EarningsRepositoryImpl
 import com.homeservices.technician.data.earnings.remote.EarningsApiService
 import com.homeservices.technician.data.network.defaultMoshi
@@ -29,7 +30,7 @@ public abstract class EarningsModule {
         ): EarningsApiService =
             Retrofit
                 .Builder()
-                .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
+                .baseUrl(BuildConfig.API_BASE_URL.trimEnd('/') + "/")
                 .client(client)
                 .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
                 .build()

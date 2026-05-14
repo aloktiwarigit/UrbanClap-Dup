@@ -1,5 +1,6 @@
 package com.homeservices.technician.data.availability.di
 
+import com.homeservices.technician.BuildConfig
 import com.homeservices.technician.data.availability.TechnicianAvailabilityRepositoryImpl
 import com.homeservices.technician.data.availability.remote.TechnicianAvailabilityApiService
 import com.homeservices.technician.data.network.defaultMoshi
@@ -29,7 +30,7 @@ internal abstract class TechnicianAvailabilityModule {
         ): TechnicianAvailabilityApiService =
             Retrofit
                 .Builder()
-                .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
+                .baseUrl(BuildConfig.API_BASE_URL.trimEnd('/') + "/")
                 .client(client)
                 .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
                 .build()

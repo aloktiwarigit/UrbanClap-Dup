@@ -1,5 +1,6 @@
 package com.homeservices.technician.data.jobs.di
 
+import com.homeservices.technician.BuildConfig
 import com.homeservices.technician.data.jobs.TechnicianJobsRepositoryImpl
 import com.homeservices.technician.data.jobs.remote.TechnicianJobsApiService
 import com.homeservices.technician.data.network.defaultMoshi
@@ -29,7 +30,7 @@ public abstract class TechnicianJobsModule {
         ): TechnicianJobsApiService =
             Retrofit
                 .Builder()
-                .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
+                .baseUrl(BuildConfig.API_BASE_URL.trimEnd('/') + "/")
                 .client(client)
                 .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
                 .build()
