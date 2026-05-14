@@ -1,7 +1,9 @@
-package com.homeservices.customer.ui.booking
+﻿package com.homeservices.customer.ui.booking
 
+import androidx.fragment.app.FragmentActivity
 import com.google.common.truth.Truth.assertThat
 import com.homeservices.customer.data.booking.PaymentResultBus
+import com.homeservices.customer.domain.auth.BiometricGateUseCase
 import com.homeservices.customer.domain.booking.ConfirmBookingUseCase
 import com.homeservices.customer.domain.booking.CreateBookingUseCase
 import com.homeservices.customer.domain.booking.RazorpayPaymentUseCase
@@ -34,9 +36,15 @@ public class BookingViewModelTest {
     private val razorpayPayment = RazorpayPaymentUseCase(bus)
     private val slot = BookingSlot(date = "2026-05-01", window = "10:00-12:00")
 
+    // Biometric gate stub: no hardware -> gate bypassed. Tests focus on booking logic.
+    // Biometric-specific tests are in BookingViewModelBiometricTest.
+    private val biometricGate: BiometricGateUseCase = mockk()
+    private val activity: FragmentActivity = mockk(relaxed = true)
+
     @Before
     public fun setUp(): Unit {
         Dispatchers.setMain(dispatcher)
+        every { biometricGate.canUseBiometric(any()) } returns false
     }
 
     @After
@@ -44,7 +52,7 @@ public class BookingViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun makeVm() = BookingViewModel(createBooking, confirmBooking, razorpayPayment)
+    private fun makeVm() = BookingViewModel(createBooking, confirmBooking, razorpayPayment, biometricGate)
 
     @Test
     public fun `setSlotAndAddress transitions to Ready`(): Unit =
@@ -65,7 +73,7 @@ public class BookingViewModelTest {
                 )
             val vm = makeVm()
             vm.setSlotAndAddress(slot, "123 Main St", 12.9716, 77.5946)
-            vm.startPayment("svc1", "cat1")
+            vm.startPayment("svc1", "cat1", activity)
             val state = vm.uiState.value
             assertThat(state).isInstanceOf(BookingUiState.AwaitingPayment::class.java)
             assertThat((state as BookingUiState.AwaitingPayment).razorpayOrderId).isEqualTo("order_1")
@@ -105,7 +113,7 @@ public class BookingViewModelTest {
                 )
             val vm = makeVm()
             vm.setSlotAndAddress(slot, "123 Main St", 12.9716, 77.5946)
-            vm.startPayment("svc1", "cat1")
+            vm.startPayment("svc1", "cat1", activity)
             val state = vm.uiState.value
             assertThat(state).isInstanceOf(BookingUiState.Error::class.java)
             assertThat((state as BookingUiState.Error).message).isEqualTo("server error")
@@ -121,8 +129,7 @@ public class BookingViewModelTest {
             every { confirmBooking("bk1", "pay_1", "order_1", "sig_1") } returns flowOf(Result.success("bk1"))
             val vm = makeVm()
             vm.setSlotAndAddress(slot, "123 Main St", 12.9716, 77.5946)
-            vm.startPayment("svc1", "cat1")
-            // Simulate Razorpay success callback via bus
+            vm.startPayment("svc1", "cat1", activity)
             bus.post(PaymentResult.Success(paymentId = "pay_1", orderId = "order_1", signature = "sig_1"))
             val state = vm.uiState.value
             assertThat(state).isInstanceOf(BookingUiState.BookingConfirmed::class.java)
@@ -138,8 +145,7 @@ public class BookingViewModelTest {
                 )
             val vm = makeVm()
             vm.setSlotAndAddress(slot, "123 Main St", 12.9716, 77.5946)
-            vm.startPayment("svc1", "cat1")
-            // SDK code 0 = Checkout.PAYMENT_CANCELED — user dismissed the sheet
+            vm.startPayment("svc1", "cat1", activity)
             bus.post(PaymentResult.Failure(code = 0, description = "Payment cancelled by user."))
             val state = vm.uiState.value
             assertThat(state).isInstanceOf(BookingUiState.PaymentFailed::class.java)
@@ -158,8 +164,7 @@ public class BookingViewModelTest {
                 )
             val vm = makeVm()
             vm.setSlotAndAddress(slot, "123 Main St", 12.9716, 77.5946)
-            vm.startPayment("svc1", "cat1")
-            // SDK code 0 = Checkout.PAYMENT_CANCELED — use cancellation code for this state-preservation test
+            vm.startPayment("svc1", "cat1", activity)
             bus.post(PaymentResult.Failure(code = 0, description = "Payment cancelled by user."))
             val state = vm.uiState.value as BookingUiState.PaymentFailed
             assertThat(state.orderId).isEqualTo("order_1")
@@ -175,8 +180,7 @@ public class BookingViewModelTest {
                 )
             val vm = makeVm()
             vm.setSlotAndAddress(slot, "123 Main St", 12.9716, 77.5946)
-            vm.startPayment("svc1", "cat1")
-            // SDK code 2 = Checkout.NETWORK_ERROR regardless of description
+            vm.startPayment("svc1", "cat1", activity)
             bus.post(PaymentResult.Failure(code = 2, description = "Connection timed out"))
             val state = vm.uiState.value as BookingUiState.PaymentFailed
             assertThat(state.errorCode).isEqualTo(RazorpayErrorCode.NETWORK_ERROR)
@@ -191,8 +195,7 @@ public class BookingViewModelTest {
                 )
             val vm = makeVm()
             vm.setSlotAndAddress(slot, "123 Main St", 12.9716, 77.5946)
-            vm.startPayment("svc1", "cat1")
-            // code 99 (unknown/future SDK code) → BAD_REQUEST_ERROR via else branch
+            vm.startPayment("svc1", "cat1", activity)
             bus.post(PaymentResult.Failure(code = 99, description = "Something went wrong"))
             val state = vm.uiState.value as BookingUiState.PaymentFailed
             assertThat(state.errorCode).isEqualTo(RazorpayErrorCode.BAD_REQUEST_ERROR)
@@ -207,8 +210,7 @@ public class BookingViewModelTest {
                 )
             val vm = makeVm()
             vm.setSlotAndAddress(slot, "123 Main St", 12.9716, 77.5946)
-            vm.startPayment("svc1", "cat1")
-            // SDK code 0 = Checkout.PAYMENT_CANCELED
+            vm.startPayment("svc1", "cat1", activity)
             bus.post(PaymentResult.Failure(code = 0, description = "Payment cancelled by user."))
             assertThat(vm.uiState.value).isInstanceOf(BookingUiState.PaymentFailed::class.java)
 
@@ -232,8 +234,7 @@ public class BookingViewModelTest {
                 )
             val vm = makeVm()
             vm.setSlotAndAddress(slot, "123 Main St", 12.9716, 77.5946)
-            vm.startPayment("svc1", "cat1")
-            // SDK code 0 = Checkout.PAYMENT_CANCELED
+            vm.startPayment("svc1", "cat1", activity)
             bus.post(PaymentResult.Failure(code = 0, description = "Payment cancelled by user."))
             assertThat(vm.uiState.value).isInstanceOf(BookingUiState.PaymentFailed::class.java)
 
@@ -258,9 +259,7 @@ public class BookingViewModelTest {
                 )
             val vm = makeVm()
             vm.setSlotAndAddress(slot, "123 Main St", 12.9716, 77.5946)
-            vm.startPayment("svc1", "cat1")
-            // Regression: SDK code 2 = Checkout.NETWORK_ERROR — must map to NETWORK_ERROR (retryable),
-            // NOT to the now-removed SERVER_ERROR. Flaky-connection users must see the retry prompt.
+            vm.startPayment("svc1", "cat1", activity)
             bus.post(PaymentResult.Failure(code = 2, description = "Server error occurred"))
             val state = vm.uiState.value as BookingUiState.PaymentFailed
             assertThat(state.errorCode).isEqualTo(RazorpayErrorCode.NETWORK_ERROR)
@@ -271,9 +270,7 @@ public class BookingViewModelTest {
         runTest(dispatcher) {
             val vm = makeVm()
             vm.setSlotAndAddress(slot, "123 Main St", 12.9716, 77.5946)
-            // State is Ready, not PaymentFailed
             vm.retryPayment()
-            // Should remain Ready without crashing
             assertThat(vm.uiState.value).isInstanceOf(BookingUiState.Ready::class.java)
         }
 
@@ -290,7 +287,7 @@ public class BookingViewModelTest {
                 )
             val vm = makeVm()
             vm.setSlotAndAddress(slot, "123 Main St", 12.9716, 77.5946)
-            vm.startPayment("svc1", "cat1")
+            vm.startPayment("svc1", "cat1", activity)
             bus.post(PaymentResult.Success(paymentId = "pay_1", orderId = "order_1", signature = "sig_1"))
             val state = vm.uiState.value
             assertThat(state).isInstanceOf(BookingUiState.Error::class.java)

@@ -1,7 +1,10 @@
-package com.homeservices.customer.ui.booking
+﻿package com.homeservices.customer.ui.booking
 
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.homeservices.customer.domain.auth.BiometricGateUseCase
+import com.homeservices.customer.domain.auth.model.BiometricResult
 import com.homeservices.customer.domain.booking.ConfirmBookingUseCase
 import com.homeservices.customer.domain.booking.CreateBookingUseCase
 import com.homeservices.customer.domain.booking.RazorpayPaymentUseCase
@@ -28,6 +31,7 @@ internal class BookingViewModel
         private val createBooking: CreateBookingUseCase,
         private val confirmBooking: ConfirmBookingUseCase,
         private val razorpayPayment: RazorpayPaymentUseCase,
+        private val biometricGate: BiometricGateUseCase,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<BookingUiState>(BookingUiState.Idle)
         public val uiState: StateFlow<BookingUiState> = _uiState.asStateFlow()
@@ -55,13 +59,34 @@ internal class BookingViewModel
             _uiState.value = BookingUiState.Ready(slot, addressText, lat, lng)
         }
 
+        /**
+         * Initiates online (Razorpay) payment with biometric gate.
+         *
+         * Security gate (fires every call):
+         * - null activity: fail closed, do NOT proceed.
+         * - canUseBiometric=true: require Authenticated; non-Authenticated blocks.
+         * - canUseBiometric=false: skip gate, proceed.
+         */
         public fun startPayment(
             serviceId: String,
             categoryId: String,
+            activity: FragmentActivity?,
         ) {
-            startBooking(serviceId, categoryId, BookingPaymentMethod.RAZORPAY)
+            if (activity == null) return
+            viewModelScope.launch {
+                if (biometricGate.canUseBiometric(activity)) {
+                    val result = biometricGate.requestAuth(
+                        activity,
+                        "Confirm Payment",
+                        "Authenticate to authorise this booking payment",
+                    )
+                    if (result !is BiometricResult.Authenticated) return@launch
+                }
+                startBooking(serviceId, categoryId, BookingPaymentMethod.RAZORPAY)
+            }
         }
 
+        /** Creates a booking. Cash bookings call this directly - no biometric gate. */
         public fun startBooking(
             serviceId: String,
             categoryId: String,
@@ -104,12 +129,7 @@ internal class BookingViewModel
             }
         }
 
-        /**
-         * Re-opens the Razorpay checkout for the same order.
-         * Razorpay supports retrying payment on the same [orderId] until the server captures it.
-         * The UI (BookingSummaryScreen) must trigger the actual checkout open via a LaunchedEffect
-         * that reacts to [BookingUiState.AwaitingPayment].
-         */
+        /** Re-opens the Razorpay checkout for the same order. */
         public fun retryPayment() {
             val failed = _uiState.value as? BookingUiState.PaymentFailed ?: return
             _uiState.value =
@@ -124,12 +144,7 @@ internal class BookingViewModel
                 )
         }
 
-        /**
-         * Cancels from [BookingUiState.PaymentFailed] back to [BookingUiState.Ready] so the user
-         * can change payment method (e.g. switch to Cash on Service).
-         * The slot/address snapshot is embedded in [BookingUiState.PaymentFailed] (forwarded from
-         * [BookingUiState.AwaitingPayment]) so we restore it directly — no navigation re-entry needed.
-         */
+        /** Cancels from PaymentFailed back to Ready so the user can change payment method. */
         public fun cancelPaymentFailed() {
             val failed = _uiState.value as? BookingUiState.PaymentFailed ?: return
             _uiState.value =
@@ -157,10 +172,6 @@ internal class BookingViewModel
                         )
                 }
                 is PaymentResult.Failure -> {
-                    // Resolve a stable error-code string from the SDK integer code + description.
-                    // The prior AwaitingPayment state holds the orderId, amount, and the Ready
-                    // snapshot (slot/address) — forward all into PaymentFailed so cancelPaymentFailed()
-                    // can restore Ready without losing the user's booking context.
                     val awaitingSnapshot = _uiState.value as? BookingUiState.AwaitingPayment
                     val errorCode = RazorpayErrorCode.resolve(result.code, result.description)
                     _uiState.value =
