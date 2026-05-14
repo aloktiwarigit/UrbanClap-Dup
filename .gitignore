@@ -48,6 +48,9 @@ pnpm-debug.log*
 **/release/
 **/app/release/
 **/app/debug/
+# Allow hand-authored source sets in build-type variants (App Check provider split)
+!**/app/src/release/
+!**/app/src/debug/
 
 # === Python ===
 __pycache__/

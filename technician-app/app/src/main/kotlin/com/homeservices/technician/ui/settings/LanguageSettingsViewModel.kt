@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.homeservices.technician.domain.locale.GetCurrentLocaleUseCase
 import com.homeservices.technician.domain.locale.SetAppLocaleUseCase
+import com.posthog.PostHog
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,7 +34,10 @@ public class LanguageSettingsViewModel
 
         public fun onSave() {
             viewModelScope.launch {
-                setAppLocale(_selectedTag.value)
+                val tag = _selectedTag.value
+                setAppLocale(tag)
+                // fire-and-forget; safe to ignore if PostHog not yet initialised (e.g. unit tests)
+                runCatching { PostHog.capture("tech_locale_switched", properties = mapOf("locale" to tag)) }
                 savedFlow.value = true
             }
         }

@@ -58,14 +58,15 @@ import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTrustBadge
+import com.homeservices.designsystem.theme.HomeservicesColors
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
 import com.homeservices.technician.R
 import com.homeservices.technician.domain.auth.PhoneNumberNormalizer
 
 private const val PHONE_LAST_DIGITS = 4
 
-private val AuthHeroStart = Color(0xFF062A20)
-private val AuthHeroEnd = Color(0xFF0B3D2E)
+private val AuthHeroStart = HomeservicesColors.Brand.primaryHover
+private val AuthHeroEnd = HomeservicesColors.Brand.primary
 private const val AUTH_HERO_FRACTION = 0.38f
 private const val AUTH_FORM_FRACTION = 0.65f
 private const val SCROLL_HANDLE_ALPHA = 0.25f
