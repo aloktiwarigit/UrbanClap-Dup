@@ -158,7 +158,7 @@ private fun AppNavigationReady(
             )
         }
         authGraph(navController, activity)
-        mainGraph(navController)
+        mainGraph(navController, featureFlags)
         settingsGraph(navController, featureFlags)
     }
 }

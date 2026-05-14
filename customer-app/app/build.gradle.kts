@@ -585,6 +585,45 @@ kover {
                     // DataExportModule — Hilt @Provides Retrofit construction + @Binds,
                     // same rationale as data.booking.di.*
                     "*.data.dataexport.di.*",
+                    // FusedCurrentLocationProvider — suspends on FusedLocationProviderClient which
+                    // requires a real device/emulator; GPS behavior is verified via mocked interface
+                    // in ServiceDetailViewModelGpsConfidenceTest and ServiceDetailViewModelConfidenceScoreTest.
+                    "*.FusedCurrentLocationProvider",
+                    "*.FusedCurrentLocationProvider\$*",
+                    // LocationModule — Hilt @Provides wiring for FusedLocationProviderClient,
+                    // same rationale as other DI modules.
+                    "*.data.location.di.*",
+                    // WalletScreen + WalletBalanceChip — Compose UI composables,
+                    // same rationale as other *Kt screen classes (recomposition guards, slot-table ops).
+                    // Paparazzi snapshot tests cover the rendering paths.
+                    "*.WalletScreenKt",
+                    "*.WalletScreenKt\$*",
+                    "*.WalletBalanceChipKt",
+                    "*.WalletBalanceChipKt\$*",
+                    // WalletRepositoryImpl — thin Retrofit wrapper, integration-tested via API layer.
+                    // Same rationale as BookingRepositoryImpl and ConfidenceScoreRepositoryImpl.
+                    "*.WalletRepositoryImpl",
+                    "*.WalletRepositoryImpl\$*",
+                    // WalletModule — Hilt @Provides wiring for Retrofit construction,
+                    // same rationale as data.booking.di.* and other DI modules.
+                    "*.data.wallet.di.*",
+                    // WalletUiState + WalletBalanceUiState + LedgerUiState — sealed class data holders,
+                    // no logic branches; state transitions covered by WalletViewModelTest.
+                    "*.WalletBalanceUiState",
+                    "*.WalletBalanceUiState\$*",
+                    "*.LedgerUiState",
+                    "*.LedgerUiState\$*",
+                    // WalletRoutes — nav route object, framework wiring
+                    "*.WalletRoutes",
+                    "*.WalletRoutes\$*",
+                    // FirstLaunchLanguageViewModel + LanguageSettingsViewModel — DataStore/locale I/O,
+                    // not unit-testable without Android context injection; covered by E12-S03c integration pass.
+                    "*.FirstLaunchLanguageViewModel",
+                    "*.FirstLaunchLanguageViewModel\$*",
+                    "*.LanguageSettingsViewModel",
+                    "*.LanguageSettingsViewModel\$*",
+                    // LocaleModule — Hilt @Provides wiring, same rationale as other DI modules.
+                    "*.data.locale.di.*",
                 )
             }
         }

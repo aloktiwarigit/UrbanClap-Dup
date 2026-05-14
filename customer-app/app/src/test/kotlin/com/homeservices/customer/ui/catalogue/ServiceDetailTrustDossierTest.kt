@@ -1,12 +1,14 @@
 package com.homeservices.customer.ui.catalogue
 
 import androidx.lifecycle.SavedStateHandle
+import com.homeservices.customer.data.location.FusedCurrentLocationProvider
 import com.homeservices.customer.domain.catalogue.CatalogueLocalizer
 import com.homeservices.customer.domain.catalogue.GetServiceDetailUseCase
 import com.homeservices.customer.domain.catalogue.model.AddOn
 import com.homeservices.customer.domain.catalogue.model.Service
 import com.homeservices.customer.domain.locale.GetCurrentLocaleUseCase
 import com.homeservices.customer.domain.technician.GetConfidenceScoreUseCase
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +38,8 @@ public class ServiceDetailTrustDossierTest {
     private val dispatcher = UnconfinedTestDispatcher()
     private val serviceDetailUseCase: GetServiceDetailUseCase = mockk()
     private val confidenceScoreUseCase: GetConfidenceScoreUseCase = mockk()
+    private val locationProvider: FusedCurrentLocationProvider =
+        mockk { coEvery { getLastLocation() } returns null }
     private val localizer = CatalogueLocalizer()
     private val getCurrentLocale: GetCurrentLocaleUseCase = mockk()
 
@@ -72,6 +76,7 @@ public class ServiceDetailTrustDossierTest {
                     SavedStateHandle(mapOf("serviceId" to "svc1")),
                     serviceDetailUseCase,
                     confidenceScoreUseCase,
+                    locationProvider,
                     localizer,
                     getCurrentLocale,
                 )
@@ -95,6 +100,7 @@ public class ServiceDetailTrustDossierTest {
                     SavedStateHandle(mapOf("serviceId" to "svc1", "techId" to "tech-1")),
                     serviceDetailUseCase,
                     confidenceScoreUseCase,
+                    locationProvider,
                     localizer,
                     getCurrentLocale,
                 )

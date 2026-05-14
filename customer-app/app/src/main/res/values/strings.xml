@@ -387,4 +387,15 @@
     <string name="notification_permission_rationale_title">Allow notifications</string>
     <string name="notification_permission_rationale_body">Allow notifications to receive booking updates, add-on requests, and service reminders.</string>
 
+    <!-- Wallet screen (E13-S02) -->
+    <string name="wallet_screen_title">My Wallet</string>
+    <string name="wallet_back_content_desc">Back</string>
+    <string name="wallet_balance_label">Available Balance</string>
+    <string name="wallet_balance_error">Unable to load balance. Please try again.</string>
+    <string name="wallet_ledger_title">Transaction History</string>
+    <string name="wallet_ledger_error">Unable to load transactions. Please try again.</string>
+    <string name="wallet_no_transactions">No transactions yet.</string>
+    <string name="wallet_retry_cta">Retry</string>
+    <string name="wallet_chip_content_desc">Wallet balance</string>
+
 </resources>

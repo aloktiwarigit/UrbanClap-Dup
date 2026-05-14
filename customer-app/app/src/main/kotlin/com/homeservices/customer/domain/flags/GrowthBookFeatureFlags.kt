@@ -58,4 +58,6 @@ public class GrowthBookFeatureFlags
         override fun truecallerServerVerify(): Boolean = sdk.isOn("truecaller_server_verify_v2") ?: false
 
         override fun dpdpSelfServiceEnabled(): Boolean = sdk.isOn("customer.dpdp-self-service.enabled") ?: false
+
+        override fun walletVisible(): Boolean = sdk.isOn("customer.wallet.visible") ?: false
     }
