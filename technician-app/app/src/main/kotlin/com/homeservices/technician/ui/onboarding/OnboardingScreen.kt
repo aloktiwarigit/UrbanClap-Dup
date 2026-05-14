@@ -27,9 +27,10 @@ import androidx.compose.ui.unit.dp
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTimelineStep
+import com.homeservices.designsystem.theme.HomeservicesColors
 
-private val OnboardingHeroStart = Color(0xFF062A20)
-private val OnboardingHeroEnd = Color(0xFF0B3D2E)
+private val OnboardingHeroStart = HomeservicesColors.Brand.primaryHover
+private val OnboardingHeroEnd = HomeservicesColors.Brand.primary
 private const val ONBOARDING_HERO_FRACTION = 0.38f
 private const val ONBOARDING_FORM_FRACTION = 0.65f
 

@@ -8,6 +8,9 @@ import androidx.work.Configuration
 import com.homeservices.technician.data.fcm.HomeservicesFcmService
 import com.homeservices.technician.domain.flags.GrowthBookFeatureFlags
 import com.homeservices.technician.domain.locale.LocaleRepository
+import com.homeservices.technician.observability.AppCheckInitializer
+import com.homeservices.technician.observability.CrashlyticsInitializer
+import com.homeservices.technician.observability.PostHogInitializer
 import com.homeservices.technician.observability.SentryInitializer
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -43,6 +46,9 @@ public class HomeservicesTechnicianApplication :
     override fun onCreate() {
         super.onCreate()
         SentryInitializer.init(this)
+        CrashlyticsInitializer.init(this)
+        AppCheckInitializer.init(this)
+        PostHogInitializer.init(this)
         HomeservicesFcmService.registerChannels(this)
 
         // Best-effort async flag refresh — non-blocking, fire-and-forget.

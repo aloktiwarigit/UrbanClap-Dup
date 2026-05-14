@@ -44,11 +44,12 @@ import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTimelineStep
+import com.homeservices.designsystem.theme.HomeservicesColors
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
 import com.homeservices.technician.domain.kyc.model.KycStatus
 
-private val KycHeroStart = Color(0xFF062A20)
-private val KycHeroEnd = Color(0xFF0B3D2E)
+private val KycHeroStart = HomeservicesColors.Brand.primaryHover
+private val KycHeroEnd = HomeservicesColors.Brand.primary
 private const val KYC_HERO_FRACTION = 0.32f
 private const val KYC_FORM_FRACTION = 0.70f
 
