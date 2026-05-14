@@ -99,7 +99,7 @@ public class DeleteAccountBiometricTest {
             coEvery { requestErasure(any()) } returns Result.success(erasure)
 
             val vm = buildAndPrimeConfirming()
-vm.onSubmitClicked(activity)
+            vm.onSubmitClicked(activity)
 
             testDispatcher.scheduler.advanceUntilIdle()
 
@@ -162,7 +162,7 @@ vm.onSubmitClicked(activity)
 
             val vm = buildAndPrimeConfirming()
             // PIN "4321" already typed and matches â€” PIN fallback should allow submission
-vm.onSubmitClicked(activity)
+            vm.onSubmitClicked(activity)
 
             testDispatcher.scheduler.advanceUntilIdle()
 

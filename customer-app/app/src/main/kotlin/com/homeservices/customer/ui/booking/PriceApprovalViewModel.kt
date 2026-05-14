@@ -59,11 +59,12 @@ public class PriceApprovalViewModel
                 if (biometricGate.canUseBiometric(activity)) {
                     pendingApprovalSnapshot = _uiState.value as? PriceApprovalUiState.PendingApproval
                     _uiState.value = PriceApprovalUiState.BiometricPending
-                    val result = biometricGate.requestAuth(
-                        activity,
-                        "Confirm Price Approval",
-                        "Authenticate to approve add-on charges",
-                    )
+                    val result =
+                        biometricGate.requestAuth(
+                            activity,
+                            "Confirm Price Approval",
+                            "Authenticate to approve add-on charges",
+                        )
                     if (result !is BiometricResult.Authenticated) {
                         _uiState.value =
                             pendingApprovalSnapshot

@@ -113,11 +113,12 @@ public class DeleteAccountViewModel
 
             viewModelScope.launch {
                 if (biometricGate.canUseBiometric(activity)) {
-                    val result = biometricGate.requestAuth(
-                        activity,
-                        "Delete Account",
-                        "Authenticate to confirm account deletion",
-                    )
+                    val result =
+                        biometricGate.requestAuth(
+                            activity,
+                            "Delete Account",
+                            "Authenticate to confirm account deletion",
+                        )
                     if (result !is BiometricResult.Authenticated) return@launch
                 }
                 dispatchErasure(current)

@@ -16,7 +16,6 @@ import com.homeservices.customer.ui.deleteaccount.DeleteAccountUiState.ExistingR
 import com.homeservices.customer.ui.deleteaccount.DeleteAccountUiState.Idle
 import com.homeservices.customer.ui.deleteaccount.DeleteAccountUiState.Revoked
 import com.homeservices.customer.ui.deleteaccount.DeleteAccountUiState.Revoking
-import com.homeservices.customer.ui.deleteaccount.DeleteAccountUiState.Submitting
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -221,7 +220,7 @@ public class DeleteAccountViewModelTest {
             viewModel.onContinueClicked()
             viewModel.onPhraseChanged("DELETE MY ACCOUNT")
             viewModel.onPinChanged("4321")
-viewModel.onSubmitClicked(activity)
+            viewModel.onSubmitClicked(activity)
             testDispatcher.scheduler.advanceUntilIdle()
 
             val state = viewModel.uiState.value as? CoolOff

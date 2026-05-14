@@ -75,11 +75,12 @@ internal class BookingViewModel
             if (activity == null) return
             viewModelScope.launch {
                 if (biometricGate.canUseBiometric(activity)) {
-                    val result = biometricGate.requestAuth(
-                        activity,
-                        "Confirm Payment",
-                        "Authenticate to authorise this booking payment",
-                    )
+                    val result =
+                        biometricGate.requestAuth(
+                            activity,
+                            "Confirm Payment",
+                            "Authenticate to authorise this booking payment",
+                        )
                     if (result !is BiometricResult.Authenticated) return@launch
                 }
                 startBooking(serviceId, categoryId, BookingPaymentMethod.RAZORPAY)
