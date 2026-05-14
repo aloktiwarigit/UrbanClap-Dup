@@ -1,6 +1,7 @@
 package com.homeservices.customer.data.location
 
 import android.annotation.SuppressLint
+import android.util.Log
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.Priority
 import kotlinx.coroutines.tasks.await
@@ -33,6 +34,11 @@ public class FusedCurrentLocationProvider
                         ?: client.lastLocation.await()
                 location?.let { Pair(it.latitude, it.longitude) }
             } catch (e: SecurityException) {
+                Log.w(TAG, "Location permission not granted; returning null", e)
                 null
             }
+
+        private companion object {
+            private const val TAG = "FusedLocationProvider"
+        }
     }

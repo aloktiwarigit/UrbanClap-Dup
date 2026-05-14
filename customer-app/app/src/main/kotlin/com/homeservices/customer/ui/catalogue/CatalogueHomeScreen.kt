@@ -227,59 +227,80 @@ internal fun CatalogueHomeContent(
         },
         bottomBar = { HomeBottomNav(selected = selectedNav, onSelect = { selectedNav = it }) },
     ) { scaffoldPadding ->
-        when (selectedNav) {
-            0 ->
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
-                    contentPadding = PaddingValues(bottom = 16.dp),
-                ) {
-                    item { PromoSlider() }
-                    item { TrustStrip() }
-                    when (uiState) {
-                        is CatalogueHomeUiState.Loading -> item { LoadingState() }
-                        is CatalogueHomeUiState.Error -> item { ErrorState() }
-                        is CatalogueHomeUiState.Success -> {
-                            item {
-                                Text(
-                                    text = stringResource(R.string.catalogue_our_services),
-                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, fontSize = 19.sp),
-                                    color = TextPrimary,
-                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-                                )
-                            }
-                            val rows = uiState.categories.chunked(2)
-                            items(rows) { row ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                ) {
-                                    row.forEach { cat ->
-                                        CategoryCard(category = cat, onClick = { onCategoryClick(cat.id) }, modifier = Modifier.weight(1f))
-                                    }
-                                    if (row.size == 1) Spacer(Modifier.weight(1f))
+        HomeTabs(
+            selectedNav = selectedNav,
+            uiState = uiState,
+            onCategoryClick = onCategoryClick,
+            onTrackBooking = onTrackBooking,
+            onProfileLanguageClick = onProfileLanguageClick,
+            onSelectNav = { selectedNav = it },
+            scaffoldPadding = scaffoldPadding,
+        )
+    }
+}
+
+@Composable
+private fun HomeTabs(
+    selectedNav: Int,
+    uiState: CatalogueHomeUiState,
+    onCategoryClick: (String) -> Unit,
+    onTrackBooking: (String) -> Unit,
+    onProfileLanguageClick: () -> Unit,
+    onSelectNav: (Int) -> Unit,
+    scaffoldPadding: PaddingValues,
+) {
+    when (selectedNav) {
+        0 ->
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
+                contentPadding = PaddingValues(bottom = 16.dp),
+            ) {
+                item { PromoSlider() }
+                item { TrustStrip() }
+                when (uiState) {
+                    is CatalogueHomeUiState.Loading -> item { LoadingState() }
+                    is CatalogueHomeUiState.Error -> item { ErrorState() }
+                    is CatalogueHomeUiState.Success -> {
+                        item {
+                            Text(
+                                text = stringResource(R.string.catalogue_our_services),
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, fontSize = 19.sp),
+                                color = TextPrimary,
+                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                            )
+                        }
+                        val rows = uiState.categories.chunked(2)
+                        items(rows) { row ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                row.forEach { cat ->
+                                    CategoryCard(category = cat, onClick = { onCategoryClick(cat.id) }, modifier = Modifier.weight(1f))
                                 }
+                                if (row.size == 1) Spacer(Modifier.weight(1f))
                             }
                         }
                     }
                 }
-            1 ->
-                CustomerBookingsScreen(
-                    onTrackBooking = onTrackBooking,
-                    modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
-                )
-            2 ->
-                SupportTab(
-                    onOpenBookings = { selectedNav = 1 },
-                    onOpenProfile = { selectedNav = 3 },
-                    modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
-                )
-            3 ->
-                com.homeservices.customer.ui.profile.ProfileScreen(
-                    modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
-                    onLanguageClick = onProfileLanguageClick,
-                    onBookingsClick = { selectedNav = 1 },
-                )
-        }
+            }
+        1 ->
+            CustomerBookingsScreen(
+                onTrackBooking = onTrackBooking,
+                modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
+            )
+        2 ->
+            SupportTab(
+                onOpenBookings = { onSelectNav(1) },
+                onOpenProfile = { onSelectNav(3) },
+                modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
+            )
+        3 ->
+            com.homeservices.customer.ui.profile.ProfileScreen(
+                modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
+                onLanguageClick = onProfileLanguageClick,
+                onBookingsClick = { onSelectNav(1) },
+            )
     }
 }
 
@@ -299,77 +320,9 @@ private fun StickyHero(
                 .statusBarsPadding()
                 .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 10.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "HomeHeroo",
-                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold, fontSize = 22.sp),
-                    color = BrandGreen,
-                )
-                Spacer(Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.LocationOn, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(15.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        text = stringResource(R.string.catalogue_location_display),
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
-                        color = TextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-            IconButton(
-                onClick = onSettingsClick,
-                modifier =
-                    Modifier
-                        .size(42.dp)
-                        .clip(CircleShape)
-                        .background(SurfaceWhite)
-                        .border(1.dp, CardBorder, CircleShape),
-            ) {
-                Icon(Icons.Default.Settings, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(21.dp))
-            }
-        }
-
+        HeroTopRow(onSettingsClick = onSettingsClick)
         Spacer(Modifier.height(10.dp))
-
-        var query by remember { mutableStateOf("") }
-        TextField(
-            value = query,
-            onValueChange = { query = it },
-            placeholder = {
-                Text(
-                    stringResource(R.string.catalogue_search_hint),
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
-                    color = TextSecondary,
-                )
-            },
-            leadingIcon = {
-                Icon(Icons.Default.Search, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(23.dp))
-            },
-            singleLine = true,
-            shape = RoundedCornerShape(18.dp),
-            colors =
-                TextFieldDefaults.colors(
-                    focusedContainerColor = SurfaceWhite,
-                    unfocusedContainerColor = SurfaceWhite,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary,
-                ),
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-                    .border(1.dp, CardBorder, RoundedCornerShape(18.dp)),
-        )
+        HeroSearchBar()
         if (showWalletChip && walletBalanceInPaise > 0L) {
             Spacer(Modifier.height(8.dp))
             WalletBalanceChip(
@@ -378,6 +331,82 @@ private fun StickyHero(
             )
         }
     }
+}
+
+@Composable
+private fun HeroTopRow(onSettingsClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "HomeHeroo",
+                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold, fontSize = 22.sp),
+                color = BrandGreen,
+            )
+            Spacer(Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.LocationOn, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(15.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = stringResource(R.string.catalogue_location_display),
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
+                    color = TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        IconButton(
+            onClick = onSettingsClick,
+            modifier =
+                Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(SurfaceWhite)
+                    .border(1.dp, CardBorder, CircleShape),
+        ) {
+            Icon(Icons.Default.Settings, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(21.dp))
+        }
+    }
+}
+
+@Composable
+private fun HeroSearchBar() {
+    var query by remember { mutableStateOf("") }
+    TextField(
+        value = query,
+        onValueChange = { query = it },
+        placeholder = {
+            Text(
+                stringResource(R.string.catalogue_search_hint),
+                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
+                color = TextSecondary,
+            )
+        },
+        leadingIcon = {
+            Icon(Icons.Default.Search, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(23.dp))
+        },
+        singleLine = true,
+        shape = RoundedCornerShape(18.dp),
+        colors =
+            TextFieldDefaults.colors(
+                focusedContainerColor = SurfaceWhite,
+                unfocusedContainerColor = SurfaceWhite,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent,
+                focusedTextColor = TextPrimary,
+                unfocusedTextColor = TextPrimary,
+            ),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .border(1.dp, CardBorder, RoundedCornerShape(18.dp)),
+    )
 }
 
 @Composable

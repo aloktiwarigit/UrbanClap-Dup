@@ -43,29 +43,31 @@ public class WalletScreenTest {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
                 WalletContent(
-                    balanceState = WalletBalanceUiState.Ready(
-                        WalletBalance(balanceInPaise = 50000L, lastUpdatedAt = "2026-05-13T10:00:00Z"),
-                    ),
-                    ledgerState = LedgerUiState.Ready(
-                        listOf(
-                            LedgerEntry(
-                                id = "le-1",
-                                type = LedgerEntryType.CREDIT_ISSUED,
-                                amountInPaise = 50000L,
-                                bookingId = null,
-                                reason = "Welcome bonus",
-                                createdAt = "2026-05-13T10:00:00Z",
-                            ),
-                            LedgerEntry(
-                                id = "le-2",
-                                type = LedgerEntryType.CREDIT_APPLIED,
-                                amountInPaise = 10000L,
-                                bookingId = "bk-1",
-                                reason = "Applied to booking",
-                                createdAt = "2026-05-13T12:00:00Z",
+                    balanceState =
+                        WalletBalanceUiState.Ready(
+                            WalletBalance(balanceInPaise = 50000L, lastUpdatedAt = "2026-05-13T10:00:00Z"),
+                        ),
+                    ledgerState =
+                        LedgerUiState.Ready(
+                            listOf(
+                                LedgerEntry(
+                                    id = "le-1",
+                                    type = LedgerEntryType.CREDIT_ISSUED,
+                                    amountInPaise = 50000L,
+                                    bookingId = null,
+                                    reason = "Welcome bonus",
+                                    createdAt = "2026-05-13T10:00:00Z",
+                                ),
+                                LedgerEntry(
+                                    id = "le-2",
+                                    type = LedgerEntryType.CREDIT_APPLIED,
+                                    amountInPaise = 10000L,
+                                    bookingId = "bk-1",
+                                    reason = "Applied to booking",
+                                    createdAt = "2026-05-13T12:00:00Z",
+                                ),
                             ),
                         ),
-                    ),
                     onRetry = {},
                 )
             }

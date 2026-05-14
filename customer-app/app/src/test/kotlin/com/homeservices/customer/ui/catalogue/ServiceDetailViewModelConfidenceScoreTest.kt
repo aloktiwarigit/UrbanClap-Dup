@@ -33,7 +33,6 @@ import org.junit.Test
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 public class ServiceDetailViewModelConfidenceScoreTest {
-
     private val dispatcher = UnconfinedTestDispatcher()
     private val serviceDetailUseCase: GetServiceDetailUseCase = mockk()
     private val confidenceScoreUseCase: GetConfidenceScoreUseCase = mockk()
@@ -41,17 +40,18 @@ public class ServiceDetailViewModelConfidenceScoreTest {
     private val localizer = CatalogueLocalizer()
     private val getCurrentLocale: GetCurrentLocaleUseCase = mockk()
 
-    private val testService = Service(
-        id = "svc1",
-        categoryId = "cat1",
-        name = "Pipe Fix",
-        description = "Full pipe replacement",
-        basePrice = 150000,
-        durationMinutes = 120,
-        imageUrl = "url",
-        includes = listOf("Labour", "Parts"),
-        addOns = emptyList<AddOn>(),
-    )
+    private val testService =
+        Service(
+            id = "svc1",
+            categoryId = "cat1",
+            name = "Pipe Fix",
+            description = "Full pipe replacement",
+            basePrice = 150000,
+            durationMinutes = 120,
+            imageUrl = "url",
+            includes = listOf("Labour", "Parts"),
+            addOns = emptyList<AddOn>(),
+        )
 
     @Before
     public fun setUp() {
@@ -111,14 +111,15 @@ public class ServiceDetailViewModelConfidenceScoreTest {
             coEvery { locationProvider.getLastLocation() } returns Pair(26.793, 82.194)
             every { confidenceScoreUseCase("tech-1", 26.793, 82.194) } returns flowOf(Result.success(score))
 
-            val vm = ServiceDetailViewModel(
-                savedStateHandle = SavedStateHandle(mapOf("serviceId" to "svc1", "techId" to "tech-1")),
-                getServiceDetail = serviceDetailUseCase,
-                getConfidenceScore = confidenceScoreUseCase,
-                locationProvider = locationProvider,
-                localizer = localizer,
-                getCurrentLocale = getCurrentLocale,
-            )
+            val vm =
+                ServiceDetailViewModel(
+                    savedStateHandle = SavedStateHandle(mapOf("serviceId" to "svc1", "techId" to "tech-1")),
+                    getServiceDetail = serviceDetailUseCase,
+                    getConfidenceScore = confidenceScoreUseCase,
+                    locationProvider = locationProvider,
+                    localizer = localizer,
+                    getCurrentLocale = getCurrentLocale,
+                )
 
             assertThat(vm.confidenceScoreState.value).isInstanceOf(ConfidenceScoreUiState.Loaded::class.java)
             assertThat((vm.confidenceScoreState.value as ConfidenceScoreUiState.Loaded).score.onTimePercent)
@@ -130,14 +131,15 @@ public class ServiceDetailViewModelConfidenceScoreTest {
         runTest(dispatcher) {
             coEvery { locationProvider.getLastLocation() } returns Pair(26.0, 82.0)
 
-            val vm = ServiceDetailViewModel(
-                savedStateHandle = SavedStateHandle(mapOf("serviceId" to "svc1")),
-                getServiceDetail = serviceDetailUseCase,
-                getConfidenceScore = confidenceScoreUseCase,
-                locationProvider = locationProvider,
-                localizer = localizer,
-                getCurrentLocale = getCurrentLocale,
-            )
+            val vm =
+                ServiceDetailViewModel(
+                    savedStateHandle = SavedStateHandle(mapOf("serviceId" to "svc1")),
+                    getServiceDetail = serviceDetailUseCase,
+                    getConfidenceScore = confidenceScoreUseCase,
+                    locationProvider = locationProvider,
+                    localizer = localizer,
+                    getCurrentLocale = getCurrentLocale,
+                )
 
             assertThat(vm.confidenceScoreState.value).isEqualTo(ConfidenceScoreUiState.Hidden)
         }
