@@ -2,11 +2,13 @@ package com.homeservices.technician.data.activeJob.di
 
 import android.content.Context
 import androidx.room.Room
+import com.homeservices.technician.BuildConfig
 import com.homeservices.technician.data.activeJob.ActiveJobApiService
 import com.homeservices.technician.data.activeJob.ActiveJobRepositoryImpl
 import com.homeservices.technician.data.activeJob.db.ActiveJobDao
 import com.homeservices.technician.data.activeJob.db.ActiveJobDatabase
 import com.homeservices.technician.data.network.defaultMoshi
+import com.homeservices.technician.data.rating.di.AuthOkHttpClient
 import com.homeservices.technician.domain.activeJob.ActiveJobRepository
 import dagger.Binds
 import dagger.Module
@@ -15,7 +17,6 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import javax.inject.Singleton
@@ -30,20 +31,16 @@ public abstract class ActiveJobModule {
     public companion object {
         @Provides
         @Singleton
-        internal fun provideActiveJobApiService(): ActiveJobApiService {
-            val logging =
-                HttpLoggingInterceptor().apply {
-                    level = HttpLoggingInterceptor.Level.BODY
-                }
-            val client = OkHttpClient.Builder().addInterceptor(logging).build()
-            return Retrofit
+        internal fun provideActiveJobApiService(
+            @AuthOkHttpClient client: OkHttpClient,
+        ): ActiveJobApiService =
+            Retrofit
                 .Builder()
-                .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
+                .baseUrl(BuildConfig.API_BASE_URL.trimEnd('/') + "/")
                 .client(client)
                 .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
                 .build()
                 .create(ActiveJobApiService::class.java)
-        }
 
         @Provides
         @Singleton

@@ -1,13 +1,14 @@
 package com.homeservices.technician.data.jobOffer.di
 
+import com.homeservices.technician.BuildConfig
 import com.homeservices.technician.data.jobOffer.JobOfferApiService
 import com.homeservices.technician.data.network.defaultMoshi
+import com.homeservices.technician.data.rating.di.AuthOkHttpClient
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import javax.inject.Singleton
@@ -17,18 +18,14 @@ import javax.inject.Singleton
 public object JobOfferModule {
     @Provides
     @Singleton
-    internal fun provideJobOfferApiService(): JobOfferApiService {
-        val logging =
-            HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY
-            }
-        val client = OkHttpClient.Builder().addInterceptor(logging).build()
-        return Retrofit
+    internal fun provideJobOfferApiService(
+        @AuthOkHttpClient client: OkHttpClient,
+    ): JobOfferApiService =
+        Retrofit
             .Builder()
-            .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
+            .baseUrl(BuildConfig.API_BASE_URL.trimEnd('/') + "/")
             .client(client)
             .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
             .build()
             .create(JobOfferApiService::class.java)
-    }
 }

@@ -1,11 +1,13 @@
 package com.homeservices.technician.data.kyc.di
 
 import com.google.firebase.storage.FirebaseStorage
+import com.homeservices.technician.BuildConfig
 import com.homeservices.technician.data.kyc.FirebaseStorageUploaderImpl
 import com.homeservices.technician.data.kyc.KycApiService
 import com.homeservices.technician.data.kyc.KycRepository
 import com.homeservices.technician.data.kyc.KycRepositoryImpl
 import com.homeservices.technician.data.network.defaultMoshi
+import com.homeservices.technician.data.rating.di.AuthOkHttpClient
 import com.homeservices.technician.domain.kyc.FirebaseStorageUploader
 import dagger.Binds
 import dagger.Module
@@ -13,7 +15,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import javax.inject.Singleton
@@ -32,20 +33,16 @@ public abstract class KycModule {
     public companion object {
         @Provides
         @Singleton
-        internal fun provideKycApiService(): KycApiService {
-            val logging =
-                HttpLoggingInterceptor().apply {
-                    level = HttpLoggingInterceptor.Level.BODY
-                }
-            val client = OkHttpClient.Builder().addInterceptor(logging).build()
-            return Retrofit
+        internal fun provideKycApiService(
+            @AuthOkHttpClient client: OkHttpClient,
+        ): KycApiService =
+            Retrofit
                 .Builder()
-                .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
+                .baseUrl(BuildConfig.API_BASE_URL.trimEnd('/') + "/")
                 .client(client)
                 .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
                 .build()
                 .create(KycApiService::class.java)
-        }
 
         @Provides
         @Singleton
