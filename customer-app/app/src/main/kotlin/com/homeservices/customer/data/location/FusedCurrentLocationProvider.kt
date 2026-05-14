@@ -3,7 +3,6 @@ package com.homeservices.customer.data.location
 import android.annotation.SuppressLint
 import android.util.Log
 import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.Priority
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
@@ -23,16 +22,15 @@ public class FusedCurrentLocationProvider
          * Returns the last cached (latitude, longitude) pair, or `null` if the device has no
          * last-known location or if a [SecurityException] is thrown (permission not granted).
          *
-         * This function is a suspend function backed by [FusedLocationProviderClient.getLastLocation].
-         * It never throws; a [SecurityException] is caught and treated as `null`.
+         * Uses [FusedLocationProviderClient.lastLocation] (fast, no GPS-fix wait) rather than
+         * `getCurrentLocation`, which may block for the full fused-provider timeout on cold starts.
+         * Callers fall back to the sentinel (0.0, 0.0) when this returns `null`.
          */
         @SuppressLint("MissingPermission")
         public suspend fun getLastLocation(): Pair<Double, Double>? =
             try {
-                val location =
-                    client.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null).await()
-                        ?: client.lastLocation.await()
-                location?.let { Pair(it.latitude, it.longitude) }
+                val cached = client.lastLocation.await()
+                cached?.let { Pair(it.latitude, it.longitude) }
             } catch (e: SecurityException) {
                 Log.w("FusedLocationProvider", "Location permission not granted: ${e.message}")
                 null

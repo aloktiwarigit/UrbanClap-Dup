@@ -66,7 +66,6 @@ internal fun BookingConfirmedScreen(
 
     ConfirmationBody(
         bookingId = bookingId,
-        technicianId = technicianId,
         trustUiState = trustUiState,
         onBackToHome = onBackToHome,
         onTrackBooking = onTrackBooking,
@@ -76,7 +75,6 @@ internal fun BookingConfirmedScreen(
 @Composable
 private fun ConfirmationBody(
     bookingId: String,
-    technicianId: String?,
     trustUiState: TrustDossierUiState,
     onBackToHome: () -> Unit,
     onTrackBooking: (bookingId: String) -> Unit,
@@ -110,10 +108,14 @@ private fun ConfirmationBody(
         Spacer(Modifier.height(18.dp))
         ConfirmationTimeline()
         Spacer(Modifier.height(14.dp))
-        // Show TrustDossierCard only when technicianId is provided and state is not Error.
-        if (technicianId != null && trustUiState !is TrustDossierUiState.Error) {
-            TrustDossierCard(uiState = trustUiState, compact = true, modifier = Modifier.fillMaxWidth())
-        }
+        // Always show TrustDossierCard:
+        // - When technicianId is non-null and load succeeded → shows tech profile (compact).
+        // - When technicianId is null (no tech assigned yet) → Unavailable state renders
+        //   the platform-level trust signal list ("All HomeServices technicians are verified…").
+        // - On Error state, fall back to Unavailable rather than hiding the card entirely.
+        val effectiveTrustState =
+            if (trustUiState is TrustDossierUiState.Error) TrustDossierUiState.Unavailable else trustUiState
+        TrustDossierCard(uiState = effectiveTrustState, compact = true, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.weight(1f))
         HsPrimaryButton(
             text = stringResource(R.string.booking_confirmed_track),
