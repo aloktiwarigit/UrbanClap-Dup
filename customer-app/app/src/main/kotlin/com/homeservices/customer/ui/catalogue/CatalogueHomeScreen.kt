@@ -185,6 +185,7 @@ internal fun CatalogueHomeScreen(
     showWalletChip: Boolean = false,
     walletBalanceInPaise: Long = 0L,
     onWalletClick: () -> Unit = {},
+    photoFirstCatalogueEnabled: Boolean = false,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     CatalogueHomeContent(
@@ -198,6 +199,7 @@ internal fun CatalogueHomeScreen(
         showWalletChip = showWalletChip,
         walletBalanceInPaise = walletBalanceInPaise,
         onWalletClick = onWalletClick,
+        photoFirstCatalogueEnabled = photoFirstCatalogueEnabled,
     )
 }
 
@@ -213,6 +215,7 @@ internal fun CatalogueHomeContent(
     showWalletChip: Boolean = false,
     walletBalanceInPaise: Long = 0L,
     onWalletClick: () -> Unit = {},
+    photoFirstCatalogueEnabled: Boolean = false,
 ) {
     var selectedNav by remember { mutableIntStateOf(0) }
 
@@ -243,6 +246,7 @@ internal fun CatalogueHomeContent(
             onProfileLanguageClick = onProfileLanguageClick,
             onSelectNav = { selectedNav = it },
             scaffoldPadding = scaffoldPadding,
+            photoFirstCatalogueEnabled = photoFirstCatalogueEnabled,
         )
     }
 }
@@ -258,6 +262,7 @@ private fun HomeTabs(
     onProfileLanguageClick: () -> Unit,
     onSelectNav: (Int) -> Unit,
     scaffoldPadding: PaddingValues,
+    photoFirstCatalogueEnabled: Boolean = false,
 ) {
     when (selectedNav) {
         0 ->
@@ -286,7 +291,11 @@ private fun HomeTabs(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
                                 row.forEach { cat ->
-                                    CategoryCard(category = cat, onClick = { onCategoryClick(cat.id) }, modifier = Modifier.weight(1f))
+                                    if (photoFirstCatalogueEnabled) {
+                                        PhotoFirstCategoryCard(category = cat, onClick = { onCategoryClick(cat.id) }, modifier = Modifier.weight(1f))
+                                    } else {
+                                        CategoryCard(category = cat, onClick = { onCategoryClick(cat.id) }, modifier = Modifier.weight(1f))
+                                    }
                                 }
                                 if (row.size == 1) Spacer(Modifier.weight(1f))
                             }

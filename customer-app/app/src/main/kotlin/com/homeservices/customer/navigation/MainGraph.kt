@@ -77,6 +77,7 @@ private fun NavGraphBuilder.homeDestination(
             showWalletChip = featureFlags.walletVisible(),
             walletBalanceInPaise = balancePaise,
             onWalletClick = { navController.navigate(WalletRoutes.WALLET) },
+            photoFirstCatalogueEnabled = featureFlags.photoFirstCatalogueEnabled(),
         )
     }
 }
