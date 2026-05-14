@@ -4,6 +4,19 @@ import com.homeservices.corenav.RouteSpec
 import kotlinx.serialization.Serializable
 
 /**
+ * String route constants for the root nav-graph destinations.
+ *
+ * E11-S01b-2: Replace inline "auth" and "main" string literals throughout
+ * AppNavigation.kt, AuthGraph.kt, and MainGraph.kt with these constants to
+ * eliminate magic strings and make route renames compile-safe.
+ *
+ * Values are intentionally stable — they match the nav-graph `route` strings
+ * registered in [NavGraphBuilder.authGraph] and [NavGraphBuilder.mainGraph].
+ */
+public const val ROUTE_AUTH: String = "auth"
+public const val ROUTE_MAIN: String = "main"
+
+/**
  * Per-app typed route specifier enum — customer-app.
  *
  * Each variant corresponds to a unique top-level screen or navigation graph.
