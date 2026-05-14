@@ -5,6 +5,7 @@ internal object BookingRoutes {
     const val SLOT_PICKER = "booking/slot/{serviceId}/{categoryId}"
     const val ADDRESS = "booking/address"
     const val SUMMARY = "booking/summary"
+
     /**
      * Booking confirmed route with an optional `techId` query parameter.
      *

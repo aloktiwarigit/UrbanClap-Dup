@@ -18,7 +18,6 @@ import org.junit.runners.JUnit4
  */
 @RunWith(JUnit4::class)
 public class BookingConfirmedScreenTrustDossierTest {
-
     @Test
     public fun `card is hidden when technicianId is null`() {
         val technicianId: String? = null
@@ -57,19 +56,20 @@ public class BookingConfirmedScreenTrustDossierTest {
 
     @Test
     public fun `Loaded state exposes displayName and verification badges`() {
-        val profile = TechnicianProfile(
-            id = "tech-007",
-            displayName = "Ramesh Kumar",
-            photoUrl = null,
-            verifiedAadhaar = true,
-            verifiedPoliceCheck = false,
-            totalJobsCompleted = 120,
-            yearsInService = 4,
-            trainingInstitution = null,
-            certifications = emptyList(),
-            languages = listOf("Hindi", "English"),
-            lastReviews = emptyList<TechnicianReview>(),
-        )
+        val profile =
+            TechnicianProfile(
+                id = "tech-007",
+                displayName = "Ramesh Kumar",
+                photoUrl = null,
+                verifiedAadhaar = true,
+                verifiedPoliceCheck = false,
+                totalJobsCompleted = 120,
+                yearsInService = 4,
+                trainingInstitution = null,
+                certifications = emptyList(),
+                languages = listOf("Hindi", "English"),
+                lastReviews = emptyList<TechnicianReview>(),
+            )
         val loaded = TrustDossierUiState.Loaded(profile)
         assertThat(loaded.profile.displayName).isEqualTo("Ramesh Kumar")
         assertThat(loaded.profile.verifiedAadhaar).isTrue()

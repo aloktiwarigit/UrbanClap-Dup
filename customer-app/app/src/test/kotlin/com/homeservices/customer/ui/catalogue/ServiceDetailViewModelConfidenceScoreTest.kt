@@ -34,7 +34,6 @@ import org.junit.Test
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 public class ServiceDetailViewModelConfidenceScoreTest {
-
     private val dispatcher = UnconfinedTestDispatcher()
     private val serviceDetailUseCase: GetServiceDetailUseCase = mockk()
     private val confidenceScoreUseCase: GetConfidenceScoreUseCase = mockk()
@@ -42,17 +41,18 @@ public class ServiceDetailViewModelConfidenceScoreTest {
     private val localizer = CatalogueLocalizer()
     private val getCurrentLocale: GetCurrentLocaleUseCase = mockk()
 
-    private val testService = Service(
-        id = "svc1",
-        categoryId = "cat1",
-        name = "Pipe Fix",
-        description = "Full pipe replacement",
-        basePrice = 150000,
-        durationMinutes = 120,
-        imageUrl = "url",
-        includes = listOf("Labour", "Parts"),
-        addOns = emptyList<AddOn>(),
-    )
+    private val testService =
+        Service(
+            id = "svc1",
+            categoryId = "cat1",
+            name = "Pipe Fix",
+            description = "Full pipe replacement",
+            basePrice = 150000,
+            durationMinutes = 120,
+            imageUrl = "url",
+            includes = listOf("Labour", "Parts"),
+            addOns = emptyList<AddOn>(),
+        )
 
     @Before
     public fun setUp() {
@@ -129,11 +129,12 @@ public class ServiceDetailViewModelConfidenceScoreTest {
         }
 
     private fun buildVm(techId: String?): ServiceDetailViewModel {
-        val handle = if (techId != null) {
-            SavedStateHandle(mapOf("serviceId" to "svc1", "techId" to techId))
-        } else {
-            SavedStateHandle(mapOf("serviceId" to "svc1"))
-        }
+        val handle =
+            if (techId != null) {
+                SavedStateHandle(mapOf("serviceId" to "svc1", "techId" to techId))
+            } else {
+                SavedStateHandle(mapOf("serviceId" to "svc1"))
+            }
         return ServiceDetailViewModel(
             savedStateHandle = handle,
             getServiceDetail = serviceDetailUseCase,

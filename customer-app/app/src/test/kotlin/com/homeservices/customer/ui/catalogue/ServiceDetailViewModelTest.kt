@@ -2,12 +2,12 @@ package com.homeservices.customer.ui.catalogue
 
 import androidx.lifecycle.SavedStateHandle
 import com.google.common.truth.Truth.assertThat
+import com.homeservices.customer.data.location.FusedCurrentLocationProvider
 import com.homeservices.customer.domain.catalogue.CatalogueLocalizer
 import com.homeservices.customer.domain.catalogue.GetServiceDetailUseCase
 import com.homeservices.customer.domain.catalogue.model.AddOn
 import com.homeservices.customer.domain.catalogue.model.Service
 import com.homeservices.customer.domain.locale.GetCurrentLocaleUseCase
-import com.homeservices.customer.data.location.FusedCurrentLocationProvider
 import com.homeservices.customer.domain.technician.GetConfidenceScoreUseCase
 import com.homeservices.customer.domain.technician.model.ConfidenceScore
 import io.mockk.coEvery
@@ -29,10 +29,12 @@ public class ServiceDetailViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
     private val serviceDetailUseCase: GetServiceDetailUseCase = mockk()
     private val confidenceScoreUseCase: GetConfidenceScoreUseCase = mockk()
+
     // Returns null → resolveGps() falls back to (0.0, 0.0), matching the existing test expectations.
-    private val locationProvider: FusedCurrentLocationProvider = mockk {
-        coEvery { getLastLocation() } returns null
-    }
+    private val locationProvider: FusedCurrentLocationProvider =
+        mockk {
+            coEvery { getLastLocation() } returns null
+        }
     private val localizer = CatalogueLocalizer()
     private val getCurrentLocale: GetCurrentLocaleUseCase = mockk()
 

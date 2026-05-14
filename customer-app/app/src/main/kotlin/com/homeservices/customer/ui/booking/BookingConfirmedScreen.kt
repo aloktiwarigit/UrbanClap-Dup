@@ -41,10 +41,6 @@ import com.homeservices.designsystem.components.HsTimelineStep
  * E11-S05b-1 additive change: [technicianId] is an optional parameter (default null).
  * When non-null, [TrustDossierViewModel] is loaded and [TrustDossierCard] is shown in
  * compact mode below the timeline. When null, the card is not rendered.
- *
- * Note: At booking-confirmed time, the technician has not yet been assigned in most flows.
- * This parameter is wired for future dispatch stories that CAN pass a technicianId here
- * (e.g. when a technician accepts immediately via real-time dispatch).
  */
 @Composable
 internal fun BookingConfirmedScreen(
@@ -53,17 +49,13 @@ internal fun BookingConfirmedScreen(
     onTrackBooking: (bookingId: String) -> Unit = {},
     technicianId: String? = null,
 ) {
-    // Obtain TrustDossierViewModel only when a technicianId is present.
     val trustDossierViewModel: TrustDossierViewModel? =
         if (technicianId != null) hiltViewModel() else null
 
     LaunchedEffect(technicianId) {
-        if (technicianId != null) {
-            trustDossierViewModel?.loadProfile(technicianId)
-        }
+        if (technicianId != null) trustDossierViewModel?.loadProfile(technicianId)
     }
 
-    // Collect dossier state; default to Unavailable when no technicianId.
     val trustUiState: TrustDossierUiState =
         if (trustDossierViewModel != null) {
             val state by trustDossierViewModel.uiState.collectAsStateWithLifecycle()
@@ -72,25 +64,29 @@ internal fun BookingConfirmedScreen(
             TrustDossierUiState.Unavailable
         }
 
+    ConfirmationBody(
+        bookingId = bookingId,
+        technicianId = technicianId,
+        trustUiState = trustUiState,
+        onBackToHome = onBackToHome,
+        onTrackBooking = onTrackBooking,
+    )
+}
+
+@Composable
+private fun ConfirmationBody(
+    bookingId: String,
+    technicianId: String?,
+    trustUiState: TrustDossierUiState,
+    onBackToHome: () -> Unit,
+    onTrackBooking: (bookingId: String) -> Unit,
+) {
     Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .padding(16.dp),
+        modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.height(28.dp))
-        Surface(
-            shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.primaryContainer,
-        ) {
-            Icon(
-                imageVector = Icons.Filled.CheckCircle,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.padding(18.dp).size(52.dp),
-            )
-        }
+        ConfirmationSuccessIcon()
         Spacer(Modifier.height(18.dp))
         Text(
             text = stringResource(R.string.booking_confirmed_title),
@@ -115,33 +111,35 @@ internal fun BookingConfirmedScreen(
         ConfirmationTimeline()
         Spacer(Modifier.height(14.dp))
         // Show TrustDossierCard only when technicianId is provided and state is not Error.
-        // Loading → shimmer; Unavailable → verification-signal stub; Loaded → compact profile.
-        // Error state → card hidden (better UX than showing an error on confirmation screen).
         if (technicianId != null && trustUiState !is TrustDossierUiState.Error) {
-            TrustDossierCard(
-                uiState = trustUiState,
-                compact = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            TrustDossierCard(uiState = trustUiState, compact = true, modifier = Modifier.fillMaxWidth())
         }
         Spacer(Modifier.weight(1f))
         HsPrimaryButton(
             text = stringResource(R.string.booking_confirmed_track),
             onClick = { onTrackBooking(bookingId) },
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .height(56.dp),
+            modifier = Modifier.fillMaxWidth().navigationBarsPadding().height(56.dp),
         )
         Spacer(Modifier.height(8.dp))
         HsSecondaryButton(
             text = stringResource(R.string.booking_confirmed_home),
             onClick = onBackToHome,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+        )
+    }
+}
+
+@Composable
+private fun ConfirmationSuccessIcon() {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.primaryContainer,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.CheckCircle,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+            modifier = Modifier.padding(18.dp).size(52.dp),
         )
     }
 }
