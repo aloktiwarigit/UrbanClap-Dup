@@ -14,6 +14,7 @@ import com.homeservices.customer.data.booking.PriceApprovalEventBus
 import com.homeservices.customer.data.rating.RatingPromptEventBus
 import com.homeservices.customer.data.tracking.TrackingEvent
 import com.homeservices.customer.data.tracking.TrackingEventBus
+import com.homeservices.customer.data.wallet.NoShowCreditEventBus
 import com.homeservices.customer.notification.PendingActionIngestor
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -54,6 +55,8 @@ public class CustomerFirebaseMessagingService : FirebaseMessagingService() {
 
     @Inject public lateinit var ingestor: PendingActionIngestor
 
+    @Inject public lateinit var noShowCreditEventBus: NoShowCreditEventBus
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onMessageReceived(message: RemoteMessage) {
@@ -92,6 +95,13 @@ public class CustomerFirebaseMessagingService : FirebaseMessagingService() {
         }
         // intent is null, or action is null (userId missing from FCM payload) —
         // fall through to legacy event-bus routing so the foreground UI is not dropped.
+
+        // NO_SHOW_CREDIT_ISSUED does not require a bookingId — handle it before the
+        // legacy gate so it is never dropped by the `?: return` guard below.
+        if (data["type"] == "NO_SHOW_CREDIT_ISSUED") {
+            handleNoShowCredit(data)
+            return
+        }
 
         // Legacy in-process routing (unchanged; removed in E11-S01b-2).
         // Also reached as a fallback when router parsed an intent but userId was absent.
@@ -201,6 +211,12 @@ public class CustomerFirebaseMessagingService : FirebaseMessagingService() {
                 "Your support ticket has been updated. Tap to view."
             else -> "Tap to open the app."
         }
+
+    // ── No-show credit FCM branch (E13-S03) ─────────────────────────────────
+
+    internal fun handleNoShowCredit(data: Map<String, String>) {
+        NoShowCreditHandler(this, noShowCreditEventBus).handle(data)
+    }
 
     // ── Legacy in-process routing (to be removed in E11-S01b-2) ─────────────
 

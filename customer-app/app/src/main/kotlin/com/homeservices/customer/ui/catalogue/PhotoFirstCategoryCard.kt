@@ -36,6 +36,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AcUnit
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.ElectricBolt
+import androidx.compose.material.icons.filled.FilterAlt
+import androidx.compose.material.icons.filled.Plumbing
+import androidx.compose.material.icons.filled.Water
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import com.homeservices.customer.R
@@ -225,37 +232,37 @@ private fun categoryStyle(id: String): CategoryStyleTokens =
             CategoryStyleTokens(
                 iconBackground = androidx.compose.ui.graphics.Color(0xFFEAF4F7),
                 iconTint = androidx.compose.ui.graphics.Color(0xFF246174),
-                icon = androidx.compose.material.icons.Icons.Default.AcUnit,
+                icon = Icons.Default.AcUnit,
             )
         "water-pump" ->
             CategoryStyleTokens(
                 iconBackground = androidx.compose.ui.graphics.Color(0xFFEAF1F8),
                 iconTint = androidx.compose.ui.graphics.Color(0xFF355F8A),
-                icon = androidx.compose.material.icons.Icons.Default.Water,
+                icon = Icons.Default.Water,
             )
         "plumbing" ->
             CategoryStyleTokens(
                 iconBackground = androidx.compose.ui.graphics.Color(0xFFEAF4EE),
                 iconTint = androidx.compose.ui.graphics.Color(0xFF2E6B4F),
-                icon = androidx.compose.material.icons.Icons.Default.Plumbing,
+                icon = Icons.Default.Plumbing,
             )
         "electrical" ->
             CategoryStyleTokens(
                 iconBackground = androidx.compose.ui.graphics.Color(0xFFF5EFE4),
                 iconTint = androidx.compose.ui.graphics.Color(0xFF80622F),
-                icon = androidx.compose.material.icons.Icons.Default.ElectricBolt,
+                icon = Icons.Default.ElectricBolt,
             )
         "water-purifier" ->
             CategoryStyleTokens(
                 iconBackground = androidx.compose.ui.graphics.Color(0xFFEAF4EE),
                 iconTint = androidx.compose.ui.graphics.Color(0xFF2E6B4F),
-                icon = androidx.compose.material.icons.Icons.Default.FilterAlt,
+                icon = Icons.Default.FilterAlt,
             )
         else ->
             CategoryStyleTokens(
                 iconBackground = PhotoCardMutedGreen,
                 iconTint = PhotoCardBrandGreen,
-                icon = androidx.compose.material.icons.Icons.Default.Build,
+                icon = Icons.Default.Build,
             )
     }
 

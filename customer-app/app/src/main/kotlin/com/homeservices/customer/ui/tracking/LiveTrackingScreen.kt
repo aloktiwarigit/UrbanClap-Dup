@@ -47,6 +47,8 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.tracking.model.BookingStatus
+import com.homeservices.customer.ui.wallet.NoShowCreditBanner
+import com.homeservices.customer.ui.wallet.NoShowCreditViewModel
 import com.homeservices.designsystem.components.HsSecondaryButton
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,11 +56,13 @@ import com.homeservices.designsystem.components.HsSecondaryButton
 internal fun LiveTrackingScreen(
     viewModel: LiveTrackingViewModel = hiltViewModel(),
     sosViewModel: SosViewModel = hiltViewModel(),
+    noShowVm: NoShowCreditViewModel = hiltViewModel(),
     onBack: () -> Unit,
     onFileComplaint: (bookingId: String) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val sosUiState by sosViewModel.sosUiState.collectAsStateWithLifecycle()
+    val noShowEvent by noShowVm.event.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val isInProgress =
         uiState is LiveTrackingUiState.Tracking &&
@@ -91,11 +95,22 @@ internal fun LiveTrackingScreen(
             )
         },
     ) { innerPadding ->
-        LiveTrackingContent(
-            uiState = uiState,
-            onFileComplaint = onFileComplaint,
-            modifier = Modifier.padding(innerPadding),
-        )
+        Box(modifier = Modifier.padding(innerPadding)) {
+            LiveTrackingContent(
+                uiState = uiState,
+                onFileComplaint = onFileComplaint,
+            )
+            noShowEvent?.let { evt ->
+                NoShowCreditBanner(
+                    creditAmountPaise = evt.creditAmountPaise,
+                    onDismiss = noShowVm::dismiss,
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+        }
     }
 
     SosOverlay(sosUiState = sosUiState, sosViewModel = sosViewModel, snackbarHostState = snackbarHostState)

@@ -50,6 +50,8 @@ import com.homeservices.customer.domain.booking.model.BookingPaymentMethod
 import com.homeservices.customer.domain.booking.model.CustomerBooking
 import com.homeservices.customer.domain.booking.model.CustomerBookingStatus
 import com.homeservices.customer.ui.util.formatInr
+import com.homeservices.customer.ui.wallet.NoShowCreditBanner
+import com.homeservices.customer.ui.wallet.NoShowCreditViewModel
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSecondaryButton
 
@@ -67,8 +69,10 @@ internal fun CustomerBookingsScreen(
     onComplainBooking: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: CustomerBookingsViewModel = hiltViewModel(),
+    noShowVm: NoShowCreditViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val noShowEvent by noShowVm.event.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
 
     LaunchedEffect(viewModel) {
@@ -85,14 +89,25 @@ internal fun CustomerBookingsScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    CustomerBookingsContent(
-        uiState = uiState,
-        onTrackBooking = onTrackBooking,
-        onRateBooking = onRateBooking,
-        onComplainBooking = onComplainBooking,
-        onRefresh = viewModel::refresh,
-        modifier = modifier,
-    )
+    Box(modifier = modifier) {
+        CustomerBookingsContent(
+            uiState = uiState,
+            onTrackBooking = onTrackBooking,
+            onRateBooking = onRateBooking,
+            onComplainBooking = onComplainBooking,
+            onRefresh = viewModel::refresh,
+        )
+        noShowEvent?.let { evt ->
+            NoShowCreditBanner(
+                creditAmountPaise = evt.creditAmountPaise,
+                onDismiss = noShowVm::dismiss,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
+    }
 }
 
 @Composable

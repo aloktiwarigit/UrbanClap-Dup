@@ -1,5 +1,6 @@
 package com.homeservices.customer.ui.wallet
 
+import com.homeservices.customer.data.wallet.NoShowCreditEventBus
 import com.homeservices.customer.domain.wallet.GetWalletBalanceUseCase
 import com.homeservices.customer.domain.wallet.GetWalletLedgerUseCase
 import com.homeservices.customer.domain.wallet.model.LedgerEntry
@@ -25,6 +26,7 @@ public class WalletViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val getBalance: GetWalletBalanceUseCase = mockk()
     private val getLedger: GetWalletLedgerUseCase = mockk()
+    private val noShowCreditEventBus = NoShowCreditEventBus()
 
     @Before
     public fun setUp() {
@@ -43,7 +45,7 @@ public class WalletViewModelTest {
             every { getBalance() } returns flowOf(Result.success(balance))
             every { getLedger(any(), any()) } returns flowOf(Result.success(emptyList()))
 
-            val vm = WalletViewModel(getBalance, getLedger)
+            val vm = WalletViewModel(getBalance, getLedger, noShowCreditEventBus)
             advanceUntilIdle()
 
             assertThat(vm.balanceState.value).isEqualTo(WalletBalanceUiState.Ready(balance))
@@ -56,7 +58,7 @@ public class WalletViewModelTest {
             every { getBalance() } returns flowOf(Result.success(WalletBalance(balanceInPaise = 50000L, lastUpdatedAt = "")))
             every { getLedger(any(), any()) } returns flowOf(Result.success(entries))
 
-            val vm = WalletViewModel(getBalance, getLedger)
+            val vm = WalletViewModel(getBalance, getLedger, noShowCreditEventBus)
             advanceUntilIdle()
 
             assertThat(vm.ledgerState.value).isEqualTo(LedgerUiState.Ready(entries))
@@ -68,7 +70,7 @@ public class WalletViewModelTest {
             every { getBalance() } returns flowOf(Result.failure(RuntimeException("network error")))
             every { getLedger(any(), any()) } returns flowOf(Result.success(emptyList()))
 
-            val vm = WalletViewModel(getBalance, getLedger)
+            val vm = WalletViewModel(getBalance, getLedger, noShowCreditEventBus)
             advanceUntilIdle()
 
             assertThat(vm.balanceState.value).isEqualTo(WalletBalanceUiState.Error)
@@ -80,7 +82,7 @@ public class WalletViewModelTest {
             every { getBalance() } returns flowOf(Result.success(WalletBalance(balanceInPaise = 0L, lastUpdatedAt = "")))
             every { getLedger(any(), any()) } returns flowOf(Result.failure(RuntimeException("network error")))
 
-            val vm = WalletViewModel(getBalance, getLedger)
+            val vm = WalletViewModel(getBalance, getLedger, noShowCreditEventBus)
             advanceUntilIdle()
 
             assertThat(vm.ledgerState.value).isEqualTo(LedgerUiState.Error)
