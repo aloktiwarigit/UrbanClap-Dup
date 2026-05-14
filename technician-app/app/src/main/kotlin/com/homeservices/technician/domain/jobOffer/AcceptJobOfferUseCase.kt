@@ -24,6 +24,7 @@ public class AcceptJobOfferUseCase
             val response = api.acceptOffer("Bearer $token", bookingId)
             return when {
                 response.isSuccessful -> JobOfferResult.Accepted(bookingId)
+                response.code() == 409 -> JobOfferResult.Conflict(bookingId)
                 response.code() == 410 -> JobOfferResult.Expired(bookingId)
                 else -> throw RuntimeException("Accept offer failed: HTTP ${response.code()}")
             }
