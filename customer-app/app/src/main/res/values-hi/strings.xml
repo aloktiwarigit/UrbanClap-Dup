@@ -378,4 +378,26 @@
     <string name="delete_account_revoke_success">हटाना रद्द किया गया। आपका खाता सुरक्षित है।</string>
     <string name="delete_account_close_cta">बंद करें</string>
     <string name="delete_account_error_unknown">कुछ गलत हो गया। कृपया पुनः प्रयास करें।</string>
+
+    <!-- Wallet screen (E13-S02) -->
+    <string name="wallet_screen_title">मेरा वॉलेट</string>
+    <string name="wallet_back_content_desc">वापस</string>
+    <string name="wallet_balance_label">उपलब्ध शेष</string>
+    <string name="wallet_balance_error">बैलेंस लोड नहीं हो सका। कृपया पुनः प्रयास करें।</string>
+    <string name="wallet_ledger_title">लेन-देन इतिहास</string>
+    <string name="wallet_ledger_error">लेन-देन लोड नहीं हो सके। कृपया पुनः प्रयास करें।</string>
+    <string name="wallet_no_transactions">अभी तक कोई लेन-देन नहीं।</string>
+    <string name="wallet_retry_cta">पुनः प्रयास करें</string>
+    <string name="wallet_chip_content_desc">वॉलेट बैलेंस</string>
+
+    <!-- Wallet screen (E13-S02) -->
+    <string name="wallet_screen_title">मेरा वॉलेट</string>
+    <string name="wallet_back_content_desc">वापस</string>
+    <string name="wallet_balance_label">उपलब्ध शेष</string>
+    <string name="wallet_balance_error">बैलेंस लोड नहीं हो सका। कृपया पुनः प्रयास करें।</string>
+    <string name="wallet_ledger_title">लेन-देन इतिहास</string>
+    <string name="wallet_ledger_error">लेन-देन लोड नहीं हो सके। कृपया पुनः प्रयास करें।</string>
+    <string name="wallet_no_transactions">अभी तक कोई लेन-देन नहीं।</string>
+    <string name="wallet_retry_cta">पुनः प्रयास करें</string>
+    <string name="wallet_chip_content_desc">वॉलेट बैलेंस</string>
 </resources>

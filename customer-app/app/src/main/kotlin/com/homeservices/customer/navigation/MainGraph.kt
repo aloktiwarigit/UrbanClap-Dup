@@ -27,17 +27,46 @@ import com.homeservices.customer.ui.rating.RatingRoutes
 import com.homeservices.customer.ui.rating.RatingScreen
 import com.homeservices.customer.ui.tracking.LiveTrackingScreen
 import com.homeservices.customer.ui.tracking.LiveTrackingViewModel
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.homeservices.customer.domain.flags.FeatureFlags
+import com.homeservices.customer.ui.wallet.WalletBalanceUiState
+import com.homeservices.customer.ui.wallet.WalletRoutes
+import com.homeservices.customer.ui.wallet.WalletScreen
+import com.homeservices.customer.ui.wallet.WalletViewModel
 
-internal fun NavGraphBuilder.mainGraph(navController: NavController) {
+internal fun NavGraphBuilder.mainGraph(
+    navController: NavController,
+    featureFlags: FeatureFlags,
+) {
     navigation(startDestination = CatalogueRoutes.HOME, route = "main") {
         composable(CatalogueRoutes.HOME) {
             val vm: CatalogueHomeViewModel = hiltViewModel()
+            val walletVm: WalletViewModel = hiltViewModel()
+            val walletBalanceState by walletVm.balanceState.collectAsStateWithLifecycle()
+            val balancePaise =
+                if (featureFlags.walletVisible()) {
+                    (walletBalanceState as? WalletBalanceUiState.Ready)?.balance?.balanceInPaise ?: 0L
+                } else {
+                    0L
+                }
             CatalogueHomeScreen(
                 viewModel = vm,
                 onCategoryClick = { id -> navController.navigate(CatalogueRoutes.serviceList(id)) },
                 onSettingsClick = { navController.navigate(LocaleRoutes.SETTINGS) },
                 onProfileLanguageClick = { navController.navigate(LocaleRoutes.LANGUAGE_SETTINGS) },
                 onTrackBooking = { id -> navController.navigate(BookingRoutes.liveTrackingRoute(id)) },
+                showWalletChip = featureFlags.walletVisible(),
+                walletBalanceInPaise = balancePaise,
+                onWalletClick = { navController.navigate(WalletRoutes.WALLET) },
+            )
+        }
+        // Wallet destination — E13-S02 (additive)
+        composable(WalletRoutes.WALLET) {
+            val vm: WalletViewModel = hiltViewModel()
+            WalletScreen(
+                viewModel = vm,
+                onBack = { navController.popBackStack() },
             )
         }
         composable(

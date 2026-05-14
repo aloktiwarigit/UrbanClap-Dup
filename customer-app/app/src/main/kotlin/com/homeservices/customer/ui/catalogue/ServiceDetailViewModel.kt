@@ -3,6 +3,7 @@ package com.homeservices.customer.ui.catalogue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.homeservices.customer.data.location.FusedCurrentLocationProvider
 import com.homeservices.customer.domain.catalogue.CatalogueLocalizer
 import com.homeservices.customer.domain.catalogue.GetServiceDetailUseCase
 import com.homeservices.customer.domain.locale.GetCurrentLocaleUseCase
@@ -22,6 +23,7 @@ internal class ServiceDetailViewModel
         savedStateHandle: SavedStateHandle,
         private val getServiceDetail: GetServiceDetailUseCase,
         private val getConfidenceScore: GetConfidenceScoreUseCase,
+        private val locationProvider: FusedCurrentLocationProvider,
         private val localizer: CatalogueLocalizer,
         private val getCurrentLocale: GetCurrentLocaleUseCase,
     ) : ViewModel() {
@@ -52,9 +54,8 @@ internal class ServiceDetailViewModel
             }
             if (technicianId != null) {
                 viewModelScope.launch {
-                    // (0.0, 0.0) sentinel: API returns nearestEtaMinutes=null. Replace with
-                    // a LocationRepository call when customer GPS story is implemented.
-                    getConfidenceScore(technicianId, 0.0, 0.0).collect { result ->
+                    val (lat, lng) = resolveGps()
+                    getConfidenceScore(technicianId, lat, lng).collect { result ->
                         _confidenceScoreState.value =
                             result.fold(
                                 onSuccess = { score ->
@@ -70,4 +71,16 @@ internal class ServiceDetailViewModel
                 }
             }
         }
+
+        /**
+         * Attempts to read the device's last GPS fix via [FusedCurrentLocationProvider].
+         * Falls back to the (0.0, 0.0) sentinel when location is unavailable (permission denied,
+         * GPS off, or no cached fix). The API still returns a score with reduced accuracy.
+         */
+        private suspend fun resolveGps(): Pair<Double, Double> =
+            try {
+                locationProvider.getLastLocation() ?: Pair(0.0, 0.0)
+            } catch (_: Exception) {
+                Pair(0.0, 0.0)
+            }
     }

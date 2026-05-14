@@ -585,6 +585,14 @@ kover {
                     // DataExportModule — Hilt @Provides Retrofit construction + @Binds,
                     // same rationale as data.booking.di.*
                     "*.data.dataexport.di.*",
+                    // FusedCurrentLocationProvider — suspends on FusedLocationProviderClient which
+                    // requires a real device/emulator; GPS behavior is verified via mocked interface
+                    // in ServiceDetailViewModelGpsConfidenceTest and ServiceDetailViewModelConfidenceScoreTest.
+                    "*.FusedCurrentLocationProvider",
+                    "*.FusedCurrentLocationProvider\$*",
+                    // LocationModule — Hilt @Provides wiring for FusedLocationProviderClient,
+                    // same rationale as other DI modules.
+                    "*.data.location.di.*",
                 )
             }
         }
