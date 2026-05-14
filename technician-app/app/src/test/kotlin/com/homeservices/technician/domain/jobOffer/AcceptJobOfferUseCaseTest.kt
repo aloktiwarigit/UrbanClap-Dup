@@ -47,6 +47,18 @@ public class AcceptJobOfferUseCaseTest {
         }
 
     @Test
+    public fun `invoke returns Conflict on HTTP 409`(): Unit =
+        runTest {
+            stubFirebaseToken("test-id-token")
+            coEvery { api.acceptOffer("Bearer test-id-token", "booking-409") } returns
+                Response.error(409, "".toResponseBody(null))
+
+            val result = useCase("booking-409")
+
+            assertThat(result).isEqualTo(JobOfferResult.Conflict("booking-409"))
+        }
+
+    @Test
     public fun `invoke throws RuntimeException on unexpected HTTP error`(): Unit =
         runTest {
             coEvery { api.acceptOffer("booking-500") } returns
