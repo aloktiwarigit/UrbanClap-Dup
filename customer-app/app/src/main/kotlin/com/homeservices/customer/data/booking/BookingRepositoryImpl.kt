@@ -89,4 +89,9 @@ internal class BookingRepositoryImpl
                     },
                 )
             }
+
+        override fun getBookingTechnicianId(bookingId: String): Flow<Result<String?>> =
+            flow {
+                emit(runCatching { api.getBooking(bookingId).technicianId })
+            }
     }

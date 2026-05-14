@@ -26,4 +26,6 @@ public interface BookingRepository {
         bookingId: String,
         decisions: List<AddOnDecision>,
     ): Flow<Result<Int>>
+
+    public fun getBookingTechnicianId(bookingId: String): Flow<Result<String?>>
 }
