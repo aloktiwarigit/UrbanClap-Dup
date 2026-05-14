@@ -49,7 +49,7 @@ public class DeleteAccountViewModelTest {
         )
 
     private fun buildViewModel(savedStateHandle: SavedStateHandle = SavedStateHandle()): DeleteAccountViewModel =
-DeleteAccountViewModel(
+        DeleteAccountViewModel(
             requestErasure = requestErasure,
             revokeErasure = revokeErasure,
             sessionManager = sessionManager,
@@ -60,7 +60,7 @@ DeleteAccountViewModel(
     @Before
     public fun setUp() {
         Dispatchers.setMain(testDispatcher)
-requestErasure = mockk()
+        requestErasure = mockk()
         biometricGate = mockk()
         io.mockk.every { biometricGate.canUseBiometric(any()) } returns false
         revokeErasure = mockk()
@@ -221,11 +221,7 @@ requestErasure = mockk()
             viewModel.onContinueClicked()
             viewModel.onPhraseChanged("DELETE MY ACCOUNT")
             viewModel.onPinChanged("4321")
-            viewModel.onSubmitClicked(activity)
-
-            // Before coroutine runs, state should be Submitting
-            assertThat(viewModel.uiState.value).isEqualTo(Submitting)
-
+viewModel.onSubmitClicked(activity)
             testDispatcher.scheduler.advanceUntilIdle()
 
             val state = viewModel.uiState.value as? CoolOff

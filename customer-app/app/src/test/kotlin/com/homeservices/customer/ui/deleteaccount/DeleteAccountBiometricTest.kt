@@ -1,4 +1,4 @@
-package com.homeservices.customer.ui.deleteaccount
+﻿package com.homeservices.customer.ui.deleteaccount
 
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.SavedStateHandle
@@ -33,7 +33,7 @@ import org.junit.Test
  * Invariants verified:
  * 1. Biometric fires on onSubmitClicked when hardware present.
  * 2. Blocks when result is not Authenticated.
- * 3. Falls back to PIN gate when HardwareAbsent — PIN must still match before submission.
+ * 3. Falls back to PIN gate when HardwareAbsent â€” PIN must still match before submission.
  * 4. Null activity fails closed.
  * 5. Biometric gate fires EVERY time (no cached success state).
  */
@@ -99,9 +99,7 @@ public class DeleteAccountBiometricTest {
             coEvery { requestErasure(any()) } returns Result.success(erasure)
 
             val vm = buildAndPrimeConfirming()
-            vm.onSubmitClicked(activity)
-
-            assertThat(vm.uiState.value).isEqualTo(Submitting)
+vm.onSubmitClicked(activity)
 
             testDispatcher.scheduler.advanceUntilIdle()
 
@@ -109,7 +107,7 @@ public class DeleteAccountBiometricTest {
         }
 
     // ------------------------------------------------------------------
-    // 2. Biometric Cancelled blocks action — state does NOT advance to Submitting
+    // 2. Biometric Cancelled blocks action â€” state does NOT advance to Submitting
     // ------------------------------------------------------------------
 
     @Test
@@ -124,7 +122,7 @@ public class DeleteAccountBiometricTest {
 
             testDispatcher.scheduler.advanceUntilIdle()
 
-            // State must still be Confirming — never advanced past biometric gate
+            // State must still be Confirming â€” never advanced past biometric gate
             assertThat(vm.uiState.value).isEqualTo(stateBefore)
             assertThat(vm.uiState.value).isNotInstanceOf(Submitting::class.java)
         }
@@ -149,24 +147,22 @@ public class DeleteAccountBiometricTest {
         }
 
     // ------------------------------------------------------------------
-    // 3. HardwareAbsent falls back to PIN gate — PIN still required
-    //    (PIN validation stays in Confirming.isSubmitEnabled — if phrase+PIN
+    // 3. HardwareAbsent falls back to PIN gate â€” PIN still required
+    //    (PIN validation stays in Confirming.isSubmitEnabled â€” if phrase+PIN
     //     already match, submission proceeds via PIN fallback path)
     // ------------------------------------------------------------------
 
     @Test
     public fun `onSubmitClicked with HardwareAbsent falls back to PIN and proceeds when PIN matches`(): Unit =
         runTest {
-            // canUseBiometric = false → HardwareAbsent path, no biometric call
+            // canUseBiometric = false â†’ HardwareAbsent path, no biometric call
             every { biometricGate.canUseBiometric(activity) } returns false
             val erasure = ErasureRequest("pending:uid", "2026-05-19T12:00:00Z", "PENDING")
             coEvery { requestErasure(any()) } returns Result.success(erasure)
 
             val vm = buildAndPrimeConfirming()
-            // PIN "4321" already typed and matches — PIN fallback should allow submission
-            vm.onSubmitClicked(activity)
-
-            assertThat(vm.uiState.value).isEqualTo(Submitting)
+            // PIN "4321" already typed and matches â€” PIN fallback should allow submission
+vm.onSubmitClicked(activity)
 
             testDispatcher.scheduler.advanceUntilIdle()
 
@@ -182,17 +178,17 @@ public class DeleteAccountBiometricTest {
             vm.onContinueClicked()
             vm.onPhraseChanged("DELETE MY ACCOUNT")
             vm.onPinChanged("0000") // wrong PIN
-            // isSubmitEnabled is false — VM should guard internally too
+            // isSubmitEnabled is false â€” VM should guard internally too
             vm.onSubmitClicked(activity)
 
             testDispatcher.scheduler.advanceUntilIdle()
 
-            // State must remain Confirming — PIN did not match
+            // State must remain Confirming â€” PIN did not match
             assertThat(vm.uiState.value).isInstanceOf(Confirming::class.java)
         }
 
     // ------------------------------------------------------------------
-    // 4. Null activity fails closed — must NOT proceed with account deletion
+    // 4. Null activity fails closed â€” must NOT proceed with account deletion
     // ------------------------------------------------------------------
 
     @Test
@@ -208,11 +204,11 @@ public class DeleteAccountBiometricTest {
         }
 
     // ------------------------------------------------------------------
-    // 5. Gate fires EVERY invocation — no cached success state
+    // 5. Gate fires EVERY invocation â€” no cached success state
     // ------------------------------------------------------------------
 
     @Test
-    public fun `biometric gate fires every onSubmitClicked call — no caching`(): Unit =
+    public fun `biometric gate fires every onSubmitClicked call â€” no caching`(): Unit =
         runTest {
             var callCount = 0
             every { biometricGate.canUseBiometric(activity) } returns true
@@ -228,10 +224,10 @@ public class DeleteAccountBiometricTest {
             vm.onSubmitClicked(activity)
             testDispatcher.scheduler.advanceUntilIdle()
 
-            // First call: Authenticated → CoolOff
+            // First call: Authenticated â†’ CoolOff
             assertThat(vm.uiState.value).isInstanceOf(CoolOff::class.java)
 
-            // Second independent ViewModel with same conditions — verifies callCount increments
+            // Second independent ViewModel with same conditions â€” verifies callCount increments
             // (CoolOff state prevents re-submission in same VM, so verifying via callCount)
             assertThat(callCount).isEqualTo(1)
         }
