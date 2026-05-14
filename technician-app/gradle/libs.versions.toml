@@ -32,7 +32,7 @@ growthbookOkHttp = "1.0.8"
 # Observability
 sentry = "7.17.0"
 crashlyticsGradle = "3.0.2"
-posthog = "3.13.0"
+posthog = "3.44.1"
 
 # Third-party auth (Maven Central: latest stable; 3.0.3 never published, using 3.2.1)
 truecallerSdk = "3.2.1"
@@ -133,7 +133,7 @@ growthbook-okhttp = { module = "io.growthbook.sdk:NetworkDispatcherOkHttp", vers
 
 # Observability
 sentry-android = { module = "io.sentry:sentry-android", version.ref = "sentry" }
-posthog-android = { module = "com.posthog.android:posthog", version.ref = "posthog" }
+posthog-android = { module = "com.posthog:posthog-android", version.ref = "posthog" }
 
 # Credential Manager + Google Identity
 androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "credentials" }

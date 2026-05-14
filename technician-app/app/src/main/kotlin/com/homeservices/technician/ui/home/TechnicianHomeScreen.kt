@@ -80,7 +80,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.homeservices.designsystem.theme.HomeservicesColors
 import com.homeservices.technician.R
 import com.homeservices.technician.domain.auth.model.AuthState
 import com.homeservices.technician.domain.availability.model.TechnicianAvailability
@@ -91,7 +90,7 @@ import com.homeservices.technician.ui.earnings.EarningsUiState
 import com.homeservices.technician.ui.earnings.EarningsViewModel
 import kotlinx.coroutines.launch
 
-// WarningSoft (0xFFF2E7CF) has no DS equivalent — kept as-is
+private val WarningSoft: Color = Color(0xFFF2E7CF) // warm warning background — no DS token equivalent
 
 @Composable
 internal fun TechnicianHomeScreen(
@@ -483,7 +482,12 @@ private fun StatTile(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp)) // decorative — label provided by adjacent text
+            Icon(
+                icon,
+                contentDescription = null, // decorative — label provided by adjacent text
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
             Column {
                 Text(
                     text = value,
@@ -766,7 +770,12 @@ private fun InfoLine(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp)) // decorative — label provided by adjacent text
+        Icon(
+            icon,
+            contentDescription = null, // decorative — label provided by adjacent text
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp),
+        )
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
@@ -873,7 +882,7 @@ private fun AvailabilitySyncCard(
 ) {
     Surface(
         shape = RoundedCornerShape(18.dp),
-        color = if (state.errorMessage == null) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF2E7CF),
+        color = if (state.errorMessage == null) MaterialTheme.colorScheme.surfaceVariant else WarningSoft,
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(14.dp),
@@ -1137,7 +1146,7 @@ private fun StatusPill(
 ) {
     Surface(
         shape = RoundedCornerShape(999.dp),
-        color = if (active) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF2E7CF),
+        color = if (active) MaterialTheme.colorScheme.surfaceVariant else WarningSoft,
     ) {
         Text(
             text = label,

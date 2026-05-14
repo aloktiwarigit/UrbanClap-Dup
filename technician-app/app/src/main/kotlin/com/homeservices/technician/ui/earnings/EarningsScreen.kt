@@ -73,7 +73,12 @@ internal fun EarningsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                modifier = Modifier.background(Brush.horizontalGradient(listOf(HomeservicesColors.Brand.primaryHover, MaterialTheme.colorScheme.primary))),
+                modifier =
+                    Modifier.background(
+                        Brush.horizontalGradient(
+                            listOf(HomeservicesColors.Brand.primaryHover, MaterialTheme.colorScheme.primary),
+                        ),
+                    ),
                 title = {
                     Text(
                         stringResource(R.string.earnings_title),
