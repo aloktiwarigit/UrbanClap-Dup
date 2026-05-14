@@ -1,12 +1,14 @@
-package com.homeservices.customer.ui.booking
+﻿package com.homeservices.customer.ui.booking
 
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.homeservices.customer.domain.booking.model.PendingAddOn
 import com.homeservices.designsystem.theme.HomeservicesTheme
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
+@Ignore("CI-only — record via paparazzi-record.yml workflow_dispatch on Linux")
 public class PriceApprovalScreenPaparazziTest {
     @get:Rule
     public val paparazzi: Paparazzi =
