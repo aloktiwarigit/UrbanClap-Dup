@@ -1,6 +1,5 @@
 package com.homeservices.customer.navigation
 
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -63,14 +62,10 @@ private fun NavGraphBuilder.homeDestination(
 ) {
     composable(CatalogueRoutes.HOME) {
         val vm: CatalogueHomeViewModel = hiltViewModel()
-        val walletVm: WalletViewModel = hiltViewModel()
-        val walletBalanceState by walletVm.balanceState.collectAsStateWithLifecycle()
+        val walletVm: WalletViewModel? = if (featureFlags.walletVisible()) hiltViewModel() else null
+        val walletBalanceState = walletVm?.balanceState?.collectAsStateWithLifecycle()?.value
         val balancePaise =
-            if (featureFlags.walletVisible()) {
-                (walletBalanceState as? WalletBalanceUiState.Ready)?.balance?.balanceInPaise ?: 0L
-            } else {
-                0L
-            }
+            (walletBalanceState as? WalletBalanceUiState.Ready)?.balance?.balanceInPaise ?: 0L
         CatalogueHomeScreen(
             viewModel = vm,
             onCategoryClick = { id -> navController.navigate(CatalogueRoutes.serviceList(id)) },
