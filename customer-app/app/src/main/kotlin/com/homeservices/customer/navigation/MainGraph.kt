@@ -145,11 +145,22 @@ internal fun NavGraphBuilder.mainGraph(navController: NavController) {
 
         composable(
             route = BookingRoutes.CONFIRMED,
-            arguments = listOf(navArgument("bookingId") { type = NavType.StringType }),
+            arguments =
+                listOf(
+                    navArgument("bookingId") { type = NavType.StringType },
+                    // E11-S05b-1: optional techId for TrustDossierCard.
+                    navArgument("techId") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                ),
         ) { backStackEntry ->
             val bookingId = backStackEntry.arguments?.getString("bookingId") ?: ""
+            val technicianId = backStackEntry.arguments?.getString("techId")
             BookingConfirmedScreen(
                 bookingId = bookingId,
+                technicianId = technicianId,
                 onBackToHome = {
                     navController.popBackStack(CatalogueRoutes.HOME, inclusive = false)
                 },
