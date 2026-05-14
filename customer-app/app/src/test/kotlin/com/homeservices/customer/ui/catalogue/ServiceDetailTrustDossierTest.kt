@@ -39,10 +39,18 @@ public class ServiceDetailTrustDossierTest {
     private val localizer = CatalogueLocalizer()
     private val getCurrentLocale: GetCurrentLocaleUseCase = mockk()
 
-    private val testService = Service(
-        "svc1", "cat1", "Pipe Fix", "Full pipe replacement",
-        150000, 120, "url", listOf("Labour", "Parts"), emptyList<AddOn>(),
-    )
+    private val testService =
+        Service(
+            "svc1",
+            "cat1",
+            "Pipe Fix",
+            "Full pipe replacement",
+            150000,
+            120,
+            "url",
+            listOf("Labour", "Parts"),
+            emptyList<AddOn>(),
+        )
 
     @Before
     public fun setUp() {
@@ -59,30 +67,37 @@ public class ServiceDetailTrustDossierTest {
     @Test
     public fun `recommendedTechnicianId is null when techId not provided`(): Unit =
         runTest(dispatcher) {
-            val vm = ServiceDetailViewModel(
-                SavedStateHandle(mapOf("serviceId" to "svc1")),
-                serviceDetailUseCase,
-                confidenceScoreUseCase,
-                localizer,
-                getCurrentLocale,
-            )
+            val vm =
+                ServiceDetailViewModel(
+                    SavedStateHandle(mapOf("serviceId" to "svc1")),
+                    serviceDetailUseCase,
+                    confidenceScoreUseCase,
+                    localizer,
+                    getCurrentLocale,
+                )
             assertThat(vm.recommendedTechnicianId.value).isNull()
         }
 
     @Test
     public fun `recommendedTechnicianId emits techId when provided in SavedStateHandle`(): Unit =
         runTest(dispatcher) {
-            val score = com.homeservices.customer.domain.technician.model.ConfidenceScore(
-                94, 4.7, 12, 35, false,
-            )
+            val score =
+                com.homeservices.customer.domain.technician.model.ConfidenceScore(
+                    94,
+                    4.7,
+                    12,
+                    35,
+                    false,
+                )
             every { confidenceScoreUseCase("tech-1", 0.0, 0.0) } returns flowOf(Result.success(score))
-            val vm = ServiceDetailViewModel(
-                SavedStateHandle(mapOf("serviceId" to "svc1", "techId" to "tech-1")),
-                serviceDetailUseCase,
-                confidenceScoreUseCase,
-                localizer,
-                getCurrentLocale,
-            )
+            val vm =
+                ServiceDetailViewModel(
+                    SavedStateHandle(mapOf("serviceId" to "svc1", "techId" to "tech-1")),
+                    serviceDetailUseCase,
+                    confidenceScoreUseCase,
+                    localizer,
+                    getCurrentLocale,
+                )
             assertThat(vm.recommendedTechnicianId.value).isEqualTo("tech-1")
         }
 }

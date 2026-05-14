@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Warning
@@ -47,6 +49,9 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.tracking.model.BookingStatus
+import com.homeservices.customer.ui.shared.TrustDossierCard
+import com.homeservices.customer.ui.shared.TrustDossierUiState
+import com.homeservices.customer.ui.shared.TrustDossierViewModel
 import com.homeservices.designsystem.components.HsSecondaryButton
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,15 +59,24 @@ import com.homeservices.designsystem.components.HsSecondaryButton
 internal fun LiveTrackingScreen(
     viewModel: LiveTrackingViewModel = hiltViewModel(),
     sosViewModel: SosViewModel = hiltViewModel(),
+    trustDossierViewModel: TrustDossierViewModel = hiltViewModel(),
     onBack: () -> Unit,
     onFileComplaint: (bookingId: String) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val sosUiState by sosViewModel.sosUiState.collectAsStateWithLifecycle()
+    val trustDossierUiState by trustDossierViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val isInProgress =
         uiState is LiveTrackingUiState.Tracking &&
             (uiState as LiveTrackingUiState.Tracking).status is BookingStatus.InProgress
+
+    val technicianId = (uiState as? LiveTrackingUiState.Tracking)?.technicianId
+    LaunchedEffect(technicianId) {
+        if (technicianId != null) {
+            trustDossierViewModel.loadProfile(technicianId)
+        }
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -93,6 +107,7 @@ internal fun LiveTrackingScreen(
     ) { innerPadding ->
         LiveTrackingContent(
             uiState = uiState,
+            trustDossierUiState = trustDossierUiState,
             onFileComplaint = onFileComplaint,
             modifier = Modifier.padding(innerPadding),
         )
@@ -136,6 +151,7 @@ internal fun LiveTrackingContent(
     uiState: LiveTrackingUiState,
     onFileComplaint: (bookingId: String) -> Unit,
     modifier: Modifier = Modifier,
+    trustDossierUiState: TrustDossierUiState = TrustDossierUiState.Unavailable,
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (val state = uiState) {
@@ -144,7 +160,12 @@ internal fun LiveTrackingContent(
                     CircularProgressIndicator()
                 }
             }
-            is LiveTrackingUiState.Tracking -> TrackingBody(state = state, onFileComplaint = onFileComplaint)
+            is LiveTrackingUiState.Tracking ->
+                TrackingBody(
+                    state = state,
+                    trustDossierUiState = trustDossierUiState,
+                    onFileComplaint = onFileComplaint,
+                )
         }
     }
 }
@@ -152,42 +173,70 @@ internal fun LiveTrackingContent(
 @Composable
 private fun TrackingBody(
     state: LiveTrackingUiState.Tracking,
+    trustDossierUiState: TrustDossierUiState,
     onFileComplaint: (bookingId: String) -> Unit,
 ) {
     val defaultTechName = stringResource(R.string.tracking_your_technician)
-    Column(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(
-                text = state.techName.ifBlank { defaultTechName },
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        TrackingTechHeader(state = state, defaultTechName = defaultTechName)
+        TrackingMapSection(state = state, defaultTechName = defaultTechName)
+        TrackingServiceProgressCard(state = state, onFileComplaint = onFileComplaint)
+        if (state.technicianId != null) {
+            TrustDossierCard(
+                uiState = trustDossierUiState,
+                compact = false,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 16.dp),
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                AssistChip(onClick = {}, label = { Text(statusLabel(state.status)) })
-                state.etaMinutes?.let { AssistChip(onClick = {}, label = { Text(stringResource(R.string.tracking_eta_chip, it)) }) }
+        }
+    }
+}
+
+@Composable
+private fun TrackingTechHeader(
+    state: LiveTrackingUiState.Tracking,
+    defaultTechName: String,
+) {
+    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            text = state.techName.ifBlank { defaultTechName },
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            AssistChip(onClick = {}, label = { Text(statusLabel(state.status)) })
+            state.etaMinutes?.let {
+                AssistChip(onClick = {}, label = { Text(stringResource(R.string.tracking_eta_chip, it)) })
             }
         }
-
-        state.location?.let { loc ->
-            val techLatLng = LatLng(loc.lat, loc.lng)
-            val techNameForMarker = state.techName.ifBlank { defaultTechName }
-            val cameraPositionState =
-                rememberCameraPositionState {
-                    position = CameraPosition.fromLatLngZoom(techLatLng, 15f)
-                }
-            GoogleMap(
-                modifier = Modifier.fillMaxWidth().height(300.dp),
-                cameraPositionState = cameraPositionState,
-            ) {
-                Marker(
-                    state = MarkerState(position = techLatLng),
-                    title = techNameForMarker,
-                )
-            }
-        } ?: MapPlaceholder()
-
-        TrackingServiceProgressCard(state = state, onFileComplaint = onFileComplaint)
     }
+}
+
+@Composable
+private fun TrackingMapSection(
+    state: LiveTrackingUiState.Tracking,
+    defaultTechName: String,
+) {
+    state.location?.let { loc ->
+        val techLatLng = LatLng(loc.lat, loc.lng)
+        val techNameForMarker = state.techName.ifBlank { defaultTechName }
+        val cameraPositionState =
+            rememberCameraPositionState {
+                position = CameraPosition.fromLatLngZoom(techLatLng, 15f)
+            }
+        GoogleMap(
+            modifier = Modifier.fillMaxWidth().height(300.dp),
+            cameraPositionState = cameraPositionState,
+        ) {
+            Marker(
+                state = MarkerState(position = techLatLng),
+                title = techNameForMarker,
+            )
+        }
+    } ?: MapPlaceholder()
 }
 
 @Composable

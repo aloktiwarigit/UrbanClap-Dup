@@ -21,40 +21,42 @@ import org.junit.runners.JUnit4
  */
 @RunWith(JUnit4::class)
 public class LiveTrackingTrustDossierTest {
-
     @Test
     public fun `Tracking state exposes technicianId from LiveLocation`() {
-        val loc = LiveLocation(
-            lat = 12.97,
-            lng = 77.59,
-            etaMinutes = 8,
-            techName = "Suresh",
-            techPhotoUrl = "https://example.com/photo.jpg",
-            technicianId = "tech-99",
-        )
-        val state = LiveTrackingUiState.Tracking(
-            bookingId = "b1",
-            location = loc,
-            status = BookingStatus.EnRoute,
-            techName = loc.techName,
-            techPhotoUrl = loc.techPhotoUrl,
-            etaMinutes = loc.etaMinutes,
-            technicianId = loc.technicianId,
-        )
+        val loc =
+            LiveLocation(
+                lat = 12.97,
+                lng = 77.59,
+                etaMinutes = 8,
+                techName = "Suresh",
+                techPhotoUrl = "https://example.com/photo.jpg",
+                technicianId = "tech-99",
+            )
+        val state =
+            LiveTrackingUiState.Tracking(
+                bookingId = "b1",
+                location = loc,
+                status = BookingStatus.EnRoute,
+                techName = loc.techName,
+                techPhotoUrl = loc.techPhotoUrl,
+                etaMinutes = loc.etaMinutes,
+                technicianId = loc.technicianId,
+            )
         assertThat(state.technicianId).isEqualTo("tech-99")
     }
 
     @Test
     public fun `Tracking state has null technicianId when location is null`() {
-        val state = LiveTrackingUiState.Tracking(
-            bookingId = "b2",
-            location = null,
-            status = BookingStatus.Searching,
-            techName = "",
-            techPhotoUrl = "",
-            etaMinutes = null,
-            technicianId = null,
-        )
+        val state =
+            LiveTrackingUiState.Tracking(
+                bookingId = "b2",
+                location = null,
+                status = BookingStatus.Searching,
+                techName = "",
+                techPhotoUrl = "",
+                etaMinutes = null,
+                technicianId = null,
+            )
         assertThat(state.technicianId).isNull()
     }
 
@@ -67,34 +69,37 @@ public class LiveTrackingTrustDossierTest {
 
     @Test
     public fun `technicianId is not exposed when status is Searching`() {
-        val state = LiveTrackingUiState.Tracking(
-            bookingId = "b3",
-            location = null,
-            status = BookingStatus.Searching,
-            techName = "",
-            techPhotoUrl = "",
-            etaMinutes = null,
-            technicianId = null,
-        )
+        val state =
+            LiveTrackingUiState.Tracking(
+                bookingId = "b3",
+                location = null,
+                status = BookingStatus.Searching,
+                techName = "",
+                techPhotoUrl = "",
+                etaMinutes = null,
+                technicianId = null,
+            )
         // Dossier should not be triggered for pre-assignment statuses
-        val shouldShowDossier = state.technicianId != null &&
-            state.status !is BookingStatus.Searching &&
-            state.status !is BookingStatus.PendingPayment &&
-            state.status !is BookingStatus.Paid
+        val shouldShowDossier =
+            state.technicianId != null &&
+                state.status !is BookingStatus.Searching &&
+                state.status !is BookingStatus.PendingPayment &&
+                state.status !is BookingStatus.Paid
         assertThat(shouldShowDossier).isFalse()
     }
 
     @Test
     public fun `technicianId triggers dossier load when status is Assigned`() {
-        val state = LiveTrackingUiState.Tracking(
-            bookingId = "b4",
-            location = null,
-            status = BookingStatus.Assigned,
-            techName = "Ramesh",
-            techPhotoUrl = "",
-            etaMinutes = null,
-            technicianId = "tech-42",
-        )
+        val state =
+            LiveTrackingUiState.Tracking(
+                bookingId = "b4",
+                location = null,
+                status = BookingStatus.Assigned,
+                techName = "Ramesh",
+                techPhotoUrl = "",
+                etaMinutes = null,
+                technicianId = "tech-42",
+            )
         val shouldShowDossier = state.technicianId != null
         assertThat(shouldShowDossier).isTrue()
     }

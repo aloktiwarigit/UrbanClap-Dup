@@ -34,6 +34,7 @@ public class LiveTrackingViewModel
                     techName = location?.techName ?: "",
                     techPhotoUrl = location?.techPhotoUrl ?: "",
                     etaMinutes = location?.etaMinutes,
+                    technicianId = location?.technicianId,
                 )
             }.stateIn(
                 scope = viewModelScope,
