@@ -303,6 +303,8 @@
     <string name="bookings_error_title">Could not refresh bookings</string>
     <string name="bookings_error_body">Your latest booking is still saved. Retry when the network is stable.</string>
     <string name="bookings_retry">Retry</string>
+    <string name="bookings_rate_booking">Rate Booking</string>
+    <string name="bookings_file_complaint">File Complaint</string>
     <!-- Booking status labels -->
     <string name="booking_status_pending_payment">Payment pending</string>
     <string name="booking_status_paid">Confirmed</string>

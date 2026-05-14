@@ -72,6 +72,8 @@ private fun NavGraphBuilder.homeDestination(
             onSettingsClick = { navController.navigate(LocaleRoutes.SETTINGS) },
             onProfileLanguageClick = { navController.navigate(LocaleRoutes.LANGUAGE_SETTINGS) },
             onTrackBooking = { id -> navController.navigate(BookingRoutes.liveTrackingRoute(id)) },
+            onRateBooking = { id -> navController.navigate(RatingRoutes.route(id)) },
+            onComplainBooking = { id -> navController.navigate(ComplaintRoutes.route(id)) },
             showWalletChip = featureFlags.walletVisible(),
             walletBalanceInPaise = balancePaise,
             onWalletClick = { navController.navigate(WalletRoutes.WALLET) },

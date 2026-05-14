@@ -180,6 +180,8 @@ internal fun CatalogueHomeScreen(
     onSettingsClick: () -> Unit,
     onProfileLanguageClick: () -> Unit,
     onTrackBooking: (String) -> Unit,
+    onRateBooking: (String) -> Unit = {},
+    onComplainBooking: (String) -> Unit = {},
     showWalletChip: Boolean = false,
     walletBalanceInPaise: Long = 0L,
     onWalletClick: () -> Unit = {},
@@ -191,6 +193,8 @@ internal fun CatalogueHomeScreen(
         onSettingsClick = onSettingsClick,
         onProfileLanguageClick = onProfileLanguageClick,
         onTrackBooking = onTrackBooking,
+        onRateBooking = onRateBooking,
+        onComplainBooking = onComplainBooking,
         showWalletChip = showWalletChip,
         walletBalanceInPaise = walletBalanceInPaise,
         onWalletClick = onWalletClick,
@@ -204,6 +208,8 @@ internal fun CatalogueHomeContent(
     onSettingsClick: () -> Unit,
     onProfileLanguageClick: () -> Unit,
     onTrackBooking: (String) -> Unit,
+    onRateBooking: (String) -> Unit = {},
+    onComplainBooking: (String) -> Unit = {},
     showWalletChip: Boolean = false,
     walletBalanceInPaise: Long = 0L,
     onWalletClick: () -> Unit = {},
@@ -232,6 +238,8 @@ internal fun CatalogueHomeContent(
             uiState = uiState,
             onCategoryClick = onCategoryClick,
             onTrackBooking = onTrackBooking,
+            onRateBooking = onRateBooking,
+            onComplainBooking = onComplainBooking,
             onProfileLanguageClick = onProfileLanguageClick,
             onSelectNav = { selectedNav = it },
             scaffoldPadding = scaffoldPadding,
@@ -245,6 +253,8 @@ private fun HomeTabs(
     uiState: CatalogueHomeUiState,
     onCategoryClick: (String) -> Unit,
     onTrackBooking: (String) -> Unit,
+    onRateBooking: (String) -> Unit,
+    onComplainBooking: (String) -> Unit,
     onProfileLanguageClick: () -> Unit,
     onSelectNav: (Int) -> Unit,
     scaffoldPadding: PaddingValues,
@@ -287,6 +297,8 @@ private fun HomeTabs(
         1 ->
             CustomerBookingsScreen(
                 onTrackBooking = onTrackBooking,
+                onRateBooking = onRateBooking,
+                onComplainBooking = onComplainBooking,
                 modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
             )
         2 ->

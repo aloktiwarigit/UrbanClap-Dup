@@ -63,6 +63,8 @@ private val WarningSoft = Color(0xFFF2E7CF)
 @Composable
 internal fun CustomerBookingsScreen(
     onTrackBooking: (String) -> Unit,
+    onRateBooking: (String) -> Unit,
+    onComplainBooking: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: CustomerBookingsViewModel = hiltViewModel(),
 ) {
@@ -86,6 +88,8 @@ internal fun CustomerBookingsScreen(
     CustomerBookingsContent(
         uiState = uiState,
         onTrackBooking = onTrackBooking,
+        onRateBooking = onRateBooking,
+        onComplainBooking = onComplainBooking,
         onRefresh = viewModel::refresh,
         modifier = modifier,
     )
@@ -95,6 +99,8 @@ internal fun CustomerBookingsScreen(
 internal fun CustomerBookingsContent(
     uiState: CustomerBookingsUiState,
     onTrackBooking: (String) -> Unit,
+    onRateBooking: (String) -> Unit,
+    onComplainBooking: (String) -> Unit,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -145,7 +151,12 @@ internal fun CustomerBookingsContent(
                     }
                 } else {
                     items(uiState.bookings, key = { it.bookingId }) { booking ->
-                        BookingCard(booking = booking, onTrackBooking = onTrackBooking)
+                        BookingCard(
+                            booking = booking,
+                            onTrackBooking = onTrackBooking,
+                            onRateBooking = onRateBooking,
+                            onComplainBooking = onComplainBooking,
+                        )
                     }
                 }
         }
@@ -156,6 +167,8 @@ internal fun CustomerBookingsContent(
 private fun BookingCard(
     booking: CustomerBooking,
     onTrackBooking: (String) -> Unit,
+    onRateBooking: (String) -> Unit,
+    onComplainBooking: (String) -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -198,6 +211,20 @@ private fun BookingCard(
                             stringResource(R.string.bookings_view_status)
                         },
                     onClick = { onTrackBooking(booking.bookingId) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            if (booking.status.isPostService()) {
+                if (!booking.ratingSubmitted) {
+                    HsPrimaryButton(
+                        text = stringResource(R.string.bookings_rate_booking),
+                        onClick = { onRateBooking(booking.bookingId) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                HsSecondaryButton(
+                    text = stringResource(R.string.bookings_file_complaint),
+                    onClick = { onComplainBooking(booking.bookingId) },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -387,6 +414,9 @@ private fun CustomerBookingStatus.isLiveTracking(): Boolean =
             CustomerBookingStatus.REACHED,
             CustomerBookingStatus.IN_PROGRESS,
         )
+
+private fun CustomerBookingStatus.isPostService(): Boolean =
+    this == CustomerBookingStatus.COMPLETED || this == CustomerBookingStatus.CLOSED
 
 @Composable
 private fun BookingPaymentMethod.labelRes(): String =

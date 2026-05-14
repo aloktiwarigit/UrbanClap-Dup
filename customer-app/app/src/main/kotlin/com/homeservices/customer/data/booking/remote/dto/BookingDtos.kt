@@ -111,6 +111,7 @@ public data class CustomerBookingDto(
     val amount: Long,
     val paymentMethod: String? = null,
     val createdAt: String,
+    val ratingSubmitted: Boolean = false,
 ) {
     public fun toDomain(): CustomerBooking =
         CustomerBooking(
@@ -130,5 +131,6 @@ public data class CustomerBookingDto(
                     ?.let { runCatching { BookingPaymentMethod.valueOf(it) }.getOrNull() }
                     ?: BookingPaymentMethod.RAZORPAY,
             createdAt = createdAt,
+            ratingSubmitted = ratingSubmitted,
         )
 }

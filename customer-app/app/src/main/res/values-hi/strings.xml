@@ -283,6 +283,8 @@
     <string name="bookings_error_title">बुकिंग रिफ्रेश नहीं हो सकी</string>
     <string name="bookings_error_body">आपकी आखिरी बुकिंग सेव है। नेटवर्क स्थिर होने पर फिर कोशिश करें।</string>
     <string name="bookings_retry">फिर कोशिश करें</string>
+    <string name="bookings_rate_booking">बुकिंग को रेट करें</string>
+    <string name="bookings_file_complaint">शिकायत दर्ज करें</string>
     <!-- Booking status labels -->
     <string name="booking_status_pending_payment">पेमेंट बाकी</string>
     <string name="booking_status_paid">कन्फर्म</string>
