@@ -1,0 +1,36 @@
+# Prevents bare OkHttpClient.Builder() in Hilt DI modules.
+# All API clients must use @AuthOkHttpClient (authenticated) or @UnauthOkHttpClient
+# (explicitly unauthenticated, with a documented reason comment).
+#
+# Anti-pattern (WRONG):
+#   fun provideXyzApiService(...): XyzApiService =
+#       Retrofit.Builder()
+#           .client(OkHttpClient.Builder().build())  // BARE BUILDER, UNQUALIFIED
+#
+# Correct pattern:
+#   fun provideXyzApiService(@AuthOkHttpClient client: OkHttpClient): XyzApiService =
+#       Retrofit.Builder()
+#           .client(client)  // INJECTED QUALIFIED CLIENT
+#
+# Reference: data/rating/di/RatingModule.kt (provideAuthOkHttpClient provider)
+#           data/activeJob/di/ActiveJobModule.kt (consumer using @AuthOkHttpClient)
+rules:
+  - id: no-bare-okhttp-in-module
+    pattern: |
+      OkHttpClient.Builder()
+    paths:
+      include:
+        - "technician-app/app/src/main/kotlin/com/homeservices/technician/data/**/di/*Module.kt"
+    # Note: This rule may produce a false positive on RatingModule.kt:provideAuthOkHttpClient()
+    # (the reference @AuthOkHttpClient provider itself). This is acceptable - the provider
+    # is meant to be the single canonical place where OkHttpClient is constructed.
+    # If triaging this finding, check whether the OkHttpClient.Builder() is in a
+    # @AuthOkHttpClient or @UnauthOkHttpClient annotated function. If yes, dismiss.
+    # If no, it's a real regression - inject the qualifier instead.
+    message: |
+      Bare OkHttpClient.Builder() in a Hilt DI module (B1 regression).
+      Inject @AuthOkHttpClient (or @UnauthOkHttpClient with a reason comment) instead.
+      See: data/rating/di/RatingModule.kt for the @AuthOkHttpClient provider;
+           data/activeJob/di/ActiveJobModule.kt for correct usage pattern.
+    languages: [kotlin]
+    severity: ERROR
