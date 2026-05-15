@@ -1,6 +1,5 @@
 package com.homeservices.customer.data.catalogue.remote
 
-<<<<<<< HEAD
 import com.homeservices.customer.data.catalogue.remote.dto.CategoriesResponse
 import com.homeservices.customer.data.catalogue.remote.dto.ServiceDto
 import retrofit2.http.GET
@@ -16,7 +15,6 @@ import retrofit2.http.Path
  */
 public interface CatalogueApiService {
     @GET("v1/categories")
-<<<<<<< HEAD
     public suspend fun getCategories(): CategoriesResponse
 
     @GET("v1/services/{id}")
