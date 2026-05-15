@@ -18,7 +18,8 @@ public class CataloguePhotoUrlTest {
             CategoryDto(
                 id = "ac-repair",
                 name = "AC Repair",
-                imageUrl = "https://cdn.example.com/cat-ac.jpg",
+                heroImageUrl = "https://cdn.example.com/cat-ac.jpg",
+                sortOrder = 0,
                 services = emptyList(),
             )
 
@@ -33,7 +34,8 @@ public class CataloguePhotoUrlTest {
             CategoryDto(
                 id = "plumbing",
                 name = "Plumbing",
-                imageUrl = "",
+                heroImageUrl = "",
+                sortOrder = 0,
                 services = emptyList(),
             )
 
@@ -42,12 +44,12 @@ public class CataloguePhotoUrlTest {
         assertThat(domain.imageUrl).isEmpty()
     }
 
-    // ── ServiceSummaryDto ─────────────────────────────────────────────────────
+    // ── ServiceCardDto ────────────────────────────────────────────────────────
 
     @Test
-    public fun `ServiceSummaryDto toServiceDomain maps heroImageUrl to domain imageUrl`() {
+    public fun `ServiceCardDto toDomain maps heroImageUrl to domain imageUrl`() {
         val dto =
-            ServiceSummaryDto(
+            ServiceCardDto(
                 id = "ac-deep-clean",
                 categoryId = "ac-repair",
                 name = "AC Deep Clean",
@@ -57,15 +59,15 @@ public class CataloguePhotoUrlTest {
                 durationMinutes = 60,
             )
 
-        val domain = dto.toServiceDomain()
+        val domain = dto.toDomain()
 
         assertThat(domain.imageUrl).isEqualTo("https://cdn.example.com/svc-ac.jpg")
     }
 
     @Test
-    public fun `ServiceSummaryDto toServiceDomain preserves blank heroImageUrl`() {
+    public fun `ServiceCardDto toDomain preserves blank heroImageUrl`() {
         val dto =
-            ServiceSummaryDto(
+            ServiceCardDto(
                 id = "ac-deep-clean",
                 categoryId = "ac-repair",
                 name = "AC Deep Clean",
@@ -75,7 +77,7 @@ public class CataloguePhotoUrlTest {
                 durationMinutes = 60,
             )
 
-        val domain = dto.toServiceDomain()
+        val domain = dto.toDomain()
 
         assertThat(domain.imageUrl).isEmpty()
     }
@@ -83,34 +85,18 @@ public class CataloguePhotoUrlTest {
     // ── ServiceDto ────────────────────────────────────────────────────────────
 
     @Test
-    public fun `ServiceDto toDomain prefers imageUrl over heroImageUrl`() {
+    public fun `ServiceDto toDomain maps heroImageUrl to domain imageUrl`() {
         val dto =
             ServiceDto(
                 id = "ac-deep-clean",
                 categoryId = "ac-repair",
                 name = "AC Deep Clean",
+                shortDescription = "Full indoor unit clean",
                 basePrice = 59900,
                 durationMinutes = 60,
-                imageUrl = "https://cdn.example.com/direct.jpg",
                 heroImageUrl = "https://cdn.example.com/hero.jpg",
-            )
-
-        val domain = dto.toDomain()
-
-        assertThat(domain.imageUrl).isEqualTo("https://cdn.example.com/direct.jpg")
-    }
-
-    @Test
-    public fun `ServiceDto toDomain falls back to heroImageUrl when imageUrl is null`() {
-        val dto =
-            ServiceDto(
-                id = "ac-deep-clean",
-                categoryId = "ac-repair",
-                name = "AC Deep Clean",
-                basePrice = 59900,
-                durationMinutes = 60,
-                imageUrl = null,
-                heroImageUrl = "https://cdn.example.com/hero.jpg",
+                includes = emptyList(),
+                addOns = emptyList(),
             )
 
         val domain = dto.toDomain()
@@ -119,16 +105,18 @@ public class CataloguePhotoUrlTest {
     }
 
     @Test
-    public fun `ServiceDto toDomain yields empty string when both imageUrl and heroImageUrl are null`() {
+    public fun `ServiceDto toDomain preserves blank heroImageUrl as empty string`() {
         val dto =
             ServiceDto(
                 id = "ac-deep-clean",
                 categoryId = "ac-repair",
                 name = "AC Deep Clean",
+                shortDescription = "Full indoor unit clean",
                 basePrice = 59900,
                 durationMinutes = 60,
-                imageUrl = null,
-                heroImageUrl = null,
+                heroImageUrl = "",
+                includes = emptyList(),
+                addOns = emptyList(),
             )
 
         val domain = dto.toDomain()
