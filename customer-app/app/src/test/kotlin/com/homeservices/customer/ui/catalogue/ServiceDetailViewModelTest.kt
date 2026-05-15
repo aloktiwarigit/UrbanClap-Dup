@@ -29,7 +29,12 @@ public class ServiceDetailViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
     private val serviceDetailUseCase: GetServiceDetailUseCase = mockk()
     private val confidenceScoreUseCase: GetConfidenceScoreUseCase = mockk()
-    private val locationProvider: FusedCurrentLocationProvider = mockk()
+
+    // Returns null → resolveGps() falls back to (0.0, 0.0), matching the existing test expectations.
+    private val locationProvider: FusedCurrentLocationProvider =
+        mockk {
+            coEvery { getLastLocation() } returns null
+        }
     private val localizer = CatalogueLocalizer()
     private val getCurrentLocale: GetCurrentLocaleUseCase = mockk()
 
@@ -46,16 +51,12 @@ public class ServiceDetailViewModelTest {
             emptyList<AddOn>(),
         )
 
-    @Before
-    public fun setUp(): Unit {
+    @Before public fun setUp(): Unit {
         Dispatchers.setMain(dispatcher)
         every { getCurrentLocale() } returns flowOf("en")
-        // Default: GPS unavailable — falls back to (0.0, 0.0) sentinel
-        coEvery { locationProvider.getLastLocation() } returns null
     }
 
-    @After
-    public fun tearDown(): Unit {
+    @After public fun tearDown(): Unit {
         Dispatchers.resetMain()
     }
 
@@ -63,7 +64,15 @@ public class ServiceDetailViewModelTest {
     public fun `loads service detail for given serviceId`(): Unit =
         runTest(dispatcher) {
             every { serviceDetailUseCase("svc1") } returns flowOf(Result.success(testService))
-            val vm = buildVm(SavedStateHandle(mapOf("serviceId" to "svc1")))
+            val vm =
+                ServiceDetailViewModel(
+                    SavedStateHandle(mapOf("serviceId" to "svc1")),
+                    serviceDetailUseCase,
+                    confidenceScoreUseCase,
+                    locationProvider,
+                    localizer,
+                    getCurrentLocale,
+                )
             assertThat(vm.uiState.value).isInstanceOf(ServiceDetailUiState.Success::class.java)
             assertThat((vm.uiState.value as ServiceDetailUiState.Success).service).isEqualTo(testService)
         }
@@ -72,7 +81,15 @@ public class ServiceDetailViewModelTest {
     public fun `emits Error on failure`(): Unit =
         runTest(dispatcher) {
             every { serviceDetailUseCase("svc1") } returns flowOf(Result.failure(RuntimeException("not found")))
-            val vm = buildVm(SavedStateHandle(mapOf("serviceId" to "svc1")))
+            val vm =
+                ServiceDetailViewModel(
+                    SavedStateHandle(mapOf("serviceId" to "svc1")),
+                    serviceDetailUseCase,
+                    confidenceScoreUseCase,
+                    locationProvider,
+                    localizer,
+                    getCurrentLocale,
+                )
             assertThat(vm.uiState.value).isInstanceOf(ServiceDetailUiState.Error::class.java)
             assertThat((vm.uiState.value as ServiceDetailUiState.Error).message).isEqualTo("not found")
         }
@@ -81,7 +98,15 @@ public class ServiceDetailViewModelTest {
     public fun `confidenceScoreState is Hidden when no techId`(): Unit =
         runTest(dispatcher) {
             every { serviceDetailUseCase("svc1") } returns flowOf(Result.success(testService))
-            val vm = buildVm(SavedStateHandle(mapOf("serviceId" to "svc1")))
+            val vm =
+                ServiceDetailViewModel(
+                    SavedStateHandle(mapOf("serviceId" to "svc1")),
+                    serviceDetailUseCase,
+                    confidenceScoreUseCase,
+                    locationProvider,
+                    localizer,
+                    getCurrentLocale,
+                )
             assertThat(vm.confidenceScoreState.value).isInstanceOf(ConfidenceScoreUiState.Hidden::class.java)
         }
 
@@ -91,7 +116,15 @@ public class ServiceDetailViewModelTest {
             val score = ConfidenceScore(94, 4.7, 12, 35, false)
             every { serviceDetailUseCase("svc1") } returns flowOf(Result.success(testService))
             every { confidenceScoreUseCase("tech-1", 0.0, 0.0) } returns flowOf(Result.success(score))
-            val vm = buildVm(SavedStateHandle(mapOf("serviceId" to "svc1", "techId" to "tech-1")))
+            val vm =
+                ServiceDetailViewModel(
+                    SavedStateHandle(mapOf("serviceId" to "svc1", "techId" to "tech-1")),
+                    serviceDetailUseCase,
+                    confidenceScoreUseCase,
+                    locationProvider,
+                    localizer,
+                    getCurrentLocale,
+                )
             assertThat(vm.confidenceScoreState.value).isInstanceOf(ConfidenceScoreUiState.Loaded::class.java)
             assertThat((vm.confidenceScoreState.value as ConfidenceScoreUiState.Loaded).score).isEqualTo(score)
         }
@@ -102,17 +135,15 @@ public class ServiceDetailViewModelTest {
             val score = ConfidenceScore(0, null, null, 3, true)
             every { serviceDetailUseCase("svc1") } returns flowOf(Result.success(testService))
             every { confidenceScoreUseCase("tech-1", 0.0, 0.0) } returns flowOf(Result.success(score))
-            val vm = buildVm(SavedStateHandle(mapOf("serviceId" to "svc1", "techId" to "tech-1")))
+            val vm =
+                ServiceDetailViewModel(
+                    SavedStateHandle(mapOf("serviceId" to "svc1", "techId" to "tech-1")),
+                    serviceDetailUseCase,
+                    confidenceScoreUseCase,
+                    locationProvider,
+                    localizer,
+                    getCurrentLocale,
+                )
             assertThat(vm.confidenceScoreState.value).isInstanceOf(ConfidenceScoreUiState.Limited::class.java)
         }
-
-    private fun buildVm(handle: SavedStateHandle): ServiceDetailViewModel =
-        ServiceDetailViewModel(
-            savedStateHandle = handle,
-            getServiceDetail = serviceDetailUseCase,
-            getConfidenceScore = confidenceScoreUseCase,
-            locationProvider = locationProvider,
-            localizer = localizer,
-            getCurrentLocale = getCurrentLocale,
-        )
 }

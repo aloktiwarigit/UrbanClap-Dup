@@ -26,10 +26,11 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Verifies that [ServiceDetailViewModel] fetches real GPS coordinates from
- * [FusedCurrentLocationProvider] on init and passes them to [GetConfidenceScoreUseCase].
+ * Verifies that [ServiceDetailViewModel] fetches real GPS from [FusedCurrentLocationProvider]
+ * on init and passes the coordinates to [GetConfidenceScoreUseCase].
  *
- * Fallback: when GPS is unavailable (null), coordinates (0.0, 0.0) are used.
+ * Fallback: when GPS returns null (permission denied / unavailable), (0.0, 0.0) is used.
+ * Exception handling: if [FusedCurrentLocationProvider.getLastLocation] throws, fall back to (0.0, 0.0).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 public class ServiceDetailViewModelConfidenceScoreTest {
@@ -66,81 +67,81 @@ public class ServiceDetailViewModelConfidenceScoreTest {
     }
 
     @Test
-    public fun `GPS coordinates are fetched on init when techId is present`(): Unit =
+    public fun `GPS fetched on init and passed to GetConfidenceScoreUseCase`(): Unit =
         runTest(dispatcher) {
             val score = ConfidenceScore(87, 4.5, 8, 42, false)
             coEvery { locationProvider.getLastLocation() } returns Pair(26.793, 82.194)
             every { confidenceScoreUseCase("tech-1", 26.793, 82.194) } returns flowOf(Result.success(score))
 
-            ServiceDetailViewModel(
-                savedStateHandle = SavedStateHandle(mapOf("serviceId" to "svc1", "techId" to "tech-1")),
-                getServiceDetail = serviceDetailUseCase,
-                getConfidenceScore = confidenceScoreUseCase,
-                locationProvider = locationProvider,
-                localizer = localizer,
-                getCurrentLocale = getCurrentLocale,
-            )
+            buildVm(techId = "tech-1")
 
             coVerify { locationProvider.getLastLocation() }
         }
 
     @Test
-    public fun `GPS fallback to (0,0) when location provider returns null`(): Unit =
+    public fun `null GPS falls back to (0,0) sentinel`(): Unit =
         runTest(dispatcher) {
             val score = ConfidenceScore(0, null, null, 5, true)
             coEvery { locationProvider.getLastLocation() } returns null
             every { confidenceScoreUseCase("tech-1", 0.0, 0.0) } returns flowOf(Result.success(score))
 
-            ServiceDetailViewModel(
-                savedStateHandle = SavedStateHandle(mapOf("serviceId" to "svc1", "techId" to "tech-1")),
-                getServiceDetail = serviceDetailUseCase,
-                getConfidenceScore = confidenceScoreUseCase,
-                locationProvider = locationProvider,
-                localizer = localizer,
-                getCurrentLocale = getCurrentLocale,
-            )
+            buildVm(techId = "tech-1")
 
             coVerify { locationProvider.getLastLocation() }
-            every { confidenceScoreUseCase("tech-1", 0.0, 0.0) } returns flowOf(Result.success(score))
         }
 
     @Test
-    public fun `confidence score emits Loaded when GPS available and score not limited`(): Unit =
+    public fun `GPS not fetched when techId is absent`(): Unit =
+        runTest(dispatcher) {
+            val vm = buildVm(techId = null)
+
+            coVerify(exactly = 0) { locationProvider.getLastLocation() }
+            assertThat(vm.confidenceScoreState.value).isEqualTo(ConfidenceScoreUiState.Hidden)
+        }
+
+    @Test
+    public fun `GPS exception falls back to (0,0) gracefully`(): Unit =
+        runTest(dispatcher) {
+            val score = ConfidenceScore(75, null, null, 10, false)
+            coEvery { locationProvider.getLastLocation() } throws SecurityException("no permission")
+            every { confidenceScoreUseCase("tech-1", 0.0, 0.0) } returns flowOf(Result.success(score))
+
+            val vm = buildVm(techId = "tech-1")
+
+            // Must not crash; score should be Loaded from fallback coords
+            assertThat(vm.confidenceScoreState.value)
+                .isInstanceOf(ConfidenceScoreUiState.Loaded::class.java)
+        }
+
+    @Test
+    public fun `Loaded confidence score emitted when GPS is available`(): Unit =
         runTest(dispatcher) {
             val score = ConfidenceScore(92, 4.8, 10, 55, false)
             coEvery { locationProvider.getLastLocation() } returns Pair(26.793, 82.194)
             every { confidenceScoreUseCase("tech-1", 26.793, 82.194) } returns flowOf(Result.success(score))
 
-            val vm =
-                ServiceDetailViewModel(
-                    savedStateHandle = SavedStateHandle(mapOf("serviceId" to "svc1", "techId" to "tech-1")),
-                    getServiceDetail = serviceDetailUseCase,
-                    getConfidenceScore = confidenceScoreUseCase,
-                    locationProvider = locationProvider,
-                    localizer = localizer,
-                    getCurrentLocale = getCurrentLocale,
-                )
+            val vm = buildVm(techId = "tech-1")
 
-            assertThat(vm.confidenceScoreState.value).isInstanceOf(ConfidenceScoreUiState.Loaded::class.java)
+            assertThat(vm.confidenceScoreState.value)
+                .isInstanceOf(ConfidenceScoreUiState.Loaded::class.java)
             assertThat((vm.confidenceScoreState.value as ConfidenceScoreUiState.Loaded).score.onTimePercent)
                 .isEqualTo(92)
         }
 
-    @Test
-    public fun `confidence score Hidden when no techId regardless of GPS`(): Unit =
-        runTest(dispatcher) {
-            coEvery { locationProvider.getLastLocation() } returns Pair(26.0, 82.0)
-
-            val vm =
-                ServiceDetailViewModel(
-                    savedStateHandle = SavedStateHandle(mapOf("serviceId" to "svc1")),
-                    getServiceDetail = serviceDetailUseCase,
-                    getConfidenceScore = confidenceScoreUseCase,
-                    locationProvider = locationProvider,
-                    localizer = localizer,
-                    getCurrentLocale = getCurrentLocale,
-                )
-
-            assertThat(vm.confidenceScoreState.value).isEqualTo(ConfidenceScoreUiState.Hidden)
-        }
+    private fun buildVm(techId: String?): ServiceDetailViewModel {
+        val handle =
+            if (techId != null) {
+                SavedStateHandle(mapOf("serviceId" to "svc1", "techId" to techId))
+            } else {
+                SavedStateHandle(mapOf("serviceId" to "svc1"))
+            }
+        return ServiceDetailViewModel(
+            savedStateHandle = handle,
+            getServiceDetail = serviceDetailUseCase,
+            getConfidenceScore = confidenceScoreUseCase,
+            locationProvider = locationProvider,
+            localizer = localizer,
+            getCurrentLocale = getCurrentLocale,
+        )
+    }
 }

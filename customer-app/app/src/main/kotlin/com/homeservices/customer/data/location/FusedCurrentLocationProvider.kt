@@ -34,11 +34,7 @@ public class FusedCurrentLocationProvider
                         ?: client.lastLocation.await()
                 location?.let { Pair(it.latitude, it.longitude) }
             } catch (e: SecurityException) {
-                Log.w(TAG, "Location permission not granted; returning null", e)
+                Log.w("FusedLocationProvider", "Location permission not granted: ${e.message}")
                 null
             }
-
-        private companion object {
-            private const val TAG = "FusedLocationProvider"
-        }
     }

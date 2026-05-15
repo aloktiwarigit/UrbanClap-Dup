@@ -10,8 +10,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.homeservices.customer.data.auth.SessionManager
 import com.homeservices.customer.data.booking.PaymentResultBus
-import com.homeservices.customer.data.booking.PriceApprovalEventBus
-import com.homeservices.customer.data.rating.RatingPromptEventBus
+import com.homeservices.customer.data.pendingaction.PendingActionStore
 import com.homeservices.customer.di.BuildInfoProvider
 import com.homeservices.customer.domain.booking.model.PaymentResult
 import com.homeservices.customer.domain.flags.FeatureFlags
@@ -58,9 +57,11 @@ public class MainActivity :
 
     @Inject public lateinit var paymentResultBus: PaymentResultBus
 
-    @Inject public lateinit var priceApprovalEventBus: PriceApprovalEventBus
-
-    @Inject public lateinit var ratingPromptEventBus: RatingPromptEventBus
+    /**
+     * E11-S01b-2: Injected to drive Room-based navigation in [AppNavigation].
+     * Replaces the removed PriceApprovalEventBus + RatingPromptEventBus injection.
+     */
+    @Inject public lateinit var pendingActionStore: PendingActionStore
 
     @Inject public lateinit var isFirstLaunch: IsFirstLaunchUseCase
 
@@ -102,8 +103,7 @@ public class MainActivity :
                 AppNavigation(
                     sessionManager = sessionManager,
                     activity = this,
-                    priceApprovalEventBus = priceApprovalEventBus,
-                    ratingPromptEventBus = ratingPromptEventBus,
+                    pendingActionStore = pendingActionStore,
                     isFirstLaunch = isFirstLaunch,
                     featureFlags = featureFlags,
                     routeResolver = routeResolver,

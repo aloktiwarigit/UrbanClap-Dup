@@ -1,4 +1,4 @@
-package com.homeservices.customer.ui.deleteaccount
+﻿package com.homeservices.customer.ui.deleteaccount
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
@@ -43,15 +43,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
 
-// Design tokens — mirror DeleteAccountScreen palette
+// Design tokens â€” mirror DeleteAccountScreen palette
 private val WarmIvory = Color(0xFFFBF7EF)
 private val ErrorRed = Color(0xFFB3261E)
 private val ErrorRedSurface = Color(0xFFFFF0EE)
@@ -83,9 +85,10 @@ public fun DeleteAccountConfirmScreen(
     viewModel: DeleteAccountViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val activity = LocalContext.current as? FragmentActivity
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // FIX 1 (P2 — system back bypasses onBackFromConfirmation):
+    // FIX 1 (P2 â€” system back bypasses onBackFromConfirmation):
     // System back gesture / button bypasses the in-app back control wired to [onBack].
     // BackHandler intercepts it and routes through the same lambda so
     // SettingsGraph's wrapper calls viewModel.onBackFromConfirmation() before popping.
@@ -145,7 +148,7 @@ public fun DeleteAccountConfirmScreen(
             DeleteAccountConfirmSubmitBar(
                 confirming = confirming,
                 isSubmitting = isSubmitting,
-                onSubmitClicked = { viewModel.onSubmitClicked() },
+                onSubmitClicked = { viewModel.onSubmitClicked(activity) },
                 onBack = onBack,
             )
 

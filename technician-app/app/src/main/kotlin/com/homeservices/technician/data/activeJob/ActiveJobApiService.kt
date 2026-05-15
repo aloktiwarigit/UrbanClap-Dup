@@ -11,13 +11,11 @@ import retrofit2.http.Path
 internal interface ActiveJobApiService {
     @GET("v1/technicians/active-job/{bookingId}")
     suspend fun getActiveJob(
-        @Header("Authorization") authHeader: String,
         @Path("bookingId") bookingId: String,
     ): Response<ActiveJobResponse>
 
     @PATCH("v1/technicians/active-job/{bookingId}/transition")
     suspend fun transitionStatus(
-        @Header("Authorization") authHeader: String,
         @Path("bookingId") bookingId: String,
         @Body body: TransitionRequest,
         @Header("X-Integrity-Token") integrityToken: String? = null,

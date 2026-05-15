@@ -39,6 +39,9 @@ internal class ServiceDetailViewModel
             )
         public val confidenceScoreState: StateFlow<ConfidenceScoreUiState> = _confidenceScoreState.asStateFlow()
 
+        /** Exposed so the screen can drive [TrustDossierViewModel.loadProfile]. */
+        public val recommendedTechnicianId: StateFlow<String?> = MutableStateFlow(technicianId).asStateFlow()
+
         init {
             viewModelScope.launch {
                 combine(getServiceDetail(serviceId), getCurrentLocale()) { result, locale ->

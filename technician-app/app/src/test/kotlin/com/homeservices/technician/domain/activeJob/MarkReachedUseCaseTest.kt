@@ -1,9 +1,5 @@
 package com.homeservices.technician.domain.activeJob
 
-import com.google.android.gms.tasks.Tasks
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.auth.GetTokenResult
 import com.homeservices.technician.data.integrity.IntegrityApiService
 import com.homeservices.technician.data.integrity.IntegrityNonceResponseDto
 import com.homeservices.technician.domain.activeJob.model.ActiveJob
@@ -15,7 +11,6 @@ import com.homeservices.technician.domain.location.LocationFidelity
 import com.homeservices.technician.domain.location.LocationWithFidelity
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
@@ -26,19 +21,13 @@ public class MarkReachedUseCaseTest {
     private val repository: ActiveJobRepository = mockk()
     private val integrityAttestor: IntegrityAttestor = mockk()
     private val integrityApiService: IntegrityApiService = mockk()
-    private val firebaseAuth: FirebaseAuth = mockk()
-    private val firebaseUser: FirebaseUser = mockk()
-    private val tokenResult: GetTokenResult = mockk()
     private val currentLocationProvider: CurrentLocationProvider = mockk()
     private val useCase =
-        MarkReachedUseCase(repository, integrityAttestor, integrityApiService, firebaseAuth, currentLocationProvider)
+        MarkReachedUseCase(repository, integrityAttestor, integrityApiService, currentLocationProvider)
 
     @BeforeEach
     public fun setUp() {
-        every { firebaseAuth.currentUser } returns firebaseUser
-        every { firebaseUser.getIdToken(false) } returns Tasks.forResult(tokenResult)
-        every { tokenResult.token } returns "firebase-token"
-        coEvery { integrityApiService.getNonce(any()) } returns IntegrityNonceResponseDto("test-nonce")
+        coEvery { integrityApiService.getNonce() } returns IntegrityNonceResponseDto("test-nonce")
         coEvery { integrityAttestor.attest("test-nonce") } returns Result.success("integrity-token")
         // Default: real GPS, isMock = false
         coEvery { currentLocationProvider.currentLocation() } returns

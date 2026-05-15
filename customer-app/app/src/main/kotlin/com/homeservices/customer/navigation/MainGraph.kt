@@ -50,7 +50,7 @@ private fun NavGraphBuilder.catalogueGraph(
     navController: NavController,
     featureFlags: FeatureFlags,
 ) {
-    navigation(startDestination = CatalogueRoutes.HOME, route = "main") {
+    navigation(startDestination = CatalogueRoutes.HOME, route = ROUTE_MAIN) {
         homeDestination(navController, featureFlags)
         walletDestination(navController)
         serviceListDestination(navController)

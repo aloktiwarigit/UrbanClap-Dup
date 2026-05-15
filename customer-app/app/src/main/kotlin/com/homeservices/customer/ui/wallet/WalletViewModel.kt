@@ -2,7 +2,6 @@ package com.homeservices.customer.ui.wallet
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.homeservices.customer.data.wallet.NoShowCreditEventBus
 import com.homeservices.customer.domain.wallet.GetWalletBalanceUseCase
 import com.homeservices.customer.domain.wallet.GetWalletLedgerUseCase
 import com.homeservices.customer.domain.wallet.model.LedgerEntry
@@ -42,7 +41,6 @@ public class WalletViewModel
     public constructor(
         private val getBalance: GetWalletBalanceUseCase,
         private val getLedger: GetWalletLedgerUseCase,
-        private val noShowCreditEventBus: NoShowCreditEventBus,
     ) : ViewModel() {
         private val _balanceState = MutableStateFlow<WalletBalanceUiState>(WalletBalanceUiState.Loading)
         public val balanceState: StateFlow<WalletBalanceUiState> = _balanceState.asStateFlow()
@@ -52,9 +50,6 @@ public class WalletViewModel
 
         init {
             load()
-            viewModelScope.launch {
-                noShowCreditEventBus.events.collect { retry() }
-            }
         }
 
         public fun retry() {
