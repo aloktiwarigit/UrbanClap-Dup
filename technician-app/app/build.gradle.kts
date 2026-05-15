@@ -588,6 +588,10 @@ kover {
                     "*.AppCheckInitializer\$*",
                     "*.PostHogInitializer",
                     "*.PostHogInitializer\$*",
+                    // TechnicianDashboardScreen — Compose UI composable added by home-heroo branch;
+                    // same rationale as other *Kt screen exclusions (recomposition guards, palette logic).
+                    "*.TechnicianDashboardScreenKt",
+                    "*.TechnicianDashboardScreenKt\$*",
                 )
             }
         }

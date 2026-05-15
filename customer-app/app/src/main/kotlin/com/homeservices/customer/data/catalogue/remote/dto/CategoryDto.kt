@@ -28,4 +28,5 @@ public fun CategoryDto.toDomain(): com.homeservices.customer.domain.catalogue.mo
         name = name,
         imageUrl = heroImageUrl,
         serviceCount = services.size,
+        minPricePaise = services.minOfOrNull { it.basePrice } ?: 0,
     )

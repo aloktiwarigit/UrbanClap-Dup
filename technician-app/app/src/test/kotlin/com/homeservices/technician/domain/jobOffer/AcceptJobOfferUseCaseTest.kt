@@ -49,8 +49,7 @@ public class AcceptJobOfferUseCaseTest {
     @Test
     public fun `invoke returns Conflict on HTTP 409`(): Unit =
         runTest {
-            stubFirebaseToken("test-id-token")
-            coEvery { api.acceptOffer("Bearer test-id-token", "booking-409") } returns
+            coEvery { api.acceptOffer("booking-409") } returns
                 Response.error(409, "".toResponseBody(null))
 
             val result = useCase("booking-409")

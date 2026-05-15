@@ -624,6 +624,10 @@ kover {
                     "*.LanguageSettingsViewModel\$*",
                     // LocaleModule — Hilt @Provides wiring, same rationale as other DI modules.
                     "*.data.locale.di.*",
+                    // CatalogueVisualImage — Compose UI composables (image placeholder, bar meter),
+                    // same rationale as other *Kt screen classes; palette when-branches are data, not logic.
+                    "*.CatalogueVisualImageKt",
+                    "*.CatalogueVisualImageKt\$*",
                 )
             }
         }

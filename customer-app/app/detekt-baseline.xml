@@ -24,6 +24,7 @@
     <ID>LongMethod:CatalogueHomeScreen.kt$@Composable private fun CategoryCard( category: Category, onClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:CatalogueHomeScreen.kt$@Composable private fun StickyHero(onSettingsClick: () -&gt; Unit)</ID>
     <ID>LongMethod:CatalogueHomeScreen.kt$@OptIn(ExperimentalFoundationApi::class) @Composable private fun PromoSlider()</ID>
+    <ID>LongMethod:CatalogueVisualImage.kt$@Composable private fun CatalogueImagePlaceholder( title: String, supportingText: String?, visualSize: CatalogueVisualSize, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:ComplaintScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun ComplaintContent( state: ComplaintUiState, onBack: () -&gt; Unit, onRetry: () -&gt; Unit, onReasonSelected: (ComplaintReason) -&gt; Unit, onDescriptionChanged: (String) -&gt; Unit, onPhotoClick: () -&gt; Unit, onSubmit: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:DeleteAccountConfirmScreen.kt$@Composable public fun DeleteAccountConfirmScreen( onBack: () -&gt; Unit, onConfirmed: (requestId: String, scheduledDeletionAt: String) -&gt; Unit, viewModel: DeleteAccountViewModel = hiltViewModel(), )</ID>
     <ID>LongMethod:MainGraph.kt$internal fun NavGraphBuilder.mainGraph(navController: NavController)</ID>
@@ -50,6 +51,24 @@
     <ID>MagicNumber:CatalogueHomeScreen.kt$3</ID>
     <ID>MagicNumber:CatalogueHomeScreen.kt$4_000</ID>
     <ID>MagicNumber:CatalogueHomeScreen.kt$600</ID>
+    <ID>MagicNumber:CatalogueVisualImage.kt$0.86f</ID>
+    <ID>MagicNumber:CatalogueVisualImage.kt$0xFF00796B</ID>
+    <ID>MagicNumber:CatalogueVisualImage.kt$CataloguePalette$0xFF18202A</ID>
+    <ID>MagicNumber:CatalogueVisualImage.kt$0xFF2E5EAA</ID>
+    <ID>MagicNumber:CatalogueVisualImage.kt$0xFF5A4E9A</ID>
+    <ID>MagicNumber:CatalogueVisualImage.kt$0xFF9A6500</ID>
+    <ID>MagicNumber:CatalogueVisualImage.kt$0xFF9C3B63</ID>
+    <ID>MagicNumber:CatalogueVisualImage.kt$0xFFD3ECE7</ID>
+    <ID>MagicNumber:CatalogueVisualImage.kt$0xFFD7E5F7</ID>
+    <ID>MagicNumber:CatalogueVisualImage.kt$0xFFDDD9EF</ID>
+    <ID>MagicNumber:CatalogueVisualImage.kt$0xFFE7F4F1</ID>
+    <ID>MagicNumber:CatalogueVisualImage.kt$0xFFE8F0FB</ID>
+    <ID>MagicNumber:CatalogueVisualImage.kt$0xFFEDECF6</ID>
+    <ID>MagicNumber:CatalogueVisualImage.kt$0xFFF0D8E2</ID>
+    <ID>MagicNumber:CatalogueVisualImage.kt$0xFFF7E8EE</ID>
+    <ID>MagicNumber:CatalogueVisualImage.kt$0xFFF8E4BC</ID>
+    <ID>MagicNumber:CatalogueVisualImage.kt$0xFFFFF3DF</ID>
+    <ID>MagicNumber:CatalogueVisualImage.kt$3</ID>
     <ID>MagicNumber:ComplaintViewModel.kt$ComplaintViewModel$10</ID>
     <ID>MagicNumber:ConfidenceScoreRow.kt$3</ID>
     <ID>MagicNumber:ConfidenceScoreRow.kt$50</ID>
@@ -77,6 +96,7 @@
     <ID>MagicNumber:SosViewModel.kt$SosViewModel$30</ID>
     <ID>MagicNumber:TrustDossierCard.kt$10</ID>
     <ID>MatchingDeclarationName:AppNavigation.kt$LocaleRoutes</ID>
+    <ID>MatchingDeclarationName:CatalogueVisualImage.kt$CatalogueVisualSize</ID>
     <ID>MaxLineLength:ProfileScreen.kt$"आपका नाम, फ़ोन, पता और बुकिंग जानकारी सेवा देने, तकनीशियन असाइन करने, सपोर्ट और सुरक्षा समीक्षा के लिए इस्तेमाल होती है। पता केवल असाइन किए गए तकनीशियन और Owner support के साथ साझा किया जाता है।"</ID>
     <ID>MaxLineLength:TrustDossierCardPaparazziTest.kt$TrustDossierCardPaparazziTest$"HandlerDispatcher IllegalStateException — Coil async handler fires after Paparazzi Looper quits on Loaded state; fix with Coil test dispatcher before recording"</ID>
     <ID>NestedBlockDepth:SessionPrefsMigrator.kt$SessionPrefsMigrator$internal fun migrateIfNeededInternal( context: Context, newPrefs: SharedPreferences, newPrefsName: String, legacyKeyPresent: Boolean, )</ID>
