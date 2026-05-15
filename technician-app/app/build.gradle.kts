@@ -287,16 +287,11 @@ kover {
     reports {
         verify {
             rule {
-                // Coverage debt acknowledgment (E13-S02 iteration 3, 2026-05-04):
-                // Technician-app actual coverage at the time CI started enforcing Kover was
-                // lines=55.1%, branches=38.1%, instructions=45.3%. Thresholds set just below
-                // those values to (a) prevent further regression while (b) acknowledging
-                // debt without faking a passing gate.
+                // Coverage thresholds raised to measured values (2026-05-14, E13-pilot blocker B3).
+                // Baseline at raise time: lines=58.5%, branches=41.1%, instructions=47.8%.
+                // Target: lines=80%, branches=69%, instructions=80% (§8 KPI).
+                // Do NOT lower these without an ADR.
                 //
-                // Plan E13-S02b (Wave 3) raises these to parity with customer-app (80/69/80)
-                // after a dedicated test-writing pass on the technician-app domain layer.
-                // Do NOT lower these further. See ADR-0026 (TBD) for the lifting schedule.
-                minBound(50, kotlinx.kover.gradle.plugin.dsl.CoverageUnit.LINE)
                 // Branch coverage threshold is intentionally lower than line/instruction because:
                 // 1. Compose UI files generate synthetic internal branches (recomposition guards,
                 //    slot-table ops) that are only exercisable via Compose instrumented tests,
@@ -306,8 +301,11 @@ kover {
                 // 3. Android BiometricPrompt callback branches require a real device/emulator.
                 // CI's Espresso/Compose instrumented tests (run in a later story) will cover
                 // the remaining UI and framework integration branches.
-                minBound(35, kotlinx.kover.gradle.plugin.dsl.CoverageUnit.BRANCH)
-                minBound(40, kotlinx.kover.gradle.plugin.dsl.CoverageUnit.INSTRUCTION)
+                // Reaching the 80/69/80 §8 KPI target requires a dedicated test-writing pass
+                // on the technician-app domain layer. See ADR-0026 (TBD) for the lifting schedule.
+                minBound(56, kotlinx.kover.gradle.plugin.dsl.CoverageUnit.LINE)
+                minBound(39, kotlinx.kover.gradle.plugin.dsl.CoverageUnit.BRANCH)
+                minBound(45, kotlinx.kover.gradle.plugin.dsl.CoverageUnit.INSTRUCTION)
             }
         }
         filters {
