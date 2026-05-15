@@ -34,6 +34,9 @@ public object IntegrityModule {
     @Singleton
     public fun provideIntegrityApiService(): IntegrityApiService {
         val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
+        // Intentionally unauthenticated: integrity attestation is a pre-auth bootstrap call.
+        // The token acquired here IS the proof-of-integrity, not an API auth token.
+        // nosemgrep: no-bare-okhttp-in-module
         val client = OkHttpClient.Builder().build()
         return Retrofit
             .Builder()

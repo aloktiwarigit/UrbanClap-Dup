@@ -21,6 +21,7 @@ rules:
     paths:
       include:
         - "technician-app/app/src/main/kotlin/com/homeservices/technician/data/**/di/*Module.kt"
+        - "technician-app/app/src/main/kotlin/com/homeservices/technician/domain/**/di/*Module.kt"
     # Note: This rule may produce a false positive on RatingModule.kt:provideAuthOkHttpClient()
     # (the reference @AuthOkHttpClient provider itself). This is acceptable - the provider
     # is meant to be the single canonical place where OkHttpClient is constructed.
