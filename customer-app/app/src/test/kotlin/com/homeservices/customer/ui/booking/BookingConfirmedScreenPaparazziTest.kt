@@ -3,6 +3,7 @@ package com.homeservices.customer.ui.booking
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.homeservices.designsystem.theme.HomeservicesTheme
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -33,6 +34,21 @@ public class BookingConfirmedScreenPaparazziTest {
                 BookingConfirmedScreen(
                     bookingId = "BK-2026-001234",
                     onBackToHome = {},
+                )
+            }
+        }
+    }
+
+    // E13-S04: credit applied banner visible when appliedCreditAmount > 0
+    @Ignore("CI-only: trigger paparazzi-record.yml workflow_dispatch to record goldens on Linux CI")
+    @Test
+    public fun bookingConfirmedWithCreditApplied_lightTheme() {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                BookingConfirmedScreen(
+                    bookingId = "BK-2026-001234",
+                    onBackToHome = {},
+                    appliedCreditAmount = 50000,
                 )
             }
         }

@@ -650,6 +650,13 @@ kover {
                     // SettingsScreen — Compose UI updated with onMyComplaintsClick; Paparazzi covers.
                     "*.SettingsScreenKt",
                     "*.SettingsScreenKt\$*",
+                    // CustomerHomeTabContent — Compose UI composable (E11-S03), Paparazzi @Ignored
+                    // stubs cover rendering; JVM unit tests cover ViewModel logic only.
+                    "*.CustomerHomeTabContentKt",
+                    "*.CustomerHomeTabContentKt\$*",
+                    // CustomerHomeUiState — sealed class data holders, no logic branches
+                    "*.CustomerHomeUiState",
+                    "*.CustomerHomeUiState\$*",
                 )
             }
         }

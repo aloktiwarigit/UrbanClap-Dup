@@ -408,4 +408,23 @@
     <string name="no_show_credit_notification_body">आपके वॉलेट में नो-शो क्रेडिट जुड़ गया।</string>
     <string name="no_show_credit_banner">आपको %1$s क्रेडिट मिला! अगली बुकिंग पर लागू होगा।</string>
     <string name="no_show_credit_banner_dismiss">बंद करें</string>
+
+    <!-- Customer home durable hooks (E11-S03) -->
+    <string name="home_pending_actions_label">कार्रवाई जरूरी</string>
+    <string name="home_pending_action_tap_hint">जारी रखने के लिए टैप करें</string>
+    <string name="home_action_rate_booking">बुकिंग रेट करें</string>
+    <string name="home_action_approve_addon">ऐड-ऑन अनुरोध स्वीकृत करें</string>
+    <string name="home_action_complaint_update">शिकायत अपडेट</string>
+    <string name="home_action_support_followup">सपोर्ट फॉलो-अप</string>
+    <string name="home_active_booking_label">सक्रिय बुकिंग</string>
+    <string name="home_active_booking_track_cta">ट्रैक करें</string>
+    <string name="home_active_booking_approve_cta">स्वीकृत करें</string>
+    <string name="home_recent_bookings_label">हाल की बुकिंग</string>
+    <string name="home_recent_booking_rate">रेट करें</string>
+    <string name="home_recent_booking_complain">शिकायत</string>
+
+    <!-- Credit-apply toggle on booking summary (E13-S04) -->
+    <string name="wallet_apply_credit_toggle">₹%1$s क्रेडिट लागू करें</string>
+    <string name="wallet_credit_original_price">मूल कीमत: ₹%1$s</string>
+    <string name="wallet_credit_applied_banner">₹%1$s क्रेडिट लागू किया गया</string>
 </resources>

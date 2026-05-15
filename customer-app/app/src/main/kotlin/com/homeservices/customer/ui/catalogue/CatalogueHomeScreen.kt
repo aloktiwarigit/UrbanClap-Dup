@@ -176,6 +176,7 @@ private val navItems =
 @Composable
 internal fun CatalogueHomeScreen(
     viewModel: CatalogueHomeViewModel,
+    customerHomeViewModel: CustomerHomeViewModel,
     onCategoryClick: (String) -> Unit,
     onSettingsClick: () -> Unit,
     onProfileLanguageClick: () -> Unit,
@@ -186,10 +187,14 @@ internal fun CatalogueHomeScreen(
     walletBalanceInPaise: Long = 0L,
     onWalletClick: () -> Unit = {},
     photoFirstCatalogueEnabled: Boolean = false,
+    onPendingActionRoute: (String) -> Unit = {},
+    onPriceApproval: (String) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val homeUiState by customerHomeViewModel.homeUiState.collectAsStateWithLifecycle()
     CatalogueHomeContent(
         uiState = uiState,
+        homeUiState = homeUiState,
         onCategoryClick = onCategoryClick,
         onSettingsClick = onSettingsClick,
         onProfileLanguageClick = onProfileLanguageClick,
@@ -200,6 +205,8 @@ internal fun CatalogueHomeScreen(
         walletBalanceInPaise = walletBalanceInPaise,
         onWalletClick = onWalletClick,
         photoFirstCatalogueEnabled = photoFirstCatalogueEnabled,
+        onPendingActionRoute = onPendingActionRoute,
+        onPriceApproval = onPriceApproval,
     )
 }
 
@@ -216,6 +223,9 @@ internal fun CatalogueHomeContent(
     walletBalanceInPaise: Long = 0L,
     onWalletClick: () -> Unit = {},
     photoFirstCatalogueEnabled: Boolean = false,
+    homeUiState: CustomerHomeUiState = CustomerHomeUiState.Loading,
+    onPendingActionRoute: (String) -> Unit = {},
+    onPriceApproval: (String) -> Unit = {},
 ) {
     var selectedNav by remember { mutableIntStateOf(0) }
 
@@ -239,6 +249,7 @@ internal fun CatalogueHomeContent(
         HomeTabs(
             selectedNav = selectedNav,
             uiState = uiState,
+            homeUiState = homeUiState,
             onCategoryClick = onCategoryClick,
             onTrackBooking = onTrackBooking,
             onRateBooking = onRateBooking,
@@ -247,6 +258,8 @@ internal fun CatalogueHomeContent(
             onSelectNav = { selectedNav = it },
             scaffoldPadding = scaffoldPadding,
             photoFirstCatalogueEnabled = photoFirstCatalogueEnabled,
+            onPendingActionRoute = onPendingActionRoute,
+            onPriceApproval = onPriceApproval,
         )
     }
 }
@@ -263,14 +276,23 @@ private fun HomeTabs(
     onSelectNav: (Int) -> Unit,
     scaffoldPadding: PaddingValues,
     photoFirstCatalogueEnabled: Boolean = false,
+    homeUiState: CustomerHomeUiState = CustomerHomeUiState.Loading,
+    onPendingActionRoute: (String) -> Unit = {},
+    onPriceApproval: (String) -> Unit = {},
 ) {
     when (selectedNav) {
         0 ->
             CatalogueTab(
                 uiState = uiState,
+                homeUiState = homeUiState,
                 scaffoldPadding = scaffoldPadding,
                 photoFirstCatalogueEnabled = photoFirstCatalogueEnabled,
                 onCategoryClick = onCategoryClick,
+                onPendingActionRoute = onPendingActionRoute,
+                onTrackBooking = onTrackBooking,
+                onPriceApproval = onPriceApproval,
+                onRateBooking = onRateBooking,
+                onComplainBooking = onComplainBooking,
             )
         1 ->
             CustomerBookingsScreen(
@@ -300,11 +322,27 @@ private fun CatalogueTab(
     scaffoldPadding: PaddingValues,
     photoFirstCatalogueEnabled: Boolean,
     onCategoryClick: (String) -> Unit,
+    homeUiState: CustomerHomeUiState = CustomerHomeUiState.Loading,
+    onPendingActionRoute: (String) -> Unit = {},
+    onTrackBooking: (String) -> Unit = {},
+    onPriceApproval: (String) -> Unit = {},
+    onRateBooking: (String) -> Unit = {},
+    onComplainBooking: (String) -> Unit = {},
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
         contentPadding = PaddingValues(bottom = 16.dp),
     ) {
+        item {
+            CustomerHomeTabContent(
+                homeState = homeUiState,
+                onPendingActionClick = onPendingActionRoute,
+                onTrackBooking = onTrackBooking,
+                onPriceApproval = onPriceApproval,
+                onRateBooking = onRateBooking,
+                onComplainBooking = onComplainBooking,
+            )
+        }
         item { PromoSlider() }
         item { TrustStrip() }
         when (uiState) {

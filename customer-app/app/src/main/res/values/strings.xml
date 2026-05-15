@@ -417,4 +417,23 @@
     <string name="no_show_credit_banner">You received %1$s credit! Will apply on next booking.</string>
     <string name="no_show_credit_banner_dismiss">Dismiss</string>
 
+    <!-- Customer home durable hooks (E11-S03) -->
+    <string name="home_pending_actions_label">Action needed</string>
+    <string name="home_pending_action_tap_hint">Tap to continue</string>
+    <string name="home_action_rate_booking">Rate your booking</string>
+    <string name="home_action_approve_addon">Approve add-on request</string>
+    <string name="home_action_complaint_update">Complaint update</string>
+    <string name="home_action_support_followup">Support follow-up</string>
+    <string name="home_active_booking_label">Active booking</string>
+    <string name="home_active_booking_track_cta">Track</string>
+    <string name="home_active_booking_approve_cta">Approve</string>
+    <string name="home_recent_bookings_label">Recent bookings</string>
+    <string name="home_recent_booking_rate">Rate</string>
+    <string name="home_recent_booking_complain">Complaint</string>
+
+    <!-- Credit-apply toggle on booking summary (E13-S04) -->
+    <string name="wallet_apply_credit_toggle">Apply ₹%1$s credit</string>
+    <string name="wallet_credit_original_price">Original price: ₹%1$s</string>
+    <string name="wallet_credit_applied_banner">₹%1$s credit applied</string>
+
 </resources>

@@ -32,7 +32,14 @@ internal class BookingViewModel
         private val _uiState = MutableStateFlow<BookingUiState>(BookingUiState.Idle)
         public val uiState: StateFlow<BookingUiState> = _uiState.asStateFlow()
 
+        private val _walletBalanceInPaise = MutableStateFlow(0L)
+        public val walletBalanceInPaise: StateFlow<Long> = _walletBalanceInPaise.asStateFlow()
+
+        private val _applyCreditToggle = MutableStateFlow(false)
+        public val applyCreditToggle: StateFlow<Boolean> = _applyCreditToggle.asStateFlow()
+
         private var pendingBookingId: String? = null
+        private var pendingAppliedCredit: Int = 0
 
         public var pendingServiceId: String = ""
         public var pendingCategoryId: String = ""
@@ -44,6 +51,19 @@ internal class BookingViewModel
                     handlePaymentResult(result, bookingId)
                 }
             }
+        }
+
+        /** Sets the available wallet balance in paise. Auto-enables the toggle when balance > 0. */
+        public fun setWalletBalance(paise: Long) {
+            _walletBalanceInPaise.value = paise
+            if (paise > 0L) {
+                _applyCreditToggle.value = true
+            }
+        }
+
+        /** Called by the UI when the user flips the "Apply credit" toggle. */
+        public fun setApplyCreditToggle(checked: Boolean) {
+            _applyCreditToggle.value = checked
         }
 
         public fun setSlotAndAddress(
@@ -79,10 +99,12 @@ internal class BookingViewModel
                         addressLat = state.lat,
                         addressLng = state.lng,
                         paymentMethod = paymentMethod,
+                        applyCredit = _applyCreditToggle.value,
                     )
                 createBooking(request).first().fold(
                     onSuccess = { result ->
                         pendingBookingId = result.bookingId
+                        pendingAppliedCredit = result.appliedCreditAmount
                         _uiState.value =
                             if (result.requiresPayment) {
                                 BookingUiState.AwaitingPayment(
@@ -95,7 +117,10 @@ internal class BookingViewModel
                                     lng = state.lng,
                                 )
                             } else {
-                                BookingUiState.BookingConfirmed(result.bookingId)
+                                BookingUiState.BookingConfirmed(
+                                    bookingId = result.bookingId,
+                                    appliedCreditAmount = result.appliedCreditAmount,
+                                )
                             }
                     },
                     // Error message key: R.string.booking_error_failed surfaced in UI layer
@@ -151,7 +176,13 @@ internal class BookingViewModel
                     confirmBooking(bookingId, result.paymentId, result.orderId, result.signature)
                         .first()
                         .fold(
-                            onSuccess = { _uiState.value = BookingUiState.BookingConfirmed(bookingId) },
+                            onSuccess = {
+                                _uiState.value =
+                                    BookingUiState.BookingConfirmed(
+                                        bookingId = bookingId,
+                                        appliedCreditAmount = pendingAppliedCredit,
+                                    )
+                            },
                             // Error message key: R.string.booking_error_confirmation_failed surfaced in UI layer
                             onFailure = { _uiState.value = BookingUiState.Error(it.message ?: CONFIRMATION_FAILED_FALLBACK) },
                         )

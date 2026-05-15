@@ -29,6 +29,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -43,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.BuildConfig
@@ -56,16 +58,20 @@ import com.homeservices.designsystem.components.HsSkeletonBlock
 import com.razorpay.Checkout
 import org.json.JSONObject
 
+private const val PAISE_PER_RUPEE = 100L
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun BookingSummaryScreen(
     viewModel: BookingViewModel,
     serviceId: String,
     categoryId: String,
-    onConfirmed: (bookingId: String) -> Unit,
+    onConfirmed: (bookingId: String, appliedCredit: Int) -> Unit,
     onBack: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val walletBalanceInPaise by viewModel.walletBalanceInPaise.collectAsStateWithLifecycle()
+    val applyCreditToggle by viewModel.applyCreditToggle.collectAsStateWithLifecycle()
     val activity = LocalContext.current as? Activity
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -95,12 +101,16 @@ internal fun BookingSummaryScreen(
             checkout.open(activity, options)
         }
         if (uiState is BookingUiState.BookingConfirmed) {
-            onConfirmed((uiState as BookingUiState.BookingConfirmed).bookingId)
+            val confirmed = uiState as BookingUiState.BookingConfirmed
+            onConfirmed(confirmed.bookingId, confirmed.appliedCreditAmount)
         }
     }
 
     BookingSummaryContent(
         uiState = uiState,
+        walletBalanceInPaise = walletBalanceInPaise,
+        applyCreditToggle = applyCreditToggle,
+        onApplyCreditChanged = viewModel::setApplyCreditToggle,
         snackbarHostState = snackbarHostState,
         onCreateBooking = { paymentMethod -> viewModel.startBooking(serviceId, categoryId, paymentMethod) },
         onRetryPayment = viewModel::retryPayment,
@@ -116,6 +126,9 @@ internal fun BookingSummaryContent(
     onCreateBooking: (BookingPaymentMethod) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    walletBalanceInPaise: Long = 0L,
+    applyCreditToggle: Boolean = false,
+    onApplyCreditChanged: (Boolean) -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onRetryPayment: () -> Unit = {},
     onCancelPaymentFailed: () -> Unit = {},
@@ -152,6 +165,9 @@ internal fun BookingSummaryContent(
                         selectedPaymentMethod = selectedPaymentMethod,
                         onPaymentMethodSelected = { selectedPaymentMethod = it },
                         onCreateBooking = { onCreateBooking(selectedPaymentMethod) },
+                        walletBalanceInPaise = walletBalanceInPaise,
+                        applyCreditToggle = applyCreditToggle,
+                        onApplyCreditChanged = onApplyCreditChanged,
                     )
                 is BookingUiState.CreatingBooking,
                 is BookingUiState.AwaitingPayment,
@@ -170,12 +186,16 @@ internal fun BookingSummaryContent(
     }
 }
 
+@Suppress("LongMethod")
 @Composable
 private fun ReadySummary(
     state: BookingUiState.Ready,
     selectedPaymentMethod: BookingPaymentMethod,
     onPaymentMethodSelected: (BookingPaymentMethod) -> Unit,
     onCreateBooking: () -> Unit,
+    walletBalanceInPaise: Long = 0L,
+    applyCreditToggle: Boolean = false,
+    onApplyCreditChanged: (Boolean) -> Unit = {},
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Column(
@@ -204,6 +224,14 @@ private fun ReadySummary(
                 SummaryRow(
                     label = stringResource(R.string.booking_summary_address_label),
                     value = state.addressText,
+                )
+            }
+            if (walletBalanceInPaise > 0L) {
+                Spacer(Modifier.height(12.dp))
+                CreditToggleRow(
+                    walletBalanceInPaise = walletBalanceInPaise,
+                    applyCreditToggle = applyCreditToggle,
+                    onApplyCreditChanged = onApplyCreditChanged,
                 )
             }
             Spacer(Modifier.height(12.dp))
@@ -335,6 +363,45 @@ private fun PaymentOptionRow(
                     text = body,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CreditToggleRow(
+    walletBalanceInPaise: Long,
+    applyCreditToggle: Boolean,
+    onApplyCreditChanged: (Boolean) -> Unit,
+) {
+    // Display balance as rounded rupees (paise / PAISE_PER_RUPEE)
+    val rupees = walletBalanceInPaise / PAISE_PER_RUPEE
+    HsSectionCard {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = stringResource(R.string.wallet_apply_credit_toggle, rupees),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(
+                    checked = applyCreditToggle,
+                    onCheckedChange = onApplyCreditChanged,
+                )
+            }
+            if (applyCreditToggle) {
+                // Display only — actual total is server-authoritative via response.amount
+                Text(
+                    text = stringResource(R.string.wallet_credit_original_price, rupees),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textDecoration = TextDecoration.LineThrough,
                 )
             }
         }

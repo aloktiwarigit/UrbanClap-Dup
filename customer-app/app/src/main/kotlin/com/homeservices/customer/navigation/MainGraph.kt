@@ -19,6 +19,7 @@ import com.homeservices.customer.ui.booking.PriceApprovalViewModel
 import com.homeservices.customer.ui.booking.SlotPickerScreen
 import com.homeservices.customer.ui.catalogue.CatalogueHomeScreen
 import com.homeservices.customer.ui.catalogue.CatalogueHomeViewModel
+import com.homeservices.customer.ui.catalogue.CustomerHomeViewModel
 import com.homeservices.customer.ui.catalogue.ServiceDetailScreen
 import com.homeservices.customer.ui.catalogue.ServiceDetailViewModel
 import com.homeservices.customer.ui.catalogue.ServiceListScreen
@@ -70,12 +71,14 @@ private fun NavGraphBuilder.homeDestination(
 ) {
     composable(CatalogueRoutes.HOME) {
         val vm: CatalogueHomeViewModel = hiltViewModel()
+        val customerHomeVm: CustomerHomeViewModel = hiltViewModel()
         val walletVm: WalletViewModel? = if (featureFlags.walletVisible()) hiltViewModel() else null
         val walletBalanceState = walletVm?.balanceState?.collectAsStateWithLifecycle()?.value
         val balancePaise =
             (walletBalanceState as? WalletBalanceUiState.Ready)?.balance?.balanceInPaise ?: 0L
         CatalogueHomeScreen(
             viewModel = vm,
+            customerHomeViewModel = customerHomeVm,
             onCategoryClick = { id -> navController.navigate(CatalogueRoutes.serviceList(id)) },
             onSettingsClick = { navController.navigate(LocaleRoutes.SETTINGS) },
             onProfileLanguageClick = { navController.navigate(LocaleRoutes.LANGUAGE_SETTINGS) },
@@ -86,6 +89,22 @@ private fun NavGraphBuilder.homeDestination(
             walletBalanceInPaise = balancePaise,
             onWalletClick = { navController.navigate(WalletRoutes.WALLET) },
             photoFirstCatalogueEnabled = featureFlags.photoFirstCatalogueEnabled(),
+            // E11-S03: durable-hooks navigation callbacks
+            onPendingActionRoute = { uri ->
+                // Route URI format: homeservices://action/<TYPE>?bookingId=<id>
+                // Resolve specific action routes that the nav graph already supports.
+                val bookingId = uri.substringAfter("bookingId=", "").substringBefore("&")
+                when {
+                    "RATING_PROMPT_CUSTOMER" in uri && bookingId.isNotEmpty() ->
+                        navController.navigate(RatingRoutes.route(bookingId))
+                    "ADDON_APPROVAL_REQUESTED" in uri && bookingId.isNotEmpty() ->
+                        navController.navigate(BookingRoutes.priceApprovalRoute(bookingId))
+                    "COMPLAINT_UPDATE" in uri && bookingId.isNotEmpty() ->
+                        navController.navigate(ComplaintRoutes.route(bookingId))
+                    else -> Unit // Unknown type — no-op until E11-S01b-2 route migration
+                }
+            },
+            onPriceApproval = { id -> navController.navigate(BookingRoutes.priceApprovalRoute(id)) },
         )
     }
 }
@@ -202,8 +221,8 @@ private fun NavGraphBuilder.summaryDestination(navController: NavController) {
             viewModel = vm,
             serviceId = vm.pendingServiceId,
             categoryId = vm.pendingCategoryId,
-            onConfirmed = { bookingId ->
-                navController.navigate(BookingRoutes.confirmedRoute(bookingId)) {
+            onConfirmed = { bookingId, appliedCredit ->
+                navController.navigate(BookingRoutes.confirmedRoute(bookingId, appliedCredit)) {
                     popUpTo(BookingRoutes.BOOKING_GRAPH) { inclusive = true }
                 }
             },
@@ -215,13 +234,22 @@ private fun NavGraphBuilder.summaryDestination(navController: NavController) {
 private fun NavGraphBuilder.confirmedDestination(navController: NavController) {
     composable(
         route = BookingRoutes.CONFIRMED,
-        arguments = listOf(navArgument("bookingId") { type = NavType.StringType }),
+        arguments =
+            listOf(
+                navArgument("bookingId") { type = NavType.StringType },
+                navArgument("appliedCredit") {
+                    type = NavType.IntType
+                    defaultValue = 0
+                },
+            ),
     ) { backStackEntry ->
         val bookingId = backStackEntry.arguments?.getString("bookingId") ?: ""
+        val appliedCredit = backStackEntry.arguments?.getInt("appliedCredit") ?: 0
         BookingConfirmedScreen(
             bookingId = bookingId,
             onBackToHome = { navController.popBackStack(CatalogueRoutes.HOME, inclusive = false) },
             onTrackBooking = { id -> navController.navigate(BookingRoutes.liveTrackingRoute(id)) },
+            appliedCreditAmount = appliedCredit,
         )
     }
 }
