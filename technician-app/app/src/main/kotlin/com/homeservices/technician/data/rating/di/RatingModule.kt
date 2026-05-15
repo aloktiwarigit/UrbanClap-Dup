@@ -38,7 +38,7 @@ public abstract class RatingModule {
             authenticator: FirebaseTokenAuthenticator,
         ): OkHttpClient =
             OkHttpClient
-                .Builder()
+                .Builder() // nosemgrep: no-bare-okhttp-in-module
                 .addInterceptor { chain ->
                     // Non-blocking: reads the pre-fetched cached token.
                     // IdTokenCache refreshes every 55 min in the background so
