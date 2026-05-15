@@ -24,9 +24,14 @@ public class AcceptJobOfferUseCase
             val response = api.acceptOffer("Bearer $token", bookingId)
             return when {
                 response.isSuccessful -> JobOfferResult.Accepted(bookingId)
-                response.code() == 409 -> JobOfferResult.Conflict(bookingId)
-                response.code() == 410 -> JobOfferResult.Expired(bookingId)
+                response.code() == HTTP_CONFLICT -> JobOfferResult.Conflict(bookingId)
+                response.code() == HTTP_GONE -> JobOfferResult.Expired(bookingId)
                 else -> throw RuntimeException("Accept offer failed: HTTP ${response.code()}")
             }
+        }
+
+        private companion object {
+            private const val HTTP_CONFLICT = 409
+            private const val HTTP_GONE = 410
         }
     }
