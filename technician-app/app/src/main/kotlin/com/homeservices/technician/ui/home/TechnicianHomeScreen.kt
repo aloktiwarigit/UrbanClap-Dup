@@ -80,8 +80,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.homeservices.corenav.PendingAction
 import com.homeservices.technician.R
 import com.homeservices.technician.domain.auth.model.AuthState
+import com.homeservices.technician.ui.dashboard.PendingActionCard
+import com.homeservices.technician.ui.dashboard.TechnicianDashboardViewModel
 import com.homeservices.technician.domain.availability.model.TechnicianAvailability
 import com.homeservices.technician.domain.earnings.model.EarningsSummary
 import com.homeservices.technician.domain.jobs.model.TechnicianBooking
@@ -101,15 +104,18 @@ internal fun TechnicianHomeScreen(
     onLanguageSettings: () -> Unit,
     onEditServices: () -> Unit,
     onSignOut: () -> Unit,
+    onPendingActionClick: (PendingAction) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: TechnicianHomeViewModel = hiltViewModel(),
     earningsViewModel: EarningsViewModel = hiltViewModel(),
     availabilityViewModel: AvailabilityViewModel = hiltViewModel(),
+    dashboardViewModel: TechnicianDashboardViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val earningsState by earningsViewModel.uiState.collectAsStateWithLifecycle()
     val availabilityState by availabilityViewModel.uiState.collectAsStateWithLifecycle()
+    val pendingActions by dashboardViewModel.pendingActions.collectAsStateWithLifecycle()
     var selectedTab by rememberSaveable { mutableStateOf(TechTab.Today) }
     val isOnline = availabilityState.availability.acceptingJobs
     val snackbarHostState = remember { SnackbarHostState() }
@@ -139,6 +145,8 @@ internal fun TechnicianHomeScreen(
                         uiState = uiState,
                         earningsState = earningsState,
                         isOnline = isOnline,
+                        pendingActions = pendingActions,
+                        onPendingActionClick = onPendingActionClick,
                         onOnlineChange = {
                             availabilityViewModel.setAcceptingJobs(it)
                             scope.launch {
@@ -255,6 +263,8 @@ private fun TodayScreen(
     uiState: TechnicianHomeUiState,
     earningsState: EarningsUiState,
     isOnline: Boolean,
+    pendingActions: List<PendingAction>,
+    onPendingActionClick: (PendingAction) -> Unit,
     onOnlineChange: (Boolean) -> Unit,
     onOpenJob: (String) -> Unit,
     onRefresh: () -> Unit,
@@ -272,6 +282,11 @@ private fun TodayScreen(
                 isOnline = isOnline,
                 onOnlineChange = onOnlineChange,
             )
+        }
+        if (pendingActions.isNotEmpty()) {
+            items(pendingActions, key = { it.id }) { action ->
+                PendingActionCard(action = action, onClick = onPendingActionClick)
+            }
         }
         item {
             NextJobHero(
