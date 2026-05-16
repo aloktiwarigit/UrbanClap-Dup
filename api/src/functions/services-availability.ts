@@ -4,16 +4,7 @@ import { requireCustomer, type CustomerHttpHandler } from '../middleware/require
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { slotHoldsRepo } from '../cosmos/slot-holds-repository.js';
 import { bookingRepo } from '../cosmos/booking-repository.js';
-import { generateSlots } from '../shared/slot-utils.js';
-
-// IST offset from UTC in minutes (UTC+5:30)
-const IST_OFFSET_MINUTES = 5 * 60 + 30;
-
-function todayIst(): string {
-  const now = new Date();
-  const istMs = now.getTime() + IST_OFFSET_MINUTES * 60_000;
-  return new Date(istMs).toISOString().slice(0, 10);
-}
+import { generateSlots, filterElapsedSlots, currentIstMinuteOfDay, todayIst } from '../shared/slot-utils.js';
 
 function addDays(yyyymmdd: string, days: number): string {
   const d = new Date(`${yyyymmdd}T00:00:00Z`);
@@ -56,8 +47,11 @@ export const availabilityHandler: CustomerHttpHandler = async (req, _ctx, _custo
     return { status: 404, jsonBody: { code: 'SERVICE_NOT_FOUND' } };
   }
 
-  // Generate server-side slot windows
-  const allWindows = generateSlots(service, date);
+  // Generate server-side slot windows; filter elapsed slots when date is today
+  let allWindows = generateSlots(service, date);
+  if (date === today) {
+    allWindows = filterElapsedSlots(allWindows, currentIstMinuteOfDay());
+  }
 
   // Load held + hard-booked windows in parallel
   const [holds, bookedWindows] = await Promise.all([

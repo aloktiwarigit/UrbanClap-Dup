@@ -58,7 +58,8 @@ describe('slotHoldsRepo.createHold', () => {
   });
 
   it('returns CONFLICT when Cosmos responds 409 (slot already held)', async () => {
-    mockCreate.mockRejectedValue({ statusCode: 409 });
+    // @azure/cosmos ErrorResponse uses err.code, not err.statusCode
+    mockCreate.mockRejectedValue({ code: 409 });
 
     const result = await slotHoldsRepo.createHold(SVC, DATE, WINDOW, CUST);
 
@@ -66,7 +67,7 @@ describe('slotHoldsRepo.createHold', () => {
   });
 
   it('returns CONFLICT when Cosmos responds 412 (etag mismatch — ADR-0017 pattern)', async () => {
-    mockCreate.mockRejectedValue({ statusCode: 412 });
+    mockCreate.mockRejectedValue({ code: 412 });
 
     const result = await slotHoldsRepo.createHold(SVC, DATE, WINDOW, CUST);
 
@@ -74,9 +75,9 @@ describe('slotHoldsRepo.createHold', () => {
   });
 
   it('rethrows non-409/412 errors for Sentry to capture upstream', async () => {
-    mockCreate.mockRejectedValue({ statusCode: 500, message: 'Internal error' });
+    mockCreate.mockRejectedValue({ code: 500, message: 'Internal error' });
 
-    await expect(slotHoldsRepo.createHold(SVC, DATE, WINDOW, CUST)).rejects.toMatchObject({ statusCode: 500 });
+    await expect(slotHoldsRepo.createHold(SVC, DATE, WINDOW, CUST)).rejects.toMatchObject({ code: 500 });
   });
 });
 
@@ -95,21 +96,21 @@ describe('slotHoldsRepo.commitHold', () => {
     expect(mockItem).toHaveBeenCalledWith(HOLD_ID, HOLD_PK);
     expect(mockPatch).toHaveBeenCalledWith([
       { op: 'add', path: '/bookingId', value: 'bk-1' },
-      { op: 'replace', path: '/ttl', value: -1 },
+      { op: 'add', path: '/ttl', value: -1 },
     ]);
   });
 
   it('silently returns when hold has already expired (Cosmos 404)', async () => {
-    mockPatch.mockRejectedValue({ statusCode: 404 });
+    mockPatch.mockRejectedValue({ code: 404 });
 
     // Should NOT throw — expired hold is non-fatal
     await expect(slotHoldsRepo.commitHold(HOLD_ID, HOLD_PK, 'bk-1')).resolves.toBeUndefined();
   });
 
   it('rethrows non-404 errors', async () => {
-    mockPatch.mockRejectedValue({ statusCode: 503 });
+    mockPatch.mockRejectedValue({ code: 503 });
 
-    await expect(slotHoldsRepo.commitHold(HOLD_ID, HOLD_PK, 'bk-1')).rejects.toMatchObject({ statusCode: 503 });
+    await expect(slotHoldsRepo.commitHold(HOLD_ID, HOLD_PK, 'bk-1')).rejects.toMatchObject({ code: 503 });
   });
 });
 

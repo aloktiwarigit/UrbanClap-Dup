@@ -37,6 +37,7 @@ vi.mock('../../../src/cosmos/booking-repository.js', () => ({
   bookingRepo: {
     createPending: vi.fn(),
     markPaid: vi.fn(),
+    // Called before createHold to guard against pre-deployment booking gaps (P1 Codex fix)
     getBookedWindowsByServiceDate: vi.fn().mockResolvedValue([]),
   },
 }));
@@ -168,6 +169,8 @@ beforeEach(() => {
   vi.mocked(catalogueRepo.getServiceByIdCrossPartition).mockResolvedValue(makeService());
   vi.mocked(bookingRepo.createPending).mockResolvedValue(makeBooking());
   vi.mocked(bookingRepo.markPaid).mockResolvedValue(makeBooking());
+  // Reset to empty so the existing-bookings gate doesn't block subsequent tests
+  vi.mocked(bookingRepo.getBookedWindowsByServiceDate).mockResolvedValue([]);
   mockCommitHold.mockResolvedValue(undefined);
 });
 
@@ -214,6 +217,17 @@ describe('E16-S02: slot-hold gate in POST /v1/bookings', () => {
     // Wait for the non-blocking commitHold promise to settle
     await new Promise((r) => setTimeout(r, 10));
     expect(Sentry.captureException).toHaveBeenCalled();
+  });
+
+  it('returns 409 SLOT_UNAVAILABLE when an existing booking already occupies the window', async () => {
+    // Pre-deployment gap: booking exists but no hold doc (hold container newly deployed)
+    vi.mocked(bookingRepo.getBookedWindowsByServiceDate).mockResolvedValue(['10:00-11:00']);
+
+    const res = await createBookingHandler(makeReq(VALID_BODY), ctx);
+
+    expect(res.status).toBe(409);
+    expect(((res as unknown as HttpResponseInit).jsonBody as { code: string }).code).toBe('SLOT_UNAVAILABLE');
+    expect(mockCreateHold).not.toHaveBeenCalled();
   });
 
   it('calls commitHold with holdId and bookingId after successful booking', async () => {

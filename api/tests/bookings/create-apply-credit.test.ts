@@ -33,6 +33,8 @@ vi.mock('../../src/middleware/requireCustomer.js', () => ({
 
 vi.mock('../../src/cosmos/booking-repository.js', () => ({
   bookingRepo: {
+    // E16-S02: must return [] for the pre-hold existing-bookings gate
+    getBookedWindowsByServiceDate: vi.fn().mockResolvedValue([]),
     createPending: vi.fn().mockResolvedValue({
       id: 'bk-100',
       customerId: 'cust-1',

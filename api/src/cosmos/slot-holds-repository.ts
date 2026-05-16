@@ -34,7 +34,8 @@ export class SlotHoldsRepository {
       const { resource } = await this.container.items.create(doc);
       return resource as SlotHoldDoc;
     } catch (err: unknown) {
-      const code = (err as { statusCode?: number }).statusCode;
+      // @azure/cosmos ErrorResponse sets the HTTP status on err.code, not err.statusCode
+      const code = (err as { code?: number }).code;
       if (code === 409 || code === 412) return 'CONFLICT';
       throw err;
     }
@@ -50,10 +51,11 @@ export class SlotHoldsRepository {
     try {
       await this.container.item(holdId, servicePartitionKey).patch([
         { op: 'add', path: '/bookingId', value: bookingId },
-        { op: 'replace', path: '/ttl', value: -1 },
+        // 'add' (not 'replace') — soft holds omit ttl entirely; replace fails on absent fields
+        { op: 'add', path: '/ttl', value: -1 },
       ]);
     } catch (err: unknown) {
-      const code = (err as { statusCode?: number }).statusCode;
+      const code = (err as { code?: number }).code;
       if (code === 404) {
         console.warn('[slotHoldsRepo] commitHold: hold already expired (non-fatal)', { holdId, bookingId });
         return;

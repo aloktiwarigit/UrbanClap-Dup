@@ -21,7 +21,7 @@ import { normalizeAddressText } from '../shared/address-text.js';
 import { isLatLngInServiceArea } from '../services/service-area.service.js';
 import { AYODHYA_SERVICE_AREA } from '../data/service-area-ayodhya.js';
 import { slotHoldsRepo } from '../cosmos/slot-holds-repository.js';
-import { generateSlots } from '../shared/slot-utils.js';
+import { generateSlots, filterElapsedSlots, currentIstMinuteOfDay, todayIst } from '../shared/slot-utils.js';
 
 function makeRazorpayReceipt(customerId: string): string {
   return `bk_${Date.now().toString(36)}_${customerId.slice(0, 20)}`;
@@ -151,10 +151,28 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
   if (!service || !service.isActive) return { status: 404, jsonBody: { code: 'SERVICE_NOT_FOUND' } };
 
   // E16-S02: Validate slotWindow against server-generated windows for this service + date.
-  // Rejects fabricated windows that don't align with the service's durationMinutes / workStart-workEnd.
-  const validWindows = generateSlots(service, parsed.data.slotDate);
+  // Rejects fabricated windows and past windows (elapsed slots for today's date).
+  let validWindows = generateSlots(service, parsed.data.slotDate);
+  if (parsed.data.slotDate === todayIst()) {
+    validWindows = filterElapsedSlots(validWindows, currentIstMinuteOfDay());
+  }
   if (!validWindows.includes(parsed.data.slotWindow)) {
     return { status: 422, jsonBody: { code: 'INVALID_SLOT_WINDOW', message: 'The requested time slot does not match this service\'s schedule.' } };
+  }
+
+  // E16-S02: Guard against pre-deployment or post-expiry booking gaps.
+  // The slot_holds container only prevents concurrent holds — it does not know about bookings
+  // that pre-date the container deployment or whose hold doc expired. Check existing bookings
+  // directly before attempting the hold so we never create a duplicate booking.
+  const existingBookedWindows = await bookingRepo.getBookedWindowsByServiceDate(
+    parsed.data.serviceId,
+    parsed.data.slotDate,
+  );
+  if (existingBookedWindows.includes(parsed.data.slotWindow)) {
+    return {
+      status: 409,
+      jsonBody: { code: 'SLOT_UNAVAILABLE', message: 'This time slot is no longer available.' },
+    };
   }
 
   // E16-S02: Slot-conflict locking — attempt to hold the slot before writing the booking.
