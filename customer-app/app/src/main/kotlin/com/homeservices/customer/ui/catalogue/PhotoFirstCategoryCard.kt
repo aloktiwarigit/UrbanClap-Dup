@@ -98,7 +98,7 @@ internal fun PhotoFirstCategoryCard(
 
     // Track whether the Coil load succeeded so we can show the icon fallback.
     var imageLoadFailed by remember { mutableStateOf(false) }
-    val showImage = category.imageUrl.isNotBlank() && !imageLoadFailed
+    val showImage = shouldRenderCdnImage(category.imageUrl) && !imageLoadFailed
 
     Box(
         modifier =
