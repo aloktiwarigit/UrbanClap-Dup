@@ -1,5 +1,6 @@
 package com.homeservices.technician.data.activeJob
 
+import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import retrofit2.Response
 import retrofit2.http.Body
@@ -24,7 +25,9 @@ internal interface ActiveJobApiService {
 
 @JsonClass(generateAdapter = true)
 internal data class ActiveJobResponse(
-    val bookingId: String,
+    // API returns "bookingId"; field aliased to "id" per E11 spec §9.3.
+    // Follow-up API PR required: rename active-job.ts:40 bookingId → id.
+    @Json(name = "bookingId") val id: String,
     val customerId: String,
     val serviceId: String,
     val serviceName: String,

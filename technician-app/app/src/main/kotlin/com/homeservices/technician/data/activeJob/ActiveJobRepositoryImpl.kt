@@ -122,7 +122,7 @@ public class ActiveJobRepositoryImpl
 
         private fun ActiveJobResponse.toDomain(): ActiveJob =
             ActiveJob(
-                bookingId = bookingId,
+                bookingId = id,
                 customerId = customerId,
                 serviceId = serviceId,
                 serviceName = serviceName,

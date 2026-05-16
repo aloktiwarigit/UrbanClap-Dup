@@ -34,7 +34,7 @@ public class ActiveJobRepositoryImplTest {
 
     private fun aResponse(status: String = "ASSIGNED") =
         ActiveJobResponse(
-            bookingId = "bk-1",
+            id = "bk-1",
             customerId = "c-1",
             serviceId = "svc-1",
             serviceName = "AC Repair",

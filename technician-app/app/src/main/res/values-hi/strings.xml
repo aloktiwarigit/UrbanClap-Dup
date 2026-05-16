@@ -130,4 +130,16 @@
     <string name="auth_mobile_placeholder">+91 98765 43210</string>
     <string name="auth_otp_label">6-अंक कोड</string>
     <string name="auth_resend_code">कोड पुनः भेजें</string>
+
+    <!-- FCM tray notifications — dashboard types (E11-S04) -->
+    <string name="fcm_earnings_update_title">कमाई अपडेट हुई</string>
+    <string name="fcm_earnings_update_body">आपकी कमाई अपडेट हुई। देखने के लिए टैप करें।</string>
+    <string name="fcm_rating_prompt_title">अपने काम को रेट करें</string>
+    <string name="fcm_rating_prompt_body">बुकिंग %1$s के लिए रेटिंग दें।</string>
+
+    <!-- Dashboard pending-action cards (E11-S04) -->
+    <string name="dashboard_pending_action_job_offer">नया काम — जल्द एक्सपायर</string>
+    <string name="dashboard_pending_action_rating_prompt">यह काम रेट करें</string>
+    <string name="dashboard_pending_action_rating_received">रेटिंग मिली — फीडबैक देखें</string>
+    <string name="dashboard_pending_action_earnings_update">कमाई अपडेट हुई</string>
 </resources>
