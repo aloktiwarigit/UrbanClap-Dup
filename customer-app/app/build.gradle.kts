@@ -661,6 +661,10 @@ kover {
                     // CustomerHomeUiState — sealed class data holders, no logic branches
                     "*.CustomerHomeUiState",
                     "*.CustomerHomeUiState\$*",
+                    // CatalogueVisualImage — Compose UI composables (image placeholder, bar meter),
+                    // same rationale as other *Kt screen classes; palette when-branches are data, not logic.
+                    "*.CatalogueVisualImageKt",
+                    "*.CatalogueVisualImageKt\$*",
                 )
             }
         }
