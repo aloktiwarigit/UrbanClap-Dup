@@ -57,8 +57,12 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
         private const val REQUEST_CODE_RATING = 1001
         private const val REQUEST_CODE_JOB_OFFER = 1002
         private const val REQUEST_CODE_ERASURE = 1003
+        private const val REQUEST_CODE_EARNINGS = 1004
+        private const val REQUEST_CODE_RATING_PROMPT = 1005
         private const val NOTIFICATION_ID_JOB_OFFER = 3001
         private const val NOTIFICATION_ID_ERASURE_NOTICE = 3002
+        private const val NOTIFICATION_ID_EARNINGS_UPDATE = 3003
+        private const val NOTIFICATION_ID_RATING_PROMPT = 3004
 
         /** Register all notification channels. Call from Application.onCreate.
          *  Notification channels are an Oreo+ API; the project's minSdk is 26 so the
@@ -180,9 +184,11 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
             "RATING_PROMPT_TECHNICIAN" -> {
                 val bookingId = data["bookingId"] ?: return
                 ratingPromptEventBus.post(bookingId)
+                showRatingPromptNotification(bookingId)
             }
             "EARNINGS_UPDATE" -> {
                 earningsUpdateEventBus.notifyEarningsUpdate()
+                showEarningsUpdateNotification()
             }
             "RATING_RECEIVED" -> {
                 val overall = data["overall"]?.toIntOrNull() ?: 1
@@ -357,6 +363,58 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
                 .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
                 .build()
         nm.notify(NOTIFICATION_ID_ERASURE_NOTICE, notification)
+    }
+
+    private fun showEarningsUpdateNotification() {
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        val intent =
+            Intent(this, MainActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                .putExtra("navigate_to", "payout_settings")
+        val pi =
+            PendingIntent.getActivity(
+                this,
+                REQUEST_CODE_EARNINGS,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        val notification =
+            NotificationCompat
+                .Builder(this, CHANNEL_PAYOUTS)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle(getString(com.homeservices.technician.R.string.fcm_earnings_update_title))
+                .setContentText(getString(com.homeservices.technician.R.string.fcm_earnings_update_body))
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .build()
+        nm.notify(NOTIFICATION_ID_EARNINGS_UPDATE, notification)
+    }
+
+    private fun showRatingPromptNotification(bookingId: String) {
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        val intent =
+            Intent(this, MainActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                .putExtra("navigate_to", "rating/${bookingId}")
+        val pi =
+            PendingIntent.getActivity(
+                this,
+                REQUEST_CODE_RATING_PROMPT,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        val notification =
+            NotificationCompat
+                .Builder(this, CHANNEL_BOOKINGS)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle(getString(com.homeservices.technician.R.string.fcm_rating_prompt_title))
+                .setContentText(
+                    getString(com.homeservices.technician.R.string.fcm_rating_prompt_body, bookingId),
+                )
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .build()
+        nm.notify(NOTIFICATION_ID_RATING_PROMPT, notification)
     }
 
     override fun onNewToken(token: String): Unit {
