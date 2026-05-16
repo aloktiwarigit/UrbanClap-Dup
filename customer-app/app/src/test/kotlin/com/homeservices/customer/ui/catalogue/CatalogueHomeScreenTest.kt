@@ -4,7 +4,6 @@ import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.homeservices.customer.domain.catalogue.model.Category
 import com.homeservices.designsystem.theme.HomeservicesTheme
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -15,7 +14,6 @@ public class CatalogueHomeScreenTest {
     @get:Rule
     public val paparazzi: Paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
 
-    @Ignore("E11-S03 added CustomerHomeTabContent — goldens stale, re-record via paparazzi-record.yml after merge")
     @Test
     public fun `catalogue home loading state`(): Unit {
         paparazzi.snapshot {
@@ -31,7 +29,6 @@ public class CatalogueHomeScreenTest {
         }
     }
 
-    @Ignore("E11-S03 added CustomerHomeTabContent — goldens stale, re-record via paparazzi-record.yml after merge")
     @Test
     public fun `catalogue home success state`(): Unit {
         paparazzi.snapshot {
