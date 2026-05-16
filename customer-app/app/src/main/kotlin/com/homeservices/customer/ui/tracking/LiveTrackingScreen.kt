@@ -52,6 +52,8 @@ import com.homeservices.customer.domain.tracking.model.BookingStatus
 import com.homeservices.customer.ui.shared.TrustDossierCard
 import com.homeservices.customer.ui.shared.TrustDossierUiState
 import com.homeservices.customer.ui.shared.TrustDossierViewModel
+import com.homeservices.customer.ui.wallet.NoShowCreditBanner
+import com.homeservices.customer.ui.wallet.NoShowCreditViewModel
 import com.homeservices.designsystem.components.HsSecondaryButton
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,12 +61,14 @@ import com.homeservices.designsystem.components.HsSecondaryButton
 internal fun LiveTrackingScreen(
     viewModel: LiveTrackingViewModel = hiltViewModel(),
     sosViewModel: SosViewModel = hiltViewModel(),
+    noShowVm: NoShowCreditViewModel = hiltViewModel(),
     trustDossierViewModel: TrustDossierViewModel = hiltViewModel(),
     onBack: () -> Unit,
     onFileComplaint: (bookingId: String) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val sosUiState by sosViewModel.sosUiState.collectAsStateWithLifecycle()
+    val noShowEvent by noShowVm.event.collectAsStateWithLifecycle()
     val trustDossierUiState by trustDossierViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val isInProgress =
@@ -105,12 +109,23 @@ internal fun LiveTrackingScreen(
             )
         },
     ) { innerPadding ->
-        LiveTrackingContent(
-            uiState = uiState,
-            trustDossierUiState = trustDossierUiState,
-            onFileComplaint = onFileComplaint,
-            modifier = Modifier.padding(innerPadding),
-        )
+        Box(modifier = Modifier.padding(innerPadding)) {
+            LiveTrackingContent(
+                uiState = uiState,
+                onFileComplaint = onFileComplaint,
+                trustDossierUiState = trustDossierUiState,
+            )
+            noShowEvent?.let { evt ->
+                NoShowCreditBanner(
+                    creditAmountPaise = evt.creditAmountPaise,
+                    onDismiss = noShowVm::dismiss,
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+        }
     }
 
     SosOverlay(sosUiState = sosUiState, sosViewModel = sosViewModel, snackbarHostState = snackbarHostState)

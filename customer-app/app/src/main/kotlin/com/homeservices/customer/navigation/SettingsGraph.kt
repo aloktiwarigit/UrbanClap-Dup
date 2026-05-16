@@ -8,6 +8,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.homeservices.customer.domain.flags.FeatureFlags
+import com.homeservices.customer.ui.complaint.ComplaintRoutes
 import com.homeservices.customer.ui.deleteaccount.DeleteAccountConfirmScreen
 import com.homeservices.customer.ui.deleteaccount.DeleteAccountCoolOffScreen
 import com.homeservices.customer.ui.deleteaccount.DeleteAccountScreen
@@ -42,6 +43,7 @@ internal fun NavGraphBuilder.settingsGraph(
             onLanguageClick = { navController.navigate(LocaleRoutes.LANGUAGE_SETTINGS) },
             onPrivacyDataClick = { navController.navigate(LocaleRoutes.PRIVACY_DATA) },
             onBack = { navController.popBackStack() },
+            onMyComplaintsClick = { navController.navigate(ComplaintRoutes.LIST) },
         )
     }
     composable(LocaleRoutes.LANGUAGE_SETTINGS) {

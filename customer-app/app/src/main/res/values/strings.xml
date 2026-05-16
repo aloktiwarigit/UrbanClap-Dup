@@ -303,6 +303,8 @@
     <string name="bookings_error_title">Could not refresh bookings</string>
     <string name="bookings_error_body">Your latest booking is still saved. Retry when the network is stable.</string>
     <string name="bookings_retry">Retry</string>
+    <string name="bookings_rate_booking">Rate Booking</string>
+    <string name="bookings_file_complaint">File Complaint</string>
     <!-- Booking status labels -->
     <string name="booking_status_pending_payment">Payment pending</string>
     <string name="booking_status_paid">Confirmed</string>
@@ -387,6 +389,17 @@
     <string name="notification_permission_rationale_title">Allow notifications</string>
     <string name="notification_permission_rationale_body">Allow notifications to receive booking updates, add-on requests, and service reminders.</string>
 
+    <!-- Complaint SLA countdown + history + reopen (E18-S02) -->
+    <string name="complaint_countdown_remaining">%1$s remaining</string>
+    <string name="complaint_reopen">Reopen complaint</string>
+    <string name="complaint_list_title">My Complaints</string>
+    <string name="complaint_list_empty_title">No complaints yet</string>
+    <string name="complaint_list_empty_body">You have not filed any complaints.</string>
+    <string name="complaint_list_status_open">Open</string>
+    <string name="complaint_list_status_acknowledged">Acknowledged</string>
+    <string name="complaint_list_status_resolved">Resolved</string>
+    <string name="complaint_list_status_reopened">Reopened</string>
+
     <!-- Wallet screen (E13-S02) -->
     <string name="wallet_screen_title">My Wallet</string>
     <string name="wallet_back_content_desc">Back</string>
@@ -397,5 +410,30 @@
     <string name="wallet_no_transactions">No transactions yet.</string>
     <string name="wallet_retry_cta">Retry</string>
     <string name="wallet_chip_content_desc">Wallet balance</string>
+
+    <!-- No-show credit banner + notification (E13-S03) -->
+    <string name="no_show_credit_notification_title">Credit Added!</string>
+    <string name="no_show_credit_notification_body">A no-show credit has been added to your wallet.</string>
+    <string name="no_show_credit_banner">You received %1$s credit! Will apply on next booking.</string>
+    <string name="no_show_credit_banner_dismiss">Dismiss</string>
+
+    <!-- Customer home durable hooks (E11-S03) -->
+    <string name="home_pending_actions_label">Action needed</string>
+    <string name="home_pending_action_tap_hint">Tap to continue</string>
+    <string name="home_action_rate_booking">Rate your booking</string>
+    <string name="home_action_approve_addon">Approve add-on request</string>
+    <string name="home_action_complaint_update">Complaint update</string>
+    <string name="home_action_support_followup">Support follow-up</string>
+    <string name="home_active_booking_label">Active booking</string>
+    <string name="home_active_booking_track_cta">Track</string>
+    <string name="home_active_booking_approve_cta">Approve</string>
+    <string name="home_recent_bookings_label">Recent bookings</string>
+    <string name="home_recent_booking_rate">Rate</string>
+    <string name="home_recent_booking_complain">Complaint</string>
+
+    <!-- Credit-apply toggle on booking summary (E13-S04) -->
+    <string name="wallet_apply_credit_toggle">Apply ₹%1$s credit</string>
+    <string name="wallet_credit_original_price">Original price: ₹%1$s</string>
+    <string name="wallet_credit_applied_banner">₹%1$s credit applied</string>
 
 </resources>

@@ -19,15 +19,13 @@
     <ID>LongMethod:AddressScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun AddressScreen( onAddressConfirmed: (addressText: String, lat: Double, lng: Double) -&gt; Unit, onBack: () -&gt; Unit, )</ID>
     <ID>LongMethod:AuthScreen.kt$@Composable internal fun AuthScreen( uiState: AuthUiState, onPhoneSubmitted: (String) -&gt; Unit, onOtpEntered: (String) -&gt; Unit, onResendRequested: () -&gt; Unit, onRetry: () -&gt; Unit, onGoogleSelected: () -&gt; Unit = {}, onEmailSelected: () -&gt; Unit = {}, onPhoneSelected: () -&gt; Unit = {}, onEmailSignIn: (String, String) -&gt; Unit = { _, _ -&gt; }, onEmailSignUp: (String, String) -&gt; Unit = { _, _ -&gt; }, onEmailModeToggle: (String) -&gt; Unit = {}, onBackToMethodSelection: () -&gt; Unit = {}, onEmailVerificationContinue: (String) -&gt; Unit = {}, onResendVerificationEmail: (String) -&gt; Unit = {}, onForgotPassword: (String) -&gt; Unit = {}, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:AuthScreen.kt$@Composable private fun EmailEntryContent( state: AuthUiState.EmailEntry, onEmailSignIn: (String, String) -&gt; Unit, onEmailSignUp: (String, String) -&gt; Unit, onEmailModeToggle: (String) -&gt; Unit, onBackToMethodSelection: () -&gt; Unit, onForgotPassword: (String) -&gt; Unit, )</ID>
-    <ID>LongMethod:BookingSummaryScreen.kt$@Composable private fun ReadySummary( state: BookingUiState.Ready, selectedPaymentMethod: BookingPaymentMethod, onPaymentMethodSelected: (BookingPaymentMethod) -&gt; Unit, onCreateBooking: () -&gt; Unit, )</ID>
-    <ID>LongMethod:CatalogueHomeScreen.kt$@Composable internal fun CatalogueHomeContent( uiState: CatalogueHomeUiState, onCategoryClick: (String) -&gt; Unit, onSettingsClick: () -&gt; Unit, onProfileLanguageClick: () -&gt; Unit, onTrackBooking: (String) -&gt; Unit, )</ID>
+    <ID>LongMethod:BookingConfirmedScreen.kt$@Composable private fun ConfirmationBody( bookingId: String, appliedCreditAmount: Int = 0, technicianId: String?, trustUiState: TrustDossierUiState, onBackToHome: () -&gt; Unit, onTrackBooking: (bookingId: String) -&gt; Unit, )</ID>
     <ID>LongMethod:CatalogueHomeScreen.kt$@Composable private fun CategoryCard( category: Category, onClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
-    <ID>LongMethod:CatalogueHomeScreen.kt$@Composable private fun StickyHero(onSettingsClick: () -&gt; Unit)</ID>
     <ID>LongMethod:CatalogueHomeScreen.kt$@OptIn(ExperimentalFoundationApi::class) @Composable private fun PromoSlider()</ID>
     <ID>LongMethod:CatalogueVisualImage.kt$@Composable private fun CatalogueImagePlaceholder( title: String, supportingText: String?, visualSize: CatalogueVisualSize, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:ComplaintScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun ComplaintContent( state: ComplaintUiState, onBack: () -&gt; Unit, onRetry: () -&gt; Unit, onReasonSelected: (ComplaintReason) -&gt; Unit, onDescriptionChanged: (String) -&gt; Unit, onPhotoClick: () -&gt; Unit, onSubmit: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:DeleteAccountConfirmScreen.kt$@Composable public fun DeleteAccountConfirmScreen( onBack: () -&gt; Unit, onConfirmed: (requestId: String, scheduledDeletionAt: String) -&gt; Unit, viewModel: DeleteAccountViewModel = hiltViewModel(), )</ID>
-    <ID>LongMethod:MainGraph.kt$internal fun NavGraphBuilder.mainGraph(navController: NavController)</ID>
+    <ID>LongMethod:LiveTrackingScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun LiveTrackingScreen( viewModel: LiveTrackingViewModel = hiltViewModel(), sosViewModel: SosViewModel = hiltViewModel(), noShowVm: NoShowCreditViewModel = hiltViewModel(), trustDossierViewModel: TrustDossierViewModel = hiltViewModel(), onBack: () -&gt; Unit, onFileComplaint: (bookingId: String) -&gt; Unit = {}, )</ID>
     <ID>LongMethod:ProfileScreen.kt$@Composable internal fun ProfileScreen( viewModel: ProfileViewModel = hiltViewModel(), modifier: Modifier = Modifier, onLanguageClick: () -&gt; Unit = {}, onBookingsClick: () -&gt; Unit = {}, )</ID>
     <ID>LongMethod:ServiceDetailScreen.kt$@Composable private fun ServiceHero( service: Service, onBack: (() -&gt; Unit)?, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:SlotPickerScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable internal fun SlotPickerScreen( onSlotSelected: (BookingSlot) -&gt; Unit, onBack: () -&gt; Unit, )</ID>
@@ -53,7 +51,6 @@
     <ID>MagicNumber:CatalogueHomeScreen.kt$600</ID>
     <ID>MagicNumber:CatalogueVisualImage.kt$0.86f</ID>
     <ID>MagicNumber:CatalogueVisualImage.kt$0xFF00796B</ID>
-    <ID>MagicNumber:CatalogueVisualImage.kt$CataloguePalette$0xFF18202A</ID>
     <ID>MagicNumber:CatalogueVisualImage.kt$0xFF2E5EAA</ID>
     <ID>MagicNumber:CatalogueVisualImage.kt$0xFF5A4E9A</ID>
     <ID>MagicNumber:CatalogueVisualImage.kt$0xFF9A6500</ID>
@@ -69,6 +66,7 @@
     <ID>MagicNumber:CatalogueVisualImage.kt$0xFFF8E4BC</ID>
     <ID>MagicNumber:CatalogueVisualImage.kt$0xFFFFF3DF</ID>
     <ID>MagicNumber:CatalogueVisualImage.kt$3</ID>
+    <ID>MagicNumber:CatalogueVisualImage.kt$CataloguePalette$0xFF18202A</ID>
     <ID>MagicNumber:ComplaintViewModel.kt$ComplaintViewModel$10</ID>
     <ID>MagicNumber:ConfidenceScoreRow.kt$3</ID>
     <ID>MagicNumber:ConfidenceScoreRow.kt$50</ID>
@@ -100,13 +98,7 @@
     <ID>MaxLineLength:ProfileScreen.kt$"आपका नाम, फ़ोन, पता और बुकिंग जानकारी सेवा देने, तकनीशियन असाइन करने, सपोर्ट और सुरक्षा समीक्षा के लिए इस्तेमाल होती है। पता केवल असाइन किए गए तकनीशियन और Owner support के साथ साझा किया जाता है।"</ID>
     <ID>MaxLineLength:TrustDossierCardPaparazziTest.kt$TrustDossierCardPaparazziTest$"HandlerDispatcher IllegalStateException — Coil async handler fires after Paparazzi Looper quits on Loaded state; fix with Coil test dispatcher before recording"</ID>
     <ID>NestedBlockDepth:SessionPrefsMigrator.kt$SessionPrefsMigrator$internal fun migrateIfNeededInternal( context: Context, newPrefs: SharedPreferences, newPrefsName: String, legacyKeyPresent: Boolean, )</ID>
-    <ID>NewLineAtEndOfFile:BookingViewModel.kt$.BookingViewModel.kt</ID>
-    <ID>NewLineAtEndOfFile:BookingViewModelTest.kt$.BookingViewModelTest.kt</ID>
-    <ID>NewLineAtEndOfFile:DeleteAccountViewModel.kt$.DeleteAccountViewModel.kt</ID>
-    <ID>NewLineAtEndOfFile:PriceApprovalScreen.kt$.PriceApprovalScreen.kt</ID>
-    <ID>NewLineAtEndOfFile:PriceApprovalUiState.kt$.PriceApprovalUiState.kt</ID>
-    <ID>NewLineAtEndOfFile:PriceApprovalViewModel.kt$.PriceApprovalViewModel.kt</ID>
-    <ID>NewLineAtEndOfFile:PriceApprovalViewModelTest.kt$.PriceApprovalViewModelTest.kt</ID>
+    <ID>ReturnCount:CustomerFirebaseMessagingService.kt$CustomerFirebaseMessagingService$override fun onMessageReceived(message: RemoteMessage)</ID>
     <ID>ReturnCount:DeleteAccountViewModel.kt$DeleteAccountViewModel$public fun onSubmitClicked(activity: FragmentActivity?)</ID>
     <ID>ReturnCount:FirebaseTokenAuthenticator.kt$FirebaseTokenAuthenticator$override fun authenticate( route: Route?, response: Response, ): Request?</ID>
     <ID>SwallowedException:AuthOrchestrator.kt$AuthOrchestrator$e: FirebaseAuthUserCollisionException</ID>
@@ -126,7 +118,6 @@
     <ID>TooManyFunctions:CatalogueHomeScreen.kt$com.homeservices.customer.ui.catalogue.CatalogueHomeScreen.kt</ID>
     <ID>TooManyFunctions:RatingViewModel.kt$RatingViewModel : ViewModel</ID>
     <ID>TooManyFunctions:ServiceDetailScreen.kt$com.homeservices.customer.ui.catalogue.ServiceDetailScreen.kt</ID>
-    <ID>UnusedImports:DeleteAccountViewModelTest.kt$import com.homeservices.customer.ui.deleteaccount.DeleteAccountUiState.Submitting</ID>
     <ID>UnusedParameter:PiiRedactorTest.kt$PiiRedactorTest$description: String</ID>
     <ID>UnusedPrivateMember:ServiceListScreen.kt$@Composable private fun ServiceImageFallback( name: String, modifier: Modifier = Modifier, )</ID>
   </CurrentIssues>

@@ -176,24 +176,37 @@ private val navItems =
 @Composable
 internal fun CatalogueHomeScreen(
     viewModel: CatalogueHomeViewModel,
+    customerHomeViewModel: CustomerHomeViewModel,
     onCategoryClick: (String) -> Unit,
     onSettingsClick: () -> Unit,
     onProfileLanguageClick: () -> Unit,
     onTrackBooking: (String) -> Unit,
+    onRateBooking: (String) -> Unit = {},
+    onComplainBooking: (String) -> Unit = {},
     showWalletChip: Boolean = false,
     walletBalanceInPaise: Long = 0L,
     onWalletClick: () -> Unit = {},
+    photoFirstCatalogueEnabled: Boolean = false,
+    onPendingActionRoute: (String) -> Unit = {},
+    onPriceApproval: (String) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val homeUiState by customerHomeViewModel.homeUiState.collectAsStateWithLifecycle()
     CatalogueHomeContent(
         uiState = uiState,
+        homeUiState = homeUiState,
         onCategoryClick = onCategoryClick,
         onSettingsClick = onSettingsClick,
         onProfileLanguageClick = onProfileLanguageClick,
         onTrackBooking = onTrackBooking,
+        onRateBooking = onRateBooking,
+        onComplainBooking = onComplainBooking,
         showWalletChip = showWalletChip,
         walletBalanceInPaise = walletBalanceInPaise,
         onWalletClick = onWalletClick,
+        photoFirstCatalogueEnabled = photoFirstCatalogueEnabled,
+        onPendingActionRoute = onPendingActionRoute,
+        onPriceApproval = onPriceApproval,
     )
 }
 
@@ -204,9 +217,15 @@ internal fun CatalogueHomeContent(
     onSettingsClick: () -> Unit,
     onProfileLanguageClick: () -> Unit,
     onTrackBooking: (String) -> Unit,
+    onRateBooking: (String) -> Unit = {},
+    onComplainBooking: (String) -> Unit = {},
     showWalletChip: Boolean = false,
     walletBalanceInPaise: Long = 0L,
     onWalletClick: () -> Unit = {},
+    photoFirstCatalogueEnabled: Boolean = false,
+    homeUiState: CustomerHomeUiState = CustomerHomeUiState.Loading,
+    onPendingActionRoute: (String) -> Unit = {},
+    onPriceApproval: (String) -> Unit = {},
 ) {
     var selectedNav by remember { mutableIntStateOf(0) }
 
@@ -230,11 +249,17 @@ internal fun CatalogueHomeContent(
         HomeTabs(
             selectedNav = selectedNav,
             uiState = uiState,
+            homeUiState = homeUiState,
             onCategoryClick = onCategoryClick,
             onTrackBooking = onTrackBooking,
+            onRateBooking = onRateBooking,
+            onComplainBooking = onComplainBooking,
             onProfileLanguageClick = onProfileLanguageClick,
             onSelectNav = { selectedNav = it },
             scaffoldPadding = scaffoldPadding,
+            photoFirstCatalogueEnabled = photoFirstCatalogueEnabled,
+            onPendingActionRoute = onPendingActionRoute,
+            onPriceApproval = onPriceApproval,
         )
     }
 }
@@ -245,48 +270,35 @@ private fun HomeTabs(
     uiState: CatalogueHomeUiState,
     onCategoryClick: (String) -> Unit,
     onTrackBooking: (String) -> Unit,
+    onRateBooking: (String) -> Unit,
+    onComplainBooking: (String) -> Unit,
     onProfileLanguageClick: () -> Unit,
     onSelectNav: (Int) -> Unit,
     scaffoldPadding: PaddingValues,
+    photoFirstCatalogueEnabled: Boolean = false,
+    homeUiState: CustomerHomeUiState = CustomerHomeUiState.Loading,
+    onPendingActionRoute: (String) -> Unit = {},
+    onPriceApproval: (String) -> Unit = {},
 ) {
     when (selectedNav) {
         0 ->
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
-                contentPadding = PaddingValues(bottom = 16.dp),
-            ) {
-                item { PromoSlider() }
-                item { TrustStrip() }
-                when (uiState) {
-                    is CatalogueHomeUiState.Loading -> item { LoadingState() }
-                    is CatalogueHomeUiState.Error -> item { ErrorState() }
-                    is CatalogueHomeUiState.Success -> {
-                        item {
-                            Text(
-                                text = stringResource(R.string.catalogue_our_services),
-                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, fontSize = 19.sp),
-                                color = TextPrimary,
-                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-                            )
-                        }
-                        val rows = uiState.categories.chunked(2)
-                        items(rows) { row ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                row.forEach { cat ->
-                                    CategoryCard(category = cat, onClick = { onCategoryClick(cat.id) }, modifier = Modifier.weight(1f))
-                                }
-                                if (row.size == 1) Spacer(Modifier.weight(1f))
-                            }
-                        }
-                    }
-                }
-            }
+            CatalogueTab(
+                uiState = uiState,
+                homeUiState = homeUiState,
+                scaffoldPadding = scaffoldPadding,
+                photoFirstCatalogueEnabled = photoFirstCatalogueEnabled,
+                onCategoryClick = onCategoryClick,
+                onPendingActionRoute = onPendingActionRoute,
+                onTrackBooking = onTrackBooking,
+                onPriceApproval = onPriceApproval,
+                onRateBooking = onRateBooking,
+                onComplainBooking = onComplainBooking,
+            )
         1 ->
             CustomerBookingsScreen(
                 onTrackBooking = onTrackBooking,
+                onRateBooking = onRateBooking,
+                onComplainBooking = onComplainBooking,
                 modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
             )
         2 ->
@@ -301,6 +313,72 @@ private fun HomeTabs(
                 onLanguageClick = onProfileLanguageClick,
                 onBookingsClick = { onSelectNav(1) },
             )
+    }
+}
+
+@Composable
+private fun CatalogueTab(
+    uiState: CatalogueHomeUiState,
+    scaffoldPadding: PaddingValues,
+    photoFirstCatalogueEnabled: Boolean,
+    onCategoryClick: (String) -> Unit,
+    homeUiState: CustomerHomeUiState = CustomerHomeUiState.Loading,
+    onPendingActionRoute: (String) -> Unit = {},
+    onTrackBooking: (String) -> Unit = {},
+    onPriceApproval: (String) -> Unit = {},
+    onRateBooking: (String) -> Unit = {},
+    onComplainBooking: (String) -> Unit = {},
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
+        contentPadding = PaddingValues(bottom = 16.dp),
+    ) {
+        item {
+            CustomerHomeTabContent(
+                homeState = homeUiState,
+                onPendingActionClick = onPendingActionRoute,
+                onTrackBooking = onTrackBooking,
+                onPriceApproval = onPriceApproval,
+                onRateBooking = onRateBooking,
+                onComplainBooking = onComplainBooking,
+            )
+        }
+        item { PromoSlider() }
+        item { TrustStrip() }
+        when (uiState) {
+            is CatalogueHomeUiState.Loading -> item { LoadingState() }
+            is CatalogueHomeUiState.Error -> item { ErrorState() }
+            is CatalogueHomeUiState.Success -> {
+                item {
+                    Text(
+                        text = stringResource(R.string.catalogue_our_services),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, fontSize = 19.sp),
+                        color = TextPrimary,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                    )
+                }
+                val rows = uiState.categories.chunked(2)
+                items(rows) { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        row.forEach { cat ->
+                            if (photoFirstCatalogueEnabled) {
+                                PhotoFirstCategoryCard(
+                                    category = cat,
+                                    onClick = { onCategoryClick(cat.id) },
+                                    modifier = Modifier.weight(1f),
+                                )
+                            } else {
+                                CategoryCard(category = cat, onClick = { onCategoryClick(cat.id) }, modifier = Modifier.weight(1f))
+                            }
+                        }
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+            }
+        }
     }
 }
 

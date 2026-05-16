@@ -30,6 +30,7 @@ public sealed class BookingUiState {
 
     public data class BookingConfirmed(
         val bookingId: String,
+        val appliedCreditAmount: Int = 0,
     ) : BookingUiState()
 
     /**

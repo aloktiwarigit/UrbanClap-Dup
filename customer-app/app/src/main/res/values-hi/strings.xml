@@ -283,6 +283,8 @@
     <string name="bookings_error_title">बुकिंग रिफ्रेश नहीं हो सकी</string>
     <string name="bookings_error_body">आपकी आखिरी बुकिंग सेव है। नेटवर्क स्थिर होने पर फिर कोशिश करें।</string>
     <string name="bookings_retry">फिर कोशिश करें</string>
+    <string name="bookings_rate_booking">बुकिंग को रेट करें</string>
+    <string name="bookings_file_complaint">शिकायत दर्ज करें</string>
     <!-- Booking status labels -->
     <string name="booking_status_pending_payment">पेमेंट बाकी</string>
     <string name="booking_status_paid">कन्फर्म</string>
@@ -379,6 +381,17 @@
     <string name="delete_account_close_cta">बंद करें</string>
     <string name="delete_account_error_unknown">कुछ गलत हो गया। कृपया पुनः प्रयास करें।</string>
 
+    <!-- Complaint SLA countdown + history + reopen (E18-S02) -->
+    <string name="complaint_countdown_remaining">%1$s बचा है</string>
+    <string name="complaint_reopen">शिकायत फिर खोलें</string>
+    <string name="complaint_list_title">मेरी शिकायतें</string>
+    <string name="complaint_list_empty_title">अभी कोई शिकायत नहीं</string>
+    <string name="complaint_list_empty_body">आपने अभी तक कोई शिकायत दर्ज नहीं की है।</string>
+    <string name="complaint_list_status_open">खुली</string>
+    <string name="complaint_list_status_acknowledged">स्वीकृत</string>
+    <string name="complaint_list_status_resolved">हल हो गई</string>
+    <string name="complaint_list_status_reopened">फिर खोली गई</string>
+
     <!-- Wallet screen (E13-S02) -->
     <string name="wallet_screen_title">मेरा वॉलेट</string>
     <string name="wallet_back_content_desc">वापस</string>
@@ -389,4 +402,29 @@
     <string name="wallet_no_transactions">अभी तक कोई लेन-देन नहीं।</string>
     <string name="wallet_retry_cta">पुनः प्रयास करें</string>
     <string name="wallet_chip_content_desc">वॉलेट बैलेंस</string>
+
+    <!-- No-show credit banner + notification (E13-S03) -->
+    <string name="no_show_credit_notification_title">क्रेडिट जुड़ा!</string>
+    <string name="no_show_credit_notification_body">आपके वॉलेट में नो-शो क्रेडिट जुड़ गया।</string>
+    <string name="no_show_credit_banner">आपको %1$s क्रेडिट मिला! अगली बुकिंग पर लागू होगा।</string>
+    <string name="no_show_credit_banner_dismiss">बंद करें</string>
+
+    <!-- Customer home durable hooks (E11-S03) -->
+    <string name="home_pending_actions_label">कार्रवाई जरूरी</string>
+    <string name="home_pending_action_tap_hint">जारी रखने के लिए टैप करें</string>
+    <string name="home_action_rate_booking">बुकिंग रेट करें</string>
+    <string name="home_action_approve_addon">ऐड-ऑन अनुरोध स्वीकृत करें</string>
+    <string name="home_action_complaint_update">शिकायत अपडेट</string>
+    <string name="home_action_support_followup">सपोर्ट फॉलो-अप</string>
+    <string name="home_active_booking_label">सक्रिय बुकिंग</string>
+    <string name="home_active_booking_track_cta">ट्रैक करें</string>
+    <string name="home_active_booking_approve_cta">स्वीकृत करें</string>
+    <string name="home_recent_bookings_label">हाल की बुकिंग</string>
+    <string name="home_recent_booking_rate">रेट करें</string>
+    <string name="home_recent_booking_complain">शिकायत</string>
+
+    <!-- Credit-apply toggle on booking summary (E13-S04) -->
+    <string name="wallet_apply_credit_toggle">₹%1$s क्रेडिट लागू करें</string>
+    <string name="wallet_credit_original_price">मूल कीमत: ₹%1$s</string>
+    <string name="wallet_credit_applied_banner">₹%1$s क्रेडिट लागू किया गया</string>
 </resources>

@@ -40,6 +40,15 @@ public interface FeatureFlags {
      * Default: OFF (false) — flipped ON after E13-S02 rollout.
      */
     public fun walletVisible(): Boolean
+
+    /**
+     * When `true`, CategoryCard and ServiceCard render photo-first (AsyncImage
+     * from Firebase CDN). When `false`, the legacy icon-tile layout is used.
+     *
+     * Flag name: `customer.photo-first-catalogue.enabled`
+     * Default: OFF (false) — flipped ON once CDN assets are commissioned.
+     */
+    public fun photoFirstCatalogueEnabled(): Boolean
 }
 
 /**
@@ -55,12 +64,11 @@ public class BuildConfigFeatureFlags
 
         override fun walletVisible(): Boolean = false
 
+        override fun photoFirstCatalogueEnabled(): Boolean = false
+
         private companion object {
-            /**
-             * Set via build.gradle `buildConfigField` when the flag should be hardcoded ON
-             * for testing builds. Production defaults to false; the live value comes from
-             * GrowthBook once E13-S05 wires the GrowthBook FeatureFlags impl.
-             */
             const val TRUECALLER_SERVER_VERIFY_V2_ENABLED: Boolean = false
         }
     }
+
+// GrowthBookFeatureFlags is defined in GrowthBookFeatureFlags.kt — stub removed to avoid redeclaration.

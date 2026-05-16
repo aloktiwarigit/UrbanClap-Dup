@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.homeservices.customer.domain.complaint.ComplaintReason
 import com.homeservices.customer.domain.complaint.GetComplaintStatusUseCase
 import com.homeservices.customer.domain.complaint.PhotoUploadUseCase
+import com.homeservices.customer.domain.complaint.ReopenComplaintUseCase
 import com.homeservices.customer.domain.complaint.SubmitComplaintUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +30,8 @@ public sealed class ComplaintUiState {
         val complaintId: String,
         val acknowledgeDeadlineAt: String?,
         val status: String = "NEW",
+        val isAcknowledged: Boolean = false,
+        val isResolved: Boolean = false,
     ) : ComplaintUiState()
 
     public data class Error(
@@ -37,6 +40,8 @@ public sealed class ComplaintUiState {
 }
 
 private const val UNKNOWN_ERROR_FALLBACK = "Unknown error"
+private const val STATUS_ACKNOWLEDGED = "ACKNOWLEDGED"
+private const val STATUS_RESOLVED = "RESOLVED"
 
 @HiltViewModel
 public class ComplaintViewModel
@@ -45,6 +50,7 @@ public class ComplaintViewModel
         private val submitUseCase: SubmitComplaintUseCase,
         private val photoUploadUseCase: PhotoUploadUseCase,
         private val getStatusUseCase: GetComplaintStatusUseCase,
+        private val reopenUseCase: ReopenComplaintUseCase,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<ComplaintUiState>(ComplaintUiState.Idle())
         public val uiState: StateFlow<ComplaintUiState> = _uiState.asStateFlow()
@@ -59,6 +65,8 @@ public class ComplaintViewModel
                                 complaintId = existing.id,
                                 acknowledgeDeadlineAt = existing.acknowledgeDeadlineAt,
                                 status = existing.status ?: "NEW",
+                                isAcknowledged = existing.status == STATUS_ACKNOWLEDGED,
+                                isResolved = existing.status == STATUS_RESOLVED,
                             )
                     }
                 }
@@ -117,6 +125,8 @@ public class ComplaintViewModel
                                         complaintId = dto.id,
                                         acknowledgeDeadlineAt = dto.acknowledgeDeadlineAt,
                                         status = dto.status ?: "NEW",
+                                        isAcknowledged = dto.status == STATUS_ACKNOWLEDGED,
+                                        isResolved = dto.status == STATUS_RESOLVED,
                                     )
                                 },
                                 onFailure = { e ->
@@ -125,6 +135,29 @@ public class ComplaintViewModel
                                 },
                             )
                     }
+            }
+        }
+
+        public fun onReopen() {
+            val current = _uiState.value as? ComplaintUiState.Success ?: return
+            viewModelScope.launch {
+                reopenUseCase(current.complaintId).collect { result ->
+                    _uiState.value =
+                        result.fold(
+                            onSuccess = { dto ->
+                                ComplaintUiState.Success(
+                                    complaintId = dto.id,
+                                    acknowledgeDeadlineAt = dto.acknowledgeDeadlineAt,
+                                    status = dto.status ?: "REOPENED",
+                                    isAcknowledged = dto.status == STATUS_ACKNOWLEDGED,
+                                    isResolved = dto.status == STATUS_RESOLVED,
+                                )
+                            },
+                            onFailure = { e ->
+                                ComplaintUiState.Error(e.message ?: UNKNOWN_ERROR_FALLBACK)
+                            },
+                        )
+                }
             }
         }
 

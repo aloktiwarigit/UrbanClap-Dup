@@ -101,4 +101,40 @@ public class BookingSummaryScreenPaparazziTest {
             }
         }
     }
+
+    // E13-S04: credit toggle visible when wallet balance > 0
+    @Ignore("CI-only: trigger paparazzi-record.yml workflow_dispatch to record goldens on Linux CI")
+    @Test
+    public fun bookingSummaryWithCreditToggle_lightTheme() {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                BookingSummaryContent(
+                    uiState = readyState,
+                    walletBalanceInPaise = 50000L,
+                    applyCreditToggle = true,
+                    onApplyCreditChanged = {},
+                    onCreateBooking = {},
+                    onBack = {},
+                )
+            }
+        }
+    }
+
+    // E13-S04: credit toggle hidden when wallet balance == 0
+    @Ignore("CI-only: trigger paparazzi-record.yml workflow_dispatch to record goldens on Linux CI")
+    @Test
+    public fun bookingSummaryWithCreditToggleHidden_lightTheme() {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                BookingSummaryContent(
+                    uiState = readyState,
+                    walletBalanceInPaise = 0L,
+                    applyCreditToggle = false,
+                    onApplyCreditChanged = {},
+                    onCreateBooking = {},
+                    onBack = {},
+                )
+            }
+        }
+    }
 }

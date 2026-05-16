@@ -4,15 +4,8 @@ import com.homeservices.customer.data.catalogue.remote.dto.CategoriesResponse
 import com.homeservices.customer.data.catalogue.remote.dto.ServiceDto
 import retrofit2.http.GET
 import retrofit2.http.Path
+import retrofit2.http.Query
 
-/**
- * Public catalogue endpoints — no authentication required.
- *
- * The API returns categories with their services embedded (see [CategoriesResponse]),
- * so a single round-trip provides everything needed to render the catalogue home and
- * the per-category service list. There is intentionally no separate
- * `/v1/services?categoryId=` endpoint; the client filters from the categories response.
- */
 public interface CatalogueApiService {
     @GET("v1/categories")
     public suspend fun getCategories(): CategoriesResponse
@@ -21,4 +14,9 @@ public interface CatalogueApiService {
     public suspend fun getServiceDetail(
         @Path("id") id: String,
     ): ServiceDto
+
+    @GET("v1/services")
+    public suspend fun getServicesForCategory(
+        @Query("categoryId") categoryId: String,
+    ): List<ServiceDto>
 }

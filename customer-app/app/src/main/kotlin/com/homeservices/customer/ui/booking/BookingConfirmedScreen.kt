@@ -35,18 +35,23 @@ import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTimelineStep
 
+private const val PAISE_PER_RUPEE = 100
+
 /**
  * Booking confirmation screen.
  *
  * E11-S05b-1 additive change: [technicianId] is an optional parameter (default null).
  * When non-null, [TrustDossierViewModel] is loaded and [TrustDossierCard] is shown in
  * compact mode below the timeline. When null, the card is not rendered.
+ *
+ * E13-S04 additive change: [appliedCreditAmount] shows a credit-applied banner when > 0.
  */
 @Composable
 internal fun BookingConfirmedScreen(
     bookingId: String,
     onBackToHome: () -> Unit,
     onTrackBooking: (bookingId: String) -> Unit = {},
+    appliedCreditAmount: Int = 0,
     technicianId: String? = null,
 ) {
     val trustDossierViewModel: TrustDossierViewModel? =
@@ -66,6 +71,7 @@ internal fun BookingConfirmedScreen(
 
     ConfirmationBody(
         bookingId = bookingId,
+        appliedCreditAmount = appliedCreditAmount,
         technicianId = technicianId,
         trustUiState = trustUiState,
         onBackToHome = onBackToHome,
@@ -76,6 +82,7 @@ internal fun BookingConfirmedScreen(
 @Composable
 private fun ConfirmationBody(
     bookingId: String,
+    appliedCreditAmount: Int = 0,
     technicianId: String?,
     trustUiState: TrustDossierUiState,
     onBackToHome: () -> Unit,
@@ -107,6 +114,25 @@ private fun ConfirmationBody(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (appliedCreditAmount > 0) {
+            Spacer(Modifier.height(12.dp))
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.tertiaryContainer,
+            ) {
+                Text(
+                    text =
+                        stringResource(
+                            R.string.wallet_credit_applied_banner,
+                            appliedCreditAmount / PAISE_PER_RUPEE,
+                        ),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                )
+            }
+        }
         Spacer(Modifier.height(18.dp))
         ConfirmationTimeline()
         Spacer(Modifier.height(14.dp))
