@@ -13,13 +13,13 @@ import org.junit.jupiter.api.Test
  * JOB_OFFER is used as the assignment signal per E11 spec §3.1 and plan A2.
  */
 public class PendingActionTypeRoundTripTest {
-
-    private val technicianDashboardTypes = listOf(
-        PendingActionType.JOB_OFFER,
-        PendingActionType.RATING_PROMPT_TECHNICIAN,
-        PendingActionType.RATING_RECEIVED,
-        PendingActionType.EARNINGS_UPDATE,
-    )
+    private val technicianDashboardTypes =
+        listOf(
+            PendingActionType.JOB_OFFER,
+            PendingActionType.RATING_PROMPT_TECHNICIAN,
+            PendingActionType.RATING_RECEIVED,
+            PendingActionType.EARNINGS_UPDATE,
+        )
 
     @Test
     public fun `all dashboard-relevant types round-trip through valueOf`() {

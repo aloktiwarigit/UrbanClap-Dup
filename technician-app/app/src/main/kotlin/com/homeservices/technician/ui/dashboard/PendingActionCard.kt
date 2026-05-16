@@ -28,6 +28,10 @@ import com.homeservices.corenav.PendingAction
 import com.homeservices.corenav.PendingActionType
 import com.homeservices.technician.R
 
+private const val MUTED_ALPHA = 0.7f
+private const val ICON_BG_ALPHA = 0.12f
+private const val MS_PER_SECOND = 1_000L
+
 private val Amber = Color(0xFFB86B00)
 private val AmberSoft = Color(0xFFFFF3E0)
 private val Teal = Color(0xFF006064)
@@ -46,7 +50,11 @@ internal fun PendingActionCard(
     onClick: (PendingAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val (accent, bg, icon, label) = cardVisuals(action.type)
+    val visuals = cardVisuals(action.type)
+    val accent = visuals.accent
+    val bg = visuals.bg
+    val icon = visuals.icon
+    val label = visuals.label
 
     Surface(
         onClick = { onClick(action) },
@@ -61,16 +69,17 @@ internal fun PendingActionCard(
         ) {
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = accent.copy(alpha = 0.12f),
+                color = accent.copy(alpha = ICON_BG_ALPHA),
                 modifier = Modifier.size(40.dp),
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     tint = accent,
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .size(24.dp),
+                    modifier =
+                        Modifier
+                            .padding(8.dp)
+                            .size(24.dp),
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
@@ -80,12 +89,12 @@ internal fun PendingActionCard(
                     fontWeight = FontWeight.SemiBold,
                     color = accent,
                 )
-                if (action.expiresAt != null) {
-                    val remaining = ((action.expiresAt - System.currentTimeMillis()) / 1_000).coerceAtLeast(0)
+                action.expiresAt?.let { expiresAt ->
+                    val remaining = ((expiresAt - System.currentTimeMillis()) / MS_PER_SECOND).coerceAtLeast(0)
                     Text(
                         text = "${remaining}s",
                         style = MaterialTheme.typography.labelSmall,
-                        color = accent.copy(alpha = 0.7f),
+                        color = accent.copy(alpha = MUTED_ALPHA),
                     )
                 }
             }
@@ -104,17 +113,33 @@ private data class CardVisuals(
 private fun cardVisuals(type: PendingActionType): CardVisuals =
     when (type) {
         PendingActionType.JOB_OFFER ->
-            CardVisuals(Amber, AmberSoft, Icons.Default.Work,
-                stringResource(R.string.dashboard_pending_action_job_offer))
+            CardVisuals(
+                Amber,
+                AmberSoft,
+                Icons.Default.Work,
+                stringResource(R.string.dashboard_pending_action_job_offer),
+            )
         PendingActionType.RATING_PROMPT_TECHNICIAN ->
-            CardVisuals(Blue, BlueSoft, Icons.Default.Star,
-                stringResource(R.string.dashboard_pending_action_rating_prompt))
+            CardVisuals(
+                Blue,
+                BlueSoft,
+                Icons.Default.Star,
+                stringResource(R.string.dashboard_pending_action_rating_prompt),
+            )
         PendingActionType.RATING_RECEIVED ->
-            CardVisuals(Purple, PurpleSoft, Icons.Default.Star,
-                stringResource(R.string.dashboard_pending_action_rating_received))
+            CardVisuals(
+                Purple,
+                PurpleSoft,
+                Icons.Default.Star,
+                stringResource(R.string.dashboard_pending_action_rating_received),
+            )
         PendingActionType.EARNINGS_UPDATE ->
-            CardVisuals(Teal, TealSoft, Icons.Default.AccountBalanceWallet,
-                stringResource(R.string.dashboard_pending_action_earnings_update))
+            CardVisuals(
+                Teal,
+                TealSoft,
+                Icons.Default.AccountBalanceWallet,
+                stringResource(R.string.dashboard_pending_action_earnings_update),
+            )
         else ->
             CardVisuals(Green, GreenSoft, Icons.Default.Work, type.name)
     }

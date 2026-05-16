@@ -83,12 +83,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.corenav.PendingAction
 import com.homeservices.technician.R
 import com.homeservices.technician.domain.auth.model.AuthState
-import com.homeservices.technician.ui.dashboard.PendingActionCard
-import com.homeservices.technician.ui.dashboard.TechnicianDashboardViewModel
 import com.homeservices.technician.domain.availability.model.TechnicianAvailability
 import com.homeservices.technician.domain.earnings.model.EarningsSummary
 import com.homeservices.technician.domain.jobs.model.TechnicianBooking
 import com.homeservices.technician.domain.jobs.model.TechnicianBookingStatus
+import com.homeservices.technician.ui.dashboard.PendingActionCard
+import com.homeservices.technician.ui.dashboard.TechnicianDashboardViewModel
 import com.homeservices.technician.ui.earnings.EarningsUiState
 import com.homeservices.technician.ui.earnings.EarningsViewModel
 import kotlinx.coroutines.launch

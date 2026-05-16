@@ -42,7 +42,9 @@ import javax.inject.Inject
  *   - system (low) — misc/token rotation
  */
 @AndroidEntryPoint
-public class HomeservicesFcmService : FirebaseMessagingService() {
+@Suppress("TooManyFunctions") // FCM message types dispatch to dedicated handlers; extraction would obscure routing
+public class HomeservicesFcmService :
+    FirebaseMessagingService() {
     public companion object {
         public const val CHANNEL_OFFERS: String = "offers"
         public const val CHANNEL_BOOKINGS: String = "bookings"
@@ -395,7 +397,7 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
         val intent =
             Intent(this, MainActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                .putExtra("navigate_to", "rating/${bookingId}")
+                .putExtra("navigate_to", "rating/$bookingId")
         val pi =
             PendingIntent.getActivity(
                 this,
@@ -410,8 +412,7 @@ public class HomeservicesFcmService : FirebaseMessagingService() {
                 .setContentTitle(getString(com.homeservices.technician.R.string.fcm_rating_prompt_title))
                 .setContentText(
                     getString(com.homeservices.technician.R.string.fcm_rating_prompt_body, bookingId),
-                )
-                .setContentIntent(pi)
+                ).setContentIntent(pi)
                 .setAutoCancel(true)
                 .build()
         nm.notify(NOTIFICATION_ID_RATING_PROMPT, notification)

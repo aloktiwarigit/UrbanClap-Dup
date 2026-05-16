@@ -20,7 +20,6 @@ import org.junit.Test
  */
 @Ignore("Paparazzi goldens recorded on CI Linux only — see paparazzi-cross-os-goldens.md")
 public class PendingActionCardPaparazziTest {
-
     @get:Rule
     public val paparazzi: Paparazzi =
         Paparazzi(
@@ -28,7 +27,10 @@ public class PendingActionCardPaparazziTest {
             theme = "android:Theme.Material3.DayNight.NoActionBar",
         )
 
-    private fun makeAction(type: PendingActionType, priority: PendingActionPriority = PendingActionPriority.NORMAL): PendingAction =
+    private fun makeAction(
+        type: PendingActionType,
+        priority: PendingActionPriority = PendingActionPriority.NORMAL,
+    ): PendingAction =
         PendingAction(
             id = "test-${type.name}",
             userId = "tech-1",

@@ -32,7 +32,6 @@ import org.junit.jupiter.api.Test
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 public class TechnicianDashboardViewModelTest {
-
     private val dispatcher = UnconfinedTestDispatcher()
     private val pendingActionStore: PendingActionStore = mockk(relaxed = true)
     private val sessionManager: SessionManager = mockk()
@@ -103,12 +102,13 @@ public class TechnicianDashboardViewModelTest {
     @Test
     public fun `all five dashboard types are included when present`(): Unit =
         runTest(dispatcher) {
-            val actions = listOf(
-                makeAction("a1", PendingActionType.JOB_OFFER),
-                makeAction("a2", PendingActionType.RATING_PROMPT_TECHNICIAN),
-                makeAction("a3", PendingActionType.RATING_RECEIVED),
-                makeAction("a4", PendingActionType.EARNINGS_UPDATE),
-            )
+            val actions =
+                listOf(
+                    makeAction("a1", PendingActionType.JOB_OFFER),
+                    makeAction("a2", PendingActionType.RATING_PROMPT_TECHNICIAN),
+                    makeAction("a3", PendingActionType.RATING_RECEIVED),
+                    makeAction("a4", PendingActionType.EARNINGS_UPDATE),
+                )
             every { sessionManager.authState } returns authenticatedState()
             every { pendingActionStore.observeActive("tech-1") } returns flowOf(actions)
 
@@ -120,12 +120,13 @@ public class TechnicianDashboardViewModelTest {
     @Test
     public fun `complaint and kyc types are filtered out`(): Unit =
         runTest(dispatcher) {
-            val actions = listOf(
-                makeAction("c1", PendingActionType.COMPLAINT_UPDATE),
-                makeAction("k1", PendingActionType.KYC_RESUME),
-                makeAction("s1", PendingActionType.SUPPORT_FOLLOWUP),
-                makeAction("job1", PendingActionType.JOB_OFFER),
-            )
+            val actions =
+                listOf(
+                    makeAction("c1", PendingActionType.COMPLAINT_UPDATE),
+                    makeAction("k1", PendingActionType.KYC_RESUME),
+                    makeAction("s1", PendingActionType.SUPPORT_FOLLOWUP),
+                    makeAction("job1", PendingActionType.JOB_OFFER),
+                )
             every { sessionManager.authState } returns authenticatedState()
             every { pendingActionStore.observeActive("tech-1") } returns flowOf(actions)
 
@@ -140,11 +141,12 @@ public class TechnicianDashboardViewModelTest {
     @Test
     public fun `HIGH priority actions appear before LOW priority actions`(): Unit =
         runTest(dispatcher) {
-            val actions = listOf(
-                makeAction("low1", PendingActionType.EARNINGS_UPDATE, PendingActionPriority.LOW),
-                makeAction("high1", PendingActionType.JOB_OFFER, PendingActionPriority.HIGH),
-                makeAction("norm1", PendingActionType.RATING_PROMPT_TECHNICIAN, PendingActionPriority.NORMAL),
-            )
+            val actions =
+                listOf(
+                    makeAction("low1", PendingActionType.EARNINGS_UPDATE, PendingActionPriority.LOW),
+                    makeAction("high1", PendingActionType.JOB_OFFER, PendingActionPriority.HIGH),
+                    makeAction("norm1", PendingActionType.RATING_PROMPT_TECHNICIAN, PendingActionPriority.NORMAL),
+                )
             every { sessionManager.authState } returns authenticatedState()
             every { pendingActionStore.observeActive("tech-1") } returns flowOf(actions)
 
@@ -158,16 +160,21 @@ public class TechnicianDashboardViewModelTest {
     @Test
     public fun `within same priority older actions appear first`(): Unit =
         runTest(dispatcher) {
-            val actions = listOf(
-                makeAction("newer", PendingActionType.JOB_OFFER, PendingActionPriority.NORMAL, createdAt = 2_000L),
-                makeAction("older", PendingActionType.EARNINGS_UPDATE, PendingActionPriority.NORMAL, createdAt = 1_000L),
-            )
+            val actions =
+                listOf(
+                    makeAction("newer", PendingActionType.JOB_OFFER, PendingActionPriority.NORMAL, createdAt = 2_000L),
+                    makeAction("older", PendingActionType.EARNINGS_UPDATE, PendingActionPriority.NORMAL, createdAt = 1_000L),
+                )
             every { sessionManager.authState } returns authenticatedState()
             every { pendingActionStore.observeActive("tech-1") } returns flowOf(actions)
 
             val vm = buildViewModel()
 
-            assertThat(vm.pendingActions.value.first().id).isEqualTo("older")
+            assertThat(
+                vm.pendingActions.value
+                    .first()
+                    .id,
+            ).isEqualTo("older")
         }
 
     // ── Unauthenticated state ─────────────────────────────────────────────────
