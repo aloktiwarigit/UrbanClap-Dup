@@ -53,7 +53,7 @@ private fun NavGraphBuilder.catalogueGraph(
     navigation(startDestination = CatalogueRoutes.HOME, route = ROUTE_MAIN) {
         homeDestination(navController, featureFlags)
         walletDestination(navController)
-        serviceListDestination(navController)
+        serviceListDestination(navController, featureFlags)
         serviceDetailDestination(navController)
         // Complaint list — accessible from Settings → My Complaints
         composable(route = ComplaintRoutes.LIST) {
@@ -116,7 +116,10 @@ private fun NavGraphBuilder.walletDestination(navController: NavController) {
     }
 }
 
-private fun NavGraphBuilder.serviceListDestination(navController: NavController) {
+private fun NavGraphBuilder.serviceListDestination(
+    navController: NavController,
+    featureFlags: FeatureFlags,
+) {
     composable(
         route = CatalogueRoutes.SERVICE_LIST,
         arguments = listOf(navArgument("categoryId") { type = NavType.StringType }),
@@ -126,6 +129,7 @@ private fun NavGraphBuilder.serviceListDestination(navController: NavController)
             viewModel = vm,
             onServiceClick = { id -> navController.navigate(CatalogueRoutes.serviceDetail(id)) },
             onBack = { navController.popBackStack() },
+            photoFirstCatalogueEnabled = featureFlags.photoFirstCatalogueEnabled(),
         )
     }
 }
