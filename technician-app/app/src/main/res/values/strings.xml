@@ -128,4 +128,16 @@
     <string name="auth_mobile_placeholder">+91 98765 43210</string>
     <string name="auth_otp_label">6-digit code</string>
     <string name="auth_resend_code">Resend code</string>
+
+    <!-- FCM tray notifications — dashboard types (E11-S04) -->
+    <string name="fcm_earnings_update_title">Earnings updated</string>
+    <string name="fcm_earnings_update_body">Your earnings have been updated. Tap to view.</string>
+    <string name="fcm_rating_prompt_title">Rate your job</string>
+    <string name="fcm_rating_prompt_body">Tap to submit your rating for booking %1$s.</string>
+
+    <!-- Dashboard pending-action cards (E11-S04) -->
+    <string name="dashboard_pending_action_job_offer">New job offer — expires soon</string>
+    <string name="dashboard_pending_action_rating_prompt">Rate this job</string>
+    <string name="dashboard_pending_action_rating_received">Rating received — view feedback</string>
+    <string name="dashboard_pending_action_earnings_update">Earnings updated</string>
 </resources>
