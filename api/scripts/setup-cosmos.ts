@@ -95,6 +95,15 @@ async function main() {
     });
     console.log(`Container '${leaseId}' ready.`);
   }
+
+  // E16-S02: Slot holds for conflict locking — partition by composite serviceId|date key.
+  // Default TTL = 30 s (soft hold). commitHold sets TTL = -1 on the doc to make permanent.
+  await database.containers.createIfNotExists({
+    id: 'slot_holds',
+    partitionKey: { paths: ['/servicePartitionKey'] },
+    defaultTtl: 30,
+  });
+  console.log("Container 'slot_holds' ready.");
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

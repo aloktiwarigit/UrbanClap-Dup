@@ -45,7 +45,16 @@ vi.mock('../../src/services/dispatcher.service.js', () => ({
 
 vi.mock('../../src/cosmos/catalogue-repository.js', () => ({
   catalogueRepo: {
-    getServiceByIdCrossPartition: vi.fn().mockResolvedValue({ id: 'svc-1', name: 'AC Deep Clean', basePrice: 59900, isActive: true }),
+    // durationMinutes: 120 → generates 08:00-10:00, 10:00-12:00, … slots so '10:00-12:00' passes
+    getServiceByIdCrossPartition: vi.fn().mockResolvedValue({ id: 'svc-1', name: 'AC Deep Clean', basePrice: 59900, isActive: true, durationMinutes: 120 }),
+  },
+}));
+
+// E16-S02: slot-hold gate — mock so existing tests don't need Cosmos
+vi.mock('../../src/cosmos/slot-holds-repository.js', () => ({
+  slotHoldsRepo: {
+    createHold: vi.fn().mockResolvedValue({ id: 'svc-1|2026-05-01|10:00-12:00', servicePartitionKey: 'svc-1|2026-05-01', serviceId: 'svc-1', date: '2026-05-01', window: '10:00-12:00', customerId: 'cust-1', heldAt: new Date().toISOString() }),
+    commitHold: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
