@@ -114,14 +114,13 @@ internal class ActiveJobViewModel
                     if (connected) repository.syncPendingTransitions()
                 }
             }
-            // E11-S05a: react to server-confirmed booking-status pushes.
+            // E11-S05a: react to server-confirmed booking-status pushes. Any matching
+            // event triggers a refresh — ActiveJobRepository.getActiveJob is backed by
+            // in-memory state, not polling, so without this the screen stays stale on
+            // ASSIGNED / EN_ROUTE / IN_PROGRESS transitions that arrive via FCM.
             viewModelScope.launch {
                 bookingStatusEventBus.events.collect { event ->
-                    if (event.bookingId != bookingId) return@collect
-                    when (event.newStatus) {
-                        "PRICE_APPROVED", "PRICE_REJECTED" -> repository.startObserving(bookingId)
-                        else -> Unit
-                    }
+                    if (event.bookingId == bookingId) repository.startObserving(bookingId)
                 }
             }
             // E11-S05a: derive photoUploadPending from the local pending-actions table.

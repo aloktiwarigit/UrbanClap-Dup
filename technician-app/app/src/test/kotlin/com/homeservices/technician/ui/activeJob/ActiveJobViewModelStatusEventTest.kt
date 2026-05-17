@@ -150,7 +150,7 @@ public class ActiveJobViewModelStatusEventTest {
         }
 
     @Test
-    public fun `unhandled newStatus does not call startObserving again`(): Unit =
+    public fun `canonical status event also refreshes — getActiveJob is in-memory not polling`(): Unit =
         runTest(testDispatcher) {
             val vm = buildVm()
             @Suppress("UNUSED_EXPRESSION")
@@ -161,6 +161,8 @@ public class ActiveJobViewModelStatusEventTest {
             )
             advanceUntilIdle()
 
-            coVerify(exactly = 1) { repository.startObserving("bk-1") }
+            // ActiveJobRepository.getActiveJob is in-memory; without this refresh the screen
+            // would stay stale on ASSIGNED / EN_ROUTE / IN_PROGRESS pushes.
+            coVerify(atLeast = 2) { repository.startObserving("bk-1") }
         }
 }
