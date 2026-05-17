@@ -22,6 +22,26 @@ export async function sendBookingStatusUpdatePush(payload: {
   });
 }
 
+export async function sendTechnicianBookingStatusUpdatePush(payload: {
+  technicianId: string;
+  bookingId: string;
+  status: string;
+  priceApprovedPaise?: number;
+}): Promise<void> {
+  const data: Record<string, string> = {
+    type: 'BOOKING_STATUS_UPDATE',
+    bookingId: payload.bookingId,
+    status: payload.status,
+  };
+  if (payload.priceApprovedPaise !== undefined) {
+    data.priceApprovedPaise = String(payload.priceApprovedPaise);
+  }
+  await getFirebaseAdmin().messaging().send({
+    topic: `technician_${payload.technicianId}`,
+    data,
+  });
+}
+
 export async function sendLocationUpdatePush(payload: {
   customerId: string;
   bookingId: string;
