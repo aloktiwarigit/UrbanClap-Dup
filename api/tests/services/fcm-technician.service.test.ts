@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const sendMock = vi.fn().mockResolvedValue('mid-1');
+// vi.hoisted ensures sendMock exists before the hoisted vi.mock factory runs,
+// preventing any TDZ/initialization-order failure across Vitest versions.
+const { sendMock } = vi.hoisted(() => ({
+  sendMock: vi.fn().mockResolvedValue('mid-1'),
+}));
 
 vi.mock('../../src/services/firebaseAdmin.js', () => ({
   getFirebaseAdmin: () => ({ messaging: () => ({ send: sendMock }) }),
