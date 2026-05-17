@@ -54,14 +54,31 @@ public class HomeservicesFcmServiceBookingStatusTest {
     // ── BOOKING_STATUS_UPDATE ─────────────────────────────────────────────────
 
     @Test
-    public fun `BOOKING_STATUS_UPDATE — posts BookingStatusEvent with bookingId and newStatus`() {
+    public fun `BOOKING_STATUS_UPDATE — reads canonical 'status' key from api fcm payload`() {
+        val data =
+            mapOf(
+                "type" to "BOOKING_STATUS_UPDATE",
+                "bookingId" to "bk-1",
+                "status" to "ASSIGNED",
+            )
+        // showBookingStatusNotification touches Android OS — NPE absorbed
+        runCatching { service.handleMessageData(data) }
+
+        verify {
+            bookingStatusEventBus.post(
+                BookingStatusEvent(bookingId = "bk-1", newStatus = "ASSIGNED", priceApprovedPaise = null),
+            )
+        }
+    }
+
+    @Test
+    public fun `BOOKING_STATUS_UPDATE — accepts legacy 'newStatus' key as fallback`() {
         val data =
             mapOf(
                 "type" to "BOOKING_STATUS_UPDATE",
                 "bookingId" to "bk-1",
                 "newStatus" to "ASSIGNED",
             )
-        // showBookingStatusNotification touches Android OS — NPE absorbed
         runCatching { service.handleMessageData(data) }
 
         verify {
@@ -77,7 +94,7 @@ public class HomeservicesFcmServiceBookingStatusTest {
             mapOf(
                 "type" to "BOOKING_STATUS_UPDATE",
                 "bookingId" to "bk-2",
-                "newStatus" to "PRICE_APPROVED",
+                "status" to "PRICE_APPROVED",
                 "priceApprovedPaise" to "12500",
             )
         runCatching { service.handleMessageData(data) }
@@ -91,7 +108,7 @@ public class HomeservicesFcmServiceBookingStatusTest {
 
     @Test
     public fun `BOOKING_STATUS_UPDATE — missing bookingId returns early and does not post`() {
-        val data = mapOf("type" to "BOOKING_STATUS_UPDATE", "newStatus" to "ASSIGNED")
+        val data = mapOf("type" to "BOOKING_STATUS_UPDATE", "status" to "ASSIGNED")
 
         service.handleMessageData(data)
 
@@ -99,7 +116,7 @@ public class HomeservicesFcmServiceBookingStatusTest {
     }
 
     @Test
-    public fun `BOOKING_STATUS_UPDATE — missing newStatus returns early and does not post`() {
+    public fun `BOOKING_STATUS_UPDATE — missing status and newStatus returns early and does not post`() {
         val data = mapOf("type" to "BOOKING_STATUS_UPDATE", "bookingId" to "bk-1")
 
         service.handleMessageData(data)

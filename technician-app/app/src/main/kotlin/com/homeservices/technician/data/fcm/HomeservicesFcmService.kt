@@ -189,7 +189,10 @@ public class HomeservicesFcmService :
         when (data["type"]) {
             "BOOKING_STATUS_UPDATE" -> {
                 val bookingId = data["bookingId"] ?: return
-                val newStatus = data["newStatus"] ?: return
+                // Canonical wire key is `status` (api/src/services/fcm.service.ts +
+                // CustomerFirebaseMessagingService.handleBookingStatusUpdate). `newStatus`
+                // accepted as a fallback for forward-compat with future producers.
+                val newStatus = data["status"] ?: data["newStatus"] ?: return
                 val priceApprovedPaise = data["priceApprovedPaise"]?.toLongOrNull()
                 bookingStatusEventBus.post(
                     BookingStatusEvent(
