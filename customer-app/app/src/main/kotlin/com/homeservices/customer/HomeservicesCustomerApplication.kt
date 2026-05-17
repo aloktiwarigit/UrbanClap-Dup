@@ -3,6 +3,8 @@ package com.homeservices.customer
 import android.app.Application
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
+import com.google.android.libraries.places.api.Places
+import com.homeservices.customer.BuildConfig
 import com.homeservices.customer.domain.flags.GrowthBookFeatureFlags
 import com.homeservices.customer.domain.locale.LocaleRepository
 import com.homeservices.customer.firebase.CustomerFirebaseMessagingService
@@ -36,6 +38,9 @@ public class HomeservicesCustomerApplication : Application() {
         super.onCreate()
         SentryInitializer.init(this)
         CustomerFirebaseMessagingService.registerChannels(this)
+        if (BuildConfig.MAPS_API_KEY.isNotBlank()) {
+            Places.initializeWithNewPlacesApiEnabled(this, BuildConfig.MAPS_API_KEY)
+        }
 
         // Best-effort async flag refresh — non-blocking, fire-and-forget.
         // Uses a SupervisorJob so a failure here never propagates to sibling coroutines.
