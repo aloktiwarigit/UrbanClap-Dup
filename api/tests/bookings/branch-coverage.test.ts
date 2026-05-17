@@ -30,6 +30,7 @@ vi.mock('../../src/cosmos/booking-repository.js', () => ({
 
 vi.mock('../../src/services/fcm.service.js', () => ({
   sendPriceApprovalPush: vi.fn(),
+  sendTechnicianBookingStatusUpdatePush: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../../src/middleware/requireCustomer.js', () => ({
