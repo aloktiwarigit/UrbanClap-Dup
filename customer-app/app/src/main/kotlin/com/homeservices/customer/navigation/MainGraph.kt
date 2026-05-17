@@ -188,6 +188,7 @@ private fun NavGraphBuilder.slotPickerDestination(navController: NavController) 
         val serviceId = backStackEntry.arguments?.getString("serviceId") ?: ""
         val categoryId = backStackEntry.arguments?.getString("categoryId") ?: ""
         SlotPickerScreen(
+            serviceId = serviceId,
             onSlotSelected = { slot ->
                 vm.pendingServiceId = serviceId
                 vm.pendingCategoryId = categoryId

@@ -56,8 +56,14 @@
     <string name="slot_picker_heading">Choose your slot</string>
     <string name="slot_picker_subtitle">Pick a convenient arrival window. You can review everything before payment.</string>
     <string name="slot_picker_date_label">Date</string>
-    <string name="slot_picker_time_label">Time</string>
-    <string name="slot_picker_next">Next</string>
+    <string name="slot_picker_morning_label">Morning</string>
+    <string name="slot_picker_afternoon_label">Afternoon</string>
+    <string name="slot_picker_evening_label">Evening</string>
+    <string name="slot_picker_loading_desc">Loading available slots</string>
+    <string name="slot_picker_error_label">Could not load slots. Please try again.</string>
+    <string name="slot_picker_retry_button">Retry</string>
+    <string name="slot_picker_confirm_slot">Confirm Slot</string>
+    <string name="slot_picker_no_slots_label">No slots available for this date</string>
     <string name="address_screen_title">Your Address</string>
     <string name="address_heading">Where should the technician come?</string>
     <string name="address_subtitle">Add the full service address so the technician can reach you without follow-up calls.</string>
