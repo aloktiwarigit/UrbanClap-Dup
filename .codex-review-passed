@@ -1,1 +1,1 @@
-{"timestamp":"2026-05-14T10:09:56-04:00","commit":"4d117ac2b46af74560d5049f28127ef7846f9bb1","reviewer":"codex","reviews":["W5-quality-floor: gpt-5.5 no CRITICAL/MAJOR","W1-network-foundation: gpt-5.5 2 rounds P1+P2 fixed inline"]}
+{"timestamp":"2026-05-16T23:21:00Z","commit":"64dac6c7","reviewer":"codex-cli 0.125.0","reviews":["E16-S03 photo-first catalogue UI: codex review --base main — clean pass, no correctness/build/runtime issues; changes limited to ServiceListScreen flag gating + shouldRenderCdnImage helper extraction + DTO/fallback/Paparazzi tests"]}

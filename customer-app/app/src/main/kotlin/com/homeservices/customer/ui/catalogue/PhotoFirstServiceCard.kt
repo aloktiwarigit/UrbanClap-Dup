@@ -88,7 +88,7 @@ internal fun PhotoFirstServiceCard(
 @Composable
 private fun PhotoServiceHeroImage(service: Service) {
     var imageLoadFailed by remember { mutableStateOf(false) }
-    val showImage = service.imageUrl.isNotBlank() && !imageLoadFailed
+    val showImage = shouldRenderCdnImage(service.imageUrl) && !imageLoadFailed
 
     if (showImage) {
         AsyncImage(
