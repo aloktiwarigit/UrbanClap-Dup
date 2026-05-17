@@ -140,4 +140,14 @@
     <string name="dashboard_pending_action_rating_prompt">Rate this job</string>
     <string name="dashboard_pending_action_rating_received">Rating received — view feedback</string>
     <string name="dashboard_pending_action_earnings_update">Earnings updated</string>
+
+    <!-- Job-execution durable hooks (E11-S05a) -->
+    <string name="photo_upload_pending_banner">Photo upload pending — tap Retry to resume</string>
+    <string name="photo_upload_pending_retry">Retry</string>
+    <string name="complete_job_confirm_title">Mark job complete?</string>
+    <string name="complete_job_confirm_body">Confirm that all work is done. The customer will be notified and you cannot undo this step.</string>
+    <string name="complete_job_confirm_cta">Mark complete</string>
+    <string name="complete_job_cancel_cta">Cancel</string>
+    <string name="booking_status_notification_title">Booking update</string>
+    <string name="booking_status_notification_body_default">Your booking status has changed.</string>
 </resources>

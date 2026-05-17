@@ -16,8 +16,6 @@ import com.homeservices.technician.domain.activeJob.model.LatLng
 import com.homeservices.technician.domain.auth.model.AuthState
 import com.homeservices.technician.domain.photo.UploadJobPhotoUseCase
 import com.homeservices.technician.domain.shield.FileShieldReportUseCase
-import com.homeservices.technician.domain.shield.model.ShieldReportResult
-import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -38,10 +36,10 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-public class ActiveJobViewModelShieldTest {
+public class ActiveJobViewModelCompletionConfirmTest {
     private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var repository: ActiveJobRepository
-    private lateinit var fileShieldReportUseCase: FileShieldReportUseCase
+    private lateinit var completeJobUseCase: CompleteJobUseCase
     private lateinit var viewModel: ActiveJobViewModel
 
     private fun aJob(status: ActiveJobStatus = ActiveJobStatus.IN_PROGRESS) =
@@ -61,16 +59,16 @@ public class ActiveJobViewModelShieldTest {
     public fun setUp() {
         Dispatchers.setMain(testDispatcher)
         repository = mockk(relaxed = true)
+        completeJobUseCase = mockk(relaxed = true)
         val startTripUseCase: StartTripUseCase = mockk(relaxed = true)
         val markReachedUseCase: MarkReachedUseCase = mockk(relaxed = true)
         val startWorkUseCase: StartWorkUseCase = mockk(relaxed = true)
-        val completeJobUseCase: CompleteJobUseCase = mockk(relaxed = true)
         val connectivityObserver: ConnectivityObserver = mockk()
         val uploadJobPhotoUseCase: UploadJobPhotoUseCase = mockk(relaxed = true)
+        val fileShieldReportUseCase: FileShieldReportUseCase = mockk(relaxed = true)
         val bookingStatusEventBus: BookingStatusEventBus = mockk(relaxed = true)
         val pendingActionStore: PendingActionStore = mockk(relaxed = true)
         val sessionManager: SessionManager = mockk(relaxed = true)
-        fileShieldReportUseCase = mockk()
         every { connectivityObserver.isConnected } returns emptyFlow()
         every { repository.getActiveJob("bk-1") } returns flowOf(aJob())
         every { repository.hasPendingTransitions } returns flowOf(false)
@@ -101,77 +99,61 @@ public class ActiveJobViewModelShieldTest {
     }
 
     @Test
-    public fun `onShowShieldSheet sets showShieldSheet=true`(): Unit =
-        runTest {
-            viewModel.onShowShieldSheet()
+    public fun `requestCompletionConfirm sets awaitingCompletionConfirm to true`(): Unit =
+        runTest(testDispatcher) {
+            viewModel.requestCompletionConfirm()
+
             val state = viewModel.uiState.value as ActiveJobUiState.Active
-            assertThat(state.showShieldSheet).isTrue()
+            assertThat(state.awaitingCompletionConfirm).isTrue()
         }
 
     @Test
-    public fun `onDismissShieldSheet clears sheet flag`(): Unit =
-        runTest {
-            viewModel.onShowShieldSheet()
-            viewModel.onDismissShieldSheet()
+    public fun `cancelCompletionConfirm clears the awaitingCompletionConfirm flag`(): Unit =
+        runTest(testDispatcher) {
+            viewModel.requestCompletionConfirm()
+            viewModel.cancelCompletionConfirm()
+
             val state = viewModel.uiState.value as ActiveJobUiState.Active
-            assertThat(state.showShieldSheet).isFalse()
+            assertThat(state.awaitingCompletionConfirm).isFalse()
         }
 
     @Test
-    public fun `fileShieldReport success sets shieldReportSuccess=true and closes sheet`(): Unit =
-        runTest {
-            coEvery { fileShieldReportUseCase.invoke("bk-1", "abusive") } returns
-                Result.success(ShieldReportResult("complaint-123"))
-            viewModel.onShowShieldSheet()
-
-            viewModel.fileShieldReport("abusive")
+    public fun `confirmCompletion clears flag and routes through photo capture for COMPLETED`(): Unit =
+        runTest(testDispatcher) {
+            viewModel.requestCompletionConfirm()
+            viewModel.confirmCompletion()
             advanceUntilIdle()
 
             val state = viewModel.uiState.value as ActiveJobUiState.Active
-            assertThat(state.shieldReportSuccess).isTrue()
-            assertThat(state.showShieldSheet).isFalse()
-            assertThat(state.shieldReportInProgress).isFalse()
-            coVerify { fileShieldReportUseCase.invoke("bk-1", "abusive") }
+            assertThat(state.awaitingCompletionConfirm).isFalse()
+            // FR-5.4: completion must go through PhotoCaptureScreen, so pendingPhotoStage is set
+            // and completeJobUseCase is only triggered later via onPhotoConfirmed → fireTransition.
+            assertThat(state.pendingPhotoStage).isEqualTo("COMPLETED")
+            coVerify(exactly = 0) { completeJobUseCase("bk-1") }
         }
 
     @Test
-    public fun `fileShieldReport failure sets shieldReportError`(): Unit =
-        runTest {
-            coEvery { fileShieldReportUseCase.invoke(any(), any()) } returns
-                Result.failure(RuntimeException("network"))
+    public fun `requestCompletionConfirm is a no-op when state is Loading`(): Unit =
+        runTest(testDispatcher) {
+            every { repository.getActiveJob("bk-1") } returns emptyFlow()
+            val savedStateHandle = SavedStateHandle(mapOf("bookingId" to "bk-1"))
+            val vm =
+                ActiveJobViewModel(
+                    savedStateHandle,
+                    repository,
+                    mockk(relaxed = true),
+                    mockk(relaxed = true),
+                    mockk(relaxed = true),
+                    completeJobUseCase,
+                    mockk<ConnectivityObserver>().also { every { it.isConnected } returns emptyFlow() },
+                    mockk(relaxed = true),
+                    mockk(relaxed = true),
+                    mockk<BookingStatusEventBus>().also { every { it.events } returns MutableSharedFlow() },
+                    mockk<PendingActionStore>().also { every { it.observeActive(any()) } returns flowOf(emptyList()) },
+                    mockk<SessionManager>().also { every { it.authState } returns MutableStateFlow(AuthState.Unauthenticated) },
+                )
 
-            viewModel.fileShieldReport("abusive")
-            advanceUntilIdle()
-
-            val state = viewModel.uiState.value as ActiveJobUiState.Active
-            assertThat(state.shieldReportError).isNotNull()
-            assertThat(state.shieldReportInProgress).isFalse()
-        }
-
-    @Test
-    public fun `consumeShieldReportSuccess clears the success flag`(): Unit =
-        runTest {
-            coEvery { fileShieldReportUseCase.invoke(any(), any()) } returns
-                Result.success(ShieldReportResult("c-1"))
-            viewModel.fileShieldReport("a")
-            advanceUntilIdle()
-            assertThat((viewModel.uiState.value as ActiveJobUiState.Active).shieldReportSuccess).isTrue()
-
-            viewModel.consumeShieldReportSuccess()
-
-            assertThat((viewModel.uiState.value as ActiveJobUiState.Active).shieldReportSuccess).isFalse()
-        }
-
-    @Test
-    public fun `consumeShieldReportError clears the error message`(): Unit =
-        runTest {
-            coEvery { fileShieldReportUseCase.invoke(any(), any()) } returns
-                Result.failure(RuntimeException("network"))
-            viewModel.fileShieldReport("a")
-            advanceUntilIdle()
-
-            viewModel.consumeShieldReportError()
-
-            assertThat((viewModel.uiState.value as ActiveJobUiState.Active).shieldReportError).isNull()
+            vm.requestCompletionConfirm()
+            assertThat(vm.uiState.value).isEqualTo(ActiveJobUiState.Loading)
         }
 }
