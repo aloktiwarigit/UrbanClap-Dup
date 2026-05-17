@@ -84,4 +84,37 @@ public interface PendingActionDao {
 
     @Query("DELETE FROM pending_actions")
     public suspend fun clearAll()
+
+    /**
+     * Look up the single active PHOTO_UPLOAD_PENDING row for a booking, if any.
+     * Used by the active-job ViewModel to decide whether to surface the retry banner.
+     */
+    @Query(
+        """
+        SELECT * FROM pending_actions
+        WHERE type = 'PHOTO_UPLOAD_PENDING'
+          AND entityId = :bookingId
+          AND status = 'ACTIVE'
+        LIMIT 1
+        """,
+    )
+    public suspend fun findActivePhotoUploadForBooking(bookingId: String): PendingActionEntity?
+
+    /**
+     * Tombstone any active PHOTO_UPLOAD_PENDING rows for this booking. Called once
+     * the queued upload succeeds — the technician should no longer see the banner.
+     */
+    @Query(
+        """
+        UPDATE pending_actions
+        SET status = 'RESOLVED', resolvedAt = :now
+        WHERE type = 'PHOTO_UPLOAD_PENDING'
+          AND entityId = :bookingId
+          AND status = 'ACTIVE'
+        """,
+    )
+    public suspend fun clearActivePhotoUploadForBooking(
+        bookingId: String,
+        now: Long,
+    )
 }

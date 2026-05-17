@@ -62,6 +62,27 @@ public class PendingActionStore(
         dao.clearAll()
     }
 
+    // ── E11-S05a job-execution durable hooks ──────────────────────────────────
+
+    /**
+     * Returns the single active PHOTO_UPLOAD_PENDING [PendingAction] for the given
+     * booking, or `null` if none exists. Used by retry orchestrators to decide
+     * whether to re-attempt a queued upload.
+     */
+    public suspend fun pendingPhotoUploadForBooking(bookingId: String): PendingAction? =
+        dao.findActivePhotoUploadForBooking(bookingId)?.toDomain()
+
+    /**
+     * Tombstones any active PHOTO_UPLOAD_PENDING row for [bookingId]. Call once the
+     * queued upload succeeds so the retry banner stops surfacing.
+     */
+    public suspend fun clearPhotoUploadPending(
+        bookingId: String,
+        now: Long = System.currentTimeMillis(),
+    ) {
+        dao.clearActivePhotoUploadForBooking(bookingId = bookingId, now = now)
+    }
+
     // ── Mapping helpers ───────────────────────────────────────────────────────
 
     private fun PendingActionEntity.toDomain(): PendingAction =
