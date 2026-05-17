@@ -203,7 +203,7 @@ private fun RatingForm(
             )
             // TODO(C-19): implement tip-chip composable here in E18-S03 follow-up once
             //  AwaitingPartner post-submit state is wired (after customer rates, show optional
-            //  tip-chip before navigating away). Tracked in E18-S03 ADR-0021.
+            //  tip-chip before navigating away). Tracked in E18-S03 ADR-0024.
         }
     }
 }
