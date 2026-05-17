@@ -2,6 +2,7 @@ package com.homeservices.customer.ui.booking
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.homeservices.customer.data.booking.di.IstClock
 import com.homeservices.customer.domain.booking.GetSlotAvailabilityUseCase
 import com.homeservices.customer.domain.booking.model.SlotWindow
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalTime
 import javax.inject.Inject
@@ -22,6 +24,7 @@ public class SlotPickerViewModel
     @Inject
     public constructor(
         private val getSlotAvailability: GetSlotAvailabilityUseCase,
+        @IstClock private val clock: Clock,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<SlotPickerUiState>(SlotPickerUiState.Loading)
         public val uiState: StateFlow<SlotPickerUiState> = _uiState.asStateFlow()
@@ -29,6 +32,18 @@ public class SlotPickerViewModel
         private var loadJob: Job? = null
         private var lastServiceId: String? = null
         private var lastRequestedDate: LocalDate? = null
+
+        public fun currentIstDate(): LocalDate = LocalDate.now(clock)
+
+        /**
+         * Idempotent first-time load. Safe to call on every recomposition: subsequent calls for the
+         * same serviceId are a no-op, preserving any user selection through configuration changes
+         * and back-stack restoration.
+         */
+        public fun ensureInitialLoad(serviceId: String) {
+            if (lastServiceId == serviceId) return
+            loadSlots(serviceId, currentIstDate())
+        }
 
         public fun loadSlots(
             serviceId: String,
@@ -77,8 +92,8 @@ public class SlotPickerViewModel
             slots: List<SlotWindow>,
             date: LocalDate,
         ): List<SlotWindow> {
-            if (date != LocalDate.now()) return slots
-            val nowMinute = LocalTime.now().toSecondOfDay() / SECONDS_PER_MINUTE
+            if (date != currentIstDate()) return slots
+            val nowMinute = LocalTime.now(clock).toSecondOfDay() / SECONDS_PER_MINUTE
             return slots.map { s ->
                 val startMinute = parseStartMinute(s.window)
                 if (startMinute != null && startMinute <= nowMinute) s.copy(available = false) else s

@@ -16,16 +16,21 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalTime
-import java.util.Locale
+import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 public class SlotPickerViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
     private val getSlots: GetSlotAvailabilityUseCase = mockk()
 
-    private val today: LocalDate = LocalDate.now()
+    // Frozen IST clock at 2026-05-20 10:30 IST (= 05:00 UTC). Eliminates time-of-day flakiness.
+    private val istZone: ZoneId = ZoneId.of("Asia/Kolkata")
+    private val frozenClock: Clock = Clock.fixed(Instant.parse("2026-05-20T05:00:00Z"), istZone)
+
+    private val today: LocalDate = LocalDate.of(2026, 5, 20)
     private val tomorrow: LocalDate = today.plusDays(1)
     private val serviceId = "svc-1"
 
@@ -44,12 +49,18 @@ public class SlotPickerViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun vm() = SlotPickerViewModel(getSlots)
+    private fun vm() = SlotPickerViewModel(getSlots, frozenClock)
 
     @Test
     public fun `initial state is Loading`(): Unit =
         runTest(dispatcher) {
             assertThat(vm().uiState.value).isInstanceOf(SlotPickerUiState.Loading::class.java)
+        }
+
+    @Test
+    public fun `currentIstDate returns the clock's date`(): Unit =
+        runTest(dispatcher) {
+            assertThat(vm().currentIstDate()).isEqualTo(today)
         }
 
     @Test
@@ -79,35 +90,27 @@ public class SlotPickerViewModelTest {
         }
 
     @Test
-    public fun `past-time filter marks slots whose start minute is before now as unavailable today`(): Unit =
+    public fun `past-time filter marks slots whose start minute is at or before now as unavailable today`(): Unit =
         runTest(dispatcher) {
-            val nowMinute = LocalTime.now().toSecondOfDay() / SECONDS_PER_MINUTE
-            // Past slot — always elapsed unless the test is in the very first minutes of the day.
-            val earlySlot = slot("00:00-02:00", available = true)
-            val futureStartMinute = (nowMinute + LOOK_AHEAD_MINUTES) % MINUTES_PER_DAY
-            val futureSlot =
-                slot(
-                    window =
-                        String.format(
-                            Locale.ROOT,
-                            "%02d:%02d-%02d:%02d",
-                            futureStartMinute / MINUTES_PER_HOUR,
-                            futureStartMinute % MINUTES_PER_HOUR,
-                            ((futureStartMinute + WINDOW_LENGTH_MINUTES) / MINUTES_PER_HOUR) % HOURS_PER_DAY,
-                            (futureStartMinute + WINDOW_LENGTH_MINUTES) % MINUTES_PER_HOUR,
-                        ),
-                    available = true,
-                )
-            every { getSlots(serviceId, today) } returns flowOf(Result.success(listOf(earlySlot, futureSlot)))
+            // Clock is 10:30 IST. Elapsed: 00:00-02:00, 08:00-10:00, 10:30-11:00 (>= 10:30? no, exactly).
+            // Future: 11:00-12:00, 14:00-16:00.
+            val past1 = slot("00:00-02:00")
+            val past2 = slot("08:00-10:00")
+            val borderline = slot("10:30-11:00") // start == now → treated as past per <= filter
+            val future1 = slot("11:00-12:00")
+            val future2 = slot("14:00-16:00")
+            every { getSlots(serviceId, today) } returns
+                flowOf(Result.success(listOf(past1, past2, borderline, future1, future2)))
 
             val v = vm()
             v.loadSlots(serviceId, today)
 
             val state = v.uiState.value as SlotPickerUiState.Loaded
-            val filteredEarly = state.filteredSlots.first { it.window == earlySlot.window }
-            assertThat(filteredEarly.available).isFalse()
-            val filteredFuture = state.filteredSlots.first { it.window == futureSlot.window }
-            assertThat(filteredFuture.available).isTrue()
+            assertThat(state.filteredSlots.first { it.window == past1.window }.available).isFalse()
+            assertThat(state.filteredSlots.first { it.window == past2.window }.available).isFalse()
+            assertThat(state.filteredSlots.first { it.window == borderline.window }.available).isFalse()
+            assertThat(state.filteredSlots.first { it.window == future1.window }.available).isTrue()
+            assertThat(state.filteredSlots.first { it.window == future2.window }.available).isTrue()
         }
 
     @Test
@@ -150,7 +153,6 @@ public class SlotPickerViewModelTest {
 
             val state = v.uiState.value as SlotPickerUiState.Loaded
             assertThat(state.date).isEqualTo(tomorrow)
-            // retry must reload the date that failed, not today
             verify(atLeast = 2) { getSlots(serviceId, tomorrow) }
         }
 
@@ -158,7 +160,7 @@ public class SlotPickerViewModelTest {
     public fun `retry uses the most recent requested date when user changed dates`(): Unit =
         runTest(dispatcher) {
             val later = tomorrow.plusDays(1)
-            every { getSlots(serviceId, tomorrow) } returns flowOf(Result.success(listOf(slot("10:00-12:00"))))
+            every { getSlots(serviceId, tomorrow) } returns flowOf(Result.success(listOf(slot("11:00-12:00"))))
             every { getSlots(serviceId, later) } returns flowOf(Result.failure(RuntimeException("boom")))
             val v = vm()
             v.loadSlots(serviceId, tomorrow)
@@ -183,7 +185,7 @@ public class SlotPickerViewModelTest {
     @Test
     public fun `date change resets selected`(): Unit =
         runTest(dispatcher) {
-            val s = slot("10:00-12:00")
+            val s = slot("11:00-12:00")
             every { getSlots(serviceId, tomorrow) } returns flowOf(Result.success(listOf(s)))
             val v = vm()
             v.loadSlots(serviceId, tomorrow)
@@ -195,11 +197,47 @@ public class SlotPickerViewModelTest {
 
             assertThat((v.uiState.value as SlotPickerUiState.Loaded).selected).isNull()
         }
-}
 
-private const val SECONDS_PER_MINUTE = 60
-private const val MINUTES_PER_HOUR = 60
-private const val HOURS_PER_DAY = 24
-private const val MINUTES_PER_DAY = MINUTES_PER_HOUR * HOURS_PER_DAY
-private const val LOOK_AHEAD_MINUTES = 90
-private const val WINDOW_LENGTH_MINUTES = 60
+    @Test
+    public fun `ensureInitialLoad loads on first call`(): Unit =
+        runTest(dispatcher) {
+            val s = slot("11:00-12:00")
+            every { getSlots(serviceId, today) } returns flowOf(Result.success(listOf(s)))
+
+            val v = vm()
+            v.ensureInitialLoad(serviceId)
+
+            verify(exactly = 1) { getSlots(serviceId, today) }
+            assertThat((v.uiState.value as SlotPickerUiState.Loaded).date).isEqualTo(today)
+        }
+
+    @Test
+    public fun `ensureInitialLoad is a no-op when same serviceId already loaded`(): Unit =
+        runTest(dispatcher) {
+            val s = slot("11:00-12:00")
+            every { getSlots(serviceId, today) } returns flowOf(Result.success(listOf(s)))
+            val v = vm()
+            v.ensureInitialLoad(serviceId)
+            v.selectSlot(s)
+
+            v.ensureInitialLoad(serviceId)
+
+            // No second call; selection preserved.
+            verify(exactly = 1) { getSlots(serviceId, today) }
+            assertThat((v.uiState.value as SlotPickerUiState.Loaded).selected).isEqualTo(s)
+        }
+
+    @Test
+    public fun `ensureInitialLoad reloads when serviceId changes`(): Unit =
+        runTest(dispatcher) {
+            every { getSlots(serviceId, today) } returns flowOf(Result.success(listOf(slot("11:00-12:00"))))
+            every { getSlots("svc-2", today) } returns flowOf(Result.success(listOf(slot("14:00-16:00"))))
+
+            val v = vm()
+            v.ensureInitialLoad(serviceId)
+            v.ensureInitialLoad("svc-2")
+
+            verify(exactly = 1) { getSlots(serviceId, today) }
+            verify(exactly = 1) { getSlots("svc-2", today) }
+        }
+}

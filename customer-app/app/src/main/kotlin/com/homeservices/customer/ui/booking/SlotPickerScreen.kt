@@ -58,10 +58,10 @@ internal fun SlotPickerScreen(
     viewModel: SlotPickerViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
-    val initialDate = LocalDate.now()
+    val initialDate = viewModel.currentIstDate()
 
     LaunchedEffect(serviceId) {
-        viewModel.loadSlots(serviceId, initialDate)
+        viewModel.ensureInitialLoad(serviceId)
     }
 
     Scaffold(
@@ -120,6 +120,7 @@ internal fun SlotPickerContent(
                 )
 
                 DateChipsRow(
+                    today = initialDate,
                     selectedDate = (state as? SlotPickerUiState.Loaded)?.date ?: initialDate,
                     onDateSelect = onDateSelect,
                 )
@@ -153,10 +154,10 @@ internal fun SlotPickerContent(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DateChipsRow(
+    today: LocalDate,
     selectedDate: LocalDate,
     onDateSelect: (LocalDate) -> Unit,
 ) {
-    val today = LocalDate.now()
     val dates = (0..6).map { today.plusDays(it.toLong()) }
     SlotCard(title = stringResource(R.string.slot_picker_date_label)) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
