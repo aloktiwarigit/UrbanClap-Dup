@@ -150,4 +150,15 @@
     <string name="complete_job_cancel_cta">Cancel</string>
     <string name="booking_status_notification_title">Booking update</string>
     <string name="booking_status_notification_body_default">Your booking status has changed.</string>
+
+    <!-- Onboarding placement durable hooks (E11-S05c) -->
+    <string name="kyc_verified_notification_title">KYC verified</string>
+    <string name="kyc_verified_notification_body">Your documents are approved. You can now receive jobs.</string>
+    <string name="kyc_rejected_notification_title">KYC rejected</string>
+    <string name="kyc_rejected_notification_body">Your KYC was not approved. Please re-submit your documents.</string>
+    <string name="onboarding_reminder_notification_title">Finish onboarding</string>
+    <string name="onboarding_reminder_notification_body">Complete your KYC to start receiving jobs.</string>
+    <string name="photo_upload_retry_banner_label">Photo upload queued</string>
+    <string name="photo_upload_retry_banner_action">Retry</string>
+    <string name="onboarding_kyc_queued_offline">KYC submission will be sent when you go online.</string>
 </resources>

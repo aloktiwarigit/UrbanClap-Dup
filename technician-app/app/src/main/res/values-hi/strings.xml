@@ -152,4 +152,15 @@
     <string name="complete_job_cancel_cta">रद्द करें</string>
     <string name="booking_status_notification_title">बुकिंग अपडेट</string>
     <string name="booking_status_notification_body_default">आपकी बुकिंग की स्थिति बदल गई है।</string>
+
+    <!-- Onboarding placement durable hooks (E11-S05c) -->
+    <string name="kyc_verified_notification_title">KYC सत्यापित</string>
+    <string name="kyc_verified_notification_body">आपके दस्तावेज़ स्वीकृत हो गए हैं। अब आप काम प्राप्त कर सकते हैं।</string>
+    <string name="kyc_rejected_notification_title">KYC अस्वीकृत</string>
+    <string name="kyc_rejected_notification_body">आपकी KYC स्वीकार नहीं हुई। कृपया दस्तावेज़ दोबारा जमा करें।</string>
+    <string name="onboarding_reminder_notification_title">ऑनबोर्डिंग पूरी करें</string>
+    <string name="onboarding_reminder_notification_body">काम पाने के लिए अपनी KYC पूरी करें।</string>
+    <string name="photo_upload_retry_banner_label">फोटो अपलोड बाकी है</string>
+    <string name="photo_upload_retry_banner_action">पुनः प्रयास</string>
+    <string name="onboarding_kyc_queued_offline">ऑनलाइन होने पर KYC जमा की जाएगी।</string>
 </resources>

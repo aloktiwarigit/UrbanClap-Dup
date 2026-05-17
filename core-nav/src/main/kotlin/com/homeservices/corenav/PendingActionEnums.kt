@@ -38,6 +38,21 @@ public enum class PendingActionType {
     /** Technician must resume incomplete KYC. New type introduced in E11. */
     KYC_RESUME,
 
+    /**
+     * Local-only (E11-S05c): a KYC document submission (PAN photo) was queued while
+     * offline. Surfaced as a status chip on the onboarding screen so the technician
+     * knows the upload will be sent once connectivity returns. Cleared when the queued
+     * submit succeeds.
+     */
+    KYC_SUBMIT_PENDING,
+
+    /**
+     * Local-only (E11-S05c): a KYC PAN photo upload failed transiently. Surfaced as a
+     * retry banner above the KYC form; the technician can tap "Retry" to replay the
+     * upload. Tombstoned once the upload succeeds.
+     */
+    PHOTO_UPLOAD_RETRY,
+
     /** A complaint has been updated. New type introduced in E11. Applies to both roles. */
     COMPLAINT_UPDATE,
 

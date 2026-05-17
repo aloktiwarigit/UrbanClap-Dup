@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
  * Mirrors the customer-app DAO contract exactly.
  */
 @Dao
+@Suppress("TooManyFunctions") // Room DAOs grow with per-feature query needs; splitting would invert call sites
 public interface PendingActionDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     public suspend fun upsertAll(rows: List<PendingActionEntity>)
@@ -115,6 +116,79 @@ public interface PendingActionDao {
     )
     public suspend fun clearActivePhotoUploadForBooking(
         bookingId: String,
+        now: Long,
+    )
+
+    /**
+     * Look up the single active PHOTO_UPLOAD_RETRY row for a technician, if any.
+     * Used by the KYC ViewModel to decide whether to surface the retry banner
+     * (E11-S05c onboarding durable hooks).
+     */
+    @Query(
+        """
+        SELECT * FROM pending_actions
+        WHERE type = 'PHOTO_UPLOAD_RETRY'
+          AND entityId = :techId
+          AND status = 'ACTIVE'
+        LIMIT 1
+        """,
+    )
+    public suspend fun findActivePhotoRetryForTech(techId: String): PendingActionEntity?
+
+    /**
+     * Tombstone any active PHOTO_UPLOAD_RETRY rows for this technician. Called once
+     * the queued KYC photo upload succeeds — the technician should no longer see the
+     * banner (E11-S05c onboarding durable hooks).
+     */
+    @Query(
+        """
+        UPDATE pending_actions
+        SET status = 'RESOLVED', resolvedAt = :now
+        WHERE type = 'PHOTO_UPLOAD_RETRY'
+          AND entityId = :techId
+          AND status = 'ACTIVE'
+        """,
+    )
+    public suspend fun clearActivePhotoRetryForTech(
+        techId: String,
+        now: Long,
+    )
+
+    /**
+     * Tombstone any active KYC_SUBMIT_PENDING rows for this technician. Called once
+     * the server returns a final verdict (KYC_VERIFIED or KYC_REJECTED) — the
+     * onboarding-screen offline chip should no longer surface.
+     */
+    @Query(
+        """
+        UPDATE pending_actions
+        SET status = 'RESOLVED', resolvedAt = :now
+        WHERE type = 'KYC_SUBMIT_PENDING'
+          AND entityId = :techId
+          AND status = 'ACTIVE'
+        """,
+    )
+    public suspend fun clearActiveKycSubmitPendingForTech(
+        techId: String,
+        now: Long,
+    )
+
+    /**
+     * Tombstone any active KYC_RESUME rows for this technician. Called once the
+     * server returns a final verdict so the DigiLocker resumption nudge does not
+     * outlive the verdict.
+     */
+    @Query(
+        """
+        UPDATE pending_actions
+        SET status = 'RESOLVED', resolvedAt = :now
+        WHERE type = 'KYC_RESUME'
+          AND entityId = :techId
+          AND status = 'ACTIVE'
+        """,
+    )
+    public suspend fun clearActiveKycResumeForTech(
+        techId: String,
         now: Long,
     )
 }

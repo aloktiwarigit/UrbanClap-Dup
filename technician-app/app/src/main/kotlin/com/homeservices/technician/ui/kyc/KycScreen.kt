@@ -53,6 +53,7 @@ private val KycHeroEnd = HomeservicesColors.Brand.primary
 private const val KYC_HERO_FRACTION = 0.32f
 private const val KYC_FORM_FRACTION = 0.70f
 
+@Suppress("CyclomaticComplexMethod") // sealed KycUiState branches are a flat dispatch — extracting would obscure UI flow
 @Composable
 internal fun KycScreen(
     onComplete: () -> Unit,
@@ -60,6 +61,7 @@ internal fun KycScreen(
     viewModel: KycViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val retryPending by viewModel.photoUploadRetryPending.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     LaunchedEffect(uiState) {
@@ -74,38 +76,50 @@ internal fun KycScreen(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
-        when (val state = uiState) {
-            is KycUiState.Idle -> {
-                KycStepAadhaar(
-                    onStartKyc = { viewModel.startKyc() },
-                    onSkip = onComplete,
-                )
+        Box(modifier = Modifier.fillMaxSize()) {
+            when (val state = uiState) {
+                is KycUiState.Idle -> {
+                    KycStepAadhaar(
+                        onStartKyc = { viewModel.startKyc() },
+                        onSkip = onComplete,
+                    )
+                }
+                is KycUiState.Loading -> KycLoadingContent(message = "Processing verification")
+                is KycUiState.AadhaarPending -> KycLoadingContent(message = "Opening DigiLocker")
+                is KycUiState.AadhaarDone -> {
+                    KycStepPan(
+                        selectedUri = null,
+                        onUriSelected = { uri ->
+                            if (uri != null) viewModel.submitPan(uri)
+                        },
+                    )
+                }
+                is KycUiState.PanReady -> {
+                    KycStepPan(
+                        selectedUri = Uri.parse(state.uploadUri),
+                        onUriSelected = { uri ->
+                            if (uri != null) viewModel.submitPan(uri)
+                        },
+                    )
+                }
+                is KycUiState.PanUploading -> KycLoadingContent(message = "Uploading PAN card")
+                is KycUiState.Complete -> KycStepReview(status = state.status, onRetry = null)
+                is KycUiState.Error -> {
+                    KycStepReview(
+                        status = null,
+                        onRetry = { viewModel.startKyc() },
+                        errorMessage = state.message,
+                    )
+                }
             }
-            is KycUiState.Loading -> KycLoadingContent(message = "Processing verification")
-            is KycUiState.AadhaarPending -> KycLoadingContent(message = "Opening DigiLocker")
-            is KycUiState.AadhaarDone -> {
-                KycStepPan(
-                    selectedUri = null,
-                    onUriSelected = { uri ->
-                        if (uri != null) viewModel.submitPan(uri)
-                    },
-                )
-            }
-            is KycUiState.PanReady -> {
-                KycStepPan(
-                    selectedUri = Uri.parse(state.uploadUri),
-                    onUriSelected = { uri ->
-                        if (uri != null) viewModel.submitPan(uri)
-                    },
-                )
-            }
-            is KycUiState.PanUploading -> KycLoadingContent(message = "Uploading PAN card")
-            is KycUiState.Complete -> KycStepReview(status = state.status, onRetry = null)
-            is KycUiState.Error -> {
-                KycStepReview(
-                    status = null,
-                    onRetry = { viewModel.startKyc() },
-                    errorMessage = state.message,
+            if (retryPending) {
+                PhotoUploadRetryBanner(
+                    onRetry = viewModel::retryPhotoUpload,
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .statusBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
                 )
             }
         }

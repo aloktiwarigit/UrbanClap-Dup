@@ -14,6 +14,9 @@ import com.homeservices.technician.data.activeJob.BookingStatusEvent
 import com.homeservices.technician.data.activeJob.BookingStatusEventBus
 import com.homeservices.technician.data.earnings.EarningsUpdateEventBus
 import com.homeservices.technician.data.jobOffer.JobOfferEventBus
+import com.homeservices.technician.data.kyc.KycStatusEvent
+import com.homeservices.technician.data.kyc.KycStatusEventBus
+import com.homeservices.technician.data.pendingaction.PendingActionStore
 import com.homeservices.technician.data.rating.RatingPromptEventBus
 import com.homeservices.technician.data.rating.RatingReceivedEventBus
 import com.homeservices.technician.domain.jobOffer.FcmTokenSyncUseCase
@@ -67,6 +70,10 @@ public class HomeservicesFcmService :
         private const val NOTIFICATION_ID_ERASURE_NOTICE = 3002
         private const val NOTIFICATION_ID_EARNINGS_UPDATE = 3003
         private const val NOTIFICATION_ID_RATING_PROMPT = 3004
+        private const val NOTIFICATION_ID_KYC_STATUS = 3005
+        private const val NOTIFICATION_ID_ONBOARDING_REMINDER = 3006
+        private const val REQUEST_CODE_KYC_STATUS = 1006
+        private const val REQUEST_CODE_ONBOARDING_REMINDER = 1007
 
         /** Register all notification channels. Call from Application.onCreate.
          *  Notification channels are an Oreo+ API; the project's minSdk is 26 so the
@@ -151,6 +158,12 @@ public class HomeservicesFcmService :
     @Inject
     public lateinit var bookingStatusEventBus: BookingStatusEventBus
 
+    @Inject
+    public lateinit var kycStatusEventBus: KycStatusEventBus
+
+    @Inject
+    public lateinit var pendingActionStore: PendingActionStore
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onMessageReceived(message: RemoteMessage): Unit {
@@ -221,6 +234,26 @@ public class HomeservicesFcmService :
                     BookingStatusEvent(bookingId = bookingId, newStatus = "PRICE_REJECTED"),
                 )
                 showBookingStatusNotification(bookingId, "PRICE_REJECTED", data["title"], data["body"])
+            }
+            "KYC_VERIFIED" -> {
+                val techId = data["techId"] ?: return
+                resolveKycPendingRows(techId)
+                kycStatusEventBus.post(
+                    KycStatusEvent(technicianId = techId, verified = true, rejectionReason = null),
+                )
+                showKycStatusNotification(verified = true, title = data["title"], body = data["body"])
+            }
+            "KYC_REJECTED" -> {
+                val techId = data["techId"] ?: return
+                val reason = data["reason"]
+                resolveKycPendingRows(techId)
+                kycStatusEventBus.post(
+                    KycStatusEvent(technicianId = techId, verified = false, rejectionReason = reason),
+                )
+                showKycStatusNotification(verified = false, title = data["title"], body = data["body"])
+            }
+            "ONBOARDING_REMINDER" -> {
+                showOnboardingReminderNotification(title = data["title"], body = data["body"])
             }
             "JOB_OFFER" -> {
                 val offer = parseJobOffer(data) ?: return
@@ -493,6 +526,98 @@ public class HomeservicesFcmService :
                 .setAutoCancel(true)
                 .build()
         nm.notify(NOTIFICATION_ID_RATING_PROMPT, notification)
+    }
+
+    /**
+     * Durably tombstone the technician's KYC retry / submit-pending / resume rows
+     * on a final server verdict. Runs in [serviceScope] (`SupervisorJob`) so the
+     * writes survive the screen being torn down or the app being backgrounded.
+     *
+     * Without this, the in-process [KycStatusEventBus] post would be the only
+     * cleanup signal — and `SharedFlow(replay = 0)` drops the event if no
+     * collector is active when the FCM arrives.
+     */
+    private fun resolveKycPendingRows(techId: String) {
+        if (techId.isBlank()) return
+        serviceScope.launch {
+            val now = System.currentTimeMillis()
+            runCatching { pendingActionStore.clearPhotoRetry(techId = techId, now = now) }
+            runCatching { pendingActionStore.clearKycSubmitPending(techId = techId, now = now) }
+            runCatching { pendingActionStore.clearKycResume(techId = techId, now = now) }
+        }
+    }
+
+    private fun showKycStatusNotification(
+        verified: Boolean,
+        title: String?,
+        body: String?,
+    ) {
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        val intent =
+            Intent(this, MainActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        val pi =
+            PendingIntent.getActivity(
+                this,
+                REQUEST_CODE_KYC_STATUS,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        val defaultTitle =
+            getString(
+                if (verified) {
+                    com.homeservices.technician.R.string.kyc_verified_notification_title
+                } else {
+                    com.homeservices.technician.R.string.kyc_rejected_notification_title
+                },
+            )
+        val defaultBody =
+            getString(
+                if (verified) {
+                    com.homeservices.technician.R.string.kyc_verified_notification_body
+                } else {
+                    com.homeservices.technician.R.string.kyc_rejected_notification_body
+                },
+            )
+        val notification =
+            NotificationCompat
+                .Builder(this, CHANNEL_SYSTEM)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle(title ?: defaultTitle)
+                .setContentText(body ?: defaultBody)
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .build()
+        nm.notify(NOTIFICATION_ID_KYC_STATUS, notification)
+    }
+
+    private fun showOnboardingReminderNotification(
+        title: String?,
+        body: String?,
+    ) {
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        val intent =
+            Intent(this, MainActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        val pi =
+            PendingIntent.getActivity(
+                this,
+                REQUEST_CODE_ONBOARDING_REMINDER,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        val defaultTitle = getString(com.homeservices.technician.R.string.onboarding_reminder_notification_title)
+        val defaultBody = getString(com.homeservices.technician.R.string.onboarding_reminder_notification_body)
+        val notification =
+            NotificationCompat
+                .Builder(this, CHANNEL_SYSTEM)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle(title ?: defaultTitle)
+                .setContentText(body ?: defaultBody)
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .build()
+        nm.notify(NOTIFICATION_ID_ONBOARDING_REMINDER, notification)
     }
 
     override fun onNewToken(token: String): Unit {
