@@ -20,6 +20,8 @@ import com.homeservices.technician.domain.activeJob.model.LatLng
 import com.homeservices.technician.domain.auth.model.AuthState
 import com.homeservices.technician.domain.photo.UploadJobPhotoUseCase
 import com.homeservices.technician.domain.shield.FileShieldReportUseCase
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -207,5 +209,68 @@ public class ActiveJobViewModelPhotoRetryTest {
             vm.onPhotoRetryRequested()
 
             assertThat(vm.uiState.value).isEqualTo(ActiveJobUiState.Loading)
+        }
+
+    // ── Producer: persist PHOTO_UPLOAD_PENDING on failure, clear on success ───
+
+    @Test
+    public fun `upload failure persists PHOTO_UPLOAD_PENDING row when user is authenticated`(): Unit =
+        runTest(testDispatcher) {
+            every { sessionManager.authState } returns
+                MutableStateFlow(AuthState.Authenticated(uid = "t-uid", phoneLastFour = null))
+            every { pendingActionStore.observeActive("t-uid") } returns flowOf(emptyList())
+            coEvery { uploadJobPhotoUseCase.execute(any(), any(), any()) } returns
+                Result.failure(RuntimeException("Network timeout"))
+
+            val vm = buildVm()
+            vm.onTransitionRequested("REACHED")
+            vm.onPhotoConfirmed("/cache/p.jpg")
+
+            coVerify(exactly = 1) {
+                pendingActionStore.upsert(
+                    match { action ->
+                        action.type == PendingActionType.PHOTO_UPLOAD_PENDING &&
+                            action.entityId == "bk-1" &&
+                            action.userId == "t-uid" &&
+                            action.sourceStatus == "REACHED"
+                    },
+                )
+            }
+        }
+
+    @Test
+    public fun `upload failure does not persist when user is unauthenticated`(): Unit =
+        runTest(testDispatcher) {
+            every { sessionManager.authState } returns MutableStateFlow(AuthState.Unauthenticated)
+            every { pendingActionStore.observeActive(any()) } returns flowOf(emptyList())
+            coEvery { uploadJobPhotoUseCase.execute(any(), any(), any()) } returns
+                Result.failure(RuntimeException("Network timeout"))
+
+            val vm = buildVm()
+            vm.onTransitionRequested("REACHED")
+            vm.onPhotoConfirmed("/cache/p.jpg")
+
+            coVerify(exactly = 0) { pendingActionStore.upsert(any()) }
+        }
+
+    @Test
+    public fun `upload success clears any queued PHOTO_UPLOAD_PENDING row for the booking`(): Unit =
+        runTest(testDispatcher) {
+            every { sessionManager.authState } returns
+                MutableStateFlow(AuthState.Authenticated(uid = "t-uid", phoneLastFour = null))
+            every { pendingActionStore.observeActive("t-uid") } returns flowOf(emptyList())
+            coEvery { uploadJobPhotoUseCase.execute(any(), any(), any()) } returns
+                Result.success("bookings/bk-1/photos/uid/REACHED/123.jpg")
+            coEvery { markReachedUseCase("bk-1") } returns
+                com.homeservices.technician.domain.activeJob.MarkReachedOutcome(
+                    Result.success(aJob(ActiveJobStatus.REACHED)),
+                    isMock = false,
+                )
+
+            val vm = buildVm()
+            vm.onTransitionRequested("REACHED")
+            vm.onPhotoConfirmed("/cache/p.jpg")
+
+            coVerify(atLeast = 1) { pendingActionStore.clearPhotoUploadPending("bk-1", any()) }
         }
 }

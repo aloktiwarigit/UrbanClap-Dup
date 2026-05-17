@@ -55,6 +55,15 @@ internal class ActiveJobViewModel
         private val _uiState = MutableStateFlow<ActiveJobUiState>(ActiveJobUiState.Loading)
         public val uiState: StateFlow<ActiveJobUiState> = _uiState.asStateFlow()
 
+        /**
+         * Latest snapshot of "is there an active PHOTO_UPLOAD_PENDING row for this booking?"
+         * Cached separately because the pending-action observer can emit BEFORE the polling
+         * observer transitions uiState out of Loading on cold start; Room won't re-emit until
+         * the table changes, so we must remember the value and apply it when Active is built.
+         */
+        @Volatile
+        private var cachedPhotoUploadPending: Boolean = false
+
         private val _navigationEvents = MutableSharedFlow<NavigationEvent>(extraBufferCapacity = 1)
         public val navigationEvents: SharedFlow<NavigationEvent> = _navigationEvents.asSharedFlow()
 
@@ -84,7 +93,9 @@ internal class ActiveJobViewModel
                                 shieldReportSuccess = current?.shieldReportSuccess ?: false,
                                 shieldReportError = current?.shieldReportError,
                                 mockLocationWarning = current?.mockLocationWarning ?: false,
-                                photoUploadPending = current?.photoUploadPending ?: false,
+                                // Prefer existing Active state, fall back to cached value so a
+                                // pending row emitted before the first Active state still shows the banner.
+                                photoUploadPending = current?.photoUploadPending ?: cachedPhotoUploadPending,
                                 awaitingCompletionConfirm = current?.awaitingCompletionConfirm ?: false,
                             )
                         }
@@ -131,6 +142,8 @@ internal class ActiveJobViewModel
                             AuthState.Unauthenticated -> flowOf(false)
                         }
                     }.collect { hasPending ->
+                        // Cache so the polling collector picks up the value on Loading→Active.
+                        cachedPhotoUploadPending = hasPending
                         val current = _uiState.value as? ActiveJobUiState.Active ?: return@collect
                         if (current.photoUploadPending != hasPending) {
                             _uiState.value = current.copy(photoUploadPending = hasPending)
@@ -230,6 +243,8 @@ internal class ActiveJobViewModel
                     // Keep photoUploadInProgress = true until fireTransition completes so the
                     // Confirm button stays disabled and duplicate transitions are prevented.
                     _uiState.value = s.copy(uploadedStoragePath = storagePath)
+                    // Tombstone any queued retry row — the upload succeeded.
+                    pendingActionStore.clearPhotoUploadPending(bookingId)
                     fireTransition(stage)
                 } else {
                     val s = _uiState.value as? ActiveJobUiState.Active ?: return@launch
@@ -238,8 +253,41 @@ internal class ActiveJobViewModel
                             photoUploadInProgress = false,
                             photoUploadError = uploadResult.exceptionOrNull()?.message ?: "Upload failed",
                         )
+                    // Persist the failure so the retry banner survives process death and
+                    // surfaces on return to the screen. No-op if the user is somehow
+                    // unauthenticated mid-job — the in-memory error state is still set.
+                    persistPhotoUploadPending(stage)
                 }
             }
+        }
+
+        /**
+         * Writes a deterministic PHOTO_UPLOAD_PENDING row keyed on this booking so
+         * [ActiveJobScreen] can surface [PhotoUploadRetryBanner] on cold start.
+         * Uses the same id-derivation scheme as [PendingActionIngestor.buildIdFromIntent].
+         */
+        private suspend fun persistPhotoUploadPending(stage: String) {
+            val uid = (sessionManager.authState.value as? AuthState.Authenticated)?.uid ?: return
+            val nowMs = System.currentTimeMillis()
+            pendingActionStore.upsert(
+                com.homeservices.corenav.PendingAction(
+                    id = "PHOTO_UPLOAD_PENDING:technician:$uid:booking:$bookingId",
+                    userId = uid,
+                    role = "technician",
+                    type = PendingActionType.PHOTO_UPLOAD_PENDING,
+                    entityType = "booking",
+                    entityId = bookingId,
+                    routeUri = "homeservices://action/PHOTO_UPLOAD_PENDING?bookingId=$bookingId&stage=$stage",
+                    priority = com.homeservices.corenav.PendingActionPriority.NORMAL,
+                    status = com.homeservices.corenav.PendingActionStatus.ACTIVE,
+                    sourceStatus = stage,
+                    version = 1L,
+                    createdAt = nowMs,
+                    updatedAt = nowMs,
+                    expiresAt = null,
+                    resolvedAt = null,
+                ),
+            )
         }
 
         private fun fireTransition(stage: String) {
@@ -342,11 +390,18 @@ internal class ActiveJobViewModel
             _uiState.value = current.copy(awaitingCompletionConfirm = false)
         }
 
-        /** Confirms completion — clears the dialog flag and dispatches [completeJob]. */
+        /**
+         * Confirms completion — clears the dialog flag and routes through the standard
+         * photo-capture flow for the COMPLETED stage. We MUST NOT call [completeJob]
+         * directly here: the FR-5.4 evidence-photo invariant requires every stage
+         * transition (including final completion) to be preceded by a photo upload,
+         * which is enforced by the [PhotoCaptureScreen] that [onTransitionRequested]
+         * opens and the [fireTransition]("COMPLETED") path triggered on photo confirm.
+         */
         public fun confirmCompletion() {
             val current = _uiState.value as? ActiveJobUiState.Active ?: return
             _uiState.value = current.copy(awaitingCompletionConfirm = false)
-            completeJob()
+            onTransitionRequested("COMPLETED")
         }
 
         /**

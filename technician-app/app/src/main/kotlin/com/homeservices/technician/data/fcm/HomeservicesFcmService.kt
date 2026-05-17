@@ -440,10 +440,13 @@ public class HomeservicesFcmService :
         body: String?,
     ) {
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        // Tap simply re-opens MainActivity. The in-process BookingStatusEventBus already
+        // refreshes an open ActiveJobScreen; on cold start the user lands on the dashboard
+        // and taps the booking from there. Wiring a typed deep-link to activeJob/{bookingId}
+        // requires a PendingNavigationStore + HomeGraph collector — deferred (see follow-up).
         val intent =
             Intent(this, MainActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                .putExtra("navigate_to", "booking/$bookingId")
         val pi =
             PendingIntent.getActivity(
                 this,

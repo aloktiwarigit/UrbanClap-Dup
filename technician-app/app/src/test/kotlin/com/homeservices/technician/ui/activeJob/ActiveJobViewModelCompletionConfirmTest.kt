@@ -118,7 +118,7 @@ public class ActiveJobViewModelCompletionConfirmTest {
         }
 
     @Test
-    public fun `confirmCompletion clears flag and dispatches completeJobUseCase`(): Unit =
+    public fun `confirmCompletion clears flag and routes through photo capture for COMPLETED`(): Unit =
         runTest(testDispatcher) {
             viewModel.requestCompletionConfirm()
             viewModel.confirmCompletion()
@@ -126,7 +126,10 @@ public class ActiveJobViewModelCompletionConfirmTest {
 
             val state = viewModel.uiState.value as ActiveJobUiState.Active
             assertThat(state.awaitingCompletionConfirm).isFalse()
-            coVerify(exactly = 1) { completeJobUseCase("bk-1") }
+            // FR-5.4: completion must go through PhotoCaptureScreen, so pendingPhotoStage is set
+            // and completeJobUseCase is only triggered later via onPhotoConfirmed → fireTransition.
+            assertThat(state.pendingPhotoStage).isEqualTo("COMPLETED")
+            coVerify(exactly = 0) { completeJobUseCase("bk-1") }
         }
 
     @Test
