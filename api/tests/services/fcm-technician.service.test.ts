@@ -18,7 +18,7 @@ describe('sendTechnicianBookingStatusUpdatePush', () => {
       status: 'PRICE_APPROVED',
     });
     expect(sendMock).toHaveBeenCalledTimes(1);
-    expect(sendMock.mock.calls[0][0].topic).toBe('technician_tech-9');
+    expect(sendMock.mock.calls[0]?.[0].topic).toBe('technician_tech-9');
   });
 
   it('emits BOOKING_STATUS_UPDATE with the canonical status key', async () => {
@@ -27,7 +27,7 @@ describe('sendTechnicianBookingStatusUpdatePush', () => {
       bookingId: 'bk-1',
       status: 'PRICE_APPROVED',
     });
-    const data = sendMock.mock.calls[0][0].data;
+    const data = sendMock.mock.calls[0]?.[0].data;
     expect(data.type).toBe('BOOKING_STATUS_UPDATE');
     expect(data.bookingId).toBe('bk-1');
     expect(data.status).toBe('PRICE_APPROVED');
@@ -40,7 +40,7 @@ describe('sendTechnicianBookingStatusUpdatePush', () => {
       status: 'PRICE_APPROVED',
       priceApprovedPaise: 12500,
     });
-    expect(sendMock.mock.calls[0][0].data.priceApprovedPaise).toBe('12500');
+    expect(sendMock.mock.calls[0]?.[0].data.priceApprovedPaise).toBe('12500');
   });
 
   it('omits priceApprovedPaise when not provided', async () => {
@@ -49,6 +49,6 @@ describe('sendTechnicianBookingStatusUpdatePush', () => {
       bookingId: 'bk-1',
       status: 'ASSIGNED',
     });
-    expect(sendMock.mock.calls[0][0].data.priceApprovedPaise).toBeUndefined();
+    expect(sendMock.mock.calls[0]?.[0].data.priceApprovedPaise).toBeUndefined();
   });
 });

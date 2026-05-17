@@ -598,7 +598,7 @@ const approveFinalPriceInner: CustomerHttpHandler = async (req, _ctx, customer) 
         technicianId: updated.technicianId,
         bookingId: id,
         status: 'PRICE_APPROVED',
-        priceApprovedPaise: updated.finalAmount,
+        ...(updated.finalAmount !== undefined ? { priceApprovedPaise: updated.finalAmount } : {}),
       });
     } catch (err) {
       console.error('[approveFinalPrice] FCM technician push failed', { bookingId: id, err });
