@@ -148,6 +148,28 @@ describe('POST /v1/bookings/{id}/approve-final-price', () => {
     expect(sendTechnicianBookingStatusUpdatePush).not.toHaveBeenCalled();
   });
 
+  it('sends PRICE_DECLINED (no priceApprovedPaise) when every decision is approved=false', async () => {
+    const { sendTechnicianBookingStatusUpdatePush } = await import('../../src/services/fcm.service.js');
+    (sendTechnicianBookingStatusUpdatePush as MockFn).mockClear();
+
+    (bookingRepo.applyAddOnDecisions as MockFn).mockResolvedValue({
+      id: 'bk-4',
+      status: 'IN_PROGRESS',
+      technicianId: 'tech-3',
+      finalAmount: 59900,
+    });
+    const res: any = await approveFinalPriceHandler(
+      req('POST', 'bk-4', '/approve-final-price', { decisions: [{ name: 'Gas refill', approved: false }] }),
+      {} as any,
+    );
+    expect(res.status).toBe(200);
+    expect(sendTechnicianBookingStatusUpdatePush).toHaveBeenCalledWith({
+      technicianId: 'tech-3',
+      bookingId: 'bk-4',
+      status: 'PRICE_DECLINED',
+    });
+  });
+
   it('returns 200 even when technician push throws (best-effort)', async () => {
     const { sendTechnicianBookingStatusUpdatePush } = await import('../../src/services/fcm.service.js');
     (sendTechnicianBookingStatusUpdatePush as MockFn).mockReset();

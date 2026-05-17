@@ -593,12 +593,15 @@ const approveFinalPriceInner: CustomerHttpHandler = async (req, _ctx, customer) 
   if (!updated) return { status: 409, jsonBody: { code: 'BOOKING_NOT_AWAITING_APPROVAL' } };
 
   if (updated.technicianId) {
+    const anyApproved = parsed.data.decisions.some((d) => d.approved);
     try {
       await sendTechnicianBookingStatusUpdatePush({
         technicianId: updated.technicianId,
         bookingId: id,
-        status: 'PRICE_APPROVED',
-        ...(updated.finalAmount !== undefined ? { priceApprovedPaise: updated.finalAmount } : {}),
+        status: anyApproved ? 'PRICE_APPROVED' : 'PRICE_DECLINED',
+        ...(anyApproved && updated.finalAmount !== undefined
+          ? { priceApprovedPaise: updated.finalAmount }
+          : {}),
       });
     } catch (err) {
       console.error('[approveFinalPrice] FCM technician push failed', { bookingId: id, err });
