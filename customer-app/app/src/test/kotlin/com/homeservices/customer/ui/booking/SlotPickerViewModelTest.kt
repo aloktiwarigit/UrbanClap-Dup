@@ -5,6 +5,7 @@ import com.homeservices.customer.domain.booking.GetSlotAvailabilityUseCase
 import com.homeservices.customer.domain.booking.model.SlotWindow
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -78,18 +79,26 @@ public class SlotPickerViewModelTest {
         }
 
     @Test
-    public fun `past-time filter marks slots before now hour as unavailable today`(): Unit =
+    public fun `past-time filter marks slots whose start minute is before now as unavailable today`(): Unit =
         runTest(dispatcher) {
-            val nowHour = LocalTime.now().hour
-            // Use a slot that starts in the past relative to nowHour. Pick "00:00-02:00" — always elapsed
-            // unless the test runs in the very first hour of the day.
+            val nowMinute = LocalTime.now().toSecondOfDay() / SECONDS_PER_MINUTE
+            // Past slot — always elapsed unless the test is in the very first minutes of the day.
             val earlySlot = slot("00:00-02:00", available = true)
-            val lateSlot =
+            val futureStartMinute = (nowMinute + LOOK_AHEAD_MINUTES) % MINUTES_PER_DAY
+            val futureSlot =
                 slot(
-                    window = String.format(Locale.ROOT, "%02d:00-%02d:00", (nowHour + 1) % 24, (nowHour + 3) % 24),
+                    window =
+                        String.format(
+                            Locale.ROOT,
+                            "%02d:%02d-%02d:%02d",
+                            futureStartMinute / MINUTES_PER_HOUR,
+                            futureStartMinute % MINUTES_PER_HOUR,
+                            ((futureStartMinute + WINDOW_LENGTH_MINUTES) / MINUTES_PER_HOUR) % HOURS_PER_DAY,
+                            (futureStartMinute + WINDOW_LENGTH_MINUTES) % MINUTES_PER_HOUR,
+                        ),
                     available = true,
                 )
-            every { getSlots(serviceId, today) } returns flowOf(Result.success(listOf(earlySlot, lateSlot)))
+            every { getSlots(serviceId, today) } returns flowOf(Result.success(listOf(earlySlot, futureSlot)))
 
             val v = vm()
             v.loadSlots(serviceId, today)
@@ -97,6 +106,8 @@ public class SlotPickerViewModelTest {
             val state = v.uiState.value as SlotPickerUiState.Loaded
             val filteredEarly = state.filteredSlots.first { it.window == earlySlot.window }
             assertThat(filteredEarly.available).isFalse()
+            val filteredFuture = state.filteredSlots.first { it.window == futureSlot.window }
+            assertThat(filteredFuture.available).isTrue()
         }
 
     @Test
@@ -126,7 +137,7 @@ public class SlotPickerViewModelTest {
         }
 
     @Test
-    public fun `retry re-triggers load`(): Unit =
+    public fun `retry re-triggers load for the last requested date`(): Unit =
         runTest(dispatcher) {
             every { getSlots(serviceId, tomorrow) } returns flowOf(Result.failure(RuntimeException("boom")))
             val v = vm()
@@ -135,9 +146,38 @@ public class SlotPickerViewModelTest {
 
             val s = slot("10:00-12:00")
             every { getSlots(serviceId, tomorrow) } returns flowOf(Result.success(listOf(s)))
-            v.retry(serviceId, tomorrow)
+            v.retry()
 
-            assertThat(v.uiState.value).isInstanceOf(SlotPickerUiState.Loaded::class.java)
+            val state = v.uiState.value as SlotPickerUiState.Loaded
+            assertThat(state.date).isEqualTo(tomorrow)
+            // retry must reload the date that failed, not today
+            verify(atLeast = 2) { getSlots(serviceId, tomorrow) }
+        }
+
+    @Test
+    public fun `retry uses the most recent requested date when user changed dates`(): Unit =
+        runTest(dispatcher) {
+            val later = tomorrow.plusDays(1)
+            every { getSlots(serviceId, tomorrow) } returns flowOf(Result.success(listOf(slot("10:00-12:00"))))
+            every { getSlots(serviceId, later) } returns flowOf(Result.failure(RuntimeException("boom")))
+            val v = vm()
+            v.loadSlots(serviceId, tomorrow)
+            v.loadSlots(serviceId, later)
+            assertThat(v.uiState.value).isInstanceOf(SlotPickerUiState.Error::class.java)
+
+            every { getSlots(serviceId, later) } returns flowOf(Result.success(listOf(slot("14:00-16:00"))))
+            v.retry()
+
+            val state = v.uiState.value as SlotPickerUiState.Loaded
+            assertThat(state.date).isEqualTo(later)
+        }
+
+    @Test
+    public fun `retry is a no-op before any load`(): Unit =
+        runTest(dispatcher) {
+            val v = vm()
+            v.retry()
+            assertThat(v.uiState.value).isInstanceOf(SlotPickerUiState.Loading::class.java)
         }
 
     @Test
@@ -156,3 +196,10 @@ public class SlotPickerViewModelTest {
             assertThat((v.uiState.value as SlotPickerUiState.Loaded).selected).isNull()
         }
 }
+
+private const val SECONDS_PER_MINUTE = 60
+private const val MINUTES_PER_HOUR = 60
+private const val HOURS_PER_DAY = 24
+private const val MINUTES_PER_DAY = MINUTES_PER_HOUR * HOURS_PER_DAY
+private const val LOOK_AHEAD_MINUTES = 90
+private const val WINDOW_LENGTH_MINUTES = 60

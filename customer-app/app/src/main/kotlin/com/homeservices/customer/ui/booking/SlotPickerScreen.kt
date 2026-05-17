@@ -85,7 +85,7 @@ internal fun SlotPickerScreen(
             modifier = Modifier.fillMaxSize().padding(innerPadding),
             onDateSelect = { date -> viewModel.loadSlots(serviceId, date) },
             onSlotSelect = viewModel::selectSlot,
-            onRetry = { viewModel.retry(serviceId, initialDate) },
+            onRetry = viewModel::retry,
             onConfirm = { date, slot -> onSlotSelected(BookingSlot(date.format(DATE_ISO), slot.window)) },
         )
     }
