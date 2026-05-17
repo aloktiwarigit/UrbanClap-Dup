@@ -603,6 +603,8 @@ export interface components {
                 required: boolean;
             }[];
             isActive: boolean;
+            workStart?: string;
+            workEnd?: string;
         };
         CategoryWithServices: {
             id: string;
@@ -661,6 +663,8 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            workStart?: string;
+            workEnd?: string;
         };
         InternalNote: {
             adminId: string;
@@ -1353,6 +1357,8 @@ export interface operations {
                         label: string;
                         required: boolean;
                     }[];
+                    workStart?: string;
+                    workEnd?: string;
                 };
             };
         };
@@ -1462,6 +1468,8 @@ export interface operations {
                         label: string;
                         required: boolean;
                     }[];
+                    workStart?: string;
+                    workEnd?: string;
                 };
             };
         };

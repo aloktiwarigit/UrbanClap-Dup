@@ -449,6 +449,14 @@
           },
           "isActive": {
             "type": "boolean"
+          },
+          "workStart": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$"
+          },
+          "workEnd": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$"
           }
         },
         "required": [
@@ -684,6 +692,14 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "workStart": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$"
+          },
+          "workEnd": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$"
           }
         },
         "required": [
@@ -2173,6 +2189,14 @@
                         "required"
                       ]
                     }
+                  },
+                  "workStart": {
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$"
+                  },
+                  "workEnd": {
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$"
                   }
                 },
                 "required": [
@@ -2389,6 +2413,14 @@
                         "required"
                       ]
                     }
+                  },
+                  "workStart": {
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$"
+                  },
+                  "workEnd": {
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$"
                   }
                 },
                 "required": [

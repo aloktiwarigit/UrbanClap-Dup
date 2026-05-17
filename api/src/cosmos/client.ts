@@ -119,6 +119,15 @@ export function getAppliedCreditIdempotencyContainer(): Container {
   return getCosmosClient().database(DB_NAME).container('applied_credit_idempotency');
 }
 
+/**
+ * E16-S02: Slot holds for conflict locking.
+ * Partitioned by /servicePartitionKey ("<serviceId>|<date>"). Default TTL = 30 s.
+ * commitHold sets ttl=-1 on committed docs to make them permanent.
+ */
+export function getSlotHoldsContainer(): Container {
+  return getCosmosClient().database(DB_NAME).container('slot_holds');
+}
+
 /** Inject a mock CosmosClient in tests. */
 export function _setCosmosClientForTest(mock: CosmosClient): void {
   _client = mock;

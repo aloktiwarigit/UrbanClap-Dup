@@ -20,6 +20,8 @@ import { posthog } from '../observability/posthog.js';
 import { normalizeAddressText } from '../shared/address-text.js';
 import { isLatLngInServiceArea } from '../services/service-area.service.js';
 import { AYODHYA_SERVICE_AREA } from '../data/service-area-ayodhya.js';
+import { slotHoldsRepo } from '../cosmos/slot-holds-repository.js';
+import { generateSlots, filterElapsedSlots, currentIstMinuteOfDay, todayIst } from '../shared/slot-utils.js';
 
 function makeRazorpayReceipt(customerId: string): string {
   return `bk_${Date.now().toString(36)}_${customerId.slice(0, 20)}`;
@@ -148,6 +150,48 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
   const service = await catalogueRepo.getServiceByIdCrossPartition(parsed.data.serviceId);
   if (!service || !service.isActive) return { status: 404, jsonBody: { code: 'SERVICE_NOT_FOUND' } };
 
+  // E16-S02: Validate slotWindow against server-generated windows for this service + date.
+  // Rejects fabricated windows and past windows (elapsed slots for today's date).
+  let validWindows = generateSlots(service, parsed.data.slotDate);
+  if (parsed.data.slotDate === todayIst()) {
+    validWindows = filterElapsedSlots(validWindows, currentIstMinuteOfDay());
+  }
+  if (!validWindows.includes(parsed.data.slotWindow)) {
+    return { status: 422, jsonBody: { code: 'INVALID_SLOT_WINDOW', message: 'The requested time slot does not match this service\'s schedule.' } };
+  }
+
+  // E16-S02: Guard against pre-deployment or post-expiry booking gaps.
+  // The slot_holds container only prevents concurrent holds — it does not know about bookings
+  // that pre-date the container deployment or whose hold doc expired. Check existing bookings
+  // directly before attempting the hold so we never create a duplicate booking.
+  const existingBookedWindows = await bookingRepo.getBookedWindowsByServiceDate(
+    parsed.data.serviceId,
+    parsed.data.slotDate,
+  );
+  if (existingBookedWindows.includes(parsed.data.slotWindow)) {
+    return {
+      status: 409,
+      jsonBody: { code: 'SLOT_UNAVAILABLE', message: 'This time slot is no longer available.' },
+    };
+  }
+
+  // E16-S02: Slot-conflict locking — attempt to hold the slot before writing the booking.
+  // createHold returns 'CONFLICT' if another hold or booking already occupies this window.
+  const holdResult = await slotHoldsRepo.createHold(
+    parsed.data.serviceId,
+    parsed.data.slotDate,
+    parsed.data.slotWindow,
+    customer.customerId,
+  );
+  if (holdResult === 'CONFLICT') {
+    return {
+      status: 409,
+      jsonBody: { code: 'SLOT_UNAVAILABLE', message: 'This time slot is no longer available.' },
+    };
+  }
+  const holdId = holdResult.id;
+  const holdPk = holdResult.servicePartitionKey;
+
   if (parsed.data.paymentMethod === 'CASH_ON_SERVICE') {
     const cashOrderId = `cash_${randomUUID()}`;
     const booking = await bookingRepo.createPending(
@@ -159,6 +203,12 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     );
     const paid = await bookingRepo.markPaid(booking.id, 'cash_on_service_pending');
     if (!paid) return { status: 500, jsonBody: { code: 'BOOKING_CONFIRMATION_FAILED' } };
+
+    // E16-S02: Commit hold — converts 30 s soft hold to permanent slot record.
+    slotHoldsRepo.commitHold(holdId, holdPk, booking.id).catch((err: unknown) => {
+      Sentry.captureException(err);
+      console.warn('[createBooking] commitHold failed (non-fatal)', { holdId, bookingId: booking.id, err });
+    });
 
     // E13-S01: Apply wallet credit for cash bookings
     let appliedCreditAmount = 0;
@@ -215,6 +265,13 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     );
     const paid = await bookingRepo.markPaid(booking.id, 'manual_payment_not_configured');
     if (!paid) return { status: 500, jsonBody: { code: 'BOOKING_CONFIRMATION_FAILED' } };
+
+    // E16-S02: Commit hold (non-fatal)
+    slotHoldsRepo.commitHold(holdId, holdPk, booking.id).catch((err: unknown) => {
+      Sentry.captureException(err);
+      console.warn('[createBooking] commitHold failed (non-fatal)', { holdId, bookingId: booking.id, err });
+    });
+
     dispatcherService.triggerDispatch(booking.id).catch((err: unknown) => {
       Sentry.captureException(err);
       console.error('[createBooking] manual-payment dispatch failed', { bookingId: booking.id, err });
@@ -318,6 +375,12 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     // Mark PAID immediately (no Razorpay payment involved)
     const paid = await bookingRepo.markPaid(booking.id, 'credit_full_payment');
     if (!paid) return { status: 500, jsonBody: { code: 'BOOKING_CONFIRMATION_FAILED' } };
+
+    // E16-S02: Commit hold — converts 30 s soft hold to permanent slot record.
+    slotHoldsRepo.commitHold(holdId, holdPk, booking.id).catch((err: unknown) => {
+      Sentry.captureException(err);
+      console.warn('[createBooking] commitHold failed (non-fatal)', { holdId, bookingId: booking.id, err });
+    });
 
     try {
       posthog.capture({
@@ -445,6 +508,13 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     preGeneratedBookingId,
     razorpayCreditOptions,
   );
+
+  // E16-S02: Commit hold — converts 30 s soft hold to permanent slot record.
+  slotHoldsRepo.commitHold(holdId, holdPk, booking.id).catch((err: unknown) => {
+    Sentry.captureException(err);
+    console.warn('[createBooking] commitHold failed (non-fatal)', { holdId, bookingId: booking.id, err });
+  });
+
   try {
     posthog.capture({
       distinctId: customer.customerId,

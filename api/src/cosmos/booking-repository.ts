@@ -262,6 +262,25 @@ export const bookingRepo = {
       throw e;
     }
   },
+
+  // E16-S02: Returns slotWindow strings for all active (non-cancelled/unfulfilled) bookings
+  // for a given service on a given date. Used by the availability handler to mark slots
+  // as hard-booked. Cross-partition scan — acceptable at pilot scale (≤5,000 bookings/mo).
+  async getBookedWindowsByServiceDate(serviceId: string, date: string): Promise<string[]> {
+    const { resources } = await getBookingsContainer()
+      .items.query<{ slotWindow: string }>({
+        query: `SELECT c.slotWindow FROM c
+                WHERE c.serviceId = @serviceId
+                  AND c.slotDate = @date
+                  AND c.status NOT IN ('CUSTOMER_CANCELLED', 'UNFULFILLED')`,
+        parameters: [
+          { name: '@serviceId', value: serviceId },
+          { name: '@date', value: date },
+        ],
+      })
+      .fetchAll();
+    return resources.map((r) => r.slotWindow);
+  },
 };
 
 export async function updateBookingFields(

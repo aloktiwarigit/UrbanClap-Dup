@@ -1,1 +1,1 @@
-{"timestamp":"2026-05-17T07:59:02-04:00","commit":"0ca7129e73e04c1f7d8da9a68ac69a9c7b637b39","reviewer":"codex","rounds":3,"open_findings":[{"id":"BOOKING_STATUS_UPDATE-handler","severity":"P2","resolution":"paired-PR — handler ships in PR #233 (E11-S05a-client)"}]}
+{"timestamp":"2026-05-16T09:40:49-04:00","commit":"ce64aa029aa496c650aa3adc9e0205ceb0460c2f","reviewer":"codex","model":"gpt-5.5","story":"E16-S02"}
