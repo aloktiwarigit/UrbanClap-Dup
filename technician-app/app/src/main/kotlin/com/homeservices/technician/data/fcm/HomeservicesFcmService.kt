@@ -10,6 +10,8 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.homeservices.corenav.NotificationRouter
 import com.homeservices.technician.MainActivity
+import com.homeservices.technician.data.activeJob.BookingStatusEvent
+import com.homeservices.technician.data.activeJob.BookingStatusEventBus
 import com.homeservices.technician.data.earnings.EarningsUpdateEventBus
 import com.homeservices.technician.data.jobOffer.JobOfferEventBus
 import com.homeservices.technician.data.rating.RatingPromptEventBus
@@ -146,6 +148,9 @@ public class HomeservicesFcmService :
     @Inject
     public lateinit var ingestor: PendingActionIngestor
 
+    @Inject
+    public lateinit var bookingStatusEventBus: BookingStatusEventBus
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onMessageReceived(message: RemoteMessage): Unit {
@@ -178,6 +183,38 @@ public class HomeservicesFcmService :
 
         // Legacy in-process routing (preserved; removed in E11-S01b-2)
         when (data["type"]) {
+            "BOOKING_STATUS_UPDATE" -> {
+                val bookingId = data["bookingId"] ?: return
+                val newStatus = data["newStatus"] ?: return
+                val priceApprovedPaise = data["priceApprovedPaise"]?.toLongOrNull()
+                bookingStatusEventBus.post(
+                    BookingStatusEvent(
+                        bookingId = bookingId,
+                        newStatus = newStatus,
+                        priceApprovedPaise = priceApprovedPaise,
+                    ),
+                )
+                showBookingStatusNotification(bookingId, newStatus, data["title"], data["body"])
+            }
+            "CUSTOMER_PRICE_APPROVED" -> {
+                val bookingId = data["bookingId"] ?: return
+                val paise = data["amountPaise"]?.toLongOrNull() ?: 0L
+                bookingStatusEventBus.post(
+                    BookingStatusEvent(
+                        bookingId = bookingId,
+                        newStatus = "PRICE_APPROVED",
+                        priceApprovedPaise = paise,
+                    ),
+                )
+                showBookingStatusNotification(bookingId, "PRICE_APPROVED", data["title"], data["body"])
+            }
+            "CUSTOMER_PRICE_REJECTED" -> {
+                val bookingId = data["bookingId"] ?: return
+                bookingStatusEventBus.post(
+                    BookingStatusEvent(bookingId = bookingId, newStatus = "PRICE_REJECTED"),
+                )
+                showBookingStatusNotification(bookingId, "PRICE_REJECTED", data["title"], data["body"])
+            }
             "JOB_OFFER" -> {
                 val offer = parseJobOffer(data) ?: return
                 eventBus.tryEmit(offer)
@@ -390,6 +427,36 @@ public class HomeservicesFcmService :
                 .setAutoCancel(true)
                 .build()
         nm.notify(NOTIFICATION_ID_EARNINGS_UPDATE, notification)
+    }
+
+    private fun showBookingStatusNotification(
+        bookingId: String,
+        @Suppress("UNUSED_PARAMETER") status: String,
+        title: String?,
+        body: String?,
+    ) {
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        val intent =
+            Intent(this, MainActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                .putExtra("navigate_to", "booking/$bookingId")
+        val pi =
+            PendingIntent.getActivity(
+                this,
+                bookingId.hashCode(),
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        val notification =
+            NotificationCompat
+                .Builder(this, CHANNEL_BOOKINGS)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle(title ?: getString(com.homeservices.technician.R.string.booking_status_notification_title))
+                .setContentText(body ?: getString(com.homeservices.technician.R.string.booking_status_notification_body_default))
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .build()
+        nm.notify(bookingId.hashCode(), notification)
     }
 
     private fun showRatingPromptNotification(bookingId: String) {
