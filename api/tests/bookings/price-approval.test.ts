@@ -21,6 +21,7 @@ vi.mock('../../src/cosmos/booking-repository.js', () => ({
 }));
 vi.mock('../../src/services/fcm.service.js', () => ({
   sendPriceApprovalPush: vi.fn().mockResolvedValue(undefined),
+  sendTechnicianBookingStatusUpdatePush: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { getBookingHandler, requestAddonHandler, approveFinalPriceHandler } from '../../src/functions/bookings.js';
@@ -104,5 +105,64 @@ describe('POST /v1/bookings/{id}/approve-final-price', () => {
       {} as any,
     );
     expect(res.status).toBe(409);
+  });
+
+  it('sends technician BOOKING_STATUS_UPDATE push when booking has assigned technician', async () => {
+    const { sendTechnicianBookingStatusUpdatePush } = await import('../../src/services/fcm.service.js');
+    (sendTechnicianBookingStatusUpdatePush as MockFn).mockClear();
+
+    (bookingRepo.applyAddOnDecisions as MockFn).mockResolvedValue({
+      id: 'bk-1',
+      status: 'IN_PROGRESS',
+      technicianId: 'tech-1',
+      finalAmount: 75000,
+    });
+    const res: any = await approveFinalPriceHandler(
+      req('POST', 'bk-1', '/approve-final-price', { decisions: [{ name: 'Gas refill', approved: true }] }),
+      {} as any,
+    );
+    expect(res.status).toBe(200);
+    expect(sendTechnicianBookingStatusUpdatePush).toHaveBeenCalledWith({
+      technicianId: 'tech-1',
+      bookingId: 'bk-1',
+      status: 'PRICE_APPROVED',
+      priceApprovedPaise: 75000,
+    });
+  });
+
+  it('skips technician push when booking has no assigned technician', async () => {
+    const { sendTechnicianBookingStatusUpdatePush } = await import('../../src/services/fcm.service.js');
+    (sendTechnicianBookingStatusUpdatePush as MockFn).mockClear();
+
+    (bookingRepo.applyAddOnDecisions as MockFn).mockResolvedValue({
+      id: 'bk-2',
+      status: 'IN_PROGRESS',
+      technicianId: undefined,
+      finalAmount: 50000,
+    });
+    const res: any = await approveFinalPriceHandler(
+      req('POST', 'bk-2', '/approve-final-price', { decisions: [{ name: 'Gas refill', approved: true }] }),
+      {} as any,
+    );
+    expect(res.status).toBe(200);
+    expect(sendTechnicianBookingStatusUpdatePush).not.toHaveBeenCalled();
+  });
+
+  it('returns 200 even when technician push throws (best-effort)', async () => {
+    const { sendTechnicianBookingStatusUpdatePush } = await import('../../src/services/fcm.service.js');
+    (sendTechnicianBookingStatusUpdatePush as MockFn).mockReset();
+    (sendTechnicianBookingStatusUpdatePush as MockFn).mockRejectedValueOnce(new Error('FCM 500'));
+
+    (bookingRepo.applyAddOnDecisions as MockFn).mockResolvedValue({
+      id: 'bk-3',
+      status: 'IN_PROGRESS',
+      technicianId: 'tech-2',
+      finalAmount: 60000,
+    });
+    const res: any = await approveFinalPriceHandler(
+      req('POST', 'bk-3', '/approve-final-price', { decisions: [{ name: 'Gas refill', approved: true }] }),
+      {} as any,
+    );
+    expect(res.status).toBe(200);
   });
 });

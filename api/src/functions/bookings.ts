@@ -11,7 +11,7 @@ import { bookingRepo, type BookingCreateCreditOptions } from '../cosmos/booking-
 import { createRazorpayOrder, verifyPaymentSignature } from '../services/razorpay.service.js';
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
-import { sendPriceApprovalPush } from '../services/fcm.service.js';
+import { sendPriceApprovalPush, sendTechnicianBookingStatusUpdatePush } from '../services/fcm.service.js';
 import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
 import { isSoftLaunchEnabled, isMarketingPaused, isServiceAreaGatingEnabled, isWalletCreditEnabled } from '../services/featureFlags.service.js';
 import { customerCreditLedgerRepo } from '../cosmos/customer-credit-ledger-repository.js';
@@ -591,6 +591,20 @@ const approveFinalPriceInner: CustomerHttpHandler = async (req, _ctx, customer) 
   if (!parsed.success) return { status: 422, jsonBody: { code: 'VALIDATION_ERROR', issues: parsed.error.issues } };
   const updated = await bookingRepo.applyAddOnDecisions(id, customer.customerId, parsed.data.decisions);
   if (!updated) return { status: 409, jsonBody: { code: 'BOOKING_NOT_AWAITING_APPROVAL' } };
+
+  if (updated.technicianId) {
+    try {
+      await sendTechnicianBookingStatusUpdatePush({
+        technicianId: updated.technicianId,
+        bookingId: id,
+        status: 'PRICE_APPROVED',
+        priceApprovedPaise: updated.finalAmount,
+      });
+    } catch (err) {
+      console.error('[approveFinalPrice] FCM technician push failed', { bookingId: id, err });
+    }
+  }
+
   return { status: 200, jsonBody: { bookingId: updated.id, status: updated.status, finalAmount: updated.finalAmount } };
 };
 export const approveFinalPriceHandler: HttpHandler = requireCustomer(approveFinalPriceInner);
