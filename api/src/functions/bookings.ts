@@ -74,7 +74,7 @@ async function projectReportSignedUrl(
   status: string,
 ): Promise<string | null> {
   if (status !== 'COMPLETED') return null;
-  const reportPath = `reports/${bookingId}.pdf`;
+  const reportPath = `reports/${bookingId}/service-report.pdf`;
   try {
     const exists = await checkStorageFileExists(reportPath);
     if (!exists) return null;

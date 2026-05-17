@@ -119,8 +119,8 @@ describe('GET /v1/bookings/{id} — photos + reportSignedUrl projection', () => 
     const res: any = await getBookingHandler(req('bk-1'), {} as any);
 
     expect(res.status).toBe(200);
-    expect(checkStorageFileExists).toHaveBeenCalledWith('reports/bk-1.pdf');
-    expect(getStorageDownloadUrlWithTtl).toHaveBeenCalledWith('reports/bk-1.pdf', 300);
+    expect(checkStorageFileExists).toHaveBeenCalledWith('reports/bk-1/service-report.pdf');
+    expect(getStorageDownloadUrlWithTtl).toHaveBeenCalledWith('reports/bk-1/service-report.pdf', 300);
     expect(res.jsonBody.reportSignedUrl).toMatch(/^https:\/\//);
   });
 
@@ -134,8 +134,8 @@ describe('GET /v1/bookings/{id} — photos + reportSignedUrl projection', () => 
     const res: any = await getBookingHandler(req('bk-1'), {} as any);
 
     expect(res.status).toBe(200);
-    expect(checkStorageFileExists).toHaveBeenCalledWith('reports/bk-1.pdf');
-    expect(getStorageDownloadUrlWithTtl).not.toHaveBeenCalledWith('reports/bk-1.pdf', expect.any(Number));
+    expect(checkStorageFileExists).toHaveBeenCalledWith('reports/bk-1/service-report.pdf');
+    expect(getStorageDownloadUrlWithTtl).not.toHaveBeenCalledWith('reports/bk-1/service-report.pdf', expect.any(Number));
     expect(res.jsonBody.reportSignedUrl).toBeNull();
   });
 
