@@ -324,8 +324,14 @@
     <string name="slot_picker_heading">अपना स्लॉट चुनें</string>
     <string name="slot_picker_subtitle">सुविधाजनक आने का समय चुनें। भुगतान से पहले आप सब कुछ देख सकते हैं।</string>
     <string name="slot_picker_date_label">तारीख</string>
-    <string name="slot_picker_time_label">समय</string>
-    <string name="slot_picker_next">आगे</string>
+    <string name="slot_picker_morning_label">सुबह</string>
+    <string name="slot_picker_afternoon_label">दोपहर</string>
+    <string name="slot_picker_evening_label">शाम</string>
+    <string name="slot_picker_loading_desc">उपलब्ध स्लॉट लोड हो रहे हैं</string>
+    <string name="slot_picker_error_label">स्लॉट लोड नहीं हो सके। कृपया पुनः प्रयास करें।</string>
+    <string name="slot_picker_retry_button">पुनः प्रयास करें</string>
+    <string name="slot_picker_confirm_slot">स्लॉट पक्का करें</string>
+    <string name="slot_picker_no_slots_label">इस तारीख के लिए कोई स्लॉट उपलब्ध नहीं</string>
 
     <!-- Trust dossier — Aadhaar/Police badges, certifications, languages, reviews -->
     <string name="trust_dossier_assigning">आपके स्लॉट के लिए जल्द ही तकनीशियन असाइन किया जाएगा।</string>

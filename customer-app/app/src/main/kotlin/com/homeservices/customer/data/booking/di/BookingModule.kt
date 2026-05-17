@@ -3,6 +3,8 @@ package com.homeservices.customer.data.booking.di
 import com.homeservices.customer.BuildConfig
 import com.homeservices.customer.data.booking.BookingRepository
 import com.homeservices.customer.data.booking.BookingRepositoryImpl
+import com.homeservices.customer.data.booking.SlotAvailabilityRepository
+import com.homeservices.customer.data.booking.SlotAvailabilityRepositoryImpl
 import com.homeservices.customer.data.booking.remote.BookingApiService
 import com.homeservices.customer.data.network.auth.FirebaseTokenAuthenticator
 import com.homeservices.customer.data.network.auth.IdTokenCache
@@ -28,6 +30,9 @@ public annotation class AuthOkHttpClient
 public abstract class BookingModule {
     @Binds
     internal abstract fun bindBookingRepository(impl: BookingRepositoryImpl): BookingRepository
+
+    @Binds
+    internal abstract fun bindSlotAvailabilityRepository(impl: SlotAvailabilityRepositoryImpl): SlotAvailabilityRepository
 
     public companion object {
         @Provides
