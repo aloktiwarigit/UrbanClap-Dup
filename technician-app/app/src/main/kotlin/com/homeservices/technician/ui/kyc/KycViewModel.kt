@@ -179,9 +179,10 @@ internal class KycViewModel
                 return
             }
 
-            // A final server verdict resolves the queued retry/submit rows: the
-            // banner and the chip must both stop surfacing once the outcome is known.
-            viewModelScope.launch { clearSubmissionRows(techId) }
+            // Note: tombstoning of queued retry/submit/resume rows is owned by
+            // `HomeservicesFcmService.resolveKycPendingRows()` — it runs in a
+            // SupervisorJob serviceScope so the writes survive backgrounding and
+            // the viewModelScope cancellation that follows `onComplete()`.
 
             _uiState.value =
                 if (event.verified) {

@@ -6,12 +6,21 @@ import com.homeservices.technician.data.earnings.EarningsUpdateEventBus
 import com.homeservices.technician.data.jobOffer.JobOfferEventBus
 import com.homeservices.technician.data.kyc.KycStatusEvent
 import com.homeservices.technician.data.kyc.KycStatusEventBus
+import com.homeservices.technician.data.pendingaction.PendingActionStore
 import com.homeservices.technician.data.rating.RatingPromptEventBus
 import com.homeservices.technician.data.rating.RatingReceivedEventBus
 import com.homeservices.technician.domain.jobOffer.FcmTokenSyncUseCase
 import com.homeservices.technician.notification.PendingActionIngestor
+import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -28,12 +37,16 @@ import org.junit.jupiter.api.Test
  * [android.app.NotificationManager], which NPEs in a JVM test. The established pattern
  * (see `HomeservicesFcmServiceBookingStatusTest`) is to wrap the call in `runCatching`.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 public class HomeservicesFcmServiceKycTest {
     private lateinit var service: HomeservicesFcmService
     private lateinit var kycStatusEventBus: KycStatusEventBus
+    private lateinit var pendingActionStore: PendingActionStore
+    private val testDispatcher = UnconfinedTestDispatcher()
 
     @BeforeEach
     public fun setUp() {
+        Dispatchers.setMain(testDispatcher)
         val eventBus: JobOfferEventBus = mockk(relaxed = true)
         val ratingPromptEventBus: RatingPromptEventBus = mockk(relaxed = true)
         val earningsUpdateEventBus: EarningsUpdateEventBus = mockk(relaxed = true)
@@ -43,6 +56,7 @@ public class HomeservicesFcmServiceKycTest {
         val ingestor: PendingActionIngestor = mockk(relaxed = true)
         val bookingStatusEventBus: BookingStatusEventBus = mockk(relaxed = true)
         kycStatusEventBus = mockk(relaxed = true)
+        pendingActionStore = mockk(relaxed = true)
 
         service =
             HomeservicesFcmService().also {
@@ -55,7 +69,13 @@ public class HomeservicesFcmServiceKycTest {
                 it.ingestor = ingestor
                 it.bookingStatusEventBus = bookingStatusEventBus
                 it.kycStatusEventBus = kycStatusEventBus
+                it.pendingActionStore = pendingActionStore
             }
+    }
+
+    @AfterEach
+    public fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     // ── KYC_VERIFIED ──────────────────────────────────────────────────────────
@@ -142,5 +162,57 @@ public class HomeservicesFcmServiceKycTest {
         runCatching { service.handleMessageData(data) }
 
         verify(exactly = 0) { kycStatusEventBus.post(any()) }
+    }
+
+    // ── Durable Room cleanup on final verdict (P2/P3 from Codex round 2) ──────
+    //
+    // The launched coroutine runs in `serviceScope` on `Dispatchers.IO`, which the
+    // `Dispatchers.setMain` swap above does not redirect. `coVerify(timeout = ...)`
+    // waits up to the given budget for the suspended call to land — avoids both
+    // races and flakes without forcing a thread sleep.
+
+    @Test
+    public fun `KYC_VERIFIED — tombstones retry, submit-pending, and resume rows in serviceScope`(): Unit =
+        runTest {
+            val data = mapOf("type" to "KYC_VERIFIED", "techId" to "tech-1")
+
+            runCatching { service.handleMessageData(data) }
+
+            coVerify(timeout = TOMBSTONE_TIMEOUT_MS) {
+                pendingActionStore.clearPhotoRetry(techId = "tech-1", now = any())
+            }
+            coVerify(timeout = TOMBSTONE_TIMEOUT_MS) {
+                pendingActionStore.clearKycSubmitPending(techId = "tech-1", now = any())
+            }
+            coVerify(timeout = TOMBSTONE_TIMEOUT_MS) {
+                pendingActionStore.clearKycResume(techId = "tech-1", now = any())
+            }
+        }
+
+    @Test
+    public fun `KYC_REJECTED — tombstones retry, submit-pending, and resume rows in serviceScope`(): Unit =
+        runTest {
+            val data =
+                mapOf(
+                    "type" to "KYC_REJECTED",
+                    "techId" to "tech-2",
+                    "reason" to "PAN unreadable",
+                )
+
+            runCatching { service.handleMessageData(data) }
+
+            coVerify(timeout = TOMBSTONE_TIMEOUT_MS) {
+                pendingActionStore.clearPhotoRetry(techId = "tech-2", now = any())
+            }
+            coVerify(timeout = TOMBSTONE_TIMEOUT_MS) {
+                pendingActionStore.clearKycSubmitPending(techId = "tech-2", now = any())
+            }
+            coVerify(timeout = TOMBSTONE_TIMEOUT_MS) {
+                pendingActionStore.clearKycResume(techId = "tech-2", now = any())
+            }
+        }
+
+    private companion object {
+        private const val TOMBSTONE_TIMEOUT_MS = 2_000L
     }
 }

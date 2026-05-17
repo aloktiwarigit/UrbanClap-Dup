@@ -151,15 +151,18 @@ public class KycViewModelKycStatusTest {
         }
 
     @Test
-    public fun `final verdict tombstones retry, submit-pending, and resume rows`(): Unit =
+    public fun `final verdict does not touch Room from the ViewModel — FCM service owns the cleanup`(): Unit =
         runTest {
-            val vm = viewModel()
+            viewModel() // subscribes to kycStatusEventBus.events
 
             kycStatusEventBus.post(KycStatusEvent(technicianId = techId, verified = true))
 
-            coVerify(atLeast = 1) { pendingActionStore.clearPhotoRetry(techId, any()) }
-            coVerify(atLeast = 1) { pendingActionStore.clearKycSubmitPending(techId, any()) }
-            coVerify(atLeast = 1) { pendingActionStore.clearKycResume(techId, any()) }
+            // Tombstoning of retry / submit-pending / resume rows must run in
+            // HomeservicesFcmService.serviceScope so it survives the screen tear-down
+            // that follows onComplete(). The ViewModel must not perform these writes.
+            coVerify(exactly = 0) { pendingActionStore.clearPhotoRetry(any(), any()) }
+            coVerify(exactly = 0) { pendingActionStore.clearKycSubmitPending(any(), any()) }
+            coVerify(exactly = 0) { pendingActionStore.clearKycResume(any(), any()) }
         }
 
     // ── photoUploadRetryPending observation ────────────────────────────────────

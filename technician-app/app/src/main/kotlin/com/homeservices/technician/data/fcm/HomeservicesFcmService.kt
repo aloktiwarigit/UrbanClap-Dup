@@ -16,6 +16,7 @@ import com.homeservices.technician.data.earnings.EarningsUpdateEventBus
 import com.homeservices.technician.data.jobOffer.JobOfferEventBus
 import com.homeservices.technician.data.kyc.KycStatusEvent
 import com.homeservices.technician.data.kyc.KycStatusEventBus
+import com.homeservices.technician.data.pendingaction.PendingActionStore
 import com.homeservices.technician.data.rating.RatingPromptEventBus
 import com.homeservices.technician.data.rating.RatingReceivedEventBus
 import com.homeservices.technician.domain.jobOffer.FcmTokenSyncUseCase
@@ -160,6 +161,9 @@ public class HomeservicesFcmService :
     @Inject
     public lateinit var kycStatusEventBus: KycStatusEventBus
 
+    @Inject
+    public lateinit var pendingActionStore: PendingActionStore
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onMessageReceived(message: RemoteMessage): Unit {
@@ -233,6 +237,7 @@ public class HomeservicesFcmService :
             }
             "KYC_VERIFIED" -> {
                 val techId = data["techId"] ?: return
+                resolveKycPendingRows(techId)
                 kycStatusEventBus.post(
                     KycStatusEvent(technicianId = techId, verified = true, rejectionReason = null),
                 )
@@ -241,6 +246,7 @@ public class HomeservicesFcmService :
             "KYC_REJECTED" -> {
                 val techId = data["techId"] ?: return
                 val reason = data["reason"]
+                resolveKycPendingRows(techId)
                 kycStatusEventBus.post(
                     KycStatusEvent(technicianId = techId, verified = false, rejectionReason = reason),
                 )
@@ -520,6 +526,25 @@ public class HomeservicesFcmService :
                 .setAutoCancel(true)
                 .build()
         nm.notify(NOTIFICATION_ID_RATING_PROMPT, notification)
+    }
+
+    /**
+     * Durably tombstone the technician's KYC retry / submit-pending / resume rows
+     * on a final server verdict. Runs in [serviceScope] (`SupervisorJob`) so the
+     * writes survive the screen being torn down or the app being backgrounded.
+     *
+     * Without this, the in-process [KycStatusEventBus] post would be the only
+     * cleanup signal — and `SharedFlow(replay = 0)` drops the event if no
+     * collector is active when the FCM arrives.
+     */
+    private fun resolveKycPendingRows(techId: String) {
+        if (techId.isBlank()) return
+        serviceScope.launch {
+            val now = System.currentTimeMillis()
+            runCatching { pendingActionStore.clearPhotoRetry(techId = techId, now = now) }
+            runCatching { pendingActionStore.clearKycSubmitPending(techId = techId, now = now) }
+            runCatching { pendingActionStore.clearKycResume(techId = techId, now = now) }
+        }
     }
 
     private fun showKycStatusNotification(
