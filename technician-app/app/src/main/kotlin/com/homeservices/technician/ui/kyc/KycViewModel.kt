@@ -129,15 +129,20 @@ internal class KycViewModel
             _uiState.value = KycUiState.PanUploading
             val techId = currentTechnicianId()
             viewModelScope.launch {
+                // Optimistic durability marker: the submission is in flight and may be
+                // interrupted by process death or network loss. OnboardingViewModel
+                // observes this so the offline chip surfaces immediately.
+                persistKycSubmitPending(techId)
+
                 orchestrator.submitPan(fileUri, technicianId = techId).collect { result ->
                     _uiState.value =
                         when (result) {
                             is PanOcrResult.Success -> {
-                                runCatching { pendingActionStore.clearPhotoRetry(techId) }
+                                clearSubmissionRows(techId)
                                 KycUiState.Complete(status = KycStatus.PAN_DONE)
                             }
                             is PanOcrResult.ManualReview -> {
-                                runCatching { pendingActionStore.clearPhotoRetry(techId) }
+                                clearSubmissionRows(techId)
                                 KycUiState.Complete(status = KycStatus.MANUAL_REVIEW)
                             }
                             is PanOcrResult.OcrError ->
@@ -166,6 +171,18 @@ internal class KycViewModel
         }
 
         private fun handleKycStatusEvent(event: KycStatusEvent) {
+            // Ignore stale verdicts for previous technicians (multi-account device,
+            // delayed delivery, FCM replays). Anchor the verdict to the currently
+            // authenticated session.
+            val techId = currentTechnicianId()
+            if (event.technicianId.isNotBlank() && techId.isNotBlank() && event.technicianId != techId) {
+                return
+            }
+
+            // A final server verdict resolves the queued retry/submit rows: the
+            // banner and the chip must both stop surfacing once the outcome is known.
+            viewModelScope.launch { clearSubmissionRows(techId) }
+
             _uiState.value =
                 if (event.verified) {
                     KycUiState.Complete(status = KycStatus.PAN_DONE)
@@ -175,6 +192,39 @@ internal class KycViewModel
         }
 
         private fun currentTechnicianId(): String = (sessionManager.authState.value as? AuthState.Authenticated)?.uid ?: ""
+
+        private suspend fun clearSubmissionRows(techId: String) {
+            if (techId.isBlank()) return
+            runCatching { pendingActionStore.clearPhotoRetry(techId) }
+            runCatching { pendingActionStore.clearKycSubmitPending(techId) }
+            runCatching { pendingActionStore.clearKycResume(techId) }
+        }
+
+        private suspend fun persistKycSubmitPending(techId: String) {
+            if (techId.isBlank()) return
+            val nowMs = System.currentTimeMillis()
+            runCatching {
+                pendingActionStore.upsert(
+                    PendingAction(
+                        id = "KYC_SUBMIT_PENDING:technician:$techId:kyc:$techId",
+                        userId = techId,
+                        role = "technician",
+                        type = PendingActionType.KYC_SUBMIT_PENDING,
+                        entityType = "kyc",
+                        entityId = techId,
+                        routeUri = "homeservices://kyc",
+                        priority = PendingActionPriority.NORMAL,
+                        status = PendingActionStatus.ACTIVE,
+                        sourceStatus = null,
+                        version = 1L,
+                        createdAt = nowMs,
+                        updatedAt = nowMs,
+                        expiresAt = null,
+                        resolvedAt = null,
+                    ),
+                )
+            }
+        }
 
         private suspend fun persistPhotoUploadRetry(
             fileUri: Uri,

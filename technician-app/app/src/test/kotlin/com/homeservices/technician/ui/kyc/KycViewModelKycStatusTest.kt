@@ -137,6 +137,31 @@ public class KycViewModelKycStatusTest {
             assertThat((state as KycUiState.Error).message).isNotBlank()
         }
 
+    @Test
+    public fun `KYC verdict for another technician is ignored`(): Unit =
+        runTest {
+            val vm = viewModel()
+            val initialState = vm.uiState.value
+
+            kycStatusEventBus.post(
+                KycStatusEvent(technicianId = "tech-OTHER", verified = true),
+            )
+
+            assertThat(vm.uiState.value).isEqualTo(initialState)
+        }
+
+    @Test
+    public fun `final verdict tombstones retry, submit-pending, and resume rows`(): Unit =
+        runTest {
+            val vm = viewModel()
+
+            kycStatusEventBus.post(KycStatusEvent(technicianId = techId, verified = true))
+
+            coVerify(atLeast = 1) { pendingActionStore.clearPhotoRetry(techId, any()) }
+            coVerify(atLeast = 1) { pendingActionStore.clearKycSubmitPending(techId, any()) }
+            coVerify(atLeast = 1) { pendingActionStore.clearKycResume(techId, any()) }
+        }
+
     // ── photoUploadRetryPending observation ────────────────────────────────────
 
     @Test
@@ -246,7 +271,25 @@ public class KycViewModelKycStatusTest {
         }
 
     @Test
-    public fun `submitPan Success clears the retry row`(): Unit =
+    public fun `submitPan writes an optimistic KYC_SUBMIT_PENDING row before the upload completes`(): Unit =
+        runTest {
+            val vm = viewModel()
+            val uri = mockk<Uri>()
+            every {
+                orchestrator.submitPan(uri, technicianId = techId)
+            } returns flowOf(PanOcrResult.UploadError(RuntimeException("offline")))
+
+            vm.submitPan(uri)
+
+            coVerify(atLeast = 1) {
+                pendingActionStore.upsert(
+                    match { it.type == PendingActionType.KYC_SUBMIT_PENDING && it.entityId == techId },
+                )
+            }
+        }
+
+    @Test
+    public fun `submitPan Success clears the retry, submit-pending, and resume rows`(): Unit =
         runTest {
             val vm = viewModel()
             val uri = mockk<Uri>()
@@ -257,6 +300,8 @@ public class KycViewModelKycStatusTest {
             vm.submitPan(uri)
 
             coVerify(atLeast = 1) { pendingActionStore.clearPhotoRetry(techId, any()) }
+            coVerify(atLeast = 1) { pendingActionStore.clearKycSubmitPending(techId, any()) }
+            coVerify(atLeast = 1) { pendingActionStore.clearKycResume(techId, any()) }
         }
 
     // Suppress unused warning — declared so it can be expanded later if needed.

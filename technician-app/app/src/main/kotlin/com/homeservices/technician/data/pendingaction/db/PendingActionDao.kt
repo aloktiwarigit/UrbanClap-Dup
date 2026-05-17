@@ -153,4 +153,42 @@ public interface PendingActionDao {
         techId: String,
         now: Long,
     )
+
+    /**
+     * Tombstone any active KYC_SUBMIT_PENDING rows for this technician. Called once
+     * the server returns a final verdict (KYC_VERIFIED or KYC_REJECTED) — the
+     * onboarding-screen offline chip should no longer surface.
+     */
+    @Query(
+        """
+        UPDATE pending_actions
+        SET status = 'RESOLVED', resolvedAt = :now
+        WHERE type = 'KYC_SUBMIT_PENDING'
+          AND entityId = :techId
+          AND status = 'ACTIVE'
+        """,
+    )
+    public suspend fun clearActiveKycSubmitPendingForTech(
+        techId: String,
+        now: Long,
+    )
+
+    /**
+     * Tombstone any active KYC_RESUME rows for this technician. Called once the
+     * server returns a final verdict so the DigiLocker resumption nudge does not
+     * outlive the verdict.
+     */
+    @Query(
+        """
+        UPDATE pending_actions
+        SET status = 'RESOLVED', resolvedAt = :now
+        WHERE type = 'KYC_RESUME'
+          AND entityId = :techId
+          AND status = 'ACTIVE'
+        """,
+    )
+    public suspend fun clearActiveKycResumeForTech(
+        techId: String,
+        now: Long,
+    )
 }

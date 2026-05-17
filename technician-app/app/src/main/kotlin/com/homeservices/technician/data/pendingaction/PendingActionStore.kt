@@ -103,6 +103,28 @@ public class PendingActionStore(
         dao.clearActivePhotoRetryForTech(techId = techId, now = now)
     }
 
+    /**
+     * Tombstones any active KYC_SUBMIT_PENDING row for [techId]. Call once the
+     * server returns a final verdict so the onboarding offline chip stops surfacing.
+     */
+    public suspend fun clearKycSubmitPending(
+        techId: String,
+        now: Long = System.currentTimeMillis(),
+    ) {
+        dao.clearActiveKycSubmitPendingForTech(techId = techId, now = now)
+    }
+
+    /**
+     * Tombstones any active KYC_RESUME row for [techId]. Called on a final KYC
+     * verdict so the DigiLocker-resumption nudge does not outlive the verdict.
+     */
+    public suspend fun clearKycResume(
+        techId: String,
+        now: Long = System.currentTimeMillis(),
+    ) {
+        dao.clearActiveKycResumeForTech(techId = techId, now = now)
+    }
+
     // ── Mapping helpers ───────────────────────────────────────────────────────
 
     private fun PendingActionEntity.toDomain(): PendingAction =

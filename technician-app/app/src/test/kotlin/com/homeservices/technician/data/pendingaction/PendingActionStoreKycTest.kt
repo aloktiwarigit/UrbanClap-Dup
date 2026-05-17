@@ -79,4 +79,24 @@ public class PendingActionStoreKycTest {
                 dao.clearActivePhotoRetryForTech(techId = "tech-1", now = 9_000L)
             }
         }
+
+    @Test
+    public fun `clearKycSubmitPending delegates to DAO with techId and now`(): Unit =
+        runTest {
+            store.clearKycSubmitPending(techId = "tech-1", now = 9_500L)
+
+            coVerify(exactly = 1) {
+                dao.clearActiveKycSubmitPendingForTech(techId = "tech-1", now = 9_500L)
+            }
+        }
+
+    @Test
+    public fun `clearKycResume delegates to DAO with techId and now`(): Unit =
+        runTest {
+            store.clearKycResume(techId = "tech-1", now = 10_000L)
+
+            coVerify(exactly = 1) {
+                dao.clearActiveKycResumeForTech(techId = "tech-1", now = 10_000L)
+            }
+        }
 }

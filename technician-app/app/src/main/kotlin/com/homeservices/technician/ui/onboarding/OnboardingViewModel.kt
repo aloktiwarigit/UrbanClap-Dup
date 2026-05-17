@@ -24,6 +24,17 @@ import javax.inject.Inject
  * [OnboardingScreen] — a heads-up that "your KYC will be sent when you go online"
  * so the technician knows the app already captured the submission and is waiting
  * for connectivity.
+ *
+ * Treats both [PendingActionType.KYC_SUBMIT_PENDING] (optimistic submission marker
+ * written when the upload starts) and [PendingActionType.PHOTO_UPLOAD_RETRY]
+ * (failure-mode marker written when the upload fails) as "submission queued":
+ * either state tells the technician that work is outstanding and that going
+ * online will resume it.
+ *
+ * Note (E11-S05c follow-up): [OnboardingScreen] is currently not composed into
+ * the technician onboarding nav graph (which starts at `service_selection`). The
+ * chip is in place and correctly fed; wiring the screen into navigation is
+ * tracked separately.
  */
 @HiltViewModel
 public class OnboardingViewModel
@@ -44,12 +55,19 @@ public class OnboardingViewModel
                             is AuthState.Authenticated ->
                                 pendingActionStore
                                     .observeActive(authState.uid)
-                                    .map { actions ->
-                                        actions.any { it.type == PendingActionType.KYC_SUBMIT_PENDING }
-                                    }
+                                    .map { actions -> actions.any { it.type in QUEUED_TYPES } }
                             AuthState.Unauthenticated -> flowOf(false)
                         }
                     }.collect { _kycSubmitQueued.value = it }
             }
+        }
+
+        public companion object {
+            /** PendingAction types that map to the "KYC submission queued" indicator. */
+            public val QUEUED_TYPES: Set<PendingActionType> =
+                setOf(
+                    PendingActionType.KYC_SUBMIT_PENDING,
+                    PendingActionType.PHOTO_UPLOAD_RETRY,
+                )
         }
     }
