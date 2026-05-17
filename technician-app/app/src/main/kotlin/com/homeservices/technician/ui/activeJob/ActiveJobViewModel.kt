@@ -242,8 +242,10 @@ internal class ActiveJobViewModel
                     // Keep photoUploadInProgress = true until fireTransition completes so the
                     // Confirm button stays disabled and duplicate transitions are prevented.
                     _uiState.value = s.copy(uploadedStoragePath = storagePath)
-                    // Tombstone any queued retry row — the upload succeeded.
-                    pendingActionStore.clearPhotoUploadPending(bookingId)
+                    // Tombstone any queued retry row — best-effort cleanup, MUST NOT block
+                    // the transition. A Room I/O failure here would otherwise strand the
+                    // technician with a permanent spinner and an unadvanced job.
+                    runCatching { pendingActionStore.clearPhotoUploadPending(bookingId) }
                     fireTransition(stage)
                 } else {
                     val s = _uiState.value as? ActiveJobUiState.Active ?: return@launch
