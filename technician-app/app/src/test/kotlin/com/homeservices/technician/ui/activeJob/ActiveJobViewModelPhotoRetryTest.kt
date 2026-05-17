@@ -24,6 +24,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
@@ -100,7 +101,7 @@ public class ActiveJobViewModelPhotoRetryTest {
         every { connectivityObserver.isConnected } returns emptyFlow()
         every { repository.getActiveJob("bk-1") } returns flowOf(aJob())
         every { repository.hasPendingTransitions } returns flowOf(false)
-        every { bookingStatusEventBus.events } returns emptyFlow()
+        every { bookingStatusEventBus.events } returns MutableSharedFlow()
     }
 
     @AfterEach

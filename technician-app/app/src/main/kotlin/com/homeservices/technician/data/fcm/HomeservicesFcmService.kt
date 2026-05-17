@@ -167,8 +167,12 @@ public class HomeservicesFcmService :
      *   2. JOB_OFFER additionally triggers the in-process [JobOfferEventBus] for the
      *      full-screen offer UI (EventBus removal deferred to E11-S01b-2).
      *   3. Legacy event-bus types not yet in core-nav schema fall through to the existing switch.
+     *
+     * Detekt suppressions: this is an FCM type dispatcher; each branch is a distinct message
+     * type so extraction would obscure intent. LongMethod / ReturnCount grow linearly with the
+     * number of supported types and each branch needs 1–2 guard-clause returns.
      */
-    @Suppress("CyclomaticComplexMethod") // FCM type dispatcher — each branch is a distinct message type; extraction would obscure intent
+    @Suppress("CyclomaticComplexMethod", "LongMethod", "ReturnCount")
     public fun handleMessageData(data: Map<String, String>) {
         // Attempt to ingest via NotificationRouter (pending-action types)
         val intent = router.parseFcmData(data)

@@ -33,6 +33,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
+@Suppress("LongParameterList") // Hilt-injected dependencies for the active-job feature; extracting an aggregator would only hide the wiring
 internal class ActiveJobViewModel
     @Inject
     constructor(

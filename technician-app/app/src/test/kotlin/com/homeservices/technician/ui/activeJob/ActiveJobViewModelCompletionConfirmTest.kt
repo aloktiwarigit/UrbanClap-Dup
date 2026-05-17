@@ -21,6 +21,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
@@ -71,7 +72,7 @@ public class ActiveJobViewModelCompletionConfirmTest {
         every { connectivityObserver.isConnected } returns emptyFlow()
         every { repository.getActiveJob("bk-1") } returns flowOf(aJob())
         every { repository.hasPendingTransitions } returns flowOf(false)
-        every { bookingStatusEventBus.events } returns emptyFlow()
+        every { bookingStatusEventBus.events } returns MutableSharedFlow()
         every { sessionManager.authState } returns MutableStateFlow(AuthState.Unauthenticated)
         every { pendingActionStore.observeActive(any()) } returns flowOf(emptyList())
         val savedStateHandle = SavedStateHandle(mapOf("bookingId" to "bk-1"))
@@ -144,7 +145,7 @@ public class ActiveJobViewModelCompletionConfirmTest {
                     mockk<ConnectivityObserver>().also { every { it.isConnected } returns emptyFlow() },
                     mockk(relaxed = true),
                     mockk(relaxed = true),
-                    mockk<BookingStatusEventBus>().also { every { it.events } returns emptyFlow() },
+                    mockk<BookingStatusEventBus>().also { every { it.events } returns MutableSharedFlow() },
                     mockk<PendingActionStore>().also { every { it.observeActive(any()) } returns flowOf(emptyList()) },
                     mockk<SessionManager>().also { every { it.authState } returns MutableStateFlow(AuthState.Unauthenticated) },
                 )

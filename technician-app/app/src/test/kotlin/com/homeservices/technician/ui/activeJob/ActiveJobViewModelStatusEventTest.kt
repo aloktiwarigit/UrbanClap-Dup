@@ -106,7 +106,8 @@ public class ActiveJobViewModelStatusEventTest {
     public fun `PRICE_APPROVED event for matching bookingId triggers repository startObserving`(): Unit =
         runTest(testDispatcher) {
             val vm = buildVm()
-            @Suppress("UNUSED_EXPRESSION") vm
+            @Suppress("UNUSED_EXPRESSION")
+            vm
 
             bookingStatusEvents.tryEmit(
                 BookingStatusEvent(bookingId = "bk-1", newStatus = "PRICE_APPROVED", priceApprovedPaise = 8_000L),
@@ -121,7 +122,8 @@ public class ActiveJobViewModelStatusEventTest {
     public fun `PRICE_REJECTED event for matching bookingId triggers repository startObserving`(): Unit =
         runTest(testDispatcher) {
             val vm = buildVm()
-            @Suppress("UNUSED_EXPRESSION") vm
+            @Suppress("UNUSED_EXPRESSION")
+            vm
 
             bookingStatusEvents.tryEmit(
                 BookingStatusEvent(bookingId = "bk-1", newStatus = "PRICE_REJECTED"),
@@ -135,7 +137,8 @@ public class ActiveJobViewModelStatusEventTest {
     public fun `event for a different bookingId does not retrigger startObserving`(): Unit =
         runTest(testDispatcher) {
             val vm = buildVm()
-            @Suppress("UNUSED_EXPRESSION") vm
+            @Suppress("UNUSED_EXPRESSION")
+            vm
 
             bookingStatusEvents.tryEmit(
                 BookingStatusEvent(bookingId = "bk-other", newStatus = "PRICE_APPROVED", priceApprovedPaise = 1_000L),
@@ -150,7 +153,8 @@ public class ActiveJobViewModelStatusEventTest {
     public fun `unhandled newStatus does not call startObserving again`(): Unit =
         runTest(testDispatcher) {
             val vm = buildVm()
-            @Suppress("UNUSED_EXPRESSION") vm
+            @Suppress("UNUSED_EXPRESSION")
+            vm
 
             bookingStatusEvents.tryEmit(
                 BookingStatusEvent(bookingId = "bk-1", newStatus = "ASSIGNED"),
