@@ -1,7 +1,12 @@
 package com.homeservices.technician.ui.kyc
 
 import android.net.Uri
+import com.homeservices.technician.data.auth.SessionManager
 import com.homeservices.technician.data.kyc.DigiLockerCallbackBus
+import com.homeservices.technician.data.kyc.KycStatusEventBus
+import com.homeservices.technician.data.pendingaction.PendingActionStore
+import com.homeservices.technician.domain.auth.model.AuthProvider
+import com.homeservices.technician.domain.auth.model.AuthState
 import com.homeservices.technician.domain.kyc.KycOrchestrator
 import com.homeservices.technician.domain.kyc.model.DigiLockerResult
 import com.homeservices.technician.domain.kyc.model.KycStatus
@@ -10,6 +15,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -24,15 +30,42 @@ import org.junit.jupiter.api.Test
 public class KycViewModelTest {
     private lateinit var orchestrator: KycOrchestrator
     private lateinit var callbackBus: DigiLockerCallbackBus
+    private lateinit var kycStatusEventBus: KycStatusEventBus
+    private lateinit var pendingActionStore: PendingActionStore
+    private lateinit var sessionManager: SessionManager
     private lateinit var viewModel: KycViewModel
     private val testDispatcher = UnconfinedTestDispatcher()
+    private val techId = "tech-1"
 
     @BeforeEach
     public fun setUp(): Unit {
         Dispatchers.setMain(testDispatcher)
         orchestrator = mockk(relaxed = true)
         callbackBus = DigiLockerCallbackBus()
-        viewModel = KycViewModel(orchestrator, callbackBus)
+        kycStatusEventBus = KycStatusEventBus()
+        pendingActionStore = mockk(relaxed = true)
+        sessionManager = mockk(relaxed = true)
+
+        every { sessionManager.authState } returns
+            MutableStateFlow(
+                AuthState.Authenticated(
+                    uid = techId,
+                    phoneLastFour = null,
+                    email = null,
+                    displayName = null,
+                    authProvider = AuthProvider.Phone,
+                ),
+            )
+        every { pendingActionStore.observeActive(techId) } returns MutableStateFlow(emptyList())
+
+        viewModel =
+            KycViewModel(
+                orchestrator = orchestrator,
+                callbackBus = callbackBus,
+                kycStatusEventBus = kycStatusEventBus,
+                pendingActionStore = pendingActionStore,
+                sessionManager = sessionManager,
+            )
     }
 
     @AfterEach

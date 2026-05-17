@@ -83,6 +83,26 @@ public class PendingActionStore(
         dao.clearActivePhotoUploadForBooking(bookingId = bookingId, now = now)
     }
 
+    // ── E11-S05c onboarding durable hooks ─────────────────────────────────────
+
+    /**
+     * Returns the single active PHOTO_UPLOAD_RETRY [PendingAction] for the given
+     * technician, or `null` if none exists. Used by the KYC ViewModel to decide
+     * whether to surface the retry banner above the form card.
+     */
+    public suspend fun pendingPhotoRetryForTech(techId: String): PendingAction? = dao.findActivePhotoRetryForTech(techId)?.toDomain()
+
+    /**
+     * Tombstones any active PHOTO_UPLOAD_RETRY row for [techId]. Call once the
+     * queued KYC photo upload succeeds so the retry banner stops surfacing.
+     */
+    public suspend fun clearPhotoRetry(
+        techId: String,
+        now: Long = System.currentTimeMillis(),
+    ) {
+        dao.clearActivePhotoRetryForTech(techId = techId, now = now)
+    }
+
     // ── Mapping helpers ───────────────────────────────────────────────────────
 
     private fun PendingActionEntity.toDomain(): PendingAction =
