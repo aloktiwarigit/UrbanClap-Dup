@@ -104,6 +104,16 @@ async function main() {
     defaultTtl: 30,
   });
   console.log("Container 'slot_holds' ready.");
+
+  // E16-S04/WS-F: Waitlist — customers who requested a service in their area.
+  // Partitioned by /phone for per-customer access patterns.
+  // TTL = 1 year (31 536 000 s) for compliance retention; admin CSV export deferred to E16-S04b.
+  await database.containers.createIfNotExists({
+    id: 'customer_waitlist',
+    partitionKey: { paths: ['/phone'] },
+    defaultTtl: 31_536_000,
+  });
+  console.log("Container 'customer_waitlist' ready.");
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
