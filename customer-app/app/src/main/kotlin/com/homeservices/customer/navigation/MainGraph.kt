@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.homeservices.customer.navigation
 
 import androidx.compose.runtime.remember
@@ -10,9 +12,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.navigation
 import com.homeservices.customer.domain.flags.FeatureFlags
+import com.homeservices.customer.ui.booking.AddressPickerScreen
 import com.homeservices.customer.ui.booking.AddressScreen
 import com.homeservices.customer.ui.booking.BookingConfirmedScreen
 import com.homeservices.customer.ui.booking.BookingSummaryScreen
+import com.homeservices.customer.ui.booking.BookingUiState
 import com.homeservices.customer.ui.booking.BookingViewModel
 import com.homeservices.customer.ui.booking.PriceApprovalScreen
 import com.homeservices.customer.ui.booking.PriceApprovalViewModel
@@ -31,17 +35,23 @@ import com.homeservices.customer.ui.rating.RatingRoutes
 import com.homeservices.customer.ui.rating.RatingScreen
 import com.homeservices.customer.ui.tracking.LiveTrackingScreen
 import com.homeservices.customer.ui.tracking.LiveTrackingViewModel
+import com.homeservices.customer.ui.waitlist.WaitlistScreen
 import com.homeservices.customer.ui.wallet.WalletBalanceUiState
 import com.homeservices.customer.ui.wallet.WalletRoutes
 import com.homeservices.customer.ui.wallet.WalletScreen
 import com.homeservices.customer.ui.wallet.WalletViewModel
+
+private const val AYODHYA_CENTER_LAT = 26.7958
+private const val AYODHYA_CENTER_LNG = 82.1947
+private const val AYODHYA_CENTER_LAT_F = 26.7958f
+private const val AYODHYA_CENTER_LNG_F = 82.1947f
 
 internal fun NavGraphBuilder.mainGraph(
     navController: NavController,
     featureFlags: FeatureFlags,
 ) {
     catalogueGraph(navController, featureFlags)
-    bookingGraph(navController)
+    bookingGraph(navController, featureFlags)
 }
 
 // ── Catalogue nested graph ────────────────────────────────────────────────────
@@ -158,10 +168,15 @@ private fun NavGraphBuilder.serviceDetailDestination(navController: NavControlle
 
 // ── Booking flow — BookingViewModel scoped to the booking nested graph ─────────
 
-private fun NavGraphBuilder.bookingGraph(navController: NavController) {
+private fun NavGraphBuilder.bookingGraph(
+    navController: NavController,
+    featureFlags: FeatureFlags,
+) {
     navigation(startDestination = BookingRoutes.SLOT_PICKER, route = BookingRoutes.BOOKING_GRAPH) {
-        slotPickerDestination(navController)
+        slotPickerDestination(navController, featureFlags)
         addressDestination(navController)
+        addressPickerDestination(navController)
+        waitlistDestination(navController)
         summaryDestination(navController)
         confirmedDestination(navController)
         priceApprovalDestination(navController)
@@ -174,7 +189,10 @@ private fun NavGraphBuilder.bookingGraph(navController: NavController) {
     }
 }
 
-private fun NavGraphBuilder.slotPickerDestination(navController: NavController) {
+private fun NavGraphBuilder.slotPickerDestination(
+    navController: NavController,
+    featureFlags: FeatureFlags,
+) {
     composable(
         route = BookingRoutes.SLOT_PICKER,
         arguments =
@@ -193,8 +211,65 @@ private fun NavGraphBuilder.slotPickerDestination(navController: NavController) 
                 vm.pendingServiceId = serviceId
                 vm.pendingCategoryId = categoryId
                 vm.setSlotAndAddress(slot, "", 0.0, 0.0)
-                navController.navigate(BookingRoutes.ADDRESS)
+                // Feature flag: use new Places picker or legacy address screen
+                if (featureFlags.placesAutocompleteEnabled()) {
+                    navController.navigate(BookingRoutes.addressPicker(serviceId))
+                } else {
+                    navController.navigate(BookingRoutes.ADDRESS)
+                }
             },
+            onBack = { navController.popBackStack() },
+        )
+    }
+}
+
+private fun NavGraphBuilder.addressPickerDestination(navController: NavController) {
+    composable(
+        route = BookingRoutes.ADDRESS_PICKER,
+        arguments = listOf(navArgument("serviceId") { type = NavType.StringType }),
+    ) { backStackEntry ->
+        val serviceId = backStackEntry.arguments?.getString("serviceId") ?: ""
+        val bookingEntry = remember(backStackEntry) { navController.getBackStackEntry(BookingRoutes.BOOKING_GRAPH) }
+        val vm: BookingViewModel = hiltViewModel(bookingEntry)
+        AddressPickerScreen(
+            serviceId = serviceId,
+            onConfirmed = { addressText, lat, lng ->
+                val state = vm.uiState.value
+                val slot = (state as? BookingUiState.Ready)?.slot ?: return@AddressPickerScreen
+                vm.setSlotAndAddress(slot, addressText, lat, lng)
+                navController.navigate(BookingRoutes.SUMMARY)
+            },
+            onRefused = { lat, lng, svcId ->
+                navController.navigate(BookingRoutes.waitlist(lat, lng, svcId))
+            },
+            onBack = { navController.popBackStack() },
+        )
+    }
+}
+
+private fun NavGraphBuilder.waitlistDestination(navController: NavController) {
+    composable(
+        route = BookingRoutes.WAITLIST,
+        arguments =
+            listOf(
+                navArgument("lat") {
+                    type = NavType.FloatType
+                    defaultValue = AYODHYA_CENTER_LAT_F
+                },
+                navArgument("lng") {
+                    type = NavType.FloatType
+                    defaultValue = AYODHYA_CENTER_LNG_F
+                },
+                navArgument("serviceId") { type = NavType.StringType },
+            ),
+    ) { backStackEntry ->
+        val lat = backStackEntry.arguments?.getFloat("lat")?.toDouble() ?: AYODHYA_CENTER_LAT
+        val lng = backStackEntry.arguments?.getFloat("lng")?.toDouble() ?: AYODHYA_CENTER_LNG
+        val serviceId = backStackEntry.arguments?.getString("serviceId") ?: ""
+        WaitlistScreen(
+            lat = lat,
+            lng = lng,
+            serviceId = serviceId,
             onBack = { navController.popBackStack() },
         )
     }
