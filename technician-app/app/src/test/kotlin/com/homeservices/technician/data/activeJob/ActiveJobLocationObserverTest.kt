@@ -13,7 +13,9 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import io.mockk.verify
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -49,6 +51,8 @@ public class ActiveJobLocationObserverTest {
             slotWindow = "10:00-12:00",
         )
 
+    private val testDispatcher = UnconfinedTestDispatcher()
+
     @BeforeEach
     public fun setUp() {
         context = mockk(relaxed = true)
@@ -62,6 +66,9 @@ public class ActiveJobLocationObserverTest {
         justRun { LocationForegroundService.stop(any()) }
 
         observer = ActiveJobLocationObserver(context, repository)
+        // Override the observer's default Dispatchers.Default scope with one that uses
+        // the TestDispatcher, so `advanceUntilIdle()` actually drains the collect coroutine.
+        observer.scope = CoroutineScope(SupervisorJob() + testDispatcher)
     }
 
     @AfterEach
@@ -71,7 +78,7 @@ public class ActiveJobLocationObserverTest {
 
     @Test
     public fun `observer_emitsEnRoute_startsService`(): Unit =
-        runTest(UnconfinedTestDispatcher()) {
+        runTest(testDispatcher) {
             // Set desired state BEFORE start() so the replay emission is EN_ROUTE.
             activeJobState.value = aJob(ActiveJobStatus.EN_ROUTE)
             observer.start()
@@ -83,7 +90,7 @@ public class ActiveJobLocationObserverTest {
 
     @Test
     public fun `observer_emitsReached_startsService`(): Unit =
-        runTest(UnconfinedTestDispatcher()) {
+        runTest(testDispatcher) {
             activeJobState.value = aJob(ActiveJobStatus.REACHED)
             observer.start()
             advanceUntilIdle()
@@ -94,7 +101,7 @@ public class ActiveJobLocationObserverTest {
 
     @Test
     public fun `observer_emitsInProgress_startsService`(): Unit =
-        runTest(UnconfinedTestDispatcher()) {
+        runTest(testDispatcher) {
             activeJobState.value = aJob(ActiveJobStatus.IN_PROGRESS)
             observer.start()
             advanceUntilIdle()
@@ -105,7 +112,7 @@ public class ActiveJobLocationObserverTest {
 
     @Test
     public fun `observer_emitsCompleted_stopsService`(): Unit =
-        runTest(UnconfinedTestDispatcher()) {
+        runTest(testDispatcher) {
             activeJobState.value = aJob(ActiveJobStatus.COMPLETED)
             observer.start()
             advanceUntilIdle()
@@ -116,7 +123,7 @@ public class ActiveJobLocationObserverTest {
 
     @Test
     public fun `observer_emitsNull_stopsService`(): Unit =
-        runTest(UnconfinedTestDispatcher()) {
+        runTest(testDispatcher) {
             // activeJobState is already null from setUp() — replay emits null immediately.
             observer.start()
             advanceUntilIdle()
@@ -127,7 +134,7 @@ public class ActiveJobLocationObserverTest {
 
     @Test
     public fun `observer_emitsAssigned_doesNothing`(): Unit =
-        runTest(UnconfinedTestDispatcher()) {
+        runTest(testDispatcher) {
             activeJobState.value = aJob(ActiveJobStatus.ASSIGNED)
             observer.start()
             advanceUntilIdle()
@@ -138,7 +145,7 @@ public class ActiveJobLocationObserverTest {
 
     @Test
     public fun `observer_transitionsFromEnRouteToCompleted_stopsService`(): Unit =
-        runTest(UnconfinedTestDispatcher()) {
+        runTest(testDispatcher) {
             // Verify that a mid-job transition from active to completed stops the service.
             activeJobState.value = aJob(ActiveJobStatus.EN_ROUTE)
             observer.start()

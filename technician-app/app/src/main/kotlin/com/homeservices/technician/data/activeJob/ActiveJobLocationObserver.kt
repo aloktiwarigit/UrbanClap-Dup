@@ -1,6 +1,7 @@
 package com.homeservices.technician.data.activeJob
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import com.homeservices.technician.data.location.service.LocationForegroundService
 import com.homeservices.technician.domain.activeJob.ActiveJobRepository
 import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
@@ -26,7 +27,10 @@ public class ActiveJobLocationObserver
         @ApplicationContext private val appContext: Context,
         private val repository: ActiveJobRepository,
     ) {
-        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        // Exposed for tests: override with a TestScope before calling start() so
+        // `advanceUntilIdle()` reaches the collect coroutine.
+        @VisibleForTesting
+        internal var scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
         /** Subscribes to [ActiveJobRepository.activeJobState] and manages [LocationForegroundService]. */
         public fun start() {
