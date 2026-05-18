@@ -30,6 +30,10 @@ const containers = [
   // E17-S02: live technician location — one doc per active booking, last-write-wins.
   // Cosmos auto-deletes after 1h (TTL=3600). Partitioned by /bookingId for single-partition reads.
   { id: 'live_locations', partitionKey: '/bookingId', ttl: 3600 },
+  // E19-S02: Device tokens for FCM push (device-token-based sends, threat I-A2 mitigation).
+  // Partitioned by /userId for single-partition reads per user.
+  // No defaultTtl — manual prune via daily timer allows >60 day idle tokens if device used recently.
+  { id: 'device_tokens', partitionKey: '/userId', ttl: undefined },
 ] as const;
 
 async function main() {
