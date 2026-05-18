@@ -11,6 +11,7 @@ import com.google.firebase.messaging.RemoteMessage
 import com.homeservices.corenav.NotificationRouter
 import com.homeservices.customer.MainActivity
 import com.homeservices.customer.data.booking.PriceApprovalEventBus
+import com.homeservices.customer.data.device.DeviceTokenRegistrar
 import com.homeservices.customer.data.rating.RatingPromptEventBus
 import com.homeservices.customer.data.tracking.LocationUpdateEvent
 import com.homeservices.customer.data.tracking.LocationUpdateEventBus
@@ -60,6 +61,8 @@ public class CustomerFirebaseMessagingService : FirebaseMessagingService() {
     @Inject public lateinit var noShowCreditEventBus: NoShowCreditEventBus
 
     @Inject public lateinit var locationUpdateEventBus: LocationUpdateEventBus
+
+    @Inject public lateinit var deviceTokenRegistrar: DeviceTokenRegistrar
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -126,8 +129,9 @@ public class CustomerFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
-    // Token rotation handled via FCM topic subscription — no server-side storage needed.
-    override fun onNewToken(token: String): Unit = Unit
+    override fun onNewToken(token: String) {
+        serviceScope.launch { deviceTokenRegistrar.register() }
+    }
 
     public override fun onDestroy(): Unit {
         super.onDestroy()

@@ -96,6 +96,33 @@ rules:
     languages: [typescript]
     severity: ERROR
 
+  # E19-S02 — FCM PII trim: ban user-specific topic sends.
+  #
+  # Customer and technician UIDs in FCM topic names are PII under DPDP Act 2023.
+  # Any topic of the form `customer_<uid>` or `technician_<uid>` broadcasts the
+  # subscriber's identity to anyone subscribed to that topic, violating data
+  # minimisation (DPDP §5) and purpose limitation (DPDP §6).
+  #
+  # Use device-token sends (sendToUserTokens helper in fcm.service.ts) instead.
+  # The only approved topic exception is the non-PII `owner_alerts` aggregate
+  # topic — see ADR-0026 §5.
+  #
+  # References: docs/adr/0026-fcm-pii-trim.md, E19-S02 spec
+  - id: fcm-no-user-topic-pii
+    pattern-either:
+      - pattern: |
+          topic: `customer_${...}`
+      - pattern: |
+          topic: `technician_${...}`
+    message: >
+      FCM user-specific topics expose UIDs (PII under DPDP Act 2023 §5/§6).
+      Use device-token sends via sendToUserTokens() instead. See ADR-0026.
+    languages: [typescript]
+    severity: ERROR
+    paths:
+      include:
+        - "api/src/**"
+
   - id: audit-log-immutable
     pattern-either:
       - pattern: $X.container("audit_log").items.upsert(...)

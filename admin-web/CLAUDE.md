@@ -72,12 +72,19 @@ function Get-DotEnvValue([string]$Name) {
 $token = gh auth token
 $token | docker login ghcr.io -u aloktiwarigit --password-stdin
 
+# Web Push requires all three Firebase Messaging build-args:
+# NEXT_PUBLIC_FIREBASE_VAPID_KEY (VAPID public key for subscription)
+# NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID (required by getToken())
+# NEXT_PUBLIC_FIREBASE_APP_ID (required by Firebase SDK initialisation)
 docker build --progress=plain -t $image `
   --build-arg NEXT_PUBLIC_APP_URL="https://aca-admin-homeservices-prod.icybush-b2e9c876.centralindia.azurecontainerapps.io" `
   --build-arg NEXT_PUBLIC_CITY="$(Get-DotEnvValue 'NEXT_PUBLIC_CITY')" `
   --build-arg NEXT_PUBLIC_FIREBASE_API_KEY="$(Get-DotEnvValue 'NEXT_PUBLIC_FIREBASE_API_KEY')" `
   --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="$(Get-DotEnvValue 'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN')" `
   --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID="$(Get-DotEnvValue 'NEXT_PUBLIC_FIREBASE_PROJECT_ID')" `
+  --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="$(Get-DotEnvValue 'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID')" `
+  --build-arg NEXT_PUBLIC_FIREBASE_APP_ID="$(Get-DotEnvValue 'NEXT_PUBLIC_FIREBASE_APP_ID')" `
+  --build-arg NEXT_PUBLIC_FIREBASE_VAPID_KEY="$(Get-DotEnvValue 'NEXT_PUBLIC_FIREBASE_VAPID_KEY')" `
   --build-arg NEXT_PUBLIC_GIT_SHA="$tag" `
   --build-arg NEXT_PUBLIC_GROWTHBOOK_API_HOST="$(Get-DotEnvValue 'NEXT_PUBLIC_GROWTHBOOK_API_HOST')" `
   --build-arg NEXT_PUBLIC_GROWTHBOOK_CLIENT_KEY="$(Get-DotEnvValue 'NEXT_PUBLIC_GROWTHBOOK_CLIENT_KEY')" `

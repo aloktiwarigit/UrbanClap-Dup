@@ -1309,6 +1309,9 @@
               },
               "fcmTokensCleared": {
                 "type": "boolean"
+              },
+              "deviceTokensCleared": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -1321,7 +1324,8 @@
               "auditLogAnonymized",
               "technicianHardDeleted",
               "kycHardDeleted",
-              "fcmTokensCleared"
+              "fcmTokensCleared",
+              "deviceTokensCleared"
             ]
           }
         },

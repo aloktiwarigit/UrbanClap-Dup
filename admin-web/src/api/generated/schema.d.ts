@@ -842,6 +842,7 @@ export interface components {
                 technicianHardDeleted: boolean;
                 kycHardDeleted: boolean;
                 fcmTokensCleared: boolean;
+                deviceTokensCleared: boolean;
             };
         };
         AdminErasurePatchBody: {
