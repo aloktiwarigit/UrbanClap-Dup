@@ -95,7 +95,8 @@ describe('GET /v1/kyc/status', () => {
     vi.mocked(getKycByTechnicianId).mockResolvedValue({
       aadhaarVerified: true,
       aadhaarMaskedNumber: 'XXXX-XXXX-1234',
-      panNumber: 'ABCDE####F',
+      panNumber: null,
+      panMaskedNumber: 'XXXXX1234F',
       panImagePath: null,
       kycStatus: 'PAN_DONE',
       updatedAt: '2026-04-29T10:00:00Z',
@@ -112,5 +113,62 @@ describe('GET /v1/kyc/status', () => {
     expect(res.status).toBe(200);
     const body = res.jsonBody as Record<string, unknown>;
     expect(body['panNumberEncrypted']).toBeUndefined();
+    expect(body['panMaskedNumber']).toBe('XXXXX1234F');
+    // Legacy alias present for technician-app compat (migration window)
+    expect(body['panNumber']).toBe('XXXXX1234F');
+  });
+
+  it('[E19-S01] falls back to already-masked panNumber for legacy docs (old #### mask format)', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { getKycByTechnicianId } = await import('../../src/cosmos/technician-repository.js');
+    vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+
+    vi.mocked(getKycByTechnicianId).mockResolvedValue({
+      aadhaarVerified: true,
+      aadhaarMaskedNumber: null,
+      panNumber: 'ABCDE####F',  // old-style masked value — maskPan() returns null for this
+      panImagePath: null,
+      kycStatus: 'PAN_DONE',
+      updatedAt: '2026-04-01T00:00:00Z',
+    });
+
+    const req = new HttpRequest({
+      method: 'GET',
+      url: 'http://localhost/v1/kyc/status?technicianId=tech-001',
+      headers: { Authorization: 'Bearer valid' },
+    });
+    const res = await handler(req, new InvocationContext());
+
+    const body = res.jsonBody as Record<string, unknown>;
+    // Old mask format preserved (can't re-mask without raw PAN)
+    expect(body['panMaskedNumber']).toBe('ABCDE####F');
+    // Legacy alias also present for technician-app compat
+    expect(body['panNumber']).toBe('ABCDE####F');
+  });
+
+  it('[E19-S01-P2A] applies maskPan to raw canonical panNumber in legacy docs to avoid raw PAN exposure', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { getKycByTechnicianId } = await import('../../src/cosmos/technician-repository.js');
+    vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+
+    vi.mocked(getKycByTechnicianId).mockResolvedValue({
+      aadhaarVerified: true,
+      aadhaarMaskedNumber: null,
+      panNumber: 'ABCDE1234F',  // pre-E18-S06 raw PAN — must be masked before returning
+      panImagePath: null,
+      kycStatus: 'PAN_DONE',
+      updatedAt: '2026-03-01T00:00:00Z',
+    });
+
+    const req = new HttpRequest({
+      method: 'GET',
+      url: 'http://localhost/v1/kyc/status?technicianId=tech-001',
+      headers: { Authorization: 'Bearer valid' },
+    });
+    const res = await handler(req, new InvocationContext());
+
+    const body = res.jsonBody as Record<string, unknown>;
+    expect(body['panMaskedNumber']).toBe('XXXXX1234F');
+    expect(body['panMaskedNumber']).not.toBe('ABCDE1234F');  // raw PAN must never appear
   });
 });

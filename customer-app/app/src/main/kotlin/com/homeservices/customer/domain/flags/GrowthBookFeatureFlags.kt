@@ -63,5 +63,7 @@ public class GrowthBookFeatureFlags
 
         override fun photoFirstCatalogueEnabled(): Boolean = sdk.isOn("customer.photo-first-catalogue.enabled") ?: false
 
+        override fun placesAutocompleteEnabled(): Boolean = sdk.isOn("customer.places-autocomplete.enabled") ?: false
+
         override fun sosAudioUploadEnabled(): Boolean = sdk.isOn("customer.sos-audio-upload.enabled") ?: false
     }

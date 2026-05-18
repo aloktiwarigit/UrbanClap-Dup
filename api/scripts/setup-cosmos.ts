@@ -112,6 +112,16 @@ async function main() {
   });
   console.log("Container 'slot_holds' ready.");
 
+  // E16-S04/WS-F: Waitlist — customers who requested a service in their area.
+  // Partitioned by /phone for per-customer access patterns.
+  // TTL = 1 year (31 536 000 s) for compliance retention; admin CSV export deferred to E16-S04b.
+  await database.containers.createIfNotExists({
+    id: 'customer_waitlist',
+    partitionKey: { paths: ['/phone'] },
+    defaultTtl: 31_536_000,
+  });
+  console.log("Container 'customer_waitlist' ready.");
+
   // E11-S05b-2: Per-incident AES key docs for SOS audio encryption.
   // Partitioned by /customerId for single-partition key lookups in the playback endpoint.
   // defaultTtl = 604800 (7 days) ensures keys auto-delete with the Storage blob lifecycle.

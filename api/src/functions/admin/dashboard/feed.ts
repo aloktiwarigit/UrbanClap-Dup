@@ -69,12 +69,14 @@ export async function feedHandler(
   try {
     const db = getCosmosClient().database(DB_NAME);
 
+    const feedQuery = {
+      query: `SELECT TOP ${FEED_LIMIT} c.id, c.status, c.customerId, c.technicianId, c.serviceId, c.amount, c.finalAmount, c.createdAt, c.slotDate, c.slotWindow, c.addressText FROM c ORDER BY c.createdAt DESC`,
+      parameters: [],
+    };
+
     const result = await db
       .container('bookings')
-      .items.query({
-        query: `SELECT TOP ${FEED_LIMIT} c.id, c.status, c.customerId, c.technicianId, c.serviceId, c.amount, c.finalAmount, c.createdAt, c.slotDate, c.slotWindow, c.addressText FROM c ORDER BY c.createdAt DESC`,
-        parameters: [],
-      })
+      .items.query(feedQuery)
       .fetchAll();
 
     const events = result.resources.map(toFeedEvent);

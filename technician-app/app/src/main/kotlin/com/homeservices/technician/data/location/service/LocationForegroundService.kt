@@ -45,15 +45,10 @@ public class LocationForegroundService : Service() {
     private var currentBookingId: String? = null
     private var callback: LocationCallback? = null
 
-    override fun onStartCommand(
-        intent: Intent?,
-        flags: Int,
-        startId: Int,
-    ): Int {
-        val bookingId = intent?.getStringExtra(EXTRA_BOOKING_ID)
-        if (bookingId == null || currentBookingId == bookingId) {
-            return if (bookingId == null) START_NOT_STICKY else START_STICKY
-        }
+    @Suppress("ReturnCount") // Two early-return guards: missing bookingId + already-running idempotency check.
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val bookingId = intent?.getStringExtra(EXTRA_BOOKING_ID) ?: return START_NOT_STICKY
+        if (currentBookingId == bookingId) return START_STICKY
         currentBookingId = bookingId
         createNotificationChannel()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -71,7 +66,11 @@ public class LocationForegroundService : Service() {
             LocationRequest
                 .Builder(LOCATION_UPDATE_INTERVAL_MS)
                 .setPriority(Priority.PRIORITY_BALANCED_POWER_ACCURACY)
+<<<<<<< HEAD
                 .setMinUpdateDistanceMeters(MIN_UPDATE_DISTANCE_METERS)
+=======
+                .setMinUpdateDistanceMeters(LOCATION_MIN_UPDATE_DISTANCE_M)
+>>>>>>> origin/main
                 .build()
         val cb =
             object : LocationCallback() {
@@ -172,6 +171,13 @@ public class LocationForegroundService : Service() {
         private const val LOCATION_UPDATE_INTERVAL_MS: Long = 30_000L
         private const val MIN_UPDATE_DISTANCE_METERS: Float = 15f
 
+<<<<<<< HEAD
+=======
+        // Location-update tuning constants (extracted to satisfy detekt MagicNumber rule).
+        private const val LOCATION_UPDATE_INTERVAL_MS: Long = 30_000L
+        private const val LOCATION_MIN_UPDATE_DISTANCE_M: Float = 15f
+
+>>>>>>> origin/main
         public fun startIfNeeded(
             context: Context,
             bookingId: String,
