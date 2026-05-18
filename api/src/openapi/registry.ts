@@ -498,3 +498,59 @@ registry.registerPath({
     409: { description: 'Invalid levy status' },
   },
 });
+
+// ── Waitlist (E16-S04/WS-F) ───────────────────────────────────────────────────
+
+const WaitlistRequestBodySchema = z.object({
+  phone: z.string().regex(/^\+91[6-9]\d{9}$/).openapi({ example: '+916000000001' }),
+  lat: z.number().min(-90).max(90).openapi({ example: 26.7 }),
+  lng: z.number().min(-180).max(180).openapi({ example: 82.1 }),
+  serviceId: z.string().min(1).max(64).openapi({ example: 'ac-deep-clean' }),
+  requestedAt: z.string().datetime().openapi({ example: '2026-05-17T10:00:00.000Z' }),
+}).openapi('WaitlistRequest');
+
+const WaitlistSuccessSchema = z.object({
+  ok: z.literal(true),
+}).openapi('WaitlistSuccess');
+
+const WaitlistErrorSchema = z.object({
+  code: z.enum(['VALIDATION_ERROR', 'UNKNOWN_SERVICE', 'CLOCK_SKEW', 'RATE_LIMITED', 'INVALID_JSON', 'INTERNAL_ERROR']),
+}).openapi('WaitlistError');
+
+registry.register('WaitlistRequest', WaitlistRequestBodySchema);
+registry.register('WaitlistSuccess', WaitlistSuccessSchema);
+registry.register('WaitlistError', WaitlistErrorSchema);
+
+registry.registerPath({
+  method: 'post',
+  path: '/v1/waitlist',
+  operationId: 'joinWaitlist',
+  tags: ['waitlist'],
+  summary: 'Join the service waitlist for a specific area',
+  description:
+    'Adds a customer to the waitlist for a service in their location. ' +
+    'No authentication required. Rate-limited to 5 requests/hr per phone number ' +
+    'and 50 requests/hr per IP. requestedAt must be within ±90 s of server time.',
+  request: {
+    body: {
+      content: { 'application/json': { schema: WaitlistRequestBodySchema } },
+    },
+  },
+  responses: {
+    201: {
+      description: 'Successfully joined the waitlist',
+      content: { 'application/json': { schema: WaitlistSuccessSchema } },
+    },
+    400: {
+      description: 'Validation error, unknown serviceId, or clock skew > 90 s',
+      content: { 'application/json': { schema: WaitlistErrorSchema } },
+    },
+    429: {
+      description: 'Rate limit exceeded — check Retry-After header',
+      headers: {
+        'Retry-After': { schema: { type: 'integer' }, description: 'Seconds until the rate limit resets' },
+      },
+      content: { 'application/json': { schema: WaitlistErrorSchema } },
+    },
+  },
+});
