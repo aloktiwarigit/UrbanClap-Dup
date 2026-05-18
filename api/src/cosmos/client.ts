@@ -128,6 +128,15 @@ export function getSlotHoldsContainer(): Container {
   return getCosmosClient().database(DB_NAME).container('slot_holds');
 }
 
+/**
+ * E11-S05b-2: Per-incident AES key docs. Partitioned by /customerId.
+ * defaultTtl=604800 (7 days) set at provisioning time — see infra/firebase/sos-audio-lifecycle.json
+ * and docs/runbook.md → "SOS audio retention".
+ */
+export function getSosIncidentKeysContainer(): Container {
+  return getCosmosClient().database(DB_NAME).container('sos_incident_keys');
+}
+
 /** Inject a mock CosmosClient in tests. */
 export function _setCosmosClientForTest(mock: CosmosClient): void {
   _client = mock;

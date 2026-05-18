@@ -20,6 +20,7 @@ vi.mock('../../src/services/adminSession.service.js', () => ({
   createAdminSession: vi.fn(),
   deleteSession: vi.fn(),
   deleteAllSessionsForAdmin: vi.fn(),
+  getSessionById: vi.fn().mockResolvedValue(null),
 }));
 vi.mock('../../src/services/adminUser.service.js', () => ({
   getAdminUserById: vi.fn().mockResolvedValue(null),
@@ -42,6 +43,13 @@ vi.mock('../../src/cosmos/orders-repository.js', () => ({
   queryOrders: vi.fn().mockResolvedValue({ orders: [] }),
   getOrderById: vi.fn().mockResolvedValue(null),
 }));
+vi.mock('../../src/cosmos/booking-repository.js', () => ({
+  bookingRepo: { getById: vi.fn().mockResolvedValue(null) },
+}));
+vi.mock('../../src/cosmos/sos-incident-key-repository.js', () => ({
+  getKeyDoc: vi.fn().mockResolvedValue(null),
+  putKeyDoc: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock('../../src/cosmos/client.js', () => ({
   getCosmosClient: () => ({ database: () => ({ container: () => ({ items: { query: () => ({ fetchAll: vi.fn().mockResolvedValue({ resources: [] }) }) } }) }) }),
   DB_NAME: 'homeservices',
@@ -58,6 +66,8 @@ import { adminPatchUserHandler } from '../../src/functions/admin/users/patch.js'
 import { summaryHandler } from '../../src/functions/admin/dashboard/summary.js';
 import { adminListOrdersHandler } from '../../src/functions/admin/orders/list.js';
 import { adminGetOrderHandler } from '../../src/functions/admin/orders/detail.js';
+import { adminSosPlaybackTokenHandler } from '../../src/functions/admin/sos/playback-token.js';
+import { adminGetSosIncidentHandler } from '../../src/functions/admin/sos/get-incident.js';
 import { requireAdmin } from '../../src/middleware/requireAdmin.js';
 
 const fakeCtx = {} as any;
@@ -113,6 +123,24 @@ describe('Admin routes — unauthenticated requests must return 401', () => {
     const wrapped = wrapWithRequireAdmin(adminGetOrderHandler);
     const res = await wrapped(
       unauthReq('http://localhost/api/v1/admin/orders/booking-123'),
+      fakeCtx,
+    ) as HttpResponseInit;
+    expect(res.status).toBe(401);
+  });
+
+  it('GET /v1/admin/sos/{incidentId}/playback-token → 401 without auth cookie', async () => {
+    const wrapped = wrapWithRequireAdmin(adminSosPlaybackTokenHandler);
+    const res = await wrapped(
+      unauthReq('http://localhost/api/v1/admin/sos/bk-1/playback-token'),
+      fakeCtx,
+    ) as HttpResponseInit;
+    expect(res.status).toBe(401);
+  });
+
+  it('GET /v1/admin/sos/{incidentId} → 401 without auth cookie', async () => {
+    const wrapped = wrapWithRequireAdmin(adminGetSosIncidentHandler);
+    const res = await wrapped(
+      unauthReq('http://localhost/api/v1/admin/sos/bk-1'),
       fakeCtx,
     ) as HttpResponseInit;
     expect(res.status).toBe(401);
