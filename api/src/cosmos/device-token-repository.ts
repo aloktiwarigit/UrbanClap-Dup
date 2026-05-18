@@ -75,6 +75,19 @@ export class DeviceTokenRepository {
   }
 
   /**
+   * Returns all device tokens registered by admin users (userType = 'admin').
+   * Cross-partition query — used for sending to all enrolled admin browsers.
+   */
+  async getAllAdminDeviceTokens(): Promise<string[]> {
+    const { resources } = await this.container.items
+      .query<{ deviceToken: string }>({
+        query: "SELECT c.deviceToken FROM c WHERE c.userType = 'admin'",
+      })
+      .fetchAll();
+    return resources.map((r) => r.deviceToken);
+  }
+
+  /**
    * Deletes tokens whose lastSeen is older than `olderThanDays` days.
    * Called by a daily timer trigger (E19-S02 WS-C).
    * Returns the number of tokens deleted.

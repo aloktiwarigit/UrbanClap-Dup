@@ -37,14 +37,25 @@ async function sendToUserTokens(
 }
 
 /**
- * Sends an FCM data message to the owner_alerts topic.
- * This helper is intentionally topic-based and restricted to payloads with
- * no per-user PII — only aggregate counts or non-user identifiers are allowed.
- * Approved exception: ADR-0026 §5 ("owner_alerts topic may carry non-PII
- * aggregate metrics until admin device enrollment is live").
+ * Sends an FCM data message to all enrolled admin device tokens.
+ * Falls back to the owner_alerts topic when no admin tokens are registered,
+ * so alerts are never silently dropped during the rollout window.
+ * Fallback payload must contain no per-user PII (non-PII fields only).
  */
-async function sendToOwnerAlertsTopic(data: Record<string, string>): Promise<void> {
-  await getFirebaseAdmin().messaging().send({ topic: 'owner_alerts', data });
+async function sendToAdminTokens(data: Record<string, string>): Promise<void> {
+  const tokens = await deviceTokenRepo.getAllAdminDeviceTokens();
+  if (tokens.length === 0) {
+    // Fallback to owner_alerts topic until admin-web enrollment is fully live.
+    // Non-PII fields only in the fallback (no customerId, technicianId).
+    console.warn('[FCM] no admin device tokens, falling back to owner_alerts topic');
+    await getFirebaseAdmin().messaging().send({ topic: 'owner_alerts', data });
+    return;
+  }
+  if (tokens.length === 1) {
+    await getFirebaseAdmin().messaging().send({ token: tokens[0]!, data });
+  } else {
+    await getFirebaseAdmin().messaging().sendEachForMulticast({ tokens, data });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -194,16 +205,19 @@ export async function sendOwnerRouteAlert(payload: {
 }): Promise<void> {
   // Non-PII: only aggregate metrics (counts), no user identifiers.
   // Approved to remain on owner_alerts topic per ADR-0026 §5.
-  await sendToOwnerAlertsTopic({
-    type: 'RECON_MISMATCH_ALERT',
-    stalePending: String(payload.stalePending),
-    failed: String(payload.failed),
+  await getFirebaseAdmin().messaging().send({
+    topic: 'owner_alerts',
+    data: {
+      type: 'RECON_MISMATCH_ALERT',
+      stalePending: String(payload.stalePending),
+      failed: String(payload.failed),
+    },
   });
 }
 
 /**
  * Rating-shield alert — technicianId kept for owner triage; no customerId.
- * TODO E19-S02: migrate to admin device tokens once admin-app enrollment is live.
+ * E19-S02: migrated to sendToAdminTokens (admin device tokens with topic fallback).
  */
 export async function sendOwnerRatingShieldAlert(payload: {
   bookingId: string;
@@ -211,8 +225,7 @@ export async function sendOwnerRatingShieldAlert(payload: {
   draftOverall: number;
 }): Promise<void> {
   // technicianId retained — required for owner triage action; no customerId exposed.
-  // TODO E19-S02: switch to sendToAdminTokens once admin device enrollment is live.
-  await sendToOwnerAlertsTopic({
+  await sendToAdminTokens({
     type: 'OWNER_RATING_SHIELD_ALERT',
     bookingId: payload.bookingId,
     technicianId: payload.technicianId,
@@ -223,7 +236,7 @@ export async function sendOwnerRatingShieldAlert(payload: {
 /**
  * SOS alert — customerId and technicianId trimmed from payload (PII per ADR-0026).
  * Only bookingId + incidentId are forwarded; owner cross-references Cosmos for details.
- * TODO E19-S02: migrate to admin device tokens once admin-app enrollment is live.
+ * E19-S02: migrated to sendToAdminTokens (admin device tokens with topic fallback).
  */
 export async function sendOwnerSosAlert(payload: {
   bookingId: string;
@@ -233,8 +246,7 @@ export async function sendOwnerSosAlert(payload: {
 }): Promise<void> {
   // PII trim: customerId and technicianId are NOT included in the FCM payload.
   // Owner retrieves those from Cosmos using bookingId + incidentId.
-  // TODO E19-S02: switch to sendToAdminTokens once admin device enrollment is live.
-  await sendToOwnerAlertsTopic({
+  await sendToAdminTokens({
     type: 'SOS_ALERT',
     bookingId: payload.bookingId,
     incidentId: payload.incidentId,
@@ -244,7 +256,7 @@ export async function sendOwnerSosAlert(payload: {
 /**
  * Abusive-content shield alert — customerId trimmed from payload (PII per ADR-0026).
  * technicianId retained for owner triage.
- * TODO E19-S02: migrate to admin device tokens once admin-app enrollment is live.
+ * E19-S02: migrated to sendToAdminTokens (admin device tokens with topic fallback).
  */
 export async function sendAbusiveShieldAlert(payload: {
   bookingId: string;
@@ -252,8 +264,7 @@ export async function sendAbusiveShieldAlert(payload: {
   customerId: string;
 }): Promise<void> {
   // PII trim: customerId removed. technicianId kept for owner action.
-  // TODO E19-S02: switch to sendToAdminTokens once admin device enrollment is live.
-  await sendToOwnerAlertsTopic({
+  await sendToAdminTokens({
     type: 'ABUSIVE_SHIELD_ALERT',
     bookingId: payload.bookingId,
     technicianId: payload.technicianId,
@@ -262,15 +273,14 @@ export async function sendAbusiveShieldAlert(payload: {
 
 /**
  * Appeal filed — technicianId retained for owner triage.
- * TODO E19-S02: migrate to admin device tokens once admin-app enrollment is live.
+ * E19-S02: migrated to sendToAdminTokens (admin device tokens with topic fallback).
  */
 export async function sendAppealFiledAlert(payload: {
   appealId: string;
   technicianId: string;
   bookingId: string;
 }): Promise<void> {
-  // TODO E19-S02: switch to sendToAdminTokens once admin device enrollment is live.
-  await sendToOwnerAlertsTopic({
+  await sendToAdminTokens({
     type: 'APPEAL_FILED_ALERT',
     appealId: payload.appealId,
     technicianId: payload.technicianId,
@@ -280,7 +290,7 @@ export async function sendAppealFiledAlert(payload: {
 
 /**
  * Complaint filed — filedBy is a role string (e.g. "CUSTOMER"), not a UID.
- * TODO E19-S02: migrate to admin device tokens once admin-app enrollment is live.
+ * E19-S02: migrated to sendToAdminTokens (admin device tokens with topic fallback).
  */
 export async function sendOwnerComplaintFiled(payload: {
   bookingId: string;
@@ -288,8 +298,7 @@ export async function sendOwnerComplaintFiled(payload: {
   reasonCode: string;
 }): Promise<void> {
   // filedBy is a role enum value, not a userId — acceptable in owner_alerts topic.
-  // TODO E19-S02: switch to sendToAdminTokens once admin device enrollment is live.
-  await sendToOwnerAlertsTopic({
+  await sendToAdminTokens({
     type: 'OWNER_COMPLAINT_FILED',
     bookingId: payload.bookingId,
     filedBy: payload.filedBy,
@@ -299,15 +308,14 @@ export async function sendOwnerComplaintFiled(payload: {
 
 /**
  * Complaint SLA breach.
- * TODO E19-S02: migrate to admin device tokens once admin-app enrollment is live.
+ * E19-S02: migrated to sendToAdminTokens (admin device tokens with topic fallback).
  */
 export async function sendOwnerComplaintSlaBreach(payload: {
   complaintId: string;
   bookingId: string;
   breachType: 'SLA_BREACH' | 'SLA_BREACH_ACK';
 }): Promise<void> {
-  // TODO E19-S02: switch to sendToAdminTokens once admin device enrollment is live.
-  await sendToOwnerAlertsTopic({
+  await sendToAdminTokens({
     type: 'OWNER_COMPLAINT_SLA_BREACH',
     complaintId: payload.complaintId,
     bookingId: payload.bookingId,

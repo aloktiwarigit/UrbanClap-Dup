@@ -164,6 +164,33 @@ describe('deviceTokenRepo.unregisterAllForUser', () => {
   });
 });
 
+// ── getAllAdminDeviceTokens ────────────────────────────────────────────────
+describe('deviceTokenRepo.getAllAdminDeviceTokens', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('queries for admin userType and returns token strings', async () => {
+    mockFetchAll.mockResolvedValue({ resources: [{ deviceToken: TOKEN_A }] });
+    const tokens = await deviceTokenRepo.getAllAdminDeviceTokens();
+    expect(mockQuery).toHaveBeenCalledOnce();
+    const queryArg = (mockQuery.mock.calls as unknown[][])[0]?.[0] as unknown as { query: string };
+    expect(queryArg.query).toMatch(/userType.*admin/i);
+    expect(tokens).toEqual([TOKEN_A]);
+  });
+
+  it('returns an empty array when no admin tokens are registered', async () => {
+    mockFetchAll.mockResolvedValue({ resources: [] });
+    const tokens = await deviceTokenRepo.getAllAdminDeviceTokens();
+    expect(tokens).toEqual([]);
+  });
+
+  it('uses a SELECT that projects only deviceToken (no PII columns)', async () => {
+    mockFetchAll.mockResolvedValue({ resources: [] });
+    await deviceTokenRepo.getAllAdminDeviceTokens();
+    const queryArg = (mockQuery.mock.calls as unknown[][])[0]?.[0] as unknown as { query: string };
+    expect(queryArg.query).toMatch(/SELECT\s+c\.deviceToken\s+FROM\s+c/i);
+  });
+});
+
 // ── pruneStaleTokens ───────────────────────────────────────────────────────
 describe('deviceTokenRepo.pruneStaleTokens', () => {
   beforeEach(() => { vi.clearAllMocks(); });
