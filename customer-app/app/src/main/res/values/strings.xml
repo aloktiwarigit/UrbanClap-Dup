@@ -442,4 +442,14 @@
     <string name="wallet_credit_original_price">Original price: ₹%1$s</string>
     <string name="wallet_credit_applied_banner">₹%1$s credit applied</string>
 
+    <!-- Waitlist screen (E16-S04) -->
+    <string name="waitlist_title">Get notified when we expand</string>
+    <string name="waitlist_body">We\'ll send you one SMS when we start serving your area. No spam — promise.</string>
+    <string name="waitlist_phone_label">Mobile number</string>
+    <string name="waitlist_submit">Join the waitlist</string>
+    <string name="waitlist_confirmed_title">You\'re on the list</string>
+    <string name="waitlist_confirmed_body">We\'ll text you the day we open in your area.</string>
+    <string name="waitlist_error_retry">Try again</string>
+    <string name="waitlist_rate_limited">Try again in %d minutes</string>
+
 </resources>

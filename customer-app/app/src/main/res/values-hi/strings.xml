@@ -433,4 +433,14 @@
     <string name="wallet_apply_credit_toggle">₹%1$s क्रेडिट लागू करें</string>
     <string name="wallet_credit_original_price">मूल कीमत: ₹%1$s</string>
     <string name="wallet_credit_applied_banner">₹%1$s क्रेडिट लागू किया गया</string>
+
+    <!-- Waitlist screen (E16-S04) -->
+    <string name="waitlist_title">विस्तार होने पर सूचना पाएँ</string>
+    <string name="waitlist_body">हम आपके क्षेत्र में सेवा शुरू होते ही एक SMS भेजेंगे। कोई स्पैम नहीं।</string>
+    <string name="waitlist_phone_label">मोबाइल नंबर</string>
+    <string name="waitlist_submit">वेटलिस्ट में जुड़ें</string>
+    <string name="waitlist_confirmed_title">आप वेटलिस्ट में हैं</string>
+    <string name="waitlist_confirmed_body">जिस दिन हम आपके क्षेत्र में शुरू करेंगे — हम SMS करेंगे।</string>
+    <string name="waitlist_error_retry">पुनः प्रयास करें</string>
+    <string name="waitlist_rate_limited">%d मिनट बाद प्रयास करें</string>
 </resources>
