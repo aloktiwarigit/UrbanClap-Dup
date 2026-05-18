@@ -6,10 +6,10 @@ import com.homeservices.customer.data.waitlist.RateLimitedException
 import com.homeservices.customer.domain.auth.model.AuthState
 import com.homeservices.customer.domain.waitlist.JoinWaitlistUseCase
 import com.homeservices.customer.domain.waitlist.WaitlistRepository
-import com.homeservices.customer.domain.waitlist.WaitlistRequest
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -79,13 +79,13 @@ public class WaitlistViewModelTest {
         runTest(dispatcher) {
             givenAuthState(AuthState.Authenticated(uid = "uid-1"))
             val validPhone = "+919876543210"
-            every { repository.joinWaitlist(any()) } coAnswers { Result.success(Unit) }
+            coEvery { repository.joinWaitlist(any()) } coAnswers { Result.success(Unit) }
 
             val vm = makeVm()
             vm.onPhoneChange(validPhone)
             vm.onSubmit(lat = 26.7606, lng = 82.1545, serviceId = "svc-fan")
 
-            verify { repository.joinWaitlist(match { it.phone == validPhone }) }
+            coVerify { repository.joinWaitlist(match { it.phone == validPhone }) }
             assertThat(vm.uiState.value).isEqualTo(WaitlistUiState.Confirmed)
         }
 
@@ -95,11 +95,11 @@ public class WaitlistViewModelTest {
             givenAuthState(AuthState.Authenticated(uid = "uid-1"))
 
             val vm = makeVm()
-            vm.onPhoneChange("123")           // invalid — too short, no country code
+            vm.onPhoneChange("123") // invalid — too short, no country code
             vm.onSubmit(lat = 0.0, lng = 0.0, serviceId = "svc-fan")
 
             // Repository must NOT be called for an invalid phone.
-            verify(exactly = 0) { repository.joinWaitlist(any()) }
+            coVerify(exactly = 0) { repository.joinWaitlist(any()) }
             val state = vm.uiState.value
             assertThat(state).isInstanceOf(WaitlistUiState.Error::class.java)
             assertThat((state as WaitlistUiState.Error).retryable).isFalse()
@@ -110,7 +110,7 @@ public class WaitlistViewModelTest {
         runTest(dispatcher) {
             givenAuthState(AuthState.Authenticated(uid = "uid-1"))
             val validPhone = "+919876543210"
-            every { repository.joinWaitlist(any()) } coAnswers {
+            coEvery { repository.joinWaitlist(any()) } coAnswers {
                 Result.failure(RuntimeException("Network error"))
             }
 
@@ -128,7 +128,7 @@ public class WaitlistViewModelTest {
         runTest(dispatcher) {
             givenAuthState(AuthState.Authenticated(uid = "uid-1"))
             val validPhone = "+919876543210"
-            every { repository.joinWaitlist(any()) } coAnswers {
+            coEvery { repository.joinWaitlist(any()) } coAnswers {
                 Result.failure(RateLimitedException(retryAfterSec = 120))
             }
 

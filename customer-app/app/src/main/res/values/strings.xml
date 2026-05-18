@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">homeservices customer</string>
     <string name="catalogue_home_title">Book trusted home services</string>
     <string name="catalogue_home_subtitle">Skilled technicians, clear prices, and live updates from booking to completion.</string>
@@ -460,6 +460,6 @@
     <string name="waitlist_confirmed_title">You\'re on the list</string>
     <string name="waitlist_confirmed_body">We\'ll text you the day we open in your area.</string>
     <string name="waitlist_error_retry">Try again</string>
-    <string name="waitlist_rate_limited">Try again in %d minutes</string>
+    <string name="waitlist_rate_limited" tools:ignore="PluralsCandidate">Try again in %d minutes</string>
 
 </resources>

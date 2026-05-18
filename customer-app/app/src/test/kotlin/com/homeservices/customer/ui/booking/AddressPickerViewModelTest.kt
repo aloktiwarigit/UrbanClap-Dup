@@ -8,6 +8,7 @@ import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.resetMain
@@ -26,17 +27,17 @@ private const val INSIDE_LNG = 82.1947
 private const val OUTSIDE_LAT = 27.1336
 private const val OUTSIDE_LNG = 81.9612
 
-private val INSIDE_RING: List<Pair<Double, Double>> = listOf(
-    Pair(81.9697, 26.5708),
-    Pair(82.4197, 26.5708),
-    Pair(82.4197, 27.0208),
-    Pair(81.9697, 27.0208),
-    Pair(81.9697, 26.5708),
-)
+private val INSIDE_RING: List<Pair<Double, Double>> =
+    listOf(
+        Pair(81.9697, 26.5708),
+        Pair(82.4197, 26.5708),
+        Pair(82.4197, 27.0208),
+        Pair(81.9697, 27.0208),
+        Pair(81.9697, 26.5708),
+    )
 
 @OptIn(ExperimentalCoroutinesApi::class)
 public class AddressPickerViewModelTest {
-
     private val scheduler = TestCoroutineScheduler()
     private val dispatcher = StandardTestDispatcher(scheduler)
 
@@ -46,12 +47,13 @@ public class AddressPickerViewModelTest {
     /** Use the internal test factory that bypasses AssetManager. */
     private val serviceArea: LocalServiceAreaCheck = LocalServiceAreaCheck(INSIDE_RING)
 
-    private fun vm() = AddressPickerViewModel(
-        placesUseCase = placesUseCase,
-        serviceAreaCheck = serviceArea,
-        geocoder = geocoder,
-        defaultDispatcher = dispatcher,
-    )
+    private fun vm() =
+        AddressPickerViewModel(
+            placesUseCase = placesUseCase,
+            serviceAreaCheck = serviceArea,
+            geocoder = geocoder,
+            defaultDispatcher = dispatcher,
+        )
 
     @BeforeEach
     public fun setUp() {
@@ -68,29 +70,32 @@ public class AddressPickerViewModelTest {
     // ---------------------------------------------------------------------------
 
     @Test
-    public fun `initialState_isIdle`(): Unit = runTest(scheduler) {
-        val v = vm()
-        assertThat(v.uiState.value).isInstanceOf(AddressPickerUiState.Idle::class.java)
-    }
+    public fun `initialState_isIdle`(): Unit =
+        runTest(scheduler) {
+            val v = vm()
+            assertThat(v.uiState.value).isInstanceOf(AddressPickerUiState.Idle::class.java)
+        }
 
     // ---------------------------------------------------------------------------
     // Query change behaviour
     // ---------------------------------------------------------------------------
 
     @Test
-    public fun `onQueryChange_belowMinLength_keepsIdle`(): Unit = runTest(scheduler) {
-        val v = vm()
-        v.onQueryChange("ab") // < 3 chars
-        scheduler.advanceTimeBy(400L) // past debounce
-        assertThat(v.uiState.value).isInstanceOf(AddressPickerUiState.Idle::class.java)
-    }
+    public fun `onQueryChange_belowMinLength_keepsIdle`(): Unit =
+        runTest(scheduler) {
+            val v = vm()
+            v.onQueryChange("ab") // < 3 chars
+            scheduler.advanceTimeBy(400L) // past debounce
+            assertThat(v.uiState.value).isInstanceOf(AddressPickerUiState.Idle::class.java)
+        }
 
     @Test
     public fun `onQueryChange_aboveMinLength_emitsSearching_then_predictions`(): Unit =
         runTest(scheduler) {
-            val predictions = listOf(
-                PlacePrediction("p1", "Ram Mandir", "Ayodhya"),
-            )
+            val predictions =
+                listOf(
+                    PlacePrediction("p1", "Ram Mandir", "Ayodhya"),
+                )
             coEvery { placesUseCase.findPredictions("Ram M") } returns Result.success(predictions)
 
             val v = vm()
@@ -115,12 +120,13 @@ public class AddressPickerViewModelTest {
     @Test
     public fun `onPredictionSelected_emitsSelectedState_withLatLngFromFetchPlace_and_isInServiceTrue`(): Unit =
         runTest(scheduler) {
-            val resolved = com.homeservices.customer.domain.places.ResolvedPlace(
-                placeId = "p1",
-                formattedAddress = "Ram Janmabhoomi, Ayodhya",
-                lat = INSIDE_LAT,
-                lng = INSIDE_LNG,
-            )
+            val resolved =
+                com.homeservices.customer.domain.places.ResolvedPlace(
+                    placeId = "p1",
+                    formattedAddress = "Ram Janmabhoomi, Ayodhya",
+                    lat = INSIDE_LAT,
+                    lng = INSIDE_LNG,
+                )
             coEvery { placesUseCase.fetchPlace("p1") } returns Result.success(resolved)
 
             val v = vm()
@@ -164,12 +170,13 @@ public class AddressPickerViewModelTest {
     public fun `onMarkerDragEnd_insidePolygon_keepsSelected_andRefreshesFormattedAddress`(): Unit =
         runTest(scheduler) {
             // First select a place so state becomes Selected
-            val resolved = com.homeservices.customer.domain.places.ResolvedPlace(
-                placeId = "p1",
-                formattedAddress = "Ram Janmabhoomi, Ayodhya",
-                lat = INSIDE_LAT,
-                lng = INSIDE_LNG,
-            )
+            val resolved =
+                com.homeservices.customer.domain.places.ResolvedPlace(
+                    placeId = "p1",
+                    formattedAddress = "Ram Janmabhoomi, Ayodhya",
+                    lat = INSIDE_LAT,
+                    lng = INSIDE_LNG,
+                )
             coEvery { placesUseCase.fetchPlace("p1") } returns Result.success(resolved)
             coEvery {
                 geocoder.reverseGeocode(INSIDE_LAT + 0.001, INSIDE_LNG + 0.001)
@@ -207,9 +214,10 @@ public class AddressPickerViewModelTest {
 
             // Collect nav events; confirm must not emit NavigateToBookingSummary
             val navEvents = mutableListOf<AddressPickerNavEvent>()
-            val collectJob = kotlinx.coroutines.launch {
-                v.navEvents.collect { navEvents.add(it) }
-            }
+            val collectJob =
+                launch {
+                    v.navEvents.collect { navEvents.add(it) }
+                }
 
             v.onConfirm(serviceId = "svc-1")
             scheduler.runCurrent()

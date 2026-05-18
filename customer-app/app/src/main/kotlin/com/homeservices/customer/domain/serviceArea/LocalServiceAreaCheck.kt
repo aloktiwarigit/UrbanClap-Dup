@@ -20,23 +20,27 @@ import javax.inject.Singleton
  * Parity: matches Turf.js `booleanPointInPolygon` behaviour.
  */
 @Singleton
-public class LocalServiceAreaCheck @Inject constructor(
-    @ApplicationContext private val context: Context,
-) {
-    /** Internal secondary constructor — bypasses [AssetManager] for unit tests. */
-    internal constructor(ring: List<Pair<Double, Double>>) : this(context = dummyContext()) {
-        cachedRing = ring
+public class LocalServiceAreaCheck
+    @Inject
+    constructor(
+        @ApplicationContext private val context: Context,
+    ) {
+        /** Internal secondary constructor — bypasses [AssetManager] for unit tests. */
+        internal constructor(ring: List<Pair<Double, Double>>) : this(context = dummyContext()) {
+            cachedRing = ring
+        }
+
+        @Volatile private var cachedRing: List<Pair<Double, Double>>? = null
+
+        private val polygon: List<Pair<Double, Double>>
+            get() = cachedRing ?: loadPolygon(context).also { cachedRing = it }
+
+        /** Returns `true` if [lat]/[lng] is inside or on the boundary of the service area. */
+        public fun isInside(
+            lat: Double,
+            lng: Double,
+        ): Boolean = pointInPolygon(lat, lng, polygon)
     }
-
-    @Volatile private var cachedRing: List<Pair<Double, Double>>? = null
-
-    private val polygon: List<Pair<Double, Double>>
-        get() = cachedRing ?: loadPolygon(context).also { cachedRing = it }
-
-    /** Returns `true` if [lat]/[lng] is inside or on the boundary of the service area. */
-    public fun isInside(lat: Double, lng: Double): Boolean =
-        pointInPolygon(lat, lng, polygon)
-}
 
 // ---------------------------------------------------------------------------
 // Package-private helpers (accessible within the package and to tests
@@ -44,17 +48,20 @@ public class LocalServiceAreaCheck @Inject constructor(
 // ---------------------------------------------------------------------------
 
 internal fun loadPolygon(context: Context): List<Pair<Double, Double>> {
-    val json = context.assets.open("service-area-ayodhya.geojson")
-        .bufferedReader()
-        .use { it.readText() }
+    val json =
+        context.assets
+            .open("service-area-ayodhya.geojson")
+            .bufferedReader()
+            .use { it.readText() }
     return parseRing(json)
 }
 
 internal fun parseRing(json: String): List<Pair<Double, Double>> {
-    val coords = JSONObject(json)
-        .getJSONObject("geometry")
-        .getJSONArray("coordinates")
-        .getJSONArray(0)
+    val coords =
+        JSONObject(json)
+            .getJSONObject("geometry")
+            .getJSONArray("coordinates")
+            .getJSONArray(0)
     return (0 until coords.length()).map { i ->
         val pt = coords.getJSONArray(i)
         Pair(pt.getDouble(0), pt.getDouble(1)) // (lng, lat) — GeoJSON order
@@ -103,7 +110,8 @@ internal fun pointInPolygon(
  * Implemented as a late-binding stub that crashes loudly if any method is called,
  * making accidental production misuse visible immediately.
  */
-private fun dummyContext(): Context = object : android.content.ContextWrapper(null) {
-    override fun getAssets(): android.content.res.AssetManager =
-        error("dummyContext must not be used in production — inject a real Context")
-}
+private fun dummyContext(): Context =
+    object : android.content.ContextWrapper(null) {
+        override fun getAssets(): android.content.res.AssetManager =
+            error("dummyContext must not be used in production — inject a real Context")
+    }

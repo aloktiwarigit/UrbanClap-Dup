@@ -16,8 +16,11 @@ internal object BookingRoutes {
 
     fun addressPicker(serviceId: String) = "booking/address-picker/$serviceId"
 
-    fun waitlist(lat: Double, lng: Double, serviceId: String) =
-        "booking/waitlist?lat=$lat&lng=$lng&serviceId=$serviceId"
+    fun waitlist(
+        lat: Double,
+        lng: Double,
+        serviceId: String,
+    ) = "booking/waitlist?lat=$lat&lng=$lng&serviceId=$serviceId"
 
     fun confirmedRoute(
         bookingId: String,

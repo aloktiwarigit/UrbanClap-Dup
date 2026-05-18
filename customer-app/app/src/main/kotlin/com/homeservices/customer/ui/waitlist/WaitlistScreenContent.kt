@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.dp
 import com.homeservices.customer.R
 import com.homeservices.designsystem.components.HsPrimaryButton
 
+private const val SECONDS_PER_MINUTE = 60
+
 /**
  * Stateless composable rendering the waitlist form in all of its states.
  *
@@ -41,27 +43,14 @@ internal fun WaitlistScreenContent(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp)
-            .navigationBarsPadding(),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp)
+                .navigationBarsPadding(),
     ) {
         Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = stringResource(R.string.waitlist_title),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = stringResource(R.string.waitlist_body),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
+        WaitlistHeader()
         Spacer(modifier = Modifier.height(32.dp))
 
         when (uiState) {
@@ -71,17 +60,8 @@ internal fun WaitlistScreenContent(
                 RateLimitedContent(retryAfterSec = uiState.retryAfterSec)
             }
 
-            is WaitlistUiState.Submitting -> {
-                PhoneField(
-                    phone = phone,
-                    onPhoneChange = onPhoneChange,
-                    enabled = false,
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            }
+            is WaitlistUiState.Submitting ->
+                SubmittingContent(phone = phone, onPhoneChange = onPhoneChange)
 
             is WaitlistUiState.Error -> {
                 PhoneField(
@@ -96,9 +76,16 @@ internal fun WaitlistScreenContent(
                     color = MaterialTheme.colorScheme.error,
                 )
                 Spacer(modifier = Modifier.height(24.dp))
-                SubmitButton(
+                HsPrimaryButton(
+                    text =
+                        if (uiState.retryable) {
+                            stringResource(R.string.waitlist_error_retry)
+                        } else {
+                            stringResource(R.string.waitlist_submit)
+                        },
+                    onClick = onSubmit,
                     enabled = uiState.retryable,
-                    onSubmit = onSubmit,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
 
@@ -182,8 +169,35 @@ private fun ConfirmedContent() {
 }
 
 @Composable
+private fun SubmittingContent(
+    phone: String,
+    onPhoneChange: (String) -> Unit,
+) {
+    PhoneField(phone = phone, onPhoneChange = onPhoneChange, enabled = false)
+    Spacer(modifier = Modifier.height(24.dp))
+    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun WaitlistHeader() {
+    Text(
+        text = stringResource(R.string.waitlist_title),
+        style = MaterialTheme.typography.headlineMedium,
+        fontWeight = FontWeight.Bold,
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    Text(
+        text = stringResource(R.string.waitlist_body),
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+@Composable
 private fun RateLimitedContent(retryAfterSec: Int) {
-    val minutes = (retryAfterSec + 59) / 60   // ceiling division
+    val minutes = (retryAfterSec + SECONDS_PER_MINUTE - 1) / SECONDS_PER_MINUTE
     Text(
         text = stringResource(R.string.waitlist_rate_limited, minutes),
         style = MaterialTheme.typography.bodyLarge,

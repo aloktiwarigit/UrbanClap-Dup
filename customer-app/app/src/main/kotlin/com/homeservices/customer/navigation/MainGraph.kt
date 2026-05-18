@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.homeservices.customer.navigation
 
 import androidx.compose.runtime.remember
@@ -14,8 +16,8 @@ import com.homeservices.customer.ui.booking.AddressPickerScreen
 import com.homeservices.customer.ui.booking.AddressScreen
 import com.homeservices.customer.ui.booking.BookingConfirmedScreen
 import com.homeservices.customer.ui.booking.BookingSummaryScreen
+import com.homeservices.customer.ui.booking.BookingUiState
 import com.homeservices.customer.ui.booking.BookingViewModel
-import com.homeservices.customer.ui.waitlist.WaitlistScreen
 import com.homeservices.customer.ui.booking.PriceApprovalScreen
 import com.homeservices.customer.ui.booking.PriceApprovalViewModel
 import com.homeservices.customer.ui.booking.SlotPickerScreen
@@ -33,10 +35,16 @@ import com.homeservices.customer.ui.rating.RatingRoutes
 import com.homeservices.customer.ui.rating.RatingScreen
 import com.homeservices.customer.ui.tracking.LiveTrackingScreen
 import com.homeservices.customer.ui.tracking.LiveTrackingViewModel
+import com.homeservices.customer.ui.waitlist.WaitlistScreen
 import com.homeservices.customer.ui.wallet.WalletBalanceUiState
 import com.homeservices.customer.ui.wallet.WalletRoutes
 import com.homeservices.customer.ui.wallet.WalletScreen
 import com.homeservices.customer.ui.wallet.WalletViewModel
+
+private const val AYODHYA_CENTER_LAT = 26.7958
+private const val AYODHYA_CENTER_LNG = 82.1947
+private const val AYODHYA_CENTER_LAT_F = 26.7958f
+private const val AYODHYA_CENTER_LNG_F = 82.1947f
 
 internal fun NavGraphBuilder.mainGraph(
     navController: NavController,
@@ -160,7 +168,10 @@ private fun NavGraphBuilder.serviceDetailDestination(navController: NavControlle
 
 // ── Booking flow — BookingViewModel scoped to the booking nested graph ─────────
 
-private fun NavGraphBuilder.bookingGraph(navController: NavController, featureFlags: FeatureFlags) {
+private fun NavGraphBuilder.bookingGraph(
+    navController: NavController,
+    featureFlags: FeatureFlags,
+) {
     navigation(startDestination = BookingRoutes.SLOT_PICKER, route = BookingRoutes.BOOKING_GRAPH) {
         slotPickerDestination(navController, featureFlags)
         addressDestination(navController)
@@ -178,7 +189,10 @@ private fun NavGraphBuilder.bookingGraph(navController: NavController, featureFl
     }
 }
 
-private fun NavGraphBuilder.slotPickerDestination(navController: NavController, featureFlags: FeatureFlags) {
+private fun NavGraphBuilder.slotPickerDestination(
+    navController: NavController,
+    featureFlags: FeatureFlags,
+) {
     composable(
         route = BookingRoutes.SLOT_PICKER,
         arguments =
@@ -236,14 +250,21 @@ private fun NavGraphBuilder.addressPickerDestination(navController: NavControlle
 private fun NavGraphBuilder.waitlistDestination(navController: NavController) {
     composable(
         route = BookingRoutes.WAITLIST,
-        arguments = listOf(
-            navArgument("lat") { type = NavType.FloatType; defaultValue = 26.7958f },
-            navArgument("lng") { type = NavType.FloatType; defaultValue = 82.1947f },
-            navArgument("serviceId") { type = NavType.StringType },
-        ),
+        arguments =
+            listOf(
+                navArgument("lat") {
+                    type = NavType.FloatType
+                    defaultValue = AYODHYA_CENTER_LAT_F
+                },
+                navArgument("lng") {
+                    type = NavType.FloatType
+                    defaultValue = AYODHYA_CENTER_LNG_F
+                },
+                navArgument("serviceId") { type = NavType.StringType },
+            ),
     ) { backStackEntry ->
-        val lat = backStackEntry.arguments?.getFloat("lat")?.toDouble() ?: 26.7958
-        val lng = backStackEntry.arguments?.getFloat("lng")?.toDouble() ?: 82.1947
+        val lat = backStackEntry.arguments?.getFloat("lat")?.toDouble() ?: AYODHYA_CENTER_LAT
+        val lng = backStackEntry.arguments?.getFloat("lng")?.toDouble() ?: AYODHYA_CENTER_LNG
         val serviceId = backStackEntry.arguments?.getString("serviceId") ?: ""
         WaitlistScreen(
             lat = lat,

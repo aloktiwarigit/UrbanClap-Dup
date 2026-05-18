@@ -13,9 +13,10 @@ public interface WaitlistRepository {
     public suspend fun joinWaitlist(request: WaitlistRequest): Result<Unit>
 }
 
-public class JoinWaitlistUseCase @Inject constructor(
-    private val repository: WaitlistRepository,
-) {
-    public suspend fun invoke(request: WaitlistRequest): Result<Unit> =
-        repository.joinWaitlist(request)
-}
+public class JoinWaitlistUseCase
+    @Inject
+    constructor(
+        private val repository: WaitlistRepository,
+    ) {
+        public suspend fun invoke(request: WaitlistRequest): Result<Unit> = repository.joinWaitlist(request)
+    }

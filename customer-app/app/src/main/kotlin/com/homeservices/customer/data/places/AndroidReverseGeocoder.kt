@@ -9,19 +9,24 @@ import kotlinx.coroutines.withContext
 import java.util.Locale
 import javax.inject.Inject
 
-public class AndroidReverseGeocoder @Inject constructor(
-    @ApplicationContext private val context: Context,
-) : ReverseGeocoder {
-    @Suppress("DEPRECATION")
-    override suspend fun reverseGeocode(lat: Double, lng: Double): Result<String?> =
-        runCatching {
-            withContext(Dispatchers.IO) {
-                if (!Geocoder.isPresent()) return@withContext null
-                Geocoder(context, Locale.getDefault())
-                    .getFromLocation(lat, lng, 1)
-                    .orEmpty()
-                    .firstOrNull()
-                    ?.getAddressLine(0)
+public class AndroidReverseGeocoder
+    @Inject
+    constructor(
+        @ApplicationContext private val context: Context,
+    ) : ReverseGeocoder {
+        @Suppress("DEPRECATION")
+        override suspend fun reverseGeocode(
+            lat: Double,
+            lng: Double,
+        ): Result<String?> =
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    if (!Geocoder.isPresent()) return@withContext null
+                    Geocoder(context, Locale.getDefault())
+                        .getFromLocation(lat, lng, 1)
+                        .orEmpty()
+                        .firstOrNull()
+                        ?.getAddressLine(0)
+                }
             }
-        }
-}
+    }

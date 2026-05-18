@@ -4,7 +4,6 @@ import android.app.Application
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import com.google.android.libraries.places.api.Places
-import com.homeservices.customer.BuildConfig
 import com.homeservices.customer.domain.flags.GrowthBookFeatureFlags
 import com.homeservices.customer.domain.locale.LocaleRepository
 import com.homeservices.customer.firebase.CustomerFirebaseMessagingService

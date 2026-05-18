@@ -5,7 +5,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +35,12 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -74,16 +79,19 @@ internal fun AddressPickerScreenContent(
     onNotifyMe: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val selectedLat = (uiState as? AddressPickerUiState.Selected)?.lat
-        ?: (uiState as? AddressPickerUiState.RefusedOutOfArea)?.lat
-    val selectedLng = (uiState as? AddressPickerUiState.Selected)?.lng
-        ?: (uiState as? AddressPickerUiState.RefusedOutOfArea)?.lng
+    val selectedLat =
+        (uiState as? AddressPickerUiState.Selected)?.lat
+            ?: (uiState as? AddressPickerUiState.RefusedOutOfArea)?.lat
+    val selectedLng =
+        (uiState as? AddressPickerUiState.Selected)?.lng
+            ?: (uiState as? AddressPickerUiState.RefusedOutOfArea)?.lng
 
-    val mapCenter = if (selectedLat != null && selectedLng != null) {
-        LatLng(selectedLat, selectedLng)
-    } else {
-        AYODHYA_CENTER
-    }
+    val mapCenter =
+        if (selectedLat != null && selectedLng != null) {
+            LatLng(selectedLat, selectedLng)
+        } else {
+            AYODHYA_CENTER
+        }
 
     Box(modifier = modifier) {
         // ── Full-bleed map ─────────────────────────────────────────────────────
@@ -97,9 +105,10 @@ internal fun AddressPickerScreenContent(
 
         // ── Top panel: search + predictions overlay ────────────────────────────
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopCenter),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter),
         ) {
             SearchPanel(
                 query = query,
@@ -108,11 +117,11 @@ internal fun AddressPickerScreenContent(
                 onClearQuery = onClearQuery,
             )
 
-            // Predictions overlay (max 240dp, sits above the map)
-            val predictions = when (uiState) {
-                is AddressPickerUiState.PredictionsAvailable -> uiState.predictions
-                else -> null
-            }
+            val predictions =
+                when (uiState) {
+                    is AddressPickerUiState.PredictionsAvailable -> uiState.predictions
+                    else -> null
+                }
             AnimatedVisibility(
                 visible = predictions != null,
                 enter = expandVertically() + fadeIn(),
@@ -169,9 +178,10 @@ private fun SearchPanel(
                     }
                 },
                 singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
             )
             if (isSearching) {
                 LinearProgressIndicator(
@@ -211,12 +221,16 @@ private fun PredictionsPanel(
 }
 
 @Composable
-private fun PredictionRow(prediction: PlacePrediction, onClick: () -> Unit) {
+private fun PredictionRow(
+    prediction: PlacePrediction,
+    onClick: () -> Unit,
+) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -258,25 +272,43 @@ private fun AddressMap(
     onMarkerDragEnd: (Double, Double) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(center, DEFAULT_ZOOM)
+    val hasMarker = markerLat != null && markerLng != null
+    val initialPos = if (hasMarker) LatLng(markerLat!!, markerLng!!) else center
+
+    val markerState = remember { MarkerState(position = initialPos) }
+    val cameraPositionState =
+        rememberCameraPositionState {
+            position = CameraPosition.fromLatLngZoom(initialPos, DEFAULT_ZOOM)
+        }
+
+    // Sync external position updates (prediction selected)
+    var lastExternalPos by remember { mutableStateOf(initialPos) }
+    LaunchedEffect(markerLat, markerLng) {
+        if (markerLat != null && markerLng != null) {
+            val newPos = LatLng(markerLat, markerLng)
+            lastExternalPos = newPos
+            markerState.position = newPos
+            cameraPositionState.position = CameraPosition.fromLatLngZoom(newPos, DEFAULT_ZOOM)
+        }
+    }
+
+    // Detect drag end: position changes that were NOT caused by external prediction updates
+    LaunchedEffect(markerState) {
+        snapshotFlow { markerState.position }
+            .collect { pos ->
+                if (pos != lastExternalPos) {
+                    onMarkerDragEnd(pos.latitude, pos.longitude)
+                    lastExternalPos = pos
+                }
+            }
     }
 
     GoogleMap(
         modifier = modifier,
         cameraPositionState = cameraPositionState,
     ) {
-        if (markerLat != null && markerLng != null) {
-            val markerState = MarkerState(position = LatLng(markerLat, markerLng))
-            Marker(
-                state = markerState,
-                draggable = true,
-                onInfoWindowClick = {},
-                onClick = { false },
-                onMarkerDragEnd = {
-                    onMarkerDragEnd(markerState.position.latitude, markerState.position.longitude)
-                },
-            )
+        if (hasMarker) {
+            Marker(state = markerState, draggable = true)
         }
     }
 }
@@ -310,18 +342,16 @@ private fun BottomCtaBar(
                 }
                 is AddressPickerUiState.Searching -> {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(72.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(72.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp))
                     }
                 }
-                else -> {
-                    // Idle / PredictionsAvailable / Error — CTA disabled
-                    InServiceCtaBar(formattedAddress = null, onConfirm = onConfirm)
-                }
+                else -> InServiceCtaBar(formattedAddress = null, onConfirm = onConfirm)
             }
         }
     }
@@ -333,9 +363,9 @@ private fun InServiceCtaBar(
     onConfirm: () -> Unit,
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-        if (!formattedAddress.isNullOrBlank()) {
+        if (formattedAddress != null) {
             Text(
-                text = formattedAddress,
+                text = formattedAddress.ifBlank { stringResource(R.string.address_picker_pin_set_no_address) },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
@@ -346,9 +376,10 @@ private fun InServiceCtaBar(
             text = stringResource(R.string.address_picker_confirm),
             onClick = onConfirm,
             enabled = formattedAddress != null,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
         )
     }
 }

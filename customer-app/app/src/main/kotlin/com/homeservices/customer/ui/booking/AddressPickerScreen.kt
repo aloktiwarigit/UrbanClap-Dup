@@ -91,9 +91,10 @@ internal fun AddressPickerScreen(
             },
             onConfirm = { viewModel.onConfirm(serviceId) },
             onNotifyMe = { viewModel.onConfirm(serviceId) }, // triggers NavigateToWaitlist when out-of-service
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
         )
     }
 }

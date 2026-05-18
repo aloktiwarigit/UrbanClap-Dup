@@ -15,13 +15,13 @@ import org.junit.jupiter.api.TestInstance
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class LocalServiceAreaCheckTest {
-
     private lateinit var checker: LocalServiceAreaCheck
 
     @BeforeAll
     public fun setUp() {
-        val stream = javaClass.classLoader!!.getResourceAsStream("service-area-ayodhya.geojson")
-            ?: error("service-area-ayodhya.geojson not found in test resources")
+        val stream =
+            javaClass.classLoader!!.getResourceAsStream("service-area-ayodhya.geojson")
+                ?: error("service-area-ayodhya.geojson not found in test resources")
         val json = stream.bufferedReader().use { it.readText() }
         val ring = parseRing(json) // package-internal helper from LocalServiceAreaCheck.kt
         checker = LocalServiceAreaCheck(ring) // internal secondary constructor

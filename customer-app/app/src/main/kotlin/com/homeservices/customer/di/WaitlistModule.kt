@@ -20,12 +20,12 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 public abstract class WaitlistModule {
     @Binds
-    public abstract fun bindWaitlistRepository(impl: WaitlistRepositoryImpl): WaitlistRepository
+    internal abstract fun bindWaitlistRepository(impl: WaitlistRepositoryImpl): WaitlistRepository
 
     public companion object {
         @Provides
         @Singleton
-        public fun provideWaitlistApiService(
+        internal fun provideWaitlistApiService(
             @AuthOkHttpClient client: OkHttpClient,
             moshi: Moshi,
         ): WaitlistApiService =
