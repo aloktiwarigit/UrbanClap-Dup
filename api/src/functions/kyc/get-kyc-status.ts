@@ -29,6 +29,10 @@ export async function getKycStatus(
     return { status: 404, jsonBody: { error: 'KYC record not found' } };
   }
 
+  // migration window: prefer new panMaskedNumber; fall back to masking legacy panNumber
+  // maskPan handles raw canonical PANs; ?? kyc.panNumber handles already-masked legacy values
+  const panMaskedValue = kyc.panMaskedNumber ?? (kyc.panNumber ? maskPan(kyc.panNumber) ?? kyc.panNumber : null);
+
   return {
     status: 200,
     jsonBody: {
@@ -36,9 +40,8 @@ export async function getKycStatus(
       kycStatus: kyc.kycStatus,
       aadhaarVerified: kyc.aadhaarVerified,
       aadhaarMaskedNumber: kyc.aadhaarMaskedNumber,
-      // migration window: prefer panMaskedNumber (new docs), fall back to masking legacy panNumber
-      // maskPan handles raw canonical PANs; ?? kyc.panNumber handles already-masked legacy values
-      panMaskedNumber: kyc.panMaskedNumber ?? (kyc.panNumber ? maskPan(kyc.panNumber) ?? kyc.panNumber : null),
+      panMaskedNumber: panMaskedValue,
+      panNumber: panMaskedValue, // legacy alias — technician-app KycStatusResponse reads panNumber (migration window)
     },
   };
 }

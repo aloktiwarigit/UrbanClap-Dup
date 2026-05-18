@@ -114,6 +114,8 @@ describe('GET /v1/kyc/status', () => {
     const body = res.jsonBody as Record<string, unknown>;
     expect(body['panNumberEncrypted']).toBeUndefined();
     expect(body['panMaskedNumber']).toBe('XXXXX1234F');
+    // Legacy alias present for technician-app compat (migration window)
+    expect(body['panNumber']).toBe('XXXXX1234F');
   });
 
   it('[E19-S01] falls back to already-masked panNumber for legacy docs (old #### mask format)', async () => {
@@ -140,7 +142,8 @@ describe('GET /v1/kyc/status', () => {
     const body = res.jsonBody as Record<string, unknown>;
     // Old mask format preserved (can't re-mask without raw PAN)
     expect(body['panMaskedNumber']).toBe('ABCDE####F');
-    expect(body).not.toHaveProperty('panNumber');
+    // Legacy alias also present for technician-app compat
+    expect(body['panNumber']).toBe('ABCDE####F');
   });
 
   it('[E19-S01-P2A] applies maskPan to raw canonical panNumber in legacy docs to avoid raw PAN exposure', async () => {

@@ -70,12 +70,21 @@ function derivePanFields(kyc: KycSubdoc): {
       };
     }
 
-    // Strategy 3: panNumber is already masked — copy as panMaskedNumber, hash uncomputable
-    return {
-      panMaskedNumber: kyc.panNumber,
-      panHash: null,
-      source: 'pre-masked-no-hash',
-    };
+    // Strategy 3: panNumber looks like a known-masked format — copy only if recognised.
+    // Only accept: old-style ABCDE####F  OR  new-style XXXXX1234F
+    // Anything else (OCR artifact, raw PAN with spaces, truncated) must NOT be copied
+    // verbatim because callers trust panMaskedNumber to be safe.
+    const KNOWN_MASKED = /^(?:[A-Z]{5}#{4}[A-Z]|XXXXX\d{4}[A-Z])$/;
+    if (KNOWN_MASKED.test(kyc.panNumber)) {
+      return {
+        panMaskedNumber: kyc.panNumber,
+        panHash: null,
+        source: 'pre-masked-no-hash',
+      };
+    }
+
+    // Unrecognised format — leave masked null; keep encrypted blob for future retry
+    return { panMaskedNumber: kyc.panMaskedNumber ?? null, panHash: null, source: 'unrecognized-format' };
   }
 
   // Preserve any mask written on a previous run so retries are idempotent
