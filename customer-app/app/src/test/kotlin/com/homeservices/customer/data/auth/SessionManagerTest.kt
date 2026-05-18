@@ -3,9 +3,9 @@ package com.homeservices.customer.data.auth
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider
+import com.homeservices.customer.data.device.DeviceTokenRegistrar
 import com.homeservices.customer.domain.auth.model.AuthProvider
 import com.homeservices.customer.domain.auth.model.AuthState
-import com.homeservices.customer.data.device.DeviceTokenRegistrar
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
@@ -39,7 +39,7 @@ public class SessionManagerTest {
             firebaseAuth = mockk(relaxed = true),
             firebaseMessaging = mockk(relaxed = true),
             idTokenCache = mockk(relaxed = true),
-            deviceTokenRegistrar = mockk(relaxed = true),
+            deviceTokenRegistrar = mockk<DeviceTokenRegistrar>(relaxed = true),
         )
 
     @Test
