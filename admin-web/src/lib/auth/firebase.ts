@@ -1,4 +1,4 @@
-import { initializeApp, getApps } from 'firebase/app';
+import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -9,7 +9,10 @@ const firebaseConfig = {
 
 // Lazy factory — defers initializeApp() to first call so Next.js build
 // (which evaluates modules without NEXT_PUBLIC_FIREBASE_* env vars) doesn't throw.
+export function getFirebaseApp(): FirebaseApp {
+  return getApps().length ? getApps()[0]! : initializeApp(firebaseConfig);
+}
+
 export function getFirebaseAuth() {
-  const app = getApps().length ? getApps()[0]! : initializeApp(firebaseConfig);
-  return getAuth(app);
+  return getAuth(getFirebaseApp());
 }
