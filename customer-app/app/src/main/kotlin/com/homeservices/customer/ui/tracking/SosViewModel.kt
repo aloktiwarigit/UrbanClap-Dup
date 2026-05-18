@@ -47,6 +47,9 @@ public class SosViewModel
         private var countdownJob: Job? = null
         private var recorder: MediaRecorder? = null
 
+        /** Set to true only when startRecording() completes successfully in this SOS session. */
+        private var freshRecordingCaptured = false
+
         public fun onSosTapped() {
             viewModelScope.launch {
                 val consent = consentStore.getAudioConsent()
@@ -98,11 +101,10 @@ public class SosViewModel
             countdownJob?.cancel()
             countdownJob =
                 viewModelScope.launch {
-                    if (audioGranted && osPermissionGranted) {
-                        // Wipe any stale file (crash leftover, old build) before this recording starts.
-                        wipeStaleSosFile()
-                        startRecording()
-                    }
+                    // Wipe any stale file from a crash/old build before this countdown starts.
+                    wipeStaleSosFile()
+                    freshRecordingCaptured = false
+                    if (audioGranted && osPermissionGranted) startRecording()
                     for (sec in 30 downTo 1) {
                         _sosUiState.value = SosUiState.Countdown(sec)
                         delay(1_000L)
@@ -132,7 +134,14 @@ public class SosViewModel
                     start()
                 }
                 recorder = rec
+                freshRecordingCaptured = true
             }
+        }
+
+        /** For testing only: simulate a successful recording capture. */
+        @Suppress("unused")
+        internal fun simulateFreshRecordingCapturedForTest() {
+            freshRecordingCaptured = true
         }
 
         private fun stopRecording() {
@@ -156,7 +165,7 @@ public class SosViewModel
         }
 
         private suspend fun maybeUploadEvidence() {
-            if (!featureFlags.sosAudioUploadEnabled()) return
+            if (!featureFlags.sosAudioUploadEnabled() || !freshRecordingCaptured) return
             val customerId = (sessionManager.authState.value as? AuthState.Authenticated)?.uid
             val file = File(File(context.filesDir, "sos"), "sos-$bookingId.m4a")
             if (customerId == null || !file.exists()) return
@@ -175,6 +184,7 @@ public class SosViewModel
         }
 
         private fun wipeStaleSosFile() {
+            freshRecordingCaptured = false
             runCatching { File(File(context.filesDir, "sos"), "sos-$bookingId.m4a").delete() }
         }
 

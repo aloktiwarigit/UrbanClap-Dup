@@ -231,8 +231,6 @@ public class SosViewModelTest {
     public fun `flag_on_uploads_and_emits_evidence_saved_on_success`(): Unit =
         runTest(testDispatcher) {
             val tempDir = createTempDirectory().toFile()
-            val sosDir = File(tempDir, "sos").also { it.mkdirs() }
-            val file = File(sosDir, "sos-bk-1.m4a").also { it.writeBytes(byteArrayOf(1, 2, 3)) }
             every { mockContext.filesDir } returns tempDir
             every { featureFlags.sosAudioUploadEnabled() } returns true
             every { sessionManager.authState } returns MutableStateFlow(AuthState.Authenticated("cust-1"))
@@ -242,7 +240,16 @@ public class SosViewModelTest {
 
             val vm = buildVm()
             vm.onSosTapped()
-            advanceTimeBy(31_000L)
+            advanceTimeBy(1L) // countdown starts, wipeStaleSosFile() runs
+
+            // Simulate fresh recording: set flag + write file after wipe has cleared old state
+            vm.simulateFreshRecordingCapturedForTest()
+            File(File(tempDir, "sos"), "sos-bk-1.m4a").also {
+                it.parentFile?.mkdirs()
+                it.writeBytes(byteArrayOf(1, 2, 3))
+            }
+
+            advanceTimeBy(30_000L)
             advanceUntilIdle()
             assertThat(vm.sosUiState.value).isInstanceOf(SosUiState.EvidenceSaved::class.java)
             tempDir.deleteRecursively()
@@ -252,23 +259,25 @@ public class SosViewModelTest {
     public fun `flag_on_emits_upload_error_when_uploader_fails`(): Unit =
         runTest(testDispatcher) {
             val tempDir = createTempDirectory().toFile()
-            File(File(tempDir, "sos"), "sos-bk-1.m4a").also {
-                it.parentFile?.mkdirs()
-                it.writeBytes(byteArrayOf(0))
-            }
             every { mockContext.filesDir } returns tempDir
             every { featureFlags.sosAudioUploadEnabled() } returns true
             every { sessionManager.authState } returns MutableStateFlow(AuthState.Authenticated("cust-1"))
             coEvery { consentStore.getAudioConsent() } returns false
             coEvery { sosUseCase.execute("bk-1") } returns Result.success(Unit)
             every { audioUploader.upload(any(), any(), any()) } returns
-                flowOf(
-                    SosUploadProgress.Failure(RuntimeException("net_error")),
-                )
+                flowOf(SosUploadProgress.Failure(RuntimeException("net_error")))
 
             val vm = buildVm()
             vm.onSosTapped()
-            advanceTimeBy(31_000L)
+            advanceTimeBy(1L)
+
+            vm.simulateFreshRecordingCapturedForTest()
+            File(File(tempDir, "sos"), "sos-bk-1.m4a").also {
+                it.parentFile?.mkdirs()
+                it.writeBytes(byteArrayOf(0))
+            }
+
+            advanceTimeBy(30_000L)
             advanceUntilIdle()
             val state = vm.sosUiState.value
             assertThat(state).isInstanceOf(SosUiState.EvidenceUploadError::class.java)
@@ -280,25 +289,31 @@ public class SosViewModelTest {
     public fun `tmp_m4a_file_is_deleted_before_upload_starts`(): Unit =
         runTest(testDispatcher) {
             val tempDir = createTempDirectory().toFile()
-            val file =
-                File(File(tempDir, "sos"), "sos-bk-1.m4a").also {
-                    it.parentFile?.mkdirs()
-                    it.writeBytes(byteArrayOf(9))
-                }
             every { mockContext.filesDir } returns tempDir
             every { featureFlags.sosAudioUploadEnabled() } returns true
             every { sessionManager.authState } returns MutableStateFlow(AuthState.Authenticated("cust-1"))
             coEvery { consentStore.getAudioConsent() } returns false
             coEvery { sosUseCase.execute("bk-1") } returns Result.success(Unit)
+
+            val vm = buildVm()
+            vm.onSosTapped()
+            advanceTimeBy(1L) // wipe runs; countdown starts
+
+            // Simulate fresh recording after wipe
+            vm.simulateFreshRecordingCapturedForTest()
+            val file =
+                File(File(tempDir, "sos"), "sos-bk-1.m4a").also {
+                    it.parentFile?.mkdirs()
+                    it.writeBytes(byteArrayOf(9))
+                }
+
             var fileExistedDuringUpload = true
             every { audioUploader.upload(any(), any(), any()) } answers {
                 fileExistedDuringUpload = file.exists()
                 flowOf(SosUploadProgress.Success)
             }
 
-            val vm = buildVm()
-            vm.onSosTapped()
-            advanceTimeBy(31_000L)
+            advanceTimeBy(30_000L)
             advanceUntilIdle()
             assertThat(fileExistedDuringUpload).isFalse()
             tempDir.deleteRecursively()
