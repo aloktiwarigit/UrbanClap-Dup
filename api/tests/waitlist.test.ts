@@ -136,4 +136,44 @@ describe('POST /v1/waitlist', () => {
     const res = (await waitlistHandler(req, mockCtx)) as HttpResponseInit;
     expect(res.status).toBe(201);
   });
+
+  it('rateLimit_ipBucketDenied_returns429_withRetryAfter', async () => {
+    // First call (IP check) is denied — phone check should not be reached.
+    vi.mocked(consume).mockResolvedValueOnce({ allowed: false, retryAfterMs: 1_500 });
+
+    const res = (await waitlistHandler(postReq(validBody()), mockCtx)) as HttpResponseInit;
+    expect(res.status).toBe(429);
+    const headers = res.headers as Record<string, string>;
+    expect(Number(headers['Retry-After'])).toBeGreaterThan(0);
+    const body = res.jsonBody as { code: string };
+    expect(body.code).toBe('RATE_LIMITED');
+    expect(createWaitlistEntry).not.toHaveBeenCalled();
+    // Phone-bucket consume must NOT be called when IP bucket already denied.
+    expect(vi.mocked(consume).mock.calls).toHaveLength(1);
+  });
+
+  it('invalidJson_returns400_INVALID_JSON', async () => {
+    // Build a request whose body is non-JSON garbage so req.json() throws.
+    const req = new HttpRequest({
+      url: 'http://localhost/api/v1/waitlist',
+      method: 'POST',
+      body: { string: '{not-json' },
+      headers: { 'content-type': 'application/json' },
+    });
+    const res = (await waitlistHandler(req, mockCtx)) as HttpResponseInit;
+    expect(res.status).toBe(400);
+    const body = res.jsonBody as { code: string };
+    expect(body.code).toBe('INVALID_JSON');
+    expect(createWaitlistEntry).not.toHaveBeenCalled();
+  });
+
+  it('joinWaitlist_genericError_returns500_INTERNAL_ERROR', async () => {
+    // Repository throws a non-UNKNOWN_SERVICE error (e.g. Cosmos outage).
+    vi.mocked(createWaitlistEntry).mockRejectedValueOnce(new Error('Cosmos 503'));
+
+    const res = (await waitlistHandler(postReq(validBody()), mockCtx)) as HttpResponseInit;
+    expect(res.status).toBe(500);
+    const body = res.jsonBody as { code: string };
+    expect(body.code).toBe('INTERNAL_ERROR');
+  });
 });
