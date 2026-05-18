@@ -236,7 +236,7 @@ private fun TrackingMapSection(
     defaultTechName: String,
 ) {
     state.location?.let { loc ->
-        val techLatLng = LatLng(loc.lat, loc.lng)
+        val techLatLng = LatLng(state.liveLat ?: loc.lat, state.liveLng ?: loc.lng)
         val techNameForMarker = state.techName.ifBlank { defaultTechName }
         val cameraPositionState =
             rememberCameraPositionState {

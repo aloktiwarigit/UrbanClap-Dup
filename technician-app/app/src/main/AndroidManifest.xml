@@ -81,6 +81,11 @@
             android:foregroundServiceType="location"
             android:exported="false" />
 
+        <service
+            android:name=".data.location.service.LocationForegroundService"
+            android:foregroundServiceType="location"
+            android:exported="false" />
+
         <receiver
             android:name=".data.activeJob.receiver.BootReceiver"
             android:exported="true">

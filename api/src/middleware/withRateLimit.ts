@@ -16,6 +16,27 @@ export interface RateLimitOptions {
    * idempotent and legitimate).
    */
   exempt?: (req: HttpRequest) => boolean;
+  /**
+   * Optional custom bucket key extractor.  When provided, its return value
+   * is used as the rate-limit bucket key instead of the default
+   * `rl:ip:<ip>` key derived from the request's forwarded IP.
+   *
+   * Useful when you want per-user or per-resource limiting rather than
+   * per-IP limiting — e.g. keying by technician UID so that multiple
+   * requests from the same user behind a NAT share a single bucket.
+   *
+   * The extractor is called AFTER the exemption check (exempt paths never
+   * reach it) and BEFORE the `consume()` call.  The function receives the
+   * raw HttpRequest; capture any additional context (e.g. a decoded UID)
+   * via closure in the wrapping handler.
+   *
+   * @example
+   * withRateLimit({
+   *   buckets: { ip: { capacity: 60, refillPerSec: 1 } },
+   *   keyExtractor: (req) => `rl:tech:${techUid}`,   // techUid from closure
+   * })(handler)
+   */
+  keyExtractor?: (req: HttpRequest) => string;
 }
 
 /**
@@ -51,13 +72,15 @@ export function withRateLimit(options: RateLimitOptions) {
         return handler(req, ctx);
       }
 
-      // ── Derive IP key ─────────────────────────────────────────────────────
+      // ── Derive IP key (always computed as fallback) ───────────────────────
       const ip =
         req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
         req.headers.get('x-real-ip') ??
         'unknown';
 
-      const bucketKey = `rl:ip:${ip}`;
+      const bucketKey = options.keyExtractor
+        ? options.keyExtractor(req)
+        : `rl:ip:${ip}`;
       const { capacity, refillPerSec } = options.buckets.ip;
 
       // ── Consume token ─────────────────────────────────────────────────────

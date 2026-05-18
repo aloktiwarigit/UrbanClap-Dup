@@ -269,6 +269,25 @@ export async function sendErasureFinalNotice(payload: {
   });
 }
 
+export async function sendPeriodicLocationPush(payload: {
+  customerId: string;
+  bookingId: string;
+  lat: number;
+  lng: number;
+  capturedAt: number;
+}): Promise<void> {
+  await getFirebaseAdmin().messaging().send({
+    topic: `customer_${payload.customerId}`,
+    data: {
+      type: 'LOCATION_UPDATE',
+      bookingId: payload.bookingId,
+      lat: String(payload.lat),
+      lng: String(payload.lng),
+      capturedAt: String(payload.capturedAt),
+    },
+  });
+}
+
 /** DPDP §12 erasure denial: notify the data principal of the legal reason. */
 export async function sendErasureDenied(payload: {
   userId: string;

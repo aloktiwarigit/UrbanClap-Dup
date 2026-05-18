@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.homeservices.technician.data.activeJob.ActiveJobLocationObserver
 import com.homeservices.technician.data.fcm.HomeservicesFcmService
 import com.homeservices.technician.domain.flags.GrowthBookFeatureFlags
 import com.homeservices.technician.domain.locale.LocaleRepository
@@ -31,6 +32,9 @@ public class HomeservicesTechnicianApplication :
     @Inject
     public lateinit var workerFactory: HiltWorkerFactory
 
+    @Inject
+    public lateinit var activeJobLocationObserver: ActiveJobLocationObserver
+
     @EntryPoint
     @InstallIn(SingletonComponent::class)
     public interface FeatureFlagsEntryPoint {
@@ -50,6 +54,7 @@ public class HomeservicesTechnicianApplication :
         AppCheckInitializer.init(this)
         PostHogInitializer.init(this)
         HomeservicesFcmService.registerChannels(this)
+        activeJobLocationObserver.start()
 
         // Best-effort async flag refresh — non-blocking, fire-and-forget.
         // Uses a SupervisorJob so a failure here never propagates to sibling coroutines.
