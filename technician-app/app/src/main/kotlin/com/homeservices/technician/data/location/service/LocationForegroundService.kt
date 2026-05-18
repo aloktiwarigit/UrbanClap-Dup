@@ -66,11 +66,7 @@ public class LocationForegroundService : Service() {
             LocationRequest
                 .Builder(LOCATION_UPDATE_INTERVAL_MS)
                 .setPriority(Priority.PRIORITY_BALANCED_POWER_ACCURACY)
-<<<<<<< HEAD
-                .setMinUpdateDistanceMeters(MIN_UPDATE_DISTANCE_METERS)
-=======
                 .setMinUpdateDistanceMeters(LOCATION_MIN_UPDATE_DISTANCE_M)
->>>>>>> origin/main
                 .build()
         val cb =
             object : LocationCallback() {
@@ -168,16 +164,11 @@ public class LocationForegroundService : Service() {
         public const val CHANNEL_ID: String = "active_job_location"
         public const val EXTRA_BOOKING_ID: String = "bookingId"
         private const val NOTIFICATION_ID: Int = 2002
-        private const val LOCATION_UPDATE_INTERVAL_MS: Long = 30_000L
-        private const val MIN_UPDATE_DISTANCE_METERS: Float = 15f
 
-<<<<<<< HEAD
-=======
         // Location-update tuning constants (extracted to satisfy detekt MagicNumber rule).
         private const val LOCATION_UPDATE_INTERVAL_MS: Long = 30_000L
         private const val LOCATION_MIN_UPDATE_DISTANCE_M: Float = 15f
 
->>>>>>> origin/main
         public fun startIfNeeded(
             context: Context,
             bookingId: String,
