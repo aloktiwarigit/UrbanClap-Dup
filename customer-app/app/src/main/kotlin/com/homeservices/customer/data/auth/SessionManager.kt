@@ -4,6 +4,7 @@ import android.content.SharedPreferences
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessaging
 import com.homeservices.customer.data.auth.di.AuthPrefs
+import com.homeservices.customer.data.device.DeviceTokenRegistrar
 import com.homeservices.customer.data.network.auth.IdTokenCache
 import com.homeservices.customer.domain.auth.model.AuthProvider
 import com.homeservices.customer.domain.auth.model.AuthState
@@ -27,6 +28,7 @@ public class SessionManager
         private val firebaseAuth: FirebaseAuth,
         private val firebaseMessaging: FirebaseMessaging,
         private val idTokenCache: IdTokenCache,
+        private val deviceTokenRegistrar: DeviceTokenRegistrar,
     ) {
         private companion object {
             const val KEY_UID = "uid"
@@ -148,12 +150,14 @@ public class SessionManager
          *    and increments signOutGeneration; capture the generation for FCM guards below.
          *    Does NOT cancel the singleton scope so the next sign-in can resume.
          * 5. Best-effort [FirebaseAuth.signOut] (local-only SDK call; safe after prefs are cleared)
-         * 6. Best-effort FCM cleanup — [FirebaseMessaging.unsubscribeFromTopic] and
-         *    [FirebaseMessaging.deleteToken] (may hang or fail offline; never block sign-out).
+         * 6. Best-effort FCM cleanup — [FirebaseMessaging.deleteToken] (may hang or fail
+         *    offline; never block sign-out).
          *    Each FCM step is guarded by the sign-out generation: if the user signs back in
          *    while an FCM await is in-flight, the generation will have changed (via
          *    [signalSignIn] → incrementAndGet) and the remaining FCM operations are skipped
          *    to avoid deleting the new session's FCM token.
+         *    Step 6c calls [DeviceTokenRegistrar.unregister] to remove the token from the
+         *    server's active-token list (FCM topic model replaced by per-device tokens).
          *
          * Each step after step 1 is wrapped in [runCatching] so failures are logged as
          * Sentry breadcrumbs but never thrown — sign-out always completes.
@@ -203,21 +207,6 @@ public class SessionManager
                     )
                 }
 
-            // Step 6a — Best-effort FCM topic unsubscribe (may hang offline; does not affect local auth).
-            //            Guard: skip if generation changed (new sign-in raced the FCM await).
-            runCatching {
-                if (idTokenCache.currentSignOutGeneration() != signOutGen) return@runCatching
-                firebaseMessaging.unsubscribeFromTopic("customer_$uid").await()
-            }.onFailure { e ->
-                Sentry.addBreadcrumb(
-                    io.sentry.Breadcrumb().apply {
-                        category = "auth.signout"
-                        message = "FCM unsubscribeFromTopic failed: ${e.message}"
-                        level = SentryLevel.WARNING
-                    },
-                )
-            }
-
             // Step 6b — Best-effort FCM token deletion (rotates registration token).
             //            Guard: skip if generation changed (new sign-in raced the FCM await).
             runCatching {
@@ -228,6 +217,21 @@ public class SessionManager
                     io.sentry.Breadcrumb().apply {
                         category = "auth.signout"
                         message = "FCM deleteToken failed: ${e.message}"
+                        level = SentryLevel.WARNING
+                    },
+                )
+            }
+
+            // Step 6c — Best-effort device-token server unregister (removes token from FCM send list).
+            //            Guard: skip if generation changed (new sign-in raced the await).
+            runCatching {
+                if (idTokenCache.currentSignOutGeneration() != signOutGen) return@runCatching
+                deviceTokenRegistrar.unregister()
+            }.onFailure { e ->
+                Sentry.addBreadcrumb(
+                    io.sentry.Breadcrumb().apply {
+                        category = "auth.signout"
+                        message = "deviceTokenRegistrar.unregister failed: ${e.message}"
                         level = SentryLevel.WARNING
                     },
                 )

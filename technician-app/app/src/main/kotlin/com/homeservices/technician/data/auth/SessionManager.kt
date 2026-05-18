@@ -2,6 +2,7 @@ package com.homeservices.technician.data.auth
 
 import android.content.SharedPreferences
 import com.homeservices.technician.data.auth.di.AuthPrefs
+import com.homeservices.technician.data.device.DeviceTokenRegistrar
 import com.homeservices.technician.domain.auth.model.AuthProvider
 import com.homeservices.technician.domain.auth.model.AuthState
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +19,7 @@ public class SessionManager
     @Inject
     constructor(
         @AuthPrefs private val prefs: SharedPreferences,
+        private val deviceTokenRegistrar: DeviceTokenRegistrar,
     ) {
         private companion object {
             const val KEY_UID = "uid"
@@ -134,8 +136,14 @@ public class SessionManager
         }
 
         public suspend fun clearSession() {
+            // Capture uid BEFORE clearing prefs so it's available for the server unregister call.
+            val uid = currentUid()
             withContext(Dispatchers.IO) { clearSessionPrefs() }
             _authState.value = AuthState.Unauthenticated
+            // Best-effort server device-token unregister — never blocks sign-out.
+            if (uid != null) {
+                runCatching { deviceTokenRegistrar.unregister() }
+            }
         }
 
         private fun currentUid(): String? {

@@ -4,8 +4,11 @@ import android.content.SharedPreferences
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessaging
+import com.homeservices.customer.data.device.DeviceTokenRegistrar
 import com.homeservices.customer.data.network.auth.IdTokenCache
 import com.homeservices.customer.domain.auth.model.AuthState
+import io.mockk.coJustRun
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -20,24 +23,28 @@ import org.junit.Test
  * Unit tests for [SessionManager.signOut] orchestration.
  *
  * These tests exercise the local-state-first sign-out sequence with MockK mocks for
- * FirebaseAuth, FirebaseMessaging, and IdTokenCache. The existing
- * [SessionManagerTest] covers the prefs + AuthState round-trips via Robolectric.
+ * FirebaseAuth, FirebaseMessaging, IdTokenCache, and DeviceTokenRegistrar.
+ * The existing [SessionManagerTest] covers the prefs + AuthState round-trips via Robolectric.
  *
  * Sign-out contract (local-state-first ordering):
  * 1. prefs are cleared FIRST (survives process kill; prevents stale-uid auth on cold start)
  * 2. authState transitions to Unauthenticated BEFORE remote cleanup
  * 3. idTokenCache.signalSignOut() clears cached token and pauses refresh loop (no scope cancel)
  * 4. firebaseAuth.signOut() is called (best-effort)
- * 5. firebaseMessaging.unsubscribeFromTopic("customer_<uid>") is called (best-effort)
- * 6. firebaseMessaging.deleteToken() is called (best-effort)
+ * 5. firebaseMessaging.deleteToken() is called (best-effort) — Step 6b
+ * 6. deviceTokenRegistrar.unregister() is called (best-effort) — Step 6c
  * 7. The sequence completes even if individual steps throw (runCatching resilience)
- * 8. FCM cleanup is skipped if generation changes mid-flight (concurrent sign-in guard)
+ * 8. FCM / device-token cleanup is skipped if generation changes mid-flight (concurrent sign-in guard)
+ *
+ * Note: FCM topic unsubscription (previously Step 6a) was removed in E19-S02. The API
+ * now tracks device tokens directly; [DeviceTokenRegistrar.unregister] replaces topic cleanup.
  */
 public class SessionManagerSignOutTest {
     private lateinit var prefs: SharedPreferences
     private lateinit var firebaseAuth: FirebaseAuth
     private lateinit var firebaseMessaging: FirebaseMessaging
     private lateinit var idTokenCache: IdTokenCache
+    private lateinit var deviceTokenRegistrar: DeviceTokenRegistrar
     private lateinit var sessionManager: SessionManager
 
     @Before
@@ -46,6 +53,7 @@ public class SessionManagerSignOutTest {
         firebaseAuth = mockk(relaxed = true)
         firebaseMessaging = mockk(relaxed = true)
         idTokenCache = mockk(relaxed = true)
+        deviceTokenRegistrar = mockk(relaxed = true)
 
         // Default: prefs hold a saved uid so signOut has a uid to work with.
         val editor = mockk<SharedPreferences.Editor>(relaxed = true)
@@ -59,9 +67,11 @@ public class SessionManagerSignOutTest {
         // currentSignOutGeneration returns a stable value (simulates the generation after signalSignOut)
         every { idTokenCache.currentSignOutGeneration() } returns 1
 
-        // FCM methods return real completed Tasks so .await() resolves correctly in coroutines.
-        every { firebaseMessaging.unsubscribeFromTopic(any()) } returns Tasks.forResult(null)
+        // FCM deleteToken returns a real completed Task so .await() resolves correctly.
         every { firebaseMessaging.deleteToken() } returns Tasks.forResult(null)
+
+        // DeviceTokenRegistrar.unregister is a suspend fun; coJustRun mocks it as a no-op.
+        coJustRun { deviceTokenRegistrar.unregister() }
 
         sessionManager =
             SessionManager(
@@ -69,6 +79,7 @@ public class SessionManagerSignOutTest {
                 firebaseAuth = firebaseAuth,
                 firebaseMessaging = firebaseMessaging,
                 idTokenCache = idTokenCache,
+                deviceTokenRegistrar = deviceTokenRegistrar,
             )
     }
 
@@ -81,19 +92,19 @@ public class SessionManagerSignOutTest {
         }
 
     @Test
-    public fun `signOut unsubscribes from customer topic for current uid`(): Unit =
-        runTest {
-            sessionManager.signOut()
-
-            verify { firebaseMessaging.unsubscribeFromTopic("customer_user-42") }
-        }
-
-    @Test
     public fun `signOut deletes FCM token`(): Unit =
         runTest {
             sessionManager.signOut()
 
             verify { firebaseMessaging.deleteToken() }
+        }
+
+    @Test
+    public fun `signOut calls deviceTokenRegistrar unregister`(): Unit =
+        runTest {
+            sessionManager.signOut()
+
+            coVerify { deviceTokenRegistrar.unregister() }
         }
 
     @Test
@@ -129,17 +140,17 @@ public class SessionManagerSignOutTest {
             verify { prefs.edit() }
             assertThat(sessionManager.authState.value).isEqualTo(AuthState.Unauthenticated)
             // FCM cleanup should still have been attempted after Firebase failure
-            verify { firebaseMessaging.unsubscribeFromTopic(any()) }
             verify { firebaseMessaging.deleteToken() }
+            coVerify { deviceTokenRegistrar.unregister() }
         }
 
     @Test
     public fun `signOut emits Unauthenticated synchronously before FCM cleanup completes`(): Unit =
         runTest {
-            // FCM unsubscribe suspends (simulated by a completed task — enough to verify ordering
-            // because our signOut inverts the sequence so authState is set before .await() calls)
+            // FCM deleteToken suspends (simulated by a completed task — enough to verify ordering
+            // because our signOut sets authState before .await() calls)
             var authStateAtFcmCall: AuthState? = null
-            every { firebaseMessaging.unsubscribeFromTopic(any()) } answers {
+            every { firebaseMessaging.deleteToken() } answers {
                 // Capture authState at the moment FCM is called — must already be Unauthenticated
                 authStateAtFcmCall = sessionManager.authState.value
                 Tasks.forResult(null)
@@ -151,16 +162,16 @@ public class SessionManagerSignOutTest {
         }
 
     @Test
-    public fun `signOut completes even if FCM unsubscribe throws`(): Unit =
+    public fun `signOut completes even if FCM deleteToken throws`(): Unit =
         runTest {
             every {
-                firebaseMessaging.unsubscribeFromTopic(any())
+                firebaseMessaging.deleteToken()
             } throws RuntimeException("FCM timeout")
 
             sessionManager.signOut()
 
-            // deleteToken must still run after FCM unsubscribe failure
-            verify { firebaseMessaging.deleteToken() }
+            // deviceTokenRegistrar.unregister must still run after FCM deleteToken failure
+            coVerify { deviceTokenRegistrar.unregister() }
             assertThat(sessionManager.authState.value).isEqualTo(AuthState.Unauthenticated)
         }
 
@@ -175,13 +186,15 @@ public class SessionManagerSignOutTest {
                     firebaseAuth = firebaseAuth,
                     firebaseMessaging = firebaseMessaging,
                     idTokenCache = idTokenCache,
+                    deviceTokenRegistrar = deviceTokenRegistrar,
                 )
 
             unauthManager.signOut()
 
-            // Firebase and FCM operations must NOT be called when no uid
+            // Firebase, FCM, and device registrar operations must NOT be called when no uid
             verify(exactly = 0) { firebaseAuth.signOut() }
-            verify(exactly = 0) { firebaseMessaging.unsubscribeFromTopic(any()) }
+            verify(exactly = 0) { firebaseMessaging.deleteToken() }
+            coVerify(exactly = 0) { deviceTokenRegistrar.unregister() }
         }
 
     @Test
@@ -197,11 +210,11 @@ public class SessionManagerSignOutTest {
         }
 
     // -------------------------------------------------------------------------
-    // NEW: FIX 3 — FCM cleanup is a no-op when a new sign-in has happened
+    // FCM cleanup is a no-op when a new sign-in has happened (generation guard)
     // -------------------------------------------------------------------------
 
     /**
-     * FIX 3: signOut FCM cleanup steps are skipped when a concurrent sign-in has bumped
+     * signOut FCM cleanup steps (6b + 6c) are skipped when a concurrent sign-in has bumped
      * the signOutGeneration before the FCM awaits run.
      *
      * Scenario:
@@ -221,15 +234,15 @@ public class SessionManagerSignOutTest {
             every { idTokenCache.currentSignOutGeneration() } answers {
                 generationCallCount++
                 // First call (after signalSignOut, to capture signOutGen) → 1
-                // Subsequent calls (inside FCM guard checks) → 2 (simulates concurrent signalSignIn)
+                // Subsequent calls (inside FCM/device guard checks) → 2 (simulates concurrent signalSignIn)
                 if (generationCallCount <= 1) 1 else 2
             }
 
             sessionManager.signOut()
 
-            // FCM operations must NOT be called since generation changed before the guards ran
-            verify(exactly = 0) { firebaseMessaging.unsubscribeFromTopic(any()) }
+            // FCM and device-registrar operations must NOT be called since generation changed
             verify(exactly = 0) { firebaseMessaging.deleteToken() }
+            coVerify(exactly = 0) { deviceTokenRegistrar.unregister() }
             // Auth state and prefs must still be cleaned up (local state is unaffected)
             assertThat(sessionManager.authState.value).isEqualTo(AuthState.Unauthenticated)
             verify { firebaseAuth.signOut() }
