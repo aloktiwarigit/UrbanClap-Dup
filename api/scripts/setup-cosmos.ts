@@ -27,6 +27,9 @@ const containers = [
   // Partitioned by /customerId so reads by (idempotencyKey, customerId) are single-partition.
   // Container name: applied_credit_idempotency
   { id: 'applied_credit_idempotency', partitionKey: '/customerId', ttl: 86400 },
+  // E17-S02: live technician location — one doc per active booking, last-write-wins.
+  // Cosmos auto-deletes after 1h (TTL=3600). Partitioned by /bookingId for single-partition reads.
+  { id: 'live_locations', partitionKey: '/bookingId', ttl: 3600 },
 ] as const;
 
 async function main() {

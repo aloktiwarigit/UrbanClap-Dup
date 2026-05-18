@@ -161,4 +161,8 @@
     <string name="photo_upload_retry_banner_label">Photo upload queued</string>
     <string name="photo_upload_retry_banner_action">Retry</string>
     <string name="onboarding_kyc_queued_offline">KYC submission will be sent when you go online.</string>
+
+    <!-- Active job location foreground service (E17-S02) -->
+    <string name="active_job_location_notification_title">Sharing location with customer</string>
+    <string name="active_job_location_notification_body">Only during active booking</string>
 </resources>
