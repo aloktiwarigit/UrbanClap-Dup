@@ -51,7 +51,13 @@ export async function submitPanOcr(
     return { status: 200, jsonBody: { kycStatus: 'PAN_DONE', panMaskedNumber: ocrResult.panMaskedNumber } };
   }
 
+  // Explicitly clear any stale PAN fields — a rejected submission must not leave
+  // a previous panMaskedNumber visible via getKycStatus while status is MANUAL_REVIEW.
   await upsertKycStatus(technicianId, {
+    panMaskedNumber: null,
+    panHash: null,
+    panNumber: null,
+    panNumberEncrypted: undefined,
     panImagePath: firebaseStoragePath,
     kycStatus: 'MANUAL_REVIEW',
   });

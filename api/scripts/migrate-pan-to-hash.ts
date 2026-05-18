@@ -131,8 +131,12 @@ async function run(): Promise<void> {
           panHash,
           panNumber: null,
         };
-        // Remove legacy encrypted blob — no longer needed once hash exists
-        delete updatedKyc['panNumberEncrypted'];
+        // Only remove the encrypted blob once a deterministic hash has been derived.
+        // If panHash is null the blob may still be decryptable on a future retry
+        // (e.g. after key rotation is corrected) — keep it to avoid irrecoverable loss.
+        if (panHash !== null) {
+          delete updatedKyc['panNumberEncrypted'];
+        }
 
         await container.items.upsert({ ...doc, kyc: updatedKyc });
       }

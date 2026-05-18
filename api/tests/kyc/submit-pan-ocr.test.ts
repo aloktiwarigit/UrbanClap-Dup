@@ -55,8 +55,10 @@ describe('POST /v1/kyc/pan-ocr', () => {
   it('returns 200 with MANUAL_REVIEW on OCR failure', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { extractPanFromStoragePath } = await import('../../src/services/formRecognizer.service.js');
+    const { upsertKycStatus } = await import('../../src/cosmos/technician-repository.js');
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
     vi.mocked(extractPanFromStoragePath).mockResolvedValue({ status: 'MANUAL_REVIEW', panMaskedNumber: null, panHash: null });
+    vi.mocked(upsertKycStatus).mockResolvedValue(undefined);
 
     const req = new HttpRequest({
       method: 'POST',
@@ -70,6 +72,30 @@ describe('POST /v1/kyc/pan-ocr', () => {
     const body = res.jsonBody as { kycStatus: string; panMaskedNumber: null };
     expect(body.kycStatus).toBe('MANUAL_REVIEW');
     expect(body.panMaskedNumber).toBeNull();
+  });
+
+  it('[E19-S01-P2B] MANUAL_REVIEW clears stale panMaskedNumber + panHash from previous successful scan', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { extractPanFromStoragePath } = await import('../../src/services/formRecognizer.service.js');
+    const { upsertKycStatus } = await import('../../src/cosmos/technician-repository.js');
+    vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+    vi.mocked(extractPanFromStoragePath).mockResolvedValue({ status: 'MANUAL_REVIEW', panMaskedNumber: null, panHash: null });
+    vi.mocked(upsertKycStatus).mockResolvedValue(undefined);
+
+    const req = new HttpRequest({
+      method: 'POST',
+      url: 'http://localhost/v1/kyc/pan-ocr',
+      headers: { Authorization: 'Bearer valid-token' },
+      body: { string: JSON.stringify({ technicianId: 'tech-001', firebaseStoragePath: 'technicians/tech-001/pan.jpg' }) },
+    });
+    await handler(req, new InvocationContext());
+
+    const call = vi.mocked(upsertKycStatus).mock.calls[0];
+    const patch = call?.[1] as Record<string, unknown>;
+    expect(patch['panMaskedNumber']).toBeNull();
+    expect(patch['panHash']).toBeNull();
+    expect(patch['panNumber']).toBeNull();
+    expect(patch['panNumberEncrypted']).toBeUndefined();
   });
 
   it('emits KYC_PAN_VERIFIED audit entry on OCR success', async () => {
