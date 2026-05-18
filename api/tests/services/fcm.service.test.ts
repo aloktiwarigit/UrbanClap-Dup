@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Hoist mocks before imports so module-level vi.mock factories can reference them.
-const { mockSend, mockSendEachForMulticast, mockGetDeviceTokens } = vi.hoisted(() => ({
+const { mockSend, mockSendEachForMulticast, mockGetDeviceTokens, mockGetAdminDeviceTokens } = vi.hoisted(() => ({
   mockSend: vi.fn().mockResolvedValue('msg-id'),
   mockSendEachForMulticast: vi.fn().mockResolvedValue({
     successCount: 1,
@@ -9,6 +9,8 @@ const { mockSend, mockSendEachForMulticast, mockGetDeviceTokens } = vi.hoisted((
     responses: [{ success: true }],
   }),
   mockGetDeviceTokens: vi.fn<(userId: string) => Promise<string[]>>(),
+  // Default empty: exercises the topic fallback path for owner alerts
+  mockGetAdminDeviceTokens: vi.fn<() => Promise<string[]>>().mockResolvedValue([]),
 }));
 
 vi.mock('../../src/services/firebaseAdmin.js', () => ({
@@ -21,7 +23,10 @@ vi.mock('../../src/services/firebaseAdmin.js', () => ({
 }));
 
 vi.mock('../../src/cosmos/device-token-repository.js', () => ({
-  deviceTokenRepo: { getDeviceTokensForUser: mockGetDeviceTokens },
+  deviceTokenRepo: {
+    getDeviceTokensForUser: mockGetDeviceTokens,
+    getAllAdminDeviceTokens: mockGetAdminDeviceTokens,
+  },
 }));
 
 import {
