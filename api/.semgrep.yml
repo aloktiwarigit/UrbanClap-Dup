@@ -117,3 +117,78 @@ rules:
       an ADR with explicit owner approval.
     languages: [typescript]
     severity: ERROR
+
+  # E19-S03 — Cross-partition query injection guard.
+  #
+  # Bans Cosmos query strings that directly interpolate expressions via
+  # template-literal ${...} syntax. All filter values MUST be passed through
+  # the parameterised `parameters: [{ name: '@param', value: ... }]` array.
+  # Template-literal interpolation into a Cosmos SQL string can produce
+  # malformed queries even when the Cosmos NoSQL engine handles characters
+  # differently from relational SQL — and it makes code-review harder.
+  #
+  # Safe pattern:
+  #   items.query({ query: 'SELECT * FROM c WHERE c.id = @id', parameters: [...] })
+  #
+  # Unsafe pattern (caught by this rule):
+  #   items.query({ query: `SELECT * FROM c WHERE c.id = '${userId}'` })
+  #
+  # See docs/adr/0027-cross-partition-query-guardrails.md.
+  - id: no-user-controlled-cosmos-query
+    pattern-either:
+      - pattern: "$C.items.query({query: `...${...}...`, ...})"
+      - pattern: "$C.items.query(`...${...}...`, ...)"
+    paths:
+      include:
+        - "**/api/src/**/*.ts"
+    message: |
+      Direct template-literal interpolation into a Cosmos SQL query string.
+      Use parameterised queries instead:
+        query: 'SELECT * FROM c WHERE c.field = @param',
+        parameters: [{ name: '@param', value: userInput }]
+      See docs/adr/0027-cross-partition-query-guardrails.md.
+    languages: [typescript]
+    severity: ERROR
+
+  # E19-S03 — Cross-partition query tenant-filter guard (WARNING).
+  #
+  # Flags any .items.query() call in the Cosmos repository layer that executes
+  # WITHOUT an explicit partitionKey option, i.e. a cross-partition fan-out.
+  # Today all such calls are bounded by RBAC at the calling Azure Function layer.
+  # The risk: a future endpoint that forwards user-controlled filters into one of
+  # these helpers without first checking the caller's claim exposes other
+  # partitions' data.
+  #
+  # This rule fires on ALL existing cross-partition helpers by design — they
+  # carry // SEMGREP-JUSTIFIED: comments explaining the caller-scope guarantee.
+  # New cross-partition queries in these files must add the same justification
+  # or restructure to pass partitionKey.
+  #
+  # Severity is WARNING (not ERROR) so existing justified helpers don't break CI;
+  # violations appear as PR annotations.
+  #
+  # Known Semgrep limitation: this pattern does NOT fire on methods defined with
+  # concise object-method syntax (e.g. ratingRepo.getAllByTechnicianId in
+  # rating-repository.ts). Those helpers are guarded by Layer 3 (static coverage
+  # test in tests/cosmos/cross-partition-tenant-filter.test.ts) instead.
+  # See docs/adr/0027-cross-partition-query-guardrails.md.
+  - id: cross-partition-query-must-have-tenant-filter
+    patterns:
+      - pattern: "$C.items.query(...)"
+      - pattern-not: "$C.items.query($Q, {partitionKey: $_, ...})"
+    paths:
+      include:
+        - "**/api/src/cosmos/complaints-repository.ts"
+        - "**/api/src/cosmos/audit-log-repository.ts"
+        - "**/api/src/cosmos/rating-repository.ts"
+    message: |
+      Cross-partition Cosmos query without an explicit partitionKey option.
+      Today bounded by RBAC at the calling Function layer.
+      Risk: a future endpoint forwarding user-controlled filters without
+      caller-claim checks exposes other partitions' data.
+      Either pass { partitionKey: ... } as the second argument, or add a
+      // SEMGREP-JUSTIFIED: comment above the function explaining the
+      caller-scope guarantee.
+      See docs/adr/0027-cross-partition-query-guardrails.md.
+    languages: [typescript]
+    severity: WARNING

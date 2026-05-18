@@ -94,15 +94,18 @@ export const ratingRepo = {
       .replace(updated, { accessCondition: { type: 'IfMatch', condition: etag ?? '' } });
   },
 
+  // SEMGREP-JUSTIFIED: cross-partition query; technicianId is the authenticated tech's own uid
+  // from verifyTechnicianToken (JWT claim). Not a user-controlled filter.
+  // Called only from getTechRatingsHandler in api/src/functions/tech-ratings.ts.
   async getAllByTechnicianId(technicianId: string): Promise<RatingDoc[]> {
     const { resources } = await getRatingsContainer()
-      .items.query<RatingDoc>(
+      .items.query<Record<string, unknown>>(
         {
           query: `SELECT * FROM c WHERE c.technicianId = @uid AND IS_DEFINED(c.customerSubmittedAt)`,
           parameters: [{ name: '@uid', value: technicianId }],
         },
       )
       .fetchAll();
-    return resources;
+    return resources.map((r) => r as RatingDoc);
   },
 };
