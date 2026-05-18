@@ -4,7 +4,6 @@ import { upsertKycStatus } from '../../cosmos/technician-repository.js';
 import { verifyTechnicianToken } from '../../middleware/verifyTechnicianToken.js';
 import { SubmitPanOcrRequestSchema } from '../../schemas/kyc.js';
 import { kycAuditEntry } from '../../services/kycAudit.service.js';
-import { encryptPan, maskPan } from '../../services/piiCrypto.service.js';
 
 export async function submitPanOcr(
   req: HttpRequest,
@@ -39,37 +38,17 @@ export async function submitPanOcr(
   const ocrResult = await extractPanFromStoragePath(firebaseStoragePath);
 
   if (ocrResult.status === 'PAN_DONE') {
-    // P1-A: mask before any Cosmos write; null means non-canonical format → route to MANUAL_REVIEW
-    const maskedPan = maskPan(ocrResult.panNumber);
-    if (!maskedPan) {
-      // Non-canonical format: explicitly clear stale PAN fields so MANUAL_REVIEW state is consistent.
-      // upsertKycStatus merges patches; without explicit nulls the old panNumber/panNumberEncrypted
-      // would survive the spread and remain visible via get-kyc-status / data-export.
-      await upsertKycStatus(technicianId, {
-        panNumber: null,
-        panNumberEncrypted: undefined,
-        panImagePath: firebaseStoragePath,
-        kycStatus: 'MANUAL_REVIEW',
-      });
-      void kycAuditEntry(technicianId, 'PAN', 'REJECTED');
-      return { status: 200, jsonBody: { kycStatus: 'MANUAL_REVIEW', panNumber: null } };
-    }
-
-    let panNumberEncrypted: ReturnType<typeof encryptPan>;
-    try {
-      panNumberEncrypted = encryptPan(ocrResult.panNumber);
-    } catch {
-      return { status: 500, jsonBody: { error: 'Encryption service unavailable' } };
-    }
-
+    // Raw PAN discarded inside formRecognizer.service; only hash+mask reach here
     await upsertKycStatus(technicianId, {
-      panNumber: maskedPan,
-      panNumberEncrypted,
+      panMaskedNumber: ocrResult.panMaskedNumber,
+      panHash: ocrResult.panHash,
+      panNumber: null,           // explicitly clear legacy field
+      panNumberEncrypted: undefined, // explicitly clear
       panImagePath: firebaseStoragePath,
       kycStatus: 'PAN_DONE',
     });
     void kycAuditEntry(technicianId, 'PAN', 'VERIFIED');
-    return { status: 200, jsonBody: { kycStatus: 'PAN_DONE', panNumber: maskedPan } };
+    return { status: 200, jsonBody: { kycStatus: 'PAN_DONE', panMaskedNumber: ocrResult.panMaskedNumber } };
   }
 
   await upsertKycStatus(technicianId, {
@@ -77,7 +56,7 @@ export async function submitPanOcr(
     kycStatus: 'MANUAL_REVIEW',
   });
   void kycAuditEntry(technicianId, 'PAN', 'REJECTED');
-  return { status: 200, jsonBody: { kycStatus: 'MANUAL_REVIEW', panNumber: null } };
+  return { status: 200, jsonBody: { kycStatus: 'MANUAL_REVIEW', panMaskedNumber: null } };
 }
 
 app.http('submitPanOcr', {

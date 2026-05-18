@@ -95,7 +95,8 @@ describe('GET /v1/kyc/status', () => {
     vi.mocked(getKycByTechnicianId).mockResolvedValue({
       aadhaarVerified: true,
       aadhaarMaskedNumber: 'XXXX-XXXX-1234',
-      panNumber: 'ABCDE####F',
+      panNumber: null,
+      panMaskedNumber: 'XXXXX1234F',
       panImagePath: null,
       kycStatus: 'PAN_DONE',
       updatedAt: '2026-04-29T10:00:00Z',
@@ -112,5 +113,33 @@ describe('GET /v1/kyc/status', () => {
     expect(res.status).toBe(200);
     const body = res.jsonBody as Record<string, unknown>;
     expect(body['panNumberEncrypted']).toBeUndefined();
+    expect(body['panMaskedNumber']).toBe('XXXXX1234F');
+  });
+
+  it('[E19-S01] returns panMaskedNumber for new docs, falls back to panNumber for legacy docs', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { getKycByTechnicianId } = await import('../../src/cosmos/technician-repository.js');
+    vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+
+    // Legacy doc: has panNumber but no panMaskedNumber
+    vi.mocked(getKycByTechnicianId).mockResolvedValue({
+      aadhaarVerified: true,
+      aadhaarMaskedNumber: null,
+      panNumber: 'ABCDE####F',
+      panImagePath: null,
+      kycStatus: 'PAN_DONE',
+      updatedAt: '2026-04-01T00:00:00Z',
+    });
+
+    const req = new HttpRequest({
+      method: 'GET',
+      url: 'http://localhost/v1/kyc/status?technicianId=tech-001',
+      headers: { Authorization: 'Bearer valid' },
+    });
+    const res = await handler(req, new InvocationContext());
+
+    const body = res.jsonBody as Record<string, unknown>;
+    expect(body['panMaskedNumber']).toBe('ABCDE####F');
+    expect(body).not.toHaveProperty('panNumber');
   });
 });

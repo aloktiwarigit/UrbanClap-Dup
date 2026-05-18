@@ -35,7 +35,8 @@ export async function getKycStatus(
       kycStatus: kyc.kycStatus,
       aadhaarVerified: kyc.aadhaarVerified,
       aadhaarMaskedNumber: kyc.aadhaarMaskedNumber,
-      panNumber: kyc.panNumber,
+      // migration window: prefer panMaskedNumber (new docs), fall back to panNumber (old docs)
+      panMaskedNumber: kyc.panMaskedNumber ?? kyc.panNumber ?? null,
     },
   };
 }

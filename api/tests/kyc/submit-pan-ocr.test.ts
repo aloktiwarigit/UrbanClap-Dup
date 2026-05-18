@@ -11,10 +11,6 @@ vi.mock('../../src/middleware/verifyTechnicianToken.js', () => ({
   verifyTechnicianToken: vi.fn(),
 }));
 vi.mock('../../src/services/kycAudit.service.js', () => ({ kycAuditEntry: vi.fn().mockResolvedValue(undefined) }));
-vi.mock('../../src/services/piiCrypto.service.js', () => ({
-  encryptPan: vi.fn(),
-  maskPan: vi.fn(),
-}));
 
 describe('POST /v1/kyc/pan-ocr', () => {
   let handler: typeof import('../../src/functions/kyc/submit-pan-ocr.js').submitPanOcr;
@@ -26,16 +22,17 @@ describe('POST /v1/kyc/pan-ocr', () => {
     handler = mod.submitPanOcr;
   });
 
-  it('returns 200 with masked panNumber on OCR success (cleartext PAN never in response)', async () => {
+  it('returns 200 with panMaskedNumber on OCR success (cleartext PAN never in response)', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { extractPanFromStoragePath } = await import('../../src/services/formRecognizer.service.js');
     const { upsertKycStatus } = await import('../../src/cosmos/technician-repository.js');
-    const { encryptPan, maskPan } = await import('../../src/services/piiCrypto.service.js');
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
-    vi.mocked(extractPanFromStoragePath).mockResolvedValue({ status: 'PAN_DONE', panNumber: 'ABCDE1234F' });
+    vi.mocked(extractPanFromStoragePath).mockResolvedValue({
+      status: 'PAN_DONE',
+      panMaskedNumber: 'XXXXX1234F',
+      panHash: 'a'.repeat(64),
+    });
     vi.mocked(upsertKycStatus).mockResolvedValue(undefined);
-    vi.mocked(maskPan).mockReturnValue('ABCDE####F');
-    vi.mocked(encryptPan).mockReturnValue({ iv: 'aXY=', ciphertext: 'Y2lw', tag: 'dGFn', v: 1 });
 
     const req = new HttpRequest({
       method: 'POST',
@@ -47,18 +44,19 @@ describe('POST /v1/kyc/pan-ocr', () => {
 
     const res = await handler(req, ctx);
     expect(res.status).toBe(200);
-    const body = res.jsonBody as { kycStatus: string; panNumber: string };
+    const body = res.jsonBody as { kycStatus: string; panMaskedNumber: string };
     expect(body.kycStatus).toBe('PAN_DONE');
-    // Response must return masked PAN, never cleartext
-    expect(body.panNumber).toBe('ABCDE####F');
-    expect(body.panNumber).not.toBe('ABCDE1234F');
+    expect(body.panMaskedNumber).toBe('XXXXX1234F');
+    // Response must not expose raw PAN
+    expect(JSON.stringify(body)).not.toContain('ABCDE1234F');
+    expect(body).not.toHaveProperty('panNumber');
   });
 
   it('returns 200 with MANUAL_REVIEW on OCR failure', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { extractPanFromStoragePath } = await import('../../src/services/formRecognizer.service.js');
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
-    vi.mocked(extractPanFromStoragePath).mockResolvedValue({ status: 'MANUAL_REVIEW', panNumber: null });
+    vi.mocked(extractPanFromStoragePath).mockResolvedValue({ status: 'MANUAL_REVIEW', panMaskedNumber: null, panHash: null });
 
     const req = new HttpRequest({
       method: 'POST',
@@ -69,9 +67,9 @@ describe('POST /v1/kyc/pan-ocr', () => {
     const ctx = new InvocationContext();
 
     const res = await handler(req, ctx);
-    const body = res.jsonBody as { kycStatus: string; panNumber: null };
+    const body = res.jsonBody as { kycStatus: string; panMaskedNumber: null };
     expect(body.kycStatus).toBe('MANUAL_REVIEW');
-    expect(body.panNumber).toBeNull();
+    expect(body.panMaskedNumber).toBeNull();
   });
 
   it('emits KYC_PAN_VERIFIED audit entry on OCR success', async () => {
@@ -79,12 +77,13 @@ describe('POST /v1/kyc/pan-ocr', () => {
     const { extractPanFromStoragePath } = await import('../../src/services/formRecognizer.service.js');
     const { upsertKycStatus } = await import('../../src/cosmos/technician-repository.js');
     const { kycAuditEntry } = await import('../../src/services/kycAudit.service.js');
-    const { encryptPan, maskPan } = await import('../../src/services/piiCrypto.service.js');
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
-    vi.mocked(extractPanFromStoragePath).mockResolvedValue({ status: 'PAN_DONE', panNumber: 'ABCDE1234F' });
+    vi.mocked(extractPanFromStoragePath).mockResolvedValue({
+      status: 'PAN_DONE',
+      panMaskedNumber: 'XXXXX1234F',
+      panHash: 'a'.repeat(64),
+    });
     vi.mocked(upsertKycStatus).mockResolvedValue(undefined);
-    vi.mocked(maskPan).mockReturnValue('ABCDE####F');
-    vi.mocked(encryptPan).mockReturnValue({ iv: 'aXY=', ciphertext: 'Y2lw', tag: 'dGFn', v: 1 });
 
     const req = new HttpRequest({
       method: 'POST', url: 'http://localhost/v1/kyc/pan-ocr',
@@ -101,7 +100,7 @@ describe('POST /v1/kyc/pan-ocr', () => {
     const { extractPanFromStoragePath } = await import('../../src/services/formRecognizer.service.js');
     const { kycAuditEntry } = await import('../../src/services/kycAudit.service.js');
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
-    vi.mocked(extractPanFromStoragePath).mockResolvedValue({ status: 'MANUAL_REVIEW', panNumber: null });
+    vi.mocked(extractPanFromStoragePath).mockResolvedValue({ status: 'MANUAL_REVIEW', panMaskedNumber: null, panHash: null });
 
     const req = new HttpRequest({
       method: 'POST', url: 'http://localhost/v1/kyc/pan-ocr',
@@ -123,9 +122,7 @@ describe('POST /v1/kyc/pan-ocr', () => {
       headers: { Authorization: 'Bearer bad-token' },
       body: { string: JSON.stringify({ technicianId: 'tech-001', firebaseStoragePath: 'path' }) },
     });
-    const ctx = new InvocationContext();
-
-    const res = await handler(req, ctx);
+    const res = await handler(req, new InvocationContext());
     expect(res.status).toBe(401);
   });
 
@@ -139,25 +136,24 @@ describe('POST /v1/kyc/pan-ocr', () => {
       headers: { Authorization: 'Bearer valid-token' },
       body: { string: JSON.stringify({ technicianId: '' }) }, // missing firebaseStoragePath
     });
-    const ctx = new InvocationContext();
-
-    const res = await handler(req, ctx);
+    const res = await handler(req, new InvocationContext());
     expect(res.status).toBe(422);
   });
 
-  // ── PII encryption regression tests ──────────────────────────────────────────
+  // ── PII hash+mask regression tests (E19-S01) ────────────────────────────────
 
-  it('[T7] successful submit stores panNumberEncrypted AND masked panNumber in Cosmos', async () => {
+  it('[E19-S01-T1] successful submit stores panMaskedNumber + panHash, clears panNumber + panNumberEncrypted', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { extractPanFromStoragePath } = await import('../../src/services/formRecognizer.service.js');
     const { upsertKycStatus } = await import('../../src/cosmos/technician-repository.js');
-    const { encryptPan, maskPan } = await import('../../src/services/piiCrypto.service.js');
-    const mockBlob = { iv: 'aXY=', ciphertext: 'Y2lw', tag: 'dGFn', v: 1 as const };
+    const fakeHash = 'b'.repeat(64);
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
-    vi.mocked(extractPanFromStoragePath).mockResolvedValue({ status: 'PAN_DONE', panNumber: 'ABCDE1234F' });
+    vi.mocked(extractPanFromStoragePath).mockResolvedValue({
+      status: 'PAN_DONE',
+      panMaskedNumber: 'XXXXX1234F',
+      panHash: fakeHash,
+    });
     vi.mocked(upsertKycStatus).mockResolvedValue(undefined);
-    vi.mocked(maskPan).mockReturnValue('ABCDE####F');
-    vi.mocked(encryptPan).mockReturnValue(mockBlob);
 
     const req = new HttpRequest({
       method: 'POST',
@@ -169,20 +165,23 @@ describe('POST /v1/kyc/pan-ocr', () => {
 
     const call = vi.mocked(upsertKycStatus).mock.calls[0];
     const patch = call?.[1] as Record<string, unknown>;
-    expect(patch['panNumberEncrypted']).toEqual(mockBlob);
-    expect(patch['panNumber']).toBe('ABCDE####F');
+    expect(patch['panMaskedNumber']).toBe('XXXXX1234F');
+    expect(patch['panHash']).toBe(fakeHash);
+    expect(patch['panNumber']).toBeNull();
+    expect(patch['panNumberEncrypted']).toBeUndefined();
   });
 
-  it('[T8] panNumber stored in Cosmos must NOT equal the original extracted PAN (cleartext regression guard)', async () => {
+  it('[E19-S01-T2] patch written to Cosmos must not contain cleartext PAN', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { extractPanFromStoragePath } = await import('../../src/services/formRecognizer.service.js');
     const { upsertKycStatus } = await import('../../src/cosmos/technician-repository.js');
-    const { encryptPan, maskPan } = await import('../../src/services/piiCrypto.service.js');
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
-    vi.mocked(extractPanFromStoragePath).mockResolvedValue({ status: 'PAN_DONE', panNumber: 'ABCDE1234F' });
+    vi.mocked(extractPanFromStoragePath).mockResolvedValue({
+      status: 'PAN_DONE',
+      panMaskedNumber: 'XXXXX1234F',
+      panHash: 'c'.repeat(64),
+    });
     vi.mocked(upsertKycStatus).mockResolvedValue(undefined);
-    vi.mocked(maskPan).mockReturnValue('ABCDE####F');
-    vi.mocked(encryptPan).mockReturnValue({ iv: 'aXY=', ciphertext: 'Y2lw', tag: 'dGFn', v: 1 });
 
     const req = new HttpRequest({
       method: 'POST',
@@ -193,33 +192,12 @@ describe('POST /v1/kyc/pan-ocr', () => {
     await handler(req, new InvocationContext());
 
     const call = vi.mocked(upsertKycStatus).mock.calls[0];
-    const storedPan = (call?.[1] as Record<string, unknown>)['panNumber'];
-    expect(storedPan).not.toBe('ABCDE1234F'); // cleartext PAN must never reach Cosmos
+    const patchJson = JSON.stringify(call?.[1]);
+    // Raw PAN must never appear in any Cosmos write
+    expect(patchJson).not.toContain('ABCDE1234F');
   });
 
-  it('[T9] COSMOS_PAN_ENCRYPTION_KEY not set → endpoint returns 500', async () => {
-    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
-    const { extractPanFromStoragePath } = await import('../../src/services/formRecognizer.service.js');
-    const { encryptPan, maskPan } = await import('../../src/services/piiCrypto.service.js');
-    vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
-    vi.mocked(extractPanFromStoragePath).mockResolvedValue({ status: 'PAN_DONE', panNumber: 'ABCDE1234F' });
-    vi.mocked(maskPan).mockReturnValue('ABCDE####F');
-    vi.mocked(encryptPan).mockImplementation(() => {
-      throw new Error('COSMOS_PAN_ENCRYPTION_KEY env var not set');
-    });
-
-    const req = new HttpRequest({
-      method: 'POST',
-      url: 'http://localhost/v1/kyc/pan-ocr',
-      headers: { Authorization: 'Bearer valid-token' },
-      body: { string: JSON.stringify({ technicianId: 'tech-001', firebaseStoragePath: 'technicians/tech-001/pan.jpg' }) },
-    });
-    const res = await handler(req, new InvocationContext());
-
-    expect(res.status).toBe(500);
-  });
-
-  // ── Security: IDOR + maskPan format guard (P1-A, P1-C) ──────────────────────
+  // ── Security: IDOR guard (P1-C) ──────────────────────────────────────────────
 
   it('[P1-C] returns 403 when token uid does not match requested technicianId (IDOR guard)', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
@@ -234,33 +212,5 @@ describe('POST /v1/kyc/pan-ocr', () => {
     const res = await handler(req, new InvocationContext());
 
     expect(res.status).toBe(403);
-  });
-
-  it('[P1-A] non-canonical PAN format from OCR routes to MANUAL_REVIEW without Cosmos write', async () => {
-    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
-    const { extractPanFromStoragePath } = await import('../../src/services/formRecognizer.service.js');
-    const { upsertKycStatus } = await import('../../src/cosmos/technician-repository.js');
-    const { maskPan } = await import('../../src/services/piiCrypto.service.js');
-    vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
-    vi.mocked(extractPanFromStoragePath).mockResolvedValue({ status: 'PAN_DONE', panNumber: 'ABCDE 1234 F' });
-    vi.mocked(upsertKycStatus).mockResolvedValue(undefined);
-    vi.mocked(maskPan).mockReturnValue(null); // non-canonical format
-
-    const req = new HttpRequest({
-      method: 'POST',
-      url: 'http://localhost/v1/kyc/pan-ocr',
-      headers: { Authorization: 'Bearer valid-token' },
-      body: { string: JSON.stringify({ technicianId: 'tech-001', firebaseStoragePath: 'technicians/tech-001/pan.jpg' }) },
-    });
-    const res = await handler(req, new InvocationContext());
-
-    expect(res.status).toBe(200);
-    const body = res.jsonBody as { kycStatus: string };
-    expect(body.kycStatus).toBe('MANUAL_REVIEW');
-    // Cosmos patch must explicitly null panNumber and undefined panNumberEncrypted (stale data cleared)
-    const call = vi.mocked(upsertKycStatus).mock.calls[0];
-    const patch = call?.[1] as Record<string, unknown>;
-    expect(patch['panNumber']).toBeNull();        // explicitly cleared, not just omitted
-    expect(patch['panNumberEncrypted']).toBeUndefined(); // explicitly cleared
   });
 });
