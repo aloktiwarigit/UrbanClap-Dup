@@ -157,6 +157,12 @@ private fun SosOverlay(
         is SosUiState.SosError -> {
             LaunchedEffect(sos) { snackbarHostState.showSnackbar(sosErrorMsg) }
         }
+        is SosUiState.UploadingEvidence ->
+            SosUploadingEvidenceSheet(pct = sos.pct, onDismiss = {})
+        is SosUiState.EvidenceSaved ->
+            SosEvidenceSavedSheet(onDismiss = {})
+        is SosUiState.EvidenceUploadError ->
+            SosEvidenceUploadErrorSheet(message = sos.message, onDismiss = {})
         else -> Unit
     }
 }
