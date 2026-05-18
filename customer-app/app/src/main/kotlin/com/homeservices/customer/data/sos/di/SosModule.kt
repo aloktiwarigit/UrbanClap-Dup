@@ -4,11 +4,8 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
-import com.google.firebase.storage.FirebaseStorage
 import com.homeservices.customer.BuildConfig
 import com.homeservices.customer.data.booking.di.AuthOkHttpClient
-import com.homeservices.customer.data.sos.SosAudioCipher
-import com.homeservices.customer.data.sos.SosAudioUploader
 import com.homeservices.customer.data.sos.remote.SosApiService
 import com.squareup.moshi.Moshi
 import dagger.Module
@@ -48,15 +45,6 @@ public object SosModule {
             .build()
             .create(SosApiService::class.java)
 
-    @Provides
-    @Singleton
-    public fun provideSosAudioCipher(): SosAudioCipher = SosAudioCipher()
-
-    @Provides
-    @Singleton
-    public fun provideSosAudioUploader(
-        storage: FirebaseStorage,
-        sosApi: SosApiService,
-        cipher: SosAudioCipher,
-    ): SosAudioUploader = SosAudioUploader(storage, sosApi, cipher)
+    // SosAudioCipher and SosAudioUploader use @Inject constructor — Hilt provides them
+    // automatically. FirebaseStorage is provided by ComplaintModule.provideFirebaseStorage().
 }
