@@ -273,6 +273,18 @@ export default function LoginPage() {
         challengeToken: challenge.token,
         totpCode: mfaCode,
       });
+      // Best-effort push registration — must not block or throw into the MFA flow.
+      // Obtain the idToken from the still-authenticated Firebase user (the Firebase
+      // session persists after the MFA challenge exchange) before router.push fires.
+      try {
+        const user = getFirebaseAuth().currentUser;
+        if (user) {
+          const idToken = await user.getIdToken();
+          void registerAdminPushToken(idToken);
+        }
+      } catch {
+        // Intentionally swallowed — push registration is best-effort.
+      }
       handleLoginResponse(data, challenge.method);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : tErr('mfaVerificationFallback'));

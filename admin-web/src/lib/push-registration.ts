@@ -12,7 +12,7 @@ import { getMessaging, getToken, deleteToken } from 'firebase/messaging';
 import { getFirebaseApp } from './auth/firebase';
 
 const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
-const DEVICE_REGISTER_PATH = '/admin-api/v1/devices/register';
+const DEVICE_REGISTER_PATH = '/admin-api/admin/v1/devices/register';
 
 /**
  * Register this browser tab as an FCM push target.
@@ -70,7 +70,7 @@ export async function unregisterAdminPushToken(idToken: string): Promise<void> {
 
     await Promise.all([
       deleteToken(messaging),
-      fetch(`/admin-api/v1/devices/${encodeURIComponent(token)}`, {
+      fetch(`/admin-api/admin/v1/devices/${encodeURIComponent(token)}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${idToken}` },
       }),
