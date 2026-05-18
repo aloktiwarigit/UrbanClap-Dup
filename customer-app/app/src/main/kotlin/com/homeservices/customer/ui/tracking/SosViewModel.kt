@@ -98,7 +98,11 @@ public class SosViewModel
             countdownJob?.cancel()
             countdownJob =
                 viewModelScope.launch {
-                    if (audioGranted && osPermissionGranted) startRecording()
+                    if (audioGranted && osPermissionGranted) {
+                        // Wipe any stale file (crash leftover, old build) before this recording starts.
+                        wipeStaleSosFile()
+                        startRecording()
+                    }
                     for (sec in 30 downTo 1) {
                         _sosUiState.value = SosUiState.Countdown(sec)
                         delay(1_000L)
