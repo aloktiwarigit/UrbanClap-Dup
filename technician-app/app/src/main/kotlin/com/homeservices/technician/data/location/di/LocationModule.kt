@@ -25,7 +25,6 @@ public abstract class LocationModule {
         @Singleton
         public fun provideFusedLocationClient(
             @ApplicationContext context: Context,
-        ): FusedLocationProviderClient =
-            LocationServices.getFusedLocationProviderClient(context)
+        ): FusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(context)
     }
 }
