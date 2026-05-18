@@ -49,6 +49,16 @@ public interface FeatureFlags {
      * Default: OFF (false) — flipped ON once CDN assets are commissioned.
      */
     public fun photoFirstCatalogueEnabled(): Boolean
+
+    /**
+     * When `true`, encrypted SOS audio is uploaded to Firebase Storage after
+     * SOS fires, and the key doc is sent to the API. When `false`, the tmp
+     * .m4a file is recorded (if consent given) but never uploaded.
+     *
+     * Flag name: `customer.sos-audio-upload.enabled`
+     * Default: OFF (false) — flipped ON at Week 5 exit after ADR-0024 audit.
+     */
+    public fun sosAudioUploadEnabled(): Boolean
 }
 
 /**
@@ -65,6 +75,8 @@ public class BuildConfigFeatureFlags
         override fun walletVisible(): Boolean = false
 
         override fun photoFirstCatalogueEnabled(): Boolean = false
+
+        override fun sosAudioUploadEnabled(): Boolean = false
 
         private companion object {
             const val TRUECALLER_SERVER_VERIFY_V2_ENABLED: Boolean = false
