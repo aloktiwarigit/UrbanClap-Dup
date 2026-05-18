@@ -20,7 +20,16 @@ async function sendToUserTokens(
     return;
   }
   if (tokens.length === 1) {
-    await getFirebaseAdmin().messaging().send({ token: tokens[0]!, data });
+    try {
+      await getFirebaseAdmin().messaging().send({ token: tokens[0]!, data });
+    } catch (err: unknown) {
+      const code = (err as { errorInfo?: { code?: string } }).errorInfo?.code ?? '';
+      if (code === 'messaging/registration-token-not-registered') {
+        console.warn(`[FCM] stale single token for user ${userId}, skipping send`);
+        return;
+      }
+      throw err; // re-throw unexpected errors
+    }
   } else {
     const result = await getFirebaseAdmin()
       .messaging()
@@ -52,7 +61,16 @@ async function sendToAdminTokens(data: Record<string, string>): Promise<void> {
     return;
   }
   if (tokens.length === 1) {
-    await getFirebaseAdmin().messaging().send({ token: tokens[0]!, data });
+    try {
+      await getFirebaseAdmin().messaging().send({ token: tokens[0]!, data });
+    } catch (err: unknown) {
+      const code = (err as { errorInfo?: { code?: string } }).errorInfo?.code ?? '';
+      if (code === 'messaging/registration-token-not-registered') {
+        console.warn('[FCM] stale single admin token, skipping send');
+        return;
+      }
+      throw err; // re-throw unexpected errors
+    }
   } else {
     await getFirebaseAdmin().messaging().sendEachForMulticast({ tokens, data });
   }

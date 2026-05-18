@@ -149,6 +149,19 @@ describe('sendPriceApprovalPush — device-token send', () => {
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('no device tokens'));
     warnSpy.mockRestore();
   });
+
+  it('skips send when single customer token is stale (not-registered)', async () => {
+    const staleErr = Object.assign(new Error('token not registered'), {
+      errorInfo: { code: 'messaging/registration-token-not-registered' },
+    });
+    mockSend.mockRejectedValue(staleErr);
+    mockGetDeviceTokens.mockResolvedValue(['stale-tok']);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await expect(sendPriceApprovalPush('cust-stale', 'bk-stale')).resolves.toBeUndefined();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('stale single token'));
+    warnSpy.mockRestore();
+  });
 });
 
 describe('sendBookingStatusUpdatePush — device-token send', () => {
