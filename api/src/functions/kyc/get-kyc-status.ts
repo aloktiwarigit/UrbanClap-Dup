@@ -1,6 +1,7 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { verifyTechnicianToken } from '../../middleware/verifyTechnicianToken.js';
 import { getKycByTechnicianId } from '../../cosmos/technician-repository.js';
+import { maskPan } from '../../services/pan.utils.js';
 
 export async function getKycStatus(
   req: HttpRequest,
@@ -28,6 +29,10 @@ export async function getKycStatus(
     return { status: 404, jsonBody: { error: 'KYC record not found' } };
   }
 
+  // migration window: prefer new panMaskedNumber; fall back to masking legacy panNumber
+  // maskPan handles raw canonical PANs; ?? kyc.panNumber handles already-masked legacy values
+  const panMaskedValue = kyc.panMaskedNumber ?? (kyc.panNumber ? maskPan(kyc.panNumber) ?? kyc.panNumber : null);
+
   return {
     status: 200,
     jsonBody: {
@@ -35,7 +40,8 @@ export async function getKycStatus(
       kycStatus: kyc.kycStatus,
       aadhaarVerified: kyc.aadhaarVerified,
       aadhaarMaskedNumber: kyc.aadhaarMaskedNumber,
-      panNumber: kyc.panNumber,
+      panMaskedNumber: panMaskedValue,
+      panNumber: panMaskedValue, // legacy alias — technician-app KycStatusResponse reads panNumber (migration window)
     },
   };
 }
