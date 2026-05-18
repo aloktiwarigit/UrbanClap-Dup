@@ -34,8 +34,9 @@ service firebase.storage {
                     && request.auth.uid == customerId
                     && request.resource.size <= 10 * 1024 * 1024
                     && request.resource.contentType == 'application/octet-stream';
-      allow read: if request.auth != null
-                  && request.auth.token.role == 'admin';
+      // No direct read rule: admin reads go through the playback-token endpoint which
+      // generates a short-lived signed URL via the Admin SDK (bypasses Storage rules).
+      // Direct client reads are intentionally blocked to keep all access on the audited path.
     }
   }
 }

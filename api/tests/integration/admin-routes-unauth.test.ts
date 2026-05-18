@@ -31,6 +31,7 @@ vi.mock('../../src/services/adminUser.service.js', () => ({
 }));
 vi.mock('../../src/services/firebaseAdmin.js', () => ({
   verifyFirebaseIdToken: vi.fn().mockRejectedValue(new Error('firebase-mock-rejected')),
+  getFirebaseAdmin: vi.fn(),
 }));
 vi.mock('../../src/services/auditLog.service.js', () => ({
   auditLog: vi.fn().mockResolvedValue(undefined),
