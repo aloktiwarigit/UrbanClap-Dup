@@ -59,27 +59,28 @@ function derivePanFields(kyc: KycSubdoc): {
     }
   }
 
-  // Strategy 2: panNumber contains a raw canonical PAN (pre-masking era docs)
+  // Strategy 2: panNumber is present — must check for already-masked format FIRST.
+  // PAN_REGEX matches XXXXX1234F (valid letters + digits), so we must guard against
+  // hashing a masked value as if it were raw input.
   if (kyc.panNumber) {
-    const masked = maskPan(kyc.panNumber);
-    if (masked) {
-      return {
-        panMaskedNumber: masked,
-        panHash: hashPan(kyc.panNumber),
-        source: 'raw-pan-number',
-      };
-    }
-
-    // Strategy 3: panNumber looks like a known-masked format — copy only if recognised.
+    // Strategy 2a: known-masked format — copy as panMaskedNumber, hash is not derivable.
     // Only accept: old-style ABCDE####F  OR  new-style XXXXX1234F
-    // Anything else (OCR artifact, raw PAN with spaces, truncated) must NOT be copied
-    // verbatim because callers trust panMaskedNumber to be safe.
     const KNOWN_MASKED = /^(?:[A-Z]{5}#{4}[A-Z]|XXXXX\d{4}[A-Z])$/;
     if (KNOWN_MASKED.test(kyc.panNumber)) {
       return {
         panMaskedNumber: kyc.panNumber,
         panHash: null,
         source: 'pre-masked-no-hash',
+      };
+    }
+
+    // Strategy 2b: value is not a known-masked format — treat as raw canonical PAN.
+    const masked = maskPan(kyc.panNumber);
+    if (masked) {
+      return {
+        panMaskedNumber: masked,
+        panHash: hashPan(kyc.panNumber),
+        source: 'raw-pan-number',
       };
     }
 
@@ -96,42 +97,48 @@ async function run(): Promise<void> {
 
   const container = getCosmosClient().database(DB_NAME).container('technicians');
 
-  const { resources: docs } = await container.items
-    .query<TechnicianDoc>('SELECT * FROM c')
+  // Fetch only IDs in the initial scan — we re-read each doc fresh before writing
+  // to avoid clobbering concurrent updates to non-KYC fields (availability, location, etc.).
+  const { resources: idList } = await container.items
+    .query<{ id: string }>('SELECT c.id FROM c')
     .fetchAll();
 
-  console.log(`Total technician docs fetched: ${docs.length}\n`);
+  console.log(`Total technician docs to scan: ${idList.length}\n`);
 
   let skipped = 0;
   let processed = 0;
   let noAction = 0;
   let errors = 0;
 
-  for (const doc of docs) {
-    const kyc = doc.kyc;
-
-    if (!kyc) {
-      skipped++;
-      continue;
-    }
-
-    // Idempotent: already migrated
-    if (kyc.panHash && !kyc.panNumber) {
-      skipped++;
-      continue;
-    }
-
-    // Nothing to migrate
-    if (!kyc.panNumber && !kyc.panNumberEncrypted) {
-      noAction++;
-      continue;
-    }
-
+  for (const { id } of idList) {
     try {
+      // Re-read the full doc fresh immediately before any write
+      const { resource: doc } = await container.item(id, id).read<TechnicianDoc>();
+      if (!doc) { skipped++; continue; }
+
+      const kyc = doc.kyc;
+
+      if (!kyc) {
+        skipped++;
+        continue;
+      }
+
+      // Idempotent: already migrated
+      if (kyc.panHash && !kyc.panNumber) {
+        skipped++;
+        continue;
+      }
+
+      // Nothing to migrate
+      if (!kyc.panNumber && !kyc.panNumberEncrypted) {
+        noAction++;
+        continue;
+      }
+
       const { panMaskedNumber, panHash, source } = derivePanFields(kyc);
 
       console.log(
-        `[${doc.id}] source=${source} hasMasked=${panMaskedNumber !== null} hasHash=${panHash !== null}`,
+        `[${id}] source=${source} hasMasked=${panMaskedNumber !== null} hasHash=${panHash !== null}`,
       );
 
       if (!DRY_RUN) {
@@ -142,18 +149,20 @@ async function run(): Promise<void> {
           panNumber: null,
         };
         // Only remove the encrypted blob once a deterministic hash has been derived.
-        // If panHash is null the blob may still be decryptable on a future retry
-        // (e.g. after key rotation is corrected) — keep it to avoid irrecoverable loss.
+        // If panHash is null the blob may still be decryptable on a future retry.
         if (panHash !== null) {
           delete updatedKyc['panNumberEncrypted'];
         }
 
+        // Write only KYC fields back onto the freshly-read doc — non-KYC fields are
+        // taken from the point-read above, so concurrent changes to availability,
+        // location, etc. are not overwritten.
         await container.items.upsert({ ...doc, kyc: updatedKyc });
       }
 
       processed++;
     } catch (err) {
-      console.error(`[${doc.id}] ERROR:`, err);
+      console.error(`[${id}] ERROR:`, err);
       errors++;
     }
   }
