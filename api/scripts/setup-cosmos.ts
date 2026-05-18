@@ -114,6 +114,16 @@ async function main() {
     defaultTtl: 31_536_000,
   });
   console.log("Container 'customer_waitlist' ready.");
+
+  // E11-S05b-2: Per-incident AES key docs for SOS audio encryption.
+  // Partitioned by /customerId for single-partition key lookups in the playback endpoint.
+  // defaultTtl = 604800 (7 days) ensures keys auto-delete with the Storage blob lifecycle.
+  await database.containers.createIfNotExists({
+    id: 'sos_incident_keys',
+    partitionKey: { paths: ['/customerId'] },
+    defaultTtl: 604800,
+  });
+  console.log("Container 'sos_incident_keys' ready.");
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

@@ -237,6 +237,11 @@
     <string name="sos_send_now">Send now</string>
     <string name="sos_cancel_alert">Cancel alert</string>
 
+    <!-- SOS evidence upload states (E11-S05b-2) -->
+    <string name="sos_uploading_evidence">Uploading evidence… %1$d%%</string>
+    <string name="sos_evidence_saved">Evidence saved securely</string>
+    <string name="sos_evidence_upload_error">Could not save evidence. Help is already on the way.</string>
+
     <!-- SOS consent dialog (E12-S02a) -->
     <string name="sos_consent_title">Record audio with alert?</string>
     <string name="sos_consent_body">You can attach a short local audio recording to help owner support review the situation.</string>

@@ -211,6 +211,11 @@
     <string name="sos_send_now">अभी भेजें</string>
     <string name="sos_cancel_alert">अलर्ट रद्द करें</string>
 
+    <!-- SOS evidence upload states (E11-S05b-2) -->
+    <string name="sos_uploading_evidence">साक्ष्य अपलोड हो रहा है… %1$d%%</string>
+    <string name="sos_evidence_saved">साक्ष्य सुरक्षित रूप से सहेजा गया</string>
+    <string name="sos_evidence_upload_error">साक्ष्य नहीं सहेजा जा सका। मदद रास्ते में है।</string>
+
     <!-- SOS consent dialog (E12-S02a) -->
     <string name="sos_consent_title">अलर्ट के साथ ऑडियो रिकॉर्ड करें?</string>
     <string name="sos_consent_body">Owner support को स्थिति समझने में मदद के लिए एक छोटी ऑडियो रिकॉर्डिंग जोड़ सकते हैं।</string>
