@@ -48,7 +48,14 @@ export async function submitPanOcr(
       kycStatus: 'PAN_DONE',
     });
     void kycAuditEntry(technicianId, 'PAN', 'VERIFIED');
-    return { status: 200, jsonBody: { kycStatus: 'PAN_DONE', panMaskedNumber: ocrResult.panMaskedNumber } };
+    return {
+      status: 200,
+      jsonBody: {
+        kycStatus: 'PAN_DONE',
+        panMaskedNumber: ocrResult.panMaskedNumber,
+        panNumber: ocrResult.panMaskedNumber, // legacy alias — technician-app reads panNumber (migration window)
+      },
+    };
   }
 
   // Explicitly clear any stale PAN fields — a rejected submission must not leave

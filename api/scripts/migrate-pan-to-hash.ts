@@ -78,7 +78,8 @@ function derivePanFields(kyc: KycSubdoc): {
     };
   }
 
-  return { panMaskedNumber: null, panHash: null, source: 'no-pan-data' };
+  // Preserve any mask written on a previous run so retries are idempotent
+  return { panMaskedNumber: kyc.panMaskedNumber ?? null, panHash: null, source: 'no-pan-data' };
 }
 
 async function run(): Promise<void> {
@@ -121,7 +122,7 @@ async function run(): Promise<void> {
       const { panMaskedNumber, panHash, source } = derivePanFields(kyc);
 
       console.log(
-        `[${doc.id}] source=${source} panMaskedNumber=${panMaskedNumber} panHash=${panHash ? `${panHash.slice(0, 8)}...` : null}`,
+        `[${doc.id}] source=${source} hasMasked=${panMaskedNumber !== null} hasHash=${panHash !== null}`,
       );
 
       if (!DRY_RUN) {

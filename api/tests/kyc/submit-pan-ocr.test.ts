@@ -44,12 +44,13 @@ describe('POST /v1/kyc/pan-ocr', () => {
 
     const res = await handler(req, ctx);
     expect(res.status).toBe(200);
-    const body = res.jsonBody as { kycStatus: string; panMaskedNumber: string };
+    const body = res.jsonBody as { kycStatus: string; panMaskedNumber: string; panNumber: string };
     expect(body.kycStatus).toBe('PAN_DONE');
     expect(body.panMaskedNumber).toBe('XXXXX1234F');
+    // Legacy alias for technician-app backward compat (migration window)
+    expect(body.panNumber).toBe('XXXXX1234F');
     // Response must not expose raw PAN
     expect(JSON.stringify(body)).not.toContain('ABCDE1234F');
-    expect(body).not.toHaveProperty('panNumber');
   });
 
   it('returns 200 with MANUAL_REVIEW on OCR failure', async () => {

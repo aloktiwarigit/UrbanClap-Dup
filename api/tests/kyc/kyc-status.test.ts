@@ -116,16 +116,15 @@ describe('GET /v1/kyc/status', () => {
     expect(body['panMaskedNumber']).toBe('XXXXX1234F');
   });
 
-  it('[E19-S01] returns panMaskedNumber for new docs, falls back to panNumber for legacy docs', async () => {
+  it('[E19-S01] falls back to already-masked panNumber for legacy docs (old #### mask format)', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { getKycByTechnicianId } = await import('../../src/cosmos/technician-repository.js');
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
 
-    // Legacy doc: has panNumber but no panMaskedNumber
     vi.mocked(getKycByTechnicianId).mockResolvedValue({
       aadhaarVerified: true,
       aadhaarMaskedNumber: null,
-      panNumber: 'ABCDE####F',
+      panNumber: 'ABCDE####F',  // old-style masked value — maskPan() returns null for this
       panImagePath: null,
       kycStatus: 'PAN_DONE',
       updatedAt: '2026-04-01T00:00:00Z',
@@ -139,7 +138,34 @@ describe('GET /v1/kyc/status', () => {
     const res = await handler(req, new InvocationContext());
 
     const body = res.jsonBody as Record<string, unknown>;
+    // Old mask format preserved (can't re-mask without raw PAN)
     expect(body['panMaskedNumber']).toBe('ABCDE####F');
     expect(body).not.toHaveProperty('panNumber');
+  });
+
+  it('[E19-S01-P2A] applies maskPan to raw canonical panNumber in legacy docs to avoid raw PAN exposure', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { getKycByTechnicianId } = await import('../../src/cosmos/technician-repository.js');
+    vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+
+    vi.mocked(getKycByTechnicianId).mockResolvedValue({
+      aadhaarVerified: true,
+      aadhaarMaskedNumber: null,
+      panNumber: 'ABCDE1234F',  // pre-E18-S06 raw PAN — must be masked before returning
+      panImagePath: null,
+      kycStatus: 'PAN_DONE',
+      updatedAt: '2026-03-01T00:00:00Z',
+    });
+
+    const req = new HttpRequest({
+      method: 'GET',
+      url: 'http://localhost/v1/kyc/status?technicianId=tech-001',
+      headers: { Authorization: 'Bearer valid' },
+    });
+    const res = await handler(req, new InvocationContext());
+
+    const body = res.jsonBody as Record<string, unknown>;
+    expect(body['panMaskedNumber']).toBe('XXXXX1234F');
+    expect(body['panMaskedNumber']).not.toBe('ABCDE1234F');  // raw PAN must never appear
   });
 });

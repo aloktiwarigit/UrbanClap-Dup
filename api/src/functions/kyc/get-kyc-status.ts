@@ -1,6 +1,7 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { verifyTechnicianToken } from '../../middleware/verifyTechnicianToken.js';
 import { getKycByTechnicianId } from '../../cosmos/technician-repository.js';
+import { maskPan } from '../../services/pan.utils.js';
 
 export async function getKycStatus(
   req: HttpRequest,
@@ -35,8 +36,9 @@ export async function getKycStatus(
       kycStatus: kyc.kycStatus,
       aadhaarVerified: kyc.aadhaarVerified,
       aadhaarMaskedNumber: kyc.aadhaarMaskedNumber,
-      // migration window: prefer panMaskedNumber (new docs), fall back to panNumber (old docs)
-      panMaskedNumber: kyc.panMaskedNumber ?? kyc.panNumber ?? null,
+      // migration window: prefer panMaskedNumber (new docs), fall back to masking legacy panNumber
+      // maskPan handles raw canonical PANs; ?? kyc.panNumber handles already-masked legacy values
+      panMaskedNumber: kyc.panMaskedNumber ?? (kyc.panNumber ? maskPan(kyc.panNumber) ?? kyc.panNumber : null),
     },
   };
 }
