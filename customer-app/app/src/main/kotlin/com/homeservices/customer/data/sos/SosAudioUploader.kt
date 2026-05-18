@@ -4,6 +4,7 @@ import com.google.firebase.storage.FirebaseStorage
 import com.homeservices.customer.data.sos.remote.SosApiService
 import com.homeservices.customer.data.sos.remote.SosKeyUploadRequest
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
@@ -30,6 +31,8 @@ public class SosAudioUploader
     ) {
         private companion object {
             const val PCT_MAX = 100
+            const val KEY_POST_RETRIES = 3
+            const val KEY_POST_RETRY_DELAY_MS = 2_000L
         }
 
         public fun upload(
@@ -58,21 +61,22 @@ public class SosAudioUploader
 
                 task.addOnSuccessListener {
                     scope.launch {
-                        runCatching {
-                            sosApi.uploadKey(
-                                incidentId,
-                                SosKeyUploadRequest(encrypted.keyB64, encrypted.ivB64, path),
-                            )
-                        }.fold(
-                            onSuccess = {
+                        var lastError: Throwable? = null
+                        repeat(KEY_POST_RETRIES) { attempt ->
+                            if (attempt > 0) delay(KEY_POST_RETRY_DELAY_MS)
+                            runCatching {
+                                sosApi.uploadKey(
+                                    incidentId,
+                                    SosKeyUploadRequest(encrypted.keyB64, encrypted.ivB64, path),
+                                )
+                            }.onSuccess {
                                 trySend(SosUploadProgress.Success)
                                 close()
-                            },
-                            onFailure = { e ->
-                                trySend(SosUploadProgress.Failure(e))
-                                close()
-                            },
-                        )
+                                return@launch
+                            }.onFailure { e -> lastError = e }
+                        }
+                        trySend(SosUploadProgress.Failure(lastError!!))
+                        close()
                     }
                 }
 

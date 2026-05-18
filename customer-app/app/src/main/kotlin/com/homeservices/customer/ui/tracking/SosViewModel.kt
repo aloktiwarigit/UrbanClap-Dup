@@ -68,6 +68,11 @@ public class SosViewModel
             }
         }
 
+        /** Dismiss the evidence-saved or evidence-error sheet after upload completes. */
+        public fun onDismissEvidenceResult() {
+            _sosUiState.value = SosUiState.SosConfirmed
+        }
+
         public fun onCancelCountdown() {
             countdownJob?.cancel()
             countdownJob = null

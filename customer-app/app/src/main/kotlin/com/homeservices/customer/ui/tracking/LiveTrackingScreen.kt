@@ -160,9 +160,9 @@ private fun SosOverlay(
         is SosUiState.UploadingEvidence ->
             SosUploadingEvidenceSheet(pct = sos.pct, onDismiss = {})
         is SosUiState.EvidenceSaved ->
-            SosEvidenceSavedSheet(onDismiss = {})
+            SosEvidenceSavedSheet(onDismiss = { sosViewModel.onDismissEvidenceResult() })
         is SosUiState.EvidenceUploadError ->
-            SosEvidenceUploadErrorSheet(message = sos.message, onDismiss = {})
+            SosEvidenceUploadErrorSheet(message = sos.message, onDismiss = { sosViewModel.onDismissEvidenceResult() })
         else -> Unit
     }
 }
