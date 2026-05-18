@@ -28,7 +28,7 @@ import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "TooManyFunctions")
 public class SosViewModel
     @Inject
     constructor(
@@ -69,6 +69,7 @@ public class SosViewModel
             countdownJob?.cancel()
             countdownJob = null
             stopRecording()
+            wipeStaleSosFile()
             _sosUiState.value = SosUiState.Idle
         }
 
@@ -169,9 +170,14 @@ public class SosViewModel
             }
         }
 
+        private fun wipeStaleSosFile() {
+            runCatching { File(File(context.filesDir, "sos"), "sos-$bookingId.m4a").delete() }
+        }
+
         override fun onCleared() {
             super.onCleared()
             countdownJob?.cancel()
             stopRecording()
+            wipeStaleSosFile()
         }
     }

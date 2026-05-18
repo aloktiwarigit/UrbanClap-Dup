@@ -191,6 +191,29 @@ public class SosViewModelTest {
         }
 
     @Test
+    public fun `stale_recording_file_is_deleted_when_countdown_cancelled`(): Unit =
+        runTest(testDispatcher) {
+            val tempDir = createTempDirectory().toFile()
+            val staleFile =
+                File(File(tempDir, "sos"), "sos-bk-1.m4a").also {
+                    it.parentFile?.mkdirs()
+                    it.writeBytes(byteArrayOf(1, 2, 3))
+                }
+            every { mockContext.filesDir } returns tempDir
+            coEvery { consentStore.getAudioConsent() } returns false
+
+            val vm = buildVm()
+            vm.onSosTapped()
+            advanceTimeBy(1L)
+            vm.onCancelCountdown()
+            advanceUntilIdle()
+
+            // Stale file must be wiped on cancel so the next SOS cannot upload it
+            assertThat(staleFile.exists()).isFalse()
+            tempDir.deleteRecursively()
+        }
+
+    @Test
     public fun `flag_off_skips_upload_after_sos_fires`(): Unit =
         runTest(testDispatcher) {
             every { featureFlags.sosAudioUploadEnabled() } returns false
