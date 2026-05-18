@@ -79,7 +79,7 @@ describe('deviceTokenRepo.getDeviceTokensForUser', () => {
     const tokens = await deviceTokenRepo.getDeviceTokensForUser(USER_ID);
 
     expect(mockQuery).toHaveBeenCalledOnce();
-    const queryArg = mockQuery.mock.calls[0]?.[0] as { query: string; parameters: { name: string; value: string }[] };
+    const queryArg = (mockQuery.mock.calls as unknown[][])[0]?.[0] as unknown as { query: string; parameters: { name: string; value: string }[] };
     expect(queryArg.parameters).toContainEqual({ name: '@userId', value: USER_ID });
     expect(tokens).toEqual([TOKEN_A, TOKEN_B]);
   });
@@ -97,7 +97,7 @@ describe('deviceTokenRepo.getDeviceTokensForUser', () => {
 
     await deviceTokenRepo.getDeviceTokensForUser(USER_ID);
 
-    const queryArg = mockQuery.mock.calls[0]?.[0] as { query: string };
+    const queryArg = (mockQuery.mock.calls as unknown[][])[0]?.[0] as unknown as { query: string };
     expect(queryArg.query).toMatch(/SELECT\s+c\.deviceToken\s+FROM\s+c/i);
   });
 });
@@ -179,7 +179,7 @@ describe('deviceTokenRepo.pruneStaleTokens', () => {
     const count = await deviceTokenRepo.pruneStaleTokens(60);
 
     expect(mockQuery).toHaveBeenCalledOnce();
-    const queryArg = mockQuery.mock.calls[0]?.[0] as { query: string; parameters: { name: string; value: string }[] };
+    const queryArg = (mockQuery.mock.calls as unknown[][])[0]?.[0] as unknown as { query: string; parameters: { name: string; value: string }[] };
     expect(queryArg.query).toMatch(/lastSeen\s*<\s*@cutoff/i);
     expect(queryArg.parameters[0]?.name).toBe('@cutoff');
 
@@ -194,7 +194,7 @@ describe('deviceTokenRepo.pruneStaleTokens', () => {
     await deviceTokenRepo.pruneStaleTokens(30);
     const after = new Date();
 
-    const cutoffStr = (mockQuery.mock.calls[0]?.[0] as { parameters: { value: string }[] }).parameters[0]?.value as string;
+    const cutoffStr = ((mockQuery.mock.calls as unknown[][])[0]?.[0] as unknown as { parameters: { value: string }[] }).parameters[0]?.value as string;
     const cutoff = new Date(cutoffStr);
 
     const expectedMs30DaysAgo = before.getTime() - 30 * 24 * 60 * 60 * 1000;

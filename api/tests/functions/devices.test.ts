@@ -45,8 +45,7 @@ function makeJsonReq(method: string, url: string, body?: unknown): HttpRequest {
   return new HttpRequest({
     url,
     method,
-    body: body !== undefined ? { string: JSON.stringify(body) } : undefined,
-    headers: body !== undefined ? { 'content-type': 'application/json' } : {},
+    ...(body !== undefined ? { body: { string: JSON.stringify(body) }, headers: { 'content-type': 'application/json' } } : {}),
   });
 }
 
@@ -59,8 +58,7 @@ function makeReqWithParams(
   const req = new HttpRequest({
     url,
     method,
-    body: body !== undefined ? { string: JSON.stringify(body) } : undefined,
-    headers: body !== undefined ? { 'content-type': 'application/json' } : {},
+    ...(body !== undefined ? { body: { string: JSON.stringify(body) }, headers: { 'content-type': 'application/json' } } : {}),
   });
   // HttpRequest.params is populated by the runtime from route bindings;
   // in tests we inject them directly as the admin/detail tests do.
