@@ -30,17 +30,20 @@ public class DeviceTokenRegistrar
         public suspend fun register() {
             runCatching {
                 val token = messaging.token.await()
-                api.registerToken(RegisterDeviceTokenRequest(fcmToken = token, platform = "android"))
+                api.registerToken(RegisterDeviceTokenRequest(deviceToken = token, platform = "android"))
             }
         }
 
         /**
-         * Sends a DELETE to the server to remove the current device token.
-         * Swallows all failures (network error, server error).
+         * Fetches the current FCM token and sends a DELETE to remove it from the server's
+         * active-token list. Swallows all failures (network error, server error).
+         *
+         * Called during sign-out so push notifications are no longer delivered to this device.
          */
         public suspend fun unregister() {
             runCatching {
-                api.unregisterToken()
+                val token = messaging.token.await()
+                api.unregisterToken(token)
             }
         }
     }

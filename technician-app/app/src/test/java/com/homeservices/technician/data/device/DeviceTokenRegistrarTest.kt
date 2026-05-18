@@ -29,13 +29,13 @@ public class DeviceTokenRegistrarTest {
         runTest {
             every { messaging.token } returns Tasks.forResult("test-fcm-token")
             coEvery {
-                api.registerToken(RegisterDeviceTokenRequest("test-fcm-token", "android"))
+                api.registerToken(RegisterDeviceTokenRequest(deviceToken = "test-fcm-token", platform = "android"))
             } returns Response.success(Unit)
 
             registrar.register()
 
             coVerify(exactly = 1) {
-                api.registerToken(RegisterDeviceTokenRequest("test-fcm-token", "android"))
+                api.registerToken(RegisterDeviceTokenRequest(deviceToken = "test-fcm-token", platform = "android"))
             }
         }
 
@@ -57,19 +57,29 @@ public class DeviceTokenRegistrarTest {
         }
 
     @Test
-    public fun `unregister sends DELETE request to server`(): Unit =
+    public fun `unregister fetches FCM token and sends DELETE to server`(): Unit =
         runTest {
-            coEvery { api.unregisterToken() } returns Response.success(Unit)
+            every { messaging.token } returns Tasks.forResult("test-fcm-token")
+            coEvery { api.unregisterToken("test-fcm-token") } returns Response.success(Unit)
 
             registrar.unregister()
 
-            coVerify(exactly = 1) { api.unregisterToken() }
+            coVerify(exactly = 1) { api.unregisterToken("test-fcm-token") }
+        }
+
+    @Test
+    public fun `unregister swallows FCM token fetch failure`(): Unit =
+        runTest {
+            every { messaging.token } returns Tasks.forException(IOException("FCM unavailable"))
+
+            registrar.unregister() // must not throw
         }
 
     @Test
     public fun `unregister swallows server error`(): Unit =
         runTest {
-            coEvery { api.unregisterToken() } throws IOException("Network error")
+            every { messaging.token } returns Tasks.forResult("test-fcm-token")
+            coEvery { api.unregisterToken("test-fcm-token") } throws IOException("Network error")
 
             registrar.unregister() // must not throw
         }

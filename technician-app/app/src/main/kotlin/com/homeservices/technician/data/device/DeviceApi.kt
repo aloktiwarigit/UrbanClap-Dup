@@ -5,19 +5,23 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.POST
+import retrofit2.http.Path
 
 internal interface DeviceApi {
-    @POST("v1/technicians/me/device-tokens")
+    @POST("v1/technician/devices/register")
     suspend fun registerToken(
         @Body body: RegisterDeviceTokenRequest,
     ): Response<Unit>
 
-    @DELETE("v1/technicians/me/device-tokens/current")
-    suspend fun unregisterToken(): Response<Unit>
+    @DELETE("v1/technician/devices/{deviceToken}")
+    suspend fun unregisterToken(
+        @Path("deviceToken") deviceToken: String,
+    ): Response<Unit>
 }
 
 @JsonClass(generateAdapter = true)
 internal data class RegisterDeviceTokenRequest(
-    val fcmToken: String,
+    val deviceToken: String,
     val platform: String,
+    val appBuild: String? = null,
 )
