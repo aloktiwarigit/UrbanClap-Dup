@@ -24,14 +24,17 @@ service firebase.storage {
                   && request.auth.uid == technicianUid;
     }
 
-    // SOS audio — customer creates encrypted blob (create-only: no overwrites once key is stored).
-    // Admin reads via signed URL only (admin custom-claim required for direct read).
+    // SOS audio — customer writes encrypted blob; admin reads via signed URL only.
+    // write (not create-only) so retries can re-upload when the blob landed but
+    // the key POST timed out. Key-rotation attacks are mitigated at the key endpoint
+    // (POST /key returns ALREADY_PROCESSED if a key doc already exists for this
+    // incidentId, preventing a new key from being associated with an overwritten blob).
     // GCS lifecycle deletes after 7 days. ADR-0024: AES/GCM encrypted on-device.
     match /sos-audio/{customerId}/{incidentId} {
-      allow create: if request.auth != null
-                    && request.auth.uid == customerId
-                    && request.resource.size <= 10 * 1024 * 1024
-                    && request.resource.contentType == 'application/octet-stream';
+      allow write: if request.auth != null
+                   && request.auth.uid == customerId
+                   && request.resource.size <= 10 * 1024 * 1024
+                   && request.resource.contentType == 'application/octet-stream';
       allow read: if request.auth != null
                   && request.auth.token.role == 'admin';
     }
