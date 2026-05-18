@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.homeservices.customer.data.device.DeviceTokenRegistrar
 import com.homeservices.customer.domain.auth.model.AuthProvider
 import com.homeservices.customer.domain.auth.model.AuthState
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
@@ -18,12 +19,14 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 public class SessionManagerTest {
     private lateinit var prefs: SharedPreferences
+    private lateinit var deviceTokenRegistrar: DeviceTokenRegistrar
     private lateinit var sessionManager: SessionManager
 
     @Before
     public fun setUp() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         prefs = context.getSharedPreferences("test_auth_session", Context.MODE_PRIVATE)
+        deviceTokenRegistrar = mockk(relaxed = true)
         sessionManager = buildSessionManager(prefs)
     }
 
@@ -33,13 +36,16 @@ public class SessionManagerTest {
     }
 
     /** Convenience factory to avoid repeating relaxed mock boilerplate across tests. */
-    private fun buildSessionManager(sharedPrefs: SharedPreferences): SessionManager =
+    private fun buildSessionManager(
+        sharedPrefs: SharedPreferences,
+        registrar: DeviceTokenRegistrar = deviceTokenRegistrar,
+    ): SessionManager =
         SessionManager(
             prefs = sharedPrefs,
             firebaseAuth = mockk(relaxed = true),
             firebaseMessaging = mockk(relaxed = true),
             idTokenCache = mockk(relaxed = true),
-            deviceTokenRegistrar = mockk<DeviceTokenRegistrar>(relaxed = true),
+            deviceTokenRegistrar = registrar,
         )
 
     @Test
@@ -56,6 +62,14 @@ public class SessionManagerTest {
                 .isEqualTo(AuthState.Authenticated(uid = "uid-abc", phoneLastFour = "5678"))
             assertThat(prefs.getString("uid", null)).isEqualTo("uid-abc")
             assertThat(prefs.getString("phone_last_four", null)).isEqualTo("5678")
+        }
+
+    @Test
+    public fun `saveSession calls deviceTokenRegistrar register for existing FCM token coverage`(): Unit =
+        runTest {
+            sessionManager.saveSession("uid-abc", "5678")
+
+            coVerify(exactly = 1) { deviceTokenRegistrar.register() }
         }
 
     @Test

@@ -120,6 +120,18 @@ public class SessionManager
                     displayName = displayName,
                     authProvider = authProvider,
                 )
+            // Best-effort device token registration — ensures token is enrolled even when onNewToken
+            // is not invoked (e.g. sign-in with an already-issued FCM token).
+            runCatching { deviceTokenRegistrar.register() }
+                .onFailure { e ->
+                    Sentry.addBreadcrumb(
+                        io.sentry.Breadcrumb().apply {
+                            category = "auth.signin"
+                            message = "deviceTokenRegistrar.register failed: ${e.message}"
+                            level = SentryLevel.WARNING
+                        },
+                    )
+                }
         }
 
         public suspend fun updateDisplayName(displayName: String?) {

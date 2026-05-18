@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.homeservices.technician.data.device.DeviceTokenRegistrar
 import com.homeservices.technician.domain.auth.model.AuthProvider
 import com.homeservices.technician.domain.auth.model.AuthState
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
@@ -48,6 +49,14 @@ public class SessionManagerTest {
                 .isEqualTo(AuthState.Authenticated(uid = "uid-abc", phoneLastFour = "5678"))
             assertThat(prefs.getString("uid", null)).isEqualTo("uid-abc")
             assertThat(prefs.getString("phone_last_four", null)).isEqualTo("5678")
+        }
+
+    @Test
+    public fun `saveSession calls deviceTokenRegistrar register for existing FCM token coverage`(): Unit =
+        runTest {
+            sessionManager.saveSession("uid-abc", "5678")
+
+            coVerify(exactly = 1) { deviceTokenRegistrar.register() }
         }
 
     @Test

@@ -5,6 +5,8 @@ import com.homeservices.technician.data.auth.di.AuthPrefs
 import com.homeservices.technician.data.device.DeviceTokenRegistrar
 import com.homeservices.technician.domain.auth.model.AuthProvider
 import com.homeservices.technician.domain.auth.model.AuthState
+import io.sentry.Sentry
+import io.sentry.SentryLevel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -133,6 +135,18 @@ public class SessionManager
                     displayName = displayName,
                     authProvider = authProvider,
                 )
+            // Best-effort device token registration — ensures token is enrolled even when onNewToken
+            // is not invoked (e.g. sign-in with an already-issued FCM token).
+            runCatching { deviceTokenRegistrar.register() }
+                .onFailure { e ->
+                    Sentry.addBreadcrumb(
+                        io.sentry.Breadcrumb().apply {
+                            category = "auth.signin"
+                            message = "deviceTokenRegistrar.register failed: ${e.message}"
+                            level = SentryLevel.WARNING
+                        },
+                    )
+                }
         }
 
         public suspend fun clearSession() {
