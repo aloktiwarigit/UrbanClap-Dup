@@ -7,6 +7,7 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.PATCH
+import retrofit2.http.POST
 import retrofit2.http.Path
 
 internal interface ActiveJobApiService {
@@ -21,6 +22,12 @@ internal interface ActiveJobApiService {
         @Body body: TransitionRequest,
         @Header("X-Integrity-Token") integrityToken: String? = null,
     ): Response<ActiveJobResponse>
+
+    @POST("v1/technicians/active-job/{bookingId}/location")
+    suspend fun postActiveJobLocation(
+        @Path("bookingId") bookingId: String,
+        @Body body: com.homeservices.technician.data.activeJob.dto.PostLocationRequest,
+    ): Response<Unit>
 }
 
 @JsonClass(generateAdapter = true)

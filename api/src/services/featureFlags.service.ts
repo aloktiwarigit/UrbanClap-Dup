@@ -114,6 +114,18 @@ export async function isWalletCreditEnabled(userId?: string, client?: FeatureFla
  * @param userId  - Firebase UID; used for completeness / future per-user overrides.
  * @param client  - Injectable for testing.
  */
+export async function isPeriodicLocationEnabled(customerId?: string, client?: FeatureFlagClient): Promise<boolean> {
+  if (!process.env['GROWTHBOOK_CLIENT_KEY']) return false; // local dev — kill switch off by default
+  const gb = client ?? createRequestClient(customerId);
+  try {
+    const result = await gb.init({ timeout: 1000 });
+    if (!result.success) return false; // timeout → keep FCM quiet
+    return gb.isOn('customer.periodic-location.enabled');
+  } catch {
+    return false;
+  }
+}
+
 export async function isMarketingPaused(userId?: string, client?: FeatureFlagClient): Promise<boolean> {
   if (!process.env['GROWTHBOOK_CLIENT_KEY']) return false; // local dev — never paused
   const gb = client ?? createRequestClient(userId);

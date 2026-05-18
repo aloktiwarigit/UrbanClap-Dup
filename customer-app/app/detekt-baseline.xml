@@ -4,6 +4,7 @@
   <CurrentIssues>
     <ID>ComplexCondition:RatingDtos.kt$status == "SUBMITTED" &amp;&amp; overall != null &amp;&amp; subScores != null &amp;&amp; submittedAt != null</ID>
     <ID>CyclomaticComplexMethod:BookingStatus.kt$BookingStatus.Companion$public fun fromFcmString(value: String): BookingStatus</ID>
+    <ID>CyclomaticComplexMethod:CustomerFirebaseMessagingService.kt$CustomerFirebaseMessagingService$override fun onMessageReceived(message: RemoteMessage)</ID>
     <ID>CyclomaticComplexMethod:ServiceDetailScreen.kt$@DrawableRes private fun serviceHeroImageRes(serviceId: String): Int?</ID>
     <ID>FunctionNaming:DeleteAccountConfirmScreen.kt$@Composable private fun DeleteAccountConfirmInstructionCard()</ID>
     <ID>FunctionNaming:DeleteAccountConfirmScreen.kt$@Composable private fun DeleteAccountConfirmPhraseField( confirming: DeleteAccountUiState.Confirming?, isSubmitting: Boolean, onPhraseChanged: (String) -&gt; Unit, )</ID>
@@ -23,12 +24,10 @@
     <ID>LongMethod:CatalogueHomeScreen.kt$@Composable private fun CategoryCard( category: Category, onClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:CatalogueHomeScreen.kt$@OptIn(ExperimentalFoundationApi::class) @Composable private fun PromoSlider()</ID>
     <ID>LongMethod:CatalogueVisualImage.kt$@Composable private fun CatalogueImagePlaceholder( title: String, supportingText: String?, visualSize: CatalogueVisualSize, modifier: Modifier = Modifier, )</ID>
-    <ID>LongMethod:ComplaintScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun ComplaintContent( state: ComplaintUiState, onBack: () -&gt; Unit, onRetry: () -&gt; Unit, onReasonSelected: (ComplaintReason) -&gt; Unit, onDescriptionChanged: (String) -&gt; Unit, onPhotoClick: () -&gt; Unit, onSubmit: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:DeleteAccountConfirmScreen.kt$@Composable public fun DeleteAccountConfirmScreen( onBack: () -&gt; Unit, onConfirmed: (requestId: String, scheduledDeletionAt: String) -&gt; Unit, viewModel: DeleteAccountViewModel = hiltViewModel(), )</ID>
     <ID>LongMethod:LiveTrackingScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun LiveTrackingScreen( viewModel: LiveTrackingViewModel = hiltViewModel(), sosViewModel: SosViewModel = hiltViewModel(), noShowVm: NoShowCreditViewModel = hiltViewModel(), trustDossierViewModel: TrustDossierViewModel = hiltViewModel(), onBack: () -&gt; Unit, onFileComplaint: (bookingId: String) -&gt; Unit = {}, )</ID>
     <ID>LongMethod:ProfileScreen.kt$@Composable internal fun ProfileScreen( viewModel: ProfileViewModel = hiltViewModel(), modifier: Modifier = Modifier, onLanguageClick: () -&gt; Unit = {}, onBookingsClick: () -&gt; Unit = {}, )</ID>
     <ID>LongMethod:ServiceDetailScreen.kt$@Composable private fun ServiceHero( service: Service, onBack: (() -&gt; Unit)?, modifier: Modifier = Modifier, )</ID>
-    <ID>LongMethod:SlotPickerScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable internal fun SlotPickerScreen( onSlotSelected: (BookingSlot) -&gt; Unit, onBack: () -&gt; Unit, )</ID>
     <ID>LongMethod:TrustDossierCard.kt$@Composable private fun ExpandedContent(profile: TechnicianProfile)</ID>
     <ID>LongParameterList:AuthOrchestrator.kt$AuthOrchestrator$( private val truecallerUseCase: TruecallerLoginUseCase, private val firebaseOtpUseCase: FirebaseOtpUseCase, private val saveSessionUseCase: SaveSessionUseCase, private val googleSignInUseCase: GoogleSignInUseCase, private val emailPasswordUseCase: EmailPasswordUseCase, private val firebaseAuth: FirebaseAuth, private val verifyTruecallerUseCase: VerifyTruecallerUseCase, private val featureFlags: FeatureFlags, )</ID>
     <ID>MagicNumber:AddressScreen.kt$15f</ID>
@@ -116,6 +115,7 @@
     <ID>TooManyFunctions:AuthOrchestrator.kt$AuthOrchestrator</ID>
     <ID>TooManyFunctions:AuthViewModel.kt$AuthViewModel : ViewModel</ID>
     <ID>TooManyFunctions:CatalogueHomeScreen.kt$com.homeservices.customer.ui.catalogue.CatalogueHomeScreen.kt</ID>
+    <ID>TooManyFunctions:CustomerFirebaseMessagingService.kt$CustomerFirebaseMessagingService : FirebaseMessagingService</ID>
     <ID>TooManyFunctions:RatingViewModel.kt$RatingViewModel : ViewModel</ID>
     <ID>TooManyFunctions:ServiceDetailScreen.kt$com.homeservices.customer.ui.catalogue.ServiceDetailScreen.kt</ID>
     <ID>UnusedParameter:PiiRedactorTest.kt$PiiRedactorTest$description: String</ID>
