@@ -49,6 +49,15 @@ public interface FeatureFlags {
      * Default: OFF (false) — flipped ON once CDN assets are commissioned.
      */
     public fun photoFirstCatalogueEnabled(): Boolean
+
+    /**
+     * When `true`, the Places-autocomplete + draggable-pin [AddressPickerScreen] is shown
+     * instead of the legacy [AddressScreen]. When `false`, the legacy screen continues to serve.
+     *
+     * Flag name: `customer.places-autocomplete.enabled`
+     * Default: OFF — flipped ON at Week 5 exit after smoke + Codex green + 24h QA soak.
+     */
+    public fun placesAutocompleteEnabled(): Boolean
 }
 
 /**
@@ -65,6 +74,8 @@ public class BuildConfigFeatureFlags
         override fun walletVisible(): Boolean = false
 
         override fun photoFirstCatalogueEnabled(): Boolean = false
+
+        override fun placesAutocompleteEnabled(): Boolean = false
 
         private companion object {
             const val TRUECALLER_SERVER_VERIFY_V2_ENABLED: Boolean = false

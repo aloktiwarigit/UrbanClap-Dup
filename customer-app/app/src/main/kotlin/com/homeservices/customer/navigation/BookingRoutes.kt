@@ -4,6 +4,8 @@ internal object BookingRoutes {
     const val BOOKING_GRAPH = "booking"
     const val SLOT_PICKER = "booking/slot/{serviceId}/{categoryId}"
     const val ADDRESS = "booking/address"
+    const val ADDRESS_PICKER = "booking/address-picker/{serviceId}"
+    const val WAITLIST = "booking/waitlist?lat={lat}&lng={lng}&serviceId={serviceId}"
     const val SUMMARY = "booking/summary"
     const val CONFIRMED = "booking/confirmed/{bookingId}/{appliedCredit}"
 
@@ -11,6 +13,11 @@ internal object BookingRoutes {
         serviceId: String,
         categoryId: String,
     ) = "booking/slot/$serviceId/$categoryId"
+
+    fun addressPicker(serviceId: String) = "booking/address-picker/$serviceId"
+
+    fun waitlist(lat: Double, lng: Double, serviceId: String) =
+        "booking/waitlist?lat=$lat&lng=$lng&serviceId=$serviceId"
 
     fun confirmedRoute(
         bookingId: String,

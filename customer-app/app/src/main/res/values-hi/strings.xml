@@ -434,6 +434,16 @@
     <string name="wallet_credit_original_price">मूल कीमत: ₹%1$s</string>
     <string name="wallet_credit_applied_banner">₹%1$s क्रेडिट लागू किया गया</string>
 
+    <!-- Address picker (E16-S04) -->
+    <string name="address_picker_title">हम कहाँ आएँ?</string>
+    <string name="address_picker_search_hint">अपना पता या लैंडमार्क खोजें</string>
+    <string name="address_picker_search_unavailable_drop_pin">खोज उपलब्ध नहीं — मानचित्र पर पिन खींचकर स्थान तय करें</string>
+    <string name="address_picker_confirm">पता पुष्टि करें</string>
+    <string name="address_picker_refused_title">हम अभी इस क्षेत्र में सेवा नहीं देते</string>
+    <string name="address_picker_refused_subtitle">हम अयोध्या से शुरुआत कर रहे हैं। नीचे टैप करें — विस्तार होने पर हम सूचित करेंगे।</string>
+    <string name="address_picker_notify_me">उपलब्ध होने पर मुझे सूचित करें</string>
+    <string name="address_picker_pin_set_no_address">स्थान तय — पिन की जगह की पुष्टि करें</string>
+
     <!-- Waitlist screen (E16-S04) -->
     <string name="waitlist_title">विस्तार होने पर सूचना पाएँ</string>
     <string name="waitlist_body">हम आपके क्षेत्र में सेवा शुरू होते ही एक SMS भेजेंगे। कोई स्पैम नहीं।</string>

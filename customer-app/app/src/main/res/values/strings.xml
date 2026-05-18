@@ -442,6 +442,16 @@
     <string name="wallet_credit_original_price">Original price: ₹%1$s</string>
     <string name="wallet_credit_applied_banner">₹%1$s credit applied</string>
 
+    <!-- Address picker (E16-S04) -->
+    <string name="address_picker_title">Where should we come?</string>
+    <string name="address_picker_search_hint">Search for your address or landmark</string>
+    <string name="address_picker_search_unavailable_drop_pin">Search unavailable — drag the pin on the map to set your location</string>
+    <string name="address_picker_confirm">Confirm address</string>
+    <string name="address_picker_refused_title">We don\'t serve this area yet</string>
+    <string name="address_picker_refused_subtitle">We\'re starting in Ayodhya. Tap below and we\'ll let you know when we expand.</string>
+    <string name="address_picker_notify_me">Notify me when available</string>
+    <string name="address_picker_pin_set_no_address">Location set — confirm the pin position</string>
+
     <!-- Waitlist screen (E16-S04) -->
     <string name="waitlist_title">Get notified when we expand</string>
     <string name="waitlist_body">We\'ll send you one SMS when we start serving your area. No spam — promise.</string>
