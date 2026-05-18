@@ -1,4 +1,4 @@
-import { v4 as uuid } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { getCosmosClient, DB_NAME } from '../client.js';
 
 export interface WaitlistDoc {
@@ -20,7 +20,7 @@ export async function createWaitlistEntry(
   data: Omit<WaitlistDoc, 'id' | 'createdAt'>,
 ): Promise<WaitlistDoc> {
   const doc: WaitlistDoc = {
-    id: uuid(),
+    id: randomUUID(),
     ...data,
     createdAt: new Date().toISOString(),
   };

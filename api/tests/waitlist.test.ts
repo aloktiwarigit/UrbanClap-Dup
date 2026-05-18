@@ -52,7 +52,7 @@ const validBody = () => ({
   requestedAt: nowIso(),
 });
 
-const mockCtx = {} as never;
+const mockCtx = { log: vi.fn(), error: vi.fn(), warn: vi.fn() } as never;
 
 // ── Test suite ────────────────────────────────────────────────────────────────
 

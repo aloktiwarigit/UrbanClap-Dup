@@ -6,7 +6,7 @@ export async function joinWaitlist(
   request: WaitlistRequest,
   sourceIp: string,
 ): Promise<{ ok: true }> {
-  if (!(CATALOGUE_SERVICE_IDS as readonly string[]).includes(request.serviceId)) {
+  if (!CATALOGUE_SERVICE_IDS.includes(request.serviceId)) {
     throw new Error('UNKNOWN_SERVICE');
   }
   await createWaitlistEntry({ ...request, sourceIp });
