@@ -100,28 +100,14 @@ describe('Semgrep rule presence (E19-S03)', () => {
     expect(block).toMatch(/severity:\s+ERROR/);
   });
 
-  it('api/.semgrep.yml contains the cross-partition-query-must-have-tenant-filter rule id', () => {
-    expect(semgrepSrc).toMatch(/^\s*-\s+id:\s+cross-partition-query-must-have-tenant-filter\s*$/m);
-  });
-
-  it('cross-partition-query-must-have-tenant-filter rule has INFO severity (non-blocking)', () => {
-    // INFO (not WARNING) — semgrep-action@v1 treats any finding above INFO as blocking.
-    // The rule is intentionally informational; defence-in-depth comes from the static
-    // caller-side-middleware coverage assertions further down in this file.
-    const ruleStart = semgrepSrc.indexOf('id: cross-partition-query-must-have-tenant-filter');
-    const nextRule = semgrepSrc.indexOf('\n  - id:', ruleStart + 1);
-    const block = nextRule === -1
-      ? semgrepSrc.slice(ruleStart)
-      : semgrepSrc.slice(ruleStart, nextRule);
-    expect(block).toMatch(/severity:\s+INFO/);
-  });
-
-  it('cross-partition-query-must-have-tenant-filter is scoped to the three repository files', () => {
-    const ruleStart = semgrepSrc.indexOf('id: cross-partition-query-must-have-tenant-filter');
-    const block = semgrepSrc.slice(ruleStart, ruleStart + 1500);
-    expect(block).toMatch(/complaints-repository\.ts/);
-    expect(block).toMatch(/audit-log-repository\.ts/);
-    expect(block).toMatch(/rating-repository\.ts/);
+  // cross-partition-query-must-have-tenant-filter rule was REMOVED on 2026-05-18.
+  // semgrep-action@v1 treats every finding as blocking regardless of severity,
+  // so the rule blocked every api-ship deploy after E19-S01 + E19-S02 merged.
+  // The Layer-2 caller-scope invariant (below) is the actual regression-catching
+  // guard. Re-introduce the Semgrep rule when semgrep-action respects severity
+  // (or is replaced with a non-blocking SARIF reporter).
+  it('cross-partition-query-must-have-tenant-filter rule is not present (removed, see ADR-0027)', () => {
+    expect(semgrepSrc).not.toMatch(/^\s*-\s+id:\s+cross-partition-query-must-have-tenant-filter\s*$/m);
   });
 });
 
