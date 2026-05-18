@@ -51,6 +51,15 @@ public interface FeatureFlags {
     public fun photoFirstCatalogueEnabled(): Boolean
 
     /**
+     * When `true`, the Places-autocomplete + draggable-pin [AddressPickerScreen] is shown
+     * instead of the legacy [AddressScreen]. When `false`, the legacy screen continues to serve.
+     *
+     * Flag name: `customer.places-autocomplete.enabled`
+     * Default: OFF — flipped ON at Week 5 exit after smoke + Codex green + 24h QA soak.
+     */
+    public fun placesAutocompleteEnabled(): Boolean
+
+    /**
      * When `true`, encrypted SOS audio is uploaded to Firebase Storage after
      * SOS fires, and the key doc is sent to the API. When `false`, the tmp
      * .m4a file is recorded (if consent given) but never uploaded.
@@ -75,6 +84,8 @@ public class BuildConfigFeatureFlags
         override fun walletVisible(): Boolean = false
 
         override fun photoFirstCatalogueEnabled(): Boolean = false
+
+        override fun placesAutocompleteEnabled(): Boolean = false
 
         override fun sosAudioUploadEnabled(): Boolean = false
 

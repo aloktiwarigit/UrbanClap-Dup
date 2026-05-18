@@ -25,7 +25,6 @@ import java.util.concurrent.TimeUnit
  * Uses the same OkHttpClient + Retrofit stack as production (defaultMoshi + MoshiConverterFactory).
  */
 public class ActiveJobApiServicePostLocationTest {
-
     private lateinit var mockServer: MockWebServer
     private lateinit var apiService: ActiveJobApiService
 
@@ -34,12 +33,14 @@ public class ActiveJobApiServicePostLocationTest {
         mockServer = MockWebServer()
         mockServer.start()
 
-        apiService = Retrofit.Builder()
-            .baseUrl(mockServer.url("/"))
-            .client(OkHttpClient.Builder().build())
-            .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
-            .build()
-            .create(ActiveJobApiService::class.java)
+        apiService =
+            Retrofit
+                .Builder()
+                .baseUrl(mockServer.url("/"))
+                .client(OkHttpClient.Builder().build())
+                .addConverterFactory(MoshiConverterFactory.create(defaultMoshi))
+                .build()
+                .create(ActiveJobApiService::class.java)
     }
 
     @AfterEach
@@ -52,26 +53,29 @@ public class ActiveJobApiServicePostLocationTest {
         // Arrange: server returns 204 No Content
         mockServer.enqueue(MockResponse().setResponseCode(204))
 
-        val body = PostLocationRequest(
-            lat = 26.7922,
-            lng = 82.1998,
-            accuracyMeters = 12.5,
-            capturedAt = 1_716_000_000_000L,
-            attestation = LocationAttestationDto(isMock = false, gpsAccuracyM = 12.5f),
-        )
+        val body =
+            PostLocationRequest(
+                lat = 26.7922,
+                lng = 82.1998,
+                accuracyMeters = 12.5,
+                capturedAt = 1_716_000_000_000L,
+                attestation = LocationAttestationDto(isMock = false, gpsAccuracyM = 12.5f),
+            )
 
         // Act: call the suspend function (blocking via runBlocking since JUnit 5 test)
-        val response = kotlinx.coroutines.runBlocking {
-            apiService.postActiveJobLocation("bk-test-1", body)
-        }
+        val response =
+            kotlinx.coroutines.runBlocking {
+                apiService.postActiveJobLocation("bk-test-1", body)
+            }
 
         // Assert response is successful
         assertThat(response.isSuccessful).isTrue()
         assertThat(response.code()).isEqualTo(204)
 
         // Assert request shape
-        val recorded = mockServer.takeRequest(REQUEST_TIMEOUT_S, TimeUnit.SECONDS)
-            ?: error("No request reached MockWebServer within ${REQUEST_TIMEOUT_S}s")
+        val recorded =
+            mockServer.takeRequest(REQUEST_TIMEOUT_S, TimeUnit.SECONDS)
+                ?: error("No request reached MockWebServer within ${REQUEST_TIMEOUT_S}s")
 
         assertThat(recorded.method).isEqualTo("POST")
         assertThat(recorded.path).isEqualTo("/v1/technicians/active-job/bk-test-1/location")
@@ -95,20 +99,22 @@ public class ActiveJobApiServicePostLocationTest {
     public fun `apiService_postsCorrectShape — null attestation is omitted from body`() {
         mockServer.enqueue(MockResponse().setResponseCode(204))
 
-        val body = PostLocationRequest(
-            lat = 26.7922,
-            lng = 82.1998,
-            accuracyMeters = 8.0,
-            capturedAt = 1_716_000_000_001L,
-            attestation = null,
-        )
+        val body =
+            PostLocationRequest(
+                lat = 26.7922,
+                lng = 82.1998,
+                accuracyMeters = 8.0,
+                capturedAt = 1_716_000_000_001L,
+                attestation = null,
+            )
 
         kotlinx.coroutines.runBlocking {
             apiService.postActiveJobLocation("bk-test-2", body)
         }
 
-        val recorded = mockServer.takeRequest(REQUEST_TIMEOUT_S, TimeUnit.SECONDS)
-            ?: error("No request reached MockWebServer within ${REQUEST_TIMEOUT_S}s")
+        val recorded =
+            mockServer.takeRequest(REQUEST_TIMEOUT_S, TimeUnit.SECONDS)
+                ?: error("No request reached MockWebServer within ${REQUEST_TIMEOUT_S}s")
 
         val requestJson = recorded.body.readUtf8()
         // Moshi @JsonClass skips nulls by default
@@ -122,15 +128,16 @@ public class ActiveJobApiServicePostLocationTest {
         val adapter: JsonAdapter<PostLocationRequest> =
             defaultMoshi.adapter(PostLocationRequest::class.java)
 
-        val json = adapter.toJson(
-            PostLocationRequest(
-                lat = 26.8,
-                lng = 82.2,
-                accuracyMeters = 5.0,
-                capturedAt = 1_000_000L,
-                attestation = LocationAttestationDto(isMock = true, gpsAccuracyM = 5.0f),
-            ),
-        )
+        val json =
+            adapter.toJson(
+                PostLocationRequest(
+                    lat = 26.8,
+                    lng = 82.2,
+                    accuracyMeters = 5.0,
+                    capturedAt = 1_000_000L,
+                    attestation = LocationAttestationDto(isMock = true, gpsAccuracyM = 5.0f),
+                ),
+            )
 
         assertThat(json).contains("\"lat\"")
         assertThat(json).contains("\"lng\"")
