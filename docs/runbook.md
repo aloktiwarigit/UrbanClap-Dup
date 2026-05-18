@@ -1200,3 +1200,28 @@ Living document — update after every incident and every significant architectu
 ---
 
 **Operational Procedures 2026-04-26 complete. Total new procedures: 7 (OP-A1..A7) + 5 (OP-A8..A12) = 12.**
+
+---
+
+## SOS audio retention (E11-S05b-2)
+
+Encrypted SOS audio blobs are stored in Firebase Storage under `sos-audio/{customerId}/{incidentId}.enc`. A GCS object lifecycle rule deletes all objects in this prefix 7 days after creation, matching the Cosmos `sos_incident_keys` container's `defaultTtl = 604800` seconds.
+
+**One-time setup** (run once per environment against the Firebase Storage bucket):
+
+```bash
+gcloud storage buckets update gs://<your-firebase-bucket> \
+  --lifecycle-file=infra/firebase/sos-audio-lifecycle.json
+```
+
+Substitute `<your-firebase-bucket>` with the bucket name from Firebase Console → Storage → Files (shown in the URL bar, e.g. `homeservices-prod.appspot.com`).
+
+**Verification:**
+
+```bash
+gcloud storage buckets describe gs://<your-firebase-bucket> --format="json(lifecycle)"
+```
+
+Expected output contains `"age": 7` with `"matchesPrefix": ["sos-audio/"]`.
+
+**Why two TTLs?** The Cosmos key doc TTL (7 days) and the Storage blob lifecycle rule (7 days) are set independently. If a blob outlasts its key doc (e.g. Cosmos TTL fires first due to clock skew), the blob becomes unplayable — this is the safer failure mode. The 7-day window aligns with the maximum incident investigation SLA defined in the threat model (I-A4).

@@ -143,7 +143,7 @@ export async function sendOwnerSosAlert(payload: {
   bookingId: string;
   customerId: string;
   technicianId: string;
-  slotAddress: string;
+  incidentId: string;
 }): Promise<void> {
   await getFirebaseAdmin().messaging().send({
     topic: 'owner_alerts',
@@ -152,7 +152,7 @@ export async function sendOwnerSosAlert(payload: {
       bookingId: payload.bookingId,
       customerId: payload.customerId,
       technicianId: payload.technicianId,
-      slotAddress: payload.slotAddress,
+      incidentId: payload.incidentId,
     },
   });
 }
