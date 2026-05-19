@@ -37,7 +37,7 @@ export const submitRatingHandler: HttpHandler = async (req, _ctx: InvocationCont
   if (!isCustomer && !isTechnician) return { status: 403, jsonBody: { code: 'FORBIDDEN' } };
   if (data.side === 'CUSTOMER_TO_TECH' && !isCustomer) return { status: 403, jsonBody: { code: 'FORBIDDEN' } };
   if (data.side === 'TECH_TO_CUSTOMER' && !isTechnician) return { status: 403, jsonBody: { code: 'FORBIDDEN' } };
-  if (booking.status !== 'CLOSED') {
+  if (!['COMPLETED', 'PAID', 'CLOSED'].includes(booking.status)) {
     return { status: 409, jsonBody: { code: 'BOOKING_NOT_CLOSED', status: booking.status } };
   }
   if (!booking.technicianId) return { status: 409, jsonBody: { code: 'NO_TECHNICIAN' } };
