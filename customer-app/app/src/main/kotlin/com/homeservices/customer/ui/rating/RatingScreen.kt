@@ -1,6 +1,8 @@
 package com.homeservices.customer.ui.rating
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -162,7 +164,7 @@ private fun RatingForm(
     onSubmit: () -> Unit,
     onPostAnyway: () -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         HsTrustBadge(text = stringResource(R.string.rating_eyebrow))
         Text(
             stringResource(R.string.rating_title),
@@ -194,7 +196,6 @@ private fun RatingForm(
         if (shieldState is RatingShieldState.Escalated) {
             CountdownChip(expiresAtMs = shieldState.expiresAtMs, onPostAnyway = onPostAnyway)
         } else {
-            Spacer(Modifier.weight(1f))
             HsPrimaryButton(
                 text = stringResource(R.string.rating_submit),
                 onClick = onSubmit,

@@ -2,6 +2,8 @@ package com.homeservices.customer.ui.complaint
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -114,7 +116,7 @@ private fun IdleState(
     onSubmit: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier.verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         HsTrustBadge(text = stringResource(R.string.complaint_eyebrow))
@@ -134,7 +136,6 @@ private fun IdleState(
             onDescriptionChanged = onDescriptionChanged,
             onPhotoClick = onPhotoClick,
         )
-        Spacer(Modifier.weight(1f))
         HsPrimaryButton(
             text = stringResource(R.string.complaint_submit),
             onClick = onSubmit,
