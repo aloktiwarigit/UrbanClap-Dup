@@ -21,7 +21,7 @@
   --ink-4: #2E2719;   /* hairline strong */
   --ink-5: #3E3528;   /* divider */
 
-  --fog-0: #6E665B;   /* text-mute */
+  --fog-0: #877A6D;   /* text-mute — 4.54:1 vs --ink-1, 4.62:1 vs --ink-0 (WCAG AA pass); bumped from #6E665B which was 3.33:1 */
   --fog-1: #9A9082;   /* text-soft */
   --fog-2: #C7BCA9;   /* text-default */
   --fog-3: #F1E9D8;   /* text-strong (vellum) */
@@ -39,7 +39,8 @@
   --coral: #C26B47;       /* stalled */
   --coral-soft: #E08B66;
   --ember: #E9B44C;       /* warning */
-  --rose: #B6385C;        /* danger / breach */
+  --rose: #B6385C;        /* danger / breach — borders/accents only */
+  --rose-soft: #E27DA0;   /* danger text on dark — 4.84:1 vs --ink-1 (WCAG AA pass) */
   --lavender: #8B7DC3;    /* secondary status */
 
   /* Paper palette — light mode override (html.light) */
@@ -51,9 +52,11 @@
   --paper-text-1: #4A4135;
   --paper-text-2: #6E665B;
 
-  /* Rail navigation — separate token namespace so light-mode override is clean */
+  /* Rail navigation — separate token namespace so light-mode override is clean.
+     --rail-text uses --fog-1 (#9A9082) on --ink-1 (#14110C) = 5.95:1 (WCAG AA pass).
+     --fog-0 (#6E665B) would give 3.33:1 — fails AA at 13px / weight 400. */
   --rail-bg: var(--ink-1);
-  --rail-text: var(--fog-0);
+  --rail-text: var(--fog-1);
   --rail-text-active: var(--teal-soft);
   --rail-active-bg: var(--teal-dim);
   --rail-border: var(--ink-4);
@@ -120,7 +123,7 @@
   --color-surface-raised: #1A1610;
   --color-text: #F1E9D8;              /* vellum */
   --color-text-muted: #9A9082;
-  --color-text-faint: #6E665B;
+  --color-text-faint: #877A6D;   /* faint text on dark — 4.54:1 vs --color-surface (AA pass); bumped from #6E665B which was 3.33:1 */
   --color-border: #2E2719;
   --color-border-strong: #3E3528;
   --color-success: #5BA38E;
@@ -479,7 +482,7 @@ button {
 }
 .alert-success { border-left-color: var(--teal); color: var(--teal-soft); }
 .alert-warn    { border-left-color: var(--ember); color: var(--ember); }
-.alert-danger  { border-left-color: var(--rose); color: var(--rose); }
+.alert-danger  { border-left-color: var(--rose); color: var(--rose-soft); }
 .alert-info    { border-left-color: var(--marigold); color: var(--marigold-soft); }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -504,7 +507,7 @@ button {
 }
 .chip-success { border-color: var(--teal-dim); color: var(--teal-soft); }
 .chip-warn    { border-color: var(--ember); color: var(--ember); }
-.chip-danger  { border-color: var(--rose); color: var(--rose); }
+.chip-danger  { border-color: var(--rose); color: var(--rose-soft); }
 .chip-info    { border-color: var(--marigold-dim); color: var(--marigold-soft); }
 
 /* For complaint card "X" repeat-offender count chip */

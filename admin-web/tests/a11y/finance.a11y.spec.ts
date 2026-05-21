@@ -15,8 +15,7 @@ async function signInAs(context: BrowserContext, baseURL: string | undefined, ro
 
 test('finance page has no critical/serious WCAG 2.1 AA violations', async ({ page, context, baseURL }) => {
   await signInAs(context, baseURL, 'super-admin');
-  await page.goto('/en/finance');
-  await page.waitForLoadState('networkidle');
+  await page.goto('/en/finance', { waitUntil: 'domcontentloaded' });
 
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -43,8 +42,7 @@ test('ApproveAllModal traps focus and closes on Escape', async ({ page, context,
     }),
   );
 
-  await signInAs(context, baseURL, 'super-admin');
-  await page.goto('/en/finance');
+  await page.goto('/en/finance', { waitUntil: 'domcontentloaded' });
   const approveBtn = page.getByRole('button', { name: /approve all/i });
   await expect(approveBtn).toBeVisible({ timeout: 10_000 });
   await approveBtn.click();

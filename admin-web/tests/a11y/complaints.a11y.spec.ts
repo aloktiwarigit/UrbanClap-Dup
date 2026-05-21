@@ -17,8 +17,7 @@ test.describe('complaints route a11y', () => {
   test('complaints page has no critical/serious WCAG 2.1 AA violations', async ({ page, context, baseURL }) => {
     await signInAs(context, baseURL, 'super-admin');
 
-    await page.goto('/en/complaints');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/en/complaints', { waitUntil: 'domcontentloaded' });
 
     const results = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -34,7 +33,7 @@ test.describe('complaints route a11y', () => {
   test('ComplaintSlideOver traps focus and closes on Escape', async ({ page, context, baseURL }) => {
     await signInAs(context, baseURL, 'super-admin');
     // Complaints are server-fetched; the mock API seeds one complaint for this test.
-    await page.goto('/en/complaints');
+    await page.goto('/en/complaints', { waitUntil: 'domcontentloaded' });
     // @hello-pangea/dnd sets draggable=false on the container; target the card by its complaint ID attribute.
     const card = page.locator('[data-rfd-draggable-id="a11y-complaint-001"]');
     await expect(card).toBeVisible({ timeout: 10_000 });

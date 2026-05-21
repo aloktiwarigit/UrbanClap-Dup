@@ -45,7 +45,7 @@ test.describe('orders route a11y', () => {
       });
     });
 
-    await page.goto('/en/orders');
+    await page.goto('/en/orders', { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('table', { timeout: 10_000 });
 
     const results = await new AxeBuilder({ page })
@@ -74,7 +74,7 @@ test.describe('orders route a11y', () => {
       });
     });
 
-    await page.goto('/en/orders');
+    await page.goto('/en/orders', { waitUntil: 'domcontentloaded' });
     const row = page.locator('tr').filter({ hasText: 'Priya Sharma' });
     await expect(row).toBeVisible({ timeout: 10_000 });
 

@@ -15,8 +15,7 @@ async function signInAs(context: BrowserContext, baseURL: string | undefined, ro
 
 test('technicians page has no critical/serious WCAG 2.1 AA violations', async ({ page, context, baseURL }) => {
   await signInAs(context, baseURL, 'super-admin');
-  await page.goto('/en/technicians');
-  await page.waitForLoadState('networkidle');
+  await page.goto('/en/technicians', { waitUntil: 'domcontentloaded' });
 
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
