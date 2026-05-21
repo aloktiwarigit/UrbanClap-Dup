@@ -1,6 +1,7 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
+import FocusLock from 'react-focus-lock';
 import { useTranslations, useLocale } from 'next-intl';
 import { formatINR, formatDateTime } from '@/lib/format/intl';
 import type { Order } from '@/types/order';
@@ -38,6 +39,7 @@ export function OrderSlideOver({
 }: OrderSlideOverProps) {
   const t = useTranslations('orders');
   const locale = useLocale();
+  const titleId = useId();
   const [currentOrder, setCurrentOrder] = useState<Order>(order);
   const [toast, setToast] = useState<Toast | null>(null);
 
@@ -45,12 +47,26 @@ export function OrderSlideOver({
     setCurrentOrder(order);
   }, [order]);
 
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
   return (
     <>
       <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} aria-hidden="true" />
-      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-xl z-50 overflow-y-auto">
+      <FocusLock returnFocus>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-xl z-50 overflow-y-auto"
+      >
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="font-semibold text-gray-800">{t('detail.title', { orderId: currentOrder.id.slice(0, 8) })}</h2>
+          <h2 id={titleId} className="font-semibold text-gray-800">{t('detail.title', { orderId: currentOrder.id.slice(0, 8) })}</h2>
           <button aria-label={t('detail.closeButton.ariaLabel')} onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
         </div>
         <div className="p-4 space-y-4 text-sm">
@@ -117,6 +133,7 @@ export function OrderSlideOver({
           />
         </div>
       </div>
+      </FocusLock>
     </>
   );
 }
