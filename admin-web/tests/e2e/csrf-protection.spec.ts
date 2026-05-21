@@ -31,21 +31,20 @@ test.describe('CSRF protection on /admin-api/*', () => {
     expect(response.status()).toBe(403);
   });
 
-  test('POST without an Origin header is not blocked (SSR fetch / curl path)', async ({ request }) => {
-    // Same-origin requests that omit Origin (e.g. SSR fetch, curl) must pass the
-    // CSRF guard. They will likely fail with a different error (auth 401/404) but
-    // NOT 403 from the CSRF guard.
+  test('POST without an Origin header is blocked (default-deny on missing Origin)', async ({ request }) => {
+    // Null-Origin on unsafe methods is now default-deny. Browser fetches always send
+    // Origin; requests without it (curl, malformed clients) are rejected.
     const response = await request.post('/admin-api/v1/admin/auth/login', {
       headers: {
         'Content-Type': 'application/json',
-        // No Origin header — simulates SSR server-side fetch or curl
+        // No Origin header
       },
       data: { firebaseToken: 'test-token' },
       failOnStatusCode: false,
     });
 
-    // CSRF guard must NOT fire — any other status (401, 404, 200, 502) is acceptable.
-    expect(response.status()).not.toBe(403);
+    // CSRF guard fires for missing Origin on unsafe methods.
+    expect(response.status()).toBe(403);
   });
 
   test('GET to /admin-api/* is not blocked by CSRF check', async ({ request }) => {

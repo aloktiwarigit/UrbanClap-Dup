@@ -1,14 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { POST } from '../app/admin-api/[...path]/route';
 
-// Helper: build a POST request that passes the Origin allowlist CSRF guard
-// (i.e., either no Origin header, or an Origin matching NEXT_PUBLIC_APP_URL).
+// Helper: build a POST request that passes the Origin allowlist CSRF guard.
+// Includes `origin: http://localhost:3000` by default to match the CSRF guard's
+// default allowed origin (NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').
+// Pass a different origin via extraHeaders to test rejection cases.
 function makePostRequest(url: string, extraHeaders: Record<string, string> = {}, body = '{}'): Request {
   return new Request(url, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
       cookie: 'hs_access=access-token',
+      origin: 'http://localhost:3000',
       ...extraHeaders,
     },
     body,

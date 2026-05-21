@@ -646,5 +646,16 @@
         "TRANSFERRED": "ट्रांसफर हुआ"
       }
     }
+  },
+  "notFound": {
+    "eyebrow": "HomeHeroo एडमिन",
+    "title": "404",
+    "description": "पृष्ठ नहीं मिला",
+    "backHome": "डैशबोर्ड पर वापस जाएं"
+  },
+  "globalError": {
+    "title": "कुछ गड़बड़ हो गई",
+    "description": "एक अनपेक्षित त्रुटि हुई। कृपया पृष्ठ पुनः लोड करें।",
+    "reload": "पुनः लोड करें"
   }
 }
