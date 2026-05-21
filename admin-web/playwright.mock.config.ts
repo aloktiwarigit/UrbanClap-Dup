@@ -7,6 +7,7 @@ export default defineConfig({
   testMatch: [
     'e2e/admin-completion.spec.ts',
     'e2e/login.spec.ts',
+    'e2e/notfound.spec.ts',
     'e2e/rbac-403.spec.ts',
     'e2e/totp-enrollment.spec.ts',
   ],
