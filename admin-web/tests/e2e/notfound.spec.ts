@@ -1,3 +1,13 @@
+/**
+ * 404 not-found E2E tests.
+ *
+ * NOTE (S1→S4 dependency): This spec is currently excluded from playwright.mock.config.ts
+ * testMatch. Once S4 lands (fail-closed canAccessAdminPath fix), middleware redirects
+ * authenticated users hitting unknown paths to /not-authorized instead of falling through
+ * to Next.js's 404 handler. Re-enable after S4 updates middleware to let unknown paths
+ * (no route match) fall through so Next.js can serve the app/[locale]/not-found.tsx.
+ */
+
 import { test, expect } from '@playwright/test';
 import { makeAccessJwt } from './helpers/make-token';
 
