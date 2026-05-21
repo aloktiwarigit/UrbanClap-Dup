@@ -23,16 +23,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTrustBadge
+import com.homeservices.technician.ui.home.AvailabilityViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,7 +41,9 @@ internal fun TechnicianDashboardScreen(
     onOpenRatings: () -> Unit,
     onOpenKyc: () -> Unit,
     modifier: Modifier = Modifier,
+    availabilityViewModel: AvailabilityViewModel = hiltViewModel(),
 ) {
+    val availabilityUiState by availabilityViewModel.uiState.collectAsStateWithLifecycle()
     Scaffold(
         modifier = modifier,
         topBar = { TopAppBar(title = { Text("Technician home") }) },
@@ -52,7 +54,12 @@ internal fun TechnicianDashboardScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item { DashboardHeader() }
-            item { AvailabilityCard() }
+            item {
+                AvailabilityCard(
+                    isOnline = availabilityUiState.availability.isOnline,
+                    onCheckedChange = availabilityViewModel::setAcceptingJobs,
+                )
+            }
             item { TodaySnapshot() }
             item {
                 WorkflowCard(
@@ -87,8 +94,10 @@ private fun DashboardHeader() {
 }
 
 @Composable
-private fun AvailabilityCard() {
-    var available by remember { mutableStateOf(true) }
+private fun AvailabilityCard(
+    isOnline: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
     HsSectionCard {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -97,7 +106,7 @@ private fun AvailabilityCard() {
         ) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
-                    text = if (available) "Available for jobs" else "Paused",
+                    text = if (isOnline) "Available for jobs" else "Paused",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -107,7 +116,7 @@ private fun AvailabilityCard() {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Switch(checked = available, onCheckedChange = { available = it })
+            Switch(checked = isOnline, onCheckedChange = onCheckedChange)
         }
     }
 }
