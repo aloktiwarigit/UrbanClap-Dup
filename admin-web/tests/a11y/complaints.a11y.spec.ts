@@ -18,6 +18,10 @@ test.describe('complaints route a11y', () => {
     await signInAs(context, baseURL, 'super-admin');
 
     await page.goto('/en/complaints', { waitUntil: 'domcontentloaded' });
+    // Wait for the seeded complaint card to render so axe scans the populated kanban
+    // (not the loading state). Without this, CI scans with card visible while local
+    // may scan with empty state — divergent contrast violations.
+    await page.waitForSelector('[data-rfd-draggable-id]', { timeout: 10_000 });
 
     const results = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])

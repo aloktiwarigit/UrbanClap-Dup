@@ -66,15 +66,15 @@ describe('KanbanBoard', () => {
     render(<KanbanBoard complaints={complaints} onStatusChange={vi.fn()} onAddNote={vi.fn()} onReassign={vi.fn()} onResolve={vi.fn()} />);
     // c1 and c4 are NEW, c2 is INVESTIGATING, c3 is RESOLVED
     // We can check by customer id presence
-    const allCardButtons = screen.getAllByRole('button');
+    const allCards = screen.getAllByTestId('complaint-card');
     // There should be at least 4 cards rendered (1 per complaint)
-    expect(allCardButtons.length).toBeGreaterThanOrEqual(4);
+    expect(allCards.length).toBeGreaterThanOrEqual(4);
   });
 
   it('clicking a card opens the slide-over for that complaint', () => {
     render(<KanbanBoard complaints={[makeComplaint('c1', 'NEW')]} onStatusChange={vi.fn()} onAddNote={vi.fn()} onReassign={vi.fn()} onResolve={vi.fn()} />);
-    const cardButton = screen.getByRole('button');
-    fireEvent.click(cardButton);
+    const card = screen.getByTestId('complaint-card');
+    fireEvent.click(card);
     // SlideOver should appear — it renders the complaint description in a <p>
     const descElements = screen.getAllByText('Complaint c1');
     expect(descElements.length).toBeGreaterThanOrEqual(1);
