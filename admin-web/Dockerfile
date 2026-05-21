@@ -2,7 +2,8 @@ FROM node:22-alpine AS base
 
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
+ENV COREPACK_HOME=/corepack
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate && chmod -R 755 /corepack
 
 FROM base AS deps
 COPY package.json pnpm-lock.yaml ./
@@ -48,5 +49,6 @@ ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 
 COPY --from=builder /app ./
+USER node
 EXPOSE 3000
 CMD ["pnpm", "start"]
