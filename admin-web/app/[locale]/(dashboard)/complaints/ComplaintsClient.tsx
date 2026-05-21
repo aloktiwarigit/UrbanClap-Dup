@@ -228,7 +228,7 @@ export function ComplaintsClient({
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">{t('list.title')}</h1>
-        <span className="text-sm text-gray-500">
+        <span className="text-sm text-[var(--color-text-muted)]">
           {totalComplaints > complaints.length
             ? t('list.pagination.loadedCount', { count: complaints.length, total: totalComplaints })
             : t('list.pagination.totalCount', { total: totalComplaints })}

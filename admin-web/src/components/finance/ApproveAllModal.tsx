@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+import FocusLock from 'react-focus-lock';
 import { useTranslations } from 'next-intl';
 import { formatPaise } from '@/api/finance';
 
@@ -12,7 +14,17 @@ interface Props {
 
 export function ApproveAllModal({ totalNetPayable, onConfirm, onCancel, loading }: Props) {
   const t = useTranslations('finance');
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onCancel]);
+
   return (
+    <FocusLock returnFocus>
     <div
       role="dialog"
       aria-modal="true"
@@ -46,5 +58,6 @@ export function ApproveAllModal({ totalNetPayable, onConfirm, onCancel, loading 
         </div>
       </div>
     </div>
+    </FocusLock>
   );
 }

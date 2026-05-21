@@ -229,7 +229,7 @@
         "scheduled": "निर्धारित समय",
         "payment": "भुगतान",
         "created": "बनाया गया",
-        "evidencePhotos": "Job Photos",
+        "evidencePhotos": "काम की तस्वीरें",
         "actions": {
           "heading": "कार्रवाइयां",
           "noPermission": "आपकी भूमिका इस ऑर्डर की समीक्षा कर सकती है लेकिन परिचालन बदलाव नहीं कर सकती।"
@@ -276,7 +276,7 @@
     },
     "cells": {
       "customer": { "noName": "नाम उपलब्ध नहीं" },
-      "technician": { "unassigned": "अनुसौंपा गया" }
+      "technician": { "unassigned": "असाइन नहीं" }
     },
     "confirmModal": {
       "reasonLabel": "कारण",
