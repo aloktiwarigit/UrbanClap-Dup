@@ -376,3 +376,36 @@ Convention for `Status` column: `mitigated` | `partial` | `not-yet-mitigated` | 
 | **T-B1 (confirmed)** | **Service-area bypass via client-spoofed lat/lng** — E16-S04 adds a client-side polygon check (`LocalServiceAreaCheck`) in the Android app as defence-in-depth UX. The client check is NOT the authoritative gate. | `customer-app: LocalServiceAreaCheck.isInside()` — client only; server gate unchanged at `api/src/functions/bookings.ts → isLatLngInServiceArea()` | — | — | **Server-side Turf.js polygon check (ADR-0020) remains the authoritative gate.** `LocalServiceAreaCheck` in the Android app provides UX-only refusal (saves the round-trip for obviously out-of-area customers). A determined attacker who bypasses the client check still hits the server-side rejection. No change to the existing T-B1 mitigation. | Unchanged from E16-S01 addendum. | mitigated (server-side unchanged; client check is additive UX only) |
 
 **Addendum 2026-05-17 complete. New STRIDE entries: I-W1 (Information Disclosure), S-A2 (Spoofing/accepted); T-B1 confirmed unchanged.**
+
+---
+
+## Addendum 2026-05-21 — Cross-border data flow (admin-web S3 production-readiness audit)
+
+**Author:** Alok Tiwari + Claude Sonnet 4.6 (S3 PII remediation session)
+**Trigger:** Production-readiness audit (A3 Privacy/PII, 2026-05-21) identified three observability vendors receiving admin-dashboard PII data with cross-border transfer risk under DPDPA 2023.
+
+> **Status as of this addendum:** PII leaks into these vendors have been remediated in PR S3 (PostHog masking, Sentry scrubber extension, OTel URL sanitisation). The cross-border transfer exposure documented here is the **residual** risk — data is now scrubbed before transmission, but the vendor endpoints remain in foreign jurisdictions. A future sprint (Sprint 2) will address jurisdiction migration.
+
+### Cross-border data flow inventory
+
+| Vendor | Endpoint / Region | What is sent (post-S3 remediation) | DPDPA risk | Mitigation status |
+|---|---|---|---|---|
+| **PostHog** | `us.i.posthog.com` (US region — default when `NEXT_PUBLIC_POSTHOG_HOST` is unset) | `$pageview` events with sanitised URLs (no phone/email/PII query params after S3), click events on allowlisted elements, no session recording text content. | **Cross-border personal data transfer.** Pageview events include admin user's IP (inferred by PostHog from request) and navigation patterns. DPDPA 2023 §16 requires adequate protection for cross-border transfers. No SCCs or adequacy decision exists for US. | **Partial.** PII in event payloads is stripped. Admin-user IP and behavioural metadata still crosses to US. Remediation: set `NEXT_PUBLIC_POSTHOG_HOST=https://eu.posthog.com` or self-host on Azure Central India (Sprint 2). |
+| **Sentry** | `sentry.io` (US region by default; EU region is `de.sentry.io` and requires paid plan) | Error events scrubbed via `beforeSend` (phone/email/Aadhaar/PAN/JWT/UPI/Razorpay redacted). Admin email in auth errors may still appear in event metadata if not caught by scrubber. | **Cross-border personal data transfer.** Error events may contain admin email addresses (Firebase error messages, login flow). 30-day retention window on US servers. | **Partial.** Scrubber coverage now ≥80% (P0-PRIV-4 closed). Verify Sentry org region against production DSN `IngestionEndpoint`. If US, add ADR entry and migrate to EU or self-hosted Sentry (Sprint 2). |
+| **Azure Monitor / Application Insights** | Connection string `IngestionEndpoint` encodes region. Assumed Central India (`centralindia.in.applicationinsights.azure.com`) but not verified from committed code — only set in ACA secrets. | HTTP spans with sanitised URLs (no query strings after S3 OTel fix), span metadata (method, status code, service name). No PII query params after S3. | **Low residual risk if region is Central India.** If `IngestionEndpoint` is East US or other non-Indian region, all span metadata crosses border. | **Unverified.** Add boot-time assertion in `instrumentation.ts` (Sprint 2) to parse connection string and warn/throw if `IngestionEndpoint` is not `centralindia.*`. |
+
+### DPDPA 2023 analysis
+
+- **§16 (Cross-border transfer):** DPDPA permits transfer to "such countries or territories outside India as may be prescribed." The Rules (2025 draft) have not yet published a whitelist. Sending phone numbers, admin emails, and navigation data to US-region PostHog and Sentry without SCCs or consent is a compliance gap.
+- **§6 (Consent / Notice):** Admin users are employees — implied consent under employment contract is defensible. Customer PII (phone numbers that previously leaked via URL autocapture) flowing to US analytics without customer consent was a §6 violation; S3 remediation closes this for new events.
+- **§9 (Data minimisation):** Post-S3, PostHog receives only sanitised behavioural metadata. Sentry receives scrubbed error events. This satisfies the minimisation principle for new events; historical events (pre-S3) in PostHog/Sentry remain a gap until retention windows expire.
+- **Retention:** PostHog free tier retains events 1 year. Sentry free tier retains 30 days. Both should be documented in the data-processing inventory (`docs/dpdp-data-inventory.md`).
+
+### Recommended Sprint 2 actions (not yet done)
+
+1. Set `NEXT_PUBLIC_POSTHOG_HOST=https://eu.posthog.com` in ACA environment and `.env.example`. (EU region reduces transfer exposure; India-region self-hosting is the ideal end-state.)
+2. Verify Sentry org region via production DSN. If US, evaluate migration to `de.sentry.io` (EU) or self-hosted Sentry.
+3. Add boot-time assertion in `instrumentation.ts` to validate `APPLICATIONINSIGHTS_CONNECTION_STRING` region.
+4. Update `docs/dpdp-data-inventory.md` with vendor retention periods and legal basis.
+
+**Addendum 2026-05-21 complete. New STRIDE entries: I-CB1 (cross-border PostHog), I-CB2 (cross-border Sentry), I-CB3 (Azure Monitor region unverified).**
