@@ -40,9 +40,9 @@ export async function register() {
               span.updateName(`HTTP ${method} ${sanitized.path}`);
               // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
               span.setAttribute('http.url', sanitized.full);
-              const target = rawUrl.split('?')[0];
+              // Use sanitized.path for http.target so ID segments are already replaced.
               // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-              if (target) span.setAttribute('http.target', target);
+              if (sanitized.path) span.setAttribute('http.target', sanitized.path);
             },
           }),
         ],

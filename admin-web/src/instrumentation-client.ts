@@ -31,8 +31,10 @@ if (posthogKey && typeof window !== 'undefined') {
       // Autocapture allowlist — restrict to known-safe routes and interactions.
       // Prevents accidental capture of sensitive admin paths or PII-bearing events.
       autocapture: {
+        // Regex evaluated against window.location.href (full URL including protocol+host).
+        // No ^ anchor; trailing delimiter handles end-of-path, query string, or hash.
         url_allowlist: [
-          /^\/[a-z]{2}\/(dashboard|orders|finance|complaints|technicians|audit-log|admin-users|compliance|customers)\//,
+          /\/[a-z]{2}\/(dashboard|orders|finance|complaints|technicians|audit-log|admin-users|compliance|customers)(\/|$|\?|#)/,
         ],
         element_allowlist: ['button', 'a'],
         dom_event_allowlist: ['click'],
