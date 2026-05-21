@@ -35,7 +35,8 @@ test.describe('complaints route a11y', () => {
     await signInAs(context, baseURL, 'super-admin');
     // Complaints are server-fetched; the mock API seeds one complaint for this test.
     await page.goto('/en/complaints');
-    const card = page.locator('[draggable="true"]').first();
+    // @hello-pangea/dnd sets draggable=false on the container; target the card by its complaint ID attribute.
+    const card = page.locator('[data-rfd-draggable-id="a11y-complaint-001"]');
     await expect(card).toBeVisible({ timeout: 10_000 });
     await card.click();
 
