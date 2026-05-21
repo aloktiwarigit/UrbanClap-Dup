@@ -1,6 +1,7 @@
 package com.homeservices.technician.data.auth
 
 import android.content.SharedPreferences
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.homeservices.technician.data.auth.di.AuthPrefs
 import com.homeservices.technician.data.device.DeviceTokenRegistrar
 import com.homeservices.technician.domain.auth.model.AuthProvider
@@ -15,6 +16,7 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import io.sentry.protocol.User as SentryUser
 
 @Singleton
 public class SessionManager
@@ -135,6 +137,8 @@ public class SessionManager
                     displayName = displayName,
                     authProvider = authProvider,
                 )
+            runCatching { FirebaseCrashlytics.getInstance().setUserId(uid) }
+            runCatching { Sentry.setUser(SentryUser().apply { id = uid }) }
             // Best-effort device token registration — ensures token is enrolled even when onNewToken
             // is not invoked (e.g. sign-in with an already-issued FCM token).
             runCatching { deviceTokenRegistrar.register() }
@@ -154,6 +158,8 @@ public class SessionManager
             val uid = currentUid()
             withContext(Dispatchers.IO) { clearSessionPrefs() }
             _authState.value = AuthState.Unauthenticated
+            runCatching { FirebaseCrashlytics.getInstance().setUserId("") }
+            runCatching { Sentry.setUser(null) }
             // Best-effort server device-token unregister — never blocks sign-out.
             if (uid != null) {
                 runCatching { deviceTokenRegistrar.unregister() }

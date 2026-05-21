@@ -35,7 +35,7 @@
     "firebase": "^12.12.0",
     "jose": "^6.2.2",
     "lucide-react": "^1.14.0",
-    "next": "^15",
+    "next": "^15.5.18",
     "next-intl": "^4.11.0",
     "openapi-fetch": "^0.13.0",
     "posthog-js": "^1",
