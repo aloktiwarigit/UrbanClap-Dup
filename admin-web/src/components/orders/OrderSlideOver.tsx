@@ -49,7 +49,10 @@ export function OrderSlideOver({
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Escape') return;
+      // Don't close if a nested dialog (e.g. ConfirmModal) is handling ESC
+      if (document.querySelectorAll('[role="dialog"]').length > 1) return;
+      onClose();
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);

@@ -32,13 +32,18 @@ async function signInAs(context: BrowserContext, baseURL: string | undefined, ro
 test.describe('orders route a11y', () => {
   test('orders page has no critical/serious WCAG 2.1 AA violations', async ({ page, context, baseURL }) => {
     await signInAs(context, baseURL, 'super-admin');
-    await page.route('**/admin-api/v1/admin/orders*', route =>
-      route.fulfill({
+    await page.route('**/admin-api/v1/admin/orders*', route => {
+      const url = route.request().url();
+      // Detail request: /orders/<id> — return single order shape
+      if (/\/orders\/[^/?]+(?:\?|$)/.test(url)) {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_ORDER) });
+      }
+      return route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ items: [MOCK_ORDER], total: 1, page: 1, pageSize: 50, totalPages: 1 }),
-      }),
-    );
+      });
+    });
 
     await page.goto('/en/orders');
     await page.waitForSelector('table', { timeout: 10_000 });
@@ -57,13 +62,17 @@ test.describe('orders route a11y', () => {
 
   test('OrderSlideOver traps focus and closes on Escape', async ({ page, context, baseURL }) => {
     await signInAs(context, baseURL, 'super-admin');
-    await page.route('**/admin-api/v1/admin/orders*', route =>
-      route.fulfill({
+    await page.route('**/admin-api/v1/admin/orders*', route => {
+      const url = route.request().url();
+      if (/\/orders\/[^/?]+(?:\?|$)/.test(url)) {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_ORDER) });
+      }
+      return route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ items: [MOCK_ORDER], total: 1, page: 1, pageSize: 50, totalPages: 1 }),
-      }),
-    );
+      });
+    });
 
     await page.goto('/en/orders');
     const row = page.locator('tr').filter({ hasText: 'Priya Sharma' });
