@@ -278,7 +278,7 @@ internal fun DpdpConsentScreenContent(
                         style =
                             MaterialTheme.typography.headlineSmall.copy(
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 26.sp,
+                                fontSize = CONSENT_SECTION_TITLE_FONT_SIZE.sp,
                             ),
                         color = Color.White,
                         textAlign = TextAlign.Center,
@@ -286,7 +286,7 @@ internal fun DpdpConsentScreenContent(
 
                     Text(
                         text = "सेवा शुरू करने से पहले बताएं, हम क्या जानकारी इस्तेमाल कर सकते हैं",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = CONSENT_DESCRIPTION_SIZE_DP.sp),
                         color = Color.White.copy(alpha = HERO_SUBTITLE_ALPHA),
                         textAlign = TextAlign.Center,
                     )
@@ -301,7 +301,7 @@ internal fun DpdpConsentScreenContent(
                         .offset(y = (-20).dp),
                 shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                 color = cardBg,
-                shadowElevation = 4.dp,
+                shadowElevation = CARD_SHADOW_ELEVATION_DP.dp,
             ) {
                 Column(
                     modifier =
@@ -420,7 +420,7 @@ internal fun DpdpConsentScreenContent(
                         style =
                             MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.ExtraBold,
-                                fontSize = 16.sp,
+                                fontSize = CONSENT_TITLE_SIZE_DP.sp,
                             ),
                         color = Color.White,
                     )
@@ -435,7 +435,7 @@ internal fun DpdpConsentScreenContent(
             ) {
                 Text(
                     text = "सभी अस्वीकार करें",
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = CONSENT_DESCRIPTION_SIZE_DP.sp),
                     color = if (uiState.isLoading) TextMuted.copy(alpha = CTA_DISABLED_TEXT_ALPHA) else TextMuted,
                 )
             }
@@ -490,7 +490,7 @@ private fun ConsentToggleRow(
             )
             Text(
                 text = description,
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = CONSENT_SMALL_TEXT_SIZE_DP.sp),
                 color = TextMuted,
             )
         }
@@ -514,7 +514,7 @@ private fun ConsentToggleRow(
 private fun LegalCopyText(textMuted: Color) {
     val annotatedString =
         buildAnnotatedString {
-            withStyle(SpanStyle(color = textMuted, fontSize = 12.sp)) {
+            withStyle(SpanStyle(color = textMuted, fontSize = CONSENT_SMALL_TEXT_SIZE_DP.sp)) {
                 append("जारी रखकर आप हमारी ")
             }
             withLink(
@@ -525,7 +525,7 @@ private fun LegalCopyText(textMuted: Color) {
                             style =
                                 SpanStyle(
                                     color = BrandGreen,
-                                    fontSize = 12.sp,
+                                    fontSize = CONSENT_SMALL_TEXT_SIZE_DP.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     textDecoration = TextDecoration.Underline,
                                 ),
@@ -534,7 +534,7 @@ private fun LegalCopyText(textMuted: Color) {
             ) {
                 append("गोपनीयता नीति")
             }
-            withStyle(SpanStyle(color = textMuted, fontSize = 12.sp)) {
+            withStyle(SpanStyle(color = textMuted, fontSize = CONSENT_SMALL_TEXT_SIZE_DP.sp)) {
                 append(" से सहमत हैं")
             }
         }
