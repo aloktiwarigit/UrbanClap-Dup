@@ -153,7 +153,9 @@ private fun BoxScope.PhotoCardImageContent(
         Text(
             text = category.name,
             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 17.sp),
-            color = MaterialTheme.colorScheme.onPrimary,
+            // Photo card text sits on a fixed black bottom scrim — use Color.White for dark-mode safety
+            // (onPrimary resolves to a dark color in dark theme and loses contrast against the black scrim).
+            color = Color.White,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
@@ -161,7 +163,7 @@ private fun BoxScope.PhotoCardImageContent(
             Text(
                 text = stringResource(R.string.catalogue_starting_price, formatInr(category.minPricePaise.toLong())),
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.88f),
+                color = Color.White.copy(alpha = 0.88f),
                 maxLines = 1,
             )
         }

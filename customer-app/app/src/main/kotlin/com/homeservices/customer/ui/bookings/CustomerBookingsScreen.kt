@@ -279,6 +279,7 @@ private fun InfoLine(
     }
 }
 
+@Suppress("MagicNumber") // 0xFFB68A2C = fixed amber text on WarningSoft (light bg); visible in dark mode
 @Composable
 private fun StatusPill(
     label: String,
@@ -293,7 +294,9 @@ private fun StatusPill(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
-            color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+            // WarningSoft is a fixed light amber background — use a fixed dark-amber foreground so
+            // the inactive pill remains readable in dark mode (secondary is light in dark theme).
+            color = if (active) MaterialTheme.colorScheme.primary else Color(0xFFB68A2C),
         )
     }
 }

@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -270,6 +271,8 @@ private fun ProfileHeader(user: AuthState.Authenticated?) {
                 HsScreenTitle(
                     text = user?.displayName ?: "मेहमान",
                     style = MaterialTheme.typography.headlineMedium.copy(fontSize = 20.sp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 if (user?.phoneLastFour != null) {
                     Text(

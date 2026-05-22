@@ -320,6 +320,7 @@ private fun ServiceMetricRow(service: Service) {
     }
 }
 
+@Suppress("MagicNumber") // palette literals for fixed-light MetricNeutralBg dark-mode foreground
 @Composable
 private fun ServiceMetricTile(
     label: String,
@@ -344,7 +345,9 @@ private fun ServiceMetricTile(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                // Non-emphasized tile uses fixed MetricNeutralBg (light) — use dark foreground
+                // so text stays readable in dark mode (onSurfaceVariant is near-white in dark theme).
+                color = if (emphasized) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF5F6C66),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -352,7 +355,7 @@ private fun ServiceMetricTile(
                 text = value,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (emphasized) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                color = if (emphasized) MaterialTheme.colorScheme.primary else Color(0xFF18231F),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

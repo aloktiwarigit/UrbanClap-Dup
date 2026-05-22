@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 
 /**
  * Accessible screen-title composable.
@@ -19,6 +20,9 @@ import androidx.compose.ui.text.TextStyle
  *
  * Default [style] is `headlineMedium` — override for screens that use a
  * larger hero headline (e.g. auth, catalogue home).
+ *
+ * Use [maxLines] + [overflow] at call sites where the title source may exceed
+ * one line (e.g. user display names, dynamic service names).
  */
 @Composable
 public fun HsScreenTitle(
@@ -26,11 +30,15 @@ public fun HsScreenTitle(
     modifier: Modifier = Modifier,
     style: TextStyle = MaterialTheme.typography.headlineMedium,
     color: Color = MaterialTheme.colorScheme.onSurface,
+    maxLines: Int = Int.MAX_VALUE,
+    overflow: TextOverflow = TextOverflow.Clip,
 ) {
     Text(
         text = text,
         style = style,
         color = color,
+        maxLines = maxLines,
+        overflow = overflow,
         modifier = modifier.semantics { heading() },
     )
 }

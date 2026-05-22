@@ -259,6 +259,12 @@ private fun ActiveBookingSection(
     val cardBg = if (isPriceApproval) ActiveAccentSoft else MaterialTheme.colorScheme.surfaceVariant
     val accentColor = if (isPriceApproval) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
     val borderColor = accentColor.copy(alpha = 0.3f)
+    // ActiveAccentSoft is a fixed light background — use dark foregrounds to preserve readability
+    // in dark mode (onSurface/onSurfaceVariant resolve to near-white and lose contrast on light bg).
+    @Suppress("MagicNumber")
+    val serviceNameColor = if (isPriceApproval) Color(0xFF18231F) else MaterialTheme.colorScheme.onSurface
+    @Suppress("MagicNumber")
+    val statusLabelColor = if (isPriceApproval) Color(0xFF5F6C66) else MaterialTheme.colorScheme.onSurfaceVariant
     val statusLabel = activeBookingStatusLabel(booking.status)
     val ctaLabel =
         if (isPriceApproval) {
@@ -304,7 +310,7 @@ private fun ActiveBookingSection(
         Text(
             text = booking.serviceName,
             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = 15.sp),
-            color = MaterialTheme.colorScheme.onSurface,
+            color = serviceNameColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -316,7 +322,7 @@ private fun ActiveBookingSection(
             Text(
                 text = statusLabel,
                 style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = statusLabelColor,
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,

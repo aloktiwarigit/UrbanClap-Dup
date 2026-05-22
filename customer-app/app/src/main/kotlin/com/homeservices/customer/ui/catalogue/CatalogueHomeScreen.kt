@@ -576,7 +576,9 @@ private fun PromoSlider() {
                         Text(
                             b.title,
                             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold, fontSize = 24.sp),
-                            color = MaterialTheme.colorScheme.onPrimary,
+                            // Promo banners sit over photos with a fixed dark scrim — use Color.White
+                            // so text is readable in both light and dark mode (onPrimary is dark in dark theme).
+                            color = Color.White,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -584,7 +586,7 @@ private fun PromoSlider() {
                         Text(
                             b.subtitle,
                             style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
+                            color = Color.White.copy(alpha = 0.85f),
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -592,7 +594,7 @@ private fun PromoSlider() {
                         Text(
                             "${b.cta} →",
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
-                            color = MaterialTheme.colorScheme.onPrimary,
+                            color = Color.White,
                         )
                     }
                 }
