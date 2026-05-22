@@ -1251,3 +1251,7 @@ The policy is published automatically by `.github/workflows/gh-pages-legal.yml` 
 5. Confirm erasure to the requester within 30 days of the original request.
 
 **Annual review:** Review and update the policy document at least once per year, or whenever a new third-party SDK is integrated that processes PII.
+
+## Privacy policy
+
+Hosted at **aloktiwarigit/homeheroo-privacy** (GitHub Pages). Source of truth for all privacy-policy content; the UrbanClap-Dup repo no longer contains policy markdown files.
