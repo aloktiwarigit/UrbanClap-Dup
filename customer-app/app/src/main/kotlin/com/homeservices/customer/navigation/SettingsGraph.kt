@@ -9,6 +9,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.homeservices.customer.domain.flags.FeatureFlags
 import com.homeservices.customer.ui.complaint.ComplaintRoutes
+import com.homeservices.customer.ui.consent.DpdpConsentScreen
 import com.homeservices.customer.ui.deleteaccount.DeleteAccountConfirmScreen
 import com.homeservices.customer.ui.deleteaccount.DeleteAccountCoolOffScreen
 import com.homeservices.customer.ui.deleteaccount.DeleteAccountScreen
@@ -16,7 +17,6 @@ import com.homeservices.customer.ui.deleteaccount.DeleteAccountViewModel
 import com.homeservices.customer.ui.deleteaccount.EPOCH_MS_EXISTING_REQUEST_SENTINEL
 import com.homeservices.customer.ui.deleteaccount.NAV_ARG_REQUEST_ID
 import com.homeservices.customer.ui.deleteaccount.NAV_ARG_SCHEDULED_DELETION_EPOCH_MS
-import com.homeservices.customer.ui.consent.DpdpConsentScreen
 import com.homeservices.customer.ui.settings.LanguageSettingsScreen
 import com.homeservices.customer.ui.settings.PrivacyDataScreen
 import com.homeservices.customer.ui.settings.SettingsScreen

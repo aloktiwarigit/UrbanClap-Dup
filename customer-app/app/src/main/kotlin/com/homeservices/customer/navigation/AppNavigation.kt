@@ -28,11 +28,11 @@ import com.homeservices.corenav.PendingActionStatus
 import com.homeservices.customer.data.auth.SessionManager
 import com.homeservices.customer.data.pendingaction.PendingActionStore
 import com.homeservices.customer.domain.auth.model.AuthState
-import com.homeservices.customer.domain.flags.FeatureFlags
 import com.homeservices.customer.domain.consent.IsConsentRequiredUseCase
+import com.homeservices.customer.domain.flags.FeatureFlags
 import com.homeservices.customer.domain.locale.IsFirstLaunchUseCase
-import com.homeservices.customer.ui.consent.DpdpConsentScreen
 import com.homeservices.customer.observability.SentryContextBinder
+import com.homeservices.customer.ui.consent.DpdpConsentScreen
 import com.homeservices.customer.ui.locale.FirstLaunchLanguageScreen
 import com.homeservices.customer.ui.rating.RatingRoutes
 
@@ -135,11 +135,12 @@ private fun AppNavigationReady(
     val authState by sessionManager.authState.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     // Consent gate wins over locale picker; both win over auth.
-    val startDestination = when {
-        consentRequired -> LocaleRoutes.DPDP_CONSENT
-        firstLaunchPending -> LocaleRoutes.FIRST_LAUNCH
-        else -> ROUTE_AUTH
-    }
+    val startDestination =
+        when {
+            consentRequired -> LocaleRoutes.DPDP_CONSENT
+            firstLaunchPending -> LocaleRoutes.FIRST_LAUNCH
+            else -> ROUTE_AUTH
+        }
     val notificationPermissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
 

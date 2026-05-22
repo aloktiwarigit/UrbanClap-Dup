@@ -27,23 +27,29 @@ public class PostHogAnalyticsFacade
          */
         public fun initIfConsented(analyticsOptIn: Boolean) {
             if (!analyticsOptIn) return
-            if (!posthogInitialized.compareAndSet(false, true)) return  // already initialized or initializing
+            if (!posthogInitialized.compareAndSet(false, true)) return // already initialized or initializing
             val apiKey = buildInfoProvider.postHogApiKey
             if (apiKey.isBlank()) {
-                posthogInitialized.set(false)  // allow retry if key becomes available
+                posthogInitialized.set(false) // allow retry if key becomes available
                 return
             }
             PostHogAndroid.setup(context, PostHogAndroidConfig(apiKey, "https://app.posthog.com"))
         }
 
-        override fun track(event: String, properties: Map<String, Any>) {
+        override fun track(
+            event: String,
+            properties: Map<String, Any>,
+        ) {
             if (!posthogInitialized.get()) return
             runCatching {
                 PostHog.capture(event, properties = properties)
             }
         }
 
-        override fun identify(userId: String, traits: Map<String, Any>) {
+        override fun identify(
+            userId: String,
+            traits: Map<String, Any>,
+        ) {
             if (!posthogInitialized.get()) return
             runCatching {
                 PostHog.identify(userId, userProperties = traits)

@@ -1,7 +1,7 @@
 package com.homeservices.customer.domain.consent
 
-import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
 
 /** Expose the current [ConsentState] as a hot [Flow] sourced from DataStore. */
 public class GetConsentStateUseCase

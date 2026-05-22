@@ -1,7 +1,7 @@
 package com.homeservices.customer.domain.consent
 
-import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
 
 /**
  * Returns a [Flow] that emits `true` when the user must be shown the consent gate

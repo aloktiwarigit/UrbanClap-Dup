@@ -2,7 +2,6 @@ package com.homeservices.customer.ui.booking
 
 import com.homeservices.customer.data.booking.PaymentResultBus
 import com.homeservices.customer.domain.auth.BiometricGateUseCase
-import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import com.homeservices.customer.domain.booking.ConfirmBookingUseCase
 import com.homeservices.customer.domain.booking.CreateBookingUseCase
 import com.homeservices.customer.domain.booking.RazorpayPaymentUseCase
@@ -10,6 +9,7 @@ import com.homeservices.customer.domain.booking.model.BookingPaymentMethod
 import com.homeservices.customer.domain.booking.model.BookingRequest
 import com.homeservices.customer.domain.booking.model.BookingResult
 import com.homeservices.customer.domain.booking.model.BookingSlot
+import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk

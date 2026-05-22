@@ -81,14 +81,17 @@ public class HomeservicesCustomerApplication : Application() {
             val analyticsOptIn =
                 try {
                     withTimeout(5_000L) {
-                        analyticsEntryPoint.consentRepository().consentState.first()
+                        analyticsEntryPoint
+                            .consentRepository()
+                            .consentState
+                            .first()
                             .let { it is ConsentState.Granted && it.analyticsOptIn }
                     }
                 } catch (e: TimeoutCancellationException) {
                     io.sentry.Sentry.addBreadcrumb(
                         io.sentry.Breadcrumb.info("PostHog init skipped — consent state unavailable after 5s"),
                     )
-                    false  // default to no-op if consent state not available
+                    false // default to no-op if consent state not available
                 }
             analyticsEntryPoint.postHogAnalyticsFacade().initIfConsented(analyticsOptIn)
         }

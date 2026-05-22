@@ -6,13 +6,12 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import com.google.common.truth.Truth.assertThat
 import com.homeservices.customer.data.consent.remote.ConsentAuditApiService
 import com.homeservices.customer.data.consent.remote.dto.ConsentAuditRequestDto
-import com.homeservices.customer.domain.consent.ConsentState
 import com.homeservices.customer.domain.consent.CURRENT_CONSENT_VERSION
+import com.homeservices.customer.domain.consent.ConsentState
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.slot
-import java.io.IOException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -22,6 +21,7 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import retrofit2.Response
+import java.io.IOException
 
 @RunWith(RobolectricTestRunner::class)
 public class ConsentRepositoryImplTest {

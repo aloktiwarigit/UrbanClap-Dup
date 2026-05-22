@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.homeservices.customer.domain.consent.GrantConsentUseCase
 import com.homeservices.customer.domain.consent.IsConsentRequiredUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -15,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @HiltViewModel
 public class ConsentViewModel

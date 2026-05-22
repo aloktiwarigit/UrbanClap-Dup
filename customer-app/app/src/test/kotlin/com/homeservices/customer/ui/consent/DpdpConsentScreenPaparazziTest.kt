@@ -30,12 +30,13 @@ public class DpdpConsentScreenPaparazziTest {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
                 DpdpConsentScreenContent(
-                    uiState = ConsentUiState(
-                        analyticsOptIn = true,
-                        crashOptIn = true,
-                        marketingOptIn = false,
-                        isLoading = false,
-                    ),
+                    uiState =
+                        ConsentUiState(
+                            analyticsOptIn = true,
+                            crashOptIn = true,
+                            marketingOptIn = false,
+                            isLoading = false,
+                        ),
                     onToggleAnalytics = {},
                     onToggleCrash = {},
                     onToggleMarketing = {},
@@ -51,12 +52,13 @@ public class DpdpConsentScreenPaparazziTest {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = true) {
                 DpdpConsentScreenContent(
-                    uiState = ConsentUiState(
-                        analyticsOptIn = true,
-                        crashOptIn = true,
-                        marketingOptIn = false,
-                        isLoading = false,
-                    ),
+                    uiState =
+                        ConsentUiState(
+                            analyticsOptIn = true,
+                            crashOptIn = true,
+                            marketingOptIn = false,
+                            isLoading = false,
+                        ),
                     onToggleAnalytics = {},
                     onToggleCrash = {},
                     onToggleMarketing = {},
@@ -74,12 +76,13 @@ public class DpdpConsentScreenPaparazziTest {
                 // Hindi locale is the default string language in this app;
                 // this test captures the light-mode variant with all-accept state.
                 DpdpConsentScreenContent(
-                    uiState = ConsentUiState(
-                        analyticsOptIn = true,
-                        crashOptIn = true,
-                        marketingOptIn = true,
-                        isLoading = false,
-                    ),
+                    uiState =
+                        ConsentUiState(
+                            analyticsOptIn = true,
+                            crashOptIn = true,
+                            marketingOptIn = true,
+                            isLoading = false,
+                        ),
                     onToggleAnalytics = {},
                     onToggleCrash = {},
                     onToggleMarketing = {},
@@ -96,12 +99,13 @@ public class DpdpConsentScreenPaparazziTest {
             HomeservicesTheme(darkTheme = true) {
                 // Dark mode + all-accept state.
                 DpdpConsentScreenContent(
-                    uiState = ConsentUiState(
-                        analyticsOptIn = true,
-                        crashOptIn = true,
-                        marketingOptIn = true,
-                        isLoading = false,
-                    ),
+                    uiState =
+                        ConsentUiState(
+                            analyticsOptIn = true,
+                            crashOptIn = true,
+                            marketingOptIn = true,
+                            isLoading = false,
+                        ),
                     onToggleAnalytics = {},
                     onToggleCrash = {},
                     onToggleMarketing = {},

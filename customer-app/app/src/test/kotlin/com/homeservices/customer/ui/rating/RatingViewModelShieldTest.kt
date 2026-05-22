@@ -1,7 +1,6 @@
 package com.homeservices.customer.ui.rating
 
 import androidx.lifecycle.SavedStateHandle
-import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import com.homeservices.customer.domain.rating.EscalateRatingResult
 import com.homeservices.customer.domain.rating.EscalateRatingUseCase
 import com.homeservices.customer.domain.rating.GetRatingUseCase
@@ -9,6 +8,7 @@ import com.homeservices.customer.domain.rating.SubmitRatingUseCase
 import com.homeservices.customer.domain.rating.model.CustomerSubScores
 import com.homeservices.customer.domain.rating.model.RatingSnapshot
 import com.homeservices.customer.domain.rating.model.SideState
+import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk

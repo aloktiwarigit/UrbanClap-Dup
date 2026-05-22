@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
@@ -45,7 +46,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
@@ -141,48 +141,51 @@ internal fun DpdpConsentScreenContent(
     val textMuted = if (isDark) TextOnDarkMuted else TextMuted
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(screenBg),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(screenBg),
     ) {
         // ── Scrollable body ────────────────────────────────────────────────────
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(bottom = 112.dp), // reserve space for sticky CTAs
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 112.dp),
+            // reserve space for sticky CTAs
         ) {
             // ── Hero zone ──────────────────────────────────────────────────────
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(HERO_FRACTION)
-                    .drawBehind {
-                        drawRect(
-                            brush = Brush.verticalGradient(listOf(HeroBgDark, HeroBg)),
-                            size = size,
-                        )
-                        // Top-right atmospheric glow
-                        drawCircle(
-                            color = Color.White.copy(alpha = 0.05f),
-                            radius = 180.dp.toPx(),
-                            center = Offset(size.width - 60.dp.toPx(), -80.dp.toPx()),
-                        )
-                        // Bottom-left accent glow
-                        drawCircle(
-                            color = Color.White.copy(alpha = 0.08f),
-                            radius = 90.dp.toPx(),
-                            center = Offset(50.dp.toPx(), size.height - 30.dp.toPx()),
-                        )
-                        // Center-right mid glow
-                        drawCircle(
-                            color = Color(0xFF4CAF50).copy(alpha = 0.10f),
-                            radius = 120.dp.toPx(),
-                            center = Offset(size.width * 0.75f, size.height * 0.55f),
-                        )
-                    }
-                    .statusBarsPadding()
-                    .padding(horizontal = 24.dp, vertical = 24.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(HERO_FRACTION)
+                        .drawBehind {
+                            drawRect(
+                                brush = Brush.verticalGradient(listOf(HeroBgDark, HeroBg)),
+                                size = size,
+                            )
+                            // Top-right atmospheric glow
+                            drawCircle(
+                                color = Color.White.copy(alpha = 0.05f),
+                                radius = 180.dp.toPx(),
+                                center = Offset(size.width - 60.dp.toPx(), -80.dp.toPx()),
+                            )
+                            // Bottom-left accent glow
+                            drawCircle(
+                                color = Color.White.copy(alpha = 0.08f),
+                                radius = 90.dp.toPx(),
+                                center = Offset(50.dp.toPx(), size.height - 30.dp.toPx()),
+                            )
+                            // Center-right mid glow
+                            drawCircle(
+                                color = Color(0xFF4CAF50).copy(alpha = 0.10f),
+                                radius = 120.dp.toPx(),
+                                center = Offset(size.width * 0.75f, size.height * 0.55f),
+                            )
+                        }.statusBarsPadding()
+                        .padding(horizontal = 24.dp, vertical = 24.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(
@@ -207,10 +210,11 @@ internal fun DpdpConsentScreenContent(
 
                     Text(
                         text = "गोपनीयता आपकी, चुनाव आपका",
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 26.sp,
-                        ),
+                        style =
+                            MaterialTheme.typography.headlineSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 26.sp,
+                            ),
                         color = Color.White,
                         textAlign = TextAlign.Center,
                     )
@@ -226,17 +230,19 @@ internal fun DpdpConsentScreenContent(
 
             // ── Consent card (overlaps hero by 20dp for depth) ─────────────────
             Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .offset(y = (-20).dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .offset(y = (-20).dp),
                 shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                 color = cardBg,
                 shadowElevation = 4.dp,
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 28.dp, start = 20.dp, end = 20.dp, bottom = 20.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 28.dp, start = 20.dp, end = 20.dp, bottom = 20.dp),
                 ) {
                     // Section heading
                     Text(
@@ -314,25 +320,28 @@ internal fun DpdpConsentScreenContent(
 
         // ── Sticky CTAs pinned to bottom ───────────────────────────────────────
         Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .background(cardBg)
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(cardBg)
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             // Primary CTA
             Button(
                 onClick = onConfirm,
                 enabled = !uiState.isLoading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = BrandGreen,
-                    disabledContainerColor = BrandGreen.copy(alpha = 0.50f),
-                ),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = BrandGreen,
+                        disabledContainerColor = BrandGreen.copy(alpha = 0.50f),
+                    ),
             ) {
                 if (uiState.isLoading) {
                     CircularProgressIndicator(
@@ -343,10 +352,11 @@ internal fun DpdpConsentScreenContent(
                 } else {
                     Text(
                         text = "सहमत हों और जारी रखें",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 16.sp,
-                        ),
+                        style =
+                            MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 16.sp,
+                            ),
                         color = Color.White,
                     )
                 }
@@ -379,9 +389,10 @@ private fun ConsentToggleRow(
     onChecked: (Boolean) -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 10.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -405,10 +416,11 @@ private fun ConsentToggleRow(
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
-                ),
+                style =
+                    MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                    ),
                 color = Color(0xFF18231F),
             )
             Text(
@@ -422,41 +434,45 @@ private fun ConsentToggleRow(
         Switch(
             checked = checked,
             onCheckedChange = onChecked,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = SwitchCheckedThumb,
-                checkedTrackColor = SwitchCheckedTrack,
-                uncheckedTrackColor = SwitchUncheckedTrack,
-                uncheckedThumbColor = Color.White,
-            ),
+            colors =
+                SwitchDefaults.colors(
+                    checkedThumbColor = SwitchCheckedThumb,
+                    checkedTrackColor = SwitchCheckedTrack,
+                    uncheckedTrackColor = SwitchUncheckedTrack,
+                    uncheckedThumbColor = Color.White,
+                ),
         )
     }
 }
 
 @Composable
 private fun LegalCopyText(textMuted: Color) {
-    val annotatedString = buildAnnotatedString {
-        withStyle(SpanStyle(color = textMuted, fontSize = 12.sp)) {
-            append("जारी रखकर आप हमारी ")
-        }
-        withLink(
-            LinkAnnotation.Url(
-                url = PRIVACY_POLICY_URL,
-                styles = TextLinkStyles(
-                    style = SpanStyle(
-                        color = BrandGreen,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        textDecoration = TextDecoration.Underline,
-                    ),
+    val annotatedString =
+        buildAnnotatedString {
+            withStyle(SpanStyle(color = textMuted, fontSize = 12.sp)) {
+                append("जारी रखकर आप हमारी ")
+            }
+            withLink(
+                LinkAnnotation.Url(
+                    url = PRIVACY_POLICY_URL,
+                    styles =
+                        TextLinkStyles(
+                            style =
+                                SpanStyle(
+                                    color = BrandGreen,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    textDecoration = TextDecoration.Underline,
+                                ),
+                        ),
                 ),
-            ),
-        ) {
-            append("गोपनीयता नीति")
+            ) {
+                append("गोपनीयता नीति")
+            }
+            withStyle(SpanStyle(color = textMuted, fontSize = 12.sp)) {
+                append(" से सहमत हैं")
+            }
         }
-        withStyle(SpanStyle(color = textMuted, fontSize = 12.sp)) {
-            append(" से सहमत हैं")
-        }
-    }
 
     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         BasicText(

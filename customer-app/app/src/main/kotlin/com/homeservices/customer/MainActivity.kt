@@ -13,8 +13,8 @@ import com.homeservices.customer.data.booking.PaymentResultBus
 import com.homeservices.customer.data.pendingaction.PendingActionStore
 import com.homeservices.customer.di.BuildInfoProvider
 import com.homeservices.customer.domain.booking.model.PaymentResult
-import com.homeservices.customer.domain.flags.FeatureFlags
 import com.homeservices.customer.domain.consent.IsConsentRequiredUseCase
+import com.homeservices.customer.domain.flags.FeatureFlags
 import com.homeservices.customer.domain.locale.IsFirstLaunchUseCase
 import com.homeservices.customer.navigation.AppNavigation
 import com.homeservices.customer.navigation.CustomerRouteResolver
