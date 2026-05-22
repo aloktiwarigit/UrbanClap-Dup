@@ -10,9 +10,9 @@ import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-class OkHttpTimeoutTest {
+public class OkHttpTimeoutTest {
     @Test
-    fun `AuthOkHttpClient has correct timeouts`() {
+    public fun `AuthOkHttpClient has correct timeouts`() {
         val idTokenCache = mockk<IdTokenCache>()
         val authenticator = mockk<FirebaseTokenAuthenticator>(relaxed = true)
         val client = BookingModule.provideAuthOkHttpClient(idTokenCache, authenticator)
@@ -21,39 +21,39 @@ class OkHttpTimeoutTest {
         assertThat(client.readTimeoutMillis).isEqualTo(30_000)
         assertThat(client.writeTimeoutMillis).isEqualTo(30_000)
         assertThat(client.callTimeoutMillis).isEqualTo(60_000)
-        assertThat(client.retryOnConnectionFailure()).isTrue()
+        assertThat(client.retryOnConnectionFailure).isTrue()
     }
 
     @Test
-    fun `CatalogueOkHttpClient has correct timeouts`() {
+    public fun `CatalogueOkHttpClient has correct timeouts`() {
         val client = CatalogueModule.provideOkHttpClient()
 
         assertThat(client.connectTimeoutMillis).isEqualTo(15_000)
         assertThat(client.readTimeoutMillis).isEqualTo(30_000)
         assertThat(client.writeTimeoutMillis).isEqualTo(30_000)
         assertThat(client.callTimeoutMillis).isEqualTo(60_000)
-        assertThat(client.retryOnConnectionFailure()).isTrue()
+        assertThat(client.retryOnConnectionFailure).isTrue()
     }
 
     @Test
-    fun `PublicOkHttpClient has correct timeouts`() {
+    public fun `PublicOkHttpClient has correct timeouts`() {
         val client = AuthApiModule.providePublicOkHttpClient()
 
         assertThat(client.connectTimeoutMillis).isEqualTo(15_000)
         assertThat(client.readTimeoutMillis).isEqualTo(30_000)
         assertThat(client.writeTimeoutMillis).isEqualTo(30_000)
         assertThat(client.callTimeoutMillis).isEqualTo(60_000)
-        assertThat(client.retryOnConnectionFailure()).isTrue()
+        assertThat(client.retryOnConnectionFailure).isTrue()
     }
 
     @Test
-    fun `TechnicianOkHttpClient has correct timeouts`() {
+    public fun `TechnicianOkHttpClient has correct timeouts`() {
         val client = TechnicianModule.provideTechnicianOkHttpClient()
 
         assertThat(client.connectTimeoutMillis).isEqualTo(15_000)
         assertThat(client.readTimeoutMillis).isEqualTo(30_000)
         assertThat(client.writeTimeoutMillis).isEqualTo(30_000)
         assertThat(client.callTimeoutMillis).isEqualTo(60_000)
-        assertThat(client.retryOnConnectionFailure()).isTrue()
+        assertThat(client.retryOnConnectionFailure).isTrue()
     }
 }
