@@ -46,12 +46,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
 
 // Design tokens — consistent with SettingsScreen palette
-private val WarmIvory = Color(0xFFFBF7EF)
 private val ErrorRed = Color(0xFFB3261E)
 private val ErrorRedSurface = Color(0xFFFFF0EE)
-private val CardBorder = Color(0xFFDED8CD)
-private val TextPrimary = Color(0xFF18231F)
-private val TextSecondary = Color(0xFF5F6C66)
 
 /**
  * Entry point for the delete-account flow.
@@ -97,7 +93,7 @@ public fun DeleteAccountScreen(
         }
     }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = WarmIvory) {
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
             modifier =
                 Modifier
@@ -127,7 +123,7 @@ private fun DeleteAccountTopBar(onBack: () -> Unit) {
             Icon(
                 Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = null,
-                tint = TextPrimary,
+                tint = MaterialTheme.colorScheme.onSurface,
             )
         }
         Spacer(Modifier.width(8.dp))
@@ -137,7 +133,7 @@ private fun DeleteAccountTopBar(onBack: () -> Unit) {
                 MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.ExtraBold,
                 ),
-            color = TextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }
@@ -174,8 +170,8 @@ private fun DeleteAccountWarningCard() {
 private fun DeleteAccountWhatDeletedCard() {
     Surface(
         shape = RoundedCornerShape(20.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, CardBorder),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -185,24 +181,24 @@ private fun DeleteAccountWhatDeletedCard() {
                     MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
                     ),
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(Modifier.height(12.dp))
             DeletionItem(
                 icon = Icons.Default.Bookmark,
                 labelRes = R.string.delete_account_item_bookings,
             )
-            HorizontalDivider(color = CardBorder, modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(vertical = 8.dp))
             DeletionItem(
                 icon = Icons.Default.Home,
                 labelRes = R.string.delete_account_item_addresses,
             )
-            HorizontalDivider(color = CardBorder, modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(vertical = 8.dp))
             DeletionItem(
                 icon = Icons.Default.CreditCard,
                 labelRes = R.string.delete_account_item_payment_methods,
             )
-            HorizontalDivider(color = CardBorder, modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(vertical = 8.dp))
             DeletionItem(
                 icon = Icons.Default.Settings,
                 labelRes = R.string.delete_account_item_preferences,
@@ -220,7 +216,7 @@ private fun DeleteAccountContinueButton(onContinueClicked: () -> Unit) {
         colors =
             ButtonDefaults.buttonColors(
                 containerColor = ErrorRed,
-                contentColor = Color.White,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
             ),
     ) {
         Icon(Icons.Default.DeleteForever, contentDescription = null)
@@ -244,11 +240,11 @@ private fun DeletionItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Icon(icon, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(20.dp))
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
         Text(
             text = stringResource(labelRes),
             style = MaterialTheme.typography.bodyMedium,
-            color = TextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }
