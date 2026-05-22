@@ -8,7 +8,10 @@ import com.homeservices.customer.domain.booking.model.PendingAddOn
 import kotlinx.coroutines.flow.Flow
 
 public interface BookingRepository {
-    public fun createBooking(request: BookingRequest, idempotencyKey: String): Flow<Result<BookingResult>>
+    public fun createBooking(
+        request: BookingRequest,
+        idempotencyKey: String,
+    ): Flow<Result<BookingResult>>
 
     public fun getMyBookings(): Flow<Result<List<CustomerBooking>>>
 

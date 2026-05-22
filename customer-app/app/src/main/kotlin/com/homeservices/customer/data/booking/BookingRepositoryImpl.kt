@@ -21,7 +21,10 @@ internal class BookingRepositoryImpl
     constructor(
         private val api: BookingApiService,
     ) : BookingRepository {
-        override fun createBooking(request: BookingRequest, idempotencyKey: String): Flow<Result<BookingResult>> =
+        override fun createBooking(
+            request: BookingRequest,
+            idempotencyKey: String,
+        ): Flow<Result<BookingResult>> =
             flow {
                 emit(
                     runCatching {
