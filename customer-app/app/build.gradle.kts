@@ -704,6 +704,23 @@ kover {
                     "*.observability.analytics.di.*",
                     // NoOpAnalyticsFacade — trivial no-op stubs; no logic to test.
                     "*.NoOpAnalyticsFacade",
+                    // AnalyticsEvents — constants object; no runtime logic or branches.
+                    "*.AnalyticsEvents",
+                    // DpdpConsentScreen — Compose UI composable (first-launch + consent management),
+                    // same rationale as other *Kt screen classes (recomposition guards, slot-table ops).
+                    // Paparazzi @Ignored tests are recorded on CI; ViewModel logic is covered by ConsentViewModelTest.
+                    "*.DpdpConsentScreenKt",
+                    "*.DpdpConsentScreenKt\$*",
+                    // ConsentUiState — sealed data class data holders, no logic branches.
+                    "*.ConsentUiState",
+                    "*.ConsentUiState\$*",
+                    // data.consent.di — Hilt @Provides/@Binds wiring, same rationale as other DI modules.
+                    "*.data.consent.di.*",
+                    // data.consent.remote.di — Hilt @Provides wiring for ConsentAuditApiService (Retrofit).
+                    "*.data.consent.remote.di.*",
+                    // ConsentAuditApiService — Retrofit interface; methods invoked by Retrofit runtime,
+                    // same rationale as *.data.integrity.IntegrityApiService.
+                    "*.data.consent.remote.ConsentAuditApiService",
                 )
             }
         }
