@@ -18,6 +18,7 @@ public interface BookingApiService {
     @POST("v1/bookings")
     public suspend fun createBooking(
         @Body body: CreateBookingRequestDto,
+        @Header("Idempotency-Key") idempotencyKey: String,
     ): CreateBookingResponseDto
 
     @POST("v1/bookings/{id}/confirm")

@@ -2,6 +2,7 @@ package com.homeservices.customer.domain.rating
 
 import com.homeservices.customer.data.rating.RatingRepository
 import com.homeservices.customer.domain.rating.model.CustomerSubScores
+import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
@@ -15,5 +16,8 @@ public class SubmitRatingUseCase
             overall: Int,
             subScores: CustomerSubScores,
             comment: String?,
-        ): Flow<Result<Unit>> = repo.submitCustomerRating(bookingId, overall, subScores, comment)
+        ): Flow<Result<Unit>> {
+            val idempotencyKey = UUID.randomUUID().toString()
+            return repo.submitCustomerRating(bookingId, overall, subScores, comment, idempotencyKey)
+        }
     }

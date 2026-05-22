@@ -21,13 +21,13 @@ public class RatingRepositoryImplTest {
     @Test
     public fun `submitCustomerRating calls api with correct DTO`(): Unit =
         runTest {
-            coEvery { api.submit(any()) } returns Unit
+            coEvery { api.submit(any(), any()) } returns Unit
             val subScores = CustomerSubScores(punctuality = 5, skill = 4, behaviour = 3)
 
-            val results = repo.submitCustomerRating("bk-1", 5, subScores, "good").toList()
+            val results = repo.submitCustomerRating("bk-1", 5, subScores, "good", "test-key-1").toList()
 
             val captured = slot<com.homeservices.customer.data.rating.remote.dto.SubmitRatingRequestDto>()
-            coVerify { api.submit(capture(captured)) }
+            coVerify { api.submit(capture(captured), any()) }
             assertThat(captured.captured.side).isEqualTo("CUSTOMER_TO_TECH")
             assertThat(captured.captured.bookingId).isEqualTo("bk-1")
             assertThat(captured.captured.overall).isEqualTo(5)
@@ -38,11 +38,24 @@ public class RatingRepositoryImplTest {
     @Test
     public fun `submitCustomerRating returns failure on API error`(): Unit =
         runTest {
-            coEvery { api.submit(any()) } throws RuntimeException("network error")
+            coEvery { api.submit(any(), any()) } throws RuntimeException("network error")
 
-            val results = repo.submitCustomerRating("bk-1", 5, CustomerSubScores(5, 5, 5), null).toList()
+            val results = repo.submitCustomerRating("bk-1", 5, CustomerSubScores(5, 5, 5), null, "test-key-err").toList()
 
             assertThat(results.first().isFailure).isTrue()
+        }
+
+    @Test
+    public fun `submitCustomerRating passes idempotency key to api`(): Unit =
+        runTest {
+            coEvery { api.submit(any(), any()) } returns Unit
+            val subScores = CustomerSubScores(punctuality = 4, skill = 4, behaviour = 4)
+            val capturedKey = slot<String>()
+
+            repo.submitCustomerRating("bk-2", 4, subScores, null, "idem-key-abc").toList()
+
+            coVerify { api.submit(any(), capture(capturedKey)) }
+            assertThat(capturedKey.captured).isEqualTo("idem-key-abc")
         }
 
     @Test

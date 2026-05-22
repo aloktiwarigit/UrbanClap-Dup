@@ -20,7 +20,7 @@ internal class BookingRepositoryImpl
     constructor(
         private val api: BookingApiService,
     ) : BookingRepository {
-        override fun createBooking(request: BookingRequest): Flow<Result<BookingResult>> =
+        override fun createBooking(request: BookingRequest, idempotencyKey: String): Flow<Result<BookingResult>> =
             flow {
                 emit(
                     runCatching {
@@ -35,6 +35,7 @@ internal class BookingRepositoryImpl
                                     addressLatLng = LatLngDto(lat = request.addressLat, lng = request.addressLng),
                                     paymentMethod = request.paymentMethod.name,
                                 ),
+                                idempotencyKey = idempotencyKey,
                             ).toDomain()
                     },
                 )

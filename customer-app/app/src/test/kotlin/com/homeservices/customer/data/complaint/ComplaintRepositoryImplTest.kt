@@ -7,6 +7,7 @@ import com.homeservices.customer.data.complaint.remote.dto.CreateComplaintReques
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
@@ -30,7 +31,7 @@ public class ComplaintRepositoryImplTest {
     @Test
     public fun `createComplaint returns success result with correct response`(): Unit =
         runTest {
-            coEvery { api.createComplaint(any()) } returns mockResponse
+            coEvery { api.createComplaint(any(), any()) } returns mockResponse
 
             val results =
                 repo
@@ -39,6 +40,7 @@ public class ComplaintRepositoryImplTest {
                         "SERVICE_QUALITY",
                         "Some long enough description here.",
                         null,
+                        "test-key-1",
                     ).toList()
 
             assertThat(results).hasSize(1)
@@ -50,9 +52,9 @@ public class ComplaintRepositoryImplTest {
     @Test
     public fun `createComplaint passes photoStoragePath in request`(): Unit =
         runTest {
-            coEvery { api.createComplaint(any()) } returns mockResponse
+            coEvery { api.createComplaint(any(), any()) } returns mockResponse
 
-            repo.createComplaint("bk-1", "SERVICE_QUALITY", "Some description here.", "complaints/bk-1/uid/123.jpg").toList()
+            repo.createComplaint("bk-1", "SERVICE_QUALITY", "Some description here.", "complaints/bk-1/uid/123.jpg", "test-key-2").toList()
 
             coVerify {
                 api.createComplaint(
@@ -62,6 +64,7 @@ public class ComplaintRepositoryImplTest {
                         description = "Some description here.",
                         photoStoragePath = "complaints/bk-1/uid/123.jpg",
                     ),
+                    any(),
                 )
             }
         }
@@ -69,11 +72,23 @@ public class ComplaintRepositoryImplTest {
     @Test
     public fun `createComplaint returns failure when api throws`(): Unit =
         runTest {
-            coEvery { api.createComplaint(any()) } throws RuntimeException("network error")
+            coEvery { api.createComplaint(any(), any()) } throws RuntimeException("network error")
 
-            val results = repo.createComplaint("bk-1", "SERVICE_QUALITY", "Some description.", null).toList()
+            val results = repo.createComplaint("bk-1", "SERVICE_QUALITY", "Some description.", null, "test-key-err").toList()
 
             assertThat(results.first().isFailure).isTrue()
+        }
+
+    @Test
+    public fun `createComplaint passes idempotency key to api`(): Unit =
+        runTest {
+            coEvery { api.createComplaint(any(), any()) } returns mockResponse
+            val capturedKey = slot<String>()
+
+            repo.createComplaint("bk-1", "SERVICE_QUALITY", "Some description.", null, "idem-key-xyz").toList()
+
+            coVerify { api.createComplaint(any(), capture(capturedKey)) }
+            assertThat(capturedKey.captured).isEqualTo("idem-key-xyz")
         }
 
     @Test

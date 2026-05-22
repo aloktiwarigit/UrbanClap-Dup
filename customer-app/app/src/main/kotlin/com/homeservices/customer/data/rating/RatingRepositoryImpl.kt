@@ -18,6 +18,7 @@ internal class RatingRepositoryImpl
             overall: Int,
             subScores: CustomerSubScores,
             comment: String?,
+            idempotencyKey: String,
         ): Flow<Result<Unit>> =
             flow {
                 emit(
@@ -35,6 +36,7 @@ internal class RatingRepositoryImpl
                                     ),
                                 comment = comment,
                             ),
+                            idempotencyKey = idempotencyKey,
                         )
                     },
                 )

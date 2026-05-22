@@ -17,6 +17,7 @@ internal class ComplaintRepositoryImpl
             reasonCode: String,
             description: String,
             photoStoragePath: String?,
+            idempotencyKey: String,
         ): Flow<Result<ComplaintResponseDto>> =
             flow {
                 emit(
@@ -28,6 +29,7 @@ internal class ComplaintRepositoryImpl
                                 description = description,
                                 photoStoragePath = photoStoragePath,
                             ),
+                            idempotencyKey = idempotencyKey,
                         )
                     },
                 )

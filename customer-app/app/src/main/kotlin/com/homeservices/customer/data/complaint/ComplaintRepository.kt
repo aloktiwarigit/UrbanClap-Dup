@@ -9,6 +9,7 @@ public interface ComplaintRepository {
         reasonCode: String,
         description: String,
         photoStoragePath: String?,
+        idempotencyKey: String,
     ): Flow<Result<ComplaintResponseDto>>
 
     public fun getComplaintsForBooking(bookingId: String): Flow<Result<List<ComplaintResponseDto>>>
