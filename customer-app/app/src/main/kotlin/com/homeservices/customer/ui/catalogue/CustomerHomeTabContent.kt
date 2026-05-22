@@ -160,6 +160,7 @@ private fun PendingActionsSection(
     }
 }
 
+@Suppress("MagicNumber") // palette literals for fixed-light background contrast in dark mode
 @Composable
 private fun PendingActionCard(
     action: PendingAction,
