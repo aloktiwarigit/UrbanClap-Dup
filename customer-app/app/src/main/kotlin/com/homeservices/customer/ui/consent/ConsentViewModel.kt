@@ -42,6 +42,7 @@ public class ConsentViewModel
             _uiState.update { it.copy(marketingOptIn = value) }
         }
 
+        @Suppress("TooGenericExceptionCaught")
         public fun onConfirm() {
             val state = _uiState.value
             viewModelScope.launch {
@@ -63,6 +64,7 @@ public class ConsentViewModel
             }
         }
 
+        @Suppress("TooGenericExceptionCaught")
         public fun onDeclineAll() {
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true, error = null) }

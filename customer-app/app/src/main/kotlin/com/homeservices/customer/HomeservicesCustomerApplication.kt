@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
+private const val CONSENT_INIT_TIMEOUT_MS = 5_000L
+
 @HiltAndroidApp
 public class HomeservicesCustomerApplication : Application() {
     @EntryPoint
@@ -80,7 +82,7 @@ public class HomeservicesCustomerApplication : Application() {
                     .fromApplication(this@HomeservicesCustomerApplication, AnalyticsEntryPoint::class.java)
             val analyticsOptIn =
                 try {
-                    withTimeout(5_000L) {
+                    withTimeout(CONSENT_INIT_TIMEOUT_MS) {
                         analyticsEntryPoint
                             .consentRepository()
                             .consentState
@@ -89,7 +91,7 @@ public class HomeservicesCustomerApplication : Application() {
                     }
                 } catch (e: TimeoutCancellationException) {
                     io.sentry.Sentry.addBreadcrumb(
-                        io.sentry.Breadcrumb.info("PostHog init skipped — consent state unavailable after 5s"),
+                        io.sentry.Breadcrumb.info("PostHog init skipped — consent state unavailable after 5s: ${e.message}"),
                     )
                     false // default to no-op if consent state not available
                 }

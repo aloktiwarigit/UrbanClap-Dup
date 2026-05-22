@@ -71,6 +71,7 @@ public class ConsentRepositoryImpl
                     (state is ConsentState.Granted && state.version < CURRENT_CONSENT_VERSION)
             }
 
+        @Suppress("TooGenericExceptionCaught")
         override suspend fun grantConsent(
             analyticsOptIn: Boolean,
             crashOptIn: Boolean,
@@ -106,6 +107,7 @@ public class ConsentRepositoryImpl
             }
         }
 
+        @Suppress("TooGenericExceptionCaught")
         override suspend fun revokeConsent() {
             dataStore.edit { prefs ->
                 prefs[KEY_CONSENT_STATE] = STATE_REVOKED
