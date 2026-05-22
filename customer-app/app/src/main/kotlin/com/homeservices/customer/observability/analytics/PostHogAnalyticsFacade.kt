@@ -6,6 +6,7 @@ import com.posthog.PostHog
 import com.posthog.android.PostHogAndroid
 import com.posthog.android.PostHogAndroidConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -16,38 +17,41 @@ public class PostHogAnalyticsFacade
         @ApplicationContext private val context: Context,
         private val buildInfoProvider: BuildInfoProvider,
     ) : AnalyticsFacade {
-        @Volatile private var posthogReady: Boolean = false
+        private val posthogInitialized = AtomicBoolean(false)
 
         /**
          * Initializes PostHog if [analyticsOptIn] is true and initialization has not yet occurred.
          * Skips silently when the API key is blank (CI / local dev without a key).
          * Safe to call multiple times — only the first call with [analyticsOptIn]=true takes effect.
+         * Thread-safe: uses compareAndSet to prevent double-initialization under concurrent calls.
          */
         public fun initIfConsented(analyticsOptIn: Boolean) {
-            if (analyticsOptIn && !posthogReady) {
-                val apiKey = buildInfoProvider.postHogApiKey
-                if (apiKey.isBlank()) return
-                PostHogAndroid.setup(context, PostHogAndroidConfig(apiKey, "https://app.posthog.com"))
-                posthogReady = true
+            if (!analyticsOptIn) return
+            if (!posthogInitialized.compareAndSet(false, true)) return  // already initialized or initializing
+            val apiKey = buildInfoProvider.postHogApiKey
+            if (apiKey.isBlank()) {
+                posthogInitialized.set(false)  // allow retry if key becomes available
+                return
             }
+            PostHogAndroid.setup(context, PostHogAndroidConfig(apiKey, "https://app.posthog.com"))
         }
 
         override fun track(event: String, properties: Map<String, Any>) {
-            if (!posthogReady) return
+            if (!posthogInitialized.get()) return
             runCatching {
                 PostHog.capture(event, properties = properties)
             }
         }
 
         override fun identify(userId: String, traits: Map<String, Any>) {
-            if (!posthogReady) return
+            if (!posthogInitialized.get()) return
             runCatching {
                 PostHog.identify(userId, userProperties = traits)
             }
         }
 
         override fun reset() {
-            if (!posthogReady) return
+            if (!posthogInitialized.get()) return
             runCatching {
                 PostHog.reset()
             }

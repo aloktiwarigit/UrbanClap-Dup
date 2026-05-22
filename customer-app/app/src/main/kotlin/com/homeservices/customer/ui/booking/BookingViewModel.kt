@@ -223,6 +223,8 @@ internal class BookingViewModel
                                         AnalyticsEvents.PAYMENT_SUCCESS,
                                         mapOf("booking_id" to bookingId),
                                     )
+                                }
+                                runCatching {
                                     analytics.track(
                                         AnalyticsEvents.BOOKING_CREATE_SUCCESS,
                                         mapOf("booking_id" to bookingId),

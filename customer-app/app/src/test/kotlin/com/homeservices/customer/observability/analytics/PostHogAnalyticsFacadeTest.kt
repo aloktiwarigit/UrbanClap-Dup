@@ -9,6 +9,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
+import java.util.concurrent.atomic.AtomicBoolean
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -21,7 +22,7 @@ import org.robolectric.annotation.Config
  * Unit tests for [PostHogAnalyticsFacade].
  *
  * [PostHogAndroid] is mocked via mockkObject so that setup() never touches the network.
- * The key observable is the internal [posthogReady] flag:
+ * The key observable is the internal [posthogInitialized] AtomicBoolean:
  *  - false initially
  *  - stays false when consent=false or key is blank
  *  - becomes true after initIfConsented(true) with a non-blank key
@@ -48,54 +49,54 @@ public class PostHogAnalyticsFacadeTest {
         return PostHogAnalyticsFacade(context, buildInfo)
     }
 
-    private fun posthogReady(facade: PostHogAnalyticsFacade): Boolean {
-        val field = PostHogAnalyticsFacade::class.java.getDeclaredField("posthogReady")
+    private fun posthogInitialized(facade: PostHogAnalyticsFacade): Boolean {
+        val field = PostHogAnalyticsFacade::class.java.getDeclaredField("posthogInitialized")
         field.isAccessible = true
-        return field.getBoolean(facade)
+        return (field.get(facade) as AtomicBoolean).get()
     }
 
     @Test
-    public fun `posthogReady is false initially`() {
+    public fun `posthogInitialized is false initially`() {
         val sut = buildFacade("ph-test-key")
-        assertThat(posthogReady(sut)).isFalse()
+        assertThat(posthogInitialized(sut)).isFalse()
     }
 
     @Test
-    public fun `initIfConsented false does not set posthogReady`() {
+    public fun `initIfConsented false does not set posthogInitialized`() {
         val sut = buildFacade("ph-test-key")
         sut.initIfConsented(false)
-        assertThat(posthogReady(sut)).isFalse()
+        assertThat(posthogInitialized(sut)).isFalse()
     }
 
     @Test
-    public fun `initIfConsented true with blank key does not set posthogReady`() {
+    public fun `initIfConsented true with blank key does not set posthogInitialized`() {
         val sut = buildFacade("")
         sut.initIfConsented(true)
-        assertThat(posthogReady(sut)).isFalse()
+        assertThat(posthogInitialized(sut)).isFalse()
     }
 
     @Test
-    public fun `initIfConsented true with non-blank key sets posthogReady`() {
+    public fun `initIfConsented true with non-blank key sets posthogInitialized`() {
         val sut = buildFacade("ph-test-key-abc123")
         sut.initIfConsented(true)
-        assertThat(posthogReady(sut)).isTrue()
+        assertThat(posthogInitialized(sut)).isTrue()
     }
 
     @Test
-    public fun `track is no-op when posthogReady is false`() {
+    public fun `track is no-op when posthogInitialized is false`() {
         val sut = buildFacade("ph-test-key")
-        // posthogReady is false — track should not throw
+        // posthogInitialized is false — track should not throw
         sut.track("test_event")
     }
 
     @Test
-    public fun `identify is no-op when posthogReady is false`() {
+    public fun `identify is no-op when posthogInitialized is false`() {
         val sut = buildFacade("ph-test-key")
         sut.identify("user-123")
     }
 
     @Test
-    public fun `reset is no-op when posthogReady is false`() {
+    public fun `reset is no-op when posthogInitialized is false`() {
         val sut = buildFacade("ph-test-key")
         sut.reset()
     }
@@ -105,6 +106,6 @@ public class PostHogAnalyticsFacadeTest {
         val sut = buildFacade("ph-test-key-abc123")
         sut.initIfConsented(true)
         sut.initIfConsented(true)
-        assertThat(posthogReady(sut)).isTrue()
+        assertThat(posthogInitialized(sut)).isTrue()
     }
 }

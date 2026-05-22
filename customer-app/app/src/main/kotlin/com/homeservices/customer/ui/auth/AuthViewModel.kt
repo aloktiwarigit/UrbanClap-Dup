@@ -43,7 +43,7 @@ public class AuthViewModel
         private var emailAuthJob: Job? = null
 
         public fun initAuth(activity: FragmentActivity) {
-            runCatching { analytics.track(AnalyticsEvents.AUTH_START) }
+            viewModelScope.launch { runCatching { analytics.track(AnalyticsEvents.AUTH_START) } }
             // FragmentActivity IS-A Context; pass it for both the Context and FragmentActivity params
             when (orchestrator.start(activity, activity)) {
                 AuthOrchestrator.StartResult.TruecallerLaunched -> {
