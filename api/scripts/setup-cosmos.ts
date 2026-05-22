@@ -17,6 +17,12 @@ const containers = [
   { id: 'audit_log',         partitionKey: '/partitionKey', ttl: undefined },
   { id: 'health',            partitionKey: '/id',           ttl: undefined },
   { id: 'ssc_levies',        partitionKey: '/quarter',      ttl: undefined },
+  // DPDPA right-to-erasure: one document per request, partitioned by
+  // /partitionKey (set to userId at submit time per schemas/erasure-request.ts).
+  // The repo at api/src/cosmos/erasure-request-repository.ts queries this
+  // container; if it does not exist, admin compliance page server-render
+  // crashes with "Resource not found" → error.tsx "Something stalled".
+  { id: 'erasure_requests',  partitionKey: '/partitionKey', ttl: undefined },
   // E07-S04: customer credit wallet for no-show compensation — partitioned by /id
   // (one document per bookingId, idempotency-safe via conflict on duplicate /id)
   // NOTE (P1-1): this container is partitioned by /id, NOT /customerId.
