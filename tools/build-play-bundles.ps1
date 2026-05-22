@@ -65,6 +65,18 @@ function Get-ReleaseProperty($properties, $prefix, $name) {
     return $null
 }
 
+function Assert-GoogleServicesNotStub($app) {
+    $gsFile = Join-Path $app.Directory "app\google-services.json"
+    if (-not (Test-Path -LiteralPath $gsFile -PathType Leaf)) {
+        throw "google-services.json not found for $($app.Name)-app at $gsFile. The committed file is a stub; the real one is materialised by CI from the GOOGLE_SERVICES_JSON secret. For local Play AAB builds, drop the real file at this path before re-running."
+    }
+
+    $content = Get-Content -LiteralPath $gsFile -Raw
+    if ($content -match "PROJECT_ID_PLACEHOLDER" -or $content -match "AIzaSyPLACEHOLDER" -or $content -match "PROJECT_NUMBER_PLACEHOLDER") {
+        throw "google-services.json for $($app.Name)-app contains placeholder markers (SEC-01 stub). Refusing to build a release AAB with stub Firebase config — Auth/FCM would be broken in the published app. Replace the stub with the real google-services.json from Firebase Console (or restore from your GOOGLE_SERVICES_JSON GitHub secret) before re-running."
+    }
+}
+
 function Assert-SigningConfig($app) {
     $propertiesPath = Join-Path $app.Directory "local.properties"
     $properties = Read-LocalProperties $propertiesPath
@@ -100,6 +112,7 @@ function Assert-SigningConfig($app) {
 }
 
 foreach ($app in $apps) {
+    Assert-GoogleServicesNotStub $app
     Assert-SigningConfig $app
 
     $tasks = @()
