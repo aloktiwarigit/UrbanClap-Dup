@@ -56,14 +56,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-// ── Colour tokens (match CatalogueHomeScreen tokens) ─────────────────────────
-private val BrandGreen = Color(0xFF0B3D2E)
-private val WarmIvory = Color(0xFFFBF7EF)
-private val SurfaceWhite = Color(0xFFFFFFFF)
-private val MutedGreen = Color(0xFFE8F1EC)
-private val CardBorder = Color(0xFFDED8CD)
-private val TextPrimary = Color(0xFF18231F)
-private val TextSecondary = Color(0xFF5F6C66)
+// ── Colour tokens (keep only those not in design-system token mapping) ────────
 private val CreditColor = Color(0xFF1A7A4A)
 private val DebitColor = Color(0xFFC0392B)
 private val BrandGreenDark = Color(0xFF1A5C44)
@@ -77,7 +70,7 @@ internal fun WalletScreen(
     val balanceState by viewModel.balanceState.collectAsStateWithLifecycle()
     val ledgerState by viewModel.ledgerState.collectAsStateWithLifecycle()
     Scaffold(
-        containerColor = WarmIvory,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = { WalletTopBar(onBack = onBack) },
     ) { scaffoldPadding ->
         WalletContent(
@@ -109,7 +102,7 @@ internal fun WalletContent(
             Text(
                 text = stringResource(R.string.wallet_ledger_title),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(horizontal = 20.dp),
             )
             Spacer(Modifier.height(8.dp))
@@ -121,7 +114,7 @@ internal fun WalletContent(
                         modifier = Modifier.fillMaxWidth().height(160.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        CircularProgressIndicator(color = BrandGreen, modifier = Modifier.size(32.dp))
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
                     }
                 }
             is LedgerUiState.Error ->
@@ -144,7 +137,7 @@ private fun WalletTopBar(onBack: () -> Unit) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(WarmIvory)
+                .background(MaterialTheme.colorScheme.background)
                 .statusBarsPadding()
                 .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -153,14 +146,14 @@ private fun WalletTopBar(onBack: () -> Unit) {
             Icon(
                 Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = stringResource(R.string.wallet_back_content_desc),
-                tint = BrandGreen,
+                tint = MaterialTheme.colorScheme.primary,
             )
         }
         Spacer(Modifier.width(4.dp))
         Text(
             text = stringResource(R.string.wallet_screen_title),
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-            color = TextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }
@@ -176,7 +169,7 @@ private fun BalanceHeroCard(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp)
                 .clip(RoundedCornerShape(20.dp))
-                .background(Brush.horizontalGradient(listOf(BrandGreen, BrandGreenDark))),
+                .background(Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primary, BrandGreenDark))),
         contentAlignment = Alignment.Center,
     ) {
         when (balanceState) {
@@ -185,7 +178,7 @@ private fun BalanceHeroCard(
                     modifier = Modifier.height(100.dp).fillMaxWidth(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(32.dp))
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(32.dp))
                 }
             is WalletBalanceUiState.Error ->
                 Column(
@@ -195,14 +188,14 @@ private fun BalanceHeroCard(
                     Text(
                         text = stringResource(R.string.wallet_balance_error),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.85f),
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
                     )
                     Spacer(Modifier.height(10.dp))
                     Button(
                         onClick = onRetry,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.2f)),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f)),
                     ) {
-                        Text(stringResource(R.string.wallet_retry_cta), color = Color.White)
+                        Text(stringResource(R.string.wallet_retry_cta), color = MaterialTheme.colorScheme.onPrimary)
                     }
                 }
             is WalletBalanceUiState.Ready ->
@@ -221,20 +214,20 @@ private fun BalanceReadyContent(balance: WalletBalance) {
             Icon(
                 Icons.Default.AccountBalanceWallet,
                 contentDescription = null,
-                tint = Color.White.copy(alpha = 0.8f),
+                tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
                 modifier = Modifier.size(20.dp),
             )
             Spacer(Modifier.width(8.dp))
             Text(
                 text = stringResource(R.string.wallet_balance_label),
                 style = MaterialTheme.typography.labelLarge,
-                color = Color.White.copy(alpha = 0.8f),
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
             )
         }
         Text(
             text = formatInr(balance.balanceInPaise),
             style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.ExtraBold),
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onPrimary,
         )
     }
 }
@@ -252,8 +245,8 @@ internal fun LedgerEntryRow(entry: LedgerEntry) {
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 5.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(SurfaceWhite)
-                .border(1.dp, CardBorder, RoundedCornerShape(14.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
                 .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -263,22 +256,22 @@ internal fun LedgerEntryRow(entry: LedgerEntry) {
             modifier =
                 Modifier
                     .size(40.dp)
-                    .background(MutedGreen, RoundedCornerShape(12.dp)),
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp)),
         ) {
-            Icon(typeIcon, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(22.dp))
+            Icon(typeIcon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
         }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 text = entry.reason,
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = formatLedgerDate(entry.createdAt),
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Text(
@@ -298,7 +291,7 @@ private fun LedgerEmptyState() {
         Text(
             text = stringResource(R.string.wallet_no_transactions),
             style = MaterialTheme.typography.bodyLarge,
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -313,13 +306,13 @@ private fun LedgerErrorState(onRetry: () -> Unit) {
         Text(
             text = stringResource(R.string.wallet_ledger_error),
             style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Button(
             onClick = onRetry,
-            colors = ButtonDefaults.buttonColors(containerColor = BrandGreen),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
         ) {
-            Text(stringResource(R.string.wallet_retry_cta), color = Color.White)
+            Text(stringResource(R.string.wallet_retry_cta), color = MaterialTheme.colorScheme.onPrimary)
         }
     }
 }

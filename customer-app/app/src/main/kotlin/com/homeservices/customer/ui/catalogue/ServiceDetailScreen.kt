@@ -58,21 +58,13 @@ import com.homeservices.customer.domain.catalogue.model.Service
 import com.homeservices.customer.ui.shared.TrustDossierCard
 import com.homeservices.customer.ui.shared.TrustDossierUiState
 import com.homeservices.customer.ui.shared.TrustDossierViewModel
+import com.homeservices.designsystem.theme.LocalHomeservicesExtendedColors
 
-// ── Brand tokens (aligned with ServiceListScreen / CatalogueHomeScreen) ───────
-private val WarmIvory = Color(0xFFFBF7EF)
-private val BrandGreen = Color(0xFF0B3D2E)
-private val HeroStart = Color(0xFF062A20)
-private val HeroEnd = Color(0xFF0B3D2E)
-private val TextPrimary = Color(0xFF18231F)
-private val TextSecondary = Color(0xFF5F6C66)
-private val CardBorder = Color(0xFFDED8CD)
-private val MetricGreenBg = Color(0xFFE8F1EC)
+// ── Brand tokens (keep only those not in design-system token mapping) ─────────
 private val MetricNeutralBg = Color(0xFFF5F4F0)
 private val SkeletonLine = Color(0xFFEDE7DD)
 private val PillShape = RoundedCornerShape(percent = 50)
 private val CardShape = RoundedCornerShape(12.dp)
-private val HeroScrim = Color(0xFF000000)
 
 @Composable
 internal fun ServiceDetailScreen(
@@ -92,7 +84,7 @@ internal fun ServiceDetailScreen(
         }
     }
 
-    Scaffold(containerColor = WarmIvory) { innerPadding ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { innerPadding ->
         ServiceDetailContent(
             uiState = uiState,
             confidenceScoreState = confidenceScoreState,
@@ -113,7 +105,7 @@ internal fun ServiceDetailContent(
     onBack: (() -> Unit)? = null,
     trustDossierUiState: TrustDossierUiState = TrustDossierUiState.Unavailable,
 ) {
-    Surface(modifier = modifier.fillMaxSize(), color = WarmIvory) {
+    Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (uiState) {
             is ServiceDetailUiState.Loading -> ServiceDetailSkeleton()
             is ServiceDetailUiState.Error -> ServiceDetailError()
@@ -210,7 +202,14 @@ private fun ServiceHero(
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .background(Brush.verticalGradient(listOf(HeroStart, HeroEnd))),
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        LocalHomeservicesExtendedColors.current.brandPrimaryHover,
+                                        MaterialTheme.colorScheme.primary,
+                                    ),
+                                ),
+                            ),
                 )
             }
         }
@@ -224,7 +223,7 @@ private fun ServiceHero(
                     .align(Alignment.BottomCenter)
                     .background(
                         Brush.verticalGradient(
-                            listOf(Color.Transparent, HeroScrim.copy(alpha = 0.72f)),
+                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.72f)),
                         ),
                     ),
         )
@@ -238,13 +237,13 @@ private fun ServiceHero(
                         .statusBarsPadding()
                         .padding(12.dp),
                 shape = CircleShape,
-                color = HeroScrim.copy(alpha = 0.40f),
+                color = Color.Black.copy(alpha = 0.40f),
             ) {
                 IconButton(onClick = back, modifier = Modifier.size(40.dp)) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = stringResource(R.string.service_detail_back_desc),
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
             }
@@ -261,21 +260,21 @@ private fun ServiceHero(
             Text(
                 text = stringResource(R.string.service_detail_eyebrow),
                 style = MaterialTheme.typography.labelLarge,
-                color = Color.White.copy(alpha = 0.80f),
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.80f),
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
                 text = service.name,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onPrimary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = service.description,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.80f),
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.80f),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -332,8 +331,8 @@ private fun ServiceMetricTile(
     Surface(
         modifier = modifier,
         shape = CardShape,
-        color = if (emphasized) MetricGreenBg else MetricNeutralBg,
-        border = BorderStroke(1.dp, if (emphasized) BrandGreen.copy(alpha = 0.20f) else CardBorder),
+        color = if (emphasized) MaterialTheme.colorScheme.surfaceVariant else MetricNeutralBg,
+        border = BorderStroke(1.dp, if (emphasized) MaterialTheme.colorScheme.primary.copy(alpha = 0.20f) else MaterialTheme.colorScheme.outline),
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -342,7 +341,7 @@ private fun ServiceMetricTile(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -350,7 +349,7 @@ private fun ServiceMetricTile(
                 text = value,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (emphasized) BrandGreen else TextPrimary,
+                color = if (emphasized) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -363,8 +362,8 @@ private fun ServiceQualityPanel() {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = CardShape,
-        color = Color.White,
-        border = BorderStroke(1.dp, CardBorder),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -374,12 +373,12 @@ private fun ServiceQualityPanel() {
                 text = stringResource(R.string.service_detail_quality_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
                 text = stringResource(R.string.service_detail_quality_body),
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -394,8 +393,8 @@ private fun ServiceSection(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = CardShape,
-        color = Color.White,
-        border = BorderStroke(1.dp, CardBorder),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -406,12 +405,12 @@ private fun ServiceSection(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             content()
@@ -429,13 +428,13 @@ private fun ServiceCheckRow(text: String) {
         Icon(
             imageVector = Icons.Filled.CheckCircle,
             contentDescription = null,
-            tint = BrandGreen,
+            tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(top = 2.dp).size(16.dp),
         )
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
-            color = TextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f),
         )
     }
@@ -454,19 +453,19 @@ private fun AddOnRow(
         Text(
             text = name,
             style = MaterialTheme.typography.bodyMedium,
-            color = TextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f),
         )
         Surface(
             shape = PillShape,
-            color = MetricGreenBg,
-            border = BorderStroke(1.dp, BrandGreen.copy(alpha = 0.20f)),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)),
         ) {
             Text(
                 text = "+$price",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
-                color = BrandGreen,
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
             )
         }
@@ -480,7 +479,7 @@ private fun ServiceBookingBar(
 ) {
     Surface(
         shadowElevation = 12.dp,
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
@@ -495,18 +494,18 @@ private fun ServiceBookingBar(
                 Text(
                     text = stringResource(R.string.service_price_label),
                     style = MaterialTheme.typography.labelMedium,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
                     text = formatPrice(service.basePrice),
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = BrandGreen,
+                    color = MaterialTheme.colorScheme.primary,
                 )
                 Text(
                     text = stringResource(R.string.service_detail_cta_support),
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -518,8 +517,8 @@ private fun ServiceBookingBar(
                 shape = PillShape,
                 colors =
                     ButtonDefaults.buttonColors(
-                        containerColor = BrandGreen,
-                        contentColor = Color.White,
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
                     ),
             ) {
                 Text(
@@ -540,8 +539,8 @@ private fun ServiceDetailError() {
         Surface(
             modifier = Modifier.padding(24.dp),
             shape = CardShape,
-            color = Color.White,
-            border = BorderStroke(1.dp, CardBorder),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),
@@ -552,13 +551,13 @@ private fun ServiceDetailError() {
                     text = stringResource(R.string.catalogue_error_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center,
                 )
                 Text(
                     text = stringResource(R.string.catalogue_error),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
             }

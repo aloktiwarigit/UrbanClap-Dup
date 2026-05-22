@@ -47,15 +47,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.catalogue.model.Service
+import com.homeservices.designsystem.theme.LocalHomeservicesExtendedColors
 
-private val WarmIvory = Color(0xFFFBF7EF)
-private val AppBarStart = Color(0xFF062A20)
-private val AppBarEnd = Color(0xFF0B3D2E)
-private val BrandGreen = Color(0xFF0B3D2E)
-private val ServiceTitle = Color(0xFF18231F)
-private val ServiceDescription = Color(0xFF5F6C66)
-private val ServiceCardBorder = Color(0xFFDED8CD)
-private val DurationChipBackground = Color(0xFFE8F1EC)
 private val SkeletonLine = Color(0xFFEDE7DD)
 private val ServiceCardShape = RoundedCornerShape(12.dp)
 private val PillShape = RoundedCornerShape(percent = 50)
@@ -69,18 +62,20 @@ internal fun ServiceListScreen(
     photoFirstCatalogueEnabled: Boolean = false,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val appBarStart = LocalHomeservicesExtendedColors.current.brandPrimaryHover
+    val appBarEnd = MaterialTheme.colorScheme.primary
     Scaffold(
-        containerColor = WarmIvory,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 modifier =
                     Modifier.background(
-                        Brush.horizontalGradient(listOf(AppBarStart, AppBarEnd)),
+                        Brush.horizontalGradient(listOf(appBarStart, appBarEnd)),
                     ),
                 title = {
                     Text(
                         text = stringResource(R.string.service_list_title),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onPrimary,
                         fontWeight = FontWeight.SemiBold,
                     )
                 },
@@ -89,7 +84,7 @@ internal fun ServiceListScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.service_detail_back_desc),
-                            tint = Color.White,
+                            tint = MaterialTheme.colorScheme.onPrimary,
                         )
                     }
                 },
@@ -97,8 +92,8 @@ internal fun ServiceListScreen(
                     TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent,
                         scrolledContainerColor = Color.Transparent,
-                        navigationIconContentColor = Color.White,
-                        titleContentColor = Color.White,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
                     ),
             )
         },
@@ -119,7 +114,7 @@ internal fun ServiceListContent(
     modifier: Modifier = Modifier,
     photoFirstCatalogueEnabled: Boolean = false,
 ) {
-    Surface(modifier = modifier.fillMaxSize(), color = WarmIvory) {
+    Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (uiState) {
             is ServiceListUiState.Loading -> ServiceListSkeleton()
             is ServiceListUiState.Error -> {
@@ -140,7 +135,7 @@ internal fun ServiceListContent(
                         Text(
                             text = stringResource(R.string.service_list_subtitle),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = ServiceDescription,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                         )
                     }
@@ -178,19 +173,19 @@ private fun EmptyServiceList() {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Surface(
                 shape = PillShape,
-                color = DurationChipBackground,
+                color = MaterialTheme.colorScheme.surfaceVariant,
             ) {
                 Icon(
                     imageVector = Icons.Filled.Build,
                     contentDescription = null,
-                    tint = BrandGreen,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(14.dp).size(24.dp),
                 )
             }
             Spacer(Modifier.height(16.dp))
             Text(
                 text = stringResource(R.string.service_list_empty_title),
-                color = ServiceTitle,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
@@ -198,7 +193,7 @@ private fun EmptyServiceList() {
             Spacer(Modifier.height(8.dp))
             Text(
                 text = stringResource(R.string.service_list_empty_copy),
-                color = ServiceDescription,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center,
             )
@@ -215,9 +210,9 @@ private fun ServiceCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
         shape = ServiceCardShape,
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        border = BorderStroke(1.dp, ServiceCardBorder),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -240,7 +235,7 @@ private fun ServiceInfoColumn(
     Column(modifier = modifier) {
         Text(
             text = service.name,
-            color = ServiceTitle,
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
@@ -249,7 +244,7 @@ private fun ServiceInfoColumn(
         Spacer(Modifier.height(4.dp))
         Text(
             text = service.description,
-            color = ServiceDescription,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 13.sp,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -267,7 +262,7 @@ private fun ServiceActionColumn(
     Column(horizontalAlignment = Alignment.End) {
         Text(
             text = formatPrice(service.basePrice),
-            color = BrandGreen,
+            color = MaterialTheme.colorScheme.primary,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
@@ -279,8 +274,8 @@ private fun ServiceActionColumn(
             shape = PillShape,
             colors =
                 ButtonDefaults.buttonColors(
-                    containerColor = BrandGreen,
-                    contentColor = Color.White,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
                 ),
             elevation =
                 ButtonDefaults.buttonElevation(
@@ -303,7 +298,7 @@ private fun ServiceActionColumn(
 private fun ServiceDurationChip(durationMinutes: Int) {
     Surface(
         shape = PillShape,
-        color = DurationChipBackground,
+        color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -312,13 +307,13 @@ private fun ServiceDurationChip(durationMinutes: Int) {
             Icon(
                 imageVector = Icons.Filled.Build,
                 contentDescription = null,
-                tint = BrandGreen,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(14.dp),
             )
             Spacer(Modifier.width(4.dp))
             Text(
                 text = stringResource(R.string.service_duration_label, durationMinutes),
-                color = BrandGreen,
+                color = MaterialTheme.colorScheme.primary,
                 fontSize = 12.sp,
                 maxLines = 1,
             )
@@ -361,10 +356,10 @@ private fun ServiceListSkeleton(modifier: Modifier = Modifier) {
                         .padding(horizontal = 16.dp, vertical = 6.dp)
                         .height(128.dp),
                 shape = ServiceCardShape,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 0.dp,
                 shadowElevation = 2.dp,
-                border = BorderStroke(1.dp, ServiceCardBorder),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             ) {
                 Row(
                     modifier = Modifier.fillMaxSize().padding(16.dp),
