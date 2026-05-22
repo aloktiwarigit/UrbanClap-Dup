@@ -51,6 +51,7 @@ import com.homeservices.customer.domain.wallet.model.LedgerEntry
 import com.homeservices.customer.domain.wallet.model.LedgerEntryType
 import com.homeservices.customer.domain.wallet.model.WalletBalance
 import com.homeservices.customer.ui.util.formatInr
+import com.homeservices.designsystem.components.HsScreenTitle
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -150,10 +151,9 @@ private fun WalletTopBar(onBack: () -> Unit) {
             )
         }
         Spacer(Modifier.width(4.dp))
-        Text(
+        HsScreenTitle(
             text = stringResource(R.string.wallet_screen_title),
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }

@@ -33,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.homeservices.customer.R
+import com.homeservices.designsystem.components.HsScreenTitle
 
 
 /**
@@ -79,13 +80,8 @@ public fun PrivacyAndDataScreen(
                     )
                 }
                 Spacer(Modifier.width(8.dp))
-                Text(
+                HsScreenTitle(
                     text = stringResource(R.string.settings_privacy_and_data),
-                    style =
-                        MaterialTheme.typography.headlineMedium.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                        ),
-                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
 

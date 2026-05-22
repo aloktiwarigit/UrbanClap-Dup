@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.domain.auth.model.AuthState
+import com.homeservices.designsystem.components.HsScreenTitle
 
 // ── Brand tokens (aligned with rest of design system) ────────────────────────
 private val DangerRed = Color(0xFFDC2626)
@@ -267,13 +268,9 @@ private fun ProfileHeader(user: AuthState.Authenticated?) {
                 }
             }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
+                HsScreenTitle(
                     text = user?.displayName ?: "मेहमान",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.headlineMedium.copy(fontSize = 20.sp),
                 )
                 if (user?.phoneLastFour != null) {
                     Text(

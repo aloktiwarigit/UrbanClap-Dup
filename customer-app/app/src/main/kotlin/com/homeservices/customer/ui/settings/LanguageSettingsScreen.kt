@@ -19,6 +19,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.components.HsTrustBadge
 import com.homeservices.designsystem.locale.DefaultLanguageOptions
 import com.homeservices.designsystem.locale.LanguagePickerCard
@@ -47,7 +48,7 @@ public fun LanguageSettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             HsTrustBadge(text = "Settings")
-            Text(
+            HsScreenTitle(
                 text = stringResource(R.string.settings_language_title),
                 style = MaterialTheme.typography.headlineSmall,
             )
