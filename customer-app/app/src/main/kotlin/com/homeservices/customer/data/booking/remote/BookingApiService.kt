@@ -25,6 +25,7 @@ public interface BookingApiService {
     public suspend fun confirmBooking(
         @Path("id") bookingId: String,
         @Body body: ConfirmBookingRequestDto,
+        // Nullable: Retrofit 2 omits the header when null (play-integrity not always available)
         @Header("X-Integrity-Token") integrityToken: String? = null,
     ): ConfirmBookingResponseDto
 
