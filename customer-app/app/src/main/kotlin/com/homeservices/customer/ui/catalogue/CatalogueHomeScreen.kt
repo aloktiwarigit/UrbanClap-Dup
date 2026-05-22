@@ -189,6 +189,7 @@ internal fun CatalogueHomeScreen(
     photoFirstCatalogueEnabled: Boolean = false,
     onPendingActionRoute: (String) -> Unit = {},
     onPriceApproval: (String) -> Unit = {},
+    onManageConsentClick: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val homeUiState by customerHomeViewModel.homeUiState.collectAsStateWithLifecycle()
@@ -207,6 +208,7 @@ internal fun CatalogueHomeScreen(
         photoFirstCatalogueEnabled = photoFirstCatalogueEnabled,
         onPendingActionRoute = onPendingActionRoute,
         onPriceApproval = onPriceApproval,
+        onManageConsentClick = onManageConsentClick,
     )
 }
 
@@ -226,6 +228,7 @@ internal fun CatalogueHomeContent(
     homeUiState: CustomerHomeUiState = CustomerHomeUiState.Loading,
     onPendingActionRoute: (String) -> Unit = {},
     onPriceApproval: (String) -> Unit = {},
+    onManageConsentClick: () -> Unit = {},
 ) {
     var selectedNav by remember { mutableIntStateOf(0) }
 
@@ -260,6 +263,7 @@ internal fun CatalogueHomeContent(
             photoFirstCatalogueEnabled = photoFirstCatalogueEnabled,
             onPendingActionRoute = onPendingActionRoute,
             onPriceApproval = onPriceApproval,
+            onManageConsentClick = onManageConsentClick,
         )
     }
 }
@@ -279,6 +283,7 @@ private fun HomeTabs(
     homeUiState: CustomerHomeUiState = CustomerHomeUiState.Loading,
     onPendingActionRoute: (String) -> Unit = {},
     onPriceApproval: (String) -> Unit = {},
+    onManageConsentClick: () -> Unit = {},
 ) {
     when (selectedNav) {
         0 ->
@@ -312,6 +317,7 @@ private fun HomeTabs(
                 modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
                 onLanguageClick = onProfileLanguageClick,
                 onBookingsClick = { onSelectNav(1) },
+                onManageConsentClick = onManageConsentClick,
             )
     }
 }

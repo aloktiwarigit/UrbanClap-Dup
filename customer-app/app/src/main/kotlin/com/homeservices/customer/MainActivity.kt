@@ -14,6 +14,7 @@ import com.homeservices.customer.data.pendingaction.PendingActionStore
 import com.homeservices.customer.di.BuildInfoProvider
 import com.homeservices.customer.domain.booking.model.PaymentResult
 import com.homeservices.customer.domain.flags.FeatureFlags
+import com.homeservices.customer.domain.consent.IsConsentRequiredUseCase
 import com.homeservices.customer.domain.locale.IsFirstLaunchUseCase
 import com.homeservices.customer.navigation.AppNavigation
 import com.homeservices.customer.navigation.CustomerRouteResolver
@@ -65,6 +66,8 @@ public class MainActivity :
 
     @Inject public lateinit var isFirstLaunch: IsFirstLaunchUseCase
 
+    @Inject public lateinit var isConsentRequired: IsConsentRequiredUseCase
+
     @Inject public lateinit var featureFlags: FeatureFlags
 
     /** Injected to support cold-start tier-ladder route resolution (E11-S01b-1). */
@@ -105,6 +108,7 @@ public class MainActivity :
                     activity = this,
                     pendingActionStore = pendingActionStore,
                     isFirstLaunch = isFirstLaunch,
+                    isConsentRequired = isConsentRequired,
                     featureFlags = featureFlags,
                     routeResolver = routeResolver,
                     initialDeepLink = currentDeepLink,

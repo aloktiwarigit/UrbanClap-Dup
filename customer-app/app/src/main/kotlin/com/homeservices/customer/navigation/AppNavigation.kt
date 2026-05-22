@@ -29,7 +29,9 @@ import com.homeservices.customer.data.auth.SessionManager
 import com.homeservices.customer.data.pendingaction.PendingActionStore
 import com.homeservices.customer.domain.auth.model.AuthState
 import com.homeservices.customer.domain.flags.FeatureFlags
+import com.homeservices.customer.domain.consent.IsConsentRequiredUseCase
 import com.homeservices.customer.domain.locale.IsFirstLaunchUseCase
+import com.homeservices.customer.ui.consent.DpdpConsentScreen
 import com.homeservices.customer.observability.SentryContextBinder
 import com.homeservices.customer.ui.locale.FirstLaunchLanguageScreen
 import com.homeservices.customer.ui.rating.RatingRoutes
@@ -46,6 +48,13 @@ public object LocaleRoutes {
     public const val DELETE_ACCOUNT: String = "delete_account"
     public const val DELETE_ACCOUNT_CONFIRM: String = "delete_account_confirm"
     public const val DELETE_ACCOUNT_COOL_OFF: String = "delete_account_cool_off"
+
+    // DPDP consent gate (WS-D) — shown on first launch before locale picker,
+    // and accessible from Settings → Privacy & data → Manage consent.
+    public const val DPDP_CONSENT: String = "dpdp_consent"
+
+    // Consent management route wired in SettingsGraph (revoke / update consent).
+    public const val CONSENT_MANAGEMENT: String = "consent_management"
 }
 
 /**
@@ -73,31 +82,35 @@ internal fun AppNavigation(
     activity: FragmentActivity,
     pendingActionStore: PendingActionStore,
     isFirstLaunch: IsFirstLaunchUseCase,
+    isConsentRequired: IsConsentRequiredUseCase,
     featureFlags: FeatureFlags,
     modifier: Modifier = Modifier,
     routeResolver: CustomerRouteResolver? = null,
     initialDeepLink: String? = null,
 ) {
-    // Initial value is null (loading) so returning users with first_launch_completed=true
-    // never see the picker on cold start. We render a blank Surface until DataStore emits.
-    // Per Codex P2: avoid showing onboarding to returning users while the preference loads.
+    // Both booleans start as null (loading) so no screen flashes before DataStore emits.
+    // We hold the blank Surface until BOTH emit — prevents consent/onboarding race.
     val firstLaunchPending: Boolean? =
         isFirstLaunch().collectAsStateWithLifecycle(initialValue = null as Boolean?).value
+    val consentRequired: Boolean? =
+        isConsentRequired().collectAsStateWithLifecycle(initialValue = null as Boolean?).value
 
-    when (firstLaunchPending) {
-        null -> Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {}
-        else ->
-            AppNavigationReady(
-                sessionManager = sessionManager,
-                activity = activity,
-                pendingActionStore = pendingActionStore,
-                featureFlags = featureFlags,
-                firstLaunchPending = firstLaunchPending,
-                modifier = modifier,
-                routeResolver = routeResolver,
-                initialDeepLink = initialDeepLink,
-            )
+    if (firstLaunchPending == null || consentRequired == null) {
+        Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {}
+        return
     }
+
+    AppNavigationReady(
+        sessionManager = sessionManager,
+        activity = activity,
+        pendingActionStore = pendingActionStore,
+        featureFlags = featureFlags,
+        firstLaunchPending = firstLaunchPending,
+        consentRequired = consentRequired,
+        modifier = modifier,
+        routeResolver = routeResolver,
+        initialDeepLink = initialDeepLink,
+    )
 }
 
 /**
@@ -113,6 +126,7 @@ private fun AppNavigationReady(
     pendingActionStore: PendingActionStore,
     featureFlags: FeatureFlags,
     firstLaunchPending: Boolean,
+    consentRequired: Boolean,
     modifier: Modifier,
     routeResolver: CustomerRouteResolver?,
     initialDeepLink: String?,
@@ -120,7 +134,12 @@ private fun AppNavigationReady(
     val context = LocalContext.current
     val authState by sessionManager.authState.collectAsStateWithLifecycle()
     val navController = rememberNavController()
-    val startDestination = if (firstLaunchPending) LocaleRoutes.FIRST_LAUNCH else ROUTE_AUTH
+    // Consent gate wins over locale picker; both win over auth.
+    val startDestination = when {
+        consentRequired -> LocaleRoutes.DPDP_CONSENT
+        firstLaunchPending -> LocaleRoutes.FIRST_LAUNCH
+        else -> ROUTE_AUTH
+    }
     val notificationPermissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
@@ -147,6 +166,19 @@ private fun AppNavigationReady(
     }
 
     NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
+        // DPDP consent gate — shown when consent is required before first-launch locale picker.
+        // On completion, navigates to locale picker if needed, otherwise straight to auth.
+        composable(LocaleRoutes.DPDP_CONSENT) {
+            DpdpConsentScreen(
+                onConsentComplete = {
+                    val next = if (firstLaunchPending) LocaleRoutes.FIRST_LAUNCH else ROUTE_AUTH
+                    navController.navigate(next) {
+                        popUpTo(LocaleRoutes.DPDP_CONSENT) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
         composable(LocaleRoutes.FIRST_LAUNCH) {
             FirstLaunchLanguageScreen(
                 onConfirmed = {

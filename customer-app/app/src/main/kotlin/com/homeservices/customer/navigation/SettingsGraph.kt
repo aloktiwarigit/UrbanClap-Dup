@@ -16,6 +16,7 @@ import com.homeservices.customer.ui.deleteaccount.DeleteAccountViewModel
 import com.homeservices.customer.ui.deleteaccount.EPOCH_MS_EXISTING_REQUEST_SENTINEL
 import com.homeservices.customer.ui.deleteaccount.NAV_ARG_REQUEST_ID
 import com.homeservices.customer.ui.deleteaccount.NAV_ARG_SCHEDULED_DELETION_EPOCH_MS
+import com.homeservices.customer.ui.consent.DpdpConsentScreen
 import com.homeservices.customer.ui.settings.LanguageSettingsScreen
 import com.homeservices.customer.ui.settings.PrivacyDataScreen
 import com.homeservices.customer.ui.settings.SettingsScreen
@@ -59,6 +60,16 @@ internal fun NavGraphBuilder.settingsGraph(
             onDownloadData = null,
             onDeleteAccount = { navController.navigate(LocaleRoutes.DELETE_ACCOUNT) },
             showDeleteAccount = featureFlags.dpdpSelfServiceEnabled(),
+            onManageConsentClick = { navController.navigate(LocaleRoutes.CONSENT_MANAGEMENT) },
+        )
+    }
+
+    // Consent management route — accessible from Settings → Privacy & data.
+    // Uses the same DpdpConsentScreen composable but pops back on completion instead
+    // of navigating forward to the auth flow.
+    composable(LocaleRoutes.CONSENT_MANAGEMENT) {
+        DpdpConsentScreen(
+            onConsentComplete = { navController.popBackStack() },
         )
     }
 
