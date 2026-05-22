@@ -52,6 +52,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
+import com.homeservices.designsystem.components.HsScreenTitle
 
 // Design tokens â€” mirror DeleteAccountScreen palette
 private val ErrorRed = Color(0xFFB3261E)
@@ -166,13 +167,8 @@ private fun DeleteAccountConfirmTopBar(onBack: () -> Unit) {
             )
         }
         Spacer(Modifier.width(8.dp))
-        Text(
+        HsScreenTitle(
             text = stringResource(R.string.delete_account_confirm_title),
-            style =
-                MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                ),
-            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }

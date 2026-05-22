@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.locale.DefaultLanguageOptions
 import com.homeservices.designsystem.locale.LanguagePickerCard
 import com.homeservices.designsystem.theme.LocalHomeservicesExtendedColors
@@ -64,7 +65,7 @@ private fun LangHeroZone() {
         contentAlignment = Alignment.BottomStart,
     ) {
         Column(modifier = Modifier.padding(start = 28.dp, end = 28.dp, bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(text = "HomeHeroo", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+            HsScreenTitle(text = "HomeHeroo", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onPrimary)
             Text(text = "भाषा चुनें", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.82f))
         }
     }

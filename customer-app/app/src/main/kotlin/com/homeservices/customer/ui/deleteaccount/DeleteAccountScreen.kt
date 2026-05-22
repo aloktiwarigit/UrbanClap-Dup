@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
+import com.homeservices.designsystem.components.HsScreenTitle
 
 // Design tokens — consistent with SettingsScreen palette
 private val ErrorRed = Color(0xFFB3261E)
@@ -127,13 +128,8 @@ private fun DeleteAccountTopBar(onBack: () -> Unit) {
             )
         }
         Spacer(Modifier.width(8.dp))
-        Text(
+        HsScreenTitle(
             text = stringResource(R.string.delete_account_title),
-            style =
-                MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                ),
-            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }
