@@ -28,19 +28,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.homeservices.customer.R
 
-private val PrivacyWarmIvory = Color(0xFFFBF7EF)
-private val PrivacyBrandGreen = Color(0xFF0B3D2E)
-private val PrivacyMutedGreen = Color(0xFFE8F1EC)
-private val PrivacyCardBorder = Color(0xFFDED8CD)
-private val PrivacyTextPrimary = Color(0xFF18231F)
-private val PrivacyTextSecondary = Color(0xFF5F6C66)
 
 /**
  * Privacy & data sub-screen under Settings.
@@ -67,7 +60,7 @@ public fun PrivacyAndDataScreen(
     onDeleteAccountClick: (() -> Unit)?,
     onBack: () -> Unit,
 ) {
-    Surface(modifier = Modifier.fillMaxSize(), color = PrivacyWarmIvory) {
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
             modifier =
                 Modifier
@@ -82,7 +75,7 @@ public fun PrivacyAndDataScreen(
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = null,
-                        tint = PrivacyTextPrimary,
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Spacer(Modifier.width(8.dp))
@@ -92,7 +85,7 @@ public fun PrivacyAndDataScreen(
                         MaterialTheme.typography.headlineMedium.copy(
                             fontWeight = FontWeight.ExtraBold,
                         ),
-                    color = PrivacyTextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
 
@@ -125,8 +118,8 @@ private fun PrivacyListItem(
 ) {
     Surface(
         shape = RoundedCornerShape(20.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, PrivacyCardBorder),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -137,22 +130,22 @@ private fun PrivacyListItem(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Surface(shape = RoundedCornerShape(14.dp), color = PrivacyMutedGreen) {
+            Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
                 Box(modifier = Modifier.size(44.dp), contentAlignment = Alignment.Center) {
-                    Icon(icon, contentDescription = null, tint = PrivacyBrandGreen)
+                    Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 }
             }
             Spacer(Modifier.width(14.dp))
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = PrivacyTextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f),
             )
             Icon(
                 Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,
-                tint = PrivacyTextSecondary,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

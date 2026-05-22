@@ -52,11 +52,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.domain.auth.model.AuthState
 
 // ── Brand tokens (aligned with rest of design system) ────────────────────────
-private val WarmIvory = Color(0xFFFBF7EF)
-private val BrandGreen = Color(0xFF0B3D2E)
-private val TextPrimary = Color(0xFF18231F)
-private val TextSecondary = Color(0xFF5F6C66)
-private val CardBorder = Color(0xFFDED8CD)
 private val DangerRed = Color(0xFFDC2626)
 private val CardShape = RoundedCornerShape(12.dp)
 
@@ -90,7 +85,7 @@ internal fun ProfileScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showSignOutDialog = false }) {
-                    Text("रद्द करें", color = BrandGreen)
+                    Text("रद्द करें", color = MaterialTheme.colorScheme.primary)
                 }
             },
         )
@@ -117,12 +112,12 @@ internal fun ProfileScreen(
                     },
                     enabled = draftName.trim().isNotEmpty(),
                 ) {
-                    Text("सेव करें", color = BrandGreen, fontWeight = FontWeight.SemiBold)
+                    Text("सेव करें", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showNameDialog = false }) {
-                    Text("रद्द करें", color = TextSecondary)
+                    Text("रद्द करें", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
         )
@@ -139,14 +134,14 @@ internal fun ProfileScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showPrivacyDialog = false }) {
-                    Text("ठीक है", color = BrandGreen, fontWeight = FontWeight.SemiBold)
+                    Text("ठीक है", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
                 }
             },
         )
     }
 
     LazyColumn(
-        modifier = modifier.fillMaxSize().background(WarmIvory),
+        modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
     ) {
         // ── Avatar + name card ──────────────────────────────────────────────
         item { ProfileHeader(user = user) }
@@ -164,7 +159,7 @@ internal fun ProfileScreen(
                         showNameDialog = true
                     },
                 )
-                HorizontalDivider(color = CardBorder, thickness = 0.5.dp)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
                 MenuRow(
                     icon = Icons.Default.Language,
                     label = "भाषा",
@@ -197,7 +192,7 @@ internal fun ProfileScreen(
                     sublabel = "1800-123-456",
                     onClick = { uriHandler.openUri("tel:1800123456") },
                 )
-                HorizontalDivider(color = CardBorder, thickness = 0.5.dp)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
                 MenuRow(
                     icon = Icons.Default.Shield,
                     label = "गोपनीयता नीति",
@@ -216,7 +211,7 @@ internal fun ProfileScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
                 shape = CardShape,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.surface,
                 border = BorderStroke(1.dp, DangerRed.copy(alpha = 0.20f)),
                 onClick = { showSignOutDialog = true },
             ) {
@@ -250,7 +245,7 @@ private fun ProfileHeader(user: AuthState.Authenticated?) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(Color.White)
+                .background(MaterialTheme.colorScheme.surface)
                 .statusBarsPadding()
                 .padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 18.dp),
     ) {
@@ -258,7 +253,7 @@ private fun ProfileHeader(user: AuthState.Authenticated?) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Surface(shape = CircleShape, color = BrandGreen.copy(alpha = 0.10f)) {
+            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)) {
                 Box(
                     modifier = Modifier.size(64.dp),
                     contentAlignment = Alignment.Center,
@@ -267,7 +262,7 @@ private fun ProfileHeader(user: AuthState.Authenticated?) {
                         text = avatarInitials(user),
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
-                        color = BrandGreen,
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
             }
@@ -276,7 +271,7 @@ private fun ProfileHeader(user: AuthState.Authenticated?) {
                     text = user?.displayName ?: "मेहमान",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -284,14 +279,14 @@ private fun ProfileHeader(user: AuthState.Authenticated?) {
                     Text(
                         text = "+91 xxxxxx${user.phoneLastFour}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 if (user?.email != null) {
                     Text(
                         text = user.email,
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -309,14 +304,14 @@ private fun SectionCard(
             text = title,
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 8.dp, start = 4.dp),
         )
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = CardShape,
-            color = Color.White,
-            border = BorderStroke(1.dp, CardBorder),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         ) {
             Column { content() }
         }
@@ -342,11 +337,11 @@ private fun MenuRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Surface(shape = RoundedCornerShape(8.dp), color = BrandGreen.copy(alpha = 0.08f * contentAlpha)) {
+        Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f * contentAlpha)) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = BrandGreen.copy(alpha = contentAlpha),
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = contentAlpha),
                 modifier = Modifier.padding(8.dp).size(18.dp),
             )
         }
@@ -355,13 +350,13 @@ private fun MenuRow(
                 text = label,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
-                color = TextPrimary.copy(alpha = contentAlpha),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
             )
             if (sublabel != null) {
                 Text(
                     text = sublabel,
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary.copy(alpha = contentAlpha),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
                 )
             }
         }
@@ -369,7 +364,7 @@ private fun MenuRow(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,
-                tint = TextSecondary,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(16.dp),
             )
         }

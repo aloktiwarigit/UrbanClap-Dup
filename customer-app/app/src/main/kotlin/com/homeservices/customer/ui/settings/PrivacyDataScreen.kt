@@ -35,15 +35,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.homeservices.customer.R
 
-// Design tokens — consistent with SettingsScreen palette
-private val WarmIvory = Color(0xFFFBF7EF)
-private val BrandGreen = Color(0xFF0B3D2E)
-private val MutedGreen = Color(0xFFE8F1EC)
-private val ErrorRed = Color(0xFFB3261E)
-private val ErrorRedSurface = Color(0xFFFFF0EE)
-private val CardBorder = Color(0xFFDED8CD)
-private val TextPrimary = Color(0xFF18231F)
-private val TextSecondary = Color(0xFF5F6C66)
 
 /**
  * Settings → Privacy & data sub-screen.
@@ -75,7 +66,7 @@ public fun PrivacyDataScreen(
     onDeleteAccount: () -> Unit,
     showDeleteAccount: Boolean,
 ) {
-    Surface(modifier = Modifier.fillMaxSize(), color = WarmIvory) {
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
             modifier =
                 Modifier
@@ -90,7 +81,7 @@ public fun PrivacyDataScreen(
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = null,
-                        tint = TextPrimary,
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Spacer(Modifier.width(8.dp))
@@ -100,7 +91,7 @@ public fun PrivacyDataScreen(
                         MaterialTheme.typography.headlineMedium.copy(
                             fontWeight = FontWeight.ExtraBold,
                         ),
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
 
@@ -108,8 +99,8 @@ public fun PrivacyDataScreen(
             if (onDownloadData != null) {
                 PrivacyListItem(
                     icon = Icons.Default.CloudDownload,
-                    iconBg = MutedGreen,
-                    iconTint = BrandGreen,
+                    iconBg = MaterialTheme.colorScheme.surfaceVariant,
+                    iconTint = MaterialTheme.colorScheme.primary,
                     label = stringResource(R.string.settings_privacy_data_export_title),
                     onClick = onDownloadData,
                 )
@@ -119,11 +110,11 @@ public fun PrivacyDataScreen(
             if (showDeleteAccount) {
                 PrivacyListItem(
                     icon = Icons.Default.DeleteForever,
-                    iconBg = ErrorRedSurface,
-                    iconTint = ErrorRed,
+                    iconBg = MaterialTheme.colorScheme.errorContainer,
+                    iconTint = MaterialTheme.colorScheme.error,
                     label = stringResource(R.string.settings_privacy_data_delete_title),
                     onClick = onDeleteAccount,
-                    labelColor = ErrorRed,
+                    labelColor = MaterialTheme.colorScheme.error,
                 )
             }
         }
@@ -137,12 +128,13 @@ private fun PrivacyListItem(
     iconTint: Color,
     label: String,
     onClick: () -> Unit,
-    labelColor: Color = TextPrimary,
+    labelColor: Color = Color.Unspecified,
 ) {
+    val resolvedLabelColor = if (labelColor == Color.Unspecified) MaterialTheme.colorScheme.onSurface else labelColor
     Surface(
         shape = RoundedCornerShape(20.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, CardBorder),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -162,13 +154,13 @@ private fun PrivacyListItem(
             Text(
                 text = label,
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = labelColor,
+                color = resolvedLabelColor,
                 modifier = Modifier.weight(1f),
             )
             Icon(
                 Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,
-                tint = TextSecondary,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

@@ -29,18 +29,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.homeservices.customer.R
 
-private val WarmIvory = Color(0xFFFBF7EF)
-private val BrandGreen = Color(0xFF0B3D2E)
-private val MutedGreen = Color(0xFFE8F1EC)
-private val CardBorder = Color(0xFFDED8CD)
-private val TextPrimary = Color(0xFF18231F)
-private val TextSecondary = Color(0xFF5F6C66)
 
 @Composable
 public fun SettingsScreen(
@@ -49,28 +42,28 @@ public fun SettingsScreen(
     onBack: () -> Unit,
     onMyComplaintsClick: (() -> Unit)? = null,
 ) {
-    Surface(modifier = Modifier.fillMaxSize(), color = WarmIvory) {
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
             modifier = Modifier.fillMaxSize().statusBarsPadding().padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = TextPrimary)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
                 }
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = stringResource(R.string.settings_title),
                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold),
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
             // Language row
             SettingsRow(
                 icon = {
-                    Surface(shape = RoundedCornerShape(14.dp), color = MutedGreen) {
+                    Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
                         Box(modifier = Modifier.size(52.dp), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Language, contentDescription = null, tint = BrandGreen)
+                            Icon(Icons.Default.Language, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         }
                     }
                 },
@@ -81,9 +74,9 @@ public fun SettingsScreen(
             // Privacy & data row
             SettingsRow(
                 icon = {
-                    Surface(shape = RoundedCornerShape(14.dp), color = MutedGreen) {
+                    Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
                         Box(modifier = Modifier.size(52.dp), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Shield, contentDescription = null, tint = BrandGreen)
+                            Icon(Icons.Default.Shield, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         }
                     }
                 },
@@ -95,9 +88,9 @@ public fun SettingsScreen(
             if (onMyComplaintsClick != null) {
                 SettingsRow(
                     icon = {
-                        Surface(shape = RoundedCornerShape(14.dp), color = MutedGreen) {
+                        Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
                             Box(modifier = Modifier.size(52.dp), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.SupportAgent, contentDescription = null, tint = BrandGreen)
+                                Icon(Icons.Default.SupportAgent, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             }
                         }
                     },
@@ -119,8 +112,8 @@ private fun SettingsRow(
 ) {
     Surface(
         shape = RoundedCornerShape(20.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, CardBorder),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -137,17 +130,17 @@ private fun SettingsRow(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 if (subtitle != null) {
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
-            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = TextSecondary)
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
