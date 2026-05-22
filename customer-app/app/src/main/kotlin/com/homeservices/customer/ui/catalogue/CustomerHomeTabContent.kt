@@ -169,6 +169,10 @@ private fun PendingActionCard(
     val cardBg = if (isHigh) HighPriorityRedSoft else MaterialTheme.colorScheme.surface
     val accentColor = if (isHigh) HighPriorityRed else MaterialTheme.colorScheme.primary
     val borderColor = if (isHigh) HighPriorityRed.copy(alpha = 0.25f) else MaterialTheme.colorScheme.outline
+    // HighPriorityRedSoft is a fixed light background — use dark foregrounds so cards stay readable
+    // in dark mode (MaterialTheme.colorScheme.onSurface resolves to a light colour in dark theme).
+    val titleColor = if (isHigh) Color(0xFF18231F) else MaterialTheme.colorScheme.onSurface
+    val subtitleColor = if (isHigh) Color(0xFF5F6C66) else MaterialTheme.colorScheme.onSurfaceVariant
 
     Row(
         modifier =
@@ -200,14 +204,14 @@ private fun PendingActionCard(
             Text(
                 text = pendingActionTitle(action),
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
-                color = MaterialTheme.colorScheme.onSurface,
+                color = titleColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = stringResource(R.string.home_pending_action_tap_hint),
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = subtitleColor,
                 maxLines = 1,
             )
         }

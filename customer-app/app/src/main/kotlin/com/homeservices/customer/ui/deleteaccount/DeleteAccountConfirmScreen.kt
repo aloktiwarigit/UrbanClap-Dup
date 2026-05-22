@@ -319,15 +319,16 @@ private fun DeleteAccountConfirmSubmitBar(
             colors =
                 ButtonDefaults.buttonColors(
                     containerColor = ErrorRed,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    // ErrorRed is a fixed non-themed container: use Color.White for dark-mode contrast
+                    contentColor = Color.White,
                     disabledContainerColor = ErrorRed.copy(alpha = 0.38f),
-                    disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f),
+                    disabledContentColor = Color.White.copy(alpha = 0.6f),
                 ),
         ) {
             if (isSubmitting) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(22.dp),
-                    color = MaterialTheme.colorScheme.onPrimary,
+                    color = Color.White,
                     strokeWidth = 2.dp,
                 )
             } else {

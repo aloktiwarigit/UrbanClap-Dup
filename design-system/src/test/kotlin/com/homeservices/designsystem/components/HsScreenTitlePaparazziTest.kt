@@ -8,13 +8,13 @@ import org.junit.Rule
 import org.junit.Test
 
 @Ignore("Record on CI Linux via workflow_dispatch paparazzi-record.yml")
-class HsScreenTitlePaparazziTest {
+public class HsScreenTitlePaparazziTest {
 
     @get:Rule
-    val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
+    public val paparazzi: Paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
 
     @Test
-    fun defaultTitle_lightTheme() {
+    public fun defaultTitle_lightTheme() {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
                 HsScreenTitle(text = "Screen Title")
@@ -23,7 +23,7 @@ class HsScreenTitlePaparazziTest {
     }
 
     @Test
-    fun defaultTitle_darkTheme() {
+    public fun defaultTitle_darkTheme() {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = true) {
                 HsScreenTitle(text = "Screen Title")

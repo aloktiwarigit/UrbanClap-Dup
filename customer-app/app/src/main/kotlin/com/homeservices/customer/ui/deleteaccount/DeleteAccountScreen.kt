@@ -212,7 +212,9 @@ private fun DeleteAccountContinueButton(onContinueClicked: () -> Unit) {
         colors =
             ButtonDefaults.buttonColors(
                 containerColor = ErrorRed,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
+                // ErrorRed is a fixed non-themed container: use Color.White for contrast in dark mode
+                // (onPrimary resolves to a dark colour in dark theme and loses contrast on ErrorRed)
+                contentColor = Color.White,
             ),
     ) {
         Icon(Icons.Default.DeleteForever, contentDescription = null)

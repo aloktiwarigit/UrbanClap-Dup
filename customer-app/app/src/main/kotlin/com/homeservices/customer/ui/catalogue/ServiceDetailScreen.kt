@@ -244,7 +244,7 @@ private fun ServiceHero(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = stringResource(R.string.service_detail_back_desc),
-                        tint = MaterialTheme.colorScheme.onPrimary,
+                        tint = Color.White, // fixed black-circle scrim: always white regardless of theme
                     )
                 }
             }
@@ -261,17 +261,19 @@ private fun ServiceHero(
             Text(
                 text = stringResource(R.string.service_detail_eyebrow),
                 style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.80f),
+                // Hero text sits on a fixed black gradient scrim — use Color.White for guaranteed
+                // contrast in both light and dark mode (onPrimary is dark in dark theme).
+                color = Color.White.copy(alpha = 0.80f),
                 fontWeight = FontWeight.SemiBold,
             )
             HsScreenTitle(
                 text = service.name,
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = Color.White,
             )
             Text(
                 text = service.description,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.80f),
+                color = Color.White.copy(alpha = 0.80f),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
