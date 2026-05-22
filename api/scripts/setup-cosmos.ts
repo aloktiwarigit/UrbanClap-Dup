@@ -17,6 +17,19 @@ const containers = [
   { id: 'audit_log',         partitionKey: '/partitionKey', ttl: undefined },
   { id: 'health',            partitionKey: '/id',           ttl: undefined },
   { id: 'ssc_levies',        partitionKey: '/quarter',      ttl: undefined },
+  // DPDPA right-to-erasure: one document per request, partitioned by
+  // /partitionKey (set to userId at submit time per schemas/erasure-request.ts).
+  // The repo at api/src/cosmos/erasure-request-repository.ts queries this
+  // container; if it does not exist, admin compliance page server-render
+  // crashes with "Resource not found" → error.tsx "Something stalled".
+  { id: 'erasure_requests',  partitionKey: '/partitionKey', ttl: undefined },
+  // Admin-side customer metadata (flag, internal notes). One doc per customer
+  // id, partitioned by /id so point reads in patchCustomerMetadata are O(1).
+  // Missing this container makes the admin customers list silently empty
+  // because the page wraps the fetch in try/catch (see app/[locale]/(dashboard)/
+  // customers/page.tsx). Container name uses a hyphen per existing repo code
+  // (api/src/cosmos/customer-metadata-repository.ts:3).
+  { id: 'customer-metadata', partitionKey: '/id',           ttl: undefined },
   // E07-S04: customer credit wallet for no-show compensation — partitioned by /id
   // (one document per bookingId, idempotency-safe via conflict on duplicate /id)
   // NOTE (P1-1): this container is partitioned by /id, NOT /customerId.
@@ -34,6 +47,43 @@ const containers = [
   // Partitioned by /userId for single-partition reads per user.
   // No defaultTtl — manual prune via daily timer allows >60 day idle tokens if device used recently.
   { id: 'device_tokens', partitionKey: '/userId', ttl: undefined },
+  // ── Out-of-band containers (existed on prod before this script tracked them) ──
+  // Bookings — core transactional store. /id partition for point reads keyed by
+  // bookingId; cross-partition for filter queries. Predates this script.
+  { id: 'bookings', partitionKey: '/id', ttl: undefined },
+  // Booking change-feed events for projectors; /bookingId for single-partition
+  // ordered reads per booking.
+  { id: 'booking_events', partitionKey: '/bookingId', ttl: undefined },
+  // Dispatch attempts ledger — one doc per attempt, /id partition.
+  { id: 'dispatch_attempts', partitionKey: '/id', ttl: undefined },
+  // Ratings — one doc per booking, /bookingId partition so all ratings for a
+  // booking sit in one partition (some bookings have customer + tech ratings).
+  { id: 'ratings', partitionKey: '/bookingId', ttl: undefined },
+  // Service catalogue: services partitioned by /categoryId for listing per
+  // category in a single-partition query.
+  { id: 'services', partitionKey: '/categoryId', ttl: undefined },
+  // Service categories — top-level catalogue node. TTL=-1 = preserve forever.
+  { id: 'service_categories', partitionKey: '/id', ttl: -1 },
+  // Technicians directory — /id partition, point reads by technicianId.
+  { id: 'technicians', partitionKey: '/id', ttl: undefined },
+  // Wallet ledger — append-only credit/debit entries; /partitionKey field set
+  // to customerId at write time so per-customer balance reads are single-partition.
+  { id: 'wallet_ledger', partitionKey: '/partitionKey', ttl: undefined },
+  // Razorpay webhook idempotency — /id is the webhook event id from Razorpay.
+  { id: 'webhook_events', partitionKey: '/id', ttl: undefined },
+  // ── Truly-missing containers (code references but never provisioned) ──
+  // Finance: weekly payout snapshots — /partitionKey = weekStart (per
+  // finance-repository.ts:181 upsert body). Missing → finance payout history
+  // endpoint throws.
+  { id: 'payout_snapshots', partitionKey: '/partitionKey', ttl: undefined },
+  // Sliding-window token-bucket rate limiter — /id partition (key === id).
+  // Missing → rate-limited endpoints fail unpredictably (the repo fails open
+  // on Cosmos errors via Sentry warn, so this is degraded not blocking).
+  { id: 'rate_limit_tokens', partitionKey: '/id', ttl: undefined },
+  // Operational state cache (currently used by Truecaller public-key cache).
+  // /id partition with a fixed doc id; missing → first request after cache TTL
+  // throws inside truecaller.service.ts.
+  { id: 'system', partitionKey: '/id', ttl: undefined },
 ] as const;
 
 async function main() {
@@ -84,16 +134,20 @@ async function main() {
   });
   console.log(`Container 'pending_actions' ready.`);
 
-  // Lease containers for 5 change-feed projectors.
-  // Convention matches existing leases: booking_completed_leases, booking_rating_prompt_leases,
-  // booking_report_leases — all partitioned /id.
-  // createLeaseContainerIfNotExists=false in each trigger, so these MUST be pre-provisioned.
+  // Lease containers for change-feed projectors. All partitioned /id per Cosmos
+  // change-feed library convention. createLeaseContainerIfNotExists=false in each
+  // trigger, so these MUST be pre-provisioned (matches the api/CLAUDE.md Cosmos
+  // Pre-Provisioning section).
   const leaseContainers = [
     'pending_actions_bookings_leases',
     'pending_actions_complaints_leases',
     'pending_actions_dispatch_leases',
     'pending_actions_kyc_leases',
     'pending_actions_ratings_leases',
+    // ── Booking-event projectors (existed on prod before this script tracked them) ──
+    'booking_completed_leases',
+    'booking_rating_prompt_leases',
+    'booking_report_leases',
   ];
   for (const leaseId of leaseContainers) {
     await database.containers.createIfNotExists({
