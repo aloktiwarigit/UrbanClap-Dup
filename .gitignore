@@ -95,6 +95,7 @@ ehthumbs.db
 .remember/logs/
 .remember/tmp/
 _bmad-output/implementation-artifacts/
+.superpowers/
 
 # === Codex review markers (persist in git but filter per-story) ===
 # .codex-review-passed — keep committed per-story
