@@ -7,8 +7,13 @@ import com.homeservices.customer.domain.rating.model.CustomerSubScores
 import com.homeservices.customer.domain.rating.model.RatingSnapshot
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import io.mockk.slot
+import io.mockk.unmockkAll
+import io.mockk.verify
+import io.sentry.Sentry
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
@@ -86,5 +91,18 @@ public class RatingRepositoryImplTest {
             val results = repo.get("bk-1").toList()
 
             assertThat(results.first().isFailure).isTrue()
+        }
+
+    @Test
+    public fun `submitCustomerRating captures exception in Sentry on failure`(): Unit =
+        runTest {
+            mockkStatic("io.sentry.Sentry")
+            coEvery { api.submit(any(), any()) } throws RuntimeException("network error")
+            every { Sentry.captureException(any()) } returns mockk()
+
+            repo.submitCustomerRating("bk-1", 5, CustomerSubScores(5, 5, 5), null, "idem-key").toList()
+
+            verify { Sentry.captureException(any()) }
+            unmockkAll()
         }
 }

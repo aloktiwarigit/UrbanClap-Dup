@@ -6,8 +6,13 @@ import com.homeservices.customer.data.complaint.remote.dto.ComplaintResponseDto
 import com.homeservices.customer.data.complaint.remote.dto.CreateComplaintRequestDto
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import io.mockk.slot
+import io.mockk.unmockkAll
+import io.mockk.verify
+import io.sentry.Sentry
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
@@ -120,5 +125,18 @@ public class ComplaintRepositoryImplTest {
             val results = repo.getComplaintsForBooking("bk-1").toList()
 
             assertThat(results.first().isFailure).isTrue()
+        }
+
+    @Test
+    public fun `createComplaint captures exception in Sentry on failure`(): Unit =
+        runTest {
+            mockkStatic("io.sentry.Sentry")
+            coEvery { api.createComplaint(any(), any()) } throws RuntimeException("network error")
+            every { Sentry.captureException(any()) } returns mockk()
+
+            repo.createComplaint("bk-1", "SERVICE_QUALITY", "Some description.", null, "idem-key").toList()
+
+            verify { Sentry.captureException(any()) }
+            unmockkAll()
         }
 }

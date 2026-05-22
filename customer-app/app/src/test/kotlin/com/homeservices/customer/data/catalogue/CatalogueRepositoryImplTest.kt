@@ -8,7 +8,12 @@ import com.homeservices.customer.data.catalogue.remote.dto.CategoryDto
 import com.homeservices.customer.data.catalogue.remote.dto.ServiceDto
 import com.homeservices.customer.data.catalogue.remote.dto.ServiceSummaryDto
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkAll
+import io.mockk.verify
+import io.sentry.Sentry
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
@@ -124,5 +129,18 @@ public class CatalogueRepositoryImplTest {
             assertThat(services).hasSize(1)
             assertThat(services.first().id).isEqualTo("svc1")
             assertThat(services.first().name).isEqualTo("Pipe fix")
+        }
+
+    @Test
+    public fun `getCategories captures exception in Sentry on failure`(): Unit =
+        runTest {
+            mockkStatic("io.sentry.Sentry")
+            coEvery { api.getCategories() } throws IOException("network error")
+            every { Sentry.captureException(any()) } returns mockk()
+
+            sut.getCategories().first()
+
+            verify { Sentry.captureException(any()) }
+            unmockkAll()
         }
 }

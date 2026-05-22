@@ -4,6 +4,7 @@ import com.homeservices.customer.data.rating.remote.RatingApiService
 import com.homeservices.customer.data.rating.remote.dto.SubmitRatingRequestDto
 import com.homeservices.customer.domain.rating.model.CustomerSubScores
 import com.homeservices.customer.domain.rating.model.RatingSnapshot
+import io.sentry.Sentry
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
@@ -38,9 +39,15 @@ internal class RatingRepositoryImpl
                             ),
                             idempotencyKey = idempotencyKey,
                         )
-                    },
+                    }.onFailure { Sentry.captureException(it) },
                 )
             }
 
-        override fun get(bookingId: String): Flow<Result<RatingSnapshot>> = flow { emit(runCatching { api.get(bookingId).toDomain() }) }
+        override fun get(bookingId: String): Flow<Result<RatingSnapshot>> =
+            flow {
+                emit(
+                    runCatching { api.get(bookingId).toDomain() }
+                        .onFailure { Sentry.captureException(it) },
+                )
+            }
     }
