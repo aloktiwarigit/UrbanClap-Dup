@@ -22,6 +22,7 @@ import org.junit.Test
  *
  * Once CI goldens are committed, remove [@Ignore] from the tests you want to guard.
  */
+@Ignore("Re-record on CI Linux via workflow_dispatch paparazzi-record.yml after sprint2a merge")
 public class CustomerHomeScreenPaparazziTest {
     @get:Rule
     public val paparazzi: Paparazzi =
