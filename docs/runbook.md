@@ -1225,3 +1225,29 @@ gcloud storage buckets describe gs://<your-firebase-bucket> --format="json(lifec
 Expected output contains `"age": 7` with `"matchesPrefix": ["sos-audio/"]`.
 
 **Why two TTLs?** The Cosmos key doc TTL (7 days) and the Storage blob lifecycle rule (7 days) are set independently. If a blob outlasts its key doc (e.g. Cosmos TTL fires first due to clock skew), the blob becomes unplayable — this is the safer failure mode. The 7-day window aligns with the maximum incident investigation SLA defined in the threat model (I-A4).
+
+---
+
+## Privacy policy (E20-S07)
+
+**Policy document:** `docs/legal/privacy-policy-technician.md`
+
+**Hosted URL:** `https://aloktiwarigit.github.io/homeheroo-privacy/technician/`
+
+The policy is published automatically by `.github/workflows/gh-pages-legal.yml` on every push to `main` that changes `docs/legal/**`. To republish manually, trigger the workflow from GitHub Actions → "Publish legal docs to GitHub Pages" → Run workflow.
+
+**First-time GitHub Pages setup (one-time, per repo):**
+1. Push the `gh-pages-legal.yml` workflow to `main`.
+2. In the GitHub repo → Settings → Pages → Source: select "GitHub Actions".
+3. The next workflow run will deploy to `https://aloktiwarigit.github.io/<repo-name>/technician/`.
+
+**Play Console:** The privacy policy URL must be entered in Play Console → App content → Privacy policy before submitting to any track (internal testing or production). Use: `https://aloktiwarigit.github.io/homeheroo-privacy/technician/`
+
+**Deletion requests:** Inbound deletion requests arrive at aloktiwari49@gmail.com. Process:
+1. Acknowledge within 48 hours.
+2. In Firebase Console → Authentication → find user by phone → Delete user.
+3. In Firestore → delete all documents under `technicians/{uid}/` and `kyc/{uid}/`.
+4. In Firebase Storage → delete all objects under `kyc/{uid}/` and `uploads/{uid}/`.
+5. Confirm erasure to the requester within 30 days of the original request.
+
+**Annual review:** Review and update the policy document at least once per year, or whenever a new third-party SDK is integrated that processes PII.

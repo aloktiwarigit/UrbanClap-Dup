@@ -223,4 +223,15 @@
             file="src/main/res/mipmap-xxxhdpi/ic_launcher_homeheroo.png"/>
     </issue>
 
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.privacy_policy_url` appears to be unused"
+        errorLine1="    &lt;string name=&quot;privacy_policy_url&quot;>https://aloktiwarigit.github.io/homeheroo-privacy/technician/&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="170"
+            column="13"/>
+    </issue>
+
 </issues>
