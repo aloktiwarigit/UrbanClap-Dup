@@ -227,19 +227,31 @@ internal fun DpdpConsentScreenContent(
                             drawCircle(
                                 color = Color.White.copy(alpha = GLOW_TOP_RIGHT_ALPHA),
                                 radius = GLOW_TOP_RIGHT_RADIUS_DP.dp.toPx(),
-                                center = Offset(size.width - GLOW_TOP_RIGHT_X_OFFSET_DP.dp.toPx(), -GLOW_TOP_RIGHT_Y_OFFSET_DP.dp.toPx()),
+                                center =
+                                    Offset(
+                                        size.width - GLOW_TOP_RIGHT_X_OFFSET_DP.dp.toPx(),
+                                        -GLOW_TOP_RIGHT_Y_OFFSET_DP.dp.toPx(),
+                                    ),
                             )
                             // Bottom-left accent glow
                             drawCircle(
                                 color = Color.White.copy(alpha = GLOW_BOTTOM_LEFT_ALPHA),
                                 radius = GLOW_BOTTOM_LEFT_RADIUS_DP.dp.toPx(),
-                                center = Offset(GLOW_BOTTOM_LEFT_X_OFFSET_DP.dp.toPx(), size.height - GLOW_BOTTOM_LEFT_Y_OFFSET_DP.dp.toPx()),
+                                center =
+                                    Offset(
+                                        GLOW_BOTTOM_LEFT_X_OFFSET_DP.dp.toPx(),
+                                        size.height - GLOW_BOTTOM_LEFT_Y_OFFSET_DP.dp.toPx(),
+                                    ),
                             )
                             // Center-right mid glow
                             drawCircle(
                                 color = GLOW_CENTER_COLOR.copy(alpha = GLOW_CENTER_ALPHA),
                                 radius = GLOW_CENTER_RADIUS_DP.dp.toPx(),
-                                center = Offset(size.width * GLOW_CENTER_X_FRACTION, size.height * GLOW_CENTER_Y_FRACTION),
+                                center =
+                                    Offset(
+                                        size.width * GLOW_CENTER_X_FRACTION,
+                                        size.height * GLOW_CENTER_Y_FRACTION,
+                                    ),
                             )
                         }.statusBarsPadding()
                         .padding(horizontal = 24.dp, vertical = 24.dp),
