@@ -464,8 +464,8 @@ private fun ConsentToggleRow(
     ) {
         // Icon box
         Surface(
-            modifier = Modifier.size(44.dp),
-            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.size(TOGGLE_ICON_SIZE_DP.dp),
+            shape = RoundedCornerShape(TOGGLE_ICON_RADIUS_DP.dp),
             color = iconBg,
         ) {
             Box(contentAlignment = Alignment.Center) {
@@ -473,19 +473,19 @@ private fun ConsentToggleRow(
                     imageVector = icon,
                     contentDescription = null,
                     tint = iconTint,
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(TOGGLE_ICON_INNER_SIZE_DP.dp),
                 )
             }
         }
 
         // Title + description
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(TOGGLE_TEXT_SPACING_DP.dp)) {
             Text(
                 text = title,
                 style =
                     MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp,
+                        fontSize = TOGGLE_TEXT_TITLE_FONT_SIZE.sp,
                     ),
                 color = TEXT_PRIMARY_LIGHT,
             )
