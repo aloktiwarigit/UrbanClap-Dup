@@ -84,6 +84,40 @@ public class PiiRedactorTest {
                     "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMTIzIn0.sig",
                     "Bearer [REDACTED_JWT].eyJzdWIiOiJ1c2VyMTIzIn0.sig",
                 ),
+                // PHONE_INTL_RE — with +91 prefix
+                Arguments.of(
+                    "phone with +91 country code and hyphen",
+                    "Call +91-9876543210 for support",
+                    "Call [REDACTED_PHONE] for support",
+                ),
+                Arguments.of(
+                    "phone with +91 space",
+                    "+91 9876543210 is the number",
+                    "[REDACTED_PHONE] is the number",
+                ),
+                // IPV4_RE
+                Arguments.of(
+                    "IPv4 address",
+                    "Server at 192.168.1.1 is down",
+                    "Server at [REDACTED_IPV4] is down",
+                ),
+                // RAZORPAY_RE
+                Arguments.of(
+                    "Razorpay payment ID",
+                    "Payment pay_ABCdef1234 processed",
+                    "Payment [REDACTED_RAZORPAY] processed",
+                ),
+                Arguments.of(
+                    "Razorpay order ID",
+                    "Order order_XYZ987abc created",
+                    "Order [REDACTED_RAZORPAY] created",
+                ),
+                // LATLNG_RE
+                Arguments.of(
+                    "latitude coordinate",
+                    "Location 28.613939 N",
+                    "Location [REDACTED_LATLNG] N",
+                ),
             )
 
         @JvmStatic
@@ -93,6 +127,9 @@ public class PiiRedactorTest {
                 Arguments.of("file path", "at com.homeservices.customer.BookingViewModel.createBooking:42"),
                 Arguments.of("HTTP status text", "Booking confirmed successfully"),
                 Arguments.of("short numeric id", "bookingId: 12345"),
+                Arguments.of("short decimal no PII", "score 4.5 out of 5"),
+                Arguments.of("price rupees", "price 299.99 INR"),
+                Arguments.of("non-Razorpay underscore", "event_tracking_id"),
             )
     }
 }
