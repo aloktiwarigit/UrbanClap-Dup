@@ -137,6 +137,7 @@ private data class CategoryStyle(
     val icon: ImageVector,
 )
 
+@Suppress("MagicNumber") // hardcoded palette entries in a category-style lookup table
 private fun categoryStyle(id: String): CategoryStyle =
     when (id) {
         "ac-repair" -> CategoryStyle(Color(0xFFEAF4F7), Color(0xFF246174), Icons.Default.AcUnit)
