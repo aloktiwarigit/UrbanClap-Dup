@@ -123,9 +123,6 @@ private const val CTA_PADDING_HORIZONTAL_DP = 20
 private const val CTA_PADDING_VERTICAL_DP = 16
 private const val CTA_SPACING_DP = 8
 private const val PROGRESS_INDICATOR_SIZE_DP = 24
-private const val PROGRESS_INDICATOR_STROKE_WIDTH_DP = 2.5f
-private const val STICKY_RESERVE_BOTTOM_DP = 112
-private const val SCREEN_SCROLL_SPACER_DP = 4
 
 // ── Glow effects (atmospheric) ─────────────────────────────────────────
 private const val GLOW_TOP_RIGHT_RADIUS_DP = 180
@@ -144,7 +141,7 @@ private const val GLOW_CENTER_ALPHA = 0.10f
 // ── Color values ──────────────────────────────────────────────────────
 private val TEXT_PRIMARY_LIGHT = Color(0xFF18231F)
 private val GLOW_CENTER_COLOR = Color(0xFF4CAF50)
-private const val TEXT_PRIMARY_DISABLED_ALPHA = 0.40f
+private const val CTA_DISABLED_TEXT_ALPHA = 0.40f
 
 /**
  * Entry composable — collects ViewModel state and wires navigation.
@@ -409,12 +406,12 @@ internal fun DpdpConsentScreenContent(
                 colors =
                     ButtonDefaults.buttonColors(
                         containerColor = BrandGreen,
-                        disabledContainerColor = BrandGreen.copy(alpha = 0.50f),
+                        disabledContainerColor = BrandGreen.copy(alpha = CTA_DISABLED_ALPHA),
                     ),
             ) {
                 if (uiState.isLoading) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(PROGRESS_INDICATOR_SIZE_DP.dp),
                         color = Color.White,
                         strokeWidth = 2.5.dp,
                     )
@@ -440,7 +437,7 @@ internal fun DpdpConsentScreenContent(
                 Text(
                     text = "सभी अस्वीकार करें",
                     style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-                    color = if (uiState.isLoading) TextMuted.copy(alpha = 0.40f) else TextMuted,
+                    color = if (uiState.isLoading) TextMuted.copy(alpha = CTA_DISABLED_TEXT_ALPHA) else TextMuted,
                 )
             }
         }
