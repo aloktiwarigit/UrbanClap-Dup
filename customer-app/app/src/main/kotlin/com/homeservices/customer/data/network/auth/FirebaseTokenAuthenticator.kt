@@ -46,7 +46,7 @@ public class FirebaseTokenAuthenticator
 
             return try {
                 // Force-refresh (true) to get a new token, not the cached one
-                val result = Tasks.await(user.getIdToken(true))
+                val result = Tasks.await(user.getIdToken(true), 25, java.util.concurrent.TimeUnit.SECONDS)
                 val newToken = result?.token
                 if (newToken == null) {
                     Log.w(TAG, "getIdToken(true) returned null token")
