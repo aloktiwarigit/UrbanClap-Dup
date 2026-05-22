@@ -10,7 +10,7 @@ import io.sentry.protocol.SentryException
  * values, and breadcrumb data before transmission.
  *
  * Patterns (Indian context):
- *   - Mobile numbers (+91):   \b(?:\+91[-\s]?)?[6-9]\d{9}\b
+ *   - Mobile numbers (+91):   (?<!\w)(?:\+91[-\s]?)?[6-9]\d{9}\b
  *   - Email addresses:        [\w._%+\-]+@[\w.\-]+\.\w{2,}
  *   - Aadhaar numbers:        \b\d{4}\s?\d{4}\s?\d{4}\b
  *   - PAN card numbers:       \b[A-Z]{5}\d{4}[A-Z]\b
