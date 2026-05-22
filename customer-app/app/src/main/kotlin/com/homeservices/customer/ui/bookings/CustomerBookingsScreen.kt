@@ -53,6 +53,7 @@ import com.homeservices.customer.ui.util.formatInr
 import com.homeservices.customer.ui.wallet.NoShowCreditBanner
 import com.homeservices.customer.ui.wallet.NoShowCreditViewModel
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.components.HsSecondaryButton
 
 private val WarningSoft = Color(0xFFF2E7CF)
@@ -125,11 +126,9 @@ internal fun CustomerBookingsContent(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
+                    HsScreenTitle(
                         text = stringResource(R.string.bookings_title),
                         style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
                         text = stringResource(R.string.bookings_subtitle),

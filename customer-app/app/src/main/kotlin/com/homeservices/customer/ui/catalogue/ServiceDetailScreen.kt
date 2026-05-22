@@ -58,6 +58,7 @@ import com.homeservices.customer.domain.catalogue.model.Service
 import com.homeservices.customer.ui.shared.TrustDossierCard
 import com.homeservices.customer.ui.shared.TrustDossierUiState
 import com.homeservices.customer.ui.shared.TrustDossierViewModel
+import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.theme.LocalHomeservicesExtendedColors
 
 // ── Brand tokens (keep only those not in design-system token mapping) ─────────
@@ -263,13 +264,9 @@ private fun ServiceHero(
                 color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.80f),
                 fontWeight = FontWeight.SemiBold,
             )
-            Text(
+            HsScreenTitle(
                 text = service.name,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimary,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = service.description,

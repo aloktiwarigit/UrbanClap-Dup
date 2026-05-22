@@ -87,6 +87,7 @@ import com.homeservices.customer.domain.catalogue.model.Category
 import com.homeservices.customer.ui.bookings.CustomerBookingsScreen
 import com.homeservices.customer.ui.util.formatInr
 import com.homeservices.customer.ui.wallet.WalletBalanceChip
+import com.homeservices.designsystem.components.HsScreenTitle
 import kotlinx.coroutines.delay
 
 // ── Promo banners ─────────────────────────────────────────────────────────────
@@ -410,7 +411,7 @@ private fun HeroTopRow(onSettingsClick: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            HsScreenTitle(
                 text = "HomeHeroo",
                 style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold, fontSize = 22.sp),
                 color = MaterialTheme.colorScheme.primary,

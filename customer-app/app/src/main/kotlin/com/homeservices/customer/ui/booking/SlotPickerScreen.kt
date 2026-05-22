@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.booking.model.BookingSlot
+import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.customer.domain.booking.model.SlotWindow
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -114,10 +115,8 @@ internal fun SlotPickerContent(
                         .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                Text(
-                    stringResource(R.string.slot_picker_heading),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
+                HsScreenTitle(
+                    text = stringResource(R.string.slot_picker_heading),
                 )
                 Text(
                     stringResource(R.string.slot_picker_subtitle),

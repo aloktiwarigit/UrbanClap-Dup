@@ -53,6 +53,7 @@ import com.homeservices.customer.domain.booking.model.BookingPaymentMethod
 import com.homeservices.customer.domain.booking.model.RazorpayErrorCode
 import com.homeservices.designsystem.components.HsInfoRow
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsSkeletonBlock
 import com.razorpay.Checkout
@@ -204,10 +205,9 @@ private fun ReadySummary(
                     .weight(1f)
                     .verticalScroll(rememberScrollState()),
         ) {
-            Text(
+            HsScreenTitle(
                 text = stringResource(R.string.booking_summary_heading),
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.height(6.dp))
             Text(

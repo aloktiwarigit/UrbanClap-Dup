@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.catalogue.model.Service
+import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.theme.LocalHomeservicesExtendedColors
 
 private val SkeletonLine = Color(0xFFEDE7DD)
@@ -73,10 +74,9 @@ internal fun ServiceListScreen(
                         Brush.horizontalGradient(listOf(appBarStart, appBarEnd)),
                     ),
                 title = {
-                    Text(
+                    HsScreenTitle(
                         text = stringResource(R.string.service_list_title),
                         color = MaterialTheme.colorScheme.onPrimary,
-                        fontWeight = FontWeight.SemiBold,
                     )
                 },
                 navigationIcon = {

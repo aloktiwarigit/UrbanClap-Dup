@@ -21,6 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
+import com.homeservices.designsystem.components.HsScreenTitle
 
 /**
  * Entry-point composable for the address-picker flow.
@@ -59,7 +60,7 @@ internal fun AddressPickerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.address_picker_title)) },
+                title = { HsScreenTitle(text = stringResource(R.string.address_picker_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(

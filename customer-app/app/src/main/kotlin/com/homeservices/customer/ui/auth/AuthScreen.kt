@@ -58,6 +58,7 @@ import com.homeservices.customer.R
 import com.homeservices.customer.domain.auth.PhoneNumberNormalizer
 import com.homeservices.designsystem.components.HsActionButton
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTrustBadge
@@ -207,7 +208,7 @@ private fun AuthHeroZone() {
             modifier = Modifier.padding(start = 28.dp, end = 28.dp, bottom = 36.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Text(text = "HomeHeroo", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onPrimary)
+            HsScreenTitle(text = "HomeHeroo", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onPrimary)
             Text(text = "घर पर भरोसेमंद सेवा", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.82f))
             Text(
                 text = "भरोसेमंद सेवा · 30 दिन गारंटी",
