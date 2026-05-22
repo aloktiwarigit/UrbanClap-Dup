@@ -8,9 +8,14 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.homeservices.customer.data.consent.di.ConsentPrefs
+import com.homeservices.customer.data.consent.remote.ConsentAuditApiService
+import com.homeservices.customer.data.consent.remote.dto.ConsentAuditRequestDto
 import com.homeservices.customer.domain.consent.CURRENT_CONSENT_VERSION
 import com.homeservices.customer.domain.consent.ConsentRepository
 import com.homeservices.customer.domain.consent.ConsentState
+import io.sentry.Breadcrumb
+import io.sentry.Sentry
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Instant
@@ -22,6 +27,7 @@ public class ConsentRepositoryImpl
     @Inject
     constructor(
         @ConsentPrefs private val dataStore: DataStore<Preferences>,
+        private val consentAuditApiService: ConsentAuditApiService,
     ) : ConsentRepository {
         private companion object {
             val KEY_CONSENT_STATE = stringPreferencesKey("consent_state")
@@ -78,6 +84,26 @@ public class ConsentRepositoryImpl
                 prefs[KEY_CRASH] = crashOptIn
                 prefs[KEY_MARKETING] = marketingOptIn
             }
+
+            // Best-effort audit POST — never throws to caller.
+            try {
+                consentAuditApiService.postConsentAudit(
+                    ConsentAuditRequestDto(
+                        action = "GRANTED",
+                        version = CURRENT_CONSENT_VERSION,
+                        timestamp = Instant.now().toString(), // ISO-8601 UTC
+                        analyticsOptIn = analyticsOptIn,
+                        crashOptIn = crashOptIn,
+                        marketingOptIn = marketingOptIn,
+                    ),
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Sentry.addBreadcrumb(
+                    Breadcrumb.info("consent-audit POST failed (best-effort): ${e.message}"),
+                )
+            }
         }
 
         override suspend fun revokeConsent() {
@@ -88,6 +114,26 @@ public class ConsentRepositoryImpl
                 prefs.remove(KEY_ANALYTICS)
                 prefs.remove(KEY_CRASH)
                 prefs.remove(KEY_MARKETING)
+            }
+
+            // Best-effort audit POST — never throws to caller.
+            try {
+                consentAuditApiService.postConsentAudit(
+                    ConsentAuditRequestDto(
+                        action = "REVOKED",
+                        version = CURRENT_CONSENT_VERSION,
+                        timestamp = Instant.now().toString(), // ISO-8601 UTC
+                        analyticsOptIn = false,
+                        crashOptIn = false,
+                        marketingOptIn = false,
+                    ),
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Sentry.addBreadcrumb(
+                    Breadcrumb.info("consent-audit POST failed (best-effort): ${e.message}"),
+                )
             }
         }
     }
