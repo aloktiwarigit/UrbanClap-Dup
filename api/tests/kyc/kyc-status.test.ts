@@ -118,7 +118,7 @@ describe('GET /v1/kyc/status', () => {
     expect(body['panNumber']).toBe('XXXXX1234F');
   });
 
-  it('[E19-S01] falls back to already-masked panNumber for legacy docs (old #### mask format)', async () => {
+  it('[E19-S01 / S-001] non-canonical panNumber (already-masked #### format) escalates to MANUAL_REVIEW — never returns raw value', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { getKycByTechnicianId } = await import('../../src/cosmos/technician-repository.js');
     vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
@@ -126,7 +126,7 @@ describe('GET /v1/kyc/status', () => {
     vi.mocked(getKycByTechnicianId).mockResolvedValue({
       aadhaarVerified: true,
       aadhaarMaskedNumber: null,
-      panNumber: 'ABCDE####F',  // old-style masked value — maskPan() returns null for this
+      panNumber: 'ABCDE####F',  // non-canonical: maskPan returns null; S-001 fix escalates to MANUAL_REVIEW
       panImagePath: null,
       kycStatus: 'PAN_DONE',
       updatedAt: '2026-04-01T00:00:00Z',
@@ -140,10 +140,64 @@ describe('GET /v1/kyc/status', () => {
     const res = await handler(req, new InvocationContext());
 
     const body = res.jsonBody as Record<string, unknown>;
-    // Old mask format preserved (can't re-mask without raw PAN)
-    expect(body['panMaskedNumber']).toBe('ABCDE####F');
-    // Legacy alias also present for technician-app compat
-    expect(body['panNumber']).toBe('ABCDE####F');
+    expect(body['panMaskedNumber']).toBeNull();
+    expect(body['panNumber']).toBeNull();
+    expect(body['kycStatus']).toBe('MANUAL_REVIEW');
+  });
+
+  it('[S-001-Codex] non-canonical panMaskedNumber (#### legacy format) escalates to MANUAL_REVIEW', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { getKycByTechnicianId } = await import('../../src/cosmos/technician-repository.js');
+    vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+
+    vi.mocked(getKycByTechnicianId).mockResolvedValue({
+      aadhaarVerified: true,
+      aadhaarMaskedNumber: null,
+      panNumber: null,
+      panMaskedNumber: 'ABCDE####F',  // legacy migration script wrote this non-canonical shape
+      panImagePath: null,
+      kycStatus: 'PAN_DONE',
+      updatedAt: '2026-04-01T00:00:00Z',
+    });
+
+    const req = new HttpRequest({
+      method: 'GET',
+      url: 'http://localhost/v1/kyc/status?technicianId=tech-001',
+      headers: { Authorization: 'Bearer valid' },
+    });
+    const res = await handler(req, new InvocationContext());
+
+    const body = res.jsonBody as Record<string, unknown>;
+    expect(body['panMaskedNumber']).toBeNull();
+    expect(body['panNumber']).toBeNull();
+    expect(body['kycStatus']).toBe('MANUAL_REVIEW');
+  });
+
+  it('[S-001] OCR-noise panNumber (interior space) returns null — never exposes raw PAN', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { getKycByTechnicianId } = await import('../../src/cosmos/technician-repository.js');
+    vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-001' });
+
+    vi.mocked(getKycByTechnicianId).mockResolvedValue({
+      aadhaarVerified: true,
+      aadhaarMaskedNumber: null,
+      panNumber: 'ABCDE 1234F',  // raw PAN captured with interior space from OCR
+      panImagePath: null,
+      kycStatus: 'PAN_DONE',
+      updatedAt: '2026-04-01T00:00:00Z',
+    });
+
+    const req = new HttpRequest({
+      method: 'GET',
+      url: 'http://localhost/v1/kyc/status?technicianId=tech-001',
+      headers: { Authorization: 'Bearer valid' },
+    });
+    const res = await handler(req, new InvocationContext());
+
+    const body = res.jsonBody as Record<string, unknown>;
+    expect(body['panMaskedNumber']).toBeNull();
+    expect(body['panNumber']).toBeNull();
+    expect(body['kycStatus']).toBe('MANUAL_REVIEW');
   });
 
   it('[E19-S01-P2A] applies maskPan to raw canonical panNumber in legacy docs to avoid raw PAN exposure', async () => {

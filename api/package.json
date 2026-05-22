@@ -27,7 +27,8 @@
     "seed:catalogue": "tsx src/cosmos/seeds/catalogue.ts",
     "seed:complaints": "tsx src/cosmos/seeds/complaints.ts",
     "provision:indexes": "tsx scripts/provision-cosmos-indexes.ts",
-    "semgrep:scan": "semgrep --config .semgrep.yml src/"
+    "semgrep:scan": "semgrep --config .semgrep.yml src/",
+    "backfill:pan-mask": "tsx scripts/backfill-pan-mask.ts"
   },
   "dependencies": {
     "@azure/ai-form-recognizer": "^5.1.0",
