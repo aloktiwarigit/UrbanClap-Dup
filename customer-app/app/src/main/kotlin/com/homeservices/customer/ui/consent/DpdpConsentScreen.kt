@@ -89,6 +89,63 @@ private val MarketingTint = Color(0xFFE65100)
 private const val HERO_FRACTION = 0.40f
 private const val PRIVACY_POLICY_URL = "https://homeservices.app/privacy"
 
+// ── Layout & spacing ──────────────────────────────────────────────────────
+private const val HERO_ICON_SIZE_DP = 72
+private const val HERO_ICON_INNER_SIZE_DP = 36
+private const val HERO_SPACING_DP = 12
+private const val HERO_PADDING_DP = 24
+private const val HERO_SUBTITLE_ALPHA = 0.70f
+private const val HERO_DARK_MODE_THRESHOLD = 0.5f
+private const val CARD_OVERLAP_DP = 20
+private const val CARD_CORNER_RADIUS_DP = 24
+private const val CARD_TOP_PADDING_DP = 28
+private const val CARD_SIDE_PADDING_DP = 20
+private const val CARD_BOTTOM_PADDING_DP = 20
+private const val CARD_SHADOW_ELEVATION_DP = 4
+private const val CONSENT_SECTION_TITLE_FONT_SIZE = 26
+private const val CONSENT_TITLE_SIZE_DP = 16
+private const val CONSENT_DESCRIPTION_SIZE_DP = 14
+private const val CONSENT_SMALL_TEXT_SIZE_DP = 12
+private const val DIVIDER_THICKNESS_DP = 1
+private const val DIVIDER_PADDING_DP = 4
+private const val DIVIDER_VERTICAL_PADDING_DP = 16
+private const val TOGGLE_ROW_PADDING_DP = 10
+private const val TOGGLE_ROW_SPACING_DP = 12
+private const val TOGGLE_ICON_SIZE_DP = 44
+private const val TOGGLE_ICON_RADIUS_DP = 12
+private const val TOGGLE_ICON_INNER_SIZE_DP = 22
+private const val TOGGLE_TEXT_TITLE_FONT_SIZE = 14
+private const val TOGGLE_TEXT_SPACING_DP = 2
+private const val CTA_HEIGHT_DP = 56
+private const val CTA_CORNER_RADIUS_DP = 16
+private const val CTA_DISABLED_ALPHA = 0.50f
+private const val CTA_PADDING_HORIZONTAL_DP = 20
+private const val CTA_PADDING_VERTICAL_DP = 16
+private const val CTA_SPACING_DP = 8
+private const val PROGRESS_INDICATOR_SIZE_DP = 24
+private const val PROGRESS_INDICATOR_STROKE_WIDTH_DP = 2.5f
+private const val STICKY_RESERVE_BOTTOM_DP = 112
+private const val SCREEN_SCROLL_SPACER_DP = 4
+
+// ── Glow effects (atmospheric) ─────────────────────────────────────────
+private const val GLOW_TOP_RIGHT_RADIUS_DP = 180
+private const val GLOW_TOP_RIGHT_X_OFFSET_DP = 60
+private const val GLOW_TOP_RIGHT_Y_OFFSET_DP = 80
+private const val GLOW_TOP_RIGHT_ALPHA = 0.05f
+private const val GLOW_BOTTOM_LEFT_RADIUS_DP = 90
+private const val GLOW_BOTTOM_LEFT_X_OFFSET_DP = 50
+private const val GLOW_BOTTOM_LEFT_Y_OFFSET_DP = 30
+private const val GLOW_BOTTOM_LEFT_ALPHA = 0.08f
+private const val GLOW_CENTER_RADIUS_DP = 120
+private const val GLOW_CENTER_X_FRACTION = 0.75f
+private const val GLOW_CENTER_Y_FRACTION = 0.55f
+private const val GLOW_CENTER_ALPHA = 0.10f
+
+// ── Color values ──────────────────────────────────────────────────────
+private val TEXT_PRIMARY_LIGHT = Color(0xFF18231F)
+private val GLOW_CENTER_COLOR = Color(0xFF4CAF50)
+private const val TEXT_PRIMARY_DISABLED_ALPHA = 0.40f
+
 /**
  * Entry composable — collects ViewModel state and wires navigation.
  * Renders [DpdpConsentScreenContent] for visual logic.
@@ -133,11 +190,11 @@ internal fun DpdpConsentScreenContent(
     onDeclineAll: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val isDark = MaterialTheme.colorScheme.background.red < 0.5f
+    val isDark = MaterialTheme.colorScheme.background.red < HERO_DARK_MODE_THRESHOLD
     val screenBg = if (isDark) ScreenBgDark else ScreenBgLight
     val cardBg = if (isDark) CardBgDark else CardBgLight
     val dividerColor = if (isDark) DividerDark else DividerLight
-    val textPrimary = if (isDark) TextOnDark else Color(0xFF18231F)
+    val textPrimary = if (isDark) TextOnDark else TEXT_PRIMARY_LIGHT
     val textMuted = if (isDark) TextOnDarkMuted else TextMuted
 
     Box(
@@ -168,21 +225,21 @@ internal fun DpdpConsentScreenContent(
                             )
                             // Top-right atmospheric glow
                             drawCircle(
-                                color = Color.White.copy(alpha = 0.05f),
-                                radius = 180.dp.toPx(),
-                                center = Offset(size.width - 60.dp.toPx(), -80.dp.toPx()),
+                                color = Color.White.copy(alpha = GLOW_TOP_RIGHT_ALPHA),
+                                radius = GLOW_TOP_RIGHT_RADIUS_DP.dp.toPx(),
+                                center = Offset(size.width - GLOW_TOP_RIGHT_X_OFFSET_DP.dp.toPx(), -GLOW_TOP_RIGHT_Y_OFFSET_DP.dp.toPx()),
                             )
                             // Bottom-left accent glow
                             drawCircle(
-                                color = Color.White.copy(alpha = 0.08f),
-                                radius = 90.dp.toPx(),
-                                center = Offset(50.dp.toPx(), size.height - 30.dp.toPx()),
+                                color = Color.White.copy(alpha = GLOW_BOTTOM_LEFT_ALPHA),
+                                radius = GLOW_BOTTOM_LEFT_RADIUS_DP.dp.toPx(),
+                                center = Offset(GLOW_BOTTOM_LEFT_X_OFFSET_DP.dp.toPx(), size.height - GLOW_BOTTOM_LEFT_Y_OFFSET_DP.dp.toPx()),
                             )
                             // Center-right mid glow
                             drawCircle(
-                                color = Color(0xFF4CAF50).copy(alpha = 0.10f),
-                                radius = 120.dp.toPx(),
-                                center = Offset(size.width * 0.75f, size.height * 0.55f),
+                                color = GLOW_CENTER_COLOR.copy(alpha = GLOW_CENTER_ALPHA),
+                                radius = GLOW_CENTER_RADIUS_DP.dp.toPx(),
+                                center = Offset(size.width * GLOW_CENTER_X_FRACTION, size.height * GLOW_CENTER_Y_FRACTION),
                             )
                         }.statusBarsPadding()
                         .padding(horizontal = 24.dp, vertical = 24.dp),
@@ -222,7 +279,7 @@ internal fun DpdpConsentScreenContent(
                     Text(
                         text = "सेवा शुरू करने से पहले बताएं, हम क्या जानकारी इस्तेमाल कर सकते हैं",
                         style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-                        color = Color.White.copy(alpha = 0.70f),
+                        color = Color.White.copy(alpha = HERO_SUBTITLE_ALPHA),
                         textAlign = TextAlign.Center,
                     )
                 }
@@ -421,7 +478,7 @@ private fun ConsentToggleRow(
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
                     ),
-                color = Color(0xFF18231F),
+                color = TEXT_PRIMARY_LIGHT,
             )
             Text(
                 text = description,
