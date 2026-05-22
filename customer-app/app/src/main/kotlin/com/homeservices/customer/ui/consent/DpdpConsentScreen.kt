@@ -108,7 +108,6 @@ private const val CONSENT_DESCRIPTION_SIZE_DP = 14
 private const val CONSENT_SMALL_TEXT_SIZE_DP = 12
 private const val DIVIDER_THICKNESS_DP = 1
 private const val DIVIDER_PADDING_DP = 4
-private const val DIVIDER_VERTICAL_PADDING_DP = 16
 private const val TOGGLE_ROW_PADDING_DP = 10
 private const val TOGGLE_ROW_SPACING_DP = 12
 private const val TOGGLE_ICON_SIZE_DP = 44
@@ -337,8 +336,8 @@ internal fun DpdpConsentScreenContent(
                     )
 
                     HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 4.dp),
-                        thickness = 1.dp,
+                        modifier = Modifier.padding(vertical = DIVIDER_PADDING_DP.dp),
+                        thickness = DIVIDER_THICKNESS_DP.dp,
                         color = dividerColor,
                     )
 
@@ -354,8 +353,8 @@ internal fun DpdpConsentScreenContent(
                     )
 
                     HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 4.dp),
-                        thickness = 1.dp,
+                        modifier = Modifier.padding(vertical = DIVIDER_PADDING_DP.dp),
+                        thickness = DIVIDER_THICKNESS_DP.dp,
                         color = dividerColor,
                     )
 
@@ -372,7 +371,7 @@ internal fun DpdpConsentScreenContent(
 
                     Spacer(Modifier.height(16.dp))
 
-                    HorizontalDivider(thickness = 1.dp, color = dividerColor)
+                    HorizontalDivider(thickness = DIVIDER_THICKNESS_DP.dp, color = dividerColor)
 
                     Spacer(Modifier.height(12.dp))
 
@@ -458,9 +457,9 @@ private fun ConsentToggleRow(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(vertical = 10.dp),
+                .padding(vertical = TOGGLE_ROW_PADDING_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(TOGGLE_ROW_SPACING_DP.dp),
     ) {
         // Icon box
         Surface(
