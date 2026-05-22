@@ -307,7 +307,12 @@ internal fun DpdpConsentScreenContent(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(top = CARD_TOP_PADDING_DP.dp, start = CARD_SIDE_PADDING_DP.dp, end = CARD_SIDE_PADDING_DP.dp, bottom = CARD_BOTTOM_PADDING_DP.dp),
+                            .padding(
+                                top = CARD_TOP_PADDING_DP.dp,
+                                start = CARD_SIDE_PADDING_DP.dp,
+                                end = CARD_SIDE_PADDING_DP.dp,
+                                bottom = CARD_BOTTOM_PADDING_DP.dp,
+                            ),
                 ) {
                     // Section heading
                     Text(
