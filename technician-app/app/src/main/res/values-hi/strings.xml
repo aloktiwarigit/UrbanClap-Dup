@@ -167,4 +167,7 @@
     <!-- Active job location foreground service (E17-S02) -->
     <string name="active_job_location_notification_title">ग्राहक के साथ स्थान साझा कर रहे हैं</string>
     <string name="active_job_location_notification_body">केवल सक्रिय बुकिंग के दौरान</string>
+
+    <!-- Legal (E20-S07) -->
+    <string name="privacy_policy_url">https://aloktiwarigit.github.io/homeheroo-privacy/technician/</string>
 </resources>
