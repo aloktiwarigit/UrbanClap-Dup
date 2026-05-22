@@ -391,8 +391,8 @@ internal fun DpdpConsentScreenContent(
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .background(cardBg)
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                    .padding(horizontal = CTA_PADDING_HORIZONTAL_DP.dp, vertical = CTA_PADDING_VERTICAL_DP.dp),
+            verticalArrangement = Arrangement.spacedBy(CTA_SPACING_DP.dp),
         ) {
             // Primary CTA
             Button(
@@ -401,8 +401,8 @@ internal fun DpdpConsentScreenContent(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
+                        .height(CTA_HEIGHT_DP.dp),
+                shape = RoundedCornerShape(CTA_CORNER_RADIUS_DP.dp),
                 colors =
                     ButtonDefaults.buttonColors(
                         containerColor = BrandGreen,
