@@ -24,7 +24,10 @@ public class TrackingRepositoryImplTest {
     private class FakeBookingApiService(
         var status: String = "ASSIGNED",
     ) : BookingApiService {
-        override suspend fun createBooking(body: CreateBookingRequestDto, idempotencyKey: String): CreateBookingResponseDto = error("not used")
+        override suspend fun createBooking(
+            body: CreateBookingRequestDto,
+            idempotencyKey: String,
+        ): CreateBookingResponseDto = error("not used")
 
         override suspend fun confirmBooking(
             bookingId: String,
