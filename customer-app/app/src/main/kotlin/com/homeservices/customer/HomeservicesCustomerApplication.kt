@@ -4,10 +4,13 @@ import android.app.Application
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import com.google.android.libraries.places.api.Places
+import com.homeservices.customer.domain.consent.ConsentRepository
+import com.homeservices.customer.domain.consent.ConsentState
 import com.homeservices.customer.domain.flags.GrowthBookFeatureFlags
 import com.homeservices.customer.domain.locale.LocaleRepository
 import com.homeservices.customer.firebase.CustomerFirebaseMessagingService
 import com.homeservices.customer.observability.SentryInitializer
+import com.homeservices.customer.observability.analytics.PostHogAnalyticsFacade
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -31,6 +34,14 @@ public class HomeservicesCustomerApplication : Application() {
     @InstallIn(SingletonComponent::class)
     public interface FeatureFlagsEntryPoint {
         public fun growthBookFeatureFlags(): GrowthBookFeatureFlags
+    }
+
+    @EntryPoint
+    @InstallIn(SingletonComponent::class)
+    public interface AnalyticsEntryPoint {
+        public fun postHogAnalyticsFacade(): PostHogAnalyticsFacade
+
+        public fun consentRepository(): ConsentRepository
     }
 
     override fun onCreate() {
@@ -57,6 +68,18 @@ public class HomeservicesCustomerApplication : Application() {
         scope.launch {
             val tag = entryPoint.localeRepository().currentLocale.first()
             AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
+        }
+
+        // Gate PostHog init on user's analytics consent (DPDP Act 2023 / NFR-C-5).
+        // Fire-and-forget: failures here must never propagate to sibling coroutines.
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            val analyticsEntryPoint =
+                EntryPointAccessors
+                    .fromApplication(this@HomeservicesCustomerApplication, AnalyticsEntryPoint::class.java)
+            val analyticsOptIn =
+                analyticsEntryPoint.consentRepository().consentState.first()
+                    .let { it is ConsentState.Granted && it.analyticsOptIn }
+            analyticsEntryPoint.postHogAnalyticsFacade().initIfConsented(analyticsOptIn)
         }
     }
 }

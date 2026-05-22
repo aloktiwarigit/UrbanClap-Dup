@@ -4,6 +4,7 @@ import androidx.fragment.app.FragmentActivity
 import com.google.common.truth.Truth.assertThat
 import com.homeservices.customer.data.booking.PaymentResultBus
 import com.homeservices.customer.domain.auth.BiometricGateUseCase
+import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import com.homeservices.customer.domain.auth.model.BiometricResult
 import com.homeservices.customer.domain.booking.ConfirmBookingUseCase
 import com.homeservices.customer.domain.booking.CreateBookingUseCase
@@ -56,7 +57,7 @@ public class BookingViewModelBiometricTest {
         Dispatchers.resetMain()
     }
 
-    private fun makeVm() = BookingViewModel(createBooking, confirmBooking, razorpayPayment, biometricGate)
+    private fun makeVm() = BookingViewModel(createBooking, confirmBooking, razorpayPayment, biometricGate, NoOpAnalyticsFacade())
 
     // ------------------------------------------------------------------
     // 1. Online-payment (Razorpay) path — biometric fires and proceeds on Authenticated

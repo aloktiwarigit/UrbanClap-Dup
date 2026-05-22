@@ -1,6 +1,7 @@
 package com.homeservices.customer.ui.rating
 
 import androidx.lifecycle.SavedStateHandle
+import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import com.homeservices.customer.domain.rating.EscalateRatingResult
 import com.homeservices.customer.domain.rating.EscalateRatingUseCase
 import com.homeservices.customer.domain.rating.GetRatingUseCase
@@ -51,7 +52,7 @@ public class RatingViewModelShieldTest {
     }
 
     private fun TestScope.vm(): RatingViewModel {
-        val v = RatingViewModel(submit, get, escalate, savedState)
+        val v = RatingViewModel(submit, get, escalate, savedState, NoOpAnalyticsFacade())
         runCurrent() // drive init coroutine (collects PENDING snapshot)
         return v
     }

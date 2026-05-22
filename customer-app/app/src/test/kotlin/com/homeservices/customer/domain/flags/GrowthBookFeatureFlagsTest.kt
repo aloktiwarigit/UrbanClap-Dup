@@ -1,5 +1,7 @@
 package com.homeservices.customer.domain.flags
 
+import com.homeservices.customer.observability.analytics.AnalyticsFacade
+import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -12,17 +14,20 @@ import org.junit.jupiter.api.Test
  * GROWTHBOOK_CLIENT_KEY.
  */
 public class GrowthBookFeatureFlagsTest {
+    /** Minimal dagger.Lazy wrapper backed by a no-op analytics facade. */
+    private val noOpLazy: dagger.Lazy<AnalyticsFacade> = dagger.Lazy { NoOpAnalyticsFacade() }
+
     @Test
     public fun `truecallerServerVerify defaults to false without features`() {
         // SUT constructed without a live SDK fetch — features map is empty.
-        val sut = GrowthBookFeatureFlags()
+        val sut = GrowthBookFeatureFlags(analytics = noOpLazy)
 
         assertThat(sut.truecallerServerVerify()).isFalse()
     }
 
     @Test
     public fun `GrowthBookFeatureFlags implements FeatureFlags interface`() {
-        val sut: FeatureFlags = GrowthBookFeatureFlags()
+        val sut: FeatureFlags = GrowthBookFeatureFlags(analytics = noOpLazy)
 
         // Interface contract: the result is a Boolean (non-null).
         // Boolean::class.javaObjectType resolves to java.lang.Boolean (the boxed type),

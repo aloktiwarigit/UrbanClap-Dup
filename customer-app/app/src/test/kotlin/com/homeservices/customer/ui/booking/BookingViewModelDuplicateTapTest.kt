@@ -2,6 +2,7 @@ package com.homeservices.customer.ui.booking
 
 import com.homeservices.customer.data.booking.PaymentResultBus
 import com.homeservices.customer.domain.auth.BiometricGateUseCase
+import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import com.homeservices.customer.domain.booking.ConfirmBookingUseCase
 import com.homeservices.customer.domain.booking.CreateBookingUseCase
 import com.homeservices.customer.domain.booking.RazorpayPaymentUseCase
@@ -58,7 +59,7 @@ public class BookingViewModelDuplicateTapTest {
         Dispatchers.resetMain()
     }
 
-    private fun makeVm() = BookingViewModel(createBooking, confirmBooking, razorpayPayment, biometricGate)
+    private fun makeVm() = BookingViewModel(createBooking, confirmBooking, razorpayPayment, biometricGate, NoOpAnalyticsFacade())
 
     @Test
     public fun `startBooking called twice rapidly produces exactly one createBooking invocation`(): Unit =

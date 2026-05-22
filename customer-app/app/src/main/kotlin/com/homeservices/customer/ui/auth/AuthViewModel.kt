@@ -9,6 +9,8 @@ import com.homeservices.customer.domain.auth.PhoneNumberNormalizer
 import com.homeservices.customer.domain.auth.model.AuthResult
 import com.homeservices.customer.domain.auth.model.OtpSendResult
 import com.homeservices.customer.domain.auth.model.TruecallerAuthResult
+import com.homeservices.customer.observability.analytics.AnalyticsEvents
+import com.homeservices.customer.observability.analytics.AnalyticsFacade
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +24,7 @@ public class AuthViewModel
     @Inject
     constructor(
         private val orchestrator: AuthOrchestrator,
+        private val analytics: AnalyticsFacade,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
         public val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
@@ -40,6 +43,7 @@ public class AuthViewModel
         private var emailAuthJob: Job? = null
 
         public fun initAuth(activity: FragmentActivity) {
+            runCatching { analytics.track(AnalyticsEvents.AUTH_START) }
             // FragmentActivity IS-A Context; pass it for both the Context and FragmentActivity params
             when (orchestrator.start(activity, activity)) {
                 AuthOrchestrator.StartResult.TruecallerLaunched -> {
@@ -253,6 +257,7 @@ public class AuthViewModel
                             is OtpSendResult.CodeSent -> {
                                 currentVerificationId = result.verificationId
                                 currentResendToken = result.resendToken
+                                runCatching { analytics.track(AnalyticsEvents.AUTH_OTP_SENT) }
                                 _uiState.value =
                                     AuthUiState.OtpEntry(
                                         phoneNumber = normalizedPhoneNumber,
@@ -361,26 +366,34 @@ public class AuthViewModel
         private suspend fun handleFirebaseAuthResult(result: AuthResult) {
             when (result) {
                 is AuthResult.Success -> {
+                    runCatching { analytics.track(AnalyticsEvents.AUTH_SUCCESS) }
                     orchestrator.completeWithFirebase(result.user, currentPhoneNumber.takeLast(PHONE_LAST_DIGITS))
                 }
                 is AuthResult.Error.WrongCode -> {
                     otpAttempts++
+                    runCatching { analytics.track(AnalyticsEvents.AUTH_FAILURE, mapOf("reason" to "wrong_code")) }
                     _uiState.value =
                         AuthUiState.Error(
                             message = "Incorrect code",
                             retriesLeft = maxOf(0, MAX_OTP_RETRIES - otpAttempts),
                         )
                 }
-                is AuthResult.Error.RateLimited ->
+                is AuthResult.Error.RateLimited -> {
+                    runCatching { analytics.track(AnalyticsEvents.AUTH_FAILURE, mapOf("reason" to "rate_limited")) }
                     _uiState.value = AuthUiState.Error("Too many attempts. Try again later.", retriesLeft = 0)
-                is AuthResult.Error.CodeExpired ->
+                }
+                is AuthResult.Error.CodeExpired -> {
+                    runCatching { analytics.track(AnalyticsEvents.AUTH_FAILURE, mapOf("reason" to "code_expired")) }
                     _uiState.value = AuthUiState.Error("Code expired. Please resend.", retriesLeft = 0)
-                is AuthResult.Error.General ->
+                }
+                is AuthResult.Error.General -> {
+                    runCatching { analytics.track(AnalyticsEvents.AUTH_FAILURE, mapOf("reason" to "general")) }
                     _uiState.value =
                         AuthUiState.Error(
                             "Sign-in failed. Please try again.",
                             retriesLeft = 0,
                         )
+                }
                 is AuthResult.Error.WrongCredential ->
                     _uiState.value = AuthUiState.Error("Incorrect email or password.", retriesLeft = 0)
                 is AuthResult.Error.UserNotFound ->

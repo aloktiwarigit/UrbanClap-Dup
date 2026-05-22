@@ -8,6 +8,8 @@ import com.homeservices.customer.domain.catalogue.CatalogueLocalizer
 import com.homeservices.customer.domain.catalogue.GetServiceDetailUseCase
 import com.homeservices.customer.domain.locale.GetCurrentLocaleUseCase
 import com.homeservices.customer.domain.technician.GetConfidenceScoreUseCase
+import com.homeservices.customer.observability.analytics.AnalyticsEvents
+import com.homeservices.customer.observability.analytics.AnalyticsFacade
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +28,7 @@ internal class ServiceDetailViewModel
         private val locationProvider: FusedCurrentLocationProvider,
         private val localizer: CatalogueLocalizer,
         private val getCurrentLocale: GetCurrentLocaleUseCase,
+        private val analytics: AnalyticsFacade,
     ) : ViewModel() {
         private val serviceId: String = checkNotNull(savedStateHandle["serviceId"])
         private val technicianId: String? = savedStateHandle["techId"]
@@ -47,6 +50,12 @@ internal class ServiceDetailViewModel
                 combine(getServiceDetail(serviceId), getCurrentLocale()) { result, locale ->
                     result.fold(
                         onSuccess = { service ->
+                            runCatching {
+                                analytics.track(
+                                    AnalyticsEvents.SERVICE_VIEW,
+                                    mapOf("service_id" to serviceId),
+                                )
+                            }
                             ServiceDetailUiState.Success(localizer.localizeService(service, locale))
                         },
                         onFailure = { ServiceDetailUiState.Error(it.message ?: "Unknown error") },

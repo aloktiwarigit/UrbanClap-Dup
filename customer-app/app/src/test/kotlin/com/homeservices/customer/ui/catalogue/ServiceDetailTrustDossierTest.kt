@@ -8,6 +8,7 @@ import com.homeservices.customer.domain.catalogue.model.AddOn
 import com.homeservices.customer.domain.catalogue.model.Service
 import com.homeservices.customer.domain.locale.GetCurrentLocaleUseCase
 import com.homeservices.customer.domain.technician.GetConfidenceScoreUseCase
+import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -79,6 +80,7 @@ public class ServiceDetailTrustDossierTest {
                     locationProvider,
                     localizer,
                     getCurrentLocale,
+                    NoOpAnalyticsFacade(),
                 )
             assertThat(vm.recommendedTechnicianId.value).isNull()
         }
@@ -103,6 +105,7 @@ public class ServiceDetailTrustDossierTest {
                     locationProvider,
                     localizer,
                     getCurrentLocale,
+                    NoOpAnalyticsFacade(),
                 )
             assertThat(vm.recommendedTechnicianId.value).isEqualTo("tech-1")
         }

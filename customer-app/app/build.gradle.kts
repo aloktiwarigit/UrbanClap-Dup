@@ -177,6 +177,11 @@ android {
             "GROWTHBOOK_CLIENT_KEY",
             "\"${System.getenv("GROWTHBOOK_CLIENT_KEY") ?: ""}\"",
         )
+        buildConfigField(
+            "String",
+            "POSTHOG_API_KEY",
+            "\"${System.getenv("POSTHOG_API_KEY") ?: ""}\"",
+        )
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
@@ -695,6 +700,10 @@ kover {
                     // covered by repository-layer integration test in W6 (E16-S04b scope).
                     "*.data.waitlist.WaitlistRepositoryImpl",
                     "*.data.waitlist.WaitlistRepositoryImpl\$*",
+                    // Analytics DI module — Hilt @Binds wiring, same rationale as other DI modules.
+                    "*.observability.analytics.di.*",
+                    // NoOpAnalyticsFacade — trivial no-op stubs; no logic to test.
+                    "*.NoOpAnalyticsFacade",
                 )
             }
         }
@@ -736,6 +745,7 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
 
     implementation(libs.sentry.android)
+    implementation(libs.posthog.android)
     implementation(libs.growthbook.android)
     implementation(libs.growthbook.okhttp)
 

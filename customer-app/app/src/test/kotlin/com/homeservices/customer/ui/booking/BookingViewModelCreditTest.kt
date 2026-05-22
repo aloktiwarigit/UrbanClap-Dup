@@ -3,6 +3,7 @@ package com.homeservices.customer.ui.booking
 import com.google.common.truth.Truth.assertThat
 import com.homeservices.customer.data.booking.PaymentResultBus
 import com.homeservices.customer.domain.auth.BiometricGateUseCase
+import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import com.homeservices.customer.domain.booking.ConfirmBookingUseCase
 import com.homeservices.customer.domain.booking.CreateBookingUseCase
 import com.homeservices.customer.domain.booking.RazorpayPaymentUseCase
@@ -43,7 +44,7 @@ public class BookingViewModelCreditTest {
         Dispatchers.resetMain()
     }
 
-    private fun makeVm() = BookingViewModel(createBooking, confirmBooking, razorpayPayment, biometricGate)
+    private fun makeVm() = BookingViewModel(createBooking, confirmBooking, razorpayPayment, biometricGate, NoOpAnalyticsFacade())
 
     // AC-5: toggle hidden when balance == 0
     @Test
