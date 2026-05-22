@@ -20,7 +20,7 @@ import io.sentry.protocol.SentryException
  *   - Lat/Lng coordinates:    \b\d{1,3}\.\d{6,}\b
  */
 public object PiiRedactor {
-    private val PHONE_INTL_RE = Regex("""\b(?:\+91[-\s]?)?[6-9]\d{9}\b""")
+    private val PHONE_INTL_RE = Regex("""(?<!\w)(?:\+91[-\s]?)?[6-9]\d{9}\b""")
     private val EMAIL_RE = Regex("""[\w._%+\-]+@[\w.\-]+\.\w{2,}""")
     private val AADHAAR_RE = Regex("""\b\d{4}\s?\d{4}\s?\d{4}\b""")
     private val PAN_RE = Regex("""\b[A-Z]{5}\d{4}[A-Z]\b""")

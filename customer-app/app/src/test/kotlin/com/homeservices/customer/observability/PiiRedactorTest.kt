@@ -118,6 +118,11 @@ public class PiiRedactorTest {
                     "Location 28.613939 N",
                     "Location [REDACTED_LATLNG] N",
                 ),
+                Arguments.of(
+                    "lat/lng exactly 6 decimal places",
+                    "coords 28.613939 precise",
+                    "coords [REDACTED_LATLNG] precise",
+                ),
             )
 
         @JvmStatic
@@ -130,6 +135,7 @@ public class PiiRedactorTest {
                 Arguments.of("short decimal no PII", "score 4.5 out of 5"),
                 Arguments.of("price rupees", "price 299.99 INR"),
                 Arguments.of("non-Razorpay underscore", "event_tracking_id"),
+                Arguments.of("decimal 5dp not redacted", "score 28.12345 approx"),
             )
     }
 }
