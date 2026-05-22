@@ -29,7 +29,12 @@ export async function adminRefundCreditHandler(
     issuedAt: new Date().toISOString(),
   };
 
-  const container = getCosmosClient().database(DB_NAME).container('customer-credits');
+  // NOTE: container name is `customer_credits` (underscore) per
+  // api/src/cosmos/client.ts:88 and customer-credit-ledger-repository.ts. The
+  // previous hyphenated value was a typo — Cosmos returned "Resource not found"
+  // on every refund-credit request because no `customer-credits` container
+  // exists in prod.
+  const container = getCosmosClient().database(DB_NAME).container('customer_credits');
   await container.items.create(doc);
 
   Sentry.captureMessage('Admin refund credit issued', {
