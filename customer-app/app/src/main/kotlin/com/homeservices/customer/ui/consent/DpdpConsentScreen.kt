@@ -250,16 +250,16 @@ internal fun DpdpConsentScreenContent(
                                     ),
                             )
                         }.statusBarsPadding()
-                        .padding(horizontal = 24.dp, vertical = 24.dp),
+                        .padding(horizontal = HERO_PADDING_DP.dp, vertical = HERO_PADDING_DP.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(HERO_SPACING_DP.dp),
                 ) {
                     // Brand icon circle
                     Surface(
-                        modifier = Modifier.size(72.dp),
+                        modifier = Modifier.size(HERO_ICON_SIZE_DP.dp),
                         shape = CircleShape,
                         color = Color.White,
                     ) {
@@ -268,7 +268,7 @@ internal fun DpdpConsentScreenContent(
                                 imageVector = Icons.Default.Eco,
                                 contentDescription = null,
                                 tint = BrandGreen,
-                                modifier = Modifier.size(36.dp),
+                                modifier = Modifier.size(HERO_ICON_INNER_SIZE_DP.dp),
                             )
                         }
                     }

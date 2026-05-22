@@ -26,8 +26,7 @@ public class PostHogAnalyticsFacade
          * Thread-safe: uses compareAndSet to prevent double-initialization under concurrent calls.
          */
         public fun initIfConsented(analyticsOptIn: Boolean) {
-            if (!analyticsOptIn) return
-            if (!posthogInitialized.compareAndSet(false, true)) return // already initialized or initializing
+            if (!analyticsOptIn || !posthogInitialized.compareAndSet(false, true)) return
             val apiKey = buildInfoProvider.postHogApiKey
             if (apiKey.isBlank()) {
                 posthogInitialized.set(false) // allow retry if key becomes available
