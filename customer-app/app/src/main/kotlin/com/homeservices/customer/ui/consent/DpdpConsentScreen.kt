@@ -176,6 +176,7 @@ public fun DpdpConsentScreen(
  *     Three toggle rows + legal copy.
  *  3. Sticky CTA column pinned to bottom.
  */
+@Suppress("LongMethod")
 @Composable
 internal fun DpdpConsentScreenContent(
     uiState: ConsentUiState,

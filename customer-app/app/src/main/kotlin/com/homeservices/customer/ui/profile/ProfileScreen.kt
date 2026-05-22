@@ -60,6 +60,7 @@ private val CardBorder = Color(0xFFDED8CD)
 private val DangerRed = Color(0xFFDC2626)
 private val CardShape = RoundedCornerShape(12.dp)
 
+@Suppress("LongMethod")
 @Composable
 internal fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel(),

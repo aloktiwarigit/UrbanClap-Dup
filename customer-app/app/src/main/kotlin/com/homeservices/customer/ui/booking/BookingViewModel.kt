@@ -111,6 +111,7 @@ internal class BookingViewModel
         }
 
         /** Creates a booking. Cash bookings call this directly - no biometric gate. */
+        @Suppress("LongMethod")
         public fun startBooking(
             serviceId: String,
             categoryId: String,

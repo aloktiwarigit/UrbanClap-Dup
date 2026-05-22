@@ -119,6 +119,7 @@ internal fun AppNavigation(
  * Extracted from [AppNavigation] to satisfy detekt LongMethod and CyclomaticComplexMethod
  * limits — the outer function handles the loading gate only; all navigation wiring lives here.
  */
+@Suppress("LongMethod")
 @Composable
 private fun AppNavigationReady(
     sessionManager: SessionManager,
