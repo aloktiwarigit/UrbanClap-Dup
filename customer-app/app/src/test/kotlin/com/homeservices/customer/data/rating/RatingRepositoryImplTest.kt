@@ -17,11 +17,17 @@ import io.sentry.Sentry
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 
 public class RatingRepositoryImplTest {
     private val api: RatingApiService = mockk()
     private val repo = RatingRepositoryImpl(api)
+
+    @AfterEach
+    public fun tearDown() {
+        unmockkAll()
+    }
 
     @Test
     public fun `submitCustomerRating calls api with correct DTO`(): Unit =

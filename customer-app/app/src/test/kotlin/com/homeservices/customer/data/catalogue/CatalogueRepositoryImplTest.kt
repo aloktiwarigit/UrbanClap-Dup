@@ -16,12 +16,18 @@ import io.mockk.verify
 import io.sentry.Sentry
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Test
 import java.io.IOException
 
 public class CatalogueRepositoryImplTest {
     private val api: CatalogueApiService = mockk()
     private val sut = CatalogueRepositoryImpl(api)
+
+    @After
+    public fun tearDown() {
+        unmockkAll()
+    }
 
     @Test
     public fun `getCategories emits success with mapped domain models`(): Unit =

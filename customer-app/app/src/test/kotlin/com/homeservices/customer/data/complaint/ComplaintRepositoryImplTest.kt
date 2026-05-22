@@ -16,11 +16,17 @@ import io.sentry.Sentry
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 
 public class ComplaintRepositoryImplTest {
     private val api: ComplaintApiService = mockk()
     private val repo = ComplaintRepositoryImpl(api)
+
+    @AfterEach
+    public fun tearDown() {
+        unmockkAll()
+    }
 
     private val mockResponse =
         ComplaintResponseDto(

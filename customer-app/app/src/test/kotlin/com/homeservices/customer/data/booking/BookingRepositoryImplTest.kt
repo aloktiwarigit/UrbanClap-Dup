@@ -13,11 +13,17 @@ import io.mockk.verify
 import io.sentry.Sentry
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Test
 
 public class BookingRepositoryImplTest {
     private val api: BookingApiService = mockk()
     private val repo = BookingRepositoryImpl(api)
+
+    @After
+    public fun tearDown() {
+        unmockkAll()
+    }
 
     private val fakeSlot = BookingRequest.Slot(date = "2026-06-01", window = "10:00-12:00")
 
