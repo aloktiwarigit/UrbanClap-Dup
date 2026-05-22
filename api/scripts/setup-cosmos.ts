@@ -23,6 +23,13 @@ const containers = [
   // container; if it does not exist, admin compliance page server-render
   // crashes with "Resource not found" → error.tsx "Something stalled".
   { id: 'erasure_requests',  partitionKey: '/partitionKey', ttl: undefined },
+  // Admin-side customer metadata (flag, internal notes). One doc per customer
+  // id, partitioned by /id so point reads in patchCustomerMetadata are O(1).
+  // Missing this container makes the admin customers list silently empty
+  // because the page wraps the fetch in try/catch (see app/[locale]/(dashboard)/
+  // customers/page.tsx). Container name uses a hyphen per existing repo code
+  // (api/src/cosmos/customer-metadata-repository.ts:3).
+  { id: 'customer-metadata', partitionKey: '/id',           ttl: undefined },
   // E07-S04: customer credit wallet for no-show compensation — partitioned by /id
   // (one document per bookingId, idempotency-safe via conflict on duplicate /id)
   // NOTE (P1-1): this container is partitioned by /id, NOT /customerId.
