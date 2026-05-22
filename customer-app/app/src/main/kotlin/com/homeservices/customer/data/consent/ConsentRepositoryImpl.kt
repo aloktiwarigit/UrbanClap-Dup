@@ -61,6 +61,7 @@ public class ConsentRepositoryImpl
         override val isConsentRequired: Flow<Boolean> =
             consentState.map { state ->
                 state is ConsentState.NotGiven ||
+                    state is ConsentState.Revoked ||
                     (state is ConsentState.Granted && state.version < CURRENT_CONSENT_VERSION)
             }
 
@@ -82,6 +83,11 @@ public class ConsentRepositoryImpl
         override suspend fun revokeConsent() {
             dataStore.edit { prefs ->
                 prefs[KEY_CONSENT_STATE] = STATE_REVOKED
+                prefs.remove(KEY_CONSENT_VERSION)
+                prefs.remove(KEY_GRANTED_AT)
+                prefs.remove(KEY_ANALYTICS)
+                prefs.remove(KEY_CRASH)
+                prefs.remove(KEY_MARKETING)
             }
         }
     }
