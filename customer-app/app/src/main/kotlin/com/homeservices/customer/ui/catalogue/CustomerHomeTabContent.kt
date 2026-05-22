@@ -48,15 +48,7 @@ import com.homeservices.customer.R
 import com.homeservices.customer.domain.booking.model.CustomerBooking
 import com.homeservices.customer.domain.booking.model.CustomerBookingStatus
 
-// ── Colour tokens (aligned with CatalogueHomeScreen tokens) ──────────────────
-private val SectionBrandGreen = Color(0xFF0B3D2E)
-private val SectionWarmIvory = Color(0xFFFBF7EF)
-private val SectionSurface = Color(0xFFFFFFFF)
-private val SectionMuted = Color(0xFFE8F1EC)
-private val SectionBorder = Color(0xFFDED8CD)
-private val SectionTextPrimary = Color(0xFF18231F)
-private val SectionTextSecondary = Color(0xFF5F6C66)
-private val ActiveAccent = Color(0xFFB68A2C)
+// ── Colour tokens (non-design-system — keep as raw values) ───────────────────
 private val ActiveAccentSoft = Color(0xFFF5EFE4)
 private val HighPriorityRed = Color(0xFFB5271B)
 private val HighPriorityRedSoft = Color(0xFFFAECEB)
@@ -91,11 +83,12 @@ public fun CustomerHomeTabContent(
     onRateBooking: (bookingId: String) -> Unit,
     onComplainBooking: (bookingId: String) -> Unit,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = SectionWarmIvory,
+    backgroundColor: Color = Color.Unspecified,
 ) {
+    val resolvedBg = if (backgroundColor == Color.Unspecified) MaterialTheme.colorScheme.background else backgroundColor
     when (homeState) {
         is CustomerHomeUiState.Loading ->
-            DurableHooksSkeleton(modifier = modifier, backgroundColor = backgroundColor)
+            DurableHooksSkeleton(modifier = modifier, backgroundColor = resolvedBg)
 
         is CustomerHomeUiState.Ready ->
             DurableHooksReady(
@@ -173,9 +166,9 @@ private fun PendingActionCard(
     onClick: () -> Unit,
 ) {
     val isHigh = action.priority == PendingActionPriority.HIGH
-    val cardBg = if (isHigh) HighPriorityRedSoft else SectionSurface
-    val accentColor = if (isHigh) HighPriorityRed else SectionBrandGreen
-    val borderColor = if (isHigh) HighPriorityRed.copy(alpha = 0.25f) else SectionBorder
+    val cardBg = if (isHigh) HighPriorityRedSoft else MaterialTheme.colorScheme.surface
+    val accentColor = if (isHigh) HighPriorityRed else MaterialTheme.colorScheme.primary
+    val borderColor = if (isHigh) HighPriorityRed.copy(alpha = 0.25f) else MaterialTheme.colorScheme.outline
 
     Row(
         modifier =
@@ -207,14 +200,14 @@ private fun PendingActionCard(
             Text(
                 text = pendingActionTitle(action),
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
-                color = SectionTextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = stringResource(R.string.home_pending_action_tap_hint),
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                color = SectionTextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
             )
         }
@@ -258,8 +251,8 @@ private fun ActiveBookingSection(
     onPriceApproval: (String) -> Unit,
 ) {
     val isPriceApproval = booking.status in PRICE_APPROVAL_STATUSES
-    val cardBg = if (isPriceApproval) ActiveAccentSoft else SectionMuted
-    val accentColor = if (isPriceApproval) ActiveAccent else SectionBrandGreen
+    val cardBg = if (isPriceApproval) ActiveAccentSoft else MaterialTheme.colorScheme.surfaceVariant
+    val accentColor = if (isPriceApproval) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
     val borderColor = accentColor.copy(alpha = 0.3f)
     val statusLabel = activeBookingStatusLabel(booking.status)
     val ctaLabel =
@@ -306,7 +299,7 @@ private fun ActiveBookingSection(
         Text(
             text = booking.serviceName,
             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = 15.sp),
-            color = SectionTextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -318,7 +311,7 @@ private fun ActiveBookingSection(
             Text(
                 text = statusLabel,
                 style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
-                color = SectionTextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -390,8 +383,8 @@ private fun RecentBookingCard(
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
-                .background(SectionSurface)
-                .border(1.dp, SectionBorder, RoundedCornerShape(14.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
                 .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -401,12 +394,12 @@ private fun RecentBookingCard(
             modifier =
                 Modifier
                     .size(36.dp)
-                    .background(SectionMuted, RoundedCornerShape(10.dp)),
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp)),
         ) {
             Icon(
                 imageVector = Icons.Default.BookmarkBorder,
                 contentDescription = null,
-                tint = SectionBrandGreen,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp),
             )
         }
@@ -414,7 +407,7 @@ private fun RecentBookingCard(
             Text(
                 text = booking.serviceName,
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
-                color = SectionTextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -425,13 +418,13 @@ private fun RecentBookingCard(
                 Icon(
                     imageVector = Icons.Default.CalendarToday,
                     contentDescription = null,
-                    tint = SectionTextSecondary,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(11.dp),
                 )
                 Text(
                     text = booking.slotDate,
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                    color = SectionTextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -439,11 +432,11 @@ private fun RecentBookingCard(
             Text(
                 text = stringResource(R.string.home_recent_booking_rate),
                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 11.sp),
-                color = SectionBrandGreen,
+                color = MaterialTheme.colorScheme.primary,
                 modifier =
                     Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(SectionMuted)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                         .clickable(onClick = onRateBooking)
                         .padding(horizontal = 8.dp, vertical = 4.dp),
             )
@@ -451,11 +444,11 @@ private fun RecentBookingCard(
             Text(
                 text = stringResource(R.string.home_recent_booking_complain),
                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 11.sp),
-                color = SectionTextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier =
                     Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(SectionBorder.copy(alpha = 0.25f))
+                        .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
                         .clickable(onClick = onComplainBooking)
                         .padding(horizontal = 8.dp, vertical = 4.dp),
             )
@@ -470,7 +463,7 @@ private fun SectionLabel(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, fontSize = 13.sp),
-        color = SectionTextSecondary,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 2.dp),
     )
 }
@@ -480,8 +473,9 @@ private fun SectionLabel(text: String) {
 @Composable
 private fun DurableHooksSkeleton(
     modifier: Modifier = Modifier,
-    backgroundColor: Color = SectionWarmIvory,
+    backgroundColor: Color = Color.Unspecified,
 ) {
+    val resolvedBg = if (backgroundColor == Color.Unspecified) MaterialTheme.colorScheme.background else backgroundColor
     val transition = rememberInfiniteTransition(label = "shimmer")
     val shimmerOffset by transition.animateFloat(
         initialValue = -1f,
@@ -498,9 +492,9 @@ private fun DurableHooksSkeleton(
     fun shimmerBrush(): Brush {
         val shimmerColors =
             listOf(
-                backgroundColor,
-                SectionBorder.copy(alpha = 0.55f),
-                backgroundColor,
+                resolvedBg,
+                MaterialTheme.colorScheme.outline.copy(alpha = 0.55f),
+                resolvedBg,
             )
         return Brush.linearGradient(
             colors = shimmerColors,

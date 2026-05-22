@@ -9,14 +9,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import com.homeservices.customer.R
 import com.homeservices.customer.ui.util.formatInr
 
-private val BrandGreen = Color(0xFF0B3D2E)
-private val MutedGreen = Color(0xFFE8F1EC)
 
 /**
  * A compact wallet-balance chip displayed on HomeScreen.
@@ -36,22 +33,22 @@ public fun WalletBalanceChip(
             Text(
                 text = formatInr(balanceInPaise),
                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = BrandGreen,
+                color = MaterialTheme.colorScheme.primary,
             )
         },
         leadingIcon = {
             Icon(
                 imageVector = Icons.Default.AccountBalanceWallet,
                 contentDescription = stringResource(R.string.wallet_chip_content_desc),
-                tint = BrandGreen,
+                tint = MaterialTheme.colorScheme.primary,
             )
         },
         colors =
             AssistChipDefaults.assistChipColors(
-                containerColor = MutedGreen,
-                leadingIconContentColor = BrandGreen,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                leadingIconContentColor = MaterialTheme.colorScheme.primary,
             ),
-        border = AssistChipDefaults.assistChipBorder(enabled = true, borderColor = BrandGreen.copy(alpha = 0.3f)),
+        border = AssistChipDefaults.assistChipBorder(enabled = true, borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
         modifier = modifier,
     )
 }

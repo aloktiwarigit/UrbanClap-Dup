@@ -50,13 +50,6 @@ import com.homeservices.customer.R
 import com.homeservices.customer.domain.catalogue.model.Category
 import com.homeservices.customer.ui.util.formatInr
 
-// ── Colour tokens (shared with CatalogueHomeScreen) ───────────────────────────
-private val PhotoCardBrandGreen = Color(0xFF0B3D2E)
-private val PhotoCardSurface = Color(0xFFFFFFFF)
-private val PhotoCardBorder = Color(0xFFDED8CD)
-private val PhotoCardTextPrimary = Color(0xFF18231F)
-private val PhotoCardMutedGreen = Color(0xFFE8F1EC)
-
 // Category style colour tokens
 private val AcRepairIconBg = Color(0xFFEAF4F7)
 private val AcRepairIconTint = Color(0xFF246174)
@@ -106,8 +99,8 @@ internal fun PhotoFirstCategoryCard(
                 .height(148.dp)
                 .scale(scale)
                 .clip(PhotoCardShape)
-                .background(PhotoCardSurface)
-                .border(1.dp, PhotoCardBorder, PhotoCardShape)
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.dp, MaterialTheme.colorScheme.outline, PhotoCardShape)
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onPress = {
@@ -160,7 +153,7 @@ private fun BoxScope.PhotoCardImageContent(
         Text(
             text = category.name,
             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 17.sp),
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onPrimary,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
@@ -168,7 +161,7 @@ private fun BoxScope.PhotoCardImageContent(
             Text(
                 text = stringResource(R.string.catalogue_starting_price, formatInr(category.minPricePaise.toLong())),
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.SemiBold),
-                color = Color.White.copy(alpha = 0.88f),
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.88f),
                 maxLines = 1,
             )
         }
@@ -191,7 +184,7 @@ private fun PhotoCardIconFallback(
         Text(
             text = category.name,
             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 18.sp),
-            color = PhotoCardTextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
@@ -200,7 +193,7 @@ private fun PhotoCardIconFallback(
             Text(
                 text = stringResource(R.string.catalogue_starting_price, formatInr(category.minPricePaise.toLong())),
                 style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.SemiBold),
-                color = PhotoCardBrandGreen,
+                color = MaterialTheme.colorScheme.primary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -211,6 +204,7 @@ private fun PhotoCardIconFallback(
 // Re-export so the CatalogueHomeScreen can call categoryStyle() internally.
 // categoryStyle() is private in CatalogueHomeScreen.kt but we need it here too.
 // Defined inline to avoid exposing it from the home screen.
+@Composable
 private fun categoryStyle(id: String): CategoryStyleTokens =
     when (id) {
         "ac-repair" ->
@@ -245,8 +239,8 @@ private fun categoryStyle(id: String): CategoryStyleTokens =
             )
         else ->
             CategoryStyleTokens(
-                iconBackground = PhotoCardMutedGreen,
-                iconTint = PhotoCardBrandGreen,
+                iconBackground = MaterialTheme.colorScheme.surfaceVariant,
+                iconTint = MaterialTheme.colorScheme.primary,
                 icon = Icons.Default.Build,
             )
     }
