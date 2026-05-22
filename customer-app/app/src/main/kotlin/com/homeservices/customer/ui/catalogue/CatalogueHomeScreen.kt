@@ -87,7 +87,6 @@ import com.homeservices.customer.domain.catalogue.model.Category
 import com.homeservices.customer.ui.bookings.CustomerBookingsScreen
 import com.homeservices.customer.ui.util.formatInr
 import com.homeservices.customer.ui.wallet.WalletBalanceChip
-import com.homeservices.designsystem.theme.LocalHomeservicesExtendedColors
 import kotlinx.coroutines.delay
 
 // ── Promo banners ─────────────────────────────────────────────────────────────
