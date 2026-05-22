@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * The key observable is the internal [posthogInitialized] AtomicBoolean:
  *  - false initially
  *  - stays false when consent=false or key is blank
- *  - becomes true after initIfConsented(true) with a non-blank key
+ *  - becomes true after applyConsent(true) with a non-blank key
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33], manifest = Config.NONE)
@@ -62,23 +62,23 @@ public class PostHogAnalyticsFacadeTest {
     }
 
     @Test
-    public fun `initIfConsented false does not set posthogInitialized`() {
+    public fun `applyConsent false does not set posthogInitialized`() {
         val sut = buildFacade("ph-test-key")
-        sut.initIfConsented(false)
+        sut.applyConsent(false)
         assertThat(posthogInitialized(sut)).isFalse()
     }
 
     @Test
-    public fun `initIfConsented true with blank key does not set posthogInitialized`() {
+    public fun `applyConsent true with blank key does not set posthogInitialized`() {
         val sut = buildFacade("")
-        sut.initIfConsented(true)
+        sut.applyConsent(true)
         assertThat(posthogInitialized(sut)).isFalse()
     }
 
     @Test
-    public fun `initIfConsented true with non-blank key sets posthogInitialized`() {
+    public fun `applyConsent true with non-blank key sets posthogInitialized`() {
         val sut = buildFacade("ph-test-key-abc123")
-        sut.initIfConsented(true)
+        sut.applyConsent(true)
         assertThat(posthogInitialized(sut)).isTrue()
     }
 
@@ -102,10 +102,10 @@ public class PostHogAnalyticsFacadeTest {
     }
 
     @Test
-    public fun `second initIfConsented true call is idempotent`() {
+    public fun `second applyConsent true call is idempotent`() {
         val sut = buildFacade("ph-test-key-abc123")
-        sut.initIfConsented(true)
-        sut.initIfConsented(true)
+        sut.applyConsent(true)
+        sut.applyConsent(true)
         assertThat(posthogInitialized(sut)).isTrue()
     }
 }

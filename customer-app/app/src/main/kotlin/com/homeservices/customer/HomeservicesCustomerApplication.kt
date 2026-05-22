@@ -19,12 +19,8 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeout
-
-private const val CONSENT_INIT_TIMEOUT_MS = 5_000L
 
 @HiltAndroidApp
 public class HomeservicesCustomerApplication : Application() {
@@ -74,28 +70,22 @@ public class HomeservicesCustomerApplication : Application() {
             AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
         }
 
-        // Gate PostHog init on user's analytics consent (DPDP Act 2023 / NFR-C-5).
+        // Observe consent state continuously (DPDP Act 2023 / NFR-C-5).
+        // Uses collect{} instead of first() so that:
+        //   1. A fresh-install user who grants consent on the DPDP screen is handled in the same session.
+        //   2. A user who later revokes analytics/crash consent via Settings causes PostHog to opt out
+        //      and Sentry to stop transmitting events — without requiring an app restart.
         // Fire-and-forget: failures here must never propagate to sibling coroutines.
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-            val analyticsEntryPoint =
+            val entryPoint =
                 EntryPointAccessors
                     .fromApplication(this@HomeservicesCustomerApplication, AnalyticsEntryPoint::class.java)
-            val analyticsOptIn =
-                try {
-                    withTimeout(CONSENT_INIT_TIMEOUT_MS) {
-                        analyticsEntryPoint
-                            .consentRepository()
-                            .consentState
-                            .first()
-                            .let { it is ConsentState.Granted && it.analyticsOptIn }
-                    }
-                } catch (e: TimeoutCancellationException) {
-                    io.sentry.Sentry.addBreadcrumb(
-                        io.sentry.Breadcrumb.info("PostHog init skipped — consent state unavailable after 5s: ${e.message}"),
-                    )
-                    false // default to no-op if consent state not available
-                }
-            analyticsEntryPoint.postHogAnalyticsFacade().initIfConsented(analyticsOptIn)
+            entryPoint.consentRepository().consentState.collect { state ->
+                val analyticsOptIn = state is ConsentState.Granted && state.analyticsOptIn
+                val crashOptIn = state is ConsentState.Granted && state.crashOptIn
+                entryPoint.postHogAnalyticsFacade().applyConsent(analyticsOptIn)
+                SentryInitializer.applyCrashConsent(crashOptIn)
+            }
         }
     }
 }

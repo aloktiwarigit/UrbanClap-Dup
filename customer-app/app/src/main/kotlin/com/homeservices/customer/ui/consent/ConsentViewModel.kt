@@ -2,6 +2,8 @@ package com.homeservices.customer.ui.consent
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.homeservices.customer.domain.consent.ConsentState
+import com.homeservices.customer.domain.consent.GetConsentStateUseCase
 import com.homeservices.customer.domain.consent.GrantConsentUseCase
 import com.homeservices.customer.domain.consent.IsConsentRequiredUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -11,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -23,9 +26,28 @@ public class ConsentViewModel
         private val grantConsentUseCase: GrantConsentUseCase,
         @Suppress("UnusedPrivateMember")
         private val isConsentRequiredUseCase: IsConsentRequiredUseCase,
+        private val getConsentStateUseCase: GetConsentStateUseCase,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(ConsentUiState())
         public val uiState: StateFlow<ConsentUiState> = _uiState.asStateFlow()
+
+        init {
+            // Populate the UI with previously stored consent choices so that opening
+            // "Manage consent" from Settings → Privacy shows the user's actual current
+            // selections, not the factory defaults (analytics=ON, crash=ON, marketing=OFF).
+            viewModelScope.launch {
+                val currentState = getConsentStateUseCase().first()
+                if (currentState is ConsentState.Granted) {
+                    _uiState.update {
+                        it.copy(
+                            analyticsOptIn = currentState.analyticsOptIn,
+                            crashOptIn = currentState.crashOptIn,
+                            marketingOptIn = currentState.marketingOptIn,
+                        )
+                    }
+                }
+            }
+        }
 
         private val _navigateNext = Channel<Unit>(Channel.BUFFERED)
         public val navigateNext: Flow<Unit> = _navigateNext.receiveAsFlow()

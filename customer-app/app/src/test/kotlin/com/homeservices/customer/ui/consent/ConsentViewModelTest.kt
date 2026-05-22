@@ -1,6 +1,8 @@
 package com.homeservices.customer.ui.consent
 
 import com.google.common.truth.Truth.assertThat
+import com.homeservices.customer.domain.consent.ConsentState
+import com.homeservices.customer.domain.consent.GetConsentStateUseCase
 import com.homeservices.customer.domain.consent.GrantConsentUseCase
 import com.homeservices.customer.domain.consent.IsConsentRequiredUseCase
 import io.mockk.coEvery
@@ -21,6 +23,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
 public class ConsentViewModelTest {
@@ -28,6 +31,7 @@ public class ConsentViewModelTest {
 
     private lateinit var grantConsentUseCase: GrantConsentUseCase
     private lateinit var isConsentRequiredUseCase: IsConsentRequiredUseCase
+    private lateinit var getConsentStateUseCase: GetConsentStateUseCase
     private lateinit var viewModel: ConsentViewModel
 
     @Before
@@ -35,8 +39,11 @@ public class ConsentViewModelTest {
         Dispatchers.setMain(testDispatcher)
         grantConsentUseCase = mockk()
         isConsentRequiredUseCase = mockk()
+        getConsentStateUseCase = mockk()
         every { isConsentRequiredUseCase() } returns flowOf(true)
-        viewModel = ConsentViewModel(grantConsentUseCase, isConsentRequiredUseCase)
+        // Default: no prior consent stored — init{} leaves defaults unchanged.
+        every { getConsentStateUseCase() } returns flowOf(ConsentState.NotGiven)
+        viewModel = ConsentViewModel(grantConsentUseCase, isConsentRequiredUseCase, getConsentStateUseCase)
     }
 
     @After
@@ -48,6 +55,7 @@ public class ConsentViewModelTest {
 
     @Test
     public fun `initial state has analytics and crash on, marketing off`() {
+        // setUp stubs getConsentStateUseCase() with NotGiven — defaults stay unchanged.
         val state = viewModel.uiState.value
         assertThat(state.analyticsOptIn).isTrue()
         assertThat(state.crashOptIn).isTrue()
@@ -55,6 +63,43 @@ public class ConsentViewModelTest {
         assertThat(state.isLoading).isFalse()
         assertThat(state.error).isNull()
     }
+
+    @Test
+    public fun `initializes UI state from stored Granted consent`(): Unit =
+        runTest {
+            // Arrange: stored consent has all opt-ins declined.
+            val storedState =
+                ConsentState.Granted(
+                    version = 1,
+                    grantedAt = Instant.now(),
+                    analyticsOptIn = false,
+                    crashOptIn = false,
+                    marketingOptIn = false,
+                )
+            every { getConsentStateUseCase() } returns flowOf(storedState)
+
+            // Re-create the ViewModel so init{} runs with the new stub.
+            val vm = ConsentViewModel(grantConsentUseCase, isConsentRequiredUseCase, getConsentStateUseCase)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            assertThat(vm.uiState.value.analyticsOptIn).isFalse()
+            assertThat(vm.uiState.value.crashOptIn).isFalse()
+            assertThat(vm.uiState.value.marketingOptIn).isFalse()
+        }
+
+    @Test
+    public fun `keeps defaults for NotGiven consent`(): Unit =
+        runTest {
+            // setUp already stubs getConsentStateUseCase() with NotGiven.
+            // Re-create the ViewModel so init{} runs.
+            val vm = ConsentViewModel(grantConsentUseCase, isConsentRequiredUseCase, getConsentStateUseCase)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Defaults: analytics=true, crash=true, marketing=false.
+            assertThat(vm.uiState.value.analyticsOptIn).isTrue()
+            assertThat(vm.uiState.value.crashOptIn).isTrue()
+            assertThat(vm.uiState.value.marketingOptIn).isFalse()
+        }
 
     // ── Toggle functions ──────────────────────────────────────────────────────
 

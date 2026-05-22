@@ -157,6 +157,7 @@ private fun AppNavigationReady(
         authState = authState,
         pendingActionStore = pendingActionStore,
         navController = navController,
+        consentRequired = consentRequired,
     )
     SentryEffects(sessionManager = sessionManager, navController = navController)
     if (initialDeepLink != null && !firstLaunchPending) {
@@ -165,6 +166,7 @@ private fun AppNavigationReady(
             authState = authState,
             routeResolver = routeResolver,
             navController = navController,
+            consentRequired = consentRequired,
         )
     }
 
@@ -263,8 +265,11 @@ private fun PendingActionsNavEffect(
     authState: AuthState,
     pendingActionStore: PendingActionStore,
     navController: NavController,
+    consentRequired: Boolean,
 ) {
     val authenticatedUid = (authState as? AuthState.Authenticated)?.uid ?: return
+    // Do not navigate over the consent screen — wait until the user has consented.
+    if (consentRequired) return
 
     LaunchedEffect(authenticatedUid) {
         val navigatedIds = mutableSetOf<String>()
@@ -316,8 +321,11 @@ private fun DeepLinkEffect(
     authState: AuthState,
     routeResolver: CustomerRouteResolver?,
     navController: NavController,
+    consentRequired: Boolean,
 ) {
-    LaunchedEffect(initialDeepLink, authState) {
+    LaunchedEffect(initialDeepLink, authState, consentRequired) {
+        // Do not process deep links over the consent screen — wait until the user has consented.
+        if (consentRequired) return@LaunchedEffect
         val currentAuth = authState
         if (currentAuth !is AuthState.Authenticated) return@LaunchedEffect
         val intent = DeepLinkUri.parse(initialDeepLink) ?: return@LaunchedEffect
