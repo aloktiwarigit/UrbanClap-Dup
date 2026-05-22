@@ -209,7 +209,11 @@ private fun AuthHeroZone() {
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             HsScreenTitle(text = "HomeHeroo", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onPrimary)
-            Text(text = "घर पर भरोसेमंद सेवा", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.82f))
+            Text(
+                text = "घर पर भरोसेमंद सेवा",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.82f),
+            )
             Text(
                 text = "भरोसेमंद सेवा · 30 दिन गारंटी",
                 style = MaterialTheme.typography.labelSmall,

@@ -36,7 +36,6 @@ import androidx.compose.ui.unit.dp
 import com.homeservices.customer.R
 import com.homeservices.designsystem.components.HsScreenTitle
 
-
 /**
  * Settings → Privacy & data sub-screen.
  *

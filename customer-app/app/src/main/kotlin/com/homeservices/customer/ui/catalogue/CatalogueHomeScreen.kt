@@ -418,7 +418,12 @@ private fun HeroTopRow(onSettingsClick: () -> Unit) {
             )
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(15.dp))
+                Icon(
+                    Icons.Default.LocationOn,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(15.dp),
+                )
                 Spacer(Modifier.width(4.dp))
                 Text(
                     text = stringResource(R.string.catalogue_location_display),
@@ -438,7 +443,12 @@ private fun HeroTopRow(onSettingsClick: () -> Unit) {
                     .background(MaterialTheme.colorScheme.surface)
                     .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
         ) {
-            Icon(Icons.Default.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(21.dp))
+            Icon(
+                Icons.Default.Settings,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(21.dp),
+            )
         }
     }
 }
@@ -821,7 +831,11 @@ private fun ErrorState() {
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(Modifier.height(6.dp))
-            Text(stringResource(R.string.catalogue_error), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                stringResource(R.string.catalogue_error),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -886,9 +900,18 @@ private fun SupportHero() {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier.size(46.dp).background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.16f), RoundedCornerShape(16.dp)),
+                modifier =
+                    Modifier
+                        .size(
+                            46.dp,
+                        ).background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.16f), RoundedCornerShape(16.dp)),
             ) {
-                Icon(Icons.Default.SupportAgent, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(26.dp))
+                Icon(
+                    Icons.Default.SupportAgent,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(26.dp),
+                )
             }
             Text(
                 text = "मदद और सुरक्षा",

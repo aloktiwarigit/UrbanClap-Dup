@@ -44,8 +44,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.booking.model.BookingSlot
-import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.customer.domain.booking.model.SlotWindow
+import com.homeservices.designsystem.components.HsScreenTitle
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 

@@ -14,7 +14,6 @@ import androidx.compose.ui.text.font.FontWeight
 import com.homeservices.customer.R
 import com.homeservices.customer.ui.util.formatInr
 
-
 /**
  * A compact wallet-balance chip displayed on HomeScreen.
  *

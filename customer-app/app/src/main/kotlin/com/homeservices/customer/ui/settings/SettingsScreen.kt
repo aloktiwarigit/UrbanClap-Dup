@@ -35,7 +35,6 @@ import androidx.compose.ui.unit.dp
 import com.homeservices.customer.R
 import com.homeservices.designsystem.components.HsScreenTitle
 
-
 @Composable
 public fun SettingsScreen(
     onLanguageClick: () -> Unit,
