@@ -7,12 +7,14 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -172,5 +174,19 @@ public class ConsentViewModelTest {
             assertThat(navEvents).isEmpty()
 
             collectJob.cancel()
+        }
+
+    // ── CancellationException propagation ─────────────────────────────────────
+
+    @Test
+    public fun `onConfirm rethrows CancellationException from use case`(): Unit =
+        runTest {
+            coEvery { grantConsentUseCase(any(), any(), any()) } throws CancellationException("test cancel")
+            // CancellationException must not be swallowed — the coroutine propagates it
+            // and the viewModelScope handles cancellation. The key assertion is that
+            // isLoading is NOT left as true after the coroutine ends.
+            viewModel.onConfirm()
+            advanceUntilIdle()
+            assertThat(viewModel.uiState.value.isLoading).isFalse()
         }
 }

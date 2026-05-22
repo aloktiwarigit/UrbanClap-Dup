@@ -6,6 +6,7 @@ import com.homeservices.customer.domain.consent.GrantConsentUseCase
 import com.homeservices.customer.domain.consent.IsConsentRequiredUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,6 +53,8 @@ public class ConsentViewModel
                         marketingOptIn = state.marketingOptIn,
                     )
                     _navigateNext.send(Unit)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     _uiState.update { it.copy(error = e.message ?: "Unknown error") }
                 } finally {
@@ -70,6 +73,8 @@ public class ConsentViewModel
                         marketingOptIn = false,
                     )
                     _navigateNext.send(Unit)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     _uiState.update { it.copy(error = e.message ?: "Unknown error") }
                 } finally {

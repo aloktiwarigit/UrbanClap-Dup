@@ -146,6 +146,7 @@ private fun AppNavigationReady(
     AuthStateEffect(
         authState = authState,
         firstLaunchPending = firstLaunchPending,
+        consentRequired = consentRequired,
         context = context,
         navController = navController,
         notificationPermissionLauncher = notificationPermissionLauncher,
@@ -203,12 +204,13 @@ private fun AppNavigationReady(
 private fun AuthStateEffect(
     authState: AuthState,
     firstLaunchPending: Boolean,
+    consentRequired: Boolean,
     context: Context,
     navController: NavController,
     notificationPermissionLauncher: ActivityResultLauncher<String>,
 ) {
-    LaunchedEffect(authState, firstLaunchPending) {
-        if (firstLaunchPending) return@LaunchedEffect
+    LaunchedEffect(authState, firstLaunchPending, consentRequired) {
+        if (firstLaunchPending || consentRequired) return@LaunchedEffect
         when (val currentAuth = authState) {
             is AuthState.Authenticated -> {
                 navController.navigate(ROUTE_MAIN) {
