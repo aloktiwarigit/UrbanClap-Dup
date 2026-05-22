@@ -298,8 +298,8 @@ internal fun DpdpConsentScreenContent(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .offset(y = (-20).dp),
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                        .offset(y = (-CARD_OVERLAP_DP).dp),
+                shape = RoundedCornerShape(topStart = CARD_CORNER_RADIUS_DP.dp, topEnd = CARD_CORNER_RADIUS_DP.dp),
                 color = cardBg,
                 shadowElevation = CARD_SHADOW_ELEVATION_DP.dp,
             ) {
@@ -307,7 +307,7 @@ internal fun DpdpConsentScreenContent(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(top = 28.dp, start = 20.dp, end = 20.dp, bottom = 20.dp),
+                            .padding(top = CARD_TOP_PADDING_DP.dp, start = CARD_SIDE_PADDING_DP.dp, end = CARD_SIDE_PADDING_DP.dp, bottom = CARD_BOTTOM_PADDING_DP.dp),
                 ) {
                     // Section heading
                     Text(
