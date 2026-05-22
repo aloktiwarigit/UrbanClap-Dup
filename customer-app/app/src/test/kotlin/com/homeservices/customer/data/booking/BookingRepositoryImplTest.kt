@@ -2,8 +2,9 @@ package com.homeservices.customer.data.booking
 
 import com.google.common.truth.Truth.assertThat
 import com.homeservices.customer.data.booking.remote.BookingApiService
+import com.homeservices.customer.domain.booking.model.BookingPaymentMethod
 import com.homeservices.customer.domain.booking.model.BookingRequest
-import com.homeservices.customer.domain.booking.model.PaymentMethod
+import com.homeservices.customer.domain.booking.model.BookingSlot
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -25,7 +26,7 @@ public class BookingRepositoryImplTest {
         unmockkAll()
     }
 
-    private val fakeSlot = BookingRequest.Slot(date = "2026-06-01", window = "10:00-12:00")
+    private val fakeSlot = BookingSlot(date = "2026-06-01", window = "10:00-12:00")
 
     private val fakeRequest =
         BookingRequest(
@@ -35,7 +36,7 @@ public class BookingRepositoryImplTest {
             addressText = "123 Main St",
             addressLat = 28.7041,
             addressLng = 77.1025,
-            paymentMethod = PaymentMethod.RAZORPAY,
+            paymentMethod = BookingPaymentMethod.RAZORPAY,
         )
 
     @Test
