@@ -4,10 +4,13 @@ import android.app.Application
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import com.google.android.libraries.places.api.Places
+import com.homeservices.customer.domain.consent.ConsentRepository
+import com.homeservices.customer.domain.consent.ConsentState
 import com.homeservices.customer.domain.flags.GrowthBookFeatureFlags
 import com.homeservices.customer.domain.locale.LocaleRepository
 import com.homeservices.customer.firebase.CustomerFirebaseMessagingService
 import com.homeservices.customer.observability.SentryInitializer
+import com.homeservices.customer.observability.analytics.PostHogAnalyticsFacade
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -31,6 +34,14 @@ public class HomeservicesCustomerApplication : Application() {
     @InstallIn(SingletonComponent::class)
     public interface FeatureFlagsEntryPoint {
         public fun growthBookFeatureFlags(): GrowthBookFeatureFlags
+    }
+
+    @EntryPoint
+    @InstallIn(SingletonComponent::class)
+    public interface AnalyticsEntryPoint {
+        public fun postHogAnalyticsFacade(): PostHogAnalyticsFacade
+
+        public fun consentRepository(): ConsentRepository
     }
 
     override fun onCreate() {
@@ -57,6 +68,24 @@ public class HomeservicesCustomerApplication : Application() {
         scope.launch {
             val tag = entryPoint.localeRepository().currentLocale.first()
             AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
+        }
+
+        // Observe consent state continuously (DPDP Act 2023 / NFR-C-5).
+        // Uses collect{} instead of first() so that:
+        //   1. A fresh-install user who grants consent on the DPDP screen is handled in the same session.
+        //   2. A user who later revokes analytics/crash consent via Settings causes PostHog to opt out
+        //      and Sentry to stop transmitting events — without requiring an app restart.
+        // Fire-and-forget: failures here must never propagate to sibling coroutines.
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            val entryPoint =
+                EntryPointAccessors
+                    .fromApplication(this@HomeservicesCustomerApplication, AnalyticsEntryPoint::class.java)
+            entryPoint.consentRepository().consentState.collect { state ->
+                val analyticsOptIn = state is ConsentState.Granted && state.analyticsOptIn
+                val crashOptIn = state is ConsentState.Granted && state.crashOptIn
+                entryPoint.postHogAnalyticsFacade().applyConsent(analyticsOptIn)
+                SentryInitializer.applyCrashConsent(crashOptIn)
+            }
         }
     }
 }

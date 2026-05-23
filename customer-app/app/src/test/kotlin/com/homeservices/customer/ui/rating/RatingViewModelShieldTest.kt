@@ -8,6 +8,7 @@ import com.homeservices.customer.domain.rating.SubmitRatingUseCase
 import com.homeservices.customer.domain.rating.model.CustomerSubScores
 import com.homeservices.customer.domain.rating.model.RatingSnapshot
 import com.homeservices.customer.domain.rating.model.SideState
+import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -51,7 +52,7 @@ public class RatingViewModelShieldTest {
     }
 
     private fun TestScope.vm(): RatingViewModel {
-        val v = RatingViewModel(submit, get, escalate, savedState)
+        val v = RatingViewModel(submit, get, escalate, savedState, NoOpAnalyticsFacade())
         runCurrent() // drive init coroutine (collects PENDING snapshot)
         return v
     }

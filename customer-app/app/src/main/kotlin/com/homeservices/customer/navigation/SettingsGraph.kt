@@ -9,6 +9,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.homeservices.customer.domain.flags.FeatureFlags
 import com.homeservices.customer.ui.complaint.ComplaintRoutes
+import com.homeservices.customer.ui.consent.DpdpConsentScreen
 import com.homeservices.customer.ui.deleteaccount.DeleteAccountConfirmScreen
 import com.homeservices.customer.ui.deleteaccount.DeleteAccountCoolOffScreen
 import com.homeservices.customer.ui.deleteaccount.DeleteAccountScreen
@@ -59,6 +60,16 @@ internal fun NavGraphBuilder.settingsGraph(
             onDownloadData = null,
             onDeleteAccount = { navController.navigate(LocaleRoutes.DELETE_ACCOUNT) },
             showDeleteAccount = featureFlags.dpdpSelfServiceEnabled(),
+            onManageConsentClick = { navController.navigate(LocaleRoutes.CONSENT_MANAGEMENT) },
+        )
+    }
+
+    // Consent management route — accessible from Settings → Privacy & data.
+    // Uses the same DpdpConsentScreen composable but pops back on completion instead
+    // of navigating forward to the auth flow.
+    composable(LocaleRoutes.CONSENT_MANAGEMENT) {
+        DpdpConsentScreen(
+            onConsentComplete = { navController.popBackStack() },
         )
     }
 

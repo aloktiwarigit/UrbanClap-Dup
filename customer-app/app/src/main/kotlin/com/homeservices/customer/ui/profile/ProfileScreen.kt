@@ -56,12 +56,14 @@ import com.homeservices.designsystem.components.HsScreenTitle
 private val DangerRed = Color(0xFFDC2626)
 private val CardShape = RoundedCornerShape(12.dp)
 
+@Suppress("LongMethod")
 @Composable
 internal fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel(),
     modifier: Modifier = Modifier,
     onLanguageClick: () -> Unit = {},
     onBookingsClick: () -> Unit = {},
+    onManageConsentClick: () -> Unit = {},
 ) {
     val authState by viewModel.authState.collectAsStateWithLifecycle()
     val user = authState as? AuthState.Authenticated
@@ -199,6 +201,13 @@ internal fun ProfileScreen(
                     label = "गोपनीयता नीति",
                     sublabel = null,
                     onClick = { showPrivacyDialog = true },
+                )
+                HorizontalDivider(color = CardBorder, thickness = 0.5.dp)
+                MenuRow(
+                    icon = Icons.Default.Shield,
+                    label = "गोपनीयता प्रबंधित करें",
+                    sublabel = "डेटा सहमति अपडेट करें",
+                    onClick = onManageConsentClick,
                 )
             }
         }

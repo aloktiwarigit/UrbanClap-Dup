@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +36,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.homeservices.customer.R
 import com.homeservices.designsystem.components.HsScreenTitle
+
+private val ShieldBlue = Color(0xFFE8EDF5)
+private val ShieldBlueTint = Color(0xFF1A4B8C)
 
 /**
  * Settings → Privacy & data sub-screen.
@@ -58,6 +62,7 @@ import com.homeservices.designsystem.components.HsScreenTitle
  * @param onDownloadData Navigate to the data-export screen (Stream 2.3). Pass null to hide the row.
  * @param onDeleteAccount Navigate to the delete-account entry screen.
  * @param showDeleteAccount Whether to show the delete-account row (feature flag).
+ * @param onManageConsentClick Navigate to the consent management screen (WS-D). Pass null to hide the row.
  */
 @Composable
 public fun PrivacyDataScreen(
@@ -65,6 +70,7 @@ public fun PrivacyDataScreen(
     onDownloadData: (() -> Unit)?,
     onDeleteAccount: () -> Unit,
     showDeleteAccount: Boolean,
+    onManageConsentClick: (() -> Unit)? = null,
 ) {
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
@@ -98,6 +104,17 @@ public fun PrivacyDataScreen(
                     iconTint = MaterialTheme.colorScheme.primary,
                     label = stringResource(R.string.settings_privacy_data_export_title),
                     onClick = onDownloadData,
+                )
+            }
+
+            // Manage consent row — visible when callback is wired (WS-D)
+            if (onManageConsentClick != null) {
+                PrivacyListItem(
+                    icon = Icons.Default.ManageAccounts,
+                    iconBg = ShieldBlue,
+                    iconTint = ShieldBlueTint,
+                    label = stringResource(R.string.settings_privacy_manage_consent_title),
+                    onClick = onManageConsentClick,
                 )
             }
 

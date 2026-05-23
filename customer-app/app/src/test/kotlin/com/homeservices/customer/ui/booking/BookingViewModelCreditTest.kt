@@ -9,6 +9,7 @@ import com.homeservices.customer.domain.booking.RazorpayPaymentUseCase
 import com.homeservices.customer.domain.booking.model.BookingPaymentMethod
 import com.homeservices.customer.domain.booking.model.BookingResult
 import com.homeservices.customer.domain.booking.model.BookingSlot
+import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -43,7 +44,7 @@ public class BookingViewModelCreditTest {
         Dispatchers.resetMain()
     }
 
-    private fun makeVm() = BookingViewModel(createBooking, confirmBooking, razorpayPayment, biometricGate)
+    private fun makeVm() = BookingViewModel(createBooking, confirmBooking, razorpayPayment, biometricGate, NoOpAnalyticsFacade())
 
     // AC-5: toggle hidden when balance == 0
     @Test

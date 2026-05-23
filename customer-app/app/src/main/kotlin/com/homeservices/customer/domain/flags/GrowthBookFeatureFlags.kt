@@ -1,6 +1,7 @@
 package com.homeservices.customer.domain.flags
 
 import com.homeservices.customer.BuildConfig
+import com.homeservices.customer.observability.analytics.AnalyticsFacade
 import com.sdk.growthbook.GBSDKBuilder
 import com.sdk.growthbook.GrowthBookSDK
 import com.sdk.growthbook.model.GBValue
@@ -25,11 +26,14 @@ import javax.inject.Singleton
  * last-cached (or default-off) posture is retained.
  *
  * E13-S05 — wires the real SDK, replacing [BuildConfigFeatureFlags].
+ * DPDP/Analytics — trackingCallback forwards experiment exposures to [AnalyticsFacade].
  */
 @Singleton
 public class GrowthBookFeatureFlags
     @Inject
-    constructor() : FeatureFlags {
+    constructor(
+        private val analytics: dagger.Lazy<AnalyticsFacade>,
+    ) : FeatureFlags {
         private val keyPresent: Boolean = BuildConfig.GROWTHBOOK_CLIENT_KEY.isNotBlank()
 
         private val sdk: GrowthBookSDK =
@@ -37,7 +41,15 @@ public class GrowthBookFeatureFlags
                 apiKey = BuildConfig.GROWTHBOOK_CLIENT_KEY.ifBlank { "placeholder" },
                 apiHost = "https://cdn.growthbook.io",
                 attributes = emptyMap<String, GBValue>(),
-                trackingCallback = { _, _ -> },
+                trackingCallback = { experiment, result ->
+                    analytics.get().track(
+                        "experiment_exposure",
+                        mapOf(
+                            "experiment_id" to experiment.key,
+                            "variant" to result.value.toString(),
+                        ),
+                    )
+                },
                 networkDispatcher = GBNetworkDispatcherOkHttp(),
                 // Disable caching when key is blank so Android's CachingImpl never requires
                 // a Context (safe in unit tests and CI without a live key).

@@ -13,6 +13,7 @@ import com.homeservices.customer.domain.booking.model.BookingResult
 import com.homeservices.customer.domain.booking.model.BookingSlot
 import com.homeservices.customer.domain.booking.model.PaymentResult
 import com.homeservices.customer.domain.booking.model.RazorpayErrorCode
+import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -52,7 +53,7 @@ public class BookingViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun makeVm() = BookingViewModel(createBooking, confirmBooking, razorpayPayment, biometricGate)
+    private fun makeVm() = BookingViewModel(createBooking, confirmBooking, razorpayPayment, biometricGate, NoOpAnalyticsFacade())
 
     @Test
     public fun `setSlotAndAddress transitions to Ready`(): Unit =

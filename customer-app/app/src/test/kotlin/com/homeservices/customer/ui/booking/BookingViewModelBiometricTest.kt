@@ -11,6 +11,7 @@ import com.homeservices.customer.domain.booking.RazorpayPaymentUseCase
 import com.homeservices.customer.domain.booking.model.BookingPaymentMethod
 import com.homeservices.customer.domain.booking.model.BookingResult
 import com.homeservices.customer.domain.booking.model.BookingSlot
+import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -56,7 +57,7 @@ public class BookingViewModelBiometricTest {
         Dispatchers.resetMain()
     }
 
-    private fun makeVm() = BookingViewModel(createBooking, confirmBooking, razorpayPayment, biometricGate)
+    private fun makeVm() = BookingViewModel(createBooking, confirmBooking, razorpayPayment, biometricGate, NoOpAnalyticsFacade())
 
     // ------------------------------------------------------------------
     // 1. Online-payment (Razorpay) path — biometric fires and proceeds on Authenticated

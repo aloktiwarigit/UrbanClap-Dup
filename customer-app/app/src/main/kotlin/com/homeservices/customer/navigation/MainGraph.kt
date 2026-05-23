@@ -115,6 +115,8 @@ private fun NavGraphBuilder.homeDestination(
                 }
             },
             onPriceApproval = { id -> navController.navigate(BookingRoutes.priceApprovalRoute(id)) },
+            // WS-D: consent management accessible from Profile tab
+            onManageConsentClick = { navController.navigate(LocaleRoutes.CONSENT_MANAGEMENT) },
         )
     }
 }

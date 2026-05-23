@@ -9,6 +9,8 @@ import com.homeservices.customer.domain.rating.SubmitRatingUseCase
 import com.homeservices.customer.domain.rating.model.CustomerSubScores
 import com.homeservices.customer.domain.rating.model.RatingSnapshot
 import com.homeservices.customer.domain.rating.model.SideState
+import com.homeservices.customer.observability.analytics.AnalyticsEvents
+import com.homeservices.customer.observability.analytics.AnalyticsFacade
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -61,6 +63,7 @@ public class RatingViewModel
         private val getUseCase: GetRatingUseCase,
         private val escalateUseCase: EscalateRatingUseCase,
         private val savedStateHandle: SavedStateHandle,
+        private val analytics: AnalyticsFacade,
     ) : ViewModel() {
         public val bookingId: String =
             savedStateHandle.get<String>("bookingId") ?: error("bookingId required")
@@ -279,6 +282,12 @@ public class RatingViewModel
                                 // Clear shield state only after confirmed success — preserves
                                 // draft for retry if the network call fails.
                                 cancelShieldState()
+                                runCatching {
+                                    analytics.track(
+                                        AnalyticsEvents.RATING_SUBMITTED,
+                                        mapOf("booking_id" to bookingId, "overall" to submitOverall),
+                                    )
+                                }
                                 _uiState.value = RatingUiState.AwaitingPartner(null)
                             }.onFailure { _uiState.value = RatingUiState.Error(it.message ?: "submit failed") }
                     }

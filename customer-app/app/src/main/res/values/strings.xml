@@ -357,6 +357,7 @@
     <string name="settings_language_save">सेव करें</string>
     <string name="settings_privacy_and_data">Privacy &amp; data</string>
     <string name="settings_privacy_data_export_title">Download my data</string>
+    <string name="settings_privacy_manage_consent_title">Manage privacy consent</string>
     <string name="settings_privacy_data_delete_title">Delete account</string>
 
     <!-- Data export / DPDP §11 self-service data access (E15-S01) -->

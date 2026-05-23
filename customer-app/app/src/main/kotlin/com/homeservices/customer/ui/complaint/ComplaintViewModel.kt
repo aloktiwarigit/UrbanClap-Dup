@@ -7,6 +7,8 @@ import com.homeservices.customer.domain.complaint.GetComplaintStatusUseCase
 import com.homeservices.customer.domain.complaint.PhotoUploadUseCase
 import com.homeservices.customer.domain.complaint.ReopenComplaintUseCase
 import com.homeservices.customer.domain.complaint.SubmitComplaintUseCase
+import com.homeservices.customer.observability.analytics.AnalyticsEvents
+import com.homeservices.customer.observability.analytics.AnalyticsFacade
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -51,6 +53,7 @@ public class ComplaintViewModel
         private val photoUploadUseCase: PhotoUploadUseCase,
         private val getStatusUseCase: GetComplaintStatusUseCase,
         private val reopenUseCase: ReopenComplaintUseCase,
+        private val analytics: AnalyticsFacade,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<ComplaintUiState>(ComplaintUiState.Idle())
         public val uiState: StateFlow<ComplaintUiState> = _uiState.asStateFlow()
@@ -121,6 +124,12 @@ public class ComplaintViewModel
                         _uiState.value =
                             result.fold(
                                 onSuccess = { dto ->
+                                    runCatching {
+                                        analytics.track(
+                                            AnalyticsEvents.COMPLAINT_FILED,
+                                            mapOf("booking_id" to bookingId, "complaint_id" to dto.id),
+                                        )
+                                    }
                                     ComplaintUiState.Success(
                                         complaintId = dto.id,
                                         acknowledgeDeadlineAt = dto.acknowledgeDeadlineAt,

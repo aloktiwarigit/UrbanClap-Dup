@@ -10,6 +10,7 @@ import com.homeservices.customer.domain.catalogue.model.Service
 import com.homeservices.customer.domain.locale.GetCurrentLocaleUseCase
 import com.homeservices.customer.domain.technician.GetConfidenceScoreUseCase
 import com.homeservices.customer.domain.technician.model.ConfidenceScore
+import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -142,6 +143,7 @@ public class ServiceDetailViewModelConfidenceScoreTest {
             locationProvider = locationProvider,
             localizer = localizer,
             getCurrentLocale = getCurrentLocale,
+            analytics = NoOpAnalyticsFacade(),
         )
     }
 }

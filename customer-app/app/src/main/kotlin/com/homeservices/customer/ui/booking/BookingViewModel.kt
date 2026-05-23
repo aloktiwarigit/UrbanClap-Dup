@@ -13,6 +13,8 @@ import com.homeservices.customer.domain.booking.model.BookingRequest
 import com.homeservices.customer.domain.booking.model.BookingSlot
 import com.homeservices.customer.domain.booking.model.PaymentResult
 import com.homeservices.customer.domain.booking.model.RazorpayErrorCode
+import com.homeservices.customer.observability.analytics.AnalyticsEvents
+import com.homeservices.customer.observability.analytics.AnalyticsFacade
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,6 +34,7 @@ internal class BookingViewModel
         private val confirmBooking: ConfirmBookingUseCase,
         private val razorpayPayment: RazorpayPaymentUseCase,
         private val biometricGate: BiometricGateUseCase,
+        private val analytics: AnalyticsFacade,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<BookingUiState>(BookingUiState.Idle)
         public val uiState: StateFlow<BookingUiState> = _uiState.asStateFlow()
@@ -108,6 +111,7 @@ internal class BookingViewModel
         }
 
         /** Creates a booking. Cash bookings call this directly - no biometric gate. */
+        @Suppress("LongMethod")
         public fun startBooking(
             serviceId: String,
             categoryId: String,
@@ -118,6 +122,12 @@ internal class BookingViewModel
             // race: a second tap within the same frame must see CreatingBooking, not Ready,
             // and bail at the `as? Ready ?: return` guard above. See PRD-03.
             _uiState.value = BookingUiState.CreatingBooking
+            runCatching {
+                analytics.track(
+                    AnalyticsEvents.BOOKING_CREATE_START,
+                    mapOf("service_id" to serviceId, "category_id" to categoryId),
+                )
+            }
             viewModelScope.launch {
                 val request =
                     BookingRequest(
@@ -134,8 +144,14 @@ internal class BookingViewModel
                     onSuccess = { result ->
                         pendingBookingId = result.bookingId
                         pendingAppliedCredit = result.appliedCreditAmount
-                        _uiState.value =
-                            if (result.requiresPayment) {
+                        if (result.requiresPayment) {
+                            runCatching {
+                                analytics.track(
+                                    AnalyticsEvents.PAYMENT_INITIATED,
+                                    mapOf("booking_id" to result.bookingId),
+                                )
+                            }
+                            _uiState.value =
                                 BookingUiState.AwaitingPayment(
                                     bookingId = result.bookingId,
                                     razorpayOrderId = result.razorpayOrderId,
@@ -145,12 +161,19 @@ internal class BookingViewModel
                                     lat = state.lat,
                                     lng = state.lng,
                                 )
-                            } else {
+                        } else {
+                            runCatching {
+                                analytics.track(
+                                    AnalyticsEvents.BOOKING_CREATE_SUCCESS,
+                                    mapOf("booking_id" to result.bookingId),
+                                )
+                            }
+                            _uiState.value =
                                 BookingUiState.BookingConfirmed(
                                     bookingId = result.bookingId,
                                     appliedCreditAmount = result.appliedCreditAmount,
                                 )
-                            }
+                        }
                     },
                     // Error message key: R.string.booking_error_failed surfaced in UI layer
                     onFailure = { _uiState.value = BookingUiState.Error(it.message ?: BOOKING_FAILED_FALLBACK) },
@@ -196,6 +219,18 @@ internal class BookingViewModel
                         .first()
                         .fold(
                             onSuccess = {
+                                runCatching {
+                                    analytics.track(
+                                        AnalyticsEvents.PAYMENT_SUCCESS,
+                                        mapOf("booking_id" to bookingId),
+                                    )
+                                }
+                                runCatching {
+                                    analytics.track(
+                                        AnalyticsEvents.BOOKING_CREATE_SUCCESS,
+                                        mapOf("booking_id" to bookingId),
+                                    )
+                                }
                                 _uiState.value =
                                     BookingUiState.BookingConfirmed(
                                         bookingId = bookingId,
@@ -209,6 +244,12 @@ internal class BookingViewModel
                 is PaymentResult.Failure -> {
                     val awaitingSnapshot = _uiState.value as? BookingUiState.AwaitingPayment
                     val errorCode = RazorpayErrorCode.resolve(result.code, result.description)
+                    runCatching {
+                        analytics.track(
+                            AnalyticsEvents.PAYMENT_FAILURE,
+                            mapOf("booking_id" to bookingId, "reason" to result.description),
+                        )
+                    }
                     _uiState.value =
                         BookingUiState.PaymentFailed(
                             orderId = awaitingSnapshot?.razorpayOrderId ?: "",
