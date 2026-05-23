@@ -21,10 +21,11 @@ public class PriceApprovalEventBus
     constructor() {
         // Sticky event — replay=1 ensures a price-approval prompt fired before the subscriber
         // attaches (e.g. FCM wakes the app) is not silently lost.
-        private val _events = MutableSharedFlow<String>(
-            replay = 1,
-            onBufferOverflow = BufferOverflow.DROP_OLDEST,
-        )
+        private val _events =
+            MutableSharedFlow<String>(
+                replay = 1,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST,
+            )
         public val events: SharedFlow<String> = _events.asSharedFlow()
 
         public fun post(bookingId: String) {

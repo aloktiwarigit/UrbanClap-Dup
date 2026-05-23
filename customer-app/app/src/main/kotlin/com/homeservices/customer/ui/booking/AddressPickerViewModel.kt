@@ -53,11 +53,12 @@ public class AddressPickerViewModel
         // active while the screen is visible. replay=0: no caching for late subscribers.
         // extraBufferCapacity=1 absorbs one in-flight command. DROP_OLDEST: a stale nav event
         // (e.g. double-tap) is safely discarded.
-        private val _navEvents = MutableSharedFlow<AddressPickerNavEvent>(
-            replay = 0,
-            extraBufferCapacity = 1,
-            onBufferOverflow = BufferOverflow.DROP_OLDEST,
-        )
+        private val _navEvents =
+            MutableSharedFlow<AddressPickerNavEvent>(
+                replay = 0,
+                extraBufferCapacity = 1,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST,
+            )
         public val navEvents: SharedFlow<AddressPickerNavEvent> = _navEvents.asSharedFlow()
 
         private val queryInput = MutableStateFlow("")

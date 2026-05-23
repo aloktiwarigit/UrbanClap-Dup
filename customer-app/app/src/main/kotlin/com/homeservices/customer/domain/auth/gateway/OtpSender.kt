@@ -16,5 +16,8 @@ public interface OtpSender {
 
     public fun signInWithCredential(credential: PhoneAuthCredential): Flow<AuthResult>
 
-    public fun verifyOtp(verificationId: String, code: String): Flow<AuthResult>
+    public fun verifyOtp(
+        verificationId: String,
+        code: String,
+    ): Flow<AuthResult>
 }

@@ -22,8 +22,7 @@ public class FirebaseOtpUseCase
             resendToken: PhoneAuthProvider.ForceResendingToken? = null,
         ): Flow<OtpSendResult> = otpSender.sendOtp(phoneNumber, activity, resendToken)
 
-        public fun signInWithCredential(credential: PhoneAuthCredential): Flow<AuthResult> =
-            otpSender.signInWithCredential(credential)
+        public fun signInWithCredential(credential: PhoneAuthCredential): Flow<AuthResult> = otpSender.signInWithCredential(credential)
 
         public fun verifyOtp(
             verificationId: String,

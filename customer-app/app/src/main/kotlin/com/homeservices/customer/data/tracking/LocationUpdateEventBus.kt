@@ -24,11 +24,12 @@ public class LocationUpdateEventBus
     constructor() {
         // Hot event — replay=0, extraBufferCapacity=1, DROP_OLDEST.
         // Only the current location is relevant; stale positions are silently dropped.
-        private val _events = MutableSharedFlow<LocationUpdateEvent>(
-            replay = 0,
-            extraBufferCapacity = 1,
-            onBufferOverflow = BufferOverflow.DROP_OLDEST,
-        )
+        private val _events =
+            MutableSharedFlow<LocationUpdateEvent>(
+                replay = 0,
+                extraBufferCapacity = 1,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST,
+            )
         public val events: SharedFlow<LocationUpdateEvent> = _events.asSharedFlow()
 
         public fun post(event: LocationUpdateEvent) {

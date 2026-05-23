@@ -3,7 +3,6 @@ package com.homeservices.customer.domain.auth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.PhoneAuthCredential
 import com.homeservices.customer.domain.auth.gateway.OtpSender
-import com.homeservices.customer.domain.auth.model.AuthResult as AppAuthResult
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.first
@@ -12,6 +11,7 @@ import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import com.homeservices.customer.domain.auth.model.AuthResult as AppAuthResult
 
 public class FirebaseOtpUseCaseTest {
     private lateinit var otpSender: OtpSender

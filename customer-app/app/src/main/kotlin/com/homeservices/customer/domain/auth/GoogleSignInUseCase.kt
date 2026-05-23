@@ -12,6 +12,5 @@ public class GoogleSignInUseCase
     constructor(
         private val provider: GoogleCredentialProvider,
     ) {
-        public suspend fun getCredential(activity: FragmentActivity): GoogleSignInResult =
-            provider.getCredential(activity)
+        public suspend fun getCredential(activity: FragmentActivity): GoogleSignInResult = provider.getCredential(activity)
     }

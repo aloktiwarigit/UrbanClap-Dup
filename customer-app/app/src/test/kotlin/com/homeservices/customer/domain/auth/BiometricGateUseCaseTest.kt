@@ -37,16 +37,18 @@ public class BiometricGateUseCaseTest {
     }
 
     @Test
-    public fun `requestAuth returns Authenticated when gateway succeeds`(): Unit = runTest {
-        val activity = mockk<FragmentActivity>()
-        coEvery { gateway.requestAuth(activity, "Title", "Sub") } returns BiometricResult.Authenticated
-        assertThat(useCase.requestAuth(activity, "Title", "Sub")).isEqualTo(BiometricResult.Authenticated)
-    }
+    public fun `requestAuth returns Authenticated when gateway succeeds`(): Unit =
+        runTest {
+            val activity = mockk<FragmentActivity>()
+            coEvery { gateway.requestAuth(activity, "Title", "Sub") } returns BiometricResult.Authenticated
+            assertThat(useCase.requestAuth(activity, "Title", "Sub")).isEqualTo(BiometricResult.Authenticated)
+        }
 
     @Test
-    public fun `requestAuth returns Cancelled when gateway returns Cancelled`(): Unit = runTest {
-        val activity = mockk<FragmentActivity>()
-        coEvery { gateway.requestAuth(activity, any(), any()) } returns BiometricResult.Cancelled
-        assertThat(useCase.requestAuth(activity, "t", "s")).isEqualTo(BiometricResult.Cancelled)
-    }
+    public fun `requestAuth returns Cancelled when gateway returns Cancelled`(): Unit =
+        runTest {
+            val activity = mockk<FragmentActivity>()
+            coEvery { gateway.requestAuth(activity, any(), any()) } returns BiometricResult.Cancelled
+            assertThat(useCase.requestAuth(activity, "t", "s")).isEqualTo(BiometricResult.Cancelled)
+        }
 }
