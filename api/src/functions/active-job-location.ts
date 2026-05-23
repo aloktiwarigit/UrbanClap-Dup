@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/node';
 import { type HttpHandler, type InvocationContext, app } from '@azure/functions';
 import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
-import { withRateLimit } from '../middleware/withRateLimit.js';
+import { consume } from '../cosmos/rate-limit-repository.js';
 import { bookingRepo } from '../cosmos/booking-repository.js';
 import { liveLocationRepo } from '../cosmos/live-location-repository.js';
 import { PostLocationRequestSchema } from '../schemas/live-location.js';
@@ -11,7 +11,7 @@ import { isPeriodicLocationEnabled } from '../services/featureFlags.service.js';
 const ACTIVE_STATUSES = new Set(['EN_ROUTE', 'REACHED', 'IN_PROGRESS']);
 const STALENESS_MS = 90_000;
 
-const innerHandler: HttpHandler = async (req, ctx: InvocationContext) => {
+export const activeJobLocationHandler: HttpHandler = async (req, ctx: InvocationContext) => {
   let uid: string;
   try {
     ({ uid } = await verifyTechnicianToken(req));
@@ -20,6 +20,18 @@ const innerHandler: HttpHandler = async (req, ctx: InvocationContext) => {
   }
 
   const bookingId = (req as unknown as { params: { bookingId: string } }).params.bookingId;
+
+  // Rate-limit keyed by authenticated uid+bookingId - fires after auth so an
+  // unauthenticated caller cannot exhaust the bucket for a legitimate technician.
+  const rlResult = await consume(`rl:loc:${uid}:${bookingId}`, 1, 1 / 15);
+  if (!rlResult.allowed) {
+    const retryAfterSec = Math.ceil((rlResult.retryAfterMs ?? 1000) / 1000);
+    return {
+      status: 429,
+      headers: { 'Retry-After': String(retryAfterSec), 'Content-Type': 'application/json' },
+      jsonBody: { code: 'RATE_LIMITED', retryAfterMs: rlResult.retryAfterMs },
+    };
+  }
   const booking = await bookingRepo.getById(bookingId);
   if (!booking) return { status: 404, jsonBody: { code: 'BOOKING_NOT_FOUND' } };
   if (booking.technicianId !== uid) return { status: 403, jsonBody: { code: 'FORBIDDEN' } };
@@ -78,14 +90,6 @@ const innerHandler: HttpHandler = async (req, ctx: InvocationContext) => {
 
   return { status: 204 };
 };
-
-export const activeJobLocationHandler = withRateLimit({
-  keyExtractor: (req) => {
-    const bookingId = (req as unknown as { params: { bookingId: string } }).params.bookingId ?? 'unknown';
-    return `rl:loc:${bookingId}`;
-  },
-  buckets: { ip: { capacity: 1, refillPerSec: 1 / 15 } },
-})(innerHandler);
 
 app.http('activeJobLocation', {
   route: 'v1/technicians/active-job/{bookingId}/location',

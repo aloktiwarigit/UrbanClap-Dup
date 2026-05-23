@@ -242,8 +242,10 @@ private fun TrackingMapSection(
     state: LiveTrackingUiState.Tracking,
     defaultTechName: String,
 ) {
-    state.location?.let { loc ->
-        val techLatLng = LatLng(state.liveLat ?: loc.lat, state.liveLng ?: loc.lng)
+    val resolvedLat = state.liveLat ?: state.location?.lat
+    val resolvedLng = state.liveLng ?: state.location?.lng
+    if (resolvedLat != null && resolvedLng != null) {
+        val techLatLng = LatLng(resolvedLat, resolvedLng)
         val techNameForMarker = state.techName.ifBlank { defaultTechName }
         val cameraPositionState =
             rememberCameraPositionState {
@@ -258,7 +260,9 @@ private fun TrackingMapSection(
                 title = techNameForMarker,
             )
         }
-    } ?: MapPlaceholder()
+    } else {
+        MapPlaceholder()
+    }
 }
 
 @Composable
