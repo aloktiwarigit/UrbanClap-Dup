@@ -2,8 +2,8 @@ package com.homeservices.customer.data.device
 
 import retrofit2.http.Body
 import retrofit2.http.DELETE
+import retrofit2.http.Header
 import retrofit2.http.POST
-import retrofit2.http.Path
 
 /**
  * Retrofit interface for device-token registration endpoints.
@@ -12,7 +12,7 @@ import retrofit2.http.Path
  * attaches a Firebase Bearer token to every request.
  *
  * - POST /v1/devices/register  — register or refresh a device token
- * - DELETE /v1/devices/{token} — de-register a token on sign-out
+ * - DELETE /v1/devices/me      — de-register a token on sign-out; token sent as X-Device-Token header
  */
 public interface DeviceApi {
     @POST("v1/devices/register")
@@ -20,8 +20,8 @@ public interface DeviceApi {
         @Body body: RegisterDeviceRequest,
     )
 
-    @DELETE("v1/devices/{deviceToken}")
+    @DELETE("v1/devices/me")
     public suspend fun unregisterDevice(
-        @Path("deviceToken") deviceToken: String,
+        @Header("X-Device-Token") deviceToken: String,
     )
 }
