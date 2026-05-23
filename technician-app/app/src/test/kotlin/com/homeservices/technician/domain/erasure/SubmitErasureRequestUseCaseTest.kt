@@ -19,7 +19,7 @@ public class SubmitErasureRequestUseCaseTest {
     private val activeJobRepository: ActiveJobRepository = mockk()
     private lateinit var useCase: SubmitErasureRequestUseCase
 
-    private fun activeJob() =
+    private fun activeJob(status: ActiveJobStatus = ActiveJobStatus.IN_PROGRESS) =
         ActiveJob(
             bookingId = "bk-1",
             customerId = "c-1",
@@ -27,7 +27,7 @@ public class SubmitErasureRequestUseCaseTest {
             serviceName = "AC Repair",
             addressText = "12 Main St",
             addressLatLng = LatLng(12.0, 77.0),
-            status = ActiveJobStatus.IN_PROGRESS,
+            status = status,
             slotDate = "2026-05-22",
             slotWindow = "10:00-12:00",
         )
@@ -38,14 +38,42 @@ public class SubmitErasureRequestUseCaseTest {
     }
 
     @Test
-    public fun `returns ActiveJobExists without network call when activeJobState is non-null`(): Unit =
+    public fun `returns ActiveJobExists without network call when job is IN_PROGRESS`(): Unit =
         runTest {
-            every { activeJobRepository.activeJobState } returns MutableStateFlow(activeJob())
+            every { activeJobRepository.activeJobState } returns
+                MutableStateFlow(activeJob(ActiveJobStatus.IN_PROGRESS))
 
             val result = useCase()
 
             assertThat(result).isEqualTo(ErasureSubmitResult.ActiveJobExists)
             coVerify(exactly = 0) { erasureRepository.submitRequest(any()) }
+        }
+
+    @Test
+    public fun `returns ActiveJobExists without network call when job is ASSIGNED`(): Unit =
+        runTest {
+            every { activeJobRepository.activeJobState } returns
+                MutableStateFlow(activeJob(ActiveJobStatus.ASSIGNED))
+
+            val result = useCase()
+
+            assertThat(result).isEqualTo(ErasureSubmitResult.ActiveJobExists)
+            coVerify(exactly = 0) { erasureRepository.submitRequest(any()) }
+        }
+
+    @Test
+    public fun `does NOT block deletion when job is COMPLETED — lets server decide`(): Unit =
+        runTest {
+            every { activeJobRepository.activeJobState } returns
+                MutableStateFlow(activeJob(ActiveJobStatus.COMPLETED))
+            coEvery { erasureRepository.submitRequest(null) } returns
+                ErasureSubmitResult.Success("2026-05-29T02:00:00.000Z")
+
+            val result = useCase()
+
+            // COMPLETED stays in memory after job ends; client must not block on stale snapshot
+            assertThat(result).isEqualTo(ErasureSubmitResult.Success("2026-05-29T02:00:00.000Z"))
+            coVerify(exactly = 1) { erasureRepository.submitRequest(null) }
         }
 
     @Test
