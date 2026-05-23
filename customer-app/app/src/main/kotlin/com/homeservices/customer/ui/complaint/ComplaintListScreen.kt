@@ -38,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
 import com.homeservices.customer.data.complaint.remote.dto.ComplaintResponseDto
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsScreenTitle
 
 private const val STATUS_CHIP_CORNER_RADIUS = 50
 private const val STATUS_CHIP_H_PADDING_DP = 10
@@ -76,10 +77,9 @@ public fun ComplaintListScreen(
                     )
                 }
                 Spacer(Modifier.width(8.dp))
-                Text(
+                HsScreenTitle(
                     text = stringResource(R.string.complaint_list_title),
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
                 )
             }
 

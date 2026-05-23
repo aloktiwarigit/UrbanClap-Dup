@@ -23,28 +23,29 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.locale.DefaultLanguageOptions
 import com.homeservices.designsystem.locale.LanguagePickerCard
+import com.homeservices.designsystem.theme.LocalHomeservicesExtendedColors
 
-private val LangHeroStart = Color(0xFF062A20)
-private val LangHeroEnd = Color(0xFF0B3D2E)
 private const val LANG_HERO_FRACTION = 0.30f
 private const val LANG_FORM_FRACTION = 0.72f
 
 @Composable
 private fun LangHeroZone() {
+    val heroStart = LocalHomeservicesExtendedColors.current.brandPrimaryHover
+    val heroEnd = MaterialTheme.colorScheme.primary
     Box(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(LANG_HERO_FRACTION)
                 .drawBehind {
-                    drawRect(brush = Brush.verticalGradient(listOf(LangHeroStart, LangHeroEnd)), size = size)
+                    drawRect(brush = Brush.verticalGradient(listOf(heroStart, heroEnd)), size = size)
                     drawCircle(
                         color = Color.White.copy(alpha = 0.06f),
                         radius = 140.dp.toPx(),
@@ -63,8 +64,12 @@ private fun LangHeroZone() {
         contentAlignment = Alignment.BottomStart,
     ) {
         Column(modifier = Modifier.padding(start = 28.dp, end = 28.dp, bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(text = "HomeHeroo", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = Color.White)
-            Text(text = "भाषा चुनें", style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.82f))
+            HsScreenTitle(text = "HomeHeroo", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onPrimary)
+            Text(
+                text = "भाषा चुनें",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.82f),
+            )
         }
     }
 }
@@ -84,7 +89,7 @@ public fun FirstLaunchLanguageScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(LangHeroEnd).statusBarsPadding()) {
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primary).statusBarsPadding()) {
         LangHeroZone()
         Surface(
             modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).fillMaxHeight(LANG_FORM_FRACTION),

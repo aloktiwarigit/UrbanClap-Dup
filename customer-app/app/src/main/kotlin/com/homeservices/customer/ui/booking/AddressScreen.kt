@@ -57,6 +57,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import com.homeservices.customer.BuildConfig
 import com.homeservices.customer.R
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import kotlinx.coroutines.Dispatchers
@@ -211,10 +212,9 @@ internal fun AddressScreenContent(
 
 @Composable
 private fun AddressScreenHeading() {
-    Text(
+    HsScreenTitle(
         text = stringResource(R.string.address_heading),
         style = MaterialTheme.typography.headlineSmall,
-        fontWeight = FontWeight.Bold,
     )
     Spacer(Modifier.height(6.dp))
     Text(

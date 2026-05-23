@@ -43,12 +43,6 @@ import coil.compose.AsyncImagePainter
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.catalogue.model.Service
 
-// ── Colour tokens (shared with ServiceListScreen) ─────────────────────────────
-private val PhotoServiceBrandGreen = Color(0xFF0B3D2E)
-private val PhotoServiceTitle = Color(0xFF18231F)
-private val PhotoServiceDescription = Color(0xFF5F6C66)
-private val PhotoServiceCardBorder = Color(0xFFDED8CD)
-private val PhotoServiceDurationBg = Color(0xFFE8F1EC)
 private val PhotoServiceCardShape = RoundedCornerShape(12.dp)
 private val PhotoServicePillShape = RoundedCornerShape(percent = 50)
 private val PhotoServicePlaceholderBg = Color(0xFFEDE7DD)
@@ -74,9 +68,9 @@ internal fun PhotoFirstServiceCard(
         onClick = onClick,
         modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
         shape = PhotoServiceCardShape,
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        border = BorderStroke(1.dp, PhotoServiceCardBorder),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
         Column {
             PhotoServiceHeroImage(service = service)
@@ -121,7 +115,7 @@ private fun PhotoServiceFallbackHero(name: String) {
                 text = name.take(2).uppercase(),
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
-                color = PhotoServiceBrandGreen.copy(alpha = 0.40f),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.40f),
                 textAlign = TextAlign.Center,
             )
         }
@@ -136,7 +130,7 @@ private fun PhotoServiceInfoBlock(
     Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
         Text(
             text = service.name,
-            color = PhotoServiceTitle,
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
@@ -145,7 +139,7 @@ private fun PhotoServiceInfoBlock(
         Spacer(Modifier.height(4.dp))
         Text(
             text = service.description,
-            color = PhotoServiceDescription,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 13.sp,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -176,7 +170,7 @@ private fun PhotoServiceActionRow(
         Spacer(Modifier.width(8.dp))
         Text(
             text = formatServicePrice(basePrice),
-            color = PhotoServiceBrandGreen,
+            color = MaterialTheme.colorScheme.primary,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
@@ -188,8 +182,8 @@ private fun PhotoServiceActionRow(
             shape = PhotoServicePillShape,
             colors =
                 ButtonDefaults.buttonColors(
-                    containerColor = PhotoServiceBrandGreen,
-                    contentColor = Color.White,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
                 ),
             elevation =
                 ButtonDefaults.buttonElevation(
@@ -215,7 +209,7 @@ private fun PhotoServiceDurationChip(
 ) {
     Surface(
         shape = PhotoServicePillShape,
-        color = PhotoServiceDurationBg,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = modifier,
     ) {
         Row(
@@ -225,13 +219,13 @@ private fun PhotoServiceDurationChip(
             Icon(
                 imageVector = Icons.Filled.Build,
                 contentDescription = null,
-                tint = PhotoServiceBrandGreen,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(14.dp),
             )
             Spacer(Modifier.width(4.dp))
             Text(
                 text = stringResource(R.string.service_duration_label, durationMinutes),
-                color = PhotoServiceBrandGreen,
+                color = MaterialTheme.colorScheme.primary,
                 fontSize = 12.sp,
                 maxLines = 1,
             )
