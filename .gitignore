@@ -15,8 +15,13 @@
 *.p12
 service-account*.json
 google-services.json
-# Stub placeholder files with no real credentials are tracked; real files are excluded by the rule above
-!customer-app/app/google-services.json
+# customer-app/app/google-services.json is intentionally NOT allowlisted here.
+# A placeholder stub is committed; the real file is injected at CI build time
+# from the GOOGLE_SERVICES_JSON GitHub secret (see .github/workflows/customer-ship.yml).
+# For local development, copy your real file to google-services.json.real
+# (ignored) and run a local copy script, or replace google-services.json
+# temporarily without staging the change.
+customer-app/app/google-services.json.real
 !technician-app/app/google-services.json
 GoogleService-Info.plist
 
@@ -38,6 +43,7 @@ pnpm-debug.log*
 # === Android / Kotlin ===
 **/local.properties
 **/.gradle/
+**/.gradle-user-home*/
 **/build/
 **/captures/
 **/.idea/
@@ -47,6 +53,9 @@ pnpm-debug.log*
 **/release/
 **/app/release/
 **/app/debug/
+# Allow hand-authored source sets in build-type variants (App Check provider split)
+!**/app/src/release/
+!**/app/src/debug/
 
 # === Python ===
 __pycache__/
@@ -131,6 +140,7 @@ admin-web/*.tsbuildinfo
 
 # Debug screenshots
 docs/design/snap.png
+moto-g-snapshots/
 
 # === Visual-audit + Playwright MCP scratch (manual session output) ===
 .playwright-mcp/
@@ -174,3 +184,5 @@ technician-app/app/release/keystore.properties
 technician-app/keystore.jks
 technician-app/release.keystore
 .claude/
+.gradle-home/
+.gradle-codex/

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import type { components, operations } from '@/api/generated/schema';
 
 export type AdminService = components['schemas']['AdminService'];
@@ -21,6 +22,7 @@ export interface ServiceFormProps {
 }
 
 export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: ServiceFormProps) {
+  const t = useTranslations('catalogue');
   const [id, setId] = useState(initial?.id ?? '');
   const [name, setName] = useState(initial?.name ?? '');
   const [shortDescription, setShortDescription] = useState(initial?.shortDescription ?? '');
@@ -28,7 +30,6 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
   const [basePrice, setBasePrice] = useState(String(initial?.basePrice ?? ''));
   const [durationMinutes, setDurationMinutes] = useState(String(initial?.durationMinutes ?? ''));
   const [commissionBps, setCommissionBps] = useState(String(initial?.commissionBps ?? '2250'));
-  const [isActive, setIsActive] = useState(initial?.isActive ?? true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,12 +44,12 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
     const commissionNum = parseInt(commissionBps, 10);
 
     if (isNaN(basePriceNum) || isNaN(durationNum) || isNaN(commissionNum)) {
-      setError('Price, duration, and commission must be valid numbers.');
+      setError(t('serviceForm.validationError'));
       return;
     }
 
     if (commissionNum < 1500 || commissionNum > 3500) {
-      setError('Commission must be between 1500 and 3500 basis points.');
+      setError(t('serviceForm.commissionRangeError'));
       return;
     }
 
@@ -73,7 +74,7 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
     try {
       await onSubmit(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Submission failed.');
+      setError(err instanceof Error ? err.message : t('serviceForm.submissionError'));
       setSubmitting(false);
     }
   }
@@ -83,7 +84,7 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
       {!isEdit && (
         <div>
           <label htmlFor="svc-id" style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
-            ID (slug)
+            {t('serviceForm.idLabel')}
           </label>
           <input
             id="svc-id"
@@ -92,14 +93,14 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
             required
             value={id}
             onChange={(e) => setId(e.target.value)}
-            placeholder="e.g. ac-deep-clean"
+            placeholder={t('serviceForm.idPlaceholder')}
           />
         </div>
       )}
 
       <div>
         <label htmlFor="svc-name" style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
-          Name
+          {t('serviceForm.nameLabel')}
         </label>
         <input
           id="svc-name"
@@ -108,13 +109,13 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. AC Deep Clean"
+          placeholder={t('serviceForm.namePlaceholder')}
         />
       </div>
 
       <div>
         <label htmlFor="svc-desc" style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
-          Short Description
+          {t('serviceForm.descriptionLabel')}
         </label>
         <input
           id="svc-desc"
@@ -123,13 +124,13 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
           required
           value={shortDescription}
           onChange={(e) => setShortDescription(e.target.value)}
-          placeholder="One-liner summary"
+          placeholder={t('serviceForm.descriptionPlaceholder')}
         />
       </div>
 
       <div>
         <label htmlFor="svc-hero" style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
-          Hero Image URL
+          {t('serviceForm.heroImageLabel')}
         </label>
         <input
           id="svc-hero"
@@ -138,13 +139,13 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
           required
           value={heroImageUrl}
           onChange={(e) => setHeroImageUrl(e.target.value)}
-          placeholder="https://..."
+          placeholder={t('serviceForm.heroImagePlaceholder')}
         />
       </div>
 
       <div>
         <label htmlFor="svc-price" style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
-          Base Price (paise — ₹599 = 59900)
+          {t('serviceForm.priceLabel')}
         </label>
         <input
           id="svc-price"
@@ -154,13 +155,13 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
           min={0}
           value={basePrice}
           onChange={(e) => setBasePrice(e.target.value)}
-          placeholder="59900"
+          placeholder={t('serviceForm.pricePlaceholder')}
         />
       </div>
 
       <div>
         <label htmlFor="svc-duration" style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
-          Duration (minutes)
+          {t('serviceForm.durationLabel')}
         </label>
         <input
           id="svc-duration"
@@ -170,13 +171,13 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
           min={1}
           value={durationMinutes}
           onChange={(e) => setDurationMinutes(e.target.value)}
-          placeholder="60"
+          placeholder={t('serviceForm.durationPlaceholder')}
         />
       </div>
 
       <div>
         <label htmlFor="svc-commission" style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
-          Commission (basis points — 2250 = 22.5%, range 1500–3500)
+          {t('serviceForm.commissionLabel')}
         </label>
         <input
           id="svc-commission"
@@ -187,23 +188,9 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
           max={3500}
           value={commissionBps}
           onChange={(e) => setCommissionBps(e.target.value)}
-          placeholder="2250"
+          placeholder={t('serviceForm.commissionPlaceholder')}
         />
       </div>
-
-      {isEdit && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-          <input
-            id="svc-active"
-            type="checkbox"
-            checked={isActive}
-            onChange={(e) => setIsActive(e.target.checked)}
-          />
-          <label htmlFor="svc-active" style={{ fontSize: 'var(--text-sm)', fontWeight: 600 }}>
-            Active
-          </label>
-        </div>
-      )}
 
       {error !== null && (
         <p style={{ color: 'var(--color-danger)', fontSize: 'var(--text-sm)', margin: 0 }}>
@@ -227,7 +214,7 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
             opacity: submitting ? 0.6 : 1,
           }}
         >
-          {submitting ? 'Saving…' : isEdit ? 'Update Service' : 'Create Service'}
+          {submitting ? t('serviceForm.savingState') : isEdit ? t('serviceForm.updateButton') : t('serviceForm.createButton')}
         </button>
         <button
           type="button"
@@ -243,7 +230,7 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
             cursor: 'pointer',
           }}
         >
-          Cancel
+          {t('serviceForm.cancelButton')}
         </button>
       </div>
     </form>

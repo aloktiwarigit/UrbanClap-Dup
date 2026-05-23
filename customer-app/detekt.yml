@@ -40,17 +40,18 @@ complexity:
     active: true
     functionThreshold: 6
     constructorThreshold: 7
-    ignoreAnnotated: ['Composable']
+    ignoreAnnotated: ['Composable', 'androidx.compose.runtime.Composable']
   TooManyFunctions:
     active: true
     thresholdInFiles: 15
+    thresholdInClasses: 12
 
 naming:
   FunctionNaming:
     active: true
     functionPattern: '([a-z][a-zA-Z0-9]*)|(`.*`)'
     excludeClassPattern: '$^'
-    ignoreAnnotated: ['Composable']
+    ignoreAnnotated: ['Composable', 'androidx.compose.runtime.Composable']
   FunctionMaxLength:
     active: true
     maximumFunctionNameLength: 60

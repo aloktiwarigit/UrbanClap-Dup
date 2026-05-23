@@ -1,6 +1,6 @@
-# homeservices-admin
+# HomeHeroo admin
 
-Owner-facing admin dashboard for the homeservices-mvp platform. Next.js 15 (App Router, RSC-first) + TypeScript strict + Tailwind v4 + Storybook. Hosted on Azure Static Web Apps free tier (deploy story is separate).
+Owner-facing admin dashboard for the HomeHeroo platform. Next.js 15 (App Router, RSC-first) + TypeScript strict + Tailwind v4 + Storybook. Hosted on Azure Static Web Apps free tier (deploy story is separate).
 
 ## Quick start
 
@@ -12,13 +12,13 @@ pnpm dev                     # http://localhost:3000
 
 ## Firebase dev keys (required for login)
 
-The login form uses Firebase Phone Auth. `.env.local` ships with placeholder values that fail with `auth/api-key-not-valid` on actual sign-in. To run the login flow locally:
+The login form uses Firebase email/password auth. `.env.local` ships with placeholder values that fail with `auth/api-key-not-valid` on actual sign-in. To run the login flow locally:
 
 1. **Create a dev Firebase project** (or get added to the existing one):
    - Go to https://console.firebase.google.com
    - Create a project named `homeservices-dev` (or reuse any throwaway project).
    - Add a Web app: Project settings → General → Your apps → "Add app" → Web.
-   - Enable Phone Auth: Authentication → Sign-in method → Phone → Enable.
+   - Enable Email/Password: Authentication -> Sign-in method -> Email/Password -> Enable.
    - Add `localhost` to Authorized domains.
 
 2. **Copy the SDK config into `.env.local`:**
@@ -79,4 +79,4 @@ This project consumes `api/`'s OpenAPI spec via a generated TypeScript client.
 - **When to regenerate:** every time `api/openapi.json` changes. CI drift-checks on every PR.
 - **How to call:** import `createApiClient` from `@/api` (never from `@/api/generated/*`). See ADR-0009.
 - **Auth tokens:** pass a `headers` provider to `createApiClient({ headers: () => ({...}) })`. The provider is invoked per request, so rotating tokens work.
-- **Base URL:** set `API_BASE_URL` (server-only — never `NEXT_PUBLIC_*`) or default to `http://localhost:7071/api`.
+- **Base URL:** set `API_BASE_URL` (server-only, never `NEXT_PUBLIC_*`) or default to `http://localhost:7071/api` locally and `https://func-homeservices-prod.azurewebsites.net/api` in production. Browser calls default to the same-origin `/admin-api/*` proxy; leave `NEXT_PUBLIC_API_BASE_URL` unset unless you intentionally want to bypass that proxy.

@@ -3,17 +3,21 @@ package com.homeservices.customer.data.booking
 import com.homeservices.customer.domain.booking.model.AddOnDecision
 import com.homeservices.customer.domain.booking.model.BookingRequest
 import com.homeservices.customer.domain.booking.model.BookingResult
+import com.homeservices.customer.domain.booking.model.CustomerBooking
 import com.homeservices.customer.domain.booking.model.PendingAddOn
 import kotlinx.coroutines.flow.Flow
 
 public interface BookingRepository {
     public fun createBooking(request: BookingRequest): Flow<Result<BookingResult>>
 
+    public fun getMyBookings(): Flow<Result<List<CustomerBooking>>>
+
     public fun confirmBooking(
         bookingId: String,
         paymentId: String,
         orderId: String,
         signature: String,
+        integrityToken: String? = null,
     ): Flow<Result<String>>
 
     public fun getPendingAddOns(bookingId: String): Flow<Result<List<PendingAddOn>>>

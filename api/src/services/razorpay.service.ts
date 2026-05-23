@@ -1,5 +1,5 @@
 import Razorpay from 'razorpay';
-import { createHmac } from 'node:crypto';
+import { equalsHexHmac } from '../shared/timing-safe.js';
 
 let _rzp: Razorpay | null = null;
 
@@ -13,7 +13,12 @@ function getRazorpay(): Razorpay {
   return _rzp;
 }
 
-export async function createRazorpayOrder(opts: { amount: number; currency: string; receipt: string }) {
+export async function createRazorpayOrder(opts: {
+  amount: number;
+  currency: string;
+  receipt: string;
+  notes?: Record<string, string>;
+}) {
   const order = await getRazorpay().orders.create(opts);
   return { id: order.id, amount: order.amount, currency: order.currency };
 }
@@ -25,10 +30,11 @@ export function verifyPaymentSignature(opts: {
 }): boolean {
   const secret = process.env.RAZORPAY_KEY_SECRET;
   if (!secret) throw new Error('Missing RAZORPAY_KEY_SECRET');
-  const expected = createHmac('sha256', secret)
-    .update(`${opts.razorpayOrderId}|${opts.razorpayPaymentId}`)
-    .digest('hex');
-  return expected === opts.razorpaySignature;
+  return equalsHexHmac(
+    secret,
+    `${opts.razorpayOrderId}|${opts.razorpayPaymentId}`,
+    opts.razorpaySignature,
+  );
 }
 
 export async function createTransfer(opts: {

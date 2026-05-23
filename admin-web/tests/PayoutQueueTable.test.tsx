@@ -1,5 +1,21 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+
+vi.mock('next-intl', () => ({
+  useTranslations: (_ns: string) => (key: string, params?: Record<string, unknown>): string => {
+    if (params) {
+      if ('h' in params && 'm' in params) return `${String(params.h)}h ${String(params.m)}m`;
+      if ('m' in params && !('h' in params)) return `${String(params.m)}m`;
+      const vals = Object.values(params).filter(v => typeof v === 'string' || typeof v === 'number');
+      if (vals.length === 1) return String(vals[0]);
+      if (vals.length > 0) return vals.map(String).join(' ');
+    }
+    const last = key.split('.').pop() ?? key;
+    return last.replace(/([A-Z])/g, ' $1').toLowerCase().trim();
+  },
+  useLocale: () => 'en',
+}));
+
 import { PayoutQueueTable } from '../src/components/finance/PayoutQueueTable';
 import type { PayoutQueueEntry } from '../src/api/finance';
 
@@ -44,6 +60,19 @@ describe('PayoutQueueTable', () => {
   it('disables the "Approve All" button when entries are empty', () => {
     render(<PayoutQueueTable entries={[]} totalNetPayable={0} onApproveAll={vi.fn()} />);
     expect(screen.getByRole('button', { name: /approve all/i })).toBeDisabled();
+  });
+
+  it('hides approve command when role cannot approve payouts', () => {
+    render(
+      <PayoutQueueTable
+        entries={entries}
+        totalNetPayable={286750}
+        onApproveAll={vi.fn()}
+        canApproveAll={false}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /approve all/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/restricted/i)).toBeInTheDocument();
   });
 
   it('formats netPayable as paise / 100 with ₹ prefix', () => {

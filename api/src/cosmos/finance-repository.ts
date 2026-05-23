@@ -11,6 +11,8 @@ interface CompletedBooking {
   completedAt: string;
 }
 
+const DEFAULT_COMMISSION_BPS = 2200;
+
 interface LedgerTransferDoc {
   id: string;
   type: 'TRANSFER';
@@ -57,7 +59,7 @@ export async function getDailyPnL(from: string, to: string): Promise<FinanceSumm
 
   for (const b of bookings) {
     const date = b.completedAt.slice(0, 10);
-    const bps = b.commissionBps ?? 0;
+    const bps = b.commissionBps ?? DEFAULT_COMMISSION_BPS;
     const commission = Math.round(b.amount * bps / 10000);
     const existing = byDate.get(date) ?? { gross: 0, commission: 0 };
     byDate.set(date, { gross: existing.gross + b.amount, commission: existing.commission + commission });
@@ -81,7 +83,7 @@ export async function getPayoutQueue(weekStart: string, weekEnd: string): Promis
   const byTech = new Map<string, { name: string; jobs: number; gross: number; commission: number }>();
 
   for (const b of bookings) {
-    const bps = b.commissionBps ?? 0;
+    const bps = b.commissionBps ?? DEFAULT_COMMISSION_BPS;
     const commission = Math.round(b.amount * bps / 10000);
     const existing = byTech.get(b.technicianId) ?? { name: b.technicianName, jobs: 0, gross: 0, commission: 0 };
     byTech.set(b.technicianId, {

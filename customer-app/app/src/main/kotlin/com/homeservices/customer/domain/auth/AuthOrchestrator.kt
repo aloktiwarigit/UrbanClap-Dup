@@ -13,6 +13,7 @@ import com.homeservices.customer.domain.auth.model.AuthResult
 import com.homeservices.customer.domain.auth.model.GoogleSignInResult
 import com.homeservices.customer.domain.auth.model.OtpSendResult
 import com.homeservices.customer.domain.auth.model.TruecallerAuthResult
+import com.homeservices.customer.domain.flags.FeatureFlags
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.flow
@@ -30,6 +31,8 @@ public class AuthOrchestrator
         private val googleSignInUseCase: GoogleSignInUseCase,
         private val emailPasswordUseCase: EmailPasswordUseCase,
         private val firebaseAuth: FirebaseAuth,
+        private val verifyTruecallerUseCase: VerifyTruecallerUseCase,
+        private val featureFlags: FeatureFlags,
     ) {
         public sealed class StartResult {
             public data object TruecallerLaunched : StartResult()
@@ -66,7 +69,44 @@ public class AuthOrchestrator
         public fun signInWithCredential(credential: PhoneAuthCredential): Flow<AuthResult> =
             firebaseOtpUseCase.signInWithCredential(credential)
 
-        public suspend fun completeWithTruecaller(phoneNumber: String): AuthResult = saveSessionUseCase.saveAnonymousWithPhone(phoneNumber)
+        /**
+         * Completes the Truecaller auth flow.
+         *
+         * When [FeatureFlags.truecallerServerVerify] is ON (Phase 2), posts the
+         * payload+signature to the backend for RSA verification, then signs into
+         * Firebase with the returned custom token.
+         *
+         * When the flag is OFF (Phase 1 — default), falls back to the original
+         * anonymous sign-in path. The anonymous path is intentionally preserved
+         * until E11-S01b removes it after a 7-day soak gate.
+         *
+         * @param truecallerSuccess the SDK success result carrying payload, signature,
+         *   signatureAlgorithm, and phoneLastFour
+         */
+        @Suppress("TooGenericExceptionCaught")
+        public suspend fun completeWithTruecaller(truecallerSuccess: TruecallerAuthResult.Success): AuthResult {
+            if (featureFlags.truecallerServerVerify()) {
+                // Phase 2: server-side RSA verification → Firebase custom token
+                val result =
+                    verifyTruecallerUseCase.invoke(
+                        payload = truecallerSuccess.payload,
+                        signature = truecallerSuccess.signature,
+                        signatureAlgorithm = truecallerSuccess.signatureAlgorithm,
+                    )
+                return if (result.isSuccess) {
+                    val user = result.getOrThrow()
+                    saveSessionUseCase.save(user, truecallerSuccess.phoneLastFour)
+                    AuthResult.Success(user)
+                } else {
+                    AuthResult.Error.General(
+                        result.exceptionOrNull() ?: Exception("Truecaller server verify failed"),
+                    )
+                }
+            }
+            // Phase 1 (flag OFF): anonymous sign-in — intentionally preserved.
+            // Removal tracked in E11-S01b (Wave 3, 7-day soak gate after Phase 2 stable).
+            return saveSessionUseCase.saveAnonymousWithPhone(truecallerSuccess.phoneLastFour)
+        }
 
         public suspend fun completeWithFirebase(
             user: FirebaseUser,
@@ -160,6 +200,23 @@ public class AuthOrchestrator
             }
 
         public fun sendPasswordReset(email: String): Flow<Result<Unit>> = emailPasswordUseCase.sendPasswordReset(email)
+
+        public suspend fun completeCurrentEmailVerification(): AuthResult {
+            val user = firebaseAuth.currentUser ?: return AuthResult.Unavailable
+            return completeEmailVerification(user)
+        }
+
+        @Suppress("TooGenericExceptionCaught")
+        public suspend fun resendCurrentEmailVerification(): Result<Unit> =
+            try {
+                val user =
+                    firebaseAuth.currentUser
+                        ?: return Result.failure(IllegalStateException("No signed-in user"))
+                user.sendEmailVerification().await()
+                Result.success(Unit)
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
 
         @Suppress("TooGenericExceptionCaught")
         private suspend fun linkOrSignIn(credential: AuthCredential): AuthResult {

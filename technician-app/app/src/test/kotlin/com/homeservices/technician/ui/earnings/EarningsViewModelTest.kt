@@ -5,6 +5,7 @@ import com.homeservices.technician.domain.earnings.GetEarningsUseCase
 import com.homeservices.technician.domain.earnings.model.DailyEarnings
 import com.homeservices.technician.domain.earnings.model.EarningsPeriod
 import com.homeservices.technician.domain.earnings.model.EarningsSummary
+import com.homeservices.technician.domain.earnings.model.MonthEarningsPeriod
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -30,9 +31,9 @@ public class EarningsViewModelTest {
         EarningsSummary(
             today = EarningsPeriod(120000L, 1),
             week = EarningsPeriod(240000L, 2),
-            month = EarningsPeriod(360000L, 3),
+            month = MonthEarningsPeriod(360000L, 3, 3_500_000L),
             lifetime = EarningsPeriod(960000L, 8),
-            lastSevenDays = List(7) { DailyEarnings("2026-04-${20 + it}", 0L) },
+            lastSevenDays = List(7) { DailyEarnings("2026-04-${20 + it}", 0L, 0) },
         )
 
     @BeforeEach

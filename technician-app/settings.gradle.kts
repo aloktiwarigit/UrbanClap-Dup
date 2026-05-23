@@ -1,4 +1,5 @@
 includeBuild("../design-system")
+includeBuild("../core-nav")
 
 pluginManagement {
     repositories {

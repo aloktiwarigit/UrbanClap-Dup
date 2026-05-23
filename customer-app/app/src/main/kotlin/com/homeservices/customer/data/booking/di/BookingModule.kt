@@ -1,22 +1,25 @@
 package com.homeservices.customer.data.booking.di
 
-import com.google.firebase.auth.FirebaseAuth
 import com.homeservices.customer.BuildConfig
 import com.homeservices.customer.data.booking.BookingRepository
 import com.homeservices.customer.data.booking.BookingRepositoryImpl
+import com.homeservices.customer.data.booking.SlotAvailabilityRepository
+import com.homeservices.customer.data.booking.SlotAvailabilityRepositoryImpl
 import com.homeservices.customer.data.booking.remote.BookingApiService
+import com.homeservices.customer.data.network.auth.FirebaseTokenAuthenticator
+import com.homeservices.customer.data.network.auth.IdTokenCache
 import com.squareup.moshi.Moshi
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.tasks.await
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
+import java.time.Clock
+import java.time.ZoneId
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
@@ -24,29 +27,41 @@ import javax.inject.Singleton
 @Retention(AnnotationRetention.BINARY)
 public annotation class AuthOkHttpClient
 
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+public annotation class IstClock
+
+private val IST_ZONE: ZoneId = ZoneId.of("Asia/Kolkata")
+
 @Module
 @InstallIn(SingletonComponent::class)
 public abstract class BookingModule {
     @Binds
     internal abstract fun bindBookingRepository(impl: BookingRepositoryImpl): BookingRepository
 
+    @Binds
+    internal abstract fun bindSlotAvailabilityRepository(impl: SlotAvailabilityRepositoryImpl): SlotAvailabilityRepository
+
     public companion object {
         @Provides
         @Singleton
+        @IstClock
+        public fun provideIstClock(): Clock = Clock.system(IST_ZONE)
+
+        @Provides
+        @Singleton
         @AuthOkHttpClient
-        public fun provideAuthOkHttpClient(): OkHttpClient =
+        public fun provideAuthOkHttpClient(
+            idTokenCache: IdTokenCache,
+            authenticator: FirebaseTokenAuthenticator,
+        ): OkHttpClient =
             OkHttpClient
                 .Builder()
                 .addInterceptor { chain ->
-                    val token =
-                        runBlocking {
-                            FirebaseAuth
-                                .getInstance()
-                                .currentUser
-                                ?.getIdToken(false)
-                                ?.await()
-                                ?.token
-                        }
+                    // Non-blocking: reads the pre-fetched cached token.
+                    // IdTokenCache refreshes every 55 min in the background so
+                    // this read never blocks a dispatcher thread.
+                    val token = idTokenCache.cachedToken
                     val req =
                         if (token != null) {
                             chain
@@ -67,7 +82,8 @@ public abstract class BookingModule {
                                 HttpLoggingInterceptor.Level.NONE
                             }
                     },
-                ).build()
+                ).authenticator(authenticator)
+                .build()
 
         @Provides
         @Singleton

@@ -19,9 +19,15 @@ describe('BookingDocSchema', () => {
 
 describe('CreateBookingRequestSchema', () => {
   const v = { serviceId: 's1', categoryId: 'c1', slotDate: '2026-05-01', slotWindow: '08:00-10:00', addressText: '123 St', addressLatLng: { lat: 12.0, lng: 77.0 } };
-  it('parses valid request', () => { expect(() => CreateBookingRequestSchema.parse(v)).not.toThrow(); });
+  it('parses valid request and defaults to Razorpay', () => {
+    expect(CreateBookingRequestSchema.parse(v).paymentMethod).toBe('RAZORPAY');
+  });
+  it('accepts cash-on-service payment method', () => {
+    expect(CreateBookingRequestSchema.parse({ ...v, paymentMethod: 'CASH_ON_SERVICE' }).paymentMethod).toBe('CASH_ON_SERVICE');
+  });
   it('rejects empty serviceId', () => { expect(() => CreateBookingRequestSchema.parse({ ...v, serviceId: '' })).toThrow(); });
   it('rejects invalid slotWindow format', () => { expect(() => CreateBookingRequestSchema.parse({ ...v, slotWindow: 'morning' })).toThrow(); });
+  it('rejects unsupported payment method', () => { expect(() => CreateBookingRequestSchema.parse({ ...v, paymentMethod: 'BANK_TRANSFER' })).toThrow(); });
 });
 
 describe('ConfirmBookingRequestSchema', () => {

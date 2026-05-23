@@ -1,0 +1,40 @@
+export const dynamic = 'force-dynamic';
+
+import { cookies } from 'next/headers';
+import { notFound } from 'next/navigation';
+import type { components } from '@/api/generated/schema';
+import { getApiBaseUrl } from '@/lib/apiBase';
+import { handleAdminFetchError } from '@/lib/serverFetch';
+import { EditServiceClient } from './EditServiceClient';
+
+type AdminService = components['schemas']['AdminService'];
+
+async function fetchService(id: string, token: string): Promise<AdminService | null> {
+  const baseUrl = getApiBaseUrl();
+  const res = await fetch(`${baseUrl}/v1/admin/catalogue/services/${id}`, {
+    headers: { Cookie: `hs_access=${token}` },
+    cache: 'no-store',
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) handleAdminFetchError(res, 'Catalogue service');
+  return (await res.json()) as AdminService;
+}
+
+interface PageProps {
+  params: Promise<{ categoryId: string; serviceId: string }>;
+}
+
+export default async function EditServicePage({ params }: PageProps) {
+  const { categoryId, serviceId } = await params;
+
+  const cookieStore = await cookies();
+  const token = cookieStore.get('hs_access')?.value ?? '';
+
+  const service = await fetchService(serviceId, token);
+
+  if (service === null) {
+    notFound();
+  }
+
+  return <EditServiceClient categoryId={categoryId} service={service} />;
+}

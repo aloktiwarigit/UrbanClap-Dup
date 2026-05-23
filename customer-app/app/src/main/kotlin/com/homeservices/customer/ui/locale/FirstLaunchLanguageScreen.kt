@@ -1,23 +1,73 @@
 package com.homeservices.customer.ui.locale
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.locale.DefaultLanguageOptions
 import com.homeservices.designsystem.locale.LanguagePickerCard
+
+private val LangHeroStart = Color(0xFF062A20)
+private val LangHeroEnd = Color(0xFF0B3D2E)
+private const val LANG_HERO_FRACTION = 0.30f
+private const val LANG_FORM_FRACTION = 0.72f
+
+@Composable
+private fun LangHeroZone() {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(LANG_HERO_FRACTION)
+                .drawBehind {
+                    drawRect(brush = Brush.verticalGradient(listOf(LangHeroStart, LangHeroEnd)), size = size)
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.06f),
+                        radius = 140.dp.toPx(),
+                        center = Offset(size.width - 80.dp.toPx(), -60.dp.toPx()),
+                    )
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.09f),
+                        radius = 70.dp.toPx(),
+                        center =
+                            Offset(
+                                40.dp.toPx(),
+                                size.height - 20.dp.toPx(),
+                            ),
+                    )
+                },
+        contentAlignment = Alignment.BottomStart,
+    ) {
+        Column(modifier = Modifier.padding(start = 28.dp, end = 28.dp, bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(text = "HomeHeroo", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = Color.White)
+            Text(text = "भाषा चुनें", style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.82f))
+        }
+    }
+}
 
 @Composable
 public fun FirstLaunchLanguageScreen(
@@ -27,28 +77,38 @@ public fun FirstLaunchLanguageScreen(
     val selected by viewModel.selectedTag.collectAsStateWithLifecycle()
     val confirmed by viewModel.confirmedFlow.collectAsStateWithLifecycle()
 
-    if (confirmed) {
-        onConfirmed()
+    LaunchedEffect(confirmed) {
+        if (confirmed) {
+            viewModel.confirmedFlow.value = false
+            onConfirmed()
+        }
     }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+    Box(modifier = Modifier.fillMaxSize().background(LangHeroEnd).statusBarsPadding()) {
+        LangHeroZone()
+        Surface(
+            modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).fillMaxHeight(LANG_FORM_FRACTION),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            color = MaterialTheme.colorScheme.background,
+            shadowElevation = 8.dp,
         ) {
-            Text(
-                text = "Choose your language\nभाषा चुनें",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            LanguagePickerCard(
-                options = DefaultLanguageOptions,
-                selectedTag = selected,
-                onSelect = viewModel::onSelect,
-            )
-            Button(onClick = viewModel::onConfirm, modifier = Modifier.fillMaxWidth()) {
-                Text(text = "Continue / जारी रखें")
+            Column(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp).padding(top = 28.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Text(
+                    text = "Choose your language",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+                Text(
+                    text = "Language can be changed anytime from Settings.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                LanguagePickerCard(options = DefaultLanguageOptions, selectedTag = selected, onSelect = viewModel::onSelect)
+                Spacer(modifier = Modifier.weight(1f))
+                HsPrimaryButton(text = "Continue", onClick = viewModel::onConfirm, modifier = Modifier.fillMaxWidth())
             }
         }
     }

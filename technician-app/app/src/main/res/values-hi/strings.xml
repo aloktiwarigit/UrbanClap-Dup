@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">HomeHeroo तकनीशियन</string>
+    <!-- Job offer -->
+    <string name="job_offer_accepted">ऑफर स्वीकार किया!</string>
+    <string name="job_offer_declined">ऑफर अस्वीकार किया</string>
+    <string name="job_offer_expired">ऑफर समाप्त हो गया</string>
+    <string name="job_offer_unavailable">ऑफर उपलब्ध नहीं है</string>
+    <string name="job_offer_new_request">नया जॉब अनुरोध</string>
+    <string name="job_offer_seconds">सेकंड</string>
+    <string name="job_offer_why_you">कौशल, दूरी और उपलब्धता के आधार पर आपसे मिलान किया गया।</string>
+    <string name="job_offer_address">ग्राहक का पता</string>
+    <string name="job_offer_slot">सेवा स्लॉट</string>
+    <string name="job_offer_distance">दूरी</string>
+    <string name="job_offer_distance_km">%.1f किमी दूर</string>
+    <string name="job_offer_earnings">कमाई</string>
+    <string name="job_offer_accept">जॉब स्वीकार करें</string>
+    <string name="job_offer_decline">अस्वीकार करें</string>
+    <!-- Active job -->
+    <string name="active_job_complete_title">जॉब पूरी हुई</string>
+    <string name="active_job_complete_body">आपकी पूर्णता दर्ज की गई। कमाई जल्द ही अपडेट होगी।</string>
+    <string name="active_job_back_to_dashboard">&#x921;&#x948;&#x936;&#x92C;&#x94B;&#x930;&#x94D;&#x921; &#x92A;&#x930; &#x935;&#x93E;&#x92A;&#x938; &#x91C;&#x93E;&#x90F;&#x902;</string>
+    <string name="active_job_error_title">जॉब लोड नहीं हो सकी</string>
+    <string name="active_job_address">ग्राहक का पता</string>
+    <string name="active_job_slot">सेवा स्लॉट</string>
+    <string name="active_job_progress_title">जॉब प्रगति</string>
+    <string name="active_job_offline_sync">ऑफलाइन — पुनः कनेक्ट होने पर स्थिति सिंक होगी</string>
+    <string name="active_job_start_trip">यात्रा शुरू करें</string>
+    <string name="active_job_mark_arrived">मैं पहुँच गया</string>
+    <string name="active_job_start_work">काम शुरू करें</string>
+    <string name="active_job_complete_job">जॉब पूरी करें</string>
+    <string name="active_job_done">हो गया</string>
+    <string name="active_job_status_assigned">असाइन किया गया</string>
+    <string name="active_job_status_en_route">रास्ते में</string>
+    <string name="active_job_status_arrived">पहुँच गया</string>
+    <string name="active_job_status_working">काम चल रहा है</string>
+    <string name="active_job_status_done">पूरा हुआ</string>
+    <!-- Earnings screen -->
+    <string name="earnings_title">कमाई</string>
+    <string name="earnings_error">कमाई लोड नहीं हो सकी</string>
+    <string name="earnings_retry">पुनः प्रयास करें</string>
+    <string name="earnings_empty_title">अभी कोई कमाई नहीं</string>
+    <string name="earnings_empty_body">आज का भुगतान शुरू करने के लिए पहली जॉब स्वीकार करें। जॉब पूरी होने के कुछ मिनटों में कमाई यहाँ दिखेगी।</string>
+    <string name="earnings_hint_online">जॉब ऑफर पाने के लिए ऑनलाइन रहें</string>
+    <string name="earnings_hint_complete">भुगतान बैलेंस बनाने के लिए जॉब पूरी करें</string>
+    <string name="earnings_hint_ratings">अच्छी रेटिंग से अधिक बुकिंग मिलती है</string>
+    <string name="earnings_payout_settings">पेआउट सेटिंग्स</string>
+    <string name="earnings_dashboard_title">आपका पेआउट डैशबोर्ड</string>
+    <string name="earnings_period_today">आज</string>
+    <string name="earnings_period_week">इस सप्ताह</string>
+    <string name="earnings_period_month">इस महीने</string>
+    <string name="earnings_period_lifetime">कुल</string>
+    <string name="earnings_no_jobs">अभी कोई जॉब नहीं</string>
+    <string name="earnings_jobs_count">%d जॉब</string>
+    <string name="earnings_monthly_goal">मासिक लक्ष्य</string>
+    <string name="earnings_last_seven_days">पिछले 7 दिन</string>
+    <string name="earnings_sparkline_empty">पहली जॉब के बाद यहाँ गतिविधि दिखेगी</string>
+    <string name="earnings_view_ratings">रेटिंग देखें</string>
+
+    <!-- Notification permission rationale (E11-S01b-1) -->
+    <string name="notification_permission_rationale_title">सूचनाएं अनुमति दें</string>
+    <string name="notification_permission_rationale_body">जॉब ऑफर, बुकिंग अपडेट और भुगतान सूचनाएं पाने के लिए सूचनाएं अनुमति दें।</string>
+
+    <!-- Language settings -->
+    <string name="settings_language_title">ऐप भाषा</string>
+    <string name="settings_language_subtitle">अंग्रेज़ी और हिंदी के बीच बदलें</string>
+    <string name="settings_language_save">भाषा सहेजें</string>
+    <string name="action_back">वापस जाएं</string>
+
+    <!-- Photo capture screen (E06-S02-Codemod) -->
+    <string name="photo_no_back_camera">इस डिवाइस पर बैक कैमरा उपलब्ध नहीं है</string>
+    <string name="photo_go_back">वापस जाएं</string>
+    <string name="photo_capture">कैप्चर करें</string>
+    <string name="photo_cancel">रद्द करें</string>
+    <string name="photo_upload_failed">अपलोड विफल: %s</string>
+    <string name="photo_retry_upload">पुनः अपलोड करें</string>
+    <string name="photo_retake_photo">फ़ोटो पुनः लें</string>
+    <string name="photo_retake">पुनः लें</string>
+    <string name="photo_confirm_upload">पुष्टि करें &amp; अपलोड करें</string>
+    <string name="photo_camera_permission_required">कैमरा अनुमति आवश्यक है</string>
+    <string name="photo_grant_permission">अनुमति दें</string>
+
+    <!-- Shield report sheet (E06-S02-Codemod) -->
+    <string name="shield_description_placeholder">विवरण…</string>
+
+    <!-- Ratings screens -->
+    <string name="my_ratings_title">मेरी रेटिंग</string>
+    <string name="my_ratings_load_error">रेटिंग लोड नहीं हो सकी</string>
+    <string name="my_ratings_empty">अभी कोई रेटिंग नहीं</string>
+    <string name="rating_punctuality_chip">समय-पालन %s</string>
+    <string name="rating_skill_chip">कौशल %s</string>
+    <string name="rating_appeal_reason_placeholder">कारण लिखें…</string>
+    <string name="rating_comment_label">टिप्पणी (वैकल्पिक, ≤500 वर्ण)</string>
+    <string name="rating_overall">कुल: %s ★</string>
+    <string name="rating_behaviour">व्यवहार: %s ★</string>
+    <string name="rating_communication">संचार: %s ★</string>
+    <string name="rating_punctuality">समय-पालन: %s ★</string>
+    <string name="rating_skill">कौशल: %s ★</string>
+    <string name="rating_comment">टिप्पणी: %s</string>
+
+    <!-- Complaint screen -->
+    <string name="complaint_report_title">कोई समस्या रिपोर्ट करें</string>
+    <string name="complaint_issue_type_label">समस्या का प्रकार</string>
+    <string name="complaint_describe_label">समस्या बताएं</string>
+    <string name="complaint_char_count">%d/2000</string>
+    <string name="complaint_received_title">समस्या प्राप्त हुई</string>
+    <string name="complaint_submitting">समस्या सबमिट हो रही है</string>
+    <string name="complaint_error_title">कुछ गलत हो गया</string>
+
+    <!-- Home screen -->
+    <string name="home_open_job">जॉब खोलें</string>
+    <string name="home_retry">पुनः प्रयास करें</string>
+    <string name="home_continue_job">जॉब जारी रखें</string>
+    <string name="home_availability_online">उपलब्धता सिंक: नई जॉब के लिए ऑनलाइन</string>
+    <string name="home_availability_offline">उपलब्धता सिंक: ऑफलाइन</string>
+
+    <!-- Payout settings + Service selection -->
+    <string name="payout_settings_title">पेमेंट सेटिंग</string>
+    <string name="payout_when_question">पेमेंट कब चाहिए?</string>
+    <string name="service_finding_area">आपका वर्तमान क्षेत्र ढूंढ रहे हैं</string>
+
+    <!-- Auth screen -->
+    <string name="auth_back_to_sign_in">साइन-इन विकल्पों पर वापस जाएं</string>
+    <string name="auth_email_label">ईमेल</string>
+    <string name="auth_email_placeholder">you@example.com</string>
+    <string name="auth_password_label">पासवर्ड</string>
+    <string name="auth_forgot_password">पासवर्ड भूल गए?</string>
+    <string name="auth_use_another_method">किसी अन्य विधि से साइन इन करें</string>
+    <string name="auth_mobile_label">मोबाइल नंबर</string>
+    <string name="auth_mobile_placeholder">+91 98765 43210</string>
+    <string name="auth_otp_label">6-अंक कोड</string>
+    <string name="auth_resend_code">कोड पुनः भेजें</string>
+
+    <!-- FCM tray notifications — dashboard types (E11-S04) -->
+    <string name="fcm_earnings_update_title">कमाई अपडेट हुई</string>
+    <string name="fcm_earnings_update_body">आपकी कमाई अपडेट हुई। देखने के लिए टैप करें।</string>
+    <string name="fcm_rating_prompt_title">अपने काम को रेट करें</string>
+    <string name="fcm_rating_prompt_body">बुकिंग %1$s के लिए रेटिंग दें।</string>
+
+    <!-- Dashboard pending-action cards (E11-S04) -->
+    <string name="dashboard_pending_action_job_offer">नया काम — जल्द एक्सपायर</string>
+    <string name="dashboard_pending_action_rating_prompt">यह काम रेट करें</string>
+    <string name="dashboard_pending_action_rating_received">रेटिंग मिली — फीडबैक देखें</string>
+    <string name="dashboard_pending_action_earnings_update">कमाई अपडेट हुई</string>
+
+    <!-- Job-execution durable hooks (E11-S05a) -->
+    <string name="photo_upload_pending_banner">फोटो अपलोड बाकी है — जारी रखने के लिए Retry दबाएं</string>
+    <string name="photo_upload_pending_retry">पुनः प्रयास</string>
+    <string name="complete_job_confirm_title">काम पूरा करें?</string>
+    <string name="complete_job_confirm_body">पुष्टि करें कि सारा काम हो गया है। ग्राहक को सूचना मिलेगी और यह कदम वापस नहीं लिया जा सकता।</string>
+    <string name="complete_job_confirm_cta">पूरा करें</string>
+    <string name="complete_job_cancel_cta">रद्द करें</string>
+    <string name="booking_status_notification_title">बुकिंग अपडेट</string>
+    <string name="booking_status_notification_body_default">आपकी बुकिंग की स्थिति बदल गई है।</string>
+
+    <!-- Onboarding placement durable hooks (E11-S05c) -->
+    <string name="kyc_verified_notification_title">KYC सत्यापित</string>
+    <string name="kyc_verified_notification_body">आपके दस्तावेज़ स्वीकृत हो गए हैं। अब आप काम प्राप्त कर सकते हैं।</string>
+    <string name="kyc_rejected_notification_title">KYC अस्वीकृत</string>
+    <string name="kyc_rejected_notification_body">आपकी KYC स्वीकार नहीं हुई। कृपया दस्तावेज़ दोबारा जमा करें।</string>
+    <string name="onboarding_reminder_notification_title">ऑनबोर्डिंग पूरी करें</string>
+    <string name="onboarding_reminder_notification_body">काम पाने के लिए अपनी KYC पूरी करें।</string>
+    <string name="photo_upload_retry_banner_label">फोटो अपलोड बाकी है</string>
+    <string name="photo_upload_retry_banner_action">पुनः प्रयास</string>
+    <string name="onboarding_kyc_queued_offline">ऑनलाइन होने पर KYC जमा की जाएगी।</string>
+
+    <!-- Active job location foreground service (E17-S02) -->
+    <string name="active_job_location_notification_title">ग्राहक के साथ स्थान साझा कर रहे हैं</string>
+    <string name="active_job_location_notification_body">केवल सक्रिय बुकिंग के दौरान</string>
+
+    <!-- Legal (E20-S07) -->
+    <string name="privacy_policy_url">https://aloktiwarigit.github.io/homeheroo-privacy/technician/</string>
+</resources>

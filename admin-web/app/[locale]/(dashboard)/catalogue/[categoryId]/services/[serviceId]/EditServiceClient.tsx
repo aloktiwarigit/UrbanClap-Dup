@@ -1,0 +1,59 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { apiUrl } from '@/api/base';
+import { ServiceForm } from '@/components/catalogue/ServiceForm';
+import type { components, operations } from '@/api/generated/schema';
+
+type AdminService = components['schemas']['AdminService'];
+
+type CreateServiceBody = NonNullable<
+  operations['adminCreateService']['requestBody']
+>['content']['application/json'];
+
+type UpdateServiceBody = NonNullable<
+  operations['adminUpdateService']['requestBody']
+>['content']['application/json'];
+
+interface EditServiceClientProps {
+  categoryId: string;
+  service: AdminService;
+}
+
+export function EditServiceClient({ categoryId, service }: EditServiceClientProps) {
+  const t = useTranslations('catalogue');
+  const router = useRouter();
+
+  async function handleSubmit(data: CreateServiceBody | UpdateServiceBody) {
+    const res = await fetch(apiUrl(`/v1/admin/catalogue/services/${service.id}`), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => 'Unknown error');
+      throw new Error(`Failed to update service: ${res.status} ${text}`);
+    }
+    router.push(`/catalogue/${categoryId}`);
+  }
+
+  function handleCancel() {
+    router.push(`/catalogue/${categoryId}`);
+  }
+
+  return (
+    <div style={{ padding: 'var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+      <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>
+        {t('serviceEdit.title')}
+      </h1>
+      <ServiceForm
+        categoryId={categoryId}
+        initial={service}
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+      />
+    </div>
+  );
+}

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { HttpRequest } from '@azure/functions';
 import { getCategoriesHandler, getServiceByIdHandler } from '../src/functions/catalogue-public.js';
+import { catalogueRepo } from '../src/cosmos/catalogue-repository.js';
 
 vi.mock('../src/cosmos/catalogue-repository.js', () => ({
   catalogueRepo: {
@@ -56,6 +57,18 @@ describe('GET /v1/categories', () => {
     const res = await getCategoriesHandler(makeReq('http://localhost:7071/api/v1/categories'), {} as never);
     const body = res.jsonBody as { categories: { services: Record<string, unknown>[] }[] };
     expect(body.categories[0]?.services[0]).not.toHaveProperty('commissionBps');
+  });
+
+  it('does not return active categories that have no active services', async () => {
+    vi.mocked(catalogueRepo.listActiveCategories).mockResolvedValueOnce([
+      { id: 'deep-cleaning', name: 'Deep Cleaning', heroImageUrl: 'https://example.com/d.jpg', sortOrder: 1, isActive: true, updatedBy: 'u', createdAt: '2026-04-19T00:00:00.000Z', updatedAt: '2026-04-19T00:00:00.000Z' },
+    ]);
+    vi.mocked(catalogueRepo.listAllActiveServices).mockResolvedValueOnce([]);
+
+    const res = await getCategoriesHandler(makeReq('http://localhost:7071/api/v1/categories'), {} as never);
+    const body = res.jsonBody as { categories: { id: string }[] };
+
+    expect(body.categories).toEqual([]);
   });
 });
 

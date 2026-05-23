@@ -78,6 +78,8 @@ public class SentryInitializerTest {
         configSlot.captured.configure(capturedOptions)
         assertThat(capturedOptions.dsn).isEqualTo("https://key@o0.ingest.sentry.io/0")
         assertThat(capturedOptions.tracesSampleRate).isEqualTo(EXPECTED_TRACES_SAMPLE_RATE)
+        // beforeSend must be set for PII scrubbing (E13-S04)
+        assertThat(capturedOptions.beforeSend).isNotNull
     }
 
     private companion object {

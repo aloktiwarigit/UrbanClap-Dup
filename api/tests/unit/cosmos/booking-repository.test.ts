@@ -57,3 +57,19 @@ describe('bookingRepo.getAssignedBookingsBefore (includes NO_SHOW_REDISPATCH)', 
     expect(result).toEqual([]);
   });
 });
+
+describe('bookingRepo.getByCustomerId', () => {
+  it('queries customer bookings and orders them by scheduled slot in memory', async () => {
+    const older = { ...BASE, id: 'bk-older', slotDate: '2026-05-01', slotWindow: '09:00-11:00', createdAt: '2026-04-25T04:00:00.000Z' };
+    const newer = { ...BASE, id: 'bk-newer', slotDate: '2026-05-05', slotWindow: '10:00-12:00', createdAt: '2026-04-26T04:00:00.000Z' };
+    mockQueryFetchAll.mockResolvedValue({ resources: [older, newer] });
+
+    const result = await bookingRepo.getByCustomerId('cust-1');
+
+    expect(result.map((booking) => booking.id)).toEqual(['bk-newer', 'bk-older']);
+    const querySpec = mockQuery.mock.calls[0]![0] as { query: string; parameters: unknown[] };
+    expect(querySpec.query).toContain('c.customerId = @customerId');
+    expect(querySpec.query).not.toContain('ORDER BY');
+    expect(querySpec.parameters).toContainEqual({ name: '@customerId', value: 'cust-1' });
+  });
+});

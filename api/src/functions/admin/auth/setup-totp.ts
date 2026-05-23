@@ -1,6 +1,7 @@
 import '../../../bootstrap.js';
 import { app } from '@azure/functions';
 import type { HttpRequest, InvocationContext, HttpResponseInit, Cookie } from '@azure/functions';
+import { withRateLimit } from '../../../middleware/withRateLimit.js';
 import { timingSafeEqual } from 'crypto';
 
 if (!process.env.ADMIN_SETUP_SECRET) {
@@ -140,22 +141,26 @@ export async function setupTotpPostHandler(
 
   const cookies: Cookie[] = [
     { name: 'hs_access', value: accessToken, httpOnly: true, secure: true, sameSite: 'Strict', path: '/', maxAge: 900 },
-    { name: 'hs_refresh', value: session.sessionId, httpOnly: true, secure: true, sameSite: 'Strict', path: '/api/v1/admin/auth/refresh', maxAge: 28800 },
+    { name: 'hs_refresh', value: session.sessionId, httpOnly: true, secure: true, sameSite: 'Strict', path: '/', maxAge: 28800 },
   ];
 
   return { status: 200, cookies, jsonBody: { adminId: adminUser.adminId } };
 }
 
+const totpRateLimiter = withRateLimit({
+  buckets: { ip: { capacity: 10, refillPerSec: 10 / 60 } },
+});
+
 app.http('adminSetupTotpGet', {
   methods: ['GET'],
   route: 'v1/admin/auth/setup-totp',
   authLevel: 'anonymous',
-  handler: setupTotpGetHandler,
+  handler: totpRateLimiter(setupTotpGetHandler),
 });
 
 app.http('adminSetupTotpPost', {
   methods: ['POST'],
   route: 'v1/admin/auth/setup-totp',
   authLevel: 'anonymous',
-  handler: setupTotpPostHandler,
+  handler: totpRateLimiter(setupTotpPostHandler),
 });

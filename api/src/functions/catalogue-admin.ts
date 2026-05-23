@@ -30,6 +30,18 @@ function zodErr(err: ZodError): HttpResponseInit {
 
 // ── Categories ────────────────────────────────────────────────────────────────
 
+export async function listAdminCategoriesHandler(_req: HttpRequest, _ctx: InvocationContext, _admin: AdminContext): Promise<HttpResponseInit> {
+  const categories = await catalogueRepo.listAllCategories();
+  return { status: 200, headers: JSON_HEADERS, jsonBody: { categories } };
+}
+
+export async function getCategoryHandler(req: HttpRequest, _ctx: InvocationContext, _admin: AdminContext): Promise<HttpResponseInit> {
+  const id = req.params['id']!;
+  const category = await catalogueRepo.getCategoryById(id);
+  if (!category) return { status: 404, headers: JSON_HEADERS, jsonBody: { error: 'Category not found' } };
+  return { status: 200, headers: JSON_HEADERS, jsonBody: category };
+}
+
 export async function createCategoryHandler(req: HttpRequest, _ctx: InvocationContext, admin: AdminContext): Promise<HttpResponseInit> {
   try {
     const body = CreateCategoryBodySchema.parse(await parseJson(req));
@@ -76,6 +88,13 @@ export async function listAdminServicesHandler(req: HttpRequest, _ctx: Invocatio
   return { status: 200, headers: JSON_HEADERS, jsonBody: { services } };
 }
 
+export async function getServiceHandler(req: HttpRequest, _ctx: InvocationContext, _admin: AdminContext): Promise<HttpResponseInit> {
+  const id = req.params['id']!;
+  const service = await catalogueRepo.getServiceByIdCrossPartition(id);
+  if (!service) return { status: 404, headers: JSON_HEADERS, jsonBody: { error: 'Service not found' } };
+  return { status: 200, headers: JSON_HEADERS, jsonBody: service };
+}
+
 export async function createServiceHandler(req: HttpRequest, _ctx: InvocationContext, admin: AdminContext): Promise<HttpResponseInit> {
   try {
     const body = CreateServiceBodySchema.parse(await parseJson(req));
@@ -116,10 +135,13 @@ export async function toggleServiceHandler(req: HttpRequest, _ctx: InvocationCon
 
 const adminRoles = requireAdmin(['super-admin', 'ops-manager']);
 
+app.http('adminListCategories', { methods: ['GET'], route: 'v1/admin/catalogue/categories', authLevel: 'anonymous', handler: adminRoles(listAdminCategoriesHandler) });
+app.http('adminGetCategory', { methods: ['GET'], route: 'v1/admin/catalogue/categories/{id}', authLevel: 'anonymous', handler: adminRoles(getCategoryHandler) });
 app.http('adminCreateCategory', { methods: ['POST'], route: 'v1/admin/catalogue/categories', authLevel: 'anonymous', handler: adminRoles(createCategoryHandler) });
 app.http('adminUpdateCategory', { methods: ['PUT'], route: 'v1/admin/catalogue/categories/{id}', authLevel: 'anonymous', handler: adminRoles(updateCategoryHandler) });
 app.http('adminToggleCategory', { methods: ['PATCH'], route: 'v1/admin/catalogue/categories/{id}/toggle', authLevel: 'anonymous', handler: adminRoles(toggleCategoryHandler) });
 app.http('adminListServices', { methods: ['GET'], route: 'v1/admin/catalogue/services', authLevel: 'anonymous', handler: adminRoles(listAdminServicesHandler) });
+app.http('adminGetService', { methods: ['GET'], route: 'v1/admin/catalogue/services/{id}', authLevel: 'anonymous', handler: adminRoles(getServiceHandler) });
 app.http('adminCreateService', { methods: ['POST'], route: 'v1/admin/catalogue/services', authLevel: 'anonymous', handler: adminRoles(createServiceHandler) });
 app.http('adminUpdateService', { methods: ['PUT'], route: 'v1/admin/catalogue/services/{id}', authLevel: 'anonymous', handler: adminRoles(updateServiceHandler) });
 app.http('adminToggleService', { methods: ['PATCH'], route: 'v1/admin/catalogue/services/{id}/toggle', authLevel: 'anonymous', handler: adminRoles(toggleServiceHandler) });

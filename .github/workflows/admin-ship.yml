@@ -31,8 +31,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+permissions:
+  contents: read
 
 jobs:
   quality-gate:
@@ -40,7 +40,10 @@ jobs:
     timeout-minutes: 25
     env:
       NEXT_PUBLIC_GIT_SHA: ${{ github.sha }}
-      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      # NEXT_PUBLIC_APP_URL is intentionally NOT set at job level.
+      # Setting it here leaks into the Vitest runner and causes publicRedirectOrigin()
+      # to return http://localhost:3000 for all redirect assertions, breaking the
+      # middleware tests. It belongs only on the build step below.
     defaults:
       run:
         working-directory: admin-web
@@ -69,11 +72,20 @@ jobs:
             exit 1
           fi
 
-      - name: typecheck + unit tests
-        run: pnpm typecheck && pnpm test
+      - name: lint
+        run: pnpm lint --max-warnings 0
+
+      - name: typecheck + unit tests (with coverage gate)
+        run: pnpm typecheck && pnpm test:coverage
+        env:
+          # vitest --coverage instruments every module; default Node heap (1.5 GB) OOMs on
+          # the full admin-web suite. 4 GB leaves headroom within the 7 GB Actions runner.
+          NODE_OPTIONS: --max-old-space-size=4096
 
       - name: build (clean-room compile check)
         run: pnpm build
+        env:
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
 
       - name: semgrep SAST
         uses: returntocorp/semgrep-action@v1
@@ -83,7 +95,6 @@ jobs:
   e2e-and-a11y:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    if: github.event_name == 'push'
     needs: quality-gate
     defaults:
       run:
@@ -126,11 +137,14 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('admin-web/pnpm-lock.yaml') }}
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm build
+        env:
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
       - name: playwright e2e
         run: pnpm test:e2e
       - name: axe-core a11y (WCAG AA)
         run: pnpm test:a11y
       - name: lighthouse CI budgets
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: pnpm exec lhci autorun --config=lighthouserc.cjs
 
   deploy:
@@ -157,12 +171,6 @@ jobs:
           api_location: ''
           output_location: ''
         env:
-          # SWA action's container only supports Node 18/20/22; the workflow-scope
-          # FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 from line ~34 leaks into the action
-          # and breaks the deploy with "Node version 24.13.0 is not supported".
-          # Override here to keep Oryx + the action on supported runtimes.
-          # Oryx itself respects admin-web/.nvmrc (pinned to 22).
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: ''
           # NEXT_PUBLIC_* are baked at build time by Oryx inside the SWA action
           # container. Server-only secrets (JWT_SECRET, etc.) live in SWA app
           # settings — set via `az staticwebapp appsettings set` (see runbook §5.1).

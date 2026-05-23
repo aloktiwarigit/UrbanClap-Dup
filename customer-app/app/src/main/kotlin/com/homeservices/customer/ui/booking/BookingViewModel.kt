@@ -1,13 +1,18 @@
-package com.homeservices.customer.ui.booking
+﻿package com.homeservices.customer.ui.booking
 
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.homeservices.customer.domain.auth.BiometricGateUseCase
+import com.homeservices.customer.domain.auth.model.BiometricResult
 import com.homeservices.customer.domain.booking.ConfirmBookingUseCase
 import com.homeservices.customer.domain.booking.CreateBookingUseCase
 import com.homeservices.customer.domain.booking.RazorpayPaymentUseCase
+import com.homeservices.customer.domain.booking.model.BookingPaymentMethod
 import com.homeservices.customer.domain.booking.model.BookingRequest
 import com.homeservices.customer.domain.booking.model.BookingSlot
 import com.homeservices.customer.domain.booking.model.PaymentResult
+import com.homeservices.customer.domain.booking.model.RazorpayErrorCode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +21,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+private const val BOOKING_FAILED_FALLBACK = "Booking failed"
+private const val CONFIRMATION_FAILED_FALLBACK = "Confirmation failed"
+
 @HiltViewModel
 internal class BookingViewModel
     @Inject
@@ -23,11 +31,19 @@ internal class BookingViewModel
         private val createBooking: CreateBookingUseCase,
         private val confirmBooking: ConfirmBookingUseCase,
         private val razorpayPayment: RazorpayPaymentUseCase,
+        private val biometricGate: BiometricGateUseCase,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<BookingUiState>(BookingUiState.Idle)
         public val uiState: StateFlow<BookingUiState> = _uiState.asStateFlow()
 
+        private val _walletBalanceInPaise = MutableStateFlow(0L)
+        public val walletBalanceInPaise: StateFlow<Long> = _walletBalanceInPaise.asStateFlow()
+
+        private val _applyCreditToggle = MutableStateFlow(false)
+        public val applyCreditToggle: StateFlow<Boolean> = _applyCreditToggle.asStateFlow()
+
         private var pendingBookingId: String? = null
+        private var pendingAppliedCredit: Int = 0
 
         public var pendingServiceId: String = ""
         public var pendingCategoryId: String = ""
@@ -41,6 +57,19 @@ internal class BookingViewModel
             }
         }
 
+        /** Sets the available wallet balance in paise. Auto-enables the toggle when balance > 0. */
+        public fun setWalletBalance(paise: Long) {
+            _walletBalanceInPaise.value = paise
+            if (paise > 0L) {
+                _applyCreditToggle.value = true
+            }
+        }
+
+        /** Called by the UI when the user flips the "Apply credit" toggle. */
+        public fun setApplyCreditToggle(checked: Boolean) {
+            _applyCreditToggle.value = checked
+        }
+
         public fun setSlotAndAddress(
             slot: BookingSlot,
             addressText: String,
@@ -50,13 +79,46 @@ internal class BookingViewModel
             _uiState.value = BookingUiState.Ready(slot, addressText, lat, lng)
         }
 
+        /**
+         * Initiates online (Razorpay) payment with biometric gate.
+         *
+         * Security gate (fires every call):
+         * - null activity: fail closed, do NOT proceed.
+         * - canUseBiometric=true: require Authenticated; non-Authenticated blocks.
+         * - canUseBiometric=false: skip gate, proceed.
+         */
         public fun startPayment(
             serviceId: String,
             categoryId: String,
+            activity: FragmentActivity?,
+        ) {
+            if (activity == null) return
+            viewModelScope.launch {
+                if (biometricGate.canUseBiometric(activity)) {
+                    val result =
+                        biometricGate.requestAuth(
+                            activity,
+                            "Confirm Payment",
+                            "Authenticate to authorise this booking payment",
+                        )
+                    if (result !is BiometricResult.Authenticated) return@launch
+                }
+                startBooking(serviceId, categoryId, BookingPaymentMethod.RAZORPAY)
+            }
+        }
+
+        /** Creates a booking. Cash bookings call this directly - no biometric gate. */
+        public fun startBooking(
+            serviceId: String,
+            categoryId: String,
+            paymentMethod: BookingPaymentMethod,
         ) {
             val state = _uiState.value as? BookingUiState.Ready ?: return
+            // Synchronous transition BEFORE viewModelScope.launch to close the duplicate-tap
+            // race: a second tap within the same frame must see CreatingBooking, not Ready,
+            // and bail at the `as? Ready ?: return` guard above. See PRD-03.
+            _uiState.value = BookingUiState.CreatingBooking
             viewModelScope.launch {
-                _uiState.value = BookingUiState.CreatingBooking
                 val request =
                     BookingRequest(
                         serviceId = serviceId,
@@ -65,20 +127,62 @@ internal class BookingViewModel
                         addressText = state.addressText,
                         addressLat = state.lat,
                         addressLng = state.lng,
+                        paymentMethod = paymentMethod,
+                        applyCredit = _applyCreditToggle.value,
                     )
                 createBooking(request).first().fold(
                     onSuccess = { result ->
                         pendingBookingId = result.bookingId
+                        pendingAppliedCredit = result.appliedCreditAmount
                         _uiState.value =
-                            BookingUiState.AwaitingPayment(
-                                bookingId = result.bookingId,
-                                razorpayOrderId = result.razorpayOrderId,
-                                amount = result.amount,
-                            )
+                            if (result.requiresPayment) {
+                                BookingUiState.AwaitingPayment(
+                                    bookingId = result.bookingId,
+                                    razorpayOrderId = result.razorpayOrderId,
+                                    amount = result.amount,
+                                    slot = state.slot,
+                                    addressText = state.addressText,
+                                    lat = state.lat,
+                                    lng = state.lng,
+                                )
+                            } else {
+                                BookingUiState.BookingConfirmed(
+                                    bookingId = result.bookingId,
+                                    appliedCreditAmount = result.appliedCreditAmount,
+                                )
+                            }
                     },
-                    onFailure = { _uiState.value = BookingUiState.Error(it.message ?: "Booking failed") },
+                    // Error message key: R.string.booking_error_failed surfaced in UI layer
+                    onFailure = { _uiState.value = BookingUiState.Error(it.message ?: BOOKING_FAILED_FALLBACK) },
                 )
             }
+        }
+
+        /** Re-opens the Razorpay checkout for the same order. */
+        public fun retryPayment() {
+            val failed = _uiState.value as? BookingUiState.PaymentFailed ?: return
+            _uiState.value =
+                BookingUiState.AwaitingPayment(
+                    bookingId = pendingBookingId ?: return,
+                    razorpayOrderId = failed.orderId,
+                    amount = failed.amount,
+                    slot = failed.slot,
+                    addressText = failed.addressText,
+                    lat = failed.lat,
+                    lng = failed.lng,
+                )
+        }
+
+        /** Cancels from PaymentFailed back to Ready so the user can change payment method. */
+        public fun cancelPaymentFailed() {
+            val failed = _uiState.value as? BookingUiState.PaymentFailed ?: return
+            _uiState.value =
+                BookingUiState.Ready(
+                    slot = failed.slot,
+                    addressText = failed.addressText,
+                    lat = failed.lat,
+                    lng = failed.lng,
+                )
         }
 
         private suspend fun handlePaymentResult(
@@ -91,12 +195,32 @@ internal class BookingViewModel
                     confirmBooking(bookingId, result.paymentId, result.orderId, result.signature)
                         .first()
                         .fold(
-                            onSuccess = { _uiState.value = BookingUiState.BookingConfirmed(bookingId) },
-                            onFailure = { _uiState.value = BookingUiState.Error(it.message ?: "Confirmation failed") },
+                            onSuccess = {
+                                _uiState.value =
+                                    BookingUiState.BookingConfirmed(
+                                        bookingId = bookingId,
+                                        appliedCreditAmount = pendingAppliedCredit,
+                                    )
+                            },
+                            // Error message key: R.string.booking_error_confirmation_failed surfaced in UI layer
+                            onFailure = { _uiState.value = BookingUiState.Error(it.message ?: CONFIRMATION_FAILED_FALLBACK) },
                         )
                 }
-                is PaymentResult.Failure ->
-                    _uiState.value = BookingUiState.Error("Payment cancelled: ${result.description}")
+                is PaymentResult.Failure -> {
+                    val awaitingSnapshot = _uiState.value as? BookingUiState.AwaitingPayment
+                    val errorCode = RazorpayErrorCode.resolve(result.code, result.description)
+                    _uiState.value =
+                        BookingUiState.PaymentFailed(
+                            orderId = awaitingSnapshot?.razorpayOrderId ?: "",
+                            amount = awaitingSnapshot?.amount ?: 0,
+                            reason = result.description,
+                            errorCode = errorCode,
+                            slot = awaitingSnapshot?.slot ?: BookingSlot("", ""),
+                            addressText = awaitingSnapshot?.addressText ?: "",
+                            lat = awaitingSnapshot?.lat ?: 0.0,
+                            lng = awaitingSnapshot?.lng ?: 0.0,
+                        )
+                }
             }
         }
     }

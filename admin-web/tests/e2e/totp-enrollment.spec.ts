@@ -47,7 +47,7 @@ test.describe('TOTP enrollment (first login)', () => {
       }),
     );
 
-    await page.route('**/api/v1/admin/auth/login', (route) =>
+    await page.route('**/admin-api/v1/admin/auth/login', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -55,7 +55,7 @@ test.describe('TOTP enrollment (first login)', () => {
       }),
     );
 
-    await page.route('**/api/v1/admin/auth/setup-totp', (route) => {
+    await page.route('**/admin-api/v1/admin/auth/setup-totp', (route) => {
       if (route.request().method() === 'GET') {
         return route.fulfill({
           status: 200,
@@ -73,21 +73,37 @@ test.describe('TOTP enrollment (first login)', () => {
       });
     });
 
+    // The /setup page fetches the token via the HttpOnly cookie exchange endpoint.
+    // Intercept it so the QR-render can proceed without a real hs_setup cookie.
+    await page.route('**/api/setup-token/exchange', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ token: 'mock.setup.token' }),
+      }),
+    );
+
     await page.goto('/login');
     await page.fill('input[type="email"]', 'admin@test.com');
     await page.fill('input[type="password"]', 'password123');
     await page.click('button[type="submit"]');
 
     await expect(page).toHaveURL(/\/setup/);
-    await expect(page.getByAltText('TOTP QR code')).toBeVisible();
+    await expect(page.getByAltText('Microsoft Authenticator setup QR code')).toBeVisible();
   });
 
   test('completes enrollment and redirects to /dashboard', async ({ page }) => {
     const token = await makeAccessJwt('u1', 'super-admin');
-    await page.addInitScript(() => {
-      sessionStorage.setItem('setupToken', 'mock.setup.token');
-    });
-    await page.route('**/api/v1/admin/auth/setup-totp', async (route) => {
+    // Setup token now comes from the exchange endpoint (HttpOnly cookie path),
+    // not sessionStorage. Intercept the exchange endpoint instead.
+    await page.route('**/api/setup-token/exchange', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ token: 'mock.setup.token' }),
+      }),
+    );
+    await page.route('**/admin-api/v1/admin/auth/setup-totp', async (route) => {
       if (route.request().method() === 'GET') {
         return route.fulfill({
           status: 200, contentType: 'application/json',
@@ -111,7 +127,7 @@ test.describe('TOTP enrollment (first login)', () => {
     });
 
     await page.goto('/setup');
-    await expect(page.getByAltText('TOTP QR code')).toBeVisible();
+    await expect(page.getByAltText('Microsoft Authenticator setup QR code')).toBeVisible();
     await page.fill('input[inputmode="numeric"]', '123456');
     await page.click('button[type="submit"]');
     await expect(page).toHaveURL(/\/dashboard/);

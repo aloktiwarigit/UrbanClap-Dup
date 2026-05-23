@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { AuditLogTable } from './AuditLogTable';
 import { AuditLogFilters } from './AuditLogFilters';
 import { EMPTY_FILTERS } from '@/types/audit-log';
+import { apiUrl } from '@/api/base';
 import type { AuditLogListResponse, AuditLogFiltersState } from '@/types/audit-log';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
-
 export function AuditLogClient() {
+  const t = useTranslations('auditLog');
   const [filters, setFilters] = useState<AuditLogFiltersState>(EMPTY_FILTERS);
   const [data, setData] = useState<AuditLogListResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -29,7 +30,7 @@ export function AuditLogClient() {
         if (filters.dateTo) params.set('dateTo', new Date(filters.dateTo).toISOString());
         if (continuationToken) params.set('continuationToken', continuationToken);
 
-        const res = await fetch(`${API_BASE}/api/v1/admin/audit-log?${params.toString()}`, {
+        const res = await fetch(apiUrl(`/v1/admin/audit-log?${params.toString()}`), {
           credentials: 'include',
         });
         if (!res.ok) {
@@ -39,12 +40,12 @@ export function AuditLogClient() {
         const json = (await res.json()) as AuditLogListResponse;
         setData(json);
       } catch {
-        setError('Failed to load audit log. Please try again.');
+        setError(t('errors.loadFailed'));
       } finally {
         setLoading(false);
       }
     },
-    [filters],
+    [filters, t],
   );
 
   useEffect(() => {
@@ -71,10 +72,10 @@ export function AuditLogClient() {
       <AuditLogFilters filters={filters} onChange={setFilters} />
 
       {loading && (
-        <p className="text-sm text-[var(--color-text-muted)] mb-[var(--space-3)]">Loading…</p>
+        <p className="text-sm text-[var(--color-text-muted)] mb-[var(--space-3)]">{t('loading')}</p>
       )}
       {error && (
-        <p role="alert" className="text-sm text-[var(--color-danger)] mb-[var(--space-3)]">
+        <p role="alert" className="text-sm text-[var(--rose-soft)] mb-[var(--space-3)]">
           {error}
         </p>
       )}
@@ -87,7 +88,7 @@ export function AuditLogClient() {
           disabled={continuationStack.length === 0}
           className="px-3 py-1 text-sm rounded border border-[var(--color-border)] disabled:opacity-40"
         >
-          ← Previous
+          {t('pagination.previous')}
         </button>
         <button
           type="button"
@@ -95,7 +96,7 @@ export function AuditLogClient() {
           disabled={!data?.continuationToken}
           className="px-3 py-1 text-sm rounded border border-[var(--color-border)] disabled:opacity-40"
         >
-          Next →
+          {t('pagination.next')}
         </button>
       </div>
     </div>

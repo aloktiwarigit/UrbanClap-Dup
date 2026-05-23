@@ -1,7 +1,9 @@
 package com.homeservices.customer.data.technician.remote.dto
 
 import com.homeservices.customer.domain.technician.model.ConfidenceScore
+import com.squareup.moshi.JsonClass
 
+@JsonClass(generateAdapter = true)
 public data class ConfidenceScoreDto(
     val onTimePercent: Int,
     val areaRating: Double?,

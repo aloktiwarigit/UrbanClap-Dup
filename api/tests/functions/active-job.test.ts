@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { HttpRequest, InvocationContext, type HttpResponseInit } from '@azure/functions';
 
+vi.mock('@sentry/node', () => ({
+  captureMessage: vi.fn(),
+  withScope: vi.fn((cb: (scope: { setLevel: (l: string) => void; setExtras: (e: Record<string, unknown>) => void }) => void) => {
+    cb({ setLevel: vi.fn(), setExtras: vi.fn() });
+  }),
+}));
+
 vi.mock('../../src/middleware/verifyTechnicianToken.js', () => ({
   verifyTechnicianToken: vi.fn(),
 }));
@@ -16,6 +23,11 @@ vi.mock('../../src/cosmos/booking-event-repository.js', () => ({
 
 vi.mock('../../src/cosmos/catalogue-repository.js', () => ({
   catalogueRepo: { getServiceByIdCrossPartition: vi.fn() },
+}));
+
+vi.mock('../../src/services/fcm.service.js', () => ({
+  sendBookingStatusUpdatePush: vi.fn().mockResolvedValue(undefined),
+  sendLocationUpdatePush: vi.fn().mockResolvedValue(undefined),
 }));
 
 type MockFn = ReturnType<typeof vi.fn>;
@@ -70,7 +82,10 @@ describe('GET /v1/technicians/active-job/:bookingId', () => {
     const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
 
     (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
-    (bookingRepo.getById as MockFn).mockResolvedValue(aBooking());
+    (bookingRepo.getById as MockFn).mockResolvedValue({
+      ...aBooking(),
+      addressText: '12%20Main%20St',
+    });
     (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue(aService());
 
     const res = await getActiveJobHandler(makeGetReq('bk-1'), new InvocationContext()) as HttpResponseInit;
@@ -79,6 +94,7 @@ describe('GET /v1/technicians/active-job/:bookingId', () => {
     const body = res.jsonBody as Record<string, unknown>;
     expect(body['status']).toBe('ASSIGNED');
     expect(body['serviceName']).toBe('AC Repair');
+    expect(body['addressText']).toBe('12 Main St');
   });
 
   it('returns 403 if booking.technicianId !== caller uid', async () => {
@@ -163,6 +179,7 @@ describe('PATCH /v1/technicians/active-job/:bookingId/transition', () => {
     const { bookingRepo, updateBookingFields } = await import('../../src/cosmos/booking-repository.js');
     const { bookingEventRepo } = await import('../../src/cosmos/booking-event-repository.js');
     const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
+    const { sendBookingStatusUpdatePush } = await import('../../src/services/fcm.service.js');
 
     (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
     (bookingRepo.getById as MockFn).mockResolvedValue(aBooking('EN_ROUTE'));
@@ -177,5 +194,106 @@ describe('PATCH /v1/technicians/active-job/:bookingId/transition', () => {
     expect(arg['event']).toBe('STATUS_TRANSITION');
     expect(arg['technicianId']).toBe('tech-1');
     expect(arg['metadata']).toEqual({ from: 'EN_ROUTE', to: 'REACHED' });
+    expect(sendBookingStatusUpdatePush).toHaveBeenCalledWith({
+      customerId: 'c-1',
+      bookingId: 'bk-1',
+      status: 'REACHED',
+    });
+  });
+
+  it('sends LOCATION_UPDATE when transition includes technician GPS', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { bookingRepo, updateBookingFields } = await import('../../src/cosmos/booking-repository.js');
+    const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
+    const { sendLocationUpdatePush } = await import('../../src/services/fcm.service.js');
+
+    (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+    (bookingRepo.getById as MockFn).mockResolvedValue(aBooking('ASSIGNED'));
+    (updateBookingFields as MockFn).mockResolvedValue(aBooking('EN_ROUTE'));
+    (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue(aService());
+
+    const res = await transitionHandler(
+      makePatchReq('bk-1', {
+        targetStatus: 'EN_ROUTE',
+        currentLocation: { lat: 12.91, lng: 77.61 },
+      }),
+      new InvocationContext(),
+    ) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(sendLocationUpdatePush).toHaveBeenCalledWith({
+      customerId: 'c-1',
+      bookingId: 'bk-1',
+      lat: 12.91,
+      lng: 77.61,
+      etaMinutes: expect.any(Number),
+    });
+  });
+
+  it('returns 200 and fires Sentry warning when attestation.isMock is true', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { bookingRepo, updateBookingFields } = await import('../../src/cosmos/booking-repository.js');
+    const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
+    const Sentry = await import('@sentry/node');
+
+    (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+    (bookingRepo.getById as MockFn).mockResolvedValue(aBooking('EN_ROUTE'));
+    (updateBookingFields as MockFn).mockResolvedValue(aBooking('REACHED'));
+    (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue(aService());
+
+    const res = await transitionHandler(
+      makePatchReq('bk-1', {
+        targetStatus: 'REACHED',
+        attestation: { isMock: true, gpsAccuracyM: 1.0 },
+      }),
+      new InvocationContext(),
+    ) as HttpResponseInit;
+
+    // Non-blocking: transition succeeds even with mock GPS
+    expect(res.status).toBe(200);
+    expect(Sentry.captureMessage).toHaveBeenCalledWith('MARK_REACHED with mock location');
+  });
+
+  it('does NOT fire Sentry warning when attestation.isMock is false', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { bookingRepo, updateBookingFields } = await import('../../src/cosmos/booking-repository.js');
+    const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
+    const Sentry = await import('@sentry/node');
+
+    (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+    (bookingRepo.getById as MockFn).mockResolvedValue(aBooking('EN_ROUTE'));
+    (updateBookingFields as MockFn).mockResolvedValue(aBooking('REACHED'));
+    (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue(aService());
+
+    const res = await transitionHandler(
+      makePatchReq('bk-1', {
+        targetStatus: 'REACHED',
+        attestation: { isMock: false, gpsAccuracyM: 10.0 },
+      }),
+      new InvocationContext(),
+    ) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(Sentry.captureMessage).not.toHaveBeenCalled();
+  });
+
+  it('does NOT fire Sentry warning when attestation is absent', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { bookingRepo, updateBookingFields } = await import('../../src/cosmos/booking-repository.js');
+    const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
+    const Sentry = await import('@sentry/node');
+
+    (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+    (bookingRepo.getById as MockFn).mockResolvedValue(aBooking('EN_ROUTE'));
+    (updateBookingFields as MockFn).mockResolvedValue(aBooking('REACHED'));
+    (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue(aService());
+
+    const res = await transitionHandler(
+      makePatchReq('bk-1', { targetStatus: 'REACHED' }),
+      new InvocationContext(),
+    ) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(Sentry.captureMessage).not.toHaveBeenCalled();
   });
 });

@@ -1,9 +1,13 @@
 package com.homeservices.technician.ui.activeJob
 
 import androidx.lifecycle.SavedStateHandle
+import com.homeservices.technician.data.activeJob.BookingStatusEventBus
 import com.homeservices.technician.data.activeJob.ConnectivityObserver
+import com.homeservices.technician.data.auth.SessionManager
+import com.homeservices.technician.data.pendingaction.PendingActionStore
 import com.homeservices.technician.domain.activeJob.ActiveJobRepository
 import com.homeservices.technician.domain.activeJob.CompleteJobUseCase
+import com.homeservices.technician.domain.activeJob.MarkReachedOutcome
 import com.homeservices.technician.domain.activeJob.MarkReachedUseCase
 import com.homeservices.technician.domain.activeJob.StartTripUseCase
 import com.homeservices.technician.domain.activeJob.StartWorkUseCase
@@ -11,6 +15,7 @@ import com.homeservices.technician.domain.activeJob.model.ActiveJob
 import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
 import com.homeservices.technician.domain.activeJob.model.LatLng
 import com.homeservices.technician.domain.activeJob.model.NavigationEvent
+import com.homeservices.technician.domain.auth.model.AuthState
 import com.homeservices.technician.domain.photo.UploadJobPhotoUseCase
 import com.homeservices.technician.domain.shield.FileShieldReportUseCase
 import io.mockk.coEvery
@@ -19,6 +24,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
@@ -44,6 +50,9 @@ public class ActiveJobViewModelTest {
     private lateinit var connectivityObserver: ConnectivityObserver
     private lateinit var uploadJobPhotoUseCase: UploadJobPhotoUseCase
     private lateinit var fileShieldReportUseCase: FileShieldReportUseCase
+    private lateinit var bookingStatusEventBus: BookingStatusEventBus
+    private lateinit var pendingActionStore: PendingActionStore
+    private lateinit var sessionManager: SessionManager
     private lateinit var viewModel: ActiveJobViewModel
 
     private fun aJob(status: ActiveJobStatus = ActiveJobStatus.ASSIGNED) =
@@ -70,9 +79,15 @@ public class ActiveJobViewModelTest {
         connectivityObserver = mockk()
         uploadJobPhotoUseCase = mockk(relaxed = true)
         fileShieldReportUseCase = mockk(relaxed = true)
+        bookingStatusEventBus = mockk(relaxed = true)
+        pendingActionStore = mockk(relaxed = true)
+        sessionManager = mockk(relaxed = true)
         every { connectivityObserver.isConnected } returns emptyFlow()
         every { repository.getActiveJob("bk-1") } returns flowOf(aJob())
         every { repository.hasPendingTransitions } returns flowOf(false)
+        every { bookingStatusEventBus.events } returns MutableSharedFlow()
+        every { sessionManager.authState } returns MutableStateFlow(AuthState.Unauthenticated)
+        every { pendingActionStore.observeActive(any()) } returns flowOf(emptyList())
         val savedStateHandle = SavedStateHandle(mapOf("bookingId" to "bk-1"))
         viewModel =
             ActiveJobViewModel(
@@ -85,6 +100,9 @@ public class ActiveJobViewModelTest {
                 connectivityObserver,
                 uploadJobPhotoUseCase,
                 fileShieldReportUseCase,
+                bookingStatusEventBus,
+                pendingActionStore,
+                sessionManager,
             )
     }
 
@@ -155,6 +173,9 @@ public class ActiveJobViewModelTest {
                     connectivityObserver,
                     uploadJobPhotoUseCase,
                     fileShieldReportUseCase,
+                    bookingStatusEventBus,
+                    pendingActionStore,
+                    sessionManager,
                 )
 
             connectFlow.value = true
@@ -202,6 +223,9 @@ public class ActiveJobViewModelTest {
                     connectivityObserver,
                     uploadJobPhotoUseCase,
                     fileShieldReportUseCase,
+                    bookingStatusEventBus,
+                    pendingActionStore,
+                    sessionManager,
                 )
             assertThat(vm.uiState.value).isEqualTo(ActiveJobUiState.Loading)
         }
@@ -222,6 +246,9 @@ public class ActiveJobViewModelTest {
                     connectivityObserver,
                     uploadJobPhotoUseCase,
                     fileShieldReportUseCase,
+                    bookingStatusEventBus,
+                    pendingActionStore,
+                    sessionManager,
                 )
             assertThat(vm.uiState.value).isInstanceOf(ActiveJobUiState.Completed::class.java)
         }
@@ -261,6 +288,9 @@ public class ActiveJobViewModelTest {
                     connectivityObserver,
                     uploadJobPhotoUseCase,
                     fileShieldReportUseCase,
+                    bookingStatusEventBus,
+                    pendingActionStore,
+                    sessionManager,
                 )
             // Request transition (sets pendingPhotoStage)
             vm.onTransitionRequested("REACHED")
@@ -342,6 +372,9 @@ public class ActiveJobViewModelTest {
                     connectivityObserver,
                     uploadJobPhotoUseCase,
                     fileShieldReportUseCase,
+                    bookingStatusEventBus,
+                    pendingActionStore,
+                    sessionManager,
                 )
             vm.onPhotoRetake()
             assertThat(vm.uiState.value).isInstanceOf(ActiveJobUiState.Loading::class.java)
@@ -438,7 +471,8 @@ public class ActiveJobViewModelTest {
         runTest(testDispatcher) {
             coEvery { uploadJobPhotoUseCase.execute("bk-1", "REACHED", "/cache/p.jpg") } returns
                 Result.success("https://storage/photo.jpg")
-            coEvery { markReachedUseCase("bk-1") } returns Result.success(aJob(ActiveJobStatus.REACHED))
+            coEvery { markReachedUseCase("bk-1") } returns
+                MarkReachedOutcome(Result.success(aJob(ActiveJobStatus.REACHED)), isMock = false)
 
             viewModel.onTransitionRequested("REACHED")
             viewModel.onPhotoConfirmed("/cache/p.jpg")

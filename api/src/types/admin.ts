@@ -1,4 +1,23 @@
-export type AdminRole = 'super-admin' | 'ops-manager' | 'finance' | 'support-agent' | 'system';
+export type AdminRole =
+  | 'super-admin'
+  | 'ops-manager'
+  | 'finance'
+  | 'support-agent'
+  | 'system';
+
+export function normalizeAdminRole(role: unknown): AdminRole | null {
+  if (role === 'admin') return 'super-admin';
+  if (
+    role === 'super-admin' ||
+    role === 'ops-manager' ||
+    role === 'finance' ||
+    role === 'support-agent' ||
+    role === 'system'
+  ) {
+    return role;
+  }
+  return null;
+}
 
 export type AuditAction =
   | 'LOGIN'

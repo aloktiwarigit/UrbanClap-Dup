@@ -5,6 +5,7 @@ import type { Timer, InvocationContext, HttpRequest, HttpResponseInit } from '@a
 import { requireAdmin, type AdminHttpHandler } from '../../../middleware/requireAdmin.js';
 import type { AdminContext } from '../../../types/admin.js';
 import { sscLevyRepo } from '../../../cosmos/ssc-levy-repository.js';
+import { SscLevyStatusSchema } from '../../../schemas/ssc-levy.js';
 import { createTransfer } from '../../../services/razorpay.service.js';
 import { auditLog } from '../../../services/auditLog.service.js';
 import {
@@ -15,6 +16,9 @@ import {
   sendOwnerFcmNotification,
   sendOwnerEmail,
 } from '../../../services/ssc-levy.service.js';
+
+const DEFAULT_PAGE_SIZE = 50;
+const MAX_PAGE_SIZE = 200;
 
 export async function sscLevyTimerHandler(
   timer: Timer,
@@ -212,9 +216,51 @@ export const approveSscLevyHandler: AdminHttpHandler = async (
   };
 };
 
+export const listSscLeviesHandler: AdminHttpHandler = async (
+  req: HttpRequest,
+  _ctx: InvocationContext,
+  admin: AdminContext,
+): Promise<HttpResponseInit> => {
+  if (admin.role !== 'super-admin') {
+    return { status: 403, jsonBody: { code: 'FORBIDDEN', requiredRoles: ['super-admin'] } };
+  }
+
+  const statusParam = req.query.get('status');
+  const pageSizeParam = req.query.get('pageSize');
+  const filter: { status?: ReturnType<typeof SscLevyStatusSchema.parse>; pageSize: number } = {
+    pageSize: DEFAULT_PAGE_SIZE,
+  };
+
+  if (statusParam !== null) {
+    const parsed = SscLevyStatusSchema.safeParse(statusParam);
+    if (!parsed.success) {
+      return { status: 400, jsonBody: { code: 'INVALID_STATUS' } };
+    }
+    filter.status = parsed.data;
+  }
+
+  if (pageSizeParam !== null) {
+    const n = Number(pageSizeParam);
+    if (!Number.isInteger(n) || n < 1 || n > MAX_PAGE_SIZE) {
+      return { status: 400, jsonBody: { code: 'INVALID_PAGE_SIZE', min: 1, max: MAX_PAGE_SIZE } };
+    }
+    filter.pageSize = n;
+  }
+
+  const levies = await sscLevyRepo.listLevies(filter);
+  return { status: 200, jsonBody: { levies } };
+};
+
 app.timer('sscLevyQuarterly', {
   schedule: '0 0 0 1 1,4,7,10 *',
   handler: sscLevyTimerHandler,
+});
+
+app.http('listSscLevies', {
+  methods: ['GET'],
+  route: 'v1/admin/compliance/ssc-levy',
+  authLevel: 'anonymous',
+  handler: requireAdmin(['super-admin'])(listSscLeviesHandler),
 });
 
 app.http('approveSscLevy', {

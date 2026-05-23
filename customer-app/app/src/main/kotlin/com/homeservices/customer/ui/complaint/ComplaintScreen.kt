@@ -10,7 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -18,7 +19,6 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -31,11 +31,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.homeservices.customer.R
 import com.homeservices.customer.domain.complaint.ComplaintReason
+import com.homeservices.customer.ui.components.CountdownChip
+import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsSecondaryButton
+import com.homeservices.designsystem.components.HsSectionCard
+import com.homeservices.designsystem.components.HsTrustBadge
 
 @Composable
 public fun ComplaintScreen(
@@ -65,6 +72,7 @@ public fun ComplaintScreen(
         onDescriptionChanged = viewModel::onDescriptionChanged,
         onPhotoClick = { photoPicker.launch("image/*") },
         onSubmit = { viewModel.onSubmit(bookingId) },
+        onReopen = viewModel::onReopen,
     )
 }
 
@@ -78,65 +86,117 @@ internal fun ComplaintContent(
     onDescriptionChanged: (String) -> Unit,
     onPhotoClick: () -> Unit,
     onSubmit: () -> Unit,
+    onReopen: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (state) {
-            is ComplaintUiState.Success -> SuccessState(state = state, onBack = onBack)
+            is ComplaintUiState.Success -> SuccessState(state = state, onBack = onBack, onReopen = onReopen)
             is ComplaintUiState.PhotoUploading, ComplaintUiState.Submitting -> LoadingState()
             is ComplaintUiState.Error -> ErrorState(message = state.message, onRetry = onRetry)
-            is ComplaintUiState.Idle -> {
-                var expanded by remember { mutableStateOf(false) }
-                Column(
-                    modifier = Modifier.fillMaxSize().padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    Text("File a complaint", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                    Text(
-                        "Tell us what went wrong. Owner support will review the booking and follow up.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+            is ComplaintUiState.Idle ->
+                IdleState(
+                    state = state,
+                    onReasonSelected = onReasonSelected,
+                    onDescriptionChanged = onDescriptionChanged,
+                    onPhotoClick = onPhotoClick,
+                    onSubmit = onSubmit,
+                )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun IdleState(
+    state: ComplaintUiState.Idle,
+    onReasonSelected: (ComplaintReason) -> Unit,
+    onDescriptionChanged: (String) -> Unit,
+    onPhotoClick: () -> Unit,
+    onSubmit: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.verticalScroll(rememberScrollState()).padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        HsTrustBadge(text = stringResource(R.string.complaint_eyebrow))
+        Text(
+            stringResource(R.string.complaint_title),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            stringResource(R.string.complaint_body),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        ComplaintFormCard(
+            state = state,
+            onReasonSelected = onReasonSelected,
+            onDescriptionChanged = onDescriptionChanged,
+            onPhotoClick = onPhotoClick,
+        )
+        HsPrimaryButton(
+            text = stringResource(R.string.complaint_submit),
+            onClick = onSubmit,
+            enabled = state.submitEnabled,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ComplaintFormCard(
+    state: ComplaintUiState.Idle,
+    onReasonSelected: (ComplaintReason) -> Unit,
+    onDescriptionChanged: (String) -> Unit,
+    onPhotoClick: () -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    HsSectionCard {
+        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+            OutlinedTextField(
+                value = state.selectedReason?.displayLabel() ?: stringResource(R.string.complaint_select_reason),
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(stringResource(R.string.complaint_issue_type)) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth(),
+            )
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                ComplaintReason.entries.forEach { reason ->
+                    DropdownMenuItem(
+                        text = { Text(reason.displayLabel()) },
+                        onClick = {
+                            onReasonSelected(reason)
+                            expanded = false
+                        },
                     )
-                    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-                        OutlinedTextField(
-                            value = state.selectedReason?.displayLabel() ?: "Select reason",
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Issue type") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth(),
-                        )
-                        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                            ComplaintReason.entries.forEach { reason ->
-                                DropdownMenuItem(
-                                    text = { Text(reason.displayLabel()) },
-                                    onClick = {
-                                        onReasonSelected(reason)
-                                        expanded = false
-                                    },
-                                )
-                            }
-                        }
-                    }
-                    OutlinedTextField(
-                        value = state.description,
-                        onValueChange = onDescriptionChanged,
-                        label = { Text("What happened?") },
-                        supportingText = { Text("${state.description.length}/2000") },
-                        minLines = 4,
-                        maxLines = 8,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    OutlinedButton(onClick = onPhotoClick, modifier = Modifier.fillMaxWidth()) {
-                        Text(if (state.photoStoragePath != null) "Photo attached" else "Attach photo (optional)")
-                    }
-                    Spacer(Modifier.weight(1f))
-                    Button(onClick = onSubmit, enabled = state.submitEnabled, modifier = Modifier.fillMaxWidth()) {
-                        Text("Submit complaint")
-                    }
                 }
             }
         }
+        Spacer(Modifier.height(14.dp))
+        OutlinedTextField(
+            value = state.description,
+            onValueChange = onDescriptionChanged,
+            label = { Text(stringResource(R.string.complaint_what_happened)) },
+            supportingText = { Text("${state.description.length}/2000") },
+            minLines = 4,
+            maxLines = 8,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(14.dp))
+        HsSecondaryButton(
+            text =
+                if (state.photoStoragePath != null) {
+                    stringResource(R.string.complaint_photo_attached)
+                } else {
+                    stringResource(R.string.complaint_attach_photo)
+                },
+            onClick = onPhotoClick,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -144,17 +204,37 @@ internal fun ComplaintContent(
 private fun SuccessState(
     state: ComplaintUiState.Success,
     onBack: () -> Unit,
+    onReopen: () -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("Complaint received", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(
+            stringResource(R.string.complaint_received),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
         Spacer(Modifier.height(8.dp))
-        Text(statusMessage(state.status), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            statusMessage(state.status),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (state.isAcknowledged && state.acknowledgeDeadlineAt != null) {
+            Spacer(Modifier.height(12.dp))
+            CountdownChip(deadlineIso = state.acknowledgeDeadlineAt)
+        }
         Spacer(Modifier.height(24.dp))
-        Button(onClick = onBack) { Text("Back to booking") }
+        HsPrimaryButton(text = stringResource(R.string.complaint_back), onClick = onBack)
+        if (state.isResolved) {
+            Spacer(Modifier.height(12.dp))
+            HsSecondaryButton(
+                text = stringResource(R.string.complaint_reopen),
+                onClick = onReopen,
+            )
+        }
     }
 }
 
@@ -167,7 +247,7 @@ private fun LoadingState() {
     ) {
         CircularProgressIndicator()
         Spacer(Modifier.height(12.dp))
-        Text("Submitting complaint", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.complaint_submitting), color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -177,27 +257,33 @@ private fun ErrorState(
     onRetry: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
-        Text("Something went wrong", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(
+            stringResource(R.string.complaint_error_title),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
         Spacer(Modifier.height(8.dp))
         Text(message, color = MaterialTheme.colorScheme.error)
         Spacer(Modifier.height(16.dp))
-        Button(onClick = onRetry) { Text("Try again") }
+        HsPrimaryButton(text = stringResource(R.string.complaint_retry), onClick = onRetry)
     }
 }
 
+@Composable
 private fun statusMessage(status: String): String =
     when (status) {
-        "INVESTIGATING" -> "Owner support is reviewing your complaint."
-        "RESOLVED" -> "This complaint has been resolved."
-        else -> "Owner support will respond within 2 hours."
+        "INVESTIGATING" -> stringResource(R.string.complaint_status_investigating)
+        "RESOLVED" -> stringResource(R.string.complaint_status_resolved)
+        else -> stringResource(R.string.complaint_status_default)
     }
 
+@Composable
 private fun ComplaintReason.displayLabel(): String =
     when (this) {
-        ComplaintReason.SERVICE_QUALITY -> "Service quality"
-        ComplaintReason.LATE_ARRIVAL -> "Late arrival"
-        ComplaintReason.NO_SHOW -> "Technician did not arrive"
-        ComplaintReason.TECHNICIAN_BEHAVIOUR -> "Technician behaviour"
-        ComplaintReason.BILLING_DISPUTE -> "Billing dispute"
-        ComplaintReason.OTHER -> "Other"
+        ComplaintReason.SERVICE_QUALITY -> stringResource(R.string.complaint_reason_service_quality)
+        ComplaintReason.LATE_ARRIVAL -> stringResource(R.string.complaint_reason_late_arrival)
+        ComplaintReason.NO_SHOW -> stringResource(R.string.complaint_reason_no_show)
+        ComplaintReason.TECHNICIAN_BEHAVIOUR -> stringResource(R.string.complaint_reason_technician_behaviour)
+        ComplaintReason.BILLING_DISPUTE -> stringResource(R.string.complaint_reason_billing_dispute)
+        ComplaintReason.OTHER -> stringResource(R.string.complaint_reason_other)
     }

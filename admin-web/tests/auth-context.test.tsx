@@ -36,7 +36,7 @@ describe('AdminAuthProvider', () => {
     spy.mockRestore();
   });
 
-  it('logout calls /api/v1/admin/auth/logout and clears auth', async () => {
+  it('logout calls admin API proxy and clears auth', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response());
     function LogoutTrigger() {
       const { auth, logout } = useAdminAuth();
@@ -56,7 +56,7 @@ describe('AdminAuthProvider', () => {
     await act(() => {
       screen.getByRole('button', { name: 'logout' }).click();
     });
-    expect(fetchSpy).toHaveBeenCalledWith('/api/v1/admin/auth/logout', expect.objectContaining({ method: 'POST' }));
+    expect(fetchSpy).toHaveBeenCalledWith('/admin-api/v1/admin/auth/logout', expect.objectContaining({ method: 'POST' }));
     expect(screen.getByTestId('role').textContent).toBe('none');
     fetchSpy.mockRestore();
   });

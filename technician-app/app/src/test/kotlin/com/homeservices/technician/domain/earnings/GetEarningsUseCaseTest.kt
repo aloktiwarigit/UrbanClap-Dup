@@ -2,6 +2,7 @@ package com.homeservices.technician.domain.earnings
 
 import com.homeservices.technician.domain.earnings.model.EarningsPeriod
 import com.homeservices.technician.domain.earnings.model.EarningsSummary
+import com.homeservices.technician.domain.earnings.model.MonthEarningsPeriod
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -17,7 +18,7 @@ public class GetEarningsUseCaseTest {
         EarningsSummary(
             today = EarningsPeriod(0L, 0),
             week = EarningsPeriod(0L, 0),
-            month = EarningsPeriod(0L, 0),
+            month = MonthEarningsPeriod(0L, 0, 3_500_000L),
             lifetime = EarningsPeriod(0L, 0),
             lastSevenDays = emptyList(),
         )

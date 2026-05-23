@@ -19,15 +19,19 @@ describe('initSentry', () => {
     expect(Sentry.init).not.toHaveBeenCalled();
   });
 
-  it('calls Sentry.init exactly once with DSN + tracesSampleRate when SENTRY_DSN is set', () => {
+  it('calls Sentry.init exactly once with DSN + tracesSampleRate + release + beforeSend when SENTRY_DSN is set', () => {
     process.env.SENTRY_DSN = 'https://public@sentry.example.io/1';
+    process.env.GIT_SHA = 'abc123';
     initSentry();
     expect(Sentry.init).toHaveBeenCalledTimes(1);
     expect(Sentry.init).toHaveBeenCalledWith(
       expect.objectContaining({
         dsn: 'https://public@sentry.example.io/1',
         tracesSampleRate: 0.1,
+        release: 'abc123',
+        beforeSend: expect.any(Function),
       }),
     );
+    delete process.env.GIT_SHA;
   });
 });

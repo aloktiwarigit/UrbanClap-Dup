@@ -30,12 +30,12 @@ public class CompleteJobUseCaseTest {
     @Test
     public fun `calls transitionStatus with COMPLETED — no photo check`(): Unit =
         runTest {
-            coEvery { repository.transitionStatus("bk-1", ActiveJobStatus.COMPLETED) } returns
+            coEvery { repository.transitionStatus("bk-1", ActiveJobStatus.COMPLETED, null) } returns
                 Result.success(aJob())
 
             val result = useCase("bk-1")
 
             assertThat(result.isSuccess).isTrue()
-            coVerify(exactly = 1) { repository.transitionStatus("bk-1", ActiveJobStatus.COMPLETED) }
+            coVerify(exactly = 1) { repository.transitionStatus("bk-1", ActiveJobStatus.COMPLETED, null) }
         }
 }

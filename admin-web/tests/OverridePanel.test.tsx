@@ -3,6 +3,44 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OverridePanel } from '../src/components/orders/OverridePanel';
 import type { Order } from '../src/types/order';
 
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string, params?: Record<string, unknown>) => {
+    const map: Record<string, string> = {
+      'detail.sections.actions.heading': 'Actions',
+      'detail.sections.actions.noPermission': 'Your role can review this order but cannot run operational overrides.',
+      'actions.reassign.title': 'Re-assign Technician',
+      'actions.reassign.buttonLabel': 'Re-assign Tech',
+      'actions.reassign.selectLabel': 'Technician',
+      'actions.reassign.loadingPlaceholder': 'Loading technicians…',
+      'actions.reassign.noEligibleTechs': 'No eligible technicians found for this service area.',
+      'actions.reassign.fetchError': 'Could not load technicians for this area.',
+      'actions.complete.title': 'Mark Order Complete',
+      'actions.complete.buttonLabel': 'Mark Complete',
+      'actions.refund.title': 'Issue Refund (stub)',
+      'actions.refund.buttonLabel': 'Issue Refund',
+      'actions.waiveFee.title': 'Waive Fee',
+      'actions.waiveFee.buttonLabel': 'Waive Fee',
+      'actions.escalate.title': params?.priority ? `Escalate (${params.priority as string})` : 'Escalate',
+      'actions.escalate.buttonLabel': 'Escalate',
+      'actions.escalate.priorityLabel': 'Escalate priority:',
+      'actions.escalate.priorities.HIGH': 'HIGH',
+      'actions.escalate.priorities.CRITICAL': 'CRITICAL',
+      'actions.note.title': 'Add Internal Note',
+      'actions.note.buttonLabel': 'Add Note',
+      'actions.note.label': 'Note',
+      'actions.error': 'Action failed. Please try again.',
+      // ConfirmModal keys
+      'confirmModal.reasonLabel': 'Reason',
+      'confirmModal.selectPlaceholder': params?.label ? `Select ${params.label as string}` : 'Select',
+      'confirmModal.minCharactersHint': params?.min ? `Min ${params.min as string} characters` : 'Min characters',
+      'confirmModal.cancelButton': 'Cancel',
+      'confirmModal.submitButton.label': 'Confirm',
+      'confirmModal.submitButton.loading': 'Processing…',
+    };
+    return map[key] ?? key;
+  },
+}));
+
 vi.mock('../src/api/orders', () => ({
   reassignOrder: vi.fn(),
   completeOrder: vi.fn(),
@@ -10,12 +48,13 @@ vi.mock('../src/api/orders', () => ({
   waiveFeeOrder: vi.fn(),
   escalateOrder: vi.fn(),
   addOrderNote: vi.fn(),
+  fetchTechnicianCandidatesForOrder: vi.fn(),
   fetchOrders: vi.fn(),
   fetchOrderById: vi.fn(),
   fetchAllOrdersForExport: vi.fn(),
 }));
 
-import { completeOrder } from '../src/api/orders';
+import { completeOrder, fetchTechnicianCandidatesForOrder, reassignOrder } from '../src/api/orders';
 
 const sampleOrder: Order = {
   id: 'ord_abc123',
@@ -34,6 +73,16 @@ const mockUpdatedOrder: Order = { ...sampleOrder, status: 'COMPLETED' };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(fetchTechnicianCandidatesForOrder).mockResolvedValue([
+    {
+      technicianId: 'tech_2',
+      displayName: 'Ravi Kumar',
+      distanceKm: 2.4,
+      rating: 4.8,
+      isOnline: true,
+      isAvailable: true,
+    },
+  ]);
 });
 
 describe('OverridePanel', () => {
@@ -129,7 +178,7 @@ describe('OverridePanel', () => {
     expect(screen.getByLabelText('Note')).toBeDefined();
   });
 
-  it('reassign modal shows extra input for Technician ID', () => {
+  it('reassign modal shows a technician dropdown', async () => {
     render(
       <OverridePanel
         order={sampleOrder}
@@ -139,7 +188,34 @@ describe('OverridePanel', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: /re-assign tech/i }));
     expect(screen.getByRole('dialog')).toBeDefined();
-    expect(screen.getByLabelText('New Technician ID')).toBeDefined();
+    await waitFor(() => {
+      expect(screen.getByLabelText('Technician')).toBeDefined();
+      expect(screen.getByRole('option', { name: /ravi kumar/i })).toBeDefined();
+    });
+  });
+
+  it('submitting reassign uses selected technician id', async () => {
+    vi.mocked(reassignOrder).mockResolvedValue({ ...sampleOrder, technicianId: 'tech_2' });
+    render(
+      <OverridePanel
+        order={sampleOrder}
+        onActionComplete={vi.fn()}
+        onError={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /re-assign tech/i }));
+    const select = await screen.findByLabelText('Technician');
+    fireEvent.change(select, { target: { value: 'tech_2' } });
+    fireEvent.change(screen.getByRole('textbox', { name: /reason/i }), {
+      target: { value: 'Customer requested reassignment' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
+    await waitFor(() => {
+      expect(reassignOrder).toHaveBeenCalledWith('ord_abc123', {
+        technicianId: 'tech_2',
+        reason: 'Customer requested reassignment',
+      });
+    });
   });
 
   it('onError called when API throws', async () => {

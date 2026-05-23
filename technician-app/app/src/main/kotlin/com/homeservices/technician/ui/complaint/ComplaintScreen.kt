@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -18,7 +18,6 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -31,10 +30,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsSecondaryButton
+import com.homeservices.designsystem.components.HsSectionCard
+import com.homeservices.designsystem.components.HsTrustBadge
+import com.homeservices.technician.R
 import com.homeservices.technician.domain.complaint.TechComplaintReason
 
 @Composable
@@ -86,50 +91,64 @@ internal fun ComplaintContent(
             is ComplaintUiState.Error -> ErrorState(message = state.message, onRetry = onRetry)
             is ComplaintUiState.Idle -> {
                 var expanded by remember { mutableStateOf(false) }
-                Column(modifier = Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("Report an issue", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    HsTrustBadge(text = "Partner support")
+                    Text(
+                        stringResource(R.string.complaint_report_title),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
                     Text(
                         "Use this when a customer, payout, or safety issue needs owner support review.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-                        OutlinedTextField(
-                            value = state.selectedReason?.displayLabel() ?: "Select reason",
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Issue type") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth(),
-                        )
-                        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                            TechComplaintReason.entries.forEach { reason ->
-                                DropdownMenuItem(
-                                    text = { Text(reason.displayLabel()) },
-                                    onClick = {
-                                        onReasonSelected(reason)
-                                        expanded = false
-                                    },
-                                )
+                    HsSectionCard {
+                        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+                            OutlinedTextField(
+                                value = state.selectedReason?.displayLabel() ?: "Select reason",
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text(stringResource(R.string.complaint_issue_type_label)) },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth(),
+                            )
+                            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                TechComplaintReason.entries.forEach { reason ->
+                                    DropdownMenuItem(
+                                        text = { Text(reason.displayLabel()) },
+                                        onClick = {
+                                            onReasonSelected(reason)
+                                            expanded = false
+                                        },
+                                    )
+                                }
                             }
                         }
-                    }
-                    OutlinedTextField(
-                        value = state.description,
-                        onValueChange = onDescriptionChanged,
-                        label = { Text("Describe the issue") },
-                        supportingText = { Text("${state.description.length}/2000") },
-                        minLines = 4,
-                        maxLines = 8,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    OutlinedButton(onClick = onPhotoClick, modifier = Modifier.fillMaxWidth()) {
-                        Text(if (state.photoStoragePath != null) "Photo attached" else "Attach photo (optional)")
+                        Spacer(Modifier.height(14.dp))
+                        OutlinedTextField(
+                            value = state.description,
+                            onValueChange = onDescriptionChanged,
+                            label = { Text(stringResource(R.string.complaint_describe_label)) },
+                            supportingText = { Text(stringResource(R.string.complaint_char_count, state.description.length)) },
+                            minLines = 4,
+                            maxLines = 8,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(Modifier.height(14.dp))
+                        HsSecondaryButton(
+                            text = if (state.photoStoragePath != null) "Photo attached" else "Attach photo (optional)",
+                            onClick = onPhotoClick,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
                     Spacer(Modifier.weight(1f))
-                    Button(onClick = onSubmit, enabled = state.submitEnabled, modifier = Modifier.fillMaxWidth()) {
-                        Text("Submit issue")
-                    }
+                    HsPrimaryButton(
+                        text = "Submit issue",
+                        onClick = onSubmit,
+                        enabled = state.submitEnabled,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
         }
@@ -146,11 +165,15 @@ private fun SuccessState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("Issue received", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(
+            stringResource(R.string.complaint_received_title),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
         Spacer(Modifier.height(8.dp))
         Text(statusMessage(state.status), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp))
-        Button(onClick = onBack) { Text("Back to job") }
+        HsPrimaryButton(text = "Back to job", onClick = onBack)
     }
 }
 
@@ -161,9 +184,13 @@ private fun LoadingState() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        CircularProgressIndicator()
+        CircularProgressIndicator(
+            modifier = Modifier.size(56.dp),
+            color = MaterialTheme.colorScheme.primary,
+            strokeWidth = 4.dp,
+        )
         Spacer(Modifier.height(12.dp))
-        Text("Submitting issue", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.complaint_submitting), color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -173,11 +200,11 @@ private fun ErrorState(
     onRetry: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
-        Text("Something went wrong", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.complaint_error_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
         Text(message, color = MaterialTheme.colorScheme.error)
         Spacer(Modifier.height(16.dp))
-        Button(onClick = onRetry) { Text("Try again") }
+        HsPrimaryButton(text = "Try again", onClick = onRetry)
     }
 }
 

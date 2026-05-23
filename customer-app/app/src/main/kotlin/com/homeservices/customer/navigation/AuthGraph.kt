@@ -18,7 +18,7 @@ internal fun NavGraphBuilder.authGraph(
     navController: NavController,
     activity: FragmentActivity,
 ) {
-    navigation(startDestination = "auth_screen", route = "auth") {
+    navigation(startDestination = "auth_screen", route = ROUTE_AUTH) {
         composable("auth_screen") {
             val viewModel: AuthViewModel = hiltViewModel()
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -33,6 +33,16 @@ internal fun NavGraphBuilder.authGraph(
                 onOtpEntered = viewModel::onOtpEntered,
                 onResendRequested = { viewModel.onOtpResendRequested(activity) },
                 onRetry = viewModel::onRetry,
+                onGoogleSelected = { viewModel.onGoogleSignInClicked(activity) },
+                onEmailSelected = viewModel::onEmailSelected,
+                onPhoneSelected = viewModel::onPhoneSelected,
+                onEmailSignIn = viewModel::onEmailSignInClicked,
+                onEmailSignUp = viewModel::onEmailSignUpClicked,
+                onEmailModeToggle = viewModel::onEmailModeToggled,
+                onBackToMethodSelection = viewModel::onBackToMethodSelection,
+                onEmailVerificationContinue = viewModel::onEmailVerificationContinue,
+                onResendVerificationEmail = viewModel::onResendVerificationEmail,
+                onForgotPassword = viewModel::onForgotPassword,
             )
         }
     }

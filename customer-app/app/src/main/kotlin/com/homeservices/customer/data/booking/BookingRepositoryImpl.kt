@@ -9,6 +9,7 @@ import com.homeservices.customer.data.booking.remote.dto.LatLngDto
 import com.homeservices.customer.domain.booking.model.AddOnDecision
 import com.homeservices.customer.domain.booking.model.BookingRequest
 import com.homeservices.customer.domain.booking.model.BookingResult
+import com.homeservices.customer.domain.booking.model.CustomerBooking
 import com.homeservices.customer.domain.booking.model.PendingAddOn
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -32,10 +33,17 @@ internal class BookingRepositoryImpl
                                     slotWindow = request.slot.window,
                                     addressText = request.addressText,
                                     addressLatLng = LatLngDto(lat = request.addressLat, lng = request.addressLng),
+                                    paymentMethod = request.paymentMethod.name,
+                                    applyCredit = request.applyCredit,
                                 ),
                             ).toDomain()
                     },
                 )
+            }
+
+        override fun getMyBookings(): Flow<Result<List<CustomerBooking>>> =
+            flow {
+                emit(runCatching { api.getMyBookings().bookings.map { it.toDomain() } })
             }
 
         override fun confirmBooking(
@@ -43,6 +51,7 @@ internal class BookingRepositoryImpl
             paymentId: String,
             orderId: String,
             signature: String,
+            integrityToken: String?,
         ): Flow<Result<String>> =
             flow {
                 emit(
@@ -55,6 +64,7 @@ internal class BookingRepositoryImpl
                                     razorpayOrderId = orderId,
                                     razorpaySignature = signature,
                                 ),
+                                integrityToken = integrityToken,
                             ).bookingId
                     },
                 )

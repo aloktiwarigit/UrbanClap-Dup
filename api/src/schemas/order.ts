@@ -11,6 +11,11 @@ export const OrderStatusEnum = z.enum([
   'CANCELLED',
 ]);
 
+export const JobPhotoSetSchema = z.object({
+  stage: z.string(),
+  urls: z.array(z.string().min(1)),
+});
+
 export const OrderSchema = z.object({
   id: z.string(),
   customerId: z.string(),
@@ -30,6 +35,7 @@ export const OrderSchema = z.object({
   feesWaived: z.boolean().optional(),
   escalated: z.boolean().optional(),
   internalNotes: z.array(z.string()).optional(),
+  jobPhotoSets: z.array(JobPhotoSetSchema).optional(),
 });
 
 export const OrderListQuerySchema = z.object({
@@ -56,7 +62,21 @@ export const OrderListResponseSchema = z.object({
   totalPages: z.number(),
 });
 
+export const TechnicianCandidateSchema = z.object({
+  technicianId: z.string(),
+  displayName: z.string(),
+  distanceKm: z.number().nonnegative(),
+  rating: z.number().min(0).max(5).optional(),
+  isOnline: z.boolean(),
+  isAvailable: z.boolean(),
+});
+
+export const TechnicianCandidateListResponseSchema = z.object({
+  technicians: z.array(TechnicianCandidateSchema),
+});
+
 export type Order = z.infer<typeof OrderSchema>;
 export type OrderStatus = z.infer<typeof OrderStatusEnum>;
 export type OrderListQuery = z.infer<typeof OrderListQuerySchema>;
 export type OrderListResponse = z.infer<typeof OrderListResponseSchema>;
+export type TechnicianCandidate = z.infer<typeof TechnicianCandidateSchema>;

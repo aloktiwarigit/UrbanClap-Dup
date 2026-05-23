@@ -6,11 +6,15 @@ import com.homeservices.customer.data.booking.remote.dto.ConfirmBookingRequestDt
 import com.homeservices.customer.data.booking.remote.dto.ConfirmBookingResponseDto
 import com.homeservices.customer.data.booking.remote.dto.CreateBookingRequestDto
 import com.homeservices.customer.data.booking.remote.dto.CreateBookingResponseDto
+import com.homeservices.customer.data.booking.remote.dto.CustomerBookingsResponseDto
 import com.homeservices.customer.data.booking.remote.dto.GetBookingResponseDto
+import com.homeservices.customer.data.booking.remote.dto.SlotAvailabilityResponseDto
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 public interface BookingApiService {
     @POST("v1/bookings")
@@ -22,6 +26,7 @@ public interface BookingApiService {
     public suspend fun confirmBooking(
         @Path("id") bookingId: String,
         @Body body: ConfirmBookingRequestDto,
+        @Header("X-Integrity-Token") integrityToken: String? = null,
     ): ConfirmBookingResponseDto
 
     @GET("v1/bookings/{id}")
@@ -29,9 +34,18 @@ public interface BookingApiService {
         @Path("id") bookingId: String,
     ): GetBookingResponseDto
 
+    @GET("v1/bookings")
+    public suspend fun getMyBookings(): CustomerBookingsResponseDto
+
     @POST("v1/bookings/{id}/approve-final-price")
     public suspend fun approveFinalPrice(
         @Path("id") bookingId: String,
         @Body body: ApproveFinalPriceRequestDto,
     ): ApproveFinalPriceResponseDto
+
+    @GET("v1/services/{id}/availability")
+    public suspend fun getSlotAvailability(
+        @Path("id") serviceId: String,
+        @Query("date") date: String,
+    ): SlotAvailabilityResponseDto
 }

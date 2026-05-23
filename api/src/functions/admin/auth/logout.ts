@@ -35,6 +35,7 @@ export async function adminLogoutHandler(
 
   const clearCookies: Cookie[] = [
     { name: 'hs_access', value: '', httpOnly: true, secure: true, sameSite: 'Strict', path: '/', maxAge: 0 },
+    { name: 'hs_refresh', value: '', httpOnly: true, secure: true, sameSite: 'Strict', path: '/', maxAge: 0 },
     { name: 'hs_refresh', value: '', httpOnly: true, secure: true, sameSite: 'Strict', path: '/api/v1/admin/auth/refresh', maxAge: 0 },
   ];
 

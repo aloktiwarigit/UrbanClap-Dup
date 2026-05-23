@@ -21,6 +21,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 env:
   GIT_SHA: ${{ github.sha }}
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
@@ -64,11 +67,37 @@ jobs:
           fi
           echo "app-catalog drift check OK"
 
+      # SEC-01: the committed google-services.json is a placeholder stub with
+      # no real credentials. The real Firebase config is injected here from
+      # the GOOGLE_SERVICES_JSON repository secret. If the secret is missing
+      # (e.g. PRs from external forks), the stub remains and AGP can still
+      # parse it for compile/lint, but Firebase runtime features will not
+      # work — release builds MUST run with the secret populated.
+      - name: write google-services.json from secret
+        working-directory: ${{ github.workspace }}
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "::warning::GOOGLE_SERVICES_JSON secret is empty; build will use placeholder stub (Firebase runtime will not function)."
+            exit 0
+          fi
+          printf '%s' "$GOOGLE_SERVICES_JSON" > customer-app/app/google-services.json
+          # Sanity check: must be valid JSON and contain expected applicationId
+          python3 -c "import json,sys; d=json.load(open('customer-app/app/google-services.json')); pkgs=[c['client_info']['android_client_info']['package_name'] for c in d['client']]; sys.exit(0) if 'in.homeheroo.customer' in pkgs else sys.exit(1)"
+          echo "google-services.json written and validated"
+
       - name: assemble debug APK (clean-room compile check)
         run: ./gradlew assembleDebug
 
       - name: unit tests + coverage gate
         run: ./gradlew testDebugUnitTest koverVerify
+
+      - name: assemble release (verify R8 + ProGuard)
+        run: ./gradlew assembleRelease
+
+      - name: ktlint + detekt + android lint
+        run: ./gradlew ktlintCheck detekt lintDebug
 
       - name: paparazzi screenshot diff
         run: ./gradlew verifyPaparazziDebug

@@ -1,26 +1,38 @@
 package com.homeservices.technician.navigation
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.homeservices.technician.data.auth.SessionManager
 import com.homeservices.technician.data.fcm.FcmTopicSubscriber
 import com.homeservices.technician.data.rating.RatingPromptEventBus
 import com.homeservices.technician.data.rating.RatingReceivedEventBus
 import com.homeservices.technician.domain.auth.model.AuthState
+import com.homeservices.technician.domain.jobOffer.FcmTokenSyncUseCase
 import com.homeservices.technician.ui.jobOffer.JobOfferScreen
 import com.homeservices.technician.ui.jobOffer.JobOfferUiState
 import com.homeservices.technician.ui.jobOffer.JobOfferViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 internal fun AppNavigation(
@@ -29,23 +41,35 @@ internal fun AppNavigation(
     ratingPromptEventBus: RatingPromptEventBus,
     ratingReceivedEventBus: RatingReceivedEventBus,
     fcmTopicSubscriber: FcmTopicSubscriber,
+    fcmTokenSyncUseCase: FcmTokenSyncUseCase,
     coldStartNavDestination: String? = null,
     modifier: Modifier = Modifier,
 ): Unit {
     val navController = rememberNavController()
+    val context = LocalContext.current
     val authState by sessionManager.authState.collectAsStateWithLifecycle()
     val jobOfferViewModel: JobOfferViewModel = hiltViewModel()
     val jobOfferState by jobOfferViewModel.uiState.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    val notificationPermissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+            // The dispatch token is synced independently; Android controls notification display.
+        }
 
     LaunchedEffect(authState) {
         val current = authState
         when (current) {
             is AuthState.Authenticated -> {
-                navController.navigate("main") {
+                val dest = if (sessionManager.isOnboardingComplete) "home" else "onboarding_gate"
+                navController.navigate(dest) {
                     popUpTo("auth") { inclusive = true }
                     launchSingleTop = true
                 }
                 fcmTopicSubscriber.subscribeTechnician(current.uid)
+                if (!context.hasNotificationPermission()) {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+                fcmTokenSyncUseCase()
             }
             is AuthState.Unauthenticated -> {
                 // Drain any buffered rating prompts so the next technician to
@@ -121,8 +145,31 @@ internal fun AppNavigation(
             startDestination = "auth",
         ) {
             authGraph(navController, activity)
-            onboardingGraph(navController)
-            homeGraph(navController)
+            composable("onboarding_gate") {
+                OnboardingGateScreen(
+                    onComplete = {
+                        scope.launch {
+                            sessionManager.setOnboardingComplete()
+                            navController.navigate("home") {
+                                popUpTo("onboarding_gate") { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    },
+                    onNeedsOnboarding = {
+                        navController.navigate("main") {
+                            popUpTo("onboarding_gate") { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
+                )
+            }
+            onboardingGraph(navController, sessionManager, scope)
+            homeGraph(
+                navController = navController,
+                authState = authState,
+                onSignOut = { scope.launch { sessionManager.clearSession() } },
+            )
         }
         if (jobOfferState !is JobOfferUiState.Idle && jobOfferState !is JobOfferUiState.Accepted) {
             JobOfferScreen(
@@ -132,3 +179,10 @@ internal fun AppNavigation(
         }
     }
 }
+
+private fun Context.hasNotificationPermission(): Boolean =
+    Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS,
+        ) == PackageManager.PERMISSION_GRANTED

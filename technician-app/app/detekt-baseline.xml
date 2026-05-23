@@ -1,0 +1,232 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues></ManuallySuppressedIssues>
+  <CurrentIssues>
+    <ID>ComplexCondition:RatingDtos.kt$status == "SUBMITTED" &amp;&amp; overall != null &amp;&amp; subScores != null &amp;&amp; submittedAt != null</ID>
+    <ID>FunctionMaxLength:ActiveJobRepositoryImplTest.kt$ActiveJobRepositoryImplTest$@Test public fun `startObserving no authenticated user — leaves activeJobState null`(): Unit</ID>
+    <ID>FunctionMaxLength:ActiveJobRepositoryImplTest.kt$ActiveJobRepositoryImplTest$@Test public fun `syncPendingTransitions deletes entry on 409 — stale transition`(): Unit</ID>
+    <ID>FunctionMaxLength:ActiveJobRepositoryImplTest.kt$ActiveJobRepositoryImplTest$@Test public fun `syncPendingTransitions no authenticated user — skips without processing`(): Unit</ID>
+    <ID>FunctionMaxLength:ActiveJobRepositoryImplTest.kt$ActiveJobRepositoryImplTest$@Test public fun `syncPendingTransitions retries queued entries in createdAt order`(): Unit</ID>
+    <ID>FunctionMaxLength:ActiveJobRepositoryImplTest.kt$ActiveJobRepositoryImplTest$@Test public fun `transitionStatus HTTP error (non-exception) — returns failure without Room write`(): Unit</ID>
+    <ID>FunctionMaxLength:ActiveJobRepositoryImplTest.kt$ActiveJobRepositoryImplTest$@Test public fun `transitionStatus network failure — writes PendingTransitionEntity to Room`(): Unit</ID>
+    <ID>FunctionMaxLength:ActiveJobRepositoryImplTest.kt$ActiveJobRepositoryImplTest$@Test public fun `transitionStatus success path — does NOT write PendingTransitionEntity`(): Unit</ID>
+    <ID>FunctionMaxLength:ActiveJobViewModelShieldTest.kt$ActiveJobViewModelShieldTest$@Test public fun `fileShieldReport success sets shieldReportSuccess=true and closes sheet`(): Unit</ID>
+    <ID>FunctionMaxLength:ActiveJobViewModelTest.kt$ActiveJobViewModelTest$@Test public fun `hasPendingTransitions update is a no-op when state is Loading`(): Unit</ID>
+    <ID>FunctionMaxLength:ActiveJobViewModelTest.kt$ActiveJobViewModelTest$@Test public fun `initial state collects job and shows Active with START_TRIP action`(): Unit</ID>
+    <ID>FunctionMaxLength:ActiveJobViewModelTest.kt$ActiveJobViewModelTest$@Test public fun `onPhotoConfirmed EN_ROUTE fires startTrip and emits navigation event`(): Unit</ID>
+    <ID>FunctionMaxLength:ActiveJobViewModelTest.kt$ActiveJobViewModelTest$@Test public fun `onPhotoConfirmed EN_ROUTE with null navEvent — no navigation emitted`(): Unit</ID>
+    <ID>FunctionMaxLength:ActiveJobViewModelTest.kt$ActiveJobViewModelTest$@Test public fun `onPhotoConfirmed fires startWork and clears pending state on success`(): Unit</ID>
+    <ID>FunctionMaxLength:ActiveJobViewModelTest.kt$ActiveJobViewModelTest$@Test public fun `onPhotoConfirmed shows transition error when upload succeeds but transition fails`(): Unit</ID>
+    <ID>FunctionMaxLength:ActiveJobViewModelTest.kt$ActiveJobViewModelTest$@Test public fun `onPhotoConfirmed skips upload and fires transition when photo already uploaded`(): Unit</ID>
+    <ID>FunctionMaxLength:ActiveJobViewModelTest.kt$ActiveJobViewModelTest$@Test public fun `onPhotoRetake clears photoUploadError but preserves pendingPhotoStage`(): Unit</ID>
+    <ID>FunctionMaxLength:AuthOrchestratorTest.kt$AuthOrchestratorTest$@Test public fun `observeTruecallerResults returns flow from TruecallerLoginUseCase`()</ID>
+    <ID>FunctionMaxLength:AuthOrchestratorTest.kt$AuthOrchestratorTest$@Test public fun `start returns TruecallerLaunched and calls launch when Truecaller is available`()</ID>
+    <ID>FunctionMaxLength:AuthOrchestratorTest.kt$AuthOrchestratorTest$@Test public fun `startGoogleSignIn CredentialObtained no anonymous user signs in and saves Google session`(): Unit</ID>
+    <ID>FunctionMaxLength:AuthOrchestratorTest.kt$AuthOrchestratorTest$@Test public fun `startGoogleSignIn collision falls back to signInWithCredential`(): Unit</ID>
+    <ID>FunctionMaxLength:AuthViewModelTest.kt$AuthViewModelTest$@Test public fun `Truecaller Success with AuthResult Error transitions to Error state`(): Unit</ID>
+    <ID>FunctionMaxLength:AuthViewModelTest.kt$AuthViewModelTest$@Test public fun `Truecaller Success with AuthResult Success does not transition to Error`(): Unit</ID>
+    <ID>FunctionMaxLength:AuthViewModelTest.kt$AuthViewModelTest$@Test public fun `initAuth transitions to MethodSelection when Truecaller is unavailable`(): Unit</ID>
+    <ID>FunctionMaxLength:AuthViewModelTest.kt$AuthViewModelTest$@Test public fun `initAuth transitions to TruecallerLoading when Truecaller is available`(): Unit</ID>
+    <ID>FunctionMaxLength:AuthViewModelTest.kt$AuthViewModelTest$@Test public fun `onRetry resets state to MethodSelection when no phone is active`(): Unit</ID>
+    <ID>FunctionMaxLength:AvailabilityViewModelTest.kt$AvailabilityViewModelTest$@Test public fun `setAcceptingJobs persists online and available flags together`(): Unit</ID>
+    <ID>FunctionMaxLength:AvailabilityViewModelTest.kt$AvailabilityViewModelTest$@Test public fun `update failure restores previous availability and exposes error`(): Unit</ID>
+    <ID>FunctionMaxLength:BiometricGateUseCaseTest.kt$BiometricGateUseCaseTest$@Test public fun `canUseBiometric returns true when BiometricManager reports BIOMETRIC_SUCCESS`()</ID>
+    <ID>FunctionMaxLength:ComplaintViewModelTest.kt$ComplaintViewModelTest$@Test public fun `loadStatus transitions to Success when an existing complaint is found`(): Unit</ID>
+    <ID>FunctionMaxLength:ComplaintViewModelTest.kt$ComplaintViewModelTest$@Test public fun `onPhotoSelected returns to Idle with null path on upload failure`(): Unit</ID>
+    <ID>FunctionMaxLength:ComplaintViewModelTest.kt$ComplaintViewModelTest$@Test public fun `onPhotoSelected transitions through PhotoUploading then back to Idle with path on success`(): Unit</ID>
+    <ID>FunctionMaxLength:ComplaintViewModelTest.kt$ComplaintViewModelTest$@Test public fun `onSubmit with photo path passes it through to submitUseCase`(): Unit</ID>
+    <ID>FunctionMaxLength:ComplaintViewModelTest.kt$ComplaintViewModelTest$@Test public fun `submitEnabled becomes true when reason and long enough description set`(): Unit</ID>
+    <ID>FunctionMaxLength:DeclineJobOfferUseCaseTest.kt$DeclineJobOfferUseCaseTest$@Test public fun `invoke returns Declined on HTTP error (user intention is the source of truth)`(): Unit</ID>
+    <ID>FunctionMaxLength:DigiLockerConsentUseCaseTest.kt$DigiLockerConsentUseCaseTest$@Test public fun `proceeds with null token when attestation fails (fail-open)`(): Unit</ID>
+    <ID>FunctionMaxLength:FcmTokenSyncUseCaseTest.kt$FcmTokenSyncUseCaseTest$@Test public fun `invoke handles network error gracefully (no exception escapes)`(): Unit</ID>
+    <ID>FunctionMaxLength:FirebaseOtpUseCaseTest.kt$FirebaseOtpUseCaseTest$@Test public fun `signInWithCredential emits CodeExpired when Firebase errorCode is SESSION_EXPIRED`(): Unit</ID>
+    <ID>FunctionMaxLength:FirebaseOtpUseCaseTest.kt$FirebaseOtpUseCaseTest$@Test public fun `signInWithCredential emits General error for unexpected exceptions`(): Unit</ID>
+    <ID>FunctionMaxLength:FirebaseOtpUseCaseTest.kt$FirebaseOtpUseCaseTest$@Test public fun `signInWithCredential emits General error when user is null after success`(): Unit</ID>
+    <ID>FunctionMaxLength:FirebaseOtpUseCaseTest.kt$FirebaseOtpUseCaseTest$@Test public fun `signInWithCredential emits General when FirebaseAuth errorCode is unrecognized`(): Unit</ID>
+    <ID>FunctionMaxLength:FirebaseOtpUseCaseTest.kt$FirebaseOtpUseCaseTest$@Test public fun `signInWithCredential emits RateLimited when Firebase errorCode is TOO_MANY_REQUESTS`(): Unit</ID>
+    <ID>FunctionMaxLength:FirebaseOtpUseCaseTest.kt$FirebaseOtpUseCaseTest$@Test public fun `signInWithCredential emits WrongCode when Firebase throws invalid credentials`(): Unit</ID>
+    <ID>FunctionMaxLength:FirebaseTokenAuthenticatorTest.kt$FirebaseTokenAuthenticatorTest$@Test public fun `authenticate returns null on second 401 to stop infinite retry`()</ID>
+    <ID>FunctionMaxLength:FirebaseTokenAuthenticatorTest.kt$FirebaseTokenAuthenticatorTest$@Test public fun `authenticate returns null when no Firebase user is signed in`()</ID>
+    <ID>FunctionMaxLength:FirebaseTokenAuthenticatorTest.kt$FirebaseTokenAuthenticatorTest$@Test public fun `authenticate returns request with new Bearer token on first 401`()</ID>
+    <ID>FunctionMaxLength:HomeservicesFcmServiceJobOfferTest.kt$HomeservicesFcmServiceJobOfferTest$@Test public fun `JOB_OFFER with malformed expiresAt — does NOT emit to event bus`()</ID>
+    <ID>FunctionMaxLength:HomeservicesFcmServiceJobOfferTest.kt$HomeservicesFcmServiceJobOfferTest$@Test public fun `JOB_OFFER with missing bookingId — does NOT emit to event bus`()</ID>
+    <ID>FunctionMaxLength:IdTokenCacheTest.kt$IdTokenCacheTest$@Test public fun `cachedToken is null when no user is signed in at construction`()</ID>
+    <ID>FunctionMaxLength:JobOfferViewModelTest.kt$JobOfferViewModelTest$@Test public fun `accept transitions to Expired when use case reports booking already taken`(): Unit</ID>
+    <ID>FunctionMaxLength:JobOfferViewModelTest.kt$JobOfferViewModelTest$@Test public fun `offer arrives via bus — uiState becomes Offering with correct data and remaining seconds`(): Unit</ID>
+    <ID>FunctionMaxLength:KycRepositoryImplTest.kt$KycRepositoryImplTest$@Test public fun `exchangeAadhaarCode returns ApiError when aadhaarVerified is false`(): Unit</ID>
+    <ID>FunctionMaxLength:KycRepositoryImplTest.kt$KycRepositoryImplTest$@Test public fun `submitPanOcr returns ManualReview when API returns MANUAL_REVIEW`(): Unit</ID>
+    <ID>FunctionMaxLength:KycRepositoryImplTest.kt$KycRepositoryImplTest$@Test public fun `submitPanOcr returns OcrError when panNumber is null but status not MANUAL_REVIEW`(): Unit</ID>
+    <ID>FunctionMaxLength:KycRepositoryTest.kt$KycRepositoryTest$@Test public fun `submitPanOcr returns ManualReview when status is MANUAL_REVIEW`(): Unit</ID>
+    <ID>FunctionMaxLength:KycViewModelTest.kt$KycViewModelTest$@Test public fun `handleDeepLink emits AadhaarDone on DigiLockerResult AadhaarVerified`(): Unit</ID>
+    <ID>FunctionMaxLength:KycViewModelTest.kt$KycViewModelTest$@Test public fun `handleDeepLink emits Error on DigiLockerResult NetworkError`(): Unit</ID>
+    <ID>FunctionMaxLength:MainActivityNavTest.kt$MainActivityNavTest$@Test public fun `#138 absent navigate_to extra does not trigger rating navigation`()</ID>
+    <ID>FunctionMaxLength:MainActivityNavTest.kt$MainActivityNavTest$@Test public fun `#138 navigate_to=ratings_transparency posts to RatingReceivedEventBus`()</ID>
+    <ID>FunctionMaxLength:MainActivityNavTest.kt$MainActivityNavTest$@Test public fun `#138 unknown navigate_to value does not trigger rating navigation`()</ID>
+    <ID>FunctionMaxLength:MarkReachedUseCaseTest.kt$MarkReachedUseCaseTest$@Test public fun `proceeds with null token when attestation fails (fail-open)`(): Unit</ID>
+    <ID>FunctionMaxLength:MyRatingsViewModelAppealTest.kt$MyRatingsViewModelAppealTest$@Test public fun `fileRatingAppeal quota exceeded transitions to QuotaExceeded`(): Unit</ID>
+    <ID>FunctionMaxLength:MyRatingsViewModelAppealTest.kt$MyRatingsViewModelAppealTest$@Test public fun `fileRatingAppeal success transitions to AppealState Success`(): Unit</ID>
+    <ID>FunctionMaxLength:OutboxSyncWorkerTest.kt$OutboxSyncWorkerTest$@Test public fun `doWork exception at runAttemptCount=0 — returns Result retry`(): Unit</ID>
+    <ID>FunctionMaxLength:OutboxSyncWorkerTest.kt$OutboxSyncWorkerTest$@Test public fun `doWork exception at runAttemptCount=2 — returns Result retry`(): Unit</ID>
+    <ID>FunctionMaxLength:OutboxSyncWorkerTest.kt$OutboxSyncWorkerTest$@Test public fun `doWork exception at runAttemptCount=3 — returns Result failure`(): Unit</ID>
+    <ID>FunctionMaxLength:PayoutCadenceViewModelTest.kt$PayoutCadenceViewModelTest$@Test public fun `saveCadence aborts when biometric is available but user cancels`(): Unit</ID>
+    <ID>FunctionMaxLength:PayoutCadenceViewModelTest.kt$PayoutCadenceViewModelTest$@Test public fun `saveCadence proceeds when biometric not available (best-effort)`(): Unit</ID>
+    <ID>FunctionMaxLength:PlayIntegrityAttestorTest.kt$PlayIntegrityAttestorTest$@Test public fun `attest — debug bypass — returns Result success with debug-bypass token`(): Unit</ID>
+    <ID>FunctionMaxLength:RatingDtosTest.kt$RatingDtosTest$@Test public fun `toDomain customerSide defaults missing sub-score keys to zero`()</ID>
+    <ID>FunctionMaxLength:RatingDtosTest.kt$RatingDtosTest$@Test public fun `toDomain returns Pending for SUBMITTED side without required fields`()</ID>
+    <ID>FunctionMaxLength:RatingDtosTest.kt$RatingDtosTest$@Test public fun `toDomain treats SUBMITTED customerSide with null subScores as Pending`()</ID>
+    <ID>FunctionMaxLength:RatingDtosTest.kt$RatingDtosTest$@Test public fun `toDomain treats SUBMITTED side with null overall as Pending`()</ID>
+    <ID>FunctionMaxLength:RatingDtosTest.kt$RatingDtosTest$@Test public fun `toDomain treats SUBMITTED side with null subScores as Pending`()</ID>
+    <ID>FunctionMaxLength:RatingDtosTest.kt$RatingDtosTest$@Test public fun `toDomain treats SUBMITTED side with null submittedAt as Pending`()</ID>
+    <ID>FunctionMaxLength:RatingDtosTest.kt$RatingDtosTest$@Test public fun `toDomain treats SUBMITTED techSide with null overall as Pending`()</ID>
+    <ID>FunctionMaxLength:RatingRepositoryImplTest.kt$RatingRepositoryImplTest$@Test public fun `submitTechRating calls api with side TECH_TO_CUSTOMER and behaviour communication keys`(): Unit</ID>
+    <ID>FunctionMaxLength:RatingViewModelTest.kt$RatingViewModelTest$@Test public fun `init transitions to AwaitingPartner when techSide already submitted`(): Unit</ID>
+    <ID>FunctionMaxLength:RatingViewModelTest.kt$RatingViewModelTest$@Test public fun `submit is disabled until overall and both sub-scores are non-zero`(): Unit</ID>
+    <ID>FunctionMaxLength:SaveSessionUseCaseTest.kt$SaveSessionUseCaseTest$@Test public fun `saveAnonymousWithPhone returns General error when Firebase throws`(): Unit</ID>
+    <ID>FunctionMaxLength:SaveSessionUseCaseTest.kt$SaveSessionUseCaseTest$@Test public fun `saveAnonymousWithPhone returns General error when Firebase user is null`(): Unit</ID>
+    <ID>FunctionMaxLength:SaveSessionUseCaseTest.kt$SaveSessionUseCaseTest$@Test public fun `saveAnonymousWithPhone signs in anonymously and stores last 4 digits`(): Unit</ID>
+    <ID>FunctionMaxLength:SessionManagerTest.kt$SessionManagerTest$@Test public fun `clearSession removes all prefs and transitions to Unauthenticated`(): Unit</ID>
+    <ID>FunctionMaxLength:SessionManagerTest.kt$SessionManagerTest$@Test public fun `initial state handles missing phoneLastFour in prefs gracefully`()</ID>
+    <ID>FunctionMaxLength:SessionManagerTest.kt$SessionManagerTest$@Test public fun `initial state is Authenticated when valid session exists in prefs`()</ID>
+    <ID>FunctionMaxLength:SessionManagerTest.kt$SessionManagerTest$@Test public fun `initial state is Unauthenticated when session is older than 180 days`()</ID>
+    <ID>FunctionMaxLength:SessionManagerTest.kt$SessionManagerTest$@Test public fun `initial state is Unauthenticated when session_created_at is zero`()</ID>
+    <ID>FunctionMaxLength:SessionManagerTest.kt$SessionManagerTest$@Test public fun `saveSession stores uid and phoneLastFour and transitions to Authenticated`(): Unit</ID>
+    <ID>FunctionMaxLength:SessionManagerTest.kt$SessionManagerTest$@Test public fun `saveSession with Email provider round-trips email and displayName`(): Unit</ID>
+    <ID>FunctionMaxLength:SessionPrefsMigratorTest.kt$SessionPrefsMigratorTest$@Test public fun `isLegacyKeyPresent returns false when AndroidKeyStore has no matching alias`()</ID>
+    <ID>FunctionMaxLength:SessionPrefsMigratorTest.kt$SessionPrefsMigratorTest$@Test public fun `migrateIfNeeded copies values from legacy prefs when legacy key present`()</ID>
+    <ID>FunctionMaxLength:SessionPrefsMigratorTest.kt$SessionPrefsMigratorTest$@Test public fun `migrateIfNeeded leaves new prefs intact when legacy prefs are empty`()</ID>
+    <ID>FunctionMaxLength:ShieldRepositoryImplTest.kt$ShieldRepositoryImplTest$@Test public fun `fileRatingAppeal returns RatingAppealResult with appealId on success`(): Unit</ID>
+    <ID>FunctionMaxLength:ShieldRepositoryImplTest.kt$ShieldRepositoryImplTest$@Test public fun `fileRatingAppeal returns failure on 409 with malformed JSON`(): Unit</ID>
+    <ID>FunctionMaxLength:ShieldRepositoryImplTest.kt$ShieldRepositoryImplTest$@Test public fun `fileRatingAppeal returns failure on 409 with non-quota error code`(): Unit</ID>
+    <ID>FunctionMaxLength:ShieldRepositoryImplTest.kt$ShieldRepositoryImplTest$@Test public fun `fileRatingAppeal returns quotaExceeded=true on 409 with APPEAL_QUOTA_EXCEEDED`(): Unit</ID>
+    <ID>FunctionMaxLength:StartTripUseCaseTest.kt$StartTripUseCaseTest$@Test public fun `success — returns Result success and emits Maps NavigationEvent`(): Unit</ID>
+    <ID>FunctionMaxLength:TruecallerLoginUseCaseTest.kt$TruecallerLoginUseCaseTest$@Test public fun `emits Failure with errorType when SDK calls onFailureProfileShared`(): Unit</ID>
+    <ID>FunctionMaxLength:TruecallerLoginUseCaseTest.kt$TruecallerLoginUseCaseTest$@Test public fun `emits Success with last 4 digits when SDK calls onSuccessProfileShared`(): Unit</ID>
+    <ID>FunctionMaxLength:UploadJobPhotoUseCaseTest.kt$UploadJobPhotoUseCaseTest$@Test public fun `execute returns failure and skips recordPhotoPath if upload fails`(): Unit</ID>
+    <ID>LongMethod:AppNavigation.kt$@Composable internal fun AppNavigation( sessionManager: SessionManager, activity: FragmentActivity, ratingPromptEventBus: RatingPromptEventBus, ratingReceivedEventBus: RatingReceivedEventBus, fcmTopicSubscriber: FcmTopicSubscriber, coldStartNavDestination: String? = null, modifier: Modifier = Modifier, ): Unit</ID>
+    <ID>LongMethod:AuthScreen.kt$@Composable internal fun AuthScreen( uiState: AuthUiState, onPhoneSubmitted: (String) -&gt; Unit, onOtpEntered: (String) -&gt; Unit, onResendRequested: () -&gt; Unit, onRetry: () -&gt; Unit, onGoogleSelected: () -&gt; Unit = {}, onEmailSelected: () -&gt; Unit = {}, onPhoneSelected: () -&gt; Unit = {}, onEmailSignIn: (String, String) -&gt; Unit = { _, _ -&gt; }, onEmailSignUp: (String, String) -&gt; Unit = { _, _ -&gt; }, onEmailModeToggle: (String) -&gt; Unit = {}, onBackToMethodSelection: () -&gt; Unit = {}, onEmailVerificationContinue: (String) -&gt; Unit = {}, onResendVerificationEmail: (String) -&gt; Unit = {}, onForgotPassword: (String) -&gt; Unit = {}, modifier: Modifier = Modifier, )</ID>
+    <ID>LongMethod:AuthScreen.kt$@Composable private fun EmailEntryContent( state: AuthUiState.EmailEntry, onEmailSignIn: (String, String) -&gt; Unit, onEmailSignUp: (String, String) -&gt; Unit, onEmailModeToggle: (String) -&gt; Unit, onBackToMethodSelection: () -&gt; Unit, onForgotPassword: (String) -&gt; Unit, )</ID>
+    <ID>LongMethod:ComplaintScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun ComplaintContent( state: ComplaintUiState, onBack: () -&gt; Unit, onRetry: () -&gt; Unit, onReasonSelected: (TechComplaintReason) -&gt; Unit, onDescriptionChanged: (String) -&gt; Unit, onPhotoClick: () -&gt; Unit, onSubmit: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>LongMethod:JobOfferScreen.kt$@Composable private fun JobOfferContent( offer: JobOffer, remainingSeconds: Int, onAccept: () -&gt; Unit, onDecline: () -&gt; Unit, modifier: Modifier = Modifier, ): Unit</ID>
+    <ID>LongMethod:PhotoCaptureScreen.kt$@Composable internal fun PhotoCaptureScreen( stage: String, onPhotoTaken: (filePath: String) -&gt; Unit, onDismiss: () -&gt; Unit, isUploading: Boolean, uploadError: String?, onRetry: () -&gt; Unit, onRetake: () -&gt; Unit = {}, modifier: Modifier = Modifier, )</ID>
+    <ID>LongMethod:RatingScreen.kt$@Composable public fun RatingScreen( modifier: Modifier = Modifier, onFileComplaint: (bookingId: String) -&gt; Unit = {}, viewModel: RatingViewModel = hiltViewModel(), )</ID>
+    <ID>LongMethod:ServiceSelectionScreen.kt$@Composable internal fun ServiceSelectionContent( uiState: ServiceSelectionUiState, onSkillToggle: (String) -&gt; Unit, onLocateStarted: () -&gt; Unit, onServiceAreaCaptured: (Double, Double) -&gt; Unit, onLocateFailed: (String) -&gt; Unit, onRetry: () -&gt; Unit, onSubmit: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>LongMethod:ShieldReportSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun ShieldReportSheet( onDismiss: () -&gt; Unit, onSubmit: (description: String?) -&gt; Unit, isSubmitting: Boolean, modifier: Modifier = Modifier, )</ID>
+    <ID>LongMethod:TechnicianHomeScreen.kt$@Composable internal fun TechnicianHomeScreen( authState: AuthState, onOpenJob: (String) -&gt; Unit, onViewRatings: () -&gt; Unit, onPayoutSettings: () -&gt; Unit, onSignOut: () -&gt; Unit, modifier: Modifier = Modifier, viewModel: TechnicianHomeViewModel = hiltViewModel(), earningsViewModel: EarningsViewModel = hiltViewModel(), availabilityViewModel: AvailabilityViewModel = hiltViewModel(), )</ID>
+    <ID>LongMethod:TechnicianHomeScreen.kt$@Composable private fun AvailabilityScreen( state: AvailabilityUiState, onOnlineChange: (Boolean) -&gt; Unit, onWindowChange: (startHour: Int, endHour: Int, enabled: Boolean) -&gt; Unit, onRetry: () -&gt; Unit, )</ID>
+    <ID>LongMethod:TechnicianHomeScreen.kt$@Composable private fun NextJobHero( job: TechnicianBooking?, isOnline: Boolean, onOpenJob: (String) -&gt; Unit, )</ID>
+    <ID>LongMethod:TechnicianHomeScreen.kt$@Composable private fun ProfileScreen( authState: AuthState, onViewRatings: () -&gt; Unit, onPayoutSettings: () -&gt; Unit, onSignOut: () -&gt; Unit, )</ID>
+    <ID>LongParameterList:ActiveJobViewModel.kt$ActiveJobViewModel$( savedStateHandle: SavedStateHandle, private val repository: ActiveJobRepository, private val startTripUseCase: StartTripUseCase, private val markReachedUseCase: MarkReachedUseCase, private val startWorkUseCase: StartWorkUseCase, private val completeJobUseCase: CompleteJobUseCase, private val connectivityObserver: ConnectivityObserver, private val uploadJobPhotoUseCase: UploadJobPhotoUseCase, private val fileShieldReportUseCase: FileShieldReportUseCase, )</ID>
+    <ID>MagicNumber:AcceptJobOfferUseCase.kt$AcceptJobOfferUseCase$410</ID>
+    <ID>MagicNumber:ActiveJobRepositoryImpl.kt$ActiveJobRepositoryImpl$409</ID>
+    <ID>MagicNumber:AuthScreen.kt$0xFF1A73E8</ID>
+    <ID>MagicNumber:AuthScreen.kt$6</ID>
+    <ID>MagicNumber:AvailabilityViewModel.kt$AvailabilityViewModel$6</ID>
+    <ID>MagicNumber:AvailabilityWindow.kt$6</ID>
+    <ID>MagicNumber:ComplaintViewModel.kt$ComplaintViewModel$10</ID>
+    <ID>MagicNumber:EarningsScreen.kt$0.6f</ID>
+    <ID>MagicNumber:EarningsScreen.kt$100.0</ID>
+    <ID>MagicNumber:GoogleSignInUseCase.kt$GoogleSignInUseCase$16</ID>
+    <ID>MagicNumber:HomeservicesFcmService.kt$HomeservicesFcmService$100</ID>
+    <ID>MagicNumber:HomeservicesFcmService.kt$HomeservicesFcmService$77</ID>
+    <ID>MagicNumber:HomeservicesFcmService.kt$HomeservicesFcmService$80</ID>
+    <ID>MagicNumber:HomeservicesFcmService.kt$HomeservicesFcmService$97</ID>
+    <ID>MagicNumber:JobOfferScreen.kt$5</ID>
+    <ID>MagicNumber:JobOfferViewModel.kt$JobOfferViewModel$1000</ID>
+    <ID>MagicNumber:JobOfferViewModel.kt$JobOfferViewModel$1_000L</ID>
+    <ID>MagicNumber:JobOfferViewModel.kt$JobOfferViewModel$2_000L</ID>
+    <ID>MagicNumber:JobPhotoRepositoryImpl.kt$JobPhotoRepositoryImpl$1024</ID>
+    <ID>MagicNumber:JobPhotoRepositoryImpl.kt$JobPhotoRepositoryImpl$80</ID>
+    <ID>MagicNumber:MyRatingsScreen.kt$0.6f</ID>
+    <ID>MagicNumber:MyRatingsScreen.kt$5</ID>
+    <ID>MagicNumber:MyRatingsScreen.kt$5.0</ID>
+    <ID>MagicNumber:OutboxSyncWorker.kt$OutboxSyncWorker$3</ID>
+    <ID>MagicNumber:PhotoUploadUseCase.kt$PhotoUploadUseCase$1024</ID>
+    <ID>MagicNumber:PhotoUploadUseCase.kt$PhotoUploadUseCase$80</ID>
+    <ID>MagicNumber:RatingAppealSheet.kt$20</ID>
+    <ID>MagicNumber:RatingScreen.kt$5</ID>
+    <ID>MagicNumber:RatingViewModel.kt$RatingViewModel$5</ID>
+    <ID>MagicNumber:RatingViewModel.kt$RatingViewModel$500</ID>
+    <ID>MagicNumber:ServiceSelectionScreen.kt$14f</ID>
+    <ID>MagicNumber:ShieldRepositoryImpl.kt$ShieldRepositoryImpl$409</ID>
+    <ID>MagicNumber:TechnicianHomeScreen.kt$0.78f</ID>
+    <ID>MagicNumber:TechnicianHomeScreen.kt$0xFFF0ECE2</ID>
+    <ID>MagicNumber:TechnicianHomeScreen.kt$0xFFFBEAEA</ID>
+    <ID>MagicNumber:TechnicianHomeScreen.kt$0xFFFFFFFF</ID>
+    <ID>MagicNumber:TechnicianHomeScreen.kt$100.0</ID>
+    <ID>MagicNumber:TechnicianHomeScreen.kt$12</ID>
+    <ID>MagicNumber:TechnicianHomeScreen.kt$17</ID>
+    <ID>MagicNumber:TechnicianHomeScreen.kt$21</ID>
+    <ID>MagicNumber:TechnicianHomeScreen.kt$3</ID>
+    <ID>MagicNumber:TechnicianHomeScreen.kt$8</ID>
+    <ID>MaxLineLength:ActiveJobScreen.kt$ActiveJobAction.COMPLETE_JOB -&gt; Triple(stringResource(R.string.active_job_complete_job), true, "COMPLETED")</ID>
+    <ID>MaxLineLength:ActiveJobScreen.kt$ActiveJobAction.MARK_ARRIVED -&gt; Triple(stringResource(R.string.active_job_mark_arrived), true, "REACHED")</ID>
+    <ID>MaxLineLength:ActiveJobScreen.kt$ActiveJobAction.START_WORK -&gt; Triple(stringResource(R.string.active_job_start_work), true, "IN_PROGRESS")</ID>
+    <ID>MaxLineLength:ActiveJobViewModel.kt$ActiveJobViewModel$photoUploadError = transitionResult.exceptionOrNull()?.message ?: "Transition failed — tap Retry"</ID>
+    <ID>MaxLineLength:AuthOrchestrator.kt$AuthOrchestrator$public suspend fun completeWithTruecaller(phoneNumber: String): AuthResult</ID>
+    <ID>MaxLineLength:AvailabilityViewModelTest.kt$AvailabilityViewModelTest$coEvery { getAvailability.invoke() } returns Result.success(availability.copy(availabilityWindows = emptyList()))</ID>
+    <ID>MaxLineLength:AvailabilityViewModelTest.kt$AvailabilityViewModelTest$coEvery { updateAvailability.invoke(any()) } returns Result.success(availability.copy(isOnline = false, isAvailable = false))</ID>
+    <ID>MaxLineLength:ComplaintRepositoryImplTest.kt$ComplaintRepositoryImplTest$repo.createComplaint("bk-1", "LATE_PAYMENT", "Customer refused to pay.", "complaints/bk-1/uid/1.jpg").toList()</ID>
+    <ID>MaxLineLength:ComplaintRepositoryImplTest.kt$ComplaintRepositoryImplTest$val results = repo.createComplaint("bk-1", "CUSTOMER_MISCONDUCT", "Valid long description here.", null).toList()</ID>
+    <ID>MaxLineLength:ComplaintScreen.kt$Column</ID>
+    <ID>MaxLineLength:ComplaintScreen.kt$Text("Report an issue", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)</ID>
+    <ID>MaxLineLength:ComplaintScreen.kt$Text(statusMessage(state.status), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)</ID>
+    <ID>MaxLineLength:DigiLockerConsentUseCaseTest.kt$DigiLockerConsentUseCaseTest$coEvery { integrityAttestor.attest(any()) } returns Result.failure(RuntimeException("Play Integrity unavailable"))</ID>
+    <ID>MaxLineLength:EarningsScreen.kt$PeriodCard(stringResource(R.string.earnings_period_lifetime), summary.lifetime, modifier = Modifier.weight(1f))</ID>
+    <ID>MaxLineLength:EarningsScreen.kt$PeriodCard(stringResource(R.string.earnings_period_month), summary.month, modifier = Modifier.weight(1f))</ID>
+    <ID>MaxLineLength:EarningsScreen.kt$PeriodCard(stringResource(R.string.earnings_period_today), summary.today, modifier = Modifier.weight(1f))</ID>
+    <ID>MaxLineLength:EarningsScreen.kt$drawRect(color = barColor, topLeft = Offset(x, size.height - barHeight), size = Size(barWidth, barHeight))</ID>
+    <ID>MaxLineLength:EarningsScreen.kt$val barHeight = if (maxAmount &gt; 0L) (day.techAmountPaise.toFloat() / maxAmount) * maxBarHeight + minBarPx else minBarPx</ID>
+    <ID>MaxLineLength:FusedCurrentLocationProvider.kt$FusedCurrentLocationProvider$ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED</ID>
+    <ID>MaxLineLength:FusedCurrentLocationProvider.kt$FusedCurrentLocationProvider$ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED</ID>
+    <ID>MaxLineLength:GetComplaintStatusUseCase.kt$GetComplaintStatusUseCase$public operator fun invoke(bookingId: String): Flow&lt;Result&lt;List&lt;ComplaintResponseDto&gt;&gt;&gt;</ID>
+    <ID>MaxLineLength:MyRatingsScreen.kt$Text("Could not load ratings", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)</ID>
+    <ID>MaxLineLength:MyRatingsScreen.kt$Text("\u2605", style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.primary)</ID>
+    <ID>MaxLineLength:MyRatingsScreen.kt$Text(formatDate(rating.submittedAt), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)</ID>
+    <ID>MaxLineLength:MyRatingsScreen.kt$Text(rating.comment, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)</ID>
+    <ID>MaxLineLength:OnboardingScreen.kt$Text("Start earning with HomeServices", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)</ID>
+    <ID>MaxLineLength:PhotoCaptureScreenTest.kt$PhotoCaptureScreenTest$"HandlerDispatcher IllegalStateException — CameraX/MediaStore Handler fires after Paparazzi Looper quits; fix with mock camera provider before recording"</ID>
+    <ID>MaxLineLength:RatingReceivedEventBus.kt$RatingReceivedEventBus$private val _events = MutableSharedFlow&lt;Unit&gt;(extraBufferCapacity = 4, onBufferOverflow = BufferOverflow.DROP_OLDEST)</ID>
+    <ID>MaxLineLength:RatingRepositoryImpl.kt$RatingRepositoryImpl$override fun get(bookingId: String): Flow&lt;Result&lt;RatingSnapshot&gt;&gt;</ID>
+    <ID>MaxLineLength:RatingScreen.kt$color = if (i &lt;= value) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant</ID>
+    <ID>MaxLineLength:SaveSessionUseCaseTest.kt$SaveSessionUseCaseTest$every { firebaseAuth.signInAnonymously() } returns Tasks.forException(FirebaseNetworkException("network fail"))</ID>
+    <ID>MaxLineLength:ServiceSelectionScreen.kt$ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED</ID>
+    <ID>MaxLineLength:ServiceSelectionScreen.kt$ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED</ID>
+    <ID>MaxLineLength:ServiceSelectionScreen.kt$Icon(Icons.Default.MyLocation, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)</ID>
+    <ID>MaxLineLength:SubmitComplaintUseCase.kt$SubmitComplaintUseCase$)</ID>
+    <ID>MaxLineLength:SubmitComplaintUseCaseTest.kt$SubmitComplaintUseCaseTest$val results = useCase("bk-1", TechComplaintReason.LATE_PAYMENT, "Customer refused to pay after the work.", null).toList()</ID>
+    <ID>MaxLineLength:TechnicianAvailabilityModule.kt$TechnicianAvailabilityModule$abstract</ID>
+    <ID>MaxLineLength:TechnicianAvailabilityRepositoryImpl.kt$TechnicianAvailabilityRepositoryImpl$override suspend fun getAvailability(): Result&lt;TechnicianAvailability&gt;</ID>
+    <ID>MaxLineLength:UpdatePayoutCadenceUseCase.kt$UpdatePayoutCadenceUseCase$public suspend fun invoke(cadence: String): Result&lt;PayoutCadenceResult&gt;</ID>
+    <ID>MayBeConst:EarningsScreen.kt$private val MONTHLY_GOAL_PAISE = 3_500_000L</ID>
+    <ID>NestedBlockDepth:SessionPrefsMigrator.kt$SessionPrefsMigrator$internal fun migrateIfNeededInternal( context: Context, newPrefs: SharedPreferences, newPrefsName: String, legacyKeyPresent: Boolean, )</ID>
+    <ID>ReturnCount:ActiveJobViewModel.kt$ActiveJobViewModel$public fun onPhotoConfirmed(localFilePath: String)</ID>
+    <ID>ReturnCount:FirebaseTokenAuthenticator.kt$FirebaseTokenAuthenticator$override fun authenticate( route: Route?, response: Response, ): Request?</ID>
+    <ID>ReturnCount:HomeservicesFcmService.kt$HomeservicesFcmService$private fun parseJobOffer(data: Map&lt;String, String&gt;): JobOffer?</ID>
+    <ID>SwallowedException:AuthOrchestrator.kt$AuthOrchestrator$e: FirebaseAuthUserCollisionException</ID>
+    <ID>SwallowedException:AuthOrchestrator.kt$AuthOrchestrator$e: FirebaseAuthWeakPasswordException</ID>
+    <ID>SwallowedException:EmailPasswordUseCase.kt$EmailPasswordUseCase$e: FirebaseAuthInvalidCredentialsException</ID>
+    <ID>SwallowedException:EmailPasswordUseCase.kt$EmailPasswordUseCase$e: FirebaseAuthInvalidUserException</ID>
+    <ID>SwallowedException:EmailPasswordUseCase.kt$EmailPasswordUseCase$e: FirebaseAuthUserCollisionException</ID>
+    <ID>SwallowedException:EmailPasswordUseCase.kt$EmailPasswordUseCase$e: FirebaseAuthWeakPasswordException</ID>
+    <ID>SwallowedException:GoogleSignInUseCase.kt$GoogleSignInUseCase$e: GetCredentialCancellationException</ID>
+    <ID>SwallowedException:GoogleSignInUseCase.kt$GoogleSignInUseCase$e: NoCredentialException</ID>
+    <ID>SwallowedException:OutboxSyncWorker.kt$OutboxSyncWorker$e: Exception</ID>
+    <ID>SwallowedException:TruecallerLoginUseCase.kt$TruecallerLoginUseCase$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:ActiveJobRepositoryImpl.kt$ActiveJobRepositoryImpl$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:FirebaseTokenAuthenticator.kt$FirebaseTokenAuthenticator$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:IdTokenCache.kt$IdTokenCache$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:KycRepositoryImpl.kt$KycRepositoryImpl$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:OutboxSyncWorker.kt$OutboxSyncWorker$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:SessionPrefsMigrator.kt$SessionPrefsMigrator$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:ShieldRepositoryImpl.kt$ShieldRepositoryImpl$e: Exception</ID>
+    <ID>TooGenericExceptionThrown:AcceptJobOfferUseCase.kt$AcceptJobOfferUseCase$throw RuntimeException("Accept offer failed: HTTP ${response.code()}")</ID>
+    <ID>TooManyFunctions:ActiveJobViewModel.kt$ActiveJobViewModel : ViewModel</ID>
+    <ID>TooManyFunctions:AuthOrchestrator.kt$AuthOrchestrator</ID>
+    <ID>TooManyFunctions:AuthViewModel.kt$AuthViewModel : ViewModel</ID>
+    <ID>TooManyFunctions:ServiceSelectionScreen.kt$com.homeservices.technician.ui.serviceprofile.ServiceSelectionScreen.kt</ID>
+    <ID>TooManyFunctions:TechnicianHomeScreen.kt$com.homeservices.technician.ui.home.TechnicianHomeScreen.kt</ID>
+    <ID>UnusedParameter:PiiRedactorTest.kt$PiiRedactorTest$description: String</ID>
+    <ID>UnusedPrivateProperty:ActiveJobViewModelTest.kt$ActiveJobViewModelTest$val stateWithPath = (viewModel.uiState.value as? ActiveJobUiState.Active) ?.copy(uploadedStoragePath = "bookings/bk-1/photos/uid/IN_PROGRESS/123.jpg") ?: return@runTest</ID>
+    <ID>UseCheckOrError:AcceptJobOfferUseCase.kt$AcceptJobOfferUseCase$throw IllegalStateException("No authenticated user for job offer acceptance")</ID>
+  </CurrentIssues>
+</SmellBaseline>

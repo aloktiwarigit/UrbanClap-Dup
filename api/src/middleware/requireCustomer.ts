@@ -14,7 +14,12 @@ export function requireCustomer(handler: CustomerHttpHandler): HttpHandler {
     if (!auth.startsWith('Bearer ')) return { status: 401, jsonBody: { code: 'UNAUTHENTICATED' } };
     try {
       const decoded = await verifyFirebaseIdToken(auth.slice(7));
-      return handler(req, ctx, { customerId: decoded.uid });
+      return handler(req, ctx, {
+        customerId: decoded.uid,
+        ...(typeof decoded.name === 'string' ? { displayName: decoded.name } : {}),
+        ...(typeof decoded.phone_number === 'string' ? { phoneNumber: decoded.phone_number } : {}),
+        ...(typeof decoded.email === 'string' ? { email: decoded.email } : {}),
+      });
     } catch {
       return { status: 401, jsonBody: { code: 'TOKEN_INVALID' } };
     }

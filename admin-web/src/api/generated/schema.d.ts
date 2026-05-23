@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/v1/auth/truecaller/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify Truecaller profile signature and mint Firebase custom token
+         * @description Verifies the Truecaller SDK RSA payload/signature against the Truecaller public key API (cached 24h in Cosmos). On success, mints a Firebase custom token for the verified phone number. Called by customer-app when truecaller_server_verify_v2 flag is ON.
+         */
+        post: operations["verifyTruecaller"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/health": {
         parameters: {
             query?: never;
@@ -116,7 +136,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** List service categories (admin, includes inactive) */
+        get: operations["adminListCategories"];
         put?: never;
         /** Create a service category */
         post: operations["adminCreateCategory"];
@@ -133,7 +154,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get a service category */
+        get: operations["adminGetCategory"];
         /** Update a service category */
         put: operations["adminUpdateCategory"];
         post?: never;
@@ -185,7 +207,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get a service */
+        get: operations["adminGetService"];
         /** Update a service */
         put: operations["adminUpdateService"];
         post?: never;
@@ -210,6 +233,23 @@ export interface paths {
         head?: never;
         /** Toggle service active state */
         patch: operations["adminToggleService"];
+        trace?: never;
+    };
+    "/v1/admin/orders/{id}/technician-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Eligible technicians near an order address */
+        get: operations["adminGetOrderTechnicianCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/admin/complaints": {
@@ -258,6 +298,128 @@ export interface paths {
         get: operations["adminGetRepeatOffenders"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List admin users without secrets */
+        get: operations["adminListUsers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/users/{adminId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch admin user role, display name, or activation state */
+        patch: operations["adminPatchUser"];
+        trace?: never;
+    };
+    "/v1/admin/erasure-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List erasure requests */
+        get: operations["adminListErasureRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/erasure-requests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Execute or deny an erasure request */
+        patch: operations["adminPatchErasureRequest"];
+        trace?: never;
+    };
+    "/v1/admin/compliance/ssc-levy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List SSC levies */
+        get: operations["adminListSscLevies"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/compliance/ssc-levy/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve SSC levy transfer */
+        post: operations["adminApproveSscLevy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/waitlist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Join the service waitlist for a specific area
+         * @description Adds a customer to the waitlist for a service in their location. No authentication required. Rate-limited to 5 requests/hr per phone number and 50 requests/hr per IP. requestedAt must be within ±90 s of server time.
+         */
+        post: operations["joinWaitlist"];
         delete?: never;
         options?: never;
         head?: never;
@@ -354,6 +516,22 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        TruecallerVerifyRequest: {
+            /** @example base64encodedPayload== */
+            payload: string;
+            /** @example base64encodedSignature== */
+            signature: string;
+            /** @example SHA512withRSA */
+            signatureAlgorithm: string;
+            /** @example fcm-token-abc123 */
+            fcmToken?: string;
+        };
+        TruecallerVerifyResponse: {
+            /** @example eyJhbGci... */
+            firebaseCustomToken: string;
+            /** @example 1700000000000 */
+            sessionExpiresAt: number;
+        };
         HealthResponse: {
             /** @enum {string} */
             status: "ok";
@@ -445,6 +623,8 @@ export interface components {
                 required: boolean;
             }[];
             isActive: boolean;
+            workStart?: string;
+            workEnd?: string;
         };
         CategoryWithServices: {
             id: string;
@@ -503,6 +683,8 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            workStart?: string;
+            workEnd?: string;
         };
         InternalNote: {
             adminId: string;
@@ -610,9 +792,117 @@ export interface components {
         RepeatOffendersResponse: {
             offenders: components["schemas"]["RepeatOffender"][];
         };
+        /** @enum {string} */
+        AdminRole: "super-admin" | "ops-manager" | "finance" | "support-agent";
+        AdminUserListItem: {
+            adminId: string;
+            /** Format: email */
+            email: string;
+            role: components["schemas"]["AdminRole"];
+            displayName?: string;
+            totpEnrolled: boolean;
+            createdAt: string;
+            updatedAt: string;
+            deactivatedAt: string | null;
+        };
+        PatchAdminUserBody: {
+            role?: components["schemas"]["AdminRole"];
+            displayName?: string;
+            deactivatedAt?: string | null;
+        };
+        ErasureRequestDoc: {
+            id: string;
+            partitionKey: string;
+            userId: string;
+            /** @enum {string} */
+            userRole: "CUSTOMER" | "TECHNICIAN";
+            /** @enum {string} */
+            status: "PENDING" | "EXECUTING" | "EXECUTED" | "REVOKED" | "DENIED" | "FAILED";
+            reason?: string;
+            requestedAt: string;
+            scheduledDeletionAt: string;
+            anonymizationSalt: string;
+            anonymizedHash?: string;
+            userIdWiped?: boolean;
+            executedAt?: string;
+            revokedAt?: string;
+            deniedAt?: string;
+            /** @enum {string} */
+            denialReason?: "legal-hold" | "regulatory-retention-conflict" | "fraud-investigation";
+            failedAt?: string;
+            failureReason?: string;
+            deletedCounts?: {
+                bookings: number;
+                ratings: number;
+                complaints: number;
+                walletLedgerAnonymized: number;
+                bookingEventsAnonymized: number;
+                dispatchAttemptsAnonymized: number;
+                auditLogAnonymized: number;
+                technicianHardDeleted: boolean;
+                kycHardDeleted: boolean;
+                fcmTokensCleared: boolean;
+                deviceTokensCleared: boolean;
+            };
+        };
+        AdminErasurePatchBody: {
+            /** @enum {string} */
+            action: "EXECUTE";
+        } | {
+            /** @enum {string} */
+            action: "DENY";
+            /** @enum {string} */
+            reason: "legal-hold" | "regulatory-retention-conflict" | "fraud-investigation";
+        };
+        SscLevyDoc: {
+            id: string;
+            quarter: string;
+            gmv: number;
+            levyRate: 0.01 | 0.02;
+            levyAmount: number;
+            /** @enum {string} */
+            status: "PENDING_APPROVAL" | "APPROVED" | "TRANSFERRED" | "FAILED";
+            razorpayTransferId?: string;
+            approvedAt?: string;
+            transferredAt?: string;
+            createdAt: string;
+        };
+        SscLevyApproveResponse: {
+            levyId: string;
+            quarter: string;
+            transferId: string;
+            /** @enum {string} */
+            status: "TRANSFERRED";
+        };
+        WaitlistRequest: {
+            /** @example +916000000001 */
+            phone: string;
+            /** @example 26.7 */
+            lat: number;
+            /** @example 82.1 */
+            lng: number;
+            /** @example ac-deep-clean */
+            serviceId: string;
+            /**
+             * Format: date-time
+             * @example 2026-05-17T10:00:00.000Z
+             */
+            requestedAt: string;
+        };
+        WaitlistSuccess: {
+            /** @enum {boolean} */
+            ok: true;
+        };
+        WaitlistError: {
+            /** @enum {string} */
+            code: "VALIDATION_ERROR" | "UNKNOWN_SERVICE" | "CLOCK_SKEW" | "RATE_LIMITED" | "INVALID_JSON" | "INTERNAL_ERROR";
+        };
         AdminLoginRequest: {
             idToken: string;
             totpCode?: string;
+        } | {
+            challengeToken: string;
+            totpCode: string;
         };
         AdminSetupTotpVerifyRequest: {
             totpCode: string;
@@ -631,6 +921,37 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    verifyTruecaller: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["TruecallerVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Signature valid — Firebase custom token issued */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TruecallerVerifyResponse"];
+                };
+            };
+            /** @description Validation error or invalid signature */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getHealth: {
         parameters: {
             query?: never;
@@ -825,6 +1146,42 @@ export interface operations {
             };
         };
     };
+    adminListCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Categories list */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        categories: components["schemas"]["AdminServiceCategory"][];
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     adminCreateCategory: {
         parameters: {
             query?: never;
@@ -864,6 +1221,49 @@ export interface operations {
             };
             /** @description Duplicate id */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminGetCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Category */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminServiceCategory"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1001,6 +1401,8 @@ export interface operations {
                         label: string;
                         required: boolean;
                     }[];
+                    workStart?: string;
+                    workEnd?: string;
                 };
             };
         };
@@ -1023,6 +1425,49 @@ export interface operations {
             };
             /** @description Duplicate id */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminGetService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminService"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1067,6 +1512,8 @@ export interface operations {
                         label: string;
                         required: boolean;
                     }[];
+                    workStart?: string;
+                    workEnd?: string;
                 };
             };
         };
@@ -1110,6 +1557,58 @@ export interface operations {
                 };
             };
             /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminGetOrderTechnicianCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Technician candidates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        technicians: {
+                            technicianId: string;
+                            displayName: string;
+                            distanceKm: number;
+                            rating?: number;
+                            isOnline: boolean;
+                            isAvailable: boolean;
+                        }[];
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Order not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1294,6 +1793,330 @@ export interface operations {
             };
         };
     };
+    adminListUsers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Admin users */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        users: components["schemas"]["AdminUserListItem"][];
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminPatchUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                adminId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchAdminUserBody"];
+            };
+        };
+        responses: {
+            /** @description Patched */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        ok: true;
+                    };
+                };
+            };
+            /** @description Validation error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin user not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminListErasureRequests: {
+        parameters: {
+            query?: {
+                status?: string;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Erasure requests */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["ErasureRequestDoc"][];
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminPatchErasureRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AdminErasurePatchBody"];
+            };
+        };
+        responses: {
+            /** @description Erasure action accepted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Erasure request not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Request is not pending or cool-off has not elapsed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminListSscLevies: {
+        parameters: {
+            query?: {
+                status?: "PENDING_APPROVAL" | "APPROVED" | "TRANSFERRED" | "FAILED";
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description SSC levies */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        levies: components["schemas"]["SscLevyDoc"][];
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminApproveSscLevy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Transfer created */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SscLevyApproveResponse"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Levy not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid levy status */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    joinWaitlist: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["WaitlistRequest"];
+            };
+        };
+        responses: {
+            /** @description Successfully joined the waitlist */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaitlistSuccess"];
+                };
+            };
+            /** @description Validation error, unknown serviceId, or clock skew > 90 s */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaitlistError"];
+                };
+            };
+            /** @description Rate limit exceeded — check Retry-After header */
+            429: {
+                headers: {
+                    /** @description Seconds until the rate limit resets */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaitlistError"];
+                };
+            };
+        };
+    };
     adminLogin: {
         parameters: {
             query?: never;
@@ -1365,7 +2188,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description New hs_access cookie set */
+            /** @description Session cookies refreshed */
             200: {
                 headers: {
                     [name: string]: unknown;

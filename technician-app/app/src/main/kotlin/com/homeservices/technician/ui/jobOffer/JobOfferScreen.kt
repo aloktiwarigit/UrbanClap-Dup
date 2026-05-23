@@ -83,7 +83,11 @@ internal fun JobOfferScreenContent(
         color = MaterialTheme.colorScheme.background,
     ) {
         when (uiState) {
-            is JobOfferUiState.Idle -> Unit
+            is JobOfferUiState.Idle ->
+                JobOfferResultContent(
+                    message = stringResource(R.string.job_offer_unavailable),
+                    isSuccess = false,
+                )
             is JobOfferUiState.Offering -> {
                 JobOfferContent(
                     offer = uiState.offer,

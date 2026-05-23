@@ -18,13 +18,13 @@ test.describe('theme persistence', () => {
   });
 
   test('theme survives App Router client navigation between dashboard routes', async ({ page, context }) => {
-    const jwt = await makeAccessJwt('admin-e2e', 'admin');
+    const jwt = await makeAccessJwt('admin-e2e', 'super-admin');
     await context.addCookies([
       { name: 'hs_access', value: jwt, url: 'http://localhost:3000', httpOnly: true, sameSite: 'Lax' },
       { name: 'theme', value: 'light', url: 'http://localhost:3000' },
     ]);
 
-    await page.goto('/dashboard');
+    await page.goto('/en/dashboard');
     expect(await page.evaluate(() => document.documentElement.dataset['theme'])).toBe('light');
 
     // Click the Rail's Orders link — App Router client-side navigation,
@@ -39,12 +39,12 @@ test.describe('theme persistence', () => {
   });
 
   test('clicking the toggle persists the new theme across reload', async ({ page, context }) => {
-    const jwt = await makeAccessJwt('admin-e2e', 'admin');
+    const jwt = await makeAccessJwt('admin-e2e', 'super-admin');
     await context.addCookies([
       { name: 'hs_access', value: jwt, url: 'http://localhost:3000', httpOnly: true, sameSite: 'Lax' },
     ]);
 
-    await page.goto('/dashboard');
+    await page.goto('/en/dashboard');
     expect(await page.evaluate(() => document.documentElement.dataset['theme'])).toBe('dark');
 
     // Click the LIGHT option in the Topbar toggle.

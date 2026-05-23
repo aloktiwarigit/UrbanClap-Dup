@@ -28,10 +28,62 @@ import {
   ComplaintListResponseSchema,
   RepeatOffendersResponseSchema,
 } from '../schemas/complaint.js';
+import {
+  AdminErasurePatchBodySchema,
+  ErasureRequestDocSchema,
+} from '../schemas/erasure-request.js';
+import {
+  SscLevyDocSchema,
+  SscLevyStatusSchema,
+} from '../schemas/ssc-levy.js';
+import { TechnicianCandidateListResponseSchema } from '../schemas/order.js';
 
 extendZodWithOpenApi(z);
 
 export const registry = new OpenAPIRegistry();
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+const TruecallerVerifyRequestSchema = z.object({
+  payload: z.string().min(1).openapi({ example: 'base64encodedPayload==' }),
+  signature: z.string().min(1).openapi({ example: 'base64encodedSignature==' }),
+  signatureAlgorithm: z.string().min(1).openapi({ example: 'SHA512withRSA' }),
+  fcmToken: z.string().optional().openapi({ example: 'fcm-token-abc123' }),
+}).openapi('TruecallerVerifyRequest');
+
+const TruecallerVerifyResponseSchema = z.object({
+  firebaseCustomToken: z.string().openapi({ example: 'eyJhbGci...' }),
+  sessionExpiresAt: z.number().openapi({ example: 1700000000000 }),
+}).openapi('TruecallerVerifyResponse');
+
+registry.register('TruecallerVerifyRequest', TruecallerVerifyRequestSchema);
+registry.register('TruecallerVerifyResponse', TruecallerVerifyResponseSchema);
+
+registry.registerPath({
+  method: 'post',
+  path: '/v1/auth/truecaller/verify',
+  operationId: 'verifyTruecaller',
+  tags: ['auth'],
+  summary: 'Verify Truecaller profile signature and mint Firebase custom token',
+  description:
+    'Verifies the Truecaller SDK RSA payload/signature against the Truecaller public key API ' +
+    '(cached 24h in Cosmos). On success, mints a Firebase custom token for the verified phone number. ' +
+    'Called by customer-app when truecaller_server_verify_v2 flag is ON.',
+  request: {
+    body: {
+      content: { 'application/json': { schema: TruecallerVerifyRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Signature valid — Firebase custom token issued',
+      content: { 'application/json': { schema: TruecallerVerifyResponseSchema } },
+    },
+    400: {
+      description: 'Validation error or invalid signature',
+    },
+  },
+});
 
 const HealthResponse = HealthResponseSchema.openapi('HealthResponse');
 registry.register('HealthResponse', HealthResponse);
@@ -151,6 +203,30 @@ registry.register('AdminServiceCategory', AdminServiceCategory);
 registry.register('AdminService', AdminService);
 
 registry.registerPath({
+  method: 'get', path: '/v1/admin/catalogue/categories', operationId: 'adminListCategories',
+  tags: ['admin-catalogue'], summary: 'List service categories (admin, includes inactive)',
+  security: [{ cookieAuth: [] }],
+  responses: {
+    200: { description: 'Categories list', content: { 'application/json': { schema: z.object({ categories: z.array(AdminServiceCategory) }) } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+  },
+});
+
+registry.registerPath({
+  method: 'get', path: '/v1/admin/catalogue/categories/{id}', operationId: 'adminGetCategory',
+  tags: ['admin-catalogue'], summary: 'Get a service category',
+  security: [{ cookieAuth: [] }],
+  parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+  responses: {
+    200: { description: 'Category', content: { 'application/json': { schema: AdminServiceCategory } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+    404: { description: 'Not found' },
+  },
+});
+
+registry.registerPath({
   method: 'post', path: '/v1/admin/catalogue/categories', operationId: 'adminCreateCategory',
   tags: ['admin-catalogue'], summary: 'Create a service category',
   request: { body: { content: { 'application/json': { schema: CreateCategoryBodySchema } } } },
@@ -180,6 +256,19 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: 'get', path: '/v1/admin/catalogue/services/{id}', operationId: 'adminGetService',
+  tags: ['admin-catalogue'], summary: 'Get a service',
+  security: [{ cookieAuth: [] }],
+  parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+  responses: {
+    200: { description: 'Service', content: { 'application/json': { schema: AdminService } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+    404: { description: 'Not found' },
+  },
+});
+
+registry.registerPath({
   method: 'post', path: '/v1/admin/catalogue/services', operationId: 'adminCreateService',
   tags: ['admin-catalogue'], summary: 'Create a service',
   request: { body: { content: { 'application/json': { schema: CreateServiceBodySchema } } } },
@@ -199,6 +288,22 @@ registry.registerPath({
   tags: ['admin-catalogue'], summary: 'Toggle service active state',
   parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
   responses: { 200: { description: 'Toggled', content: { 'application/json': { schema: AdminService } } }, 404: { description: 'Not found' } },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/v1/admin/orders/{id}/technician-candidates',
+  operationId: 'adminGetOrderTechnicianCandidates',
+  tags: ['orders'],
+  security: [{ cookieAuth: [] }],
+  summary: 'Eligible technicians near an order address',
+  parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+  responses: {
+    200: { description: 'Technician candidates', content: { 'application/json': { schema: TechnicianCandidateListResponseSchema } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+    404: { description: 'Order not found' },
+  },
 });
 
 // ── Complaints ─────────────────────────────────────────────────────────────────
@@ -267,5 +372,185 @@ registry.registerPath({
     200: { description: 'Repeat offenders list', content: { 'application/json': { schema: RepeatOffendersResponseSchema } } },
     401: { description: 'Unauthenticated' },
     403: { description: 'Forbidden' },
+  },
+});
+
+// Admin users
+const AdminRoleSchema = z.enum(['super-admin', 'ops-manager', 'finance', 'support-agent']).openapi('AdminRole');
+const AdminUserListItemSchema = z.object({
+  adminId: z.string(),
+  email: z.string().email(),
+  role: AdminRoleSchema,
+  displayName: z.string().optional(),
+  totpEnrolled: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  deactivatedAt: z.string().nullable(),
+}).openapi('AdminUserListItem');
+const PatchAdminUserBodySchema = z.object({
+  role: AdminRoleSchema.optional(),
+  displayName: z.string().min(1).max(100).optional(),
+  deactivatedAt: z.string().nullable().optional(),
+}).strict().openapi('PatchAdminUserBody');
+
+registry.register('AdminRole', AdminRoleSchema);
+registry.register('AdminUserListItem', AdminUserListItemSchema);
+registry.register('PatchAdminUserBody', PatchAdminUserBodySchema);
+
+registry.registerPath({
+  method: 'get', path: '/v1/admin/users', operationId: 'adminListUsers',
+  tags: ['admin-users'], summary: 'List admin users without secrets',
+  security: [{ cookieAuth: [] }],
+  responses: {
+    200: { description: 'Admin users', content: { 'application/json': { schema: z.object({ users: z.array(AdminUserListItemSchema) }) } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+  },
+});
+
+registry.registerPath({
+  method: 'patch', path: '/v1/admin/users/{adminId}', operationId: 'adminPatchUser',
+  tags: ['admin-users'], summary: 'Patch admin user role, display name, or activation state',
+  security: [{ cookieAuth: [] }],
+  parameters: [{ name: 'adminId', in: 'path', required: true, schema: { type: 'string' } }],
+  request: { body: { content: { 'application/json': { schema: PatchAdminUserBodySchema } } } },
+  responses: {
+    200: { description: 'Patched', content: { 'application/json': { schema: z.object({ ok: z.literal(true) }) } } },
+    400: { description: 'Validation error' },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+    404: { description: 'Admin user not found' },
+  },
+});
+
+// Compliance
+const ErasureRequestDoc = ErasureRequestDocSchema.openapi('ErasureRequestDoc');
+const AdminErasurePatchBody = AdminErasurePatchBodySchema.openapi('AdminErasurePatchBody');
+const SscLevyDoc = SscLevyDocSchema.openapi('SscLevyDoc');
+const SscLevyApproveResponse = z.object({
+  levyId: z.string(),
+  quarter: z.string(),
+  transferId: z.string(),
+  status: z.literal('TRANSFERRED'),
+}).openapi('SscLevyApproveResponse');
+
+registry.register('ErasureRequestDoc', ErasureRequestDoc);
+registry.register('AdminErasurePatchBody', AdminErasurePatchBody);
+registry.register('SscLevyDoc', SscLevyDoc);
+registry.register('SscLevyApproveResponse', SscLevyApproveResponse);
+
+registry.registerPath({
+  method: 'get', path: '/v1/admin/erasure-requests', operationId: 'adminListErasureRequests',
+  tags: ['compliance'], summary: 'List erasure requests',
+  security: [{ cookieAuth: [] }],
+  parameters: [
+    { name: 'status', in: 'query', required: false, schema: { type: 'string' } },
+    { name: 'pageSize', in: 'query', required: false, schema: { type: 'integer', default: 50 } },
+  ],
+  responses: {
+    200: { description: 'Erasure requests', content: { 'application/json': { schema: z.object({ items: z.array(ErasureRequestDoc) }) } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+  },
+});
+
+registry.registerPath({
+  method: 'patch', path: '/v1/admin/erasure-requests/{id}', operationId: 'adminPatchErasureRequest',
+  tags: ['compliance'], summary: 'Execute or deny an erasure request',
+  security: [{ cookieAuth: [] }],
+  parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+  request: { body: { content: { 'application/json': { schema: AdminErasurePatchBody } } } },
+  responses: {
+    200: { description: 'Erasure action accepted' },
+    400: { description: 'Validation error' },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+    404: { description: 'Erasure request not found' },
+    409: { description: 'Request is not pending or cool-off has not elapsed' },
+  },
+});
+
+registry.registerPath({
+  method: 'get', path: '/v1/admin/compliance/ssc-levy', operationId: 'adminListSscLevies',
+  tags: ['compliance'], summary: 'List SSC levies',
+  security: [{ cookieAuth: [] }],
+  parameters: [
+    { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: SscLevyStatusSchema.options } },
+    { name: 'pageSize', in: 'query', required: false, schema: { type: 'integer', default: 50 } },
+  ],
+  responses: {
+    200: { description: 'SSC levies', content: { 'application/json': { schema: z.object({ levies: z.array(SscLevyDoc) }) } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+  },
+});
+
+registry.registerPath({
+  method: 'post', path: '/v1/admin/compliance/ssc-levy/{id}/approve', operationId: 'adminApproveSscLevy',
+  tags: ['compliance'], summary: 'Approve SSC levy transfer',
+  security: [{ cookieAuth: [] }],
+  parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+  responses: {
+    200: { description: 'Transfer created', content: { 'application/json': { schema: SscLevyApproveResponse } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+    404: { description: 'Levy not found' },
+    409: { description: 'Invalid levy status' },
+  },
+});
+
+// ── Waitlist (E16-S04/WS-F) ───────────────────────────────────────────────────
+
+const WaitlistRequestBodySchema = z.object({
+  phone: z.string().regex(/^\+91[6-9]\d{9}$/).openapi({ example: '+916000000001' }),
+  lat: z.number().min(-90).max(90).openapi({ example: 26.7 }),
+  lng: z.number().min(-180).max(180).openapi({ example: 82.1 }),
+  serviceId: z.string().min(1).max(64).openapi({ example: 'ac-deep-clean' }),
+  requestedAt: z.string().datetime().openapi({ example: '2026-05-17T10:00:00.000Z' }),
+}).openapi('WaitlistRequest');
+
+const WaitlistSuccessSchema = z.object({
+  ok: z.literal(true),
+}).openapi('WaitlistSuccess');
+
+const WaitlistErrorSchema = z.object({
+  code: z.enum(['VALIDATION_ERROR', 'UNKNOWN_SERVICE', 'CLOCK_SKEW', 'RATE_LIMITED', 'INVALID_JSON', 'INTERNAL_ERROR']),
+}).openapi('WaitlistError');
+
+registry.register('WaitlistRequest', WaitlistRequestBodySchema);
+registry.register('WaitlistSuccess', WaitlistSuccessSchema);
+registry.register('WaitlistError', WaitlistErrorSchema);
+
+registry.registerPath({
+  method: 'post',
+  path: '/v1/waitlist',
+  operationId: 'joinWaitlist',
+  tags: ['waitlist'],
+  summary: 'Join the service waitlist for a specific area',
+  description:
+    'Adds a customer to the waitlist for a service in their location. ' +
+    'No authentication required. Rate-limited to 5 requests/hr per phone number ' +
+    'and 50 requests/hr per IP. requestedAt must be within ±90 s of server time.',
+  request: {
+    body: {
+      content: { 'application/json': { schema: WaitlistRequestBodySchema } },
+    },
+  },
+  responses: {
+    201: {
+      description: 'Successfully joined the waitlist',
+      content: { 'application/json': { schema: WaitlistSuccessSchema } },
+    },
+    400: {
+      description: 'Validation error, unknown serviceId, or clock skew > 90 s',
+      content: { 'application/json': { schema: WaitlistErrorSchema } },
+    },
+    429: {
+      description: 'Rate limit exceeded — check Retry-After header',
+      headers: {
+        'Retry-After': { schema: { type: 'integer' }, description: 'Seconds until the rate limit resets' },
+      },
+      content: { 'application/json': { schema: WaitlistErrorSchema } },
+    },
   },
 });

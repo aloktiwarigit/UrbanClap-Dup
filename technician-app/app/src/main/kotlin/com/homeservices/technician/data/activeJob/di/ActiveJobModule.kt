@@ -13,10 +13,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
-import retrofit2.converter.moshi.MoshiConverterFactory
 import javax.inject.Singleton
 
 @Module
@@ -29,20 +26,7 @@ public abstract class ActiveJobModule {
     public companion object {
         @Provides
         @Singleton
-        internal fun provideActiveJobApiService(): ActiveJobApiService {
-            val logging =
-                HttpLoggingInterceptor().apply {
-                    level = HttpLoggingInterceptor.Level.BODY
-                }
-            val client = OkHttpClient.Builder().addInterceptor(logging).build()
-            return Retrofit
-                .Builder()
-                .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
-                .client(client)
-                .addConverterFactory(MoshiConverterFactory.create())
-                .build()
-                .create(ActiveJobApiService::class.java)
-        }
+        internal fun provideActiveJobApiService(retrofit: Retrofit): ActiveJobApiService = retrofit.create(ActiveJobApiService::class.java)
 
         @Provides
         @Singleton

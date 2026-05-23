@@ -33,7 +33,7 @@ public class CatalogueHomeViewModelTest {
         every { getCurrentLocale() } returns flowOf("en")
         every { useCase() } returns
             flowOf(
-                Result.success(listOf(Category("1", "Plumbing", "https://cdn.example.com/plumbing.jpg", 3))),
+                Result.success(listOf(Category("1", "Plumbing", "https://cdn.example.com/plumbing.jpg", 3, minPricePaise = 39900))),
             )
         sut = CatalogueHomeViewModel(useCase, localizer, getCurrentLocale)
     }

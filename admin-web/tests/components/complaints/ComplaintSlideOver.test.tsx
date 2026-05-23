@@ -1,5 +1,21 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
+
+vi.mock('next-intl', () => ({
+  useTranslations: (_ns: string) => (key: string, params?: Record<string, unknown>): string => {
+    if (params) {
+      if ('h' in params && 'm' in params) return `${String(params.h)}h ${String(params.m)}m`;
+      if ('m' in params && !('h' in params)) return `${String(params.m)}m`;
+      const vals = Object.values(params).filter(v => typeof v === 'string' || typeof v === 'number');
+      if (vals.length === 1) return String(vals[0]);
+      if (vals.length > 0) return vals.map(String).join(' ');
+    }
+    const last = key.split('.').pop() ?? key;
+    return last.replace(/([A-Z])/g, ' $1').toLowerCase().trim();
+  },
+  useLocale: () => 'en',
+}));
+
 import { ComplaintSlideOver } from '../../../src/components/complaints/ComplaintSlideOver';
 import type { Complaint } from '../../../src/types/complaint';
 
@@ -80,7 +96,8 @@ describe('ComplaintSlideOver', () => {
         onReassign={vi.fn()}
       />,
     );
-    fireEvent.click(screen.getByLabelText('Close slide-over'));
+    // aria-label is t('detail.closeButton.ariaLabel') → mock returns "aria label"
+    fireEvent.click(screen.getByLabelText(/aria label/i));
     expect(onClose).toHaveBeenCalledOnce();
   });
 
@@ -96,7 +113,10 @@ describe('ComplaintSlideOver', () => {
         onReassign={vi.fn()}
       />,
     );
-    const textarea = screen.getByPlaceholderText(/internal note/i);
+    // Both assignee input and note textarea use t(…placeholder) → mock returns "placeholder".
+    // Select the textarea specifically by filtering on element tag.
+    const allPlaceholders = screen.getAllByPlaceholderText(/placeholder/i);
+    const textarea = allPlaceholders.find(el => el.tagName === 'TEXTAREA')!;
     fireEvent.change(textarea, { target: { value: 'Following up with customer' } });
     fireEvent.click(screen.getByRole('button', { name: /add note/i }));
     expect(onAddNote).toHaveBeenCalledWith('Following up with customer');

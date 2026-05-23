@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
+import { apiUrl } from './base';
 
 export interface DailyPnLEntry {
   date: string;
@@ -42,7 +42,7 @@ export function formatPaise(paise: number): string {
 
 export async function fetchFinanceSummary(from: string, to: string): Promise<FinanceSummary> {
   const res = await fetch(
-    `${API_BASE}/api/v1/admin/finance/summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+    apiUrl(`/v1/admin/finance/summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
     { credentials: 'include' },
   );
   if (!res.ok) throw new Error(`Finance summary ${res.status}`);
@@ -50,13 +50,13 @@ export async function fetchFinanceSummary(from: string, to: string): Promise<Fin
 }
 
 export async function fetchPayoutQueue(): Promise<PayoutQueue> {
-  const res = await fetch(`${API_BASE}/api/v1/admin/finance/payout-queue`, { credentials: 'include' });
+  const res = await fetch(apiUrl('/v1/admin/finance/payout-queue'), { credentials: 'include' });
   if (!res.ok) throw new Error(`Payout queue ${res.status}`);
   return res.json() as Promise<PayoutQueue>;
 }
 
 export async function approveAllPayouts(): Promise<ApprovePayoutsResult> {
-  const res = await fetch(`${API_BASE}/api/v1/admin/finance/payouts/approve-all`, {
+  const res = await fetch(apiUrl('/v1/admin/finance/payouts/approve-all'), {
     method: 'POST',
     credentials: 'include',
   });

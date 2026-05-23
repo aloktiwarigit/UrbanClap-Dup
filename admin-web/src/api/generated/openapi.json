@@ -23,6 +23,52 @@
   ],
   "components": {
     "schemas": {
+      "TruecallerVerifyRequest": {
+        "type": "object",
+        "properties": {
+          "payload": {
+            "type": "string",
+            "minLength": 1,
+            "example": "base64encodedPayload=="
+          },
+          "signature": {
+            "type": "string",
+            "minLength": 1,
+            "example": "base64encodedSignature=="
+          },
+          "signatureAlgorithm": {
+            "type": "string",
+            "minLength": 1,
+            "example": "SHA512withRSA"
+          },
+          "fcmToken": {
+            "type": "string",
+            "example": "fcm-token-abc123"
+          }
+        },
+        "required": [
+          "payload",
+          "signature",
+          "signatureAlgorithm"
+        ]
+      },
+      "TruecallerVerifyResponse": {
+        "type": "object",
+        "properties": {
+          "firebaseCustomToken": {
+            "type": "string",
+            "example": "eyJhbGci..."
+          },
+          "sessionExpiresAt": {
+            "type": "number",
+            "example": 1700000000000
+          }
+        },
+        "required": [
+          "firebaseCustomToken",
+          "sessionExpiresAt"
+        ]
+      },
       "HealthResponse": {
         "type": "object",
         "properties": {
@@ -403,6 +449,14 @@
           },
           "isActive": {
             "type": "boolean"
+          },
+          "workStart": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$"
+          },
+          "workEnd": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$"
           }
         },
         "required": [
@@ -638,6 +692,14 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "workStart": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$"
+          },
+          "workEnd": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$"
           }
         },
         "required": [
@@ -1064,20 +1126,462 @@
           "offenders"
         ]
       },
-      "AdminLoginRequest": {
+      "AdminRole": {
+        "type": "string",
+        "enum": [
+          "super-admin",
+          "ops-manager",
+          "finance",
+          "support-agent"
+        ]
+      },
+      "AdminUserListItem": {
         "type": "object",
         "properties": {
-          "idToken": {
-            "type": "string",
-            "minLength": 1
+          "adminId": {
+            "type": "string"
           },
-          "totpCode": {
+          "email": {
             "type": "string",
-            "pattern": "^\\d{6}$"
+            "format": "email"
+          },
+          "role": {
+            "$ref": "#/components/schemas/AdminRole"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "totpEnrolled": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "deactivatedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
-          "idToken"
+          "adminId",
+          "email",
+          "role",
+          "totpEnrolled",
+          "createdAt",
+          "updatedAt",
+          "deactivatedAt"
+        ]
+      },
+      "PatchAdminUserBody": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "$ref": "#/components/schemas/AdminRole"
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "deactivatedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "ErasureRequestDoc": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "partitionKey": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "userRole": {
+            "type": "string",
+            "enum": [
+              "CUSTOMER",
+              "TECHNICIAN"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "EXECUTING",
+              "EXECUTED",
+              "REVOKED",
+              "DENIED",
+              "FAILED"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "requestedAt": {
+            "type": "string"
+          },
+          "scheduledDeletionAt": {
+            "type": "string"
+          },
+          "anonymizationSalt": {
+            "type": "string"
+          },
+          "anonymizedHash": {
+            "type": "string"
+          },
+          "userIdWiped": {
+            "type": "boolean"
+          },
+          "executedAt": {
+            "type": "string"
+          },
+          "revokedAt": {
+            "type": "string"
+          },
+          "deniedAt": {
+            "type": "string"
+          },
+          "denialReason": {
+            "type": "string",
+            "enum": [
+              "legal-hold",
+              "regulatory-retention-conflict",
+              "fraud-investigation"
+            ]
+          },
+          "failedAt": {
+            "type": "string"
+          },
+          "failureReason": {
+            "type": "string"
+          },
+          "deletedCounts": {
+            "type": "object",
+            "properties": {
+              "bookings": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "ratings": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "complaints": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "walletLedgerAnonymized": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "bookingEventsAnonymized": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "dispatchAttemptsAnonymized": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "auditLogAnonymized": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "technicianHardDeleted": {
+                "type": "boolean"
+              },
+              "kycHardDeleted": {
+                "type": "boolean"
+              },
+              "fcmTokensCleared": {
+                "type": "boolean"
+              },
+              "deviceTokensCleared": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "bookings",
+              "ratings",
+              "complaints",
+              "walletLedgerAnonymized",
+              "bookingEventsAnonymized",
+              "dispatchAttemptsAnonymized",
+              "auditLogAnonymized",
+              "technicianHardDeleted",
+              "kycHardDeleted",
+              "fcmTokensCleared",
+              "deviceTokensCleared"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "partitionKey",
+          "userId",
+          "userRole",
+          "status",
+          "requestedAt",
+          "scheduledDeletionAt",
+          "anonymizationSalt"
+        ]
+      },
+      "AdminErasurePatchBody": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "EXECUTE"
+                ]
+              }
+            },
+            "required": [
+              "action"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "DENY"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "legal-hold",
+                  "regulatory-retention-conflict",
+                  "fraud-investigation"
+                ]
+              }
+            },
+            "required": [
+              "action",
+              "reason"
+            ]
+          }
+        ]
+      },
+      "SscLevyDoc": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^\\d{4}-Q[1-4]$"
+          },
+          "quarter": {
+            "type": "string",
+            "pattern": "^\\d{4}-Q[1-4]$"
+          },
+          "gmv": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "levyRate": {
+            "anyOf": [
+              {
+                "type": "number",
+                "enum": [
+                  0.01
+                ]
+              },
+              {
+                "type": "number",
+                "enum": [
+                  0.02
+                ]
+              }
+            ]
+          },
+          "levyAmount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING_APPROVAL",
+              "APPROVED",
+              "TRANSFERRED",
+              "FAILED"
+            ]
+          },
+          "razorpayTransferId": {
+            "type": "string"
+          },
+          "approvedAt": {
+            "type": "string"
+          },
+          "transferredAt": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "quarter",
+          "gmv",
+          "levyRate",
+          "levyAmount",
+          "status",
+          "createdAt"
+        ]
+      },
+      "SscLevyApproveResponse": {
+        "type": "object",
+        "properties": {
+          "levyId": {
+            "type": "string"
+          },
+          "quarter": {
+            "type": "string"
+          },
+          "transferId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "TRANSFERRED"
+            ]
+          }
+        },
+        "required": [
+          "levyId",
+          "quarter",
+          "transferId",
+          "status"
+        ]
+      },
+      "WaitlistRequest": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "pattern": "^\\+91[6-9]\\d{9}$",
+            "example": "+916000000001"
+          },
+          "lat": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "example": 26.7
+          },
+          "lng": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180,
+            "example": 82.1
+          },
+          "serviceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "example": "ac-deep-clean"
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-05-17T10:00:00.000Z"
+          }
+        },
+        "required": [
+          "phone",
+          "lat",
+          "lng",
+          "serviceId",
+          "requestedAt"
+        ]
+      },
+      "WaitlistSuccess": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      },
+      "WaitlistError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "VALIDATION_ERROR",
+              "UNKNOWN_SERVICE",
+              "CLOCK_SKEW",
+              "RATE_LIMITED",
+              "INVALID_JSON",
+              "INTERNAL_ERROR"
+            ]
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "AdminLoginRequest": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "idToken": {
+                "type": "string",
+                "minLength": 1
+              },
+              "totpCode": {
+                "type": "string",
+                "pattern": "^\\d{6}$"
+              }
+            },
+            "required": [
+              "idToken"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "challengeToken": {
+                "type": "string",
+                "minLength": 1
+              },
+              "totpCode": {
+                "type": "string",
+                "pattern": "^\\d{6}$"
+              }
+            },
+            "required": [
+              "challengeToken",
+              "totpCode"
+            ]
+          }
         ]
       },
       "AdminSetupTotpVerifyRequest": {
@@ -1115,6 +1619,40 @@
     "parameters": {}
   },
   "paths": {
+    "/v1/auth/truecaller/verify": {
+      "post": {
+        "operationId": "verifyTruecaller",
+        "tags": [
+          "auth"
+        ],
+        "summary": "Verify Truecaller profile signature and mint Firebase custom token",
+        "description": "Verifies the Truecaller SDK RSA payload/signature against the Truecaller public key API (cached 24h in Cosmos). On success, mints a Firebase custom token for the verified phone number. Called by customer-app when truecaller_server_verify_v2 flag is ON.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TruecallerVerifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signature valid — Firebase custom token issued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TruecallerVerifyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error or invalid signature"
+          }
+        }
+      }
+    },
     "/v1/health": {
       "get": {
         "operationId": "getHealth",
@@ -1309,6 +1847,47 @@
       }
     },
     "/v1/admin/catalogue/categories": {
+      "get": {
+        "operationId": "adminListCategories",
+        "tags": [
+          "admin-catalogue"
+        ],
+        "summary": "List service categories (admin, includes inactive)",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Categories list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "categories": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AdminServiceCategory"
+                      }
+                    }
+                  },
+                  "required": [
+                    "categories"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      },
       "post": {
         "operationId": "adminCreateCategory",
         "tags": [
@@ -1374,6 +1953,49 @@
       }
     },
     "/v1/admin/catalogue/categories/{id}": {
+      "get": {
+        "operationId": "adminGetCategory",
+        "tags": [
+          "admin-catalogue"
+        ],
+        "summary": "Get a service category",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Category",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminServiceCategory"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
       "put": {
         "operationId": "adminUpdateCategory",
         "tags": [
@@ -1644,6 +2266,14 @@
                         "required"
                       ]
                     }
+                  },
+                  "workStart": {
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$"
+                  },
+                  "workEnd": {
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$"
                   }
                 },
                 "required": [
@@ -1686,6 +2316,49 @@
       }
     },
     "/v1/admin/catalogue/services/{id}": {
+      "get": {
+        "operationId": "adminGetService",
+        "tags": [
+          "admin-catalogue"
+        ],
+        "summary": "Get a service",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminService"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
       "put": {
         "operationId": "adminUpdateService",
         "tags": [
@@ -1817,6 +2490,14 @@
                         "required"
                       ]
                     }
+                  },
+                  "workStart": {
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$"
+                  },
+                  "workEnd": {
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$"
                   }
                 },
                 "required": [
@@ -1883,6 +2564,92 @@
           },
           "404": {
             "description": "Not found"
+          }
+        }
+      }
+    },
+    "/v1/admin/orders/{id}/technician-candidates": {
+      "get": {
+        "operationId": "adminGetOrderTechnicianCandidates",
+        "tags": [
+          "orders"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Eligible technicians near an order address",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Technician candidates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "technicians": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "technicianId": {
+                            "type": "string"
+                          },
+                          "displayName": {
+                            "type": "string"
+                          },
+                          "distanceKm": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "rating": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 5
+                          },
+                          "isOnline": {
+                            "type": "boolean"
+                          },
+                          "isAvailable": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "technicianId",
+                          "displayName",
+                          "distanceKm",
+                          "isOnline",
+                          "isAvailable"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "technicians"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Order not found"
           }
         }
       }
@@ -2122,6 +2889,407 @@
         }
       }
     },
+    "/v1/admin/users": {
+      "get": {
+        "operationId": "adminListUsers",
+        "tags": [
+          "admin-users"
+        ],
+        "summary": "List admin users without secrets",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Admin users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "users": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AdminUserListItem"
+                      }
+                    }
+                  },
+                  "required": [
+                    "users"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/v1/admin/users/{adminId}": {
+      "patch": {
+        "operationId": "adminPatchUser",
+        "tags": [
+          "admin-users"
+        ],
+        "summary": "Patch admin user role, display name, or activation state",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "adminId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchAdminUserBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Patched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Admin user not found"
+          }
+        }
+      }
+    },
+    "/v1/admin/erasure-requests": {
+      "get": {
+        "operationId": "adminListErasureRequests",
+        "tags": [
+          "compliance"
+        ],
+        "summary": "List erasure requests",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Erasure requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ErasureRequestDoc"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/v1/admin/erasure-requests/{id}": {
+      "patch": {
+        "operationId": "adminPatchErasureRequest",
+        "tags": [
+          "compliance"
+        ],
+        "summary": "Execute or deny an erasure request",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminErasurePatchBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Erasure action accepted"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Erasure request not found"
+          },
+          "409": {
+            "description": "Request is not pending or cool-off has not elapsed"
+          }
+        }
+      }
+    },
+    "/v1/admin/compliance/ssc-levy": {
+      "get": {
+        "operationId": "adminListSscLevies",
+        "tags": [
+          "compliance"
+        ],
+        "summary": "List SSC levies",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING_APPROVAL",
+                "APPROVED",
+                "TRANSFERRED",
+                "FAILED"
+              ]
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SSC levies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "levies": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SscLevyDoc"
+                      }
+                    }
+                  },
+                  "required": [
+                    "levies"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/v1/admin/compliance/ssc-levy/{id}/approve": {
+      "post": {
+        "operationId": "adminApproveSscLevy",
+        "tags": [
+          "compliance"
+        ],
+        "summary": "Approve SSC levy transfer",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transfer created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SscLevyApproveResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Levy not found"
+          },
+          "409": {
+            "description": "Invalid levy status"
+          }
+        }
+      }
+    },
+    "/v1/waitlist": {
+      "post": {
+        "operationId": "joinWaitlist",
+        "tags": [
+          "waitlist"
+        ],
+        "summary": "Join the service waitlist for a specific area",
+        "description": "Adds a customer to the waitlist for a service in their location. No authentication required. Rate-limited to 5 requests/hr per phone number and 50 requests/hr per IP. requestedAt must be within ±90 s of server time.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WaitlistRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successfully joined the waitlist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error, unknown serviceId, or clock skew > 90 s",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded — check Retry-After header",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds until the rate limit resets"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/auth/login": {
       "post": {
         "operationId": "adminLogin",
@@ -2189,7 +3357,7 @@
         "summary": "Refresh access token",
         "responses": {
           "200": {
-            "description": "New hs_access cookie set"
+            "description": "Session cookies refreshed"
           }
         }
       }

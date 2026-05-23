@@ -1,0 +1,69 @@
+package com.homeservices.technician.domain.auth
+
+import android.content.Context
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.NoCredentialException
+import androidx.fragment.app.FragmentActivity
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.firebase.auth.GoogleAuthProvider
+import com.homeservices.technician.domain.auth.model.GoogleSignInResult
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.security.SecureRandom
+import java.util.Base64
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+public class GoogleSignInUseCase
+    @Inject
+    constructor(
+        private val credentialManager: CredentialManager,
+        @ApplicationContext private val context: Context,
+    ) {
+        internal var webClientId: String = com.homeservices.technician.BuildConfig.GOOGLE_WEB_CLIENT_ID
+
+        @Suppress("TooGenericExceptionCaught")
+        public suspend fun getCredential(activity: FragmentActivity): GoogleSignInResult {
+            if (webClientId.isBlank()) {
+                return GoogleSignInResult.Error(
+                    IllegalStateException(
+                        "Google Sign-In not configured: set GOOGLE_WEB_CLIENT_ID env var or add it to local.properties",
+                    ),
+                )
+            }
+            return try {
+                val nonce = generateNonce()
+                val googleIdOption =
+                    GetGoogleIdOption
+                        .Builder()
+                        .setFilterByAuthorizedAccounts(false)
+                        .setServerClientId(webClientId)
+                        .setNonce(nonce)
+                        .build()
+                val request =
+                    GetCredentialRequest
+                        .Builder()
+                        .addCredentialOption(googleIdOption)
+                        .build()
+                val response = credentialManager.getCredential(context = activity, request = request)
+                val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(response.credential.data)
+                val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
+                GoogleSignInResult.CredentialObtained(firebaseCredential)
+            } catch (e: GetCredentialCancellationException) {
+                GoogleSignInResult.Cancelled
+            } catch (e: NoCredentialException) {
+                GoogleSignInResult.Unavailable
+            } catch (e: Exception) {
+                GoogleSignInResult.Error(e)
+            }
+        }
+
+        private fun generateNonce(): String {
+            val bytes = ByteArray(16)
+            SecureRandom().nextBytes(bytes)
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
+        }
+    }

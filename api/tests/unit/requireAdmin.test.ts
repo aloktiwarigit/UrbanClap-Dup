@@ -9,6 +9,7 @@ vi.mock('../../src/services/adminSession.service.js', () => ({
 import { requireAdmin } from '../../src/middleware/requireAdmin.js';
 import { signAccessToken } from '../../src/services/jwt.service.js';
 import { touchAndGetSession } from '../../src/services/adminSession.service.js';
+import { SignJWT } from 'jose';
 import { HttpRequest } from '@azure/functions';
 import type { HttpResponseInit } from '@azure/functions';
 
@@ -66,6 +67,23 @@ describe('requireAdmin', () => {
     const token = await signAccessToken({ sub: 'u1', role: 'super-admin', sessionId: 's1' });
     const wrapped = requireAdmin(['super-admin'])(handler);
     await wrapped(makeReq(`hs_access=${token}`), fakeCtx);
+    expect(handler).toHaveBeenCalledWith(
+      expect.anything(),
+      fakeCtx,
+      expect.objectContaining({ adminId: 'u1', role: 'super-admin', sessionId: 's1' }),
+    );
+  });
+
+  it('normalizes legacy admin role in existing tokens to super-admin', async () => {
+    vi.mocked(touchAndGetSession).mockResolvedValue({ sessionId: 's1' } as any);
+    const token = await new SignJWT({ sub: 'u1', role: 'admin', sessionId: 's1', type: 'access' })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('15m')
+      .sign(new TextEncoder().encode(process.env.JWT_SECRET!));
+    const wrapped = requireAdmin(['super-admin'])(handler);
+    const res = await wrapped(makeReq(`hs_access=${token}`), fakeCtx) as HttpResponseInit;
+    expect(res.status).toBe(200);
     expect(handler).toHaveBeenCalledWith(
       expect.anything(),
       fakeCtx,

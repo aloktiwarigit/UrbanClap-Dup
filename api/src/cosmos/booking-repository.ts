@@ -2,8 +2,27 @@ import { randomUUID } from 'node:crypto';
 import { getBookingsContainer } from './client.js';
 import type { BookingDoc, CreateBookingRequest } from '../schemas/booking.js';
 import type { PendingAddOn, AddOnDecision } from '../schemas/addon-approval.js';
+import { normalizeAddressText } from '../shared/address-text.js';
 
 function now() { return new Date().toISOString(); }
+
+export interface BookingCreateMetadata {
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  serviceName?: string;
+}
+
+export interface BookingCreateCreditOptions {
+  /**
+   * E13-S01 (P1-6): When set, the wallet credit debit is DEFERRED to the Razorpay webhook.
+   * Stored on the booking doc so the webhook can apply the credit after payment.captured.
+   * Not applicable to CASH_ON_SERVICE bookings (those apply credit synchronously).
+   */
+  pendingCreditAmountInPaise?: number;
+  /** Idempotency key for the deferred credit debit (required when pendingCreditAmountInPaise > 0). */
+  pendingCreditIdempotencyKey?: string;
+}
 
 export const bookingRepo = {
   async createPending(
@@ -11,12 +30,30 @@ export const bookingRepo = {
     customerId: string,
     paymentOrderId: string,
     amount: number,
+    metadata: BookingCreateMetadata = {},
+    bookingId?: string,
+    creditOptions?: BookingCreateCreditOptions,
   ): Promise<BookingDoc> {
+    const paymentMethod = req.paymentMethod ?? 'RAZORPAY';
     const doc: BookingDoc = {
-      id: randomUUID(), customerId, ...req,
+      id: bookingId ?? randomUUID(), customerId, ...req,
+      addressText: normalizeAddressText(req.addressText),
+      ...(metadata.customerName ? { customerName: metadata.customerName } : {}),
+      ...(metadata.customerPhone ? { customerPhone: metadata.customerPhone } : {}),
+      ...(metadata.customerEmail ? { customerEmail: metadata.customerEmail } : {}),
+      ...(metadata.serviceName ? { serviceName: metadata.serviceName } : {}),
       status: 'PENDING_PAYMENT', paymentOrderId,
+      paymentMethod,
+      ...(paymentMethod === 'CASH_ON_SERVICE' ? { cashCollectionStatus: 'PENDING' as const } : {}),
       paymentId: null, paymentSignature: null,
       amount, createdAt: now(),
+      // E13-S01 (P1-6): Store pending credit info for deferred debit in webhook
+      ...(creditOptions?.pendingCreditAmountInPaise && creditOptions.pendingCreditAmountInPaise > 0
+        ? {
+            pendingCreditAmountInPaise: creditOptions.pendingCreditAmountInPaise,
+            pendingCreditIdempotencyKey: creditOptions.pendingCreditIdempotencyKey,
+          }
+        : {}),
     };
     const { resource } = await getBookingsContainer().items.create<BookingDoc>(doc);
     return resource!;
@@ -32,11 +69,25 @@ export const bookingRepo = {
     paymentId: string,
     paymentSignature: string,
   ): Promise<BookingDoc | null> {
-    const existing = await this.getById(id);
+    const { resource: existing, etag } = await getBookingsContainer().item(id, id).read<BookingDoc>();
     if (!existing) return null;
     if (existing.status === 'PAID') return existing; // webhook already processed — idempotent success
     if (existing.status !== 'PENDING_PAYMENT') return null;
     const updated: BookingDoc = { ...existing, status: 'SEARCHING', paymentId, paymentSignature };
+    const useEtag = process.env.BOOKINGS_ETAG_GUARDS === 'on';
+    if (useEtag) {
+      try {
+        const { resource } = await getBookingsContainer()
+          .item(id, id)
+          .replace<BookingDoc>(updated, { accessCondition: { type: 'IfMatch', condition: etag ?? '' } });
+        return resource ?? null;
+      } catch (e: unknown) {
+        if (typeof e === 'object' && e !== null && 'code' in e && (e as { code: number }).code === 412) {
+          return null; // lost ETag race — idempotent by design
+        }
+        throw e;
+      }
+    }
     const { resource } = await getBookingsContainer().item(id, id).replace<BookingDoc>(updated);
     return resource!;
   },
@@ -52,9 +103,23 @@ export const bookingRepo = {
   },
 
   async markPaid(id: string, paymentId: string): Promise<BookingDoc | null> {
-    const existing = await this.getById(id);
+    const { resource: existing, etag } = await getBookingsContainer().item(id, id).read<BookingDoc>();
     if (!existing || (existing.status !== 'SEARCHING' && existing.status !== 'PENDING_PAYMENT')) return null;
     const updated: BookingDoc = { ...existing, status: 'PAID', paymentId };
+    const useEtag = process.env.BOOKINGS_ETAG_GUARDS === 'on';
+    if (useEtag) {
+      try {
+        const { resource } = await getBookingsContainer()
+          .item(id, id)
+          .replace<BookingDoc>(updated, { accessCondition: { type: 'IfMatch', condition: etag ?? '' } });
+        return resource ?? null;
+      } catch (e: unknown) {
+        if (typeof e === 'object' && e !== null && 'code' in e && (e as { code: number }).code === 412) {
+          return null; // lost ETag race — idempotent by design
+        }
+        throw e;
+      }
+    }
     const { resource } = await getBookingsContainer().item(id, id).replace<BookingDoc>(updated);
     return resource!;
   },
@@ -67,6 +132,16 @@ export const bookingRepo = {
     return resources;
   },
 
+  async getBookingsAwaitingDispatch(limit = 100): Promise<BookingDoc[]> {
+    const { resources } = await getBookingsContainer().items.query<BookingDoc>({
+      query: `SELECT * FROM c
+              WHERE c.status IN ('PAID', 'UNFULFILLED')
+                AND (NOT IS_DEFINED(c.technicianId) OR IS_NULL(c.technicianId))`,
+      parameters: [],
+    }).fetchAll();
+    return resources.slice(0, limit);
+  },
+
   async getAssignedBookingsBefore(slotDateCutoff: string): Promise<BookingDoc[]> {
     const { resources } = await getBookingsContainer()
       .items.query<BookingDoc>({
@@ -77,6 +152,44 @@ export const bookingRepo = {
     return resources;
   },
 
+  async getByTechnicianId(technicianId: string): Promise<BookingDoc[]> {
+    const { resources } = await getBookingsContainer()
+      .items.query<BookingDoc>({
+        query: `SELECT * FROM c
+                WHERE c.technicianId = @technicianId
+                  AND c.status IN (
+                    'ASSIGNED', 'EN_ROUTE', 'REACHED', 'IN_PROGRESS',
+                    'AWAITING_PRICE_APPROVAL', 'COMPLETED', 'PAID', 'CLOSED'
+                  )`,
+        parameters: [{ name: '@technicianId', value: technicianId }],
+      })
+      .fetchAll();
+    // Sort in memory — ORDER BY on a cross-partition (non-PK) query requires
+    // a composite index that isn't provisioned on the bookings container.
+    // Sort in-memory after the composite index is provisioned (see
+    // scripts/provision-cosmos-indexes.ts). The index covers [/technicianId,
+    // /slotDate, /slotWindow] so ORDER BY in the query is also valid, but
+    // in-memory sort keeps this function safe even before the first index rebuild.
+    return resources.sort(
+      (a, b) =>
+        a.slotDate.localeCompare(b.slotDate) || a.slotWindow.localeCompare(b.slotWindow),
+    );
+  },
+
+  async getByCustomerId(customerId: string): Promise<BookingDoc[]> {
+    const { resources } = await getBookingsContainer()
+      .items.query<BookingDoc>({
+        query: `SELECT * FROM c
+                WHERE c.customerId = @customerId`,
+        parameters: [{ name: '@customerId', value: customerId }],
+      })
+      .fetchAll();
+    return resources.sort((a, b) => {
+      const slotCompare = b.slotDate.localeCompare(a.slotDate) || b.slotWindow.localeCompare(a.slotWindow);
+      return slotCompare || b.createdAt.localeCompare(a.createdAt);
+    });
+  },
+
   async requestAddOn(id: string, addOn: PendingAddOn): Promise<BookingDoc | null> {
     const existing = await this.getById(id);
     if (!existing || existing.status !== 'IN_PROGRESS') return null;
@@ -84,6 +197,10 @@ export const bookingRepo = {
       ...existing,
       status: 'AWAITING_PRICE_APPROVAL',
       pendingAddOns: [...(existing.pendingAddOns ?? []), addOn],
+      // Stable anchor for the ADDON_APPROVAL_REQUESTED pending-action expiry.
+      // Written atomically with the status transition so the change-feed projector
+      // can derive 24h from the actual request time (not the booking createdAt).
+      pendingAddOnsUpdatedAt: new Date().toISOString(),
     };
     const { resource } = await getBookingsContainer().item(id, id).replace<BookingDoc>(updated);
     return resource!;
@@ -145,6 +262,25 @@ export const bookingRepo = {
       throw e;
     }
   },
+
+  // E16-S02: Returns slotWindow strings for all active (non-cancelled/unfulfilled) bookings
+  // for a given service on a given date. Used by the availability handler to mark slots
+  // as hard-booked. Cross-partition scan — acceptable at pilot scale (≤5,000 bookings/mo).
+  async getBookedWindowsByServiceDate(serviceId: string, date: string): Promise<string[]> {
+    const { resources } = await getBookingsContainer()
+      .items.query<{ slotWindow: string }>({
+        query: `SELECT c.slotWindow FROM c
+                WHERE c.serviceId = @serviceId
+                  AND c.slotDate = @date
+                  AND c.status NOT IN ('CUSTOMER_CANCELLED', 'UNFULFILLED')`,
+        parameters: [
+          { name: '@serviceId', value: serviceId },
+          { name: '@date', value: date },
+        ],
+      })
+      .fetchAll();
+    return resources.map((r) => r.slotWindow);
+  },
 };
 
 export async function updateBookingFields(
@@ -156,4 +292,69 @@ export async function updateBookingFields(
   const updated: BookingDoc = { ...existing, ...fields };
   const { resource } = await getBookingsContainer().item(id, id).replace<BookingDoc>(updated);
   return resource ?? null;
+}
+
+// ── Admin roster helpers (E09-S07a) ───────────────────────────────────────────
+
+export async function getActiveBookingCountForTechnician(technicianId: string): Promise<number> {
+  const { resources } = await getBookingsContainer()
+    .items.query<number>({
+      query: `SELECT VALUE COUNT(1) FROM c
+              WHERE c.technicianId = @technicianId
+                AND c.status IN ('ASSIGNED', 'EN_ROUTE', 'REACHED', 'IN_PROGRESS', 'AWAITING_PRICE_APPROVAL')`,
+      parameters: [{ name: '@technicianId', value: technicianId }],
+    })
+    .fetchAll();
+  return resources[0] ?? 0;
+}
+
+// ── Customer roster helpers (E09-S07a A4) ─────────────────────────────────────
+
+export interface CustomerBookingSummary {
+  customerId: string;
+  bookingCount: number;
+  lastBookingDate?: string;
+  lastCity?: string;
+  recentBookings: Array<{
+    date: string; serviceId: string; technicianId: string; status: string;
+  }>;
+}
+
+export async function getCustomerSummaries(): Promise<CustomerBookingSummary[]> {
+  const { resources } = await getBookingsContainer()
+    .items.query<{
+      customerId: string; slotDate: string; serviceId: string;
+      technicianId: string; status: string; addressText: string;
+    }>(`SELECT c.customerId, c.slotDate, c.serviceId, c.technicianId,
+              c.status, c.addressText
+        FROM c`)
+    .fetchAll();
+
+  const map = new Map<string, CustomerBookingSummary>();
+  for (const r of resources) {
+    const cid = r.customerId;
+    if (!cid) continue;
+    if (!map.has(cid)) {
+      const rawCity = typeof r.addressText === 'string' ? r.addressText.split(',').pop()?.trim() : undefined;
+      const entry: CustomerBookingSummary = {
+        customerId: cid,
+        bookingCount: 0,
+        recentBookings: [],
+      };
+      if (r.slotDate) entry.lastBookingDate = r.slotDate;
+      if (rawCity) entry.lastCity = rawCity;
+      map.set(cid, entry);
+    }
+    const entry = map.get(cid)!;
+    entry.bookingCount++;
+    if (entry.recentBookings.length < 5) {
+      entry.recentBookings.push({
+        date: r.slotDate,
+        serviceId: r.serviceId,
+        technicianId: r.technicianId ?? '',
+        status: r.status,
+      });
+    }
+  }
+  return [...map.values()];
 }

@@ -2,7 +2,10 @@
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import { apiUrl } from '@/api/base';
 import type { AdminRole } from '@/lib/auth/types';
+import { getFirebaseAuth } from '@/lib/auth/firebase';
+import { unregisterAdminPushToken } from '@/lib/push-registration';
 
 export interface AuthState {
   adminId: string;
@@ -29,7 +32,18 @@ export function AdminAuthProvider({
   const [auth, setAuth] = useState<AuthState | null>(initialAuth);
 
   const logout = useCallback(async () => {
-    await fetch('/api/v1/admin/auth/logout', { method: 'POST', credentials: 'include' });
+    // Best-effort: de-register FCM push token before invalidating the session.
+    // Failures are swallowed so logout is never blocked.
+    try {
+      const currentUser = getFirebaseAuth().currentUser;
+      if (currentUser) {
+        const idToken = await currentUser.getIdToken();
+        await unregisterAdminPushToken(idToken);
+      }
+    } catch {
+      // Intentionally ignored — push de-registration is best-effort.
+    }
+    await fetch(apiUrl('/v1/admin/auth/logout'), { method: 'POST', credentials: 'include' });
     setAuth(null);
     router.push('/login');
   }, [router]);

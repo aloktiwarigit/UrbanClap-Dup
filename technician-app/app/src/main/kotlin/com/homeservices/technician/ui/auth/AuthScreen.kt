@@ -1,17 +1,35 @@
 package com.homeservices.technician.ui.auth
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -24,16 +42,34 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.homeservices.designsystem.components.HsActionButton
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTrustBadge
+import com.homeservices.designsystem.theme.HomeservicesColors
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
+import com.homeservices.technician.R
+import com.homeservices.technician.domain.auth.PhoneNumberNormalizer
 
 private const val PHONE_LAST_DIGITS = 4
+
+private val AuthHeroStart = HomeservicesColors.Brand.primaryHover
+private val AuthHeroEnd = HomeservicesColors.Brand.primary
+private const val AUTH_HERO_FRACTION = 0.38f
+private const val AUTH_FORM_FRACTION = 0.65f
+private const val SCROLL_HANDLE_ALPHA = 0.25f
 
 @Composable
 internal fun AuthScreen(
@@ -42,6 +78,16 @@ internal fun AuthScreen(
     onOtpEntered: (String) -> Unit,
     onResendRequested: () -> Unit,
     onRetry: () -> Unit,
+    onGoogleSelected: () -> Unit = {},
+    onEmailSelected: () -> Unit = {},
+    onPhoneSelected: () -> Unit = {},
+    onEmailSignIn: (String, String) -> Unit = { _, _ -> },
+    onEmailSignUp: (String, String) -> Unit = { _, _ -> },
+    onEmailModeToggle: (String) -> Unit = {},
+    onBackToMethodSelection: () -> Unit = {},
+    onEmailVerificationContinue: (String) -> Unit = {},
+    onResendVerificationEmail: (String) -> Unit = {},
+    onForgotPassword: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -51,9 +97,50 @@ internal fun AuthScreen(
         when (uiState) {
             is AuthUiState.Idle, is AuthUiState.TruecallerLoading ->
                 LoadingContent(
-                    eyebrow = "Partner sign in",
                     title = "Checking Truecaller",
                     message = "We are verifying your partner number before falling back to OTP.",
+                )
+
+            is AuthUiState.MethodSelection ->
+                MethodSelectionContent(
+                    onGoogleSelected = onGoogleSelected,
+                    onEmailSelected = onEmailSelected,
+                    onPhoneSelected = onPhoneSelected,
+                )
+
+            is AuthUiState.GoogleSigningIn ->
+                LoadingContent(
+                    title = "Signing in with Google",
+                    message = "Choose your Google account to continue.",
+                )
+
+            is AuthUiState.EmailEntry ->
+                EmailEntryContent(
+                    state = uiState,
+                    onEmailSignIn = onEmailSignIn,
+                    onEmailSignUp = onEmailSignUp,
+                    onEmailModeToggle = onEmailModeToggle,
+                    onBackToMethodSelection = onBackToMethodSelection,
+                    onForgotPassword = onForgotPassword,
+                )
+
+            is AuthUiState.EmailSubmitting ->
+                LoadingContent(
+                    title =
+                        if (uiState.mode == AuthUiState.EmailEntry.Mode.SignUp) {
+                            "Creating account"
+                        } else {
+                            "Signing in"
+                        },
+                    message = "Keep this screen open while we verify ${uiState.email}.",
+                )
+
+            is AuthUiState.EmailVerificationSent ->
+                EmailVerificationSentContent(
+                    state = uiState,
+                    onContinue = onEmailVerificationContinue,
+                    onResend = onResendVerificationEmail,
+                    onBackToMethodSelection = onBackToMethodSelection,
                 )
 
             is AuthUiState.OtpEntry -> {
@@ -73,14 +160,12 @@ internal fun AuthScreen(
 
             is AuthUiState.OtpSending ->
                 LoadingContent(
-                    eyebrow = "OTP verification",
                     title = "Sending OTP",
                     message = "Keep this screen open while we send your secure code.",
                 )
 
             is AuthUiState.OtpVerifying ->
                 LoadingContent(
-                    eyebrow = "OTP verification",
                     title = "Verifying code",
                     message = "This usually takes a few seconds.",
                 )
@@ -100,39 +185,343 @@ private fun AuthFrame(
     content: @Composable () -> Unit,
 ) {
     val spacing = LocalHomeservicesSpacing.current
-    Column(
+    Box(
         modifier =
             modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(spacing.space6),
-        verticalArrangement = Arrangement.Center,
+                .background(AuthHeroEnd)
+                .statusBarsPadding(),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(spacing.space3)) {
-            HsTrustBadge(text = eyebrow)
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
+        // Hero zone — fixed top portion with brand identity
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(AUTH_HERO_FRACTION)
+                    .drawBehind {
+                        drawRect(
+                            brush = Brush.verticalGradient(listOf(AuthHeroStart, AuthHeroEnd)),
+                            size = size,
+                        )
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.06f),
+                            radius = 140.dp.toPx(),
+                            center = Offset(size.width - 80.dp.toPx(), -60.dp.toPx()),
+                        )
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.09f),
+                            radius = 70.dp.toPx(),
+                            center = Offset(40.dp.toPx(), size.height - 20.dp.toPx()),
+                        )
+                    },
+            contentAlignment = Alignment.BottomStart,
+        ) {
+            Column(
+                modifier = Modifier.padding(start = 28.dp, end = 28.dp, bottom = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = "HomeHeroo Partner",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White,
+                )
+                Text(
+                    text = "रोज़ काम, रोज़ कमाई",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White.copy(alpha = 0.82f),
+                )
+                Text(
+                    text = "सत्यापित पार्टनर प्रोग्राम",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.65f),
+                )
+            }
+        }
+
+        // Form card — scrollable, overlaps hero by ~24 dp
+        Surface(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .fillMaxHeight(AUTH_FORM_FRACTION),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            color = Color.White,
+            shadowElevation = 8.dp,
+        ) {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .imePadding()
+                        .padding(horizontal = 24.dp)
+                        .padding(top = 28.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(spacing.space6),
+            ) {
+                // Scroll-handle pill
+                Box(
+                    modifier =
+                        Modifier
+                            .width(40.dp)
+                            .height(2.dp)
+                            .background(
+                                AuthHeroEnd.copy(alpha = SCROLL_HANDLE_ALPHA),
+                                RoundedCornerShape(1.dp),
+                            ).align(Alignment.CenterHorizontally),
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(spacing.space3)) {
+                    HsTrustBadge(text = eyebrow)
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = body,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                HsSectionCard { content() }
+                SecurityNote(
+                    text = "Secure partner sign-in. Job offers, payouts, and documents stay protected.",
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MethodSelectionContent(
+    onGoogleSelected: () -> Unit,
+    onEmailSelected: () -> Unit,
+    onPhoneSelected: () -> Unit,
+) {
+    AuthFrame(
+        eyebrow = "Homeservices Partner",
+        title = "Sign in to manage jobs",
+        body = "Use Google, email, or phone to receive job offers, manage payouts, and track ratings.",
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            HsActionButton(
+                text = "Continue with Google",
+                onClick = onGoogleSelected,
+                modifier = Modifier.fillMaxWidth(),
+                leadingContent = { GoogleMark() },
             )
-            Text(
-                text = body,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            HsActionButton(
+                text = "Continue with email",
+                onClick = onEmailSelected,
+                modifier = Modifier.fillMaxWidth(),
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.Email,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                },
+            )
+            HsActionButton(
+                text = "Continue with phone",
+                onClick = onPhoneSelected,
+                modifier = Modifier.fillMaxWidth(),
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Default.Phone,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                },
             )
         }
-        Spacer(modifier = Modifier.height(spacing.space6))
-        HsSectionCard {
-            content()
-        }
-        Spacer(modifier = Modifier.height(spacing.space4))
+        Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "Encrypted partner sign-in. Job offers, payouts, and document status stay protected.",
-            style = MaterialTheme.typography.labelMedium,
+            text = "Email sign-up requires verification before partner access.",
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
         )
+        Text(
+            text = "By continuing, you agree to the Partner Terms and Privacy Policy.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
+private fun GoogleMark() {
+    Surface(
+        shape = CircleShape,
+        color = Color.White,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier.size(22.dp),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = "G",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF1A73E8),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SecurityNote(text: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Default.Lock,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(16.dp),
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.weight(1f).padding(start = 8.dp),
+        )
+    }
+}
+
+@Composable
+private fun EmailEntryContent(
+    state: AuthUiState.EmailEntry,
+    onEmailSignIn: (String, String) -> Unit,
+    onEmailSignUp: (String, String) -> Unit,
+    onEmailModeToggle: (String) -> Unit,
+    onBackToMethodSelection: () -> Unit,
+    onForgotPassword: (String) -> Unit,
+) {
+    var email by remember(state.prefillEmail) { mutableStateOf(state.prefillEmail) }
+    var password by remember(state.mode) { mutableStateOf("") }
+    var passwordVisible by remember(state.mode) { mutableStateOf(false) }
+    val isSignUp = state.mode == AuthUiState.EmailEntry.Mode.SignUp
+    val isValidEmail = email.trim().matches(Regex("""^[^@\s]+@[^@\s]+\.[^@\s]+$"""))
+    val isReady = isValidEmail && password.length >= 6
+
+    AuthFrame(
+        eyebrow = if (isSignUp) "Create account" else "Email sign in",
+        title = if (isSignUp) "Create your email login" else "Sign in with email",
+        body =
+            if (isSignUp) {
+                "We will send a verification email before enabling partner access."
+            } else {
+                "Use your verified email and password to continue."
+            },
+    ) {
+        TextButton(onClick = onBackToMethodSelection, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.auth_back_to_sign_in))
+        }
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text(stringResource(R.string.auth_email_label)) },
+            placeholder = { Text(stringResource(R.string.auth_email_placeholder)) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text(stringResource(R.string.auth_password_label)) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            singleLine = true,
+            trailingIcon = {
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(
+                        imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+        HsPrimaryButton(
+            text = if (isSignUp) "Create account" else "Sign in",
+            onClick = {
+                if (isSignUp) {
+                    onEmailSignUp(email.trim(), password)
+                } else {
+                    onEmailSignIn(email.trim(), password)
+                }
+            },
+            enabled = isReady,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        TextButton(
+            onClick = { onEmailModeToggle(email.trim()) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(if (isSignUp) "Already have an account? Sign in" else "New here? Create account")
+        }
+        if (!isSignUp) {
+            TextButton(
+                onClick = { onForgotPassword(email.trim()) },
+                enabled = isValidEmail,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.auth_forgot_password))
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmailVerificationSentContent(
+    state: AuthUiState.EmailVerificationSent,
+    onContinue: (String) -> Unit,
+    onResend: (String) -> Unit,
+    onBackToMethodSelection: () -> Unit,
+) {
+    AuthFrame(
+        eyebrow = "Email verification",
+        title = "Check your inbox",
+        body = "We sent a verification link to ${state.email}. Open it, then return here to continue.",
+    ) {
+        if (state.message != null) {
+            Text(
+                text = state.message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+        HsPrimaryButton(
+            text = "I verified, continue",
+            onClick = { onContinue(state.email) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        HsSecondaryButton(
+            text = "Resend email",
+            onClick = { onResend(state.email) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        TextButton(onClick = onBackToMethodSelection, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.auth_use_another_method))
+        }
     }
 }
 
@@ -142,18 +531,18 @@ private fun PhoneEntryContent(
     onPhoneSubmitted: (String) -> Unit,
 ) {
     var phone by remember { mutableStateOf(initialPhone) }
-    val isValidPhone = phone.trim().matches(Regex("""^\+[1-9]\d{9,14}$"""))
+    val normalizedPhone = PhoneNumberNormalizer.normalize(phone)
 
     AuthFrame(
-        eyebrow = "Technician app",
+        eyebrow = "Homeservices Partner",
         title = "Start earning with verified jobs",
         body = "Sign in to receive service requests, complete KYC, track active jobs, and manage payouts.",
     ) {
         OutlinedTextField(
             value = phone,
             onValueChange = { phone = it },
-            label = { Text("Mobile number") },
-            placeholder = { Text("+91 98765 43210") },
+            label = { Text(stringResource(R.string.auth_mobile_label)) },
+            placeholder = { Text(stringResource(R.string.auth_mobile_placeholder)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -167,8 +556,8 @@ private fun PhoneEntryContent(
         Spacer(modifier = Modifier.height(20.dp))
         HsPrimaryButton(
             text = "Get OTP",
-            onClick = { onPhoneSubmitted(phone.trim()) },
-            enabled = isValidPhone,
+            onClick = { normalizedPhone?.let(onPhoneSubmitted) },
+            enabled = normalizedPhone != null,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(12.dp))
@@ -199,7 +588,7 @@ private fun OtpCodeContent(
         OutlinedTextField(
             value = otp,
             onValueChange = { if (it.length <= 6) otp = it.filter(Char::isDigit) },
-            label = { Text("6-digit code") },
+            label = { Text(stringResource(R.string.auth_otp_label)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -212,26 +601,43 @@ private fun OtpCodeContent(
             modifier = Modifier.fillMaxWidth(),
         )
         TextButton(onClick = onResendRequested, modifier = Modifier.fillMaxWidth()) {
-            Text("Resend code")
+            Text(stringResource(R.string.auth_resend_code))
         }
     }
 }
 
 @Composable
 private fun LoadingContent(
-    eyebrow: String,
     title: String,
     message: String,
 ) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        AuthFrame(eyebrow = eyebrow, title = title, body = message) {
+        Column(
+            modifier = Modifier.padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(56.dp),
+                color = MaterialTheme.colorScheme.primary,
+                strokeWidth = 4.dp,
+            )
             Column(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(text = "Please wait", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
             }
         }
     }

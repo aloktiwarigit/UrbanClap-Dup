@@ -71,8 +71,9 @@ describe('POST /v1/admin/auth/refresh', () => {
       fakeCtx,
     );
     expect(res.status).toBe(200);
-    const cookies = (res as any).cookies as Array<{ name: string }>;
+    const cookies = (res as any).cookies as Array<{ name: string; path: string }>;
     expect(cookies?.some((c) => c.name === 'hs_access')).toBe(true);
+    expect(cookies?.some((c) => c.name === 'hs_refresh' && c.path === '/')).toBe(true);
   });
 });
 
@@ -83,9 +84,10 @@ describe('POST /v1/admin/auth/logout', () => {
     const req = new HttpRequest({ url: 'http://localhost/', method: 'POST' });
     const res = await adminLogoutHandler(req, fakeCtx);
     expect(res.status).toBe(200);
-    const cookies = (res as any).cookies as Array<{ name: string; maxAge: number }>;
+    const cookies = (res as any).cookies as Array<{ name: string; maxAge: number; path: string }>;
     expect(cookies?.some((c) => c.name === 'hs_access' && c.maxAge === 0)).toBe(true);
-    expect(cookies?.some((c) => c.name === 'hs_refresh' && c.maxAge === 0)).toBe(true);
+    expect(cookies?.some((c) => c.name === 'hs_refresh' && c.path === '/' && c.maxAge === 0)).toBe(true);
+    expect(cookies?.some((c) => c.name === 'hs_refresh' && c.path === '/api/v1/admin/auth/refresh' && c.maxAge === 0)).toBe(true);
   });
 
   it('calls deleteSession and writes audit log when valid token present', async () => {
