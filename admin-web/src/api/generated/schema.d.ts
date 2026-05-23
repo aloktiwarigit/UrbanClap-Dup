@@ -641,6 +641,7 @@ export interface components {
             /** Format: uri */
             heroImageUrl: string;
             sortOrder: number;
+            safetyTag?: boolean;
             isActive: boolean;
             updatedBy: string;
             /** Format: date-time */
@@ -1199,6 +1200,7 @@ export interface operations {
                     /** Format: uri */
                     heroImageUrl: string;
                     sortOrder: number;
+                    safetyTag?: boolean;
                 };
             };
         };
@@ -1288,6 +1290,7 @@ export interface operations {
                     /** Format: uri */
                     heroImageUrl: string;
                     sortOrder: number;
+                    safetyTag?: boolean;
                 };
             };
         };
