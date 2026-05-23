@@ -4,6 +4,7 @@ import android.content.SharedPreferences
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessaging
 import com.homeservices.customer.data.auth.di.AuthPrefs
+import com.homeservices.customer.data.device.DeviceTokenRegistrar
 import com.homeservices.customer.data.network.auth.IdTokenCache
 import com.homeservices.customer.domain.auth.model.AuthProvider
 import com.homeservices.customer.domain.auth.model.AuthState
@@ -27,6 +28,7 @@ public class SessionManager
         private val firebaseAuth: FirebaseAuth,
         private val firebaseMessaging: FirebaseMessaging,
         private val idTokenCache: IdTokenCache,
+        private val deviceTokenRegistrar: DeviceTokenRegistrar,
     ) {
         private companion object {
             const val KEY_UID = "uid"
@@ -118,6 +120,18 @@ public class SessionManager
                     displayName = displayName,
                     authProvider = authProvider,
                 )
+            // Best-effort device token registration — ensures token is enrolled even when onNewToken
+            // is not invoked (e.g. sign-in with an already-issued FCM token).
+            runCatching { deviceTokenRegistrar.register() }
+                .onFailure { e ->
+                    Sentry.addBreadcrumb(
+                        io.sentry.Breadcrumb().apply {
+                            category = "auth.signin"
+                            message = "deviceTokenRegistrar.register failed: ${e.message}"
+                            level = SentryLevel.WARNING
+                        },
+                    )
+                }
         }
 
         public suspend fun updateDisplayName(displayName: String?) {
@@ -144,16 +158,20 @@ public class SessionManager
          * 1. Capture UID (needed for FCM topic name — must happen before prefs are cleared)
          * 2. Clear persisted session prefs (commit-local, synchronous via [apply])
          * 3. Transition [authState] to [AuthState.Unauthenticated] (UI immediately reflects sign-out)
+         * 3.5. Best-effort [DeviceTokenRegistrar.unregister] — runs HERE while the cached bearer
+         *    token is still valid and before [FirebaseMessaging.deleteToken] rotates the FCM token.
+         *    Removes this device's token from the server's active-token list so push notifications
+         *    stop being sent to the signed-out device.
          * 4. [IdTokenCache.signalSignOut] — clears cached token, pauses the refresh loop,
          *    and increments signOutGeneration; capture the generation for FCM guards below.
          *    Does NOT cancel the singleton scope so the next sign-in can resume.
          * 5. Best-effort [FirebaseAuth.signOut] (local-only SDK call; safe after prefs are cleared)
-         * 6. Best-effort FCM cleanup — [FirebaseMessaging.unsubscribeFromTopic] and
-         *    [FirebaseMessaging.deleteToken] (may hang or fail offline; never block sign-out).
-         *    Each FCM step is guarded by the sign-out generation: if the user signs back in
-         *    while an FCM await is in-flight, the generation will have changed (via
-         *    [signalSignIn] → incrementAndGet) and the remaining FCM operations are skipped
-         *    to avoid deleting the new session's FCM token.
+         * 6. Best-effort FCM cleanup — [FirebaseMessaging.deleteToken] (may hang or fail
+         *    offline; never block sign-out).
+         *    The deleteToken step is guarded by the sign-out generation: if the user signs back in
+         *    while the FCM await is in-flight, the generation will have changed (via
+         *    [signalSignIn] → incrementAndGet) and the operation is skipped to avoid deleting
+         *    the new session's FCM token.
          *
          * Each step after step 1 is wrapped in [runCatching] so failures are logged as
          * Sentry breadcrumbs but never thrown — sign-out always completes.
@@ -173,6 +191,20 @@ public class SessionManager
 
             // Step 3 — Transition to Unauthenticated immediately (UI reflects sign-out now)
             _authState.value = AuthState.Unauthenticated
+
+            // Step 3.5 — Best-effort device-token server unregister.
+            //             Runs BEFORE signalSignOut so the cached bearer token is still valid
+            //             and BEFORE deleteToken so the FCM token hasn't been rotated.
+            runCatching { deviceTokenRegistrar.unregister() }
+                .onFailure { e ->
+                    Sentry.addBreadcrumb(
+                        io.sentry.Breadcrumb().apply {
+                            category = "auth.signout"
+                            message = "deviceTokenRegistrar.unregister failed: ${e.message}"
+                            level = SentryLevel.WARNING
+                        },
+                    )
+                }
 
             // Step 4 — Signal IdTokenCache to clear cached token and pause refresh loop.
             //           signalSignOut() increments signOutGeneration; capture it here so the
@@ -202,21 +234,6 @@ public class SessionManager
                         },
                     )
                 }
-
-            // Step 6a — Best-effort FCM topic unsubscribe (may hang offline; does not affect local auth).
-            //            Guard: skip if generation changed (new sign-in raced the FCM await).
-            runCatching {
-                if (idTokenCache.currentSignOutGeneration() != signOutGen) return@runCatching
-                firebaseMessaging.unsubscribeFromTopic("customer_$uid").await()
-            }.onFailure { e ->
-                Sentry.addBreadcrumb(
-                    io.sentry.Breadcrumb().apply {
-                        category = "auth.signout"
-                        message = "FCM unsubscribeFromTopic failed: ${e.message}"
-                        level = SentryLevel.WARNING
-                    },
-                )
-            }
 
             // Step 6b — Best-effort FCM token deletion (rotates registration token).
             //            Guard: skip if generation changed (new sign-in raced the FCM await).

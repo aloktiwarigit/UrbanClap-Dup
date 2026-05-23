@@ -42,6 +42,10 @@ public class ActiveJobScreenHiPaparazziTest {
                     onPhotoCancelled = {},
                     onPhotoConfirmed = {},
                     onPhotoRetake = {},
+                    onPhotoRetryRequested = {},
+                    onCompleteConfirmRequest = {},
+                    onCompleteConfirm = {},
+                    onCompleteCancel = {},
                 )
             }
         }
@@ -57,6 +61,10 @@ public class ActiveJobScreenHiPaparazziTest {
                     onPhotoCancelled = {},
                     onPhotoConfirmed = {},
                     onPhotoRetake = {},
+                    onPhotoRetryRequested = {},
+                    onCompleteConfirmRequest = {},
+                    onCompleteConfirm = {},
+                    onCompleteCancel = {},
                 )
             }
         }

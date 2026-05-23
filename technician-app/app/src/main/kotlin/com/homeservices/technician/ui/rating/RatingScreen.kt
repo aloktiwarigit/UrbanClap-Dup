@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -55,7 +56,11 @@ public fun RatingScreen(
             when (val current = state) {
                 is RatingUiState.Loading, is RatingUiState.Submitting ->
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(56.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            strokeWidth = 4.dp,
+                        )
                     }
                 is RatingUiState.AwaitingPartner -> {
                     AwaitingPartnerBody(

@@ -11,7 +11,7 @@ import { bookingRepo, type BookingCreateCreditOptions } from '../cosmos/booking-
 import { createRazorpayOrder, verifyPaymentSignature } from '../services/razorpay.service.js';
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
-import { sendPriceApprovalPush } from '../services/fcm.service.js';
+import { sendPriceApprovalPush, sendTechnicianBookingStatusUpdatePush } from '../services/fcm.service.js';
 import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
 import { isSoftLaunchEnabled, isMarketingPaused, isServiceAreaGatingEnabled, isWalletCreditEnabled } from '../services/featureFlags.service.js';
 import { customerCreditLedgerRepo } from '../cosmos/customer-credit-ledger-repository.js';
@@ -20,6 +20,74 @@ import { posthog } from '../observability/posthog.js';
 import { normalizeAddressText } from '../shared/address-text.js';
 import { isLatLngInServiceArea } from '../services/service-area.service.js';
 import { AYODHYA_SERVICE_AREA } from '../data/service-area-ayodhya.js';
+import { slotHoldsRepo } from '../cosmos/slot-holds-repository.js';
+import { generateSlots, filterElapsedSlots, currentIstMinuteOfDay, todayIst } from '../shared/slot-utils.js';
+import { getStorageDownloadUrlWithTtl, checkStorageFileExists } from '../firebase/admin.js';
+
+const PHOTO_STAGE_ORDER = ['EN_ROUTE', 'REACHED', 'IN_PROGRESS', 'COMPLETED'] as const;
+const PHOTO_SIGNED_URL_TTL_SECONDS = 300;
+const REPORT_SIGNED_URL_TTL_SECONDS = 300;
+
+async function projectPhotos(
+  rawPhotos: Record<string, string[]> | undefined,
+): Promise<Record<string, { urls: string[] }> | undefined> {
+  if (!rawPhotos || Object.keys(rawPhotos).length === 0) return undefined;
+
+  const knownStages = new Set<string>(PHOTO_STAGE_ORDER);
+  const orderedStages = [
+    ...PHOTO_STAGE_ORDER.filter((s) => rawPhotos[s]?.length),
+    ...Object.keys(rawPhotos).filter((s) => !knownStages.has(s)),
+  ];
+
+  const stageSets = await Promise.all(
+    orderedStages.map(async (stage) => {
+      const paths = rawPhotos[stage] ?? [];
+      const urls = (
+        await Promise.all(
+          paths.map(async (path) => {
+            try {
+              return await getStorageDownloadUrlWithTtl(path, PHOTO_SIGNED_URL_TTL_SECONDS);
+            } catch (err) {
+              Sentry.captureException(err);
+              console.warn('[getBooking] photo sign failed', {
+                stage,
+                path,
+                signedUrl: '[redacted-signed-url]',
+              });
+              return null;
+            }
+          }),
+        )
+      ).filter((u): u is string => u !== null);
+      return urls.length > 0 ? ([stage, { urls }] as const) : null;
+    }),
+  );
+
+  const result = Object.fromEntries(
+    stageSets.filter((s): s is NonNullable<typeof s> => s !== null),
+  );
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+async function projectReportSignedUrl(
+  bookingId: string,
+  status: string,
+): Promise<string | null> {
+  if (status !== 'COMPLETED') return null;
+  const reportPath = `reports/${bookingId}/service-report.pdf`;
+  try {
+    const exists = await checkStorageFileExists(reportPath);
+    if (!exists) return null;
+    return await getStorageDownloadUrlWithTtl(reportPath, REPORT_SIGNED_URL_TTL_SECONDS);
+  } catch (err) {
+    Sentry.captureException(err);
+    console.warn('[getBooking] report sign failed', {
+      bookingId,
+      signedUrl: '[redacted-signed-url]',
+    });
+    return null;
+  }
+}
 
 function makeRazorpayReceipt(customerId: string): string {
   return `bk_${Date.now().toString(36)}_${customerId.slice(0, 20)}`;
@@ -148,6 +216,48 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
   const service = await catalogueRepo.getServiceByIdCrossPartition(parsed.data.serviceId);
   if (!service || !service.isActive) return { status: 404, jsonBody: { code: 'SERVICE_NOT_FOUND' } };
 
+  // E16-S02: Validate slotWindow against server-generated windows for this service + date.
+  // Rejects fabricated windows and past windows (elapsed slots for today's date).
+  let validWindows = generateSlots(service, parsed.data.slotDate);
+  if (parsed.data.slotDate === todayIst()) {
+    validWindows = filterElapsedSlots(validWindows, currentIstMinuteOfDay());
+  }
+  if (!validWindows.includes(parsed.data.slotWindow)) {
+    return { status: 422, jsonBody: { code: 'INVALID_SLOT_WINDOW', message: 'The requested time slot does not match this service\'s schedule.' } };
+  }
+
+  // E16-S02: Guard against pre-deployment or post-expiry booking gaps.
+  // The slot_holds container only prevents concurrent holds — it does not know about bookings
+  // that pre-date the container deployment or whose hold doc expired. Check existing bookings
+  // directly before attempting the hold so we never create a duplicate booking.
+  const existingBookedWindows = await bookingRepo.getBookedWindowsByServiceDate(
+    parsed.data.serviceId,
+    parsed.data.slotDate,
+  );
+  if (existingBookedWindows.includes(parsed.data.slotWindow)) {
+    return {
+      status: 409,
+      jsonBody: { code: 'SLOT_UNAVAILABLE', message: 'This time slot is no longer available.' },
+    };
+  }
+
+  // E16-S02: Slot-conflict locking — attempt to hold the slot before writing the booking.
+  // createHold returns 'CONFLICT' if another hold or booking already occupies this window.
+  const holdResult = await slotHoldsRepo.createHold(
+    parsed.data.serviceId,
+    parsed.data.slotDate,
+    parsed.data.slotWindow,
+    customer.customerId,
+  );
+  if (holdResult === 'CONFLICT') {
+    return {
+      status: 409,
+      jsonBody: { code: 'SLOT_UNAVAILABLE', message: 'This time slot is no longer available.' },
+    };
+  }
+  const holdId = holdResult.id;
+  const holdPk = holdResult.servicePartitionKey;
+
   if (parsed.data.paymentMethod === 'CASH_ON_SERVICE') {
     const cashOrderId = `cash_${randomUUID()}`;
     const booking = await bookingRepo.createPending(
@@ -159,6 +269,12 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     );
     const paid = await bookingRepo.markPaid(booking.id, 'cash_on_service_pending');
     if (!paid) return { status: 500, jsonBody: { code: 'BOOKING_CONFIRMATION_FAILED' } };
+
+    // E16-S02: Commit hold — converts 30 s soft hold to permanent slot record.
+    slotHoldsRepo.commitHold(holdId, holdPk, booking.id).catch((err: unknown) => {
+      Sentry.captureException(err);
+      console.warn('[createBooking] commitHold failed (non-fatal)', { holdId, bookingId: booking.id, err });
+    });
 
     // E13-S01: Apply wallet credit for cash bookings
     let appliedCreditAmount = 0;
@@ -215,6 +331,13 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     );
     const paid = await bookingRepo.markPaid(booking.id, 'manual_payment_not_configured');
     if (!paid) return { status: 500, jsonBody: { code: 'BOOKING_CONFIRMATION_FAILED' } };
+
+    // E16-S02: Commit hold (non-fatal)
+    slotHoldsRepo.commitHold(holdId, holdPk, booking.id).catch((err: unknown) => {
+      Sentry.captureException(err);
+      console.warn('[createBooking] commitHold failed (non-fatal)', { holdId, bookingId: booking.id, err });
+    });
+
     dispatcherService.triggerDispatch(booking.id).catch((err: unknown) => {
       Sentry.captureException(err);
       console.error('[createBooking] manual-payment dispatch failed', { bookingId: booking.id, err });
@@ -318,6 +441,12 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     // Mark PAID immediately (no Razorpay payment involved)
     const paid = await bookingRepo.markPaid(booking.id, 'credit_full_payment');
     if (!paid) return { status: 500, jsonBody: { code: 'BOOKING_CONFIRMATION_FAILED' } };
+
+    // E16-S02: Commit hold — converts 30 s soft hold to permanent slot record.
+    slotHoldsRepo.commitHold(holdId, holdPk, booking.id).catch((err: unknown) => {
+      Sentry.captureException(err);
+      console.warn('[createBooking] commitHold failed (non-fatal)', { holdId, bookingId: booking.id, err });
+    });
 
     try {
       posthog.capture({
@@ -445,6 +574,13 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     preGeneratedBookingId,
     razorpayCreditOptions,
   );
+
+  // E16-S02: Commit hold — converts 30 s soft hold to permanent slot record.
+  slotHoldsRepo.commitHold(holdId, holdPk, booking.id).catch((err: unknown) => {
+    Sentry.captureException(err);
+    console.warn('[createBooking] commitHold failed (non-fatal)', { holdId, bookingId: booking.id, err });
+  });
+
   try {
     posthog.capture({
       distinctId: customer.customerId,
@@ -511,13 +647,23 @@ const getBookingInner: CustomerHttpHandler = async (req, _ctx, customer) => {
   const booking = await bookingRepo.getById(id);
   if (!booking) return { status: 404, jsonBody: { code: 'BOOKING_NOT_FOUND' } };
   if (booking.customerId !== customer.customerId) return { status: 403, jsonBody: { code: 'FORBIDDEN' } };
+
+  const [photos, reportSignedUrl] = await Promise.all([
+    projectPhotos(booking.photos),
+    projectReportSignedUrl(id, booking.status),
+  ]);
+
   return {
     status: 200,
     jsonBody: {
-      bookingId: booking.id, status: booking.status, amount: booking.amount,
+      bookingId: booking.id,
+      status: booking.status,
+      amount: booking.amount,
       finalAmount: booking.finalAmount ?? null,
       pendingAddOns: booking.pendingAddOns ?? [],
       approvedAddOns: booking.approvedAddOns ?? [],
+      ...(photos !== undefined ? { photos } : {}),
+      reportSignedUrl,
     },
   };
 };
@@ -591,6 +737,23 @@ const approveFinalPriceInner: CustomerHttpHandler = async (req, _ctx, customer) 
   if (!parsed.success) return { status: 422, jsonBody: { code: 'VALIDATION_ERROR', issues: parsed.error.issues } };
   const updated = await bookingRepo.applyAddOnDecisions(id, customer.customerId, parsed.data.decisions);
   if (!updated) return { status: 409, jsonBody: { code: 'BOOKING_NOT_AWAITING_APPROVAL' } };
+
+  if (updated.technicianId) {
+    const anyApproved = parsed.data.decisions.some((d) => d.approved);
+    try {
+      await sendTechnicianBookingStatusUpdatePush({
+        technicianId: updated.technicianId,
+        bookingId: id,
+        status: anyApproved ? 'PRICE_APPROVED' : 'PRICE_DECLINED',
+        ...(anyApproved && updated.finalAmount !== undefined
+          ? { priceApprovedPaise: updated.finalAmount }
+          : {}),
+      });
+    } catch (err) {
+      console.error('[approveFinalPrice] FCM technician push failed', { bookingId: id, err });
+    }
+  }
+
   return { status: 200, jsonBody: { bookingId: updated.id, status: updated.status, finalAmount: updated.finalAmount } };
 };
 export const approveFinalPriceHandler: HttpHandler = requireCustomer(approveFinalPriceInner);

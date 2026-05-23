@@ -3,13 +3,18 @@ package com.homeservices.corenav
 /**
  * Action types that can appear in the `pending_actions` collection.
  *
- * Names match the existing FCM wire types defined in:
- *   - `api/src/services/fcm.service.ts`
- *   - `customer-app/.../firebase/CustomerFirebaseMessagingService.kt`
- *   - `technician-app/.../data/fcm/HomeservicesFcmService.kt`
+ * Two sub-classes of types live in this enum:
  *
- * DO NOT add new names here without first adding them to the FCM service in the API.
- * Per E11 spec §9.2: "Do not invent new type names."
+ * 1. **Server-originated (FCM-driven)** — names mirror the FCM wire types defined in:
+ *      - `api/src/services/fcm.service.ts`
+ *      - `customer-app/.../firebase/CustomerFirebaseMessagingService.kt`
+ *      - `technician-app/.../data/fcm/HomeservicesFcmService.kt`
+ *    Per E11 spec §9.2: "Do not invent new type names." for this sub-class.
+ *
+ * 2. **Local-only retry-queue** — durable hooks the client-side persists when an
+ *    offline-tolerant action is interrupted (e.g. photo upload, state transition).
+ *    These never appear in an FCM payload; they are written by the app itself
+ *    and cleared once the queued action succeeds. Introduced in E11-S05a.
  */
 public enum class PendingActionType {
     /** Customer must approve an add-on request. Maps to existing FCM type. */
@@ -33,6 +38,21 @@ public enum class PendingActionType {
     /** Technician must resume incomplete KYC. New type introduced in E11. */
     KYC_RESUME,
 
+    /**
+     * Local-only (E11-S05c): a KYC document submission (PAN photo) was queued while
+     * offline. Surfaced as a status chip on the onboarding screen so the technician
+     * knows the upload will be sent once connectivity returns. Cleared when the queued
+     * submit succeeds.
+     */
+    KYC_SUBMIT_PENDING,
+
+    /**
+     * Local-only (E11-S05c): a KYC PAN photo upload failed transiently. Surfaced as a
+     * retry banner above the KYC form; the technician can tap "Retry" to replay the
+     * upload. Tombstoned once the upload succeeds.
+     */
+    PHOTO_UPLOAD_RETRY,
+
     /** A complaint has been updated. New type introduced in E11. Applies to both roles. */
     COMPLAINT_UPDATE,
 
@@ -41,6 +61,29 @@ public enum class PendingActionType {
 
     /** Future: SOS audio follow-up. Reserved per E11 spec. */
     SAFETY_SOS_FOLLOWUP,
+
+    /**
+     * Local-only (E11-S05a): a job-evidence photo upload failed and is queued for retry.
+     * Surfaced as a banner on the technician-app active-job screen.
+     * Cleared when the upload succeeds.
+     */
+    PHOTO_UPLOAD_PENDING,
+
+    /**
+     * Local-only (E11-S05a): a job state transition (EN_ROUTE/REACHED/IN_PROGRESS/COMPLETED)
+     * was attempted but failed to reach the server. Existing offline-queue mechanism in
+     * [ActiveJobRepository] persists the transition itself; this row exists only so the
+     * router knows a job has outstanding work and can avoid duplicate prompts.
+     */
+    STATE_TRANSITION_PENDING,
+
+    /**
+     * Local-only (E11-S05a): reserved for future durability of the completion-confirm
+     * dialog. Currently the awaiting-confirm state is held in [ActiveJobUiState] only;
+     * this enum value is reserved so existing on-device DBs need not migrate when the
+     * persistence step lands.
+     */
+    COMPLETION_CONFIRMATION_PENDING,
 }
 
 /** Lifecycle status of a pending action row, both local and server-side. */

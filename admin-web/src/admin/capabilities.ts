@@ -163,7 +163,7 @@ export function canAccessAdminPath(
   pathname: string,
 ): boolean {
   const capability = capabilityForPath(pathname);
-  if (capability === undefined) return true;
+  if (capability === undefined) return false;
   if (capability === null) return true;
   return hasCapability(role, capability);
 }

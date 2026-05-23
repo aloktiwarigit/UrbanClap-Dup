@@ -406,6 +406,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/waitlist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Join the service waitlist for a specific area
+         * @description Adds a customer to the waitlist for a service in their location. No authentication required. Rate-limited to 5 requests/hr per phone number and 50 requests/hr per IP. requestedAt must be within ±90 s of server time.
+         */
+        post: operations["joinWaitlist"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/auth/login": {
         parameters: {
             query?: never;
@@ -603,6 +623,8 @@ export interface components {
                 required: boolean;
             }[];
             isActive: boolean;
+            workStart?: string;
+            workEnd?: string;
         };
         CategoryWithServices: {
             id: string;
@@ -661,6 +683,8 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            workStart?: string;
+            workEnd?: string;
         };
         InternalNote: {
             adminId: string;
@@ -818,6 +842,7 @@ export interface components {
                 technicianHardDeleted: boolean;
                 kycHardDeleted: boolean;
                 fcmTokensCleared: boolean;
+                deviceTokensCleared: boolean;
             };
         };
         AdminErasurePatchBody: {
@@ -848,6 +873,29 @@ export interface components {
             transferId: string;
             /** @enum {string} */
             status: "TRANSFERRED";
+        };
+        WaitlistRequest: {
+            /** @example +916000000001 */
+            phone: string;
+            /** @example 26.7 */
+            lat: number;
+            /** @example 82.1 */
+            lng: number;
+            /** @example ac-deep-clean */
+            serviceId: string;
+            /**
+             * Format: date-time
+             * @example 2026-05-17T10:00:00.000Z
+             */
+            requestedAt: string;
+        };
+        WaitlistSuccess: {
+            /** @enum {boolean} */
+            ok: true;
+        };
+        WaitlistError: {
+            /** @enum {string} */
+            code: "VALIDATION_ERROR" | "UNKNOWN_SERVICE" | "CLOCK_SKEW" | "RATE_LIMITED" | "INVALID_JSON" | "INTERNAL_ERROR";
         };
         AdminLoginRequest: {
             idToken: string;
@@ -1353,6 +1401,8 @@ export interface operations {
                         label: string;
                         required: boolean;
                     }[];
+                    workStart?: string;
+                    workEnd?: string;
                 };
             };
         };
@@ -1462,6 +1512,8 @@ export interface operations {
                         label: string;
                         required: boolean;
                     }[];
+                    workStart?: string;
+                    workEnd?: string;
                 };
             };
         };
@@ -2018,6 +2070,50 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    joinWaitlist: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["WaitlistRequest"];
+            };
+        };
+        responses: {
+            /** @description Successfully joined the waitlist */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaitlistSuccess"];
+                };
+            };
+            /** @description Validation error, unknown serviceId, or clock skew > 90 s */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaitlistError"];
+                };
+            };
+            /** @description Rate limit exceeded — check Retry-After header */
+            429: {
+                headers: {
+                    /** @description Seconds until the rate limit resets */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaitlistError"];
+                };
             };
         };
     };

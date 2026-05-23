@@ -46,6 +46,49 @@ describe('upsertKycStatus', () => {
       kyc: expect.objectContaining({ kycStatus: 'PENDING' }),
     }));
   });
+
+  it('[E19-S01] writes panMaskedNumber + panHash when provided, zeroes raw panNumber', async () => {
+    const mockUpsert = vi.fn().mockResolvedValue({});
+    const mockRead = vi.fn().mockResolvedValue({ resource: { id: 'tech_1' } });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({
+        item: () => ({ read: mockRead }),
+        items: { upsert: mockUpsert },
+      }) }),
+    });
+
+    const fakeHash = 'a'.repeat(64);
+    await upsertKycStatus('tech_1', {
+      kycStatus: 'PAN_DONE',
+      panMaskedNumber: 'XXXXX1234F',
+      panHash: fakeHash,
+      panNumber: null,
+    });
+
+    const call = mockUpsert.mock.calls[0];
+    const kyc = (call?.[0] as Record<string, unknown>)['kyc'] as Record<string, unknown>;
+    expect(kyc['panMaskedNumber']).toBe('XXXXX1234F');
+    expect(kyc['panHash']).toBe(fakeHash);
+    expect(kyc['panNumber']).toBeNull();
+  });
+
+  it('[E19-S01] initializes panMaskedNumber and panHash to null for new docs', async () => {
+    const mockUpsert = vi.fn().mockResolvedValue({});
+    const mockRead = vi.fn().mockResolvedValue({ resource: undefined });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({
+        item: () => ({ read: mockRead }),
+        items: { upsert: mockUpsert },
+      }) }),
+    });
+
+    await upsertKycStatus('tech_fresh', { kycStatus: 'PENDING' });
+
+    const call = mockUpsert.mock.calls[0];
+    const kyc = (call?.[0] as Record<string, unknown>)['kyc'] as Record<string, unknown>;
+    expect(kyc['panMaskedNumber']).toBeNull();
+    expect(kyc['panHash']).toBeNull();
+  });
 });
 
 describe('getKycByTechnicianId', () => {

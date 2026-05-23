@@ -23,5 +23,20 @@ service firebase.storage {
       allow read: if request.auth != null
                   && request.auth.uid == technicianUid;
     }
+
+    // SOS audio — customer creates encrypted blob (create-only; no overwrite).
+    // Transient key-POST failures are handled by retrying only the key endpoint
+    // (up to 3× in SosAudioUploader) without re-uploading the blob, keeping the
+    // blob/key pair consistent. Admin reads via signed URL only.
+    // GCS lifecycle deletes after 7 days. ADR-0024: AES/GCM encrypted on-device.
+    match /sos-audio/{customerId}/{incidentId} {
+      allow create: if request.auth != null
+                    && request.auth.uid == customerId
+                    && request.resource.size <= 10 * 1024 * 1024
+                    && request.resource.contentType == 'application/octet-stream';
+      // No direct read rule: admin reads go through the playback-token endpoint which
+      // generates a short-lived signed URL via the Admin SDK (bypasses Storage rules).
+      // Direct client reads are intentionally blocked to keep all access on the audited path.
+    }
   }
 }

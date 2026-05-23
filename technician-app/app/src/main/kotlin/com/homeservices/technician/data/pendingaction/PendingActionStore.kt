@@ -62,6 +62,69 @@ public class PendingActionStore(
         dao.clearAll()
     }
 
+    // ── E11-S05a job-execution durable hooks ──────────────────────────────────
+
+    /**
+     * Returns the single active PHOTO_UPLOAD_PENDING [PendingAction] for the given
+     * booking, or `null` if none exists. Used by retry orchestrators to decide
+     * whether to re-attempt a queued upload.
+     */
+    public suspend fun pendingPhotoUploadForBooking(bookingId: String): PendingAction? =
+        dao.findActivePhotoUploadForBooking(bookingId)?.toDomain()
+
+    /**
+     * Tombstones any active PHOTO_UPLOAD_PENDING row for [bookingId]. Call once the
+     * queued upload succeeds so the retry banner stops surfacing.
+     */
+    public suspend fun clearPhotoUploadPending(
+        bookingId: String,
+        now: Long = System.currentTimeMillis(),
+    ) {
+        dao.clearActivePhotoUploadForBooking(bookingId = bookingId, now = now)
+    }
+
+    // ── E11-S05c onboarding durable hooks ─────────────────────────────────────
+
+    /**
+     * Returns the single active PHOTO_UPLOAD_RETRY [PendingAction] for the given
+     * technician, or `null` if none exists. Used by the KYC ViewModel to decide
+     * whether to surface the retry banner above the form card.
+     */
+    public suspend fun pendingPhotoRetryForTech(techId: String): PendingAction? = dao.findActivePhotoRetryForTech(techId)?.toDomain()
+
+    /**
+     * Tombstones any active PHOTO_UPLOAD_RETRY row for [techId]. Call once the
+     * queued KYC photo upload succeeds so the retry banner stops surfacing.
+     */
+    public suspend fun clearPhotoRetry(
+        techId: String,
+        now: Long = System.currentTimeMillis(),
+    ) {
+        dao.clearActivePhotoRetryForTech(techId = techId, now = now)
+    }
+
+    /**
+     * Tombstones any active KYC_SUBMIT_PENDING row for [techId]. Call once the
+     * server returns a final verdict so the onboarding offline chip stops surfacing.
+     */
+    public suspend fun clearKycSubmitPending(
+        techId: String,
+        now: Long = System.currentTimeMillis(),
+    ) {
+        dao.clearActiveKycSubmitPendingForTech(techId = techId, now = now)
+    }
+
+    /**
+     * Tombstones any active KYC_RESUME row for [techId]. Called on a final KYC
+     * verdict so the DigiLocker-resumption nudge does not outlive the verdict.
+     */
+    public suspend fun clearKycResume(
+        techId: String,
+        now: Long = System.currentTimeMillis(),
+    ) {
+        dao.clearActiveKycResumeForTech(techId = techId, now = now)
+    }
+
     // ── Mapping helpers ───────────────────────────────────────────────────────
 
     private fun PendingActionEntity.toDomain(): PendingAction =

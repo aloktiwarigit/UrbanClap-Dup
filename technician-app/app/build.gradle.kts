@@ -138,8 +138,8 @@ android {
         applicationId = "in.homeheroo.technician"
         minSdk = 26
         targetSdk = 35
-        versionCode = 9
-        versionName = "0.1.8"
+        versionCode = 11
+        versionName = "0.1.10"
 
         testInstrumentationRunner = "com.homeservices.technician.TestRunner"
 
@@ -425,6 +425,17 @@ kover {
                     // PhotoCaptureScreen generates Compose *Kt wrapper classes
                     "*.PhotoCaptureScreenKt",
                     "*.PhotoCaptureScreenKt\$*",
+                    // E11-S05a Compose surfaces — Paparazzi-only (goldens recorded on CI Linux);
+                    // same rationale as PhotoCaptureScreenKt / ActiveJobScreenKt.
+                    "*.PhotoUploadRetryBannerKt",
+                    "*.PhotoUploadRetryBannerKt\$*",
+                    "*.CompletionConfirmationDialogKt",
+                    "*.CompletionConfirmationDialogKt\$*",
+                    // BookingStatusEventBus (E11-S05a) wraps MutableSharedFlow.tryEmit() — only
+                    // observable in a running coroutine collector, same rationale as
+                    // RatingPromptEventBus / RatingReceivedEventBus / EarningsUpdateEventBus.
+                    "*.BookingStatusEventBus",
+                    "*.BookingStatusEventBus\$*",
                     // JobPhotoRepositoryImpl wraps Firebase Storage + HTTP — requires live services
                     "*.JobPhotoRepositoryImpl",
                     "*.JobPhotoRepositoryImpl\$*",

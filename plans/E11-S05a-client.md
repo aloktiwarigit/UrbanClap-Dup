@@ -1,6 +1,33 @@
-# E11-S05a — Technician-app Job-Execution Durable Hooks
+# E11-S05a-client — Technician-app Job-Execution Durable Hooks (Client Half)
 
 **Tier:** Feature | **Deps:** E11-S04 (dashboard patterns; pending-actions Room foundation from E11-S01a-2) | **Blocks:** none in W5
+**Status (as of 2026-05-17):** IMPLEMENTED on `feat/E11-S05a-job-execution-durable-hooks`. Awaiting [`plans/E11-S05a-api.md`](./E11-S05a-api.md) to ship before the new active-job FCM refresh path is live in production.
+
+---
+
+## Status preamble (added 2026-05-17 after Codex round 4)
+
+### What this plan covers — and what it doesn't
+
+This plan was originally written as a single `E11-S05a` story but the spec under-scoped the work. Codex review correctly flagged that **no server producer dispatches `BOOKING_STATUS_UPDATE` to the `technician_${id}` FCM topic** — only `customer_${id}`. The technician-app listener wired by this story is therefore inert in production until the matching API producer ships.
+
+The story was split:
+- **E11-S05a-client (this plan)** — every client-side change documented below: durable PHOTO_UPLOAD_PENDING producer/consumer, completion-confirm dialog, photo-retry banner, BookingStatusEvent bus + listener, FCM handler branches that PARSE the wire payload. Independently functional for everything EXCEPT the server-driven refresh path.
+- **[`plans/E11-S05a-api.md`](./E11-S05a-api.md)** — new server-side story that adds `sendTechnicianBookingStatusUpdatePush` and wires it into the `approveFinalPrice` handler so the listener actually fires.
+
+### What works without E11-S05a-api
+
+- **Durable photo-upload retry** (PHOTO_UPLOAD_PENDING producer/consumer): fully functional. Survives process death. No API dependency.
+- **Completion-confirm dialog**: fully functional. Local UI state only.
+- **FCM tray notifications** for booking-status pushes: will display correctly when/if a push arrives — the handler is wired.
+
+### What does NOT work until E11-S05a-api ships
+
+- **Active-job screen refresh on customer price-approval**: `BookingStatusEventBus` is wired but no production push reaches the technician topic, so the open `ActiveJobScreen` cannot refresh on customer-side state changes. Mitigation in the interim: the screen still refreshes whenever the technician returns to it (init re-runs `repository.startObserving`).
+
+### Known limitation deferred to a follow-up
+
+- **Notification deep-link to active-job route**: the booking-status notification opens MainActivity but does not deep-link to `activeJob/{bookingId}`. The technician lands on the dashboard and taps the booking from there. Proper deep-link wiring would add a `PendingNavigationStore` + `HomeGraph` collector — out of scope for both client and api stories. Track separately if user demand justifies.
 
 ---
 
@@ -409,3 +436,26 @@ All paths relative to `technician-app/app/src/main/kotlin/com/homeservices/techn
 4. **WS-D** — strings (no code dep; can be done in same session as WS-B or WS-C).
 5. **WS-C** — UiState extensions → ViewModel extensions → new composables → screen wiring → ViewModel tests → Paparazzi stubs. Depends on WS-A types.
 6. **WS-E** — smoke gate. Fix any issues, then push + Codex review.
+
+---
+
+## Implementation evidence (added 2026-05-17)
+
+Work shipped on branch `feat/E11-S05a-job-execution-durable-hooks`:
+
+| Commit | Scope |
+|---|---|
+| `6796babe` | WS-A — domain primitives (3 new PendingActionType enum values, BookingStatusEvent + BookingStatusEventBus, PendingActionStore extensions, DAO query methods, TDD coverage) |
+| `8d0414b6` | WS-B+D — 3 new FCM branches (BOOKING_STATUS_UPDATE, CUSTOMER_PRICE_APPROVED, CUSTOMER_PRICE_REJECTED) + showBookingStatusNotification helper + 8 EN/HI strings + HomeservicesFcmServiceBookingStatusTest |
+| `8ea9b594` | WS-C — ActiveJobUiState additions (photoUploadPending, awaitingCompletionConfirm) + ActiveJobViewModel collectors + PhotoUploadRetryBanner + CompletionConfirmationDialog + screen wiring + 3 new ViewModel test files + 2 @Ignored Paparazzi stubs |
+| `17bfd390` | WS-E — smoke-gate fixes (ktlint annotation rule, detekt suppressions for LongParameterList/LongMethod/ReturnCount, MockK SharedFlow type-explicit returns, kover exclusions for Compose *Kt wrappers + BookingStatusEventBus) |
+| `674946ec` | Codex round-1 P1/P2/P3 fixes (confirmCompletion routes through photo capture, PHOTO_UPLOAD_PENDING producer in onPhotoConfirmed, @Volatile cachedPhotoUploadPending for cold-start race, dropped broken navigate_to extra) |
+| `07b849e8` | Codex round-2 P2 fix (read canonical `status` FCM key with `newStatus` fallback) |
+| `e84f0b95` | Codex round-3 P2 fix (refresh on every booking-status event, not just price changes) |
+| (uncommitted) | Codex round-4 P2 #2 fix (runCatching around best-effort clearPhotoUploadPending so Room I/O failure can't strand the spinner) |
+
+Codex round-4 P2 #1 (no technician-bound API producer) deliberately deferred to E11-S05a-api.
+
+**Pre-Codex smoke gate (`bash tools/pre-codex-smoke.sh technician-app`):** green as of `e84f0b95`. Re-verify after the round-4 fix commits.
+
+**Codex residual:** 1 P2 outstanding (API producer missing) — explicitly out of scope per the split.

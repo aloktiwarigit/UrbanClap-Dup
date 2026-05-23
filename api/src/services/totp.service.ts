@@ -1,3 +1,4 @@
+import type { AdminSession } from './adminSession.service.js';
 import { generateSecret as otpGenerateSecret, verifySync, generateURI } from 'otplib';
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 
@@ -40,6 +41,15 @@ export function generateOtpAuthUri(secret: string, email: string): string {
     secret,
     issuer: 'homeservices-admin',
   });
+}
+
+/**
+ * Returns true when the TOTP on the session was verified within maxAgeMs milliseconds ago.
+ * Returns false for sessions that pre-date the totpVerifiedAt field (before E11-S05b-2).
+ */
+export function assertTotpFreshness(session: AdminSession, maxAgeMs: number): boolean {
+  if (!session.totpVerifiedAt) return false;
+  return Date.now() - new Date(session.totpVerifiedAt).getTime() <= maxAgeMs;
 }
 
 export function verifyToken(token: string, secret: string): boolean {

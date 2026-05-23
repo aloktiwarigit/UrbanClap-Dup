@@ -137,8 +137,8 @@ android {
         applicationId = "in.homeheroo.customer"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "0.1.4"
+        versionCode = 10
+        versionName = "0.1.6"
 
         testInstrumentationRunner = "com.homeservices.customer.TestRunner"
 
@@ -665,6 +665,36 @@ kover {
                     // same rationale as other *Kt screen classes; palette when-branches are data, not logic.
                     "*.CatalogueVisualImageKt",
                     "*.CatalogueVisualImageKt\$*",
+                    // E16-S04: PlacesModule + WaitlistModule — Hilt @Provides/@Binds wiring, same
+                    // rationale as data.auth.di.* and other DI modules excluded above.
+                    "*.di.PlacesModule",
+                    "*.di.PlacesModule\$*",
+                    "*.di.PlacesBindingsModule",
+                    "*.di.PlacesBindingsModule\$*",
+                    "*.di.WaitlistModule",
+                    "*.di.WaitlistModule\$*",
+                    // E16-S04: DefaultDispatcher annotation — compile-time qualifier, no runtime logic.
+                    "*.di.DefaultDispatcher",
+                    // E16-S04: SDK wrappers — require Android Context / Places SDK at runtime;
+                    // exercised via instrumented tests, not JVM unit tests.
+                    "*.data.places.DefaultPlacesClientGateway",
+                    "*.data.places.DefaultPlacesClientGateway\$*",
+                    "*.data.places.AndroidReverseGeocoder",
+                    "*.data.places.AndroidReverseGeocoder\$*",
+                    // E16-S04: Compose UI screens — Paparazzi stubs cover rendering paths (@Ignored
+                    // goldens recorded on CI Linux); ViewModel logic is covered by AddressPickerViewModelTest.
+                    "*.ui.booking.AddressPickerScreenKt",
+                    "*.ui.booking.AddressPickerScreenKt\$*",
+                    "*.ui.booking.AddressPickerScreenContentKt",
+                    "*.ui.booking.AddressPickerScreenContentKt\$*",
+                    "*.ui.waitlist.WaitlistScreenKt",
+                    "*.ui.waitlist.WaitlistScreenKt\$*",
+                    "*.ui.waitlist.WaitlistScreenContentKt",
+                    "*.ui.waitlist.WaitlistScreenContentKt\$*",
+                    // E16-S04: WaitlistRepositoryImpl — Retrofit/HttpException wiring; core 429 mapping
+                    // covered by repository-layer integration test in W6 (E16-S04b scope).
+                    "*.data.waitlist.WaitlistRepositoryImpl",
+                    "*.data.waitlist.WaitlistRepositoryImpl\$*",
                 )
             }
         }

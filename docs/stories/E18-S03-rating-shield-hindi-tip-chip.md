@@ -7,13 +7,13 @@ security: false
 dependencies: []
 ---
 
-# E18-S03 — Rating Shield Hindi Copy + Tip-Chip Marker + ADR-0021
+# E18-S03 — Rating Shield Hindi Copy + Tip-Chip Marker + ADR-0024
 
 ## Summary
 
 Ensure all `ShieldBottomSheet` copy is in string resources (no hardcoded literals), HI
 translations are present, add a `TODO(C-19)` tip-chip placeholder in `RatingScreen.kt`,
-write ADR-0021 documenting the ≤2★ shield threshold decision, and add an `@Ignored`
+write ADR-0024 documenting the ≤2★ shield threshold decision, and add an `@Ignored`
 Paparazzi test for the shield sheet in HI locale.
 
 ## Acceptance Criteria
@@ -23,7 +23,7 @@ Paparazzi test for the shield sheet in HI locale.
 | AC-1 | All text in `ShieldBottomSheet` uses `stringResource()`. No hardcoded English literals. | [x] |
 | AC-2 | HI translations for shield keys exist in `res/values-hi/strings.xml` | [x] |
 | AC-3 | `TODO(C-19)` marker at tip-chip placeholder in `RatingScreen.kt` | [ ] |
-| AC-4 | `docs/adr/0021-rating-shield-threshold.md` written (Context / Decision / Consequences / Alternatives) | [ ] |
+| AC-4 | `docs/adr/0024-rating-shield-threshold.md` written (Context / Decision / Consequences / Alternatives) | [ ] |
 | AC-5 | Paparazzi test `shieldBottomSheetHiLocale` with `@org.junit.Ignore` added to `RatingScreenPaparazziTest.kt` | [ ] |
 | AC-6 | ≥80% coverage on new/changed logic (trivially met — string-resource-only change) | [ ] |
 
@@ -34,4 +34,4 @@ Paparazzi test for the shield sheet in HI locale.
 - The `ShieldBottomSheet` composable lives inline in `RatingScreen.kt` (not a separate file).
 - Paparazzi tests for new screens must be `@Ignored` on Windows-local runs; goldens recorded
   on CI via `paparazzi-record.yml` workflow_dispatch. See `docs/patterns/paparazzi-cross-os-goldens.md`.
-- ADR-0019 is intentionally skipped (numbering gap in repo); ADR-0021 is the next assigned number.
+- ADR-0019 is intentionally skipped (numbering gap in repo); ADR-0024 is the next assigned number.

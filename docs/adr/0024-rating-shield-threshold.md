@@ -1,4 +1,4 @@
-# ADR-0021: Rating Shield Threshold — ≤2★ Narrow Default
+# ADR-0024: Rating Shield Threshold — ≤2★ Narrow Default
 
 - **Status:** accepted
 - **Date:** 2026-05-14

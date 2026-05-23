@@ -51,6 +51,23 @@ let adminUsers = [
   },
 ];
 
+const complaints = [
+  {
+    id: 'a11y-complaint-001',
+    orderId: 'order-1',
+    customerId: 'cust-1',
+    customerName: 'Ramesh Verma',
+    technicianId: 'tech-1',
+    technicianName: 'Suresh Kumar',
+    status: 'NEW',
+    description: 'Technician arrived late',
+    assigneeAdminId: null,
+    internalNotes: [],
+    createdAt: now,
+    updatedAt: now,
+  },
+];
+
 let erasureRequests = [
   {
     id: 'erase-1',
@@ -259,7 +276,10 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (path === '/api/v1/admin/complaints') {
-    send(res, 200, { items: [], total: 0, page: 1, pageSize: 50, totalPages: 1 });
+    const filteredComplaints = url.searchParams.has('status')
+      ? complaints.filter(c => url.searchParams.get('status')?.split(',').includes(c.status))
+      : complaints;
+    send(res, 200, { items: filteredComplaints, total: filteredComplaints.length, page: 1, pageSize: 50, totalPages: 1 });
     return;
   }
 

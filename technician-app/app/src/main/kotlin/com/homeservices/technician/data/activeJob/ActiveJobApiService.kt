@@ -1,11 +1,13 @@
 package com.homeservices.technician.data.activeJob
 
+import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.PATCH
+import retrofit2.http.POST
 import retrofit2.http.Path
 
 internal interface ActiveJobApiService {
@@ -20,11 +22,19 @@ internal interface ActiveJobApiService {
         @Body body: TransitionRequest,
         @Header("X-Integrity-Token") integrityToken: String? = null,
     ): Response<ActiveJobResponse>
+
+    @POST("v1/technicians/active-job/{bookingId}/location")
+    suspend fun postActiveJobLocation(
+        @Path("bookingId") bookingId: String,
+        @Body body: com.homeservices.technician.data.activeJob.dto.PostLocationRequest,
+    ): Response<Unit>
 }
 
 @JsonClass(generateAdapter = true)
 internal data class ActiveJobResponse(
-    val bookingId: String,
+    // API returns "bookingId"; field aliased to "id" per E11 spec §9.3.
+    // Follow-up API PR required: rename active-job.ts:40 bookingId → id.
+    @Json(name = "bookingId") val id: String,
     val customerId: String,
     val serviceId: String,
     val serviceName: String,

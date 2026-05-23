@@ -114,8 +114,11 @@ internal class BookingViewModel
             paymentMethod: BookingPaymentMethod,
         ) {
             val state = _uiState.value as? BookingUiState.Ready ?: return
+            // Synchronous transition BEFORE viewModelScope.launch to close the duplicate-tap
+            // race: a second tap within the same frame must see CreatingBooking, not Ready,
+            // and bail at the `as? Ready ?: return` guard above. See PRD-03.
+            _uiState.value = BookingUiState.CreatingBooking
             viewModelScope.launch {
-                _uiState.value = BookingUiState.CreatingBooking
                 val request =
                     BookingRequest(
                         serviceId = serviceId,

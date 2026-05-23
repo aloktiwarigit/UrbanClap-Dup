@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -162,7 +164,7 @@ private fun RatingForm(
     onSubmit: () -> Unit,
     onPostAnyway: () -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         HsTrustBadge(text = stringResource(R.string.rating_eyebrow))
         Text(
             stringResource(R.string.rating_title),
@@ -194,7 +196,6 @@ private fun RatingForm(
         if (shieldState is RatingShieldState.Escalated) {
             CountdownChip(expiresAtMs = shieldState.expiresAtMs, onPostAnyway = onPostAnyway)
         } else {
-            Spacer(Modifier.weight(1f))
             HsPrimaryButton(
                 text = stringResource(R.string.rating_submit),
                 onClick = onSubmit,
@@ -203,7 +204,7 @@ private fun RatingForm(
             )
             // TODO(C-19): implement tip-chip composable here in E18-S03 follow-up once
             //  AwaitingPartner post-submit state is wired (after customer rates, show optional
-            //  tip-chip before navigating away). Tracked in E18-S03 ADR-0021.
+            //  tip-chip before navigating away). Tracked in E18-S03 ADR-0024.
         }
     }
 }
