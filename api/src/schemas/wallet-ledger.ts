@@ -42,23 +42,29 @@ export type WalletLedgerCreateInput = {
 };
 
 export const EarningsPeriodSchema = z.object({
-  techAmount: z.number().int().nonnegative(),
-  count: z.number().int().nonnegative(),
+  amountPaise: z.number().int().nonnegative(),
+  jobs: z.number().int().nonnegative(),
 });
 export type EarningsPeriod = z.infer<typeof EarningsPeriodSchema>;
 
+export const MonthEarningsPeriodSchema = EarningsPeriodSchema.extend({
+  goalPaise: z.number().int().positive(),
+});
+export type MonthEarningsPeriod = z.infer<typeof MonthEarningsPeriodSchema>;
+
 export const DailyEarningsSchema = z.object({
   date: z.string(),
-  techAmount: z.number().int().nonnegative(),
+  amountPaise: z.number().int().nonnegative(),
+  jobs: z.number().int().nonnegative(),
 });
 export type DailyEarnings = z.infer<typeof DailyEarningsSchema>;
 
 export const EarningsResponseSchema = z.object({
   today: EarningsPeriodSchema,
   week: EarningsPeriodSchema,
-  month: EarningsPeriodSchema,
+  month: MonthEarningsPeriodSchema,
   lifetime: EarningsPeriodSchema,
-  lastSevenDays: z.array(DailyEarningsSchema),
+  dailyLast7: z.array(DailyEarningsSchema),
   pendingHeld: z.number().int().nonnegative(),
 });
 export type EarningsResponse = z.infer<typeof EarningsResponseSchema>;

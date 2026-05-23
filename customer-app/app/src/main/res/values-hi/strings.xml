@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_name">होमसर्विसेज ग्राहक</string>
     <string name="catalogue_home_title">विश्वसनीय होम सर्विस बुक करें</string>
     <string name="catalogue_home_subtitle">कुशल तकनीशियन, साफ कीमतें, और बुकिंग से पूरा होने तक लाइव अपडेट।</string>
     <string name="catalogue_trust_chip">कुशल प्रोफेशनल</string>
@@ -45,6 +46,15 @@
     <string name="address_hint">अपना पूरा पता लिखें</string>
     <string name="address_privacy_note">आपका पता केवल असाइन किए गए तकनीशियन और सपोर्ट के साथ शेयर होता है।</string>
     <string name="address_next">आगे</string>
+    <string name="address_location_not_set">लोकेशन सेट नहीं है</string>
+    <string name="address_location_captured">वर्तमान लोकेशन मिल गई</string>
+    <string name="address_location_captured_manual">वर्तमान लोकेशन मिल गई। पता मैन्युअल भरें।</string>
+    <string name="address_location_permission_denied">पास के तकनीशियन खोजने के लिए लोकेशन अनुमति दें।</string>
+    <string name="address_location_error">आपकी लोकेशन नहीं मिली। GPS जांचें और फिर कोशिश करें।</string>
+    <string name="address_finding_location">लोकेशन खोज रहे हैं</string>
+    <string name="address_use_current_location">वर्तमान लोकेशन इस्तेमाल करें</string>
+    <string name="address_finding_service_location">सर्विस लोकेशन खोज रहे हैं</string>
+    <string name="address_location_assign_help">इससे सबसे पास का उपलब्ध तकनीशियन असाइन होता है।</string>
     <string name="booking_summary_title">बुकिंग सारांश</string>
     <string name="booking_summary_heading">रिव्यू करें और बुक करें</string>
     <string name="booking_summary_subtitle">ऑनलाइन पेमेंट चुनें या तकनीशियन के घर पहुंचने पर कैश दें।</string>
@@ -62,6 +72,17 @@
     <string name="booking_summary_pay_now">पे करें</string>
     <string name="booking_summary_book_cash">कैश के साथ बुक करें</string>
     <string name="booking_error_title">बुकिंग आगे नहीं बढ़ सकी</string>
+    <string name="booking_error_failed">बुकिंग नहीं हो सकी</string>
+    <string name="booking_error_confirmation_failed">पुष्टि नहीं हो सकी</string>
+    <string name="booking_error_payment_cancelled">पेमेंट रद्द: %s</string>
+    <!-- Payment failure strings (E18-S04) — mapped from Razorpay error codes -->
+    <string name="payment_failed_title">पेमेंट पूरा नहीं हुआ</string>
+    <string name="payment_failed_retry">पेमेंट फिर करें</string>
+    <string name="payment_failed_cancel">पेमेंट तरीका बदलें</string>
+    <string name="payment_error_payment_cancelled">पेमेंट आपने रद्द किया। कृपया फिर कोशिश करें।</string>
+    <string name="payment_error_network_error">पेमेंट के दौरान नेटवर्क समस्या हुई। अपना कनेक्शन जांचें और फिर कोशिश करें।</string>
+    <string name="payment_error_bad_request_error">पेमेंट नहीं हो सका। कृपया दूसरा तरीका आजमाएं।</string>
+    <string name="payment_error_default">पेमेंट नहीं हो सका। कृपया फिर कोशिश करें।</string>
     <string name="booking_confirmed_title">बुकिंग कन्फर्म हो गई!</string>
     <string name="booking_confirmed_body">हम आपके स्लॉट के लिए तकनीशियन असाइन कर रहे हैं।</string>
     <string name="booking_confirmed_id_label">बुकिंग ID: %s</string>
@@ -85,15 +106,237 @@
     <string name="price_approval_declined">मना किया</string>
     <string name="price_approval_selected_total">अनुमोदित ऐड-ऑन कुल</string>
 
-    <string name="app_name">होमसर्विसेज ग्राहक</string>
+    <!-- Auth screen (E12-S02a) -->
+    <string name="auth_checking_truecaller">Truecaller जांच रहे हैं</string>
+    <string name="auth_checking_truecaller_body">OTP पर जाने से पहले आपका नंबर सत्यापित कर रहे हैं।</string>
+    <string name="auth_signing_in_google">Google से साइन इन हो रहा है</string>
+    <string name="auth_signing_in_google_body">जारी रखने के लिए अपना Google खाता चुनें।</string>
+    <string name="auth_sending_otp">OTP भेज रहे हैं</string>
+    <string name="auth_sending_otp_body">सुरक्षित कोड भेजते समय यह स्क्रीन खुली रखें।</string>
+    <string name="auth_verifying_code">कोड सत्यापित हो रहा है</string>
+    <string name="auth_verifying_code_body">इसमें आमतौर पर कुछ सेकंड लगते हैं।</string>
+    <string name="auth_creating_account">खाता बन रहा है</string>
+    <string name="auth_signing_in">साइन इन हो रहा है</string>
+    <string name="auth_submitting_email_body">%s सत्यापित करते समय यह स्क्रीन खुली रखें।</string>
+    <string name="auth_security_note">सुरक्षित साइन इन। बुकिंग और पेमेंट के लिए हमेशा आपकी पुष्टि जरूरी है।</string>
+    <string name="auth_method_eyebrow">होमसर्विसेज</string>
+    <string name="auth_method_title">सर्विस बुक करने के लिए साइन इन करें</string>
+    <string name="auth_method_body">बुकिंग, सर्विस अपडेट और सपोर्ट के लिए Google, ईमेल या फोन से साइन इन करें।</string>
+    <string name="auth_continue_google">Google से जारी रखें</string>
+    <string name="auth_continue_email">ईमेल से जारी रखें</string>
+    <string name="auth_continue_phone">फोन से जारी रखें</string>
+    <string name="auth_email_verification_note">ईमेल से साइन-अप के लिए बुकिंग से पहले सत्यापन जरूरी है।</string>
+    <string name="auth_terms_note">जारी रखने पर आप सेवा शर्तें और गोपनीयता नीति से सहमत हैं।</string>
+    <string name="auth_email_create_eyebrow">खाता बनाएं</string>
+    <string name="auth_email_signin_eyebrow">ईमेल साइन इन</string>
+    <string name="auth_email_create_title">ईमेल लॉगिन बनाएं</string>
+    <string name="auth_email_signin_title">ईमेल से साइन इन करें</string>
+    <string name="auth_email_create_body">बुकिंग सक्षम करने से पहले हम एक सत्यापन ईमेल भेजेंगे।</string>
+    <string name="auth_email_signin_body">जारी रखने के लिए अपना सत्यापित ईमेल और पासवर्ड डालें।</string>
+    <string name="auth_back_to_options">साइन इन विकल्पों पर वापस जाएं</string>
+    <string name="auth_email_label">ईमेल</string>
+    <string name="auth_email_placeholder">you@example.com</string>
+    <string name="auth_password_label">पासवर्ड</string>
+    <string name="auth_password_hide">पासवर्ड छुपाएं</string>
+    <string name="auth_password_show">पासवर्ड दिखाएं</string>
+    <string name="auth_create_account_btn">खाता बनाएं</string>
+    <string name="auth_signin_btn">साइन इन करें</string>
+    <string name="auth_have_account">पहले से खाता है? साइन इन करें</string>
+    <string name="auth_no_account">नए हैं? खाता बनाएं</string>
+    <string name="auth_forgot_password">पासवर्ड भूल गए?</string>
+    <string name="auth_verify_eyebrow">ईमेल सत्यापन</string>
+    <string name="auth_verify_title">अपना इनबॉक्स जांचें</string>
+    <string name="auth_verify_body">हमने %s पर एक सत्यापन लिंक भेजा है। उसे खोलें, फिर यहां वापस आएं।</string>
+    <string name="auth_i_verified">सत्यापित कर लिया, जारी रखें</string>
+    <string name="auth_resend_email">ईमेल फिर भेजें</string>
+    <string name="auth_use_other_method">दूसरा साइन इन तरीका इस्तेमाल करें</string>
+    <string name="auth_phone_title">विश्वसनीय होम सर्विस बुक करें</string>
+    <string name="auth_phone_body">बुकिंग प्रबंधन, तकनीशियन ट्रैकिंग, कीमत अनुमोदन और सपोर्ट के लिए एक बार साइन इन करें।</string>
+    <string name="auth_mobile_label">मोबाइल नंबर</string>
+    <string name="auth_mobile_placeholder">+91 98765 43210</string>
+    <string name="auth_mobile_note">वह नंबर डालें जिससे सर्विस अपडेट और बिल जोड़ना हो।</string>
+    <string name="auth_get_otp">OTP पाएं</string>
+    <string name="auth_otp_eyebrow">सत्यापन</string>
+    <string name="auth_otp_title">6 अंकों का कोड डालें</string>
+    <string name="auth_otp_body">हमने %s पर समाप्त होने वाले मोबाइल नंबर पर OTP भेजा है।</string>
+    <string name="auth_otp_label">6 अंकों का कोड</string>
+    <string name="auth_verify_continue">सत्यापित करें और जारी रखें</string>
+    <string name="auth_resend_code">कोड फिर भेजें</string>
+    <string name="auth_error_eyebrow">कार्रवाई जरूरी</string>
+    <string name="auth_error_title">साइन इन नहीं हो सका</string>
+    <string name="auth_retry">फिर कोशिश करें</string>
+    <plurals name="auth_attempts_remaining">
+        <item quantity="one">%d प्रयास बचा है</item>
+        <item quantity="other">%d प्रयास बचे हैं</item>
+    </plurals>
+
+    <!-- Live tracking screen (E12-S02a) -->
+    <string name="tracking_title">सर्विस ट्रैक करें</string>
+    <string name="tracking_back_desc">वापस</string>
+    <string name="tracking_sos_desc">सुरक्षा अलर्ट</string>
+    <string name="tracking_your_technician">आपके तकनीशियन</string>
+    <string name="tracking_eta_chip">ETA %d मिनट</string>
+    <string name="tracking_service_progress">सर्विस प्रगति</string>
+    <string name="tracking_file_complaint">शिकायत दर्ज करें</string>
+    <string name="tracking_map_placeholder_title">लाइव लोकेशन यहां दिखेगी</string>
+    <string name="tracking_map_placeholder_body">ट्रैकिंग शुरू होते ही तकनीशियन की पोजिशन अपडेट होती है।</string>
+    <string name="tracking_sos_confirmed">सुरक्षा अलर्ट Owner support को भेज दिया गया।</string>
+    <string name="tracking_sos_error">अलर्ट नहीं भेजा जा सका। फिर कोशिश करें।</string>
+    <!-- Status labels for tracking timeline -->
+    <string name="status_en_route">रास्ते में</string>
+    <string name="status_reached">पहुंच गए</string>
+    <string name="status_in_progress">काम चल रहा है</string>
+    <string name="status_done">पूरा हो गया</string>
+    <string name="status_payment_pending">पेमेंट बाकी</string>
+    <string name="status_booking_confirmed">बुकिंग कन्फर्म</string>
+    <string name="status_finding_technician">तकनीशियन खोज रहे हैं</string>
+    <string name="status_technician_assigned">तकनीशियन असाइन</string>
+    <string name="status_technician_on_way">तकनीशियन रास्ते में</string>
+    <string name="status_technician_arrived">तकनीशियन पहुंच गए</string>
+    <string name="status_work_in_progress">काम जारी है</string>
+    <string name="status_price_approval_needed">कीमत अनुमोदन जरूरी</string>
+    <string name="status_service_completed">सर्विस पूरी हो गई</string>
+    <string name="status_booking_closed">बुकिंग बंद</string>
+    <string name="status_booking_cancelled">बुकिंग रद्द</string>
+    <string name="status_technician_unavailable">तकनीशियन उपलब्ध नहीं</string>
+    <string name="status_unavailable">स्टेटस उपलब्ध नहीं</string>
+
+    <!-- SOS bottom sheet (E12-S02a) -->
+    <string name="sos_safety_alert">सुरक्षा अलर्ट</string>
+    <plurals name="sos_sending_in">
+        <item quantity="one">%d सेकंड में भेज रहे हैं</item>
+        <item quantity="other">%d सेकंड में भेज रहे हैं</item>
+    </plurals>
+    <string name="sos_send_body">Owner support को चुपके से सूचित किया जाएगा। तकनीशियन को यह अलर्ट नहीं दिखेगा।</string>
+    <string name="sos_send_now">अभी भेजें</string>
+    <string name="sos_cancel_alert">अलर्ट रद्द करें</string>
+
+    <!-- SOS evidence upload states (E11-S05b-2) -->
+    <string name="sos_uploading_evidence">साक्ष्य अपलोड हो रहा है… %1$d%%</string>
+    <string name="sos_evidence_saved">साक्ष्य सुरक्षित रूप से सहेजा गया</string>
+    <string name="sos_evidence_upload_error">साक्ष्य नहीं सहेजा जा सका। मदद रास्ते में है।</string>
+
+    <!-- SOS consent dialog (E12-S02a) -->
+    <string name="sos_consent_title">अलर्ट के साथ ऑडियो रिकॉर्ड करें?</string>
+    <string name="sos_consent_body">Owner support को स्थिति समझने में मदद के लिए एक छोटी ऑडियो रिकॉर्डिंग जोड़ सकते हैं।</string>
+    <string name="sos_consent_allow">अनुमति दें</string>
+    <string name="sos_consent_skip">छोड़ें</string>
+
+    <!-- Complaint screen (E12-S02a) -->
+    <string name="complaint_eyebrow">ग्राहक सहायता</string>
+    <string name="complaint_title">शिकायत दर्ज करें</string>
+    <string name="complaint_body">बताएं क्या गलत हुआ। Owner support बुकिंग की समीक्षा करेगा और जवाब देगा।</string>
+    <string name="complaint_select_reason">कारण चुनें</string>
+    <string name="complaint_issue_type">समस्या का प्रकार</string>
+    <string name="complaint_what_happened">क्या हुआ?</string>
+    <string name="complaint_attach_photo">फोटो जोड़ें (वैकल्पिक)</string>
+    <string name="complaint_photo_attached">फोटो जोड़ी गई</string>
+    <string name="complaint_submit">शिकायत सबमिट करें</string>
+    <string name="complaint_received">शिकायत मिल गई</string>
+    <string name="complaint_back">बुकिंग पर वापस</string>
+    <string name="complaint_submitting">शिकायत सबमिट हो रही है</string>
+    <string name="complaint_error_title">कुछ गलत हो गया</string>
+    <string name="complaint_retry">फिर कोशिश करें</string>
+    <string name="complaint_status_investigating">Owner support आपकी शिकायत की समीक्षा कर रहा है।</string>
+    <string name="complaint_status_resolved">यह शिकायत हल हो गई है।</string>
+    <string name="complaint_status_default">Owner support 2 घंटे में जवाब देगा।</string>
+    <string name="complaint_error_unknown">अज्ञात त्रुटि</string>
+    <!-- Complaint reason labels -->
+    <string name="complaint_reason_service_quality">सर्विस की गुणवत्ता</string>
+    <string name="complaint_reason_late_arrival">देरी से आना</string>
+    <string name="complaint_reason_no_show">तकनीशियन नहीं आए</string>
+    <string name="complaint_reason_technician_behaviour">तकनीशियन का व्यवहार</string>
+    <string name="complaint_reason_billing_dispute">बिलिंग विवाद</string>
+    <string name="complaint_reason_other">अन्य</string>
+
+    <!-- Rating screen (E12-S02a) -->
+    <string name="rating_awaiting_title">रेटिंग सबमिट हो गई</string>
+    <string name="rating_awaiting_body">तकनीशियन के जवाब के बाद दोनों रेटिंग दिखाई जाएंगी।</string>
+    <string name="rating_revealed_title">रेटिंग सामने आई</string>
+    <string name="rating_revealed_body">सर्विस मार्केटप्लेस को निष्पक्ष रखने के लिए धन्यवाद।</string>
+    <string name="rating_error_title">रेटिंग लोड नहीं हो सकी</string>
+    <string name="rating_loading_title">रेटिंग लोड हो रही है</string>
+    <string name="rating_loading_body">आपका सर्विस फीडबैक फॉर्म तैयार हो रहा है।</string>
+    <string name="rating_eyebrow">सर्विस फीडबैक</string>
+    <string name="rating_title">अपनी सर्विस रेट करें</string>
+    <string name="rating_body">आपकी रेटिंग से तकनीशियन की गुणवत्ता और ग्राहक सहायता बेहतर होती है।</string>
+    <string name="rating_overall">कुल अनुभव</string>
+    <string name="rating_punctuality">समय पर आना</string>
+    <string name="rating_skill">कौशल गुणवत्ता</string>
+    <string name="rating_behaviour">व्यवहार</string>
+    <string name="rating_comment_label">टिप्पणी (वैकल्पिक)</string>
+    <string name="rating_submit">रेटिंग सबमिट करें</string>
+    <plurals name="rating_star_label">
+        <item quantity="one">%d स्टार रेट करें</item>
+        <item quantity="other">%d स्टार रेट करें</item>
+    </plurals>
+    <string name="rating_private_review_countdown">निजी समीक्षा: %s बचा है</string>
+    <string name="rating_post_anyway">अभी पोस्ट करें</string>
+    <string name="rating_shield_title">पहले निजी तौर पर शेयर करें?</string>
+    <string name="rating_shield_body">कम रेटिंग सार्वजनिक होने से पहले Owner support को भेजी जा सकती है।</string>
+    <string name="rating_shield_send_support">पहले सपोर्ट को भेजें</string>
+    <string name="rating_shield_post_now">अभी रेटिंग पोस्ट करें</string>
+
+    <!-- Customer bookings screen (E12-S02a) -->
+    <string name="bookings_title">बुकिंग</string>
+    <string name="bookings_subtitle">आगामी और पूरी हुई सर्विस विजिट</string>
+    <string name="bookings_refresh_desc">बुकिंग रिफ्रेश करें</string>
+    <string name="bookings_track_technician">तकनीशियन ट्रैक करें</string>
+    <string name="bookings_view_status">स्टेटस देखें</string>
+    <string name="bookings_no_bookings">अभी कोई बुकिंग नहीं</string>
+    <string name="bookings_no_bookings_body">कन्फर्म बुकिंग यहां सर्विस तारीख, स्टेटस और ट्रैकिंग एक्सेस के साथ दिखेंगी।</string>
+    <string name="bookings_error_title">बुकिंग रिफ्रेश नहीं हो सकी</string>
+    <string name="bookings_error_body">आपकी आखिरी बुकिंग सेव है। नेटवर्क स्थिर होने पर फिर कोशिश करें।</string>
+    <string name="bookings_retry">फिर कोशिश करें</string>
+    <string name="bookings_rate_booking">बुकिंग को रेट करें</string>
+    <string name="bookings_file_complaint">शिकायत दर्ज करें</string>
+    <!-- Booking status labels -->
+    <string name="booking_status_pending_payment">पेमेंट बाकी</string>
+    <string name="booking_status_paid">कन्फर्म</string>
+    <string name="booking_status_searching">तकनीशियन खोज रहे हैं</string>
+    <string name="booking_status_assigned">तकनीशियन असाइन</string>
+    <string name="booking_status_en_route">रास्ते में</string>
+    <string name="booking_status_reached">पहुंच गए</string>
+    <string name="booking_status_in_progress">काम जारी है</string>
+    <string name="booking_status_awaiting_price_approval">कीमत अनुमोदन</string>
+    <string name="booking_status_completed">पूरा हो गया</string>
+    <string name="booking_status_closed">बंद</string>
+    <string name="booking_status_unfulfilled">अनपूर्ण</string>
+    <string name="booking_status_cancelled">रद्द</string>
+    <string name="booking_status_reassigning">फिर असाइन हो रहा है</string>
+    <string name="booking_status_updated">अपडेट हुआ</string>
+    <!-- Payment method labels -->
+    <string name="payment_method_online">ऑनलाइन पेमेंट किया</string>
+    <string name="payment_method_cash">सर्विस पर कैश</string>
+
+    <!-- Catalogue home screen (E12-S02a) -->
+    <string name="catalogue_our_services">हमारी सेवाएं</string>
+    <string name="catalogue_search_hint">AC, प्लंबर, इलेक्ट्रीशियन खोजें&#8230;</string>
+    <string name="catalogue_location_display">अयोध्या, उत्तर प्रदेश</string>
+    <string name="catalogue_starting_price">%1$s से</string>
+
+    <!-- Confidence score row (E12-S02a) -->
+    <string name="confidence_new_area">आपके क्षेत्र में नए हैं &#8212; ट्रैक रिकॉर्ड बना रहे हैं</string>
+    <string name="confidence_on_time">%d%% समय पर</string>
+    <string name="confidence_area_rating">%.1f क्षेत्र रेटिंग</string>
+    <string name="confidence_eta">~%d मिनट दूर</string>
+    <string name="confidence_methodology_title">हम यह कैसे गणना करते हैं</string>
+    <!-- HI-REVIEW: technical methodology text — please verify with a native speaker -->
+    <string name="confidence_methodology_body">समय पर %%: पिछले 30 दिनों में बुक्ड स्लॉट के 15 मिनट के अंदर शुरू हुए जॉब।\n\nक्षेत्र रेटिंग: आपके क्षेत्र में औसत स्टार रेटिंग।\n\nETA: 20 किमी/घंटा पर तकनीशियन की आखिरी लोकेशन से अनुमानित यात्रा समय।</string>
 
     <!-- Slot picker -->
     <string name="slot_picker_title">तारीख और समय चुनें</string>
     <string name="slot_picker_heading">अपना स्लॉट चुनें</string>
     <string name="slot_picker_subtitle">सुविधाजनक आने का समय चुनें। भुगतान से पहले आप सब कुछ देख सकते हैं।</string>
     <string name="slot_picker_date_label">तारीख</string>
-    <string name="slot_picker_time_label">समय</string>
-    <string name="slot_picker_next">आगे</string>
+    <string name="slot_picker_morning_label">सुबह</string>
+    <string name="slot_picker_afternoon_label">दोपहर</string>
+    <string name="slot_picker_evening_label">शाम</string>
+    <string name="slot_picker_loading_desc">उपलब्ध स्लॉट लोड हो रहे हैं</string>
+    <string name="slot_picker_error_label">स्लॉट लोड नहीं हो सके। कृपया पुनः प्रयास करें।</string>
+    <string name="slot_picker_retry_button">पुनः प्रयास करें</string>
+    <string name="slot_picker_confirm_slot">स्लॉट पक्का करें</string>
+    <string name="slot_picker_no_slots_label">इस तारीख के लिए कोई स्लॉट उपलब्ध नहीं</string>
 
     <!-- Trust dossier — Aadhaar/Police badges, certifications, languages, reviews -->
     <string name="trust_dossier_assigning">आपके स्लॉट के लिए जल्द ही तकनीशियन असाइन किया जाएगा।</string>
@@ -103,7 +346,7 @@
     <string name="trust_dossier_error">तकनीशियन प्रोफाइल लोड नहीं हो सका।</string>
     <string name="trust_dossier_jobs">%d जॉब</string>
     <string name="trust_dossier_languages_label">भाषाएं</string>
-    <string name="trust_dossier_loading">तकनीशियन प्रोफाइल लोड हो रही है...</string>
+    <string name="trust_dossier_loading">तकनीशियन प्रोफाइल लोड हो रही है&#8230;</string>
     <string name="trust_dossier_promise">तकनीशियन ने जो चेक पूरे किए हैं, उनके बैज प्रोफाइल में दिखेंगे।</string>
     <string name="trust_dossier_reviews_label">हाल के रिव्यू</string>
     <string name="trust_dossier_trained_by">%s द्वारा प्रशिक्षित</string>
@@ -112,6 +355,107 @@
     <!-- Settings -->
     <string name="settings_title">सेटिंग्स</string>
     <string name="settings_language">भाषा</string>
+    <string name="settings_language_current">हिंदी</string>
     <string name="settings_language_title">भाषा चुनें</string>
     <string name="settings_language_save">सेव करें</string>
+    <string name="settings_privacy_and_data">गोपनीयता और डेटा</string>
+    <string name="settings_privacy_data_export_title">मेरा डेटा डाउनलोड करें</string>
+    <string name="settings_privacy_data_delete_title">खाता हटाएं</string>
+
+    <!-- Notification permission rationale (E11-S01b-1) -->
+    <string name="notification_permission_rationale_title">सूचनाएं अनुमति दें</string>
+    <string name="notification_permission_rationale_body">बुकिंग अपडेट, ऐड-ऑन अनुरोध और सेवा अनुस्मारक पाने के लिए सूचनाएं अनुमति दें।</string>
+
+    <!-- Delete account / DPDP erasure (E15-S02) -->
+    <string name="delete_account_title">खाता हटाएं</string>
+    <string name="delete_account_warning">आपका खाता और सभी संबंधित डेटा 7 दिन की कूल-ऑफ अवधि के बाद स्थायी रूप से हटा दिया जाएगा। इस दौरान आप कभी भी हटाने को रद्द कर सकते हैं।</string>
+    <string name="delete_account_what_deleted_label">क्या हटाया जाएगा</string>
+    <string name="delete_account_item_bookings">बुकिंग इतिहास</string>
+    <string name="delete_account_item_addresses">सहेजे गए पते</string>
+    <string name="delete_account_item_payment_methods">भुगतान के तरीके</string>
+    <string name="delete_account_item_preferences">ऐप प्राथमिकताएं और सेटिंग्स</string>
+    <string name="delete_account_continue_cta">हटाने के लिए आगे बढ़ें</string>
+    <string name="delete_account_confirm_title">हटाने की पुष्टि करें</string>
+    <string name="delete_account_confirm_instruction">खाता हटाने की पुष्टि करने के लिए नीचे दिया गया वाक्यांश ठीक वैसे ही टाइप करें।</string>
+    <string name="delete_account_phrase_label">पुष्टि वाक्यांश</string>
+    <string name="delete_my_account_confirmation_phrase">मेरा खाता हटाएं</string>
+    <string name="delete_account_phrase_mismatch">वाक्यांश मेल नहीं खाता। कृपया इसे ठीक वैसे ही टाइप करें।</string>
+    <string name="delete_account_pin_label">अपने पंजीकृत फोन नंबर के अंतिम 4 अंक</string>
+    <string name="delete_account_submit_cta">मेरा खाता हटाएं</string>
+    <string name="delete_account_cancel_cta">रद्द करें</string>
+    <string name="delete_account_coolOff_title">हटाना निर्धारित किया गया</string>
+    <string name="delete_account_coolOff_subtitle">आपका खाता स्थायी रूप से हटने तक आप इसे रद्द कर सकते हैं।</string>
+    <string name="delete_account_coolOff_countdown_format">खाता %1$s में हटाया जाएगा</string>
+    <string name="delete_account_coolOff_pending_no_date">हटाना लंबित है — सटीक तारीख उपलब्ध नहीं</string>
+    <string name="delete_account_revoke_cta">हटाना रद्द करें</string>
+    <string name="delete_account_revoke_success">हटाना रद्द किया गया। आपका खाता सुरक्षित है।</string>
+    <string name="delete_account_close_cta">बंद करें</string>
+    <string name="delete_account_error_unknown">कुछ गलत हो गया। कृपया पुनः प्रयास करें।</string>
+
+    <!-- Complaint SLA countdown + history + reopen (E18-S02) -->
+    <string name="complaint_countdown_remaining">%1$s बचा है</string>
+    <string name="complaint_reopen">शिकायत फिर खोलें</string>
+    <string name="complaint_list_title">मेरी शिकायतें</string>
+    <string name="complaint_list_empty_title">अभी कोई शिकायत नहीं</string>
+    <string name="complaint_list_empty_body">आपने अभी तक कोई शिकायत दर्ज नहीं की है।</string>
+    <string name="complaint_list_status_open">खुली</string>
+    <string name="complaint_list_status_acknowledged">स्वीकृत</string>
+    <string name="complaint_list_status_resolved">हल हो गई</string>
+    <string name="complaint_list_status_reopened">फिर खोली गई</string>
+
+    <!-- Wallet screen (E13-S02) -->
+    <string name="wallet_screen_title">मेरा वॉलेट</string>
+    <string name="wallet_back_content_desc">वापस</string>
+    <string name="wallet_balance_label">उपलब्ध शेष</string>
+    <string name="wallet_balance_error">बैलेंस लोड नहीं हो सका। कृपया पुनः प्रयास करें।</string>
+    <string name="wallet_ledger_title">लेन-देन इतिहास</string>
+    <string name="wallet_ledger_error">लेन-देन लोड नहीं हो सके। कृपया पुनः प्रयास करें।</string>
+    <string name="wallet_no_transactions">अभी तक कोई लेन-देन नहीं।</string>
+    <string name="wallet_retry_cta">पुनः प्रयास करें</string>
+    <string name="wallet_chip_content_desc">वॉलेट बैलेंस</string>
+
+    <!-- No-show credit banner + notification (E13-S03) -->
+    <string name="no_show_credit_notification_title">क्रेडिट जुड़ा!</string>
+    <string name="no_show_credit_notification_body">आपके वॉलेट में नो-शो क्रेडिट जुड़ गया।</string>
+    <string name="no_show_credit_banner">आपको %1$s क्रेडिट मिला! अगली बुकिंग पर लागू होगा।</string>
+    <string name="no_show_credit_banner_dismiss">बंद करें</string>
+
+    <!-- Customer home durable hooks (E11-S03) -->
+    <string name="home_pending_actions_label">कार्रवाई जरूरी</string>
+    <string name="home_pending_action_tap_hint">जारी रखने के लिए टैप करें</string>
+    <string name="home_action_rate_booking">बुकिंग रेट करें</string>
+    <string name="home_action_approve_addon">ऐड-ऑन अनुरोध स्वीकृत करें</string>
+    <string name="home_action_complaint_update">शिकायत अपडेट</string>
+    <string name="home_action_support_followup">सपोर्ट फॉलो-अप</string>
+    <string name="home_active_booking_label">सक्रिय बुकिंग</string>
+    <string name="home_active_booking_track_cta">ट्रैक करें</string>
+    <string name="home_active_booking_approve_cta">स्वीकृत करें</string>
+    <string name="home_recent_bookings_label">हाल की बुकिंग</string>
+    <string name="home_recent_booking_rate">रेट करें</string>
+    <string name="home_recent_booking_complain">शिकायत</string>
+
+    <!-- Credit-apply toggle on booking summary (E13-S04) -->
+    <string name="wallet_apply_credit_toggle">₹%1$s क्रेडिट लागू करें</string>
+    <string name="wallet_credit_original_price">मूल कीमत: ₹%1$s</string>
+    <string name="wallet_credit_applied_banner">₹%1$s क्रेडिट लागू किया गया</string>
+
+    <!-- Address picker (E16-S04) -->
+    <string name="address_picker_title">हम कहाँ आएँ?</string>
+    <string name="address_picker_search_hint">अपना पता या लैंडमार्क खोजें</string>
+    <string name="address_picker_search_unavailable_drop_pin">खोज उपलब्ध नहीं — मानचित्र पर पिन खींचकर स्थान तय करें</string>
+    <string name="address_picker_confirm">पता पुष्टि करें</string>
+    <string name="address_picker_refused_title">हम अभी इस क्षेत्र में सेवा नहीं देते</string>
+    <string name="address_picker_refused_subtitle">हम अयोध्या से शुरुआत कर रहे हैं। नीचे टैप करें — विस्तार होने पर हम सूचित करेंगे।</string>
+    <string name="address_picker_notify_me">उपलब्ध होने पर मुझे सूचित करें</string>
+    <string name="address_picker_pin_set_no_address">स्थान तय — पिन की जगह की पुष्टि करें</string>
+
+    <!-- Waitlist screen (E16-S04) -->
+    <string name="waitlist_title">विस्तार होने पर सूचना पाएँ</string>
+    <string name="waitlist_body">हम आपके क्षेत्र में सेवा शुरू होते ही एक SMS भेजेंगे। कोई स्पैम नहीं।</string>
+    <string name="waitlist_phone_label">मोबाइल नंबर</string>
+    <string name="waitlist_submit">वेटलिस्ट में जुड़ें</string>
+    <string name="waitlist_confirmed_title">आप वेटलिस्ट में हैं</string>
+    <string name="waitlist_confirmed_body">जिस दिन हम आपके क्षेत्र में शुरू करेंगे — हम SMS करेंगे।</string>
+    <string name="waitlist_error_retry">पुनः प्रयास करें</string>
+    <string name="waitlist_rate_limited">%d मिनट बाद प्रयास करें</string>
 </resources>

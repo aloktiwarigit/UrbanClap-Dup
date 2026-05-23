@@ -6,4 +6,5 @@ public data class BookingResult(
     val amount: Int,
     val requiresPayment: Boolean = true,
     val paymentMethod: BookingPaymentMethod = BookingPaymentMethod.RAZORPAY,
+    val appliedCreditAmount: Int = 0,
 )

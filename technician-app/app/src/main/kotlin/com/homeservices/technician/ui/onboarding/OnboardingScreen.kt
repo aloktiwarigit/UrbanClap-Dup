@@ -16,20 +16,26 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTimelineStep
+import com.homeservices.designsystem.theme.HomeservicesColors
+import com.homeservices.technician.R
 
-private val OnboardingHeroStart = Color(0xFF062A20)
-private val OnboardingHeroEnd = Color(0xFF0B3D2E)
+private val OnboardingHeroStart = HomeservicesColors.Brand.primaryHover
+private val OnboardingHeroEnd = HomeservicesColors.Brand.primary
 private const val ONBOARDING_HERO_FRACTION = 0.38f
 private const val ONBOARDING_FORM_FRACTION = 0.65f
 
@@ -37,7 +43,9 @@ private const val ONBOARDING_FORM_FRACTION = 0.65f
 internal fun OnboardingScreen(
     modifier: Modifier = Modifier,
     onContinue: () -> Unit = {},
+    viewModel: OnboardingViewModel = hiltViewModel(),
 ) {
+    val kycQueued by viewModel.kycSubmitQueued.collectAsStateWithLifecycle()
     Box(
         modifier =
             modifier
@@ -116,6 +124,14 @@ internal fun OnboardingScreen(
                         HsTimelineStep("Go online", "Receive nearby fixed-price service jobs.")
                         HsTimelineStep("Track earnings", "Review daily payouts, ratings, and support cases.")
                     }
+                }
+                if (kycQueued) {
+                    Text(
+                        text = stringResource(R.string.onboarding_kyc_queued_offline),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                    )
                 }
                 Spacer(Modifier.weight(1f))
                 HsPrimaryButton(

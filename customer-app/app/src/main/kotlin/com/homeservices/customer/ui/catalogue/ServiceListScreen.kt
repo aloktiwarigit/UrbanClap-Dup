@@ -66,6 +66,7 @@ internal fun ServiceListScreen(
     viewModel: ServiceListViewModel,
     onServiceClick: (String) -> Unit,
     onBack: () -> Unit,
+    photoFirstCatalogueEnabled: Boolean = false,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     Scaffold(
@@ -106,6 +107,7 @@ internal fun ServiceListScreen(
             uiState = uiState,
             onServiceClick = onServiceClick,
             modifier = Modifier.padding(innerPadding),
+            photoFirstCatalogueEnabled = photoFirstCatalogueEnabled,
         )
     }
 }
@@ -115,6 +117,7 @@ internal fun ServiceListContent(
     uiState: ServiceListUiState,
     onServiceClick: (String) -> Unit,
     modifier: Modifier = Modifier,
+    photoFirstCatalogueEnabled: Boolean = false,
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = WarmIvory) {
         when (uiState) {
@@ -147,7 +150,14 @@ internal fun ServiceListContent(
                         }
                     } else {
                         items(uiState.services, key = { it.id }) { service ->
-                            ServiceCard(service = service, onClick = { onServiceClick(service.id) })
+                            if (photoFirstCatalogueEnabled) {
+                                PhotoFirstServiceCard(
+                                    service = service,
+                                    onClick = { onServiceClick(service.id) },
+                                )
+                            } else {
+                                ServiceCard(service = service, onClick = { onServiceClick(service.id) })
+                            }
                         }
                     }
                 }

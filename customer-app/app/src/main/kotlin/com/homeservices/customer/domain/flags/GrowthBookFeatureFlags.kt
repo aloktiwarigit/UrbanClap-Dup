@@ -56,4 +56,14 @@ public class GrowthBookFeatureFlags
         }
 
         override fun truecallerServerVerify(): Boolean = sdk.isOn("truecaller_server_verify_v2") ?: false
+
+        override fun dpdpSelfServiceEnabled(): Boolean = sdk.isOn("customer.dpdp-self-service.enabled") ?: false
+
+        override fun walletVisible(): Boolean = sdk.isOn("customer.wallet.visible") ?: false
+
+        override fun photoFirstCatalogueEnabled(): Boolean = sdk.isOn("customer.photo-first-catalogue.enabled") ?: false
+
+        override fun placesAutocompleteEnabled(): Boolean = sdk.isOn("customer.places-autocomplete.enabled") ?: false
+
+        override fun sosAudioUploadEnabled(): Boolean = sdk.isOn("customer.sos-audio-upload.enabled") ?: false
     }

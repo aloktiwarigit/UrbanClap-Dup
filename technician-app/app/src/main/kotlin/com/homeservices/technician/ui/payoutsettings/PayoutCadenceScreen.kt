@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -25,11 +26,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.technician.R
 
 private data class CadenceOption(
     val value: String,
@@ -70,7 +73,7 @@ internal fun PayoutCadenceScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("पेमेंट सेटिंग") }) },
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.payout_settings_title)) }) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier,
     ) { padding ->
@@ -81,7 +84,11 @@ internal fun PayoutCadenceScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(56.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 4.dp,
+                    )
                 }
             }
             is PayoutCadenceUiState.Ready -> {
@@ -113,7 +120,7 @@ private fun ReadyContent(
         modifier = modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("पेमेंट कब चाहिए?", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.payout_when_question), style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(4.dp))
 
         CADENCE_OPTIONS.forEach { option ->

@@ -13,4 +13,5 @@ public data class BookingRequest(
     val addressLat: Double,
     val addressLng: Double,
     val paymentMethod: BookingPaymentMethod = BookingPaymentMethod.RAZORPAY,
+    val applyCredit: Boolean = false,
 )

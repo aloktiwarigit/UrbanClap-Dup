@@ -6,11 +6,18 @@ function defaultBucket() {
 }
 
 export async function getStorageDownloadUrl(storagePath: string): Promise<string> {
+  return getStorageDownloadUrlWithTtl(storagePath, 900);
+}
+
+export async function getStorageDownloadUrlWithTtl(
+  storagePath: string,
+  ttlSeconds: number,
+): Promise<string> {
   const bucket = defaultBucket();
   const file = bucket.file(storagePath);
   const [url] = await file.getSignedUrl({
     action: 'read',
-    expires: Date.now() + 15 * 60 * 1000, // 15 min
+    expires: Date.now() + ttlSeconds * 1000,
   });
   return url;
 }

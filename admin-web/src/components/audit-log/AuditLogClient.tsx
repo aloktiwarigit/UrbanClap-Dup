@@ -75,7 +75,7 @@ export function AuditLogClient() {
         <p className="text-sm text-[var(--color-text-muted)] mb-[var(--space-3)]">{t('loading')}</p>
       )}
       {error && (
-        <p role="alert" className="text-sm text-[var(--color-danger)] mb-[var(--space-3)]">
+        <p role="alert" className="text-sm text-[var(--rose-soft)] mb-[var(--space-3)]">
           {error}
         </p>
       )}

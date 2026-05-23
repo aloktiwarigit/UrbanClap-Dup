@@ -78,11 +78,30 @@ jobs:
       - name: ktlint + detekt + android lint
         run: ./gradlew ktlintCheck detekt lintDebug
 
+      - name: Zero hardcoded Text literals
+        run: |
+          count=$(grep -r 'Text("' technician-app/app/src/main/kotlin/com/homeservices/technician/ui/ \
+            | grep -v '//\|%.1f\|\\u\|""\|" "' \
+            | grep -v 'stringResource\|getString' \
+            | wc -l | tr -d ' ')
+          if [ "$count" -gt 0 ]; then
+            echo "❌ Found $count hardcoded Text() literals in ui/ — use stringResource()"
+            grep -r 'Text("' technician-app/app/src/main/kotlin/com/homeservices/technician/ui/ \
+              | grep -v '//\|%.1f\|\\u\|""\|" "' \
+              | grep -v 'stringResource\|getString'
+            exit 1
+          fi
+          echo "✅ No hardcoded Text() literals"
+
       - name: paparazzi screenshot diff
         run: ./gradlew verifyPaparazziDebug
 
       - name: semgrep SAST
         uses: returntocorp/semgrep-action@v1
         with:
-          config: p/kotlin p/owasp-top-ten p/secrets
+          config: >-
+            p/kotlin
+            p/owasp-top-ten
+            p/secrets
+            technician-app/.semgrep/
 

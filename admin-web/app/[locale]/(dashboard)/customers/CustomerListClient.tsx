@@ -11,6 +11,8 @@ import type { AdminCustomer, CustomerStatus } from '@/types/customer-admin';
 
 interface Props {
   initialCustomers: AdminCustomer[];
+  /** Server-side fetch error, surfaced inline instead of silently rendering empty. */
+  fetchError?: string | null;
 }
 
 type StatusFilter = 'ALL' | CustomerStatus;
@@ -44,7 +46,7 @@ interface ExpandedState {
   saving: '' | 'flag' | 'note' | 'refund';
 }
 
-export function CustomerListClient({ initialCustomers }: Props) {
+export function CustomerListClient({ initialCustomers, fetchError = null }: Props) {
   const t = useTranslations('customers');
   const locale = useLocale();
 
@@ -220,8 +222,15 @@ export function CustomerListClient({ initialCustomers }: Props) {
         </div>
       </div>
 
+      {/* Server-side fetch error — surface inline instead of silently rendering empty. */}
+      {fetchError && (
+        <p role="alert" className="alert alert-danger" style={{ margin: '1rem 0' }}>
+          customers list failed: {fetchError}
+        </p>
+      )}
+
       {/* Table */}
-      {filtered.length === 0 ? (
+      {fetchError ? null : filtered.length === 0 ? (
         <p style={{ color: 'var(--fog-0)', textAlign: 'center', padding: '3rem 0' }}>
           {t('emptyState')}
         </p>
