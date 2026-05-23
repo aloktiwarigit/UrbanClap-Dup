@@ -1,1 +1,7 @@
-E20-S08 account deletion — Codex review passed 2026-05-23 (2 rounds: P2 stale cache + back-nav; P1 Moshi adapters + P2 persistent sign-out flag; all fixed)
+codex-review-passed: 2026-05-23T21:14:08Z
+branch: fix/sprint7-architecture-cleanup
+base: main
+model: gpt-5.5
+rounds: 2
+result: PASS — no discrete correctness issues
+p2-fixes: PaymentResultBus HOT revert + NoShowCreditEventBus StateFlow consume()
