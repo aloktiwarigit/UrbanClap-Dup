@@ -1,14 +1,8 @@
 package com.homeservices.technician.domain.erasure
 
-import com.homeservices.technician.domain.activeJob.ActiveJobRepository
-import com.homeservices.technician.domain.activeJob.model.ActiveJob
-import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
-import com.homeservices.technician.domain.activeJob.model.LatLng
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -16,82 +10,40 @@ import org.junit.jupiter.api.Test
 
 public class SubmitErasureRequestUseCaseTest {
     private val erasureRepository: ErasureRepository = mockk()
-    private val activeJobRepository: ActiveJobRepository = mockk()
     private lateinit var useCase: SubmitErasureRequestUseCase
-
-    private fun activeJob(status: ActiveJobStatus = ActiveJobStatus.IN_PROGRESS) =
-        ActiveJob(
-            bookingId = "bk-1",
-            customerId = "c-1",
-            serviceId = "svc-1",
-            serviceName = "AC Repair",
-            addressText = "12 Main St",
-            addressLatLng = LatLng(12.0, 77.0),
-            status = status,
-            slotDate = "2026-05-22",
-            slotWindow = "10:00-12:00",
-        )
 
     @BeforeEach
     public fun setUp() {
-        useCase = SubmitErasureRequestUseCase(erasureRepository, activeJobRepository)
+        useCase = SubmitErasureRequestUseCase(erasureRepository)
     }
 
     @Test
-    public fun `returns ActiveJobExists without network call when job is IN_PROGRESS`(): Unit =
+    public fun `delegates to repository and returns Success`(): Unit =
         runTest {
-            every { activeJobRepository.activeJobState } returns
-                MutableStateFlow(activeJob(ActiveJobStatus.IN_PROGRESS))
-
-            val result = useCase()
-
-            assertThat(result).isEqualTo(ErasureSubmitResult.ActiveJobExists)
-            coVerify(exactly = 0) { erasureRepository.submitRequest(any()) }
-        }
-
-    @Test
-    public fun `returns ActiveJobExists without network call when job is ASSIGNED`(): Unit =
-        runTest {
-            every { activeJobRepository.activeJobState } returns
-                MutableStateFlow(activeJob(ActiveJobStatus.ASSIGNED))
-
-            val result = useCase()
-
-            assertThat(result).isEqualTo(ErasureSubmitResult.ActiveJobExists)
-            coVerify(exactly = 0) { erasureRepository.submitRequest(any()) }
-        }
-
-    @Test
-    public fun `does NOT block deletion when job is COMPLETED — lets server decide`(): Unit =
-        runTest {
-            every { activeJobRepository.activeJobState } returns
-                MutableStateFlow(activeJob(ActiveJobStatus.COMPLETED))
             coEvery { erasureRepository.submitRequest(null) } returns
                 ErasureSubmitResult.Success("2026-05-29T02:00:00.000Z")
 
             val result = useCase()
 
-            // COMPLETED stays in memory after job ends; client must not block on stale snapshot
             assertThat(result).isEqualTo(ErasureSubmitResult.Success("2026-05-29T02:00:00.000Z"))
             coVerify(exactly = 1) { erasureRepository.submitRequest(null) }
         }
 
     @Test
-    public fun `calls repository when activeJobState is null and returns Success`(): Unit =
+    public fun `passes reason argument to repository`(): Unit =
         runTest {
-            every { activeJobRepository.activeJobState } returns MutableStateFlow(null)
-            coEvery { erasureRepository.submitRequest(null) } returns
+            coEvery { erasureRepository.submitRequest("moving abroad") } returns
                 ErasureSubmitResult.Success("2026-05-29T02:00:00.000Z")
 
-            val result = useCase()
+            val result = useCase(reason = "moving abroad")
 
             assertThat(result).isEqualTo(ErasureSubmitResult.Success("2026-05-29T02:00:00.000Z"))
+            coVerify(exactly = 1) { erasureRepository.submitRequest("moving abroad") }
         }
 
     @Test
-    public fun `propagates ActiveJobExists from server when activeJobState is null`(): Unit =
+    public fun `propagates ActiveJobExists from server — server gate is authoritative`(): Unit =
         runTest {
-            every { activeJobRepository.activeJobState } returns MutableStateFlow(null)
             coEvery { erasureRepository.submitRequest(null) } returns ErasureSubmitResult.ActiveJobExists
 
             val result = useCase()
@@ -100,9 +52,18 @@ public class SubmitErasureRequestUseCaseTest {
         }
 
     @Test
+    public fun `propagates DuplicatePending from repository`(): Unit =
+        runTest {
+            coEvery { erasureRepository.submitRequest(null) } returns ErasureSubmitResult.DuplicatePending
+
+            val result = useCase()
+
+            assertThat(result).isEqualTo(ErasureSubmitResult.DuplicatePending)
+        }
+
+    @Test
     public fun `propagates UnknownError from repository`(): Unit =
         runTest {
-            every { activeJobRepository.activeJobState } returns MutableStateFlow(null)
             coEvery { erasureRepository.submitRequest(null) } returns
                 ErasureSubmitResult.UnknownError("HTTP 500")
 

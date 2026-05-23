@@ -2,6 +2,7 @@ package com.homeservices.technician.ui.deleteaccount
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -41,13 +42,17 @@ public fun AccountDeletedScreen(
 ) {
     val scope = rememberCoroutineScope()
     val formattedDate = rememberFormattedDate(scheduledAt)
+    val onDone = { scope.launch { sessionManager.clearSession() } }
+
+    // Back gesture must clear the session just like the Done button does.
+    // Without this the user could press Back to return to the dashboard while
+    // a deletion request is already pending, leaving them signed in.
+    BackHandler { onDone() }
 
     AccountDeletedScreenContent(
         formattedDate = formattedDate,
         deletionRequestUrl = stringResource(R.string.deletion_request_url),
-        // clearSession() triggers AuthState.Unauthenticated; AppNavigation observer
-        // navigates to "auth" and pops the back stack automatically.
-        onDone = { scope.launch { sessionManager.clearSession() } },
+        onDone = { onDone() },
     )
 }
 
