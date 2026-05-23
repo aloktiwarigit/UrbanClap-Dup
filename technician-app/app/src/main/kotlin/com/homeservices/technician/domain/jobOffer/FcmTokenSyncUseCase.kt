@@ -1,6 +1,5 @@
 package com.homeservices.technician.domain.jobOffer
 
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessaging
 import com.homeservices.technician.data.jobOffer.FcmTokenRequest
 import com.homeservices.technician.data.jobOffer.JobOfferApiService
@@ -13,7 +12,6 @@ public class FcmTokenSyncUseCase
     @Inject
     internal constructor(
         private val api: JobOfferApiService,
-        private val firebaseAuth: FirebaseAuth,
     ) {
         /** Called from app startup / login flow. Fetches the FCM token internally. */
         public suspend operator fun invoke(): Unit {
@@ -31,14 +29,7 @@ public class FcmTokenSyncUseCase
          */
         public suspend fun invokeWithFcmToken(fcmToken: String): Unit {
             try {
-                val idToken =
-                    firebaseAuth.currentUser
-                        ?.getIdToken(false)
-                        ?.await()
-                        ?.token
-                        .orEmpty()
-                if (idToken.isBlank()) return
-                api.syncFcmToken("Bearer $idToken", FcmTokenRequest(fcmToken))
+                api.syncFcmToken(FcmTokenRequest(fcmToken))
             } catch (_: Exception) {
                 // Token sync is best-effort; failures are non-fatal
             }

@@ -25,7 +25,7 @@ internal class ProfileViewModel
             )
 
         fun signOut() {
-            viewModelScope.launch { sessionManager.clearSession() }
+            viewModelScope.launch { sessionManager.signOut() }
         }
 
         fun updateDisplayName(rawName: String) {

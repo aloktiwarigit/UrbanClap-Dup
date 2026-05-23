@@ -47,10 +47,10 @@ public class ProfileViewModelTest {
         }
 
     @Test
-    public fun `signOut calls sessionManager clearSession`(): Unit =
+    public fun `signOut calls sessionManager signOut`(): Unit =
         runTest(dispatcher) {
             sut.signOut()
-            coVerify { sessionManager.clearSession() }
+            coVerify { sessionManager.signOut() }
         }
 
     @Test

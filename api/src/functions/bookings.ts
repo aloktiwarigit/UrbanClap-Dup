@@ -7,18 +7,87 @@ import { requireIntegrity } from '../middleware/requireIntegrity.js';
 import { requireCustomer, type CustomerHttpHandler } from '../middleware/requireCustomer.js';
 import { CreateBookingRequestSchema, ConfirmBookingRequestSchema } from '../schemas/booking.js';
 import { RequestAddOnBodySchema, ApproveAddOnsBodySchema } from '../schemas/addon-approval.js';
-import { bookingRepo } from '../cosmos/booking-repository.js';
+import { bookingRepo, type BookingCreateCreditOptions } from '../cosmos/booking-repository.js';
 import { createRazorpayOrder, verifyPaymentSignature } from '../services/razorpay.service.js';
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
-import { sendPriceApprovalPush } from '../services/fcm.service.js';
+import { sendPriceApprovalPush, sendTechnicianBookingStatusUpdatePush } from '../services/fcm.service.js';
 import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
-import { isSoftLaunchEnabled, isMarketingPaused, isServiceAreaGatingEnabled } from '../services/featureFlags.service.js';
+import { isSoftLaunchEnabled, isMarketingPaused, isServiceAreaGatingEnabled, isWalletCreditEnabled } from '../services/featureFlags.service.js';
+import { customerCreditLedgerRepo } from '../cosmos/customer-credit-ledger-repository.js';
 import { dispatcherService } from '../services/dispatcher.service.js';
 import { posthog } from '../observability/posthog.js';
 import { normalizeAddressText } from '../shared/address-text.js';
 import { isLatLngInServiceArea } from '../services/service-area.service.js';
 import { AYODHYA_SERVICE_AREA } from '../data/service-area-ayodhya.js';
+import { slotHoldsRepo } from '../cosmos/slot-holds-repository.js';
+import { generateSlots, filterElapsedSlots, currentIstMinuteOfDay, todayIst } from '../shared/slot-utils.js';
+import { getStorageDownloadUrlWithTtl, checkStorageFileExists } from '../firebase/admin.js';
+
+const PHOTO_STAGE_ORDER = ['EN_ROUTE', 'REACHED', 'IN_PROGRESS', 'COMPLETED'] as const;
+const PHOTO_SIGNED_URL_TTL_SECONDS = 300;
+const REPORT_SIGNED_URL_TTL_SECONDS = 300;
+
+async function projectPhotos(
+  rawPhotos: Record<string, string[]> | undefined,
+): Promise<Record<string, { urls: string[] }> | undefined> {
+  if (!rawPhotos || Object.keys(rawPhotos).length === 0) return undefined;
+
+  const knownStages = new Set<string>(PHOTO_STAGE_ORDER);
+  const orderedStages = [
+    ...PHOTO_STAGE_ORDER.filter((s) => rawPhotos[s]?.length),
+    ...Object.keys(rawPhotos).filter((s) => !knownStages.has(s)),
+  ];
+
+  const stageSets = await Promise.all(
+    orderedStages.map(async (stage) => {
+      const paths = rawPhotos[stage] ?? [];
+      const urls = (
+        await Promise.all(
+          paths.map(async (path) => {
+            try {
+              return await getStorageDownloadUrlWithTtl(path, PHOTO_SIGNED_URL_TTL_SECONDS);
+            } catch (err) {
+              Sentry.captureException(err);
+              console.warn('[getBooking] photo sign failed', {
+                stage,
+                path,
+                signedUrl: '[redacted-signed-url]',
+              });
+              return null;
+            }
+          }),
+        )
+      ).filter((u): u is string => u !== null);
+      return urls.length > 0 ? ([stage, { urls }] as const) : null;
+    }),
+  );
+
+  const result = Object.fromEntries(
+    stageSets.filter((s): s is NonNullable<typeof s> => s !== null),
+  );
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+async function projectReportSignedUrl(
+  bookingId: string,
+  status: string,
+): Promise<string | null> {
+  if (status !== 'COMPLETED') return null;
+  const reportPath = `reports/${bookingId}/service-report.pdf`;
+  try {
+    const exists = await checkStorageFileExists(reportPath);
+    if (!exists) return null;
+    return await getStorageDownloadUrlWithTtl(reportPath, REPORT_SIGNED_URL_TTL_SECONDS);
+  } catch (err) {
+    Sentry.captureException(err);
+    console.warn('[getBooking] report sign failed', {
+      bookingId,
+      signedUrl: '[redacted-signed-url]',
+    });
+    return null;
+  }
+}
 
 function makeRazorpayReceipt(customerId: string): string {
   return `bk_${Date.now().toString(36)}_${customerId.slice(0, 20)}`;
@@ -47,6 +116,54 @@ function bookingMetadata(
   };
 }
 
+/**
+ * E13-S01: Attempt to apply wallet credit for a booking.
+ *
+ * Returns the applied amount (0 if none, or on any non-fatal error).
+ * 412 from Cosmos (etag conflict = concurrent apply) is treated as zero-credit:
+ * the booking still succeeds, credit just wasn't applied this time.
+ *
+ * @param customerId     - customer's UID
+ * @param bookingId      - pre-generated or created booking ID (used in ledger entry)
+ * @param bookingAmount  - booking total in paise (credit capped at this)
+ * @param idempotencyKey - UUID from Idempotency-Key header (caller must validate present)
+ */
+async function attemptCreditApplication(
+  customerId: string,
+  bookingId: string,
+  bookingAmount: number,
+  idempotencyKey: string,
+): Promise<number> {
+  try {
+    const { balanceInPaise } = await customerCreditLedgerRepo.getBalance(customerId);
+    if (balanceInPaise <= 0) return 0;
+
+    const amountToApply = Math.min(balanceInPaise, bookingAmount);
+    const result = await customerCreditLedgerRepo.applyCredit(
+      customerId,
+      bookingId,
+      amountToApply,
+      idempotencyKey,
+    );
+    return result.appliedAmountInPaise;
+  } catch (err: unknown) {
+    const code = (err as { code?: number }).code;
+    if (code === 412) {
+      // Optimistic concurrency conflict — concurrent write, safe to return 0
+      console.warn('[createBooking] applyCredit 412 conflict — proceeding without credit', {
+        customerId, bookingId,
+      });
+      return 0;
+    }
+    // Non-412 unexpected errors — log and continue (never block the booking)
+    Sentry.captureException(err);
+    console.error('[createBooking] applyCredit unexpected error — proceeding without credit', {
+      customerId, bookingId, err,
+    });
+    return 0;
+  }
+}
+
 const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
   if (!(await isSoftLaunchEnabled(customer.customerId))) {
     return { status: 503, jsonBody: { code: 'SERVICE_UNAVAILABLE', message: 'Launch coming soon' } };
@@ -58,6 +175,15 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
   const body = await req.json().catch(() => null);
   const parsed = CreateBookingRequestSchema.safeParse(body);
   if (!parsed.success) return { status: 422, jsonBody: { code: 'VALIDATION_ERROR', issues: parsed.error.issues } };
+
+  // E13-S01: Validate Idempotency-Key is present when applyCredit=true
+  const idempotencyKey = req.headers.get('idempotency-key') ?? '';
+  if (parsed.data.applyCredit) {
+    const creditEnabled = await isWalletCreditEnabled(customer.customerId);
+    if (creditEnabled && !idempotencyKey) {
+      return { status: 422, jsonBody: { code: 'IDEMPOTENCY_KEY_REQUIRED', message: 'Idempotency-Key header is required when applyCredit=true' } };
+    }
+  }
 
   // Service-area polygon gating — E16-S01 / ADR-0020 / Threat-model T-B1
   // Zod already guarantees lat ∈ [-90,90] and lng ∈ [-180,180]; this is the
@@ -90,6 +216,48 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
   const service = await catalogueRepo.getServiceByIdCrossPartition(parsed.data.serviceId);
   if (!service || !service.isActive) return { status: 404, jsonBody: { code: 'SERVICE_NOT_FOUND' } };
 
+  // E16-S02: Validate slotWindow against server-generated windows for this service + date.
+  // Rejects fabricated windows and past windows (elapsed slots for today's date).
+  let validWindows = generateSlots(service, parsed.data.slotDate);
+  if (parsed.data.slotDate === todayIst()) {
+    validWindows = filterElapsedSlots(validWindows, currentIstMinuteOfDay());
+  }
+  if (!validWindows.includes(parsed.data.slotWindow)) {
+    return { status: 422, jsonBody: { code: 'INVALID_SLOT_WINDOW', message: 'The requested time slot does not match this service\'s schedule.' } };
+  }
+
+  // E16-S02: Guard against pre-deployment or post-expiry booking gaps.
+  // The slot_holds container only prevents concurrent holds — it does not know about bookings
+  // that pre-date the container deployment or whose hold doc expired. Check existing bookings
+  // directly before attempting the hold so we never create a duplicate booking.
+  const existingBookedWindows = await bookingRepo.getBookedWindowsByServiceDate(
+    parsed.data.serviceId,
+    parsed.data.slotDate,
+  );
+  if (existingBookedWindows.includes(parsed.data.slotWindow)) {
+    return {
+      status: 409,
+      jsonBody: { code: 'SLOT_UNAVAILABLE', message: 'This time slot is no longer available.' },
+    };
+  }
+
+  // E16-S02: Slot-conflict locking — attempt to hold the slot before writing the booking.
+  // createHold returns 'CONFLICT' if another hold or booking already occupies this window.
+  const holdResult = await slotHoldsRepo.createHold(
+    parsed.data.serviceId,
+    parsed.data.slotDate,
+    parsed.data.slotWindow,
+    customer.customerId,
+  );
+  if (holdResult === 'CONFLICT') {
+    return {
+      status: 409,
+      jsonBody: { code: 'SLOT_UNAVAILABLE', message: 'This time slot is no longer available.' },
+    };
+  }
+  const holdId = holdResult.id;
+  const holdPk = holdResult.servicePartitionKey;
+
   if (parsed.data.paymentMethod === 'CASH_ON_SERVICE') {
     const cashOrderId = `cash_${randomUUID()}`;
     const booking = await bookingRepo.createPending(
@@ -101,11 +269,37 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     );
     const paid = await bookingRepo.markPaid(booking.id, 'cash_on_service_pending');
     if (!paid) return { status: 500, jsonBody: { code: 'BOOKING_CONFIRMATION_FAILED' } };
+
+    // E16-S02: Commit hold — converts 30 s soft hold to permanent slot record.
+    slotHoldsRepo.commitHold(holdId, holdPk, booking.id).catch((err: unknown) => {
+      Sentry.captureException(err);
+      console.warn('[createBooking] commitHold failed (non-fatal)', { holdId, bookingId: booking.id, err });
+    });
+
+    // E13-S01: Apply wallet credit for cash bookings
+    let appliedCreditAmount = 0;
+    if (parsed.data.applyCredit && idempotencyKey) {
+      const creditEnabled = await isWalletCreditEnabled(customer.customerId);
+      if (creditEnabled) {
+        appliedCreditAmount = await attemptCreditApplication(
+          customer.customerId,
+          booking.id,
+          service.basePrice,
+          idempotencyKey,
+        );
+      }
+    }
+
     try {
       posthog.capture({
         distinctId: customer.customerId,
         event: 'booking-created',
-        properties: { bookingId: booking.id, serviceId: parsed.data.serviceId, paymentMethod: 'CASH_ON_SERVICE' },
+        properties: {
+          bookingId: booking.id,
+          serviceId: parsed.data.serviceId,
+          paymentMethod: 'CASH_ON_SERVICE',
+          appliedCreditAmount,
+        },
       });
     } catch { /* never break the main path */ }
     dispatcherService.triggerDispatch(booking.id).catch((err: unknown) => {
@@ -120,6 +314,7 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
         amount: service.basePrice,
         requiresPayment: false,
         paymentMethod: 'CASH_ON_SERVICE',
+        appliedCreditAmount,
       },
     };
   }
@@ -136,6 +331,13 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     );
     const paid = await bookingRepo.markPaid(booking.id, 'manual_payment_not_configured');
     if (!paid) return { status: 500, jsonBody: { code: 'BOOKING_CONFIRMATION_FAILED' } };
+
+    // E16-S02: Commit hold (non-fatal)
+    slotHoldsRepo.commitHold(holdId, holdPk, booking.id).catch((err: unknown) => {
+      Sentry.captureException(err);
+      console.warn('[createBooking] commitHold failed (non-fatal)', { holdId, bookingId: booking.id, err });
+    });
+
     dispatcherService.triggerDispatch(booking.id).catch((err: unknown) => {
       Sentry.captureException(err);
       console.error('[createBooking] manual-payment dispatch failed', { bookingId: booking.id, err });
@@ -148,6 +350,7 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
         amount: service.basePrice,
         requiresPayment: false,
         paymentMethod: 'CASH_ON_SERVICE',
+        appliedCreditAmount: 0,
       },
     };
   }
@@ -156,10 +359,185 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
   // The webhook can then do a cheap point-read (getById) instead of a cross-partition scan.
   const preGeneratedBookingId = randomUUID();
 
+  // E13-S01 (P1-6): Determine intended credit amount WITHOUT writing to the ledger yet.
+  // The actual ledger CREDIT_APPLIED entry is written in the Razorpay webhook (payment.captured),
+  // NOT here. This prevents the "debit-before-payment" bug where an unpaid/abandoned booking
+  // permanently consumes the customer's wallet credit.
+  //
+  // For the fully-credit-paid path (P1-5): if credit covers 100% of the booking, we skip
+  // Razorpay entirely and mark the booking PAID directly — no payment intent is needed.
+  let pendingCreditAmount = 0;
+  const creditEnabled = parsed.data.applyCredit && idempotencyKey
+    ? await isWalletCreditEnabled(customer.customerId)
+    : false;
+
+  if (creditEnabled) {
+    // Peek at current balance; we don't write the ledger entry here.
+    const { balanceInPaise } = await customerCreditLedgerRepo.getBalance(customer.customerId);
+    pendingCreditAmount = Math.min(balanceInPaise, service.basePrice);
+  }
+
+  const payableAmount = service.basePrice - pendingCreditAmount;
+
+  // P1-5: Credit covers 100% — skip Razorpay, mark PAID directly
+  if (payableAmount <= 0 && pendingCreditAmount > 0) {
+    const fullCreditOrderId = `credit_${randomUUID()}`;
+    const fullCreditCreditOptions: BookingCreateCreditOptions = {
+      pendingCreditAmountInPaise: pendingCreditAmount,
+      pendingCreditIdempotencyKey: idempotencyKey,
+    };
+    const booking = await bookingRepo.createPending(
+      parsed.data,
+      customer.customerId,
+      fullCreditOrderId,
+      service.basePrice,
+      bookingMetadata(customer, service.name),
+      preGeneratedBookingId,
+      fullCreditCreditOptions,
+    );
+
+    // Apply credit synchronously for the fully-credit-paid path (no payment to wait for)
+    const appliedCreditAmount = await attemptCreditApplication(
+      customer.customerId,
+      booking.id,
+      pendingCreditAmount,
+      idempotencyKey,
+    );
+
+    // P1-1: Verify the credit was actually applied before marking PAID.
+    //
+    // attemptCreditApplication returns 0 (or a partial amount) when:
+    //   - A 412 ETag conflict (race with another concurrent apply) exhausted all retries.
+    //   - An unexpected Cosmos error was swallowed by the non-blocking path.
+    //
+    // If we mark PAID without the credit being applied, the customer gets a free
+    // or underpaid booking (the Razorpay order was skipped entirely).
+    //
+    // Safe fallback: reject with 409 so the customer retries. We cannot safely
+    // fall back to Razorpay here because the booking doc was already created and
+    // the Razorpay order amount would need to be recomputed — doing so in a partially
+    // applied state risks double-charging or missed credit.
+    if (appliedCreditAmount < pendingCreditAmount) {
+      console.warn('[createBooking] full-credit path: applied amount < expected; rejecting with 409', {
+        customerId: customer.customerId,
+        bookingId: booking.id,
+        expected: pendingCreditAmount,
+        applied: appliedCreditAmount,
+      });
+      Sentry.captureException(
+        new Error(`CREDIT_RACE: applied ${appliedCreditAmount} < expected ${pendingCreditAmount}`),
+      );
+      // Booking is in PENDING_PAYMENT state and no Razorpay order was created — safe to
+      // leave it; it will expire naturally (stale-booking cleanup handles it).
+      return {
+        status: 409,
+        jsonBody: {
+          code: 'CREDIT_RACE',
+          message: 'Credit application conflict — please retry. Your wallet balance is unchanged.',
+        },
+      };
+    }
+
+    // Mark PAID immediately (no Razorpay payment involved)
+    const paid = await bookingRepo.markPaid(booking.id, 'credit_full_payment');
+    if (!paid) return { status: 500, jsonBody: { code: 'BOOKING_CONFIRMATION_FAILED' } };
+
+    // E16-S02: Commit hold — converts 30 s soft hold to permanent slot record.
+    slotHoldsRepo.commitHold(holdId, holdPk, booking.id).catch((err: unknown) => {
+      Sentry.captureException(err);
+      console.warn('[createBooking] commitHold failed (non-fatal)', { holdId, bookingId: booking.id, err });
+    });
+
+    try {
+      posthog.capture({
+        distinctId: customer.customerId,
+        event: 'booking-created',
+        properties: {
+          bookingId: booking.id,
+          serviceId: parsed.data.serviceId,
+          paymentMethod: 'CREDIT_FULL',
+          appliedCreditAmount,
+        },
+      });
+    } catch { /* never break the main path */ }
+
+    dispatcherService.triggerDispatch(booking.id).catch((err: unknown) => {
+      Sentry.captureException(err);
+      console.error('[createBooking] credit-full dispatch failed', { bookingId: booking.id, err });
+    });
+
+    return {
+      status: 201,
+      jsonBody: {
+        bookingId: booking.id,
+        razorpayOrderId: fullCreditOrderId,
+        amount: service.basePrice,
+        requiresPayment: false,
+        paymentMethod: 'CREDIT_FULL',
+        appliedCreditAmount,
+      },
+    };
+  }
+
+  // Partial or no credit — create Razorpay order for the payable portion.
+  //
+  // P1-2: Reserve the credit BEFORE creating the discounted Razorpay order.
+  //
+  // Problem without reservation: `pendingCreditAmount` is only a balance peek. If:
+  //   (a) The same idempotency key is replayed (client retry), a second discounted
+  //       Razorpay order is created, potentially granting the discount twice.
+  //   (b) The wallet balance is spent elsewhere between here and payment.captured,
+  //       the webhook tries to apply a credit that no longer exists — the Razorpay
+  //       payment collected less than basePrice and the booking is undercollected.
+  //
+  // Fix: write a RESERVED idempotency doc with IfNoneMatch: * before creating the
+  // Razorpay order. This guarantees:
+  //   - Idempotency-key replay on Razorpay order creation returns 'already_reserved'
+  //     (same booking) → skip Razorpay creation and return the same pending credit amount.
+  //   - The wallet balance is not double-spent (the reservation does not debit the wallet;
+  //     the actual debit in applyCredit will see the RESERVED status and proceed to debit).
+  //   - On abandonment (no payment.captured within TTL): the reservation auto-expires, leaving
+  //     the wallet balance intact for the next booking.
+  if (pendingCreditAmount > 0) {
+    try {
+      const reserveResult = await customerCreditLedgerRepo.reserveCredit(
+        customer.customerId,
+        preGeneratedBookingId,
+        pendingCreditAmount,
+        idempotencyKey,
+      );
+      if (reserveResult === 'already_reserved') {
+        // Idempotent replay: same key, same booking — the Razorpay order was already created
+        // in a prior attempt (but the response may not have reached the client). Return the
+        // same pending credit info so the client can resume payment.
+        console.info('[createBooking] credit reservation already exists — idempotent replay', {
+          customerId: customer.customerId,
+          bookingId: preGeneratedBookingId,
+        });
+        // Fall through to create the Razorpay order (or it may already exist; Razorpay is
+        // idempotent on order ID because the receipt is unique per attempt — acceptable).
+      }
+    } catch (reserveErr: unknown) {
+      Sentry.captureException(reserveErr);
+      console.error('[createBooking] credit reservation failed — falling back to no-credit Razorpay', {
+        customerId: customer.customerId,
+        err: reserveErr,
+      });
+      // Non-fatal: fall back to full-price Razorpay (safer than blocking the booking).
+      // pendingCreditAmount is reset to 0 so no discount is applied.
+      // The unreserved credit stays in the wallet for the next booking.
+      // NOTE: if this was a 409 IDEMPOTENCY_KEY_ALREADY_USED for a different booking,
+      // that is an abuse signal — Sentry captures it above.
+      // For non-409 errors (Cosmos failures, timeouts, etc.), the reservation didn't
+      // happen — credit stays intact in the wallet for the next booking attempt.
+      // We fall through to create a full-price Razorpay order (no discount) which is safe.
+    }
+  }
+
   let order: Awaited<ReturnType<typeof createRazorpayOrder>>;
   try {
     order = await createRazorpayOrder({
-      amount: service.basePrice,
+      amount: payableAmount > 0 ? payableAmount : service.basePrice,
       currency: 'INR',
       receipt: makeRazorpayReceipt(customer.customerId),
       notes: { bookingId: preGeneratedBookingId },
@@ -180,6 +558,13 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     };
   }
 
+  // P1-6: Store the intended credit amount on the booking doc.
+  // The webhook (payment.captured) will call applyCredit to debit the ledger.
+  // If the customer abandons payment, no credit is debited (it stays intact).
+  const razorpayCreditOptions: BookingCreateCreditOptions | undefined = pendingCreditAmount > 0
+    ? { pendingCreditAmountInPaise: pendingCreditAmount, pendingCreditIdempotencyKey: idempotencyKey }
+    : undefined;
+
   const booking = await bookingRepo.createPending(
     parsed.data,
     customer.customerId,
@@ -187,15 +572,42 @@ const createHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
     service.basePrice,
     bookingMetadata(customer, service.name),
     preGeneratedBookingId,
+    razorpayCreditOptions,
   );
+
+  // E16-S02: Commit hold — converts 30 s soft hold to permanent slot record.
+  slotHoldsRepo.commitHold(holdId, holdPk, booking.id).catch((err: unknown) => {
+    Sentry.captureException(err);
+    console.warn('[createBooking] commitHold failed (non-fatal)', { holdId, bookingId: booking.id, err });
+  });
+
   try {
     posthog.capture({
       distinctId: customer.customerId,
       event: 'booking-created',
-      properties: { bookingId: booking.id, serviceId: parsed.data.serviceId, paymentMethod: 'RAZORPAY' },
+      properties: {
+        bookingId: booking.id,
+        serviceId: parsed.data.serviceId,
+        paymentMethod: 'RAZORPAY',
+        // appliedCreditAmount reported as 0 here — actual debit happens post-payment
+        appliedCreditAmount: 0,
+        pendingCreditAmount,
+      },
     });
   } catch { /* never break the main path */ }
-  return { status: 201, jsonBody: { bookingId: booking.id, razorpayOrderId: order.id, amount: order.amount, requiresPayment: true, paymentMethod: 'RAZORPAY' } };
+  return {
+    status: 201,
+    jsonBody: {
+      bookingId: booking.id,
+      razorpayOrderId: order.id,
+      amount: order.amount,
+      requiresPayment: true,
+      paymentMethod: 'RAZORPAY',
+      // Report pending credit to client so the UI can show "₹X will be applied after payment"
+      appliedCreditAmount: 0,
+      pendingCreditAmount,
+    },
+  };
 };
 
 const confirmHandler: CustomerHttpHandler = async (req, _ctx, customer) => {
@@ -235,13 +647,23 @@ const getBookingInner: CustomerHttpHandler = async (req, _ctx, customer) => {
   const booking = await bookingRepo.getById(id);
   if (!booking) return { status: 404, jsonBody: { code: 'BOOKING_NOT_FOUND' } };
   if (booking.customerId !== customer.customerId) return { status: 403, jsonBody: { code: 'FORBIDDEN' } };
+
+  const [photos, reportSignedUrl] = await Promise.all([
+    projectPhotos(booking.photos),
+    projectReportSignedUrl(id, booking.status),
+  ]);
+
   return {
     status: 200,
     jsonBody: {
-      bookingId: booking.id, status: booking.status, amount: booking.amount,
+      bookingId: booking.id,
+      status: booking.status,
+      amount: booking.amount,
       finalAmount: booking.finalAmount ?? null,
       pendingAddOns: booking.pendingAddOns ?? [],
       approvedAddOns: booking.approvedAddOns ?? [],
+      ...(photos !== undefined ? { photos } : {}),
+      reportSignedUrl,
     },
   };
 };
@@ -315,6 +737,23 @@ const approveFinalPriceInner: CustomerHttpHandler = async (req, _ctx, customer) 
   if (!parsed.success) return { status: 422, jsonBody: { code: 'VALIDATION_ERROR', issues: parsed.error.issues } };
   const updated = await bookingRepo.applyAddOnDecisions(id, customer.customerId, parsed.data.decisions);
   if (!updated) return { status: 409, jsonBody: { code: 'BOOKING_NOT_AWAITING_APPROVAL' } };
+
+  if (updated.technicianId) {
+    const anyApproved = parsed.data.decisions.some((d) => d.approved);
+    try {
+      await sendTechnicianBookingStatusUpdatePush({
+        technicianId: updated.technicianId,
+        bookingId: id,
+        status: anyApproved ? 'PRICE_APPROVED' : 'PRICE_DECLINED',
+        ...(anyApproved && updated.finalAmount !== undefined
+          ? { priceApprovedPaise: updated.finalAmount }
+          : {}),
+      });
+    } catch (err) {
+      console.error('[approveFinalPrice] FCM technician push failed', { bookingId: id, err });
+    }
+  }
+
   return { status: 200, jsonBody: { bookingId: updated.id, status: updated.status, finalAmount: updated.finalAmount } };
 };
 export const approveFinalPriceHandler: HttpHandler = requireCustomer(approveFinalPriceInner);

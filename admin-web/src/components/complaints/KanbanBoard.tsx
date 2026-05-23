@@ -74,8 +74,8 @@ export function KanbanBoard({ complaints, onStatusChange, onAddNote, onReassign,
             return (
               <div key={columnStatus} className="flex-1 min-w-[260px]">
                 <div className="flex items-center justify-between mb-2">
-                  <h2 className="font-semibold text-sm text-gray-700">{t(`kanban.column.${columnStatus}`)}</h2>
-                  <span className="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
+                  <h2 className="font-semibold text-sm text-[var(--color-text)]">{t(`kanban.column.${columnStatus}`)}</h2>
+                  <span className="text-xs text-[var(--color-text-muted)] bg-[var(--color-surface-raised)] rounded-full px-2 py-0.5">
                     {columnComplaints.length}
                   </span>
                 </div>

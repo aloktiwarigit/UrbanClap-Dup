@@ -28,6 +28,8 @@ export async function replaceComplaint(doc: ComplaintDoc, etag?: string): Promis
     .replace(doc, options);
 }
 
+// SEMGREP-JUSTIFIED: cross-partition fan-out; caller MUST enforce requireAdmin middleware.
+// All callers in api/src/functions/admin/complaints/list.ts gate on requireAdmin(['super-admin','ops-manager']).
 export async function queryComplaints(params: ComplaintListQuery): Promise<ComplaintListResponse> {
   const conditions: string[] = [];
   const parameters: SqlParameter[] = [];
@@ -113,6 +115,8 @@ export async function queryComplaints(params: ComplaintListQuery): Promise<Compl
   });
 }
 
+// SEMGREP-JUSTIFIED: cross-partition fan-out; caller is a system timer trigger (no user input path).
+// Called only from slaBreachTimerHandler in api/src/functions/admin/complaints/sla-timer.ts.
 export async function getOverdueComplaints(): Promise<Array<{ doc: ComplaintDoc; etag: string }>> {
   const now = new Date().toISOString();
   const query: SqlQuerySpec = {
@@ -133,6 +137,9 @@ export async function getOverdueComplaints(): Promise<Array<{ doc: ComplaintDoc;
   }));
 }
 
+// SEMGREP-JUSTIFIED: cross-partition fan-out bounded by sinceIso window; caller MUST enforce
+// requireAdmin middleware. Called only from adminRepeatOffendersHandler which gates on
+// requireAdmin(['super-admin','ops-manager']).
 export async function getRepeatOffenders(
   sinceIso: string,
 ): Promise<Array<{ technicianId: string; count: number }>> {
@@ -161,6 +168,8 @@ export async function getRepeatOffenders(
     .map(([technicianId, count]) => ({ technicianId, count }));
 }
 
+// SEMGREP-JUSTIFIED: cross-partition query; technicianId and bookingId are caller-validated
+// (booking ownership checked before call). Not exposed to raw user-controlled filters.
 export async function findShieldByTechBooking(
   technicianId: string,
   bookingId: string,
@@ -181,6 +190,8 @@ export async function findShieldByTechBooking(
   return raw !== undefined ? ComplaintDocSchema.parse(raw) : null;
 }
 
+// SEMGREP-JUSTIFIED: cross-partition query; technicianId is the authenticated tech's own uid
+// (not a user-controlled filter). monthStart is computed server-side.
 export async function countAppealsByTechInMonth(
   technicianId: string,
   monthStart: string,
@@ -200,6 +211,9 @@ export async function countAppealsByTechInMonth(
   return resources[0] ?? 0;
 }
 
+// SEMGREP-JUSTIFIED: cross-partition query; bookingId and customerId are validated by
+// requireCustomer middleware + booking-ownership check before this call.
+// No unvalidated user-controlled filter is forwarded to this helper.
 export async function findRatingShieldEscalation(
   bookingId: string,
   customerId: string,
@@ -222,6 +236,8 @@ export async function findRatingShieldEscalation(
   return raw !== undefined ? ComplaintDocSchema.parse(raw) : null;
 }
 
+// SEMGREP-JUSTIFIED: cross-partition query; bookingId, uid, and filedBy are validated by
+// caller middleware (requireCustomer / requireTechnician). No raw user filter forwarded.
 export async function findComplaintByBookingAndParty(
   bookingId: string,
   uid: string,
@@ -246,6 +262,8 @@ export async function findComplaintByBookingAndParty(
   return resources.length > 0 ? ComplaintDocSchema.parse(resources[0]) : null;
 }
 
+// SEMGREP-JUSTIFIED: cross-partition query; same caller-scope guarantee as
+// findComplaintByBookingAndParty — bookingId and uid come from authenticated context.
 export async function queryComplaintsByBookingAndParty(
   bookingId: string,
   uid: string,
@@ -270,6 +288,8 @@ export async function queryComplaintsByBookingAndParty(
   return resources.map(r => ComplaintDocSchema.parse(r));
 }
 
+// SEMGREP-JUSTIFIED: cross-partition fan-out; caller is a system timer trigger (no user input path).
+// Called only from slaBreachTimerHandler alongside getOverdueComplaints.
 export async function getUnacknowledgedPastDueComplaints(): Promise<Array<{ doc: ComplaintDoc; etag: string }>> {
   const now = new Date().toISOString();
   const query: SqlQuerySpec = {

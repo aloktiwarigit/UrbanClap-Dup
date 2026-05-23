@@ -1,9 +1,10 @@
 import { DocumentAnalysisClient, AzureKeyCredential } from '@azure/ai-form-recognizer';
 import { getStorageDownloadUrl } from '../firebase/admin.js';
+import { maskPan, hashPan } from './pan.utils.js';
 
 type OcrResult =
-  | { status: 'PAN_DONE'; panNumber: string }
-  | { status: 'MANUAL_REVIEW'; panNumber: null };
+  | { status: 'PAN_DONE'; panMaskedNumber: string; panHash: string }
+  | { status: 'MANUAL_REVIEW'; panMaskedNumber: null; panHash: null };
 
 export async function extractPanFromStoragePath(
   firebaseStoragePath: string
@@ -22,13 +23,19 @@ export async function extractPanFromStoragePath(
     const result = await poller.pollUntilDone();
     const docNumber = result.documents?.[0]?.fields?.['DocumentNumber']?.content;
     if (docNumber) {
-      return { status: 'PAN_DONE', panNumber: docNumber };
+      const panMaskedNumber = maskPan(docNumber);
+      if (!panMaskedNumber) {
+        // Non-canonical format — route to manual review; raw discarded
+        return { status: 'MANUAL_REVIEW', panMaskedNumber: null, panHash: null };
+      }
+      const panHash = hashPan(docNumber);
+      return { status: 'PAN_DONE', panMaskedNumber, panHash };
     }
-    return { status: 'MANUAL_REVIEW', panNumber: null };
+    return { status: 'MANUAL_REVIEW', panMaskedNumber: null, panHash: null };
   } catch (err: unknown) {
     const statusCode = (err as { statusCode?: number }).statusCode;
     if (statusCode === 429) {
-      return { status: 'MANUAL_REVIEW', panNumber: null };
+      return { status: 'MANUAL_REVIEW', panMaskedNumber: null, panHash: null };
     }
     throw err;
   }

@@ -57,15 +57,8 @@ internal class JobPhotoRepositoryImpl
             storagePath: String,
         ): Result<Unit> =
             runCatching {
-                val token =
-                    auth.currentUser
-                        ?.getIdToken(false)
-                        ?.await()
-                        ?.token
-                        ?: error("No authenticated user")
                 val response =
                     api.recordPhoto(
-                        "Bearer $token",
                         bookingId,
                         RecordPhotoBody(stage, storagePath),
                     )

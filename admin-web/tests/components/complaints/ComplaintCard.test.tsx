@@ -71,7 +71,7 @@ describe('ComplaintCard', () => {
   it('calls onClick when the card is clicked', () => {
     const onClick = vi.fn();
     render(<ComplaintCard complaint={makeComplaint()} onClick={onClick} />);
-    fireEvent.click(screen.getByRole('button'));
+    fireEvent.click(screen.getByTestId('complaint-card'));
     expect(onClick).toHaveBeenCalledOnce();
   });
 });

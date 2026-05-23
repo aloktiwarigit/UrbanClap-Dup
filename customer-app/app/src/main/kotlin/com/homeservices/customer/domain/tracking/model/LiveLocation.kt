@@ -6,4 +6,5 @@ public data class LiveLocation(
     val etaMinutes: Int,
     val techName: String,
     val techPhotoUrl: String,
+    val technicianId: String? = null,
 )

@@ -10,6 +10,8 @@ export interface AdminSession {
   lastActivityAt: string;
   hardExpiresAt: string;
   refreshTokenHash: string;
+  /** Timestamp when TOTP was verified (set at session creation = login time). */
+  totpVerifiedAt?: string;
 }
 
 export interface AdminSessionWithRawToken extends AdminSession {
@@ -44,6 +46,7 @@ export async function createAdminSession(args: {
     lastActivityAt: now.toISOString(),
     hardExpiresAt: new Date(now.getTime() + HARD_EXPIRY_MS).toISOString(),
     refreshTokenHash: sha256(rawRefreshToken),
+    totpVerifiedAt: now.toISOString(),
   };
   await container().items.create(sessionDoc);
   return { ...sessionDoc, rawRefreshToken };
@@ -108,6 +111,16 @@ export async function touchAndGetSession(
 
 export async function deleteSession(sessionId: string): Promise<void> {
   await container().item(sessionId, sessionId).delete();
+}
+
+/** Read session without updating lastActivityAt (used for TOTP-freshness checks). */
+export async function getSessionById(sessionId: string): Promise<AdminSession | null> {
+  const { resource } = await container().item(sessionId, sessionId).read<AdminSession>();
+  if (!resource) return null;
+  const now = new Date();
+  if (new Date(resource.hardExpiresAt) <= now) return null;
+  if (now.getTime() - new Date(resource.lastActivityAt).getTime() > INACTIVITY_MS) return null;
+  return resource;
 }
 
 /** Revoke all active sessions for an admin — called when role or deactivatedAt changes. */
