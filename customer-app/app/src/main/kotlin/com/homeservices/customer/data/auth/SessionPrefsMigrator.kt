@@ -6,20 +6,27 @@ import android.util.Log
 import java.security.KeyStore
 
 /**
- * One-time migration helper from the deprecated [androidx.security.crypto.MasterKeys]-based
- * EncryptedSharedPreferences (key alias `_androidx_security_master_key_`) to the new
- * [androidx.security.crypto.MasterKey.Builder]-based prefs.
+ * One-time migration helper that guards against a hypothetical legacy plaintext prefs file
+ * at the `auth_session` filename.
  *
- * Migration is safe and conservative:
- * - If the legacy key alias is absent, this is a no-op.
- * - If the legacy key is present, all key/value pairs are copied to [newPrefs] and the
- *   legacy prefs are cleared.
- * - On any error during migration, [newPrefs] is cleared so the session expires naturally
- *   (180-day TTL means this is a rare edge case).
+ * **Actual migration behavior (SEC-07):**
+ * The _known_ prior state of this app used [androidx.security.crypto.MasterKeys]-backed
+ * [androidx.security.crypto.EncryptedSharedPreferences] (key alias
+ * `_androidx_security_master_key_`). That file cannot be decrypted here because:
+ * - [MasterKeys] encrypted both the key _names_ and the values.
+ * - Opening the file as plaintext via [android.content.Context.getSharedPreferences]
+ *   returns ciphertext blobs under encrypted key names, not readable entries.
+ * - The [androidx.security.crypto.MasterKey] key alias may be unavailable (key rotation,
+ *   device restore, factory reset) so decryption is not attempted.
+ *
+ * Users whose legacy prefs were encrypted will silently re-login. This is the intended
+ * fallback — the session TTL would have expired anyway on most devices.
+ *
+ * This migrator only provides value for a hypothetical plaintext legacy prefs file
+ * (e.g. if a future rollback created one). It is a no-op for the encrypted case.
  *
  * The internal logic is split into [migrateIfNeededInternal] to support unit-testing without
- * Robolectric classloader constraints (objects with @JvmStatic are not intercept-able by
- * mockkObject in a Robolectric sandbox — see [SessionPrefsMigratorTest]).
+ * Robolectric classloader constraints (see [SessionPrefsMigratorTest]).
  */
 public object SessionPrefsMigrator {
     private const val TAG = "SessionPrefsMigrator"
@@ -87,6 +94,9 @@ public object SessionPrefsMigrator {
             return
         }
 
+        // Opening as plaintext. If the legacy file was written by EncryptedSharedPreferences,
+        // legacyPrefs.all returns encrypted key names as strings — migration "copies" them but
+        // produces useless entries; the session will be empty and the user must re-login.
         Log.i(TAG, "Legacy MasterKey alias found — migrating $newPrefsName")
         try {
             val legacyPrefs =
