@@ -23,11 +23,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
@@ -48,14 +48,14 @@ public fun RatingScreen(
     modifier: Modifier = Modifier,
     viewModel: RatingViewModel = hiltViewModel(),
 ) {
-    val state by viewModel.uiState.collectAsState()
-    val shieldState by viewModel.shieldState.collectAsState()
-    val overall by viewModel.overall.collectAsState()
-    val punct by viewModel.punctuality.collectAsState()
-    val skill by viewModel.skill.collectAsState()
-    val behav by viewModel.behaviour.collectAsState()
-    val comment by viewModel.comment.collectAsState()
-    val canSubmit by viewModel.canSubmit.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val shieldState by viewModel.shieldState.collectAsStateWithLifecycle()
+    val overall by viewModel.overall.collectAsStateWithLifecycle()
+    val punct by viewModel.punctuality.collectAsStateWithLifecycle()
+    val skill by viewModel.skill.collectAsStateWithLifecycle()
+    val behav by viewModel.behaviour.collectAsStateWithLifecycle()
+    val comment by viewModel.comment.collectAsStateWithLifecycle()
+    val canSubmit by viewModel.canSubmit.collectAsStateWithLifecycle()
 
     RatingContent(
         state = state,
