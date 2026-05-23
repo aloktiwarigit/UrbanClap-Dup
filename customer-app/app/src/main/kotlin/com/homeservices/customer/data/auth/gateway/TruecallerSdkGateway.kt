@@ -24,10 +24,11 @@ public class TruecallerSdkGateway
         // (e.g. AuthViewModel collects after the SDK callback fires on a background thread).
         // DROP_OLDEST: only one result per auth attempt; overflow cannot occur in practice
         // but is made explicit for policy consistency.
-        private val _resultFlow = MutableSharedFlow<TruecallerAuthResult>(
-            replay = 1,
-            onBufferOverflow = BufferOverflow.DROP_OLDEST,
-        )
+        private val _resultFlow =
+            MutableSharedFlow<TruecallerAuthResult>(
+                replay = 1,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST,
+            )
         public override val resultFlow: SharedFlow<TruecallerAuthResult> = _resultFlow.asSharedFlow()
 
         internal val sdkCallback: ITrueCallback =
@@ -83,11 +84,11 @@ public class TruecallerSdkGateway
                 false
             }
 
-        @Suppress("TooGenericExceptionCaught")
+        @Suppress("TooGenericExceptionCaught", "SwallowedException")
         public override fun launch(activity: FragmentActivity) {
             try {
                 TruecallerSDK.getInstance().getUserProfile(activity)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 _resultFlow.tryEmit(TruecallerAuthResult.Cancelled)
             }
         }

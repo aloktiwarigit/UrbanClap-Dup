@@ -24,6 +24,10 @@ public class CredentialManagerGoogleProvider
         private val credentialManager: CredentialManager,
         @ApplicationContext private val context: Context,
     ) : GoogleCredentialProvider {
+        private companion object {
+            const val NONCE_BYTE_LENGTH = 16
+        }
+
         // Overridable in tests via internal setter — matches the original pattern.
         // Production value from BuildConfig; tests inject a fake string directly.
         internal var webClientId: String = com.homeservices.customer.BuildConfig.GOOGLE_WEB_CLIENT_ID
@@ -55,9 +59,9 @@ public class CredentialManagerGoogleProvider
                 val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(response.credential.data)
                 val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
                 GoogleSignInResult.CredentialObtained(firebaseCredential)
-            } catch (e: GetCredentialCancellationException) {
+            } catch (_: GetCredentialCancellationException) {
                 GoogleSignInResult.Cancelled
-            } catch (e: NoCredentialException) {
+            } catch (_: NoCredentialException) {
                 GoogleSignInResult.Unavailable
             } catch (e: Exception) {
                 GoogleSignInResult.Error(e)
@@ -65,7 +69,7 @@ public class CredentialManagerGoogleProvider
         }
 
         private fun generateNonce(): String {
-            val bytes = ByteArray(16)
+            val bytes = ByteArray(NONCE_BYTE_LENGTH)
             SecureRandom().nextBytes(bytes)
             return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
         }
