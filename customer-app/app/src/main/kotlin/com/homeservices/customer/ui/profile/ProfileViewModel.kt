@@ -17,18 +17,18 @@ internal class ProfileViewModel
     constructor(
         private val sessionManager: SessionManager,
     ) : ViewModel() {
-        val authState: StateFlow<AuthState> =
+        internal val authState: StateFlow<AuthState> =
             sessionManager.authState.stateIn(
                 viewModelScope,
                 SharingStarted.WhileSubscribed(5_000),
                 AuthState.Unauthenticated,
             )
 
-        fun signOut() {
+        internal fun signOut() {
             viewModelScope.launch { sessionManager.signOut() }
         }
 
-        fun updateDisplayName(rawName: String) {
+        internal fun updateDisplayName(rawName: String) {
             val name = rawName.trim()
             if (name.isEmpty()) return
             viewModelScope.launch { sessionManager.updateDisplayName(name) }

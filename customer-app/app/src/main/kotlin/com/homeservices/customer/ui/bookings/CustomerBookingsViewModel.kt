@@ -18,13 +18,13 @@ internal class CustomerBookingsViewModel
         private val getBookings: GetCustomerBookingsUseCase,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<CustomerBookingsUiState>(CustomerBookingsUiState.Loading)
-        val uiState: StateFlow<CustomerBookingsUiState> = _uiState.asStateFlow()
+        internal val uiState: StateFlow<CustomerBookingsUiState> = _uiState.asStateFlow()
 
         init {
             refresh()
         }
 
-        fun refresh() {
+        internal fun refresh() {
             viewModelScope.launch {
                 _uiState.value = CustomerBookingsUiState.Loading
                 _uiState.value =

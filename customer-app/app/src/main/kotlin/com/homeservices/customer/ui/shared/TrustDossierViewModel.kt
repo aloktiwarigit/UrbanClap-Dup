@@ -17,9 +17,9 @@ internal class TrustDossierViewModel
         private val getProfile: GetTechnicianProfileUseCase,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<TrustDossierUiState>(TrustDossierUiState.Unavailable)
-        public val uiState: StateFlow<TrustDossierUiState> = _uiState.asStateFlow()
+        internal val uiState: StateFlow<TrustDossierUiState> = _uiState.asStateFlow()
 
-        public fun loadProfile(technicianId: String) {
+        internal fun loadProfile(technicianId: String) {
             viewModelScope.launch {
                 _uiState.value = TrustDossierUiState.Loading
                 getProfile(technicianId).collect { result ->

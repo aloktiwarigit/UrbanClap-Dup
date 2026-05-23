@@ -31,16 +31,16 @@ internal class ServiceDetailViewModel
         private val technicianId: String? = savedStateHandle["techId"]
 
         private val _uiState = MutableStateFlow<ServiceDetailUiState>(ServiceDetailUiState.Loading)
-        public val uiState: StateFlow<ServiceDetailUiState> = _uiState.asStateFlow()
+        internal val uiState: StateFlow<ServiceDetailUiState> = _uiState.asStateFlow()
 
         private val _confidenceScoreState =
             MutableStateFlow<ConfidenceScoreUiState>(
                 if (technicianId != null) ConfidenceScoreUiState.Loading else ConfidenceScoreUiState.Hidden,
             )
-        public val confidenceScoreState: StateFlow<ConfidenceScoreUiState> = _confidenceScoreState.asStateFlow()
+        internal val confidenceScoreState: StateFlow<ConfidenceScoreUiState> = _confidenceScoreState.asStateFlow()
 
         /** Exposed so the screen can drive [TrustDossierViewModel.loadProfile]. */
-        public val recommendedTechnicianId: StateFlow<String?> = MutableStateFlow(technicianId).asStateFlow()
+        internal val recommendedTechnicianId: StateFlow<String?> = MutableStateFlow(technicianId).asStateFlow()
 
         init {
             viewModelScope.launch {

@@ -26,7 +26,7 @@ internal class ServiceListViewModel
         private val categoryId: String = checkNotNull(savedStateHandle["categoryId"])
 
         private val _uiState = MutableStateFlow<ServiceListUiState>(ServiceListUiState.Loading)
-        public val uiState: StateFlow<ServiceListUiState> = _uiState.asStateFlow()
+        internal val uiState: StateFlow<ServiceListUiState> = _uiState.asStateFlow()
 
         init {
             viewModelScope.launch {

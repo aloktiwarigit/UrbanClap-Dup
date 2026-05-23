@@ -22,7 +22,7 @@ internal class CatalogueHomeViewModel
         private val getCurrentLocale: GetCurrentLocaleUseCase,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<CatalogueHomeUiState>(CatalogueHomeUiState.Loading)
-        public val uiState: StateFlow<CatalogueHomeUiState> = _uiState.asStateFlow()
+        internal val uiState: StateFlow<CatalogueHomeUiState> = _uiState.asStateFlow()
 
         init {
             viewModelScope.launch {
