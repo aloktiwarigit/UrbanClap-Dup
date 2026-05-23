@@ -21,13 +21,13 @@ public class PhotoFirstCatalogueFeatureFlagTest {
 
     @Test
     public fun `GrowthBookFeatureFlags photoFirstCatalogueEnabled defaults to false without live SDK`() {
-        val sut = GrowthBookFeatureFlags(analytics = noOpLazy)
+        val sut = GrowthBookFeatureFlags(apiKey = "", analytics = noOpLazy)
         assertThat(sut.photoFirstCatalogueEnabled()).isFalse()
     }
 
     @Test
     public fun `GrowthBookFeatureFlags implements FeatureFlags interface`() {
-        val sut: FeatureFlags = GrowthBookFeatureFlags(analytics = noOpLazy)
+        val sut: FeatureFlags = GrowthBookFeatureFlags(apiKey = "", analytics = noOpLazy)
         assertThat(sut.photoFirstCatalogueEnabled()).isInstanceOf(Boolean::class.javaObjectType)
     }
 }

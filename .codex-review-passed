@@ -18,3 +18,15 @@ is implemented in this PR. Legacy DELETE /v1/devices/{deviceToken} kept for tran
 Remove legacy path once minimum versionCode in Play Console confirms no old builds in active use.
 This paired task is acknowledged — Codex should cap SEC-06 server-side findings to 1 round.
 {"timestamp":"2026-05-21T23:45:24-04:00","commit":"5cda916a681463f6e18ed9bfcad58723df28ea5e","reviewer":"codex","round":2}
+branch: fix/sprint5-testing-foundation
+reviewed-by: codex gpt-5.5
+date: 2026-05-23
+base: main
+session: 019e54aa-e061-7930-8a23-73a0f76c746e
+result: PASS (1 P2 follow-up, no blockers)
+
+P2 — NoShowCreditEventBus.kt: MutableSharedFlow(extraBufferCapacity=1, replay=0) can
+drop no-show credit events when no UI collector is active at post() time. This class
+was ported as-is from fix/s001-pan-plaintext-migration-fallback as a Sprint 5
+prerequisite. Follow-up: set replay=1 in the wallet feature branch before that PR
+merges to main.

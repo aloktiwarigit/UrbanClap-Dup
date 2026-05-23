@@ -86,23 +86,7 @@ public class FirebaseOtpUseCase
                         }
                         close()
                     }.addOnFailureListener(executor) { e ->
-                        val mapped =
-                            when {
-                                e is FirebaseAuthInvalidCredentialsException &&
-                                    e.errorCode == "ERROR_INVALID_VERIFICATION_CODE" ->
-                                    AuthResult.Error.WrongCode
-
-                                e is FirebaseAuthException &&
-                                    e.errorCode == "ERROR_SESSION_EXPIRED" ->
-                                    AuthResult.Error.CodeExpired
-
-                                e is FirebaseAuthException &&
-                                    e.errorCode == "ERROR_TOO_MANY_REQUESTS" ->
-                                    AuthResult.Error.RateLimited
-
-                                else -> AuthResult.Error.General(e)
-                            }
-                        trySend(mapped)
+                        trySend(mapFirebaseSignInError(e))
                         close()
                     }
                 awaitClose()
@@ -115,4 +99,16 @@ public class FirebaseOtpUseCase
             val credential = PhoneAuthProvider.getCredential(verificationId, code)
             return signInWithCredential(credential)
         }
+    }
+
+internal fun mapFirebaseSignInError(e: Exception): AuthResult.Error =
+    when {
+        e is FirebaseAuthInvalidCredentialsException &&
+            e.errorCode == "ERROR_INVALID_VERIFICATION_CODE" ->
+            AuthResult.Error.WrongCode
+        e is FirebaseAuthException && e.errorCode == "ERROR_SESSION_EXPIRED" ->
+            AuthResult.Error.CodeExpired
+        e is FirebaseAuthException && e.errorCode == "ERROR_TOO_MANY_REQUESTS" ->
+            AuthResult.Error.RateLimited
+        else -> AuthResult.Error.General(e)
     }

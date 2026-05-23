@@ -472,9 +472,6 @@ kover {
                     // CustomerFirebaseMessagingService — Android OS entry-point, not unit-testable
                     "*.CustomerFirebaseMessagingService",
                     "*.CustomerFirebaseMessagingService\$*",
-                    // BookingRepositoryImpl — thin Retrofit wrapper, integration-tested via API layer
-                    "*.BookingRepositoryImpl",
-                    "*.BookingRepositoryImpl\$*",
                     // BookingModule — Hilt @Provides wiring + OkHttp/Retrofit construction,
                     // same rationale as data.auth.di.* and data.catalogue.di.*
                     "*.data.booking.di.*",
@@ -486,11 +483,6 @@ kover {
                     "*.data.auth.remote.dto.*",
                     // BuildConfigFeatureFlags — reads a compile-time constant; no branches to test
                     "*.BuildConfigFeatureFlags",
-                    // GrowthBookFeatureFlags — SDK construction requires network (OkHttp); the
-                    // unit test covers the safe-off invariant via the no-arg constructor path;
-                    // the refreshAsync() fire-and-forget and SDK init branches need integration tests.
-                    "*.GrowthBookFeatureFlags",
-                    "*.GrowthBookFeatureFlags\$*",
                     // RazorpayPaymentUseCase.open() — uses callbackFlow + Razorpay Checkout SDK which
                     // requires a real Activity; same rationale as FirebaseOtpUseCase (callbackFlow + SDK)
                     "*.RazorpayPaymentUseCase",
@@ -508,9 +500,6 @@ kover {
                     // TrackingEventBus — MutableSharedFlow wrapper, same rationale as PriceApprovalEventBus
                     "*.TrackingEventBus",
                     "*.TrackingEventBus\$*",
-                    // TrackingRepositoryImpl — scan over SharedFlow, same rationale as BookingRepositoryImpl
-                    "*.TrackingRepositoryImpl",
-                    "*.TrackingRepositoryImpl\$*",
                     // data.tracking.di — Hilt @Binds wiring, same rationale as other DI modules
                     "*.data.tracking.di.*",
                     // RatingScreen — Compose UI composables (RatingScreen, ShieldBottomSheet,
