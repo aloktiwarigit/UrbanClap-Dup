@@ -9,6 +9,10 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -41,9 +45,12 @@ public class ProfileViewModelTest {
     @Test
     public fun `authState reflects session manager state`(): Unit =
         runTest(dispatcher) {
+            // With WhileSubscribed, upstream starts on first subscription
+            val job = sut.authState.launchIn(this)
             val state = sut.authState.value
             assertThat(state).isInstanceOf(AuthState.Authenticated::class.java)
             assertThat((state as AuthState.Authenticated).displayName).isEqualTo("Ramesh")
+            job.cancel()
         }
 
     @Test
@@ -59,5 +66,16 @@ public class ProfileViewModelTest {
             sut.updateDisplayName("  Sita Sharma  ")
 
             coVerify { sessionManager.updateDisplayName("Sita Sharma") }
+        }
+
+    @Test
+    public fun `authState initial value is Unauthenticated (WhileSubscribed does not pre-start upstream)`(): Unit =
+        runTest(dispatcher) {
+            // With WhileSubscribed, the upstream is NOT started until first subscriber.
+            // Initial value is Unauthenticated as configured in stateIn.
+            every { sessionManager.authState } returns
+                MutableStateFlow(AuthState.Unauthenticated)
+            val vm = ProfileViewModel(sessionManager)
+            assertThat(vm.authState.value).isEqualTo(AuthState.Unauthenticated)
         }
 }

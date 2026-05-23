@@ -29,7 +29,7 @@ public class LiveTrackingViewModel
         private val liveLocationFromBus: StateFlow<LocationUpdateEvent?> =
             locationUpdateEventBus.events
                 .filter { it.bookingId == bookingId }
-                .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
         public val uiState: StateFlow<LiveTrackingUiState> =
             combine(
@@ -51,7 +51,7 @@ public class LiveTrackingViewModel
                 )
             }.stateIn(
                 scope = viewModelScope,
-                started = SharingStarted.Eagerly,
+                started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = LiveTrackingUiState.Loading,
             )
     }
