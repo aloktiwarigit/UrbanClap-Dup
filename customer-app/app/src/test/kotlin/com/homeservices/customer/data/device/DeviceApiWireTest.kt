@@ -30,12 +30,14 @@ public class DeviceApiWireTest {
     public fun setUp() {
         server = MockWebServer()
         server.start()
-        api = Retrofit.Builder()
-            .baseUrl(server.url("/"))
-            .client(OkHttpClient())
-            .addConverterFactory(MoshiConverterFactory.create())
-            .build()
-            .create(DeviceApi::class.java)
+        api =
+            Retrofit
+                .Builder()
+                .baseUrl(server.url("/"))
+                .client(OkHttpClient())
+                .addConverterFactory(MoshiConverterFactory.create())
+                .build()
+                .create(DeviceApi::class.java)
     }
 
     @After
@@ -44,26 +46,29 @@ public class DeviceApiWireTest {
     }
 
     @Test
-    public fun `unregisterDevice sends DELETE to slash-v1-slash-devices-slash-me`(): Unit = runTest {
-        server.enqueue(MockResponse().setResponseCode(204))
-        api.unregisterDevice("test-fcm-token-xyz")
-        val request = server.takeRequest()
-        assertThat(request.path).isEqualTo("/v1/devices/me")
-    }
+    public fun `unregisterDevice sends DELETE to slash-v1-slash-devices-slash-me`(): Unit =
+        runTest {
+            server.enqueue(MockResponse().setResponseCode(204))
+            api.unregisterDevice("test-fcm-token-xyz")
+            val request = server.takeRequest()
+            assertThat(request.path).isEqualTo("/v1/devices/me")
+        }
 
     @Test
-    public fun `unregisterDevice sends token as X-Device-Token header`(): Unit = runTest {
-        server.enqueue(MockResponse().setResponseCode(204))
-        api.unregisterDevice("test-fcm-token-xyz")
-        val request = server.takeRequest()
-        assertThat(request.getHeader("X-Device-Token")).isEqualTo("test-fcm-token-xyz")
-    }
+    public fun `unregisterDevice sends token as X-Device-Token header`(): Unit =
+        runTest {
+            server.enqueue(MockResponse().setResponseCode(204))
+            api.unregisterDevice("test-fcm-token-xyz")
+            val request = server.takeRequest()
+            assertThat(request.getHeader("X-Device-Token")).isEqualTo("test-fcm-token-xyz")
+        }
 
     @Test
-    public fun `unregisterDevice does NOT include token in URL path`(): Unit = runTest {
-        server.enqueue(MockResponse().setResponseCode(204))
-        api.unregisterDevice("test-fcm-token-xyz")
-        val request = server.takeRequest()
-        assertThat(request.path).doesNotContain("test-fcm-token-xyz")
-    }
+    public fun `unregisterDevice does NOT include token in URL path`(): Unit =
+        runTest {
+            server.enqueue(MockResponse().setResponseCode(204))
+            api.unregisterDevice("test-fcm-token-xyz")
+            val request = server.takeRequest()
+            assertThat(request.path).doesNotContain("test-fcm-token-xyz")
+        }
 }

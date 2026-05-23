@@ -20,7 +20,6 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [31])
 public class DataExtractionRulesTest {
-
     @Test
     public fun `cloud-backup excludes database domain`() {
         assertExcludePresent(block = "cloud-backup", domain = "database")
@@ -41,7 +40,10 @@ public class DataExtractionRulesTest {
         assertExcludePresent(block = "device-transfer", domain = "file")
     }
 
-    private fun assertExcludePresent(block: String, domain: String) {
+    private fun assertExcludePresent(
+        block: String,
+        domain: String,
+    ) {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val parser = context.resources.getXml(R.xml.data_extraction_rules)
         val excludedDomains = mutableMapOf<String, MutableSet<String>>() // block -> set of excluded domains

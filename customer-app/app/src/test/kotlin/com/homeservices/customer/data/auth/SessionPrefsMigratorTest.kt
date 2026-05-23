@@ -170,7 +170,8 @@ public class SessionPrefsMigratorTest {
         // and copies them under their encrypted (unreadable) key names into new prefs.
         // Result: newPrefs has no "uid" key → session is empty → user must re-login.
         val legacyPrefs = context.getSharedPreferences("auth_session", Context.MODE_PRIVATE)
-        legacyPrefs.edit()
+        legacyPrefs
+            .edit()
             .putString("AES256_ENCRYPTED_KEY_BLOB_1", "AES256_ENCRYPTED_VALUE_BLOB_1") // simulates encrypted uid entry
             .putString("AES256_ENCRYPTED_KEY_BLOB_2", "AES256_ENCRYPTED_VALUE_BLOB_2") // simulates encrypted phone entry
             .commit()
