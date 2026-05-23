@@ -40,8 +40,9 @@ internal class ServiceSelectionViewModel
                 _uiState.value =
                     outcome.fold(
                         onSuccess = { profile ->
+                            val selectedSkillIds = profile.skills.filter { it in validSkillIds }.toSet()
                             _uiState.value.copy(
-                                selectedSkillIds = profile.skills.filter { it in validSkillIds }.toSet(),
+                                selectedSkillIds = selectedSkillIds,
                                 serviceLat = profile.location?.lat,
                                 serviceLng = profile.location?.lng,
                                 serviceAreaLabel =
@@ -52,12 +53,16 @@ internal class ServiceSelectionViewModel
                                     },
                                 isLoading = false,
                                 errorMessage = null,
+                                existingCompleteProfileLoaded =
+                                    selectedSkillIds.isNotEmpty() &&
+                                        profile.location?.let { validateLocation(it.lat, it.lng) == null } == true,
                             )
                         },
                         onFailure = {
                             _uiState.value.copy(
                                 isLoading = false,
                                 errorMessage = "Could not load your saved services. You can still save this form.",
+                                existingCompleteProfileLoaded = false,
                             )
                         },
                     )
@@ -73,7 +78,13 @@ internal class ServiceSelectionViewModel
                 } else {
                     current.selectedSkillIds + skillId
                 }
-            _uiState.value = current.copy(selectedSkillIds = selected, errorMessage = null, saved = false)
+            _uiState.value =
+                current.copy(
+                    selectedSkillIds = selected,
+                    errorMessage = null,
+                    saved = false,
+                    existingCompleteProfileLoaded = false,
+                )
         }
 
         fun onLocateStarted(): Unit {
@@ -94,14 +105,26 @@ internal class ServiceSelectionViewModel
                         isLocating = false,
                         errorMessage = null,
                         saved = false,
+                        existingCompleteProfileLoaded = false,
                     )
                 } else {
-                    _uiState.value.copy(isLocating = false, errorMessage = validation, saved = false)
+                    _uiState.value.copy(
+                        isLocating = false,
+                        errorMessage = validation,
+                        saved = false,
+                        existingCompleteProfileLoaded = false,
+                    )
                 }
         }
 
         fun onLocateFailed(message: String): Unit {
-            _uiState.value = _uiState.value.copy(isLocating = false, errorMessage = message, saved = false)
+            _uiState.value =
+                _uiState.value.copy(
+                    isLocating = false,
+                    errorMessage = message,
+                    saved = false,
+                    existingCompleteProfileLoaded = false,
+                )
         }
 
         fun submit(): Unit {
@@ -137,6 +160,7 @@ internal class ServiceSelectionViewModel
                                 isSaving = false,
                                 saved = true,
                                 errorMessage = null,
+                                existingCompleteProfileLoaded = true,
                             )
                         },
                         onFailure = {

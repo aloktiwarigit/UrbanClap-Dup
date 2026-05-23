@@ -1,5 +1,6 @@
 import groovy.json.JsonSlurper
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.File
 import java.util.Properties
 
 val localProperties =
@@ -32,6 +33,63 @@ fun googleServicesWebClientId(): String? {
 
 fun buildConfigString(value: String): String = "\"${value.replace("\\", "\\\\").replace("\"", "\\\"")}\""
 
+data class ReleaseSigning(
+    val storeFile: File,
+    val storePassword: String,
+    val keyAlias: String,
+    val keyPassword: String,
+)
+
+fun envOrLocalProperty(name: String): String? =
+    System.getenv(name)?.takeIf { it.isNotBlank() }
+        ?: localProperty(name)
+
+fun releaseSigningProperty(name: String): String? =
+    envOrLocalProperty("TECHNICIAN_$name")
+        ?: envOrLocalProperty(name)
+
+fun resolveReleaseFile(path: String): File {
+    val candidate = File(path)
+    return if (candidate.isAbsolute) candidate else rootProject.file(path)
+}
+
+fun loadReleaseSigning(): ReleaseSigning? {
+    val storeFilePath = releaseSigningProperty("RELEASE_STORE_FILE")
+    val storePassword = releaseSigningProperty("RELEASE_STORE_PASSWORD")
+    val keyAlias = releaseSigningProperty("RELEASE_KEY_ALIAS")
+    val keyPassword = releaseSigningProperty("RELEASE_KEY_PASSWORD")
+
+    if (listOf(storeFilePath, storePassword, keyAlias, keyPassword).all { it == null }) {
+        return null
+    }
+
+    val storeFile =
+        resolveReleaseFile(
+            requireNotNull(storeFilePath) {
+                "Missing RELEASE_STORE_FILE for release signing."
+            },
+        )
+    require(storeFile.isFile) {
+        "Release signing store file not found at ${storeFile.absolutePath}."
+    }
+
+    return ReleaseSigning(
+        storeFile = storeFile,
+        storePassword =
+            requireNotNull(storePassword) {
+                "Missing RELEASE_STORE_PASSWORD for release signing."
+            },
+        keyAlias =
+            requireNotNull(keyAlias) {
+                "Missing RELEASE_KEY_ALIAS for release signing."
+            },
+        keyPassword =
+            requireNotNull(keyPassword) {
+                "Missing RELEASE_KEY_PASSWORD for release signing."
+            },
+    )
+}
+
 val googleWebClientId =
     System.getenv("GOOGLE_WEB_CLIENT_ID")?.takeIf { it.isNotBlank() }
         ?: localProperty("GOOGLE_WEB_CLIENT_ID")
@@ -42,6 +100,8 @@ val mapsApiKey =
     System.getenv("MAPS_API_KEY")?.takeIf { it.isNotBlank() }
         ?: localProperty("MAPS_API_KEY")
         ?: ""
+
+val releaseSigning = loadReleaseSigning()
 
 plugins {
     alias(libs.plugins.android.application)
@@ -55,18 +115,31 @@ plugins {
     alias(libs.plugins.kover)
     alias(libs.plugins.android.junit5)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.crashlytics)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
     namespace = "com.homeservices.technician"
     compileSdk = 35
 
+    if (releaseSigning != null) {
+        signingConfigs {
+            create("release") {
+                storeFile = releaseSigning.storeFile
+                storePassword = releaseSigning.storePassword
+                keyAlias = releaseSigning.keyAlias
+                keyPassword = releaseSigning.keyPassword
+            }
+        }
+    }
+
     defaultConfig {
-        applicationId = "com.homeservices.technician"
+        applicationId = "in.homeheroo.technician"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 11
+        versionName = "0.1.10"
 
         testInstrumentationRunner = "com.homeservices.technician.TestRunner"
 
@@ -100,6 +173,16 @@ android {
             "GROWTHBOOK_CLIENT_KEY",
             "\"${System.getenv("GROWTHBOOK_CLIENT_KEY") ?: ""}\"",
         )
+        buildConfigField(
+            "String",
+            "POSTHOG_API_KEY",
+            "\"${System.getenv("POSTHOG_API_KEY") ?: ""}\"",
+        )
+        buildConfigField(
+            "String",
+            "POSTHOG_HOST",
+            "\"${System.getenv("POSTHOG_HOST") ?: "https://us.i.posthog.com"}\"",
+        )
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
@@ -110,11 +193,13 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            if (releaseSigning != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            // NOTE: signing config will be added in E13-S09 (Android release pipeline)
         }
     }
 
@@ -137,6 +222,8 @@ android {
 
     sourceSets {
         getByName("main").kotlin.srcDirs("src/main/kotlin")
+        getByName("debug").kotlin.srcDirs("src/debug/kotlin")
+        getByName("release").kotlin.srcDirs("src/release/kotlin")
         getByName("test").kotlin.srcDirs("src/test/kotlin")
         getByName("androidTest").kotlin.srcDirs("src/androidTest/kotlin")
     }
@@ -200,27 +287,17 @@ kover {
     reports {
         verify {
             rule {
-                // Coverage debt acknowledgment (E13-S02 iteration 3, 2026-05-04):
-                // Technician-app actual coverage at the time CI started enforcing Kover was
-                // lines=55.1%, branches=38.1%, instructions=45.3%. Thresholds set just below
-                // those values to (a) prevent further regression while (b) acknowledging
-                // debt without faking a passing gate.
-                //
-                // Plan E13-S02b (Wave 3) raises these to parity with customer-app (80/69/80)
-                // after a dedicated test-writing pass on the technician-app domain layer.
-                // Do NOT lower these further. See ADR-0026 (TBD) for the lifting schedule.
-                minBound(50, kotlinx.kover.gradle.plugin.dsl.CoverageUnit.LINE)
-                // Branch coverage threshold is intentionally lower than line/instruction because:
-                // 1. Compose UI files generate synthetic internal branches (recomposition guards,
-                //    slot-table ops) that are only exercisable via Compose instrumented tests,
-                //    not JVM unit tests. Paparazzi snapshot tests cover the UI rendering paths.
-                // 2. Firebase SDK callbackFlow bodies (PhoneAuthProvider callbacks) are framework
-                //    callbacks that require a live Firebase project to trigger.
-                // 3. Android BiometricPrompt callback branches require a real device/emulator.
-                // CI's Espresso/Compose instrumented tests (run in a later story) will cover
-                // the remaining UI and framework integration branches.
-                minBound(35, kotlinx.kover.gradle.plugin.dsl.CoverageUnit.BRANCH)
-                minBound(40, kotlinx.kover.gradle.plugin.dsl.CoverageUnit.INSTRUCTION)
+                // E13-S02b (Wave 3, 2026-05-14): raised LINE + INSTRUCTION to 80% after
+                // domain-layer test-writing pass + proper exclusion of TechnicianHomeScreenKt,
+                // AuthScreenKt$*, LanguageSettingsScreenKt, and missing DI-module packages.
+                // Actual at gate: lines=86.3%, branches=62.1%, instructions=85.1%.
+                // Do NOT lower these further.
+                minBound(80, kotlinx.kover.gradle.plugin.dsl.CoverageUnit.LINE)
+                // Branch coverage intentionally lower — Compose UI synthetic branches, Firebase
+                // SDK callbacks, and BiometricPrompt require instrumented tests (later story).
+                // Raised from 35 → 55 to reflect real improvement; target 69% deferred.
+                minBound(55, kotlinx.kover.gradle.plugin.dsl.CoverageUnit.BRANCH)
+                minBound(80, kotlinx.kover.gradle.plugin.dsl.CoverageUnit.INSTRUCTION)
             }
         }
         filters {
@@ -348,6 +425,17 @@ kover {
                     // PhotoCaptureScreen generates Compose *Kt wrapper classes
                     "*.PhotoCaptureScreenKt",
                     "*.PhotoCaptureScreenKt\$*",
+                    // E11-S05a Compose surfaces — Paparazzi-only (goldens recorded on CI Linux);
+                    // same rationale as PhotoCaptureScreenKt / ActiveJobScreenKt.
+                    "*.PhotoUploadRetryBannerKt",
+                    "*.PhotoUploadRetryBannerKt\$*",
+                    "*.CompletionConfirmationDialogKt",
+                    "*.CompletionConfirmationDialogKt\$*",
+                    // BookingStatusEventBus (E11-S05a) wraps MutableSharedFlow.tryEmit() — only
+                    // observable in a running coroutine collector, same rationale as
+                    // RatingPromptEventBus / RatingReceivedEventBus / EarningsUpdateEventBus.
+                    "*.BookingStatusEventBus",
+                    "*.BookingStatusEventBus\$*",
                     // JobPhotoRepositoryImpl wraps Firebase Storage + HTTP — requires live services
                     "*.JobPhotoRepositoryImpl",
                     "*.JobPhotoRepositoryImpl\$*",
@@ -464,6 +552,60 @@ kover {
                     "*.SessionPrefsMigrator",
                     "*.SessionPrefsMigrator\$*",
                     "*.data.network.auth.di.*",
+                    // Moshi KSP-generated JSON adapters — code-gen output, same rationale as
+                    // Hilt/Room-generated classes above. Each @JsonClass(generateAdapter = true)
+                    // annotation causes Moshi KSP to emit a *JsonAdapter class with 30-50 JVM
+                    // branches (null checks, token-switch statements, field-loop logic) that are
+                    // invoked only by the Retrofit/Moshi runtime, not by JVM unit tests.
+                    // Excluding these restores the branch metric to reflect actual domain-logic
+                    // coverage rather than generated serialisation plumbing.
+                    // Pattern covers all generated adapter names: ClassNameJsonAdapter.
+                    "*.*JsonAdapter",
+                    "*.*JsonAdapter\$*",
+                    // PendingActionsModule — Hilt @Provides wiring for Room database construction (E11-S01a)
+                    "*.data.pendingaction.di.*",
+                    // PendingActionsDatabase — Room database singleton; generated _Impl has no unit-testable logic
+                    "*.PendingActionsDatabase",
+                    "*.PendingActionsDatabase\$*",
+                    // Room KSP-generated DAO/DB implementation classes (anonymous Runnable/Callable on Room executor)
+                    "*.PendingActionsDatabase_Impl",
+                    "*.PendingActionsDatabase_Impl\$*",
+                    "*.PendingActionDao_Impl",
+                    "*.PendingActionDao_Impl\$*",
+                    // Locale DI module — @Provides + @Binds methods are framework wiring, same rationale
+                    // as data.auth.di.* / data.activeJob.di.* / data.jobOffer.di.* / data.photo.di.*.
+                    "*.data.locale.di.*",
+                    // CrashlyticsInitializer / AppCheckInitializer / PostHogInitializer wrap Firebase + PostHog
+                    // Android SDK calls; not unit-testable without a live Firebase project / device.
+                    "*.CrashlyticsInitializer",
+                    "*.CrashlyticsInitializer\$*",
+                    "*.AppCheckInitializer",
+                    "*.AppCheckInitializer\$*",
+                    "*.PostHogInitializer",
+                    "*.PostHogInitializer\$*",
+                    // TechnicianHomeScreen — Compose screen Kt wrapper + nested lambdas.
+                    // Same rationale as RatingScreenKt / AuthScreenKt / EarningsScreenKt.
+                    "*.TechnicianHomeScreenKt",
+                    "*.TechnicianHomeScreenKt\$*",
+                    // AuthScreenKt sub-composable lambda classes not matched by "*.AuthScreenKt".
+                    "*.AuthScreenKt\$*",
+                    // LanguageSettingsScreen — Compose screen Kt wrapper + nested lambdas.
+                    "*.LanguageSettingsScreenKt",
+                    "*.LanguageSettingsScreenKt\$*",
+                    // Missing DI module packages — @Provides / @Binds framework wiring.
+                    "*.data.kyc.di.*",
+                    "*.data.earnings.di.*",
+                    "*.data.availability.di.*",
+                    "*.data.complaint.di.*",
+                    "*.data.jobs.di.*",
+                    "*.data.location.di.*",
+                    "*.notification.di.*",
+                    // HiltWrapper_* generated by Hilt — same rationale as *.Hilt_*.
+                    "*.HiltWrapper_*",
+                    // TechnicianDashboardScreen — Compose UI composable added by home-heroo branch;
+                    // same rationale as other *Kt screen exclusions (recomposition guards, palette logic).
+                    "*.TechnicianDashboardScreenKt",
+                    "*.TechnicianDashboardScreenKt\$*",
                 )
             }
         }
@@ -484,8 +626,10 @@ ksp {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.datastore.preferences)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
@@ -494,6 +638,8 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.compose.material.icons.extended)
     implementation(libs.homeservices.design.system)
+    implementation(libs.homeservices.core.nav)
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
@@ -503,6 +649,7 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
 
     implementation(libs.sentry.android)
+    implementation(libs.posthog.android)
     implementation(libs.growthbook.android)
     implementation(libs.growthbook.okhttp)
 
@@ -510,6 +657,9 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.messaging)
+    implementation(libs.firebase.crashlytics.ktx)
+    implementation(libs.firebase.appcheck.playintegrity)
+    debugImplementation(libs.firebase.appcheck.debug)
 
     // Credential Manager + Google Identity Library
     implementation(libs.androidx.credentials)
@@ -537,6 +687,7 @@ dependencies {
     implementation(libs.okhttp.core)
     implementation(libs.okhttp.logging)
     implementation(libs.moshi.kotlin)
+    ksp(libs.moshi.kotlin.codegen)
     implementation(libs.androidx.browser)
     implementation(libs.firebase.storage)
 
@@ -562,6 +713,7 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.hilt.testing)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.okhttp.mockwebserver)
     kspTest(libs.hilt.compiler)
     kspTest(libs.androidx.hilt.compiler)
 

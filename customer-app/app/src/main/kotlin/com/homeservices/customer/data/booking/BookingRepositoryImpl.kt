@@ -34,6 +34,7 @@ internal class BookingRepositoryImpl
                                     addressText = request.addressText,
                                     addressLatLng = LatLngDto(lat = request.addressLat, lng = request.addressLng),
                                     paymentMethod = request.paymentMethod.name,
+                                    applyCredit = request.applyCredit,
                                 ),
                             ).toDomain()
                     },

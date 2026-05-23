@@ -15,7 +15,7 @@ internal fun NavGraphBuilder.onboardingGraph(
     sessionManager: SessionManager,
     scope: CoroutineScope,
 ) {
-    navigation(startDestination = "kyc", route = "main") {
+    navigation(startDestination = "service_selection", route = "main") {
         composable("kyc") {
             KycScreen(
                 onComplete = {
@@ -26,11 +26,14 @@ internal fun NavGraphBuilder.onboardingGraph(
         composable("service_selection") {
             ServiceSelectionScreen(
                 onComplete = {
-                    scope.launch { sessionManager.setOnboardingComplete() }
-                    navController.navigate("home") {
-                        popUpTo("main") { inclusive = true }
+                    scope.launch {
+                        sessionManager.setOnboardingComplete()
+                        navController.navigate("home") {
+                            popUpTo("main") { inclusive = true }
+                        }
                     }
                 },
+                autoCompleteExistingProfile = true,
             )
         }
     }

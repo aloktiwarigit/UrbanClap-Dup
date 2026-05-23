@@ -22,7 +22,7 @@ export function withCorrelationId(handler: HttpHandler): HttpHandler {
     // Tag the Sentry scope so any exception from this request carries the ID.
     const response = await Sentry.withScope(async (scope) => {
       scope.setTag('correlationId', correlationId);
-      return handler(req, ctx) as Promise<HttpResponseInit>;
+      return handler(req, ctx);
     });
 
     // Inject correlation-ID into the response so the caller can trace requests.

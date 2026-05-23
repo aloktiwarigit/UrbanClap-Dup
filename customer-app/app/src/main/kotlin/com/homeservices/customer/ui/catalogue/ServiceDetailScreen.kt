@@ -35,6 +35,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,12 +50,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.catalogue.model.Service
 import com.homeservices.customer.ui.shared.TrustDossierCard
 import com.homeservices.customer.ui.shared.TrustDossierUiState
+import com.homeservices.customer.ui.shared.TrustDossierViewModel
 
 // ── Brand tokens (aligned with ServiceListScreen / CatalogueHomeScreen) ───────
 private val WarmIvory = Color(0xFFFBF7EF)
@@ -74,15 +77,26 @@ private val HeroScrim = Color(0xFF000000)
 @Composable
 internal fun ServiceDetailScreen(
     viewModel: ServiceDetailViewModel,
+    trustDossierViewModel: TrustDossierViewModel = hiltViewModel(),
     onBookNow: (serviceId: String, categoryId: String) -> Unit,
     onBack: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val confidenceScoreState by viewModel.confidenceScoreState.collectAsStateWithLifecycle()
+    val trustDossierUiState by trustDossierViewModel.uiState.collectAsStateWithLifecycle()
+    val recommendedTechnicianId by viewModel.recommendedTechnicianId.collectAsStateWithLifecycle()
+
+    LaunchedEffect(recommendedTechnicianId) {
+        if (recommendedTechnicianId != null) {
+            trustDossierViewModel.loadProfile(checkNotNull(recommendedTechnicianId))
+        }
+    }
+
     Scaffold(containerColor = WarmIvory) { innerPadding ->
         ServiceDetailContent(
             uiState = uiState,
             confidenceScoreState = confidenceScoreState,
+            trustDossierUiState = trustDossierUiState,
             onBookNow = onBookNow,
             onBack = onBack,
             modifier = Modifier.padding(innerPadding),
@@ -97,6 +111,7 @@ internal fun ServiceDetailContent(
     onBookNow: (serviceId: String, categoryId: String) -> Unit,
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null,
+    trustDossierUiState: TrustDossierUiState = TrustDossierUiState.Unavailable,
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = WarmIvory) {
         when (uiState) {
@@ -106,6 +121,7 @@ internal fun ServiceDetailContent(
                 ServiceDetailBody(
                     service = uiState.service,
                     confidenceScoreState = confidenceScoreState,
+                    trustDossierUiState = trustDossierUiState,
                     onBookNow = { onBookNow(uiState.service.id, uiState.service.categoryId) },
                     onBack = onBack,
                 )
@@ -118,6 +134,7 @@ internal fun ServiceDetailContent(
 private fun ServiceDetailBody(
     service: Service,
     confidenceScoreState: ConfidenceScoreUiState,
+    trustDossierUiState: TrustDossierUiState,
     onBookNow: () -> Unit,
     onBack: (() -> Unit)?,
     modifier: Modifier = Modifier,
@@ -131,7 +148,7 @@ private fun ServiceDetailBody(
             ) {
                 ServiceMetricRow(service = service)
                 TrustDossierCard(
-                    uiState = TrustDossierUiState.Unavailable,
+                    uiState = trustDossierUiState,
                     compact = false,
                     modifier = Modifier.fillMaxWidth(),
                 )

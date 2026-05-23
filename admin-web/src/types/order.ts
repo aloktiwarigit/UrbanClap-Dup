@@ -33,6 +33,12 @@ export interface Order {
   feesWaived?: boolean;
   escalated?: boolean;
   internalNotes?: string[];
+  jobPhotoSets?: JobPhotoSet[];
+}
+
+export interface JobPhotoSet {
+  stage: string;
+  urls: string[];
 }
 
 export interface OrderListResponse {

@@ -18,7 +18,7 @@ public class SettingsScreenPaparazziTest {
     public fun settings_light() {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
-                SettingsScreen(onLanguageClick = {}, onBack = {})
+                SettingsScreen(onLanguageClick = {}, onPrivacyDataClick = {}, onBack = {})
             }
         }
     }
@@ -27,7 +27,7 @@ public class SettingsScreenPaparazziTest {
     public fun settings_dark() {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = true) {
-                SettingsScreen(onLanguageClick = {}, onBack = {})
+                SettingsScreen(onLanguageClick = {}, onPrivacyDataClick = {}, onBack = {})
             }
         }
     }

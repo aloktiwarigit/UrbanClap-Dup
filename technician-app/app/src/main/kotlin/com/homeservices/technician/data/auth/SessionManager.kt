@@ -1,9 +1,13 @@
 package com.homeservices.technician.data.auth
 
 import android.content.SharedPreferences
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.homeservices.technician.data.auth.di.AuthPrefs
+import com.homeservices.technician.data.device.DeviceTokenRegistrar
 import com.homeservices.technician.domain.auth.model.AuthProvider
 import com.homeservices.technician.domain.auth.model.AuthState
+import io.sentry.Sentry
+import io.sentry.SentryLevel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,12 +16,14 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import io.sentry.protocol.User as SentryUser
 
 @Singleton
 public class SessionManager
     @Inject
     constructor(
         @AuthPrefs private val prefs: SharedPreferences,
+        private val deviceTokenRegistrar: DeviceTokenRegistrar,
     ) {
         private companion object {
             const val KEY_UID = "uid"
@@ -26,7 +32,8 @@ public class SessionManager
             const val KEY_EMAIL = "email"
             const val KEY_DISPLAY_NAME = "display_name"
             const val KEY_AUTH_PROVIDER = "auth_provider"
-            const val KEY_ONBOARDING_COMPLETE = "onboarding_complete"
+            const val KEY_ONBOARDING_COMPLETE_LEGACY = "onboarding_complete"
+            const val KEY_ONBOARDING_COMPLETE_PREFIX = "onboarding_complete_"
             val SESSION_TTL_MS = TimeUnit.DAYS.toMillis(180)
         }
 
@@ -34,11 +41,19 @@ public class SessionManager
         public val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
         public val isOnboardingComplete: Boolean
-            get() = prefs.getBoolean(KEY_ONBOARDING_COMPLETE, false)
+            get() {
+                val uid = currentUid() ?: return false
+                return prefs.getBoolean(onboardingCompleteKey(uid), false)
+            }
 
         public suspend fun setOnboardingComplete() {
             withContext(Dispatchers.IO) {
-                prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETE, true).apply()
+                val uid = currentUid() ?: return@withContext
+                prefs
+                    .edit()
+                    .putBoolean(onboardingCompleteKey(uid), true)
+                    .remove(KEY_ONBOARDING_COMPLETE_LEGACY)
+                    .apply()
             }
         }
 
@@ -50,7 +65,7 @@ public class SessionManager
                     createdAt == 0L ||
                     System.currentTimeMillis() - createdAt > SESSION_TTL_MS
             return if (sessionExpired) {
-                if (uid != null) clearPrefs()
+                if (uid != null) clearSessionPrefs()
                 AuthState.Unauthenticated
             } else {
                 AuthState.Authenticated(
@@ -85,6 +100,7 @@ public class SessionManager
             authProvider: AuthProvider = AuthProvider.Phone,
         ) {
             withContext(Dispatchers.IO) {
+                val legacyOnboardingComplete = prefs.getBoolean(KEY_ONBOARDING_COMPLETE_LEGACY, false)
                 val editor =
                     prefs
                         .edit()
@@ -106,6 +122,11 @@ public class SessionManager
                 } else {
                     editor.remove(KEY_DISPLAY_NAME)
                 }
+                if (legacyOnboardingComplete) {
+                    editor
+                        .putBoolean(onboardingCompleteKey(uid), true)
+                        .remove(KEY_ONBOARDING_COMPLETE_LEGACY)
+                }
                 editor.apply()
             }
             _authState.value =
@@ -116,14 +137,52 @@ public class SessionManager
                     displayName = displayName,
                     authProvider = authProvider,
                 )
+            runCatching { FirebaseCrashlytics.getInstance().setUserId(uid) }
+            runCatching { Sentry.setUser(SentryUser().apply { id = uid }) }
+            // Best-effort device token registration — ensures token is enrolled even when onNewToken
+            // is not invoked (e.g. sign-in with an already-issued FCM token).
+            runCatching { deviceTokenRegistrar.register() }
+                .onFailure { e ->
+                    Sentry.addBreadcrumb(
+                        io.sentry.Breadcrumb().apply {
+                            category = "auth.signin"
+                            message = "deviceTokenRegistrar.register failed: ${e.message}"
+                            level = SentryLevel.WARNING
+                        },
+                    )
+                }
         }
 
         public suspend fun clearSession() {
-            withContext(Dispatchers.IO) { clearPrefs() }
+            // Capture uid BEFORE clearing prefs so it's available for the server unregister call.
+            val uid = currentUid()
+            withContext(Dispatchers.IO) { clearSessionPrefs() }
             _authState.value = AuthState.Unauthenticated
+            runCatching { FirebaseCrashlytics.getInstance().setUserId("") }
+            runCatching { Sentry.setUser(null) }
+            // Best-effort server device-token unregister — never blocks sign-out.
+            if (uid != null) {
+                runCatching { deviceTokenRegistrar.unregister() }
+            }
         }
 
-        private fun clearPrefs() {
-            prefs.edit().clear().apply()
+        private fun currentUid(): String? {
+            val fromState = (authState.value as? AuthState.Authenticated)?.uid
+            return fromState ?: prefs.getString(KEY_UID, null)
+        }
+
+        private fun onboardingCompleteKey(uid: String): String = "$KEY_ONBOARDING_COMPLETE_PREFIX$uid"
+
+        private fun clearSessionPrefs() {
+            prefs
+                .edit()
+                .remove(KEY_UID)
+                .remove(KEY_PHONE_LAST_FOUR)
+                .remove(KEY_SESSION_CREATED_AT)
+                .remove(KEY_EMAIL)
+                .remove(KEY_DISPLAY_NAME)
+                .remove(KEY_AUTH_PROVIDER)
+                .remove(KEY_ONBOARDING_COMPLETE_LEGACY)
+                .apply()
         }
     }

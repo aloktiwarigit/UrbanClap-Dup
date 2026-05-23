@@ -25,7 +25,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.homeservices.customer.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,7 +44,7 @@ internal fun ConfidenceScoreRow(
             Row(modifier = modifier.padding(vertical = 4.dp)) {
                 AssistChip(
                     onClick = { showMethodology = true },
-                    label = { Text("New in your area -- building track record") },
+                    label = { Text(stringResource(R.string.confidence_new_area)) },
                 )
             }
         }
@@ -54,18 +56,18 @@ internal fun ConfidenceScoreRow(
             ) {
                 AssistChip(
                     onClick = { showMethodology = true },
-                    label = { Text("${score.onTimePercent}% on-time") },
+                    label = { Text(stringResource(R.string.confidence_on_time, score.onTimePercent)) },
                 )
                 score.areaRating?.let { rating ->
                     AssistChip(
                         onClick = { showMethodology = true },
-                        label = { Text("${"%.1f".format(rating)} area rating") },
+                        label = { Text(stringResource(R.string.confidence_area_rating, rating)) },
                     )
                 }
                 score.nearestEtaMinutes?.let { eta ->
                     AssistChip(
                         onClick = { showMethodology = true },
-                        label = { Text("~$eta min away") },
+                        label = { Text(stringResource(R.string.confidence_eta, eta)) },
                     )
                 }
             }
@@ -78,15 +80,12 @@ internal fun ConfidenceScoreRow(
             sheetState = rememberModalBottomSheetState(),
         ) {
             Text(
-                text = "How we calculate this",
+                text = stringResource(R.string.confidence_methodology_title),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
             Text(
-                text =
-                    "On-time %: jobs started within 15 min of booked slot (last 30 days).\n\n" +
-                        "Area rating: average star rating in your area.\n\n" +
-                        "ETA: estimated travel time from technician's last location at 20 km/h.",
+                text = stringResource(R.string.confidence_methodology_body),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 24.dp),
             )

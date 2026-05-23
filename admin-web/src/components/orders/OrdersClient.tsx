@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import type { Order, OrderListResponse, OrdersQueryParams } from '@/types/order';
-import { fetchOrders, fetchAllOrdersForExport } from '@/api/orders';
+import { fetchOrders, fetchOrderById, fetchAllOrdersForExport } from '@/api/orders';
 import { OrdersTable } from './OrdersTable';
 import { OrderFilters, type FiltersState } from './OrderFilters';
 import { OrderSlideOver } from './OrderSlideOver';
@@ -51,6 +52,7 @@ function filtersToQueryParams(f: FiltersState): OrdersQueryParams {
 void DEFAULT_FILTERS;
 
 export function OrdersClient() {
+  const t = useTranslations('orders');
   const { auth } = useAdminAuth();
   const canOverride = hasCapability(auth?.role, 'orders.override');
   const canFinancialOverride = hasCapability(auth?.role, 'orders.financialOverride');
@@ -89,29 +91,41 @@ export function OrdersClient() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams.toString()]);
 
+  const tCsvHeaders = useTranslations('orders.csv.headers');
   const handleExport = async () => {
     setIsExporting(true);
     try {
       const orders = await fetchAllOrdersForExport(filtersToQueryParams(filters));
-      exportOrdersCsv(orders);
+      exportOrdersCsv(orders, tCsvHeaders);
     } finally {
       setIsExporting(false);
     }
   };
 
+  const openOrder = useCallback((order: Order) => {
+    setSelectedOrder(order);
+    fetchOrderById(order.id)
+      .then(detail => {
+        setSelectedOrder(current => current?.id === order.id ? detail : current);
+      })
+      .catch(() => {
+        // The list-row snapshot is still useful if the detail call fails.
+      });
+  }, []);
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="eyebrow m-0 mb-[var(--space-1)]">All bookings &mdash; today &amp; back</p>
-          <h1 className="display text-[length:var(--text-4xl)] m-0 text-[var(--color-text)]">Orders</h1>
+          <p className="eyebrow m-0 mb-[var(--space-1)]">{t('list.subtitle')}</p>
+          <h1 className="display text-[length:var(--text-4xl)] m-0 text-[var(--color-text)]">{t('list.title')}</h1>
         </div>
         <button
           onClick={() => { void handleExport(); }}
           disabled={isExporting}
           className="btn btn-ghost"
         >
-          {isExporting ? 'Exporting\u2026' : 'Export CSV'}
+          {isExporting ? t('list.exportButton.loading') : t('list.exportButton.label')}
         </button>
       </div>
 
@@ -132,7 +146,7 @@ export function OrdersClient() {
           pageSize={data.pageSize}
           totalPages={data.totalPages}
           isLoading={false}
-          onRowClick={setSelectedOrder}
+          onRowClick={openOrder}
           onPageChange={(p) => updateUrl({ page: p })}
         />
       )}

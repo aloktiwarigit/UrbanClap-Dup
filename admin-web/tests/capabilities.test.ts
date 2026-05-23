@@ -22,6 +22,8 @@ describe('admin capability matrix', () => {
       'catalogue.manage',
       'finance.read',
       'complaints.manage',
+      'technicians.manage',
+      'customers.manage',
     ]);
     expect(hasCapability('ops-manager', 'orders.financialOverride')).toBe(false);
     expect(hasCapability('ops-manager', 'audit.read')).toBe(false);
@@ -46,5 +48,15 @@ describe('admin capability matrix', () => {
     expect(canAccessAdminPath('ops-manager', '/catalogue/ac-repair')).toBe(true);
     expect(canAccessAdminPath('ops-manager', '/audit-log')).toBe(false);
     expect(canAccessAdminPath('super-admin', '/compliance')).toBe(true);
+  });
+
+  it('canAccessAdminPath defaults deny on unknown paths', () => {
+    const unknownPath = '/some/unregistered/route/that/does/not/exist';
+    expect(canAccessAdminPath('super-admin', unknownPath)).toBe(false);
+    expect(canAccessAdminPath('ops-manager', unknownPath)).toBe(false);
+    expect(canAccessAdminPath('finance', unknownPath)).toBe(false);
+    expect(canAccessAdminPath('support-agent', unknownPath)).toBe(false);
+    expect(canAccessAdminPath(null, unknownPath)).toBe(false);
+    expect(canAccessAdminPath(undefined, unknownPath)).toBe(false);
   });
 });

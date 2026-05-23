@@ -170,15 +170,34 @@ jobs:
               NPM_CONFIG_INCLUDE=dev \
               NPM_CONFIG_PRODUCTION=false \
               NODE_ENV=production \
-              GIT_SHA="${GITHUB_SHA}" \
               AzureWebJobsFeatureFlags=EnableWorkerIndexing \
             --output none
       - name: Deploy via Oryx remote build
-        # Oryx builds on Azure Linux — functions ARE discovered (proven).
-        # Trigger sync timeout is a known non-fatal race; subsequent steps verify the
-        # actual deploy outcome. The 36-attempt health probe is the real deploy verifier.
-        continue-on-error: true
-        run: func azure functionapp publish "$AZURE_FUNCTIONAPP_NAME" --javascript --build remote --verbose
+        # Trigger sync timeout is a known non-fatal race; remote build failures are not.
+        run: |
+          set +e
+          func azure functionapp publish "$AZURE_FUNCTIONAPP_NAME" --javascript --build remote --verbose 2>&1 | tee /tmp/func-publish.log
+          publish_status="${PIPESTATUS[0]}"
+          set -e
+
+          if grep -Eiq 'Remote build failed|Deployment Failed|No space left on device|rsync error' /tmp/func-publish.log; then
+            exit 1
+          fi
+
+          if [ "$publish_status" -ne 0 ]; then
+            if grep -Eiq 'sync.*trigger|trigger.*sync|timed out' /tmp/func-publish.log; then
+              echo "::warning::Publish exited non-zero during trigger sync; continuing to health verification."
+            else
+              exit "$publish_status"
+            fi
+          fi
+      - name: Set deployed commit
+        run: |
+          az functionapp config appsettings set \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --resource-group rg-homeservices-prod \
+            --settings GIT_SHA="${GITHUB_SHA}" \
+            --output none
       - name: List indexed functions
         continue-on-error: true
         run: |

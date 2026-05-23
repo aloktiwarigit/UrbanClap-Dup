@@ -10,18 +10,23 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { useTranslations } from 'next-intl';
 import type { DailyPnLEntry } from '@/api/finance';
 
 interface Props {
   data: DailyPnLEntry[];
+  locale: string;
 }
 
-function tickFormatter(value: unknown): string {
-  if (typeof value !== 'number') return '';
-  return `₹${(value / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-}
+export function PnLChart({ data, locale }: Props) {
+  const t = useTranslations('finance');
+  const localeStr = locale === 'hi' ? 'hi-IN' : 'en-IN';
 
-export function PnLChart({ data }: Props) {
+  function tickFormatter(value: unknown): string {
+    if (typeof value !== 'number') return '';
+    return `₹${(value / 100).toLocaleString(localeStr, { maximumFractionDigits: 0 })}`;
+  }
+
   return (
     <ResponsiveContainer width="100%" height={320}>
       <BarChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
@@ -30,9 +35,9 @@ export function PnLChart({ data }: Props) {
         <YAxis tickFormatter={tickFormatter} tick={{ fontSize: 12 }} />
         <Tooltip formatter={tickFormatter} />
         <Legend />
-        <Bar dataKey="grossRevenue" name="Gross Revenue" fill="var(--color-brand)" />
-        <Bar dataKey="commission" name="Commission" fill="var(--color-warn)" />
-        <Bar dataKey="netToOwner" name="Net to Owner" fill="var(--color-success)" />
+        <Bar dataKey="grossRevenue" name={t('chart.legend.grossRevenue')} fill="var(--color-brand)" />
+        <Bar dataKey="commission" name={t('chart.legend.commission')} fill="var(--color-warn)" />
+        <Bar dataKey="netToOwner" name={t('chart.legend.netToOwner')} fill="var(--color-success)" />
       </BarChart>
     </ResponsiveContainer>
   );

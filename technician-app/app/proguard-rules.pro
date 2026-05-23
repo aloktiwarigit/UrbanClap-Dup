@@ -46,6 +46,10 @@
 # OkHttp / Retrofit
 -dontwarn okhttp3.**
 -dontwarn retrofit2.**
+# Retrofit services are instantiated through dynamic proxies. Keep the app's
+# service interfaces and members so release shrinking cannot remove or rewrite
+# methods that Retrofit needs to inspect at runtime.
+-keep,allowobfuscation interface com.homeservices.technician.**.*ApiService { *; }
 
 # Sentry
 -dontwarn io.sentry.**
@@ -57,3 +61,7 @@
 # GrowthBook SDK
 -keep class com.sdk.growthbook.** { *; }
 -dontwarn com.sdk.growthbook.**
+
+# E11-S04 dashboard (Hilt ViewModel + Compose internals)
+-keep class com.homeservices.technician.ui.dashboard.TechnicianDashboardViewModel { *; }
+-keep class com.homeservices.technician.ui.dashboard.PendingActionCard { *; }

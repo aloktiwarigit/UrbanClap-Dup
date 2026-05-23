@@ -19,10 +19,22 @@ interface TopbarProps {
 }
 
 export function Topbar({ rightSlot }: TopbarProps) {
-  const [clock, setClock] = useState<string>(() => formatClock(new Date()));
+  // Clock must be empty during SSR — server time and client time differ, which
+  // triggers React #418 hydration mismatch. The mismatch bailout discards the
+  // entire dashboard subtree and re-renders it client-side, collapsing the
+  // Rail's inline width and breaking the flex layout (manifested as the page
+  // rendering in only half the viewport on /hi/dashboard).
+  const [clock, setClock] = useState<string>('');
+  const [isoTimestamp, setIsoTimestamp] = useState<string>('');
 
   useEffect(() => {
-    const timer = setInterval(() => setClock(formatClock(new Date())), 1000);
+    const update = () => {
+      const now = new Date();
+      setClock(formatClock(now));
+      setIsoTimestamp(now.toISOString());
+    };
+    update();
+    const timer = setInterval(update, 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -41,7 +53,11 @@ export function Topbar({ rightSlot }: TopbarProps) {
           <span className="topbar__live-label">LIVE</span>
         </div>
 
-        <time className="topbar__clock" dateTime={new Date().toISOString()}>
+        <time
+          className="topbar__clock"
+          dateTime={isoTimestamp || undefined}
+          suppressHydrationWarning
+        >
           {clock}
         </time>
 
