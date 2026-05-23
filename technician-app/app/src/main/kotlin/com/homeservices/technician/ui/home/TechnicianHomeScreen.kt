@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Email
@@ -43,6 +44,7 @@ import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -103,6 +105,7 @@ internal fun TechnicianHomeScreen(
     onPayoutSettings: () -> Unit,
     onLanguageSettings: () -> Unit,
     onEditServices: () -> Unit,
+    onDeleteAccount: () -> Unit,
     onSignOut: () -> Unit,
     onPendingActionClick: (PendingAction) -> Unit,
     modifier: Modifier = Modifier,
@@ -194,6 +197,7 @@ internal fun TechnicianHomeScreen(
                         onPayoutSettings = onPayoutSettings,
                         onLanguageSettings = onLanguageSettings,
                         onEditServices = onEditServices,
+                        onDeleteAccount = onDeleteAccount,
                         onSignOut = onSignOut,
                     )
             }
@@ -932,6 +936,7 @@ private fun ProfileScreen(
     onPayoutSettings: () -> Unit,
     onLanguageSettings: () -> Unit,
     onEditServices: () -> Unit,
+    onDeleteAccount: () -> Unit,
     onSignOut: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -1012,6 +1017,18 @@ private fun ProfileScreen(
                 title = "Sign out",
                 subtitle = "Remove this device session",
                 onClick = onSignOut,
+                destructive = true,
+            )
+        }
+        item {
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(8.dp))
+            SettingCard(
+                icon = Icons.Default.DeleteForever,
+                title = stringResource(R.string.settings_delete_account_title),
+                subtitle = stringResource(R.string.settings_delete_account_subtitle),
+                onClick = onDeleteAccount,
                 destructive = true,
             )
         }

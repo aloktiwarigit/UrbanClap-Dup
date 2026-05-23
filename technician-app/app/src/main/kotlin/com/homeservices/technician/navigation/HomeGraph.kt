@@ -30,6 +30,9 @@ import com.homeservices.technician.ui.rating.RatingRoutes
 import com.homeservices.technician.ui.rating.RatingScreen
 import com.homeservices.technician.ui.serviceprofile.ServiceSelectionMode
 import com.homeservices.technician.ui.serviceprofile.ServiceSelectionScreen
+import com.homeservices.technician.data.auth.SessionManager
+import com.homeservices.technician.ui.deleteaccount.AccountDeletedScreen
+import com.homeservices.technician.ui.deleteaccount.DeleteAccountScreen
 import com.homeservices.technician.ui.settings.LanguageSettingsScreen
 
 private const val HOME_GRAPH_ROUTE = "home"
@@ -38,6 +41,7 @@ private const val HOME_DASHBOARD_ROUTE = "home_dashboard"
 internal fun NavGraphBuilder.homeGraph(
     navController: NavController,
     authState: AuthState,
+    sessionManager: SessionManager,
     onSignOut: () -> Unit,
 ) {
     navigation(startDestination = HOME_DASHBOARD_ROUTE, route = HOME_GRAPH_ROUTE) {
@@ -60,6 +64,29 @@ internal fun NavGraphBuilder.homeGraph(
         }
         composable("language_settings") {
             LanguageSettingsScreen(onBack = { navController.popBackStack() })
+        }
+        composable("delete_account") {
+            DeleteAccountScreen(
+                onBack = { navController.popBackStack() },
+                onDeleted = { scheduledAt ->
+                    navController.navigate("account_deleted/${Uri.encode(scheduledAt)}") {
+                        popUpTo(HOME_DASHBOARD_ROUTE) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
+        composable(
+            route = "account_deleted/{scheduledAt}",
+            arguments = listOf(navArgument("scheduledAt") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val scheduledAt = Uri.decode(
+                backStackEntry.arguments?.getString("scheduledAt") ?: "",
+            )
+            AccountDeletedScreen(
+                scheduledAt = scheduledAt,
+                sessionManager = sessionManager,
+            )
         }
         composable("ratings_transparency") {
             MyRatingsScreen(onBack = { navController.popBackStack() })
@@ -117,6 +144,7 @@ private fun HomeDashboardRoute(
         onPayoutSettings = { navController.navigate("payout_settings") },
         onLanguageSettings = { navController.navigate("language_settings") },
         onEditServices = { navController.navigate("edit_services") },
+        onDeleteAccount = { navController.navigate("delete_account") },
         onSignOut = onSignOut,
         onPendingActionClick = { action ->
             when (action.type) {
