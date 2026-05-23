@@ -436,11 +436,6 @@ kover {
                     "*.data.auth.remote.dto.*",
                     // BuildConfigFeatureFlags — reads a compile-time constant; no branches to test
                     "*.BuildConfigFeatureFlags",
-                    // GrowthBookFeatureFlags — SDK construction requires network (OkHttp); the
-                    // unit test covers the safe-off invariant via the no-arg constructor path;
-                    // the refreshAsync() fire-and-forget and SDK init branches need integration tests.
-                    "*.GrowthBookFeatureFlags",
-                    "*.GrowthBookFeatureFlags\$*",
                     // RazorpayPaymentUseCase.open() — uses callbackFlow + Razorpay Checkout SDK which
                     // requires a real Activity; same rationale as FirebaseOtpUseCase (callbackFlow + SDK)
                     "*.RazorpayPaymentUseCase",

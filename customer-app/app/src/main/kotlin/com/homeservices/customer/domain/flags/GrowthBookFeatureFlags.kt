@@ -29,12 +29,14 @@ import javax.inject.Singleton
 @Singleton
 public class GrowthBookFeatureFlags
     @Inject
-    constructor() : FeatureFlags {
-        private val keyPresent: Boolean = BuildConfig.GROWTHBOOK_CLIENT_KEY.isNotBlank()
+    constructor(
+        private val apiKey: String = BuildConfig.GROWTHBOOK_CLIENT_KEY,
+    ) : FeatureFlags {
+        private val keyPresent: Boolean = apiKey.isNotBlank()
 
         private val sdk: GrowthBookSDK =
             GBSDKBuilder(
-                apiKey = BuildConfig.GROWTHBOOK_CLIENT_KEY.ifBlank { "placeholder" },
+                apiKey = apiKey.ifBlank { "placeholder" },
                 apiHost = "https://cdn.growthbook.io",
                 attributes = emptyMap<String, GBValue>(),
                 trackingCallback = { _, _ -> },
