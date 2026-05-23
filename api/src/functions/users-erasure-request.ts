@@ -11,6 +11,7 @@ import {
   getActiveErasureRequestForUser,
   replaceErasureRequest,
 } from '../cosmos/erasure-request-repository.js';
+import { bookingRepo } from '../cosmos/booking-repository.js';
 import {
   ErasureRequestSubmitBodySchema,
   ERASURE_GRACE_PERIOD_MS,
@@ -40,6 +41,14 @@ export async function submitErasureRequestHandler(
   }
   const { uid } = auth;
   const role = await inferUserRole(uid);
+
+  // Gate: refuse deletion if an active booking exists for this technician.
+  if (role === 'TECHNICIAN') {
+    const hasActive = await bookingRepo.hasActiveBookingForTechnician(uid);
+    if (hasActive) {
+      return { status: 409, jsonBody: { code: 'ACTIVE_JOB_EXISTS' } };
+    }
+  }
 
   let body: unknown;
   try {

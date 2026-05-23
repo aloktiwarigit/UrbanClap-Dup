@@ -9,6 +9,10 @@ vi.mock('../../src/services/userRole.service.js', () => ({
   inferUserRole: vi.fn().mockResolvedValue('CUSTOMER'),
 }));
 
+vi.mock('../../src/cosmos/booking-repository.js', () => ({
+  bookingRepo: { hasActiveBookingForTechnician: vi.fn().mockResolvedValue(false) },
+}));
+
 vi.mock('../../src/cosmos/erasure-request-repository.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../src/cosmos/erasure-request-repository.js')>();
   return {
