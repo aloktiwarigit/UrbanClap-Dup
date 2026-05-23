@@ -32,9 +32,16 @@ public class BookingViewModelWomenSafeTest {
     private val biometricGate: BiometricGateUseCase = mockk()
     private val catalogueRepository: CatalogueRepository = mockk()
 
-    private fun makeCategory(id: String, safetyTag: Boolean) = Category(
-        id = id, name = "Test", imageUrl = "", serviceCount = 1, minPricePaise = 0,
-        safetyTag = safetyTag
+    private fun makeCategory(
+        id: String,
+        safetyTag: Boolean,
+    ) = Category(
+        id = id,
+        name = "Test",
+        imageUrl = "",
+        serviceCount = 1,
+        minPricePaise = 0,
+        safetyTag = safetyTag,
     )
 
     @Before
@@ -48,9 +55,14 @@ public class BookingViewModelWomenSafeTest {
         Dispatchers.resetMain()
     }
 
-    private fun makeVm() = BookingViewModel(
-        createBooking, confirmBooking, razorpayPayment, biometricGate, catalogueRepository
-    )
+    private fun makeVm() =
+        BookingViewModel(
+            createBooking,
+            confirmBooking,
+            razorpayPayment,
+            biometricGate,
+            catalogueRepository,
+        )
 
     @Test
     public fun `showWomenSafeToggle is false for daytime slot and non-safety category`(): Unit =
@@ -93,5 +105,47 @@ public class BookingViewModelWomenSafeTest {
             assertThat(vm.preferFemaleTechnician.value).isFalse()
             vm.setPreferFemaleTechnician(true)
             assertThat(vm.preferFemaleTechnician.value).isTrue()
+        }
+
+    @Test
+    public fun `setWalletBalance with positive amount enables credit toggle`(): Unit =
+        runTest(dispatcher) {
+            every { catalogueRepository.getCategories() } returns flowOf(Result.success(emptyList()))
+            val vm = makeVm()
+            assertThat(vm.applyCreditToggle.value).isFalse()
+            vm.setWalletBalance(5000L)
+            assertThat(vm.walletBalanceInPaise.value).isEqualTo(5000L)
+            assertThat(vm.applyCreditToggle.value).isTrue()
+        }
+
+    @Test
+    public fun `setWalletBalance with zero does not enable credit toggle`(): Unit =
+        runTest(dispatcher) {
+            every { catalogueRepository.getCategories() } returns flowOf(Result.success(emptyList()))
+            val vm = makeVm()
+            vm.setWalletBalance(0L)
+            assertThat(vm.walletBalanceInPaise.value).isEqualTo(0L)
+            assertThat(vm.applyCreditToggle.value).isFalse()
+        }
+
+    @Test
+    public fun `malformed slot window defaults to hour 0 and hides toggle for non-safety category`(): Unit =
+        runTest(dispatcher) {
+            every { catalogueRepository.getCategories() } returns
+                flowOf(Result.success(listOf(makeCategory("cat1", safetyTag = false))))
+            val vm = makeVm()
+            vm.pendingCategoryId = "cat1"
+            vm.setSlotAndAddress(BookingSlot("2026-06-01", "invalid-window"), "Addr", 0.0, 0.0)
+            assertThat(vm.showWomenSafeToggle.value).isFalse()
+        }
+
+    @Test
+    public fun `catalogue failure defaults to no women safe toggle`(): Unit =
+        runTest(dispatcher) {
+            every { catalogueRepository.getCategories() } returns
+                flowOf(Result.failure(RuntimeException("offline")))
+            val vm = makeVm()
+            vm.setSlotAndAddress(BookingSlot("2026-06-01", "10:00-12:00"), "Addr", 0.0, 0.0)
+            assertThat(vm.showWomenSafeToggle.value).isFalse()
         }
 }

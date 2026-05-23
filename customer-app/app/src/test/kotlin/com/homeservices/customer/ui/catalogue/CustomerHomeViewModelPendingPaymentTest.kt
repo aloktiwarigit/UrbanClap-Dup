@@ -29,17 +29,28 @@ public class CustomerHomeViewModelPendingPaymentTest {
     private val pendingActionStore: PendingActionStore = mockk()
     private val bookingRepository: BookingRepository = mockk()
 
-    private val authStateFlow = MutableStateFlow<AuthState>(
-        AuthState.Authenticated(uid = "uid1")
-    )
-
-    private fun makeBooking(id: String, status: CustomerBookingStatus, orderId: String? = null) =
-        CustomerBooking(
-            bookingId = id, serviceId = "svc1", serviceName = "AC", addressText = "Addr",
-            status = status, slotDate = "2026-06-01", slotWindow = "10:00-12:00",
-            amountPaise = 59900, paymentMethod = BookingPaymentMethod.RAZORPAY,
-            createdAt = "2026-06-01T10:00:00Z", razorpayOrderId = orderId,
+    private val authStateFlow =
+        MutableStateFlow<AuthState>(
+            AuthState.Authenticated(uid = "uid1"),
         )
+
+    private fun makeBooking(
+        id: String,
+        status: CustomerBookingStatus,
+        orderId: String? = null,
+    ) = CustomerBooking(
+        bookingId = id,
+        serviceId = "svc1",
+        serviceName = "AC",
+        addressText = "Addr",
+        status = status,
+        slotDate = "2026-06-01",
+        slotWindow = "10:00-12:00",
+        amountPaise = 59900,
+        paymentMethod = BookingPaymentMethod.RAZORPAY,
+        createdAt = "2026-06-01T10:00:00Z",
+        razorpayOrderId = orderId,
+    )
 
     @Before
     public fun setUp() {
@@ -80,6 +91,24 @@ public class CustomerHomeViewModelPendingPaymentTest {
     public fun `empty bookings list yields null pendingPaymentBooking`(): Unit =
         runTest(dispatcher) {
             every { bookingRepository.getMyBookings() } returns flowOf(Result.success(emptyList()))
+            val vm = CustomerHomeViewModel(pendingActionStore, bookingRepository, sessionManager)
+            val state = vm.homeUiState.value as? CustomerHomeUiState.Ready
+            assertThat(state!!.pendingPaymentBooking).isNull()
+        }
+
+    @Test
+    public fun `unauthenticated authState keeps state as Loading`(): Unit =
+        runTest(dispatcher) {
+            authStateFlow.value = AuthState.Unauthenticated
+            val vm = CustomerHomeViewModel(pendingActionStore, bookingRepository, sessionManager)
+            assertThat(vm.homeUiState.value).isInstanceOf(CustomerHomeUiState.Loading::class.java)
+        }
+
+    @Test
+    public fun `booking repository failure yields null pendingPaymentBooking`(): Unit =
+        runTest(dispatcher) {
+            every { bookingRepository.getMyBookings() } returns
+                flowOf(Result.failure(RuntimeException("network")))
             val vm = CustomerHomeViewModel(pendingActionStore, bookingRepository, sessionManager)
             val state = vm.homeUiState.value as? CustomerHomeUiState.Ready
             assertThat(state!!.pendingPaymentBooking).isNull()

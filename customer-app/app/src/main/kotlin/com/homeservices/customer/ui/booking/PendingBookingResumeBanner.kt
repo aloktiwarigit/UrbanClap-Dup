@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.dp
 import com.homeservices.customer.R
 import com.homeservices.designsystem.components.HsPrimaryButton
 
+private const val PAISE_PER_RUPEE = 100L
+
 @Composable
 internal fun PendingBookingResumeBanner(
     serviceName: String,
@@ -32,9 +34,10 @@ internal fun PendingBookingResumeBanner(
     Surface(
         color = MaterialTheme.colorScheme.errorContainer,
         shape = MaterialTheme.shapes.medium,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -45,11 +48,12 @@ internal fun PendingBookingResumeBanner(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = stringResource(
-                    R.string.pending_payment_banner_subtitle,
-                    serviceName,
-                    amountPaise / 100L,
-                ),
+                text =
+                    stringResource(
+                        R.string.pending_payment_banner_subtitle,
+                        serviceName,
+                        amountPaise / PAISE_PER_RUPEE,
+                    ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )

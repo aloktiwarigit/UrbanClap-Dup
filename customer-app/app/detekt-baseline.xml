@@ -4,22 +4,21 @@
   <CurrentIssues>
     <ID>ComplexCondition:RatingDtos.kt$status == "SUBMITTED" &amp;&amp; overall != null &amp;&amp; subScores != null &amp;&amp; submittedAt != null</ID>
     <ID>CyclomaticComplexMethod:BookingStatus.kt$BookingStatus.Companion$public fun fromFcmString(value: String): BookingStatus</ID>
-    <ID>CyclomaticComplexMethod:CustomerBookingsScreen.kt$private fun CustomerBookingStatus.label(): String</ID>
+    <ID>CyclomaticComplexMethod:CatalogueHomeScreen.kt$@Composable internal fun CatalogueHomeContent( uiState: CatalogueHomeUiState, onCategoryClick: (String) -&gt; Unit, onSettingsClick: () -&gt; Unit, onProfileLanguageClick: () -&gt; Unit, onTrackBooking: (String) -&gt; Unit, pendingPaymentBooking: CustomerBooking? = null, onResumePayment: (bookingId: String, orderId: String, amount: Int) -&gt; Unit = { _, _, _ -&gt; }, onCancelPendingBooking: (bookingId: String) -&gt; Unit = {}, onPrivacyAndDataClick: () -&gt; Unit = {}, )</ID>
     <ID>CyclomaticComplexMethod:ServiceDetailScreen.kt$@DrawableRes private fun serviceHeroImageRes(serviceId: String): Int?</ID>
     <ID>LongMethod:AddressScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun AddressScreen( onAddressConfirmed: (addressText: String, lat: Double, lng: Double) -&gt; Unit, onBack: () -&gt; Unit, )</ID>
-    <ID>LongMethod:AddressScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun AddressScreenContent( addressText: String, selectedLat: Double?, selectedLng: Double?, locationMessage: String, isLocating: Boolean, onAddressTextChanged: (String) -&gt; Unit, onUseCurrentLocation: () -&gt; Unit, onAddressConfirmed: (addressText: String, lat: Double, lng: Double) -&gt; Unit, onBack: () -&gt; Unit, )</ID>
     <ID>LongMethod:AppNavigation.kt$@Composable internal fun AppNavigation( sessionManager: SessionManager, activity: FragmentActivity, priceApprovalEventBus: PriceApprovalEventBus, ratingPromptEventBus: RatingPromptEventBus, isFirstLaunch: IsFirstLaunchUseCase, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:AuthScreen.kt$@Composable internal fun AuthScreen( uiState: AuthUiState, onPhoneSubmitted: (String) -&gt; Unit, onOtpEntered: (String) -&gt; Unit, onResendRequested: () -&gt; Unit, onRetry: () -&gt; Unit, onGoogleSelected: () -&gt; Unit = {}, onEmailSelected: () -&gt; Unit = {}, onPhoneSelected: () -&gt; Unit = {}, onEmailSignIn: (String, String) -&gt; Unit = { _, _ -&gt; }, onEmailSignUp: (String, String) -&gt; Unit = { _, _ -&gt; }, onEmailModeToggle: (String) -&gt; Unit = {}, onBackToMethodSelection: () -&gt; Unit = {}, onEmailVerificationContinue: (String) -&gt; Unit = {}, onResendVerificationEmail: (String) -&gt; Unit = {}, onForgotPassword: (String) -&gt; Unit = {}, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:AuthScreen.kt$@Composable private fun EmailEntryContent( state: AuthUiState.EmailEntry, onEmailSignIn: (String, String) -&gt; Unit, onEmailSignUp: (String, String) -&gt; Unit, onEmailModeToggle: (String) -&gt; Unit, onBackToMethodSelection: () -&gt; Unit, onForgotPassword: (String) -&gt; Unit, )</ID>
     <ID>LongMethod:BookingConfirmedScreen.kt$@Composable internal fun BookingConfirmedScreen( bookingId: String, onBackToHome: () -&gt; Unit, onTrackBooking: (bookingId: String) -&gt; Unit = {}, )</ID>
-    <ID>LongMethod:BookingSummaryScreen.kt$@Composable private fun ReadySummary( state: BookingUiState.Ready, selectedPaymentMethod: BookingPaymentMethod, onPaymentMethodSelected: (BookingPaymentMethod) -&gt; Unit, onCreateBooking: () -&gt; Unit, )</ID>
-    <ID>LongMethod:CatalogueHomeScreen.kt$@Composable internal fun CatalogueHomeContent( uiState: CatalogueHomeUiState, onCategoryClick: (String) -&gt; Unit, onSettingsClick: () -&gt; Unit, onProfileLanguageClick: () -&gt; Unit, onTrackBooking: (String) -&gt; Unit, )</ID>
+    <ID>LongMethod:BookingSummaryScreen.kt$@Composable private fun ReadySummary( state: BookingUiState.Ready, selectedPaymentMethod: BookingPaymentMethod, onPaymentMethodSelected: (BookingPaymentMethod) -&gt; Unit, onCreateBooking: () -&gt; Unit, showWomenSafeToggle: Boolean = false, preferFemaleTechnician: Boolean = false, onPreferFemaleChange: (Boolean) -&gt; Unit = {}, )</ID>
+    <ID>LongMethod:CatalogueHomeScreen.kt$@Composable internal fun CatalogueHomeContent( uiState: CatalogueHomeUiState, onCategoryClick: (String) -&gt; Unit, onSettingsClick: () -&gt; Unit, onProfileLanguageClick: () -&gt; Unit, onTrackBooking: (String) -&gt; Unit, pendingPaymentBooking: CustomerBooking? = null, onResumePayment: (bookingId: String, orderId: String, amount: Int) -&gt; Unit = { _, _, _ -&gt; }, onCancelPendingBooking: (bookingId: String) -&gt; Unit = {}, onPrivacyAndDataClick: () -&gt; Unit = {}, )</ID>
     <ID>LongMethod:CatalogueHomeScreen.kt$@Composable private fun CategoryCard( category: Category, onClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:CatalogueHomeScreen.kt$@Composable private fun StickyHero(onSettingsClick: () -&gt; Unit)</ID>
     <ID>LongMethod:CatalogueHomeScreen.kt$@OptIn(ExperimentalFoundationApi::class) @Composable private fun PromoSlider()</ID>
-    <ID>LongMethod:ComplaintScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun ComplaintContent( state: ComplaintUiState, onBack: () -&gt; Unit, onRetry: () -&gt; Unit, onReasonSelected: (ComplaintReason) -&gt; Unit, onDescriptionChanged: (String) -&gt; Unit, onPhotoClick: () -&gt; Unit, onSubmit: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>LongMethod:ComplaintScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun ComplaintContent( state: ComplaintUiState, onRetry: () -&gt; Unit, onReasonSelected: (ComplaintReason) -&gt; Unit, onDescriptionChanged: (String) -&gt; Unit, onPhotoClick: () -&gt; Unit, onSubmit: () -&gt; Unit, modifier: Modifier = Modifier, onComplaintSubmitted: () -&gt; Unit = {}, )</ID>
     <ID>LongMethod:MainGraph.kt$internal fun NavGraphBuilder.mainGraph(navController: NavController)</ID>
-    <ID>LongMethod:ProfileScreen.kt$@Composable internal fun ProfileScreen( viewModel: ProfileViewModel = hiltViewModel(), modifier: Modifier = Modifier, onLanguageClick: () -&gt; Unit = {}, onBookingsClick: () -&gt; Unit = {}, )</ID>
+    <ID>LongMethod:ProfileScreen.kt$@Composable internal fun ProfileScreen( viewModel: ProfileViewModel = hiltViewModel(), modifier: Modifier = Modifier, onLanguageClick: () -&gt; Unit = {}, onBookingsClick: () -&gt; Unit = {}, onPrivacyAndDataClick: () -&gt; Unit = {}, )</ID>
     <ID>LongMethod:ServiceDetailScreen.kt$@Composable private fun ServiceHero( service: Service, onBack: (() -&gt; Unit)?, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:SlotPickerScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable internal fun SlotPickerScreen( onSlotSelected: (BookingSlot) -&gt; Unit, onBack: () -&gt; Unit, )</ID>
     <ID>LongMethod:TrustDossierCard.kt$@Composable private fun ExpandedContent(profile: TechnicianProfile)</ID>
@@ -39,7 +38,6 @@
     <ID>MagicNumber:CatalogueHomeScreen.kt$0xFFEAF4EE</ID>
     <ID>MagicNumber:CatalogueHomeScreen.kt$0xFFEAF4F7</ID>
     <ID>MagicNumber:CatalogueHomeScreen.kt$0xFFF5EFE4</ID>
-    <ID>MagicNumber:CatalogueHomeScreen.kt$100</ID>
     <ID>MagicNumber:CatalogueHomeScreen.kt$3</ID>
     <ID>MagicNumber:CatalogueHomeScreen.kt$4_000</ID>
     <ID>MagicNumber:CatalogueHomeScreen.kt$600</ID>
@@ -47,7 +45,6 @@
     <ID>MagicNumber:ConfidenceScoreRow.kt$3</ID>
     <ID>MagicNumber:ConfidenceScoreRow.kt$50</ID>
     <ID>MagicNumber:ConfidenceScoreRow.kt$800</ID>
-    <ID>MagicNumber:CustomerBookingsScreen.kt$100.0</ID>
     <ID>MagicNumber:CustomerBookingsScreen.kt$3</ID>
     <ID>MagicNumber:GoogleSignInUseCase.kt$GoogleSignInUseCase$16</ID>
     <ID>MagicNumber:LiveTrackingScreen.kt$15f</ID>
@@ -90,11 +87,12 @@
     <ID>TooGenericExceptionCaught:SessionPrefsMigrator.kt$SessionPrefsMigrator$e: Exception</ID>
     <ID>TooManyFunctions:AuthOrchestrator.kt$AuthOrchestrator</ID>
     <ID>TooManyFunctions:AuthViewModel.kt$AuthViewModel : ViewModel</ID>
+    <ID>TooManyFunctions:BookingViewModel.kt$BookingViewModel : ViewModel</ID>
     <ID>TooManyFunctions:CatalogueHomeScreen.kt$com.homeservices.customer.ui.catalogue.CatalogueHomeScreen.kt</ID>
     <ID>TooManyFunctions:RatingViewModel.kt$RatingViewModel : ViewModel</ID>
     <ID>TooManyFunctions:ServiceDetailScreen.kt$com.homeservices.customer.ui.catalogue.ServiceDetailScreen.kt</ID>
+    <ID>UnusedParameter:ComplaintScreen.kt$onBack: () -&gt; Unit</ID>
     <ID>UnusedParameter:PiiRedactorTest.kt$PiiRedactorTest$description: String</ID>
     <ID>UnusedPrivateMember:ServiceListScreen.kt$@Composable private fun ServiceImageFallback( name: String, modifier: Modifier = Modifier, )</ID>
   </CurrentIssues>
 </SmellBaseline>
-

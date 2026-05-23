@@ -64,7 +64,6 @@ public fun ComplaintScreen(
 
     ComplaintContent(
         state = uiState,
-        onBack = onBack,
         onComplaintSubmitted = onComplaintSubmitted,
         onRetry = viewModel::onRetry,
         onReasonSelected = viewModel::onReasonSelected,
@@ -78,14 +77,13 @@ public fun ComplaintScreen(
 @Composable
 internal fun ComplaintContent(
     state: ComplaintUiState,
-    onBack: () -> Unit,
     onRetry: () -> Unit,
-    onComplaintSubmitted: () -> Unit = {},
     onReasonSelected: (ComplaintReason) -> Unit,
     onDescriptionChanged: (String) -> Unit,
     onPhotoClick: () -> Unit,
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
+    onComplaintSubmitted: () -> Unit = {},
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (state) {
