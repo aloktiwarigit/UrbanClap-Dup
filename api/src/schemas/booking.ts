@@ -64,6 +64,8 @@ export const BookingDocSchema = z.object({
    * the booking's original createdAt (which may be >24h in the past for advance bookings).
    */
   pendingAddOnsUpdatedAt: z.string().optional(),
+  /** PRD-08: Customer preference for a female technician. Stored on the booking for dispatcher awareness. */
+  preferFemaleTechnician: z.boolean().optional(),
   /**
    * E13-S01 (P1-6): Wallet credit amount in paise that is PENDING debit for a Razorpay booking.
    * Written at booking creation time (before Razorpay order); deducted from the ledger only
@@ -93,6 +95,8 @@ export const CreateBookingRequestSchema = z.object({
    * Requires an `Idempotency-Key: <uuid>` header for replay protection.
    */
   applyCredit: z.boolean().optional().default(false),
+  /** PRD-08: Customer preference for a female technician. Passed to the dispatcher. */
+  preferFemaleTechnician: z.boolean().optional(),
 });
 
 export const ConfirmBookingRequestSchema = z.object({
