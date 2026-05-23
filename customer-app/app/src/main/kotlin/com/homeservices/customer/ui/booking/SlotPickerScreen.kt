@@ -1,6 +1,7 @@
 package com.homeservices.customer.ui.booking
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -10,57 +11,60 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.booking.model.BookingSlot
+import com.homeservices.customer.domain.booking.model.SlotWindow
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 private val DATE_DISPLAY = DateTimeFormatter.ofPattern("EEE, d MMM")
 private val DATE_ISO = DateTimeFormatter.ISO_LOCAL_DATE
 
-private val TIME_WINDOWS =
-    listOf(
-        "08:00-10:00",
-        "10:00-12:00",
-        "12:00-14:00",
-        "14:00-16:00",
-        "16:00-18:00",
-        "18:00-20:00",
-    )
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SlotPickerScreen(
+    serviceId: String,
     onSlotSelected: (BookingSlot) -> Unit,
     onBack: () -> Unit,
+    viewModel: SlotPickerViewModel = hiltViewModel(),
 ) {
-    val today = LocalDate.now()
-    val dates = (0..6).map { today.plusDays(it.toLong()) }
-    var selectedDate by rememberSaveable { mutableStateOf<LocalDate?>(null) }
-    var selectedWindow by rememberSaveable { mutableStateOf<String?>(null) }
+    val state by viewModel.uiState.collectAsState()
+    val initialDate = viewModel.currentIstDate()
+
+    LaunchedEffect(serviceId) {
+        viewModel.ensureInitialLoad(serviceId)
+    }
 
     Scaffold(
         topBar = {
@@ -77,60 +81,75 @@ internal fun SlotPickerScreen(
             )
         },
     ) { innerPadding ->
-        Surface(modifier = Modifier.fillMaxSize().padding(innerPadding), color = MaterialTheme.colorScheme.background) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                Column(
-                    modifier = Modifier.weight(1f).padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    Text(
-                        stringResource(R.string.slot_picker_heading),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Text(
-                        stringResource(R.string.slot_picker_subtitle),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    SlotSection(title = stringResource(R.string.slot_picker_date_label)) {
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            dates.forEach { date ->
-                                FilterChip(
-                                    selected = selectedDate == date,
-                                    onClick = { selectedDate = date },
-                                    label = { Text(date.format(DATE_DISPLAY)) },
-                                )
-                            }
-                        }
-                    }
-                    SlotSection(title = stringResource(R.string.slot_picker_time_label)) {
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TIME_WINDOWS.forEach { window ->
-                                FilterChip(
-                                    selected = selectedWindow == window,
-                                    onClick = { selectedWindow = window },
-                                    label = { Text(window) },
-                                )
-                            }
-                        }
-                    }
+        SlotPickerContent(
+            state = state,
+            initialDate = initialDate,
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
+            onDateSelect = { date -> viewModel.loadSlots(serviceId, date) },
+            onSlotSelect = viewModel::selectSlot,
+            onRetry = viewModel::retry,
+            onConfirm = { date, slot -> onSlotSelected(BookingSlot(date.format(DATE_ISO), slot.window)) },
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun SlotPickerContent(
+    state: SlotPickerUiState,
+    initialDate: LocalDate,
+    modifier: Modifier = Modifier,
+    onDateSelect: (LocalDate) -> Unit,
+    onSlotSelect: (SlotWindow) -> Unit,
+    onRetry: () -> Unit,
+    onConfirm: (LocalDate, SlotWindow) -> Unit,
+) {
+    Surface(modifier = modifier, color = MaterialTheme.colorScheme.background) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Text(
+                    stringResource(R.string.slot_picker_heading),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    stringResource(R.string.slot_picker_subtitle),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                DateChipsRow(
+                    today = initialDate,
+                    selectedDate = (state as? SlotPickerUiState.Loaded)?.date ?: initialDate,
+                    onDateSelect = onDateSelect,
+                )
+
+                when (state) {
+                    is SlotPickerUiState.Loading -> LoadingBlock()
+                    is SlotPickerUiState.Error -> ErrorBlock(message = state.message, onRetry = onRetry)
+                    is SlotPickerUiState.Loaded -> LoadedBlock(state = state, onSlotSelect = onSlotSelect)
                 }
-                Surface(shadowElevation = 8.dp, color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
-                    Row(modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp)) {
-                        Button(
-                            onClick = {
-                                val date = selectedDate
-                                val window = selectedWindow
-                                if (date != null && window != null) {
-                                    onSlotSelected(BookingSlot(date.format(DATE_ISO), window))
-                                }
-                            },
-                            enabled = selectedDate != null && selectedWindow != null,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(stringResource(R.string.slot_picker_next))
-                        }
+            }
+
+            Surface(shadowElevation = 8.dp, color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
+                Row(modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp)) {
+                    val loaded = state as? SlotPickerUiState.Loaded
+                    val selected = loaded?.selected
+                    Button(
+                        onClick = {
+                            if (loaded != null && selected != null) onConfirm(loaded.date, selected)
+                        },
+                        enabled = selected != null && selected.available,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.slot_picker_confirm_slot))
                     }
                 }
             }
@@ -138,8 +157,141 @@ internal fun SlotPickerScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SlotSection(
+private fun DateChipsRow(
+    today: LocalDate,
+    selectedDate: LocalDate,
+    onDateSelect: (LocalDate) -> Unit,
+) {
+    val dates = (0..6).map { today.plusDays(it.toLong()) }
+    SlotCard(title = stringResource(R.string.slot_picker_date_label)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            dates.forEach { date ->
+                FilterChip(
+                    selected = selectedDate == date,
+                    onClick = { onDateSelect(date) },
+                    label = { Text(date.format(DATE_DISPLAY)) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LoadingBlock() {
+    val desc = stringResource(R.string.slot_picker_loading_desc)
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(32.dp)
+                .semantics { contentDescription = desc },
+        contentAlignment = Alignment.Center,
+    ) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun ErrorBlock(
+    message: String,
+    onRetry: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            stringResource(R.string.slot_picker_error_label),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.error,
+        )
+        if (message.isNotBlank()) {
+            Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        OutlinedButton(onClick = onRetry) {
+            Text(stringResource(R.string.slot_picker_retry_button))
+        }
+    }
+}
+
+@Composable
+private fun LoadedBlock(
+    state: SlotPickerUiState.Loaded,
+    onSlotSelect: (SlotWindow) -> Unit,
+) {
+    val sections =
+        listOf(
+            stringResource(R.string.slot_picker_morning_label) to state.filteredSlots.filter { startHour(it.window) < MORNING_END },
+            stringResource(R.string.slot_picker_afternoon_label) to
+                state.filteredSlots.filter { startHour(it.window) in MORNING_END until EVENING_START },
+            stringResource(R.string.slot_picker_evening_label) to state.filteredSlots.filter { startHour(it.window) >= EVENING_START },
+        ).filter { it.second.isNotEmpty() }
+
+    if (sections.isEmpty()) {
+        Text(
+            stringResource(R.string.slot_picker_no_slots_label),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        return
+    }
+
+    sections.forEach { (title, slots) ->
+        SlotSection(
+            title = title,
+            slots = slots,
+            selectedWindow = state.selected?.window,
+            onSelect = onSlotSelect,
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun SlotSection(
+    title: String,
+    slots: List<SlotWindow>,
+    selectedWindow: String?,
+    onSelect: (SlotWindow) -> Unit,
+) {
+    SlotCard(title = title) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            slots.forEach { s ->
+                SlotChip(
+                    slot = s,
+                    selected = selectedWindow == s.window,
+                    onClick = { onSelect(s) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun SlotChip(
+    slot: SlotWindow,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        enabled = slot.available,
+        label = { Text(slot.window) },
+        colors =
+            FilterChipDefaults.filterChipColors(
+                disabledLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+            ),
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun SlotCard(
     title: String,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -154,3 +306,8 @@ private fun SlotSection(
         }
     }
 }
+
+private const val MORNING_END = 12
+private const val EVENING_START = 17
+
+private fun startHour(window: String): Int = window.substringBefore(":").toIntOrNull() ?: 0

@@ -3,8 +3,12 @@ package com.homeservices.technician.ui.auth
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.FirebaseTooManyRequestsException
+import com.google.firebase.auth.FirebaseAuthException
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.PhoneAuthProvider
 import com.homeservices.technician.domain.auth.AuthOrchestrator
+import com.homeservices.technician.domain.auth.PhoneNumberNormalizer
 import com.homeservices.technician.domain.auth.model.AuthResult
 import com.homeservices.technician.domain.auth.model.OtpSendResult
 import com.homeservices.technician.domain.auth.model.TruecallerAuthResult
@@ -229,19 +233,29 @@ public class AuthViewModel
             activity: FragmentActivity,
             resendToken: PhoneAuthProvider.ForceResendingToken? = null,
         ) {
+            val normalizedPhoneNumber =
+                PhoneNumberNormalizer.normalize(phoneNumber)
+                    ?: run {
+                        _uiState.value =
+                            AuthUiState.Error(
+                                message = "Enter a valid 10-digit mobile number.",
+                                retriesLeft = 0,
+                            )
+                        return
+                    }
             sendOtpJob?.cancel()
-            currentPhoneNumber = phoneNumber
+            currentPhoneNumber = normalizedPhoneNumber
             _uiState.value = AuthUiState.OtpSending
             sendOtpJob =
                 viewModelScope.launch {
-                    orchestrator.sendOtp(phoneNumber, activity, resendToken).collect { result ->
+                    orchestrator.sendOtp(normalizedPhoneNumber, activity, resendToken).collect { result ->
                         when (result) {
                             is OtpSendResult.CodeSent -> {
                                 currentVerificationId = result.verificationId
                                 currentResendToken = result.resendToken
                                 _uiState.value =
                                     AuthUiState.OtpEntry(
-                                        phoneNumber = phoneNumber,
+                                        phoneNumber = normalizedPhoneNumber,
                                         verificationId = result.verificationId,
                                     )
                             }
@@ -253,7 +267,7 @@ public class AuthViewModel
                             is OtpSendResult.Error -> {
                                 _uiState.value =
                                     AuthUiState.Error(
-                                        message = "Failed to send OTP. Check your number and connection.",
+                                        message = otpSendFailureMessage(result.cause),
                                         retriesLeft = MAX_OTP_RETRIES,
                                     )
                             }
@@ -385,4 +399,27 @@ public class AuthViewModel
                     _uiState.value = AuthUiState.OtpEntry(phoneNumber = currentPhoneNumber)
             }
         }
+
+        private fun otpSendFailureMessage(cause: Throwable): String =
+            when (cause) {
+                is FirebaseTooManyRequestsException ->
+                    "Too many OTP requests. Wait a while, then try again."
+                is FirebaseAuthInvalidCredentialsException ->
+                    "Enter a valid mobile number with country code."
+                is FirebaseAuthException ->
+                    when (cause.errorCode) {
+                        "ERROR_APP_NOT_AUTHORIZED" ->
+                            "This Play Store build is not authorised for OTP. " +
+                                "Add the Play signing SHA-1 and SHA-256 in Firebase."
+                        "ERROR_OPERATION_NOT_ALLOWED" ->
+                            "Phone sign-in is not enabled in Firebase Authentication."
+                        "ERROR_QUOTA_EXCEEDED" ->
+                            "Firebase SMS quota is not available. Upgrade to Blaze or wait for quota reset."
+                        "ERROR_TOO_MANY_REQUESTS" ->
+                            "Too many OTP requests. Wait a while, then try again."
+                        else ->
+                            "Failed to send OTP. Check Firebase phone-auth setup."
+                    }
+                else -> "Failed to send OTP. Check your number and connection."
+            }
     }

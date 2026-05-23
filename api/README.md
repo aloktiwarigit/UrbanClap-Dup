@@ -5,6 +5,7 @@ Node 22 + TypeScript + Azure Functions Consumption backend for homeservices-mvp.
 ## Quick start
 
 ```bash
+func --version  # requires Azure Functions Core Tools v4 on PATH
 pnpm install
 pnpm dev    # compiles src/ → dist/ then runs `func start`; serves http://localhost:7071/api/v1/health
 ```
@@ -17,13 +18,13 @@ For edit-reload during development, run the watcher in a second terminal:
 pnpm dev:watch    # tsc --watch — recompiles on save; `func start` picks up changed files
 ```
 
-**Windows fallback:** if `azure-functions-core-tools` fails to install via npm (a known intermittent issue on Windows), install it system-wide instead:
+Azure Functions Core Tools is intentionally not a package dependency because it is large and should not be installed into the deployed Functions app. Install it system-wide:
 
 ```powershell
 winget install Microsoft.AzureFunctionsCoreTools
 ```
 
-Then use `pnpm dev:direct`, which also runs `pnpm build && func start` but expects `func` on PATH rather than in `node_modules/.bin`.
+Then use `pnpm dev` or `pnpm dev:direct`; both run `pnpm build && func start` and expect `func` on PATH.
 
 ## Test
 

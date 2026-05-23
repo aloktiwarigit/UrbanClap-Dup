@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/v1/auth/truecaller/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify Truecaller profile signature and mint Firebase custom token
+         * @description Verifies the Truecaller SDK RSA payload/signature against the Truecaller public key API (cached 24h in Cosmos). On success, mints a Firebase custom token for the verified phone number. Called by customer-app when truecaller_server_verify_v2 flag is ON.
+         */
+        post: operations["verifyTruecaller"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/health": {
         parameters: {
             query?: never;
@@ -386,6 +406,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/waitlist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Join the service waitlist for a specific area
+         * @description Adds a customer to the waitlist for a service in their location. No authentication required. Rate-limited to 5 requests/hr per phone number and 50 requests/hr per IP. requestedAt must be within ±90 s of server time.
+         */
+        post: operations["joinWaitlist"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/auth/login": {
         parameters: {
             query?: never;
@@ -476,6 +516,22 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        TruecallerVerifyRequest: {
+            /** @example base64encodedPayload== */
+            payload: string;
+            /** @example base64encodedSignature== */
+            signature: string;
+            /** @example SHA512withRSA */
+            signatureAlgorithm: string;
+            /** @example fcm-token-abc123 */
+            fcmToken?: string;
+        };
+        TruecallerVerifyResponse: {
+            /** @example eyJhbGci... */
+            firebaseCustomToken: string;
+            /** @example 1700000000000 */
+            sessionExpiresAt: number;
+        };
         HealthResponse: {
             /** @enum {string} */
             status: "ok";
@@ -567,6 +623,8 @@ export interface components {
                 required: boolean;
             }[];
             isActive: boolean;
+            workStart?: string;
+            workEnd?: string;
         };
         CategoryWithServices: {
             id: string;
@@ -625,6 +683,8 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            workStart?: string;
+            workEnd?: string;
         };
         InternalNote: {
             adminId: string;
@@ -782,6 +842,7 @@ export interface components {
                 technicianHardDeleted: boolean;
                 kycHardDeleted: boolean;
                 fcmTokensCleared: boolean;
+                deviceTokensCleared: boolean;
             };
         };
         AdminErasurePatchBody: {
@@ -813,6 +874,29 @@ export interface components {
             /** @enum {string} */
             status: "TRANSFERRED";
         };
+        WaitlistRequest: {
+            /** @example +916000000001 */
+            phone: string;
+            /** @example 26.7 */
+            lat: number;
+            /** @example 82.1 */
+            lng: number;
+            /** @example ac-deep-clean */
+            serviceId: string;
+            /**
+             * Format: date-time
+             * @example 2026-05-17T10:00:00.000Z
+             */
+            requestedAt: string;
+        };
+        WaitlistSuccess: {
+            /** @enum {boolean} */
+            ok: true;
+        };
+        WaitlistError: {
+            /** @enum {string} */
+            code: "VALIDATION_ERROR" | "UNKNOWN_SERVICE" | "CLOCK_SKEW" | "RATE_LIMITED" | "INVALID_JSON" | "INTERNAL_ERROR";
+        };
         AdminLoginRequest: {
             idToken: string;
             totpCode?: string;
@@ -837,6 +921,37 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    verifyTruecaller: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["TruecallerVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Signature valid — Firebase custom token issued */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TruecallerVerifyResponse"];
+                };
+            };
+            /** @description Validation error or invalid signature */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getHealth: {
         parameters: {
             query?: never;
@@ -1286,6 +1401,8 @@ export interface operations {
                         label: string;
                         required: boolean;
                     }[];
+                    workStart?: string;
+                    workEnd?: string;
                 };
             };
         };
@@ -1395,6 +1512,8 @@ export interface operations {
                         label: string;
                         required: boolean;
                     }[];
+                    workStart?: string;
+                    workEnd?: string;
                 };
             };
         };
@@ -1951,6 +2070,50 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    joinWaitlist: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["WaitlistRequest"];
+            };
+        };
+        responses: {
+            /** @description Successfully joined the waitlist */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaitlistSuccess"];
+                };
+            };
+            /** @description Validation error, unknown serviceId, or clock skew > 90 s */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaitlistError"];
+                };
+            };
+            /** @description Rate limit exceeded — check Retry-After header */
+            429: {
+                headers: {
+                    /** @description Seconds until the rate limit resets */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaitlistError"];
+                };
             };
         };
     };

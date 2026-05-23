@@ -20,9 +20,15 @@ public class TruecallerLoginUseCaseTest {
     }
 
     @Test
-    public fun `emits Success with last 4 digits when SDK calls onSuccessProfileShared`(): Unit =
+    public fun `emits Success with payload, signature, algorithm and last 4 digits when SDK calls onSuccessProfileShared`(): Unit =
         runTest {
-            val profile = TrueProfile.Builder("Test", "").build().also { it.phoneNumber = "+919876540000" }
+            val profile =
+                TrueProfile.Builder("Test", "").build().also {
+                    it.phoneNumber = "+919876540000"
+                    it.payload = "base64payload=="
+                    it.signature = "base64signature=="
+                    it.signatureAlgorithm = "SHA512withRSA"
+                }
 
             useCase.simulateSdkCallback { callback ->
                 callback.onSuccessProfileShared(profile)
@@ -30,7 +36,34 @@ public class TruecallerLoginUseCaseTest {
 
             val result = useCase.resultFlow.first()
             assertThat(result).isInstanceOf(TruecallerAuthResult.Success::class.java)
-            assertThat((result as TruecallerAuthResult.Success).phoneLastFour).isEqualTo("0000")
+            val success = result as TruecallerAuthResult.Success
+            assertThat(success.phoneLastFour).isEqualTo("0000")
+            assertThat(success.payload).isEqualTo("base64payload==")
+            assertThat(success.signature).isEqualTo("base64signature==")
+            assertThat(success.signatureAlgorithm).isEqualTo("SHA512withRSA")
+        }
+
+    @Test
+    public fun `emits Success with empty strings for payload and signature when SDK provides null values`(): Unit =
+        runTest {
+            val profile =
+                TrueProfile.Builder("Test", "").build().also {
+                    it.phoneNumber = "+919876541111"
+                    // payload, signature, signatureAlgorithm not set — will be null from SDK
+                }
+
+            useCase.simulateSdkCallback { callback ->
+                callback.onSuccessProfileShared(profile)
+            }
+
+            val result = useCase.resultFlow.first()
+            assertThat(result).isInstanceOf(TruecallerAuthResult.Success::class.java)
+            val success = result as TruecallerAuthResult.Success
+            assertThat(success.phoneLastFour).isEqualTo("1111")
+            // Null-safe: empty string fallback ensures downstream code is not null-unsafe
+            assertThat(success.payload).isNotNull()
+            assertThat(success.signature).isNotNull()
+            assertThat(success.signatureAlgorithm).isNotNull()
         }
 
     @Test

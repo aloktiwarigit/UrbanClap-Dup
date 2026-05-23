@@ -34,6 +34,7 @@ internal class BookingRepositoryImpl
                                     addressText = request.addressText,
                                     addressLatLng = LatLngDto(lat = request.addressLat, lng = request.addressLng),
                                     paymentMethod = request.paymentMethod.name,
+                                    applyCredit = request.applyCredit,
                                 ),
                             ).toDomain()
                     },
@@ -50,6 +51,7 @@ internal class BookingRepositoryImpl
             paymentId: String,
             orderId: String,
             signature: String,
+            integrityToken: String?,
         ): Flow<Result<String>> =
             flow {
                 emit(
@@ -62,6 +64,7 @@ internal class BookingRepositoryImpl
                                     razorpayOrderId = orderId,
                                     razorpaySignature = signature,
                                 ),
+                                integrityToken = integrityToken,
                             ).bookingId
                     },
                 )

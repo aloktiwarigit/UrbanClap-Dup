@@ -23,7 +23,7 @@ function makeReq(): HttpRequest {
   });
 }
 
-const ctx = { error: vi.fn() } as unknown as InvocationContext;
+const ctx = { error: vi.fn(), warn: vi.fn() } as unknown as InvocationContext;
 
 describe('GET /v1/technicians/me/bookings', () => {
   let handler: typeof import('../../src/functions/technician-bookings.js').getMyTechnicianBookingsHandler;
@@ -53,7 +53,7 @@ describe('GET /v1/technicians/me/bookings', () => {
         id: 'bk-1',
         customerId: 'cust-1',
         serviceId: 'ac-deep-clean',
-        addressText: '101 Ayodhya',
+        addressText: '101%20Ayodhya',
         addressLatLng: { lat: 12.9, lng: 77.6 },
         status: 'IN_PROGRESS',
         slotDate: '2026-05-03',
@@ -86,7 +86,7 @@ describe('GET /v1/technicians/me/bookings', () => {
     });
   });
 
-  it('returns a structured 500 when Cosmos fails', async () => {
+  it('returns 500 when technician booking query fails', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { bookingRepo } = await import('../../src/cosmos/booking-repository.js');
     (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
@@ -96,5 +96,87 @@ describe('GET /v1/technicians/me/bookings', () => {
 
     expect(res.status).toBe(500);
     expect(res.jsonBody).toEqual({ code: 'INTERNAL_ERROR' });
+  });
+
+  it('returns empty bookings when the repository returns an invalid result shape', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { bookingRepo } = await import('../../src/cosmos/booking-repository.js');
+    (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+    (bookingRepo.getByTechnicianId as MockFn).mockResolvedValue(null);
+
+    const res = (await handler(makeReq(), ctx)) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(res.jsonBody).toEqual({ bookings: [] });
+  });
+
+  it('skips malformed booking rows and defaults missing optional response fields', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { bookingRepo } = await import('../../src/cosmos/booking-repository.js');
+    const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
+    (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+    (bookingRepo.getByTechnicianId as MockFn).mockResolvedValue([
+      null,
+      {
+        id: 'bk-1',
+        serviceId: 'ac-deep-clean',
+      },
+    ]);
+    (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue({ name: 'AC deep clean' });
+
+    const res = (await handler(makeReq(), ctx)) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(res.jsonBody).toEqual({
+      bookings: [
+        {
+          bookingId: 'bk-1',
+          customerId: '',
+          serviceId: 'ac-deep-clean',
+          serviceName: 'AC deep clean',
+          addressText: '',
+          addressLatLng: { lat: 0, lng: 0 },
+          status: 'UNKNOWN',
+          slotDate: '',
+          slotWindow: '',
+          amount: 0,
+        },
+      ],
+    });
+  });
+
+  it('uses booking serviceName fallback when catalogue lookup fails', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { bookingRepo } = await import('../../src/cosmos/booking-repository.js');
+    const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
+    (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+    (bookingRepo.getByTechnicianId as MockFn).mockResolvedValue([
+      {
+        id: 'bk-1',
+        customerId: 'cust-1',
+        serviceId: 'ac-deep-clean',
+        serviceName: 'Stored AC service',
+        addressText: '101 Ayodhya',
+        addressLatLng: { lat: 12.9, lng: 77.6 },
+        status: 'ASSIGNED',
+        slotDate: '2026-05-03',
+        slotWindow: '10:00-12:00',
+        amount: 89900,
+      },
+    ]);
+    (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockRejectedValue(new Error('Catalogue unavailable'));
+
+    const res = (await handler(makeReq(), ctx)) as HttpResponseInit;
+
+    expect(res.status).toBe(200);
+    expect(res.jsonBody).toMatchObject({
+      bookings: [
+        {
+          bookingId: 'bk-1',
+          serviceId: 'ac-deep-clean',
+          serviceName: 'Stored AC service',
+        },
+      ],
+    });
   });
 });

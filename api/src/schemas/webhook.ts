@@ -31,6 +31,7 @@ export const RazorpayWebhookPayloadSchema = z.object({
         .object({
           id: z.string(),
           order_id: z.string(),
+          notes: z.record(z.string()).optional(),
         })
         .passthrough(),
     }),

@@ -40,7 +40,10 @@ jobs:
     timeout-minutes: 25
     env:
       NEXT_PUBLIC_GIT_SHA: ${{ github.sha }}
-      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      # NEXT_PUBLIC_APP_URL is intentionally NOT set at job level.
+      # Setting it here leaks into the Vitest runner and causes publicRedirectOrigin()
+      # to return http://localhost:3000 for all redirect assertions, breaking the
+      # middleware tests. It belongs only on the build step below.
     defaults:
       run:
         working-directory: admin-web
@@ -74,9 +77,15 @@ jobs:
 
       - name: typecheck + unit tests (with coverage gate)
         run: pnpm typecheck && pnpm test:coverage
+        env:
+          # vitest --coverage instruments every module; default Node heap (1.5 GB) OOMs on
+          # the full admin-web suite. 4 GB leaves headroom within the 7 GB Actions runner.
+          NODE_OPTIONS: --max-old-space-size=4096
 
       - name: build (clean-room compile check)
         run: pnpm build
+        env:
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
 
       - name: semgrep SAST
         uses: returntocorp/semgrep-action@v1
@@ -128,6 +137,8 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('admin-web/pnpm-lock.yaml') }}
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm build
+        env:
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
       - name: playwright e2e
         run: pnpm test:e2e
       - name: axe-core a11y (WCAG AA)

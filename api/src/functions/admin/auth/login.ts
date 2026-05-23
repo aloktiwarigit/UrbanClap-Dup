@@ -2,6 +2,7 @@ import '../../../bootstrap.js';
 import { randomUUID } from 'node:crypto';
 import { app } from '@azure/functions';
 import type { HttpRequest, InvocationContext, HttpResponseInit, Cookie } from '@azure/functions';
+import { withRateLimit } from '../../../middleware/withRateLimit.js';
 import * as Sentry from '@sentry/node';
 import { LoginRequestSchema } from '../../../schemas/admin-auth.js';
 import { verifyFirebaseIdToken } from '../../../services/firebaseAdmin.js';
@@ -81,8 +82,11 @@ async function completeTotpLogin(
       maxAge: 900,
     },
     {
+      // Format: "<sessionId>:<rawRefreshToken>" — sessionId is the partition key
+      // for O(1) lookup in the refresh handler; rawRefreshToken is the one-time
+      // credential rotated on each use.
       name: 'hs_refresh',
-      value: session.sessionId,
+      value: `${session.sessionId}:${session.rawRefreshToken}`,
       httpOnly: true,
       secure: true,
       sameSite: 'Strict',
@@ -190,7 +194,24 @@ export async function adminLoginHandler(
 
   if (!adminUser.totpEnrolled) {
     const setupToken = await signSetupToken({ sub: adminUser.adminId, email: adminUser.email });
-    return { status: 200, jsonBody: { requiresSetup: true, setupToken } };
+    // Deliver setupToken as an HttpOnly cookie (hs_setup) so the client never
+    // touches it via JS. The cookie must be available to the Next.js
+    // /api/setup-token/exchange route, not just /setup, because the visible
+    // setup page is locale-prefixed.
+    const setupCookie: Cookie = {
+      name: 'hs_setup',
+      value: setupToken,
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Strict',
+      path: '/',
+      maxAge: 600,
+    };
+    return {
+      status: 200,
+      cookies: [setupCookie],
+      jsonBody: { requiresSetup: true, setupToken },
+    };
   }
 
   if (!totpCode) {
@@ -212,9 +233,13 @@ export async function adminLoginHandler(
   return completeTotpLogin(req, adminUser, role, totpCode);
 }
 
+const adminLoginRateLimiter = withRateLimit({
+  buckets: { ip: { capacity: 10, refillPerSec: 10 / 60 } },
+});
+
 app.http('adminLogin', {
   methods: ['POST'],
   route: 'v1/admin/auth/login',
   authLevel: 'anonymous',
-  handler: adminLoginHandler,
+  handler: adminLoginRateLimiter(adminLoginHandler),
 });

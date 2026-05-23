@@ -1,0 +1,15 @@
+rules:
+  - id: no-manual-getidtoken-outside-auth-package
+    languages: [kotlin]
+    severity: ERROR
+    message: |
+      Manual firebaseAuth.currentUser?.getIdToken() calls bypass the
+      IdTokenCache + FirebaseTokenAuthenticator chain (no auto-refresh on 401,
+      no shared cache). Let NetworkModule's @AuthOkHttpClient interceptor
+      handle authentication. ADR-0021.
+    pattern: $X.getIdToken($Y)
+    paths:
+      include:
+        - "technician-app/app/src/main/kotlin/**/*.kt"
+      exclude:
+        - "technician-app/app/src/main/kotlin/com/homeservices/technician/data/network/auth"

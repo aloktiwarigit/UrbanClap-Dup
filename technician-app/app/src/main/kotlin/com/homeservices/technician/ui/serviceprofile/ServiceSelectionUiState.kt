@@ -11,6 +11,7 @@ internal data class ServiceSelectionUiState(
     val isLocating: Boolean = false,
     val errorMessage: String? = null,
     val saved: Boolean = false,
+    val existingCompleteProfileLoaded: Boolean = false,
 )
 
 internal const val DEFAULT_SERVICE_LAT: Double = 26.7922

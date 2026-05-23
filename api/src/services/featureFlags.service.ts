@@ -41,6 +41,69 @@ export async function isSoftLaunchEnabled(userId?: string, client?: FeatureFlagC
 }
 
 /**
+ * Returns true when service-area polygon gating should hard-reject out-of-area bookings.
+ *
+ * When false (default / warn-only mode): out-of-area coordinates are logged but the
+ * booking is allowed through. This enables a soak period before hard enforcement.
+ * When true: `POST /v1/bookings` rejects with 400 SERVICE_NOT_AVAILABLE_AT_LOCATION.
+ *
+ * Flag name: `customer.service-area-gating.enabled`
+ * GrowthBook default: false (warn-only). Flip to true after soak (Week 1 exit).
+ * See ADR-0020 and threat-model row T-B1.
+ *
+ * Fail-open contracts:
+ *   - init() resolves with success=false → return false (do not accidentally block)
+ *   - init() throws → return false
+ *   - Empty GROWTHBOOK_CLIENT_KEY (local dev) → return false, never blocks locally
+ *
+ * @param userId  - Firebase UID; used for per-user GrowthBook targeting.
+ * @param client  - Injectable for testing.
+ */
+export async function isServiceAreaGatingEnabled(userId?: string, client?: FeatureFlagClient): Promise<boolean> {
+  if (!process.env['GROWTHBOOK_CLIENT_KEY']) return false; // local dev — warn-only
+  const gb = client ?? createRequestClient(userId);
+  try {
+    const result = await gb.init({ timeout: 1000 });
+    if (!result.success) return false; // timeout or network error → do not accidentally block
+    return gb.isOn('customer.service-area-gating.enabled');
+  } catch {
+    return false; // unexpected SDK throw → do not accidentally block
+  }
+}
+
+/**
+ * E13-S01: Returns true when wallet credit application is enabled.
+ *
+ * When false: `applyCredit: true` in the booking request is silently ignored
+ * (no credit applied, no error) — safe fail-closed so credit spend is controlled.
+ * When true: credit is applied up to min(balance, bookingAmount), a CREDIT_APPLIED
+ * ledger entry is written, and `appliedCreditAmount` is returned.
+ *
+ * Flag name: `customer.wallet-credit.enabled`
+ * GrowthBook default: false. Flip after E13-S02 (WalletScreen) is live.
+ * See ADR-0017.
+ *
+ * Fail-closed contracts (credit = money — never silently spend):
+ *   - init() resolves with success=false → return false
+ *   - init() throws → return false
+ *   - Empty GROWTHBOOK_CLIENT_KEY (local dev) → return false
+ *
+ * @param userId  - Firebase UID; used for F&F targeting.
+ * @param client  - Injectable for testing.
+ */
+export async function isWalletCreditEnabled(userId?: string, client?: FeatureFlagClient): Promise<boolean> {
+  if (!process.env['GROWTHBOOK_CLIENT_KEY']) return false; // local dev — never spend credit
+  const gb = client ?? createRequestClient(userId);
+  try {
+    const result = await gb.init({ timeout: 1000 });
+    if (!result.success) return false; // timeout → fail closed
+    return gb.isOn('customer.wallet-credit.enabled');
+  } catch {
+    return false; // unexpected SDK throw → fail closed
+  }
+}
+
+/**
  * Returns true when the owner has manually paused new bookings (e.g. surge / incident).
  *
  * Fail-open contracts:
@@ -51,6 +114,18 @@ export async function isSoftLaunchEnabled(userId?: string, client?: FeatureFlagC
  * @param userId  - Firebase UID; used for completeness / future per-user overrides.
  * @param client  - Injectable for testing.
  */
+export async function isPeriodicLocationEnabled(customerId?: string, client?: FeatureFlagClient): Promise<boolean> {
+  if (!process.env['GROWTHBOOK_CLIENT_KEY']) return false; // local dev — kill switch off by default
+  const gb = client ?? createRequestClient(customerId);
+  try {
+    const result = await gb.init({ timeout: 1000 });
+    if (!result.success) return false; // timeout → keep FCM quiet
+    return gb.isOn('customer.periodic-location.enabled');
+  } catch {
+    return false;
+  }
+}
+
 export async function isMarketingPaused(userId?: string, client?: FeatureFlagClient): Promise<boolean> {
   if (!process.env['GROWTHBOOK_CLIENT_KEY']) return false; // local dev — never paused
   const gb = client ?? createRequestClient(userId);

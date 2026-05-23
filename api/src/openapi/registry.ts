@@ -42,6 +42,49 @@ extendZodWithOpenApi(z);
 
 export const registry = new OpenAPIRegistry();
 
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+const TruecallerVerifyRequestSchema = z.object({
+  payload: z.string().min(1).openapi({ example: 'base64encodedPayload==' }),
+  signature: z.string().min(1).openapi({ example: 'base64encodedSignature==' }),
+  signatureAlgorithm: z.string().min(1).openapi({ example: 'SHA512withRSA' }),
+  fcmToken: z.string().optional().openapi({ example: 'fcm-token-abc123' }),
+}).openapi('TruecallerVerifyRequest');
+
+const TruecallerVerifyResponseSchema = z.object({
+  firebaseCustomToken: z.string().openapi({ example: 'eyJhbGci...' }),
+  sessionExpiresAt: z.number().openapi({ example: 1700000000000 }),
+}).openapi('TruecallerVerifyResponse');
+
+registry.register('TruecallerVerifyRequest', TruecallerVerifyRequestSchema);
+registry.register('TruecallerVerifyResponse', TruecallerVerifyResponseSchema);
+
+registry.registerPath({
+  method: 'post',
+  path: '/v1/auth/truecaller/verify',
+  operationId: 'verifyTruecaller',
+  tags: ['auth'],
+  summary: 'Verify Truecaller profile signature and mint Firebase custom token',
+  description:
+    'Verifies the Truecaller SDK RSA payload/signature against the Truecaller public key API ' +
+    '(cached 24h in Cosmos). On success, mints a Firebase custom token for the verified phone number. ' +
+    'Called by customer-app when truecaller_server_verify_v2 flag is ON.',
+  request: {
+    body: {
+      content: { 'application/json': { schema: TruecallerVerifyRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Signature valid — Firebase custom token issued',
+      content: { 'application/json': { schema: TruecallerVerifyResponseSchema } },
+    },
+    400: {
+      description: 'Validation error or invalid signature',
+    },
+  },
+});
+
 const HealthResponse = HealthResponseSchema.openapi('HealthResponse');
 registry.register('HealthResponse', HealthResponse);
 
@@ -453,5 +496,61 @@ registry.registerPath({
     403: { description: 'Forbidden' },
     404: { description: 'Levy not found' },
     409: { description: 'Invalid levy status' },
+  },
+});
+
+// ── Waitlist (E16-S04/WS-F) ───────────────────────────────────────────────────
+
+const WaitlistRequestBodySchema = z.object({
+  phone: z.string().regex(/^\+91[6-9]\d{9}$/).openapi({ example: '+916000000001' }),
+  lat: z.number().min(-90).max(90).openapi({ example: 26.7 }),
+  lng: z.number().min(-180).max(180).openapi({ example: 82.1 }),
+  serviceId: z.string().min(1).max(64).openapi({ example: 'ac-deep-clean' }),
+  requestedAt: z.string().datetime().openapi({ example: '2026-05-17T10:00:00.000Z' }),
+}).openapi('WaitlistRequest');
+
+const WaitlistSuccessSchema = z.object({
+  ok: z.literal(true),
+}).openapi('WaitlistSuccess');
+
+const WaitlistErrorSchema = z.object({
+  code: z.enum(['VALIDATION_ERROR', 'UNKNOWN_SERVICE', 'CLOCK_SKEW', 'RATE_LIMITED', 'INVALID_JSON', 'INTERNAL_ERROR']),
+}).openapi('WaitlistError');
+
+registry.register('WaitlistRequest', WaitlistRequestBodySchema);
+registry.register('WaitlistSuccess', WaitlistSuccessSchema);
+registry.register('WaitlistError', WaitlistErrorSchema);
+
+registry.registerPath({
+  method: 'post',
+  path: '/v1/waitlist',
+  operationId: 'joinWaitlist',
+  tags: ['waitlist'],
+  summary: 'Join the service waitlist for a specific area',
+  description:
+    'Adds a customer to the waitlist for a service in their location. ' +
+    'No authentication required. Rate-limited to 5 requests/hr per phone number ' +
+    'and 50 requests/hr per IP. requestedAt must be within ±90 s of server time.',
+  request: {
+    body: {
+      content: { 'application/json': { schema: WaitlistRequestBodySchema } },
+    },
+  },
+  responses: {
+    201: {
+      description: 'Successfully joined the waitlist',
+      content: { 'application/json': { schema: WaitlistSuccessSchema } },
+    },
+    400: {
+      description: 'Validation error, unknown serviceId, or clock skew > 90 s',
+      content: { 'application/json': { schema: WaitlistErrorSchema } },
+    },
+    429: {
+      description: 'Rate limit exceeded — check Retry-After header',
+      headers: {
+        'Retry-After': { schema: { type: 'integer' }, description: 'Seconds until the rate limit resets' },
+      },
+      content: { 'application/json': { schema: WaitlistErrorSchema } },
+    },
   },
 });

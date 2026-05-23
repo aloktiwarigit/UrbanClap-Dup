@@ -1,17 +1,41 @@
 package com.homeservices.technician.domain.activeJob
 
+import com.homeservices.technician.data.integrity.IntegrityApiService
+import com.homeservices.technician.data.integrity.IntegrityNonceResponseDto
 import com.homeservices.technician.domain.activeJob.model.ActiveJob
 import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
 import com.homeservices.technician.domain.activeJob.model.LatLng
+import com.homeservices.technician.domain.integrity.IntegrityAttestor
+import com.homeservices.technician.domain.location.CurrentLocationProvider
+import com.homeservices.technician.domain.location.LocationFidelity
+import com.homeservices.technician.domain.location.LocationWithFidelity
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 public class MarkReachedUseCaseTest {
     private val repository: ActiveJobRepository = mockk()
-    private val useCase = MarkReachedUseCase(repository)
+    private val integrityAttestor: IntegrityAttestor = mockk()
+    private val integrityApiService: IntegrityApiService = mockk()
+    private val currentLocationProvider: CurrentLocationProvider = mockk()
+    private val useCase =
+        MarkReachedUseCase(repository, integrityAttestor, integrityApiService, currentLocationProvider)
+
+    @BeforeEach
+    public fun setUp() {
+        coEvery { integrityApiService.getNonce() } returns IntegrityNonceResponseDto("test-nonce")
+        coEvery { integrityAttestor.attest("test-nonce") } returns Result.success("integrity-token")
+        // Default: real GPS, isMock = false
+        coEvery { currentLocationProvider.currentLocation() } returns
+            LocationWithFidelity(
+                latLng = LatLng(26.8, 82.2),
+                fidelity = LocationFidelity(isMock = false, accuracyMetres = 10f),
+            )
+    }
 
     private fun aJob() =
         ActiveJob(
@@ -27,14 +51,98 @@ public class MarkReachedUseCaseTest {
         )
 
     @Test
-    public fun `transitions EN_ROUTE to REACHED`(): Unit =
+    public fun `transitions EN_ROUTE to REACHED with integrity token`(): Unit =
         runTest {
-            coEvery { repository.transitionStatus("bk-1", ActiveJobStatus.REACHED) } returns
-                Result.success(aJob())
+            coEvery {
+                repository.transitionStatus("bk-1", ActiveJobStatus.REACHED, "integrity-token")
+            } returns Result.success(aJob())
 
-            val result = useCase("bk-1")
+            val outcome = useCase("bk-1")
 
-            assertThat(result.isSuccess).isTrue()
-            assertThat(result.getOrThrow().status).isEqualTo(ActiveJobStatus.REACHED)
+            assertThat(outcome.result.isSuccess).isTrue()
+            assertThat(outcome.result.getOrThrow().status).isEqualTo(ActiveJobStatus.REACHED)
+            coVerify(exactly = 1) {
+                repository.transitionStatus("bk-1", ActiveJobStatus.REACHED, "integrity-token")
+            }
+        }
+
+    @Test
+    public fun `proceeds with null token when attestation fails (fail-open)`(): Unit =
+        runTest {
+            coEvery { integrityAttestor.attest(any()) } returns Result.failure(RuntimeException("attestation failed"))
+            coEvery {
+                repository.transitionStatus("bk-1", ActiveJobStatus.REACHED, null)
+            } returns Result.success(aJob())
+
+            val outcome = useCase("bk-1")
+
+            assertThat(outcome.result.isSuccess).isTrue()
+            coVerify(exactly = 1) {
+                repository.transitionStatus("bk-1", ActiveJobStatus.REACHED, null)
+            }
+        }
+
+    @Test
+    public fun `isMock is false when location provider returns real GPS`(): Unit =
+        runTest {
+            coEvery {
+                repository.transitionStatus(any(), any(), any())
+            } returns Result.success(aJob())
+
+            val outcome = useCase("bk-1")
+
+            assertThat(outcome.isMock).isFalse()
+        }
+
+    @Test
+    public fun `isMock true when provider reports mock location`(): Unit =
+        runTest {
+            coEvery { currentLocationProvider.currentLocation() } returns
+                LocationWithFidelity(
+                    latLng = LatLng(26.8, 82.2),
+                    fidelity = LocationFidelity(isMock = true, accuracyMetres = 1f),
+                )
+            coEvery {
+                repository.transitionStatus(any(), any(), any())
+            } returns Result.success(aJob())
+
+            val outcome = useCase("bk-1")
+
+            assertThat(outcome.isMock).isTrue()
+        }
+
+    @Test
+    public fun `isMock is false when provider returns null`(): Unit =
+        runTest {
+            coEvery { currentLocationProvider.currentLocation() } returns null
+            coEvery {
+                repository.transitionStatus(any(), any(), any())
+            } returns Result.success(aJob())
+
+            val outcome = useCase("bk-1")
+
+            assertThat(outcome.isMock).isFalse()
+        }
+
+    @Test
+    public fun `isMock true attestation still forwarded fail-open`(): Unit =
+        runTest {
+            coEvery { currentLocationProvider.currentLocation() } returns
+                LocationWithFidelity(
+                    latLng = LatLng(26.8, 82.2),
+                    fidelity = LocationFidelity(isMock = true, accuracyMetres = 1f),
+                )
+            coEvery {
+                repository.transitionStatus("bk-1", ActiveJobStatus.REACHED, "integrity-token")
+            } returns Result.success(aJob())
+
+            val outcome = useCase("bk-1")
+
+            // Transition is NOT blocked — isMock is warn-only
+            assertThat(outcome.result.isSuccess).isTrue()
+            assertThat(outcome.isMock).isTrue()
+            coVerify(exactly = 1) {
+                repository.transitionStatus("bk-1", ActiveJobStatus.REACHED, "integrity-token")
+            }
         }
 }

@@ -4,6 +4,7 @@ import { getApiBaseUrl } from '@/lib/apiBase';
 export const dynamic = 'force-dynamic';
 
 const LEGACY_REFRESH_PROXY_PATH = '/admin-api/v1/admin/auth/refresh';
+const SETUP_TOTP_PATH = 'v1/admin/auth/setup-totp';
 
 type ProxyContext = {
   params: Promise<{ path?: string[] }>;
@@ -36,6 +37,10 @@ function rewriteSetCookie(cookie: string, requestUrl: string): string {
     '; Path=/',
   );
 
+  if (/^hs_setup=/i.test(cookie.trim())) {
+    rewritten = rewritten.replace(/;\s*Path=\/setup\b/gi, '; Path=/');
+  }
+
   if (isLocalhost(requestUrl)) {
     rewritten = rewritten.replace(/;\s*Secure/gi, '');
   }
@@ -64,6 +69,11 @@ function rewriteSetCookies(cookie: string, requestUrl: string): string[] {
   ];
 }
 
+function buildSetupCookieClear(requestUrl: string): string {
+  const secure = isLocalhost(requestUrl) ? '' : '; Secure';
+  return `hs_setup=; Path=/; Max-Age=0; HttpOnly${secure}; SameSite=Strict`;
+}
+
 function buildForwardHeaders(request: Request): Headers {
   const headers = new Headers(request.headers);
   headers.delete('accept-encoding');
@@ -90,6 +100,22 @@ function buildResponseHeaders(upstream: Response): Headers {
 }
 
 async function proxy(request: Request, context: ProxyContext): Promise<NextResponse> {
+  // CSRF protection via Origin allowlist.
+  // SameSite=Strict on hs_access provides the primary CSRF defense.
+  // This Origin check adds defense-in-depth for state-changing methods
+  // without requiring cookie seeding (the double-submit cookie pattern
+  // was half-implemented — see csrf.ts for the future full implementation).
+  const unsafeMethod = !['GET', 'HEAD', 'OPTIONS'].includes(request.method);
+  if (unsafeMethod) {
+    const origin = request.headers.get('origin');
+    const allowed = process.env['NEXT_PUBLIC_APP_URL'] ?? 'http://localhost:3000';
+    // Default-deny: missing Origin on unsafe methods is rejected. Browser fetches
+    // always send Origin; server-to-server calls should not go through this proxy.
+    if (origin !== allowed) {
+      return NextResponse.json({ error: 'Cross-origin request denied' }, { status: 403 });
+    }
+  }
+
   const { path = [] } = await context.params;
   const requestUrl = new URL(request.url);
   const apiPath = path.map((segment) => encodeURIComponent(segment)).join('/');
@@ -117,6 +143,10 @@ async function proxy(request: Request, context: ProxyContext): Promise<NextRespo
     for (const rewritten of rewriteSetCookies(cookie, request.url)) {
       response.headers.append('set-cookie', rewritten);
     }
+  }
+
+  if (request.method === 'POST' && apiPath === SETUP_TOTP_PATH && upstream.ok) {
+    response.headers.append('set-cookie', buildSetupCookieClear(request.url));
   }
 
   return response;

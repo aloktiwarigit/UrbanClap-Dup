@@ -54,6 +54,23 @@ public class ServiceSelectionViewModelTest {
             assertEquals(26.79221, vm.uiState.value.serviceLat)
             assertEquals(82.19982, vm.uiState.value.serviceLng)
             assertEquals("Saved service area", vm.uiState.value.serviceAreaLabel)
+            assertTrue(vm.uiState.value.existingCompleteProfileLoaded)
+        }
+
+    @Test
+    public fun `loaded profile is incomplete without saved location`(): Unit =
+        runTest {
+            coEvery { getServiceProfile.invoke() } returns
+                Result.success(
+                    ServiceProfile(
+                        skills = listOf("ac-deep-clean"),
+                        location = null,
+                    ),
+                )
+
+            val vm = ServiceSelectionViewModel(getServiceProfile, saveServiceProfile)
+
+            assertFalse(vm.uiState.value.existingCompleteProfileLoaded)
         }
 
     @Test
@@ -93,6 +110,7 @@ public class ServiceSelectionViewModelTest {
             vm.toggleSkill("water-pump-repair")
             vm.toggleSkill("electrical-wiring")
             vm.onServiceAreaCaptured(26.8, 82.2)
+            assertFalse(vm.uiState.value.existingCompleteProfileLoaded)
             vm.submit()
 
             coVerify {

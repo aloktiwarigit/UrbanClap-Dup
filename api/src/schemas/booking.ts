@@ -10,7 +10,10 @@ const BOOKING_STATUSES = [
 const PAYMENT_METHODS = ['RAZORPAY', 'CASH_ON_SERVICE'] as const;
 const CASH_COLLECTION_STATUSES = ['PENDING', 'COLLECTED'] as const;
 
-export const LatLngSchema = z.object({ lat: z.number(), lng: z.number() });
+export const LatLngSchema = z.object({
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+});
 export const PaymentMethodSchema = z.enum(PAYMENT_METHODS);
 export const CashCollectionStatusSchema = z.enum(CASH_COLLECTION_STATUSES);
 
@@ -54,6 +57,25 @@ export const BookingDocSchema = z.object({
   sosActivatedAt: z.string().optional(),
   /** ISO timestamp written after sendOwnerSosAlert() succeeds. Absent = alert pending retry. */
   sosAlertSentAt: z.string().optional(),
+  /**
+   * ISO timestamp written atomically when the booking transitions to AWAITING_PRICE_APPROVAL
+   * (i.e. when the technician requests an add-on). Used by the bookings change-feed projector
+   * to anchor the ADDON_APPROVAL_REQUESTED expiresAt from the actual request time, not from
+   * the booking's original createdAt (which may be >24h in the past for advance bookings).
+   */
+  pendingAddOnsUpdatedAt: z.string().optional(),
+  /**
+   * E13-S01 (P1-6): Wallet credit amount in paise that is PENDING debit for a Razorpay booking.
+   * Written at booking creation time (before Razorpay order); deducted from the ledger only
+   * after payment.captured is received from the Razorpay webhook. Absent = no credit pending.
+   * Once the webhook debits the credit, this field should be removed (or left as a historical record).
+   */
+  pendingCreditAmountInPaise: z.number().int().nonnegative().optional(),
+  /**
+   * E13-S01 (P1-6): Idempotency key for the pending credit debit above.
+   * Stored so the webhook can call applyCredit idempotently on re-delivery.
+   */
+  pendingCreditIdempotencyKey: z.string().optional(),
 });
 
 export const CreateBookingRequestSchema = z.object({
@@ -64,6 +86,13 @@ export const CreateBookingRequestSchema = z.object({
   addressText: z.string().min(1),
   addressLatLng: LatLngSchema,
   paymentMethod: PaymentMethodSchema.default('RAZORPAY'),
+  /**
+   * E13-S01: If true, the server will attempt to apply the customer's wallet
+   * credit balance against this booking's amount. The actual applied amount is
+   * returned as `appliedCreditAmount` in the response (may be 0 if no balance).
+   * Requires an `Idempotency-Key: <uuid>` header for replay protection.
+   */
+  applyCredit: z.boolean().optional().default(false),
 });
 
 export const ConfirmBookingRequestSchema = z.object({
@@ -72,6 +101,22 @@ export const ConfirmBookingRequestSchema = z.object({
   razorpaySignature: z.string().min(1),
 });
 
+export const PhotoStageResponseSchema = z.object({
+  urls: z.array(z.string().url()),
+});
+
+export const GetBookingResponseSchema = z.object({
+  bookingId: z.string(),
+  status: BookingDocSchema.shape.status,
+  amount: z.number().int().positive(),
+  finalAmount: z.number().int().positive().nullable(),
+  pendingAddOns: z.array(PendingAddOnSchema).default([]),
+  approvedAddOns: z.array(PendingAddOnSchema).default([]),
+  photos: z.record(z.string(), PhotoStageResponseSchema).optional(),
+  reportSignedUrl: z.string().url().nullable().optional(),
+});
+
 export type BookingDoc = z.infer<typeof BookingDocSchema>;
 export type CreateBookingRequest = z.infer<typeof CreateBookingRequestSchema>;
 export type ConfirmBookingRequest = z.infer<typeof ConfirmBookingRequestSchema>;
+export type GetBookingResponse = z.infer<typeof GetBookingResponseSchema>;

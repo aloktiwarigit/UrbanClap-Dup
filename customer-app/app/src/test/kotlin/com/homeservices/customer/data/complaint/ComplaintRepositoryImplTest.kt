@@ -106,4 +106,48 @@ public class ComplaintRepositoryImplTest {
 
             assertThat(results.first().isFailure).isTrue()
         }
+
+    @Test
+    public fun `reopenComplaint returns success result`(): Unit =
+        runTest {
+            coEvery { api.reopenComplaint("c-1") } returns mockResponse
+
+            val results = repo.reopenComplaint("c-1").toList()
+
+            assertThat(results).hasSize(1)
+            assertThat(results.first().isSuccess).isTrue()
+            assertThat(results.first().getOrNull()?.id).isEqualTo("c-1")
+        }
+
+    @Test
+    public fun `reopenComplaint returns failure when api throws`(): Unit =
+        runTest {
+            coEvery { api.reopenComplaint(any()) } throws RuntimeException("network error")
+
+            val results = repo.reopenComplaint("c-1").toList()
+
+            assertThat(results.first().isFailure).isTrue()
+        }
+
+    @Test
+    public fun `getComplaints returns paginated list`(): Unit =
+        runTest {
+            coEvery { api.getComplaints(page = 1, limit = 20) } returns
+                ComplaintListResponseDto(complaints = listOf(mockResponse))
+
+            val results = repo.getComplaints(page = 1, limit = 20).toList()
+
+            assertThat(results.first().isSuccess).isTrue()
+            assertThat(results.first().getOrNull()).hasSize(1)
+        }
+
+    @Test
+    public fun `getComplaints returns failure when api throws`(): Unit =
+        runTest {
+            coEvery { api.getComplaints(any(), any()) } throws RuntimeException("network error")
+
+            val results = repo.getComplaints().toList()
+
+            assertThat(results.first().isFailure).isTrue()
+        }
 }

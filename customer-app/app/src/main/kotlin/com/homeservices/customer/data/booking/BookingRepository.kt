@@ -17,6 +17,7 @@ public interface BookingRepository {
         paymentId: String,
         orderId: String,
         signature: String,
+        integrityToken: String? = null,
     ): Flow<Result<String>>
 
     public fun getPendingAddOns(bookingId: String): Flow<Result<List<PendingAddOn>>>

@@ -19,14 +19,14 @@ vi.mock('@/api/complaints', () => ({
 
 // Capture the props the page passes to its client component.
 const clientProps: { current: unknown } = { current: undefined };
-vi.mock('../app/(dashboard)/complaints/ComplaintsClient', () => ({
+vi.mock('../app/[locale]/(dashboard)/complaints/ComplaintsClient', () => ({
   ComplaintsClient: (props: unknown) => {
     clientProps.current = props;
     return null;
   },
 }));
 
-import ComplaintsPage from '../app/(dashboard)/complaints/page';
+import ComplaintsPage from '../app/[locale]/(dashboard)/complaints/page';
 
 interface ClientProps {
   initialComplaints: ReadonlyArray<{ id: string }>;

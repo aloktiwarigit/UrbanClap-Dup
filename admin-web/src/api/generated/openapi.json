@@ -23,6 +23,52 @@
   ],
   "components": {
     "schemas": {
+      "TruecallerVerifyRequest": {
+        "type": "object",
+        "properties": {
+          "payload": {
+            "type": "string",
+            "minLength": 1,
+            "example": "base64encodedPayload=="
+          },
+          "signature": {
+            "type": "string",
+            "minLength": 1,
+            "example": "base64encodedSignature=="
+          },
+          "signatureAlgorithm": {
+            "type": "string",
+            "minLength": 1,
+            "example": "SHA512withRSA"
+          },
+          "fcmToken": {
+            "type": "string",
+            "example": "fcm-token-abc123"
+          }
+        },
+        "required": [
+          "payload",
+          "signature",
+          "signatureAlgorithm"
+        ]
+      },
+      "TruecallerVerifyResponse": {
+        "type": "object",
+        "properties": {
+          "firebaseCustomToken": {
+            "type": "string",
+            "example": "eyJhbGci..."
+          },
+          "sessionExpiresAt": {
+            "type": "number",
+            "example": 1700000000000
+          }
+        },
+        "required": [
+          "firebaseCustomToken",
+          "sessionExpiresAt"
+        ]
+      },
       "HealthResponse": {
         "type": "object",
         "properties": {
@@ -403,6 +449,14 @@
           },
           "isActive": {
             "type": "boolean"
+          },
+          "workStart": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$"
+          },
+          "workEnd": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$"
           }
         },
         "required": [
@@ -638,6 +692,14 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "workStart": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$"
+          },
+          "workEnd": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$"
           }
         },
         "required": [
@@ -1247,6 +1309,9 @@
               },
               "fcmTokensCleared": {
                 "type": "boolean"
+              },
+              "deviceTokensCleared": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -1259,7 +1324,8 @@
               "auditLogAnonymized",
               "technicianHardDeleted",
               "kycHardDeleted",
-              "fcmTokensCleared"
+              "fcmTokensCleared",
+              "deviceTokensCleared"
             ]
           }
         },
@@ -1408,6 +1474,79 @@
           "status"
         ]
       },
+      "WaitlistRequest": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "pattern": "^\\+91[6-9]\\d{9}$",
+            "example": "+916000000001"
+          },
+          "lat": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "example": 26.7
+          },
+          "lng": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180,
+            "example": 82.1
+          },
+          "serviceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "example": "ac-deep-clean"
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-05-17T10:00:00.000Z"
+          }
+        },
+        "required": [
+          "phone",
+          "lat",
+          "lng",
+          "serviceId",
+          "requestedAt"
+        ]
+      },
+      "WaitlistSuccess": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      },
+      "WaitlistError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "VALIDATION_ERROR",
+              "UNKNOWN_SERVICE",
+              "CLOCK_SKEW",
+              "RATE_LIMITED",
+              "INVALID_JSON",
+              "INTERNAL_ERROR"
+            ]
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
       "AdminLoginRequest": {
         "anyOf": [
           {
@@ -1480,6 +1619,40 @@
     "parameters": {}
   },
   "paths": {
+    "/v1/auth/truecaller/verify": {
+      "post": {
+        "operationId": "verifyTruecaller",
+        "tags": [
+          "auth"
+        ],
+        "summary": "Verify Truecaller profile signature and mint Firebase custom token",
+        "description": "Verifies the Truecaller SDK RSA payload/signature against the Truecaller public key API (cached 24h in Cosmos). On success, mints a Firebase custom token for the verified phone number. Called by customer-app when truecaller_server_verify_v2 flag is ON.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TruecallerVerifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signature valid — Firebase custom token issued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TruecallerVerifyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error or invalid signature"
+          }
+        }
+      }
+    },
     "/v1/health": {
       "get": {
         "operationId": "getHealth",
@@ -2093,6 +2266,14 @@
                         "required"
                       ]
                     }
+                  },
+                  "workStart": {
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$"
+                  },
+                  "workEnd": {
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$"
                   }
                 },
                 "required": [
@@ -2309,6 +2490,14 @@
                         "required"
                       ]
                     }
+                  },
+                  "workStart": {
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$"
+                  },
+                  "workEnd": {
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$"
                   }
                 },
                 "required": [
@@ -3038,6 +3227,65 @@
           },
           "409": {
             "description": "Invalid levy status"
+          }
+        }
+      }
+    },
+    "/v1/waitlist": {
+      "post": {
+        "operationId": "joinWaitlist",
+        "tags": [
+          "waitlist"
+        ],
+        "summary": "Join the service waitlist for a specific area",
+        "description": "Adds a customer to the waitlist for a service in their location. No authentication required. Rate-limited to 5 requests/hr per phone number and 50 requests/hr per IP. requestedAt must be within ±90 s of server time.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WaitlistRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successfully joined the waitlist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error, unknown serviceId, or clock skew > 90 s",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded — check Retry-After header",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds until the rate limit resets"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistError"
+                }
+              }
+            }
           }
         }
       }

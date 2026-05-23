@@ -30,7 +30,7 @@ public class StartTripUseCaseTest {
     @Test
     public fun `success — returns Result success and emits Maps NavigationEvent`(): Unit =
         runTest {
-            coEvery { repository.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE) } returns
+            coEvery { repository.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE, null) } returns
                 Result.success(aJob(ActiveJobStatus.EN_ROUTE))
 
             val (result, navEvent) = useCase("bk-1")
@@ -42,7 +42,7 @@ public class StartTripUseCaseTest {
     @Test
     public fun `failure — returns Result failure and navEvent is null`(): Unit =
         runTest {
-            coEvery { repository.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE) } returns
+            coEvery { repository.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE, null) } returns
                 Result.failure(RuntimeException("offline"))
 
             val (result, navEvent) = useCase("bk-1")

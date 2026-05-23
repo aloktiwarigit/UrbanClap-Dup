@@ -1,0 +1,11 @@
+rules:
+  - id: no-hardcoded-base-url
+    languages: [kotlin, generic]
+    severity: ERROR
+    message: |
+      Base URL string literals are forbidden in main source. Use
+      BuildConfig.API_BASE_URL via NetworkModule. ADR-0021.
+    pattern-regex: 'https://func-[^"]+\.azurewebsites\.net'
+    paths:
+      include:
+        - "technician-app/app/src/main/**/*.kt"

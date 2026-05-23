@@ -13,19 +13,25 @@ import androidx.compose.ui.unit.sp
 import com.homeservices.designsystem.R
 
 /**
- * Geist Sans Variable font family wired to the variable-font weight axis (UX §5.2).
+ * Combined font family: Geist Sans Variable (Latin + symbols) with Noto Sans Devanagari fallback.
  *
- * Uses `FontVariation.weight(N)` to instruct the runtime to render each weight
- * bucket via the single variable TTF rather than loading a separate static file.
- * This avoids the B3 trap where `Font(resId, FontWeight.Bold)` is treated as a
- * *hint* by the static-font loader and the variable axis is silently ignored.
+ * Compose resolves font families per-glyph: when the Geist Sans variable font has no glyph for
+ * a Devanagari codepoint (which it does not), the runtime falls through to the Noto entry.
+ * Registering all four weight buckets for both typefaces ensures that Bold/SemiBold Devanagari
+ * text receives the correct visual weight rather than falling back to the system Roboto.
  *
- * Four weight buckets are registered to cover all slots used by [HomeservicesTypography]:
- * Normal (400), Medium (500), SemiBold (600), Bold (700).
+ * By embedding the Devanagari fallback here — rather than in a separate family — every text style
+ * in [HomeservicesTypography] automatically gets multi-script support, and the test assertion
+ * `style.fontFamily isSameAs HomeservicesFontFamily` continues to hold for all roles.
+ *
+ * Asset locations:
+ *   design-system/src/main/res/font/geist_sans_variable.ttf  (SIL OFL-1.1)
+ *   design-system/src/main/res/font/noto_sans_devanagari.ttf  (SIL OFL-1.1)
  */
 @OptIn(ExperimentalTextApi::class)
 public val HomeservicesFontFamily: FontFamily =
     FontFamily(
+        // Geist Sans Variable — Latin, symbols, numerals
         Font(
             resId = R.font.geist_sans_variable,
             weight = FontWeight.Normal,
@@ -54,7 +60,70 @@ public val HomeservicesFontFamily: FontFamily =
             loadingStrategy = FontLoadingStrategy.OptionalLocal,
             variationSettings = FontVariation.Settings(FontVariation.weight(700)),
         ),
+        // Noto Sans Devanagari — Hindi (hi) locale fallback glyphs
+        Font(
+            resId = R.font.noto_sans_devanagari,
+            weight = FontWeight.Normal,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
+        ),
+        Font(
+            resId = R.font.noto_sans_devanagari,
+            weight = FontWeight.Medium,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
+        ),
+        Font(
+            resId = R.font.noto_sans_devanagari,
+            weight = FontWeight.SemiBold,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
+        ),
+        Font(
+            resId = R.font.noto_sans_devanagari,
+            weight = FontWeight.Bold,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
+        ),
     )
+
+/**
+ * Noto Sans Devanagari standalone family — kept for direct use in non-typography contexts
+ * (e.g. standalone Hindi-only text that must not fall back to Geist).
+ *
+ * Asset location: design-system/src/main/res/font/noto_sans_devanagari.ttf
+ * License: OFL-1.1 (see design-system/src/main/res/font/LICENSE_NOTO_SANS_DEVANAGARI.txt)
+ */
+@OptIn(ExperimentalTextApi::class)
+public val NotoSansDevanagariFontFamily: FontFamily =
+    FontFamily(
+        Font(
+            resId = R.font.noto_sans_devanagari,
+            weight = FontWeight.Normal,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
+        ),
+        Font(
+            resId = R.font.noto_sans_devanagari,
+            weight = FontWeight.Medium,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
+        ),
+        Font(
+            resId = R.font.noto_sans_devanagari,
+            weight = FontWeight.SemiBold,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
+        ),
+        Font(
+            resId = R.font.noto_sans_devanagari,
+            weight = FontWeight.Bold,
+            loadingStrategy = FontLoadingStrategy.OptionalLocal,
+        ),
+    )
+
+/**
+ * Alias for [HomeservicesFontFamily].
+ *
+ * The Devanagari fallback was merged into [HomeservicesFontFamily] itself so that ALL
+ * text styles automatically support Hindi glyphs without requiring a separate family.
+ * This alias preserves backward compatibility for any external references; new code
+ * should reference [HomeservicesFontFamily] directly.
+ */
+public val HomeservicesDevanagariFontFamily: FontFamily = HomeservicesFontFamily
 
 /**
  * Homeservices M3 typography scale mapped to UX §5.2 tokens.

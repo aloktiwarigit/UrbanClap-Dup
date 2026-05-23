@@ -1,6 +1,8 @@
 package com.homeservices.technician.domain.kyc
 
+import com.homeservices.technician.data.integrity.IntegrityApiService
 import com.homeservices.technician.data.kyc.KycRepository
+import com.homeservices.technician.domain.integrity.IntegrityAttestor
 import com.homeservices.technician.domain.kyc.model.DigiLockerResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -10,12 +12,23 @@ public class DigiLockerConsentUseCase
     @Inject
     constructor(
         private val repository: KycRepository,
+        private val integrityAttestor: IntegrityAttestor,
+        private val integrityApiService: IntegrityApiService,
     ) {
         public operator fun invoke(
             authCode: String,
             redirectUri: String,
         ): Flow<DigiLockerResult> =
             flow {
-                emit(repository.exchangeAadhaarCode(authCode, redirectUri))
+                // Fetch nonce → attest → attach integrity token (fail-open on errors).
+                // Auth on the nonce endpoint is handled by NetworkModule's @AuthOkHttpClient
+                // interceptor; no manual token plumbing here.
+                val integrityToken: String? =
+                    runCatching {
+                        val nonce = integrityApiService.getNonce().nonce
+                        integrityAttestor.attest(nonce).getOrThrow()
+                    }.getOrNull()
+
+                emit(repository.exchangeAadhaarCode(authCode, redirectUri, integrityToken))
             }
     }

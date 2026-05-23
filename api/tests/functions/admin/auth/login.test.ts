@@ -15,7 +15,16 @@ vi.mock('../../../../src/services/totp.service.js', () => ({
   verifyToken: vi.fn(),
 }));
 vi.mock('../../../../src/services/adminSession.service.js', () => ({
-  createAdminSession: vi.fn().mockResolvedValue({ sessionId: 'sess-1' }),
+  createAdminSession: vi.fn().mockResolvedValue({
+    sessionId: 'sess-1',
+    rawRefreshToken: 'raw-refresh-token-1',
+    id: 'sess-1',
+    adminId: 'admin-1',
+    role: 'super-admin',
+    lastActivityAt: new Date().toISOString(),
+    hardExpiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
+    refreshTokenHash: 'hash-placeholder',
+  }),
 }));
 vi.mock('../../../../src/services/jwt.service.js', () => ({
   signAccessToken: vi.fn().mockResolvedValue('access-token'),
@@ -35,7 +44,7 @@ import {
 } from '../../../../src/services/adminUser.service.js';
 import { verifyToken } from '../../../../src/services/totp.service.js';
 import { createAdminSession } from '../../../../src/services/adminSession.service.js';
-import { signAccessToken, signMfaChallengeToken } from '../../../../src/services/jwt.service.js';
+import { signAccessToken, signMfaChallengeToken, signSetupToken } from '../../../../src/services/jwt.service.js';
 
 const mockCtx = {} as InvocationContext;
 
@@ -134,6 +143,18 @@ describe('POST /v1/admin/auth/login', () => {
 
     expect(res.status).toBe(200);
     expect((res.jsonBody as { requiresSetup?: boolean }).requiresSetup).toBe(true);
+    expect(signSetupToken).toHaveBeenCalledWith({
+      sub: 'firebase-uid',
+      email: 'anshutiwari183@gmail.com',
+    });
+    expect(res.cookies).toContainEqual(
+      expect.objectContaining({
+        name: 'hs_setup',
+        value: 'setup-token',
+        httpOnly: true,
+        path: '/',
+      }),
+    );
     expect(claimAdminInvite).toHaveBeenCalledWith(invite, 'firebase-uid', 'anshutiwari183@gmail.com');
   });
 

@@ -1,17 +1,29 @@
 // @vitest-environment node
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { SignJWT } from 'jose';
-import { middleware } from '../middleware';
 import type { AdminRole } from '@/lib/auth/types';
+
+// next-intl/middleware imports next/server without .js extension which fails in
+// Vitest's node environment. Mock it to return a pass-through middleware.
+vi.mock('next-intl/middleware', () => ({
+  default: () => (req: NextRequest) => NextResponse.next({ request: req }),
+}));
+
+import { middleware } from '../middleware';
 
 const JWT_SECRET = 'test-secret-that-is-long-enough-for-hs256-minimum-32-chars!!';
 
-function makeRequest(pathname: string, cookie?: string): NextRequest {
-  const url = `http://localhost:3000${pathname}`;
-  if (!cookie) return new NextRequest(url);
-  return new NextRequest(url, { headers: { cookie } });
+function makeRequest(
+  pathname: string,
+  cookie?: string,
+  headers?: HeadersInit,
+  origin = 'http://localhost:3000',
+): NextRequest {
+  const requestHeaders = new Headers(headers);
+  if (cookie) requestHeaders.set('cookie', cookie);
+  return new NextRequest(`${origin}${pathname}`, { headers: requestHeaders });
 }
 
 async function signAccessToken(role: AdminRole): Promise<string> {
@@ -87,10 +99,67 @@ describe('admin middleware session refresh', () => {
     const location = response.headers.get('location') ?? '';
     const setCookie = response.headers.get('set-cookie') ?? '';
 
-    expect(location).toBe('http://localhost:3000/login?next=%2Forders');
+    // After locale migration: redirect is to /{defaultLocale}/login
+    expect(location).toMatch(/\/hi\/login\?next=%2Forders/);
     expect(setCookie).toContain('hs_access=');
     expect(setCookie).toContain('hs_refresh=');
     expect(setCookie).toContain('Path=/admin-api/v1/admin/auth/refresh');
+  });
+
+  it('keeps SWA backend port out of unauthenticated redirects', async () => {
+    vi.stubEnv('JWT_SECRET', JWT_SECRET);
+
+    const response = await middleware(
+      makeRequest(
+        '/orders',
+        undefined,
+        {
+          'x-forwarded-host': 'black-river-0af326a00.7.azurestaticapps.net',
+          'x-forwarded-proto': 'https',
+        },
+        'https://black-river-0af326a00.7.azurestaticapps.net:8080',
+      ),
+    );
+
+    expect(response.headers.get('location')).toBe(
+      'https://black-river-0af326a00.7.azurestaticapps.net/hi/login?next=%2Forders',
+    );
+  });
+
+  it('redirects locale roots directly to login without the SWA backend port', async () => {
+    const response = await middleware(
+      makeRequest(
+        '/',
+        undefined,
+        {
+          'x-forwarded-host': 'black-river-0af326a00.7.azurestaticapps.net',
+          'x-forwarded-proto': 'https',
+        },
+        'https://black-river-0af326a00.7.azurestaticapps.net:8080',
+      ),
+    );
+
+    expect(response.headers.get('location')).toBe(
+      'https://black-river-0af326a00.7.azurestaticapps.net/hi/login',
+    );
+  });
+
+  it('redirects unprefixed public routes to their locale-prefixed URL without the SWA backend port', async () => {
+    const response = await middleware(
+      makeRequest(
+        '/login',
+        undefined,
+        {
+          'x-forwarded-host': 'black-river-0af326a00.7.azurestaticapps.net',
+          'x-forwarded-proto': 'https',
+        },
+        'https://black-river-0af326a00.7.azurestaticapps.net:8080',
+      ),
+    );
+
+    expect(response.headers.get('location')).toBe(
+      'https://black-river-0af326a00.7.azurestaticapps.net/hi/login',
+    );
   });
 
   it('keeps RBAC redirects after a successful refresh', async () => {
@@ -112,9 +181,8 @@ describe('admin middleware session refresh', () => {
     const response = await middleware(makeRequest('/orders', 'hs_refresh=sess-1'));
     const location = response.headers.get('location') ?? '';
 
-    expect(location).toBe(
-      'http://localhost:3000/not-authorized?from=%2Forders&next=%2Ffinance',
-    );
+    // After locale migration: not-authorized is now /{locale}/not-authorized
+    expect(location).toMatch(/\/hi\/not-authorized\?from=%2Forders&next=%2Fhi%2Ffinance/);
     expect(response.headers.get('set-cookie')).toContain(`hs_access=${accessToken}`);
   });
 });

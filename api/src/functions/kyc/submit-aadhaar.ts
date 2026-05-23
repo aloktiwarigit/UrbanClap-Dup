@@ -9,8 +9,9 @@ export async function submitAadhaar(
   req: HttpRequest,
   _ctx: InvocationContext
 ): Promise<HttpResponseInit> {
+  let decoded: { uid: string };
   try {
-    await verifyTechnicianToken(req);
+    decoded = await verifyTechnicianToken(req);
   } catch {
     return { status: 401, jsonBody: { error: 'Unauthorized' } };
   }
@@ -28,6 +29,12 @@ export async function submitAadhaar(
   }
 
   const { technicianId, authCode, redirectUri } = parsed.data;
+
+  // P0: caller may only update their own KYC record (IDOR guard)
+  if (decoded.uid !== technicianId) {
+    return { status: 403, jsonBody: { code: 'FORBIDDEN' } };
+  }
+
   const aadhaarResult = await exchangeCodeForAadhaar(authCode, redirectUri);
 
   if (!aadhaarResult) {

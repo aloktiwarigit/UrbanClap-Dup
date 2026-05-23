@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -58,21 +59,25 @@ import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTrustBadge
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
 import com.homeservices.technician.BuildConfig
+import com.homeservices.technician.R
 
 @Composable
 internal fun ServiceSelectionScreen(
     onComplete: () -> Unit,
     modifier: Modifier = Modifier,
+    autoCompleteExistingProfile: Boolean = false,
+    mode: ServiceSelectionMode = ServiceSelectionMode.Onboarding,
     viewModel: ServiceSelectionViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(uiState.saved) {
-        if (uiState.saved) onComplete()
+    LaunchedEffect(uiState.saved, uiState.existingCompleteProfileLoaded, autoCompleteExistingProfile) {
+        if (uiState.saved || (autoCompleteExistingProfile && uiState.existingCompleteProfileLoaded)) onComplete()
     }
 
     ServiceSelectionContent(
         uiState = uiState,
+        mode = mode,
         onSkillToggle = viewModel::toggleSkill,
         onLocateStarted = viewModel::onLocateStarted,
         onServiceAreaCaptured = viewModel::onServiceAreaCaptured,
@@ -86,13 +91,14 @@ internal fun ServiceSelectionScreen(
 @Composable
 internal fun ServiceSelectionContent(
     uiState: ServiceSelectionUiState,
+    modifier: Modifier = Modifier,
+    mode: ServiceSelectionMode = ServiceSelectionMode.Onboarding,
     onSkillToggle: (String) -> Unit,
     onLocateStarted: () -> Unit,
     onServiceAreaCaptured: (Double, Double) -> Unit,
     onLocateFailed: (String) -> Unit,
     onRetry: () -> Unit,
     onSubmit: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     val spacing = LocalHomeservicesSpacing.current
     val context = LocalContext.current
@@ -129,7 +135,7 @@ internal fun ServiceSelectionContent(
             verticalArrangement = Arrangement.spacedBy(spacing.space4),
         ) {
             item {
-                ServiceSelectionHeader()
+                ServiceSelectionHeader(mode = mode)
             }
             if (uiState.isLoading) {
                 item { LoadingCard() }
@@ -159,24 +165,34 @@ internal fun ServiceSelectionContent(
                 }
             }
             item {
-                SaveButton(uiState = uiState, onSubmit = onSubmit)
+                SaveButton(uiState = uiState, mode = mode, onSubmit = onSubmit)
             }
         }
     }
 }
 
+internal enum class ServiceSelectionMode {
+    Onboarding,
+    Edit,
+}
+
 @Composable
-private fun ServiceSelectionHeader() {
+private fun ServiceSelectionHeader(mode: ServiceSelectionMode) {
     val spacing = LocalHomeservicesSpacing.current
     Column(verticalArrangement = Arrangement.spacedBy(spacing.space3)) {
-        HsTrustBadge(text = "Step 3 of 3")
+        HsTrustBadge(text = if (mode == ServiceSelectionMode.Onboarding) "Step 3 of 3" else "My services")
         Text(
-            text = "Choose your services",
+            text = if (mode == ServiceSelectionMode.Onboarding) "Choose your services" else "Update your services",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
         )
         Text(
-            text = "Jobs are matched from these services and your approximate starting area.",
+            text =
+                if (mode == ServiceSelectionMode.Onboarding) {
+                    "Jobs are matched from these services and your approximate starting area."
+                } else {
+                    "Changes apply to future job offers matched from your skills and starting area."
+                },
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -186,10 +202,18 @@ private fun ServiceSelectionHeader() {
 @Composable
 private fun SaveButton(
     uiState: ServiceSelectionUiState,
+    mode: ServiceSelectionMode,
     onSubmit: () -> Unit,
 ) {
     HsPrimaryButton(
-        text = if (uiState.isSaving) "Saving services" else "Save and continue",
+        text =
+            if (uiState.isSaving) {
+                "Saving services"
+            } else if (mode == ServiceSelectionMode.Onboarding) {
+                "Save and continue"
+            } else {
+                "Save services"
+            },
         onClick = onSubmit,
         enabled = !uiState.isSaving && !uiState.isLoading && !uiState.isLocating,
         modifier = Modifier.fillMaxWidth(),
@@ -333,7 +357,7 @@ private fun EmptyLocationPreview(state: ServiceSelectionUiState) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator()
                     Spacer(Modifier.width(12.dp))
-                    Text("Finding your current area")
+                    Text(stringResource(R.string.service_finding_area))
                 }
             } else {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {

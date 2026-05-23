@@ -35,6 +35,8 @@ export const ErasureDeletedCountsSchema = z.object({
   technicianHardDeleted: z.boolean(),
   kycHardDeleted: z.boolean(),
   fcmTokensCleared: z.boolean(),
+  /** Device-token collection docs removed from Cosmos (E19-S02). */
+  deviceTokensCleared: z.boolean(),
 });
 export type ErasureDeletedCounts = z.infer<typeof ErasureDeletedCountsSchema>;
 

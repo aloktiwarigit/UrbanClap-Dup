@@ -295,7 +295,7 @@ iOS apps (customer + technician). Web PWA. Multi-city architecture (2nd city lau
 
 ## User Journeys
 
-Six personas from the product brief. **Four are MVP-primary** (Riya, Suresh, Priya, Alokt); **two are Phase 2+** (Mr. Verma needs voice booking, Mrs. Iyer needs B2B portal — both deferred). Narrative journeys below.
+Seven personas from the product brief. **Five are MVP-primary** (Riya, Suresh, Priya, Alokt, Ayodhya Ops Operator); **two are Phase 2+** (Mr. Verma needs voice booking, Mrs. Iyer needs B2B portal — both deferred). Narrative journeys below.
 
 ### Journey 1 — Riya (Customer) — Happy Path
 
@@ -358,6 +358,22 @@ Before confirm, she sees: *"95% on-time in your area. Nearest tech: Suresh, 4.8�
 **Resolution.** Total time in the admin: 22 minutes. Alokt closes the laptop and goes to the vendor breakfast meeting — 6 new AC techs joining this month; he personally shakes hands with each. No ops team needed. Solo operation is working.
 
 **Requirements revealed:** real-time city map + order feed + counters (O-1/O-2/O-3), master orders table + drill-down (O-4/O-5), override controls (O-6), tech roster + commission tuning (O-7/O-8), customer view with complaint history (O-10), daily P&L (O-13), weekly payout queue with Razorpay Route integration (O-14), complaints inbox with SLA (O-19), regulatory dashboard (O-30 — Phase 2 but SSC/welfare calculations are MVP), audit log (O-28).
+
+### Journey 5a — Ayodhya Ops Operator (Admin) — Hindi-first Daily Ops
+
+**Persona:** 24-year-old Pradeep from Faridabad, now based in Ayodhya. ITI diploma, comfortable on smartphone and Chrome on laptop. Strong Hindi literacy; limited English (can read digits, recognize "OK", "Save", "Delete" but cannot read error messages). First non-founder admin hire.
+
+**Opening scene.** Pradeep opens the admin console on his laptop, Monday 8 AM. He's covering for Alokt during a vendor meeting. Dashboard loads in Hindi — booking counters (`आज के बुकिंग: 12`), city map with green tech icons, live order feed showing names in Devanagari.
+
+**Rising action.** An order comes in: AC service, Ayodhya Cantonment, 10 AM. The feed reads `स्वीकार — सुरेश (4.8★, 2.3 किमी)`. He clicks into complaints inbox — one open complaint, SLA 6 hours. He reads the complaint notes in Hindi, sees the resolution options, clicks `तकनीशियन को पुनः भेजें` (Re-dispatch tech). Done.
+
+**Climax.** He navigates to Finance: payout queue for the week shows ₹1,82,400 for 38 techs. Numbers are INR-formatted with lakh/crore grouping. He doesn't approve payouts — that's Alokt's authority — but he can verify per-tech breakdowns are correct. He uses the Tech Roster screen to check if Ramesh (a tech flagged yesterday) is still on-duty; sees Ramesh's status is `ऑफ ड्यूटी` and KYC is `लंबित` (pending). He notes this for Alokt.
+
+**Resolution.** 45 minutes of ops, zero English required. Pradeep messages Alokt on WhatsApp with a morning summary. No escalations needed. He's confident the tool works for him.
+
+**Requirements revealed:** admin-web Hindi parity at full feature parity (E12-S03a/b), Tech Roster screen with Hindi status labels (E09-S07), locale-aware currency formatting (E12-S03b), role-limited access (ops-manager role cannot approve payouts), Hindi error messages in toast notifications.
+
+---
 
 ### Journey 6 — Mr. Verma (Customer — Senior, Phase 2)
 

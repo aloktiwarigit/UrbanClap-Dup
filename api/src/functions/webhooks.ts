@@ -1,22 +1,15 @@
-import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import type { HttpHandler, Timer } from '@azure/functions';
 import { type InvocationContext, app } from '@azure/functions';
 import * as Sentry from '@sentry/node';
 import { RazorpayWebhookPayloadSchema } from '../schemas/webhook.js';
 import { bookingRepo } from '../cosmos/booking-repository.js';
+import { customerCreditLedgerRepo } from '../cosmos/customer-credit-ledger-repository.js';
 import { dispatcherService } from '../services/dispatcher.service.js';
 import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
 import { getWebhookEventsContainer } from '../cosmos/client.js';
-
-// Compare buffer lengths (not string lengths) so non-hex chars in `provided`
-// that produce shorter buffers are caught without timingSafeEqual throwing.
-function isValidSignature(payload: string, provided: string, secret: string): boolean {
-  const expected = createHmac('sha256', secret).update(payload).digest('hex');
-  const expectedBuf = Buffer.from(expected, 'hex');
-  const providedBuf = Buffer.from(provided, 'hex');
-  if (expectedBuf.length !== providedBuf.length) return false;
-  return timingSafeEqual(expectedBuf, providedBuf);
-}
+import { equalsHexHmac } from '../shared/timing-safe.js';
+import { posthog } from '../observability/posthog.js';
 
 export const razorpayWebhookHandler: HttpHandler = async (req, _ctx) => {
   const secret = process.env['RAZORPAY_WEBHOOK_SECRET'];
@@ -25,7 +18,7 @@ export const razorpayWebhookHandler: HttpHandler = async (req, _ctx) => {
   const signature = req.headers.get('x-razorpay-signature') ?? '';
   const rawBody = await req.text();
 
-  if (!isValidSignature(rawBody, signature, secret)) {
+  if (!equalsHexHmac(secret, rawBody, signature)) {
     return { status: 400, jsonBody: { code: 'SIGNATURE_INVALID' } };
   }
 
@@ -48,7 +41,18 @@ export const razorpayWebhookHandler: HttpHandler = async (req, _ctx) => {
   const orderId = parsed.payload.payment.entity.order_id;
   const paymentId = parsed.payload.payment.entity.id;
 
-  const booking = await bookingRepo.getByPaymentOrderId(orderId);
+  // Fast path: use bookingId embedded in Razorpay order notes for a cheap point-read.
+  // Falls back to cross-partition scan for bookings created before this change.
+  // [ ] Razorpay-live-gate: verify notes.bookingId survives order → payment → webhook round-trip
+  const bookingIdFromNotes = parsed.payload.payment.entity.notes?.['bookingId'];
+  let booking = null;
+  if (bookingIdFromNotes) {
+    booking = await bookingRepo.getById(bookingIdFromNotes);
+  }
+  if (!booking) {
+    booking = await bookingRepo.getByPaymentOrderId(orderId);
+  }
+
   if (!booking) {
     return { status: 200, jsonBody: { received: true } };
   }
@@ -61,6 +65,64 @@ export const razorpayWebhookHandler: HttpHandler = async (req, _ctx) => {
   if (!updated) {
     return { status: 200, jsonBody: { received: true } };
   }
+
+  // E13-S01 (P1-6): Apply deferred wallet credit AFTER payment confirmation.
+  // The credit amount was stored on the booking doc at creation time to avoid the
+  // "debit-before-payment" bug. Now that payment is confirmed, debit the ledger.
+  // Non-fatal: if credit application fails, the booking is already PAID — log and continue.
+  if (
+    booking.pendingCreditAmountInPaise &&
+    booking.pendingCreditAmountInPaise > 0 &&
+    booking.pendingCreditIdempotencyKey
+  ) {
+    try {
+      await customerCreditLedgerRepo.applyCredit(
+        booking.customerId,
+        booking.id,
+        booking.pendingCreditAmountInPaise,
+        booking.pendingCreditIdempotencyKey,
+      );
+      const _creditTs = new Date().toISOString();
+      void appendAuditEntry({
+        id: randomUUID(),
+        adminId: 'system',
+        role: 'system',
+        action: 'WALLET_CREDIT_APPLIED_ON_PAYMENT',
+        resourceType: 'booking',
+        resourceId: booking.id,
+        payload: {
+          bookingId: booking.id,
+          creditAmountInPaise: booking.pendingCreditAmountInPaise,
+          idempotencyKey: booking.pendingCreditIdempotencyKey,
+        },
+        timestamp: _creditTs,
+        partitionKey: _creditTs.slice(0, 7),
+      }).catch(Sentry.captureException);
+    } catch (creditErr: unknown) {
+      // Credit application failure is non-fatal — booking is already PAID.
+      // The pending credit fields remain on the booking doc for manual reconciliation.
+      Sentry.captureException(creditErr);
+      console.error('[razorpayWebhook] deferred credit application failed', {
+        bookingId: booking.id,
+        pendingCreditAmountInPaise: booking.pendingCreditAmountInPaise,
+        idempotencyKey: booking.pendingCreditIdempotencyKey,
+        err: creditErr,
+      });
+    }
+  }
+
+  try {
+    posthog.capture({
+      distinctId: booking.customerId,
+      event: 'booking-paid',
+      properties: {
+        bookingId: booking.id,
+        paymentId,
+        orderId,
+        creditAppliedInPaise: booking.pendingCreditAmountInPaise ?? 0,
+      },
+    });
+  } catch { /* never break the webhook ack */ }
 
   // Event-ID replay defense written AFTER successful markPaid so a transient
   // Cosmos failure before this point does not permanently suppress Razorpay retries.

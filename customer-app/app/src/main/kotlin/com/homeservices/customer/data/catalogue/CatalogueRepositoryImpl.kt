@@ -2,7 +2,6 @@ package com.homeservices.customer.data.catalogue
 
 import com.homeservices.customer.data.catalogue.remote.CatalogueApiService
 import com.homeservices.customer.data.catalogue.remote.dto.toDomain
-import com.homeservices.customer.data.catalogue.remote.dto.toServiceDomain
 import com.homeservices.customer.domain.catalogue.model.Category
 import com.homeservices.customer.domain.catalogue.model.Service
 import kotlinx.coroutines.flow.Flow
@@ -19,17 +18,21 @@ internal class CatalogueRepositoryImpl
                 emit(runCatching { api.getCategories().categories.map { it.toDomain() } })
             }
 
+        /**
+         * The API embeds services inside each category on `/v1/categories`, so this
+         * implementation re-uses that single endpoint and filters client-side rather
+         * than making a second round-trip. Future caching layer can short-circuit
+         * the second fetch.
+         */
         override fun getServicesForCategory(categoryId: String): Flow<Result<List<Service>>> =
             flow {
                 emit(
                     runCatching {
-                        api
-                            .getCategories()
-                            .categories
-                            .firstOrNull { it.id == categoryId }
-                            ?.services
-                            ?.map { it.toServiceDomain() }
-                            .orEmpty()
+                        val categories = api.getCategories().categories
+                        val match =
+                            categories.find { it.id == categoryId }
+                                ?: throw NoSuchElementException("Category not found: $categoryId")
+                        match.services.map { it.toDomain() }
                     },
                 )
             }

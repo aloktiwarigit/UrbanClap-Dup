@@ -3,6 +3,7 @@
   <ManuallySuppressedIssues></ManuallySuppressedIssues>
   <CurrentIssues>
     <ID>ComplexCondition:RatingDtos.kt$status == "SUBMITTED" &amp;&amp; overall != null &amp;&amp; subScores != null &amp;&amp; submittedAt != null</ID>
+    <ID>FunctionMaxLength:ActiveJobRepositoryImplTest.kt$ActiveJobRepositoryImplTest$@Test public fun `startObserving no authenticated user — leaves activeJobState null`(): Unit</ID>
     <ID>FunctionMaxLength:ActiveJobRepositoryImplTest.kt$ActiveJobRepositoryImplTest$@Test public fun `syncPendingTransitions deletes entry on 409 — stale transition`(): Unit</ID>
     <ID>FunctionMaxLength:ActiveJobRepositoryImplTest.kt$ActiveJobRepositoryImplTest$@Test public fun `syncPendingTransitions no authenticated user — skips without processing`(): Unit</ID>
     <ID>FunctionMaxLength:ActiveJobRepositoryImplTest.kt$ActiveJobRepositoryImplTest$@Test public fun `syncPendingTransitions retries queued entries in createdAt order`(): Unit</ID>
@@ -36,6 +37,7 @@
     <ID>FunctionMaxLength:ComplaintViewModelTest.kt$ComplaintViewModelTest$@Test public fun `onSubmit with photo path passes it through to submitUseCase`(): Unit</ID>
     <ID>FunctionMaxLength:ComplaintViewModelTest.kt$ComplaintViewModelTest$@Test public fun `submitEnabled becomes true when reason and long enough description set`(): Unit</ID>
     <ID>FunctionMaxLength:DeclineJobOfferUseCaseTest.kt$DeclineJobOfferUseCaseTest$@Test public fun `invoke returns Declined on HTTP error (user intention is the source of truth)`(): Unit</ID>
+    <ID>FunctionMaxLength:DigiLockerConsentUseCaseTest.kt$DigiLockerConsentUseCaseTest$@Test public fun `proceeds with null token when attestation fails (fail-open)`(): Unit</ID>
     <ID>FunctionMaxLength:FcmTokenSyncUseCaseTest.kt$FcmTokenSyncUseCaseTest$@Test public fun `invoke handles network error gracefully (no exception escapes)`(): Unit</ID>
     <ID>FunctionMaxLength:FirebaseOtpUseCaseTest.kt$FirebaseOtpUseCaseTest$@Test public fun `signInWithCredential emits CodeExpired when Firebase errorCode is SESSION_EXPIRED`(): Unit</ID>
     <ID>FunctionMaxLength:FirebaseOtpUseCaseTest.kt$FirebaseOtpUseCaseTest$@Test public fun `signInWithCredential emits General error for unexpected exceptions`(): Unit</ID>
@@ -43,6 +45,12 @@
     <ID>FunctionMaxLength:FirebaseOtpUseCaseTest.kt$FirebaseOtpUseCaseTest$@Test public fun `signInWithCredential emits General when FirebaseAuth errorCode is unrecognized`(): Unit</ID>
     <ID>FunctionMaxLength:FirebaseOtpUseCaseTest.kt$FirebaseOtpUseCaseTest$@Test public fun `signInWithCredential emits RateLimited when Firebase errorCode is TOO_MANY_REQUESTS`(): Unit</ID>
     <ID>FunctionMaxLength:FirebaseOtpUseCaseTest.kt$FirebaseOtpUseCaseTest$@Test public fun `signInWithCredential emits WrongCode when Firebase throws invalid credentials`(): Unit</ID>
+    <ID>FunctionMaxLength:FirebaseTokenAuthenticatorTest.kt$FirebaseTokenAuthenticatorTest$@Test public fun `authenticate returns null on second 401 to stop infinite retry`()</ID>
+    <ID>FunctionMaxLength:FirebaseTokenAuthenticatorTest.kt$FirebaseTokenAuthenticatorTest$@Test public fun `authenticate returns null when no Firebase user is signed in`()</ID>
+    <ID>FunctionMaxLength:FirebaseTokenAuthenticatorTest.kt$FirebaseTokenAuthenticatorTest$@Test public fun `authenticate returns request with new Bearer token on first 401`()</ID>
+    <ID>FunctionMaxLength:HomeservicesFcmServiceJobOfferTest.kt$HomeservicesFcmServiceJobOfferTest$@Test public fun `JOB_OFFER with malformed expiresAt — does NOT emit to event bus`()</ID>
+    <ID>FunctionMaxLength:HomeservicesFcmServiceJobOfferTest.kt$HomeservicesFcmServiceJobOfferTest$@Test public fun `JOB_OFFER with missing bookingId — does NOT emit to event bus`()</ID>
+    <ID>FunctionMaxLength:IdTokenCacheTest.kt$IdTokenCacheTest$@Test public fun `cachedToken is null when no user is signed in at construction`()</ID>
     <ID>FunctionMaxLength:JobOfferViewModelTest.kt$JobOfferViewModelTest$@Test public fun `accept transitions to Expired when use case reports booking already taken`(): Unit</ID>
     <ID>FunctionMaxLength:JobOfferViewModelTest.kt$JobOfferViewModelTest$@Test public fun `offer arrives via bus — uiState becomes Offering with correct data and remaining seconds`(): Unit</ID>
     <ID>FunctionMaxLength:KycRepositoryImplTest.kt$KycRepositoryImplTest$@Test public fun `exchangeAadhaarCode returns ApiError when aadhaarVerified is false`(): Unit</ID>
@@ -54,10 +62,15 @@
     <ID>FunctionMaxLength:MainActivityNavTest.kt$MainActivityNavTest$@Test public fun `#138 absent navigate_to extra does not trigger rating navigation`()</ID>
     <ID>FunctionMaxLength:MainActivityNavTest.kt$MainActivityNavTest$@Test public fun `#138 navigate_to=ratings_transparency posts to RatingReceivedEventBus`()</ID>
     <ID>FunctionMaxLength:MainActivityNavTest.kt$MainActivityNavTest$@Test public fun `#138 unknown navigate_to value does not trigger rating navigation`()</ID>
+    <ID>FunctionMaxLength:MarkReachedUseCaseTest.kt$MarkReachedUseCaseTest$@Test public fun `proceeds with null token when attestation fails (fail-open)`(): Unit</ID>
     <ID>FunctionMaxLength:MyRatingsViewModelAppealTest.kt$MyRatingsViewModelAppealTest$@Test public fun `fileRatingAppeal quota exceeded transitions to QuotaExceeded`(): Unit</ID>
     <ID>FunctionMaxLength:MyRatingsViewModelAppealTest.kt$MyRatingsViewModelAppealTest$@Test public fun `fileRatingAppeal success transitions to AppealState Success`(): Unit</ID>
+    <ID>FunctionMaxLength:OutboxSyncWorkerTest.kt$OutboxSyncWorkerTest$@Test public fun `doWork exception at runAttemptCount=0 — returns Result retry`(): Unit</ID>
+    <ID>FunctionMaxLength:OutboxSyncWorkerTest.kt$OutboxSyncWorkerTest$@Test public fun `doWork exception at runAttemptCount=2 — returns Result retry`(): Unit</ID>
+    <ID>FunctionMaxLength:OutboxSyncWorkerTest.kt$OutboxSyncWorkerTest$@Test public fun `doWork exception at runAttemptCount=3 — returns Result failure`(): Unit</ID>
     <ID>FunctionMaxLength:PayoutCadenceViewModelTest.kt$PayoutCadenceViewModelTest$@Test public fun `saveCadence aborts when biometric is available but user cancels`(): Unit</ID>
     <ID>FunctionMaxLength:PayoutCadenceViewModelTest.kt$PayoutCadenceViewModelTest$@Test public fun `saveCadence proceeds when biometric not available (best-effort)`(): Unit</ID>
+    <ID>FunctionMaxLength:PlayIntegrityAttestorTest.kt$PlayIntegrityAttestorTest$@Test public fun `attest — debug bypass — returns Result success with debug-bypass token`(): Unit</ID>
     <ID>FunctionMaxLength:RatingDtosTest.kt$RatingDtosTest$@Test public fun `toDomain customerSide defaults missing sub-score keys to zero`()</ID>
     <ID>FunctionMaxLength:RatingDtosTest.kt$RatingDtosTest$@Test public fun `toDomain returns Pending for SUBMITTED side without required fields`()</ID>
     <ID>FunctionMaxLength:RatingDtosTest.kt$RatingDtosTest$@Test public fun `toDomain treats SUBMITTED customerSide with null subScores as Pending`()</ID>
@@ -78,6 +91,9 @@
     <ID>FunctionMaxLength:SessionManagerTest.kt$SessionManagerTest$@Test public fun `initial state is Unauthenticated when session_created_at is zero`()</ID>
     <ID>FunctionMaxLength:SessionManagerTest.kt$SessionManagerTest$@Test public fun `saveSession stores uid and phoneLastFour and transitions to Authenticated`(): Unit</ID>
     <ID>FunctionMaxLength:SessionManagerTest.kt$SessionManagerTest$@Test public fun `saveSession with Email provider round-trips email and displayName`(): Unit</ID>
+    <ID>FunctionMaxLength:SessionPrefsMigratorTest.kt$SessionPrefsMigratorTest$@Test public fun `isLegacyKeyPresent returns false when AndroidKeyStore has no matching alias`()</ID>
+    <ID>FunctionMaxLength:SessionPrefsMigratorTest.kt$SessionPrefsMigratorTest$@Test public fun `migrateIfNeeded copies values from legacy prefs when legacy key present`()</ID>
+    <ID>FunctionMaxLength:SessionPrefsMigratorTest.kt$SessionPrefsMigratorTest$@Test public fun `migrateIfNeeded leaves new prefs intact when legacy prefs are empty`()</ID>
     <ID>FunctionMaxLength:ShieldRepositoryImplTest.kt$ShieldRepositoryImplTest$@Test public fun `fileRatingAppeal returns RatingAppealResult with appealId on success`(): Unit</ID>
     <ID>FunctionMaxLength:ShieldRepositoryImplTest.kt$ShieldRepositoryImplTest$@Test public fun `fileRatingAppeal returns failure on 409 with malformed JSON`(): Unit</ID>
     <ID>FunctionMaxLength:ShieldRepositoryImplTest.kt$ShieldRepositoryImplTest$@Test public fun `fileRatingAppeal returns failure on 409 with non-quota error code`(): Unit</ID>
@@ -102,7 +118,6 @@
     <ID>LongParameterList:ActiveJobViewModel.kt$ActiveJobViewModel$( savedStateHandle: SavedStateHandle, private val repository: ActiveJobRepository, private val startTripUseCase: StartTripUseCase, private val markReachedUseCase: MarkReachedUseCase, private val startWorkUseCase: StartWorkUseCase, private val completeJobUseCase: CompleteJobUseCase, private val connectivityObserver: ConnectivityObserver, private val uploadJobPhotoUseCase: UploadJobPhotoUseCase, private val fileShieldReportUseCase: FileShieldReportUseCase, )</ID>
     <ID>MagicNumber:AcceptJobOfferUseCase.kt$AcceptJobOfferUseCase$410</ID>
     <ID>MagicNumber:ActiveJobRepositoryImpl.kt$ActiveJobRepositoryImpl$409</ID>
-    <ID>MagicNumber:ActiveJobRepositoryImpl.kt$ActiveJobRepositoryImpl$5_000L</ID>
     <ID>MagicNumber:AuthScreen.kt$0xFF1A73E8</ID>
     <ID>MagicNumber:AuthScreen.kt$6</ID>
     <ID>MagicNumber:AvailabilityViewModel.kt$AvailabilityViewModel$6</ID>
@@ -124,6 +139,7 @@
     <ID>MagicNumber:MyRatingsScreen.kt$0.6f</ID>
     <ID>MagicNumber:MyRatingsScreen.kt$5</ID>
     <ID>MagicNumber:MyRatingsScreen.kt$5.0</ID>
+    <ID>MagicNumber:OutboxSyncWorker.kt$OutboxSyncWorker$3</ID>
     <ID>MagicNumber:PhotoUploadUseCase.kt$PhotoUploadUseCase$1024</ID>
     <ID>MagicNumber:PhotoUploadUseCase.kt$PhotoUploadUseCase$80</ID>
     <ID>MagicNumber:RatingAppealSheet.kt$20</ID>
@@ -154,6 +170,7 @@
     <ID>MaxLineLength:ComplaintScreen.kt$Column</ID>
     <ID>MaxLineLength:ComplaintScreen.kt$Text("Report an issue", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)</ID>
     <ID>MaxLineLength:ComplaintScreen.kt$Text(statusMessage(state.status), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)</ID>
+    <ID>MaxLineLength:DigiLockerConsentUseCaseTest.kt$DigiLockerConsentUseCaseTest$coEvery { integrityAttestor.attest(any()) } returns Result.failure(RuntimeException("Play Integrity unavailable"))</ID>
     <ID>MaxLineLength:EarningsScreen.kt$PeriodCard(stringResource(R.string.earnings_period_lifetime), summary.lifetime, modifier = Modifier.weight(1f))</ID>
     <ID>MaxLineLength:EarningsScreen.kt$PeriodCard(stringResource(R.string.earnings_period_month), summary.month, modifier = Modifier.weight(1f))</ID>
     <ID>MaxLineLength:EarningsScreen.kt$PeriodCard(stringResource(R.string.earnings_period_today), summary.today, modifier = Modifier.weight(1f))</ID>
@@ -181,7 +198,9 @@
     <ID>MaxLineLength:TechnicianAvailabilityRepositoryImpl.kt$TechnicianAvailabilityRepositoryImpl$override suspend fun getAvailability(): Result&lt;TechnicianAvailability&gt;</ID>
     <ID>MaxLineLength:UpdatePayoutCadenceUseCase.kt$UpdatePayoutCadenceUseCase$public suspend fun invoke(cadence: String): Result&lt;PayoutCadenceResult&gt;</ID>
     <ID>MayBeConst:EarningsScreen.kt$private val MONTHLY_GOAL_PAISE = 3_500_000L</ID>
+    <ID>NestedBlockDepth:SessionPrefsMigrator.kt$SessionPrefsMigrator$internal fun migrateIfNeededInternal( context: Context, newPrefs: SharedPreferences, newPrefsName: String, legacyKeyPresent: Boolean, )</ID>
     <ID>ReturnCount:ActiveJobViewModel.kt$ActiveJobViewModel$public fun onPhotoConfirmed(localFilePath: String)</ID>
+    <ID>ReturnCount:FirebaseTokenAuthenticator.kt$FirebaseTokenAuthenticator$override fun authenticate( route: Route?, response: Response, ): Request?</ID>
     <ID>ReturnCount:HomeservicesFcmService.kt$HomeservicesFcmService$private fun parseJobOffer(data: Map&lt;String, String&gt;): JobOffer?</ID>
     <ID>SwallowedException:AuthOrchestrator.kt$AuthOrchestrator$e: FirebaseAuthUserCollisionException</ID>
     <ID>SwallowedException:AuthOrchestrator.kt$AuthOrchestrator$e: FirebaseAuthWeakPasswordException</ID>
@@ -191,9 +210,14 @@
     <ID>SwallowedException:EmailPasswordUseCase.kt$EmailPasswordUseCase$e: FirebaseAuthWeakPasswordException</ID>
     <ID>SwallowedException:GoogleSignInUseCase.kt$GoogleSignInUseCase$e: GetCredentialCancellationException</ID>
     <ID>SwallowedException:GoogleSignInUseCase.kt$GoogleSignInUseCase$e: NoCredentialException</ID>
+    <ID>SwallowedException:OutboxSyncWorker.kt$OutboxSyncWorker$e: Exception</ID>
     <ID>SwallowedException:TruecallerLoginUseCase.kt$TruecallerLoginUseCase$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ActiveJobRepositoryImpl.kt$ActiveJobRepositoryImpl$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:FirebaseTokenAuthenticator.kt$FirebaseTokenAuthenticator$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:IdTokenCache.kt$IdTokenCache$e: Exception</ID>
     <ID>TooGenericExceptionCaught:KycRepositoryImpl.kt$KycRepositoryImpl$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:OutboxSyncWorker.kt$OutboxSyncWorker$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:SessionPrefsMigrator.kt$SessionPrefsMigrator$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ShieldRepositoryImpl.kt$ShieldRepositoryImpl$e: Exception</ID>
     <ID>TooGenericExceptionThrown:AcceptJobOfferUseCase.kt$AcceptJobOfferUseCase$throw RuntimeException("Accept offer failed: HTTP ${response.code()}")</ID>
     <ID>TooManyFunctions:ActiveJobViewModel.kt$ActiveJobViewModel : ViewModel</ID>
@@ -201,6 +225,7 @@
     <ID>TooManyFunctions:AuthViewModel.kt$AuthViewModel : ViewModel</ID>
     <ID>TooManyFunctions:ServiceSelectionScreen.kt$com.homeservices.technician.ui.serviceprofile.ServiceSelectionScreen.kt</ID>
     <ID>TooManyFunctions:TechnicianHomeScreen.kt$com.homeservices.technician.ui.home.TechnicianHomeScreen.kt</ID>
+    <ID>UnusedParameter:PiiRedactorTest.kt$PiiRedactorTest$description: String</ID>
     <ID>UnusedPrivateProperty:ActiveJobViewModelTest.kt$ActiveJobViewModelTest$val stateWithPath = (viewModel.uiState.value as? ActiveJobUiState.Active) ?.copy(uploadedStoragePath = "bookings/bk-1/photos/uid/IN_PROGRESS/123.jpg") ?: return@runTest</ID>
     <ID>UseCheckOrError:AcceptJobOfferUseCase.kt$AcceptJobOfferUseCase$throw IllegalStateException("No authenticated user for job offer acceptance")</ID>
   </CurrentIssues>
