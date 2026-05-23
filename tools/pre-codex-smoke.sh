@@ -18,7 +18,8 @@ echo "[2/4] ktlintCheck — formatting must be clean before Codex sees it..."
 ./gradlew ktlintCheck --quiet 2>&1 | tail -20
 
 echo "[3/4] testDebugUnitTest — TDD invariant: all unit tests must be green..."
-./gradlew testDebugUnitTest --quiet 2>&1 | tail -30
+# -PexcludePaparazzi: Paparazzi snapshot tests require Linux font rendering; run on CI via paparazzi-record.yml
+./gradlew testDebugUnitTest --quiet -PexcludePaparazzi 2>&1 | tail -30
 
 echo "[4/4] koverVerify — coverage must meet >=80% threshold..."
 ./gradlew koverVerify --quiet 2>&1 | tail -10

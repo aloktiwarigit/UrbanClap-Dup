@@ -235,6 +235,12 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
+            all {
+                // Pass -PexcludePaparazzi in smoke gate to skip snapshot tests on Windows
+                if (project.hasProperty("excludePaparazzi")) {
+                    exclude("**/*PaparazziTest.class")
+                }
+            }
         }
     }
 }
