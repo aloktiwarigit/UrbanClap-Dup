@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -114,7 +116,7 @@ private fun IdleState(
     onSubmit: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier.verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         HsTrustBadge(text = stringResource(R.string.complaint_eyebrow))
@@ -134,7 +136,6 @@ private fun IdleState(
             onDescriptionChanged = onDescriptionChanged,
             onPhotoClick = onPhotoClick,
         )
-        Spacer(Modifier.weight(1f))
         HsPrimaryButton(
             text = stringResource(R.string.complaint_submit),
             onClick = onSubmit,

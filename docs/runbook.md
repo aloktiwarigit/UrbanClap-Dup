@@ -1200,3 +1200,98 @@ Living document — update after every incident and every significant architectu
 ---
 
 **Operational Procedures 2026-04-26 complete. Total new procedures: 7 (OP-A1..A7) + 5 (OP-A8..A12) = 12.**
+
+---
+
+## SOS audio retention (E11-S05b-2)
+
+Encrypted SOS audio blobs are stored in Firebase Storage under `sos-audio/{customerId}/{incidentId}.enc`. A GCS object lifecycle rule deletes all objects in this prefix 7 days after creation, matching the Cosmos `sos_incident_keys` container's `defaultTtl = 604800` seconds.
+
+**One-time setup** (run once per environment against the Firebase Storage bucket):
+
+```bash
+gcloud storage buckets update gs://<your-firebase-bucket> \
+  --lifecycle-file=infra/firebase/sos-audio-lifecycle.json
+```
+
+Substitute `<your-firebase-bucket>` with the bucket name from Firebase Console → Storage → Files (shown in the URL bar, e.g. `homeservices-prod.appspot.com`).
+
+**Verification:**
+
+```bash
+gcloud storage buckets describe gs://<your-firebase-bucket> --format="json(lifecycle)"
+```
+
+Expected output contains `"age": 7` with `"matchesPrefix": ["sos-audio/"]`.
+
+**Why two TTLs?** The Cosmos key doc TTL (7 days) and the Storage blob lifecycle rule (7 days) are set independently. If a blob outlasts its key doc (e.g. Cosmos TTL fires first due to clock skew), the blob becomes unplayable — this is the safer failure mode. The 7-day window aligns with the maximum incident investigation SLA defined in the threat model (I-A4).
+
+---
+
+## Privacy policy (E20-S07)
+
+**Policy document:** `docs/legal/privacy-policy-technician.md`
+
+**Hosted URL:** `https://aloktiwarigit.github.io/homeheroo-privacy/technician/`
+
+The policy is published automatically by `.github/workflows/gh-pages-legal.yml` on every push to `main` that changes `docs/legal/**`. To republish manually, trigger the workflow from GitHub Actions → "Publish legal docs to GitHub Pages" → Run workflow.
+
+**First-time GitHub Pages setup (one-time, per repo):**
+1. Push the `gh-pages-legal.yml` workflow to `main`.
+2. In the GitHub repo → Settings → Pages → Source: select "GitHub Actions".
+3. The next workflow run will deploy to `https://aloktiwarigit.github.io/<repo-name>/technician/`.
+
+**Play Console:** The privacy policy URL must be entered in Play Console → App content → Privacy policy before submitting to any track (internal testing or production). Use: `https://aloktiwarigit.github.io/homeheroo-privacy/technician/`
+
+**Deletion requests:** Inbound deletion requests arrive at aloktiwari49@gmail.com. Process:
+1. Acknowledge within 48 hours.
+2. In Firebase Console → Authentication → find user by phone → Delete user.
+3. In Firestore → delete all documents under `technicians/{uid}/` and `kyc/{uid}/`.
+4. In Firebase Storage → delete all objects under `kyc/{uid}/` and `uploads/{uid}/`.
+5. Confirm erasure to the requester within 30 days of the original request.
+
+**Annual review:** Review and update the policy document at least once per year, or whenever a new third-party SDK is integrated that processes PII.
+
+## One-time migrations
+
+### PAN mask backfill (S-001 / E20-S09 — run before pilot launch)
+
+This script scans the `technicians` Cosmos container for records where `kyc.panNumber` is set and `kyc.panMaskedNumber` is null. It is the companion operation to the S-001 fix that removed the `?? kyc.panNumber` plaintext fallback from `GET /v1/kyc/status`.
+
+**When to run:** Once, after the S-001 API fix is deployed to production and before pilot launch. Do not run during peak hours (prefer off-peak maintenance window).
+
+**Prerequisites:**
+- `COSMOS_CONNECTION_STRING` or `COSMOS_ENDPOINT` + `COSMOS_KEY` env vars set.
+- `COSMOS_DATABASE` env var (defaults to `homeservices`).
+
+**Step 1 — dry run (verify scope, no writes):**
+```bash
+cd api
+pnpm backfill:pan-mask
+```
+
+**Step 2 — review the log** output. Expect two categories:
+- `[MASK]` — canonical PAN (`ABCDE1234F` shape); script will write `panMaskedNumber = XXXXX1234F` and clear `panNumber`.
+- `[ESCALATE]` — non-canonical value (OCR noise, old `####` format); script will clear `panNumber` and set `kycStatus = MANUAL_REVIEW`. Admin must re-collect the PAN via DigiLocker for these technicians.
+
+**Step 3 — apply:**
+```bash
+pnpm backfill:pan-mask -- --apply
+```
+
+**Step 4 — verify** no remaining plaintext PANs:
+```sql
+SELECT COUNT(1) FROM c
+WHERE IS_DEFINED(c.kyc.panNumber)
+  AND c.kyc.panNumber != null
+  AND (NOT IS_DEFINED(c.kyc.panMaskedNumber) OR c.kyc.panMaskedNumber = null)
+```
+Expected result: `0`.
+
+**Escalated records:** Search admin dashboard for `kycStatus = MANUAL_REVIEW` technicians and contact them to re-submit their PAN card via DigiLocker before the pilot goes live.
+
+---
+
+## Privacy policy
+
+Hosted at **aloktiwarigit/homeheroo-privacy** (GitHub Pages). Source of truth for all privacy-policy content; the UrbanClap-Dup repo no longer contains policy markdown files.

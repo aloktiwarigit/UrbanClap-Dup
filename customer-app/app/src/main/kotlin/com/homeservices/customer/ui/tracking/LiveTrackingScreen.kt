@@ -157,6 +157,12 @@ private fun SosOverlay(
         is SosUiState.SosError -> {
             LaunchedEffect(sos) { snackbarHostState.showSnackbar(sosErrorMsg) }
         }
+        is SosUiState.UploadingEvidence ->
+            SosUploadingEvidenceSheet(pct = sos.pct, onDismiss = {})
+        is SosUiState.EvidenceSaved ->
+            SosEvidenceSavedSheet(onDismiss = { sosViewModel.onDismissEvidenceResult() })
+        is SosUiState.EvidenceUploadError ->
+            SosEvidenceUploadErrorSheet(message = sos.message, onDismiss = { sosViewModel.onDismissEvidenceResult() })
         else -> Unit
     }
 }
@@ -236,7 +242,7 @@ private fun TrackingMapSection(
     defaultTechName: String,
 ) {
     state.location?.let { loc ->
-        val techLatLng = LatLng(loc.lat, loc.lng)
+        val techLatLng = LatLng(state.liveLat ?: loc.lat, state.liveLng ?: loc.lng)
         val techNameForMarker = state.techName.ifBlank { defaultTechName }
         val cameraPositionState =
             rememberCameraPositionState {

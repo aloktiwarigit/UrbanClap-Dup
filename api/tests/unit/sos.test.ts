@@ -105,7 +105,7 @@ describe('POST /v1/sos/{bookingId}', () => {
     expect(res.status).toBe(201);
     expect(bookingRepo.markSosActivated).toHaveBeenCalledWith('bk-1');
     expect(sendOwnerSosAlert).toHaveBeenCalledWith({
-      bookingId: 'bk-1', customerId: 'cust-1', technicianId: 'tech-1', slotAddress: '42 MG Road, Bangalore',
+      bookingId: 'bk-1', customerId: 'cust-1', technicianId: 'tech-1', incidentId: 'bk-1',
     });
     expect(updateBookingFields).toHaveBeenCalledWith('bk-1', expect.objectContaining({ sosAlertSentAt: expect.any(String) }));
     expect(appendAuditEntry).toHaveBeenCalledWith(expect.objectContaining({

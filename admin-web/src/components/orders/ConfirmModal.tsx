@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import FocusLock from 'react-focus-lock';
 import { useTranslations } from 'next-intl';
 
 interface ExtraInput {
@@ -35,12 +36,21 @@ export function ConfirmModal({
   const resolvedInputLabel = inputLabel ?? t('confirmModal.reasonLabel');
   const [value, setValue] = useState('');
 
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onCancel]);
+
   const isDisabled =
     loading ||
     value.length < inputMinLength ||
     (extraInput !== undefined && (extraInput.disabled === true || extraInput.value.trim() === ''));
 
   return (
+    <FocusLock returnFocus>
     <div
       role="dialog"
       aria-modal="true"
@@ -114,5 +124,6 @@ export function ConfirmModal({
         </div>
       </div>
     </div>
+    </FocusLock>
   );
 }

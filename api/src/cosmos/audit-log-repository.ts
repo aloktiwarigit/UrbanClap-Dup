@@ -9,6 +9,8 @@ export async function appendAuditEntry(entry: AuditLogDoc): Promise<void> {
   await getCosmosClient().database(DB_NAME).container(CONTAINER).items.create(entry);
 }
 
+// SEMGREP-JUSTIFIED: cross-partition fan-out; caller MUST enforce requireAdmin(['super-admin'])
+// middleware. Called only from adminAuditLogListHandler which gates on requireAdmin(['super-admin']).
 export async function queryAuditLog(
   params: AuditLogQuery,
 ): Promise<{ entries: AuditLogEntry[]; continuationToken?: string }> {

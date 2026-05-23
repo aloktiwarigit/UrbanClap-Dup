@@ -211,6 +211,11 @@
     <string name="sos_send_now">अभी भेजें</string>
     <string name="sos_cancel_alert">अलर्ट रद्द करें</string>
 
+    <!-- SOS evidence upload states (E11-S05b-2) -->
+    <string name="sos_uploading_evidence">साक्ष्य अपलोड हो रहा है… %1$d%%</string>
+    <string name="sos_evidence_saved">साक्ष्य सुरक्षित रूप से सहेजा गया</string>
+    <string name="sos_evidence_upload_error">साक्ष्य नहीं सहेजा जा सका। मदद रास्ते में है।</string>
+
     <!-- SOS consent dialog (E12-S02a) -->
     <string name="sos_consent_title">अलर्ट के साथ ऑडियो रिकॉर्ड करें?</string>
     <string name="sos_consent_body">Owner support को स्थिति समझने में मदद के लिए एक छोटी ऑडियो रिकॉर्डिंग जोड़ सकते हैं।</string>
@@ -324,8 +329,14 @@
     <string name="slot_picker_heading">अपना स्लॉट चुनें</string>
     <string name="slot_picker_subtitle">सुविधाजनक आने का समय चुनें। भुगतान से पहले आप सब कुछ देख सकते हैं।</string>
     <string name="slot_picker_date_label">तारीख</string>
-    <string name="slot_picker_time_label">समय</string>
-    <string name="slot_picker_next">आगे</string>
+    <string name="slot_picker_morning_label">सुबह</string>
+    <string name="slot_picker_afternoon_label">दोपहर</string>
+    <string name="slot_picker_evening_label">शाम</string>
+    <string name="slot_picker_loading_desc">उपलब्ध स्लॉट लोड हो रहे हैं</string>
+    <string name="slot_picker_error_label">स्लॉट लोड नहीं हो सके। कृपया पुनः प्रयास करें।</string>
+    <string name="slot_picker_retry_button">पुनः प्रयास करें</string>
+    <string name="slot_picker_confirm_slot">स्लॉट पक्का करें</string>
+    <string name="slot_picker_no_slots_label">इस तारीख के लिए कोई स्लॉट उपलब्ध नहीं</string>
 
     <!-- Trust dossier — Aadhaar/Police badges, certifications, languages, reviews -->
     <string name="trust_dossier_assigning">आपके स्लॉट के लिए जल्द ही तकनीशियन असाइन किया जाएगा।</string>
@@ -427,4 +438,24 @@
     <string name="wallet_apply_credit_toggle">₹%1$s क्रेडिट लागू करें</string>
     <string name="wallet_credit_original_price">मूल कीमत: ₹%1$s</string>
     <string name="wallet_credit_applied_banner">₹%1$s क्रेडिट लागू किया गया</string>
+
+    <!-- Address picker (E16-S04) -->
+    <string name="address_picker_title">हम कहाँ आएँ?</string>
+    <string name="address_picker_search_hint">अपना पता या लैंडमार्क खोजें</string>
+    <string name="address_picker_search_unavailable_drop_pin">खोज उपलब्ध नहीं — मानचित्र पर पिन खींचकर स्थान तय करें</string>
+    <string name="address_picker_confirm">पता पुष्टि करें</string>
+    <string name="address_picker_refused_title">हम अभी इस क्षेत्र में सेवा नहीं देते</string>
+    <string name="address_picker_refused_subtitle">हम अयोध्या से शुरुआत कर रहे हैं। नीचे टैप करें — विस्तार होने पर हम सूचित करेंगे।</string>
+    <string name="address_picker_notify_me">उपलब्ध होने पर मुझे सूचित करें</string>
+    <string name="address_picker_pin_set_no_address">स्थान तय — पिन की जगह की पुष्टि करें</string>
+
+    <!-- Waitlist screen (E16-S04) -->
+    <string name="waitlist_title">विस्तार होने पर सूचना पाएँ</string>
+    <string name="waitlist_body">हम आपके क्षेत्र में सेवा शुरू होते ही एक SMS भेजेंगे। कोई स्पैम नहीं।</string>
+    <string name="waitlist_phone_label">मोबाइल नंबर</string>
+    <string name="waitlist_submit">वेटलिस्ट में जुड़ें</string>
+    <string name="waitlist_confirmed_title">आप वेटलिस्ट में हैं</string>
+    <string name="waitlist_confirmed_body">जिस दिन हम आपके क्षेत्र में शुरू करेंगे — हम SMS करेंगे।</string>
+    <string name="waitlist_error_retry">पुनः प्रयास करें</string>
+    <string name="waitlist_rate_limited">%d मिनट बाद प्रयास करें</string>
 </resources>

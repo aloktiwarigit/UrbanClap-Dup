@@ -22,6 +22,72 @@ import { isLatLngInServiceArea } from '../services/service-area.service.js';
 import { AYODHYA_SERVICE_AREA } from '../data/service-area-ayodhya.js';
 import { slotHoldsRepo } from '../cosmos/slot-holds-repository.js';
 import { generateSlots, filterElapsedSlots, currentIstMinuteOfDay, todayIst } from '../shared/slot-utils.js';
+import { getStorageDownloadUrlWithTtl, checkStorageFileExists } from '../firebase/admin.js';
+
+const PHOTO_STAGE_ORDER = ['EN_ROUTE', 'REACHED', 'IN_PROGRESS', 'COMPLETED'] as const;
+const PHOTO_SIGNED_URL_TTL_SECONDS = 300;
+const REPORT_SIGNED_URL_TTL_SECONDS = 300;
+
+async function projectPhotos(
+  rawPhotos: Record<string, string[]> | undefined,
+): Promise<Record<string, { urls: string[] }> | undefined> {
+  if (!rawPhotos || Object.keys(rawPhotos).length === 0) return undefined;
+
+  const knownStages = new Set<string>(PHOTO_STAGE_ORDER);
+  const orderedStages = [
+    ...PHOTO_STAGE_ORDER.filter((s) => rawPhotos[s]?.length),
+    ...Object.keys(rawPhotos).filter((s) => !knownStages.has(s)),
+  ];
+
+  const stageSets = await Promise.all(
+    orderedStages.map(async (stage) => {
+      const paths = rawPhotos[stage] ?? [];
+      const urls = (
+        await Promise.all(
+          paths.map(async (path) => {
+            try {
+              return await getStorageDownloadUrlWithTtl(path, PHOTO_SIGNED_URL_TTL_SECONDS);
+            } catch (err) {
+              Sentry.captureException(err);
+              console.warn('[getBooking] photo sign failed', {
+                stage,
+                path,
+                signedUrl: '[redacted-signed-url]',
+              });
+              return null;
+            }
+          }),
+        )
+      ).filter((u): u is string => u !== null);
+      return urls.length > 0 ? ([stage, { urls }] as const) : null;
+    }),
+  );
+
+  const result = Object.fromEntries(
+    stageSets.filter((s): s is NonNullable<typeof s> => s !== null),
+  );
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+async function projectReportSignedUrl(
+  bookingId: string,
+  status: string,
+): Promise<string | null> {
+  if (status !== 'COMPLETED') return null;
+  const reportPath = `reports/${bookingId}/service-report.pdf`;
+  try {
+    const exists = await checkStorageFileExists(reportPath);
+    if (!exists) return null;
+    return await getStorageDownloadUrlWithTtl(reportPath, REPORT_SIGNED_URL_TTL_SECONDS);
+  } catch (err) {
+    Sentry.captureException(err);
+    console.warn('[getBooking] report sign failed', {
+      bookingId,
+      signedUrl: '[redacted-signed-url]',
+    });
+    return null;
+  }
+}
 
 function makeRazorpayReceipt(customerId: string): string {
   return `bk_${Date.now().toString(36)}_${customerId.slice(0, 20)}`;
@@ -581,13 +647,23 @@ const getBookingInner: CustomerHttpHandler = async (req, _ctx, customer) => {
   const booking = await bookingRepo.getById(id);
   if (!booking) return { status: 404, jsonBody: { code: 'BOOKING_NOT_FOUND' } };
   if (booking.customerId !== customer.customerId) return { status: 403, jsonBody: { code: 'FORBIDDEN' } };
+
+  const [photos, reportSignedUrl] = await Promise.all([
+    projectPhotos(booking.photos),
+    projectReportSignedUrl(id, booking.status),
+  ]);
+
   return {
     status: 200,
     jsonBody: {
-      bookingId: booking.id, status: booking.status, amount: booking.amount,
+      bookingId: booking.id,
+      status: booking.status,
+      amount: booking.amount,
       finalAmount: booking.finalAmount ?? null,
       pendingAddOns: booking.pendingAddOns ?? [],
       approvedAddOns: booking.approvedAddOns ?? [],
+      ...(photos !== undefined ? { photos } : {}),
+      reportSignedUrl,
     },
   };
 };

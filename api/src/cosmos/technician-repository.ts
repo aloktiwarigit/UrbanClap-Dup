@@ -27,6 +27,8 @@ export async function upsertKycStatus(
       aadhaarVerified: false,
       aadhaarMaskedNumber: null,
       panNumber: null,
+      panMaskedNumber: null,
+      panHash: null,
       panImagePath: null,
       ...(existing.kyc ?? {}),
       ...patch,

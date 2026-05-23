@@ -346,21 +346,23 @@ export async function middleware(request: NextRequest) {
     setCookies = refreshed.setCookies;
   }
 
-  // 6. Capability check on the locale-stripped raw path
-  if (!canAccessAdminPath(access.role, rawPath)) {
-    const notAuthResponse = redirectToNotAuthorized(request, access.role);
-    if (setCookies.length > 0) appendSetCookies(notAuthResponse, setCookies);
-    return notAuthResponse;
-  }
-
-  // 7. Admin API proxy requests — pass through after auth check, skip locale routing.
+  // 6. Admin API proxy requests — pass through after auth check, skip capability check and locale routing.
   // next-intl with localePrefix:'always' would redirect /admin-api/v1/... to
   // /{locale}/admin-api/v1/... which has no matching route and breaks proxy calls.
+  // Must precede the capability check: /admin-api/* paths are not registered in
+  // ADMIN_ROUTE_CAPABILITIES so they would be default-denied otherwise.
   if (pathname.startsWith('/admin-api/')) {
     if (setCookies.length === 0) return NextResponse.next();
     const response = NextResponse.next();
     appendSetCookies(response, setCookies);
     return response;
+  }
+
+  // 7. Capability check on the locale-stripped raw path
+  if (!canAccessAdminPath(access.role, rawPath)) {
+    const notAuthResponse = redirectToNotAuthorized(request, access.role);
+    if (setCookies.length > 0) appendSetCookies(notAuthResponse, setCookies);
+    return notAuthResponse;
   }
 
   // 8. Auth passed — apply i18n routing (handles locale prefix, NEXT_LOCALE cookie)
@@ -400,7 +402,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match all paths except SWA health checks, Next.js static assets, and image optimization
-    '/((?!\\.swa|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Match all paths except SWA health checks, Next.js static assets, image optimization,
+    // and the Firebase service worker (must be served publicly from root for FCM push registration).
+    '/((?!\\.swa|_next/static|_next/image|favicon\\.ico|firebase-messaging-sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

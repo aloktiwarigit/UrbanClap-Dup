@@ -116,7 +116,14 @@ internal fun EarningsContent(
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (val state = uiState) {
-            is EarningsUiState.Loading -> CenterState { CircularProgressIndicator(color = MaterialTheme.colorScheme.primary) }
+            is EarningsUiState.Loading ->
+                CenterState {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(56.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 4.dp,
+                    )
+                }
             is EarningsUiState.Error ->
                 CenterState {
                     Text(

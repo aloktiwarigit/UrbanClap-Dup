@@ -17,9 +17,11 @@ export const EncryptedPanSchema = z.object({
 export const TechnicianKycSchema = z.object({
   aadhaarVerified: z.boolean(),
   aadhaarMaskedNumber: z.string().nullable(),
-  panNumber: z.string().nullable(),
+  panNumber: z.string().nullable(),                   // legacy — migration reads only
+  panMaskedNumber: z.string().nullable().optional(),  // new (E19-S01): XXXXX1234F format
+  panHash: z.string().nullable().optional(),          // new (E19-S01): SHA-256 hex, 64 chars
   panImagePath: z.string().nullable(),
-  panNumberEncrypted: EncryptedPanSchema.optional(),
+  panNumberEncrypted: EncryptedPanSchema.optional(),  // legacy — kept for migration decryption
   kycStatus: KycStatusSchema,
   updatedAt: z.string().datetime(),
 });
@@ -43,7 +45,7 @@ export const SubmitPanOcrRequestSchema = z.object({
 
 export const SubmitPanOcrResponseSchema = z.object({
   kycStatus: KycStatusSchema,
-  panNumber: z.string().nullable(),
+  panMaskedNumber: z.string().nullable(),
 });
 
 export const GetKycStatusResponseSchema = z.object({
@@ -51,7 +53,7 @@ export const GetKycStatusResponseSchema = z.object({
   kycStatus: KycStatusSchema,
   aadhaarVerified: z.boolean(),
   aadhaarMaskedNumber: z.string().nullable(),
-  panNumber: z.string().nullable(),
+  panMaskedNumber: z.string().nullable(),
 });
 
 export type EncryptedPan = z.infer<typeof EncryptedPanSchema>;

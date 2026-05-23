@@ -23,6 +23,10 @@ const DEFAULT_DENIAL_REASON: ErasureDenialReason = 'legal-hold';
 interface ComplianceClientProps {
   initialErasureRequests: ErasureRequest[];
   initialSscLevies: SscLevy[];
+  /** Server-side fetch error for the erasure-requests endpoint, surfaced inline so one bad endpoint does not crash the page. */
+  erasureError?: string | null;
+  /** Server-side fetch error for the ssc-levy endpoint, surfaced inline. */
+  sscError?: string | null;
 }
 
 function formatPaise(paise: number): string {
@@ -35,6 +39,8 @@ function formatPaise(paise: number): string {
 export function ComplianceClient({
   initialErasureRequests,
   initialSscLevies,
+  erasureError = null,
+  sscError = null,
 }: ComplianceClientProps) {
   const t = useTranslations('compliance');
   const locale = useLocale();
@@ -159,7 +165,13 @@ export function ComplianceClient({
           </p>
         </div>
 
-        {erasureRequests.length === 0 ? (
+        {erasureError && (
+          <p role="alert" className="alert alert-danger">
+            {erasureError}
+          </p>
+        )}
+
+        {erasureError ? null : erasureRequests.length === 0 ? (
           <p className="text-sm text-[var(--color-text-muted)]">{t('erasure.emptyState')}</p>
         ) : (
           <div className="overflow-x-auto">
@@ -253,7 +265,13 @@ export function ComplianceClient({
           </p>
         </div>
 
-        {sscLevies.length === 0 ? (
+        {sscError && (
+          <p role="alert" className="alert alert-danger">
+            {sscError}
+          </p>
+        )}
+
+        {sscError ? null : sscLevies.length === 0 ? (
           <p className="text-sm text-[var(--color-text-muted)]">{t('sscLevy.emptyState')}</p>
         ) : (
           <div className="overflow-x-auto">

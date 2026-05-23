@@ -101,6 +101,22 @@ export const ConfirmBookingRequestSchema = z.object({
   razorpaySignature: z.string().min(1),
 });
 
+export const PhotoStageResponseSchema = z.object({
+  urls: z.array(z.string().url()),
+});
+
+export const GetBookingResponseSchema = z.object({
+  bookingId: z.string(),
+  status: BookingDocSchema.shape.status,
+  amount: z.number().int().positive(),
+  finalAmount: z.number().int().positive().nullable(),
+  pendingAddOns: z.array(PendingAddOnSchema).default([]),
+  approvedAddOns: z.array(PendingAddOnSchema).default([]),
+  photos: z.record(z.string(), PhotoStageResponseSchema).optional(),
+  reportSignedUrl: z.string().url().nullable().optional(),
+});
+
 export type BookingDoc = z.infer<typeof BookingDocSchema>;
 export type CreateBookingRequest = z.infer<typeof CreateBookingRequestSchema>;
 export type ConfirmBookingRequest = z.infer<typeof ConfirmBookingRequestSchema>;
+export type GetBookingResponse = z.infer<typeof GetBookingResponseSchema>;

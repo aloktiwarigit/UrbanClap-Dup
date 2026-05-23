@@ -279,6 +279,19 @@ An epic is "done" when:
 | E09 | ⬜ | ⬜ |
 | E10 | ⬜ | ⬜ |
 | E12 | ⬜ | ⬜ |
+| E16 | ✅ | ⬜ |
+
+---
+
+## Week 5 Stories (E16)
+
+| Story | Description | Status |
+|---|---|---|
+| E16-S01 | Service-area gating — server-side Turf.js polygon (ADR-0020) | ✅ done (merged W1) |
+| E16-S02 | Slot availability API + conflict locking | ✅ done |
+| E16-S04 | Address picker (Places SDK + draggable pin) + waitlist API | ✅ done (this PR) |
+| **E16-S04b** | **Admin waitlist CSV export** | 🔲 backlog (W6) |
+| E16-S05 | API-driven slot picker (customer-app) | ✅ done (merged) |
 
 ---
 

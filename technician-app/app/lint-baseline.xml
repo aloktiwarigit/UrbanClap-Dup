@@ -2,14 +2,14 @@
 <issues format="6" by="lint 8.6.0" type="baseline" client="gradle" dependencies="false" name="AGP (8.6.0)" variant="all" version="8.6.0">
 
     <issue
-        id="MissingPermission"
-        message="Missing permissions required by Vibrator.vibrate: android.permission.VIBRATE"
-        errorLine1="                    vibrator?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))"
-        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        id="UnusedAttribute"
+        message="Attribute `localeConfig` is only used in API level 33 and higher (current min is 26)"
+        errorLine1="        android:localeConfig=&quot;@xml/locale_config&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferScreen.kt"
-            line="58"
-            column="21"/>
+            file="src/main/AndroidManifest.xml"
+            line="31"
+            column="9"/>
     </issue>
 
     <issue
@@ -221,6 +221,17 @@
         message="Launcher icon used as round icon did not have a circular shape">
         <location
             file="src/main/res/mipmap-xxxhdpi/ic_launcher_homeheroo.png"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.privacy_policy_url` appears to be unused"
+        errorLine1="    &lt;string name=&quot;privacy_policy_url&quot;>https://aloktiwarigit.github.io/homeheroo-privacy/technician/&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="170"
+            column="13"/>
     </issue>
 
 </issues>

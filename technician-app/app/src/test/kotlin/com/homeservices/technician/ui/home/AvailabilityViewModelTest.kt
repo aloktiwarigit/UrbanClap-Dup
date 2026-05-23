@@ -71,6 +71,25 @@ public class AvailabilityViewModelTest {
         }
 
     @Test
+    public fun `setAcceptingJobs true propagates to repository with both flags set`(): Unit =
+        runTest {
+            val offlineAvailability = availability.copy(isOnline = false, isAvailable = false)
+            coEvery { getAvailability.invoke() } returns Result.success(offlineAvailability)
+            coEvery { updateAvailability.invoke(any()) } returns Result.success(availability)
+            val vm = AvailabilityViewModel(getAvailability, updateAvailability)
+
+            vm.setAcceptingJobs(true)
+
+            coVerify {
+                updateAvailability.invoke(
+                    offlineAvailability.copy(isOnline = true, isAvailable = true),
+                )
+            }
+            assertTrue(vm.uiState.value.availability.isOnline)
+            assertTrue(vm.uiState.value.availability.isAvailable)
+        }
+
+    @Test
     public fun `setWindowEnabled expands preset window to all weekdays`(): Unit =
         runTest {
             coEvery { getAvailability.invoke() } returns Result.success(availability.copy(availabilityWindows = emptyList()))

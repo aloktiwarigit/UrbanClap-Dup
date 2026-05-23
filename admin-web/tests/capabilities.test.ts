@@ -49,4 +49,14 @@ describe('admin capability matrix', () => {
     expect(canAccessAdminPath('ops-manager', '/audit-log')).toBe(false);
     expect(canAccessAdminPath('super-admin', '/compliance')).toBe(true);
   });
+
+  it('canAccessAdminPath defaults deny on unknown paths', () => {
+    const unknownPath = '/some/unregistered/route/that/does/not/exist';
+    expect(canAccessAdminPath('super-admin', unknownPath)).toBe(false);
+    expect(canAccessAdminPath('ops-manager', unknownPath)).toBe(false);
+    expect(canAccessAdminPath('finance', unknownPath)).toBe(false);
+    expect(canAccessAdminPath('support-agent', unknownPath)).toBe(false);
+    expect(canAccessAdminPath(null, unknownPath)).toBe(false);
+    expect(canAccessAdminPath(undefined, unknownPath)).toBe(false);
+  });
 });

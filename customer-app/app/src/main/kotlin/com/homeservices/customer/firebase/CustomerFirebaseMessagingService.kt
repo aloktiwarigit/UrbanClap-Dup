@@ -11,7 +11,10 @@ import com.google.firebase.messaging.RemoteMessage
 import com.homeservices.corenav.NotificationRouter
 import com.homeservices.customer.MainActivity
 import com.homeservices.customer.data.booking.PriceApprovalEventBus
+import com.homeservices.customer.data.device.DeviceTokenRegistrar
 import com.homeservices.customer.data.rating.RatingPromptEventBus
+import com.homeservices.customer.data.tracking.LocationUpdateEvent
+import com.homeservices.customer.data.tracking.LocationUpdateEventBus
 import com.homeservices.customer.data.tracking.TrackingEvent
 import com.homeservices.customer.data.tracking.TrackingEventBus
 import com.homeservices.customer.data.wallet.NoShowCreditEventBus
@@ -57,6 +60,10 @@ public class CustomerFirebaseMessagingService : FirebaseMessagingService() {
 
     @Inject public lateinit var noShowCreditEventBus: NoShowCreditEventBus
 
+    @Inject public lateinit var locationUpdateEventBus: LocationUpdateEventBus
+
+    @Inject public lateinit var deviceTokenRegistrar: DeviceTokenRegistrar
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onMessageReceived(message: RemoteMessage) {
@@ -96,6 +103,14 @@ public class CustomerFirebaseMessagingService : FirebaseMessagingService() {
         // intent is null, or action is null (userId missing from FCM payload) —
         // fall through to legacy event-bus routing so the foreground UI is not dropped.
 
+        // Slim LOCATION_UPDATE from E17-S02 periodic location push.
+        // Distinguishing guard: capturedAt is present in the slim payload but absent in the
+        // legacy transitionStatus-fired LOCATION_UPDATE payload.
+        if (data["type"] == "LOCATION_UPDATE" && data["capturedAt"] != null) {
+            handleSlimLocationUpdate(data)
+            return
+        }
+
         // NO_SHOW_CREDIT_ISSUED does not require a bookingId — handle it before the
         // legacy gate so it is never dropped by the `?: return` guard below.
         if (data["type"] == "NO_SHOW_CREDIT_ISSUED") {
@@ -114,8 +129,9 @@ public class CustomerFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
-    // Token rotation handled via FCM topic subscription — no server-side storage needed.
-    override fun onNewToken(token: String): Unit = Unit
+    override fun onNewToken(token: String) {
+        serviceScope.launch { deviceTokenRegistrar.register() }
+    }
 
     public override fun onDestroy(): Unit {
         super.onDestroy()
@@ -210,6 +226,17 @@ public class CustomerFirebaseMessagingService : FirebaseMessagingService() {
                 "Your support ticket has been updated. Tap to view."
             else -> "Tap to open the app."
         }
+
+    // ── Slim location-update FCM branch (E17-S02) ────────────────────────────
+
+    internal fun handleSlimLocationUpdate(data: Map<String, String>) {
+        val bookingId = data["bookingId"] ?: return
+        val lat = data["lat"]?.toDoubleOrNull()
+        val lng = data["lng"]?.toDoubleOrNull()
+        val capturedAt = data["capturedAt"]?.toLongOrNull()
+        if (lat == null || lng == null || capturedAt == null) return
+        locationUpdateEventBus.post(LocationUpdateEvent(bookingId, lat, lng, capturedAt))
+    }
 
     // ── No-show credit FCM branch (E13-S03) ─────────────────────────────────
 

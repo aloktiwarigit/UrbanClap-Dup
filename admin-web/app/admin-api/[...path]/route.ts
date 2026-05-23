@@ -109,8 +109,9 @@ async function proxy(request: Request, context: ProxyContext): Promise<NextRespo
   if (unsafeMethod) {
     const origin = request.headers.get('origin');
     const allowed = process.env['NEXT_PUBLIC_APP_URL'] ?? 'http://localhost:3000';
-    // Allow same-origin requests that omit the Origin header (SSR fetch, curl)
-    if (origin !== null && origin !== allowed) {
+    // Default-deny: missing Origin on unsafe methods is rejected. Browser fetches
+    // always send Origin; server-to-server calls should not go through this proxy.
+    if (origin !== allowed) {
       return NextResponse.json({ error: 'Cross-origin request denied' }, { status: 403 });
     }
   }

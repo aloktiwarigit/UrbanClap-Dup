@@ -5,7 +5,9 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.homeservices.technician.data.activeJob.ActiveJobLocationObserver
 import com.homeservices.technician.data.fcm.HomeservicesFcmService
+import com.homeservices.technician.data.locale.LocaleRepositoryImpl
 import com.homeservices.technician.domain.flags.GrowthBookFeatureFlags
 import com.homeservices.technician.domain.locale.LocaleRepository
 import com.homeservices.technician.observability.AppCheckInitializer
@@ -31,6 +33,9 @@ public class HomeservicesTechnicianApplication :
     @Inject
     public lateinit var workerFactory: HiltWorkerFactory
 
+    @Inject
+    public lateinit var activeJobLocationObserver: ActiveJobLocationObserver
+
     @EntryPoint
     @InstallIn(SingletonComponent::class)
     public interface FeatureFlagsEntryPoint {
@@ -50,6 +55,7 @@ public class HomeservicesTechnicianApplication :
         AppCheckInitializer.init(this)
         PostHogInitializer.init(this)
         HomeservicesFcmService.registerChannels(this)
+        activeJobLocationObserver.start()
 
         // Best-effort async flag refresh — non-blocking, fire-and-forget.
         // Uses a SupervisorJob so a failure here never propagates to sibling coroutines.
@@ -60,11 +66,21 @@ public class HomeservicesTechnicianApplication :
                 .refreshAsync()
         }
 
-        // Apply persisted locale BEFORE first Activity onCreate so the initial frame uses correct strings.
+        // Apply locale synchronously from SharedPreferences mirror so the first Compose frame uses
+        // the correct language with no race. The mirror is written on every SetAppLocaleUseCase call.
+        // Fall back to DEFAULT_LOCALE on first install (no mirror yet).
+        val syncTag =
+            LocaleRepositoryImpl.readMirrorLocale(this)
+                ?: LocaleRepositoryImpl.DEFAULT_LOCALE
+        AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(syncTag))
+
+        // Async reconciliation: DataStore may have a newer tag (e.g. if mirror write failed).
         val localeEp = EntryPointAccessors.fromApplication(this, LocaleEntryPoint::class.java)
         CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).launch {
             val tag = localeEp.localeRepository().currentLocale.first()
-            AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
+            if (tag != syncTag) {
+                AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
+            }
         }
     }
 

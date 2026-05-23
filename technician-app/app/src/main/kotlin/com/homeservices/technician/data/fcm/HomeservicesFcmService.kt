@@ -12,6 +12,7 @@ import com.homeservices.corenav.NotificationRouter
 import com.homeservices.technician.MainActivity
 import com.homeservices.technician.data.activeJob.BookingStatusEvent
 import com.homeservices.technician.data.activeJob.BookingStatusEventBus
+import com.homeservices.technician.data.device.DeviceTokenRegistrar
 import com.homeservices.technician.data.earnings.EarningsUpdateEventBus
 import com.homeservices.technician.data.jobOffer.JobOfferEventBus
 import com.homeservices.technician.data.kyc.KycStatusEvent
@@ -163,6 +164,9 @@ public class HomeservicesFcmService :
 
     @Inject
     public lateinit var pendingActionStore: PendingActionStore
+
+    @Inject
+    public lateinit var deviceTokenRegistrar: DeviceTokenRegistrar
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -623,6 +627,7 @@ public class HomeservicesFcmService :
     override fun onNewToken(token: String): Unit {
         serviceScope.launch {
             fcmTokenSyncUseCase.invokeWithFcmToken(token)
+            deviceTokenRegistrar.register()
         }
     }
 
