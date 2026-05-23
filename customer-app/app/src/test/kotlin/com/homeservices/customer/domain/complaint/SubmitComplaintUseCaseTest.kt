@@ -29,7 +29,7 @@ public class SubmitComplaintUseCaseTest {
     public fun `delegates to repo with reason code and returns success`(): Unit =
         runTest {
             coEvery {
-                repo.createComplaint("bk-1", "SERVICE_QUALITY", "A long enough description.", null)
+                repo.createComplaint("bk-1", "SERVICE_QUALITY", "A long enough description.", null, any())
             } returns flowOf(Result.success(mockResponse))
 
             val results = useCase("bk-1", ComplaintReason.SERVICE_QUALITY, "A long enough description.", null).toList()
@@ -41,7 +41,7 @@ public class SubmitComplaintUseCaseTest {
     @Test
     public fun `propagates failure from repository`(): Unit =
         runTest {
-            coEvery { repo.createComplaint(any(), any(), any(), any()) } returns
+            coEvery { repo.createComplaint(any(), any(), any(), any(), any()) } returns
                 flowOf(Result.failure(RuntimeException("network")))
 
             val results = useCase("bk-1", ComplaintReason.OTHER, "A long enough description.", null).toList()
@@ -53,7 +53,7 @@ public class SubmitComplaintUseCaseTest {
     public fun `uses reason code string from enum`(): Unit =
         runTest {
             coEvery {
-                repo.createComplaint("bk-1", "BILLING_DISPUTE", any(), any())
+                repo.createComplaint("bk-1", "BILLING_DISPUTE", any(), any(), any())
             } returns flowOf(Result.success(mockResponse))
 
             val results = useCase("bk-1", ComplaintReason.BILLING_DISPUTE, "Some long description here.", null).toList()

@@ -5,6 +5,7 @@ import com.homeservices.customer.domain.catalogue.CatalogueLocalizer
 import com.homeservices.customer.domain.catalogue.GetCategoriesUseCase
 import com.homeservices.customer.domain.catalogue.model.Category
 import com.homeservices.customer.domain.locale.GetCurrentLocaleUseCase
+import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -35,7 +36,7 @@ public class CatalogueHomeViewModelTest {
             flowOf(
                 Result.success(listOf(Category("1", "Plumbing", "https://cdn.example.com/plumbing.jpg", 3, minPricePaise = 39900))),
             )
-        sut = CatalogueHomeViewModel(useCase, localizer, getCurrentLocale)
+        sut = CatalogueHomeViewModel(useCase, localizer, getCurrentLocale, NoOpAnalyticsFacade())
     }
 
     @After
@@ -55,7 +56,7 @@ public class CatalogueHomeViewModelTest {
     public fun `uiState emits Error on failure`(): Unit =
         runTest(dispatcher) {
             every { useCase() } returns flowOf(Result.failure(IOException("net err")))
-            sut = CatalogueHomeViewModel(useCase, localizer, getCurrentLocale)
+            sut = CatalogueHomeViewModel(useCase, localizer, getCurrentLocale, NoOpAnalyticsFacade())
             assertThat(sut.uiState.value).isInstanceOf(CatalogueHomeUiState.Error::class.java)
         }
 }

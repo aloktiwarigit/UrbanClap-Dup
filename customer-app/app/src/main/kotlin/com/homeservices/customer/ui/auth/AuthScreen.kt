@@ -58,15 +58,15 @@ import com.homeservices.customer.R
 import com.homeservices.customer.domain.auth.PhoneNumberNormalizer
 import com.homeservices.designsystem.components.HsActionButton
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTrustBadge
+import com.homeservices.designsystem.theme.LocalHomeservicesExtendedColors
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
 
 private const val PHONE_LAST_DIGITS = 4
 
-private val AuthHeroStart = Color(0xFF062A20)
-private val AuthHeroEnd = Color(0xFF0B3D2E)
 private const val AUTH_HERO_FRACTION = 0.38f
 private const val AUTH_FORM_FRACTION = 0.65f
 private const val SCROLL_HANDLE_ALPHA = 0.25f
@@ -178,6 +178,9 @@ internal fun AuthScreen(
 
 @Composable
 private fun AuthHeroZone() {
+    val heroStart = LocalHomeservicesExtendedColors.current.brandPrimaryHover
+    val heroEnd = MaterialTheme.colorScheme.primary
+    val onPrimary = MaterialTheme.colorScheme.onPrimary
     Box(
         modifier =
             Modifier
@@ -185,16 +188,16 @@ private fun AuthHeroZone() {
                 .fillMaxHeight(AUTH_HERO_FRACTION)
                 .drawBehind {
                     drawRect(
-                        brush = Brush.verticalGradient(listOf(AuthHeroStart, AuthHeroEnd)),
+                        brush = Brush.verticalGradient(listOf(heroStart, heroEnd)),
                         size = size,
                     )
                     drawCircle(
-                        color = Color.White.copy(alpha = 0.06f),
+                        color = onPrimary.copy(alpha = 0.06f),
                         radius = 140.dp.toPx(),
                         center = Offset(size.width - 80.dp.toPx(), -60.dp.toPx()),
                     )
                     drawCircle(
-                        color = Color.White.copy(alpha = 0.09f),
+                        color = onPrimary.copy(alpha = 0.09f),
                         radius = 70.dp.toPx(),
                         center = Offset(40.dp.toPx(), size.height - 20.dp.toPx()),
                     )
@@ -205,12 +208,16 @@ private fun AuthHeroZone() {
             modifier = Modifier.padding(start = 28.dp, end = 28.dp, bottom = 36.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Text(text = "HomeHeroo", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, color = Color.White)
-            Text(text = "घर पर भरोसेमंद सेवा", style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.82f))
+            HsScreenTitle(text = "HomeHeroo", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onPrimary)
+            Text(
+                text = "घर पर भरोसेमंद सेवा",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.82f),
+            )
             Text(
                 text = "भरोसेमंद सेवा · 30 दिन गारंटी",
                 style = MaterialTheme.typography.labelSmall,
-                color = Color.White.copy(alpha = 0.65f),
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.65f),
             )
         }
     }
@@ -229,14 +236,14 @@ private fun AuthFrame(
         modifier =
             modifier
                 .fillMaxSize()
-                .background(AuthHeroEnd)
+                .background(MaterialTheme.colorScheme.primary)
                 .statusBarsPadding(),
     ) {
         AuthHeroZone()
         Surface(
             modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).fillMaxHeight(AUTH_FORM_FRACTION),
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-            color = Color.White,
+            color = MaterialTheme.colorScheme.surface,
             shadowElevation = 8.dp,
         ) {
             Column(
@@ -254,7 +261,7 @@ private fun AuthFrame(
                         Modifier
                             .width(40.dp)
                             .height(2.dp)
-                            .background(AuthHeroEnd.copy(alpha = SCROLL_HANDLE_ALPHA), RoundedCornerShape(1.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = SCROLL_HANDLE_ALPHA), RoundedCornerShape(1.dp))
                             .align(Alignment.CenterHorizontally),
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(spacing.space3)) {
@@ -336,7 +343,7 @@ private fun MethodSelectionContent(
 private fun GoogleMark() {
     Surface(
         shape = CircleShape,
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.size(22.dp),
     ) {

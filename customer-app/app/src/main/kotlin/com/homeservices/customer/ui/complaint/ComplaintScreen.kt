@@ -40,6 +40,7 @@ import com.homeservices.customer.R
 import com.homeservices.customer.domain.complaint.ComplaintReason
 import com.homeservices.customer.ui.components.CountdownChip
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTrustBadge
@@ -48,6 +49,7 @@ import com.homeservices.designsystem.components.HsTrustBadge
 public fun ComplaintScreen(
     bookingId: String,
     onBack: () -> Unit,
+    onComplaintSubmitted: () -> Unit = {},
     viewModel: ComplaintViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -66,7 +68,7 @@ public fun ComplaintScreen(
 
     ComplaintContent(
         state = uiState,
-        onBack = onBack,
+        onComplaintSubmitted = onComplaintSubmitted,
         onRetry = viewModel::onRetry,
         onReasonSelected = viewModel::onReasonSelected,
         onDescriptionChanged = viewModel::onDescriptionChanged,
@@ -80,7 +82,6 @@ public fun ComplaintScreen(
 @Composable
 internal fun ComplaintContent(
     state: ComplaintUiState,
-    onBack: () -> Unit,
     onRetry: () -> Unit,
     onReasonSelected: (ComplaintReason) -> Unit,
     onDescriptionChanged: (String) -> Unit,
@@ -88,10 +89,12 @@ internal fun ComplaintContent(
     onSubmit: () -> Unit,
     onReopen: () -> Unit,
     modifier: Modifier = Modifier,
+    onComplaintSubmitted: () -> Unit = {},
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (state) {
-            is ComplaintUiState.Success -> SuccessState(state = state, onBack = onBack, onReopen = onReopen)
+            is ComplaintUiState.Success ->
+                SuccessState(state = state, onBack = onComplaintSubmitted, onReopen = onReopen)
             is ComplaintUiState.PhotoUploading, ComplaintUiState.Submitting -> LoadingState()
             is ComplaintUiState.Error -> ErrorState(message = state.message, onRetry = onRetry)
             is ComplaintUiState.Idle ->
@@ -120,10 +123,9 @@ private fun IdleState(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         HsTrustBadge(text = stringResource(R.string.complaint_eyebrow))
-        Text(
-            stringResource(R.string.complaint_title),
+        HsScreenTitle(
+            text = stringResource(R.string.complaint_title),
             style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
         )
         Text(
             stringResource(R.string.complaint_body),

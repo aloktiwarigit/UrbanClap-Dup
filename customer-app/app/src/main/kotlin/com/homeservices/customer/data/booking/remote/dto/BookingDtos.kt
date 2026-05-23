@@ -17,6 +17,7 @@ public data class CreateBookingRequestDto(
     val addressLatLng: LatLngDto,
     val paymentMethod: String = BookingPaymentMethod.RAZORPAY.name,
     val applyCredit: Boolean = false,
+    val preferFemaleTechnician: Boolean = false,
 )
 
 @JsonClass(generateAdapter = true)
@@ -115,6 +116,7 @@ public data class CustomerBookingDto(
     val paymentMethod: String? = null,
     val createdAt: String,
     val ratingSubmitted: Boolean = false,
+    val razorpayOrderId: String? = null,
 ) {
     public fun toDomain(): CustomerBooking =
         CustomerBooking(
@@ -135,5 +137,12 @@ public data class CustomerBookingDto(
                     ?: BookingPaymentMethod.RAZORPAY,
             createdAt = createdAt,
             ratingSubmitted = ratingSubmitted,
+            razorpayOrderId = razorpayOrderId,
         )
 }
+
+@JsonClass(generateAdapter = true)
+public data class CancelBookingResponseDto(
+    val bookingId: String,
+    val status: String,
+)

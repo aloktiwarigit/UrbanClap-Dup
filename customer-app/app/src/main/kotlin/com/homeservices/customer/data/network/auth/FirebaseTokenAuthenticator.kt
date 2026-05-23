@@ -3,6 +3,7 @@ package com.homeservices.customer.data.network.auth
 import android.util.Log
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
+import io.sentry.Sentry
 import okhttp3.Authenticator
 import okhttp3.Request
 import okhttp3.Response
@@ -46,7 +47,7 @@ public class FirebaseTokenAuthenticator
 
             return try {
                 // Force-refresh (true) to get a new token, not the cached one
-                val result = Tasks.await(user.getIdToken(true))
+                val result = Tasks.await(user.getIdToken(true), 25, java.util.concurrent.TimeUnit.SECONDS)
                 val newToken = result?.token
                 if (newToken == null) {
                     Log.w(TAG, "getIdToken(true) returned null token")
@@ -59,6 +60,7 @@ public class FirebaseTokenAuthenticator
                     .build()
             } catch (e: Exception) {
                 Log.e(TAG, "Token force-refresh failed on 401", e)
+                Sentry.captureException(e)
                 null
             }
         }

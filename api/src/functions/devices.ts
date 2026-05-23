@@ -37,6 +37,29 @@ app.http('customerRegisterDevice', {
   handler: requireCustomer(customerRegisterDeviceHandler),
 });
 
+// ── Customer: DELETE /v1/devices/me (SEC-06: token in X-Device-Token header) ─────────────
+// New wire format — token is in X-Device-Token header, not in URL path.
+// The legacy /v1/devices/{deviceToken} endpoint is kept for the transition window while
+// old client builds (without SEC-06 fix) are still in the wild.
+
+export async function customerUnregisterDeviceMeHandler(
+  req: HttpRequest,
+  _ctx: InvocationContext,
+  customer: CustomerContext,
+): Promise<HttpResponseInit> {
+  const deviceToken = req.headers.get('x-device-token');
+  if (!deviceToken) return { status: 400, jsonBody: { code: 'MISSING_TOKEN' } };
+  await deviceTokenRepo.unregisterDeviceToken(customer.customerId, deviceToken);
+  return { status: 204 };
+}
+
+app.http('customerUnregisterDeviceMe', {
+  methods: ['DELETE'],
+  authLevel: 'anonymous',
+  route: 'v1/devices/me',
+  handler: requireCustomer(customerUnregisterDeviceMeHandler),
+});
+
 // ── Customer: DELETE /v1/devices/{deviceToken} ─────────────────────────────────
 
 export async function customerUnregisterDeviceHandler(

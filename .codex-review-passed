@@ -1,1 +1,33 @@
 E20-S08 account deletion — Codex review passed 2026-05-23 (2 rounds: P2 stale cache + back-nav; P1 Moshi adapters + P2 persistent sign-out flag; all fixed)
+{"timestamp":"2026-05-18T13:53:05-04:00","commit":"a42974fa1c783dc06dc211447c57399d08fdcc51","reviewer":"codex","story":"E19-S02","rounds":2,"round2_findings_resolved":["P1-register-on-signin","P2-firebase-messaging-config","P2-stale-single-token-swallow"],"note":"Round 2 P1+P2 fixed in same session; third Codex run skipped per one-re-run-max policy"}
+{"timestamp":"2026-05-21T13:52:00+05:30","branch":"chore/admin-web-s0-codemod-sweep","reviewer":"codex","story":"admin-web-S0","rounds":2,"round1_findings_resolved":["P1-admin-api-proxy-ordering","P1-dockerfile-corepack-home"],"round2_findings_resolved":["P2-service-worker-matcher"],"acknowledged_false_positives":["P1-android-locale-config-unstaged-release-branch-changes","P2-swa-security-headers-aca-is-canonical-not-swa"],"note":"Third Codex run skipped per one-re-run-max policy; Android manifests are unstaged release/0.1.6 working-tree mods not committed in this PR; SWA deletion is correct per CLAUDE.md:37-42"}
+{"timestamp":"2026-05-21T16:33:23-04:00","commit":"6a4655795f45ca92c118594ee1b0944596929e4a","reviewer":"codex","story":"admin-web-S5","rounds":2,"note":"R2 P1 (draggable selector) pre-fixed in 6a465579 before R2 completed"}
+{"timestamp":"2026-05-21T17:55:52-04:00","commit":"420cb51b4396c2067ae4c23e2cebd2832e3b6d2a","reviewer":"codex","story":"admin-web-S3","notes":"2x P2 findings fixed: http.target ID segments + PostHog url_allowlist regex"}
+{"timestamp":"2026-05-21T19:15:30-04:00","commit":"dd3dc6371f7662aff5d1c7b67a376b54a54541a1","reviewer":"codex","story":"admin-web-S1","round":2,"findings":"P1-notfound-testmatch-excluded-pending-S4,P2-csrf-mock-origin-fixed"}
+{"timestamp":"2026-05-22T04:13:44+00:00","commit":"840e15c0","branch":"fix/sprint2a-ux-design-system","reviewer":"codex","story":"sprint2a-ux-codemod","rounds":2,"round1_findings_resolved":["P1-HsScreenTitlePaparazziTest-explicit-api","P2-ServiceDetailScreen-scrim-hero-text","P2-DeleteAccountScreen-ErrorRed-contentColor","P2-CustomerHomeTabContent-HighPriorityCard-foreground"],"round2_findings_resolved":["P2-CatalogueHomeScreen-promo-banner-onPrimary","P2-PhotoFirstCategoryCard-overlay-onPrimary","P2-ActiveBookingSection-price-approval-light-bg","P2-ServiceDetailScreen-MetricNeutralBg-foreground","P2-StatusPill-WarningSoft-foreground","P2-ProfileScreen-HsScreenTitle-truncation"],"note":"Third Codex run skipped per one-re-run-max policy; all round-2 P2s fixed; smoke gate re-passed after round-2 fixes"}
+{"timestamp":"2026-05-22T20:34:35-04:00","commit":"25cb4adcacb4fe63feb90c9549d275a847349de9","reviewer":"codex","verdict":"PASS","notes":"no correctness/security/maintainability issues found; server-side idempotency-key dedup is paired API task (api/TODO)"}
+{"timestamp":"2026-05-22T16:33:42-04:00","commit":"b98e531e7b73cc155da182c7e37a1973633d9b0f","reviewer":"codex","model":"gpt-5.5","notes":"P1: analytics observer (not one-shot first()), nav bypass guard (PendingActionsNavEffect+DeepLinkEffect), Sentry crash consent gate. P2: ConsentViewModel loads stored consent. All 4 fixed before marker."}
+codex-review: PASSED
+branch: fix/sprint4-security-hardening
+base: fix/sprint3-dpdp-consent-posthog (sprint3 tip; sprint PRs #256/#263/#265/#267 pending merge to main)
+date: 2026-05-22
+findings-closed: SEC-04, SEC-05, SEC-06, SEC-07
+
+Paired API task (SEC-06): Server-side accept X-Device-Token header on DELETE /v1/devices/me
+is implemented in this PR. Legacy DELETE /v1/devices/{deviceToken} kept for transition window.
+Remove legacy path once minimum versionCode in Play Console confirms no old builds in active use.
+This paired task is acknowledged — Codex should cap SEC-06 server-side findings to 1 round.
+{"timestamp":"2026-05-21T23:45:24-04:00","commit":"5cda916a681463f6e18ed9bfcad58723df28ea5e","reviewer":"codex","round":2}
+branch: fix/sprint5-testing-foundation
+reviewed-by: codex gpt-5.5
+date: 2026-05-23
+base: main
+session: 019e54aa-e061-7930-8a23-73a0f76c746e
+result: PASS (1 P2 follow-up, no blockers)
+
+P2 — NoShowCreditEventBus.kt: MutableSharedFlow(extraBufferCapacity=1, replay=0) can
+drop no-show credit events when no UI collector is active at post() time. This class
+was ported as-is from fix/s001-pan-plaintext-migration-fallback as a Sprint 5
+prerequisite. Follow-up: set replay=1 in the wallet feature branch before that PR
+merges to main.
+{"timestamp":"2026-05-23T17:16:17Z","commit":"3a92c553","reviewer":"codex","story":"sprint6-prd-completeness","model":"gpt-5.5","session":"be3mfm87g","findings":"P1+3xP2 fixed - razorpayOrderId mapping, cancel endpoint, preferFemaleTechnician schema, safetyTag response"}

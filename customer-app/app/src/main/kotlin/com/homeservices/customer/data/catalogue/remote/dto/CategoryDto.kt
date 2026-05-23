@@ -18,8 +18,9 @@ public data class CategoryDto(
     @Json(name = "id") public val id: String,
     @Json(name = "name") public val name: String,
     @Json(name = "heroImageUrl") public val heroImageUrl: String,
-    @Json(name = "sortOrder") public val sortOrder: Int,
+    @Json(name = "sortOrder") public val sortOrder: Int = 0,
     @Json(name = "services") public val services: List<ServiceCardDto>,
+    @Json(name = "safetyTag") public val safetyTag: Boolean = false,
 )
 
 public fun CategoryDto.toDomain(): com.homeservices.customer.domain.catalogue.model.Category =
@@ -29,4 +30,5 @@ public fun CategoryDto.toDomain(): com.homeservices.customer.domain.catalogue.mo
         imageUrl = heroImageUrl,
         serviceCount = services.size,
         minPricePaise = services.minOfOrNull { it.basePrice } ?: 0,
+        safetyTag = safetyTag,
     )

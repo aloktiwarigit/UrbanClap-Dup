@@ -25,7 +25,10 @@ public class TrackingRepositoryImplTest {
     private class FakeBookingApiService(
         var status: String = "ASSIGNED",
     ) : BookingApiService {
-        override suspend fun createBooking(body: CreateBookingRequestDto): CreateBookingResponseDto = error("not used")
+        override suspend fun createBooking(
+            body: CreateBookingRequestDto,
+            idempotencyKey: String,
+        ): CreateBookingResponseDto = error("not used")
 
         override suspend fun confirmBooking(
             bookingId: String,
@@ -53,6 +56,9 @@ public class TrackingRepositoryImplTest {
             serviceId: String,
             date: String,
         ): SlotAvailabilityResponseDto = error("not used")
+
+        override suspend fun cancelBooking(bookingId: String): com.homeservices.customer.data.booking.remote.dto.CancelBookingResponseDto =
+            error("not used")
     }
 
     @Test

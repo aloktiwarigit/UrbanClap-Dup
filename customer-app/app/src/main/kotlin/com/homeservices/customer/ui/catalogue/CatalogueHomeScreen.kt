@@ -84,19 +84,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.catalogue.model.Category
+import com.homeservices.customer.ui.booking.PendingBookingResumeBanner
 import com.homeservices.customer.ui.bookings.CustomerBookingsScreen
 import com.homeservices.customer.ui.util.formatInr
 import com.homeservices.customer.ui.wallet.WalletBalanceChip
+import com.homeservices.designsystem.components.HsScreenTitle
 import kotlinx.coroutines.delay
-
-// ── Colour tokens (Codex-refined) ────────────────────────────────────────────
-private val BrandGreen = Color(0xFF0B3D2E)
-private val WarmIvory = Color(0xFFFBF7EF)
-private val SurfaceWhite = Color(0xFFFFFFFF)
-private val MutedGreen = Color(0xFFE8F1EC)
-private val CardBorder = Color(0xFFDED8CD)
-private val TextPrimary = Color(0xFF18231F)
-private val TextSecondary = Color(0xFF5F6C66)
 
 // ── Promo banners ─────────────────────────────────────────────────────────────
 // To activate real photos: place banner_1.jpg / banner_2.jpg / banner_3.jpg in
@@ -145,6 +138,7 @@ private data class CategoryStyle(
     val icon: ImageVector,
 )
 
+@Suppress("MagicNumber") // hardcoded palette entries in a category-style lookup table
 private fun categoryStyle(id: String): CategoryStyle =
     when (id) {
         "ac-repair" -> CategoryStyle(Color(0xFFEAF4F7), Color(0xFF246174), Icons.Default.AcUnit)
@@ -152,7 +146,7 @@ private fun categoryStyle(id: String): CategoryStyle =
         "plumbing" -> CategoryStyle(Color(0xFFEAF4EE), Color(0xFF2E6B4F), Icons.Default.Plumbing)
         "electrical" -> CategoryStyle(Color(0xFFF5EFE4), Color(0xFF80622F), Icons.Default.ElectricBolt)
         "water-purifier" -> CategoryStyle(Color(0xFFEAF4EE), Color(0xFF2E6B4F), Icons.Default.FilterAlt)
-        else -> CategoryStyle(MutedGreen, BrandGreen, Icons.Default.Build)
+        else -> CategoryStyle(Color(0xFFE8F1EC), Color(0xFF0B3D2E), Icons.Default.Build)
     }
 
 // formatPrice removed — price label is now built at the call site using stringResource
@@ -189,6 +183,10 @@ internal fun CatalogueHomeScreen(
     photoFirstCatalogueEnabled: Boolean = false,
     onPendingActionRoute: (String) -> Unit = {},
     onPriceApproval: (String) -> Unit = {},
+    onManageConsentClick: () -> Unit = {},
+    onResumePayment: (bookingId: String, orderId: String, amount: Int) -> Unit = { _, _, _ -> },
+    onCancelPendingBooking: (bookingId: String) -> Unit = {},
+    onPrivacyAndDataClick: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val homeUiState by customerHomeViewModel.homeUiState.collectAsStateWithLifecycle()
@@ -207,6 +205,13 @@ internal fun CatalogueHomeScreen(
         photoFirstCatalogueEnabled = photoFirstCatalogueEnabled,
         onPendingActionRoute = onPendingActionRoute,
         onPriceApproval = onPriceApproval,
+        onManageConsentClick = onManageConsentClick,
+        onResumePayment = onResumePayment,
+        onCancelPendingBooking = { id ->
+            customerHomeViewModel.cancelPendingBooking(id)
+            onCancelPendingBooking(id)
+        },
+        onPrivacyAndDataClick = onPrivacyAndDataClick,
     )
 }
 
@@ -226,11 +231,15 @@ internal fun CatalogueHomeContent(
     homeUiState: CustomerHomeUiState = CustomerHomeUiState.Loading,
     onPendingActionRoute: (String) -> Unit = {},
     onPriceApproval: (String) -> Unit = {},
+    onManageConsentClick: () -> Unit = {},
+    onResumePayment: (bookingId: String, orderId: String, amount: Int) -> Unit = { _, _, _ -> },
+    onCancelPendingBooking: (bookingId: String) -> Unit = {},
+    onPrivacyAndDataClick: () -> Unit = {},
 ) {
     var selectedNav by remember { mutableIntStateOf(0) }
 
     Scaffold(
-        containerColor = WarmIvory,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             when (selectedNav) {
                 0 ->
@@ -260,6 +269,10 @@ internal fun CatalogueHomeContent(
             photoFirstCatalogueEnabled = photoFirstCatalogueEnabled,
             onPendingActionRoute = onPendingActionRoute,
             onPriceApproval = onPriceApproval,
+            onManageConsentClick = onManageConsentClick,
+            onResumePayment = onResumePayment,
+            onCancelPendingBooking = onCancelPendingBooking,
+            onPrivacyAndDataClick = onPrivacyAndDataClick,
         )
     }
 }
@@ -279,6 +292,10 @@ private fun HomeTabs(
     homeUiState: CustomerHomeUiState = CustomerHomeUiState.Loading,
     onPendingActionRoute: (String) -> Unit = {},
     onPriceApproval: (String) -> Unit = {},
+    onManageConsentClick: () -> Unit = {},
+    onResumePayment: (bookingId: String, orderId: String, amount: Int) -> Unit = { _, _, _ -> },
+    onCancelPendingBooking: (bookingId: String) -> Unit = {},
+    onPrivacyAndDataClick: () -> Unit = {},
 ) {
     when (selectedNav) {
         0 ->
@@ -293,6 +310,8 @@ private fun HomeTabs(
                 onPriceApproval = onPriceApproval,
                 onRateBooking = onRateBooking,
                 onComplainBooking = onComplainBooking,
+                onResumePayment = onResumePayment,
+                onCancelPendingBooking = onCancelPendingBooking,
             )
         1 ->
             CustomerBookingsScreen(
@@ -312,6 +331,8 @@ private fun HomeTabs(
                 modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
                 onLanguageClick = onProfileLanguageClick,
                 onBookingsClick = { onSelectNav(1) },
+                onManageConsentClick = onManageConsentClick,
+                onPrivacyAndDataClick = onPrivacyAndDataClick,
             )
     }
 }
@@ -328,6 +349,8 @@ private fun CatalogueTab(
     onPriceApproval: (String) -> Unit = {},
     onRateBooking: (String) -> Unit = {},
     onComplainBooking: (String) -> Unit = {},
+    onResumePayment: (bookingId: String, orderId: String, amount: Int) -> Unit = { _, _, _ -> },
+    onCancelPendingBooking: (bookingId: String) -> Unit = {},
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
@@ -343,6 +366,26 @@ private fun CatalogueTab(
                 onComplainBooking = onComplainBooking,
             )
         }
+        val pendingPaymentBooking = (homeUiState as? CustomerHomeUiState.Ready)?.pendingPaymentBooking
+        if (pendingPaymentBooking != null) {
+            item {
+                val orderId = pendingPaymentBooking.razorpayOrderId
+                if (orderId != null) {
+                    PendingBookingResumeBanner(
+                        serviceName = pendingPaymentBooking.serviceName,
+                        amountPaise = pendingPaymentBooking.amountPaise,
+                        onResumePayment = {
+                            onResumePayment(
+                                pendingPaymentBooking.bookingId,
+                                orderId,
+                                pendingPaymentBooking.amountPaise.toInt(),
+                            )
+                        },
+                        onCancel = { onCancelPendingBooking(pendingPaymentBooking.bookingId) },
+                    )
+                }
+            }
+        }
         item { PromoSlider() }
         item { TrustStrip() }
         when (uiState) {
@@ -353,7 +396,7 @@ private fun CatalogueTab(
                     Text(
                         text = stringResource(R.string.catalogue_our_services),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, fontSize = 19.sp),
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
                     )
                 }
@@ -394,7 +437,7 @@ private fun StickyHero(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(WarmIvory)
+                .background(MaterialTheme.colorScheme.background)
                 .statusBarsPadding()
                 .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 10.dp),
     ) {
@@ -419,19 +462,24 @@ private fun HeroTopRow(onSettingsClick: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            HsScreenTitle(
                 text = "HomeHeroo",
                 style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold, fontSize = 22.sp),
-                color = BrandGreen,
+                color = MaterialTheme.colorScheme.primary,
             )
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.LocationOn, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(15.dp))
+                Icon(
+                    Icons.Default.LocationOn,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(15.dp),
+                )
                 Spacer(Modifier.width(4.dp))
                 Text(
                     text = stringResource(R.string.catalogue_location_display),
                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -443,10 +491,15 @@ private fun HeroTopRow(onSettingsClick: () -> Unit) {
                 Modifier
                     .size(42.dp)
                     .clip(CircleShape)
-                    .background(SurfaceWhite)
-                    .border(1.dp, CardBorder, CircleShape),
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
         ) {
-            Icon(Icons.Default.Settings, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(21.dp))
+            Icon(
+                Icons.Default.Settings,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(21.dp),
+            )
         }
     }
 }
@@ -461,29 +514,29 @@ private fun HeroSearchBar() {
             Text(
                 stringResource(R.string.catalogue_search_hint),
                 style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         },
         leadingIcon = {
-            Icon(Icons.Default.Search, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(23.dp))
+            Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(23.dp))
         },
         singleLine = true,
         shape = RoundedCornerShape(18.dp),
         colors =
             TextFieldDefaults.colors(
-                focusedContainerColor = SurfaceWhite,
-                unfocusedContainerColor = SurfaceWhite,
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
                 disabledIndicatorColor = Color.Transparent,
-                focusedTextColor = TextPrimary,
-                unfocusedTextColor = TextPrimary,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
             ),
         modifier =
             Modifier
                 .fillMaxWidth()
                 .height(52.dp)
-                .border(1.dp, CardBorder, RoundedCornerShape(18.dp)),
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(18.dp)),
     )
 }
 
@@ -493,7 +546,7 @@ private fun CompactTabBar(title: String) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(WarmIvory)
+                .background(MaterialTheme.colorScheme.background)
                 .statusBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -501,7 +554,7 @@ private fun CompactTabBar(title: String) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-            color = TextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }
@@ -550,7 +603,7 @@ private fun PromoSlider() {
                                     Brush.verticalGradient(
                                         listOf(
                                             Color.Transparent,
-                                            Color(0xFF000000).copy(alpha = 0.62f),
+                                            Color.Black.copy(alpha = 0.62f),
                                         ),
                                     ),
                                 ),
@@ -573,6 +626,8 @@ private fun PromoSlider() {
                         Text(
                             b.title,
                             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold, fontSize = 24.sp),
+                            // Promo banners sit over photos with a fixed dark scrim — use Color.White
+                            // so text is readable in both light and dark mode (onPrimary is dark in dark theme).
                             color = Color.White,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
@@ -605,7 +660,7 @@ private fun PromoSlider() {
                             .padding(horizontal = 3.dp)
                             .size(if (sel) 18.dp else 5.dp, 5.dp)
                             .clip(if (sel) RoundedCornerShape(3.dp) else CircleShape)
-                            .background(if (sel) BrandGreen else Color(0xFFD1D5DB)),
+                            .background(if (sel) MaterialTheme.colorScheme.primary else Color(0xFFD1D5DB)),
                 )
             }
         }
@@ -637,18 +692,18 @@ private fun TrustChip(
             modifier
                 .height(44.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(SurfaceWhite)
-                .border(1.dp, CardBorder, RoundedCornerShape(14.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
                 .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        Icon(icon, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(18.dp))
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(4.dp))
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.SemiBold),
-            color = BrandGreen,
+            color = MaterialTheme.colorScheme.primary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -676,8 +731,8 @@ private fun CategoryCard(
                 .height(126.dp)
                 .scale(scale)
                 .clip(RoundedCornerShape(16.dp))
-                .background(SurfaceWhite)
-                .border(1.dp, CardBorder, RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onPress = {
@@ -704,7 +759,7 @@ private fun CategoryCard(
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowForward,
                     contentDescription = null,
-                    tint = TextSecondary.copy(alpha = 0.55f),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
                     modifier = Modifier.size(16.dp),
                 )
             }
@@ -712,7 +767,7 @@ private fun CategoryCard(
             Text(
                 text = category.name,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 18.sp),
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -730,7 +785,7 @@ private fun CategoryCard(
                             lineHeight = 16.sp,
                             fontWeight = FontWeight.SemiBold,
                         ),
-                    color = BrandGreen,
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
         }
@@ -758,8 +813,8 @@ private fun HomeBottomNav(
                     .height(68.dp)
                     .shadow(24.dp, RoundedCornerShape(28.dp), clip = false)
                     .clip(RoundedCornerShape(28.dp))
-                    .background(Color.White.copy(alpha = 0.74f))
-                    .border(1.dp, Color.White.copy(alpha = 0.86f), RoundedCornerShape(28.dp))
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.74f))
+                    .border(1.dp, MaterialTheme.colorScheme.surface.copy(alpha = 0.86f), RoundedCornerShape(28.dp))
                     .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -783,13 +838,13 @@ private fun GlassNavItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val itemColor = if (selected) BrandGreen else TextSecondary
+    val itemColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
     Column(
         modifier =
             modifier
                 .height(52.dp)
                 .clip(RoundedCornerShape(22.dp))
-                .background(if (selected) MutedGreen.copy(alpha = 0.95f) else Color.Transparent)
+                .background(if (selected) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f) else Color.Transparent)
                 .clickable(onClick = onClick)
                 .padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -814,7 +869,7 @@ private fun GlassNavItem(
 @Composable
 private fun LoadingState() {
     Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(color = BrandGreen)
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -826,10 +881,14 @@ private fun ErrorState() {
                 stringResource(R.string.catalogue_error_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(Modifier.height(6.dp))
-            Text(stringResource(R.string.catalogue_error), style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+            Text(
+                stringResource(R.string.catalogue_error),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -888,25 +947,34 @@ private fun SupportHero() {
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
-                .background(Brush.horizontalGradient(listOf(BrandGreen, Color(0xFF123B32))))
+                .background(Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primary, Color(0xFF123B32))))
                 .padding(18.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier.size(46.dp).background(Color.White.copy(alpha = 0.16f), RoundedCornerShape(16.dp)),
+                modifier =
+                    Modifier
+                        .size(
+                            46.dp,
+                        ).background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.16f), RoundedCornerShape(16.dp)),
             ) {
-                Icon(Icons.Default.SupportAgent, contentDescription = null, tint = Color.White, modifier = Modifier.size(26.dp))
+                Icon(
+                    Icons.Default.SupportAgent,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(26.dp),
+                )
             }
             Text(
                 text = "मदद और सुरक्षा",
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold),
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onPrimary,
             )
             Text(
                 text = "बुकिंग, भुगतान, शिकायत और सुरक्षा मामलों के लिए Owner support उपलब्ध है।",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.84f),
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.84f),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SupportPill("30 दिन गारंटी")
@@ -921,11 +989,11 @@ private fun SupportPill(label: String) {
     Text(
         text = label,
         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.onPrimary,
         modifier =
             Modifier
                 .clip(RoundedCornerShape(999.dp))
-                .background(Color.White.copy(alpha = 0.14f))
+                .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.14f))
                 .padding(horizontal = 10.dp, vertical = 6.dp),
         maxLines = 1,
     )
@@ -964,8 +1032,8 @@ private fun SupportCardFrame(
             modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(18.dp))
-                .background(SurfaceWhite)
-                .border(1.dp, CardBorder, RoundedCornerShape(18.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(18.dp))
                 .padding(16.dp),
     ) {
         content()
@@ -986,22 +1054,22 @@ private fun SupportCardContent(
     ) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(44.dp).background(MutedGreen, RoundedCornerShape(15.dp)),
+            modifier = Modifier.size(44.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(15.dp)),
         ) {
-            Icon(icon, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(24.dp))
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
         }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -1010,7 +1078,7 @@ private fun SupportCardContent(
             Icon(
                 Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,
-                tint = TextSecondary.copy(alpha = 0.64f),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.64f),
                 modifier = Modifier.size(18.dp),
             )
         }

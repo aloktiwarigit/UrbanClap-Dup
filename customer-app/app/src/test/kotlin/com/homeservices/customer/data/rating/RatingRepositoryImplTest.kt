@@ -7,27 +7,38 @@ import com.homeservices.customer.domain.rating.model.CustomerSubScores
 import com.homeservices.customer.domain.rating.model.RatingSnapshot
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import io.mockk.slot
+import io.mockk.unmockkAll
+import io.mockk.verify
+import io.sentry.Sentry
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 
 public class RatingRepositoryImplTest {
     private val api: RatingApiService = mockk()
     private val repo = RatingRepositoryImpl(api)
 
+    @AfterEach
+    public fun tearDown() {
+        unmockkAll()
+    }
+
     @Test
     public fun `submitCustomerRating calls api with correct DTO`(): Unit =
         runTest {
-            coEvery { api.submit(any()) } returns Unit
+            coEvery { api.submit(any(), any()) } returns Unit
             val subScores = CustomerSubScores(punctuality = 5, skill = 4, behaviour = 3)
 
-            val results = repo.submitCustomerRating("bk-1", 5, subScores, "good").toList()
+            val results = repo.submitCustomerRating("bk-1", 5, subScores, "good", "test-key-1").toList()
 
             val captured = slot<com.homeservices.customer.data.rating.remote.dto.SubmitRatingRequestDto>()
-            coVerify { api.submit(capture(captured)) }
+            coVerify { api.submit(capture(captured), any()) }
             assertThat(captured.captured.side).isEqualTo("CUSTOMER_TO_TECH")
             assertThat(captured.captured.bookingId).isEqualTo("bk-1")
             assertThat(captured.captured.overall).isEqualTo(5)
@@ -38,11 +49,24 @@ public class RatingRepositoryImplTest {
     @Test
     public fun `submitCustomerRating returns failure on API error`(): Unit =
         runTest {
-            coEvery { api.submit(any()) } throws RuntimeException("network error")
+            coEvery { api.submit(any(), any()) } throws RuntimeException("network error")
 
-            val results = repo.submitCustomerRating("bk-1", 5, CustomerSubScores(5, 5, 5), null).toList()
+            val results = repo.submitCustomerRating("bk-1", 5, CustomerSubScores(5, 5, 5), null, "test-key-err").toList()
 
             assertThat(results.first().isFailure).isTrue()
+        }
+
+    @Test
+    public fun `submitCustomerRating passes idempotency key to api`(): Unit =
+        runTest {
+            coEvery { api.submit(any(), any()) } returns Unit
+            val subScores = CustomerSubScores(punctuality = 4, skill = 4, behaviour = 4)
+            val capturedKey = slot<String>()
+
+            repo.submitCustomerRating("bk-2", 4, subScores, null, "idem-key-abc").toList()
+
+            coVerify { api.submit(any(), capture(capturedKey)) }
+            assertThat(capturedKey.captured).isEqualTo("idem-key-abc")
         }
 
     @Test
@@ -73,5 +97,18 @@ public class RatingRepositoryImplTest {
             val results = repo.get("bk-1").toList()
 
             assertThat(results.first().isFailure).isTrue()
+        }
+
+    @Test
+    public fun `submitCustomerRating captures exception in Sentry on failure`(): Unit =
+        runTest {
+            mockkStatic("io.sentry.Sentry")
+            coEvery { api.submit(any(), any()) } throws RuntimeException("network error")
+            every { Sentry.captureException(any()) } returns mockk()
+
+            repo.submitCustomerRating("bk-1", 5, CustomerSubScores(5, 5, 5), null, "idem-key").toList()
+
+            verify { Sentry.captureException(any()) }
+            unmockkAll()
         }
 }

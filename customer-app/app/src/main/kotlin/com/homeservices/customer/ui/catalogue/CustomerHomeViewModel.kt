@@ -62,6 +62,12 @@ public class CustomerHomeViewModel
         @Suppress("FunctionOnlyReturningConstant")
         public fun isDirty(): Boolean = false
 
+        public fun cancelPendingBooking(bookingId: String) {
+            viewModelScope.launch {
+                bookingRepository.cancelBooking(bookingId)
+            }
+        }
+
         // ── Private helpers ────────────────────────────────────────────────────
 
         @OptIn(ExperimentalCoroutinesApi::class)
@@ -104,11 +110,22 @@ public class CustomerHomeViewModel
                         ?: emptyList()
                 }
 
-            return combine(pendingActionsFlow, activeBookingFlow, recentBookingsFlow) { actions, active, recent ->
+            val pendingPaymentBookingFlow: Flow<CustomerBooking?> =
+                bookingsFlow.map { result ->
+                    result.getOrNull()?.firstOrNull { it.status == CustomerBookingStatus.PENDING_PAYMENT }
+                }
+
+            return combine(
+                pendingActionsFlow,
+                activeBookingFlow,
+                recentBookingsFlow,
+                pendingPaymentBookingFlow,
+            ) { actions, active, recent, pendingPayment ->
                 CustomerHomeUiState.Ready(
                     pendingActions = actions,
                     activeBooking = active,
                     recentBookings = recent,
+                    pendingPaymentBooking = pendingPayment,
                 )
             }
         }

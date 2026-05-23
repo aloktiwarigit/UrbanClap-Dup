@@ -53,6 +53,7 @@ import com.homeservices.customer.domain.booking.model.BookingPaymentMethod
 import com.homeservices.customer.domain.booking.model.RazorpayErrorCode
 import com.homeservices.designsystem.components.HsInfoRow
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsSkeletonBlock
 import com.razorpay.Checkout
@@ -72,6 +73,8 @@ internal fun BookingSummaryScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val walletBalanceInPaise by viewModel.walletBalanceInPaise.collectAsStateWithLifecycle()
     val applyCreditToggle by viewModel.applyCreditToggle.collectAsStateWithLifecycle()
+    val showWomenSafeToggle by viewModel.showWomenSafeToggle.collectAsStateWithLifecycle()
+    val preferFemaleTechnician by viewModel.preferFemaleTechnician.collectAsStateWithLifecycle()
     val activity = LocalContext.current as? Activity
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -111,10 +114,14 @@ internal fun BookingSummaryScreen(
         walletBalanceInPaise = walletBalanceInPaise,
         applyCreditToggle = applyCreditToggle,
         onApplyCreditChanged = viewModel::setApplyCreditToggle,
+        showWomenSafeToggle = showWomenSafeToggle,
+        preferFemaleTechnician = preferFemaleTechnician,
+        onPreferFemaleChange = viewModel::setPreferFemaleTechnician,
         snackbarHostState = snackbarHostState,
         onCreateBooking = { paymentMethod -> viewModel.startBooking(serviceId, categoryId, paymentMethod) },
         onRetryPayment = viewModel::retryPayment,
         onCancelPaymentFailed = viewModel::cancelPaymentFailed,
+        onRetryNetworkError = viewModel::retryNetworkError,
         onBack = onBack,
     )
 }
@@ -132,6 +139,10 @@ internal fun BookingSummaryContent(
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onRetryPayment: () -> Unit = {},
     onCancelPaymentFailed: () -> Unit = {},
+    showWomenSafeToggle: Boolean = false,
+    preferFemaleTechnician: Boolean = false,
+    onPreferFemaleChange: (Boolean) -> Unit = {},
+    onRetryNetworkError: () -> Unit = {},
 ) {
     var selectedPaymentMethod by rememberSaveable { mutableStateOf(BookingPaymentMethod.RAZORPAY) }
 
@@ -168,6 +179,9 @@ internal fun BookingSummaryContent(
                         walletBalanceInPaise = walletBalanceInPaise,
                         applyCreditToggle = applyCreditToggle,
                         onApplyCreditChanged = onApplyCreditChanged,
+                        showWomenSafeToggle = showWomenSafeToggle,
+                        preferFemaleTechnician = preferFemaleTechnician,
+                        onPreferFemaleChange = onPreferFemaleChange,
                     )
                 is BookingUiState.CreatingBooking,
                 is BookingUiState.AwaitingPayment,
@@ -179,6 +193,8 @@ internal fun BookingSummaryContent(
                         onRetry = onRetryPayment,
                         onCancel = onCancelPaymentFailed,
                     )
+                is BookingUiState.NetworkError ->
+                    NetworkErrorCard(message = state.message, onRetry = onRetryNetworkError)
                 is BookingUiState.Error -> BookingError(message = state.message)
                 else -> Unit
             }
@@ -196,6 +212,9 @@ private fun ReadySummary(
     walletBalanceInPaise: Long = 0L,
     applyCreditToggle: Boolean = false,
     onApplyCreditChanged: (Boolean) -> Unit = {},
+    showWomenSafeToggle: Boolean = false,
+    preferFemaleTechnician: Boolean = false,
+    onPreferFemaleChange: (Boolean) -> Unit = {},
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Column(
@@ -204,10 +223,9 @@ private fun ReadySummary(
                     .weight(1f)
                     .verticalScroll(rememberScrollState()),
         ) {
-            Text(
+            HsScreenTitle(
                 text = stringResource(R.string.booking_summary_heading),
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.height(6.dp))
             Text(
@@ -232,6 +250,13 @@ private fun ReadySummary(
                     walletBalanceInPaise = walletBalanceInPaise,
                     applyCreditToggle = applyCreditToggle,
                     onApplyCreditChanged = onApplyCreditChanged,
+                )
+            }
+            if (showWomenSafeToggle) {
+                Spacer(Modifier.height(12.dp))
+                WomenSafeFilterToggle(
+                    checked = preferFemaleTechnician,
+                    onCheckedChange = onPreferFemaleChange,
                 )
             }
             Spacer(Modifier.height(12.dp))
@@ -516,6 +541,36 @@ private fun BookingError(message: String) {
             text = message,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun NetworkErrorCard(
+    message: String,
+    onRetry: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = stringResource(R.string.booking_network_error_title),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(20.dp))
+        HsPrimaryButton(
+            text = stringResource(R.string.booking_network_error_retry),
+            onClick = onRetry,
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }

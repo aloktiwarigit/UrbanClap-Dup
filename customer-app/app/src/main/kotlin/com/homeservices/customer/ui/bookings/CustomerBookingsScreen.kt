@@ -53,13 +53,9 @@ import com.homeservices.customer.ui.util.formatInr
 import com.homeservices.customer.ui.wallet.NoShowCreditBanner
 import com.homeservices.customer.ui.wallet.NoShowCreditViewModel
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.components.HsSecondaryButton
 
-private val Ink = Color(0xFF18231F)
-private val Muted = Color(0xFF5F6C66)
-private val DeepGreen = Color(0xFF0B3D2E)
-private val SoftGreen = Color(0xFFE8F1EC)
-private val Warning = Color(0xFFB68A2C)
 private val WarningSoft = Color(0xFFF2E7CF)
 
 @Composable
@@ -130,16 +126,14 @@ internal fun CustomerBookingsContent(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
+                    HsScreenTitle(
                         text = stringResource(R.string.bookings_title),
                         style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Ink,
                     )
                     Text(
                         text = stringResource(R.string.bookings_subtitle),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Muted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 IconButton(onClick = onRefresh) {
@@ -188,7 +182,7 @@ private fun BookingCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         tonalElevation = 1.dp,
     ) {
         Column(
@@ -205,14 +199,14 @@ private fun BookingCard(
                     text = formatInr(booking.amountPaise),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Ink,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
             Text(
                 text = booking.serviceName,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = Ink,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -274,17 +268,18 @@ private fun InfoLine(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Icon(icon, contentDescription = null, tint = Muted, modifier = Modifier.size(18.dp))
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
-            color = Muted,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
     }
 }
 
+@Suppress("MagicNumber") // 0xFFB68A2C = fixed amber text on WarningSoft (light bg); visible in dark mode
 @Composable
 private fun StatusPill(
     label: String,
@@ -292,14 +287,16 @@ private fun StatusPill(
 ) {
     Surface(
         shape = RoundedCornerShape(999.dp),
-        color = if (active) SoftGreen else WarningSoft,
+        color = if (active) MaterialTheme.colorScheme.surfaceVariant else WarningSoft,
     ) {
         Text(
             text = label,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
-            color = if (active) DeepGreen else Warning,
+            // WarningSoft is a fixed light amber background — use a fixed dark-amber foreground so
+            // the inactive pill remains readable in dark mode (secondary is light in dark theme).
+            color = if (active) MaterialTheme.colorScheme.primary else Color(0xFFB68A2C),
         )
     }
 }
@@ -309,7 +306,7 @@ private fun LoadingCard() {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -331,7 +328,7 @@ private fun ErrorCard(onRefresh: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         tonalElevation = 1.dp,
     ) {
         Column(
@@ -342,12 +339,12 @@ private fun ErrorCard(onRefresh: () -> Unit) {
                 text = stringResource(R.string.bookings_error_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Ink,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
                 text = stringResource(R.string.bookings_error_body),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Muted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             HsSecondaryButton(
                 text = stringResource(R.string.bookings_retry),
@@ -369,13 +366,13 @@ private fun EmptyBookingsCard() {
             modifier =
                 Modifier
                     .size(56.dp)
-                    .background(SoftGreen, RoundedCornerShape(20.dp)),
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(20.dp)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = Icons.Default.BookOnline,
                 contentDescription = null,
-                tint = DeepGreen,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(28.dp),
             )
         }
@@ -383,12 +380,12 @@ private fun EmptyBookingsCard() {
             text = stringResource(R.string.bookings_no_bookings),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = Ink,
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
             text = stringResource(R.string.bookings_no_bookings_body),
             style = MaterialTheme.typography.bodyMedium,
-            color = Muted,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
     }

@@ -54,6 +54,7 @@ import com.homeservices.customer.ui.shared.TrustDossierUiState
 import com.homeservices.customer.ui.shared.TrustDossierViewModel
 import com.homeservices.customer.ui.wallet.NoShowCreditBanner
 import com.homeservices.customer.ui.wallet.NoShowCreditViewModel
+import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.components.HsSecondaryButton
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,7 +87,7 @@ internal fun LiveTrackingScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.tracking_title)) },
+                title = { HsScreenTitle(text = stringResource(R.string.tracking_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(

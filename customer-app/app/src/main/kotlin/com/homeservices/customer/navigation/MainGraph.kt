@@ -95,6 +95,10 @@ private fun NavGraphBuilder.homeDestination(
             onTrackBooking = { id -> navController.navigate(BookingRoutes.liveTrackingRoute(id)) },
             onRateBooking = { id -> navController.navigate(RatingRoutes.route(id)) },
             onComplainBooking = { id -> navController.navigate(ComplaintRoutes.route(id)) },
+            onResumePayment = { bookingId, orderId, amount ->
+                navController.navigate(BookingRoutes.resumePaymentRoute(bookingId, orderId, amount))
+            },
+            onCancelPendingBooking = { id -> customerHomeVm.cancelPendingBooking(id) },
             showWalletChip = featureFlags.walletVisible(),
             walletBalanceInPaise = balancePaise,
             onWalletClick = { navController.navigate(WalletRoutes.WALLET) },
@@ -115,6 +119,9 @@ private fun NavGraphBuilder.homeDestination(
                 }
             },
             onPriceApproval = { id -> navController.navigate(BookingRoutes.priceApprovalRoute(id)) },
+            // WS-D: consent management accessible from Profile tab
+            onManageConsentClick = { navController.navigate(LocaleRoutes.CONSENT_MANAGEMENT) },
+            onPrivacyAndDataClick = { navController.navigate(LocaleRoutes.PRIVACY_DATA) },
         )
     }
 }
@@ -178,6 +185,7 @@ private fun NavGraphBuilder.bookingGraph(
         addressPickerDestination(navController)
         waitlistDestination(navController)
         summaryDestination(navController)
+        resumePaymentDestination(navController)
         confirmedDestination(navController)
         priceApprovalDestination(navController)
         liveTrackingDestination(navController)
@@ -311,6 +319,36 @@ private fun NavGraphBuilder.summaryDestination(navController: NavController) {
     }
 }
 
+private fun NavGraphBuilder.resumePaymentDestination(navController: NavController) {
+    composable(
+        route = BookingRoutes.RESUME_PAYMENT,
+        arguments =
+            listOf(
+                navArgument("bookingId") { type = NavType.StringType },
+                navArgument("orderId") { type = NavType.StringType },
+                navArgument("amount") { type = NavType.IntType },
+            ),
+    ) { backStackEntry ->
+        val bookingEntry = remember(backStackEntry) { navController.getBackStackEntry(BookingRoutes.BOOKING_GRAPH) }
+        val vm: BookingViewModel = hiltViewModel(bookingEntry)
+        val bookingId = backStackEntry.arguments?.getString("bookingId") ?: ""
+        val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
+        val amount = backStackEntry.arguments?.getInt("amount") ?: 0
+        vm.resumeFromPendingPayment(bookingId, orderId, amount)
+        BookingSummaryScreen(
+            viewModel = vm,
+            serviceId = vm.pendingServiceId,
+            categoryId = vm.pendingCategoryId,
+            onConfirmed = { id, appliedCredit ->
+                navController.navigate(BookingRoutes.confirmedRoute(id, appliedCredit)) {
+                    popUpTo(BookingRoutes.BOOKING_GRAPH) { inclusive = true }
+                }
+            },
+            onBack = { navController.popBackStack(CatalogueRoutes.HOME, inclusive = false) },
+        )
+    }
+}
+
 private fun NavGraphBuilder.confirmedDestination(navController: NavController) {
     composable(
         route = BookingRoutes.CONFIRMED,
@@ -368,6 +406,10 @@ private fun NavGraphBuilder.complaintDestination(navController: NavController) {
         arguments = listOf(navArgument("bookingId") { type = NavType.StringType }),
     ) { backStackEntry ->
         val bookingId = backStackEntry.arguments?.getString("bookingId") ?: ""
-        ComplaintScreen(bookingId = bookingId, onBack = { navController.popBackStack() })
+        ComplaintScreen(
+            bookingId = bookingId,
+            onBack = { navController.popBackStack() },
+            onComplaintSubmitted = { navController.popBackStack(CatalogueRoutes.HOME, inclusive = false) },
+        )
     }
 }

@@ -37,6 +37,7 @@ export async function getCategoriesHandler(
       name: cat.name,
       heroImageUrl: cat.heroImageUrl,
       sortOrder: cat.sortOrder,
+      safetyTag: cat.safetyTag ?? false,
       services: (byCat.get(cat.id) ?? []).map((s) => ServiceCardSchema.parse(s)),
     }))
     .filter((cat) => cat.services.length > 0);

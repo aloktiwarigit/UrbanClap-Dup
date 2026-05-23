@@ -8,15 +8,26 @@ import com.homeservices.customer.data.catalogue.remote.dto.CategoryDto
 import com.homeservices.customer.data.catalogue.remote.dto.ServiceCardDto
 import com.homeservices.customer.data.catalogue.remote.dto.ServiceDto
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkAll
+import io.mockk.verify
+import io.sentry.Sentry
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Test
 import java.io.IOException
 
 public class CatalogueRepositoryImplTest {
     private val api: CatalogueApiService = mockk()
     private val sut = CatalogueRepositoryImpl(api)
+
+    @After
+    public fun tearDown() {
+        unmockkAll()
+    }
 
     @Test
     public fun `getCategories emits success with mapped domain models`(): Unit =
@@ -135,6 +146,18 @@ public class CatalogueRepositoryImplTest {
             val result = sut.getServicesForCategory("missing").first()
             assertThat(result.isFailure).isTrue()
             assertThat(result.exceptionOrNull()).isInstanceOf(NoSuchElementException::class.java)
+        }
+
+    @Test
+    public fun `getCategories captures exception in Sentry on failure`(): Unit =
+        runTest {
+            mockkStatic("io.sentry.Sentry")
+            coEvery { api.getCategories() } throws IOException("network error")
+            every { Sentry.captureException(any()) } returns mockk()
+
+            sut.getCategories().first()
+
+            verify { Sentry.captureException(any()) }
         }
 
     private fun sampleCard(

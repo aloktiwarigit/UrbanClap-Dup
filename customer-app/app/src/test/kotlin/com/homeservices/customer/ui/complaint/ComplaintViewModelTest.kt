@@ -6,6 +6,7 @@ import com.homeservices.customer.domain.complaint.GetComplaintStatusUseCase
 import com.homeservices.customer.domain.complaint.PhotoUploadUseCase
 import com.homeservices.customer.domain.complaint.ReopenComplaintUseCase
 import com.homeservices.customer.domain.complaint.SubmitComplaintUseCase
+import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -33,7 +34,7 @@ public class ComplaintViewModelTest {
     @BeforeEach
     public fun setUp() {
         Dispatchers.setMain(dispatcher)
-        viewModel = ComplaintViewModel(submitUseCase, photoUploadUseCase, getStatusUseCase, reopenUseCase)
+        viewModel = ComplaintViewModel(submitUseCase, photoUploadUseCase, getStatusUseCase, reopenUseCase, NoOpAnalyticsFacade())
     }
 
     @AfterEach
