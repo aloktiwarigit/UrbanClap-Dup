@@ -105,3 +105,4 @@ design-system/
 - ADR-0007 (zero paid SaaS): `docs/adr/0007-zero-paid-saas-constraint.md`
 - ADR-0001 (primary stack): `docs/adr/0001-primary-stack-choice.md`
 - UX §5: `docs/ux-design.md`
+
