@@ -109,11 +109,10 @@ internal class BookingViewModel
         public fun startPayment(
             serviceId: String,
             categoryId: String,
-            activity: FragmentActivity?,
+            activity: FragmentActivity? = null,
         ) {
-            if (activity == null) return
             viewModelScope.launch {
-                if (biometricGate.canUseBiometric(activity)) {
+                if (activity != null && biometricGate.canUseBiometric(activity)) {
                     val result = biometricGate.requestAuth(
                         activity,
                         "Confirm Payment",
