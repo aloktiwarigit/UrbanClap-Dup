@@ -8,6 +8,7 @@ import com.homeservices.customer.domain.auth.AuthOrchestrator
 import com.homeservices.customer.domain.auth.model.AuthResult
 import com.homeservices.customer.domain.auth.model.OtpSendResult
 import com.homeservices.customer.domain.auth.model.TruecallerAuthResult
+import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -36,7 +37,7 @@ public class AuthViewModelTest {
         Dispatchers.setMain(testDispatcher)
         orchestrator = mockk(relaxed = true)
         every { orchestrator.observeTruecallerResults() } returns truecallerResultFlow
-        viewModel = AuthViewModel(orchestrator)
+        viewModel = AuthViewModel(orchestrator, NoOpAnalyticsFacade())
     }
 
     @AfterEach

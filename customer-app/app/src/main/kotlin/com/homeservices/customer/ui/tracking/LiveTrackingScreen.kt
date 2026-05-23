@@ -54,6 +54,7 @@ import com.homeservices.customer.ui.shared.TrustDossierUiState
 import com.homeservices.customer.ui.shared.TrustDossierViewModel
 import com.homeservices.customer.ui.wallet.NoShowCreditBanner
 import com.homeservices.customer.ui.wallet.NoShowCreditViewModel
+import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.components.HsSecondaryButton
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,7 +87,7 @@ internal fun LiveTrackingScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.tracking_title)) },
+                title = { HsScreenTitle(text = stringResource(R.string.tracking_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -241,8 +242,10 @@ private fun TrackingMapSection(
     state: LiveTrackingUiState.Tracking,
     defaultTechName: String,
 ) {
-    state.location?.let { loc ->
-        val techLatLng = LatLng(state.liveLat ?: loc.lat, state.liveLng ?: loc.lng)
+    val resolvedLat = state.liveLat ?: state.location?.lat
+    val resolvedLng = state.liveLng ?: state.location?.lng
+    if (resolvedLat != null && resolvedLng != null) {
+        val techLatLng = LatLng(resolvedLat, resolvedLng)
         val techNameForMarker = state.techName.ifBlank { defaultTechName }
         val cameraPositionState =
             rememberCameraPositionState {
@@ -257,7 +260,9 @@ private fun TrackingMapSection(
                 title = techNameForMarker,
             )
         }
-    } ?: MapPlaceholder()
+    } else {
+        MapPlaceholder()
+    }
 }
 
 @Composable

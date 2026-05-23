@@ -9,6 +9,8 @@ export const ServiceCategorySchema = z
     name: z.string().min(1).max(100).openapi({ example: 'AC Repair' }),
     heroImageUrl: z.string().url(),
     sortOrder: z.number().int().nonnegative(),
+    /** PRD-08: When true, this category's services should trigger the women-safe filter by default. */
+    safetyTag: z.boolean().optional(),
     isActive: z.boolean(),
     updatedBy: z.string().min(1),
     createdAt: z.string().datetime(),

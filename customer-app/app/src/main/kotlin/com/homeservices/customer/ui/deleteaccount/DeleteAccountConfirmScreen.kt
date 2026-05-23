@@ -52,14 +52,11 @@ import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
+import com.homeservices.designsystem.components.HsScreenTitle
 
 // Design tokens â€” mirror DeleteAccountScreen palette
-private val WarmIvory = Color(0xFFFBF7EF)
 private val ErrorRed = Color(0xFFB3261E)
 private val ErrorRedSurface = Color(0xFFFFF0EE)
-private val CardBorder = Color(0xFFDED8CD)
-private val TextPrimary = Color(0xFF18231F)
-private val TextSecondary = Color(0xFF5F6C66)
 
 // Identity gate: last-4 digits of registered phone number.
 private const val PIN_LENGTH = 4
@@ -113,7 +110,7 @@ public fun DeleteAccountConfirmScreen(
     val confirming = uiState as? DeleteAccountUiState.Confirming
     val isSubmitting = uiState is DeleteAccountUiState.Submitting
 
-    Surface(modifier = Modifier.fillMaxSize(), color = WarmIvory) {
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
             modifier =
                 Modifier
@@ -166,17 +163,12 @@ private fun DeleteAccountConfirmTopBar(onBack: () -> Unit) {
             Icon(
                 Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = null,
-                tint = TextPrimary,
+                tint = MaterialTheme.colorScheme.onSurface,
             )
         }
         Spacer(Modifier.width(8.dp))
-        Text(
+        HsScreenTitle(
             text = stringResource(R.string.delete_account_confirm_title),
-            style =
-                MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                ),
-            color = TextPrimary,
         )
     }
 }
@@ -226,7 +218,7 @@ private fun DeleteAccountConfirmPhraseField(
                 MaterialTheme.typography.labelLarge.copy(
                     fontWeight = FontWeight.SemiBold,
                 ),
-            color = TextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
         )
         // Show the expected phrase so the user knows what to type.
         Text(
@@ -245,9 +237,9 @@ private fun DeleteAccountConfirmPhraseField(
             colors =
                 OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = ErrorRed,
-                    unfocusedBorderColor = CardBorder,
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                 ),
             isError = isPhraseError,
             supportingText =
@@ -279,7 +271,7 @@ private fun DeleteAccountConfirmPinField(
             Icon(
                 Icons.Default.Lock,
                 contentDescription = null,
-                tint = TextSecondary,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(16.dp),
             )
             Text(
@@ -288,7 +280,7 @@ private fun DeleteAccountConfirmPinField(
                     MaterialTheme.typography.labelLarge.copy(
                         fontWeight = FontWeight.SemiBold,
                     ),
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
         OutlinedTextField(
@@ -299,9 +291,9 @@ private fun DeleteAccountConfirmPinField(
             colors =
                 OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = ErrorRed,
-                    unfocusedBorderColor = CardBorder,
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                 ),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             isError = isPinError,
@@ -327,6 +319,7 @@ private fun DeleteAccountConfirmSubmitBar(
             colors =
                 ButtonDefaults.buttonColors(
                     containerColor = ErrorRed,
+                    // ErrorRed is a fixed non-themed container: use Color.White for dark-mode contrast
                     contentColor = Color.White,
                     disabledContainerColor = ErrorRed.copy(alpha = 0.38f),
                     disabledContentColor = Color.White.copy(alpha = 0.6f),
@@ -357,7 +350,7 @@ private fun DeleteAccountConfirmSubmitBar(
         ) {
             Text(
                 text = stringResource(R.string.delete_account_cancel_cta),
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

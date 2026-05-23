@@ -11,6 +11,7 @@ import com.homeservices.customer.domain.booking.model.BookingRequest
 import com.homeservices.customer.domain.booking.model.BookingResult
 import com.homeservices.customer.domain.booking.model.CustomerBooking
 import com.homeservices.customer.domain.booking.model.PendingAddOn
+import io.sentry.Sentry
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
@@ -20,7 +21,10 @@ internal class BookingRepositoryImpl
     constructor(
         private val api: BookingApiService,
     ) : BookingRepository {
-        override fun createBooking(request: BookingRequest): Flow<Result<BookingResult>> =
+        override fun createBooking(
+            request: BookingRequest,
+            idempotencyKey: String,
+        ): Flow<Result<BookingResult>> =
             flow {
                 emit(
                     runCatching {
@@ -35,15 +39,20 @@ internal class BookingRepositoryImpl
                                     addressLatLng = LatLngDto(lat = request.addressLat, lng = request.addressLng),
                                     paymentMethod = request.paymentMethod.name,
                                     applyCredit = request.applyCredit,
+                                    preferFemaleTechnician = request.preferFemaleTechnician,
                                 ),
+                                idempotencyKey = idempotencyKey,
                             ).toDomain()
-                    },
+                    }.onFailure { Sentry.captureException(it) },
                 )
             }
 
         override fun getMyBookings(): Flow<Result<List<CustomerBooking>>> =
             flow {
-                emit(runCatching { api.getMyBookings().bookings.map { it.toDomain() } })
+                emit(
+                    runCatching { api.getMyBookings().bookings.map { it.toDomain() } }
+                        .onFailure { Sentry.captureException(it) },
+                )
             }
 
         override fun confirmBooking(
@@ -66,13 +75,16 @@ internal class BookingRepositoryImpl
                                 ),
                                 integrityToken = integrityToken,
                             ).bookingId
-                    },
+                    }.onFailure { Sentry.captureException(it) },
                 )
             }
 
         override fun getPendingAddOns(bookingId: String): Flow<Result<List<PendingAddOn>>> =
             flow {
-                emit(runCatching { api.getBooking(bookingId).pendingAddOns.map { it.toDomain() } })
+                emit(
+                    runCatching { api.getBooking(bookingId).pendingAddOns.map { it.toDomain() } }
+                        .onFailure { Sentry.captureException(it) },
+                )
             }
 
         override fun approveFinalPrice(
@@ -87,7 +99,9 @@ internal class BookingRepositoryImpl
                                 bookingId,
                                 ApproveFinalPriceRequestDto(decisions.map { AddOnDecisionDto(it.name, it.approved) }),
                             ).finalAmount ?: error("finalAmount missing in approve-final-price response")
-                    },
+                    }.onFailure { Sentry.captureException(it) },
                 )
             }
+
+        override suspend fun cancelBooking(bookingId: String): Result<Unit> = runCatching { api.cancelBooking(bookingId) }.map { Unit }
     }

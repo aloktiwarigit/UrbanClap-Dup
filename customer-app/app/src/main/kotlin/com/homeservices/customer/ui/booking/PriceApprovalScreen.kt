@@ -36,6 +36,7 @@ import com.homeservices.customer.domain.booking.model.PendingAddOn
 import com.homeservices.customer.ui.util.formatInr
 import com.homeservices.designsystem.components.HsPriceText
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsSkeletonBlock
@@ -86,10 +87,9 @@ internal fun PriceApprovalContent(
         is PriceApprovalUiState.PendingApproval -> {
             val decisions = remember(uiState.bookingId) { mutableStateMapOf<String, Boolean>() }
             Column(modifier.fillMaxSize().padding(16.dp)) {
-                Text(
+                HsScreenTitle(
                     text = stringResource(R.string.price_approval_heading),
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(

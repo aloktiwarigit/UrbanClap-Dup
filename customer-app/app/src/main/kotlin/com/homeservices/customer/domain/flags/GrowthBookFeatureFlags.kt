@@ -1,19 +1,19 @@
 package com.homeservices.customer.domain.flags
 
-import com.homeservices.customer.BuildConfig
+import com.homeservices.customer.observability.analytics.AnalyticsFacade
 import com.sdk.growthbook.GBSDKBuilder
 import com.sdk.growthbook.GrowthBookSDK
 import com.sdk.growthbook.model.GBValue
 import com.sdk.growthbook.network.GBNetworkDispatcherOkHttp
 import javax.inject.Inject
+import javax.inject.Named
 import javax.inject.Singleton
 
 /**
  * GrowthBook-backed [FeatureFlags] implementation.
  *
- * Uses the GrowthBook Cloud Free SDK (v7+). The client key is read from
- * [BuildConfig.GROWTHBOOK_CLIENT_KEY] which is populated from the
- * `GROWTHBOOK_CLIENT_KEY` environment variable at build time.
+ * Uses the GrowthBook Cloud Free SDK (v7+). The client key is provided by
+ * FeatureFlagsModule from the build-time `GROWTHBOOK_CLIENT_KEY` value.
  *
  * When the key is blank (CI, local dev without a key), the SDK is instantiated
  * with `enabled = false` and `cachingEnabled = false` so no network calls or disk
@@ -25,19 +25,31 @@ import javax.inject.Singleton
  * last-cached (or default-off) posture is retained.
  *
  * E13-S05 — wires the real SDK, replacing [BuildConfigFeatureFlags].
+ * DPDP/Analytics — trackingCallback forwards experiment exposures to [AnalyticsFacade].
  */
 @Singleton
 public class GrowthBookFeatureFlags
     @Inject
-    constructor() : FeatureFlags {
-        private val keyPresent: Boolean = BuildConfig.GROWTHBOOK_CLIENT_KEY.isNotBlank()
+    constructor(
+        @Named("growthbook_api_key") private val apiKey: String,
+        private val analytics: dagger.Lazy<AnalyticsFacade>,
+    ) : FeatureFlags {
+        private val keyPresent: Boolean = apiKey.isNotBlank()
 
         private val sdk: GrowthBookSDK =
             GBSDKBuilder(
-                apiKey = BuildConfig.GROWTHBOOK_CLIENT_KEY.ifBlank { "placeholder" },
+                apiKey = apiKey.ifBlank { "placeholder" },
                 apiHost = "https://cdn.growthbook.io",
                 attributes = emptyMap<String, GBValue>(),
-                trackingCallback = { _, _ -> },
+                trackingCallback = { experiment, result ->
+                    analytics.get().track(
+                        "experiment_exposure",
+                        mapOf(
+                            "experiment_id" to experiment.key,
+                            "variant" to result.value.toString(),
+                        ),
+                    )
+                },
                 networkDispatcher = GBNetworkDispatcherOkHttp(),
                 // Disable caching when key is blank so Android's CachingImpl never requires
                 // a Context (safe in unit tests and CI without a live key).

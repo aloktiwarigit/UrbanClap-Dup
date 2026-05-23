@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
+import com.homeservices.designsystem.components.HsScreenTitle
 import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.ZoneId
@@ -54,14 +55,8 @@ import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 
 // Design tokens — consistent palette
-private val WarmIvory = Color(0xFFFBF7EF)
-private val BrandGreen = Color(0xFF0B3D2E)
-private val MutedGreen = Color(0xFFE8F1EC)
 private val ErrorRed = Color(0xFFB3261E)
 private val ErrorRedSurface = Color(0xFFFFF0EE)
-private val CardBorder = Color(0xFFDED8CD)
-private val TextPrimary = Color(0xFF18231F)
-private val TextSecondary = Color(0xFF5F6C66)
 
 // Magic-number constants
 private const val TICK_INTERVAL_MS = 60_000L
@@ -102,7 +97,7 @@ public fun DeleteAccountCoolOffScreen(
 
     val countdownText = rememberCountdownText(coolOff)
 
-    Surface(modifier = Modifier.fillMaxSize(), color = WarmIvory) {
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
             modifier = Modifier.fillMaxSize().statusBarsPadding().padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
@@ -172,17 +167,12 @@ private fun DeleteAccountCoolOffTopBar(onBack: () -> Unit) {
             Icon(
                 Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = null,
-                tint = TextPrimary,
+                tint = MaterialTheme.colorScheme.onSurface,
             )
         }
         Spacer(Modifier.width(8.dp))
-        Text(
+        HsScreenTitle(
             text = stringResource(R.string.delete_account_coolOff_title),
-            style =
-                MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                ),
-            color = TextPrimary,
         )
     }
 }
@@ -223,7 +213,7 @@ private fun DeleteAccountCoolOffCountdownCard(
             Text(
                 text = stringResource(R.string.delete_account_coolOff_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
         }
@@ -252,8 +242,8 @@ private fun DeleteAccountCoolOffRevokedBanner(uiState: DeleteAccountUiState) {
     if (uiState is DeleteAccountUiState.Revoked) {
         Surface(
             shape = RoundedCornerShape(20.dp),
-            color = MutedGreen,
-            border = BorderStroke(1.dp, BrandGreen.copy(alpha = 0.3f)),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Row(
@@ -261,11 +251,11 @@ private fun DeleteAccountCoolOffRevokedBanner(uiState: DeleteAccountUiState) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = BrandGreen)
+                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Text(
                     text = stringResource(R.string.delete_account_revoke_success),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = BrandGreen,
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
         }
@@ -286,16 +276,16 @@ private fun DeleteAccountCoolOffActions(
         shape = RoundedCornerShape(16.dp),
         colors =
             ButtonDefaults.buttonColors(
-                containerColor = BrandGreen,
-                contentColor = Color.White,
-                disabledContainerColor = BrandGreen.copy(alpha = 0.38f),
-                disabledContentColor = Color.White.copy(alpha = 0.6f),
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.38f),
+                disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f),
             ),
     ) {
         if (isRevoking) {
             CircularProgressIndicator(
                 modifier = Modifier.size(22.dp),
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onPrimary,
                 strokeWidth = 2.dp,
             )
         } else {
@@ -313,11 +303,11 @@ private fun DeleteAccountCoolOffActions(
         onClick = onBack,
         modifier = Modifier.fillMaxWidth().height(48.dp),
         shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, CardBorder),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
         Text(
             text = stringResource(R.string.delete_account_close_cta),
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

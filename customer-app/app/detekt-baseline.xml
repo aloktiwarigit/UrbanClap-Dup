@@ -21,33 +21,34 @@
     <ID>LongMethod:AuthScreen.kt$@Composable internal fun AuthScreen( uiState: AuthUiState, onPhoneSubmitted: (String) -&gt; Unit, onOtpEntered: (String) -&gt; Unit, onResendRequested: () -&gt; Unit, onRetry: () -&gt; Unit, onGoogleSelected: () -&gt; Unit = {}, onEmailSelected: () -&gt; Unit = {}, onPhoneSelected: () -&gt; Unit = {}, onEmailSignIn: (String, String) -&gt; Unit = { _, _ -&gt; }, onEmailSignUp: (String, String) -&gt; Unit = { _, _ -&gt; }, onEmailModeToggle: (String) -&gt; Unit = {}, onBackToMethodSelection: () -&gt; Unit = {}, onEmailVerificationContinue: (String) -&gt; Unit = {}, onResendVerificationEmail: (String) -&gt; Unit = {}, onForgotPassword: (String) -&gt; Unit = {}, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:AuthScreen.kt$@Composable private fun EmailEntryContent( state: AuthUiState.EmailEntry, onEmailSignIn: (String, String) -&gt; Unit, onEmailSignUp: (String, String) -&gt; Unit, onEmailModeToggle: (String) -&gt; Unit, onBackToMethodSelection: () -&gt; Unit, onForgotPassword: (String) -&gt; Unit, )</ID>
     <ID>LongMethod:BookingConfirmedScreen.kt$@Composable private fun ConfirmationBody( bookingId: String, appliedCreditAmount: Int = 0, technicianId: String?, trustUiState: TrustDossierUiState, onBackToHome: () -&gt; Unit, onTrackBooking: (bookingId: String) -&gt; Unit, )</ID>
+    <ID>LongMethod:CatalogueHomeScreen.kt$@Composable private fun CatalogueTab( uiState: CatalogueHomeUiState, scaffoldPadding: PaddingValues, photoFirstCatalogueEnabled: Boolean, onCategoryClick: (String) -&gt; Unit, homeUiState: CustomerHomeUiState = CustomerHomeUiState.Loading, onPendingActionRoute: (String) -&gt; Unit = {}, onTrackBooking: (String) -&gt; Unit = {}, onPriceApproval: (String) -&gt; Unit = {}, onRateBooking: (String) -&gt; Unit = {}, onComplainBooking: (String) -&gt; Unit = {}, onResumePayment: (bookingId: String, orderId: String, amount: Int) -&gt; Unit = { _, _, _ -&gt; }, onCancelPendingBooking: (bookingId: String) -&gt; Unit = {}, )</ID>
     <ID>LongMethod:CatalogueHomeScreen.kt$@Composable private fun CategoryCard( category: Category, onClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:CatalogueHomeScreen.kt$@OptIn(ExperimentalFoundationApi::class) @Composable private fun PromoSlider()</ID>
     <ID>LongMethod:CatalogueVisualImage.kt$@Composable private fun CatalogueImagePlaceholder( title: String, supportingText: String?, visualSize: CatalogueVisualSize, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:DeleteAccountConfirmScreen.kt$@Composable public fun DeleteAccountConfirmScreen( onBack: () -&gt; Unit, onConfirmed: (requestId: String, scheduledDeletionAt: String) -&gt; Unit, viewModel: DeleteAccountViewModel = hiltViewModel(), )</ID>
     <ID>LongMethod:LiveTrackingScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun LiveTrackingScreen( viewModel: LiveTrackingViewModel = hiltViewModel(), sosViewModel: SosViewModel = hiltViewModel(), noShowVm: NoShowCreditViewModel = hiltViewModel(), trustDossierViewModel: TrustDossierViewModel = hiltViewModel(), onBack: () -&gt; Unit, onFileComplaint: (bookingId: String) -&gt; Unit = {}, )</ID>
-    <ID>LongMethod:ProfileScreen.kt$@Composable internal fun ProfileScreen( viewModel: ProfileViewModel = hiltViewModel(), modifier: Modifier = Modifier, onLanguageClick: () -&gt; Unit = {}, onBookingsClick: () -&gt; Unit = {}, )</ID>
+    <ID>LongMethod:PiiRedactorTest.kt$PiiRedactorTest.Companion$@JvmStatic public fun redactCases(): Stream&lt;Arguments&gt;</ID>
     <ID>LongMethod:ServiceDetailScreen.kt$@Composable private fun ServiceHero( service: Service, onBack: (() -&gt; Unit)?, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:TrustDossierCard.kt$@Composable private fun ExpandedContent(profile: TechnicianProfile)</ID>
     <ID>LongParameterList:AuthOrchestrator.kt$AuthOrchestrator$( private val truecallerUseCase: TruecallerLoginUseCase, private val firebaseOtpUseCase: FirebaseOtpUseCase, private val saveSessionUseCase: SaveSessionUseCase, private val googleSignInUseCase: GoogleSignInUseCase, private val emailPasswordUseCase: EmailPasswordUseCase, private val firebaseAuth: FirebaseAuth, private val verifyTruecallerUseCase: VerifyTruecallerUseCase, private val featureFlags: FeatureFlags, )</ID>
     <ID>MagicNumber:AddressScreen.kt$15f</ID>
+    <ID>MagicNumber:AuthApiModule.kt$AuthApiModule$15</ID>
+    <ID>MagicNumber:AuthApiModule.kt$AuthApiModule$30</ID>
+    <ID>MagicNumber:AuthApiModule.kt$AuthApiModule$60</ID>
     <ID>MagicNumber:AuthScreen.kt$0xFF1A73E8</ID>
     <ID>MagicNumber:AuthScreen.kt$6</ID>
+    <ID>MagicNumber:BookingModule.kt$BookingModule.Companion$15</ID>
+    <ID>MagicNumber:BookingModule.kt$BookingModule.Companion$30</ID>
+    <ID>MagicNumber:BookingModule.kt$BookingModule.Companion$60</ID>
     <ID>MagicNumber:BookingSummaryScreen.kt$3</ID>
-    <ID>MagicNumber:CatalogueHomeScreen.kt$0xFF000000</ID>
     <ID>MagicNumber:CatalogueHomeScreen.kt$0xFF123B32</ID>
-    <ID>MagicNumber:CatalogueHomeScreen.kt$0xFF246174</ID>
-    <ID>MagicNumber:CatalogueHomeScreen.kt$0xFF2E6B4F</ID>
-    <ID>MagicNumber:CatalogueHomeScreen.kt$0xFF355F8A</ID>
-    <ID>MagicNumber:CatalogueHomeScreen.kt$0xFF80622F</ID>
     <ID>MagicNumber:CatalogueHomeScreen.kt$0xFFD1D5DB</ID>
-    <ID>MagicNumber:CatalogueHomeScreen.kt$0xFFEAF1F8</ID>
-    <ID>MagicNumber:CatalogueHomeScreen.kt$0xFFEAF4EE</ID>
-    <ID>MagicNumber:CatalogueHomeScreen.kt$0xFFEAF4F7</ID>
-    <ID>MagicNumber:CatalogueHomeScreen.kt$0xFFF5EFE4</ID>
     <ID>MagicNumber:CatalogueHomeScreen.kt$3</ID>
     <ID>MagicNumber:CatalogueHomeScreen.kt$4_000</ID>
     <ID>MagicNumber:CatalogueHomeScreen.kt$600</ID>
+    <ID>MagicNumber:CatalogueModule.kt$CatalogueModule.Companion$15</ID>
+    <ID>MagicNumber:CatalogueModule.kt$CatalogueModule.Companion$30</ID>
+    <ID>MagicNumber:CatalogueModule.kt$CatalogueModule.Companion$60</ID>
     <ID>MagicNumber:CatalogueVisualImage.kt$0.86f</ID>
     <ID>MagicNumber:CatalogueVisualImage.kt$0xFF00796B</ID>
     <ID>MagicNumber:CatalogueVisualImage.kt$0xFF2E5EAA</ID>
@@ -71,6 +72,7 @@
     <ID>MagicNumber:ConfidenceScoreRow.kt$50</ID>
     <ID>MagicNumber:ConfidenceScoreRow.kt$800</ID>
     <ID>MagicNumber:CustomerBookingsScreen.kt$3</ID>
+    <ID>MagicNumber:FirebaseTokenAuthenticator.kt$FirebaseTokenAuthenticator$25</ID>
     <ID>MagicNumber:GoogleSignInUseCase.kt$GoogleSignInUseCase$16</ID>
     <ID>MagicNumber:LiveTrackingScreen.kt$15f</ID>
     <ID>MagicNumber:PhotoUploadUseCase.kt$PhotoUploadUseCase$1024</ID>
@@ -91,9 +93,13 @@
     <ID>MagicNumber:SlotPickerScreen.kt$6</ID>
     <ID>MagicNumber:SosViewModel.kt$SosViewModel$1_000L</ID>
     <ID>MagicNumber:SosViewModel.kt$SosViewModel$30</ID>
+    <ID>MagicNumber:TechnicianModule.kt$TechnicianModule.Companion$15</ID>
+    <ID>MagicNumber:TechnicianModule.kt$TechnicianModule.Companion$30</ID>
+    <ID>MagicNumber:TechnicianModule.kt$TechnicianModule.Companion$60</ID>
     <ID>MagicNumber:TrustDossierCard.kt$10</ID>
     <ID>MatchingDeclarationName:AppNavigation.kt$LocaleRoutes</ID>
     <ID>MatchingDeclarationName:CatalogueVisualImage.kt$CatalogueVisualSize</ID>
+    <ID>MaxLineLength:BookingRepositoryImplHttpTest.kt$BookingRepositoryImplHttpTest$"""{"bookings":[{"bookingId":"bk-1","serviceId":"svc-1","serviceName":"Plumbing","addressText":"123 Main St","status":"ASSIGNED","slotDate":"2026-06-01","slotWindow":"10:00-12:00","amount":59900,"createdAt":"2026-05-20T10:00:00Z"}]}"""</ID>
     <ID>MaxLineLength:ProfileScreen.kt$"आपका नाम, फ़ोन, पता और बुकिंग जानकारी सेवा देने, तकनीशियन असाइन करने, सपोर्ट और सुरक्षा समीक्षा के लिए इस्तेमाल होती है। पता केवल असाइन किए गए तकनीशियन और Owner support के साथ साझा किया जाता है।"</ID>
     <ID>MaxLineLength:TrustDossierCardPaparazziTest.kt$TrustDossierCardPaparazziTest$"HandlerDispatcher IllegalStateException — Coil async handler fires after Paparazzi Looper quits on Loaded state; fix with Coil test dispatcher before recording"</ID>
     <ID>NestedBlockDepth:SessionPrefsMigrator.kt$SessionPrefsMigrator$internal fun migrateIfNeededInternal( context: Context, newPrefs: SharedPreferences, newPrefsName: String, legacyKeyPresent: Boolean, )</ID>
@@ -114,10 +120,12 @@
     <ID>TooGenericExceptionCaught:SessionPrefsMigrator.kt$SessionPrefsMigrator$e: Exception</ID>
     <ID>TooManyFunctions:AuthOrchestrator.kt$AuthOrchestrator</ID>
     <ID>TooManyFunctions:AuthViewModel.kt$AuthViewModel : ViewModel</ID>
+    <ID>TooManyFunctions:BookingViewModel.kt$BookingViewModel : ViewModel</ID>
     <ID>TooManyFunctions:CatalogueHomeScreen.kt$com.homeservices.customer.ui.catalogue.CatalogueHomeScreen.kt</ID>
     <ID>TooManyFunctions:CustomerFirebaseMessagingService.kt$CustomerFirebaseMessagingService : FirebaseMessagingService</ID>
     <ID>TooManyFunctions:RatingViewModel.kt$RatingViewModel : ViewModel</ID>
     <ID>TooManyFunctions:ServiceDetailScreen.kt$com.homeservices.customer.ui.catalogue.ServiceDetailScreen.kt</ID>
+    <ID>UnusedParameter:ComplaintScreen.kt$onBack: () -&gt; Unit</ID>
     <ID>UnusedParameter:PiiRedactorTest.kt$PiiRedactorTest$description: String</ID>
     <ID>UnusedPrivateMember:ServiceListScreen.kt$@Composable private fun ServiceImageFallback( name: String, modifier: Modifier = Modifier, )</ID>
   </CurrentIssues>

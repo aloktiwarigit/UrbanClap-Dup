@@ -7,6 +7,7 @@ import com.homeservices.customer.domain.booking.model.BookingResult
 import com.homeservices.customer.domain.booking.model.BookingSlot
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -31,15 +32,29 @@ public class CreateBookingUseCaseTest {
     public fun `invoke returns BookingResult on success`(): Unit =
         runTest {
             val expected = BookingResult(bookingId = "bk-1", razorpayOrderId = "order_1", amount = 59900)
-            every { repo.createBooking(request) } returns flowOf(Result.success(expected))
+            every { repo.createBooking(request, any()) } returns flowOf(Result.success(expected))
             assertThat(sut(request).first().getOrThrow()).isEqualTo(expected)
-            verify(exactly = 1) { repo.createBooking(request) }
+            verify(exactly = 1) { repo.createBooking(request, any()) }
         }
 
     @Test
     public fun `invoke propagates repository failure`(): Unit =
         runTest {
-            every { repo.createBooking(request) } returns flowOf(Result.failure(RuntimeException("network error")))
+            every { repo.createBooking(request, any()) } returns flowOf(Result.failure(RuntimeException("network error")))
             assertThat(sut(request).first().isFailure).isTrue()
+        }
+
+    @Test
+    public fun `invoke generates non-blank UUID idempotency key`(): Unit =
+        runTest {
+            val expected = BookingResult(bookingId = "bk-2", razorpayOrderId = "order_2", amount = 10000)
+            val capturedKey = slot<String>()
+            every { repo.createBooking(request, capture(capturedKey)) } returns flowOf(Result.success(expected))
+
+            sut(request).first()
+
+            val key = capturedKey.captured
+            assertThat(key).isNotEmpty()
+            assertThat(key).matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
         }
 }

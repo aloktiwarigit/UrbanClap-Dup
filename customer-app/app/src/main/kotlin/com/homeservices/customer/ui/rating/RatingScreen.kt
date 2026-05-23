@@ -37,6 +37,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTrustBadge
@@ -47,6 +48,8 @@ import kotlinx.coroutines.delay
 public fun RatingScreen(
     modifier: Modifier = Modifier,
     viewModel: RatingViewModel = hiltViewModel(),
+    onBack: () -> Unit = {},
+    onSubmitted: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val shieldState by viewModel.shieldState.collectAsStateWithLifecycle()
@@ -56,6 +59,14 @@ public fun RatingScreen(
     val behav by viewModel.behaviour.collectAsStateWithLifecycle()
     val comment by viewModel.comment.collectAsStateWithLifecycle()
     val canSubmit by viewModel.canSubmit.collectAsStateWithLifecycle()
+
+    androidx.activity.compose.BackHandler(onBack = onBack)
+
+    androidx.compose.runtime.LaunchedEffect(state) {
+        if (state is RatingUiState.AwaitingPartner || state is RatingUiState.Revealed) {
+            onSubmitted()
+        }
+    }
 
     RatingContent(
         state = state,
@@ -166,10 +177,9 @@ private fun RatingForm(
 ) {
     Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         HsTrustBadge(text = stringResource(R.string.rating_eyebrow))
-        Text(
-            stringResource(R.string.rating_title),
+        HsScreenTitle(
+            text = stringResource(R.string.rating_title),
             style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
         )
         Text(
             stringResource(R.string.rating_body),

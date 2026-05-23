@@ -92,6 +92,18 @@ The platform is built solo by the founder using BMAD + Claude Code on Firebase +
 
 ## Success Criteria
 
+### Pilot Exit Gates (Binary — all 5 must pass to graduate from soft-launch)
+
+| Gate | Threshold | Measurement |
+|---|---|---|
+| Crash-free sessions | ≥ 99.5% over 7-day rolling window, ≥ 100 sessions | Firebase Crashlytics (crash-free users %) |
+| Booking success rate | ≥ 90% (PAID or CASH_BOOKING_CREATED events / BookingSummaryScreen attempts) | PostHog funnel |
+| Payment success rate | ≥ 92% (Razorpay successful captures / initiations, excluding user-cancelled) | PostHog + Razorpay dashboard |
+| p50 time-to-first-booking | ≤ 3 minutes (PostHog funnel: app_open → booking_confirmed, new users only) | PostHog funnel |
+| Net Promoter Score | ≥ 30 from ≥ 15 soft-launch users (2-question in-app survey after first booking) | Manual survey via PostHog feature flag gate |
+
+> These are the PRD-05 pilot acceptance criteria. All 5 gates must be green for ≥ 7 consecutive days before graduating to public launch. Source: customer-app prod-readiness audit 2026-05-21 (lens 9 proposal, confirmed by owner).
+
 ### User Success
 
 **Customer-side metrics:**

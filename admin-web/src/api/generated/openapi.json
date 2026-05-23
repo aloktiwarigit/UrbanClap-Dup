@@ -527,6 +527,9 @@
             "type": "integer",
             "minimum": 0
           },
+          "safetyTag": {
+            "type": "boolean"
+          },
           "isActive": {
             "type": "boolean"
           },
@@ -1919,6 +1922,9 @@
                   "sortOrder": {
                     "type": "integer",
                     "minimum": 0
+                  },
+                  "safetyTag": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -2031,6 +2037,9 @@
                   "sortOrder": {
                     "type": "integer",
                     "minimum": 0
+                  },
+                  "safetyTag": {
+                    "type": "boolean"
                   }
                 },
                 "required": [

@@ -12,13 +12,13 @@ import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -29,8 +29,6 @@ import com.homeservices.customer.R
 import com.homeservices.customer.ui.util.formatInr
 import kotlinx.coroutines.delay
 
-private val BrandGreen = Color(0xFF0B3D2E)
-private val OnGreen = Color(0xFFFFFFFF)
 private const val AUTO_DISMISS_MS = 5_000L
 
 /**
@@ -59,7 +57,7 @@ public fun NoShowCreditBanner(
                 .fillMaxWidth()
                 .semantics { contentDescription = bannerText },
         shape = RoundedCornerShape(12.dp),
-        color = BrandGreen,
+        color = MaterialTheme.colorScheme.primary,
         tonalElevation = 4.dp,
         shadowElevation = 4.dp,
     ) {
@@ -70,13 +68,13 @@ public fun NoShowCreditBanner(
             Icon(
                 imageVector = Icons.Default.AccountBalanceWallet,
                 contentDescription = null,
-                tint = OnGreen,
+                tint = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.size(20.dp),
             )
             Spacer(Modifier.width(10.dp))
             Text(
                 text = bannerText,
-                color = OnGreen,
+                color = MaterialTheme.colorScheme.onPrimary,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.weight(1f),
@@ -88,7 +86,7 @@ public fun NoShowCreditBanner(
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = dismissDesc,
-                    tint = OnGreen,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(18.dp),
                 )
             }

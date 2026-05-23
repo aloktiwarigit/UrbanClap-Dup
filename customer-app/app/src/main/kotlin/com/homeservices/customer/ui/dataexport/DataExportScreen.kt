@@ -46,18 +46,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val WarmIvory = Color(0xFFFBF7EF)
-private val BrandGreen = Color(0xFF0B3D2E)
-private val MutedGreen = Color(0xFFE8F1EC)
-private val CardBorder = Color(0xFFDED8CD)
-private val TextPrimary = Color(0xFF18231F)
-private val TextSecondary = Color(0xFF5F6C66)
 private val ErrorRed = Color(0xFFB00020)
 
 private const val ERROR_SURFACE_COLOR = 0xFFFFF0F0
@@ -113,7 +108,7 @@ public fun DataExportScreen(
     }
 
     Scaffold(
-        containerColor = WarmIvory,
+        containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         DataExportContent(
@@ -164,18 +159,13 @@ private fun DataExportHeader(onBack: (() -> Unit)?) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = null,
-                    tint = TextPrimary,
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
             Spacer(Modifier.width(8.dp))
         }
-        Text(
+        HsScreenTitle(
             text = stringResource(R.string.data_export_title),
-            style =
-                MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                ),
-            color = TextPrimary,
         )
     }
     DataExportHeroCard()
@@ -186,18 +176,18 @@ private fun DataExportHeader(onBack: (() -> Unit)?) {
 private fun DataExportHeroCard() {
     Surface(
         shape = RoundedCornerShape(20.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, CardBorder),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = RoundedCornerShape(14.dp), color = MutedGreen) {
+                Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
                     Box(modifier = Modifier.size(52.dp), contentAlignment = Alignment.Center) {
                         Icon(
                             Icons.Default.CloudDownload,
                             contentDescription = null,
-                            tint = BrandGreen,
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                     }
                 }
@@ -208,13 +198,13 @@ private fun DataExportHeroCard() {
                         MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Bold,
                         ),
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
             Text(
                 text = stringResource(R.string.data_export_description),
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -231,13 +221,13 @@ private fun DataExportPrivacyNote() {
             Icon(
                 Icons.Default.Lock,
                 contentDescription = null,
-                tint = BrandGreen,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp),
             )
             Text(
                 text = stringResource(R.string.data_export_privacy_note),
                 style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -289,11 +279,11 @@ private fun DataExportLoadingIndicator() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        CircularProgressIndicator(color = BrandGreen)
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         Text(
             text = stringResource(R.string.data_export_loading),
             style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

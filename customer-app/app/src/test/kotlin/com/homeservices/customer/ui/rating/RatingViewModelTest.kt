@@ -7,6 +7,7 @@ import com.homeservices.customer.domain.rating.SubmitRatingUseCase
 import com.homeservices.customer.domain.rating.model.CustomerSubScores
 import com.homeservices.customer.domain.rating.model.RatingSnapshot
 import com.homeservices.customer.domain.rating.model.SideState
+import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -53,7 +54,7 @@ public class RatingViewModelTest {
                         ),
                     ),
                 )
-            val vm = RatingViewModel(submit, get, escalate, savedState)
+            val vm = RatingViewModel(submit, get, escalate, savedState, NoOpAnalyticsFacade())
             assertThat(vm.canSubmit.value).isFalse()
             vm.setOverall(5)
             assertThat(vm.canSubmit.value).isFalse()
@@ -83,7 +84,7 @@ public class RatingViewModelTest {
                 submit.invoke("bk-1", 5, CustomerSubScores(5, 5, 5), null)
             } returns flowOf(Result.success(Unit))
 
-            val vm = RatingViewModel(submit, get, escalate, savedState)
+            val vm = RatingViewModel(submit, get, escalate, savedState, NoOpAnalyticsFacade())
             vm.setOverall(5)
             vm.setPunctuality(5)
             vm.setSkill(5)
@@ -106,7 +107,7 @@ public class RatingViewModelTest {
                 )
             coEvery { get.invoke("bk-1") } returns flowOf(Result.success(snapshot))
 
-            val vm = RatingViewModel(submit, get, escalate, savedState)
+            val vm = RatingViewModel(submit, get, escalate, savedState, NoOpAnalyticsFacade())
 
             assertThat(vm.uiState.value).isInstanceOf(RatingUiState.Revealed::class.java)
         }
@@ -133,7 +134,7 @@ public class RatingViewModelTest {
                 )
             coEvery { get.invoke("bk-1") } returns flowOf(Result.success(snapshot))
 
-            val vm = RatingViewModel(submit, get, escalate, savedState)
+            val vm = RatingViewModel(submit, get, escalate, savedState, NoOpAnalyticsFacade())
 
             assertThat(vm.uiState.value).isInstanceOf(RatingUiState.AwaitingPartner::class.java)
         }
@@ -144,7 +145,7 @@ public class RatingViewModelTest {
             coEvery { get.invoke("bk-1") } returns
                 flowOf(Result.failure(RuntimeException("load failed")))
 
-            val vm = RatingViewModel(submit, get, escalate, savedState)
+            val vm = RatingViewModel(submit, get, escalate, savedState, NoOpAnalyticsFacade())
 
             assertThat(vm.uiState.value).isInstanceOf(RatingUiState.Error::class.java)
         }
@@ -158,7 +159,7 @@ public class RatingViewModelTest {
                         RatingSnapshot("bk-1", RatingSnapshot.Status.PENDING, null, SideState.Pending, SideState.Pending),
                     ),
                 )
-            val vm = RatingViewModel(submit, get, escalate, savedState)
+            val vm = RatingViewModel(submit, get, escalate, savedState, NoOpAnalyticsFacade())
             vm.submit()
             assertThat(vm.uiState.value).isNotInstanceOf(RatingUiState.Submitting::class.java)
         }
@@ -176,7 +177,7 @@ public class RatingViewModelTest {
                 submit.invoke("bk-1", 5, CustomerSubScores(5, 5, 5), null)
             } returns flowOf(Result.failure(RuntimeException("network error")))
 
-            val vm = RatingViewModel(submit, get, escalate, savedState)
+            val vm = RatingViewModel(submit, get, escalate, savedState, NoOpAnalyticsFacade())
             vm.setOverall(5)
             vm.setPunctuality(5)
             vm.setSkill(5)
@@ -195,7 +196,7 @@ public class RatingViewModelTest {
                         RatingSnapshot("bk-1", RatingSnapshot.Status.PENDING, null, SideState.Pending, SideState.Pending),
                     ),
                 )
-            val vm = RatingViewModel(submit, get, escalate, savedState)
+            val vm = RatingViewModel(submit, get, escalate, savedState, NoOpAnalyticsFacade())
             vm.setComment("a".repeat(600))
             assertThat(vm.comment.value.length).isEqualTo(500)
         }

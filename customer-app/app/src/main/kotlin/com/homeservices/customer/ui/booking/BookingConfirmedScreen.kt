@@ -31,6 +31,7 @@ import com.homeservices.customer.ui.shared.TrustDossierCard
 import com.homeservices.customer.ui.shared.TrustDossierUiState
 import com.homeservices.customer.ui.shared.TrustDossierViewModel
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTimelineStep
@@ -95,11 +96,9 @@ private fun ConfirmationBody(
         Spacer(Modifier.height(28.dp))
         ConfirmationSuccessIcon()
         Spacer(Modifier.height(18.dp))
-        Text(
+        HsScreenTitle(
             text = stringResource(R.string.booking_confirmed_title),
             style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(8.dp))
         Text(

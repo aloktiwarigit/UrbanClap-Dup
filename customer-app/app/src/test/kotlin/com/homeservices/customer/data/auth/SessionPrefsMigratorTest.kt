@@ -147,4 +147,47 @@ public class SessionPrefsMigratorTest {
         // on a device/emulator; Robolectric does not exercise SharedPreferences exceptions.
         assertThat(newPrefs.getString("uid", null)).isEqualTo("stale-uid")
     }
+
+    /**
+     * SEC-07: Documents the failure mode when legacy prefs were written by
+     * MasterKeys-backed EncryptedSharedPreferences.
+     *
+     * When EncryptedSharedPreferences writes to a file, BOTH the key and the value
+     * are encrypted. Reading the file as plain SharedPreferences yields opaque blobs
+     * under encrypted key names — NOT the original "uid" / "phone_last_four" keys.
+     * The migrator copies those garbage-keyed entries into new prefs, leaving no
+     * standard session keys → user is forced to re-login.
+     *
+     * This test documents (and regression-protects) that failure mode so that any
+     * future migrator change which accidentally hides the empty-session outcome is
+     * immediately caught.
+     */
+    @Test
+    public fun `migration with legacy encrypted file produces empty new prefs (forces re-login)`() {
+        // Simulate what happens when legacy prefs were written by EncryptedSharedPreferences:
+        // the key names themselves are encrypted, so "uid" and "phone_last_four" are never
+        // stored under those literal key names. The migrator reads these garbage-key entries
+        // and copies them under their encrypted (unreadable) key names into new prefs.
+        // Result: newPrefs has no "uid" key → session is empty → user must re-login.
+        val legacyPrefs = context.getSharedPreferences("auth_session", Context.MODE_PRIVATE)
+        legacyPrefs
+            .edit()
+            .putString("AES256_ENCRYPTED_KEY_BLOB_1", "AES256_ENCRYPTED_VALUE_BLOB_1") // simulates encrypted uid entry
+            .putString("AES256_ENCRYPTED_KEY_BLOB_2", "AES256_ENCRYPTED_VALUE_BLOB_2") // simulates encrypted phone entry
+            .commit()
+
+        val newPrefs = context.getSharedPreferences("auth_session_new_target", Context.MODE_PRIVATE)
+
+        SessionPrefsMigrator.migrateIfNeededInternal(
+            context = context,
+            newPrefs = newPrefs,
+            newPrefsName = "auth_session_new_target",
+            legacyKeyPresent = true,
+        )
+
+        // The migration "succeeded" but copied useless encrypted key names.
+        // Standard session keys are absent → user is forced to re-login.
+        assertThat(newPrefs.getString("uid", null)).isNull()
+        assertThat(newPrefs.getString("phone_last_four", null)).isNull()
+    }
 }

@@ -6,4 +6,5 @@ public data class Category(
     public val imageUrl: String,
     public val serviceCount: Int,
     public val minPricePaise: Int,
+    public val safetyTag: Boolean = false,
 )

@@ -47,8 +47,17 @@ public class LocationForegroundService : Service() {
 
     @Suppress("ReturnCount") // Two early-return guards: missing bookingId + already-running idempotency check.
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val bookingId = intent?.getStringExtra(EXTRA_BOOKING_ID) ?: return START_NOT_STICKY
+        // On a sticky restart the OS delivers intent=null; restore from prefs so we
+        // keep pushing location without requiring the user to re-enter the active-job screen.
+        val bookingId =
+            intent?.getStringExtra(EXTRA_BOOKING_ID)
+                ?: getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString(PREF_BOOKING_ID, null)
+                ?: return START_NOT_STICKY
         if (currentBookingId == bookingId) return START_STICKY
+        getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(PREF_BOOKING_ID, bookingId)
+            .apply()
         currentBookingId = bookingId
         createNotificationChannel()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -114,6 +123,10 @@ public class LocationForegroundService : Service() {
         callback?.let { locationProvider.removeLocationUpdates(it) }
         callback = null
         serviceScope.cancel()
+        getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .remove(PREF_BOOKING_ID)
+            .apply()
         super.onDestroy()
     }
 
@@ -164,6 +177,8 @@ public class LocationForegroundService : Service() {
         public const val CHANNEL_ID: String = "active_job_location"
         public const val EXTRA_BOOKING_ID: String = "bookingId"
         private const val NOTIFICATION_ID: Int = 2002
+        private const val PREFS_NAME: String = "location_foreground_svc"
+        private const val PREF_BOOKING_ID: String = "active_booking_id"
 
         // Location-update tuning constants (extracted to satisfy detekt MagicNumber rule).
         private const val LOCATION_UPDATE_INTERVAL_MS: Long = 30_000L

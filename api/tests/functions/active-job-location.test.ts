@@ -28,9 +28,9 @@ vi.mock('../../src/services/featureFlags.service.js', () => ({
   isPeriodicLocationEnabled: vi.fn().mockResolvedValue(true),
 }));
 
-// withRateLimit: pass-through in tests so rate-limit bucket state doesn't affect other tests
-vi.mock('../../src/middleware/withRateLimit.js', () => ({
-  withRateLimit: () => (handler: unknown) => handler,
+// consume: allow by default; individual tests override for the 429 case
+vi.mock('../../src/cosmos/rate-limit-repository.js', () => ({
+  consume: vi.fn().mockResolvedValue({ allowed: true }),
 }));
 
 type MockFn = ReturnType<typeof vi.fn>;
@@ -87,8 +87,8 @@ describe('POST /v1/technicians/active-job/:bookingId/location', () => {
     vi.mock('../../src/services/featureFlags.service.js', () => ({
       isPeriodicLocationEnabled: vi.fn().mockResolvedValue(true),
     }));
-    vi.mock('../../src/middleware/withRateLimit.js', () => ({
-      withRateLimit: () => (handler: unknown) => handler,
+    vi.mock('../../src/cosmos/rate-limit-repository.js', () => ({
+      consume: vi.fn().mockResolvedValue({ allowed: true }),
     }));
     vi.mock('@sentry/node', () => ({
       captureMessage: vi.fn(),
@@ -173,6 +173,21 @@ describe('POST /v1/technicians/active-job/:bookingId/location', () => {
     const res = await innerHandler(makeReq('bk-1', staleBody), new InvocationContext()) as HttpResponseInit;
     expect(res.status).toBe(400);
     expect((res.jsonBody as { code: string }).code).toBe('STALE_FIX');
+  });
+
+  it('returns 429 when rate limit exceeded (keyed by uid+bookingId after auth)', async () => {
+    const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+    const { bookingRepo } = await import('../../src/cosmos/booking-repository.js');
+    const { consume } = await import('../../src/cosmos/rate-limit-repository.js');
+    (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+    (bookingRepo.getById as MockFn).mockResolvedValue(aBooking());
+    (consume as MockFn).mockResolvedValueOnce({ allowed: false, retryAfterMs: 8000 });
+
+    const res = await innerHandler(makeReq('bk-1', validBody), new InvocationContext()) as HttpResponseInit;
+    expect(res.status).toBe(429);
+    expect((res.jsonBody as { code: string }).code).toBe('RATE_LIMITED');
+    // rate-limit key must include the authenticated uid, not just the bookingId
+    expect(consume).toHaveBeenCalledWith(expect.stringContaining('tech-1'), expect.any(Number), expect.any(Number));
   });
 
   it('returns 204, upserts to Cosmos, and calls sendPeriodicLocationPush when flag=on', async () => {

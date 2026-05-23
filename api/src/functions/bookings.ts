@@ -7,7 +7,7 @@ import { requireIntegrity } from '../middleware/requireIntegrity.js';
 import { requireCustomer, type CustomerHttpHandler } from '../middleware/requireCustomer.js';
 import { CreateBookingRequestSchema, ConfirmBookingRequestSchema } from '../schemas/booking.js';
 import { RequestAddOnBodySchema, ApproveAddOnsBodySchema } from '../schemas/addon-approval.js';
-import { bookingRepo, type BookingCreateCreditOptions } from '../cosmos/booking-repository.js';
+import { bookingRepo, updateBookingFields, type BookingCreateCreditOptions } from '../cosmos/booking-repository.js';
 import { createRazorpayOrder, verifyPaymentSignature } from '../services/razorpay.service.js';
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
@@ -695,6 +695,7 @@ const getMyBookingsInner: CustomerHttpHandler = async (_req, ctx, customer) => {
           slotWindow: booking.slotWindow,
           amount: booking.finalAmount ?? booking.amount,
           paymentMethod: booking.paymentMethod ?? 'RAZORPAY',
+          razorpayOrderId: booking.paymentOrderId,
           createdAt: booking.createdAt,
         })),
       },
@@ -758,6 +759,18 @@ const approveFinalPriceInner: CustomerHttpHandler = async (req, _ctx, customer) 
 };
 export const approveFinalPriceHandler: HttpHandler = requireCustomer(approveFinalPriceInner);
 
+const cancelBookingInner: CustomerHttpHandler = async (req, _ctx, customer) => {
+  const id = (req as unknown as { params: { id: string } }).params.id;
+  const booking = await bookingRepo.getById(id);
+  if (!booking) return { status: 404, jsonBody: { code: 'BOOKING_NOT_FOUND' } };
+  if (booking.customerId !== customer.customerId) return { status: 403, jsonBody: { code: 'FORBIDDEN' } };
+  if (booking.status !== 'PENDING_PAYMENT') return { status: 409, jsonBody: { code: 'BOOKING_NOT_CANCELLABLE' } };
+  const updated = await updateBookingFields(id, { status: 'CUSTOMER_CANCELLED' });
+  if (!updated) return { status: 500, jsonBody: { code: 'INTERNAL_ERROR' } };
+  return { status: 200, jsonBody: { bookingId: updated.id, status: updated.status } };
+};
+export const cancelBookingHandler: HttpHandler = requireCustomer(cancelBookingInner);
+
 const createBookingRateLimiter = withRateLimit({
   buckets: { ip: { capacity: 20, refillPerSec: 20 / 60 } },
 });
@@ -768,3 +781,4 @@ app.http('getMyBookings', { route: 'v1/bookings', methods: ['GET'], handler: get
 app.http('getBooking', { route: 'v1/bookings/{id}', methods: ['GET'], handler: getBookingHandler });
 app.http('requestAddon', { route: 'v1/bookings/{id}/request-addon', methods: ['POST'], handler: requestAddonHandler });
 app.http('approveFinalPrice', { route: 'v1/bookings/{id}/approve-final-price', methods: ['POST'], handler: approveFinalPriceHandler });
+app.http('cancelBooking', { route: 'v1/bookings/{id}/cancel', methods: ['POST'], handler: cancelBookingHandler });

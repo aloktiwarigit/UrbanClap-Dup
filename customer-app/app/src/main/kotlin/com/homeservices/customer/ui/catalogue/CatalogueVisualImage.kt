@@ -155,7 +155,7 @@ private fun InitialsTile(
     Surface(
         modifier = modifier.size(size),
         shape = MaterialTheme.shapes.medium,
-        color = Color.White.copy(alpha = 0.58f),
+        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.58f),
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(

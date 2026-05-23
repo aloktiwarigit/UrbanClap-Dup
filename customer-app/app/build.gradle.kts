@@ -177,6 +177,11 @@ android {
             "GROWTHBOOK_CLIENT_KEY",
             "\"${System.getenv("GROWTHBOOK_CLIENT_KEY") ?: ""}\"",
         )
+        buildConfigField(
+            "String",
+            "POSTHOG_API_KEY",
+            "\"${System.getenv("POSTHOG_API_KEY") ?: ""}\"",
+        )
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
@@ -250,6 +255,12 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
+            all { test: org.gradle.api.tasks.testing.Test ->
+                // Pass -PexcludePaparazzi in smoke gate to skip snapshot tests on Windows
+                if (project.hasProperty("excludePaparazzi")) {
+                    test.filter.excludeTestsMatching("*PaparazziTest*")
+                }
+            }
         }
     }
 }
@@ -461,9 +472,6 @@ kover {
                     // CustomerFirebaseMessagingService — Android OS entry-point, not unit-testable
                     "*.CustomerFirebaseMessagingService",
                     "*.CustomerFirebaseMessagingService\$*",
-                    // BookingRepositoryImpl — thin Retrofit wrapper, integration-tested via API layer
-                    "*.BookingRepositoryImpl",
-                    "*.BookingRepositoryImpl\$*",
                     // BookingModule — Hilt @Provides wiring + OkHttp/Retrofit construction,
                     // same rationale as data.auth.di.* and data.catalogue.di.*
                     "*.data.booking.di.*",
@@ -475,11 +483,6 @@ kover {
                     "*.data.auth.remote.dto.*",
                     // BuildConfigFeatureFlags — reads a compile-time constant; no branches to test
                     "*.BuildConfigFeatureFlags",
-                    // GrowthBookFeatureFlags — SDK construction requires network (OkHttp); the
-                    // unit test covers the safe-off invariant via the no-arg constructor path;
-                    // the refreshAsync() fire-and-forget and SDK init branches need integration tests.
-                    "*.GrowthBookFeatureFlags",
-                    "*.GrowthBookFeatureFlags\$*",
                     // RazorpayPaymentUseCase.open() — uses callbackFlow + Razorpay Checkout SDK which
                     // requires a real Activity; same rationale as FirebaseOtpUseCase (callbackFlow + SDK)
                     "*.RazorpayPaymentUseCase",
@@ -497,9 +500,6 @@ kover {
                     // TrackingEventBus — MutableSharedFlow wrapper, same rationale as PriceApprovalEventBus
                     "*.TrackingEventBus",
                     "*.TrackingEventBus\$*",
-                    // TrackingRepositoryImpl — scan over SharedFlow, same rationale as BookingRepositoryImpl
-                    "*.TrackingRepositoryImpl",
-                    "*.TrackingRepositoryImpl\$*",
                     // data.tracking.di — Hilt @Binds wiring, same rationale as other DI modules
                     "*.data.tracking.di.*",
                     // RatingScreen — Compose UI composables (RatingScreen, ShieldBottomSheet,
@@ -695,6 +695,27 @@ kover {
                     // covered by repository-layer integration test in W6 (E16-S04b scope).
                     "*.data.waitlist.WaitlistRepositoryImpl",
                     "*.data.waitlist.WaitlistRepositoryImpl\$*",
+                    // Analytics DI module — Hilt @Binds wiring, same rationale as other DI modules.
+                    "*.observability.analytics.di.*",
+                    // NoOpAnalyticsFacade — trivial no-op stubs; no logic to test.
+                    "*.NoOpAnalyticsFacade",
+                    // AnalyticsEvents — constants object; no runtime logic or branches.
+                    "*.AnalyticsEvents",
+                    // DpdpConsentScreen — Compose UI composable (first-launch + consent management),
+                    // same rationale as other *Kt screen classes (recomposition guards, slot-table ops).
+                    // Paparazzi @Ignored tests are recorded on CI; ViewModel logic is covered by ConsentViewModelTest.
+                    "*.DpdpConsentScreenKt",
+                    "*.DpdpConsentScreenKt\$*",
+                    // ConsentUiState — sealed data class data holders, no logic branches.
+                    "*.ConsentUiState",
+                    "*.ConsentUiState\$*",
+                    // data.consent.di — Hilt @Provides/@Binds wiring, same rationale as other DI modules.
+                    "*.data.consent.di.*",
+                    // data.consent.remote.di — Hilt @Provides wiring for ConsentAuditApiService (Retrofit).
+                    "*.data.consent.remote.di.*",
+                    // ConsentAuditApiService — Retrofit interface; methods invoked by Retrofit runtime,
+                    // same rationale as *.data.integrity.IntegrityApiService.
+                    "*.data.consent.remote.ConsentAuditApiService",
                 )
             }
         }
@@ -736,6 +757,7 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
 
     implementation(libs.sentry.android)
+    implementation(libs.posthog.android)
     implementation(libs.growthbook.android)
     implementation(libs.growthbook.okhttp)
 
@@ -799,6 +821,7 @@ dependencies {
     testImplementation(libs.hilt.testing)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
+    testImplementation(libs.okhttp.mockwebserver)
     kspTest(libs.hilt.compiler)
 
     androidTestImplementation(libs.hilt.testing)

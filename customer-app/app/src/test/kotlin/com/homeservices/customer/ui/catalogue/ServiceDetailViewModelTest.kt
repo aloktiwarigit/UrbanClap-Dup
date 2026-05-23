@@ -10,6 +10,7 @@ import com.homeservices.customer.domain.catalogue.model.Service
 import com.homeservices.customer.domain.locale.GetCurrentLocaleUseCase
 import com.homeservices.customer.domain.technician.GetConfidenceScoreUseCase
 import com.homeservices.customer.domain.technician.model.ConfidenceScore
+import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -72,6 +73,7 @@ public class ServiceDetailViewModelTest {
                     locationProvider,
                     localizer,
                     getCurrentLocale,
+                    NoOpAnalyticsFacade(),
                 )
             assertThat(vm.uiState.value).isInstanceOf(ServiceDetailUiState.Success::class.java)
             assertThat((vm.uiState.value as ServiceDetailUiState.Success).service).isEqualTo(testService)
@@ -89,6 +91,7 @@ public class ServiceDetailViewModelTest {
                     locationProvider,
                     localizer,
                     getCurrentLocale,
+                    NoOpAnalyticsFacade(),
                 )
             assertThat(vm.uiState.value).isInstanceOf(ServiceDetailUiState.Error::class.java)
             assertThat((vm.uiState.value as ServiceDetailUiState.Error).message).isEqualTo("not found")
@@ -106,6 +109,7 @@ public class ServiceDetailViewModelTest {
                     locationProvider,
                     localizer,
                     getCurrentLocale,
+                    NoOpAnalyticsFacade(),
                 )
             assertThat(vm.confidenceScoreState.value).isInstanceOf(ConfidenceScoreUiState.Hidden::class.java)
         }
@@ -124,6 +128,7 @@ public class ServiceDetailViewModelTest {
                     locationProvider,
                     localizer,
                     getCurrentLocale,
+                    NoOpAnalyticsFacade(),
                 )
             assertThat(vm.confidenceScoreState.value).isInstanceOf(ConfidenceScoreUiState.Loaded::class.java)
             assertThat((vm.confidenceScoreState.value as ConfidenceScoreUiState.Loaded).score).isEqualTo(score)
@@ -143,6 +148,7 @@ public class ServiceDetailViewModelTest {
                     locationProvider,
                     localizer,
                     getCurrentLocale,
+                    NoOpAnalyticsFacade(),
                 )
             assertThat(vm.confidenceScoreState.value).isInstanceOf(ConfidenceScoreUiState.Limited::class.java)
         }
