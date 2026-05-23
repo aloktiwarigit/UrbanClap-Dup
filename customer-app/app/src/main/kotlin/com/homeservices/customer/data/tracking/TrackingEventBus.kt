@@ -11,14 +11,16 @@ import javax.inject.Singleton
 public class TrackingEventBus
     @Inject
     constructor() {
-        // Hot event — only the latest tracking position matters; backpressure is safe to drop.
-        // replay=0: no caching for late subscribers. extraBufferCapacity=1: absorbs one in-flight
-        // event to avoid suspension. DROP_OLDEST: stale positions are silently discarded.
-        private val mutableEvents = MutableSharedFlow<TrackingEvent>(
-            replay = 0,
-            extraBufferCapacity = 1,
-            onBufferOverflow = BufferOverflow.DROP_OLDEST,
-        )
+        // Hot event — no replay for late subscribers (live position only matters now).
+        // extraBufferCapacity=64: absorbs a burst of FCM events without blocking the poster.
+        // DROP_OLDEST: under extreme backpressure (>64 queued events), oldest position is
+        // discarded; normal FCM cadence (~1/s) never reaches this limit.
+        private val mutableEvents =
+            MutableSharedFlow<TrackingEvent>(
+                replay = 0,
+                extraBufferCapacity = 64,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST,
+            )
         internal val events: SharedFlow<TrackingEvent> = mutableEvents.asSharedFlow()
 
         internal fun post(event: TrackingEvent) {
