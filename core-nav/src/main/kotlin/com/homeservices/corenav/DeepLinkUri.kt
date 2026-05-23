@@ -22,6 +22,7 @@ public object DeepLinkUri {
     private const val HOST = "action"
     private const val ENTITY_ID_KEY = "entityId"
     private const val ENCODING = "UTF-8"
+    private val ENTITY_ID_PATTERN = Regex("^[a-zA-Z0-9_-]{1,64}\$")
 
     /**
      * Build a deep-link URI string from a [NotificationIntent].
@@ -63,6 +64,7 @@ public object DeepLinkUri {
 
             val queryParams = parseQueryString(parsed.rawQuery ?: return null)
             val entityId = queryParams[ENTITY_ID_KEY]?.takeIf { it.isNotEmpty() } ?: return null
+            if (!ENTITY_ID_PATTERN.matches(entityId)) return null
 
             // Build rawArgs from remaining params (excluding entityId)
             val rawArgs = queryParams.filterKeys { it != ENTITY_ID_KEY }
