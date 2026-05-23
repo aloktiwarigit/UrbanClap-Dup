@@ -826,6 +826,7 @@ dependencies {
     testImplementation(libs.hilt.testing)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
+    testImplementation(libs.okhttp.mockwebserver)
     kspTest(libs.hilt.compiler)
 
     androidTestImplementation(libs.hilt.testing)

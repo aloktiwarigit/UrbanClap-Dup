@@ -198,4 +198,40 @@ public class DeepLinkUriTest {
             assertThat(result).isNull()
         }
     }
+
+    // ── SEC-04: entityId allowlist validation ─────────────────────────────────
+
+    @Nested
+    public inner class EntityIdValidationTests {
+        @Test
+        public fun `parse returns null for traversal entityId`() {
+            // entityId = "../../delete_account" — must be rejected by allowlist
+            val uri = "homeservices://action/RATING_PROMPT_CUSTOMER?entityId=..%2F..%2Fdelete_account"
+            val result = DeepLinkUri.parse(uri)
+            assertThat(result).isNull()
+        }
+
+        @Test
+        public fun `parse returns null for entityId with slash`() {
+            val uri = "homeservices://action/ADDON_APPROVAL_REQUESTED?entityId=bk-001%2Ffoo"
+            val result = DeepLinkUri.parse(uri)
+            assertThat(result).isNull()
+        }
+
+        @Test
+        public fun `parse accepts valid alphanumeric entityId`() {
+            val uri = "homeservices://action/RATING_PROMPT_CUSTOMER?entityId=bk-test-123"
+            val result = DeepLinkUri.parse(uri)
+            assertThat(result).isNotNull()
+            assertThat(result!!.entityId).isEqualTo("bk-test-123")
+        }
+
+        @Test
+        public fun `parse rejects entityId longer than 64 characters`() {
+            val longId = "a".repeat(65)
+            val uri = "homeservices://action/RATING_PROMPT_CUSTOMER?entityId=$longId"
+            val result = DeepLinkUri.parse(uri)
+            assertThat(result).isNull()
+        }
+    }
 }
