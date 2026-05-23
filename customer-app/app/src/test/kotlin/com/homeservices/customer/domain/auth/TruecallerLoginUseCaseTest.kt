@@ -1,10 +1,10 @@
 package com.homeservices.customer.domain.auth
 
+import com.homeservices.customer.domain.auth.gateway.TruecallerGateway
 import com.homeservices.customer.domain.auth.model.TruecallerAuthResult
-import com.truecaller.android.sdk.common.models.TrueProfile
-import com.truecaller.android.sdk.legacy.TrueError
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
@@ -12,82 +12,73 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 public class TruecallerLoginUseCaseTest {
+    private lateinit var gateway: TruecallerGateway
     private lateinit var useCase: TruecallerLoginUseCase
+    private lateinit var resultFlow: MutableSharedFlow<TruecallerAuthResult>
 
     @BeforeEach
     public fun setUp() {
-        useCase = TruecallerLoginUseCase()
+        resultFlow = MutableSharedFlow(replay = 1)
+        gateway = mockk(relaxed = true)
+        every { gateway.resultFlow } returns resultFlow
+        useCase = TruecallerLoginUseCase(gateway)
     }
 
     @Test
-    public fun `emits Success with payload, signature, algorithm and last 4 digits when SDK calls onSuccessProfileShared`(): Unit =
+    public fun `emits Success with payload, signature, algorithm and last 4 digits when gateway emits Success`(): Unit =
         runTest {
-            val profile =
-                TrueProfile.Builder("Test", "").build().also {
-                    it.phoneNumber = "+919876540000"
-                    it.payload = "base64payload=="
-                    it.signature = "base64signature=="
-                    it.signatureAlgorithm = "SHA512withRSA"
-                }
-
-            useCase.simulateSdkCallback { callback ->
-                callback.onSuccessProfileShared(profile)
-            }
+            val success =
+                TruecallerAuthResult.Success(
+                    payload = "base64payload==",
+                    signature = "base64signature==",
+                    signatureAlgorithm = "SHA512withRSA",
+                    phoneLastFour = "0000",
+                )
+            resultFlow.tryEmit(success)
 
             val result = useCase.resultFlow.first()
             assertThat(result).isInstanceOf(TruecallerAuthResult.Success::class.java)
-            val success = result as TruecallerAuthResult.Success
-            assertThat(success.phoneLastFour).isEqualTo("0000")
-            assertThat(success.payload).isEqualTo("base64payload==")
-            assertThat(success.signature).isEqualTo("base64signature==")
-            assertThat(success.signatureAlgorithm).isEqualTo("SHA512withRSA")
+            val s = result as TruecallerAuthResult.Success
+            assertThat(s.phoneLastFour).isEqualTo("0000")
+            assertThat(s.payload).isEqualTo("base64payload==")
+            assertThat(s.signature).isEqualTo("base64signature==")
+            assertThat(s.signatureAlgorithm).isEqualTo("SHA512withRSA")
         }
 
     @Test
-    public fun `emits Success with empty strings for payload and signature when SDK provides null values`(): Unit =
+    public fun `emits Success with empty strings for payload and signature when gateway emits null-safe values`(): Unit =
         runTest {
-            val profile =
-                TrueProfile.Builder("Test", "").build().also {
-                    it.phoneNumber = "+919876541111"
-                    // payload, signature, signatureAlgorithm not set — will be null from SDK
-                }
-
-            useCase.simulateSdkCallback { callback ->
-                callback.onSuccessProfileShared(profile)
-            }
+            val success =
+                TruecallerAuthResult.Success(
+                    payload = "",
+                    signature = "",
+                    signatureAlgorithm = "",
+                    phoneLastFour = "1111",
+                )
+            resultFlow.tryEmit(success)
 
             val result = useCase.resultFlow.first()
             assertThat(result).isInstanceOf(TruecallerAuthResult.Success::class.java)
-            val success = result as TruecallerAuthResult.Success
-            assertThat(success.phoneLastFour).isEqualTo("1111")
-            // Null-safe: empty string fallback ensures downstream code is not null-unsafe
-            assertThat(success.payload).isNotNull()
-            assertThat(success.signature).isNotNull()
-            assertThat(success.signatureAlgorithm).isNotNull()
+            val s = result as TruecallerAuthResult.Success
+            assertThat(s.phoneLastFour).isEqualTo("1111")
+            assertThat(s.payload).isNotNull()
+            assertThat(s.signature).isNotNull()
+            assertThat(s.signatureAlgorithm).isNotNull()
         }
 
     @Test
-    public fun `emits Cancelled when SDK calls onVerificationRequired`(): Unit =
+    public fun `emits Cancelled when gateway emits Cancelled`(): Unit =
         runTest {
-            useCase.simulateSdkCallback { callback ->
-                callback.onVerificationRequired(null)
-            }
+            resultFlow.tryEmit(TruecallerAuthResult.Cancelled)
 
             val result = useCase.resultFlow.first()
             assertThat(result).isEqualTo(TruecallerAuthResult.Cancelled)
         }
 
     @Test
-    public fun `emits Failure with errorType when SDK calls onFailureProfileShared`(): Unit =
+    public fun `emits Failure with errorType when gateway emits Failure`(): Unit =
         runTest {
-            val trueError =
-                mockk<TrueError> {
-                    every { errorType } returns 404
-                }
-
-            useCase.simulateSdkCallback { callback ->
-                callback.onFailureProfileShared(trueError)
-            }
+            resultFlow.tryEmit(TruecallerAuthResult.Failure(errorType = 404))
 
             val result = useCase.resultFlow.first()
             assertThat(result).isInstanceOf(TruecallerAuthResult.Failure::class.java)

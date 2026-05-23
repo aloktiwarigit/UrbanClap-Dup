@@ -1,39 +1,36 @@
 package com.homeservices.customer.domain.auth
 
-import com.google.android.gms.tasks.Tasks
-import com.google.firebase.auth.AuthResult
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseAuthException
-import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.PhoneAuthCredential
+import com.homeservices.customer.domain.auth.gateway.OtpSender
+import com.homeservices.customer.domain.auth.model.AuthResult as AppAuthResult
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import com.homeservices.customer.domain.auth.model.AuthResult as AppAuthResult
 
 public class FirebaseOtpUseCaseTest {
-    private lateinit var firebaseAuth: FirebaseAuth
+    private lateinit var otpSender: OtpSender
     private lateinit var useCase: FirebaseOtpUseCase
 
     @BeforeEach
     public fun setUp() {
-        firebaseAuth = mockk()
-        useCase = FirebaseOtpUseCase(firebaseAuth)
+        otpSender = mockk()
+        useCase = FirebaseOtpUseCase(otpSender)
     }
 
     @Test
-    public fun `signInWithCredential emits Success when Firebase succeeds`(): Unit =
+    public fun `signInWithCredential emits Success when OtpSender emits Success`(): Unit =
         runTest {
             val firebaseUser = mockk<FirebaseUser> { every { uid } returns "uid-123" }
-            val authResultMock = mockk<AuthResult> { every { user } returns firebaseUser }
             val credential = mockk<PhoneAuthCredential>()
 
-            every { firebaseAuth.signInWithCredential(credential) } returns Tasks.forResult(authResultMock)
+            every { otpSender.signInWithCredential(credential) } returns
+                flowOf(AppAuthResult.Success(firebaseUser))
 
             val result = useCase.signInWithCredential(credential).first()
 
@@ -42,15 +39,12 @@ public class FirebaseOtpUseCaseTest {
         }
 
     @Test
-    public fun `signInWithCredential emits WrongCode when Firebase throws invalid credentials`(): Unit =
+    public fun `signInWithCredential emits WrongCode when OtpSender emits WrongCode`(): Unit =
         runTest {
             val credential = mockk<PhoneAuthCredential>()
-            val exception =
-                mockk<FirebaseAuthInvalidCredentialsException> {
-                    every { errorCode } returns "ERROR_INVALID_VERIFICATION_CODE"
-                }
 
-            every { firebaseAuth.signInWithCredential(credential) } returns Tasks.forException(exception)
+            every { otpSender.signInWithCredential(credential) } returns
+                flowOf(AppAuthResult.Error.WrongCode)
 
             val result = useCase.signInWithCredential(credential).first()
 
@@ -58,12 +52,13 @@ public class FirebaseOtpUseCaseTest {
         }
 
     @Test
-    public fun `signInWithCredential emits General error for unexpected exceptions`(): Unit =
+    public fun `signInWithCredential emits General error when OtpSender emits General error`(): Unit =
         runTest {
             val credential = mockk<PhoneAuthCredential>()
             val exception = RuntimeException("network error")
 
-            every { firebaseAuth.signInWithCredential(credential) } returns Tasks.forException(exception)
+            every { otpSender.signInWithCredential(credential) } returns
+                flowOf(AppAuthResult.Error.General(exception))
 
             val result = useCase.signInWithCredential(credential).first()
 
@@ -71,15 +66,12 @@ public class FirebaseOtpUseCaseTest {
         }
 
     @Test
-    public fun `signInWithCredential emits CodeExpired when Firebase errorCode is SESSION_EXPIRED`(): Unit =
+    public fun `signInWithCredential emits CodeExpired when OtpSender emits CodeExpired`(): Unit =
         runTest {
             val credential = mockk<PhoneAuthCredential>()
-            val exception =
-                mockk<FirebaseAuthException> {
-                    every { errorCode } returns "ERROR_SESSION_EXPIRED"
-                }
 
-            every { firebaseAuth.signInWithCredential(credential) } returns Tasks.forException(exception)
+            every { otpSender.signInWithCredential(credential) } returns
+                flowOf(AppAuthResult.Error.CodeExpired)
 
             val result = useCase.signInWithCredential(credential).first()
 
@@ -87,15 +79,12 @@ public class FirebaseOtpUseCaseTest {
         }
 
     @Test
-    public fun `signInWithCredential emits RateLimited when Firebase errorCode is TOO_MANY_REQUESTS`(): Unit =
+    public fun `signInWithCredential emits RateLimited when OtpSender emits RateLimited`(): Unit =
         runTest {
             val credential = mockk<PhoneAuthCredential>()
-            val exception =
-                mockk<FirebaseAuthException> {
-                    every { errorCode } returns "ERROR_TOO_MANY_REQUESTS"
-                }
 
-            every { firebaseAuth.signInWithCredential(credential) } returns Tasks.forException(exception)
+            every { otpSender.signInWithCredential(credential) } returns
+                flowOf(AppAuthResult.Error.RateLimited)
 
             val result = useCase.signInWithCredential(credential).first()
 
@@ -103,12 +92,12 @@ public class FirebaseOtpUseCaseTest {
         }
 
     @Test
-    public fun `signInWithCredential emits General error when user is null after success`(): Unit =
+    public fun `signInWithCredential emits General error when OtpSender emits null-user General error`(): Unit =
         runTest {
             val credential = mockk<PhoneAuthCredential>()
-            val authResultMock = mockk<AuthResult> { every { user } returns null }
+            val nullUserError = AppAuthResult.Error.General(IllegalStateException("null user after sign-in"))
 
-            every { firebaseAuth.signInWithCredential(credential) } returns Tasks.forResult(authResultMock)
+            every { otpSender.signInWithCredential(credential) } returns flowOf(nullUserError)
 
             val result = useCase.signInWithCredential(credential).first()
 
@@ -116,15 +105,12 @@ public class FirebaseOtpUseCaseTest {
         }
 
     @Test
-    public fun `signInWithCredential emits General when FirebaseAuth errorCode is unrecognized`(): Unit =
+    public fun `signInWithCredential emits General when OtpSender emits unrecognized error`(): Unit =
         runTest {
             val credential = mockk<PhoneAuthCredential>()
-            val exception =
-                mockk<FirebaseAuthInvalidCredentialsException> {
-                    every { errorCode } returns "ERROR_UNKNOWN_CODE"
-                }
+            val unknownError = AppAuthResult.Error.General(RuntimeException("unknown"))
 
-            every { firebaseAuth.signInWithCredential(credential) } returns Tasks.forException(exception)
+            every { otpSender.signInWithCredential(credential) } returns flowOf(unknownError)
 
             val result = useCase.signInWithCredential(credential).first()
 
@@ -132,25 +118,16 @@ public class FirebaseOtpUseCaseTest {
         }
 
     @Test
-    public fun `verifyOtp delegates to signInWithCredential`(): Unit =
+    public fun `verifyOtp delegates to OtpSender verifyOtp`(): Unit =
         runTest {
-            // verifyOtp creates a credential and delegates — we can verify it returns a flow
-            // without throwing (PhoneAuthProvider.getCredential may throw in unit test, that's fine)
-            // We just verify the method path through delegation is exercised
             val firebaseUser = mockk<FirebaseUser> { every { uid } returns "uid-verify" }
-            val authResultMock = mockk<AuthResult> { every { user } returns firebaseUser }
-            val credential = mockk<PhoneAuthCredential>()
 
-            // Mock PhoneAuthProvider static to return a credential — use relaxed mock on FirebaseAuth
-            every { firebaseAuth.signInWithCredential(any()) } returns Tasks.forResult(authResultMock)
+            every { otpSender.verifyOtp("verificationId", "123456") } returns
+                flowOf(AppAuthResult.Success(firebaseUser))
 
-            // verifyOtp internally calls PhoneAuthProvider.getCredential which requires Firebase.
-            // If it throws, catch gracefully — the path is covered by signInWithCredential tests above.
-            try {
-                val result = useCase.verifyOtp("verificationId", "123456").first()
-                assertThat(result).isNotNull()
-            } catch (_: Exception) {
-                // Expected: PhoneAuthProvider.getCredential may fail in Robolectric without full Firebase init
-            }
+            val result = useCase.verifyOtp("verificationId", "123456").first()
+
+            assertThat(result).isInstanceOf(AppAuthResult.Success::class.java)
+            assertThat((result as AppAuthResult.Success).user.uid).isEqualTo("uid-verify")
         }
 }

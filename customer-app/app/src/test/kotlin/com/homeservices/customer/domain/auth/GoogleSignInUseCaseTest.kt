@@ -1,11 +1,7 @@
 package com.homeservices.customer.domain.auth
 
-import android.content.Context
-import androidx.credentials.CredentialManager
-import androidx.credentials.GetCredentialRequest
-import androidx.credentials.exceptions.GetCredentialCancellationException
-import androidx.credentials.exceptions.NoCredentialException
 import androidx.fragment.app.FragmentActivity
+import com.homeservices.customer.domain.auth.gateway.GoogleCredentialProvider
 import com.homeservices.customer.domain.auth.model.GoogleSignInResult
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -15,26 +11,21 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 public class GoogleSignInUseCaseTest {
-    private lateinit var credentialManager: CredentialManager
-    private lateinit var context: Context
+    private lateinit var provider: GoogleCredentialProvider
     private lateinit var activity: FragmentActivity
     private lateinit var sut: GoogleSignInUseCase
 
     @BeforeEach
     public fun setUp(): Unit {
-        credentialManager = mockk()
-        context = mockk(relaxed = true)
+        provider = mockk()
         activity = mockk(relaxed = true)
-        sut = GoogleSignInUseCase(credentialManager, context)
-        // Override internal property so tests do not depend on build-time config.
-        sut.webClientId = "fake-web-client-id"
+        sut = GoogleSignInUseCase(provider)
     }
 
     @Test
-    public fun `getCredential — GetCredentialCancellationException — returns Cancelled`(): Unit =
+    public fun `getCredential — provider returns Cancelled — returns Cancelled`(): Unit =
         runTest {
-            coEvery { credentialManager.getCredential(any<Context>(), any<GetCredentialRequest>()) } throws
-                GetCredentialCancellationException()
+            coEvery { provider.getCredential(activity) } returns GoogleSignInResult.Cancelled
 
             val result = sut.getCredential(activity)
 
@@ -42,10 +33,9 @@ public class GoogleSignInUseCaseTest {
         }
 
     @Test
-    public fun `getCredential — NoCredentialException — returns Unavailable`(): Unit =
+    public fun `getCredential — provider returns Unavailable — returns Unavailable`(): Unit =
         runTest {
-            coEvery { credentialManager.getCredential(any<Context>(), any<GetCredentialRequest>()) } throws
-                NoCredentialException()
+            coEvery { provider.getCredential(activity) } returns GoogleSignInResult.Unavailable
 
             val result = sut.getCredential(activity)
 
@@ -53,10 +43,10 @@ public class GoogleSignInUseCaseTest {
         }
 
     @Test
-    public fun `getCredential — unexpected exception — returns Error with cause`(): Unit =
+    public fun `getCredential — provider returns Error — returns Error with cause`(): Unit =
         runTest {
             val cause = RuntimeException("unexpected")
-            coEvery { credentialManager.getCredential(any<Context>(), any<GetCredentialRequest>()) } throws cause
+            coEvery { provider.getCredential(activity) } returns GoogleSignInResult.Error(cause)
 
             val result = sut.getCredential(activity)
 

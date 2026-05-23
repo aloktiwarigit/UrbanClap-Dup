@@ -1,63 +1,52 @@
 package com.homeservices.customer.domain.auth
 
 import android.content.Context
-import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
-import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
+import androidx.fragment.app.FragmentActivity
+import com.homeservices.customer.domain.auth.gateway.BiometricGateway
+import com.homeservices.customer.domain.auth.model.BiometricResult
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
+import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 public class BiometricGateUseCaseTest {
-    private lateinit var context: Context
-    private lateinit var biometricManager: BiometricManager
+    private lateinit var gateway: BiometricGateway
     private lateinit var useCase: BiometricGateUseCase
 
     @BeforeEach
     public fun setUp() {
-        context = mockk()
-        biometricManager = mockk()
-        mockkStatic(BiometricManager::class)
-        every { BiometricManager.from(context) } returns biometricManager
-        useCase = BiometricGateUseCase()
+        gateway = mockk()
+        useCase = BiometricGateUseCase(gateway)
     }
 
     @Test
-    public fun `canUseBiometric returns true when BiometricManager reports BIOMETRIC_SUCCESS`() {
-        every {
-            biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
-        } returns BiometricManager.BIOMETRIC_SUCCESS
-
+    public fun `canUseBiometric delegates to gateway canAuthenticate`() {
+        val context = mockk<Context>()
+        every { gateway.canAuthenticate(context) } returns true
         assertThat(useCase.canUseBiometric(context)).isTrue()
     }
 
     @Test
-    public fun `canUseBiometric returns false when no hardware present`() {
-        every {
-            biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
-        } returns BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE
-
+    public fun `canUseBiometric returns false when gateway returns false`() {
+        val context = mockk<Context>()
+        every { gateway.canAuthenticate(context) } returns false
         assertThat(useCase.canUseBiometric(context)).isFalse()
     }
 
     @Test
-    public fun `canUseBiometric returns false when no biometric enrolled`() {
-        every {
-            biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
-        } returns BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED
-
-        assertThat(useCase.canUseBiometric(context)).isFalse()
+    public fun `requestAuth returns Authenticated when gateway succeeds`(): Unit = runTest {
+        val activity = mockk<FragmentActivity>()
+        coEvery { gateway.requestAuth(activity, "Title", "Sub") } returns BiometricResult.Authenticated
+        assertThat(useCase.requestAuth(activity, "Title", "Sub")).isEqualTo(BiometricResult.Authenticated)
     }
 
     @Test
-    public fun `canUseBiometric returns false when hardware unavailable`() {
-        every {
-            biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
-        } returns BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE
-
-        assertThat(useCase.canUseBiometric(context)).isFalse()
+    public fun `requestAuth returns Cancelled when gateway returns Cancelled`(): Unit = runTest {
+        val activity = mockk<FragmentActivity>()
+        coEvery { gateway.requestAuth(activity, any(), any()) } returns BiometricResult.Cancelled
+        assertThat(useCase.requestAuth(activity, "t", "s")).isEqualTo(BiometricResult.Cancelled)
     }
 }
