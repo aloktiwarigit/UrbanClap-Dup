@@ -530,20 +530,30 @@ kover {
                     // tests using mockk.
                     "*.PayoutCadenceViewModel\$saveCadence\$1",
                     "*.PayoutCadenceViewModel\$saveCadence\$1\$*",
+                    // ActiveJobForegroundService — @AndroidEntryPoint service with field injection;
+                    // foreground notification and WorkManager scheduling are OS-framework calls
+                    // not exercisable in JVM unit tests. Smoke test covers lifecycle.
+                    "*.ActiveJobForegroundService",
+                    "*.ActiveJobForegroundService\$*",
+                    // BootReceiver — goAsync() + Room call in a BroadcastReceiver; requires
+                    // a real Android runtime to exercise properly.
+                    "*.BootReceiver",
+                    "*.BootReceiver\$*",
+                    // JobOfferFullScreenActivity — Compose Activity wrapping JobOfferScreen;
+                    // identical rationale to MainActivity exclusion.
+                    "*.JobOfferFullScreenActivity",
+                    "*.JobOfferFullScreenActivity\$*",
+                    // OutboxSyncWorker is fully covered by OutboxSyncWorkerTest; the
+                    // @HiltWorker-generated factory is excluded here (same as other generated DI).
+                    "*.*_AssistedFactory",
+                    "*.*_AssistedFactory\$*",
+                    // HomeservicesTechnicianApplication.workManagerConfiguration — framework
+                    // Configuration.Provider wiring, tested indirectly via WorkManager integration.
+                    "*.HomeservicesTechnicianApplication",
+                    "*.HomeservicesTechnicianApplication\$*",
                     // IntegrityModule + IntegrityApiService — Play Integrity SDK DI wiring (E11-S03)
                     "*.domain.integrity.di.*",
                     "*.data.integrity.IntegrityApiService",
-                    // Foreground service, BootReceiver, JobOfferFullScreenActivity (E11-S04)
-                    "*.ActiveJobForegroundService",
-                    "*.ActiveJobForegroundService\$*",
-                    "*.BootReceiver",
-                    "*.BootReceiver\$*",
-                    "*.JobOfferFullScreenActivity",
-                    "*.JobOfferFullScreenActivity\$*",
-                    "*.*_AssistedFactory",
-                    "*.*_AssistedFactory\$*",
-                    "*.HomeservicesTechnicianApplication",
-                    "*.HomeservicesTechnicianApplication\$*",
                     // IdTokenCache, FirebaseTokenAuthenticator, SessionPrefsMigrator (E11-S02)
                     "*.IdTokenCache",
                     "*.IdTokenCache\$*",

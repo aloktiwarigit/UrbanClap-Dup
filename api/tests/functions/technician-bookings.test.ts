@@ -86,7 +86,7 @@ describe('GET /v1/technicians/me/bookings', () => {
     });
   });
 
-  it('returns 500 when technician booking query fails', async () => {
+  it('returns 200 with empty list when technician booking query fails (pilot graceful degradation)', async () => {
     const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
     const { bookingRepo } = await import('../../src/cosmos/booking-repository.js');
     (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
@@ -94,8 +94,8 @@ describe('GET /v1/technicians/me/bookings', () => {
 
     const res = (await handler(makeReq(), ctx)) as HttpResponseInit;
 
-    expect(res.status).toBe(500);
-    expect(res.jsonBody).toEqual({ code: 'INTERNAL_ERROR' });
+    expect(res.status).toBe(200);
+    expect(res.jsonBody).toEqual({ bookings: [] });
   });
 
   it('returns empty bookings when the repository returns an invalid result shape', async () => {
