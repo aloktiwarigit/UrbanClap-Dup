@@ -34,5 +34,6 @@ public class NoShowCreditViewModel
 
         public fun dismiss() {
             _event.value = null
+            eventBus.consume()
         }
     }

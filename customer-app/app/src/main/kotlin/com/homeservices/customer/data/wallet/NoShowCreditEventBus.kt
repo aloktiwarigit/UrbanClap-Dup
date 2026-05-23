@@ -1,29 +1,39 @@
 package com.homeservices.customer.data.wallet
 
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * In-process event bus for no-show credit notifications.
  *
- * The FCM service calls [post] on the background thread; [WalletViewModel] and
- * [NoShowCreditViewModel] collect [events] in their viewModelScope to react.
+ * The FCM service calls [post] on the background thread; [NoShowCreditViewModel] collects
+ * [events] in viewModelScope to react. [consume] must be called when the credit banner is
+ * dismissed so that the [MutableStateFlow] cache is cleared and subsequent screen collectors
+ * (e.g. navigating between CustomerBookingsScreen and LiveTrackingScreen) do not re-receive
+ * a stale credit without a new FCM event.
  *
- * Uses [extraBufferCapacity] = 1 so a single in-flight credit is not dropped if
- * no collector is active at the moment of emission, but replayed events are not
- * accumulated (replay = 0).
+ * State-based (resettable) rather than [kotlinx.coroutines.flow.SharedFlow] replay, because
+ * a SharedFlow replay cache cannot be cleared after emission.
  */
 @Singleton
 public class NoShowCreditEventBus
     @Inject
     constructor() {
-        private val _events = MutableSharedFlow<NoShowCreditEvent>(extraBufferCapacity = 1)
-        public val events: SharedFlow<NoShowCreditEvent> = _events.asSharedFlow()
+        private val _events = MutableStateFlow<NoShowCreditEvent?>(null)
+
+        // Emits only when a non-null credit is posted; silent after consume().
+        public val events: Flow<NoShowCreditEvent> = _events.filterNotNull()
 
         public fun post(event: NoShowCreditEvent) {
-            _events.tryEmit(event)
+            _events.value = event
+        }
+
+        // Called by NoShowCreditViewModel.dismiss() to clear the cached event so that
+        // new collectors on other screens do not re-receive a stale credit.
+        public fun consume() {
+            _events.value = null
         }
     }

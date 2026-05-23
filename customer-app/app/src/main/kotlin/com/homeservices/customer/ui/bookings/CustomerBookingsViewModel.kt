@@ -17,17 +17,17 @@ internal class CustomerBookingsViewModel
     constructor(
         private val getBookings: GetCustomerBookingsUseCase,
     ) : ViewModel() {
-        private val _uiState = MutableStateFlow<CustomerBookingsUiState>(CustomerBookingsUiState.Loading)
-        val uiState: StateFlow<CustomerBookingsUiState> = _uiState.asStateFlow()
+        private val uiStateMutable = MutableStateFlow<CustomerBookingsUiState>(CustomerBookingsUiState.Loading)
+        internal val uiState: StateFlow<CustomerBookingsUiState> = uiStateMutable.asStateFlow()
 
         init {
             refresh()
         }
 
-        fun refresh() {
+        public fun refresh() {
             viewModelScope.launch {
-                _uiState.value = CustomerBookingsUiState.Loading
-                _uiState.value =
+                uiStateMutable.value = CustomerBookingsUiState.Loading
+                uiStateMutable.value =
                     getBookings()
                         .first()
                         .fold(

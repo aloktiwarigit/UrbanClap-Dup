@@ -12,6 +12,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -54,6 +55,8 @@ public class LiveTrackingViewModelLocationBusTest {
             every { trackStatus.execute("b1") } returns flowOf(BookingStatus.EnRoute)
 
             val vm = viewModel("b1")
+            // With WhileSubscribed, upstream starts on first subscription
+            val job = vm.uiState.launchIn(this)
             advanceUntilIdle()
 
             val busEvent = LocationUpdateEvent(bookingId = "b1", lat = 13.00, lng = 78.00, capturedAt = 999L)
@@ -64,6 +67,7 @@ public class LiveTrackingViewModelLocationBusTest {
             assertThat(state.liveLat).isEqualTo(13.00)
             assertThat(state.liveLng).isEqualTo(78.00)
             assertThat(state.liveCapturedAt).isEqualTo(999L)
+            job.cancel()
         }
 
     // ── 2. No bus event → liveLat/liveLng fall back to legacy location ────────────
@@ -76,6 +80,8 @@ public class LiveTrackingViewModelLocationBusTest {
             every { trackStatus.execute("b1") } returns flowOf(BookingStatus.EnRoute)
 
             val vm = viewModel("b1")
+            // With WhileSubscribed, upstream starts on first subscription
+            val job = vm.uiState.launchIn(this)
             advanceUntilIdle()
 
             val state = vm.uiState.value as LiveTrackingUiState.Tracking
@@ -83,6 +89,7 @@ public class LiveTrackingViewModelLocationBusTest {
             assertThat(state.liveLat).isEqualTo(12.97)
             assertThat(state.liveLng).isEqualTo(77.59)
             assertThat(state.liveCapturedAt).isNull()
+            job.cancel()
         }
 
     // ── 3. Bus event for a different bookingId is filtered out ────────────────────
@@ -95,6 +102,8 @@ public class LiveTrackingViewModelLocationBusTest {
             every { trackStatus.execute("b1") } returns flowOf(BookingStatus.EnRoute)
 
             val vm = viewModel("b1")
+            // With WhileSubscribed, upstream starts on first subscription
+            val job = vm.uiState.launchIn(this)
             advanceUntilIdle()
 
             // Post event for a DIFFERENT booking — should not affect vm.
@@ -105,6 +114,7 @@ public class LiveTrackingViewModelLocationBusTest {
             // liveLat still falls back to legacy location, not the filtered-out bus event.
             assertThat(state.liveLat).isEqualTo(12.97)
             assertThat(state.liveLng).isEqualTo(77.59)
+            job.cancel()
         }
 
     // ── 4. No legacy location, no bus event → liveLat/liveLng both null ──────────
@@ -116,11 +126,14 @@ public class LiveTrackingViewModelLocationBusTest {
             every { trackStatus.execute("b2") } returns flowOf(BookingStatus.InProgress)
 
             val vm = viewModel("b2")
+            // With WhileSubscribed, upstream starts on first subscription
+            val job = vm.uiState.launchIn(this)
             advanceUntilIdle()
 
             val state = vm.uiState.value as LiveTrackingUiState.Tracking
             assertThat(state.liveLat).isNull()
             assertThat(state.liveLng).isNull()
             assertThat(state.liveCapturedAt).isNull()
+            job.cancel()
         }
 }
