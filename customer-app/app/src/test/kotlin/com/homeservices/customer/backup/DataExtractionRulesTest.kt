@@ -48,8 +48,7 @@ public class DataExtractionRulesTest {
         assertThat(excludedDomains[block])
             .withFailMessage(
                 "Expected <exclude domain=\"$domain\"/> inside <$block> but found: ${excludedDomains[block]}",
-            )
-            .contains(domain)
+            ).contains(domain)
     }
 
     private fun parseDataExtractionRules(): Map<String, Set<String>> {
