@@ -331,6 +331,5 @@ internal class BookingViewModel
             }
         }
 
-        private fun parseSlotStartHour(window: String): Int =
-            runCatching { window.substringBefore(":").toInt() }.getOrDefault(0)
+        private fun parseSlotStartHour(window: String): Int = runCatching { window.substringBefore(":").toInt() }.getOrDefault(0)
     }
