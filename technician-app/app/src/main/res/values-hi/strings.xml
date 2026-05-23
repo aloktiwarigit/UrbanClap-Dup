@@ -170,4 +170,30 @@
 
     <!-- Legal (E20-S07) -->
     <string name="privacy_policy_url">https://aloktiwarigit.github.io/homeheroo-privacy/technician/</string>
+
+    <!-- Account deletion (E20-S08) -->
+    <string name="settings_delete_account_title">अकाउंट हटाएं</string>
+    <string name="settings_delete_account_subtitle">आपकी प्रोफ़ाइल और डेटा स्थायी रूप से हटाएं</string>
+    <string name="delete_account_title">अकाउंट हटाएं</string>
+    <string name="delete_account_warning">यह स्थायी है और पूर्ववत नहीं होगा</string>
+    <string name="delete_account_what_gets_deleted">क्या हटाया जाएगा</string>
+    <string name="delete_account_item_profile">आपकी प्रोफ़ाइल और फ़ोन नंबर</string>
+    <string name="delete_account_item_kyc">KYC दस्तावेज़ (आधार, पैन)</string>
+    <string name="delete_account_item_earnings">कमाई इतिहास और भुगतान रिकॉर्ड</string>
+    <string name="delete_account_item_photos">जॉब फ़ोटो और कार्य इतिहास</string>
+    <string name="delete_account_item_ratings">ग्राहकों की रेटिंग</string>
+    <string name="delete_account_footnote">पुष्टि के 7 दिनों के भीतर डेटा हटाया जाएगा</string>
+    <string name="delete_account_confirm_button">हाँ, मेरा अकाउंट हटाएं</string>
+    <string name="delete_account_cancel_button">रद्द करें</string>
+    <string name="delete_account_active_job_title">जॉब जारी है</string>
+    <string name="delete_account_active_job_error">अकाउंट हटाने से पहले अपनी मौजूदा जॉब पूरी करें या रद्द करें</string>
+    <string name="delete_account_active_job_ok">ठीक है</string>
+    <string name="delete_account_duplicate_pending">आपके अकाउंट के लिए पहले से एक हटाने का अनुरोध लंबित है</string>
+    <string name="delete_account_generic_error">कुछ गड़बड़ी हुई। कृपया पुनः प्रयास करें।</string>
+    <string name="account_deleted_title">हटाने का अनुरोध सबमिट हुआ</string>
+    <string name="account_deleted_body">आपका अकाउंट %1$s को हटाया जाएगा।</string>
+    <string name="account_deleted_revocation_hint">मन बदला? %1$s से पहले support@homeheroo.in पर \'Cancel account deletion\' subject से अपना फ़ोन नंबर लिखकर ईमेल करें।</string>
+    <string name="account_deleted_web_form_label">ऐप तक पहुंच खो गई? यहाँ हटाने का अनुरोध करें</string>
+    <string name="account_deleted_done">हो गया</string>
+    <string name="deletion_request_url">https://aloktiwarigit.github.io/homeheroo-privacy/deletion-request/</string>
 </resources>
