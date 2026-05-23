@@ -44,33 +44,35 @@ public class DataExtractionRulesTest {
         block: String,
         domain: String,
     ) {
+        val excludedDomains = parseDataExtractionRules()
+        assertThat(excludedDomains[block])
+            .withFailMessage(
+                "Expected <exclude domain=\"$domain\"/> inside <$block> but found: ${excludedDomains[block]}",
+            )
+            .contains(domain)
+    }
+
+    private fun parseDataExtractionRules(): Map<String, Set<String>> {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val parser = context.resources.getXml(R.xml.data_extraction_rules)
-        val excludedDomains = mutableMapOf<String, MutableSet<String>>() // block -> set of excluded domains
+        val excludedDomains = mutableMapOf<String, MutableSet<String>>()
         var currentBlock: String? = null
-        var eventType = parser.next()
-        while (eventType != org.xmlpull.v1.XmlPullParser.END_DOCUMENT) {
-            when (eventType) {
-                org.xmlpull.v1.XmlPullParser.START_TAG -> {
-                    when (parser.name) {
-                        "cloud-backup", "device-transfer" -> currentBlock = parser.name
-                        "exclude" -> {
-                            val domainAttr = parser.getAttributeValue(null, "domain")
-                            if (currentBlock != null && domainAttr != null) {
-                                excludedDomains.getOrPut(currentBlock) { mutableSetOf() }.add(domainAttr)
-                            }
-                        }
+        generateSequence { parser.next().takeIf { it != org.xmlpull.v1.XmlPullParser.END_DOCUMENT } }
+            .forEach { eventType ->
+                when {
+                    eventType == org.xmlpull.v1.XmlPullParser.START_TAG &&
+                        parser.name in listOf("cloud-backup", "device-transfer") -> currentBlock = parser.name
+                    eventType == org.xmlpull.v1.XmlPullParser.START_TAG &&
+                        parser.name == "exclude" -> {
+                        val domainAttr = parser.getAttributeValue(null, "domain") ?: return@forEach
+                        val block = currentBlock ?: return@forEach
+                        excludedDomains.getOrPut(block) { mutableSetOf() }.add(domainAttr)
                     }
-                }
-                org.xmlpull.v1.XmlPullParser.END_TAG -> {
-                    if (parser.name == currentBlock) currentBlock = null
+                    eventType == org.xmlpull.v1.XmlPullParser.END_TAG &&
+                        parser.name == currentBlock -> currentBlock = null
                 }
             }
-            eventType = parser.next()
-        }
         parser.close()
-        assertThat(excludedDomains[block])
-            .withFailMessage("Expected <exclude domain=\"$domain\"/> inside <$block> but found: ${excludedDomains[block]}")
-            .contains(domain)
+        return excludedDomains
     }
 }
