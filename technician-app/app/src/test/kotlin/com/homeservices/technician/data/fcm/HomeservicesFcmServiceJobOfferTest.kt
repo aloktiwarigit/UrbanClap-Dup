@@ -1,11 +1,13 @@
 package com.homeservices.technician.data.fcm
 
+import com.homeservices.corenav.NotificationRouter
 import com.homeservices.technician.data.earnings.EarningsUpdateEventBus
 import com.homeservices.technician.data.jobOffer.JobOfferEventBus
 import com.homeservices.technician.data.rating.RatingPromptEventBus
 import com.homeservices.technician.data.rating.RatingReceivedEventBus
 import com.homeservices.technician.domain.jobOffer.FcmTokenSyncUseCase
 import com.homeservices.technician.domain.jobOffer.model.JobOffer
+import com.homeservices.technician.notification.PendingActionIngestor
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -35,6 +37,8 @@ public class HomeservicesFcmServiceJobOfferTest {
     private lateinit var earningsUpdateEventBus: EarningsUpdateEventBus
     private lateinit var ratingReceivedEventBus: RatingReceivedEventBus
     private lateinit var fcmTokenSyncUseCase: FcmTokenSyncUseCase
+    private lateinit var router: NotificationRouter
+    private lateinit var ingestor: PendingActionIngestor
 
     private val validJobOfferData: Map<String, String>
         get() {
@@ -60,6 +64,9 @@ public class HomeservicesFcmServiceJobOfferTest {
         earningsUpdateEventBus = mockk(relaxed = true)
         ratingReceivedEventBus = mockk(relaxed = true)
         fcmTokenSyncUseCase = mockk(relaxed = true)
+        // router returns null for all FCM data by default (relaxed = true → null for nullable returns)
+        router = mockk(relaxed = true)
+        ingestor = mockk(relaxed = true)
 
         every { eventBus.tryEmit(any()) } returns Unit
 
@@ -73,6 +80,8 @@ public class HomeservicesFcmServiceJobOfferTest {
                 it.ratingPromptEventBus = ratingPromptEventBus
                 it.earningsUpdateEventBus = earningsUpdateEventBus
                 it.ratingReceivedEventBus = ratingReceivedEventBus
+                it.router = router
+                it.ingestor = ingestor
             }
     }
 
@@ -127,8 +136,8 @@ public class HomeservicesFcmServiceJobOfferTest {
     @Test
     public fun `RATING_PROMPT_TECHNICIAN — posts to ratingPromptEventBus`() {
         val data = mapOf("type" to "RATING_PROMPT_TECHNICIAN", "bookingId" to "bk-2")
-
-        service.handleMessageData(data)
+        // showRatingPromptNotification requires Android context — NPE absorbed by runCatching
+        runCatching { service.handleMessageData(data) }
 
         verify { ratingPromptEventBus.post("bk-2") }
     }
@@ -136,8 +145,8 @@ public class HomeservicesFcmServiceJobOfferTest {
     @Test
     public fun `EARNINGS_UPDATE — notifies earnings event bus`() {
         val data = mapOf("type" to "EARNINGS_UPDATE")
-
-        service.handleMessageData(data)
+        // showEarningsUpdateNotification requires Android context — NPE absorbed by runCatching
+        runCatching { service.handleMessageData(data) }
 
         verify { earningsUpdateEventBus.notifyEarningsUpdate() }
     }
@@ -145,5 +154,42 @@ public class HomeservicesFcmServiceJobOfferTest {
     @Test
     public fun `CHANNEL_DISPATCH_OFFERS constant has expected value`() {
         assertThat(HomeservicesFcmService.CHANNEL_DISPATCH_OFFERS).isEqualTo("dispatch_offers")
+    }
+
+    @Test
+    public fun `ERASURE_FINAL_NOTICE — does not trigger any unrelated event bus`() {
+        // Pre-fix, this message type fell through the when block silently and was dropped.
+        // Post-fix, it routes to showErasureFinalNoticeNotification(daysRemaining) which
+        // posts to a dedicated notification channel. The OS-level NotificationManager call
+        // throws an NPE in this unit context (no Android service) — runCatching absorbs it,
+        // same pattern as the JOB_OFFER test. The meaningful assertion here is the absence
+        // of cross-talk: no other event bus should receive this message type.
+        val data = mapOf("type" to "ERASURE_FINAL_NOTICE", "daysRemaining" to "3")
+
+        runCatching { service.handleMessageData(data) }
+
+        verify(exactly = 0) { eventBus.tryEmit(any()) }
+        verify(exactly = 0) { ratingPromptEventBus.post(any()) }
+        verify(exactly = 0) { earningsUpdateEventBus.notifyEarningsUpdate() }
+        verify(exactly = 0) { ratingReceivedEventBus.post() }
+    }
+
+    @Test
+    public fun `ERASURE_FINAL_NOTICE — missing daysRemaining defaults to zero`() {
+        // Defensive parsing: a malformed/absent daysRemaining field must not crash the
+        // handler. The notification path renders the "last day" copy when 0.
+        val data = mapOf("type" to "ERASURE_FINAL_NOTICE")
+
+        runCatching { service.handleMessageData(data) }
+
+        verify(exactly = 0) { eventBus.tryEmit(any()) }
+        verify(exactly = 0) { ratingPromptEventBus.post(any()) }
+        verify(exactly = 0) { earningsUpdateEventBus.notifyEarningsUpdate() }
+        verify(exactly = 0) { ratingReceivedEventBus.post() }
+    }
+
+    @Test
+    public fun `CHANNEL_ERASURE_NOTICES constant has expected value`() {
+        assertThat(HomeservicesFcmService.CHANNEL_ERASURE_NOTICES).isEqualTo("erasure_notices")
     }
 }

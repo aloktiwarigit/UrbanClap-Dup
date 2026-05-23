@@ -229,7 +229,7 @@
         "scheduled": "निर्धारित समय",
         "payment": "भुगतान",
         "created": "बनाया गया",
-        "evidencePhotos": "Job Photos",
+        "evidencePhotos": "काम की तस्वीरें",
         "actions": {
           "heading": "कार्रवाइयां",
           "noPermission": "आपकी भूमिका इस ऑर्डर की समीक्षा कर सकती है लेकिन परिचालन बदलाव नहीं कर सकती।"
@@ -276,7 +276,7 @@
     },
     "cells": {
       "customer": { "noName": "नाम उपलब्ध नहीं" },
-      "technician": { "unassigned": "अनुसौंपा गया" }
+      "technician": { "unassigned": "असाइन नहीं" }
     },
     "confirmModal": {
       "reasonLabel": "कारण",
@@ -646,5 +646,16 @@
         "TRANSFERRED": "ट्रांसफर हुआ"
       }
     }
+  },
+  "notFound": {
+    "eyebrow": "HomeHeroo एडमिन",
+    "title": "404",
+    "description": "पृष्ठ नहीं मिला",
+    "backHome": "डैशबोर्ड पर वापस जाएं"
+  },
+  "globalError": {
+    "title": "कुछ गड़बड़ हो गई",
+    "description": "एक अनपेक्षित त्रुटि हुई। कृपया पृष्ठ पुनः लोड करें।",
+    "reload": "पुनः लोड करें"
   }
 }

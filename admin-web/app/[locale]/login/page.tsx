@@ -13,6 +13,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { apiUrl } from '@/api/base';
 import { getFirebaseAuth } from '@/lib/auth/firebase';
 import { getSafeNextPath } from '@/lib/auth/safe-next-path';
+import { registerAdminPushToken } from '@/lib/push-registration';
 import { routing } from '@/i18n/config';
 import type { AdminRole } from '@/lib/auth/types';
 
@@ -127,6 +128,8 @@ export default function LoginPage() {
         setLoading('google');
         const idToken = await result.user.getIdToken();
         const data = await postAdminLogin({ idToken });
+        // Best-effort push registration — must not block or throw into the auth flow.
+        void registerAdminPushToken(idToken);
         if (!cancelled) handleLoginResponse(data, 'google');
       } catch (err: unknown) {
         if (cancelled) return;
@@ -198,6 +201,8 @@ export default function LoginPage() {
       const credential = await signInWithEmailAndPassword(getFirebaseAuth(), email, password);
       const idToken = await credential.user.getIdToken();
       const data = await postAdminLogin({ idToken });
+      // Best-effort push registration — must not block or throw into the auth flow.
+      void registerAdminPushToken(idToken);
       handleLoginResponse(data, 'password');
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code ?? '';
@@ -236,6 +241,8 @@ export default function LoginPage() {
       const credential = await signInWithPopup(getFirebaseAuth(), provider);
       const idToken = await credential.user.getIdToken();
       const data = await postAdminLogin({ idToken });
+      // Best-effort push registration — must not block or throw into the auth flow.
+      void registerAdminPushToken(idToken);
       handleLoginResponse(data, 'google');
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code ?? '';
@@ -266,6 +273,18 @@ export default function LoginPage() {
         challengeToken: challenge.token,
         totpCode: mfaCode,
       });
+      // Best-effort push registration — must not block or throw into the MFA flow.
+      // Obtain the idToken from the still-authenticated Firebase user (the Firebase
+      // session persists after the MFA challenge exchange) before router.push fires.
+      try {
+        const user = getFirebaseAuth().currentUser;
+        if (user) {
+          const idToken = await user.getIdToken();
+          void registerAdminPushToken(idToken);
+        }
+      } catch {
+        // Intentionally swallowed — push registration is best-effort.
+      }
       handleLoginResponse(data, challenge.method);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : tErr('mfaVerificationFallback'));

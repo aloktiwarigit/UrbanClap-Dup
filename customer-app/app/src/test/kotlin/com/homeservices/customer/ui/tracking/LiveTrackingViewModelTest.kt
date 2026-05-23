@@ -1,6 +1,7 @@
 package com.homeservices.customer.ui.tracking
 
 import androidx.lifecycle.SavedStateHandle
+import com.homeservices.customer.data.tracking.LocationUpdateEventBus
 import com.homeservices.customer.domain.tracking.GetLiveLocationUseCase
 import com.homeservices.customer.domain.tracking.TrackBookingStatusUseCase
 import com.homeservices.customer.domain.tracking.model.BookingStatus
@@ -38,7 +39,7 @@ public class LiveTrackingViewModelTest {
 
     private fun viewModel(bookingId: String = "b1"): LiveTrackingViewModel {
         val handle = SavedStateHandle(mapOf("bookingId" to bookingId))
-        return LiveTrackingViewModel(handle, getLiveLocation, trackStatus)
+        return LiveTrackingViewModel(handle, getLiveLocation, trackStatus, LocationUpdateEventBus())
     }
 
     @Test

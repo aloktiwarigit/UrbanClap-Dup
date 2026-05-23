@@ -42,6 +42,16 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Deep-link handler for notification tray taps (E11-S01b-1).
+                 homeservices://action/<TYPE>?entityId=<id> → MainActivity → TierLadder routing. -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="homeservices"
+                    android:host="action" />
+            </intent-filter>
         </activity>
 
         <!-- AppCompat locale auto-storage on API < 33; LocaleManager handles API 33+ natively -->

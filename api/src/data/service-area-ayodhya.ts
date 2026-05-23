@@ -1,0 +1,75 @@
+/**
+ * Ayodhya service-area polygon — E16-S01 / ADR-0020
+ *
+ * A 25 km radius, 32-vertex regular polygon centred on Ramkot temple complex
+ * (Ram Janmabhoomi site), Ayodhya, Uttar Pradesh, India.
+ *
+ * Centre coordinates: 26.7958°N, 82.1947°E
+ * Source: Wikipedia "Ayodhya" article (https://en.wikipedia.org/wiki/Ayodhya)
+ * and Google Maps landmark pin for Ram Janmabhoomi temple complex.
+ * Coordinates cross-verified against Uttar Pradesh government mapping records
+ * for Faizabad district (now Ayodhya district).
+ *
+ * Coverage note: The 25 km radius is deliberately broad — Ayodhya city core
+ * is approximately 5 km across. This radius encompasses Ayodhya city,
+ * Faizabad city, and surrounding villages in Ambedkar Nagar / Barabanki /
+ * Gonda border areas. See ADR-0020 for Phase-2 polygon refinement playbook.
+ *
+ * The canonical `.geojson` file lives at api/src/data/service-area-ayodhya.geojson
+ * and is the source of truth for GIS tooling. This module exports the same data
+ * as a typed TypeScript constant so it can be imported in ESM / Vitest contexts
+ * without requiring JSON import assertion configuration.
+ */
+
+import type { Feature, Polygon } from 'geojson';
+
+export const AYODHYA_SERVICE_AREA: Feature<Polygon> = {
+  type: 'Feature',
+  properties: {
+    name: 'Ayodhya Service Area — Phase 1 Pilot',
+    center_lat: 26.7958,
+    center_lng: 82.1947,
+    radius_km: 25,
+    vertex_count: 32,
+  },
+  geometry: {
+    type: 'Polygon',
+    coordinates: [
+      [
+        [82.1947, 27.02063],
+        [82.243935, 27.016302],
+        [82.291266, 27.003483],
+        [82.334867, 26.982671],
+        [82.373054, 26.954667],
+        [82.404359, 26.920555],
+        [82.427581, 26.881648],
+        [82.441833, 26.839448],
+        [82.446577, 26.795577],
+        [82.441642, 26.751724],
+        [82.427228, 26.709571],
+        [82.403898, 26.670737],
+        [82.372555, 26.63671],
+        [82.334406, 26.608792],
+        [82.290913, 26.588051],
+        [82.243744, 26.575281],
+        [82.1947, 26.57097],
+        [82.145656, 26.575281],
+        [82.098487, 26.588051],
+        [82.054994, 26.608792],
+        [82.016845, 26.63671],
+        [81.985502, 26.670737],
+        [81.962172, 26.709571],
+        [81.947758, 26.751724],
+        [81.942823, 26.795577],
+        [81.947567, 26.839448],
+        [81.961819, 26.881648],
+        [81.985041, 26.920555],
+        [82.016346, 26.954667],
+        [82.054533, 26.982671],
+        [82.098134, 27.003483],
+        [82.145465, 27.016302],
+        [82.1947, 27.02063], // closing coordinate — identical to vertex #0
+      ],
+    ],
+  },
+};

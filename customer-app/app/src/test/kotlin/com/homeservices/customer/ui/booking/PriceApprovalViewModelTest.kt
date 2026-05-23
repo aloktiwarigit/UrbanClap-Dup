@@ -1,6 +1,8 @@
-package com.homeservices.customer.ui.booking
+﻿package com.homeservices.customer.ui.booking
 
+import androidx.fragment.app.FragmentActivity
 import com.google.common.truth.Truth.assertThat
+import com.homeservices.customer.domain.auth.BiometricGateUseCase
 import com.homeservices.customer.domain.booking.ApproveFinalPriceUseCase
 import com.homeservices.customer.domain.booking.GetPendingAddOnsUseCase
 import com.homeservices.customer.domain.booking.model.AddOnDecision
@@ -25,15 +27,22 @@ public class PriceApprovalViewModelTest {
     private val approve: ApproveFinalPriceUseCase = mockk()
     private val addOns = listOf(PendingAddOn("Gas refill", 120000, "Low pressure"))
 
-    @Before public fun setUp(): Unit {
+    // Biometric gate stub: no hardware -> gate bypassed. Tests focus on price-approval logic.
+    private val biometricGate: BiometricGateUseCase = mockk()
+    private val activity: FragmentActivity = mockk(relaxed = true)
+
+    @Before
+    public fun setUp(): Unit {
         Dispatchers.setMain(dispatcher)
+        every { biometricGate.canUseBiometric(any()) } returns false
     }
 
-    @After public fun tearDown(): Unit {
+    @After
+    public fun tearDown(): Unit {
         Dispatchers.resetMain()
     }
 
-    private fun vm() = PriceApprovalViewModel(getAddOns, approve)
+    private fun vm() = PriceApprovalViewModel(getAddOns, approve, biometricGate)
 
     @Test
     public fun `initial state is Loading`(): Unit =
@@ -58,7 +67,7 @@ public class PriceApprovalViewModelTest {
             every { approve("bk-1", any()) } returns flowOf(Result.success(179900))
             val v = vm()
             v.loadAddOns("bk-1")
-            v.submitDecisions("bk-1", listOf(AddOnDecision("Gas refill", approved = true)))
+            v.submitDecisions("bk-1", listOf(AddOnDecision("Gas refill", approved = true)), activity)
             assertThat((v.uiState.value as PriceApprovalUiState.Approved).finalAmount).isEqualTo(179900)
         }
 

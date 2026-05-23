@@ -19,12 +19,33 @@ export async function register() {
         '@azure/monitor-opentelemetry-exporter'
       );
       const { Resource } = await import('@opentelemetry/resources');
+      const { HttpInstrumentation } = await import('@opentelemetry/instrumentation-http');
+      const { sanitizeUrl } = await import('./lib/otelSanitizeUrl');
 
       const sdk = new NodeSDK({
         resource: new Resource({
           'service.name': 'homeservices-admin-web',
           'service.version': process.env['GIT_SHA'] ?? 'local',
         }),
+        instrumentations: [
+          new HttpInstrumentation({
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            requestHook: (span: any, request: any) => {
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+              const rawUrl: string = (request.url as string | undefined) ?? (request.path as string | undefined) ?? '';
+              const sanitized = sanitizeUrl(rawUrl);
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+              const method: string = (request.method as string | undefined) ?? 'HTTP';
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+              span.updateName(`HTTP ${method} ${sanitized.path}`);
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+              span.setAttribute('http.url', sanitized.full);
+              // Use sanitized.path for http.target so ID segments are already replaced.
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+              if (sanitized.path) span.setAttribute('http.target', sanitized.path);
+            },
+          }),
+        ],
         // @azure/monitor-opentelemetry-exporter is still in beta and ships an older
         // @opentelemetry/sdk-trace-base peer than @opentelemetry/sdk-node expects,
         // causing a ReadableSpan struct mismatch at the TypeScript level only.

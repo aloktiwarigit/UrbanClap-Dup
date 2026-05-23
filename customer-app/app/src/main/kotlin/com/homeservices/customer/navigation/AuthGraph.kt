@@ -18,7 +18,7 @@ internal fun NavGraphBuilder.authGraph(
     navController: NavController,
     activity: FragmentActivity,
 ) {
-    navigation(startDestination = "auth_screen", route = "auth") {
+    navigation(startDestination = "auth_screen", route = ROUTE_AUTH) {
         composable("auth_screen") {
             val viewModel: AuthViewModel = hiltViewModel()
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()

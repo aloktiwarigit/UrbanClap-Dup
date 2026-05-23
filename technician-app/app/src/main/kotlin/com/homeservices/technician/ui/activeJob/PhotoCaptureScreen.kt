@@ -43,10 +43,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.homeservices.technician.R
 import java.io.File
 import java.util.concurrent.Executors
 
@@ -118,8 +120,8 @@ internal fun PhotoCaptureScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text("No back camera available on this device", color = Color.White)
-                TextButton(onClick = onDismiss) { Text("Go back", color = Color.White) }
+                Text(stringResource(R.string.photo_no_back_camera), color = Color.White)
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.photo_go_back), color = Color.White) }
             }
             return@Box
         }
@@ -171,9 +173,13 @@ internal fun PhotoCaptureScreen(
 
             Button(
                 onClick = {
+                    // filesDir (not cacheDir): the OS may evict cacheDir under storage
+                    // pressure between capture and the user tapping "Confirm & Upload",
+                    // losing the evidence photo. JobPhotoRepositoryImpl.uploadPhoto deletes
+                    // the file after a successful upload to keep filesDir from growing.
                     val file =
                         File(
-                            context.cacheDir,
+                            context.filesDir,
                             "photo_${stage}_${System.currentTimeMillis()}.jpg",
                         )
                     imageCapture.takePicture(
@@ -193,7 +199,7 @@ internal fun PhotoCaptureScreen(
                         .align(Alignment.BottomCenter)
                         .navigationBarsPadding()
                         .padding(bottom = 48.dp),
-            ) { Text("Capture") }
+            ) { Text(stringResource(R.string.photo_capture)) }
 
             TextButton(
                 onClick = onDismiss,
@@ -202,7 +208,7 @@ internal fun PhotoCaptureScreen(
                         .align(Alignment.BottomStart)
                         .navigationBarsPadding()
                         .padding(16.dp),
-            ) { Text("Cancel", color = Color.White) }
+            ) { Text(stringResource(R.string.photo_cancel), color = Color.White) }
         } else {
             val previewBitmap =
                 remember(capturedPath) {
@@ -249,13 +255,15 @@ internal fun PhotoCaptureScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Text("Upload failed: $uploadError", color = Color.White)
-                    Button(onClick = onRetry) { Text("Retry Upload") }
+                    Text(stringResource(R.string.photo_upload_failed, uploadError), color = Color.White)
+                    Button(onClick = onRetry) { Text(stringResource(R.string.photo_retry_upload)) }
                     TextButton(onClick = {
+                        // Delete the abandoned filesDir capture so it doesn't accumulate.
+                        capturedPath?.let { runCatching { File(it).delete() } }
                         capturedPath = null
                         onRetake()
                     }) {
-                        Text("Retake Photo", color = Color.White)
+                        Text(stringResource(R.string.photo_retake_photo), color = Color.White)
                     }
                 }
             } else {
@@ -268,8 +276,18 @@ internal fun PhotoCaptureScreen(
                             .padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    OutlinedButton(onClick = { capturedPath = null }) {
-                        Text("Retake", color = Color.White)
+                    OutlinedButton(
+                        onClick = {
+                            // Delete the abandoned filesDir capture so it doesn't accumulate.
+                            capturedPath?.let { runCatching { File(it).delete() } }
+                            capturedPath = null
+                        },
+                        // Disabled while uploading: deleting capturedPath mid-upload races
+                        // UploadJobPhotoUseCase's BitmapFactory.decodeFile and surfaces as
+                        // "Cannot decode image" instead of completing.
+                        enabled = !isUploading,
+                    ) {
+                        Text(stringResource(R.string.photo_retake), color = Color.White)
                     }
                     Button(
                         onClick = { capturedPath?.let(onPhotoTaken) },
@@ -282,7 +300,7 @@ internal fun PhotoCaptureScreen(
                                 color = MaterialTheme.colorScheme.onPrimary,
                             )
                         } else {
-                            Text("Confirm & Upload")
+                            Text(stringResource(R.string.photo_confirm_upload))
                         }
                     }
                 }
@@ -302,9 +320,9 @@ private fun PermissionDeniedContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("Camera permission required", color = Color.White)
-        Button(onClick = onRequest) { Text("Grant Permission") }
-        TextButton(onClick = onDismiss) { Text("Cancel", color = Color.White) }
+        Text(stringResource(R.string.photo_camera_permission_required), color = Color.White)
+        Button(onClick = onRequest) { Text(stringResource(R.string.photo_grant_permission)) }
+        TextButton(onClick = onDismiss) { Text(stringResource(R.string.photo_cancel), color = Color.White) }
     }
 }
 

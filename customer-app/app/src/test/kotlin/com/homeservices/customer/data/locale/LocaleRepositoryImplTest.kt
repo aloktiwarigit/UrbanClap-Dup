@@ -28,9 +28,12 @@ public class LocaleRepositoryImplTest {
     }
 
     @Test
-    public fun `currentLocale defaults to en when nothing is stored`(): Unit =
+    public fun `currentLocale defaults to hi when nothing is stored`(): Unit =
         runTest {
-            assertThat(repo.currentLocale.first()).isEqualTo("en")
+            // ADR-0018: Hindi is the default locale for the Ayodhya/UP rural pilot.
+            // The device fallback logic in LocaleRepositoryImpl.deviceSupportedLocale()
+            // maps any non-hi device locale to DEFAULT_LOCALE which is "hi".
+            assertThat(repo.currentLocale.first()).isEqualTo("hi")
         }
 
     @Test

@@ -1,6 +1,7 @@
 package com.homeservices.technician.data.kyc
 
 import com.homeservices.technician.domain.kyc.model.DigiLockerResult
+import com.homeservices.technician.domain.kyc.model.KycStatus
 import com.homeservices.technician.domain.kyc.model.PanOcrResult
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -56,12 +57,20 @@ public class KycRepositoryImplTest {
         }
 
     @Test
-    public fun `submitPanOcr returns Success with panNumber`(): Unit =
+    public fun `submitPanOcr returns Success with masked panNumber`(): Unit =
+        runTest {
+            coEvery { api.submitPanOcr(any()) } returns PanOcrResponse(kycStatus = "PAN_DONE", panNumber = "XXXXX1234F")
+            val result = sut.submitPanOcr("technicians/t1/pan.jpg")
+            assertThat(result).isInstanceOf(PanOcrResult.Success::class.java)
+            assertThat((result as PanOcrResult.Success).panNumber).isEqualTo("XXXXX1234F")
+        }
+
+    @Test
+    public fun `submitPanOcr returns ManualReview when server sends raw unmasked PAN (S-001 guard)`(): Unit =
         runTest {
             coEvery { api.submitPanOcr(any()) } returns PanOcrResponse(kycStatus = "PAN_DONE", panNumber = "ABCDE1234F")
             val result = sut.submitPanOcr("technicians/t1/pan.jpg")
-            assertThat(result).isInstanceOf(PanOcrResult.Success::class.java)
-            assertThat((result as PanOcrResult.Success).panNumber).isEqualTo("ABCDE1234F")
+            assertThat(result).isEqualTo(PanOcrResult.ManualReview)
         }
 
     @Test
@@ -81,7 +90,7 @@ public class KycRepositoryImplTest {
         }
 
     @Test
-    public fun `getKycStatus maps response to KycState`(): Unit =
+    public fun `getKycStatus maps response to KycState with masked panNumber`(): Unit =
         runTest {
             coEvery { api.getKycStatus() } returns
                 KycStatusResponse(
@@ -89,10 +98,27 @@ public class KycRepositoryImplTest {
                     kycStatus = "COMPLETE",
                     aadhaarVerified = true,
                     aadhaarMaskedNumber = "XXXX-XXXX-1234",
-                    panNumber = "ABCDE1234F",
+                    panNumber = "XXXXX1234F",
                 )
             val state = sut.getKycStatus()
             assertThat(state.aadhaarVerified).isTrue()
-            assertThat(state.panNumber).isEqualTo("ABCDE1234F")
+            assertThat(state.panNumber).isEqualTo("XXXXX1234F")
+            assertThat(state.status).isEqualTo(KycStatus.COMPLETE)
+        }
+
+    @Test
+    public fun `getKycStatus nulls panNumber and sets MANUAL_REVIEW when server returns raw PAN (S-001 guard)`(): Unit =
+        runTest {
+            coEvery { api.getKycStatus() } returns
+                KycStatusResponse(
+                    technicianId = "tech_1",
+                    kycStatus = "PAN_DONE",
+                    aadhaarVerified = true,
+                    aadhaarMaskedNumber = "XXXX-XXXX-1234",
+                    panNumber = "ABCDE1234F",
+                )
+            val state = sut.getKycStatus()
+            assertThat(state.panNumber).isNull()
+            assertThat(state.status).isEqualTo(KycStatus.MANUAL_REVIEW)
         }
 }

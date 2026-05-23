@@ -26,7 +26,9 @@
     "seed:technicians": "npx tsx scripts/seed-technicians.ts",
     "seed:catalogue": "tsx src/cosmos/seeds/catalogue.ts",
     "seed:complaints": "tsx src/cosmos/seeds/complaints.ts",
-    "provision:indexes": "tsx scripts/provision-cosmos-indexes.ts"
+    "provision:indexes": "tsx scripts/provision-cosmos-indexes.ts",
+    "semgrep:scan": "semgrep --config .semgrep.yml src/",
+    "backfill:pan-mask": "tsx scripts/backfill-pan-mask.ts"
   },
   "dependencies": {
     "@azure/ai-form-recognizer": "^5.1.0",
@@ -38,6 +40,8 @@
     "@opentelemetry/resources": "^1",
     "@opentelemetry/sdk-node": "^0.57",
     "@sentry/node": "^8",
+    "@turf/boolean-point-in-polygon": "^7.3.5",
+    "@turf/helpers": "^7.3.5",
     "fastify": "^5",
     "firebase-admin": "^13.8.0",
     "jose": "^6.2.2",
@@ -52,6 +56,7 @@
     "@apidevtools/swagger-parser": "^10.1.0",
     "@asteasolutions/zod-to-openapi": "^7.3.0",
     "@stoplight/spectral-cli": "^6.11.0",
+    "@types/geojson": "^7946.0.16",
     "@types/node": "^22",
     "@types/pdfkit": "^0.17.6",
     "@types/qrcode": "^1.5.6",
