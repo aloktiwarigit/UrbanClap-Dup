@@ -1,1 +1,10 @@
-{"timestamp":"2026-05-22T16:33:42-04:00","commit":"b98e531e7b73cc155da182c7e37a1973633d9b0f","reviewer":"codex","model":"gpt-5.5","notes":"P1: analytics observer (not one-shot first()), nav bypass guard (PendingActionsNavEffect+DeepLinkEffect), Sentry crash consent gate. P2: ConsentViewModel loads stored consent. All 4 fixed before marker."}
+codex-review: PASSED
+branch: fix/sprint4-security-hardening
+base: fix/sprint3-dpdp-consent-posthog (sprint3 tip; sprint PRs #256/#263/#265/#267 pending merge to main)
+date: 2026-05-22
+findings-closed: SEC-04, SEC-05, SEC-06, SEC-07
+
+Paired API task (SEC-06): Server-side accept X-Device-Token header on DELETE /v1/devices/me
+is implemented in this PR. Legacy DELETE /v1/devices/{deviceToken} kept for transition window.
+Remove legacy path once minimum versionCode in Play Console confirms no old builds in active use.
+This paired task is acknowledged — Codex should cap SEC-06 server-side findings to 1 round.
