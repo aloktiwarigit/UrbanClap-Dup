@@ -92,6 +92,8 @@ internal fun JobOfferScreenContent(
                 JobOfferContent(
                     offer = uiState.offer,
                     remainingSeconds = uiState.remainingSeconds,
+                    isAccepting = uiState.isAccepting,
+                    errorMessage = uiState.errorMessage,
                     onAccept = onAccept,
                     onDecline = onDecline,
                 )
@@ -119,6 +121,8 @@ internal fun JobOfferScreenContent(
 private fun JobOfferContent(
     offer: JobOffer,
     remainingSeconds: Int,
+    isAccepting: Boolean,
+    errorMessage: String?,
     onAccept: () -> Unit,
     onDecline: () -> Unit,
     modifier: Modifier = Modifier,
@@ -219,14 +223,30 @@ private fun JobOfferContent(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
             HsPrimaryButton(
-                text = stringResource(R.string.job_offer_accept),
+                text =
+                    if (isAccepting) {
+                        stringResource(R.string.job_offer_accepting)
+                    } else {
+                        stringResource(R.string.job_offer_accept)
+                    },
                 onClick = onAccept,
+                enabled = !isAccepting,
                 modifier = Modifier.fillMaxWidth(),
             )
             HsSecondaryButton(
                 text = stringResource(R.string.job_offer_decline),
                 onClick = onDecline,
+                enabled = !isAccepting,
                 modifier = Modifier.fillMaxWidth(),
             )
         }

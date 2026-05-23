@@ -15,6 +15,7 @@
     <string name="job_offer_distance_km">%.1f किमी दूर</string>
     <string name="job_offer_earnings">कमाई</string>
     <string name="job_offer_accept">जॉब स्वीकार करें</string>
+    <string name="job_offer_accepting">&#x91C;&#x949;&#x92C; &#x938;&#x94D;&#x935;&#x940;&#x915;&#x93E;&#x930; &#x939;&#x94B; &#x930;&#x939;&#x940; &#x939;&#x948;...</string>
     <string name="job_offer_decline">अस्वीकार करें</string>
     <!-- Active job -->
     <string name="active_job_complete_title">जॉब पूरी हुई</string>
@@ -64,6 +65,7 @@
     <!-- Language settings -->
     <string name="settings_language_title">ऐप भाषा</string>
     <string name="settings_language_subtitle">अंग्रेज़ी और हिंदी के बीच बदलें</string>
+    <string name="settings_language_current">&#x939;&#x93F;&#x902;&#x926;&#x940; &#x91A;&#x941;&#x928;&#x940; &#x917;&#x908;</string>
     <string name="settings_language_save">भाषा सहेजें</string>
     <string name="action_back">वापस जाएं</string>
 

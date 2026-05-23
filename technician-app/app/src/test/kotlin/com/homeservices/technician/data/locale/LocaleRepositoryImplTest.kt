@@ -20,6 +20,7 @@ public class LocaleRepositoryImplTest {
     private val mockPrefs: SharedPreferences =
         mockk(relaxed = true) {
             every { edit() } returns mockPrefsEditor
+            every { getString(any(), any()) } returns null
         }
     private val mockContext: Context =
         mockk(relaxed = true) {

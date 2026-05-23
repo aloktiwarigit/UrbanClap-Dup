@@ -10,4 +10,5 @@ public data class JobOffer(
     val amountPaise: Long,
     val distanceKm: Double,
     val expiresAtMs: Long,
+    val serverClockOffsetMs: Long = 0L,
 )

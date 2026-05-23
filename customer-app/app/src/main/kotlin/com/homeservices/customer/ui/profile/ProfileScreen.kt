@@ -44,12 +44,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.homeservices.customer.R
 import com.homeservices.customer.domain.auth.model.AuthState
 import com.homeservices.designsystem.components.HsScreenTitle
 
@@ -167,8 +169,8 @@ internal fun ProfileScreen(
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
                 MenuRow(
                     icon = Icons.Default.Language,
-                    label = "भाषा",
-                    sublabel = "हिंदी",
+                    label = stringResource(R.string.settings_language),
+                    sublabel = stringResource(R.string.settings_language_current),
                     onClick = onLanguageClick,
                 )
             }

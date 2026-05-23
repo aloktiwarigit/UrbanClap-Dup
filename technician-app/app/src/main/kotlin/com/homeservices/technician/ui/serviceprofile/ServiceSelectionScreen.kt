@@ -60,6 +60,7 @@ import com.homeservices.designsystem.components.HsTrustBadge
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
 import com.homeservices.technician.BuildConfig
 import com.homeservices.technician.R
+import java.util.Locale
 
 @Composable
 internal fun ServiceSelectionScreen(
@@ -325,7 +326,7 @@ private fun ServiceAreaPreview(state: ServiceSelectionUiState) {
     }
 
     if (BuildConfig.MAPS_API_KEY.isBlank()) {
-        CapturedLocationPreview(state.serviceAreaLabel)
+        CapturedLocationPreview(state.serviceAreaLabel, lat, lng)
         return
     }
 
@@ -382,7 +383,11 @@ private fun EmptyLocationPreview(state: ServiceSelectionUiState) {
 }
 
 @Composable
-private fun CapturedLocationPreview(label: String) {
+private fun CapturedLocationPreview(
+    label: String,
+    lat: Double,
+    lng: Double,
+) {
     Surface(
         modifier = Modifier.fillMaxWidth().height(132.dp),
         shape = MaterialTheme.shapes.medium,
@@ -393,7 +398,11 @@ private fun CapturedLocationPreview(label: String) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Icon(Icons.Default.MyLocation, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            Icon(
+                imageVector = Icons.Default.MyLocation,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
             Spacer(Modifier.height(8.dp))
             Text(
                 text = label,
@@ -402,7 +411,7 @@ private fun CapturedLocationPreview(label: String) {
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
             Text(
-                text = "Map preview appears when a Maps API key is configured.",
+                text = "Location selected: ${formatCoordinate(lat)}, ${formatCoordinate(lng)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                 textAlign = TextAlign.Center,
@@ -410,6 +419,8 @@ private fun CapturedLocationPreview(label: String) {
         }
     }
 }
+
+private fun formatCoordinate(value: Double): String = String.format(Locale.US, "%.5f", value)
 
 @Composable
 private fun LoadingCard() {

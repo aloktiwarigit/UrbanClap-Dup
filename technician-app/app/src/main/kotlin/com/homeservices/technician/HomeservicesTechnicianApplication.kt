@@ -71,6 +71,13 @@ public class HomeservicesTechnicianApplication :
         // Fall back to DEFAULT_LOCALE on first install (no mirror yet).
         val syncTag =
             LocaleRepositoryImpl.readMirrorLocale(this)
+                ?: AppCompatDelegate
+                    .getApplicationLocales()
+                    .toLanguageTags()
+                    .split(",")
+                    .firstOrNull()
+                    ?.substringBefore("-")
+                    ?.takeIf { it == "en" || it == "hi" }
                 ?: LocaleRepositoryImpl.DEFAULT_LOCALE
         AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(syncTag))
 

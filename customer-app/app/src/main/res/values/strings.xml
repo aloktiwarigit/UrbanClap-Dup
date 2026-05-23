@@ -350,11 +350,11 @@
     <string name="confidence_methodology_body">On-time %%: jobs started within 15 min of booked slot (last 30 days).\n\nArea rating: average star rating in your area.\n\nETA: estimated travel time from technician\'s last location at 20 km/h.</string>
 
     <!-- Settings -->
-    <string name="settings_title">सेटिंग्स</string>
-    <string name="settings_language">भाषा</string>
-    <string name="settings_language_current">हिंदी</string>
-    <string name="settings_language_title">भाषा चुनें</string>
-    <string name="settings_language_save">सेव करें</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_current">English</string>
+    <string name="settings_language_title">Choose language</string>
+    <string name="settings_language_save">Save</string>
     <string name="settings_privacy_and_data">Privacy &amp; data</string>
     <string name="settings_privacy_data_export_title">Download my data</string>
     <string name="settings_privacy_manage_consent_title">Manage privacy consent</string>

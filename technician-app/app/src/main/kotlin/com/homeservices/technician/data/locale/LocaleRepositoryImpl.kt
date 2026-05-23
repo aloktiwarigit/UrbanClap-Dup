@@ -1,6 +1,7 @@
 package com.homeservices.technician.data.locale
 
 import android.content.Context
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -33,7 +34,9 @@ public class LocaleRepositoryImpl
 
             public fun readMirrorLocale(context: Context): String? {
                 val prefs = context.getSharedPreferences(MIRROR_PREFS, Context.MODE_PRIVATE)
-                return prefs.getString(MIRROR_KEY, null)
+                return prefs
+                    .getString(MIRROR_KEY, null)
+                    ?.takeIf { it == "en" || it == "hi" }
             }
 
             internal fun writeMirrorLocale(
@@ -47,7 +50,12 @@ public class LocaleRepositoryImpl
         }
 
         override val currentLocale: Flow<String> =
-            dataStore.data.map { prefs -> prefs[KEY_LOCALE_TAG] ?: deviceSupportedLocale() }
+            dataStore.data.map { prefs ->
+                prefs[KEY_LOCALE_TAG]
+                    ?: readMirrorLocale(context)
+                    ?: appCompatLocale()
+                    ?: deviceSupportedLocale()
+            }
 
         override suspend fun setLocale(tag: String) {
             writeMirrorLocale(context, tag)
@@ -59,4 +67,13 @@ public class LocaleRepositoryImpl
                 "hi" -> "hi"
                 else -> DEFAULT_LOCALE
             }
+
+        private fun appCompatLocale(): String? =
+            AppCompatDelegate
+                .getApplicationLocales()
+                .toLanguageTags()
+                .split(",")
+                .firstOrNull()
+                ?.substringBefore("-")
+                ?.takeIf { it == "en" || it == "hi" }
     }

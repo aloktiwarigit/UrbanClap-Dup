@@ -171,7 +171,7 @@ public class HomeservicesFcmService :
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onMessageReceived(message: RemoteMessage): Unit {
-        handleMessageData(message.data)
+        handleMessageData(message.data, message.sentTime)
     }
 
     /**
@@ -189,8 +189,15 @@ public class HomeservicesFcmService :
      * type so extraction would obscure intent. LongMethod / ReturnCount grow linearly with the
      * number of supported types and each branch needs 1–2 guard-clause returns.
      */
-    @Suppress("CyclomaticComplexMethod", "LongMethod", "ReturnCount")
     public fun handleMessageData(data: Map<String, String>) {
+        handleMessageData(data, sentTimeMs = 0L)
+    }
+
+    @Suppress("CyclomaticComplexMethod", "LongMethod", "ReturnCount")
+    internal fun handleMessageData(
+        data: Map<String, String>,
+        sentTimeMs: Long,
+    ) {
         // Attempt to ingest via NotificationRouter (pending-action types)
         val intent = router.parseFcmData(data)
         if (intent != null) {
@@ -260,7 +267,7 @@ public class HomeservicesFcmService :
                 showOnboardingReminderNotification(title = data["title"], body = data["body"])
             }
             "JOB_OFFER" -> {
-                val offer = parseJobOffer(data) ?: return
+                val offer = parseJobOffer(data, sentTimeMs) ?: return
                 eventBus.tryEmit(offer)
                 showJobOfferNotification(offer)
             }
@@ -636,8 +643,18 @@ public class HomeservicesFcmService :
         serviceScope.cancel()
     }
 
-    private fun parseJobOffer(data: Map<String, String>): JobOffer? {
+    private fun parseJobOffer(
+        data: Map<String, String>,
+        sentTimeMs: Long = 0L,
+    ): JobOffer? {
         return try {
+            val receivedAtMs = System.currentTimeMillis()
+            val serverClockOffsetMs =
+                if (sentTimeMs > 0L) {
+                    sentTimeMs - receivedAtMs
+                } else {
+                    0L
+                }
             val expiresAtMs = Instant.parse(data["expiresAt"] ?: return null).toEpochMilli()
             JobOffer(
                 bookingId = data["bookingId"] ?: return null,
@@ -649,6 +666,7 @@ public class HomeservicesFcmService :
                 amountPaise = data["amount"]?.toLongOrNull() ?: return null,
                 distanceKm = data["distanceKm"]?.toDoubleOrNull() ?: return null,
                 expiresAtMs = expiresAtMs,
+                serverClockOffsetMs = serverClockOffsetMs,
             )
         } catch (_: Exception) {
             null

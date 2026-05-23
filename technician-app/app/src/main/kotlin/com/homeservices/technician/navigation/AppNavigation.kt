@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -139,7 +140,7 @@ internal fun AppNavigation(
         }
     }
 
-    Box(modifier = modifier) {
+    Box(modifier = modifier.fillMaxSize().navigationBarsPadding()) {
         NavHost(
             navController = navController,
             startDestination = "auth",

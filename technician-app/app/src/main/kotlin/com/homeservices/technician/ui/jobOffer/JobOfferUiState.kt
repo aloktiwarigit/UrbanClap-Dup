@@ -8,6 +8,8 @@ public sealed class JobOfferUiState {
     public data class Offering(
         val offer: JobOffer,
         val remainingSeconds: Int,
+        val isAccepting: Boolean = false,
+        val errorMessage: String? = null,
     ) : JobOfferUiState()
 
     public data class Accepted(

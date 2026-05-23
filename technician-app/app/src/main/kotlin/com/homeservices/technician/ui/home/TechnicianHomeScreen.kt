@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -225,7 +224,6 @@ private fun TechnicianBottomBar(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         shape = RoundedCornerShape(28.dp),
         color = Color.White.copy(alpha = 0.94f),
@@ -982,7 +980,7 @@ private fun ProfileScreen(
             SettingCard(
                 icon = Icons.Default.Language,
                 title = stringResource(R.string.settings_language_title),
-                subtitle = stringResource(R.string.settings_language_subtitle),
+                subtitle = stringResource(R.string.settings_language_current),
                 onClick = onLanguageSettings,
             )
         }

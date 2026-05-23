@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.homeservices.technician.data.jobOffer.JobOfferEventBus
 import com.homeservices.technician.domain.jobOffer.AcceptJobOfferUseCase
 import com.homeservices.technician.domain.jobOffer.DeclineJobOfferUseCase
+import com.homeservices.technician.domain.jobOffer.model.JobOffer
 import com.homeservices.technician.domain.jobOffer.model.JobOfferResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.Clock
 import javax.inject.Inject
 
 @HiltViewModel
@@ -22,6 +24,7 @@ internal class JobOfferViewModel
         private val eventBus: JobOfferEventBus,
         private val acceptUseCase: AcceptJobOfferUseCase,
         private val declineUseCase: DeclineJobOfferUseCase,
+        private val clock: Clock,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<JobOfferUiState>(JobOfferUiState.Idle)
         public val uiState: StateFlow<JobOfferUiState> = _uiState.asStateFlow()
@@ -31,54 +34,55 @@ internal class JobOfferViewModel
         init {
             viewModelScope.launch {
                 eventBus.events.collect { offer ->
-                    countdownJob?.cancel()
-                    val remainingMs = offer.expiresAtMs - System.currentTimeMillis()
-                    if (remainingMs <= 0) {
-                        expireOffer()
-                        return@collect
-                    }
-                    val initialSeconds = (remainingMs / 1000).toInt().coerceAtLeast(0)
-                    _uiState.value = JobOfferUiState.Offering(offer, initialSeconds)
-                    countdownJob =
-                        viewModelScope.launch {
-                            var seconds = initialSeconds
-                            while (seconds > 0) {
-                                delay(1_000L)
-                                seconds--
-                                val current = _uiState.value
-                                if (current is JobOfferUiState.Offering) {
-                                    _uiState.value = current.copy(remainingSeconds = seconds)
-                                } else {
-                                    break
-                                }
-                            }
-                            if (_uiState.value is JobOfferUiState.Offering) {
-                                expireOffer()
-                            }
-                        }
+                    startOffer(offer)
                 }
             }
         }
 
         public fun accept(): Unit {
             val current = _uiState.value as? JobOfferUiState.Offering ?: return
+            if (current.isAccepting) return
+            if (remainingSeconds(current.offer) <= 0) {
+                expireOffer()
+                return
+            }
             countdownJob?.cancel()
+            _uiState.value = current.copy(isAccepting = true, errorMessage = null)
             viewModelScope.launch {
                 val result =
                     try {
                         acceptUseCase(current.offer.bookingId)
                     } catch (_: Exception) {
-                        JobOfferResult.Expired(current.offer.bookingId)
+                        null
                     }
-                _uiState.value =
-                    when (result) {
-                        is JobOfferResult.Accepted -> JobOfferUiState.Accepted(result.bookingId)
-                        is JobOfferResult.Expired -> JobOfferUiState.Expired
-                        is JobOfferResult.Declined -> JobOfferUiState.Declined
-                        is JobOfferResult.Conflict -> JobOfferUiState.Expired
+                when (result) {
+                    is JobOfferResult.Accepted -> {
+                        _uiState.value = JobOfferUiState.Accepted(result.bookingId)
+                        eventBus.clearCurrentOffer()
+                        scheduleReset(2_000L)
                     }
-                eventBus.clearCurrentOffer()
-                scheduleReset(2_000L)
+                    is JobOfferResult.Expired,
+                    is JobOfferResult.Conflict -> {
+                        _uiState.value = JobOfferUiState.Expired
+                        eventBus.clearCurrentOffer()
+                        scheduleReset(2_000L)
+                    }
+                    is JobOfferResult.Declined -> {
+                        _uiState.value = JobOfferUiState.Declined
+                        eventBus.clearCurrentOffer()
+                        scheduleReset(2_000L)
+                    }
+                    null -> {
+                        if (remainingSeconds(current.offer) <= 0) {
+                            expireOffer()
+                        } else {
+                            startOffer(
+                                offer = current.offer,
+                                errorMessage = "Could not accept job. Check your connection and try again.",
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -94,9 +98,50 @@ internal class JobOfferViewModel
         }
 
         private fun expireOffer(): Unit {
+            countdownJob?.cancel()
             _uiState.value = JobOfferUiState.Expired
             eventBus.clearCurrentOffer()
             scheduleReset(2_000L)
+        }
+
+        private fun startOffer(
+            offer: JobOffer,
+            errorMessage: String? = null,
+        ): Unit {
+            countdownJob?.cancel()
+            val initialSeconds = remainingSeconds(offer)
+            if (initialSeconds <= 0) {
+                expireOffer()
+                return
+            }
+            _uiState.value =
+                JobOfferUiState.Offering(
+                    offer = offer,
+                    remainingSeconds = initialSeconds,
+                    errorMessage = errorMessage,
+                )
+            countdownJob =
+                viewModelScope.launch {
+                    while (true) {
+                        delay(1_000L)
+                        val current = _uiState.value as? JobOfferUiState.Offering ?: break
+                        if (current.offer.bookingId != offer.bookingId) break
+                        val seconds = remainingSeconds(offer)
+                        if (seconds <= 0) break
+                        _uiState.value = current.copy(remainingSeconds = seconds)
+                    }
+                    val current = _uiState.value as? JobOfferUiState.Offering
+                    if (current?.offer?.bookingId == offer.bookingId) {
+                        expireOffer()
+                    }
+                }
+        }
+
+        private fun remainingSeconds(offer: JobOffer): Int {
+            val deviceNowMs = clock.millis()
+            val adjustedNowMs = maxOf(deviceNowMs, deviceNowMs + offer.serverClockOffsetMs)
+            val remainingMs = offer.expiresAtMs - adjustedNowMs
+            return ((remainingMs + MS_PER_SECOND - 1L) / MS_PER_SECOND).toInt().coerceAtLeast(0)
         }
 
         private fun scheduleReset(delayMs: Long): Unit {
@@ -104,5 +149,9 @@ internal class JobOfferViewModel
                 delay(delayMs)
                 _uiState.value = JobOfferUiState.Idle
             }
+        }
+
+        private companion object {
+            const val MS_PER_SECOND = 1_000L
         }
     }

@@ -11,15 +11,21 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.test.TestCoroutineScheduler
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.setMain
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 public class JobOfferViewModelTest {
@@ -27,11 +33,11 @@ public class JobOfferViewModelTest {
     private lateinit var declineUseCase: DeclineJobOfferUseCase
     private lateinit var eventBus: JobOfferEventBus
     private lateinit var viewModel: JobOfferViewModel
-    private val testDispatcher = UnconfinedTestDispatcher()
+    private lateinit var clock: SchedulerClock
 
-    private val offerFlow = MutableSharedFlow<JobOffer>(extraBufferCapacity = 1)
+    private lateinit var offerFlow: MutableSharedFlow<JobOffer>
 
-    private fun aJobOffer(expiresAtMs: Long = System.currentTimeMillis() + 30_000L): JobOffer =
+    private fun aJobOffer(expiresAtMs: Long = clock.millis() + 30_000L): JobOffer =
         JobOffer(
             bookingId = "booking-123",
             serviceId = "svc-1",
@@ -46,12 +52,11 @@ public class JobOfferViewModelTest {
 
     @BeforeEach
     public fun setUp(): Unit {
-        Dispatchers.setMain(testDispatcher)
         acceptUseCase = mockk(relaxed = true)
         declineUseCase = mockk(relaxed = true)
         eventBus = mockk(relaxed = true)
+        offerFlow = MutableSharedFlow(extraBufferCapacity = 1)
         every { eventBus.events } returns offerFlow
-        viewModel = JobOfferViewModel(eventBus, acceptUseCase, declineUseCase)
     }
 
     @AfterEach
@@ -62,13 +67,16 @@ public class JobOfferViewModelTest {
     @Test
     public fun `initial uiState is Idle`(): Unit =
         runTest {
+            createViewModel()
+
             assertThat(viewModel.uiState.value).isEqualTo(JobOfferUiState.Idle)
         }
 
     @Test
     public fun `offer arrives via bus — uiState becomes Offering with correct data and remaining seconds`(): Unit =
         runTest {
-            val offer = aJobOffer(expiresAtMs = System.currentTimeMillis() + 30_000L)
+            createViewModel()
+            val offer = aJobOffer(expiresAtMs = clock.millis() + 30_000L)
 
             offerFlow.emit(offer)
 
@@ -82,6 +90,7 @@ public class JobOfferViewModelTest {
     @Test
     public fun `accept transitions to Accepted state`(): Unit =
         runTest {
+            createViewModel()
             val offer = aJobOffer()
             offerFlow.emit(offer)
             assertThat(viewModel.uiState.value).isInstanceOf(JobOfferUiState.Offering::class.java)
@@ -98,7 +107,8 @@ public class JobOfferViewModelTest {
     @Test
     public fun `accept transitions to Expired when use case reports booking already taken`(): Unit =
         runTest {
-            offerFlow.emit(aJobOffer(expiresAtMs = System.currentTimeMillis() + 30_000L))
+            createViewModel()
+            offerFlow.emit(aJobOffer(expiresAtMs = clock.millis() + 30_000L))
             coEvery { acceptUseCase(any()) } returns JobOfferResult.Expired("booking-123")
 
             viewModel.accept()
@@ -107,8 +117,55 @@ public class JobOfferViewModelTest {
         }
 
     @Test
+    public fun `accept failure keeps offer active while timer remains`(): Unit =
+        runTest {
+            createViewModel()
+            val offer = aJobOffer(expiresAtMs = clock.millis() + 30_000L)
+            offerFlow.emit(offer)
+            coEvery { acceptUseCase(offer.bookingId) } throws RuntimeException("network")
+
+            viewModel.accept()
+
+            val state = viewModel.uiState.value
+            assertThat(state).isInstanceOf(JobOfferUiState.Offering::class.java)
+            val offering = state as JobOfferUiState.Offering
+            assertThat(offering.offer).isEqualTo(offer)
+            assertThat(offering.errorMessage).contains("Could not accept")
+        }
+
+    @Test
+    public fun `offer countdown uses server clock offset`(): Unit =
+        runTest {
+            createViewModel()
+            val deviceNow = clock.millis()
+            val offer =
+                aJobOffer(expiresAtMs = deviceNow + 100_000L)
+                    .copy(serverClockOffsetMs = 70_000L)
+
+            offerFlow.emit(offer)
+
+            val state = viewModel.uiState.value as JobOfferUiState.Offering
+            assertThat(state.remainingSeconds).isBetween(29, 30)
+        }
+
+    @Test
+    public fun `negative server clock offset does not extend countdown`(): Unit =
+        runTest {
+            createViewModel()
+            val offer =
+                aJobOffer(expiresAtMs = clock.millis() + 30_000L)
+                    .copy(serverClockOffsetMs = -10_000L)
+
+            offerFlow.emit(offer)
+
+            val state = viewModel.uiState.value as JobOfferUiState.Offering
+            assertThat(state.remainingSeconds).isLessThanOrEqualTo(30)
+        }
+
+    @Test
     public fun `decline transitions to Declined state`(): Unit =
         runTest {
+            createViewModel()
             val offer = aJobOffer()
             offerFlow.emit(offer)
             assertThat(viewModel.uiState.value).isInstanceOf(JobOfferUiState.Offering::class.java)
@@ -123,7 +180,8 @@ public class JobOfferViewModelTest {
     @Test
     public fun `offer expires when remainingSeconds reaches zero`(): Unit =
         runTest {
-            val expiredOffer = aJobOffer(expiresAtMs = System.currentTimeMillis() - 1_000L)
+            createViewModel()
+            val expiredOffer = aJobOffer(expiresAtMs = clock.millis() - 1_000L)
 
             offerFlow.emit(expiredOffer)
 
@@ -133,7 +191,8 @@ public class JobOfferViewModelTest {
     @Test
     public fun `countdown reduces remainingSeconds over time`(): Unit =
         runTest {
-            val offer = aJobOffer(expiresAtMs = System.currentTimeMillis() + 30_000L)
+            createViewModel()
+            val offer = aJobOffer(expiresAtMs = clock.millis() + 30_000L)
             offerFlow.emit(offer)
 
             val initialState = viewModel.uiState.value as? JobOfferUiState.Offering
@@ -141,10 +200,31 @@ public class JobOfferViewModelTest {
             val initialSeconds = initialState!!.remainingSeconds
 
             advanceTimeBy(5_000L)
+            runCurrent()
 
             val laterState = viewModel.uiState.value
             assertThat(laterState).isInstanceOf(JobOfferUiState.Offering::class.java)
             val offeringState = laterState as JobOfferUiState.Offering
             assertThat(offeringState.remainingSeconds).isLessThan(initialSeconds)
         }
+
+    private fun TestScope.createViewModel(): Unit {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        clock = SchedulerClock(testScheduler)
+        viewModel = JobOfferViewModel(eventBus, acceptUseCase, declineUseCase, clock)
+    }
+
+    private class SchedulerClock(
+        private val scheduler: TestCoroutineScheduler,
+        private val baseMs: Long = Instant.parse("2026-05-23T00:00:00Z").toEpochMilli(),
+        private val zoneId: ZoneId = ZoneId.of("UTC"),
+    ) : Clock() {
+        override fun getZone(): ZoneId = zoneId
+
+        override fun withZone(zone: ZoneId): Clock = SchedulerClock(scheduler, baseMs, zone)
+
+        override fun instant(): Instant = Instant.ofEpochMilli(millis())
+
+        override fun millis(): Long = baseMs + scheduler.currentTime
+    }
 }

@@ -108,6 +108,20 @@ public class HomeservicesFcmServiceJobOfferTest {
     }
 
     @Test
+    public fun `JOB_OFFER data with FCM sent time carries server clock offset`() {
+        var capturedOffer: JobOffer? = null
+        every { eventBus.tryEmit(any()) } answers {
+            capturedOffer = firstArg()
+            Unit
+        }
+        val sentTimeMs = System.currentTimeMillis() + 70_000L
+
+        runCatching { service.handleMessageData(validJobOfferData, sentTimeMs) }
+
+        assertThat(capturedOffer?.serverClockOffsetMs).isBetween(69_000L, 70_000L)
+    }
+
+    @Test
     public fun `JOB_OFFER with missing bookingId — does NOT emit to event bus`() {
         val badData = validJobOfferData.toMutableMap().apply { remove("bookingId") }
 

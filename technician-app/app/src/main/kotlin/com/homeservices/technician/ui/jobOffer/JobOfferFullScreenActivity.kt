@@ -5,6 +5,8 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.ui.Modifier
 import com.homeservices.designsystem.theme.HomeservicesTheme
 import com.homeservices.technician.data.jobOffer.JobOfferEventBus
 import com.homeservices.technician.domain.jobOffer.model.JobOffer
@@ -34,6 +36,7 @@ public class JobOfferFullScreenActivity : ComponentActivity() {
         private const val EXTRA_AMOUNT_PAISE = "amountPaise"
         private const val EXTRA_DISTANCE_KM = "distanceKm"
         private const val EXTRA_EXPIRES_AT_MS = "expiresAtMs"
+        private const val EXTRA_SERVER_CLOCK_OFFSET_MS = "serverClockOffsetMs"
         private val offerActivityFlags: Int =
             Intent.FLAG_ACTIVITY_NEW_TASK or
                 Intent.FLAG_ACTIVITY_CLEAR_TOP or
@@ -54,12 +57,14 @@ public class JobOfferFullScreenActivity : ComponentActivity() {
                 .putExtra(EXTRA_AMOUNT_PAISE, offer.amountPaise)
                 .putExtra(EXTRA_DISTANCE_KM, offer.distanceKm)
                 .putExtra(EXTRA_EXPIRES_AT_MS, offer.expiresAtMs)
+                .putExtra(EXTRA_SERVER_CLOCK_OFFSET_MS, offer.serverClockOffsetMs)
 
         @Suppress("ComplexCondition")
         internal fun offerFromIntent(intent: Intent): JobOffer? {
             val amount = intent.getLongExtra(EXTRA_AMOUNT_PAISE, Long.MIN_VALUE)
             val distance = intent.getDoubleExtra(EXTRA_DISTANCE_KM, Double.NaN)
             val expiresAt = intent.getLongExtra(EXTRA_EXPIRES_AT_MS, Long.MIN_VALUE)
+            val serverClockOffsetMs = intent.getLongExtra(EXTRA_SERVER_CLOCK_OFFSET_MS, 0L)
             val bookingId = intent.getStringExtra(EXTRA_BOOKING_ID)
             val serviceId = intent.getStringExtra(EXTRA_SERVICE_ID)
             val serviceName = intent.getStringExtra(EXTRA_SERVICE_NAME)
@@ -88,6 +93,7 @@ public class JobOfferFullScreenActivity : ComponentActivity() {
                 amountPaise = amount,
                 distanceKm = distance,
                 expiresAtMs = expiresAt,
+                serverClockOffsetMs = serverClockOffsetMs,
             )
         }
     }
@@ -97,7 +103,7 @@ public class JobOfferFullScreenActivity : ComponentActivity() {
         emitIntentOffer(intent)
         setContent {
             HomeservicesTheme {
-                JobOfferScreen()
+                JobOfferScreen(modifier = Modifier.navigationBarsPadding())
             }
         }
     }
