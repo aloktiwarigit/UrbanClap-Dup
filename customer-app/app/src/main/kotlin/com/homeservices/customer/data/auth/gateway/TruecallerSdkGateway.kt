@@ -9,6 +9,7 @@ import com.truecaller.android.sdk.legacy.ITrueCallback
 import com.truecaller.android.sdk.legacy.TrueError
 import com.truecaller.android.sdk.legacy.TruecallerSDK
 import com.truecaller.android.sdk.legacy.TruecallerSdkScope
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -19,7 +20,14 @@ import javax.inject.Singleton
 public class TruecallerSdkGateway
     @Inject
     constructor() : TruecallerGateway {
-        private val _resultFlow = MutableSharedFlow<TruecallerAuthResult>(replay = 1)
+        // Sticky event — replay=1 so the auth result is available to a late subscriber
+        // (e.g. AuthViewModel collects after the SDK callback fires on a background thread).
+        // DROP_OLDEST: only one result per auth attempt; overflow cannot occur in practice
+        // but is made explicit for policy consistency.
+        private val _resultFlow = MutableSharedFlow<TruecallerAuthResult>(
+            replay = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
         public override val resultFlow: SharedFlow<TruecallerAuthResult> = _resultFlow.asSharedFlow()
 
         internal val sdkCallback: ITrueCallback =

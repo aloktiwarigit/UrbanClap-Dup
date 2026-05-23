@@ -10,6 +10,7 @@ import com.homeservices.customer.domain.serviceArea.LocalServiceAreaCheck
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -48,7 +49,15 @@ public class AddressPickerViewModel
         private val _uiState = MutableStateFlow<AddressPickerUiState>(AddressPickerUiState.Idle)
         public val uiState: StateFlow<AddressPickerUiState> = _uiState.asStateFlow()
 
-        private val _navEvents = MutableSharedFlow<AddressPickerNavEvent>(extraBufferCapacity = 1)
+        // Hot event — nav commands are user-gesture-driven; the Compose collector is always
+        // active while the screen is visible. replay=0: no caching for late subscribers.
+        // extraBufferCapacity=1 absorbs one in-flight command. DROP_OLDEST: a stale nav event
+        // (e.g. double-tap) is safely discarded.
+        private val _navEvents = MutableSharedFlow<AddressPickerNavEvent>(
+            replay = 0,
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
         public val navEvents: SharedFlow<AddressPickerNavEvent> = _navEvents.asSharedFlow()
 
         private val queryInput = MutableStateFlow("")

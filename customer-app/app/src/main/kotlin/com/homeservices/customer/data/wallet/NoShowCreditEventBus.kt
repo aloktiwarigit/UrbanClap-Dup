@@ -1,5 +1,6 @@
 package com.homeservices.customer.data.wallet
 
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -12,15 +13,20 @@ import javax.inject.Singleton
  * The FCM service calls [post] on the background thread; [WalletViewModel] and
  * [NoShowCreditViewModel] collect [events] in their viewModelScope to react.
  *
- * Uses [extraBufferCapacity] = 1 so a single in-flight credit is not dropped if
- * no collector is active at the moment of emission, but replayed events are not
- * accumulated (replay = 0).
+ * STICKY event bus — [replay] = 1 so a credit notification fired before any subscriber
+ * attaches is cached and delivered when the first subscriber arrives.
+ * [BufferOverflow.DROP_OLDEST] prevents accumulation if a second credit fires before the
+ * first is consumed (only the latest credit is retained in the replay cache).
  */
 @Singleton
 public class NoShowCreditEventBus
     @Inject
     constructor() {
-        private val _events = MutableSharedFlow<NoShowCreditEvent>(extraBufferCapacity = 1)
+        // Sticky event — replay=1 ensures a credit fired before WalletViewModel subscribes is not lost.
+        private val _events = MutableSharedFlow<NoShowCreditEvent>(
+            replay = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
         public val events: SharedFlow<NoShowCreditEvent> = _events.asSharedFlow()
 
         public fun post(event: NoShowCreditEvent) {

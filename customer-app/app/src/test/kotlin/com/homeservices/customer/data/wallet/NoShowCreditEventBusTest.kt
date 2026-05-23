@@ -56,4 +56,40 @@ public class NoShowCreditEventBusTest {
                 cancelAndIgnoreRemainingEvents()
             }
         }
+
+    // --- replay=1 sticky behaviour tests ---
+
+    @Test
+    public fun `late subscriber receives replayed credit event`(): Unit =
+        runTest {
+            val event = NoShowCreditEvent(creditAmountPaise = 15000L, bookingId = "booking-123")
+
+            // Post BEFORE any subscriber exists
+            bus.post(event)
+
+            // Late subscriber should still receive the event due to replay=1
+            bus.events.test {
+                val received = awaitItem()
+                assertThat(received).isEqualTo(event)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    public fun `second late credit drops first when buffer overflows`(): Unit =
+        runTest {
+            val event1 = NoShowCreditEvent(creditAmountPaise = 10000L, bookingId = "booking-111")
+            val event2 = NoShowCreditEvent(creditAmountPaise = 20000L, bookingId = "booking-222")
+
+            // Post two events before any subscriber — DROP_OLDEST keeps only the latest
+            bus.post(event1)
+            bus.post(event2)
+
+            bus.events.test {
+                val received = awaitItem()
+                // Only the latest event should be replayed (DROP_OLDEST evicted event1)
+                assertThat(received).isEqualTo(event2)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
 }
