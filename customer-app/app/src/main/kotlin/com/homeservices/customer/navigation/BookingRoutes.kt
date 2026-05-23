@@ -21,4 +21,12 @@ internal object BookingRoutes {
     const val LIVE_TRACKING = "booking/tracking/{bookingId}"
 
     fun liveTrackingRoute(bookingId: String) = "booking/tracking/$bookingId"
+
+    const val RESUME_PAYMENT = "booking/resume/{bookingId}/{orderId}/{amount}"
+
+    fun resumePaymentRoute(
+        bookingId: String,
+        orderId: String,
+        amount: Int,
+    ) = "booking/resume/$bookingId/$orderId/$amount"
 }

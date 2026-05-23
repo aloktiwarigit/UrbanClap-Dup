@@ -81,10 +81,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
+import com.homeservices.customer.domain.booking.model.CustomerBooking
 import com.homeservices.customer.domain.catalogue.model.Category
 import com.homeservices.customer.ui.bookings.CustomerBookingsScreen
+import com.homeservices.customer.ui.booking.PendingBookingResumeBanner
 import com.homeservices.customer.ui.util.formatInr
 import kotlinx.coroutines.delay
 
@@ -179,14 +182,27 @@ internal fun CatalogueHomeScreen(
     onSettingsClick: () -> Unit,
     onProfileLanguageClick: () -> Unit,
     onTrackBooking: (String) -> Unit,
+    onResumePayment: (bookingId: String, orderId: String, amount: Int) -> Unit = { _, _, _ -> },
+    onCancelPendingBooking: (bookingId: String) -> Unit = {},
+    onPrivacyAndDataClick: () -> Unit = {},
+    customerHomeViewModel: CustomerHomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val homeUiState by customerHomeViewModel.homeUiState.collectAsStateWithLifecycle()
+    val pendingPaymentBooking = (homeUiState as? CustomerHomeUiState.Ready)?.pendingPaymentBooking
     CatalogueHomeContent(
         uiState = uiState,
+        pendingPaymentBooking = pendingPaymentBooking,
         onCategoryClick = onCategoryClick,
         onSettingsClick = onSettingsClick,
         onProfileLanguageClick = onProfileLanguageClick,
         onTrackBooking = onTrackBooking,
+        onResumePayment = onResumePayment,
+        onCancelPendingBooking = { id ->
+            customerHomeViewModel.cancelPendingBooking(id)
+            onCancelPendingBooking(id)
+        },
+        onPrivacyAndDataClick = onPrivacyAndDataClick,
     )
 }
 
@@ -197,6 +213,10 @@ internal fun CatalogueHomeContent(
     onSettingsClick: () -> Unit,
     onProfileLanguageClick: () -> Unit,
     onTrackBooking: (String) -> Unit,
+    pendingPaymentBooking: CustomerBooking? = null,
+    onResumePayment: (bookingId: String, orderId: String, amount: Int) -> Unit = { _, _, _ -> },
+    onCancelPendingBooking: (bookingId: String) -> Unit = {},
+    onPrivacyAndDataClick: () -> Unit = {},
 ) {
     var selectedNav by remember { mutableIntStateOf(0) }
 
@@ -247,10 +267,29 @@ internal fun CatalogueHomeContent(
                     }
                 }
             1 ->
-                CustomerBookingsScreen(
-                    onTrackBooking = onTrackBooking,
-                    modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
-                )
+                Column(modifier = Modifier.fillMaxSize().padding(scaffoldPadding)) {
+                    if (pendingPaymentBooking != null) {
+                        val orderId = pendingPaymentBooking.razorpayOrderId
+                        if (orderId != null) {
+                            PendingBookingResumeBanner(
+                                serviceName = pendingPaymentBooking.serviceName,
+                                amountPaise = pendingPaymentBooking.amountPaise,
+                                onResumePayment = {
+                                    onResumePayment(
+                                        pendingPaymentBooking.bookingId,
+                                        orderId,
+                                        pendingPaymentBooking.amountPaise.toInt(),
+                                    )
+                                },
+                                onCancel = { onCancelPendingBooking(pendingPaymentBooking.bookingId) },
+                            )
+                        }
+                    }
+                    CustomerBookingsScreen(
+                        onTrackBooking = onTrackBooking,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             2 ->
                 SupportTab(
                     onOpenBookings = { selectedNav = 1 },
@@ -262,6 +301,7 @@ internal fun CatalogueHomeContent(
                     modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
                     onLanguageClick = onProfileLanguageClick,
                     onBookingsClick = { selectedNav = 1 },
+                    onPrivacyAndDataClick = onPrivacyAndDataClick,
                 )
         }
     }

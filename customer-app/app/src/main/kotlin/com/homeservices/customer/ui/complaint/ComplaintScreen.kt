@@ -45,6 +45,7 @@ import com.homeservices.designsystem.components.HsTrustBadge
 public fun ComplaintScreen(
     bookingId: String,
     onBack: () -> Unit,
+    onComplaintSubmitted: () -> Unit = {},
     viewModel: ComplaintViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -64,6 +65,7 @@ public fun ComplaintScreen(
     ComplaintContent(
         state = uiState,
         onBack = onBack,
+        onComplaintSubmitted = onComplaintSubmitted,
         onRetry = viewModel::onRetry,
         onReasonSelected = viewModel::onReasonSelected,
         onDescriptionChanged = viewModel::onDescriptionChanged,
@@ -78,6 +80,7 @@ internal fun ComplaintContent(
     state: ComplaintUiState,
     onBack: () -> Unit,
     onRetry: () -> Unit,
+    onComplaintSubmitted: () -> Unit = {},
     onReasonSelected: (ComplaintReason) -> Unit,
     onDescriptionChanged: (String) -> Unit,
     onPhotoClick: () -> Unit,
@@ -86,7 +89,7 @@ internal fun ComplaintContent(
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (state) {
-            is ComplaintUiState.Success -> SuccessState(state = state, onBack = onBack)
+            is ComplaintUiState.Success -> SuccessState(state = state, onBack = onComplaintSubmitted)
             is ComplaintUiState.PhotoUploading, ComplaintUiState.Submitting -> LoadingState()
             is ComplaintUiState.Error -> ErrorState(message = state.message, onRetry = onRetry)
             is ComplaintUiState.Idle -> {

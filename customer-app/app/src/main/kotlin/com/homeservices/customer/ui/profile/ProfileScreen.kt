@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.BookOnline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Headset
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
@@ -66,6 +67,7 @@ internal fun ProfileScreen(
     modifier: Modifier = Modifier,
     onLanguageClick: () -> Unit = {},
     onBookingsClick: () -> Unit = {},
+    onPrivacyAndDataClick: () -> Unit = {},
 ) {
     val authState by viewModel.authState.collectAsStateWithLifecycle()
     val user = authState as? AuthState.Authenticated
@@ -203,6 +205,13 @@ internal fun ProfileScreen(
                     label = "गोपनीयता नीति",
                     sublabel = null,
                     onClick = { showPrivacyDialog = true },
+                )
+                HorizontalDivider(color = CardBorder, thickness = 0.5.dp)
+                MenuRow(
+                    icon = Icons.Default.Lock,
+                    label = "गोपनीयता और डेटा",
+                    sublabel = "आपका डेटा कैसे उपयोग होता है",
+                    onClick = onPrivacyAndDataClick,
                 )
             }
         }

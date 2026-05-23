@@ -32,6 +32,7 @@ public object LocaleRoutes {
     public const val FIRST_LAUNCH: String = "first_launch_language"
     public const val SETTINGS: String = "settings"
     public const val LANGUAGE_SETTINGS: String = "language_settings"
+    public const val PRIVACY_DATA: String = "privacy_data"
 }
 
 @Composable

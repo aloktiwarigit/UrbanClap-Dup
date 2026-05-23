@@ -30,6 +30,12 @@ internal class CustomerHomeViewModel
         private val _homeUiState = MutableStateFlow<CustomerHomeUiState>(CustomerHomeUiState.Loading)
         public val homeUiState: StateFlow<CustomerHomeUiState> = _homeUiState.asStateFlow()
 
+        public fun cancelPendingBooking(bookingId: String) {
+            viewModelScope.launch {
+                bookingRepository.cancelBooking(bookingId)
+            }
+        }
+
         init {
             viewModelScope.launch {
                 sessionManager.authState

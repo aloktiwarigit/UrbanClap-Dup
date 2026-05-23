@@ -59,6 +59,8 @@ internal fun BookingSummaryScreen(
     onBack: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val showWomenSafeToggle by viewModel.showWomenSafeToggle.collectAsStateWithLifecycle()
+    val preferFemaleTechnician by viewModel.preferFemaleTechnician.collectAsStateWithLifecycle()
     val activity = LocalContext.current as? Activity
 
     LaunchedEffect(uiState) {
@@ -81,7 +83,11 @@ internal fun BookingSummaryScreen(
 
     BookingSummaryContent(
         uiState = uiState,
+        showWomenSafeToggle = showWomenSafeToggle,
+        preferFemaleTechnician = preferFemaleTechnician,
+        onPreferFemaleChange = viewModel::setPreferFemaleTechnician,
         onCreateBooking = { paymentMethod -> viewModel.startBooking(serviceId, categoryId, paymentMethod) },
+        onRetryNetworkError = viewModel::retryNetworkError,
         onBack = onBack,
     )
 }
@@ -93,6 +99,10 @@ internal fun BookingSummaryContent(
     onCreateBooking: (BookingPaymentMethod) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    showWomenSafeToggle: Boolean = false,
+    preferFemaleTechnician: Boolean = false,
+    onPreferFemaleChange: (Boolean) -> Unit = {},
+    onRetryNetworkError: () -> Unit = {},
 ) {
     var selectedPaymentMethod by rememberSaveable { mutableStateOf(BookingPaymentMethod.RAZORPAY) }
 
@@ -125,11 +135,16 @@ internal fun BookingSummaryContent(
                         selectedPaymentMethod = selectedPaymentMethod,
                         onPaymentMethodSelected = { selectedPaymentMethod = it },
                         onCreateBooking = { onCreateBooking(selectedPaymentMethod) },
+                        showWomenSafeToggle = showWomenSafeToggle,
+                        preferFemaleTechnician = preferFemaleTechnician,
+                        onPreferFemaleChange = onPreferFemaleChange,
                     )
                 is BookingUiState.CreatingBooking,
                 is BookingUiState.AwaitingPayment,
                 is BookingUiState.ConfirmingPayment,
                 -> BookingProgress()
+                is BookingUiState.NetworkError ->
+                    NetworkErrorCard(message = state.message, onRetry = onRetryNetworkError)
                 is BookingUiState.Error -> BookingError(message = state.message)
                 else -> Unit
             }
@@ -143,6 +158,9 @@ private fun ReadySummary(
     selectedPaymentMethod: BookingPaymentMethod,
     onPaymentMethodSelected: (BookingPaymentMethod) -> Unit,
     onCreateBooking: () -> Unit,
+    showWomenSafeToggle: Boolean = false,
+    preferFemaleTechnician: Boolean = false,
+    onPreferFemaleChange: (Boolean) -> Unit = {},
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Column(
@@ -235,6 +253,14 @@ private fun ReadySummary(
                 }
             }
             Spacer(Modifier.height(12.dp))
+            if (showWomenSafeToggle) {
+                WomenSafeFilterToggle(
+                    checked = preferFemaleTechnician,
+                    onCheckedChange = onPreferFemaleChange,
+                    modifier = Modifier.padding(horizontal = 0.dp),
+                )
+                Spacer(Modifier.height(4.dp))
+            }
         }
         Spacer(Modifier.height(14.dp))
         HsPrimaryButton(
@@ -348,6 +374,36 @@ private fun BookingError(message: String) {
             text = message,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun NetworkErrorCard(
+    message: String,
+    onRetry: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = stringResource(R.string.booking_network_error_title),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(20.dp))
+        HsPrimaryButton(
+            text = stringResource(R.string.booking_network_error_retry),
+            onClick = onRetry,
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }

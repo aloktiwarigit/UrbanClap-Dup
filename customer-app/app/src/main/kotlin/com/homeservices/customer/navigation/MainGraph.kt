@@ -38,6 +38,11 @@ internal fun NavGraphBuilder.mainGraph(navController: NavController) {
                 onSettingsClick = { navController.navigate(LocaleRoutes.SETTINGS) },
                 onProfileLanguageClick = { navController.navigate(LocaleRoutes.LANGUAGE_SETTINGS) },
                 onTrackBooking = { id -> navController.navigate(BookingRoutes.liveTrackingRoute(id)) },
+                onResumePayment = { bookingId, orderId, amount ->
+                    navController.navigate(BookingRoutes.resumePaymentRoute(bookingId, orderId, amount))
+                },
+                onCancelPendingBooking = {},
+                onPrivacyAndDataClick = { navController.navigate(LocaleRoutes.PRIVACY_DATA) },
             )
         }
         composable(
@@ -187,7 +192,11 @@ internal fun NavGraphBuilder.mainGraph(navController: NavController) {
             route = RatingRoutes.ROUTE,
             arguments = listOf(navArgument("bookingId") { type = NavType.StringType }),
         ) {
-            RatingScreen()
+            val toHome: () -> Unit = { navController.popBackStack(CatalogueRoutes.HOME, inclusive = false) }
+            RatingScreen(
+                onBack = toHome,
+                onSubmitted = toHome,
+            )
         }
 
         composable(
@@ -198,6 +207,38 @@ internal fun NavGraphBuilder.mainGraph(navController: NavController) {
             ComplaintScreen(
                 bookingId = bookingId,
                 onBack = { navController.popBackStack() },
+                onComplaintSubmitted = {
+                    navController.popBackStack(CatalogueRoutes.HOME, inclusive = false)
+                },
+            )
+        }
+
+        composable(
+            route = BookingRoutes.RESUME_PAYMENT,
+            arguments = listOf(
+                navArgument("bookingId") { type = NavType.StringType },
+                navArgument("orderId") { type = NavType.StringType },
+                navArgument("amount") { type = NavType.IntType },
+            ),
+        ) { backStackEntry ->
+            val bookingEntry = remember(backStackEntry) {
+                navController.getBackStackEntry(BookingRoutes.BOOKING_GRAPH)
+            }
+            val vm: BookingViewModel = hiltViewModel(bookingEntry)
+            val bookingId = backStackEntry.arguments?.getString("bookingId") ?: ""
+            val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
+            val amount = backStackEntry.arguments?.getInt("amount") ?: 0
+            vm.resumeFromPendingPayment(bookingId, orderId, amount)
+            BookingSummaryScreen(
+                viewModel = vm,
+                serviceId = vm.pendingServiceId,
+                categoryId = vm.pendingCategoryId,
+                onConfirmed = { id ->
+                    navController.navigate(BookingRoutes.confirmedRoute(id)) {
+                        popUpTo(BookingRoutes.BOOKING_GRAPH) { inclusive = true }
+                    }
+                },
+                onBack = { navController.popBackStack(CatalogueRoutes.HOME, inclusive = false) },
             )
         }
     }
