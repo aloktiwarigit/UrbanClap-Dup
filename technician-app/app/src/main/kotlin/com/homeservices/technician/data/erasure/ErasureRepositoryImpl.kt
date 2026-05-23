@@ -16,9 +16,10 @@ public class ErasureRepositoryImpl
     ) : ErasureRepository {
         public override suspend fun submitRequest(reason: String?): ErasureSubmitResult =
             runCatching {
-                val response = api.submitErasureRequest(
-                    ErasureSubmitRequestBody(confirmationPhrase = CONFIRMATION_PHRASE, reason = reason),
-                )
+                val response =
+                    api.submitErasureRequest(
+                        ErasureSubmitRequestBody(confirmationPhrase = CONFIRMATION_PHRASE, reason = reason),
+                    )
                 when {
                     response.isSuccessful -> {
                         val body = checkNotNull(response.body()) { "Null body on 2xx" }
@@ -40,7 +41,7 @@ public class ErasureRepositoryImpl
             runCatching {
                 val response = api.revokeErasureRequest()
                 if (!response.isSuccessful) {
-                    throw RuntimeException("Revoke failed: HTTP ${response.code()}")
+                    error("Revoke failed: HTTP ${response.code()}")
                 }
             }
     }

@@ -15,6 +15,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.navArgument
 import com.homeservices.corenav.PendingActionType
+import com.homeservices.technician.data.auth.SessionManager
 import com.homeservices.technician.domain.activeJob.model.NavigationEvent
 import com.homeservices.technician.domain.auth.model.AuthState
 import com.homeservices.technician.ui.activeJob.ActiveJobScreen
@@ -22,6 +23,8 @@ import com.homeservices.technician.ui.activeJob.ActiveJobViewModel
 import com.homeservices.technician.ui.complaint.ComplaintRoutes
 import com.homeservices.technician.ui.complaint.ComplaintScreen
 import com.homeservices.technician.ui.dashboard.TechnicianDashboardViewModel
+import com.homeservices.technician.ui.deleteaccount.AccountDeletedScreen
+import com.homeservices.technician.ui.deleteaccount.DeleteAccountScreen
 import com.homeservices.technician.ui.home.TechnicianHomeScreen
 import com.homeservices.technician.ui.home.TechnicianHomeViewModel
 import com.homeservices.technician.ui.myratings.MyRatingsScreen
@@ -30,9 +33,6 @@ import com.homeservices.technician.ui.rating.RatingRoutes
 import com.homeservices.technician.ui.rating.RatingScreen
 import com.homeservices.technician.ui.serviceprofile.ServiceSelectionMode
 import com.homeservices.technician.ui.serviceprofile.ServiceSelectionScreen
-import com.homeservices.technician.data.auth.SessionManager
-import com.homeservices.technician.ui.deleteaccount.AccountDeletedScreen
-import com.homeservices.technician.ui.deleteaccount.DeleteAccountScreen
 import com.homeservices.technician.ui.settings.LanguageSettingsScreen
 
 private const val HOME_GRAPH_ROUTE = "home"
@@ -65,29 +65,7 @@ internal fun NavGraphBuilder.homeGraph(
         composable("language_settings") {
             LanguageSettingsScreen(onBack = { navController.popBackStack() })
         }
-        composable("delete_account") {
-            DeleteAccountScreen(
-                onBack = { navController.popBackStack() },
-                onDeleted = { scheduledAt ->
-                    navController.navigate("account_deleted/${Uri.encode(scheduledAt)}") {
-                        popUpTo(HOME_DASHBOARD_ROUTE) { inclusive = false }
-                        launchSingleTop = true
-                    }
-                },
-            )
-        }
-        composable(
-            route = "account_deleted/{scheduledAt}",
-            arguments = listOf(navArgument("scheduledAt") { type = NavType.StringType }),
-        ) { backStackEntry ->
-            val scheduledAt = Uri.decode(
-                backStackEntry.arguments?.getString("scheduledAt") ?: "",
-            )
-            AccountDeletedScreen(
-                scheduledAt = scheduledAt,
-                sessionManager = sessionManager,
-            )
-        }
+        accountDeletionRoutes(navController = navController, sessionManager = sessionManager)
         composable("ratings_transparency") {
             MyRatingsScreen(onBack = { navController.popBackStack() })
         }
@@ -112,6 +90,36 @@ internal fun NavGraphBuilder.homeGraph(
             val bookingId = backStackEntry.arguments?.getString("bookingId") ?: ""
             ComplaintScreen(bookingId = bookingId, onBack = { navController.popBackStack() })
         }
+    }
+}
+
+private fun NavGraphBuilder.accountDeletionRoutes(
+    navController: NavController,
+    sessionManager: SessionManager,
+) {
+    composable("delete_account") {
+        DeleteAccountScreen(
+            onBack = { navController.popBackStack() },
+            onDeleted = { scheduledAt ->
+                navController.navigate("account_deleted/${Uri.encode(scheduledAt)}") {
+                    popUpTo(HOME_DASHBOARD_ROUTE) { inclusive = false }
+                    launchSingleTop = true
+                }
+            },
+        )
+    }
+    composable(
+        route = "account_deleted/{scheduledAt}",
+        arguments = listOf(navArgument("scheduledAt") { type = NavType.StringType }),
+    ) { backStackEntry ->
+        val scheduledAt =
+            Uri.decode(
+                backStackEntry.arguments?.getString("scheduledAt") ?: "",
+            )
+        AccountDeletedScreen(
+            scheduledAt = scheduledAt,
+            sessionManager = sessionManager,
+        )
     }
 }
 

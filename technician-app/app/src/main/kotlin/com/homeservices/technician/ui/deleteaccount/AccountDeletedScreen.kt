@@ -60,9 +60,10 @@ internal fun AccountDeletedScreenContent(
     val context = LocalContext.current
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -86,9 +87,10 @@ internal fun AccountDeletedScreenContent(
         )
         Spacer(Modifier.height(16.dp))
         Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            ),
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                ),
         ) {
             Text(
                 text = stringResource(R.string.account_deleted_revocation_hint, formattedDate),
@@ -101,7 +103,7 @@ internal fun AccountDeletedScreenContent(
         TextButton(
             onClick = {
                 context.startActivity(
-                    Intent(Intent.ACTION_VIEW, Uri.parse(deletionRequestUrl))
+                    Intent(Intent.ACTION_VIEW, Uri.parse(deletionRequestUrl)),
                 )
             },
         ) {
@@ -118,9 +120,10 @@ internal fun AccountDeletedScreenContent(
 private fun rememberFormattedDate(isoTimestamp: String): String =
     try {
         val instant = Instant.parse(isoTimestamp)
-        val formatter = DateTimeFormatter
-            .ofLocalizedDate(FormatStyle.LONG)
-            .withZone(ZoneId.systemDefault())
+        val formatter =
+            DateTimeFormatter
+                .ofLocalizedDate(FormatStyle.LONG)
+                .withZone(ZoneId.systemDefault())
         formatter.format(instant)
     } catch (_: Exception) {
         isoTimestamp

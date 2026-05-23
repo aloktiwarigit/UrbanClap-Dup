@@ -19,13 +19,18 @@ public class SubmitErasureRequestUseCaseTest {
     private val activeJobRepository: ActiveJobRepository = mockk()
     private lateinit var useCase: SubmitErasureRequestUseCase
 
-    private fun activeJob() = ActiveJob(
-        bookingId = "bk-1", customerId = "c-1", serviceId = "svc-1",
-        serviceName = "AC Repair", addressText = "12 Main St",
-        addressLatLng = LatLng(12.0, 77.0),
-        status = ActiveJobStatus.IN_PROGRESS,
-        slotDate = "2026-05-22", slotWindow = "10:00-12:00",
-    )
+    private fun activeJob() =
+        ActiveJob(
+            bookingId = "bk-1",
+            customerId = "c-1",
+            serviceId = "svc-1",
+            serviceName = "AC Repair",
+            addressText = "12 Main St",
+            addressLatLng = LatLng(12.0, 77.0),
+            status = ActiveJobStatus.IN_PROGRESS,
+            slotDate = "2026-05-22",
+            slotWindow = "10:00-12:00",
+        )
 
     @BeforeEach
     public fun setUp() {
@@ -33,44 +38,48 @@ public class SubmitErasureRequestUseCaseTest {
     }
 
     @Test
-    public fun `returns ActiveJobExists without network call when activeJobState is non-null`(): Unit = runTest {
-        every { activeJobRepository.activeJobState } returns MutableStateFlow(activeJob())
+    public fun `returns ActiveJobExists without network call when activeJobState is non-null`(): Unit =
+        runTest {
+            every { activeJobRepository.activeJobState } returns MutableStateFlow(activeJob())
 
-        val result = useCase()
+            val result = useCase()
 
-        assertThat(result).isEqualTo(ErasureSubmitResult.ActiveJobExists)
-        coVerify(exactly = 0) { erasureRepository.submitRequest(any()) }
-    }
-
-    @Test
-    public fun `calls repository when activeJobState is null and returns Success`(): Unit = runTest {
-        every { activeJobRepository.activeJobState } returns MutableStateFlow(null)
-        coEvery { erasureRepository.submitRequest(null) } returns
-            ErasureSubmitResult.Success("2026-05-29T02:00:00.000Z")
-
-        val result = useCase()
-
-        assertThat(result).isEqualTo(ErasureSubmitResult.Success("2026-05-29T02:00:00.000Z"))
-    }
+            assertThat(result).isEqualTo(ErasureSubmitResult.ActiveJobExists)
+            coVerify(exactly = 0) { erasureRepository.submitRequest(any()) }
+        }
 
     @Test
-    public fun `propagates ActiveJobExists from server when activeJobState is null`(): Unit = runTest {
-        every { activeJobRepository.activeJobState } returns MutableStateFlow(null)
-        coEvery { erasureRepository.submitRequest(null) } returns ErasureSubmitResult.ActiveJobExists
+    public fun `calls repository when activeJobState is null and returns Success`(): Unit =
+        runTest {
+            every { activeJobRepository.activeJobState } returns MutableStateFlow(null)
+            coEvery { erasureRepository.submitRequest(null) } returns
+                ErasureSubmitResult.Success("2026-05-29T02:00:00.000Z")
 
-        val result = useCase()
+            val result = useCase()
 
-        assertThat(result).isEqualTo(ErasureSubmitResult.ActiveJobExists)
-    }
+            assertThat(result).isEqualTo(ErasureSubmitResult.Success("2026-05-29T02:00:00.000Z"))
+        }
 
     @Test
-    public fun `propagates UnknownError from repository`(): Unit = runTest {
-        every { activeJobRepository.activeJobState } returns MutableStateFlow(null)
-        coEvery { erasureRepository.submitRequest(null) } returns
-            ErasureSubmitResult.UnknownError("HTTP 500")
+    public fun `propagates ActiveJobExists from server when activeJobState is null`(): Unit =
+        runTest {
+            every { activeJobRepository.activeJobState } returns MutableStateFlow(null)
+            coEvery { erasureRepository.submitRequest(null) } returns ErasureSubmitResult.ActiveJobExists
 
-        val result = useCase()
+            val result = useCase()
 
-        assertThat(result).isEqualTo(ErasureSubmitResult.UnknownError("HTTP 500"))
-    }
+            assertThat(result).isEqualTo(ErasureSubmitResult.ActiveJobExists)
+        }
+
+    @Test
+    public fun `propagates UnknownError from repository`(): Unit =
+        runTest {
+            every { activeJobRepository.activeJobState } returns MutableStateFlow(null)
+            coEvery { erasureRepository.submitRequest(null) } returns
+                ErasureSubmitResult.UnknownError("HTTP 500")
+
+            val result = useCase()
+
+            assertThat(result).isEqualTo(ErasureSubmitResult.UnknownError("HTTP 500"))
+        }
 }

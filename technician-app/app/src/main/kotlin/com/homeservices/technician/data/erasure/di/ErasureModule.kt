@@ -20,7 +20,6 @@ public abstract class ErasureModule {
     public companion object {
         @Provides
         @Singleton
-        public fun provideErasureApiService(retrofit: Retrofit): ErasureApiService =
-            retrofit.create(ErasureApiService::class.java)
+        public fun provideErasureApiService(retrofit: Retrofit): ErasureApiService = retrofit.create(ErasureApiService::class.java)
     }
 }

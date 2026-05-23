@@ -110,16 +110,18 @@ internal fun DeleteAccountScreenContent(
     val isSubmitting = uiState == DeleteAccountUiState.Submitting
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp),
     ) {
         Spacer(Modifier.height(16.dp))
         Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.errorContainer,
-            ),
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                ),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
@@ -135,13 +137,14 @@ internal fun DeleteAccountScreenContent(
             style = MaterialTheme.typography.titleMedium,
         )
         Spacer(Modifier.height(12.dp))
-        val items = listOf(
-            R.string.delete_account_item_profile,
-            R.string.delete_account_item_kyc,
-            R.string.delete_account_item_earnings,
-            R.string.delete_account_item_photos,
-            R.string.delete_account_item_ratings,
-        )
+        val items =
+            listOf(
+                R.string.delete_account_item_profile,
+                R.string.delete_account_item_kyc,
+                R.string.delete_account_item_earnings,
+                R.string.delete_account_item_photos,
+                R.string.delete_account_item_ratings,
+            )
         items.forEach { res ->
             Row(
                 verticalAlignment = Alignment.Top,
@@ -169,9 +172,10 @@ internal fun DeleteAccountScreenContent(
         Button(
             onClick = onConfirm,
             enabled = !isSubmitting,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.error,
-            ),
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                ),
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (isSubmitting) {
