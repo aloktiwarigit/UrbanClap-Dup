@@ -37,6 +37,7 @@ public class HomeservicesFcmServiceJobOfferTest {
     private lateinit var earningsUpdateEventBus: EarningsUpdateEventBus
     private lateinit var ratingReceivedEventBus: RatingReceivedEventBus
     private lateinit var fcmTokenSyncUseCase: FcmTokenSyncUseCase
+
     // router returns null for all FCM data by default (relaxed = true → null for nullable returns)
     private lateinit var router: NotificationRouter
     private lateinit var ingestor: PendingActionIngestor
