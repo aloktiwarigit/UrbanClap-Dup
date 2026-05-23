@@ -9,6 +9,7 @@ import com.homeservices.customer.domain.booking.CreateBookingUseCase
 import com.homeservices.customer.domain.booking.RazorpayPaymentUseCase
 import com.homeservices.customer.domain.booking.model.BookingSlot
 import com.homeservices.customer.domain.catalogue.model.Category
+import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -61,6 +62,7 @@ public class BookingViewModelWomenSafeTest {
             confirmBooking,
             razorpayPayment,
             biometricGate,
+            NoOpAnalyticsFacade(),
             catalogueRepository,
         )
 

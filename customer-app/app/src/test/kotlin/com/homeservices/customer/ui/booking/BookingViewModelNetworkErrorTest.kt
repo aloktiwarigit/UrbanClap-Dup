@@ -9,6 +9,7 @@ import com.homeservices.customer.domain.booking.CreateBookingUseCase
 import com.homeservices.customer.domain.booking.RazorpayPaymentUseCase
 import com.homeservices.customer.domain.booking.model.BookingPaymentMethod
 import com.homeservices.customer.domain.booking.model.BookingSlot
+import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -53,6 +54,7 @@ public class BookingViewModelNetworkErrorTest {
             confirmBooking,
             razorpayPayment,
             biometricGate,
+            NoOpAnalyticsFacade(),
             catalogueRepository,
         )
 

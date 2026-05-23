@@ -204,14 +204,14 @@ internal fun ProfileScreen(
                     sublabel = null,
                     onClick = { showPrivacyDialog = true },
                 )
-                HorizontalDivider(color = CardBorder, thickness = 0.5.dp)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
                 MenuRow(
                     icon = Icons.Default.Shield,
                     label = "गोपनीयता प्रबंधित करें",
                     sublabel = "डेटा सहमति अपडेट करें",
                     onClick = onManageConsentClick,
                 )
-                HorizontalDivider(color = CardBorder, thickness = 0.5.dp)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
                 MenuRow(
                     icon = Icons.Default.Lock,
                     label = "गोपनीयता और डेटा",

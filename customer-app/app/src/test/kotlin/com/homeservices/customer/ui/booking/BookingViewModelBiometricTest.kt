@@ -3,6 +3,7 @@ package com.homeservices.customer.ui.booking
 import androidx.fragment.app.FragmentActivity
 import com.google.common.truth.Truth.assertThat
 import com.homeservices.customer.data.booking.PaymentResultBus
+import com.homeservices.customer.data.catalogue.CatalogueRepository
 import com.homeservices.customer.domain.auth.BiometricGateUseCase
 import com.homeservices.customer.domain.auth.model.BiometricResult
 import com.homeservices.customer.domain.booking.ConfirmBookingUseCase
@@ -44,12 +45,14 @@ public class BookingViewModelBiometricTest {
     private val confirmBooking: ConfirmBookingUseCase = mockk()
     private val razorpayPayment = RazorpayPaymentUseCase(bus)
     private val biometricGate: BiometricGateUseCase = mockk()
+    private val catalogueRepository: CatalogueRepository = mockk()
     private val activity: FragmentActivity = mockk(relaxed = true)
     private val slot = BookingSlot(date = "2026-05-01", window = "10:00-12:00")
 
     @Before
     public fun setUp(): Unit {
         Dispatchers.setMain(dispatcher)
+        every { catalogueRepository.getCategories() } returns flowOf(Result.success(emptyList()))
     }
 
     @After
@@ -57,7 +60,15 @@ public class BookingViewModelBiometricTest {
         Dispatchers.resetMain()
     }
 
-    private fun makeVm() = BookingViewModel(createBooking, confirmBooking, razorpayPayment, biometricGate, NoOpAnalyticsFacade())
+    private fun makeVm() =
+        BookingViewModel(
+            createBooking,
+            confirmBooking,
+            razorpayPayment,
+            biometricGate,
+            NoOpAnalyticsFacade(),
+            catalogueRepository,
+        )
 
     // ------------------------------------------------------------------
     // 1. Online-payment (Razorpay) path — biometric fires and proceeds on Authenticated
