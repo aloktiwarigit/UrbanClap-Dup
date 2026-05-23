@@ -458,9 +458,6 @@ kover {
                     // TrackingEventBus — MutableSharedFlow wrapper, same rationale as PriceApprovalEventBus
                     "*.TrackingEventBus",
                     "*.TrackingEventBus\$*",
-                    // TrackingRepositoryImpl — scan over SharedFlow, same rationale as BookingRepositoryImpl
-                    "*.TrackingRepositoryImpl",
-                    "*.TrackingRepositoryImpl\$*",
                     // data.tracking.di — Hilt @Binds wiring, same rationale as other DI modules
                     "*.data.tracking.di.*",
                     // RatingScreen — Compose UI composables (RatingScreen, ShieldBottomSheet,
