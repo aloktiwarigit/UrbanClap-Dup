@@ -96,6 +96,56 @@ export function getSystemContainer(): Container {
   return getCosmosClient().database(DB_NAME).container('system');
 }
 
+export function getPendingActionsContainer(): Container {
+  return getCosmosClient().database(DB_NAME).container('pending_actions');
+}
+
+/**
+ * E13-S01: Customer credit ledger entries (issued / applied / refunded).
+ * Stored in the existing `customer_credits` container, partitioned by /customerId.
+ * No new container — the original `CustomerCreditDoc` records remain; we add
+ * new `CustomerCreditLedgerDoc` records alongside them with type='CREDIT_APPLIED'.
+ */
+export function getCustomerCreditLedgerContainer(): Container {
+  return getCosmosClient().database(DB_NAME).container('customer_credits');
+}
+
+/**
+ * E13-S01: Applied-credit idempotency dedup.
+ * Separate container so TTL can be set at the container level (86400 s = 24h).
+ * Partitioned by /customerId (same access pattern as credits).
+ */
+export function getAppliedCreditIdempotencyContainer(): Container {
+  return getCosmosClient().database(DB_NAME).container('applied_credit_idempotency');
+}
+
+/**
+ * E16-S02: Slot holds for conflict locking.
+ * Partitioned by /servicePartitionKey ("<serviceId>|<date>"). Default TTL = 30 s.
+ * commitHold sets ttl=-1 on committed docs to make them permanent.
+ */
+export function getSlotHoldsContainer(): Container {
+  return getCosmosClient().database(DB_NAME).container('slot_holds');
+}
+
+/**
+ * E11-S05b-2: Per-incident AES key docs. Partitioned by /customerId.
+ * defaultTtl=604800 (7 days) set at provisioning time — see infra/firebase/sos-audio-lifecycle.json
+ * and docs/runbook.md → "SOS audio retention".
+ */
+export function getSosIncidentKeysContainer(): Container {
+  return getCosmosClient().database(DB_NAME).container('sos_incident_keys');
+}
+
+/**
+ * E19-S02: FCM device tokens — one doc per (userId, deviceToken) pair.
+ * Partitioned by /userId for single-partition reads per user.
+ * No container-level TTL; stale docs pruned manually by a daily timer trigger.
+ */
+export function getDeviceTokensContainer(): Container {
+  return getCosmosClient().database(DB_NAME).container('device_tokens');
+}
+
 /** Inject a mock CosmosClient in tests. */
 export function _setCosmosClientForTest(mock: CosmosClient): void {
   _client = mock;

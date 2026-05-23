@@ -75,6 +75,7 @@ internal class JobOfferViewModel
                         is JobOfferResult.Accepted -> JobOfferUiState.Accepted(result.bookingId)
                         is JobOfferResult.Expired -> JobOfferUiState.Expired
                         is JobOfferResult.Declined -> JobOfferUiState.Declined
+                        is JobOfferResult.Conflict -> JobOfferUiState.Expired
                     }
                 eventBus.clearCurrentOffer()
                 scheduleReset(2_000L)

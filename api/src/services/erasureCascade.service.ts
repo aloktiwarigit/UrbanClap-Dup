@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { userDataCascadeWrites } from '../cosmos/user-data-cascade-writes.js';
+import { deviceTokenRepo } from '../cosmos/device-token-repository.js';
 import type { ErasureDeletedCounts, ErasureRequestDoc } from '../schemas/erasure-request.js';
 
 /**
@@ -49,6 +50,9 @@ export async function executeErasureCascade(
     userDataCascadeWrites.anonymizeAuditLogResourceId(userId, hash),
   ]);
 
+  // E19-S02: clear FCM device token docs linked to erased UID (DPDP §12 compliance).
+  await deviceTokenRepo.unregisterAllForUser(userId);
+
   let technicianHardDeleted = false;
   let kycHardDeleted = false;
   let fcmTokensCleared = false;
@@ -75,5 +79,6 @@ export async function executeErasureCascade(
     technicianHardDeleted,
     kycHardDeleted,
     fcmTokensCleared,
+    deviceTokensCleared: true, // E19-S02: unregisterAllForUser always succeeds (no-ops on empty)
   };
 }

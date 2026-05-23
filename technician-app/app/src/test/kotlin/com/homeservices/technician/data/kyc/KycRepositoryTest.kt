@@ -53,14 +53,25 @@ public class KycRepositoryTest {
         }
 
     @Test
-    public fun `submitPanOcr returns Success with panNumber`(): Unit =
+    public fun `submitPanOcr returns Success with masked panNumber`(): Unit =
+        runTest {
+            coEvery { api.submitPanOcr(PanOcrRequest("path/pan.jpg")) } returns
+                PanOcrResponse("PAN_DONE", "XXXXX1234F")
+
+            val result = repo.submitPanOcr("path/pan.jpg")
+
+            val success = result as PanOcrResult.Success
+            assertThat(success.panNumber).isEqualTo("XXXXX1234F")
+        }
+
+    @Test
+    public fun `submitPanOcr returns ManualReview when server sends raw unmasked PAN (S-001 guard)`(): Unit =
         runTest {
             coEvery { api.submitPanOcr(PanOcrRequest("path/pan.jpg")) } returns
                 PanOcrResponse("PAN_DONE", "ABCDE1234F")
 
             val result = repo.submitPanOcr("path/pan.jpg")
 
-            val success = result as PanOcrResult.Success
-            assertThat(success.panNumber).isEqualTo("ABCDE1234F")
+            assertThat(result).isEqualTo(PanOcrResult.ManualReview)
         }
 }

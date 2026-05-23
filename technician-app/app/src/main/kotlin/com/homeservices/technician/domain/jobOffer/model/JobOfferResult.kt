@@ -12,4 +12,8 @@ public sealed class JobOfferResult {
     public data class Expired(
         val bookingId: String,
     ) : JobOfferResult()
+
+    public data class Conflict(
+        val bookingId: String,
+    ) : JobOfferResult()
 }

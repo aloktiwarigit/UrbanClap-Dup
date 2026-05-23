@@ -13,6 +13,17 @@ export interface BookingCreateMetadata {
   serviceName?: string;
 }
 
+export interface BookingCreateCreditOptions {
+  /**
+   * E13-S01 (P1-6): When set, the wallet credit debit is DEFERRED to the Razorpay webhook.
+   * Stored on the booking doc so the webhook can apply the credit after payment.captured.
+   * Not applicable to CASH_ON_SERVICE bookings (those apply credit synchronously).
+   */
+  pendingCreditAmountInPaise?: number;
+  /** Idempotency key for the deferred credit debit (required when pendingCreditAmountInPaise > 0). */
+  pendingCreditIdempotencyKey?: string;
+}
+
 export const bookingRepo = {
   async createPending(
     req: CreateBookingRequest,
@@ -21,6 +32,7 @@ export const bookingRepo = {
     amount: number,
     metadata: BookingCreateMetadata = {},
     bookingId?: string,
+    creditOptions?: BookingCreateCreditOptions,
   ): Promise<BookingDoc> {
     const paymentMethod = req.paymentMethod ?? 'RAZORPAY';
     const doc: BookingDoc = {
@@ -35,6 +47,13 @@ export const bookingRepo = {
       ...(paymentMethod === 'CASH_ON_SERVICE' ? { cashCollectionStatus: 'PENDING' as const } : {}),
       paymentId: null, paymentSignature: null,
       amount, createdAt: now(),
+      // E13-S01 (P1-6): Store pending credit info for deferred debit in webhook
+      ...(creditOptions?.pendingCreditAmountInPaise && creditOptions.pendingCreditAmountInPaise > 0
+        ? {
+            pendingCreditAmountInPaise: creditOptions.pendingCreditAmountInPaise,
+            pendingCreditIdempotencyKey: creditOptions.pendingCreditIdempotencyKey,
+          }
+        : {}),
     };
     const { resource } = await getBookingsContainer().items.create<BookingDoc>(doc);
     return resource!;
@@ -178,6 +197,10 @@ export const bookingRepo = {
       ...existing,
       status: 'AWAITING_PRICE_APPROVAL',
       pendingAddOns: [...(existing.pendingAddOns ?? []), addOn],
+      // Stable anchor for the ADDON_APPROVAL_REQUESTED pending-action expiry.
+      // Written atomically with the status transition so the change-feed projector
+      // can derive 24h from the actual request time (not the booking createdAt).
+      pendingAddOnsUpdatedAt: new Date().toISOString(),
     };
     const { resource } = await getBookingsContainer().item(id, id).replace<BookingDoc>(updated);
     return resource!;
@@ -238,6 +261,25 @@ export const bookingRepo = {
       }
       throw e;
     }
+  },
+
+  // E16-S02: Returns slotWindow strings for all active (non-cancelled/unfulfilled) bookings
+  // for a given service on a given date. Used by the availability handler to mark slots
+  // as hard-booked. Cross-partition scan — acceptable at pilot scale (≤5,000 bookings/mo).
+  async getBookedWindowsByServiceDate(serviceId: string, date: string): Promise<string[]> {
+    const { resources } = await getBookingsContainer()
+      .items.query<{ slotWindow: string }>({
+        query: `SELECT c.slotWindow FROM c
+                WHERE c.serviceId = @serviceId
+                  AND c.slotDate = @date
+                  AND c.status NOT IN ('CUSTOMER_CANCELLED', 'UNFULFILLED')`,
+        parameters: [
+          { name: '@serviceId', value: serviceId },
+          { name: '@date', value: date },
+        ],
+      })
+      .fetchAll();
+    return resources.map((r) => r.slotWindow);
   },
 };
 

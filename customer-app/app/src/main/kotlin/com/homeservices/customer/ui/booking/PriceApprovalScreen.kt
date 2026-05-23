@@ -1,4 +1,4 @@
-package com.homeservices.customer.ui.booking
+﻿package com.homeservices.customer.ui.booking
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,13 +24,16 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.booking.model.AddOnDecision
 import com.homeservices.customer.domain.booking.model.PendingAddOn
+import com.homeservices.customer.ui.util.formatInr
 import com.homeservices.designsystem.components.HsPriceText
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSecondaryButton
@@ -45,6 +48,7 @@ public fun PriceApprovalScreen(
     onApprovalComplete: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val activity = LocalContext.current as? FragmentActivity
     LaunchedEffect(bookingId) { viewModel.loadAddOns(bookingId) }
     if (state is PriceApprovalUiState.Approved) {
         LaunchedEffect(Unit) { onApprovalComplete() }
@@ -53,7 +57,7 @@ public fun PriceApprovalScreen(
     Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.price_approval_title)) }) }) { padding ->
         PriceApprovalContent(
             uiState = state,
-            onSubmit = { viewModel.submitDecisions(bookingId, it) },
+            onSubmit = { viewModel.submitDecisions(bookingId, it, activity) },
             modifier = Modifier.padding(padding),
         )
     }
@@ -66,7 +70,9 @@ internal fun PriceApprovalContent(
     modifier: Modifier = Modifier,
 ) {
     when (uiState) {
-        is PriceApprovalUiState.Loading -> PriceApprovalSkeleton(modifier = modifier)
+        is PriceApprovalUiState.Loading,
+        is PriceApprovalUiState.BiometricPending,
+        -> PriceApprovalSkeleton(modifier = modifier)
         is PriceApprovalUiState.Error -> {
             Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
@@ -170,7 +176,7 @@ private fun TotalDecisionSummary(
     addOns: List<PendingAddOn>,
     decisions: Map<String, Boolean>,
 ) {
-    val approvedTotal = addOns.filter { decisions[it.name] == true }.sumOf { it.price }
+    val approvedTotal = addOns.filter { decisions[it.name] == true }.sumOf { it.price.toLong() }
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
@@ -184,7 +190,7 @@ private fun TotalDecisionSummary(
                 modifier = Modifier.weight(1f),
             )
             Text(
-                text = "Rs ${approvedTotal / 100}",
+                text = formatInr(approvedTotal),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,

@@ -1,9 +1,5 @@
 package com.homeservices.technician.data.activeJob
 
-import com.google.android.gms.tasks.Tasks
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.auth.GetTokenResult
 import com.homeservices.technician.data.activeJob.db.ActiveJobDao
 import com.homeservices.technician.data.activeJob.db.PendingTransitionEntity
 import com.homeservices.technician.domain.activeJob.model.ActiveJob
@@ -33,13 +29,12 @@ import retrofit2.Response
 public class ActiveJobRepositoryImplTest {
     private lateinit var api: ActiveJobApiService
     private lateinit var dao: ActiveJobDao
-    private lateinit var firebaseAuth: FirebaseAuth
     private lateinit var currentLocationProvider: CurrentLocationProvider
     private lateinit var repo: ActiveJobRepositoryImpl
 
     private fun aResponse(status: String = "ASSIGNED") =
         ActiveJobResponse(
-            bookingId = "bk-1",
+            id = "bk-1",
             customerId = "c-1",
             serviceId = "svc-1",
             serviceName = "AC Repair",
@@ -54,24 +49,17 @@ public class ActiveJobRepositoryImplTest {
     public fun setUp() {
         api = mockk(relaxed = true)
         dao = mockk(relaxed = true)
-        firebaseAuth = mockk()
         currentLocationProvider = mockk()
-
-        val user = mockk<FirebaseUser>()
-        val tokenResult = mockk<GetTokenResult>()
-        every { firebaseAuth.currentUser } returns user
-        every { tokenResult.token } returns "test-token"
-        every { user.getIdToken(false) } returns Tasks.forResult(tokenResult)
 
         every { dao.getPendingFlow() } returns emptyFlow()
         coEvery { currentLocationProvider.currentLocation() } returns null
-        repo = ActiveJobRepositoryImpl(api, dao, firebaseAuth, currentLocationProvider)
+        repo = ActiveJobRepositoryImpl(api, dao, currentLocationProvider)
     }
 
     @Test
     public fun `transitionStatus success path — does NOT write PendingTransitionEntity`(): Unit =
         runTest {
-            coEvery { api.transitionStatus(any(), any(), any(), any()) } returns Response.success(aResponse("EN_ROUTE"))
+            coEvery { api.transitionStatus(any(), any(), any()) } returns Response.success(aResponse("EN_ROUTE"))
 
             val result = repo.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE)
 
@@ -87,13 +75,12 @@ public class ActiveJobRepositoryImplTest {
                     latLng = LatLng(26.8, 82.2),
                     fidelity = LocationFidelity(isMock = false, accuracyMetres = 10f),
                 )
-            coEvery { api.transitionStatus(any(), any(), any(), any()) } returns Response.success(aResponse("EN_ROUTE"))
+            coEvery { api.transitionStatus(any(), any(), any()) } returns Response.success(aResponse("EN_ROUTE"))
 
             repo.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE)
 
             coVerify {
                 api.transitionStatus(
-                    "Bearer test-token",
                     "bk-1",
                     TransitionRequest(
                         targetStatus = "EN_ROUTE",
@@ -113,13 +100,12 @@ public class ActiveJobRepositoryImplTest {
                     latLng = LatLng(26.8, 82.2),
                     fidelity = LocationFidelity(isMock = true, accuracyMetres = 1f),
                 )
-            coEvery { api.transitionStatus(any(), any(), any(), any()) } returns Response.success(aResponse("REACHED"))
+            coEvery { api.transitionStatus(any(), any(), any()) } returns Response.success(aResponse("REACHED"))
 
             repo.transitionStatus("bk-1", ActiveJobStatus.REACHED)
 
             coVerify {
                 api.transitionStatus(
-                    "Bearer test-token",
                     "bk-1",
                     TransitionRequest(
                         targetStatus = "REACHED",
@@ -134,7 +120,7 @@ public class ActiveJobRepositoryImplTest {
     @Test
     public fun `transitionStatus network failure — writes PendingTransitionEntity to Room`(): Unit =
         runTest {
-            coEvery { api.transitionStatus(any(), any(), any(), any()) } throws RuntimeException("network error")
+            coEvery { api.transitionStatus(any(), any(), any()) } throws RuntimeException("network error")
 
             val result = repo.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE)
 
@@ -151,7 +137,7 @@ public class ActiveJobRepositoryImplTest {
                     PendingTransitionEntity("id-2", "bk-1", "REACHED", createdAt = 2000L),
                 )
             coEvery { dao.getPending() } returns entries
-            coEvery { api.transitionStatus(any(), any(), any(), any()) } returns Response.success(aResponse("EN_ROUTE"))
+            coEvery { api.transitionStatus(any(), any(), any()) } returns Response.success(aResponse("EN_ROUTE"))
 
             repo.syncPendingTransitions()
 
@@ -165,7 +151,7 @@ public class ActiveJobRepositoryImplTest {
         runTest {
             val entry = PendingTransitionEntity("id-1", "bk-1", "IN_PROGRESS", createdAt = 1000L)
             coEvery { dao.getPending() } returns listOf(entry)
-            coEvery { api.transitionStatus(any(), any(), any(), any()) } returns
+            coEvery { api.transitionStatus(any(), any(), any()) } returns
                 Response.error(409, "".toResponseBody(null))
 
             repo.syncPendingTransitions()
@@ -177,7 +163,7 @@ public class ActiveJobRepositoryImplTest {
     public fun `hasPendingTransitions emits false when queue is empty`(): Unit =
         runTest {
             every { dao.getPendingFlow() } returns flowOf(emptyList())
-            val repo2 = ActiveJobRepositoryImpl(api, dao, firebaseAuth, currentLocationProvider)
+            val repo2 = ActiveJobRepositoryImpl(api, dao, currentLocationProvider)
 
             val hasPending = repo2.hasPendingTransitions.first()
 
@@ -191,7 +177,7 @@ public class ActiveJobRepositoryImplTest {
                 flowOf(
                     listOf(PendingTransitionEntity("id-1", "bk-1", "EN_ROUTE", 1000L)),
                 )
-            val repo2 = ActiveJobRepositoryImpl(api, dao, firebaseAuth, currentLocationProvider)
+            val repo2 = ActiveJobRepositoryImpl(api, dao, currentLocationProvider)
 
             val hasPending = repo2.hasPendingTransitions.first()
 
@@ -201,7 +187,7 @@ public class ActiveJobRepositoryImplTest {
     @Test
     public fun `transitionStatus HTTP error (non-exception) — returns failure without Room write`(): Unit =
         runTest {
-            coEvery { api.transitionStatus(any(), any(), any(), any()) } returns
+            coEvery { api.transitionStatus(any(), any(), any()) } returns
                 Response.error(400, "".toResponseBody(null))
 
             val result = repo.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE)
@@ -219,7 +205,7 @@ public class ActiveJobRepositoryImplTest {
             val emptyBodyResponse = mockk<Response<ActiveJobResponse>>()
             every { emptyBodyResponse.isSuccessful } returns true
             every { emptyBodyResponse.body() } returns null
-            coEvery { api.transitionStatus(any(), any(), any(), any()) } returns emptyBodyResponse
+            coEvery { api.transitionStatus(any(), any(), any()) } returns emptyBodyResponse
 
             val result = repo.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE)
 
@@ -228,31 +214,11 @@ public class ActiveJobRepositoryImplTest {
         }
 
     @Test
-    public fun `transitionStatus no authenticated user — returns failure`(): Unit =
-        runTest {
-            every { firebaseAuth.currentUser } returns null
-
-            val result = repo.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE)
-
-            assertThat(result.isFailure).isTrue()
-        }
-
-    @Test
-    public fun `syncPendingTransitions no authenticated user — skips without processing`(): Unit =
-        runTest {
-            every { firebaseAuth.currentUser } returns null
-
-            repo.syncPendingTransitions()
-
-            coVerify(exactly = 0) { api.transitionStatus(any(), any(), any(), any()) }
-        }
-
-    @Test
     public fun `syncPendingTransitions API failure — leaves entry in queue`(): Unit =
         runTest {
             val entry = PendingTransitionEntity("id-1", "bk-1", "EN_ROUTE", createdAt = 1000L)
             coEvery { dao.getPending() } returns listOf(entry)
-            coEvery { api.transitionStatus(any(), any(), any(), any()) } throws RuntimeException("network")
+            coEvery { api.transitionStatus(any(), any(), any()) } throws RuntimeException("network")
 
             repo.syncPendingTransitions()
 
@@ -264,7 +230,7 @@ public class ActiveJobRepositoryImplTest {
         runTest {
             val entry = PendingTransitionEntity("id-1", "bk-1", "EN_ROUTE", createdAt = 1000L)
             coEvery { dao.getPending() } returns listOf(entry)
-            coEvery { api.transitionStatus(any(), any(), any(), any()) } returns
+            coEvery { api.transitionStatus(any(), any(), any()) } returns
                 Response.error(500, "".toResponseBody(null))
 
             repo.syncPendingTransitions()
@@ -275,22 +241,12 @@ public class ActiveJobRepositoryImplTest {
     @Test
     public fun `startObserving primes activeJobState via one-shot fetch`(): Unit =
         runTest {
-            coEvery { api.getActiveJob(any(), "bk-1") } returns Response.success(aResponse("ASSIGNED"))
+            coEvery { api.getActiveJob("bk-1") } returns Response.success(aResponse("ASSIGNED"))
 
             repo.startObserving("bk-1")
 
             assertThat(repo.activeJobState.value?.bookingId).isEqualTo("bk-1")
             assertThat(repo.activeJobState.value?.status).isEqualTo(ActiveJobStatus.ASSIGNED)
-        }
-
-    @Test
-    public fun `startObserving no authenticated user — leaves activeJobState null`(): Unit =
-        runTest {
-            every { firebaseAuth.currentUser } returns null
-
-            repo.startObserving("bk-1")
-
-            assertThat(repo.activeJobState.value).isNull()
         }
 
     @Test

@@ -1,8 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { useTranslations, useLocale } from 'next-intl';
-import { PnLChart } from '@/components/finance/PnLChart';
+
+const PnLChart = dynamic(() => import('@/components/finance/FinanceChart'), {
+  ssr: false,
+  loading: () => <div className="skeleton h-64 w-full" />,
+});
 import { PayoutQueueTable } from '@/components/finance/PayoutQueueTable';
 import { ApproveAllModal } from '@/components/finance/ApproveAllModal';
 import {

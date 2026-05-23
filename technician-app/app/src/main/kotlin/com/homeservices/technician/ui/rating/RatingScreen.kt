@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -20,6 +21,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -27,6 +29,7 @@ import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTrustBadge
+import com.homeservices.technician.R
 import com.homeservices.technician.domain.rating.model.CustomerRating
 import com.homeservices.technician.domain.rating.model.RatingSnapshot
 import com.homeservices.technician.domain.rating.model.SideState
@@ -53,7 +56,11 @@ public fun RatingScreen(
             when (val current = state) {
                 is RatingUiState.Loading, is RatingUiState.Submitting ->
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(56.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            strokeWidth = 4.dp,
+                        )
                     }
                 is RatingUiState.AwaitingPartner -> {
                     AwaitingPartnerBody(
@@ -92,7 +99,7 @@ public fun RatingScreen(
                     OutlinedTextField(
                         value = comment,
                         onValueChange = viewModel::setComment,
-                        label = { Text("Comment (optional, <=500 chars)") },
+                        label = { Text(stringResource(R.string.rating_comment_label)) },
                         minLines = 3,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -164,19 +171,19 @@ private fun RevealedBody(
 
 @Composable
 private fun TechRatingDisplay(rating: TechRating) {
-    Text("Overall: ${rating.overall} \u2605")
-    Text("Behaviour: ${rating.subScores.behaviour} \u2605")
-    Text("Communication: ${rating.subScores.communication} \u2605")
-    rating.comment?.takeIf { it.isNotBlank() }?.let { Text("Comment: $it") }
+    Text(stringResource(R.string.rating_overall, rating.overall))
+    Text(stringResource(R.string.rating_behaviour, rating.subScores.behaviour))
+    Text(stringResource(R.string.rating_communication, rating.subScores.communication))
+    rating.comment?.takeIf { it.isNotBlank() }?.let { Text(stringResource(R.string.rating_comment, it)) }
 }
 
 @Composable
 private fun CustomerRatingDisplay(rating: CustomerRating) {
-    Text("Overall: ${rating.overall} \u2605")
-    Text("Punctuality: ${rating.subScores.punctuality} \u2605")
-    Text("Skill: ${rating.subScores.skill} \u2605")
-    Text("Behaviour: ${rating.subScores.behaviour} \u2605")
-    rating.comment?.takeIf { it.isNotBlank() }?.let { Text("Comment: $it") }
+    Text(stringResource(R.string.rating_overall, rating.overall))
+    Text(stringResource(R.string.rating_punctuality, rating.subScores.punctuality))
+    Text(stringResource(R.string.rating_skill, rating.subScores.skill))
+    Text(stringResource(R.string.rating_behaviour, rating.subScores.behaviour))
+    rating.comment?.takeIf { it.isNotBlank() }?.let { Text(stringResource(R.string.rating_comment, it)) }
 }
 
 @Composable

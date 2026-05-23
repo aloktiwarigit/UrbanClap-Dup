@@ -4,6 +4,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.homeservices.customer.R
 
 @Composable
 internal fun SosConsentDialog(
@@ -12,15 +14,15 @@ internal fun SosConsentDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDenied,
-        title = { Text("Record audio with alert?") },
+        title = { Text(stringResource(R.string.sos_consent_title)) },
         text = {
-            Text("You can attach a short local audio recording to help owner support review the situation.")
+            Text(stringResource(R.string.sos_consent_body))
         },
         confirmButton = {
-            TextButton(onClick = onGranted) { Text("Allow") }
+            TextButton(onClick = onGranted) { Text(stringResource(R.string.sos_consent_allow)) }
         },
         dismissButton = {
-            TextButton(onClick = onDenied) { Text("Skip") }
+            TextButton(onClick = onDenied) { Text(stringResource(R.string.sos_consent_skip)) }
         },
     )
 }

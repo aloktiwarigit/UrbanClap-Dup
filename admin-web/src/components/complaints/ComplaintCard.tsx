@@ -51,17 +51,24 @@ export function ComplaintCard({ complaint, tick: _tick, onClick }: ComplaintCard
     urgent = slaCountdown!.urgent;
   }
 
+  // Rendered as <div> not <button> because @hello-pangea/dnd already wraps this
+  // node in a `role="button" tabindex="0"` drag handle; a nested <button> would
+  // fail WCAG 4.1.2 (nested-interactive). Mouse clicks still open the slide-over;
+  // keyboard activation flows through the drag handle. Dedicated keyboard "open"
+  // affordance (e.g. dblclick or detail icon) tracked separately.
   return (
-    <button
+    <div
+      role="presentation"
+      data-testid="complaint-card"
       onClick={onClick}
-      className="w-full text-left bg-white border border-gray-200 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+      className="w-full text-left bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-xs text-gray-500 font-mono truncate">
+          <p className="text-xs text-[var(--color-text-muted)] font-mono truncate">
             {complaint.customerId.slice(0, 12)}
           </p>
-          <p className="text-xs text-gray-400 font-mono truncate">
+          <p className="text-xs text-[var(--color-text-muted)] font-mono truncate">
             {complaint.orderId.slice(0, 12)}
           </p>
         </div>
@@ -82,9 +89,9 @@ export function ComplaintCard({ complaint, tick: _tick, onClick }: ComplaintCard
           <span className="chip chip-info chip-numeral">
             {complaint.assigneeAdminId.slice(0, 1).toUpperCase()}
           </span>
-          <span className="text-xs text-gray-400 truncate">{complaint.assigneeAdminId}</span>
+          <span className="text-xs text-[var(--color-text-muted)] truncate">{complaint.assigneeAdminId}</span>
         </div>
       )}
-    </button>
+    </div>
   );
 }

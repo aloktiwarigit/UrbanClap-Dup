@@ -292,7 +292,7 @@ All new customer-app surfaces ship behind kill-switches so we can roll back inst
 | `customer.periodic-location.enabled` | `off` (turn on Week 5 exit) | E17-S02 | Eng |
 | `customer.photo-first-catalogue.enabled` | `off` (toggle after asset commissioning) | E16-S03 | Product |
 | `customer.service-area-gating.enabled` | `off` initially (warn-only), `on` Week 1 exit | E16-S01 | Eng |
-| `customer.rating-shield.threshold` | `2` (paise of overall ★ that triggers shield); flip to `3` after ADR-0021 | E18-S03 | Product |
+| `customer.rating-shield.threshold` | `2` (paise of overall ★ that triggers shield); flip to `3` after ADR-0024 | E18-S03 | Product |
 
 ### Observability (Sentry + PostHog)
 
@@ -359,7 +359,7 @@ All new screens (`WalletScreen`, photo-first `CategoryCard`/`ServiceCard`, addre
 
 - **E18-S01** `BookingCard` for CLOSED/COMPLETED shows `"बुकिंग को रेट करें"` + `"शिकायत दर्ज करें"` buttons. Rating button hidden if `ratingSubmitted == true` (requires adding `ratingSubmitted` flag to `CustomerBooking` DTO + projection).
 - **E18-S02** `ComplaintScreen` Success state renders live `CountdownChip` reading `acknowledgeDeadlineAt` → `slaDeadlineAt` after `ACKNOWLEDGED`. New `ComplaintListScreen` reachable from profile/support. Reopen button when `status == RESOLVED`.
-- **E18-S03** Shield bottom-sheet copy moved to HI strings (per spec verbatim). Tip-chip `TODO(C-19)` marker added with code reference to `AwaitingPartner` post-submit state. ADR-0021 documents the ≤2★ vs <3★ decision (recommend narrowing to ≤2★ unless launch-review math demands broader, with PostHog event to monitor).
+- **E18-S03** Shield bottom-sheet copy moved to HI strings (per spec verbatim). Tip-chip `TODO(C-19)` marker added with code reference to `AwaitingPartner` post-submit state. ADR-0024 documents the ≤2★ vs <3★ decision (recommend narrowing to ≤2★ unless launch-review math demands broader, with PostHog event to monitor).
 - **E18-S04** `BookingSummaryScreen` `LaunchedEffect` guards `BuildConfig.RAZORPAY_KEY_ID.isBlank()`. Release build fails compile if env var missing. New `BookingUiState.PaymentFailed(orderId, amount, reason)` with retry CTA that re-opens Razorpay on the same `orderId` (Razorpay supports retry until capture).
 - **E18-S05** `ProfileScreen` adds: avatar (upload via Firebase Storage), email-edit (verification email), saved-addresses list with edit/delete, notification toggles per channel, "Manage payment methods" row → Razorpay customer portal. Hindi.
 - **E18-S06** `AppNavigation` calls `Sentry.setUser(User(id = sha256(uid).take(16)))` on `Authenticated`; `setUser(null)` on `Unauthenticated`. `NavController.OnDestinationChangedListener` adds breadcrumbs. PostHog client initialized (or ADR-0022 deferring it).
@@ -509,7 +509,7 @@ Mirrors `CLAUDE.md` per-story protocol:
 - `technician-app/app/src/main/AndroidManifest.xml` — `FOREGROUND_SERVICE_LOCATION` + service declaration
 
 ### docs
-- `docs/adr/0017-customer-wallet-ledger.md`, `0018-hindi-default-customer-app.md`, `0019-periodic-tech-location.md`, `0020-service-area-gating.md`, `0021-rating-shield-threshold.md` (optional), `0022-posthog-otel-deferral.md` (optional)
+- `docs/adr/0017-customer-wallet-ledger.md`, `0018-hindi-default-customer-app.md`, `0019-periodic-tech-location.md`, `0020-service-area-gating.md`, `0024-rating-shield-threshold.md` (optional), `0022-posthog-otel-deferral.md` (optional)
 - `docs/threat-model.md` — append rows S-W1, D-L1, T-B1
 - `docs/stories/E13-*.md` through `E18-*.md` — story files per template
 - `docs/superpowers/plans/2026-05-1{1..6}-*.md` — per-story plans
@@ -560,7 +560,7 @@ Resulting scope: ~25 stories, 20 dev-days, achievable in 4 weeks with the same p
 ## Open decisions surfaced for owner
 
 1. **E11-S05b-2 SOS audio** — Option A (encrypted Firebase Storage upload, 7-day TTL, owner can listen) vs Option B (local-only). **Plan defaults to Option A** because PRD says "encrypted on device" implies eventual upload for owner-review. Confirms threat-model S-A1 mitigation. Override if Option B preferred.
-2. **Rating shield threshold** — `<3★` (PRD wording) vs `≤2★` (current code). **Plan defaults to keeping `≤2★`** (avoid alert fatigue) but commits ADR-0021 documenting the choice. Override if Day-1 launch-review math demands `<3★`.
+2. **Rating shield threshold** — `<3★` (PRD wording) vs `≤2★` (current code). **Plan defaults to keeping `≤2★`** (avoid alert fatigue) but commits ADR-0024 documenting the choice. Override if Day-1 launch-review math demands `<3★`.
 3. **PostHog vs ADR-0022 deferral** — full PostHog instrumentation (~10 funnels) vs deferring all product analytics to Phase 2. **Plan defaults to ship PostHog minimal taxonomy** because soft-launch insight is too valuable to skip; ADR-0022 only if budget rejects.
 4. **6-week vs 4-week** — Plan defaults to 6 weeks for enterprise quality. 4-week variant available if hard launch date.
 5. **Cross-app coordination overhead** — E17-S02 (periodic location) and the FCM-payload extensions force tech-app + API + customer-app churn in the same sprint. **Plan defaults to bundling** because customer-side gap is structurally unfixable otherwise.

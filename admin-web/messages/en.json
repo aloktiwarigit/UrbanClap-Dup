@@ -646,5 +646,16 @@
         "TRANSFERRED": "Transferred"
       }
     }
+  },
+  "notFound": {
+    "eyebrow": "HomeHeroo admin",
+    "title": "404",
+    "description": "Page not found",
+    "backHome": "Back to dashboard"
+  },
+  "globalError": {
+    "title": "Something went wrong",
+    "description": "An unexpected error occurred. Please try reloading the page.",
+    "reload": "Reload"
   }
 }
