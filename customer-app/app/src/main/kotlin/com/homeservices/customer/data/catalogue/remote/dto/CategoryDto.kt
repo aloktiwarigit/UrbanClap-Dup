@@ -14,6 +14,7 @@ public data class CategoryDto(
     @Json(name = "name") public val name: String,
     @Json(name = "heroImageUrl") public val imageUrl: String,
     @Json(name = "services") public val services: List<ServiceSummaryDto>,
+    @Json(name = "safetyTag") public val safetyTag: Boolean = false,
 )
 
 @JsonClass(generateAdapter = true)
@@ -34,6 +35,7 @@ public fun CategoryDto.toDomain() =
         imageUrl = imageUrl,
         serviceCount = services.size,
         minPricePaise = services.minOfOrNull { it.basePrice } ?: 0,
+        safetyTag = safetyTag,
     )
 
 public fun ServiceSummaryDto.toServiceDomain() =
