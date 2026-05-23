@@ -1,11 +1,11 @@
 package com.homeservices.customer.domain.flags
 
-import com.homeservices.customer.BuildConfig
 import com.sdk.growthbook.GBSDKBuilder
 import com.sdk.growthbook.GrowthBookSDK
 import com.sdk.growthbook.model.GBValue
 import com.sdk.growthbook.network.GBNetworkDispatcherOkHttp
 import javax.inject.Inject
+import javax.inject.Named
 import javax.inject.Singleton
 
 /**
@@ -30,7 +30,7 @@ import javax.inject.Singleton
 public class GrowthBookFeatureFlags
     @Inject
     constructor(
-        private val apiKey: String = BuildConfig.GROWTHBOOK_CLIENT_KEY,
+        @Named("growthbook_api_key") private val apiKey: String,
     ) : FeatureFlags {
         private val keyPresent: Boolean = apiKey.isNotBlank()
 
