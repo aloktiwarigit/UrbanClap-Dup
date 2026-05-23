@@ -48,7 +48,8 @@ public class TrackingRepositoryImplTest {
             body: ApproveFinalPriceRequestDto,
         ): ApproveFinalPriceResponseDto = error("not used")
 
-        override suspend fun cancelBooking(bookingId: String): com.homeservices.customer.data.booking.remote.dto.CancelBookingResponseDto = error("not used")
+        override suspend fun cancelBooking(bookingId: String): com.homeservices.customer.data.booking.remote.dto.CancelBookingResponseDto =
+            error("not used")
     }
 
     @Test

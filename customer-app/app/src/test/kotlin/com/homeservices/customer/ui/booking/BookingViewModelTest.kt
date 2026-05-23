@@ -49,9 +49,14 @@ public class BookingViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun makeVm() = BookingViewModel(
-        createBooking, confirmBooking, razorpayPayment, biometricGate, catalogueRepository
-    )
+    private fun makeVm() =
+        BookingViewModel(
+            createBooking,
+            confirmBooking,
+            razorpayPayment,
+            biometricGate,
+            catalogueRepository,
+        )
 
     @Test
     public fun `setSlotAndAddress transitions to Ready`(): Unit =

@@ -92,6 +92,5 @@ internal class BookingRepositoryImpl
                 )
             }
 
-        override suspend fun cancelBooking(bookingId: String): Result<Unit> =
-            runCatching { api.cancelBooking(bookingId) }.map { Unit }
+        override suspend fun cancelBooking(bookingId: String): Result<Unit> = runCatching { api.cancelBooking(bookingId) }.map { Unit }
     }

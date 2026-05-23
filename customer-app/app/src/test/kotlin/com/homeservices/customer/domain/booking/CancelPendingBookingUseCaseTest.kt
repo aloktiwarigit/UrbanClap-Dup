@@ -13,19 +13,21 @@ public class CancelPendingBookingUseCaseTest {
     private val useCase = CancelPendingBookingUseCase(bookingRepository)
 
     @Test
-    public fun `invoke calls repository cancelBooking with correct bookingId`(): Unit = runTest {
-        coEvery { bookingRepository.cancelBooking("bk-123") } returns Result.success(Unit)
-        val result = useCase("bk-123")
-        assertThat(result.isSuccess).isTrue()
-        coVerify(exactly = 1) { bookingRepository.cancelBooking("bk-123") }
-    }
+    public fun `invoke calls repository cancelBooking with correct bookingId`(): Unit =
+        runTest {
+            coEvery { bookingRepository.cancelBooking("bk-123") } returns Result.success(Unit)
+            val result = useCase("bk-123")
+            assertThat(result.isSuccess).isTrue()
+            coVerify(exactly = 1) { bookingRepository.cancelBooking("bk-123") }
+        }
 
     @Test
-    public fun `invoke propagates repository failure`(): Unit = runTest {
-        coEvery { bookingRepository.cancelBooking("bk-err") } returns
-            Result.failure(RuntimeException("cancel failed"))
-        val result = useCase("bk-err")
-        assertThat(result.isFailure).isTrue()
-        assertThat(result.exceptionOrNull()?.message).isEqualTo("cancel failed")
-    }
+    public fun `invoke propagates repository failure`(): Unit =
+        runTest {
+            coEvery { bookingRepository.cancelBooking("bk-err") } returns
+                Result.failure(RuntimeException("cancel failed"))
+            val result = useCase("bk-err")
+            assertThat(result.isFailure).isTrue()
+            assertThat(result.exceptionOrNull()?.message).isEqualTo("cancel failed")
+        }
 }

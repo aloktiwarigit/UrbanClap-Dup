@@ -215,15 +215,17 @@ internal fun NavGraphBuilder.mainGraph(navController: NavController) {
 
         composable(
             route = BookingRoutes.RESUME_PAYMENT,
-            arguments = listOf(
-                navArgument("bookingId") { type = NavType.StringType },
-                navArgument("orderId") { type = NavType.StringType },
-                navArgument("amount") { type = NavType.IntType },
-            ),
+            arguments =
+                listOf(
+                    navArgument("bookingId") { type = NavType.StringType },
+                    navArgument("orderId") { type = NavType.StringType },
+                    navArgument("amount") { type = NavType.IntType },
+                ),
         ) { backStackEntry ->
-            val bookingEntry = remember(backStackEntry) {
-                navController.getBackStackEntry(BookingRoutes.BOOKING_GRAPH)
-            }
+            val bookingEntry =
+                remember(backStackEntry) {
+                    navController.getBackStackEntry(BookingRoutes.BOOKING_GRAPH)
+                }
             val vm: BookingViewModel = hiltViewModel(bookingEntry)
             val bookingId = backStackEntry.arguments?.getString("bookingId") ?: ""
             val orderId = backStackEntry.arguments?.getString("orderId") ?: ""

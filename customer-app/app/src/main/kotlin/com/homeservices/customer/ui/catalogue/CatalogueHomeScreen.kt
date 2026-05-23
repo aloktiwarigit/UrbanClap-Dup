@@ -86,8 +86,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.booking.model.CustomerBooking
 import com.homeservices.customer.domain.catalogue.model.Category
-import com.homeservices.customer.ui.bookings.CustomerBookingsScreen
 import com.homeservices.customer.ui.booking.PendingBookingResumeBanner
+import com.homeservices.customer.ui.bookings.CustomerBookingsScreen
 import com.homeservices.customer.ui.util.formatInr
 import kotlinx.coroutines.delay
 

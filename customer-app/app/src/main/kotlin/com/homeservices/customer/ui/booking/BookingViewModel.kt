@@ -99,11 +99,12 @@ internal class BookingViewModel
             amount: Int,
         ) {
             pendingBookingId = bookingId
-            _uiState.value = BookingUiState.AwaitingPayment(
-                bookingId = bookingId,
-                razorpayOrderId = razorpayOrderId,
-                amount = amount,
-            )
+            _uiState.value =
+                BookingUiState.AwaitingPayment(
+                    bookingId = bookingId,
+                    razorpayOrderId = razorpayOrderId,
+                    amount = amount,
+                )
         }
 
         public fun startPayment(
@@ -113,11 +114,12 @@ internal class BookingViewModel
         ) {
             viewModelScope.launch {
                 if (activity != null && biometricGate.canUseBiometric(activity)) {
-                    val result = biometricGate.requestAuth(
-                        activity,
-                        "Confirm Payment",
-                        "Authenticate to authorise this booking payment",
-                    )
+                    val result =
+                        biometricGate.requestAuth(
+                            activity,
+                            "Confirm Payment",
+                            "Authenticate to authorise this booking payment",
+                        )
                     if (result !is BiometricResult.Authenticated) return@launch
                 }
                 startBooking(serviceId, categoryId, BookingPaymentMethod.RAZORPAY)
@@ -131,17 +133,18 @@ internal class BookingViewModel
         ) {
             val state = _uiState.value as? BookingUiState.Ready ?: return
             _uiState.value = BookingUiState.CreatingBooking
-            val request = BookingRequest(
-                serviceId = serviceId,
-                categoryId = categoryId,
-                slot = state.slot,
-                addressText = state.addressText,
-                addressLat = state.lat,
-                addressLng = state.lng,
-                paymentMethod = paymentMethod,
-                applyCredit = _applyCreditToggle.value,
-                preferFemaleTechnician = _preferFemaleTechnician.value,
-            )
+            val request =
+                BookingRequest(
+                    serviceId = serviceId,
+                    categoryId = categoryId,
+                    slot = state.slot,
+                    addressText = state.addressText,
+                    addressLat = state.lat,
+                    addressLng = state.lng,
+                    paymentMethod = paymentMethod,
+                    applyCredit = _applyCreditToggle.value,
+                    preferFemaleTechnician = _preferFemaleTechnician.value,
+                )
             viewModelScope.launch { executeCreateBooking(request) }
         }
 
@@ -170,10 +173,11 @@ internal class BookingViewModel
                 onFailure = { e ->
                     if (e is IOException) {
                         lastNetworkErrorRequest = request
-                        _uiState.value = BookingUiState.NetworkError(
-                            message = e.message ?: BOOKING_FAILED_FALLBACK,
-                            pendingRequest = request,
-                        )
+                        _uiState.value =
+                            BookingUiState.NetworkError(
+                                message = e.message ?: BOOKING_FAILED_FALLBACK,
+                                pendingRequest = request,
+                            )
                     } else {
                         _uiState.value = BookingUiState.Error(e.message ?: BOOKING_FAILED_FALLBACK)
                     }
@@ -181,7 +185,10 @@ internal class BookingViewModel
             )
         }
 
-        private suspend fun handlePaymentResult(result: PaymentResult, bookingId: String) {
+        private suspend fun handlePaymentResult(
+            result: PaymentResult,
+            bookingId: String,
+        ) {
             when (result) {
                 is PaymentResult.Success -> {
                     _uiState.value = BookingUiState.ConfirmingPayment
@@ -192,9 +199,10 @@ internal class BookingViewModel
                                 _uiState.value = BookingUiState.BookingConfirmed(bookingId)
                             },
                             onFailure = {
-                                _uiState.value = BookingUiState.Error(
-                                    it.message ?: CONFIRMATION_FAILED_FALLBACK,
-                                )
+                                _uiState.value =
+                                    BookingUiState.Error(
+                                        it.message ?: CONFIRMATION_FAILED_FALLBACK,
+                                    )
                             },
                         )
                 }
