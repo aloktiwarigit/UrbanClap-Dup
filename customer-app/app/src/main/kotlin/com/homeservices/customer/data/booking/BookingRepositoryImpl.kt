@@ -34,6 +34,8 @@ internal class BookingRepositoryImpl
                                     addressText = request.addressText,
                                     addressLatLng = LatLngDto(lat = request.addressLat, lng = request.addressLng),
                                     paymentMethod = request.paymentMethod.name,
+                                    applyCredit = request.applyCredit,
+                                    preferFemaleTechnician = request.preferFemaleTechnician,
                                 ),
                             ).toDomain()
                     },
@@ -89,4 +91,7 @@ internal class BookingRepositoryImpl
                     },
                 )
             }
+
+        override suspend fun cancelBooking(bookingId: String): Result<Unit> =
+            runCatching { api.cancelBooking(bookingId) }.map { Unit }
     }
