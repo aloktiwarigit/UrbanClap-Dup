@@ -176,6 +176,18 @@ export const bookingRepo = {
     );
   },
 
+  async hasActiveBookingForTechnician(technicianId: string): Promise<boolean> {
+    const { resources } = await getBookingsContainer()
+      .items.query<{ id: string }>({
+        query: `SELECT TOP 1 c.id FROM c
+                WHERE c.technicianId = @technicianId
+                  AND c.status IN ('ASSIGNED', 'EN_ROUTE', 'REACHED', 'IN_PROGRESS', 'AWAITING_PRICE_APPROVAL')`,
+        parameters: [{ name: '@technicianId', value: technicianId }],
+      })
+      .fetchNext();
+    return resources.length > 0;
+  },
+
   async getByCustomerId(customerId: string): Promise<BookingDoc[]> {
     const { resources } = await getBookingsContainer()
       .items.query<BookingDoc>({
