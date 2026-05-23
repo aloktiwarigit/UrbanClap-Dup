@@ -20,12 +20,14 @@ public interface BookingApiService {
     @POST("v1/bookings")
     public suspend fun createBooking(
         @Body body: CreateBookingRequestDto,
+        @Header("Idempotency-Key") idempotencyKey: String,
     ): CreateBookingResponseDto
 
     @POST("v1/bookings/{id}/confirm")
     public suspend fun confirmBooking(
         @Path("id") bookingId: String,
         @Body body: ConfirmBookingRequestDto,
+        // Nullable: Retrofit 2 omits the header when null (play-integrity not always available)
         @Header("X-Integrity-Token") integrityToken: String? = null,
     ): ConfirmBookingResponseDto
 

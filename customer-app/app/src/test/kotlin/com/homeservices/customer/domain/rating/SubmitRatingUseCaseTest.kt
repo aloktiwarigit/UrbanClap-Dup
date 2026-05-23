@@ -19,7 +19,7 @@ public class SubmitRatingUseCaseTest {
         runTest {
             val subScores = CustomerSubScores(punctuality = 5, skill = 4, behaviour = 5)
             coEvery {
-                repo.submitCustomerRating("bk-1", 5, subScores, "great")
+                repo.submitCustomerRating("bk-1", 5, subScores, "great", any())
             } returns flowOf(Result.success(Unit))
 
             val results = useCase.invoke("bk-1", 5, subScores, "great").toList()

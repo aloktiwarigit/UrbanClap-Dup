@@ -10,6 +10,7 @@ public interface RatingRepository {
         overall: Int,
         subScores: CustomerSubScores,
         comment: String?,
+        idempotencyKey: String,
     ): Flow<Result<Unit>>
 
     public fun get(bookingId: String): Flow<Result<RatingSnapshot>>

@@ -27,7 +27,8 @@ echo "[4/6] lintDebug — Android Lint (UnusedResources, MissingTranslation, Obs
 ./gradlew lintDebug --quiet 2>&1 | tail -20
 
 echo "[5/6] testDebugUnitTest — TDD invariant: all unit tests must be green..."
-./gradlew testDebugUnitTest --quiet 2>&1 | tail -30
+# -PexcludePaparazzi: Paparazzi snapshot tests require Linux font rendering; run on CI via paparazzi-record.yml
+./gradlew testDebugUnitTest --quiet -PexcludePaparazzi 2>&1 | tail -30
 
 echo "[6/6] koverVerify — coverage must meet >=80% threshold..."
 ./gradlew koverVerify --quiet 2>&1 | tail -10

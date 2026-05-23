@@ -4,6 +4,7 @@ import com.homeservices.customer.data.catalogue.remote.CatalogueApiService
 import com.homeservices.customer.data.catalogue.remote.dto.toDomain
 import com.homeservices.customer.domain.catalogue.model.Category
 import com.homeservices.customer.domain.catalogue.model.Service
+import io.sentry.Sentry
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
@@ -15,7 +16,10 @@ internal class CatalogueRepositoryImpl
     ) : CatalogueRepository {
         override fun getCategories(): Flow<Result<List<Category>>> =
             flow {
-                emit(runCatching { api.getCategories().categories.map { it.toDomain() } })
+                emit(
+                    runCatching { api.getCategories().categories.map { it.toDomain() } }
+                        .onFailure { Sentry.captureException(it) },
+                )
             }
 
         /**
@@ -33,12 +37,15 @@ internal class CatalogueRepositoryImpl
                             categories.find { it.id == categoryId }
                                 ?: throw NoSuchElementException("Category not found: $categoryId")
                         match.services.map { it.toDomain() }
-                    },
+                    }.onFailure { Sentry.captureException(it) },
                 )
             }
 
         override fun getServiceDetail(serviceId: String): Flow<Result<Service>> =
             flow {
-                emit(runCatching { api.getServiceDetail(serviceId).toDomain() })
+                emit(
+                    runCatching { api.getServiceDetail(serviceId).toDomain() }
+                        .onFailure { Sentry.captureException(it) },
+                )
             }
     }
