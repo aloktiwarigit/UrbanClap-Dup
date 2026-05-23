@@ -11,21 +11,23 @@ import javax.inject.Singleton
 /**
  * In-process event bus carrying the Razorpay payment result back to the booking flow.
  *
- * STICKY event bus — [replay] = 1 so a payment result posted by the Razorpay Activity
- * callback is cached and delivered to the BookingConfirmationViewModel even if it
- * subscribes after the result has been emitted (e.g. Activity re-creation race).
- * [BufferOverflow.DROP_OLDEST] retains only the most-recent result.
+ * HOT event bus — [RazorpayPaymentUseCase.open] launches a collector coroutine before
+ * calling [com.razorpay.Checkout.open], eliminating the race window that would require
+ * replay. Using replay=1 here would surface a stale prior-checkout result to the next
+ * [open] call's [kotlinx.coroutines.flow.first] collector.
  */
 @Singleton
 public class PaymentResultBus
     @Inject
     constructor() {
-        // Sticky event — replay=1 ensures a payment result is not lost during
-        // Activity re-creation between the Razorpay callback and ViewModel collection.
-        private val _results = MutableSharedFlow<PaymentResult>(
-            replay = 1,
-            onBufferOverflow = BufferOverflow.DROP_OLDEST,
-        )
+        // Hot event — replay=0; extraBufferCapacity=1 absorbs the single result per checkout.
+        // DROP_OLDEST is harmless since there is at most one active checkout at a time.
+        private val _results =
+            MutableSharedFlow<PaymentResult>(
+                replay = 0,
+                extraBufferCapacity = 1,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST,
+            )
         public val results: SharedFlow<PaymentResult> = _results.asSharedFlow()
 
         public fun post(result: PaymentResult) {

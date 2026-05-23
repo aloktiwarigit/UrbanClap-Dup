@@ -20,7 +20,7 @@ public class NoShowCreditEventBusTest {
         }
 
     @Test
-    public fun `post multiple events emits each in order`(): Unit =
+    public fun `post different events emits each in order`(): Unit =
         runTest {
             val first = NoShowCreditEvent(creditAmountPaise = 10000L, bookingId = "bk-1")
             val second = NoShowCreditEvent(creditAmountPaise = 20000L, bookingId = "bk-2")
@@ -57,17 +57,15 @@ public class NoShowCreditEventBusTest {
             }
         }
 
-    // --- replay=1 sticky behaviour tests ---
-
     @Test
-    public fun `late subscriber receives replayed credit event`(): Unit =
+    public fun `late subscriber receives cached credit event`(): Unit =
         runTest {
             val event = NoShowCreditEvent(creditAmountPaise = 15000L, bookingId = "booking-123")
 
-            // Post BEFORE any subscriber exists
+            // Post BEFORE any subscriber — StateFlow value is cached
             bus.post(event)
 
-            // Late subscriber should still receive the event due to replay=1
+            // Late subscriber receives the cached value immediately
             bus.events.test {
                 val received = awaitItem()
                 assertThat(received).isEqualTo(event)
@@ -76,19 +74,32 @@ public class NoShowCreditEventBusTest {
         }
 
     @Test
-    public fun `second late credit drops first when buffer overflows`(): Unit =
+    public fun `consume clears the cache — late subscriber after dismiss receives nothing`(): Unit =
         runTest {
-            val event1 = NoShowCreditEvent(creditAmountPaise = 10000L, bookingId = "booking-111")
-            val event2 = NoShowCreditEvent(creditAmountPaise = 20000L, bookingId = "booking-222")
+            val event = NoShowCreditEvent(creditAmountPaise = 15000L, bookingId = "booking-456")
+            bus.post(event)
+            bus.consume()
 
-            // Post two events before any subscriber — DROP_OLDEST keeps only the latest
-            bus.post(event1)
-            bus.post(event2)
+            // After consume(), no stale event is delivered to a new subscriber
+            bus.events.test {
+                expectNoEvents()
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    public fun `new post after consume is delivered to late subscriber`(): Unit =
+        runTest {
+            val stale = NoShowCreditEvent(creditAmountPaise = 10000L, bookingId = "bk-old")
+            val fresh = NoShowCreditEvent(creditAmountPaise = 25000L, bookingId = "bk-new")
+
+            bus.post(stale)
+            bus.consume()
+            bus.post(fresh)
 
             bus.events.test {
                 val received = awaitItem()
-                // Only the latest event should be replayed (DROP_OLDEST evicted event1)
-                assertThat(received).isEqualTo(event2)
+                assertThat(received).isEqualTo(fresh)
                 cancelAndIgnoreRemainingEvents()
             }
         }
