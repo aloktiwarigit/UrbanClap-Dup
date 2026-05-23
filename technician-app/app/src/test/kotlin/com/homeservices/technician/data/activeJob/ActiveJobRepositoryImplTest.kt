@@ -1,15 +1,13 @@
 package com.homeservices.technician.data.activeJob
 
-import com.google.android.gms.tasks.Tasks
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.auth.GetTokenResult
 import com.homeservices.technician.data.activeJob.db.ActiveJobDao
 import com.homeservices.technician.data.activeJob.db.PendingTransitionEntity
 import com.homeservices.technician.domain.activeJob.model.ActiveJob
 import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
 import com.homeservices.technician.domain.activeJob.model.LatLng
 import com.homeservices.technician.domain.location.CurrentLocationProvider
+import com.homeservices.technician.domain.location.LocationFidelity
+import com.homeservices.technician.domain.location.LocationWithFidelity
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -31,13 +29,12 @@ import retrofit2.Response
 public class ActiveJobRepositoryImplTest {
     private lateinit var api: ActiveJobApiService
     private lateinit var dao: ActiveJobDao
-    private lateinit var firebaseAuth: FirebaseAuth
     private lateinit var currentLocationProvider: CurrentLocationProvider
     private lateinit var repo: ActiveJobRepositoryImpl
 
     private fun aResponse(status: String = "ASSIGNED") =
         ActiveJobResponse(
-            bookingId = "bk-1",
+            id = "bk-1",
             customerId = "c-1",
             serviceId = "svc-1",
             serviceName = "AC Repair",
@@ -52,18 +49,11 @@ public class ActiveJobRepositoryImplTest {
     public fun setUp() {
         api = mockk(relaxed = true)
         dao = mockk(relaxed = true)
-        firebaseAuth = mockk()
         currentLocationProvider = mockk()
-
-        val user = mockk<FirebaseUser>()
-        val tokenResult = mockk<GetTokenResult>()
-        every { firebaseAuth.currentUser } returns user
-        every { tokenResult.token } returns "test-token"
-        every { user.getIdToken(false) } returns Tasks.forResult(tokenResult)
 
         every { dao.getPendingFlow() } returns emptyFlow()
         coEvery { currentLocationProvider.currentLocation() } returns null
-        repo = ActiveJobRepositoryImpl(api, dao, firebaseAuth, currentLocationProvider)
+        repo = ActiveJobRepositoryImpl(api, dao, currentLocationProvider)
     }
 
     @Test
@@ -80,19 +70,49 @@ public class ActiveJobRepositoryImplTest {
     @Test
     public fun `transitionStatus includes current GPS when available`(): Unit =
         runTest {
-            coEvery { currentLocationProvider.currentLocation() } returns LatLng(26.8, 82.2)
+            coEvery { currentLocationProvider.currentLocation() } returns
+                LocationWithFidelity(
+                    latLng = LatLng(26.8, 82.2),
+                    fidelity = LocationFidelity(isMock = false, accuracyMetres = 10f),
+                )
             coEvery { api.transitionStatus(any(), any(), any()) } returns Response.success(aResponse("EN_ROUTE"))
 
             repo.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE)
 
             coVerify {
                 api.transitionStatus(
-                    "Bearer test-token",
                     "bk-1",
                     TransitionRequest(
                         targetStatus = "EN_ROUTE",
                         currentLocation = LatLngDto(lat = 26.8, lng = 82.2),
+                        attestation = LocationAttestationDto(isMock = false, gpsAccuracyM = 10f),
                     ),
+                    integrityToken = null,
+                )
+            }
+        }
+
+    @Test
+    public fun `transitionStatus includes mock attestation on spoof`(): Unit =
+        runTest {
+            coEvery { currentLocationProvider.currentLocation() } returns
+                LocationWithFidelity(
+                    latLng = LatLng(26.8, 82.2),
+                    fidelity = LocationFidelity(isMock = true, accuracyMetres = 1f),
+                )
+            coEvery { api.transitionStatus(any(), any(), any()) } returns Response.success(aResponse("REACHED"))
+
+            repo.transitionStatus("bk-1", ActiveJobStatus.REACHED)
+
+            coVerify {
+                api.transitionStatus(
+                    "bk-1",
+                    TransitionRequest(
+                        targetStatus = "REACHED",
+                        currentLocation = LatLngDto(lat = 26.8, lng = 82.2),
+                        attestation = LocationAttestationDto(isMock = true, gpsAccuracyM = 1f),
+                    ),
+                    integrityToken = null,
                 )
             }
         }
@@ -143,7 +163,7 @@ public class ActiveJobRepositoryImplTest {
     public fun `hasPendingTransitions emits false when queue is empty`(): Unit =
         runTest {
             every { dao.getPendingFlow() } returns flowOf(emptyList())
-            val repo2 = ActiveJobRepositoryImpl(api, dao, firebaseAuth, currentLocationProvider)
+            val repo2 = ActiveJobRepositoryImpl(api, dao, currentLocationProvider)
 
             val hasPending = repo2.hasPendingTransitions.first()
 
@@ -157,7 +177,7 @@ public class ActiveJobRepositoryImplTest {
                 flowOf(
                     listOf(PendingTransitionEntity("id-1", "bk-1", "EN_ROUTE", 1000L)),
                 )
-            val repo2 = ActiveJobRepositoryImpl(api, dao, firebaseAuth, currentLocationProvider)
+            val repo2 = ActiveJobRepositoryImpl(api, dao, currentLocationProvider)
 
             val hasPending = repo2.hasPendingTransitions.first()
 
@@ -177,23 +197,20 @@ public class ActiveJobRepositoryImplTest {
         }
 
     @Test
-    public fun `transitionStatus no authenticated user — returns failure`(): Unit =
+    public fun `transitionStatus 2xx null body fails without outbox write`(): Unit =
         runTest {
-            every { firebaseAuth.currentUser } returns null
+            // Server contract violation: 2xx response with empty body. Pre-fix this NPE'd inside
+            // the try block, was caught, and incorrectly enqueued a PendingTransitionEntity —
+            // corrupting the offline outbox and triggering duplicate-replay storms.
+            val emptyBodyResponse = mockk<Response<ActiveJobResponse>>()
+            every { emptyBodyResponse.isSuccessful } returns true
+            every { emptyBodyResponse.body() } returns null
+            coEvery { api.transitionStatus(any(), any(), any()) } returns emptyBodyResponse
 
             val result = repo.transitionStatus("bk-1", ActiveJobStatus.EN_ROUTE)
 
             assertThat(result.isFailure).isTrue()
-        }
-
-    @Test
-    public fun `syncPendingTransitions no authenticated user — skips without processing`(): Unit =
-        runTest {
-            every { firebaseAuth.currentUser } returns null
-
-            repo.syncPendingTransitions()
-
-            coVerify(exactly = 0) { api.transitionStatus(any(), any(), any()) }
+            coVerify(exactly = 0) { dao.insert(any()) }
         }
 
     @Test
@@ -224,22 +241,12 @@ public class ActiveJobRepositoryImplTest {
     @Test
     public fun `startObserving primes activeJobState via one-shot fetch`(): Unit =
         runTest {
-            coEvery { api.getActiveJob(any(), "bk-1") } returns Response.success(aResponse("ASSIGNED"))
+            coEvery { api.getActiveJob("bk-1") } returns Response.success(aResponse("ASSIGNED"))
 
             repo.startObserving("bk-1")
 
             assertThat(repo.activeJobState.value?.bookingId).isEqualTo("bk-1")
             assertThat(repo.activeJobState.value?.status).isEqualTo(ActiveJobStatus.ASSIGNED)
-        }
-
-    @Test
-    public fun `startObserving no authenticated user — leaves activeJobState null`(): Unit =
-        runTest {
-            every { firebaseAuth.currentUser } returns null
-
-            repo.startObserving("bk-1")
-
-            assertThat(repo.activeJobState.value).isNull()
         }
 
     @Test

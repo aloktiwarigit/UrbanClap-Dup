@@ -2,16 +2,13 @@ package com.homeservices.technician.data.earnings.di
 
 import com.homeservices.technician.data.earnings.EarningsRepositoryImpl
 import com.homeservices.technician.data.earnings.remote.EarningsApiService
-import com.homeservices.technician.data.rating.di.AuthOkHttpClient
 import com.homeservices.technician.domain.earnings.EarningsRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import okhttp3.OkHttpClient
 import retrofit2.Retrofit
-import retrofit2.converter.moshi.MoshiConverterFactory
 import javax.inject.Singleton
 
 @Module
@@ -23,15 +20,6 @@ public abstract class EarningsModule {
     public companion object {
         @Provides
         @Singleton
-        public fun provideEarningsApiService(
-            @AuthOkHttpClient client: OkHttpClient,
-        ): EarningsApiService =
-            Retrofit
-                .Builder()
-                .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
-                .client(client)
-                .addConverterFactory(MoshiConverterFactory.create())
-                .build()
-                .create(EarningsApiService::class.java)
+        public fun provideEarningsApiService(retrofit: Retrofit): EarningsApiService = retrofit.create(EarningsApiService::class.java)
     }
 }

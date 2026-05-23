@@ -135,7 +135,7 @@ describe('GET /v1/technicians/me/service-profile', () => {
     });
 
     const req = makeRequest(undefined, 'Bearer valid-token');
-    const res = await getMyTechnicianServiceProfileHandler(req, { error: vi.fn() } as any) as HttpResponseInit;
+    const res = await getMyTechnicianServiceProfileHandler(req, { warn: vi.fn(), error: vi.fn() } as any) as HttpResponseInit;
 
     expect(getTechnicianServiceProfile).toHaveBeenCalledWith('tech-uid-1');
     expect(res.status).toBe(200);
@@ -150,7 +150,7 @@ describe('GET /v1/technicians/me/service-profile', () => {
     vi.mocked(getTechnicianServiceProfile).mockResolvedValue({ skills: [], location: null });
 
     const req = makeRequest(undefined, 'Bearer valid-token');
-    const res = await getMyTechnicianServiceProfileHandler(req, { error: vi.fn() } as any) as HttpResponseInit;
+    const res = await getMyTechnicianServiceProfileHandler(req, { warn: vi.fn(), error: vi.fn() } as any) as HttpResponseInit;
 
     expect(res.status).toBe(200);
     expect(res.jsonBody).toEqual({ skills: [], location: null });
@@ -173,17 +173,17 @@ describe('PATCH /v1/technicians/me/service-profile', () => {
     vi.mocked(patchTechnicianServiceProfile).mockResolvedValue(body);
 
     const req = makeRequest(body, 'Bearer valid-token');
-    const res = await patchMyTechnicianServiceProfileHandler(req, { error: vi.fn() } as any) as HttpResponseInit;
+    const res = await patchMyTechnicianServiceProfileHandler(req, { warn: vi.fn(), error: vi.fn() } as any) as HttpResponseInit;
 
     expect(catalogueRepo.getServiceByIdCrossPartition).toHaveBeenCalledWith('svc-plumbing');
-    expect(patchTechnicianServiceProfile).toHaveBeenCalledWith('tech-uid-1', body);
+    expect(patchTechnicianServiceProfile).toHaveBeenCalledWith('tech-uid-1', { ...body, location: body.location ?? undefined });
     expect(res.status).toBe(200);
     expect(res.jsonBody).toEqual(body);
   });
 
   it('rejects missing or empty skills before repository write', async () => {
     const req = makeRequest({ skills: [] }, 'Bearer valid-token');
-    const res = await patchMyTechnicianServiceProfileHandler(req, { error: vi.fn() } as any) as HttpResponseInit;
+    const res = await patchMyTechnicianServiceProfileHandler(req, { warn: vi.fn(), error: vi.fn() } as any) as HttpResponseInit;
 
     expect(res.status).toBe(400);
     expect(res.jsonBody).toMatchObject({ code: 'VALIDATION_ERROR' });
@@ -192,7 +192,7 @@ describe('PATCH /v1/technicians/me/service-profile', () => {
 
   it('rejects duplicate skills before catalogue lookup', async () => {
     const req = makeRequest({ skills: ['svc-plumbing', 'svc-plumbing'] }, 'Bearer valid-token');
-    const res = await patchMyTechnicianServiceProfileHandler(req, { error: vi.fn() } as any) as HttpResponseInit;
+    const res = await patchMyTechnicianServiceProfileHandler(req, { warn: vi.fn(), error: vi.fn() } as any) as HttpResponseInit;
 
     expect(res.status).toBe(400);
     expect(res.jsonBody).toMatchObject({ code: 'VALIDATION_ERROR' });
@@ -203,7 +203,7 @@ describe('PATCH /v1/technicians/me/service-profile', () => {
     vi.mocked(catalogueRepo.getServiceByIdCrossPartition).mockResolvedValue({ isActive: false } as any);
 
     const req = makeRequest({ skills: ['svc-disabled'] }, 'Bearer valid-token');
-    const res = await patchMyTechnicianServiceProfileHandler(req, { error: vi.fn() } as any) as HttpResponseInit;
+    const res = await patchMyTechnicianServiceProfileHandler(req, { warn: vi.fn(), error: vi.fn() } as any) as HttpResponseInit;
 
     expect(res.status).toBe(400);
     expect(res.jsonBody).toMatchObject({ code: 'VALIDATION_ERROR' });

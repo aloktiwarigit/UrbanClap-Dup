@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import type { OrderStatus } from '@/types/order';
 
 const STATUS_STYLES: Record<OrderStatus, string> = {
@@ -17,12 +20,20 @@ const STATUS_STYLES: Record<OrderStatus, string> = {
   CANCELLED:   'bg-red-100 text-red-800',
 };
 
+/** Statuses that exist in the orders.statuses catalog */
+const CATALOG_STATUSES = new Set([
+  'NEW', 'PENDING_PAYMENT', 'SEARCHING', 'ACCEPTED', 'EN_ROUTE', 'ARRIVED',
+  'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'REFUNDED',
+]);
+
 interface StatusBadgeProps { status: OrderStatus; }
 
 export function StatusBadge({ status }: StatusBadgeProps) {
+  const t = useTranslations('orders');
+  const label = CATALOG_STATUSES.has(status) ? t(`statuses.${status}`) : status;
   return (
     <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_STYLES[status]}`}>
-      {status}
+      {label}
     </span>
   );
 }

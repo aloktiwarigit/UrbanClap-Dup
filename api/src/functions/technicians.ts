@@ -55,7 +55,7 @@ const PatchServiceProfileBodySchema = z.object({
   location: z.object({
     lat: z.number().min(-90).max(90),
     lng: z.number().min(-180).max(180),
-  }).optional(),
+  }).nullish(),
 }).strict();
 
 export const patchFcmTokenHandler: HttpHandler = async (req, _ctx: InvocationContext) => {
@@ -172,6 +172,7 @@ export const patchMyTechnicianServiceProfileHandler: HttpHandler = async (
     const raw: unknown = await req.json();
     const parsed = PatchServiceProfileBodySchema.safeParse(raw);
     if (!parsed.success) {
+      ctx.warn('patchMyTechnicianServiceProfile body validation failed', JSON.stringify(parsed.error.issues));
       return { status: 400, jsonBody: { code: 'VALIDATION_ERROR', issues: parsed.error.issues } };
     }
     body = parsed.data;
@@ -203,7 +204,7 @@ export const patchMyTechnicianServiceProfileHandler: HttpHandler = async (
   }
 
   try {
-    return { status: 200, jsonBody: await patchTechnicianServiceProfile(uid, body) };
+    return { status: 200, jsonBody: await patchTechnicianServiceProfile(uid, { ...body, location: body.location ?? undefined }) };
   } catch (err: unknown) {
     ctx.error('patchMyTechnicianServiceProfile failed', err);
     return { status: 500, jsonBody: { code: 'INTERNAL_ERROR' } };

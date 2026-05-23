@@ -3,15 +3,12 @@ package com.homeservices.technician.data.complaint.di
 import com.homeservices.technician.data.complaint.ComplaintRepository
 import com.homeservices.technician.data.complaint.ComplaintRepositoryImpl
 import com.homeservices.technician.data.complaint.remote.ComplaintApiService
-import com.homeservices.technician.data.rating.di.AuthOkHttpClient
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import okhttp3.OkHttpClient
 import retrofit2.Retrofit
-import retrofit2.converter.moshi.MoshiConverterFactory
 import javax.inject.Singleton
 
 @Module
@@ -26,15 +23,6 @@ public abstract class ComplaintModule {
 
         @Provides
         @Singleton
-        public fun provideComplaintApiService(
-            @AuthOkHttpClient client: OkHttpClient,
-        ): ComplaintApiService =
-            Retrofit
-                .Builder()
-                .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
-                .client(client)
-                .addConverterFactory(MoshiConverterFactory.create())
-                .build()
-                .create(ComplaintApiService::class.java)
+        public fun provideComplaintApiService(retrofit: Retrofit): ComplaintApiService = retrofit.create(ComplaintApiService::class.java)
     }
 }

@@ -29,6 +29,7 @@ public interface ActiveJobRepository {
     public suspend fun transitionStatus(
         bookingId: String,
         targetStatus: ActiveJobStatus,
+        integrityToken: String? = null,
     ): Result<ActiveJob>
 
     public suspend fun syncPendingTransitions()

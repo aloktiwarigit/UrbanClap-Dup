@@ -27,8 +27,9 @@ export const dispatchAttemptRepo = {
 
   async acceptAttempt(id: string, bookingId: string): Promise<DispatchAttemptDoc | null> {
     const container = getDispatchAttemptsContainer();
-    const { resource } = await container.item(id, bookingId).read<DispatchAttemptDoc & Resource>();
+    const { resource } = await container.item(id, id).read<DispatchAttemptDoc & Resource>();
     if (!resource) return null;
+    if (resource.bookingId !== bookingId) return null;
     if (resource.status !== 'PENDING') return null;
 
     const updated: DispatchAttemptDoc = {
@@ -41,7 +42,7 @@ export const dispatchAttemptRepo = {
     };
 
     try {
-      const { resource: replaced } = await container.item(id, bookingId).replace<DispatchAttemptDoc>(
+      const { resource: replaced } = await container.item(id, id).replace<DispatchAttemptDoc>(
         updated,
         { accessCondition: { type: 'IfMatch', condition: resource._etag } },
       );
@@ -54,8 +55,9 @@ export const dispatchAttemptRepo = {
 
   async declineAttempt(id: string, bookingId: string): Promise<DispatchAttemptDoc | null> {
     const container = getDispatchAttemptsContainer();
-    const { resource } = await container.item(id, bookingId).read<DispatchAttemptDoc & Resource>();
+    const { resource } = await container.item(id, id).read<DispatchAttemptDoc & Resource>();
     if (!resource) return null;
+    if (resource.bookingId !== bookingId) return null;
     if (resource.status !== 'PENDING') return null;
     if (new Date(resource.expiresAt) <= new Date()) return null;
 
@@ -69,7 +71,7 @@ export const dispatchAttemptRepo = {
     };
 
     try {
-      const { resource: replaced } = await container.item(id, bookingId).replace<DispatchAttemptDoc>(
+      const { resource: replaced } = await container.item(id, id).replace<DispatchAttemptDoc>(
         updated,
         { accessCondition: { type: 'IfMatch', condition: resource._etag } },
       );

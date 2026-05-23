@@ -27,6 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.designsystem.components.HsInfoRow
 import com.homeservices.designsystem.components.HsPrimaryButton
+import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsSkeletonBlock
 import com.homeservices.designsystem.components.HsTrustBadge
@@ -37,6 +38,7 @@ import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
 internal fun ActiveJobScreen(
     modifier: Modifier = Modifier,
     viewModel: ActiveJobViewModel = hiltViewModel(),
+    onBackToDashboard: () -> Unit = {},
 ): Unit {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     ActiveJobScreenContent(
@@ -45,6 +47,11 @@ internal fun ActiveJobScreen(
         onPhotoCancelled = viewModel::onPhotoCancelled,
         onPhotoConfirmed = viewModel::onPhotoConfirmed,
         onPhotoRetake = viewModel::onPhotoRetake,
+        onPhotoRetryRequested = viewModel::onPhotoRetryRequested,
+        onCompleteConfirmRequest = viewModel::requestCompletionConfirm,
+        onCompleteConfirm = viewModel::confirmCompletion,
+        onCompleteCancel = viewModel::cancelCompletionConfirm,
+        onBackToDashboard = onBackToDashboard,
         modifier = modifier,
     )
 }
@@ -56,7 +63,12 @@ internal fun ActiveJobScreenContent(
     onPhotoCancelled: () -> Unit,
     onPhotoConfirmed: (filePath: String) -> Unit,
     onPhotoRetake: () -> Unit,
+    onPhotoRetryRequested: () -> Unit,
+    onCompleteConfirmRequest: () -> Unit,
+    onCompleteConfirm: () -> Unit,
+    onCompleteCancel: () -> Unit,
     modifier: Modifier = Modifier,
+    onBackToDashboard: () -> Unit = {},
 ): Unit {
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -68,16 +80,22 @@ internal fun ActiveJobScreenContent(
                 CenterMessage(
                     title = stringResource(R.string.active_job_complete_title),
                     body = stringResource(R.string.active_job_complete_body),
+                    actionLabel = stringResource(R.string.active_job_back_to_dashboard),
+                    onAction = onBackToDashboard,
                 )
             is ActiveJobUiState.Error ->
                 CenterMessage(
                     title = stringResource(R.string.active_job_error_title),
                     body = uiState.message,
+                    actionLabel = stringResource(R.string.active_job_back_to_dashboard),
+                    onAction = onBackToDashboard,
                 )
             is ActiveJobUiState.Active -> {
                 ActiveJobContent(
                     state = uiState,
                     onTransitionRequested = onTransitionRequested,
+                    onCompleteConfirmRequest = onCompleteConfirmRequest,
+                    onPhotoRetryRequested = onPhotoRetryRequested,
                 )
                 uiState.pendingPhotoStage?.let { stage ->
                     var lastCapturedPath by remember { mutableStateOf<String?>(null) }
@@ -94,6 +112,12 @@ internal fun ActiveJobScreenContent(
                         onRetake = onPhotoRetake,
                     )
                 }
+                if (uiState.awaitingCompletionConfirm) {
+                    CompletionConfirmationDialog(
+                        onConfirm = onCompleteConfirm,
+                        onDismiss = onCompleteCancel,
+                    )
+                }
             }
         }
     }
@@ -103,6 +127,8 @@ internal fun ActiveJobScreenContent(
 private fun ActiveJobContent(
     state: ActiveJobUiState.Active,
     onTransitionRequested: (stage: String) -> Unit,
+    onCompleteConfirmRequest: () -> Unit,
+    onPhotoRetryRequested: () -> Unit,
     modifier: Modifier = Modifier,
 ): Unit {
     Column(
@@ -113,6 +139,9 @@ private fun ActiveJobContent(
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            if (state.photoUploadPending) {
+                PhotoUploadRetryBanner(onRetry = onPhotoRetryRequested)
+            }
             HsTrustBadge(text = statusLabel(state.job.status))
             HsSectionCard {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -158,7 +187,13 @@ private fun ActiveJobContent(
             }
         HsPrimaryButton(
             text = ctaLabel,
-            onClick = { if (ctaTargetStage.isNotEmpty()) onTransitionRequested(ctaTargetStage) },
+            onClick = {
+                if (state.availableAction == ActiveJobAction.COMPLETE_JOB) {
+                    onCompleteConfirmRequest()
+                } else if (ctaTargetStage.isNotEmpty()) {
+                    onTransitionRequested(ctaTargetStage)
+                }
+            },
             enabled = ctaEnabled,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -232,6 +267,8 @@ private fun ActiveJobSkeleton() {
 private fun CenterMessage(
     title: String,
     body: String,
+    actionLabel: String? = null,
+    onAction: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
@@ -246,6 +283,14 @@ private fun CenterMessage(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
+        if (actionLabel != null) {
+            Spacer(Modifier.height(24.dp))
+            HsSecondaryButton(
+                text = actionLabel,
+                onClick = onAction,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 

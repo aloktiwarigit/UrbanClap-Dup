@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">homeservices customer</string>
     <string name="catalogue_home_title">Book trusted home services</string>
-    <string name="catalogue_home_subtitle">Verified technicians, clear prices, and live updates from booking to completion.</string>
-    <string name="catalogue_trust_chip">Aadhaar verified pros</string>
+    <string name="catalogue_home_subtitle">Skilled technicians, clear prices, and live updates from booking to completion.</string>
+    <string name="catalogue_trust_chip">Skilled pros</string>
     <string name="category_image_desc">%s category</string>
     <string name="category_service_count">%d services</string>
     <string name="catalogue_loading">Loading...</string>
@@ -18,10 +18,10 @@
     <string name="service_rating_placeholder">Rating pending</string>
     <string name="includes_label">What\'s included</string>
     <string name="addons_label">Add-ons</string>
-    <string name="trust_dossier_stub">Verified Professional</string>
+    <string name="trust_dossier_stub">Professional Profile</string>
     <string name="trust_dossier_badge_aadhaar">Aadhaar Verified</string>
     <string name="trust_dossier_badge_police">Background Checked</string>
-    <string name="trust_dossier_promise">All our technicians are Aadhaar-verified and background-checked.</string>
+    <string name="trust_dossier_promise">Verification badges appear when a technician has completed those checks.</string>
     <string name="trust_dossier_assigning">Your technician will be assigned shortly.</string>
     <string name="trust_dossier_jobs">%d jobs</string>
     <string name="trust_dossier_years">%d yr exp</string>
@@ -45,10 +45,10 @@
     <string name="trust_dossier_title">Professional trust dossier</string>
     <string name="trust_dossier_loading_title">Building trust dossier</string>
     <string name="trust_dossier_error_title">Trust profile unavailable</string>
-    <string name="trust_dossier_unavailable_title">Verified professional assigned before confirmation</string>
-    <string name="trust_dossier_unavailable_body">We show identity checks, background status, work history, and reviews before the technician reaches your home.</string>
+    <string name="trust_dossier_unavailable_title">Professional assigned before confirmation</string>
+    <string name="trust_dossier_unavailable_body">We show available identity checks, background status, work history, and reviews before the technician reaches your home.</string>
     <string name="trust_dossier_signal_identity">Identity checked</string>
-    <string name="trust_dossier_signal_background">Background checked</string>
+    <string name="trust_dossier_signal_background">Background status</string>
     <string name="trust_dossier_signal_reviews">Reviewed jobs</string>
 
     <!-- Booking flow -->
@@ -56,8 +56,14 @@
     <string name="slot_picker_heading">Choose your slot</string>
     <string name="slot_picker_subtitle">Pick a convenient arrival window. You can review everything before payment.</string>
     <string name="slot_picker_date_label">Date</string>
-    <string name="slot_picker_time_label">Time</string>
-    <string name="slot_picker_next">Next</string>
+    <string name="slot_picker_morning_label">Morning</string>
+    <string name="slot_picker_afternoon_label">Afternoon</string>
+    <string name="slot_picker_evening_label">Evening</string>
+    <string name="slot_picker_loading_desc">Loading available slots</string>
+    <string name="slot_picker_error_label">Could not load slots. Please try again.</string>
+    <string name="slot_picker_retry_button">Retry</string>
+    <string name="slot_picker_confirm_slot">Confirm Slot</string>
+    <string name="slot_picker_no_slots_label">No slots available for this date</string>
     <string name="address_screen_title">Your Address</string>
     <string name="address_heading">Where should the technician come?</string>
     <string name="address_subtitle">Add the full service address so the technician can reach you without follow-up calls.</string>
@@ -66,6 +72,15 @@
     <string name="address_hint">Enter your full address</string>
     <string name="address_privacy_note">Your address is shared only with the assigned technician and owner support.</string>
     <string name="address_next">Next</string>
+    <string name="address_location_not_set">Location not set</string>
+    <string name="address_location_captured">Current location captured</string>
+    <string name="address_location_captured_manual">Current location captured. Enter the address manually.</string>
+    <string name="address_location_permission_denied">Allow location access to find nearby technicians.</string>
+    <string name="address_location_error">Could not find your location. Check GPS and try again.</string>
+    <string name="address_finding_location">Finding your location</string>
+    <string name="address_use_current_location">Use current location</string>
+    <string name="address_finding_service_location">Finding your service location</string>
+    <string name="address_location_assign_help">This helps assign the nearest available technician.</string>
     <string name="booking_summary_title">Booking Summary</string>
     <string name="booking_summary_heading">Review and book</string>
     <string name="booking_summary_subtitle">Choose online payment or pay cash when the technician reaches your home.</string>
@@ -83,8 +98,19 @@
     <string name="booking_summary_pay_now">Pay Now</string>
     <string name="booking_summary_book_cash">Book with Cash</string>
     <string name="booking_error_title">Booking could not continue</string>
+    <string name="booking_error_failed">Booking failed</string>
+    <string name="booking_error_confirmation_failed">Confirmation failed</string>
+    <string name="booking_error_payment_cancelled">Payment cancelled: %s</string>
+    <!-- Payment failure strings (E18-S04) — mapped from Razorpay error codes -->
+    <string name="payment_failed_title">Payment not completed</string>
+    <string name="payment_failed_retry">Retry payment</string>
+    <string name="payment_failed_cancel">Change payment method</string>
+    <string name="payment_error_payment_cancelled">Payment cancelled by user. Please try again.</string>
+    <string name="payment_error_network_error">Network issue during payment. Please check your connection and retry.</string>
+    <string name="payment_error_bad_request_error">Payment failed. Please try a different method.</string>
+    <string name="payment_error_default">Payment failed. Please try again.</string>
     <string name="booking_confirmed_title">Booking Confirmed!</string>
-    <string name="booking_confirmed_body">We are assigning a verified technician for your slot.</string>
+    <string name="booking_confirmed_body">We are assigning a technician for your slot.</string>
     <string name="booking_confirmed_id_label">Booking ID: %s</string>
     <string name="booking_confirmed_track">Track your service</string>
     <string name="booking_confirmed_home">Back to Home</string>
@@ -106,10 +132,339 @@
     <string name="price_approval_declined">Declined</string>
     <string name="price_approval_selected_total">Approved add-ons total</string>
 
+    <!-- Auth screen (E12-S02a) -->
+    <string name="auth_checking_truecaller">Checking Truecaller</string>
+    <string name="auth_checking_truecaller_body">We are verifying your number before falling back to OTP.</string>
+    <string name="auth_signing_in_google">Signing in with Google</string>
+    <string name="auth_signing_in_google_body">Choose your Google account to continue.</string>
+    <string name="auth_sending_otp">Sending OTP</string>
+    <string name="auth_sending_otp_body">Keep this screen open while we send your secure code.</string>
+    <string name="auth_verifying_code">Verifying code</string>
+    <string name="auth_verifying_code_body">This usually takes a few seconds.</string>
+    <string name="auth_creating_account">Creating account</string>
+    <string name="auth_signing_in">Signing in</string>
+    <string name="auth_submitting_email_body">Keep this screen open while we verify %s.</string>
+    <string name="auth_security_note">Secure sign-in. Booking and payment actions always need your confirmation.</string>
+    <string name="auth_method_eyebrow">Homeservices</string>
+    <string name="auth_method_title">Sign in to book services</string>
+    <string name="auth_method_body">Use Google, email, or phone to manage bookings, service updates, and support cases.</string>
+    <string name="auth_continue_google">Continue with Google</string>
+    <string name="auth_continue_email">Continue with email</string>
+    <string name="auth_continue_phone">Continue with phone</string>
+    <string name="auth_email_verification_note">Email sign-up requires verification before booking access.</string>
+    <string name="auth_terms_note">By continuing, you agree to the Terms of Service and Privacy Policy.</string>
+    <string name="auth_email_create_eyebrow">Create account</string>
+    <string name="auth_email_signin_eyebrow">Email sign in</string>
+    <string name="auth_email_create_title">Create your email login</string>
+    <string name="auth_email_signin_title">Sign in with email</string>
+    <string name="auth_email_create_body">We will send a verification email before enabling bookings.</string>
+    <string name="auth_email_signin_body">Use your verified email and password to continue.</string>
+    <string name="auth_back_to_options">Back to sign-in options</string>
+    <string name="auth_email_label">Email</string>
+    <string name="auth_email_placeholder">you@example.com</string>
+    <string name="auth_password_label">Password</string>
+    <string name="auth_password_hide">Hide password</string>
+    <string name="auth_password_show">Show password</string>
+    <string name="auth_create_account_btn">Create account</string>
+    <string name="auth_signin_btn">Sign in</string>
+    <string name="auth_have_account">Already have an account? Sign in</string>
+    <string name="auth_no_account">New here? Create account</string>
+    <string name="auth_forgot_password">Forgot password?</string>
+    <string name="auth_verify_eyebrow">Email verification</string>
+    <string name="auth_verify_title">Check your inbox</string>
+    <string name="auth_verify_body">We sent a verification link to %s. Open it, then return here to continue.</string>
+    <string name="auth_i_verified">I verified, continue</string>
+    <string name="auth_resend_email">Resend email</string>
+    <string name="auth_use_other_method">Use another sign-in method</string>
+    <string name="auth_phone_title">Book trusted home services</string>
+    <string name="auth_phone_body">Sign in once to manage bookings, track your professional, approve prices, and raise support requests.</string>
+    <string name="auth_mobile_label">Mobile number</string>
+    <string name="auth_mobile_placeholder">+91 98765 43210</string>
+    <string name="auth_mobile_note">Use the number you want linked to service updates and invoices.</string>
+    <string name="auth_get_otp">Get OTP</string>
+    <string name="auth_otp_eyebrow">Verification</string>
+    <string name="auth_otp_title">Enter your 6-digit code</string>
+    <string name="auth_otp_body">We sent an OTP to the mobile number ending in %s.</string>
+    <string name="auth_otp_label">6-digit code</string>
+    <string name="auth_verify_continue">Verify and continue</string>
+    <string name="auth_resend_code">Resend code</string>
+    <string name="auth_error_eyebrow">Action needed</string>
+    <string name="auth_error_title">We could not sign you in</string>
+    <string name="auth_retry">Try again</string>
+    <plurals name="auth_attempts_remaining">
+        <item quantity="one">%d attempt remaining</item>
+        <item quantity="other">%d attempts remaining</item>
+    </plurals>
+
+    <!-- Live tracking screen (E12-S02a) -->
+    <string name="tracking_title">Track service</string>
+    <string name="tracking_back_desc">Back</string>
+    <string name="tracking_sos_desc">Safety alert</string>
+    <string name="tracking_your_technician">Your technician</string>
+    <string name="tracking_eta_chip">ETA %d min</string>
+    <string name="tracking_service_progress">Service progress</string>
+    <string name="tracking_file_complaint">File a complaint</string>
+    <string name="tracking_map_placeholder_title">Live location will appear here</string>
+    <string name="tracking_map_placeholder_body">We update the technician position as soon as tracking starts.</string>
+    <string name="tracking_sos_confirmed">Safety alert sent to owner support.</string>
+    <string name="tracking_sos_error">Could not send alert. Please try again.</string>
+    <!-- Status labels for tracking timeline -->
+    <string name="status_en_route">En route</string>
+    <string name="status_reached">Arrived</string>
+    <string name="status_in_progress">Working</string>
+    <string name="status_done">Done</string>
+    <string name="status_payment_pending">Payment pending</string>
+    <string name="status_booking_confirmed">Booking confirmed</string>
+    <string name="status_finding_technician">Finding technician</string>
+    <string name="status_technician_assigned">Technician assigned</string>
+    <string name="status_technician_on_way">Technician on the way</string>
+    <string name="status_technician_arrived">Technician arrived</string>
+    <string name="status_work_in_progress">Work in progress</string>
+    <string name="status_price_approval_needed">Price approval needed</string>
+    <string name="status_service_completed">Service completed</string>
+    <string name="status_booking_closed">Booking closed</string>
+    <string name="status_booking_cancelled">Booking cancelled</string>
+    <string name="status_technician_unavailable">Technician unavailable</string>
+    <string name="status_unavailable">Status unavailable</string>
+
+    <!-- SOS bottom sheet (E12-S02a) -->
+    <string name="sos_safety_alert">Safety alert</string>
+    <plurals name="sos_sending_in">
+        <item quantity="one">Sending in %d sec</item>
+        <item quantity="other">Sending in %d sec</item>
+    </plurals>
+    <string name="sos_send_body">Owner support will be notified silently. The technician will not see this alert.</string>
+    <string name="sos_send_now">Send now</string>
+    <string name="sos_cancel_alert">Cancel alert</string>
+
+    <!-- SOS evidence upload states (E11-S05b-2) -->
+    <string name="sos_uploading_evidence">Uploading evidence… %1$d%%</string>
+    <string name="sos_evidence_saved">Evidence saved securely</string>
+    <string name="sos_evidence_upload_error">Could not save evidence. Help is already on the way.</string>
+
+    <!-- SOS consent dialog (E12-S02a) -->
+    <string name="sos_consent_title">Record audio with alert?</string>
+    <string name="sos_consent_body">You can attach a short local audio recording to help owner support review the situation.</string>
+    <string name="sos_consent_allow">Allow</string>
+    <string name="sos_consent_skip">Skip</string>
+
+    <!-- Complaint screen (E12-S02a) -->
+    <string name="complaint_eyebrow">Customer support</string>
+    <string name="complaint_title">File a complaint</string>
+    <string name="complaint_body">Tell us what went wrong. Owner support will review the booking and follow up.</string>
+    <string name="complaint_select_reason">Select reason</string>
+    <string name="complaint_issue_type">Issue type</string>
+    <string name="complaint_what_happened">What happened?</string>
+    <string name="complaint_attach_photo">Attach photo (optional)</string>
+    <string name="complaint_photo_attached">Photo attached</string>
+    <string name="complaint_submit">Submit complaint</string>
+    <string name="complaint_received">Complaint received</string>
+    <string name="complaint_back">Back to booking</string>
+    <string name="complaint_submitting">Submitting complaint</string>
+    <string name="complaint_error_title">Something went wrong</string>
+    <string name="complaint_retry">Try again</string>
+    <string name="complaint_status_investigating">Owner support is reviewing your complaint.</string>
+    <string name="complaint_status_resolved">This complaint has been resolved.</string>
+    <string name="complaint_status_default">Owner support will respond within 2 hours.</string>
+    <string name="complaint_error_unknown">Unknown error</string>
+    <!-- Complaint reason labels -->
+    <string name="complaint_reason_service_quality">Service quality</string>
+    <string name="complaint_reason_late_arrival">Late arrival</string>
+    <string name="complaint_reason_no_show">Technician did not arrive</string>
+    <string name="complaint_reason_technician_behaviour">Technician behaviour</string>
+    <string name="complaint_reason_billing_dispute">Billing dispute</string>
+    <string name="complaint_reason_other">Other</string>
+
+    <!-- Rating screen (E12-S02a) -->
+    <string name="rating_awaiting_title">Rating submitted</string>
+    <string name="rating_awaiting_body">We will reveal both ratings after the technician responds.</string>
+    <string name="rating_revealed_title">Ratings revealed</string>
+    <string name="rating_revealed_body">Thanks for keeping the service marketplace fair.</string>
+    <string name="rating_error_title">Could not load rating</string>
+    <string name="rating_loading_title">Loading rating</string>
+    <string name="rating_loading_body">Preparing your service feedback form.</string>
+    <string name="rating_eyebrow">Service feedback</string>
+    <string name="rating_title">Rate your service</string>
+    <string name="rating_body">Your rating helps improve technician quality and customer support follow-up.</string>
+    <string name="rating_overall">Overall experience</string>
+    <string name="rating_punctuality">Punctuality</string>
+    <string name="rating_skill">Skill quality</string>
+    <string name="rating_behaviour">Behaviour</string>
+    <string name="rating_comment_label">Comment (optional)</string>
+    <string name="rating_submit">Submit rating</string>
+    <plurals name="rating_star_label">
+        <item quantity="one">rate %d star</item>
+        <item quantity="other">rate %d stars</item>
+    </plurals>
+    <string name="rating_private_review_countdown">Private review: %s left</string>
+    <string name="rating_post_anyway">Post anyway</string>
+    <string name="rating_shield_title">Share this privately first?</string>
+    <string name="rating_shield_body">Low ratings can be sent to owner support before posting publicly.</string>
+    <string name="rating_shield_send_support">Send to support first</string>
+    <string name="rating_shield_post_now">Post rating now</string>
+
+    <!-- Customer bookings screen (E12-S02a) -->
+    <string name="bookings_title">Bookings</string>
+    <string name="bookings_subtitle">Upcoming and completed service visits</string>
+    <string name="bookings_refresh_desc">Refresh bookings</string>
+    <string name="bookings_track_technician">Track technician</string>
+    <string name="bookings_view_status">View status</string>
+    <string name="bookings_no_bookings">No bookings yet</string>
+    <string name="bookings_no_bookings_body">Confirmed bookings will appear here with service date, status, and tracking access.</string>
+    <string name="bookings_error_title">Could not refresh bookings</string>
+    <string name="bookings_error_body">Your latest booking is still saved. Retry when the network is stable.</string>
+    <string name="bookings_retry">Retry</string>
+    <string name="bookings_rate_booking">Rate Booking</string>
+    <string name="bookings_file_complaint">File Complaint</string>
+    <!-- Booking status labels -->
+    <string name="booking_status_pending_payment">Payment pending</string>
+    <string name="booking_status_paid">Confirmed</string>
+    <string name="booking_status_searching">Finding technician</string>
+    <string name="booking_status_assigned">Technician assigned</string>
+    <string name="booking_status_en_route">En route</string>
+    <string name="booking_status_reached">Arrived</string>
+    <string name="booking_status_in_progress">In progress</string>
+    <string name="booking_status_awaiting_price_approval">Price approval</string>
+    <string name="booking_status_completed">Completed</string>
+    <string name="booking_status_closed">Closed</string>
+    <string name="booking_status_unfulfilled">Unfulfilled</string>
+    <string name="booking_status_cancelled">Cancelled</string>
+    <string name="booking_status_reassigning">Reassigning</string>
+    <string name="booking_status_updated">Updated</string>
+    <!-- Payment method labels -->
+    <string name="payment_method_online">Paid online</string>
+    <string name="payment_method_cash">Cash on service</string>
+
+    <!-- Catalogue home screen (E12-S02a) -->
+    <string name="catalogue_our_services">Our services</string>
+    <string name="catalogue_search_hint">Search AC, plumber, electrician…</string>
+    <string name="catalogue_location_display">Ayodhya, Uttar Pradesh</string>
+    <string name="catalogue_starting_price">From %1$s</string>
+
+    <!-- Confidence score row (E12-S02a) -->
+    <string name="confidence_new_area">New in your area &#8212; building track record</string>
+    <string name="confidence_on_time">%d%% on-time</string>
+    <string name="confidence_area_rating">%.1f area rating</string>
+    <string name="confidence_eta">~%d min away</string>
+    <string name="confidence_methodology_title">How we calculate this</string>
+    <string name="confidence_methodology_body">On-time %%: jobs started within 15 min of booked slot (last 30 days).\n\nArea rating: average star rating in your area.\n\nETA: estimated travel time from technician\'s last location at 20 km/h.</string>
+
     <!-- Settings -->
     <string name="settings_title">सेटिंग्स</string>
     <string name="settings_language">भाषा</string>
+    <string name="settings_language_current">हिंदी</string>
     <string name="settings_language_title">भाषा चुनें</string>
     <string name="settings_language_save">सेव करें</string>
+    <string name="settings_privacy_and_data">Privacy &amp; data</string>
+    <string name="settings_privacy_data_export_title">Download my data</string>
+    <string name="settings_privacy_data_delete_title">Delete account</string>
+
+    <!-- Data export / DPDP §11 self-service data access (E15-S01) -->
+    <string name="data_export_title">Download my data</string>
+    <string name="data_export_description">Your complete account data — profile, bookings, ratings, and complaints — will be downloaded as a JSON file to a location of your choice.</string>
+    <string name="data_export_privacy_note">Your data is downloaded directly to your device. It is never stored or processed by third parties.</string>
+    <string name="data_export_button">Download my data</string>
+    <string name="data_export_loading">Preparing your data export&#8230;</string>
+    <string name="data_export_success_toast">Data saved successfully</string>
+    <string name="data_export_error_unknown">Something went wrong. Please check your connection and try again.</string>
+    <string name="data_export_retry">Try again</string>
+    <string name="data_export_filename_prefix">homeservices-data-export</string>
+
+    <!-- Delete account / DPDP erasure (E15-S02) -->
+    <string name="delete_account_title">Delete account</string>
+    <string name="delete_account_warning">Your account and all associated data will be permanently deleted after a 7-day cool-off period. You can cancel the deletion any time during this window.</string>
+    <string name="delete_account_what_deleted_label">What will be deleted</string>
+    <string name="delete_account_item_bookings">Bookings history</string>
+    <string name="delete_account_item_addresses">Saved addresses</string>
+    <string name="delete_account_item_payment_methods">Payment methods</string>
+    <string name="delete_account_item_preferences">App preferences &amp; settings</string>
+    <string name="delete_account_continue_cta">Continue to delete</string>
+    <string name="delete_account_confirm_title">Confirm deletion</string>
+    <string name="delete_account_confirm_instruction">Type the phrase below exactly to confirm you want to delete your account.</string>
+    <string name="delete_account_phrase_label">Confirmation phrase</string>
+    <string name="delete_my_account_confirmation_phrase">DELETE MY ACCOUNT</string>
+    <string name="delete_account_phrase_mismatch">Phrase does not match. Please type it exactly.</string>
+    <string name="delete_account_pin_label">Last 4 digits of your registered phone number</string>
+    <string name="delete_account_submit_cta">Delete my account</string>
+    <string name="delete_account_cancel_cta">Cancel</string>
+    <string name="delete_account_coolOff_title">Deletion scheduled</string>
+    <string name="delete_account_coolOff_subtitle">You can still revoke this deletion until your account is permanently removed.</string>
+    <string name="delete_account_coolOff_countdown_format">Account will be deleted in %1$s</string>
+    <string name="delete_account_coolOff_pending_no_date">Deletion pending — exact date unavailable</string>
+    <string name="delete_account_revoke_cta">Revoke deletion</string>
+    <string name="delete_account_revoke_success">Deletion cancelled. Your account is safe.</string>
+    <string name="delete_account_close_cta">Close</string>
+    <string name="delete_account_error_unknown">Something went wrong. Please try again.</string>
+
+    <!-- Notification permission rationale (E11-S01b-1) -->
+    <string name="notification_permission_rationale_title">Allow notifications</string>
+    <string name="notification_permission_rationale_body">Allow notifications to receive booking updates, add-on requests, and service reminders.</string>
+
+    <!-- Complaint SLA countdown + history + reopen (E18-S02) -->
+    <string name="complaint_countdown_remaining">%1$s remaining</string>
+    <string name="complaint_reopen">Reopen complaint</string>
+    <string name="complaint_list_title">My Complaints</string>
+    <string name="complaint_list_empty_title">No complaints yet</string>
+    <string name="complaint_list_empty_body">You have not filed any complaints.</string>
+    <string name="complaint_list_status_open">Open</string>
+    <string name="complaint_list_status_acknowledged">Acknowledged</string>
+    <string name="complaint_list_status_resolved">Resolved</string>
+    <string name="complaint_list_status_reopened">Reopened</string>
+
+    <!-- Wallet screen (E13-S02) -->
+    <string name="wallet_screen_title">My Wallet</string>
+    <string name="wallet_back_content_desc">Back</string>
+    <string name="wallet_balance_label">Available Balance</string>
+    <string name="wallet_balance_error">Unable to load balance. Please try again.</string>
+    <string name="wallet_ledger_title">Transaction History</string>
+    <string name="wallet_ledger_error">Unable to load transactions. Please try again.</string>
+    <string name="wallet_no_transactions">No transactions yet.</string>
+    <string name="wallet_retry_cta">Retry</string>
+    <string name="wallet_chip_content_desc">Wallet balance</string>
+
+    <!-- No-show credit banner + notification (E13-S03) -->
+    <string name="no_show_credit_notification_title">Credit Added!</string>
+    <string name="no_show_credit_notification_body">A no-show credit has been added to your wallet.</string>
+    <string name="no_show_credit_banner">You received %1$s credit! Will apply on next booking.</string>
+    <string name="no_show_credit_banner_dismiss">Dismiss</string>
+
+    <!-- Customer home durable hooks (E11-S03) -->
+    <string name="home_pending_actions_label">Action needed</string>
+    <string name="home_pending_action_tap_hint">Tap to continue</string>
+    <string name="home_action_rate_booking">Rate your booking</string>
+    <string name="home_action_approve_addon">Approve add-on request</string>
+    <string name="home_action_complaint_update">Complaint update</string>
+    <string name="home_action_support_followup">Support follow-up</string>
+    <string name="home_active_booking_label">Active booking</string>
+    <string name="home_active_booking_track_cta">Track</string>
+    <string name="home_active_booking_approve_cta">Approve</string>
+    <string name="home_recent_bookings_label">Recent bookings</string>
+    <string name="home_recent_booking_rate">Rate</string>
+    <string name="home_recent_booking_complain">Complaint</string>
+
+    <!-- Credit-apply toggle on booking summary (E13-S04) -->
+    <string name="wallet_apply_credit_toggle">Apply ₹%1$s credit</string>
+    <string name="wallet_credit_original_price">Original price: ₹%1$s</string>
+    <string name="wallet_credit_applied_banner">₹%1$s credit applied</string>
+
+    <!-- Address picker (E16-S04) -->
+    <string name="address_picker_title">Where should we come?</string>
+    <string name="address_picker_search_hint">Search for your address or landmark</string>
+    <string name="address_picker_search_unavailable_drop_pin">Search unavailable — drag the pin on the map to set your location</string>
+    <string name="address_picker_confirm">Confirm address</string>
+    <string name="address_picker_refused_title">We don\'t serve this area yet</string>
+    <string name="address_picker_refused_subtitle">We\'re starting in Ayodhya. Tap below and we\'ll let you know when we expand.</string>
+    <string name="address_picker_notify_me">Notify me when available</string>
+    <string name="address_picker_pin_set_no_address">Location set — confirm the pin position</string>
+
+    <!-- Waitlist screen (E16-S04) -->
+    <string name="waitlist_title">Get notified when we expand</string>
+    <string name="waitlist_body">We\'ll send you one SMS when we start serving your area. No spam — promise.</string>
+    <string name="waitlist_phone_label">Mobile number</string>
+    <string name="waitlist_submit">Join the waitlist</string>
+    <string name="waitlist_confirmed_title">You\'re on the list</string>
+    <string name="waitlist_confirmed_body">We\'ll text you the day we open in your area.</string>
+    <string name="waitlist_error_retry">Try again</string>
+    <string name="waitlist_rate_limited" tools:ignore="PluralsCandidate">Try again in %d minutes</string>
 
 </resources>

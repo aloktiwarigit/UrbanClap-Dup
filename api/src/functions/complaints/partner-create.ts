@@ -42,7 +42,7 @@ export async function partnerCreateComplaintHandler(
   const isCustomer = booking.customerId === uid;
   const isTechnician = booking.technicianId === uid;
   if (!isCustomer && !isTechnician) return { status: 403, jsonBody: { code: 'FORBIDDEN' } };
-  if (booking.status !== 'CLOSED') {
+  if (!['COMPLETED', 'PAID', 'CLOSED'].includes(booking.status)) {
     return { status: 409, jsonBody: { code: 'BOOKING_NOT_ELIGIBLE', status: booking.status } };
   }
 

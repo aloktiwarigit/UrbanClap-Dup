@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import FocusLock from 'react-focus-lock';
+import { useTranslations, useLocale } from 'next-intl';
+import { formatDateTime } from '@/lib/format/intl';
 import type { Complaint, ComplaintStatus, ComplaintResolutionCategory } from '@/types/complaint';
 
 interface ComplaintSlideOverProps {
@@ -24,14 +27,6 @@ const RESOLUTION_CATEGORIES: ComplaintResolutionCategory[] = [
 // RESOLVED is excluded — use the resolve section below to supply the required resolutionCategory.
 const STATUS_OPTIONS: ComplaintStatus[] = ['NEW', 'INVESTIGATING'];
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString('en-IN', {
-    timeZone: 'Asia/Kolkata',
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
-}
-
 export function ComplaintSlideOver({
   complaint,
   onClose,
@@ -40,6 +35,8 @@ export function ComplaintSlideOver({
   onResolve,
   onReassign,
 }: ComplaintSlideOverProps) {
+  const t = useTranslations('complaints');
+  const locale = useLocale();
   const [noteText, setNoteText] = useState('');
   const [resolutionCategory, setResolutionCategory] = useState<ComplaintResolutionCategory>('OTHER');
   const [reassignInput, setReassignInput] = useState(complaint.assigneeAdminId ?? '');
@@ -47,6 +44,14 @@ export function ComplaintSlideOver({
   useEffect(() => {
     setReassignInput(complaint.assigneeAdminId ?? '');
   }, [complaint.assigneeAdminId]);
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onClose]);
 
   const handleAddNote = () => {
     if (noteText.trim()) {
@@ -67,6 +72,7 @@ export function ComplaintSlideOver({
   return (
     <>
       <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} aria-hidden="true" />
+      <FocusLock returnFocus>
       <div
         role="dialog"
         aria-modal="true"
@@ -75,10 +81,10 @@ export function ComplaintSlideOver({
       >
         <div className="flex items-center justify-between p-4 border-b">
           <h2 id="complaint-slide-over-title" className="font-semibold text-gray-800">
-            Complaint {complaint.id.slice(0, 8)}
+            {t('detail.title', { complaintId: complaint.id.slice(0, 8) })}
           </h2>
           <button
-            aria-label="Close slide-over"
+            aria-label={t('detail.closeButton.ariaLabel')}
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 text-xl leading-none"
           >
@@ -89,15 +95,15 @@ export function ComplaintSlideOver({
         <div className="p-4 space-y-4 text-sm">
           {/* Description */}
           <section>
-            <h3 className="text-xs text-gray-500 font-medium mb-1">Description</h3>
+            <h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.description')}</h3>
             <p className="text-gray-800">{complaint.description}</p>
           </section>
 
           {/* Status */}
           <section>
-            <h3 className="text-xs text-gray-500 font-medium mb-1">Status</h3>
+            <h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.status')}</h3>
             {complaint.status === 'RESOLVED' ? (
-              <p className="text-sm text-gray-700 font-medium">RESOLVED</p>
+              <p className="text-sm text-gray-700 font-medium">{t('statuses.RESOLVED')}</p>
             ) : (
               <select
                 aria-label="Status"
@@ -114,21 +120,21 @@ export function ComplaintSlideOver({
 
           {/* Assignee */}
           <section>
-            <h3 className="text-xs text-gray-500 font-medium mb-1">Assignee</h3>
+            <h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.assignee.label')}</h3>
             <div className="flex gap-2">
               <input
                 type="text"
                 aria-label="Assignee admin ID"
                 value={reassignInput}
                 onChange={(e) => setReassignInput(e.target.value)}
-                placeholder="admin ID"
+                placeholder={t('detail.sections.assignee.placeholder')}
                 className="border rounded px-2 py-1 text-sm flex-1 font-mono"
               />
               <button
                 onClick={handleReassign}
                 className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm"
               >
-                Reassign
+                {t('detail.actions.reassignButton')}
               </button>
             </div>
             {complaint.assigneeAdminId && (
@@ -138,16 +144,16 @@ export function ComplaintSlideOver({
 
           {/* Internal notes */}
           <section>
-            <h3 className="text-xs text-gray-500 font-medium mb-1">Internal Notes</h3>
+            <h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.internalNotes.label')}</h3>
             {complaint.internalNotes.length === 0 ? (
-              <p className="text-gray-400 text-xs">No notes yet.</p>
+              <p className="text-gray-400 text-xs">{t('detail.sections.internalNotes.empty')}</p>
             ) : (
               <ul className="space-y-2">
                 {complaint.internalNotes.map((n, i) => (
                   <li key={i} className="bg-gray-50 rounded p-2">
                     <p className="text-gray-700">{n.note}</p>
                     <p className="text-xs text-gray-400 mt-0.5 font-mono">
-                      {n.adminId} &middot; {formatDate(n.createdAt)}
+                      {n.adminId} &middot; {formatDateTime(n.createdAt, locale)}
                     </p>
                   </li>
                 ))}
@@ -157,11 +163,11 @@ export function ComplaintSlideOver({
 
           {/* Add note */}
           <section>
-            <h3 className="text-xs text-gray-500 font-medium mb-1">Add Note</h3>
+            <h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.addNote.label')}</h3>
             <textarea
               value={noteText}
               onChange={(e) => setNoteText(e.target.value)}
-              placeholder="Enter internal note..."
+              placeholder={t('detail.sections.addNote.placeholder')}
               rows={3}
               className="border rounded px-2 py-1 text-sm w-full resize-none"
             />
@@ -169,14 +175,14 @@ export function ComplaintSlideOver({
               onClick={handleAddNote}
               className="btn btn-primary mt-1"
             >
-              Add Note
+              {t('detail.actions.addNoteButton')}
             </button>
           </section>
 
           {/* Resolve */}
           {complaint.status !== 'RESOLVED' && (
             <section>
-              <h3 className="text-xs text-gray-500 font-medium mb-1">Resolve Complaint</h3>
+              <h3 className="text-xs text-gray-500 font-medium mb-1">{t('detail.sections.resolve')}</h3>
               <label htmlFor="resolution-category" className="sr-only">
                 Resolution Category
               </label>
@@ -188,19 +194,20 @@ export function ComplaintSlideOver({
                 className="border rounded px-2 py-1 text-sm w-full mb-2"
               >
                 {RESOLUTION_CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>{cat.replace(/_/g, ' ')}</option>
+                  <option key={cat} value={cat}>{t(`resolutionCategories.${cat}`)}</option>
                 ))}
               </select>
               <button
                 onClick={handleResolve}
                 className="btn btn-success"
               >
-                Resolve
+                {t('detail.actions.resolveButton')}
               </button>
             </section>
           )}
         </div>
       </div>
+      </FocusLock>
     </>
   );
 }

@@ -29,7 +29,7 @@ public class StartWorkUseCaseTest {
     @Test
     public fun `transitions REACHED to IN_PROGRESS`(): Unit =
         runTest {
-            coEvery { repository.transitionStatus("bk-1", ActiveJobStatus.IN_PROGRESS) } returns
+            coEvery { repository.transitionStatus("bk-1", ActiveJobStatus.IN_PROGRESS, null) } returns
                 Result.success(aJob())
 
             val result = useCase("bk-1")

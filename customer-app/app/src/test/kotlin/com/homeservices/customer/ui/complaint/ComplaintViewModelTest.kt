@@ -4,6 +4,7 @@ import com.homeservices.customer.data.complaint.remote.dto.ComplaintResponseDto
 import com.homeservices.customer.domain.complaint.ComplaintReason
 import com.homeservices.customer.domain.complaint.GetComplaintStatusUseCase
 import com.homeservices.customer.domain.complaint.PhotoUploadUseCase
+import com.homeservices.customer.domain.complaint.ReopenComplaintUseCase
 import com.homeservices.customer.domain.complaint.SubmitComplaintUseCase
 import io.mockk.coEvery
 import io.mockk.every
@@ -25,13 +26,14 @@ public class ComplaintViewModelTest {
     private val submitUseCase: SubmitComplaintUseCase = mockk()
     private val photoUploadUseCase: PhotoUploadUseCase = mockk()
     private val getStatusUseCase: GetComplaintStatusUseCase = mockk()
+    private val reopenUseCase: ReopenComplaintUseCase = mockk()
     private val dispatcher = StandardTestDispatcher()
     private lateinit var viewModel: ComplaintViewModel
 
     @BeforeEach
     public fun setUp() {
         Dispatchers.setMain(dispatcher)
-        viewModel = ComplaintViewModel(submitUseCase, photoUploadUseCase, getStatusUseCase)
+        viewModel = ComplaintViewModel(submitUseCase, photoUploadUseCase, getStatusUseCase, reopenUseCase)
     }
 
     @AfterEach

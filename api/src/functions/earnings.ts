@@ -6,9 +6,11 @@ import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
 import { walletLedgerRepo } from '../cosmos/wallet-ledger-repository.js';
 import type { EarningsResponse, EarningsPeriod, DailyEarnings, WalletLedgerEntry } from '../schemas/wallet-ledger.js';
 
+const MONTH_GOAL_PAISE = 3_500_000;
+
 function aggregate(entries: WalletLedgerEntry[], predicate: (e: WalletLedgerEntry) => boolean): EarningsPeriod {
   const subset = entries.filter(predicate);
-  return { techAmount: subset.reduce((s, e) => s + e.techAmount, 0), count: subset.length };
+  return { amountPaise: subset.reduce((s, e) => s + e.techAmount, 0), jobs: subset.length };
 }
 
 export const getEarningsHandler: HttpHandler = async (req: HttpRequest, ctx: InvocationContext) => {
@@ -47,23 +49,26 @@ export const getEarningsHandler: HttpHandler = async (req: HttpRequest, ctx: Inv
     const toIstDateStr = (utcIso: string): string =>
       new Date(new Date(utcIso).getTime() + IST_OFFSET_MS).toISOString().slice(0, 10);
 
-    const lastSevenDays: DailyEarnings[] = [];
+    const dailyLast7: DailyEarnings[] = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(istNow);
       d.setUTCDate(istNow.getUTCDate() - i);
       const dateStr = d.toISOString().slice(0, 10);
-      const dayTotal = settled
-        .filter(e => toIstDateStr(e.createdAt) === dateStr)
-        .reduce((s, e) => s + e.techAmount, 0);
-      lastSevenDays.push({ date: dateStr, techAmount: dayTotal });
+      const dayEntries = settled.filter(e => toIstDateStr(e.createdAt) === dateStr);
+      dailyLast7.push({
+        date: dateStr,
+        amountPaise: dayEntries.reduce((s, e) => s + e.techAmount, 0),
+        jobs: dayEntries.length,
+      });
     }
 
+    const monthPeriod = aggregate(settled, e => toIstDateStr(e.createdAt).slice(0, 7) === monthStr);
     const response: EarningsResponse = {
       today: aggregate(settled, e => toIstDateStr(e.createdAt) === todayStr),
       week:  aggregate(settled, e => new Date(e.createdAt) >= weekStartUtc),
-      month: aggregate(settled, e => toIstDateStr(e.createdAt).slice(0, 7) === monthStr),
+      month: { ...monthPeriod, goalPaise: MONTH_GOAL_PAISE },
       lifetime: aggregate(settled, _ => true),
-      lastSevenDays,
+      dailyLast7,
       pendingHeld,
     };
 

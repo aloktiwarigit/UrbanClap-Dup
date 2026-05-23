@@ -2,6 +2,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { PnLChart } from '../src/components/finance/PnLChart';
 
+vi.mock('next-intl', () => ({
+  useTranslations: (ns: string) => (key: string) => `[${ns}.${key}]`,
+}));
+
 vi.mock('recharts', () => ({
   BarChart: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="bar-chart">{children}</div>
@@ -22,19 +26,19 @@ const sampleData = [
 
 describe('PnLChart', () => {
   it('renders a bar-chart container', () => {
-    render(<PnLChart data={sampleData} />);
+    render(<PnLChart data={sampleData} locale="en" />);
     expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
   });
 
   it('renders three Bar series: grossRevenue, commission, netToOwner', () => {
-    render(<PnLChart data={sampleData} />);
+    render(<PnLChart data={sampleData} locale="en" />);
     expect(screen.getByTestId('bar-grossRevenue')).toBeInTheDocument();
     expect(screen.getByTestId('bar-commission')).toBeInTheDocument();
     expect(screen.getByTestId('bar-netToOwner')).toBeInTheDocument();
   });
 
   it('renders without error when data is empty', () => {
-    render(<PnLChart data={[]} />);
+    render(<PnLChart data={[]} locale="hi" />);
     expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
   });
 });

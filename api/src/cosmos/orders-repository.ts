@@ -4,6 +4,9 @@ import { OrderSchema, type Order, type OrderListQuery, type OrderListResponse } 
 import { catalogueRepo } from './catalogue-repository.js';
 import { getTechniciansByIds } from './technician-repository.js';
 import { getFirebaseAdmin } from '../services/firebaseAdmin.js';
+import { getStorageDownloadUrl } from '../firebase/admin.js';
+
+const PHOTO_STAGE_ORDER = ['EN_ROUTE', 'REACHED', 'IN_PROGRESS', 'COMPLETED'];
 
 function getContainer(client: CosmosClient) {
   return client.database(DB_NAME).container('bookings');
@@ -15,6 +18,46 @@ function asString(value: unknown): string | undefined {
 
 function asNumber(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function asPhotoRecord(value: unknown): Record<string, string[]> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {};
+
+  const result: Record<string, string[]> = {};
+  for (const [stage, refs] of Object.entries(value)) {
+    if (!Array.isArray(refs)) continue;
+    const cleanRefs = refs.filter((ref): ref is string => typeof ref === 'string' && ref.trim() !== '');
+    if (cleanRefs.length > 0) result[stage] = cleanRefs;
+  }
+  return result;
+}
+
+async function toPhotoUrl(photoRef: string): Promise<string | null> {
+  if (/^data:image\/jpe?g;base64,/.test(photoRef)) return photoRef;
+  try {
+    return await getStorageDownloadUrl(photoRef);
+  } catch {
+    return null;
+  }
+}
+
+async function buildJobPhotoSets(raw: Record<string, unknown>): Promise<Order['jobPhotoSets']> {
+  const photos = asPhotoRecord(raw['photos']);
+  const orderedStages = [
+    ...PHOTO_STAGE_ORDER.filter((stage) => photos[stage]?.length),
+    ...Object.keys(photos).filter((stage) => !PHOTO_STAGE_ORDER.includes(stage)),
+  ];
+
+  const sets = await Promise.all(
+    orderedStages.map(async (stage) => {
+      const urls = (await Promise.all((photos[stage] ?? []).map(toPhotoUrl)))
+        .filter((url): url is string => typeof url === 'string' && url.length > 0);
+      return urls.length > 0 ? { stage, urls } : null;
+    }),
+  );
+
+  const visibleSets = sets.filter((set): set is NonNullable<typeof set> => set !== null);
+  return visibleSets.length > 0 ? visibleSets : undefined;
 }
 
 function scheduledAtFromSlot(slotDate: string | undefined, slotWindow: string | undefined): string | undefined {
@@ -244,5 +287,12 @@ export async function getOrderById(id: string): Promise<Order | null> {
     parameters: [{ name: '@id', value: id }],
   }).fetchAll();
   if (!resources.length) return null;
-  return (await hydrateOrders([toAdminOrder(resources[0])]))[0] ?? null;
+  const raw = resources[0] as Record<string, unknown>;
+  const order = (await hydrateOrders([toAdminOrder(raw)]))[0];
+  if (!order) return null;
+  const jobPhotoSets = await buildJobPhotoSets(raw);
+  return OrderSchema.parse({
+    ...order,
+    ...(jobPhotoSets ? { jobPhotoSets } : {}),
+  });
 }

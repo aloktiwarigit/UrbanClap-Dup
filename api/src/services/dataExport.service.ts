@@ -157,7 +157,8 @@ export async function assembleUserDataExport(
       }
       kyc = {
         aadhaarMaskedNumber: techDoc.kyc.aadhaarMaskedNumber ?? null,
-        panNumber: maskPan(techDoc.kyc.panNumber),
+        // E19-S01 migration window: prefer new panMaskedNumber, fall back to masking legacy panNumber
+        panNumber: techDoc.kyc.panMaskedNumber ?? maskPan(techDoc.kyc.panNumber),
         panDecrypted,
       };
     } else {

@@ -5,6 +5,7 @@ import com.homeservices.technician.data.kyc.KycRepository
 import com.homeservices.technician.domain.kyc.model.PanOcrResult
 import io.mockk.coEvery
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
@@ -24,11 +25,25 @@ public class PanOcrUseCaseTest {
     }
 
     @Test
+    public fun `storage path uses kyc prefix to match Firebase Storage rules`(): Unit =
+        runTest {
+            val imageUri = mockk<Uri>()
+            val capturedPath = slot<String>()
+            coEvery { firebaseStorageUploader.upload(imageUri, capture(capturedPath)) } returns "kyc/t1/pan.jpg"
+            coEvery { repo.submitPanOcr(any()) } returns PanOcrResult.Success("ABCDE1234F")
+
+            useCase(imageUri, technicianId = "t1").toList()
+
+            assertThat(capturedPath.captured).startsWith("kyc/t1/pan_")
+            assertThat(capturedPath.captured).doesNotStartWith("technicians/")
+        }
+
+    @Test
     public fun `emits Success with panNumber when OCR succeeds`(): Unit =
         runTest {
             val imageUri = mockk<Uri>()
-            coEvery { firebaseStorageUploader.upload(imageUri, any()) } returns "technicians/t1/pan.jpg"
-            coEvery { repo.submitPanOcr("technicians/t1/pan.jpg") } returns PanOcrResult.Success("ABCDE1234F")
+            coEvery { firebaseStorageUploader.upload(imageUri, any()) } returns "kyc/t1/pan.jpg"
+            coEvery { repo.submitPanOcr("kyc/t1/pan.jpg") } returns PanOcrResult.Success("ABCDE1234F")
 
             val results = useCase(imageUri, technicianId = "t1").toList()
 
@@ -41,7 +56,7 @@ public class PanOcrUseCaseTest {
     public fun `emits ManualReview when API returns ManualReview`(): Unit =
         runTest {
             val imageUri = mockk<Uri>()
-            coEvery { firebaseStorageUploader.upload(imageUri, any()) } returns "technicians/t1/pan.jpg"
+            coEvery { firebaseStorageUploader.upload(imageUri, any()) } returns "kyc/t1/pan.jpg"
             coEvery { repo.submitPanOcr(any()) } returns PanOcrResult.ManualReview
 
             val results = useCase(imageUri, "t1").toList()

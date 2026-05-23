@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import type { AuditLogFiltersState } from '@/types/audit-log';
 import { EMPTY_FILTERS } from '@/types/audit-log';
 
@@ -39,6 +40,8 @@ function FilterInput({
 }
 
 export function AuditLogFilters({ filters, onChange }: Props) {
+  const t = useTranslations('auditLog');
+
   function update(partial: Partial<AuditLogFiltersState>) {
     onChange({ ...filters, ...partial });
   }
@@ -46,38 +49,38 @@ export function AuditLogFilters({ filters, onChange }: Props) {
   return (
     <div className="flex flex-wrap gap-[var(--space-3)] items-end mb-[var(--space-4)]">
       <FilterInput
-        label="Admin ID"
+        label={t('filters.adminId')}
         htmlFor="filter-adminId"
         value={filters.adminId}
         onChange={(v) => update({ adminId: v })}
       />
       <FilterInput
-        label="Action"
+        label={t('filters.action')}
         htmlFor="filter-action"
         value={filters.action}
         onChange={(v) => update({ action: v })}
       />
       <FilterInput
-        label="Resource Type"
+        label={t('filters.resourceType')}
         htmlFor="filter-resourceType"
         value={filters.resourceType}
         onChange={(v) => update({ resourceType: v })}
       />
       <FilterInput
-        label="Resource ID"
+        label={t('filters.resourceId')}
         htmlFor="filter-resourceId"
         value={filters.resourceId}
         onChange={(v) => update({ resourceId: v })}
       />
       <FilterInput
-        label="From"
+        label={t('filters.dateFrom')}
         htmlFor="filter-dateFrom"
         value={filters.dateFrom}
         onChange={(v) => update({ dateFrom: v })}
         type="datetime-local"
       />
       <FilterInput
-        label="To"
+        label={t('filters.dateTo')}
         htmlFor="filter-dateTo"
         value={filters.dateTo}
         onChange={(v) => update({ dateTo: v })}
@@ -88,7 +91,7 @@ export function AuditLogFilters({ filters, onChange }: Props) {
         onClick={() => onChange(EMPTY_FILTERS)}
         className="px-3 py-1 text-xs rounded border border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]"
       >
-        Clear
+        {t('buttons.clearFilters')}
       </button>
     </div>
   );

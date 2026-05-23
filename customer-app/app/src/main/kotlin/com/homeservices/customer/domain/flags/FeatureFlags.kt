@@ -21,6 +21,53 @@ public interface FeatureFlags {
      * Default: OFF (false)
      */
     public fun truecallerServerVerify(): Boolean
+
+    /**
+     * When `true`, the DPDP self-service delete-account flow is visible
+     * in Settings → Privacy & data. When `false`, the entry point is hidden
+     * (the code is compiled in but unreachable from the UI).
+     *
+     * Flag name: `customer.dpdp-self-service.enabled`
+     * Default: OFF (false) — flipped ON after Week 2 exit / Play Store submission.
+     */
+    public fun dpdpSelfServiceEnabled(): Boolean
+
+    /**
+     * When `true`, the wallet balance chip on HomeScreen and the WalletScreen
+     * are visible to the customer. When `false`, the entry point is hidden.
+     *
+     * Flag name: `customer.wallet.visible`
+     * Default: OFF (false) — flipped ON after E13-S02 rollout.
+     */
+    public fun walletVisible(): Boolean
+
+    /**
+     * When `true`, CategoryCard and ServiceCard render photo-first (AsyncImage
+     * from Firebase CDN). When `false`, the legacy icon-tile layout is used.
+     *
+     * Flag name: `customer.photo-first-catalogue.enabled`
+     * Default: OFF (false) — flipped ON once CDN assets are commissioned.
+     */
+    public fun photoFirstCatalogueEnabled(): Boolean
+
+    /**
+     * When `true`, the Places-autocomplete + draggable-pin [AddressPickerScreen] is shown
+     * instead of the legacy [AddressScreen]. When `false`, the legacy screen continues to serve.
+     *
+     * Flag name: `customer.places-autocomplete.enabled`
+     * Default: OFF — flipped ON at Week 5 exit after smoke + Codex green + 24h QA soak.
+     */
+    public fun placesAutocompleteEnabled(): Boolean
+
+    /**
+     * When `true`, encrypted SOS audio is uploaded to Firebase Storage after
+     * SOS fires, and the key doc is sent to the API. When `false`, the tmp
+     * .m4a file is recorded (if consent given) but never uploaded.
+     *
+     * Flag name: `customer.sos-audio-upload.enabled`
+     * Default: OFF (false) — flipped ON at Week 5 exit after ADR-0024 audit.
+     */
+    public fun sosAudioUploadEnabled(): Boolean
 }
 
 /**
@@ -30,14 +77,21 @@ public interface FeatureFlags {
 public class BuildConfigFeatureFlags
     @Inject
     constructor() : FeatureFlags {
-    override fun truecallerServerVerify(): Boolean = TRUECALLER_SERVER_VERIFY_V2_ENABLED
+        override fun truecallerServerVerify(): Boolean = TRUECALLER_SERVER_VERIFY_V2_ENABLED
 
-    private companion object {
-        /**
-         * Set via build.gradle `buildConfigField` when the flag should be hardcoded ON
-         * for testing builds. Production defaults to false; the live value comes from
-         * GrowthBook once E13-S05 wires the GrowthBook FeatureFlags impl.
-         */
-        const val TRUECALLER_SERVER_VERIFY_V2_ENABLED: Boolean = false
+        override fun dpdpSelfServiceEnabled(): Boolean = false
+
+        override fun walletVisible(): Boolean = false
+
+        override fun photoFirstCatalogueEnabled(): Boolean = false
+
+        override fun placesAutocompleteEnabled(): Boolean = false
+
+        override fun sosAudioUploadEnabled(): Boolean = false
+
+        private companion object {
+            const val TRUECALLER_SERVER_VERIFY_V2_ENABLED: Boolean = false
+        }
     }
-}
+
+// GrowthBookFeatureFlags is defined in GrowthBookFeatureFlags.kt — stub removed to avoid redeclaration.

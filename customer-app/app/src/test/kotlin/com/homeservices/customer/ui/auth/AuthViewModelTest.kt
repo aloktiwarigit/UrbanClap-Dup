@@ -99,12 +99,13 @@ public class AuthViewModelTest {
     public fun `Truecaller Success with AuthResult Error transitions to Error state`(): Unit =
         runTest(testDispatcher) {
             val activity = mockk<FragmentActivity>()
-            val truecallerSuccess = TruecallerAuthResult.Success(
-                payload = "payload-b64",
-                signature = "sig-b64",
-                signatureAlgorithm = "SHA512withRSA",
-                phoneLastFour = "0000",
-            )
+            val truecallerSuccess =
+                TruecallerAuthResult.Success(
+                    payload = "payload-b64",
+                    signature = "sig-b64",
+                    signatureAlgorithm = "SHA512withRSA",
+                    phoneLastFour = "0000",
+                )
             every { orchestrator.start(activity, activity) } returns AuthOrchestrator.StartResult.TruecallerLaunched
             coEvery { orchestrator.completeWithTruecaller(truecallerSuccess) } returns
                 AuthResult.Error.General(RuntimeException("session fail"))
@@ -330,12 +331,13 @@ public class AuthViewModelTest {
             // Covers the false-branch of `if (authResult is AuthResult.Error)` in handleTruecallerResult
             val activity = mockk<FragmentActivity>()
             val user = mockk<FirebaseUser>()
-            val truecallerSuccess = TruecallerAuthResult.Success(
-                payload = "payload-b64",
-                signature = "sig-b64",
-                signatureAlgorithm = "SHA512withRSA",
-                phoneLastFour = "0000",
-            )
+            val truecallerSuccess =
+                TruecallerAuthResult.Success(
+                    payload = "payload-b64",
+                    signature = "sig-b64",
+                    signatureAlgorithm = "SHA512withRSA",
+                    phoneLastFour = "0000",
+                )
             every { orchestrator.start(activity, activity) } returns AuthOrchestrator.StartResult.TruecallerLaunched
             coEvery { orchestrator.completeWithTruecaller(truecallerSuccess) } returns AuthResult.Success(user)
 

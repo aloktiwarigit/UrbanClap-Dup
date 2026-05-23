@@ -159,6 +159,7 @@
 | **E09-S04** | Owner Finance module — daily P&L, weekly Payout Queue with Razorpay Route approve-all | FR-8.1, FR-8.2 | Chart, per-tech queue, Monday-morning cron aggregate |
 | **E09-S05** | Immutable Audit Log — append-only Cosmos collection + Cosmos stored-procedure deny-write/update + viewer UI | FR-7.4, NFR-S-6 | Searchable + filterable; every admin action logged; no edit/delete possible |
 | **E09-S06** | Owner Complaints Inbox — kanban per status with SLA timer + assignment + resolution-categorisation | FR-6.3 (owner side) | SLA breach auto-escalation; repeat-offender detection helper |
+| **E09-S07** | Navigation IA redesign + Tech Roster + Customer List — see E12 section (depends on E12-S03a) | FR-7.5, ADR-0016 | Implemented in E09-S07 branch |
 
 ---
 
@@ -172,6 +173,20 @@
 | **E10-S02** | Central SSC aggregator levy automation — quarterly cron calculates 1-2% of GMV + Razorpay transfer to SSC fund | FR-9.2, NFR-C-2 | Quarterly timer trigger; itemised report; owner verification; audit log entry |
 | **E10-S03** | GST e-invoice pipeline — per-booking generation + B2B path (GSTIN in profile) + IRP integration when applicable | NFR-C-4 | MVP covers single-state GST; e-invoicing for B2B triggered on toggle (C-34 GST mode) |
 | **E10-S04** | Launch readiness suite — soft-launch feature flag (GrowthBook OSS), marketing-pause toggle, emergency-rollback playbook test, DR drill | NFR-R-1/R-3, Runbook §5 | Flag-controlled: first 100 F&F bookings only while soft-launch (D23); DR drill documented; **launch-gate ACs (added 2026-05-01)**: (1) `marketing.public-launch` flag = on requires ≥2 verified techs per active serviceId in Ayodhya service radius `[82.20, 26.79]`; soft-launch flag may flip with ≥1 tech per serviceId; (2) Hindi `strings.xml` content + serviceId/categoryId Hindi-name lookup table field-tested with ≥3 Ayodhya techs and ≥3 Ayodhya customers, comprehension feedback captured in `docs/launch-readiness/hindi-field-test-2026-XX.md` before public-launch flag flips on |
+
+---
+
+## E12 — Admin-web Bilingual & Navigation IA
+
+**Epic goal:** Promote admin-web to bilingual EN/HI from MVP; redesign navigation IA to use real icons + localized labels; build missing screens for the Ayodhya ops operator persona.
+
+**ADR:** `docs/adr/0016-admin-web-bilingual-from-mvp.md` (supersedes architecture.md:56 exemption)
+
+| ID | Story | FR / NFR | Notes |
+|---|---|---|---|
+| **E12-S03a** | admin-web i18n infrastructure + locale switcher — next-intl wiring, route migration under `[locale]/`, Noto Devanagari font, `LocaleSwitcher` in Topbar | ADR-0016 | Foundation tier. Unblocks E09-S07 and E12-S03b. Default locale = `hi`. |
+| **E09-S07** | Navigation IA redesign + Tech Roster + Customer list — replace 2-letter rail abbreviations with lucide-react icons + always-visible localized labels; build `/[locale]/technicians` and `/[locale]/customers` screens | FR-7.5, ADR-0016 | Foundation tier. Depends on E12-S03a. |
+| **E12-S03b** | Hindi content population + devanagari visual polish — translate ~300 message keys, INR/date formatting, ICU plurals, typography tuning | ADR-0016 | Feature tier. Depends on E12-S03a + E09-S07. |
 
 ---
 
@@ -208,6 +223,10 @@ E10-S01 — blocks E05-S02 merge to main (Karnataka test is MVP-gate)
 E10-S02 — independent (Phase 2 reasonable target; soft requirement)
 E10-S03 — independent (can ship after MVP)
 E10-S04 — final integration; blocks public launch
+
+E12-S03a — unblocks E09-S07 and E12-S03b
+E09-S07  — depends on E12-S03a (uses t() and Noto font)
+E12-S03b — depends on E12-S03a + E09-S07 (full string extraction)
 ```
 
 ---
@@ -259,6 +278,20 @@ An epic is "done" when:
 | E08 | ⬜ | ⬜ |
 | E09 | ⬜ | ⬜ |
 | E10 | ⬜ | ⬜ |
+| E12 | ⬜ | ⬜ |
+| E16 | ✅ | ⬜ |
+
+---
+
+## Week 5 Stories (E16)
+
+| Story | Description | Status |
+|---|---|---|
+| E16-S01 | Service-area gating — server-side Turf.js polygon (ADR-0020) | ✅ done (merged W1) |
+| E16-S02 | Slot availability API + conflict locking | ✅ done |
+| E16-S04 | Address picker (Places SDK + draggable pin) + waitlist API | ✅ done (this PR) |
+| **E16-S04b** | **Admin waitlist CSV export** | 🔲 backlog (W6) |
+| E16-S05 | API-driven slot picker (customer-app) | ✅ done (merged) |
 
 ---
 

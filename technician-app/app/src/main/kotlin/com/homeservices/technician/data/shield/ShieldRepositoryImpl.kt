@@ -23,7 +23,8 @@ public class ShieldRepositoryImpl
             runCatching {
                 val resp = api.fileShieldReport(ShieldReportRequestDto(bookingId, description))
                 if (!resp.isSuccessful) error("shield report failed: ${resp.code()}")
-                ShieldReportResult(resp.body()!!.complaintId)
+                val body = resp.body() ?: error("shield report succeeded with empty body")
+                ShieldReportResult(body.complaintId)
             }
 
         public override suspend fun fileRatingAppeal(
@@ -52,7 +53,11 @@ public class ShieldRepositoryImpl
                     !resp.isSuccessful ->
                         Result.failure(IllegalStateException("rating appeal failed: ${resp.code()}"))
                     else ->
-                        Result.success(RatingAppealResult(appealId = resp.body()!!.appealId))
+                        resp.body()?.let { body ->
+                            Result.success(RatingAppealResult(appealId = body.appealId))
+                        } ?: Result.failure(
+                            IllegalStateException("rating appeal succeeded with empty body"),
+                        )
                 }
             } catch (e: Exception) {
                 Result.failure(e)

@@ -1,12 +1,15 @@
+import * as Sentry from '@sentry/node';
 import { z } from 'zod';
 import { type HttpHandler, type InvocationContext, app } from '@azure/functions';
 import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
+import { requireIntegrity } from '../middleware/requireIntegrity.js';
 import { bookingRepo, updateBookingFields } from '../cosmos/booking-repository.js';
 import { bookingEventRepo } from '../cosmos/booking-event-repository.js';
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { haversine } from '../cosmos/geo.js';
 import { sendBookingStatusUpdatePush, sendLocationUpdatePush } from '../services/fcm.service.js';
-import type { BookingDoc } from '../schemas/booking.js';
+import type { BookingDoc as _BookingDoc } from '../schemas/booking.js';
+import { normalizeAddressText } from '../shared/address-text.js';
 
 const TRANSITION_ORDER = ['ASSIGNED', 'EN_ROUTE', 'REACHED', 'IN_PROGRESS', 'COMPLETED'] as const;
 const AVG_CITY_SPEED_KMH = 20;
@@ -23,6 +26,10 @@ const TransitionBodySchema = z.object({
   currentLocation: z.object({
     lat: z.number().min(-90).max(90),
     lng: z.number().min(-180).max(180),
+  }).optional(),
+  attestation: z.object({
+    isMock: z.boolean(),
+    gpsAccuracyM: z.number(),
   }).optional(),
 });
 
@@ -48,7 +55,7 @@ export const getActiveJobHandler: HttpHandler = async (req, _ctx: InvocationCont
       customerId: booking.customerId,
       serviceId: booking.serviceId,
       serviceName: service?.name ?? '',
-      addressText: booking.addressText,
+      addressText: normalizeAddressText(booking.addressText),
       addressLatLng: booking.addressLatLng,
       status: booking.status,
       slotDate: booking.slotDate,
@@ -89,8 +96,18 @@ export const transitionStatusHandler: HttpHandler = async (req, ctx: InvocationC
     };
   }
 
+  // Warn in Sentry if the technician's device reported a mock/spoofed GPS fix.
+  // Non-blocking: we allow the transition through and flag for investigation.
+  if (body.attestation?.isMock === true) {
+    Sentry.withScope((scope) => {
+      scope.setLevel('warning');
+      scope.setExtras({ bookingId, technicianId: uid, gpsAccuracyM: body.attestation!.gpsAccuracyM });
+      Sentry.captureMessage('MARK_REACHED with mock location');
+    });
+  }
+
   const updated = await updateBookingFields(bookingId, {
-    status: body.targetStatus as BookingDoc['status'],
+    status: body.targetStatus,
     ...(body.targetStatus === 'COMPLETED' ? { completedAt: new Date().toISOString() } : {}),
   });
   if (!updated) return { status: 500, jsonBody: { code: 'UPDATE_FAILED' } };
@@ -137,7 +154,7 @@ export const transitionStatusHandler: HttpHandler = async (req, ctx: InvocationC
       customerId: updated.customerId,
       serviceId: updated.serviceId,
       serviceName: service?.name ?? '',
-      addressText: updated.addressText,
+      addressText: normalizeAddressText(updated.addressText),
       addressLatLng: updated.addressLatLng,
       status: updated.status,
       slotDate: updated.slotDate,
@@ -155,5 +172,8 @@ app.http('getActiveJob', {
 app.http('transitionActiveJobStatus', {
   route: 'v1/technicians/active-job/{bookingId}/transition',
   methods: ['PATCH'],
-  handler: transitionStatusHandler,
+  // requireIntegrity is applied to the REACHED (and all) status transitions.
+  // Non-strict by default: absent/invalid token warns to Sentry but allows through.
+  // Set PLAY_INTEGRITY_STRICT=true in production to enforce rejection.
+  handler: requireIntegrity(transitionStatusHandler),
 });
