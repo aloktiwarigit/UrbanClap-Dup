@@ -472,7 +472,4 @@
     <!-- PRD-08: Women-safe toggle -->
     <string name="women_safe_toggle_label">महिला तकनीशियन को प्राथमिकता दें</string>
 
-    <!-- PRD-09: Privacy &amp; Data screen -->
-    <string name="privacy_data_title">गोपनीयता और डेटा</string>
-    <string name="privacy_data_body">आपका नाम, फ़ोन, पता और बुकिंग जानकारी सेवा देने, तकनीशियन असाइन करने, सपोर्ट और सुरक्षा के लिए उपयोग होती है। पता केवल असाइन किए गए तकनीशियन और ओनर सपोर्ट के साथ साझा किया जाता है।</string>
 </resources>

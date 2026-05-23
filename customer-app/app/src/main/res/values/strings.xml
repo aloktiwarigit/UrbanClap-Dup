@@ -481,8 +481,5 @@
     <!-- PRD-08: Women-safe toggle -->
     <string name="women_safe_toggle_label">Prefer female technician</string>
 
-    <!-- PRD-09: Privacy &amp; Data screen -->
-    <string name="privacy_data_title">Privacy &amp; Data</string>
-    <string name="privacy_data_body">Your name, phone, address, and booking information is used to provide services, assign technicians, handle support, and ensure safety. Your address is shared only with the assigned technician and owner support.</string>
 
 </resources>
