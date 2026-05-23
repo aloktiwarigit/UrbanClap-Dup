@@ -34,19 +34,19 @@ internal class BookingViewModel
         private val biometricGate: BiometricGateUseCase,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<BookingUiState>(BookingUiState.Idle)
-        internal val uiState: StateFlow<BookingUiState> = _uiState.asStateFlow()
+        public val uiState: StateFlow<BookingUiState> = _uiState.asStateFlow()
 
         private val _walletBalanceInPaise = MutableStateFlow(0L)
-        internal val walletBalanceInPaise: StateFlow<Long> = _walletBalanceInPaise.asStateFlow()
+        public val walletBalanceInPaise: StateFlow<Long> = _walletBalanceInPaise.asStateFlow()
 
         private val _applyCreditToggle = MutableStateFlow(false)
-        internal val applyCreditToggle: StateFlow<Boolean> = _applyCreditToggle.asStateFlow()
+        public val applyCreditToggle: StateFlow<Boolean> = _applyCreditToggle.asStateFlow()
 
         private var pendingBookingId: String? = null
         private var pendingAppliedCredit: Int = 0
 
-        internal var pendingServiceId: String = ""
-        internal var pendingCategoryId: String = ""
+        public var pendingServiceId: String = ""
+        public var pendingCategoryId: String = ""
 
         init {
             viewModelScope.launch {
@@ -58,7 +58,7 @@ internal class BookingViewModel
         }
 
         /** Sets the available wallet balance in paise. Auto-enables the toggle when balance > 0. */
-        internal fun setWalletBalance(paise: Long) {
+        public fun setWalletBalance(paise: Long) {
             _walletBalanceInPaise.value = paise
             if (paise > 0L) {
                 _applyCreditToggle.value = true
@@ -66,11 +66,11 @@ internal class BookingViewModel
         }
 
         /** Called by the UI when the user flips the "Apply credit" toggle. */
-        internal fun setApplyCreditToggle(checked: Boolean) {
+        public fun setApplyCreditToggle(checked: Boolean) {
             _applyCreditToggle.value = checked
         }
 
-        internal fun setSlotAndAddress(
+        public fun setSlotAndAddress(
             slot: BookingSlot,
             addressText: String,
             lat: Double,
@@ -87,7 +87,7 @@ internal class BookingViewModel
          * - canUseBiometric=true: require Authenticated; non-Authenticated blocks.
          * - canUseBiometric=false: skip gate, proceed.
          */
-        internal fun startPayment(
+        public fun startPayment(
             serviceId: String,
             categoryId: String,
             activity: FragmentActivity?,
@@ -108,7 +108,7 @@ internal class BookingViewModel
         }
 
         /** Creates a booking. Cash bookings call this directly - no biometric gate. */
-        internal fun startBooking(
+        public fun startBooking(
             serviceId: String,
             categoryId: String,
             paymentMethod: BookingPaymentMethod,
@@ -159,7 +159,7 @@ internal class BookingViewModel
         }
 
         /** Re-opens the Razorpay checkout for the same order. */
-        internal fun retryPayment() {
+        public fun retryPayment() {
             val failed = _uiState.value as? BookingUiState.PaymentFailed ?: return
             _uiState.value =
                 BookingUiState.AwaitingPayment(
@@ -174,7 +174,7 @@ internal class BookingViewModel
         }
 
         /** Cancels from PaymentFailed back to Ready so the user can change payment method. */
-        internal fun cancelPaymentFailed() {
+        public fun cancelPaymentFailed() {
             val failed = _uiState.value as? BookingUiState.PaymentFailed ?: return
             _uiState.value =
                 BookingUiState.Ready(
