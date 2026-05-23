@@ -238,7 +238,7 @@ android {
             all {
                 // Pass -PexcludePaparazzi in smoke gate to skip snapshot tests on Windows
                 if (project.hasProperty("excludePaparazzi")) {
-                    filter.excludeTestsMatching("*PaparazziTest*")
+                    getFilter().excludeTestsMatching("*PaparazziTest*")
                 }
             }
         }
