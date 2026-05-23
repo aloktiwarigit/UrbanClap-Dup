@@ -15,7 +15,6 @@ import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 
 public class BookingRepositoryImplHttpTest {
-
     private val server = MockWebServer()
     private lateinit var sut: BookingRepositoryImpl
 
@@ -23,11 +22,13 @@ public class BookingRepositoryImplHttpTest {
     public fun setUp() {
         server.start()
         val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
-        val api = Retrofit.Builder()
-            .baseUrl(server.url("/"))
-            .addConverterFactory(MoshiConverterFactory.create(moshi))
-            .build()
-            .create(BookingApiService::class.java)
+        val api =
+            Retrofit
+                .Builder()
+                .baseUrl(server.url("/"))
+                .addConverterFactory(MoshiConverterFactory.create(moshi))
+                .build()
+                .create(BookingApiService::class.java)
         sut = BookingRepositoryImpl(api)
     }
 
@@ -37,51 +38,56 @@ public class BookingRepositoryImplHttpTest {
     }
 
     @Test
-    public fun `getMyBookings happy path 200 returns success with mapped bookings`(): Unit = runTest {
-        server.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setBody(
-                    """{"bookings":[{"bookingId":"bk-1","serviceId":"svc-1","serviceName":"Plumbing","addressText":"123 Main St","status":"ASSIGNED","slotDate":"2026-06-01","slotWindow":"10:00-12:00","amount":59900,"createdAt":"2026-05-20T10:00:00Z"}]}"""
-                )
-        )
-        val result = sut.getMyBookings().first()
-        assertThat(result.isSuccess).isTrue()
-        val bookings = result.getOrThrow()
-        assertThat(bookings).hasSize(1)
-        assertThat(bookings[0].bookingId).isEqualTo("bk-1")
-        assertThat(bookings[0].serviceName).isEqualTo("Plumbing")
-    }
+    public fun `getMyBookings happy path 200 returns success with mapped bookings`(): Unit =
+        runTest {
+            server.enqueue(
+                MockResponse()
+                    .setResponseCode(200)
+                    .setBody(
+                        """{"bookings":[{"bookingId":"bk-1","serviceId":"svc-1","serviceName":"Plumbing","addressText":"123 Main St","status":"ASSIGNED","slotDate":"2026-06-01","slotWindow":"10:00-12:00","amount":59900,"createdAt":"2026-05-20T10:00:00Z"}]}""",
+                    ),
+            )
+            val result = sut.getMyBookings().first()
+            assertThat(result.isSuccess).isTrue()
+            val bookings = result.getOrThrow()
+            assertThat(bookings).hasSize(1)
+            assertThat(bookings[0].bookingId).isEqualTo("bk-1")
+            assertThat(bookings[0].serviceName).isEqualTo("Plumbing")
+        }
 
     @Test
-    public fun `getMyBookings returns failure on 401`(): Unit = runTest {
-        server.enqueue(MockResponse().setResponseCode(401).setBody("""{"error":"Unauthorized"}"""))
-        val result = sut.getMyBookings().first()
-        assertThat(result.isFailure).isTrue()
-    }
+    public fun `getMyBookings returns failure on 401`(): Unit =
+        runTest {
+            server.enqueue(MockResponse().setResponseCode(401).setBody("""{"error":"Unauthorized"}"""))
+            val result = sut.getMyBookings().first()
+            assertThat(result.isFailure).isTrue()
+        }
 
     @Test
-    public fun `getMyBookings returns failure on 404`(): Unit = runTest {
-        server.enqueue(MockResponse().setResponseCode(404).setBody("""{"error":"Not Found"}"""))
-        val result = sut.getMyBookings().first()
-        assertThat(result.isFailure).isTrue()
-    }
+    public fun `getMyBookings returns failure on 404`(): Unit =
+        runTest {
+            server.enqueue(MockResponse().setResponseCode(404).setBody("""{"error":"Not Found"}"""))
+            val result = sut.getMyBookings().first()
+            assertThat(result.isFailure).isTrue()
+        }
 
     @Test
-    public fun `getMyBookings returns failure on 500`(): Unit = runTest {
-        server.enqueue(MockResponse().setResponseCode(500).setBody("""{"error":"Server Error"}"""))
-        val result = sut.getMyBookings().first()
-        assertThat(result.isFailure).isTrue()
-    }
+    public fun `getMyBookings returns failure on 500`(): Unit =
+        runTest {
+            server.enqueue(MockResponse().setResponseCode(500).setBody("""{"error":"Server Error"}"""))
+            val result = sut.getMyBookings().first()
+            assertThat(result.isFailure).isTrue()
+        }
 
     @Test
-    public fun `getMyBookings returns failure on malformed JSON`(): Unit = runTest {
-        server.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setBody("""{ this is not valid json ]""")
-        )
-        val result = sut.getMyBookings().first()
-        assertThat(result.isFailure).isTrue()
-    }
+    public fun `getMyBookings returns failure on malformed JSON`(): Unit =
+        runTest {
+            server.enqueue(
+                MockResponse()
+                    .setResponseCode(200)
+                    .setBody("""{ this is not valid json ]"""),
+            )
+            val result = sut.getMyBookings().first()
+            assertThat(result.isFailure).isTrue()
+        }
 }

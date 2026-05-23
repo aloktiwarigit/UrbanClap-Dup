@@ -9,7 +9,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
 public class FirebaseOtpUseCaseErrorMappingTest {
-
     @Test
     public fun `mapFirebaseSignInError maps ERROR_INVALID_VERIFICATION_CODE to WrongCode`() {
         val e = mockk<FirebaseAuthInvalidCredentialsException>()

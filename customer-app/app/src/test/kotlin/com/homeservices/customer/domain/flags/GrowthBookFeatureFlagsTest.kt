@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test
  * safe-off invariant required by ADR-0005.
  */
 public class GrowthBookFeatureFlagsTest {
-
     @Test
     public fun `all flags return false when api key is blank`() {
         val flags = GrowthBookFeatureFlags(apiKey = "")

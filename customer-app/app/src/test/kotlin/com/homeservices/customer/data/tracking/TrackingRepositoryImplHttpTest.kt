@@ -20,7 +20,6 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 
 @OptIn(ExperimentalCoroutinesApi::class)
 public class TrackingRepositoryImplHttpTest {
-
     private val server = MockWebServer()
     private lateinit var sut: TrackingRepositoryImpl
 
@@ -28,11 +27,13 @@ public class TrackingRepositoryImplHttpTest {
     public fun setUp() {
         server.start()
         val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
-        val api = Retrofit.Builder()
-            .baseUrl(server.url("/"))
-            .addConverterFactory(MoshiConverterFactory.create(moshi))
-            .build()
-            .create(BookingApiService::class.java)
+        val api =
+            Retrofit
+                .Builder()
+                .baseUrl(server.url("/"))
+                .addConverterFactory(MoshiConverterFactory.create(moshi))
+                .build()
+                .create(BookingApiService::class.java)
         sut = TrackingRepositoryImpl(TrackingEventBus(), api)
     }
 
@@ -42,54 +43,58 @@ public class TrackingRepositoryImplHttpTest {
     }
 
     @Test
-    public fun `trackBooking initial status is ASSIGNED from 200 response`(): Unit = runTest {
-        server.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setBody("""{"bookingId":"bk-1","status":"ASSIGNED","amount":59900,"finalAmount":null,"pendingAddOns":[]}""")
-        )
-        val results = mutableListOf<TrackingState>()
-        val job = launch { sut.trackBooking("bk-1").collect { results.add(it) } }
-        advanceUntilIdle()
-        job.cancel()
-        assertThat(results).isNotEmpty()
-        assertThat(results[0].status).isEqualTo(BookingStatus.Assigned)
-    }
+    public fun `trackBooking initial status is ASSIGNED from 200 response`(): Unit =
+        runTest {
+            server.enqueue(
+                MockResponse()
+                    .setResponseCode(200)
+                    .setBody("""{"bookingId":"bk-1","status":"ASSIGNED","amount":59900,"finalAmount":null,"pendingAddOns":[]}"""),
+            )
+            val results = mutableListOf<TrackingState>()
+            val job = launch { sut.trackBooking("bk-1").collect { results.add(it) } }
+            advanceUntilIdle()
+            job.cancel()
+            assertThat(results).isNotEmpty()
+            assertThat(results[0].status).isEqualTo(BookingStatus.Assigned)
+        }
 
     @Test
-    public fun `trackBooking falls back to Unknown on 401`(): Unit = runTest {
-        server.enqueue(MockResponse().setResponseCode(401).setBody("""{"error":"Unauthorized"}"""))
-        val results = mutableListOf<TrackingState>()
-        val job = launch { sut.trackBooking("bk-1").collect { results.add(it) } }
-        advanceUntilIdle()
-        job.cancel()
-        assertThat(results).isNotEmpty()
-        assertThat(results[0].status).isEqualTo(BookingStatus.Unknown)
-    }
+    public fun `trackBooking falls back to Unknown on 401`(): Unit =
+        runTest {
+            server.enqueue(MockResponse().setResponseCode(401).setBody("""{"error":"Unauthorized"}"""))
+            val results = mutableListOf<TrackingState>()
+            val job = launch { sut.trackBooking("bk-1").collect { results.add(it) } }
+            advanceUntilIdle()
+            job.cancel()
+            assertThat(results).isNotEmpty()
+            assertThat(results[0].status).isEqualTo(BookingStatus.Unknown)
+        }
 
     @Test
-    public fun `trackBooking falls back to Unknown on 500`(): Unit = runTest {
-        server.enqueue(MockResponse().setResponseCode(500).setBody("""{"error":"Server Error"}"""))
-        val results = mutableListOf<TrackingState>()
-        val job = launch { sut.trackBooking("bk-1").collect { results.add(it) } }
-        advanceUntilIdle()
-        job.cancel()
-        assertThat(results).isNotEmpty()
-        assertThat(results[0].status).isEqualTo(BookingStatus.Unknown)
-    }
+    public fun `trackBooking falls back to Unknown on 500`(): Unit =
+        runTest {
+            server.enqueue(MockResponse().setResponseCode(500).setBody("""{"error":"Server Error"}"""))
+            val results = mutableListOf<TrackingState>()
+            val job = launch { sut.trackBooking("bk-1").collect { results.add(it) } }
+            advanceUntilIdle()
+            job.cancel()
+            assertThat(results).isNotEmpty()
+            assertThat(results[0].status).isEqualTo(BookingStatus.Unknown)
+        }
 
     @Test
-    public fun `trackBooking falls back to Unknown on malformed JSON`(): Unit = runTest {
-        server.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setBody("""{ not valid json ]""")
-        )
-        val results = mutableListOf<TrackingState>()
-        val job = launch { sut.trackBooking("bk-1").collect { results.add(it) } }
-        advanceUntilIdle()
-        job.cancel()
-        assertThat(results).isNotEmpty()
-        assertThat(results[0].status).isEqualTo(BookingStatus.Unknown)
-    }
+    public fun `trackBooking falls back to Unknown on malformed JSON`(): Unit =
+        runTest {
+            server.enqueue(
+                MockResponse()
+                    .setResponseCode(200)
+                    .setBody("""{ not valid json ]"""),
+            )
+            val results = mutableListOf<TrackingState>()
+            val job = launch { sut.trackBooking("bk-1").collect { results.add(it) } }
+            advanceUntilIdle()
+            job.cancel()
+            assertThat(results).isNotEmpty()
+            assertThat(results[0].status).isEqualTo(BookingStatus.Unknown)
+        }
 }

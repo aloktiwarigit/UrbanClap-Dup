@@ -4,7 +4,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
 public class RazorpayErrorCodeTest {
-
     @Test
     public fun `resolve maps SDK code 0 to PAYMENT_CANCELLED`() {
         assertThat(RazorpayErrorCode.resolve(0, "User dismissed")).isEqualTo(RazorpayErrorCode.PAYMENT_CANCELLED)

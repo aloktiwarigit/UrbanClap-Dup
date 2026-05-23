@@ -15,7 +15,6 @@ import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 
 public class WalletRepositoryImplHttpTest {
-
     private val server = MockWebServer()
     private lateinit var sut: WalletRepositoryImpl
 
@@ -23,11 +22,13 @@ public class WalletRepositoryImplHttpTest {
     public fun setUp() {
         server.start()
         val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
-        val api = Retrofit.Builder()
-            .baseUrl(server.url("/"))
-            .addConverterFactory(MoshiConverterFactory.create(moshi))
-            .build()
-            .create(WalletApiService::class.java)
+        val api =
+            Retrofit
+                .Builder()
+                .baseUrl(server.url("/"))
+                .addConverterFactory(MoshiConverterFactory.create(moshi))
+                .build()
+                .create(WalletApiService::class.java)
         sut = WalletRepositoryImpl(api)
     }
 
@@ -37,46 +38,51 @@ public class WalletRepositoryImplHttpTest {
     }
 
     @Test
-    public fun `getBalance happy path 200 returns success with balance`(): Unit = runTest {
-        server.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setBody("""{"balanceInPaise":500000,"lastUpdatedAt":"2026-05-20T10:00:00Z"}""")
-        )
-        val result = sut.getBalance().first()
-        assertThat(result.isSuccess).isTrue()
-        assertThat(result.getOrThrow().balanceInPaise).isEqualTo(500000L)
-    }
+    public fun `getBalance happy path 200 returns success with balance`(): Unit =
+        runTest {
+            server.enqueue(
+                MockResponse()
+                    .setResponseCode(200)
+                    .setBody("""{"balanceInPaise":500000,"lastUpdatedAt":"2026-05-20T10:00:00Z"}"""),
+            )
+            val result = sut.getBalance().first()
+            assertThat(result.isSuccess).isTrue()
+            assertThat(result.getOrThrow().balanceInPaise).isEqualTo(500000L)
+        }
 
     @Test
-    public fun `getBalance returns failure on 401`(): Unit = runTest {
-        server.enqueue(MockResponse().setResponseCode(401).setBody("""{"error":"Unauthorized"}"""))
-        val result = sut.getBalance().first()
-        assertThat(result.isFailure).isTrue()
-    }
+    public fun `getBalance returns failure on 401`(): Unit =
+        runTest {
+            server.enqueue(MockResponse().setResponseCode(401).setBody("""{"error":"Unauthorized"}"""))
+            val result = sut.getBalance().first()
+            assertThat(result.isFailure).isTrue()
+        }
 
     @Test
-    public fun `getBalance returns failure on 404`(): Unit = runTest {
-        server.enqueue(MockResponse().setResponseCode(404).setBody("""{"error":"Not Found"}"""))
-        val result = sut.getBalance().first()
-        assertThat(result.isFailure).isTrue()
-    }
+    public fun `getBalance returns failure on 404`(): Unit =
+        runTest {
+            server.enqueue(MockResponse().setResponseCode(404).setBody("""{"error":"Not Found"}"""))
+            val result = sut.getBalance().first()
+            assertThat(result.isFailure).isTrue()
+        }
 
     @Test
-    public fun `getBalance returns failure on 500`(): Unit = runTest {
-        server.enqueue(MockResponse().setResponseCode(500).setBody("""{"error":"Server Error"}"""))
-        val result = sut.getBalance().first()
-        assertThat(result.isFailure).isTrue()
-    }
+    public fun `getBalance returns failure on 500`(): Unit =
+        runTest {
+            server.enqueue(MockResponse().setResponseCode(500).setBody("""{"error":"Server Error"}"""))
+            val result = sut.getBalance().first()
+            assertThat(result.isFailure).isTrue()
+        }
 
     @Test
-    public fun `getBalance returns failure on malformed JSON`(): Unit = runTest {
-        server.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setBody("""{ not valid json ]""")
-        )
-        val result = sut.getBalance().first()
-        assertThat(result.isFailure).isTrue()
-    }
+    public fun `getBalance returns failure on malformed JSON`(): Unit =
+        runTest {
+            server.enqueue(
+                MockResponse()
+                    .setResponseCode(200)
+                    .setBody("""{ not valid json ]"""),
+            )
+            val result = sut.getBalance().first()
+            assertThat(result.isFailure).isTrue()
+        }
 }
