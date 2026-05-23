@@ -159,6 +159,7 @@
 | **E09-S04** | Owner Finance module — daily P&L, weekly Payout Queue with Razorpay Route approve-all | FR-8.1, FR-8.2 | Chart, per-tech queue, Monday-morning cron aggregate |
 | **E09-S05** | Immutable Audit Log — append-only Cosmos collection + Cosmos stored-procedure deny-write/update + viewer UI | FR-7.4, NFR-S-6 | Searchable + filterable; every admin action logged; no edit/delete possible |
 | **E09-S06** | Owner Complaints Inbox — kanban per status with SLA timer + assignment + resolution-categorisation | FR-6.3 (owner side) | SLA breach auto-escalation; repeat-offender detection helper |
+| **E09-S07** | Navigation IA redesign + Tech Roster + Customer List — see E12 section (depends on E12-S03a) | FR-7.5, ADR-0016 | Implemented in E09-S07 branch |
 
 ---
 
@@ -278,6 +279,19 @@ An epic is "done" when:
 | E09 | ⬜ | ⬜ |
 | E10 | ⬜ | ⬜ |
 | E12 | ⬜ | ⬜ |
+| E16 | ✅ | ⬜ |
+
+---
+
+## Week 5 Stories (E16)
+
+| Story | Description | Status |
+|---|---|---|
+| E16-S01 | Service-area gating — server-side Turf.js polygon (ADR-0020) | ✅ done (merged W1) |
+| E16-S02 | Slot availability API + conflict locking | ✅ done |
+| E16-S04 | Address picker (Places SDK + draggable pin) + waitlist API | ✅ done (this PR) |
+| **E16-S04b** | **Admin waitlist CSV export** | 🔲 backlog (W6) |
+| E16-S05 | API-driven slot picker (customer-app) | ✅ done (merged) |
 
 ---
 

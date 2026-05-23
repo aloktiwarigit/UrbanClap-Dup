@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.PhoneAuthProvider
 import com.homeservices.customer.domain.auth.AuthOrchestrator
+import com.homeservices.customer.domain.auth.PhoneNumberNormalizer
 import com.homeservices.customer.domain.auth.model.AuthResult
 import com.homeservices.customer.domain.auth.model.OtpSendResult
 import com.homeservices.customer.domain.auth.model.TruecallerAuthResult
@@ -232,19 +233,29 @@ public class AuthViewModel
             activity: FragmentActivity,
             resendToken: PhoneAuthProvider.ForceResendingToken? = null,
         ) {
+            val normalizedPhoneNumber =
+                PhoneNumberNormalizer.normalize(phoneNumber)
+                    ?: run {
+                        _uiState.value =
+                            AuthUiState.Error(
+                                message = "Enter a valid 10-digit mobile number.",
+                                retriesLeft = 0,
+                            )
+                        return
+                    }
             sendOtpJob?.cancel()
-            currentPhoneNumber = phoneNumber
+            currentPhoneNumber = normalizedPhoneNumber
             _uiState.value = AuthUiState.OtpSending
             sendOtpJob =
                 viewModelScope.launch {
-                    orchestrator.sendOtp(phoneNumber, activity, resendToken).collect { result ->
+                    orchestrator.sendOtp(normalizedPhoneNumber, activity, resendToken).collect { result ->
                         when (result) {
                             is OtpSendResult.CodeSent -> {
                                 currentVerificationId = result.verificationId
                                 currentResendToken = result.resendToken
                                 _uiState.value =
                                     AuthUiState.OtpEntry(
-                                        phoneNumber = phoneNumber,
+                                        phoneNumber = normalizedPhoneNumber,
                                         verificationId = result.verificationId,
                                     )
                             }

@@ -44,7 +44,7 @@ import {
 } from '../../../../src/services/adminUser.service.js';
 import { verifyToken } from '../../../../src/services/totp.service.js';
 import { createAdminSession } from '../../../../src/services/adminSession.service.js';
-import { signAccessToken, signMfaChallengeToken } from '../../../../src/services/jwt.service.js';
+import { signAccessToken, signMfaChallengeToken, signSetupToken } from '../../../../src/services/jwt.service.js';
 
 const mockCtx = {} as InvocationContext;
 
@@ -143,6 +143,18 @@ describe('POST /v1/admin/auth/login', () => {
 
     expect(res.status).toBe(200);
     expect((res.jsonBody as { requiresSetup?: boolean }).requiresSetup).toBe(true);
+    expect(signSetupToken).toHaveBeenCalledWith({
+      sub: 'firebase-uid',
+      email: 'anshutiwari183@gmail.com',
+    });
+    expect(res.cookies).toContainEqual(
+      expect.objectContaining({
+        name: 'hs_setup',
+        value: 'setup-token',
+        httpOnly: true,
+        path: '/',
+      }),
+    );
     expect(claimAdminInvite).toHaveBeenCalledWith(invite, 'firebase-uid', 'anshutiwari183@gmail.com');
   });
 

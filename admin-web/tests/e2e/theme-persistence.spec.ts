@@ -24,7 +24,7 @@ test.describe('theme persistence', () => {
       { name: 'theme', value: 'light', url: 'http://localhost:3000' },
     ]);
 
-    await page.goto('/dashboard');
+    await page.goto('/en/dashboard');
     expect(await page.evaluate(() => document.documentElement.dataset['theme'])).toBe('light');
 
     // Click the Rail's Orders link — App Router client-side navigation,
@@ -44,7 +44,7 @@ test.describe('theme persistence', () => {
       { name: 'hs_access', value: jwt, url: 'http://localhost:3000', httpOnly: true, sameSite: 'Lax' },
     ]);
 
-    await page.goto('/dashboard');
+    await page.goto('/en/dashboard');
     expect(await page.evaluate(() => document.documentElement.dataset['theme'])).toBe('dark');
 
     // Click the LIGHT option in the Topbar toggle.

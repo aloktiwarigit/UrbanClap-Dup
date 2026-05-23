@@ -21,7 +21,7 @@
   --ink-4: #2E2719;   /* hairline strong */
   --ink-5: #3E3528;   /* divider */
 
-  --fog-0: #6E665B;   /* text-mute */
+  --fog-0: #877A6D;   /* text-mute — 4.54:1 vs --ink-1, 4.62:1 vs --ink-0 (WCAG AA pass); bumped from #6E665B which was 3.33:1 */
   --fog-1: #9A9082;   /* text-soft */
   --fog-2: #C7BCA9;   /* text-default */
   --fog-3: #F1E9D8;   /* text-strong (vellum) */
@@ -39,7 +39,8 @@
   --coral: #C26B47;       /* stalled */
   --coral-soft: #E08B66;
   --ember: #E9B44C;       /* warning */
-  --rose: #B6385C;        /* danger / breach */
+  --rose: #B6385C;        /* danger / breach — borders/accents only */
+  --rose-soft: #E27DA0;   /* danger text on dark — 4.84:1 vs --ink-1 (WCAG AA pass) */
   --lavender: #8B7DC3;    /* secondary status */
 
   /* Paper palette — light mode override (html.light) */
@@ -51,16 +52,57 @@
   --paper-text-1: #4A4135;
   --paper-text-2: #6E665B;
 
-  /* Rail navigation — separate token namespace so light-mode override is clean */
+  /* Rail navigation — separate token namespace so light-mode override is clean.
+     --rail-text uses --fog-1 (#9A9082) on --ink-1 (#14110C) = 5.95:1 (WCAG AA pass).
+     --fog-0 (#6E665B) would give 3.33:1 — fails AA at 13px / weight 400. */
   --rail-bg: var(--ink-1);
-  --rail-text: var(--fog-0);
+  --rail-text: var(--fog-1);
   --rail-text-active: var(--teal-soft);
   --rail-active-bg: var(--teal-dim);
   --rail-border: var(--ink-4);
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Devanagari typography — E12-S03b
+   Architect verdict locked 2026-05-06. Scoped to :lang(hi) — EN styles untouched.
+   ───────────────────────────────────────────────────────────────────────── */
+
 :lang(hi) {
-  --font-body: var(--font-devanagari), sans-serif;
+  --font-body: var(--font-devanagari), "Noto Sans Devanagari", sans-serif;
+
+  /* Tighten line-height: Devanagari has no descenders; 1.45 matches visual
+     density of Geist at 1.55 while giving matras (ि ी े) room to breathe. */
+  line-height: 1.45;
+
+  /* Override Geist-specific features (ss01, cv11) with Devanagari-correct set.
+     calt + clig are required for correct conjunct shaping (क्ष त्र ज्ञ). */
+  font-feature-settings: "kern" 1, "calt" 1, "liga" 1, "clig" 1;
+
+  /* Prevent browser from synthesizing bold/italic — Noto ships real 500/600
+     weights; synthesized bold produces double-stroke on the shirorekha. */
+  font-synthesis: none;
+
+  text-rendering: optimizeLegibility;
+}
+
+/* Table cells: reset tracking, fix alignment for mixed Latin+Devanagari rows */
+:lang(hi) table td,
+:lang(hi) table th {
+  letter-spacing: 0;
+  vertical-align: baseline;
+  line-height: 1.45;
+  /* tnum + lnum keep ₹ amounts tabular-aligned next to Devanagari status text */
+  font-feature-settings: "kern" 1, "calt" 1, "liga" 1, "clig" 1, "tnum" 1, "lnum" 1;
+}
+
+:lang(hi) table th {
+  font-weight: 500;
+}
+
+/* Nav labels: reset letter-spacing so matra spacing isn't disrupted */
+:lang(hi) nav[aria-label="Primary navigation"] a span,
+:lang(hi) nav[aria-label="Primary navigation (mobile)"] a span {
+  letter-spacing: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -81,7 +123,7 @@
   --color-surface-raised: #1A1610;
   --color-text: #F1E9D8;              /* vellum */
   --color-text-muted: #9A9082;
-  --color-text-faint: #6E665B;
+  --color-text-faint: #877A6D;   /* faint text on dark — 4.54:1 vs --color-surface (AA pass); bumped from #6E665B which was 3.33:1 */
   --color-border: #2E2719;
   --color-border-strong: #3E3528;
   --color-success: #5BA38E;
@@ -440,7 +482,7 @@ button {
 }
 .alert-success { border-left-color: var(--teal); color: var(--teal-soft); }
 .alert-warn    { border-left-color: var(--ember); color: var(--ember); }
-.alert-danger  { border-left-color: var(--rose); color: var(--rose); }
+.alert-danger  { border-left-color: var(--rose); color: var(--rose-soft); }
 .alert-info    { border-left-color: var(--marigold); color: var(--marigold-soft); }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -465,7 +507,7 @@ button {
 }
 .chip-success { border-color: var(--teal-dim); color: var(--teal-soft); }
 .chip-warn    { border-color: var(--ember); color: var(--ember); }
-.chip-danger  { border-color: var(--rose); color: var(--rose); }
+.chip-danger  { border-color: var(--rose); color: var(--rose-soft); }
 .chip-info    { border-color: var(--marigold-dim); color: var(--marigold-soft); }
 
 /* For complaint card "X" repeat-offender count chip */
@@ -587,4 +629,24 @@ button {
   .rail-mobile { display: flex !important; }
   .dashboard-grid { grid-template-columns: 1fr !important; }
   main { padding-bottom: 72px; }
+}
+
+/* Skeleton loader — marigold-tinted shimmer */
+@keyframes skeletonShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-alt) 0%,
+    color-mix(in oklab, var(--marigold) 6%, var(--color-surface-raised)) 50%,
+    var(--color-surface-alt) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1400ms var(--ease-in-out) infinite;
+  border-radius: var(--radius-sm);
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
 }

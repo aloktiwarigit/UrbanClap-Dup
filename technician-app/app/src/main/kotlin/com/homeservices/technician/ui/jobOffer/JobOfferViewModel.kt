@@ -34,8 +34,7 @@ internal class JobOfferViewModel
                     countdownJob?.cancel()
                     val remainingMs = offer.expiresAtMs - System.currentTimeMillis()
                     if (remainingMs <= 0) {
-                        _uiState.value = JobOfferUiState.Expired
-                        scheduleReset(2_000L)
+                        expireOffer()
                         return@collect
                     }
                     val initialSeconds = (remainingMs / 1000).toInt().coerceAtLeast(0)
@@ -54,8 +53,7 @@ internal class JobOfferViewModel
                                 }
                             }
                             if (_uiState.value is JobOfferUiState.Offering) {
-                                _uiState.value = JobOfferUiState.Expired
-                                scheduleReset(2_000L)
+                                expireOffer()
                             }
                         }
                 }
@@ -77,7 +75,9 @@ internal class JobOfferViewModel
                         is JobOfferResult.Accepted -> JobOfferUiState.Accepted(result.bookingId)
                         is JobOfferResult.Expired -> JobOfferUiState.Expired
                         is JobOfferResult.Declined -> JobOfferUiState.Declined
+                        is JobOfferResult.Conflict -> JobOfferUiState.Expired
                     }
+                eventBus.clearCurrentOffer()
                 scheduleReset(2_000L)
             }
         }
@@ -88,8 +88,15 @@ internal class JobOfferViewModel
             viewModelScope.launch {
                 declineUseCase(current.offer.bookingId)
                 _uiState.value = JobOfferUiState.Declined
+                eventBus.clearCurrentOffer()
                 scheduleReset(2_000L)
             }
+        }
+
+        private fun expireOffer(): Unit {
+            _uiState.value = JobOfferUiState.Expired
+            eventBus.clearCurrentOffer()
+            scheduleReset(2_000L)
         }
 
         private fun scheduleReset(delayMs: Long): Unit {

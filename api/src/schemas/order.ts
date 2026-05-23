@@ -11,6 +11,11 @@ export const OrderStatusEnum = z.enum([
   'CANCELLED',
 ]);
 
+export const JobPhotoSetSchema = z.object({
+  stage: z.string(),
+  urls: z.array(z.string().min(1)),
+});
+
 export const OrderSchema = z.object({
   id: z.string(),
   customerId: z.string(),
@@ -30,6 +35,7 @@ export const OrderSchema = z.object({
   feesWaived: z.boolean().optional(),
   escalated: z.boolean().optional(),
   internalNotes: z.array(z.string()).optional(),
+  jobPhotoSets: z.array(JobPhotoSetSchema).optional(),
 });
 
 export const OrderListQuerySchema = z.object({

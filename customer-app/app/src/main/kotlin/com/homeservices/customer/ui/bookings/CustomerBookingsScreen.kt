@@ -28,20 +28,30 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.homeservices.customer.R
 import com.homeservices.customer.domain.booking.model.BookingPaymentMethod
 import com.homeservices.customer.domain.booking.model.CustomerBooking
 import com.homeservices.customer.domain.booking.model.CustomerBookingStatus
+import com.homeservices.customer.ui.util.formatInr
+import com.homeservices.customer.ui.wallet.NoShowCreditBanner
+import com.homeservices.customer.ui.wallet.NoShowCreditViewModel
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSecondaryButton
 
@@ -55,22 +65,57 @@ private val WarningSoft = Color(0xFFF2E7CF)
 @Composable
 internal fun CustomerBookingsScreen(
     onTrackBooking: (String) -> Unit,
+    onRateBooking: (String) -> Unit,
+    onComplainBooking: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: CustomerBookingsViewModel = hiltViewModel(),
+    noShowVm: NoShowCreditViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    CustomerBookingsContent(
-        uiState = uiState,
-        onTrackBooking = onTrackBooking,
-        onRefresh = viewModel::refresh,
-        modifier = modifier,
-    )
+    val noShowEvent by noShowVm.event.collectAsStateWithLifecycle()
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    LaunchedEffect(viewModel) {
+        viewModel.refresh()
+    }
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    viewModel.refresh()
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    Box(modifier = modifier) {
+        CustomerBookingsContent(
+            uiState = uiState,
+            onTrackBooking = onTrackBooking,
+            onRateBooking = onRateBooking,
+            onComplainBooking = onComplainBooking,
+            onRefresh = viewModel::refresh,
+        )
+        noShowEvent?.let { evt ->
+            NoShowCreditBanner(
+                creditAmountPaise = evt.creditAmountPaise,
+                onDismiss = noShowVm::dismiss,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
+    }
 }
 
 @Composable
 internal fun CustomerBookingsContent(
     uiState: CustomerBookingsUiState,
     onTrackBooking: (String) -> Unit,
+    onRateBooking: (String) -> Unit,
+    onComplainBooking: (String) -> Unit,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -86,19 +131,22 @@ internal fun CustomerBookingsContent(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Bookings",
+                        text = stringResource(R.string.bookings_title),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = Ink,
                     )
                     Text(
-                        text = "Upcoming and completed service visits",
+                        text = stringResource(R.string.bookings_subtitle),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Muted,
                     )
                 }
                 IconButton(onClick = onRefresh) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Refresh bookings")
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = stringResource(R.string.bookings_refresh_desc),
+                    )
                 }
             }
         }
@@ -118,7 +166,12 @@ internal fun CustomerBookingsContent(
                     }
                 } else {
                     items(uiState.bookings, key = { it.bookingId }) { booking ->
-                        BookingCard(booking = booking, onTrackBooking = onTrackBooking)
+                        BookingCard(
+                            booking = booking,
+                            onTrackBooking = onTrackBooking,
+                            onRateBooking = onRateBooking,
+                            onComplainBooking = onComplainBooking,
+                        )
                     }
                 }
         }
@@ -129,6 +182,8 @@ internal fun CustomerBookingsContent(
 private fun BookingCard(
     booking: CustomerBooking,
     onTrackBooking: (String) -> Unit,
+    onRateBooking: (String) -> Unit,
+    onComplainBooking: (String) -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -141,10 +196,13 @@ private fun BookingCard(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                StatusPill(label = booking.status.label(), active = booking.status.isTrackable())
+                StatusPill(
+                    label = booking.status.labelRes(),
+                    active = booking.status in TRACKABLE_STATUSES,
+                )
                 Spacer(Modifier.weight(1f))
                 Text(
-                    text = formatRupees(booking.amountPaise),
+                    text = formatInr(booking.amountPaise),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = Ink,
@@ -161,15 +219,49 @@ private fun BookingCard(
             InfoLine(icon = Icons.Default.CalendarToday, text = booking.slotDate)
             InfoLine(icon = Icons.Default.Schedule, text = booking.slotWindow)
             InfoLine(icon = Icons.Default.LocationOn, text = booking.addressText)
-            InfoLine(icon = Icons.Default.Payments, text = booking.paymentMethod.label())
-            if (booking.status.canOpenTracking()) {
-                HsPrimaryButton(
-                    text = if (booking.status.isLiveTracking()) "Track technician" else "View status",
-                    onClick = { onTrackBooking(booking.bookingId) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+            InfoLine(icon = Icons.Default.Payments, text = booking.paymentMethod.labelRes())
+            BookingCardActions(
+                booking = booking,
+                onTrackBooking = onTrackBooking,
+                onRateBooking = onRateBooking,
+                onComplainBooking = onComplainBooking,
+            )
         }
+    }
+}
+
+@Composable
+private fun BookingCardActions(
+    booking: CustomerBooking,
+    onTrackBooking: (String) -> Unit,
+    onRateBooking: (String) -> Unit,
+    onComplainBooking: (String) -> Unit,
+) {
+    if (booking.status.canOpenTracking()) {
+        HsPrimaryButton(
+            text =
+                if (booking.status.isLiveTracking()) {
+                    stringResource(R.string.bookings_track_technician)
+                } else {
+                    stringResource(R.string.bookings_view_status)
+                },
+            onClick = { onTrackBooking(booking.bookingId) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+    if (booking.status.isPostService()) {
+        if (!booking.ratingSubmitted) {
+            HsPrimaryButton(
+                text = stringResource(R.string.bookings_rate_booking),
+                onClick = { onRateBooking(booking.bookingId) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        HsSecondaryButton(
+            text = stringResource(R.string.bookings_file_complaint),
+            onClick = { onComplainBooking(booking.bookingId) },
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -247,17 +339,21 @@ private fun ErrorCard(onRefresh: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
-                text = "Could not refresh bookings",
+                text = stringResource(R.string.bookings_error_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = Ink,
             )
             Text(
-                text = "Your latest booking is still saved. Retry when the network is stable.",
+                text = stringResource(R.string.bookings_error_body),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Muted,
             )
-            HsSecondaryButton(text = "Retry", onClick = onRefresh, modifier = Modifier.fillMaxWidth())
+            HsSecondaryButton(
+                text = stringResource(R.string.bookings_retry),
+                onClick = onRefresh,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
@@ -284,13 +380,13 @@ private fun EmptyBookingsCard() {
             )
         }
         Text(
-            text = "No bookings yet",
+            text = stringResource(R.string.bookings_no_bookings),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = Ink,
         )
         Text(
-            text = "Confirmed bookings will appear here with service date, status, and tracking access.",
+            text = stringResource(R.string.bookings_no_bookings_body),
             style = MaterialTheme.typography.bodyMedium,
             color = Muted,
             textAlign = TextAlign.Center,
@@ -298,23 +394,27 @@ private fun EmptyBookingsCard() {
     }
 }
 
-private fun CustomerBookingStatus.label(): String =
-    when (this) {
-        CustomerBookingStatus.PENDING_PAYMENT -> "Payment pending"
-        CustomerBookingStatus.PAID -> "Confirmed"
-        CustomerBookingStatus.SEARCHING -> "Finding technician"
-        CustomerBookingStatus.ASSIGNED -> "Technician assigned"
-        CustomerBookingStatus.EN_ROUTE -> "En route"
-        CustomerBookingStatus.REACHED -> "Arrived"
-        CustomerBookingStatus.IN_PROGRESS -> "In progress"
-        CustomerBookingStatus.AWAITING_PRICE_APPROVAL -> "Price approval"
-        CustomerBookingStatus.COMPLETED -> "Completed"
-        CustomerBookingStatus.CLOSED -> "Closed"
-        CustomerBookingStatus.UNFULFILLED -> "Unfulfilled"
-        CustomerBookingStatus.CUSTOMER_CANCELLED -> "Cancelled"
-        CustomerBookingStatus.NO_SHOW_REDISPATCH -> "Reassigning"
-        CustomerBookingStatus.UNKNOWN -> "Updated"
-    }
+@Composable
+private fun CustomerBookingStatus.labelRes(): String =
+    stringResource(BOOKING_STATUS_RES_IDS.getOrDefault(this, R.string.booking_status_updated))
+
+private val BOOKING_STATUS_RES_IDS: Map<CustomerBookingStatus, Int> =
+    mapOf(
+        CustomerBookingStatus.PENDING_PAYMENT to R.string.booking_status_pending_payment,
+        CustomerBookingStatus.PAID to R.string.booking_status_paid,
+        CustomerBookingStatus.SEARCHING to R.string.booking_status_searching,
+        CustomerBookingStatus.ASSIGNED to R.string.booking_status_assigned,
+        CustomerBookingStatus.EN_ROUTE to R.string.booking_status_en_route,
+        CustomerBookingStatus.REACHED to R.string.booking_status_reached,
+        CustomerBookingStatus.IN_PROGRESS to R.string.booking_status_in_progress,
+        CustomerBookingStatus.AWAITING_PRICE_APPROVAL to R.string.booking_status_awaiting_price_approval,
+        CustomerBookingStatus.COMPLETED to R.string.booking_status_completed,
+        CustomerBookingStatus.CLOSED to R.string.booking_status_closed,
+        CustomerBookingStatus.UNFULFILLED to R.string.booking_status_unfulfilled,
+        CustomerBookingStatus.CUSTOMER_CANCELLED to R.string.booking_status_cancelled,
+        CustomerBookingStatus.NO_SHOW_REDISPATCH to R.string.booking_status_reassigning,
+        CustomerBookingStatus.UNKNOWN to R.string.booking_status_updated,
+    )
 
 private fun CustomerBookingStatus.canOpenTracking(): Boolean =
     this in
@@ -329,15 +429,14 @@ private fun CustomerBookingStatus.canOpenTracking(): Boolean =
             CustomerBookingStatus.NO_SHOW_REDISPATCH,
         )
 
-private fun CustomerBookingStatus.isTrackable(): Boolean =
-    this in
-        setOf(
-            CustomerBookingStatus.ASSIGNED,
-            CustomerBookingStatus.EN_ROUTE,
-            CustomerBookingStatus.REACHED,
-            CustomerBookingStatus.IN_PROGRESS,
-            CustomerBookingStatus.AWAITING_PRICE_APPROVAL,
-        )
+private val TRACKABLE_STATUSES: Set<CustomerBookingStatus> =
+    setOf(
+        CustomerBookingStatus.ASSIGNED,
+        CustomerBookingStatus.EN_ROUTE,
+        CustomerBookingStatus.REACHED,
+        CustomerBookingStatus.IN_PROGRESS,
+        CustomerBookingStatus.AWAITING_PRICE_APPROVAL,
+    )
 
 private fun CustomerBookingStatus.isLiveTracking(): Boolean =
     this in
@@ -347,10 +446,11 @@ private fun CustomerBookingStatus.isLiveTracking(): Boolean =
             CustomerBookingStatus.IN_PROGRESS,
         )
 
-private fun BookingPaymentMethod.label(): String =
-    when (this) {
-        BookingPaymentMethod.RAZORPAY -> "Paid online"
-        BookingPaymentMethod.CASH_ON_SERVICE -> "Cash on service"
-    }
+private fun CustomerBookingStatus.isPostService(): Boolean = this == CustomerBookingStatus.COMPLETED || this == CustomerBookingStatus.CLOSED
 
-private fun formatRupees(paise: Long): String = "Rs %,.0f".format(paise / 100.0)
+@Composable
+private fun BookingPaymentMethod.labelRes(): String =
+    when (this) {
+        BookingPaymentMethod.RAZORPAY -> stringResource(R.string.payment_method_online)
+        BookingPaymentMethod.CASH_ON_SERVICE -> stringResource(R.string.payment_method_cash)
+    }

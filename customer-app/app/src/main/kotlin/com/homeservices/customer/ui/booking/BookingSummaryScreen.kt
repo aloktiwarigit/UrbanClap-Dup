@@ -17,19 +17,26 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -37,11 +44,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.BuildConfig
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.booking.model.BookingPaymentMethod
+import com.homeservices.customer.domain.booking.model.RazorpayErrorCode
 import com.homeservices.designsystem.components.HsInfoRow
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSectionCard
@@ -49,17 +58,34 @@ import com.homeservices.designsystem.components.HsSkeletonBlock
 import com.razorpay.Checkout
 import org.json.JSONObject
 
+private const val PAISE_PER_RUPEE = 100L
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun BookingSummaryScreen(
     viewModel: BookingViewModel,
     serviceId: String,
     categoryId: String,
-    onConfirmed: (bookingId: String) -> Unit,
+    onConfirmed: (bookingId: String, appliedCredit: Int) -> Unit,
     onBack: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val walletBalanceInPaise by viewModel.walletBalanceInPaise.collectAsStateWithLifecycle()
+    val applyCreditToggle by viewModel.applyCreditToggle.collectAsStateWithLifecycle()
     val activity = LocalContext.current as? Activity
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Debug-only guard: warn developer if RAZORPAY_KEY_ID is blank.
+    // Release builds are protected at assemble time via the Gradle guard in build.gradle.kts.
+    if (BuildConfig.DEBUG) {
+        LaunchedEffect(Unit) {
+            if (BuildConfig.RAZORPAY_KEY_ID.isBlank()) {
+                snackbarHostState.showSnackbar(
+                    "RAZORPAY_KEY_ID env var is blank — payment will fail. Set it in local.properties or env.",
+                )
+            }
+        }
+    }
 
     LaunchedEffect(uiState) {
         if (uiState is BookingUiState.AwaitingPayment && activity != null) {
@@ -75,13 +101,20 @@ internal fun BookingSummaryScreen(
             checkout.open(activity, options)
         }
         if (uiState is BookingUiState.BookingConfirmed) {
-            onConfirmed((uiState as BookingUiState.BookingConfirmed).bookingId)
+            val confirmed = uiState as BookingUiState.BookingConfirmed
+            onConfirmed(confirmed.bookingId, confirmed.appliedCreditAmount)
         }
     }
 
     BookingSummaryContent(
         uiState = uiState,
+        walletBalanceInPaise = walletBalanceInPaise,
+        applyCreditToggle = applyCreditToggle,
+        onApplyCreditChanged = viewModel::setApplyCreditToggle,
+        snackbarHostState = snackbarHostState,
         onCreateBooking = { paymentMethod -> viewModel.startBooking(serviceId, categoryId, paymentMethod) },
+        onRetryPayment = viewModel::retryPayment,
+        onCancelPaymentFailed = viewModel::cancelPaymentFailed,
         onBack = onBack,
     )
 }
@@ -93,6 +126,12 @@ internal fun BookingSummaryContent(
     onCreateBooking: (BookingPaymentMethod) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    walletBalanceInPaise: Long = 0L,
+    applyCreditToggle: Boolean = false,
+    onApplyCreditChanged: (Boolean) -> Unit = {},
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    onRetryPayment: () -> Unit = {},
+    onCancelPaymentFailed: () -> Unit = {},
 ) {
     var selectedPaymentMethod by rememberSaveable { mutableStateOf(BookingPaymentMethod.RAZORPAY) }
 
@@ -110,6 +149,7 @@ internal fun BookingSummaryContent(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier,
     ) { innerPadding ->
         Box(
@@ -125,11 +165,20 @@ internal fun BookingSummaryContent(
                         selectedPaymentMethod = selectedPaymentMethod,
                         onPaymentMethodSelected = { selectedPaymentMethod = it },
                         onCreateBooking = { onCreateBooking(selectedPaymentMethod) },
+                        walletBalanceInPaise = walletBalanceInPaise,
+                        applyCreditToggle = applyCreditToggle,
+                        onApplyCreditChanged = onApplyCreditChanged,
                     )
                 is BookingUiState.CreatingBooking,
                 is BookingUiState.AwaitingPayment,
                 is BookingUiState.ConfirmingPayment,
                 -> BookingProgress()
+                is BookingUiState.PaymentFailed ->
+                    PaymentFailedCard(
+                        state = state,
+                        onRetry = onRetryPayment,
+                        onCancel = onCancelPaymentFailed,
+                    )
                 is BookingUiState.Error -> BookingError(message = state.message)
                 else -> Unit
             }
@@ -137,12 +186,16 @@ internal fun BookingSummaryContent(
     }
 }
 
+@Suppress("LongMethod")
 @Composable
 private fun ReadySummary(
     state: BookingUiState.Ready,
     selectedPaymentMethod: BookingPaymentMethod,
     onPaymentMethodSelected: (BookingPaymentMethod) -> Unit,
     onCreateBooking: () -> Unit,
+    walletBalanceInPaise: Long = 0L,
+    applyCreditToggle: Boolean = false,
+    onApplyCreditChanged: (Boolean) -> Unit = {},
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Column(
@@ -171,6 +224,14 @@ private fun ReadySummary(
                 SummaryRow(
                     label = stringResource(R.string.booking_summary_address_label),
                     value = state.addressText,
+                )
+            }
+            if (walletBalanceInPaise > 0L) {
+                Spacer(Modifier.height(12.dp))
+                CreditToggleRow(
+                    walletBalanceInPaise = walletBalanceInPaise,
+                    applyCreditToggle = applyCreditToggle,
+                    onApplyCreditChanged = onApplyCreditChanged,
                 )
             }
             Spacer(Modifier.height(12.dp))
@@ -309,6 +370,45 @@ private fun PaymentOptionRow(
 }
 
 @Composable
+private fun CreditToggleRow(
+    walletBalanceInPaise: Long,
+    applyCreditToggle: Boolean,
+    onApplyCreditChanged: (Boolean) -> Unit,
+) {
+    // Display balance as rounded rupees (paise / PAISE_PER_RUPEE)
+    val rupees = walletBalanceInPaise / PAISE_PER_RUPEE
+    HsSectionCard {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = stringResource(R.string.wallet_apply_credit_toggle, rupees),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(
+                    checked = applyCreditToggle,
+                    onCheckedChange = onApplyCreditChanged,
+                )
+            }
+            if (applyCreditToggle) {
+                // Display only — actual total is server-authoritative via response.amount
+                Text(
+                    text = stringResource(R.string.wallet_credit_original_price, rupees),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textDecoration = TextDecoration.LineThrough,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun SummaryRow(
     label: String,
     value: String,
@@ -327,6 +427,74 @@ private fun BookingProgress() {
                 shape = MaterialTheme.shapes.medium,
                 color = MaterialTheme.colorScheme.surfaceVariant,
             ) {}
+        }
+    }
+}
+
+@Composable
+private fun paymentErrorStringRes(errorCode: String): Int =
+    when (errorCode) {
+        RazorpayErrorCode.PAYMENT_CANCELLED -> R.string.payment_error_payment_cancelled
+        RazorpayErrorCode.NETWORK_ERROR -> R.string.payment_error_network_error
+        RazorpayErrorCode.BAD_REQUEST_ERROR -> R.string.payment_error_bad_request_error
+        else -> R.string.payment_error_default
+    }
+
+@Composable
+private fun PaymentFailedCard(
+    state: BookingUiState.PaymentFailed,
+    onRetry: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Surface(
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.errorContainer,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                )
+                Text(
+                    text = stringResource(R.string.payment_failed_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+                Text(
+                    text = stringResource(paymentErrorStringRes(state.errorCode)),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+            }
+        }
+        Spacer(Modifier.height(24.dp))
+        Button(
+            onClick = onRetry,
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+        ) {
+            Text(stringResource(R.string.payment_failed_retry))
+        }
+        Spacer(Modifier.height(12.dp))
+        OutlinedButton(
+            onClick = onCancel,
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+        ) {
+            Text(stringResource(R.string.payment_failed_cancel))
         }
     }
 }

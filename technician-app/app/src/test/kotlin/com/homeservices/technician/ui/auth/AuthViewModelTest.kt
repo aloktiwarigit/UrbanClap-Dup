@@ -1,6 +1,7 @@
 package com.homeservices.technician.ui.auth
 
 import androidx.fragment.app.FragmentActivity
+import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthProvider
@@ -128,6 +129,22 @@ public class AuthViewModelTest {
         }
 
     @Test
+    public fun `onPhoneSubmitted normalizes Indian mobile to E164`(): Unit =
+        runTest(testDispatcher) {
+            val activity = mockk<FragmentActivity>()
+            val resendToken = mockk<PhoneAuthProvider.ForceResendingToken>()
+            every {
+                orchestrator.sendOtp("+919873846727", activity, null)
+            } returns flowOf(OtpSendResult.CodeSent("verId", resendToken))
+
+            viewModel.onPhoneNumberSubmitted("9873846727", activity)
+
+            assertThat(viewModel.uiState.value).isInstanceOf(AuthUiState.OtpEntry::class.java)
+            assertThat((viewModel.uiState.value as AuthUiState.OtpEntry).phoneNumber)
+                .isEqualTo("+919873846727")
+        }
+
+    @Test
     public fun `onPhoneNumberSubmitted handles OtpSendResult Error`(): Unit =
         runTest(testDispatcher) {
             val activity = mockk<FragmentActivity>()
@@ -140,6 +157,33 @@ public class AuthViewModelTest {
             val state = viewModel.uiState.value
             assertThat(state).isInstanceOf(AuthUiState.Error::class.java)
             assertThat((state as AuthUiState.Error).retriesLeft).isEqualTo(3)
+        }
+
+    @Test
+    public fun `onPhoneSubmitted surfaces Play signing authorization error`(): Unit =
+        runTest(testDispatcher) {
+            val activity = mockk<FragmentActivity>()
+            every {
+                orchestrator.sendOtp("+919876543210", activity, null)
+            } returns
+                flowOf(
+                    OtpSendResult.Error(
+                        FirebaseAuthException(
+                            "ERROR_APP_NOT_AUTHORIZED",
+                            "This app is not authorized to use Firebase Authentication.",
+                        ),
+                    ),
+                )
+
+            viewModel.onPhoneNumberSubmitted("+919876543210", activity)
+
+            val state = viewModel.uiState.value
+            assertThat(state).isInstanceOf(AuthUiState.Error::class.java)
+            assertThat((state as AuthUiState.Error).message)
+                .isEqualTo(
+                    "This Play Store build is not authorised for OTP. " +
+                        "Add the Play signing SHA-1 and SHA-256 in Firebase.",
+                )
         }
 
     @Test

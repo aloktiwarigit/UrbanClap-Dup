@@ -11,6 +11,7 @@ public data class CustomerBooking(
     val amountPaise: Long,
     val paymentMethod: BookingPaymentMethod,
     val createdAt: String,
+    val ratingSubmitted: Boolean = false,
 )
 
 public enum class CustomerBookingStatus {

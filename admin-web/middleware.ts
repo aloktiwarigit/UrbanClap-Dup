@@ -47,6 +47,28 @@ function getSetCookieHeaders(headers: Headers): string[] {
   return combined ? splitSetCookieHeader(combined) : [];
 }
 
+function firstForwardedValue(value: string | null): string | null {
+  return value?.split(',')[0]?.trim() || null;
+}
+
+function externalUrl(request: NextRequest, pathname: string): URL {
+  const protocol =
+    firstForwardedValue(request.headers.get('x-forwarded-proto')) ??
+    request.nextUrl.protocol.replace(/:$/, '');
+  const host =
+    firstForwardedValue(request.headers.get('x-forwarded-host')) ??
+    firstForwardedValue(request.headers.get('host')) ??
+    request.nextUrl.host;
+
+  const url = new URL(`${protocol}://${host}`);
+  if (url.protocol === 'https:' && url.port === '8080') {
+    url.port = '';
+  }
+  url.pathname = pathname;
+  url.search = '';
+  return url;
+}
+
 function isLocalhost(requestUrl: string): boolean {
   const hostname = new URL(requestUrl).hostname;
   return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
@@ -104,24 +126,96 @@ function clearAdminCookies(response: NextResponse): void {
   }
 }
 
+function hostnameFromHeader(value: string | null): string | null {
+  const first = value?.split(',')[0]?.trim();
+  if (!first) return null;
+  return first.replace(/:\d+$/, '');
+}
+
+function isAbsoluteUrl(value: string): boolean {
+  return /^[a-z][a-z\d+\-.]*:/i.test(value);
+}
+
+function publicRedirectOrigin(request: NextRequest): string {
+  const appUrl = process.env['NEXT_PUBLIC_APP_URL'];
+  if (appUrl) {
+    try {
+      return new URL(appUrl).origin;
+    } catch {
+      // Ignore invalid configuration here; env validation handles hard failures.
+    }
+  }
+
+  const forwardedProto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
+  const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
+  const host = forwardedHost || request.headers.get('host') || request.nextUrl.host;
+  const protocol = forwardedProto || request.nextUrl.protocol.replace(/:$/, '');
+  return `${protocol}://${host}`;
+}
+
+export function normalizeSameHostRedirect(
+  response: NextResponse,
+  request: NextRequest,
+): NextResponse {
+  const location = response.headers.get('location');
+  if (!location || !isAbsoluteUrl(location)) return response;
+
+  let redirectUrl: URL;
+  try {
+    redirectUrl = new URL(location);
+  } catch {
+    return response;
+  }
+
+  const sameHostCandidates = new Set<string>([request.nextUrl.hostname]);
+
+  const host = hostnameFromHeader(request.headers.get('host'));
+  if (host) sameHostCandidates.add(host);
+
+  const forwardedHost = hostnameFromHeader(request.headers.get('x-forwarded-host'));
+  if (forwardedHost) sameHostCandidates.add(forwardedHost);
+
+  const appUrl = process.env['NEXT_PUBLIC_APP_URL'];
+  if (appUrl) {
+    try {
+      sameHostCandidates.add(new URL(appUrl).hostname);
+    } catch {
+      // Ignore invalid configuration here; env validation handles hard failures.
+    }
+  }
+
+  if (!sameHostCandidates.has(redirectUrl.hostname)) return response;
+
+  const publicUrl = new URL(
+    `${redirectUrl.pathname}${redirectUrl.search}${redirectUrl.hash}`,
+    publicRedirectOrigin(request),
+  );
+  response.headers.set('location', publicUrl.toString());
+  return response;
+}
+
+function handleI18n(request: NextRequest): NextResponse {
+  return normalizeSameHostRedirect(handleI18nRouting(request), request);
+}
+
 // ── Locale-aware redirect helpers ─────────────────────────────────────────────
 
 function redirectToLogin(request: NextRequest): NextResponse {
   const locale = getLocaleFromRequest(request, routing.defaultLocale, routing.locales);
-  const loginUrl = new URL(`/${locale}/login`, request.url);
+  const loginUrl = externalUrl(request, `/${locale}/login`);
   loginUrl.searchParams.set('next', request.nextUrl.pathname);
   const response = NextResponse.redirect(loginUrl);
   clearAdminCookies(response);
-  return response;
+  return normalizeSameHostRedirect(response, request);
 }
 
 function redirectToNotAuthorized(request: NextRequest, role: AdminRole): NextResponse {
   const locale = getLocaleFromRequest(request, routing.defaultLocale, routing.locales);
-  const url = new URL(`/${locale}/not-authorized`, request.url);
+  const url = externalUrl(request, `/${locale}/not-authorized`);
   url.searchParams.set('from', request.nextUrl.pathname);
   const rawDefault = defaultPathForRole(role);
   url.searchParams.set('next', `/${locale}${rawDefault}`);
-  return NextResponse.redirect(url);
+  return normalizeSameHostRedirect(NextResponse.redirect(url), request);
 }
 
 // ── JWT verification (unchanged logic) ───────────────────────────────────────
@@ -192,11 +286,30 @@ export async function middleware(request: NextRequest) {
 
   // 2. Strip locale prefix to get the underlying path for capability checks
   const rawPath = stripLocalePrefix(pathname, routing.locales);
+  const hasLocalePrefix = routing.locales.some(
+    (locale) => pathname === `/${locale}` || pathname.startsWith(`/${locale}/`),
+  );
+
+  if (rawPath === '/') {
+    const locale = getLocaleFromRequest(request, routing.defaultLocale, routing.locales);
+    return NextResponse.redirect(externalUrl(request, `/${locale}/login`));
+  }
+
+  if (
+    !hasLocalePrefix &&
+    (rawPath === '/login' ||
+      rawPath.startsWith('/login/') ||
+      rawPath === '/setup' ||
+      rawPath.startsWith('/setup/'))
+  ) {
+    const locale = getLocaleFromRequest(request, routing.defaultLocale, routing.locales);
+    return NextResponse.redirect(externalUrl(request, `/${locale}${rawPath}`));
+  }
 
   // 3. Public paths — locale routing only, no JWT required
   const PUBLIC_PATHS = ['/', '/login', '/setup'];
   if (PUBLIC_PATHS.some((p) => rawPath === p || rawPath.startsWith(p + '/'))) {
-    return handleI18nRouting(request);
+    return handleI18n(request);
   }
 
   // 4. Internal Next.js API routes (/api/) — pass through (no JWT proxy needed)
@@ -233,16 +346,11 @@ export async function middleware(request: NextRequest) {
     setCookies = refreshed.setCookies;
   }
 
-  // 6. Capability check on the locale-stripped raw path
-  if (!canAccessAdminPath(access.role, rawPath)) {
-    const notAuthResponse = redirectToNotAuthorized(request, access.role);
-    if (setCookies.length > 0) appendSetCookies(notAuthResponse, setCookies);
-    return notAuthResponse;
-  }
-
-  // 7. Admin API proxy requests — pass through after auth check, skip locale routing.
+  // 6. Admin API proxy requests — pass through after auth check, skip capability check and locale routing.
   // next-intl with localePrefix:'always' would redirect /admin-api/v1/... to
   // /{locale}/admin-api/v1/... which has no matching route and breaks proxy calls.
+  // Must precede the capability check: /admin-api/* paths are not registered in
+  // ADMIN_ROUTE_CAPABILITIES so they would be default-denied otherwise.
   if (pathname.startsWith('/admin-api/')) {
     if (setCookies.length === 0) return NextResponse.next();
     const response = NextResponse.next();
@@ -250,27 +358,52 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
+  // 7. Capability check on the locale-stripped raw path
+  if (!canAccessAdminPath(access.role, rawPath)) {
+    const notAuthResponse = redirectToNotAuthorized(request, access.role);
+    if (setCookies.length > 0) appendSetCookies(notAuthResponse, setCookies);
+    return notAuthResponse;
+  }
+
   // 8. Auth passed — apply i18n routing (handles locale prefix, NEXT_LOCALE cookie)
   if (setCookies.length > 0) {
-    // Refreshed session: inject updated access token into request headers so
-    // downstream server components receive it, then propagate Set-Cookie headers.
+    // Refreshed session: pass original `request` to handleI18nRouting to preserve
+    // nextUrl (wrapping a plain Request in new NextRequest() loses nextUrl and breaks
+    // locale detection). Forward the refreshed cookie via NextResponse.next's request
+    // headers so downstream server components receive the updated access token.
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set(
       'cookie',
       withRequestCookie(request.headers.get('cookie'), ACCESS_COOKIE, access.token),
     );
-    const refreshedRequest = new Request(request, { headers: requestHeaders });
-    const i18nResponse = handleI18nRouting(new NextRequest(refreshedRequest));
-    appendSetCookies(i18nResponse, setCookies);
-    return i18nResponse;
+    const i18nResponse = handleI18n(request);
+    if (i18nResponse.status >= 300 && i18nResponse.status < 400) {
+      // i18n is redirecting for locale normalization — carry Set-Cookie on redirect
+      appendSetCookies(i18nResponse, setCookies);
+      return i18nResponse;
+    }
+    // i18n returned next() — rebuild with refreshed request headers so server
+    // components see the updated access token, then copy i18n response headers
+    // (e.g. NEXT_LOCALE set-cookie) but skip x-middleware-* which Next.js already
+    // set correctly on the new response for the refreshed cookie.
+    const response = NextResponse.next({ request: { headers: requestHeaders } });
+    i18nResponse.headers.forEach((value, key) => {
+      if (!key.startsWith('x-middleware-')) response.headers.set(key, value);
+    });
+    appendSetCookies(response, setCookies);
+    return response;
   }
+  // TODO(ADR needed): /api/* bypass and /setup/* public-path behaviour should be
+  // reviewed in a dedicated ADR before changing — altering them could break the
+  // setup flow and the API edge-network routing.
 
-  return handleI18nRouting(request);
+  return handleI18n(request);
 }
 
 export const config = {
   matcher: [
-    // Match all paths except Next.js static assets and image optimization
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Match all paths except SWA health checks, Next.js static assets, image optimization,
+    // and the Firebase service worker (must be served publicly from root for FCM push registration).
+    '/((?!\\.swa|_next/static|_next/image|favicon\\.ico|firebase-messaging-sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

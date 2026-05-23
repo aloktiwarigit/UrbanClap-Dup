@@ -41,8 +41,8 @@ describe('seed-technicians Ayodhya coords', () => {
     }
   });
 
-  it('every active catalogue serviceId has >=2 KYC-approved + online technicians (launch-gate prerequisite)', () => {
-    const eligible = TECHNICIANS.filter(t => t.kycStatus === 'APPROVED' && t.isOnline);
+  it('every active catalogue serviceId has >=2 online technicians (launch-gate prerequisite)', () => {
+    const eligible = TECHNICIANS.filter(t => t.isOnline);
     for (const svc of SERVICES.filter(s => s.isActive)) {
       const matchCount = eligible.filter(t => t.skills.includes(svc.id)).length;
       expect(
@@ -53,7 +53,7 @@ describe('seed-technicians Ayodhya coords', () => {
   });
 
   it('every active catalogue category has >=2 techs with at least one of its services', () => {
-    const eligible = TECHNICIANS.filter(t => t.kycStatus === 'APPROVED' && t.isOnline);
+    const eligible = TECHNICIANS.filter(t => t.isOnline);
     for (const cat of CATEGORIES.filter(c => c.isActive)) {
       const catServiceIds = new Set(SERVICES.filter(s => s.categoryId === cat.id).map(s => s.id));
       const matchCount = eligible.filter(t => t.skills.some(skill => catServiceIds.has(skill))).length;

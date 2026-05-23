@@ -25,8 +25,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -43,9 +46,11 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.homeservices.designsystem.components.HsActionButton
@@ -53,12 +58,15 @@ import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTrustBadge
+import com.homeservices.designsystem.theme.HomeservicesColors
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
+import com.homeservices.technician.R
+import com.homeservices.technician.domain.auth.PhoneNumberNormalizer
 
 private const val PHONE_LAST_DIGITS = 4
 
-private val AuthHeroStart = Color(0xFF062A20)
-private val AuthHeroEnd = Color(0xFF0B3D2E)
+private val AuthHeroStart = HomeservicesColors.Brand.primaryHover
+private val AuthHeroEnd = HomeservicesColors.Brand.primary
 private const val AUTH_HERO_FRACTION = 0.38f
 private const val AUTH_FORM_FRACTION = 0.65f
 private const val SCROLL_HANDLE_ALPHA = 0.25f
@@ -401,6 +409,7 @@ private fun EmailEntryContent(
 ) {
     var email by remember(state.prefillEmail) { mutableStateOf(state.prefillEmail) }
     var password by remember(state.mode) { mutableStateOf("") }
+    var passwordVisible by remember(state.mode) { mutableStateOf(false) }
     val isSignUp = state.mode == AuthUiState.EmailEntry.Mode.SignUp
     val isValidEmail = email.trim().matches(Regex("""^[^@\s]+@[^@\s]+\.[^@\s]+$"""))
     val isReady = isValidEmail && password.length >= 6
@@ -416,13 +425,13 @@ private fun EmailEntryContent(
             },
     ) {
         TextButton(onClick = onBackToMethodSelection, modifier = Modifier.fillMaxWidth()) {
-            Text("Back to sign-in options")
+            Text(stringResource(R.string.auth_back_to_sign_in))
         }
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Email") },
-            placeholder = { Text("you@example.com") },
+            label = { Text(stringResource(R.string.auth_email_label)) },
+            placeholder = { Text(stringResource(R.string.auth_email_placeholder)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -431,10 +440,19 @@ private fun EmailEntryContent(
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Password") },
+            label = { Text(stringResource(R.string.auth_password_label)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            visualTransformation = PasswordVisualTransformation(),
+            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             singleLine = true,
+            trailingIcon = {
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(
+                        imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(20.dp))
@@ -462,7 +480,7 @@ private fun EmailEntryContent(
                 enabled = isValidEmail,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Forgot password?")
+                Text(stringResource(R.string.auth_forgot_password))
             }
         }
     }
@@ -502,7 +520,7 @@ private fun EmailVerificationSentContent(
             modifier = Modifier.fillMaxWidth(),
         )
         TextButton(onClick = onBackToMethodSelection, modifier = Modifier.fillMaxWidth()) {
-            Text("Use another sign-in method")
+            Text(stringResource(R.string.auth_use_another_method))
         }
     }
 }
@@ -513,7 +531,7 @@ private fun PhoneEntryContent(
     onPhoneSubmitted: (String) -> Unit,
 ) {
     var phone by remember { mutableStateOf(initialPhone) }
-    val isValidPhone = phone.trim().matches(Regex("""^\+[1-9]\d{9,14}$"""))
+    val normalizedPhone = PhoneNumberNormalizer.normalize(phone)
 
     AuthFrame(
         eyebrow = "Homeservices Partner",
@@ -523,8 +541,8 @@ private fun PhoneEntryContent(
         OutlinedTextField(
             value = phone,
             onValueChange = { phone = it },
-            label = { Text("Mobile number") },
-            placeholder = { Text("+91 98765 43210") },
+            label = { Text(stringResource(R.string.auth_mobile_label)) },
+            placeholder = { Text(stringResource(R.string.auth_mobile_placeholder)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -538,8 +556,8 @@ private fun PhoneEntryContent(
         Spacer(modifier = Modifier.height(20.dp))
         HsPrimaryButton(
             text = "Get OTP",
-            onClick = { onPhoneSubmitted(phone.trim()) },
-            enabled = isValidPhone,
+            onClick = { normalizedPhone?.let(onPhoneSubmitted) },
+            enabled = normalizedPhone != null,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(12.dp))
@@ -570,7 +588,7 @@ private fun OtpCodeContent(
         OutlinedTextField(
             value = otp,
             onValueChange = { if (it.length <= 6) otp = it.filter(Char::isDigit) },
-            label = { Text("6-digit code") },
+            label = { Text(stringResource(R.string.auth_otp_label)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -583,7 +601,7 @@ private fun OtpCodeContent(
             modifier = Modifier.fillMaxWidth(),
         )
         TextButton(onClick = onResendRequested, modifier = Modifier.fillMaxWidth()) {
-            Text("Resend code")
+            Text(stringResource(R.string.auth_resend_code))
         }
     }
 }
@@ -599,7 +617,11 @@ private fun LoadingContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            CircularProgressIndicator()
+            CircularProgressIndicator(
+                modifier = Modifier.size(56.dp),
+                color = MaterialTheme.colorScheme.primary,
+                strokeWidth = 4.dp,
+            )
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp),

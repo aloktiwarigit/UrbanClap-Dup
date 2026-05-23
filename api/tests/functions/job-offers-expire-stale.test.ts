@@ -6,6 +6,7 @@ const { capturedHandlers, mocks } = vi.hoisted(() => ({
   capturedHandlers: {} as Record<string, (...args: unknown[]) => Promise<void>>,
   mocks: {
     fetchAll: vi.fn(),
+    containerItem: vi.fn(),
     containerReplace: vi.fn(),
     updateBookingFields: vi.fn(),
     eventAppend: vi.fn(),
@@ -25,7 +26,7 @@ vi.mock('@azure/functions', () => ({
 vi.mock('../../src/cosmos/client.js', () => ({
   getDispatchAttemptsContainer: () => ({
     items: { query: vi.fn(() => ({ fetchAll: mocks.fetchAll })) },
-    item: vi.fn(() => ({ replace: mocks.containerReplace })),
+    item: mocks.containerItem,
   }),
   getBookingsContainer: () => ({
     items: { query: vi.fn(() => ({ fetchAll: vi.fn() })), create: vi.fn() },
@@ -90,6 +91,7 @@ describe('expireStaleOffers timer', () => {
     vi.clearAllMocks();
     mocks.updateBookingFields.mockResolvedValue({ id: 'bk-1', status: 'UNFULFILLED' });
     mocks.eventAppend.mockResolvedValue(undefined);
+    mocks.containerItem.mockReturnValue({ replace: mocks.containerReplace });
     mocks.containerReplace.mockResolvedValue({});
     mocks.continueDispatchAfterOfferOutcome.mockResolvedValue(false);
   });
@@ -101,6 +103,7 @@ describe('expireStaleOffers timer', () => {
     await runExpiry();
 
     expect(mocks.containerReplace).toHaveBeenCalledOnce();
+    expect(mocks.containerItem).toHaveBeenCalledWith('da-stale-1', 'da-stale-1');
     const [replacedDoc, replaceOpts] = mocks.containerReplace.mock.calls[0] as [{ status: string }, { accessCondition: { type: string; condition: string } }];
     expect(replacedDoc.status).toBe('EXPIRED');
     expect(replaceOpts.accessCondition.type).toBe('IfMatch');

@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ── Mock module declarations (must precede imports) ───────────────────────────
 
 vi.mock('../../src/cosmos/booking-repository.js', () => ({
-  bookingRepo: { getById: vi.fn() },
+  bookingRepo: { getById: vi.fn(), getBookingsAwaitingDispatch: vi.fn() },
   updateBookingFields: vi.fn(),
 }));
 
@@ -21,6 +21,10 @@ vi.mock('../../src/cosmos/dispatch-attempt-repository.js', () => ({
 
 vi.mock('firebase-admin/messaging', () => ({
   getMessaging: vi.fn(),
+}));
+
+vi.mock('../../src/services/firebaseAdmin.js', () => ({
+  getFirebaseAdmin: vi.fn(),
 }));
 
 vi.mock('../../src/cosmos/client.js', () => ({
@@ -159,9 +163,24 @@ describe('dispatcherService.triggerDispatch', () => {
     expect(messaging.send).not.toHaveBeenCalled();
   });
 
+  it('keeps a future paid booking retryable when 0 technicians are currently found', async () => {
+    const futureBooking = { ...BASE_BOOKING, slotDate: '2099-01-01' };
+    vi.mocked(bookingRepo.getById).mockResolvedValue(futureBooking);
+    vi.mocked(getTechniciansWithinRadius).mockResolvedValue([]);
+
+    await dispatcherService.triggerDispatch('bk-1');
+
+    expect(updateBookingFields).not.toHaveBeenCalledWith('bk-1', { status: 'UNFULFILLED' });
+    expect(dispatchContainer.items.create).not.toHaveBeenCalled();
+    expect(messaging.send).not.toHaveBeenCalled();
+  });
+
   it('creates dispatch attempt and sends FCM to all found techs (1 tech)', async () => {
     const tech = makeTech('t1', 0.05);
-    vi.mocked(bookingRepo.getById).mockResolvedValue(BASE_BOOKING);
+    vi.mocked(bookingRepo.getById).mockResolvedValue({
+      ...BASE_BOOKING,
+      addressText: '100%20MG%20Road%2C%20Bangalore',
+    });
     vi.mocked(getTechniciansWithinRadius).mockResolvedValue([tech]);
 
     await dispatcherService.triggerDispatch('bk-1');
@@ -178,6 +197,7 @@ describe('dispatcherService.triggerDispatch', () => {
     expect(msg.data.type).toBe('JOB_OFFER');
     expect(msg.data.bookingId).toBe('bk-1');
     expect(msg.data.serviceName).toBe('Plumbing');
+    expect(msg.data.addressText).toBe('100 MG Road, Bangalore');
   });
 
   it('dispatches only to the nearest ranked technician per attempt', async () => {
@@ -197,7 +217,7 @@ describe('dispatcherService.triggerDispatch', () => {
     expect(vi.mocked(messaging.send).mock.calls[0]![0].token).toBe('fcm-token-t1');
   });
 
-  it('sets expiresAt to sentAt + 30 seconds', async () => {
+  it('sets expiresAt to sentAt + 90 seconds', async () => {
     vi.mocked(bookingRepo.getById).mockResolvedValue(BASE_BOOKING);
     vi.mocked(getTechniciansWithinRadius).mockResolvedValue([makeTech('t1', 0.05)]);
 
@@ -211,7 +231,7 @@ describe('dispatcherService.triggerDispatch', () => {
 
     expect(sentAt).toBeGreaterThanOrEqual(before);
     expect(sentAt).toBeLessThanOrEqual(after);
-    expect(expiresAt - sentAt).toBe(30_000);
+    expect(expiresAt - sentAt).toBe(90_000);
 
     // expiresAt also propagated to FCM payload
     const msg = vi.mocked(messaging.send).mock.calls[0]![0] as any;
@@ -270,6 +290,71 @@ describe('dispatcherService.triggerDispatch', () => {
     await dispatcherService.triggerDispatch('bk-1');
 
     expect(updateBookingFields).toHaveBeenCalledWith('bk-1', { status: 'SEARCHING' });
+  });
+
+  it('retries paid bookings that are awaiting dispatch', async () => {
+    const futureBooking = { ...BASE_BOOKING, slotDate: '2099-01-01' };
+    vi.mocked(bookingRepo.getBookingsAwaitingDispatch).mockResolvedValue([futureBooking]);
+    vi.mocked(getTechniciansWithinRadius).mockResolvedValue([makeTech('t1', 0.05)]);
+
+    const result = await dispatcherService.retryAwaitingDispatch();
+
+    expect(result).toEqual({ checked: 1, dispatched: 1 });
+    expect(dispatchContainer.items.create).toHaveBeenCalledOnce();
+  });
+
+  it('does not re-offer the same awaiting-dispatch booking to an already attempted technician', async () => {
+    const futureBooking = { ...BASE_BOOKING, slotDate: '2099-01-01' };
+    vi.mocked(bookingRepo.getBookingsAwaitingDispatch).mockResolvedValue([futureBooking]);
+    vi.mocked(dispatchAttemptRepo.getAttemptedTechnicianIds).mockResolvedValue(['t1']);
+    vi.mocked(getTechniciansWithinRadius).mockResolvedValue([makeTech('t1', 0.05)]);
+
+    const result = await dispatcherService.retryAwaitingDispatch();
+
+    expect(result).toEqual({ checked: 1, dispatched: 0 });
+    expect(dispatchContainer.items.create).not.toHaveBeenCalled();
+    expect(messaging.send).not.toHaveBeenCalled();
+  });
+
+  it('retries awaiting-dispatch bookings only for technicians not previously attempted', async () => {
+    const futureBooking = { ...BASE_BOOKING, slotDate: '2099-01-01' };
+    vi.mocked(bookingRepo.getBookingsAwaitingDispatch).mockResolvedValue([futureBooking]);
+    vi.mocked(dispatchAttemptRepo.getAttemptedTechnicianIds).mockResolvedValue(['t1']);
+    vi.mocked(getTechniciansWithinRadius).mockResolvedValue([
+      makeTech('t1', 0.01),
+      makeTech('t2', 0.05),
+    ]);
+
+    const result = await dispatcherService.retryAwaitingDispatch();
+
+    expect(result).toEqual({ checked: 1, dispatched: 1 });
+    expect(dispatchContainer.items.create).toHaveBeenCalledOnce();
+    expect(dispatchContainer.items.create).toHaveBeenCalledWith(
+      expect.objectContaining({ technicianIds: ['t2'] }),
+    );
+  });
+
+  it('retries future unfulfilled bookings that were waiting for an online technician', async () => {
+    const futureBooking = { ...BASE_BOOKING, status: 'UNFULFILLED' as const, slotDate: '2099-01-01' };
+    vi.mocked(bookingRepo.getBookingsAwaitingDispatch).mockResolvedValue([futureBooking]);
+    vi.mocked(getTechniciansWithinRadius).mockResolvedValue([makeTech('t1', 0.05)]);
+
+    const result = await dispatcherService.retryAwaitingDispatch();
+
+    expect(result).toEqual({ checked: 1, dispatched: 1 });
+    expect(dispatchContainer.items.create).toHaveBeenCalledOnce();
+  });
+
+  it('does not retry expired awaiting-dispatch bookings', async () => {
+    const expiredBooking = { ...BASE_BOOKING, slotDate: '2000-01-01' };
+    vi.mocked(bookingRepo.getBookingsAwaitingDispatch).mockResolvedValue([expiredBooking]);
+    vi.mocked(getTechniciansWithinRadius).mockResolvedValue([makeTech('t1', 0.05)]);
+
+    const result = await dispatcherService.retryAwaitingDispatch();
+
+    expect(result).toEqual({ checked: 1, dispatched: 0 });
+    expect(getTechniciansWithinRadius).not.toHaveBeenCalled();
+    expect(dispatchContainer.items.create).not.toHaveBeenCalled();
   });
 });
 

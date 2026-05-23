@@ -449,6 +449,14 @@
           },
           "isActive": {
             "type": "boolean"
+          },
+          "workStart": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$"
+          },
+          "workEnd": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$"
           }
         },
         "required": [
@@ -684,6 +692,14 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "workStart": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$"
+          },
+          "workEnd": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$"
           }
         },
         "required": [
@@ -1293,6 +1309,9 @@
               },
               "fcmTokensCleared": {
                 "type": "boolean"
+              },
+              "deviceTokensCleared": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -1305,7 +1324,8 @@
               "auditLogAnonymized",
               "technicianHardDeleted",
               "kycHardDeleted",
-              "fcmTokensCleared"
+              "fcmTokensCleared",
+              "deviceTokensCleared"
             ]
           }
         },
@@ -1452,6 +1472,79 @@
           "quarter",
           "transferId",
           "status"
+        ]
+      },
+      "WaitlistRequest": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "pattern": "^\\+91[6-9]\\d{9}$",
+            "example": "+916000000001"
+          },
+          "lat": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "example": 26.7
+          },
+          "lng": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180,
+            "example": 82.1
+          },
+          "serviceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "example": "ac-deep-clean"
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-05-17T10:00:00.000Z"
+          }
+        },
+        "required": [
+          "phone",
+          "lat",
+          "lng",
+          "serviceId",
+          "requestedAt"
+        ]
+      },
+      "WaitlistSuccess": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      },
+      "WaitlistError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "VALIDATION_ERROR",
+              "UNKNOWN_SERVICE",
+              "CLOCK_SKEW",
+              "RATE_LIMITED",
+              "INVALID_JSON",
+              "INTERNAL_ERROR"
+            ]
+          }
+        },
+        "required": [
+          "code"
         ]
       },
       "AdminLoginRequest": {
@@ -2173,6 +2266,14 @@
                         "required"
                       ]
                     }
+                  },
+                  "workStart": {
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$"
+                  },
+                  "workEnd": {
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$"
                   }
                 },
                 "required": [
@@ -2389,6 +2490,14 @@
                         "required"
                       ]
                     }
+                  },
+                  "workStart": {
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$"
+                  },
+                  "workEnd": {
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$"
                   }
                 },
                 "required": [
@@ -3118,6 +3227,65 @@
           },
           "409": {
             "description": "Invalid levy status"
+          }
+        }
+      }
+    },
+    "/v1/waitlist": {
+      "post": {
+        "operationId": "joinWaitlist",
+        "tags": [
+          "waitlist"
+        ],
+        "summary": "Join the service waitlist for a specific area",
+        "description": "Adds a customer to the waitlist for a service in their location. No authentication required. Rate-limited to 5 requests/hr per phone number and 50 requests/hr per IP. requestedAt must be within ±90 s of server time.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WaitlistRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successfully joined the waitlist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error, unknown serviceId, or clock skew > 90 s",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded — check Retry-After header",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds until the rate limit resets"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistError"
+                }
+              }
+            }
           }
         }
       }

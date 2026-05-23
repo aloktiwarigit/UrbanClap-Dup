@@ -9,6 +9,7 @@ import com.homeservices.customer.data.booking.remote.dto.CreateBookingRequestDto
 import com.homeservices.customer.data.booking.remote.dto.CreateBookingResponseDto
 import com.homeservices.customer.data.booking.remote.dto.CustomerBookingsResponseDto
 import com.homeservices.customer.data.booking.remote.dto.GetBookingResponseDto
+import com.homeservices.customer.data.booking.remote.dto.SlotAvailabilityResponseDto
 import com.homeservices.customer.domain.tracking.model.BookingStatus
 import com.homeservices.customer.domain.tracking.model.TrackingState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -47,6 +48,11 @@ public class TrackingRepositoryImplTest {
             bookingId: String,
             body: ApproveFinalPriceRequestDto,
         ): ApproveFinalPriceResponseDto = error("not used")
+
+        override suspend fun getSlotAvailability(
+            serviceId: String,
+            date: String,
+        ): SlotAvailabilityResponseDto = error("not used")
     }
 
     @Test

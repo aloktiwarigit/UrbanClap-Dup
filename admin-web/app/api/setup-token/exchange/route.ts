@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
  * read it directly — this one-shot server Route Handler is the only way for the
  * setup page to obtain the token.
  *
- * On success: returns { token: string } and clears the hs_setup cookie.
+ * On success: returns { token: string }.
  * On failure: returns 401.
  */
 export function GET(request: NextRequest): NextResponse {
@@ -20,13 +20,5 @@ export function GET(request: NextRequest): NextResponse {
     return NextResponse.json({ code: 'SETUP_TOKEN_MISSING' }, { status: 401 });
   }
 
-  const response = NextResponse.json({ token });
-
-  // Clear the one-shot cookie immediately after it has been read.
-  response.headers.set(
-    'set-cookie',
-    'hs_setup=; Path=/setup; Max-Age=0; HttpOnly; SameSite=Strict',
-  );
-
-  return response;
+  return NextResponse.json({ token });
 }

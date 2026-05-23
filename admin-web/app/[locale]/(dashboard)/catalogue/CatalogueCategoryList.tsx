@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { CategoryCard } from '@/components/catalogue/CategoryCard';
 import type { components } from '@/api/generated/schema';
 import { toggleCategoryAction } from './actions';
@@ -13,6 +14,7 @@ interface CatalogueCategoryListProps {
 }
 
 export function CatalogueCategoryList({ categories: initial }: CatalogueCategoryListProps) {
+  const t = useTranslations('catalogue');
   const [categories, setCategories] = useState<AdminServiceCategory[]>(initial);
   const [_isPending, startTransition] = useTransition();
 
@@ -44,7 +46,7 @@ export function CatalogueCategoryList({ categories: initial }: CatalogueCategory
               textDecoration: 'underline',
             }}
           >
-            View services
+            {t('categoryCard.viewServices')}
           </Link>
         </div>
       ))}

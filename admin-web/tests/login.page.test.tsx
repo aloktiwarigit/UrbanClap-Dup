@@ -6,6 +6,68 @@ import LoginPage from '../app/[locale]/login/page';
 const pushMock = vi.fn();
 const replaceMock = vi.fn();
 
+const LOGIN_EN: Record<string, string> = {
+  'brand.eyebrow': 'HomeHeroo admin',
+  'hero.title': 'Secure operations access',
+  'hero.subtitle':
+    'Google or password proves identity. Microsoft Authenticator approves admin access.',
+  'steps.one.title': 'Verify identity',
+  'steps.one.description': 'Continue with Google or admin email and password.',
+  'steps.two.title': 'Approve with Microsoft Authenticator',
+  'steps.two.description':
+    'Use the 6-digit code for HomeHeroo admin. It is not a Gmail OTP.',
+  'form.ariaLabel': 'Admin sign-in',
+  'form.eyebrow.signIn': 'Step 1 of 2',
+  'form.eyebrow.mfa': 'Step 2 of 2',
+  'form.heading.signIn': 'Choose how to sign in',
+  'form.heading.mfa': 'Open Microsoft Authenticator',
+  'form.description.signIn':
+    'Start with Google sign-in or admin email and password. The Microsoft Authenticator step appears next.',
+  'form.description.mfa':
+    'Enter the 6-digit code shown for HomeHeroo admin. Do not use a Gmail email code.',
+  'form.identityCard.label': 'Signed in identity',
+  'form.identityCard.fallback': 'Verified admin',
+  'form.mfa.codeLabel': 'Microsoft Authenticator code',
+  'form.mfa.codePlaceholder': '6-digit code',
+  'form.mfa.verifyingButton': 'Verifying…',
+  'form.mfa.verifyButton': 'Verify Microsoft Authenticator',
+  'form.mfa.switchMethodButton': 'Use a different sign-in',
+  'form.google.openingButton': 'Opening Google…',
+  'form.google.continueButton': 'Continue with Google',
+  'form.divider': 'or use admin password',
+  'form.emailLabel': 'Email address',
+  'form.passwordLabel': 'Password',
+  'form.password.submittingButton': 'Signing in…',
+  'form.password.submitButton': 'Sign in with password',
+};
+
+const LOGIN_ERR_EN: Record<string, string> = {
+  adminNotFound: 'This Google account or email address is not an active admin user.',
+  firebaseTokenInvalid: 'Google could not verify this sign-in. Try again.',
+  mfaChallengeInvalid: 'The Microsoft Authenticator step expired. Sign in again.',
+  totpInvalid:
+    'That Microsoft Authenticator code did not match. Try the next 6-digit code.',
+  totpNotConfigured:
+    'Microsoft Authenticator is not set up for this admin user. Sign in again to finish setup.',
+  fallback: 'Login failed. Check your credentials and try again.',
+  invalidCredential: 'Invalid email or password.',
+  genericPassword: 'An error occurred. Please try again.',
+  googlePopupClosed: 'Google sign-in was closed before it completed.',
+  googlePopupBlocked: 'Allow pop-ups for this admin site and try again.',
+  googleAccountExists: 'This email uses a different sign-in method.',
+  googleFallback: 'Google sign-in failed. Please try again.',
+  mfaVerificationFallback: 'Verification failed. Try again.',
+};
+
+vi.mock('next-intl', () => ({
+  useTranslations: (ns: string) => (key: string) => {
+    if (ns === 'login') return LOGIN_EN[key] ?? key;
+    if (ns === 'login.errors') return LOGIN_ERR_EN[key] ?? key;
+    return key;
+  },
+  useLocale: () => 'hi',
+}));
+
 vi.mock('@/lib/auth/firebase', () => ({ getFirebaseAuth: () => ({}) }));
 vi.mock('firebase/auth', () => ({
   GoogleAuthProvider: vi.fn(() => ({ setCustomParameters: vi.fn() })),
@@ -50,7 +112,7 @@ describe('LoginPage', () => {
         method: 'POST',
         credentials: 'include',
       });
-      expect(replaceMock).toHaveBeenCalledWith('/orders');
+      expect(replaceMock).toHaveBeenCalledWith('/hi/orders');
     });
   });
 
@@ -88,7 +150,7 @@ describe('LoginPage', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: /verify microsoft authenticator/i }));
 
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/dashboard'));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/hi/dashboard'));
     const secondBody = JSON.parse(
       (vi.mocked(fetch).mock.calls[1]?.[1] as RequestInit).body as string,
     ) as { challengeToken: string; totpCode: string };

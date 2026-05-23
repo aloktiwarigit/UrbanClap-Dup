@@ -1,5 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import FocusLock from 'react-focus-lock';
+import { useTranslations } from 'next-intl';
 
 interface ExtraInput {
   label: string;
@@ -26,11 +28,21 @@ export function ConfirmModal({
   onCancel,
   onConfirm,
   loading,
-  inputLabel = 'Reason',
+  inputLabel,
   inputMinLength = 5,
   extraInput,
 }: ConfirmModalProps) {
+  const t = useTranslations('orders');
+  const resolvedInputLabel = inputLabel ?? t('confirmModal.reasonLabel');
   const [value, setValue] = useState('');
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onCancel]);
 
   const isDisabled =
     loading ||
@@ -38,6 +50,7 @@ export function ConfirmModal({
     (extraInput !== undefined && (extraInput.disabled === true || extraInput.value.trim() === ''));
 
   return (
+    <FocusLock returnFocus>
     <div
       role="dialog"
       aria-modal="true"
@@ -60,7 +73,7 @@ export function ConfirmModal({
                 disabled={extraInput.disabled}
                 className="w-full rounded border border-gray-300 p-2 text-sm"
               >
-                <option value="">{extraInput.placeholder ?? `Select ${extraInput.label}`}</option>
+                <option value="">{extraInput.placeholder ?? t('confirmModal.selectPlaceholder', { label: extraInput.label })}</option>
                 {extraInput.options.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -84,14 +97,14 @@ export function ConfirmModal({
           </div>
         )}
 
-        <label className="block text-sm text-gray-600 mb-1">{inputLabel}</label>
+        <label className="block text-sm text-gray-600 mb-1">{resolvedInputLabel}</label>
         <textarea
-          aria-label={inputLabel}
+          aria-label={resolvedInputLabel}
           rows={3}
           value={value}
           onChange={e => setValue(e.target.value)}
           className="w-full rounded border border-gray-300 p-2 text-sm resize-none"
-          placeholder={`Min ${inputMinLength} characters`}
+          placeholder={t('confirmModal.minCharactersHint', { min: inputMinLength })}
         />
 
         <div className="flex gap-3 justify-end mt-4">
@@ -99,17 +112,18 @@ export function ConfirmModal({
             onClick={onCancel}
             className="px-4 py-2 rounded border border-gray-300 text-sm text-gray-700 hover:bg-gray-50"
           >
-            Cancel
+            {t('confirmModal.cancelButton')}
           </button>
           <button
             onClick={() => void onConfirm(value)}
             disabled={isDisabled}
             className="btn btn-primary"
           >
-            {loading ? 'Processing…' : 'Confirm'}
+            {loading ? t('confirmModal.submitButton.loading') : t('confirmModal.submitButton.label')}
           </button>
         </div>
       </div>
     </div>
+    </FocusLock>
   );
 }

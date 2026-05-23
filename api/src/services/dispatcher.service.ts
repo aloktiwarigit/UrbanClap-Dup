@@ -6,12 +6,30 @@ import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { dispatchAttemptRepo } from '../cosmos/dispatch-attempt-repository.js';
 import { haversine } from '../cosmos/geo.js';
 import { getDispatchAttemptsContainer } from '../cosmos/client.js';
+import { getFirebaseAdmin } from './firebaseAdmin.js';
 import type { TechnicianProfile } from '../schemas/technician.js';
 import type { DispatchAttemptDoc } from '../schemas/dispatch-attempt.js';
 import type { BookingDoc } from '../schemas/booking.js';
+import { normalizeAddressText } from '../shared/address-text.js';
 
 const DISPATCH_RADIUS_KM = 10;
-const OFFER_WINDOW_MS = 30_000;
+const OFFER_WINDOW_MS = 90_000;
+const SLOT_GRACE_WINDOW_MS = 30 * 60 * 1_000;
+
+function slotStartUtcMs(slotDate: string, slotWindow: string): number {
+  const startTime = slotWindow.split('-')[0];
+  const ms = new Date(`${slotDate}T${startTime}:00+05:30`).getTime();
+  if (isNaN(ms)) throw new Error(`invalid slotWindow "${slotWindow}" on slotDate "${slotDate}"`);
+  return ms;
+}
+
+function isStillDispatchable(booking: BookingDoc, nowMs = Date.now()): boolean {
+  try {
+    return nowMs < slotStartUtcMs(booking.slotDate, booking.slotWindow) + SLOT_GRACE_WINDOW_MS;
+  } catch {
+    return false;
+  }
+}
 
 export function rankTechnicians(
   techs: TechnicianProfile[],
@@ -48,23 +66,31 @@ async function dispatchBookingToTechs(
   // receive the same booking again via a redispatch.
   const candidates = (await getTechniciansWithinRadius(lat, lng, radiusKm, booking.serviceId))
     .filter((t) => haversine(lat, lng, t.location.coordinates[1], t.location.coordinates[0]) <= radiusKm)
-    .filter((t) => !excluded.has(t.id))
+    .filter((t) => !excluded.has(t.id) && !excluded.has(t.technicianId))
     .filter((t) => !(t.blockedCustomerIds ?? []).includes(booking.customerId));
 
   if (candidates.length === 0) {
+    if (isStillDispatchable(booking)) {
+      console.log(`DISPATCH_WAITING_FOR_TECHS bookingId=${bookingId}`);
+      if (booking.status !== 'PAID') {
+        await updateBookingFields(bookingId, { status: 'PAID' });
+      }
+      return false;
+    }
     console.log(`DISPATCH_NO_TECHS bookingId=${bookingId}`);
     await updateBookingFields(bookingId, { status: 'UNFULFILLED' });
     return false;
   }
 
   const selected = rankTechnicians(candidates, lat, lng)[0]!;
+  const selectedTechnicianId = selected.technicianId || selected.id;
   const sentAt = new Date();
   const expiresAt = new Date(sentAt.getTime() + OFFER_WINDOW_MS);
 
   const attempt: DispatchAttemptDoc = {
     id: randomUUID(),
     bookingId,
-    technicianIds: [selected.id],
+    technicianIds: [selectedTechnicianId],
     sentAt: sentAt.toISOString(),
     expiresAt: expiresAt.toISOString(),
     status: 'PENDING',
@@ -81,6 +107,7 @@ async function dispatchBookingToTechs(
   } catch (err: unknown) {
     console.error('DISPATCH_SERVICE_LOOKUP_FAILED', err);
   }
+  getFirebaseAdmin();
   const messaging = getMessaging();
   if (selected.fcmToken) {
     try {
@@ -91,7 +118,7 @@ async function dispatchBookingToTechs(
           bookingId,
           serviceId: booking.serviceId,
           serviceName,
-          addressText: booking.addressText,
+          addressText: normalizeAddressText(booking.addressText),
           slotDate: booking.slotDate,
           slotWindow: booking.slotWindow,
           amount: String(booking.amount),
@@ -107,7 +134,7 @@ async function dispatchBookingToTechs(
     }
   }
 
-  console.log(`DISPATCH_SENT bookingId=${bookingId} technicianIds=${selected.id}`);
+  console.log(`DISPATCH_SENT bookingId=${bookingId} technicianIds=${selectedTechnicianId}`);
   return true;
 }
 
@@ -119,6 +146,18 @@ export const dispatcherService = {
       return;
     }
     await dispatchBookingToTechs(bookingId, booking, DISPATCH_RADIUS_KM);
+  },
+
+  async retryAwaitingDispatch(limit = 100): Promise<{ checked: number; dispatched: number }> {
+    const bookings = await bookingRepo.getBookingsAwaitingDispatch(limit);
+    let dispatched = 0;
+    for (const booking of bookings.filter((b) => isStillDispatchable(b))) {
+      const previouslyAttempted = await dispatchAttemptRepo.getAttemptedTechnicianIds(booking.id);
+      if (await dispatchBookingToTechs(booking.id, booking, DISPATCH_RADIUS_KM, previouslyAttempted)) {
+        dispatched += 1;
+      }
+    }
+    return { checked: bookings.length, dispatched };
   },
 
   /**

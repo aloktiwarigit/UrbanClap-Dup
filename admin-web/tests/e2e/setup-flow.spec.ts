@@ -52,10 +52,10 @@ test.describe('Setup flow — HttpOnly cookie path (E12-S07)', () => {
         status: 200,
         contentType: 'application/json',
         // hs_setup is delivered as an HttpOnly cookie by the API server.
-        // In this test we verify the client NEVER writes it to sessionStorage.
+        // Path=/ is required because the server-side exchange runs under /api.
         headers: {
           'set-cookie':
-            'hs_setup=mock.setup.token; HttpOnly; Path=/setup; Max-Age=600; SameSite=Strict',
+            'hs_setup=mock.setup.token; HttpOnly; Path=/; Max-Age=600; SameSite=Strict',
         },
         body: JSON.stringify({ requiresSetup: true, setupToken: 'mock.setup.token' }),
       }),

@@ -18,6 +18,10 @@ public class UploadJobPhotoUseCase
             val storagePath = uploadResult.getOrThrow()
             val recordResult = repository.recordPhotoPath(bookingId, stage, storagePath)
             return if (recordResult.isSuccess) {
+                // Only delete the local file once the full end-to-end flow has
+                // succeeded — keeps the retry path viable if the record step fails
+                // after a successful Storage upload.
+                repository.deleteLocalPhoto(localFilePath)
                 Result.success(storagePath)
             } else {
                 Result.failure(recordResult.exceptionOrNull()!!)

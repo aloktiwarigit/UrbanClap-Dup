@@ -68,7 +68,7 @@ describe('getDailyPnL', () => {
     expect(day.netToOwner).toBe(59900 - expectedCommission);
   });
 
-  it('uses commissionBps=0 when field is missing on booking', async () => {
+  it('uses default commissionBps when field is missing on booking', async () => {
     const booking = {
       id: 'b2',
       amount: 10000,
@@ -79,8 +79,8 @@ describe('getDailyPnL', () => {
     };
     vi.mocked(getCosmosClient).mockReturnValue(makeClient({ bookings: makeContainer([booking]) }) as any);
     const result = await getDailyPnL('2026-04-14', '2026-04-14');
-    expect(result.dailyPnL[0]!.commission).toBe(0);
-    expect(result.dailyPnL[0]!.netToOwner).toBe(10000);
+    expect(result.dailyPnL[0]!.commission).toBe(2200);
+    expect(result.dailyPnL[0]!.netToOwner).toBe(7800);
   });
 
   it('aggregates two bookings on the same date', async () => {

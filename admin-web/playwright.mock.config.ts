@@ -7,6 +7,9 @@ export default defineConfig({
   testMatch: [
     'e2e/admin-completion.spec.ts',
     'e2e/login.spec.ts',
+    // notfound.spec.ts excluded: after S4 merges (fail-closed canAccessAdminPath),
+    // authenticated users hitting unknown paths get /not-authorized instead of 404.
+    // Re-add once S4 updates middleware to fall through unknown paths to Next.js.
     'e2e/rbac-403.spec.ts',
     'e2e/totp-enrollment.spec.ts',
   ],
@@ -38,6 +41,10 @@ export default defineConfig({
       env: {
         API_BASE_URL: 'http://localhost:7072/api',
         JWT_SECRET: jwtSecret,
+        // Must match the port Next.js is served on — the CSRF guard in
+        // app/admin-api/[...path]/route.ts compares request Origin against
+        // this value; mismatched origins return 403.
+        NEXT_PUBLIC_APP_URL: 'http://localhost:3010',
       },
     },
   ],

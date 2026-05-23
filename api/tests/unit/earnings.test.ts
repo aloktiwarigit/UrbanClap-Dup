@@ -33,6 +33,7 @@ function makeEntry(createdAt: string, techAmount: number, payoutStatus: 'PENDING
 
 const fixedNow = new Date('2026-04-15T12:00:00.000Z');
 const today = fixedNow.toISOString().slice(0, 10);
+const MONTH_GOAL_PAISE = 3_500_000;
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -58,10 +59,16 @@ describe('GET /v1/technicians/me/earnings', () => {
     const res = await getEarningsHandler(makeReq('Bearer tok'), ctx) as HttpResponseInit;
     expect(res.status).toBe(200);
     const body = res.jsonBody as any;
-    expect(body.today.techAmount).toBe(0);
-    expect(body.today.count).toBe(0);
-    expect(body.lastSevenDays).toHaveLength(7);
-    expect(body.lastSevenDays.every((d: any) => d.techAmount === 0)).toBe(true);
+    expect(body.today.amountPaise).toBe(0);
+    expect(body.today.jobs).toBe(0);
+    expect(body.dailyLast7).toHaveLength(7);
+    expect(body.dailyLast7.every((d: any) => d.amountPaise === 0 && d.jobs === 0)).toBe(true);
+  });
+
+  it('includes month.goalPaise on the month period', async () => {
+    const res = await getEarningsHandler(makeReq('Bearer tok'), ctx) as HttpResponseInit;
+    const body = res.jsonBody as any;
+    expect(body.month.goalPaise).toBe(MONTH_GOAL_PAISE);
   });
 
   it('aggregates today entry correctly', async () => {
@@ -70,10 +77,10 @@ describe('GET /v1/technicians/me/earnings', () => {
     ]);
     const res = await getEarningsHandler(makeReq('Bearer tok'), ctx) as HttpResponseInit;
     const body = res.jsonBody as any;
-    expect(body.today.techAmount).toBe(120000);
-    expect(body.today.count).toBe(1);
-    expect(body.lifetime.techAmount).toBe(120000);
-    expect(body.lifetime.count).toBe(1);
+    expect(body.today.amountPaise).toBe(120000);
+    expect(body.today.jobs).toBe(1);
+    expect(body.lifetime.amountPaise).toBe(120000);
+    expect(body.lifetime.jobs).toBe(1);
   });
 
   it('aggregates week entry (3 days ago) correctly', async () => {
@@ -85,10 +92,10 @@ describe('GET /v1/technicians/me/earnings', () => {
     ]);
     const res = await getEarningsHandler(makeReq('Bearer tok'), ctx) as HttpResponseInit;
     const body = res.jsonBody as any;
-    expect(body.today.techAmount).toBe(0);
-    expect(body.week.techAmount).toBe(90000);
-    expect(body.week.count).toBe(1);
-    expect(body.lifetime.techAmount).toBe(90000);
+    expect(body.today.amountPaise).toBe(0);
+    expect(body.week.amountPaise).toBe(90000);
+    expect(body.week.jobs).toBe(1);
+    expect(body.lifetime.amountPaise).toBe(90000);
   });
 
   it('aggregates month entry (same month, older) correctly', async () => {
@@ -100,10 +107,11 @@ describe('GET /v1/technicians/me/earnings', () => {
     ]);
     const res = await getEarningsHandler(makeReq('Bearer tok'), ctx) as HttpResponseInit;
     const body = res.jsonBody as any;
-    expect(body.today.techAmount).toBe(0);
-    expect(body.month.techAmount).toBe(75000);
-    expect(body.month.count).toBe(1);
-    expect(body.lifetime.techAmount).toBe(75000);
+    expect(body.today.amountPaise).toBe(0);
+    expect(body.month.amountPaise).toBe(75000);
+    expect(body.month.jobs).toBe(1);
+    expect(body.month.goalPaise).toBe(MONTH_GOAL_PAISE);
+    expect(body.lifetime.amountPaise).toBe(75000);
   });
 
   it('excludes FAILED entries from all totals', async () => {
@@ -112,22 +120,26 @@ describe('GET /v1/technicians/me/earnings', () => {
     ]);
     const res = await getEarningsHandler(makeReq('Bearer tok'), ctx) as HttpResponseInit;
     const body = res.jsonBody as any;
-    expect(body.today.techAmount).toBe(0);
-    expect(body.today.count).toBe(0);
-    expect(body.lifetime.techAmount).toBe(0);
-    expect(body.lastSevenDays[6].techAmount).toBe(0);
+    expect(body.today.amountPaise).toBe(0);
+    expect(body.today.jobs).toBe(0);
+    expect(body.lifetime.amountPaise).toBe(0);
+    expect(body.dailyLast7[6].amountPaise).toBe(0);
+    expect(body.dailyLast7[6].jobs).toBe(0);
   });
 
-  it('lastSevenDays is always exactly 7 entries ordered oldest-to-newest', async () => {
+  it('dailyLast7 is always exactly 7 entries ordered oldest-to-newest with per-day jobs count', async () => {
     vi.mocked(walletLedgerRepo.getAllByTechnicianId).mockResolvedValue([
       makeEntry(`${today}T08:00:00.000Z`, 50000),
+      makeEntry(`${today}T14:00:00.000Z`, 30000),
     ]);
     const res = await getEarningsHandler(makeReq('Bearer tok'), ctx) as HttpResponseInit;
     const body = res.jsonBody as any;
-    expect(body.lastSevenDays).toHaveLength(7);
-    expect(body.lastSevenDays[6].date).toBe(today);
-    expect(body.lastSevenDays[6].techAmount).toBe(50000);
-    expect(body.lastSevenDays[0].techAmount).toBe(0);
+    expect(body.dailyLast7).toHaveLength(7);
+    expect(body.dailyLast7[6].date).toBe(today);
+    expect(body.dailyLast7[6].amountPaise).toBe(80000);
+    expect(body.dailyLast7[6].jobs).toBe(2);
+    expect(body.dailyLast7[0].amountPaise).toBe(0);
+    expect(body.dailyLast7[0].jobs).toBe(0);
   });
 
   it('calls getAllByTechnicianId with the authenticated uid', async () => {

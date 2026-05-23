@@ -13,5 +13,9 @@ public sealed class LiveTrackingUiState {
         val techName: String,
         val techPhotoUrl: String,
         val etaMinutes: Int?,
+        val technicianId: String? = null,
+        val liveLat: Double? = null,
+        val liveLng: Double? = null,
+        val liveCapturedAt: Long? = null,
     ) : LiveTrackingUiState()
 }

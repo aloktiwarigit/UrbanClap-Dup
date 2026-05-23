@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { formatPaise } from '@/api/finance';
 import type { PayoutQueueEntry } from '@/api/finance';
 
@@ -16,11 +17,12 @@ export function PayoutQueueTable({
   onApproveAll,
   canApproveAll = true,
 }: Props) {
+  const t = useTranslations('finance');
   return (
     <div>
       <div className="flex items-center justify-between mb-[var(--space-3)]">
         <h2 className="text-[length:var(--text-lg)] font-semibold text-[var(--color-text)]">
-          Payout Queue — {formatPaise(totalNetPayable)} total
+          {t('payoutQueue.title', { total: formatPaise(totalNetPayable) })}
         </h2>
         {canApproveAll ? (
           <button
@@ -28,26 +30,26 @@ export function PayoutQueueTable({
             disabled={entries.length === 0}
             className="px-4 py-2 rounded bg-[var(--color-brand)] text-[var(--color-brand-fg)] font-medium disabled:opacity-40"
           >
-            Approve All
+            {t('buttons.approveAll')}
           </button>
         ) : (
           <span className="text-xs text-[var(--color-text-muted)]">
-            Approval is restricted to super-admins.
+            {t('permissions.approvalRestricted')}
           </span>
         )}
       </div>
 
       {entries.length === 0 ? (
-        <p className="text-sm text-[var(--color-text-muted)]">No payouts due this week.</p>
+        <p className="text-sm text-[var(--color-text-muted)]">{t('emptyStates.noPayouts')}</p>
       ) : (
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="text-left text-[var(--color-text-muted)] border-b border-[var(--color-border)]">
-              <th className="pb-2 pr-4 font-medium">Technician</th>
-              <th className="pb-2 pr-4 font-medium text-right">Jobs</th>
-              <th className="pb-2 pr-4 font-medium text-right">Gross</th>
-              <th className="pb-2 pr-4 font-medium text-right">Commission</th>
-              <th className="pb-2 font-medium text-right">Net Payable</th>
+              <th className="pb-2 pr-4 font-medium">{t('payoutQueue.columns.technician')}</th>
+              <th className="pb-2 pr-4 font-medium text-right">{t('payoutQueue.columns.jobs')}</th>
+              <th className="pb-2 pr-4 font-medium text-right">{t('payoutQueue.columns.gross')}</th>
+              <th className="pb-2 pr-4 font-medium text-right">{t('payoutQueue.columns.commission')}</th>
+              <th className="pb-2 font-medium text-right">{t('payoutQueue.columns.netPayable')}</th>
             </tr>
           </thead>
           <tbody>

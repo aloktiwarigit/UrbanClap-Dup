@@ -39,6 +39,9 @@ export const ServiceSchema = z
     updatedBy: z.string().min(1),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
+    // E16-S02: optional scheduling window; defaults applied server-side (08:00 / 20:00)
+    workStart: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+    workEnd: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   })
   .strict();
 
@@ -80,3 +83,19 @@ export type ServiceCard = z.infer<typeof ServiceCardSchema>;
 export type ServiceDetail = z.infer<typeof ServiceDetailSchema>;
 export type CreateServiceBody = z.infer<typeof CreateServiceBodySchema>;
 export type UpdateServiceBody = z.infer<typeof UpdateServiceBodySchema>;
+
+// E16-S02: Slot availability response schemas
+export const SlotWindowSchema = z.object({
+  window: z.string().regex(/^\d{2}:\d{2}-\d{2}:\d{2}$/),
+  available: z.boolean(),
+});
+
+export const AvailabilityResponseSchema = z.object({
+  serviceId: z.string(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  slotGranularityMinutes: z.number().int().positive(),
+  slots: z.array(SlotWindowSchema),
+});
+
+export type SlotWindow = z.infer<typeof SlotWindowSchema>;
+export type AvailabilityResponse = z.infer<typeof AvailabilityResponseSchema>;

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -44,15 +45,16 @@ import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTimelineStep
+import com.homeservices.designsystem.theme.HomeservicesColors
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
-import com.homeservices.technician.BuildConfig
 import com.homeservices.technician.domain.kyc.model.KycStatus
 
-private val KycHeroStart = Color(0xFF062A20)
-private val KycHeroEnd = Color(0xFF0B3D2E)
+private val KycHeroStart = HomeservicesColors.Brand.primaryHover
+private val KycHeroEnd = HomeservicesColors.Brand.primary
 private const val KYC_HERO_FRACTION = 0.32f
 private const val KYC_FORM_FRACTION = 0.70f
 
+@Suppress("CyclomaticComplexMethod") // sealed KycUiState branches are a flat dispatch — extracting would obscure UI flow
 @Composable
 internal fun KycScreen(
     onComplete: () -> Unit,
@@ -60,6 +62,7 @@ internal fun KycScreen(
     viewModel: KycViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val retryPending by viewModel.photoUploadRetryPending.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     LaunchedEffect(uiState) {
@@ -74,38 +77,50 @@ internal fun KycScreen(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
-        when (val state = uiState) {
-            is KycUiState.Idle -> {
-                KycStepAadhaar(
-                    onStartKyc = { viewModel.startKyc() },
-                    onSkip = onComplete,
-                )
+        Box(modifier = Modifier.fillMaxSize()) {
+            when (val state = uiState) {
+                is KycUiState.Idle -> {
+                    KycStepAadhaar(
+                        onStartKyc = { viewModel.startKyc() },
+                        onSkip = onComplete,
+                    )
+                }
+                is KycUiState.Loading -> KycLoadingContent(message = "Processing verification")
+                is KycUiState.AadhaarPending -> KycLoadingContent(message = "Opening DigiLocker")
+                is KycUiState.AadhaarDone -> {
+                    KycStepPan(
+                        selectedUri = null,
+                        onUriSelected = { uri ->
+                            if (uri != null) viewModel.submitPan(uri)
+                        },
+                    )
+                }
+                is KycUiState.PanReady -> {
+                    KycStepPan(
+                        selectedUri = Uri.parse(state.uploadUri),
+                        onUriSelected = { uri ->
+                            if (uri != null) viewModel.submitPan(uri)
+                        },
+                    )
+                }
+                is KycUiState.PanUploading -> KycLoadingContent(message = "Uploading PAN card")
+                is KycUiState.Complete -> KycStepReview(status = state.status, onRetry = null)
+                is KycUiState.Error -> {
+                    KycStepReview(
+                        status = null,
+                        onRetry = { viewModel.startKyc() },
+                        errorMessage = state.message,
+                    )
+                }
             }
-            is KycUiState.Loading -> KycLoadingContent(message = "Processing verification")
-            is KycUiState.AadhaarPending -> KycLoadingContent(message = "Opening DigiLocker")
-            is KycUiState.AadhaarDone -> {
-                KycStepPan(
-                    selectedUri = null,
-                    onUriSelected = { uri ->
-                        if (uri != null) viewModel.submitPan(uri)
-                    },
-                )
-            }
-            is KycUiState.PanReady -> {
-                KycStepPan(
-                    selectedUri = Uri.parse(state.uploadUri),
-                    onUriSelected = { uri ->
-                        if (uri != null) viewModel.submitPan(uri)
-                    },
-                )
-            }
-            is KycUiState.PanUploading -> KycLoadingContent(message = "Uploading PAN card")
-            is KycUiState.Complete -> KycStepReview(status = state.status, onRetry = null)
-            is KycUiState.Error -> {
-                KycStepReview(
-                    status = null,
-                    onRetry = { viewModel.startKyc() },
-                    errorMessage = state.message,
+            if (retryPending) {
+                PhotoUploadRetryBanner(
+                    onRetry = viewModel::retryPhotoUpload,
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .statusBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
                 )
             }
         }
@@ -235,14 +250,12 @@ internal fun KycStepAadhaar(
             onClick = onStartKyc,
             modifier = Modifier.fillMaxWidth(),
         )
-        if (BuildConfig.DEBUG) {
-            Spacer(modifier = Modifier.height(12.dp))
-            HsSecondaryButton(
-                text = "Skip KYC (debug only)",
-                onClick = onSkip,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
+        Spacer(modifier = Modifier.height(12.dp))
+        HsSecondaryButton(
+            text = "Skip for now, complete later",
+            onClick = onSkip,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -361,19 +374,28 @@ internal fun KycLoadingContent(
     message: String,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(
-            modifier = Modifier.padding(horizontal = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            CircularProgressIndicator()
-            Text(
-                text = message,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-            )
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+    ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(
+                modifier = Modifier.padding(horizontal = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(56.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    strokeWidth = 4.dp,
+                )
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }

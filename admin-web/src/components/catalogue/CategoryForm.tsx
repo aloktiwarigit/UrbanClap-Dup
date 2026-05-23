@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import type { components, operations } from '@/api/generated/schema';
 
 type AdminServiceCategory = components['schemas']['AdminServiceCategory'];
@@ -20,6 +21,7 @@ export interface CategoryFormProps {
 }
 
 export function CategoryForm({ initial, onSubmit, onCancel }: CategoryFormProps) {
+  const t = useTranslations('catalogue');
   const isEdit = initial !== undefined;
   const [id, setId] = useState(initial?.id ?? '');
   const [name, setName] = useState(initial?.name ?? '');
@@ -34,7 +36,7 @@ export function CategoryForm({ initial, onSubmit, onCancel }: CategoryFormProps)
 
     const sortOrderNum = Number.parseInt(sortOrder, 10);
     if (!Number.isInteger(sortOrderNum) || sortOrderNum < 0) {
-      setError('Sort order must be a non-negative integer.');
+      setError(t('form.sortOrderError'));
       return;
     }
 
@@ -49,7 +51,7 @@ export function CategoryForm({ initial, onSubmit, onCancel }: CategoryFormProps)
     try {
       await onSubmit(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Submission failed.');
+      setError(err instanceof Error ? err.message : t('form.submissionError'));
       setSubmitting(false);
     }
   }
@@ -75,7 +77,7 @@ export function CategoryForm({ initial, onSubmit, onCancel }: CategoryFormProps)
               marginBottom: 'var(--space-1)',
             }}
           >
-            ID (slug)
+            {t('form.idLabel')}
           </label>
           <input
             id="category-id"
@@ -85,7 +87,7 @@ export function CategoryForm({ initial, onSubmit, onCancel }: CategoryFormProps)
             pattern="[a-z0-9-]+"
             value={id}
             onChange={(event) => setId(event.target.value)}
-            placeholder="e.g. ac-repair"
+            placeholder={t('form.idPlaceholder')}
           />
         </div>
       )}
@@ -100,7 +102,7 @@ export function CategoryForm({ initial, onSubmit, onCancel }: CategoryFormProps)
             marginBottom: 'var(--space-1)',
           }}
         >
-          Name
+          {t('form.nameLabel')}
         </label>
         <input
           id="category-name"
@@ -109,7 +111,7 @@ export function CategoryForm({ initial, onSubmit, onCancel }: CategoryFormProps)
           required
           value={name}
           onChange={(event) => setName(event.target.value)}
-          placeholder="e.g. AC Repair"
+          placeholder={t('form.namePlaceholder')}
         />
       </div>
 
@@ -123,7 +125,7 @@ export function CategoryForm({ initial, onSubmit, onCancel }: CategoryFormProps)
             marginBottom: 'var(--space-1)',
           }}
         >
-          Hero Image URL
+          {t('form.heroImageLabel')}
         </label>
         <input
           id="category-hero"
@@ -132,7 +134,7 @@ export function CategoryForm({ initial, onSubmit, onCancel }: CategoryFormProps)
           required
           value={heroImageUrl}
           onChange={(event) => setHeroImageUrl(event.target.value)}
-          placeholder="https://..."
+          placeholder={t('form.heroImagePlaceholder')}
         />
       </div>
 
@@ -146,7 +148,7 @@ export function CategoryForm({ initial, onSubmit, onCancel }: CategoryFormProps)
             marginBottom: 'var(--space-1)',
           }}
         >
-          Sort Order
+          {t('form.sortOrderLabel')}
         </label>
         <input
           id="category-sort"
@@ -156,7 +158,7 @@ export function CategoryForm({ initial, onSubmit, onCancel }: CategoryFormProps)
           required
           value={sortOrder}
           onChange={(event) => setSortOrder(event.target.value)}
-          placeholder="10"
+          placeholder={t('form.sortOrderPlaceholder')}
         />
       </div>
 
@@ -168,10 +170,10 @@ export function CategoryForm({ initial, onSubmit, onCancel }: CategoryFormProps)
 
       <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
         <button type="submit" className="btn btn-primary" disabled={submitting}>
-          {submitting ? 'Saving...' : isEdit ? 'Update Category' : 'Create Category'}
+          {submitting ? t('form.savingState') : isEdit ? t('form.updateButton') : t('form.createButton')}
         </button>
         <button type="button" className="btn btn-ghost" onClick={onCancel}>
-          Cancel
+          {t('form.cancelButton')}
         </button>
       </div>
     </form>

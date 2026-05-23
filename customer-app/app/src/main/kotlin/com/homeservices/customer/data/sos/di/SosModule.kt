@@ -44,4 +44,7 @@ public object SosModule {
             .client(client)
             .build()
             .create(SosApiService::class.java)
+
+    // SosAudioCipher and SosAudioUploader use @Inject constructor — Hilt provides them
+    // automatically. FirebaseStorage is provided by ComplaintModule.provideFirebaseStorage().
 }

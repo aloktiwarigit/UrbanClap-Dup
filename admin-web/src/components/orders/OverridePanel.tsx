@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { ConfirmModal } from './ConfirmModal';
 import {
   reassignOrder,
@@ -29,6 +30,7 @@ export function OverridePanel({
   canOverride = true,
   canFinancialOverride = true,
 }: OverridePanelProps) {
+  const t = useTranslations('orders');
   const [activeAction, setActiveAction] = useState<Action | null>(null);
   const [loading, setLoading] = useState(false);
   const [reassignTechId, setReassignTechId] = useState('');
@@ -53,7 +55,7 @@ export function OverridePanel({
       })
       .catch(() => {
         setTechnicianCandidates([]);
-        setCandidatesError('Could not load technicians for this area.');
+        setCandidatesError(t('actions.reassign.fetchError'));
       })
       .finally(() => setCandidatesLoading(false));
   };
@@ -65,7 +67,7 @@ export function OverridePanel({
       onActionComplete(updated);
       close();
     } catch {
-      onError('Action failed. Please try again.');
+      onError(t('actions.error'));
     } finally {
       setLoading(false);
     }
@@ -107,61 +109,61 @@ export function OverridePanel({
 
   const actionConfigs: Record<Action, ActionConfig> = {
     reassign: {
-      title: 'Re-assign Technician',
+      title: t('actions.reassign.title'),
       extraInput: {
-        label: 'Technician',
+        label: t('actions.reassign.selectLabel'),
         value: reassignTechId,
         onChange: setReassignTechId,
         options: technicianCandidates.map((tech) => ({
           value: tech.technicianId,
           label: `${tech.displayName} (${tech.technicianId}) - ${tech.distanceKm.toFixed(1)} km`,
         })),
-        placeholder: candidatesLoading ? 'Loading technicians...' : 'Select technician',
+        ...(candidatesLoading ? { placeholder: t('actions.reassign.loadingPlaceholder') } : {}),
         disabled: candidatesLoading || technicianCandidates.length === 0,
         helperText: candidatesError ?? (
           technicianCandidates.length === 0 && !candidatesLoading
-            ? 'No eligible technicians found for this service area.'
+            ? t('actions.reassign.noEligibleTechs')
             : ''
         ),
       },
     },
-    complete: { title: 'Mark Order Complete' },
-    refund: { title: 'Issue Refund (stub)' },
-    'waive-fee': { title: 'Waive Fee' },
-    escalate: { title: `Escalate (${escalatePriority})` },
-    note: { title: 'Add Internal Note', label: 'Note', minLen: 1 },
+    complete: { title: t('actions.complete.title') },
+    refund: { title: t('actions.refund.title') },
+    'waive-fee': { title: t('actions.waiveFee.title') },
+    escalate: { title: t('actions.escalate.title', { priority: escalatePriority }) },
+    note: { title: t('actions.note.title'), label: t('actions.note.label'), minLen: 1 },
   };
 
   const buttons: Array<{ action: Action; label: string; financial?: boolean }> = [
-    { action: 'reassign', label: 'Re-assign Tech' },
-    { action: 'complete', label: 'Mark Complete' },
-    { action: 'refund', label: 'Issue Refund', financial: true },
-    { action: 'waive-fee', label: 'Waive Fee', financial: true },
-    { action: 'escalate', label: 'Escalate' },
-    { action: 'note', label: 'Add Note' },
+    { action: 'reassign', label: t('actions.reassign.buttonLabel') },
+    { action: 'complete', label: t('actions.complete.buttonLabel') },
+    { action: 'refund', label: t('actions.refund.buttonLabel'), financial: true },
+    { action: 'waive-fee', label: t('actions.waiveFee.buttonLabel'), financial: true },
+    { action: 'escalate', label: t('actions.escalate.buttonLabel') },
+    { action: 'note', label: t('actions.note.buttonLabel') },
   ];
 
   const visibleButtons = buttons.filter((button) => !button.financial || canFinancialOverride);
 
   return (
-    <section aria-label="Order actions">
-      <h3 className="text-xs text-gray-500 font-medium mb-2">Actions</h3>
+    <section aria-label={t('detail.sections.actions.heading')}>
+      <h3 className="text-xs text-gray-500 font-medium mb-2">{t('detail.sections.actions.heading')}</h3>
       {!canOverride ? (
         <p className="text-xs text-gray-500">
-          Your role can review this order but cannot run operational overrides.
+          {t('detail.sections.actions.noPermission')}
         </p>
       ) : (
         <>
       <div className="mb-2 flex items-center gap-2 text-xs text-gray-600">
-        <label htmlFor="escalate-priority">Escalate priority:</label>
+        <label htmlFor="escalate-priority">{t('actions.escalate.priorityLabel')}</label>
         <select
           id="escalate-priority"
           value={escalatePriority}
           onChange={e => setEscalatePriority(e.target.value as 'HIGH' | 'CRITICAL')}
           className="border border-gray-300 rounded px-1 py-0.5 text-xs"
         >
-          <option value="HIGH">HIGH</option>
-          <option value="CRITICAL">CRITICAL</option>
+          <option value="HIGH">{t('actions.escalate.priorities.HIGH')}</option>
+          <option value="CRITICAL">{t('actions.escalate.priorities.CRITICAL')}</option>
         </select>
       </div>
       <div className="grid grid-cols-3 gap-2">

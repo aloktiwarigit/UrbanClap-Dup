@@ -48,4 +48,10 @@ describe('getSafeNextPath', () => {
     expect(result).toBe('/hi/dashboard');
     expect(result).not.toContain('injected');
   });
+
+  it('rejects absolute URL open redirect', () => {
+    const result = getSafeNextPath('https://evil.com/dashboard', 'super-admin');
+    expect(result).not.toContain('evil.com');
+    expect(result).toMatch(/^\//);
+  });
 });

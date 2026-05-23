@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { cookies } from 'next/headers';
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import type { components } from '@/api/generated/schema';
 import { EmptyState } from '@/components/EmptyState';
 import { getApiBaseUrl } from '@/lib/apiBase';
@@ -27,7 +28,10 @@ async function fetchAdminCategories(token: string): Promise<AdminServiceCategory
 export default async function CataloguePage() {
   const cookieStore = await cookies();
   const token = cookieStore.get('hs_access')?.value ?? '';
-  const categories = await fetchAdminCategories(token);
+  const [categories, t] = await Promise.all([
+    fetchAdminCategories(token),
+    getTranslations('catalogue'),
+  ]);
 
   return (
     <div
@@ -47,18 +51,18 @@ export default async function CataloguePage() {
             margin: 0,
           }}
         >
-          Service Catalogue
+          {t('list.title')}
         </h1>
         <Link href="/catalogue/new" className="btn btn-primary">
-          New Category
+          {t('list.newButton')}
         </Link>
       </div>
 
       {categories.length === 0 ? (
         <EmptyState
-          eyebrow="Catalogue"
-          headline="The catalogue is empty"
-          copy="No categories have been provisioned yet. Create one to get started."
+          eyebrow={t('emptyState.eyebrow')}
+          headline={t('emptyState.headline')}
+          copy={t('emptyState.description')}
         />
       ) : (
         <CatalogueCategoryList categories={categories} />

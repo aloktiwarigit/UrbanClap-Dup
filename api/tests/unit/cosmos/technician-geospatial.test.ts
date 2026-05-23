@@ -79,10 +79,10 @@ describe('getTechniciansWithinRadius', () => {
     expect(capturedQuery.query).toContain('@serviceId');
   });
 
-  it('query SQL filters on kycStatus APPROVED, isOnline, isAvailable', async () => {
+  it('query SQL filters on online availability but does not require KYC approval', async () => {
     await getTechniciansWithinRadius(12.9352, 77.6245, 5, 'ac-deep-clean');
-    expect(capturedQuery.query).toContain('kycStatus');
-    expect(capturedQuery.query).toContain('APPROVED');
+    expect(capturedQuery.query).not.toContain('kycStatus');
+    expect(capturedQuery.query).not.toContain('APPROVED');
     expect(capturedQuery.query).toContain('isOnline');
     expect(capturedQuery.query).toContain('isAvailable');
   });
