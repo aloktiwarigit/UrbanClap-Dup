@@ -42,4 +42,18 @@ public class PendingActionNavObserverTest {
         val route = pendingActionNavRoute(PendingActionType.SUPPORT_FOLLOWUP, "t-1")
         assertThat(route).isNull()
     }
+
+    // ── SEC-04: entityId allowlist validation ─────────────────────────────────
+
+    @Test
+    public fun `traversal entityId is rejected and returns null`() {
+        val route = pendingActionNavRoute(PendingActionType.ADDON_APPROVAL_REQUESTED, "../../delete_account")
+        assertThat(route).isNull()
+    }
+
+    @Test
+    public fun `entityId with special characters is rejected`() {
+        val route = pendingActionNavRoute(PendingActionType.RATING_PROMPT_CUSTOMER, "<script>alert(1)</script>")
+        assertThat(route).isNull()
+    }
 }

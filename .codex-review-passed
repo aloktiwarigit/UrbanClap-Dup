@@ -7,3 +7,13 @@ E20-S08 account deletion — Codex review passed 2026-05-23 (2 rounds: P2 stale 
 {"timestamp":"2026-05-22T04:13:44+00:00","commit":"840e15c0","branch":"fix/sprint2a-ux-design-system","reviewer":"codex","story":"sprint2a-ux-codemod","rounds":2,"round1_findings_resolved":["P1-HsScreenTitlePaparazziTest-explicit-api","P2-ServiceDetailScreen-scrim-hero-text","P2-DeleteAccountScreen-ErrorRed-contentColor","P2-CustomerHomeTabContent-HighPriorityCard-foreground"],"round2_findings_resolved":["P2-CatalogueHomeScreen-promo-banner-onPrimary","P2-PhotoFirstCategoryCard-overlay-onPrimary","P2-ActiveBookingSection-price-approval-light-bg","P2-ServiceDetailScreen-MetricNeutralBg-foreground","P2-StatusPill-WarningSoft-foreground","P2-ProfileScreen-HsScreenTitle-truncation"],"note":"Third Codex run skipped per one-re-run-max policy; all round-2 P2s fixed; smoke gate re-passed after round-2 fixes"}
 {"timestamp":"2026-05-22T20:34:35-04:00","commit":"25cb4adcacb4fe63feb90c9549d275a847349de9","reviewer":"codex","verdict":"PASS","notes":"no correctness/security/maintainability issues found; server-side idempotency-key dedup is paired API task (api/TODO)"}
 {"timestamp":"2026-05-22T16:33:42-04:00","commit":"b98e531e7b73cc155da182c7e37a1973633d9b0f","reviewer":"codex","model":"gpt-5.5","notes":"P1: analytics observer (not one-shot first()), nav bypass guard (PendingActionsNavEffect+DeepLinkEffect), Sentry crash consent gate. P2: ConsentViewModel loads stored consent. All 4 fixed before marker."}
+codex-review: PASSED
+branch: fix/sprint4-security-hardening
+base: fix/sprint3-dpdp-consent-posthog (sprint3 tip; sprint PRs #256/#263/#265/#267 pending merge to main)
+date: 2026-05-22
+findings-closed: SEC-04, SEC-05, SEC-06, SEC-07
+
+Paired API task (SEC-06): Server-side accept X-Device-Token header on DELETE /v1/devices/me
+is implemented in this PR. Legacy DELETE /v1/devices/{deviceToken} kept for transition window.
+Remove legacy path once minimum versionCode in Play Console confirms no old builds in active use.
+This paired task is acknowledged — Codex should cap SEC-06 server-side findings to 1 round.
