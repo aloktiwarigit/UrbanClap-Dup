@@ -235,10 +235,10 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
-            all {
+            all { test: org.gradle.api.tasks.testing.Test ->
                 // Pass -PexcludePaparazzi in smoke gate to skip snapshot tests on Windows
                 if (project.hasProperty("excludePaparazzi")) {
-                    getFilter().excludeTestsMatching("*PaparazziTest*")
+                    test.filter.excludeTestsMatching("*PaparazziTest*")
                 }
             }
         }
