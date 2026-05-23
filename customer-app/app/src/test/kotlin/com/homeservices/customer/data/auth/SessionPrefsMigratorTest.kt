@@ -71,6 +71,27 @@ public class SessionPrefsMigratorTest {
     }
 
     @Test
+    public fun `migrateIfNeeded does not clear active auth session prefs`() {
+        val activePrefs: SharedPreferences =
+            context.getSharedPreferences("auth_session", Context.MODE_PRIVATE)
+        activePrefs
+            .edit()
+            .putString("uid", "active-uid")
+            .putLong("session_created_at_epoch_ms", 3_000_000L)
+            .commit()
+
+        SessionPrefsMigrator.migrateIfNeededInternal(
+            context = context,
+            newPrefs = activePrefs,
+            newPrefsName = "auth_session",
+            legacyKeyPresent = true,
+        )
+
+        assertThat(activePrefs.getString("uid", null)).isEqualTo("active-uid")
+        assertThat(activePrefs.getLong("session_created_at_epoch_ms", 0L)).isEqualTo(3_000_000L)
+    }
+
+    @Test
     public fun `migrateIfNeeded copies values from legacy prefs when legacy key present`() {
         // Seed the legacy prefs file (plain prefs simulate what old EncryptedSharedPreferences held)
         val legacyPrefs: SharedPreferences =

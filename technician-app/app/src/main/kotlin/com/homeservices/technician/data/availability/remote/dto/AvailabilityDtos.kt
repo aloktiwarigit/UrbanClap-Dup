@@ -2,7 +2,9 @@ package com.homeservices.technician.data.availability.remote.dto
 
 import com.homeservices.technician.domain.availability.model.AvailabilityWindow
 import com.homeservices.technician.domain.availability.model.TechnicianAvailability
+import com.squareup.moshi.JsonClass
 
+@JsonClass(generateAdapter = true)
 internal data class AvailabilityWindowDto(
     val dayOfWeek: Int,
     val startHour: Int,
@@ -16,6 +18,7 @@ internal data class AvailabilityWindowDto(
         )
 }
 
+@JsonClass(generateAdapter = true)
 internal data class TechnicianAvailabilityDto(
     val isOnline: Boolean,
     val isAvailable: Boolean,
@@ -29,6 +32,7 @@ internal data class TechnicianAvailabilityDto(
         )
 }
 
+@JsonClass(generateAdapter = true)
 internal data class UpdateAvailabilityRequestDto(
     val isOnline: Boolean,
     val isAvailable: Boolean,

@@ -2,11 +2,14 @@ package com.homeservices.technician.data.jobs.remote.dto
 
 import com.homeservices.technician.domain.jobs.model.TechnicianBooking
 import com.homeservices.technician.domain.jobs.model.TechnicianBookingStatus
+import com.squareup.moshi.JsonClass
 
+@JsonClass(generateAdapter = true)
 internal data class TechnicianBookingsResponseDto(
     val bookings: List<TechnicianBookingDto> = emptyList(),
 )
 
+@JsonClass(generateAdapter = true)
 internal data class TechnicianBookingDto(
     val bookingId: String,
     val serviceId: String,

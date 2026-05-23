@@ -51,21 +51,15 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.designsystem.components.HsSectionCard
+import com.homeservices.designsystem.theme.HomeservicesColors
 import com.homeservices.technician.R
+import com.homeservices.technician.domain.earnings.model.BaseEarningsPeriod
 import com.homeservices.technician.domain.earnings.model.DailyEarnings
-import com.homeservices.technician.domain.earnings.model.EarningsPeriod
 import com.homeservices.technician.domain.earnings.model.EarningsSummary
+import com.homeservices.technician.domain.earnings.model.MonthEarningsPeriod
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
-
-private val WarmIvory = Color(0xFFFBF7EF)
-private val BrandGreen = Color(0xFF0B3D2E)
-private val AppBarStart = Color(0xFF062A20)
-private val AppBarEnd = Color(0xFF0B3D2E)
-private val BrandGreenSoft = Color(0xFFE8F1EC)
-private val TextPrimary = Color(0xFF18231F)
-private val TextSecondary = Color(0xFF5F6C66)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,7 +73,12 @@ internal fun EarningsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                modifier = Modifier.background(Brush.horizontalGradient(listOf(AppBarStart, AppBarEnd))),
+                modifier =
+                    Modifier.background(
+                        Brush.horizontalGradient(
+                            listOf(HomeservicesColors.Brand.primaryHover, MaterialTheme.colorScheme.primary),
+                        ),
+                    ),
                 title = {
                     Text(
                         stringResource(R.string.earnings_title),
@@ -115,21 +114,28 @@ internal fun EarningsContent(
     onPayoutSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(modifier = modifier.fillMaxSize(), color = WarmIvory) {
+    Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (val state = uiState) {
-            is EarningsUiState.Loading -> CenterState { CircularProgressIndicator(color = BrandGreen) }
+            is EarningsUiState.Loading ->
+                CenterState {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(56.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 4.dp,
+                    )
+                }
             is EarningsUiState.Error ->
                 CenterState {
                     Text(
                         stringResource(R.string.earnings_error),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onBackground,
                     )
                     Spacer(Modifier.height(12.dp))
                     Button(
                         onClick = onRetry,
-                        colors = ButtonDefaults.buttonColors(containerColor = BrandGreen),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     ) { Text(stringResource(R.string.earnings_retry)) }
                 }
             is EarningsUiState.Success ->
@@ -158,12 +164,12 @@ private fun EarningsEmptyState(onPayoutSettings: () -> Unit) {
             modifier =
                 Modifier
                     .size(80.dp)
-                    .background(BrandGreenSoft, shape = RoundedCornerShape(24.dp)),
+                    .background(MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(24.dp)),
         ) {
             Icon(
                 imageVector = Icons.Default.AccountBalanceWallet,
                 contentDescription = null,
-                tint = BrandGreen,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(40.dp),
             )
         }
@@ -172,14 +178,14 @@ private fun EarningsEmptyState(onPayoutSettings: () -> Unit) {
             text = stringResource(R.string.earnings_empty_title),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            color = TextPrimary,
+            color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(8.dp))
         Text(
             text = stringResource(R.string.earnings_empty_body),
             style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(32.dp))
@@ -209,12 +215,12 @@ private fun StepHint(
             modifier =
                 Modifier
                     .size(36.dp)
-                    .background(BrandGreenSoft, shape = RoundedCornerShape(10.dp)),
+                    .background(MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(10.dp)),
         ) {
-            Icon(imageVector = icon, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(20.dp))
+            Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.size(12.dp))
-        Text(text = text, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
+        Text(text = text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground)
     }
 }
 
@@ -234,7 +240,7 @@ private fun EarningsSuccess(
                 stringResource(R.string.earnings_dashboard_title),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onBackground,
             )
         }
         item {
@@ -249,7 +255,7 @@ private fun EarningsSuccess(
                 PeriodCard(stringResource(R.string.earnings_period_lifetime), summary.lifetime, modifier = Modifier.weight(1f))
             }
         }
-        item { GoalProgressCard(summary.month.techAmountPaise) }
+        item { GoalProgressCard(summary.month) }
         item { SparklineCard(summary.lastSevenDays) }
         item {
             OutlinedButton(onClick = onViewRatings, modifier = Modifier.fillMaxWidth()) {
@@ -267,16 +273,16 @@ private fun EarningsSuccess(
 @Composable
 private fun PeriodCard(
     label: String,
-    period: EarningsPeriod,
+    period: BaseEarningsPeriod,
     modifier: Modifier = Modifier,
 ) {
     HsSectionCard(modifier = modifier) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = TextSecondary)
+        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(
             formatRupees(period.techAmountPaise),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            color = TextPrimary,
+            color = MaterialTheme.colorScheme.onBackground,
         )
         Text(
             text =
@@ -288,26 +294,24 @@ private fun PeriodCard(
                     stringResource(R.string.earnings_jobs_count, period.count)
                 },
             style = MaterialTheme.typography.bodySmall,
-            color = if (period.count == 0) TextSecondary else BrandGreen,
+            color = if (period.count == 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
         )
     }
 }
 
-private val MONTHLY_GOAL_PAISE = 3_500_000L
-
 @Composable
-private fun GoalProgressCard(monthAmountPaise: Long) {
+private fun GoalProgressCard(month: MonthEarningsPeriod) {
     HsSectionCard(title = stringResource(R.string.earnings_monthly_goal)) {
         LinearProgressIndicator(
-            progress = { (monthAmountPaise.toFloat() / MONTHLY_GOAL_PAISE).coerceIn(0f, 1f) },
+            progress = { (month.techAmountPaise.toFloat() / month.goalPaise).coerceIn(0f, 1f) },
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)),
-            color = BrandGreen,
+            color = MaterialTheme.colorScheme.primary,
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            "${formatRupees(monthAmountPaise)} / ${formatRupees(MONTHLY_GOAL_PAISE)}",
+            "${formatRupees(month.techAmountPaise)} / ${formatRupees(month.goalPaise)}",
             style = MaterialTheme.typography.bodySmall,
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -323,7 +327,7 @@ private fun SparklineCard(days: List<DailyEarnings>) {
                 Text(
                     stringResource(R.string.earnings_sparkline_empty),
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
             }
@@ -339,8 +343,8 @@ private fun EarningsSparkline(
     modifier: Modifier = Modifier,
 ) {
     val maxAmount = days.maxOfOrNull { it.techAmountPaise } ?: 0L
-    val barColor = BrandGreen
-    val labelColor = TextSecondary
+    val barColor = MaterialTheme.colorScheme.primary
+    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     Column(modifier = modifier) {
         Canvas(modifier = Modifier.weight(1f).fillMaxWidth()) {
             val spacing = size.width / days.size
@@ -357,7 +361,7 @@ private fun EarningsSparkline(
             days.forEach { day ->
                 val label =
                     try {
-                        LocalDate.parse(day.date).dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
+                        LocalDate.parse(day.date).dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
                     } catch (_: Exception) {
                         "?"
                     }

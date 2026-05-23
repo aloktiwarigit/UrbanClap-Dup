@@ -1,16 +1,11 @@
 package com.homeservices.technician.domain.kyc
 
-import com.google.android.gms.tasks.Tasks
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.auth.GetTokenResult
 import com.homeservices.technician.data.integrity.IntegrityApiService
 import com.homeservices.technician.data.integrity.IntegrityNonceResponseDto
 import com.homeservices.technician.data.kyc.KycRepository
 import com.homeservices.technician.domain.integrity.IntegrityAttestor
 import com.homeservices.technician.domain.kyc.model.DigiLockerResult
 import io.mockk.coEvery
-import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
@@ -24,9 +19,6 @@ public class DigiLockerConsentUseCaseTest {
     private lateinit var repo: KycRepository
     private lateinit var integrityAttestor: IntegrityAttestor
     private lateinit var integrityApiService: IntegrityApiService
-    private lateinit var firebaseAuth: FirebaseAuth
-    private lateinit var firebaseUser: FirebaseUser
-    private lateinit var tokenResult: GetTokenResult
     private lateinit var useCase: DigiLockerConsentUseCase
 
     @BeforeEach
@@ -34,15 +26,9 @@ public class DigiLockerConsentUseCaseTest {
         repo = mockk()
         integrityAttestor = mockk()
         integrityApiService = mockk()
-        firebaseAuth = mockk()
-        firebaseUser = mockk()
-        tokenResult = mockk()
-        every { firebaseAuth.currentUser } returns firebaseUser
-        every { firebaseUser.getIdToken(false) } returns Tasks.forResult(tokenResult)
-        every { tokenResult.token } returns "firebase-token"
-        coEvery { integrityApiService.getNonce(any()) } returns IntegrityNonceResponseDto("nonce-kyc")
+        coEvery { integrityApiService.getNonce() } returns IntegrityNonceResponseDto("nonce-kyc")
         coEvery { integrityAttestor.attest("nonce-kyc") } returns Result.success("integrity-token-kyc")
-        useCase = DigiLockerConsentUseCase(repo, integrityAttestor, integrityApiService, firebaseAuth)
+        useCase = DigiLockerConsentUseCase(repo, integrityAttestor, integrityApiService)
     }
 
     @Test

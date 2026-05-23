@@ -1,0 +1,15 @@
+rules:
+  - id: no-header-authorization-in-apiservice
+    languages: [kotlin]
+    severity: ERROR
+    message: |
+      ApiService methods must not declare @Header("Authorization") parameters.
+      Use the @AuthOkHttpClient interceptor in NetworkModule.kt — it adds the
+      Authorization header automatically (via IdTokenCache) and refreshes the
+      token on 401 (via FirebaseTokenAuthenticator). Manual @Header("Authorization")
+      bypasses both. ADR-0021.
+    pattern: |
+      @Header("Authorization") $X
+    paths:
+      include:
+        - "technician-app/app/src/main/kotlin/**/*ApiService.kt"

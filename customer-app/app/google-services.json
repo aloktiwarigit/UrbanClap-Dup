@@ -1,78 +1,34 @@
 {
+  "_comment": "PLACEHOLDER STUB - NOT REAL FIREBASE CONFIG. The real google-services.json is injected at build time by .github/workflows/customer-ship.yml from the GOOGLE_SERVICES_JSON GitHub secret. This stub exists so AGP's processGoogleServices task can parse a structurally-valid JSON during local clean checkouts and forks/PR checks that lack the secret. The api_key value below is NOT a real credential.",
   "project_info": {
-    "project_number": "1044159357347",
-    "project_id": "homeservices-prod-001",
-    "storage_bucket": "homeservices-prod-001.firebasestorage.app"
+    "project_number": "000000000000",
+    "project_id": "PROJECT_ID_PLACEHOLDER",
+    "storage_bucket": "PROJECT_ID_PLACEHOLDER.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1044159357347:android:966ad8b5a7b1c12f97fa16",
+        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
         "android_client_info": {
-          "package_name": "com.homeservices.customer"
+          "package_name": "in.homeheroo.customer"
         }
       },
       "oauth_client": [
         {
-          "client_id": "1044159357347-1j30ia40923u8hutrnh17idad3eul53j.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.homeservices.customer",
-            "certificate_hash": "3df23e55392522dfc549d75e69c7c5aec5d2b8fa"
-          }
-        },
-        {
-          "client_id": "1044159357347-1kgmgij2id6amirv1u9f2i2929g11pvh.apps.googleusercontent.com",
+          "client_id": "000000000000-placeholderplaceholderplaceholder.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyDLAk_Ye8yeoT8of2niAclnmo4K5A_FTNE"
+          "current_key": "AIzaSyPLACEHOLDER_NOT_A_REAL_KEY_0000000"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "1044159357347-1kgmgij2id6amirv1u9f2i2929g11pvh.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:1044159357347:android:8df0499111f4cfd197fa16",
-        "android_client_info": {
-          "package_name": "com.homeservices.technician"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "1044159357347-qjvi1keasv27uqvrll2ep07ulm4t5coh.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.homeservices.technician",
-            "certificate_hash": "3df23e55392522dfc549d75e69c7c5aec5d2b8fa"
-          }
-        },
-        {
-          "client_id": "1044159357347-1kgmgij2id6amirv1u9f2i2929g11pvh.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyDLAk_Ye8yeoT8of2niAclnmo4K5A_FTNE"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "1044159357347-1kgmgij2id6amirv1u9f2i2929g11pvh.apps.googleusercontent.com",
+              "client_id": "000000000000-placeholderplaceholderplaceholder.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

@@ -27,6 +27,8 @@ export async function upsertKycStatus(
       aadhaarVerified: false,
       aadhaarMaskedNumber: null,
       panNumber: null,
+      panMaskedNumber: null,
+      panHash: null,
       panImagePath: null,
       ...(existing.kyc ?? {}),
       ...patch,
@@ -202,7 +204,6 @@ export async function getTechniciansWithinRadius(
     query: `SELECT * FROM c
             WHERE ST_WITHIN(c.location, @polygon)
             AND ARRAY_CONTAINS(c.skills, @serviceId)
-            AND c.kycStatus = "APPROVED"
             AND c.isOnline = true
             AND c.isAvailable = true`,
     parameters: [
@@ -272,7 +273,7 @@ export async function getTechnicianCandidatesForBooking(
   return candidates
     .map((tech) => {
       const distanceKm = haversine(lat, lng, tech.location.coordinates[1], tech.location.coordinates[0]);
-      return { tech: tech as TechnicianProfile & Record<string, unknown>, distanceKm };
+      return { tech: tech, distanceKm };
     })
     .filter(({ tech, distanceKm }) =>
       distanceKm <= radiusKm &&
@@ -427,4 +428,46 @@ export async function getTechnicianForReport(
     .read<{ displayName?: string; rating?: number }>();
   if (!resource) return null;
   return { displayName: resource.displayName ?? 'Technician', rating: resource.rating ?? 0 };
+}
+
+// ── Admin roster helpers (E09-S07a) ───────────────────────────────────────────
+
+export interface TechnicianAdminDoc {
+  id: string;
+  displayName?: string;
+  name?: string;
+  isOnline?: boolean;
+  suspended?: boolean;
+  kycStatus?: string;
+  skills?: string[];
+  commissionPct?: number;
+  updatedAt?: string;
+}
+
+export async function listAllTechniciansForAdmin(): Promise<TechnicianAdminDoc[]> {
+  const client = getCosmosClient();
+  const container = client.database(DB_NAME).container(CONTAINER);
+  const { resources } = await container.items
+    .query<TechnicianAdminDoc>('SELECT * FROM c')
+    .fetchAll();
+  return resources;
+}
+
+export async function patchTechnicianAdminFields(
+  id: string,
+  patch: { isOnline?: boolean; suspended?: boolean; commissionPct?: number; skills?: string[] },
+): Promise<void> {
+  const client = getCosmosClient();
+  const container = client.database(DB_NAME).container(CONTAINER);
+  const { resource } = await container.item(id, id).read<Record<string, unknown>>();
+  const updated = {
+    ...(resource ?? { id }),
+    id,
+    ...(patch.isOnline !== undefined ? { isOnline: patch.isOnline } : {}),
+    ...(patch.suspended !== undefined ? { suspended: patch.suspended } : {}),
+    ...(patch.commissionPct !== undefined ? { commissionPct: patch.commissionPct } : {}),
+    ...(patch.skills !== undefined ? { skills: patch.skills } : {}),
+    updatedAt: new Date().toISOString(),
+  };
+  await container.items.upsert(updated);
 }

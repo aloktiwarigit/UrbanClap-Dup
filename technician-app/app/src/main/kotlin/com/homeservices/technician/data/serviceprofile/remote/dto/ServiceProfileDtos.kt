@@ -2,10 +2,13 @@ package com.homeservices.technician.data.serviceprofile.remote.dto
 
 import com.homeservices.technician.domain.serviceprofile.model.ServiceLocation
 import com.homeservices.technician.domain.serviceprofile.model.ServiceProfile
+import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 
+@JsonClass(generateAdapter = true)
 internal data class ServiceLocationDto(
-    val lat: Double,
-    val lng: Double,
+    @Json(name = "lat") val lat: Double,
+    @Json(name = "lng") val lng: Double,
 ) {
     fun toDomain(): ServiceLocation =
         ServiceLocation(
@@ -14,9 +17,10 @@ internal data class ServiceLocationDto(
         )
 }
 
+@JsonClass(generateAdapter = true)
 internal data class ServiceProfileDto(
-    val skills: List<String>,
-    val location: ServiceLocationDto?,
+    @Json(name = "skills") val skills: List<String>,
+    @Json(name = "location") val location: ServiceLocationDto?,
 ) {
     fun toDomain(): ServiceProfile =
         ServiceProfile(
@@ -25,9 +29,10 @@ internal data class ServiceProfileDto(
         )
 }
 
+@JsonClass(generateAdapter = true)
 internal data class UpdateServiceProfileRequestDto(
-    val skills: List<String>,
-    val location: ServiceLocationDto?,
+    @Json(name = "skills") val skills: List<String>,
+    @Json(name = "location") val location: ServiceLocationDto?,
 )
 
 internal fun ServiceLocation.toDto(): ServiceLocationDto =

@@ -18,7 +18,7 @@ public class PanOcrUseCase
             technicianId: String,
         ): Flow<PanOcrResult> =
             flow {
-                val storagePath = "technicians/$technicianId/pan_${System.currentTimeMillis()}.jpg"
+                val storagePath = "kyc/$technicianId/pan_${System.currentTimeMillis()}.jpg"
                 val uploadedPath =
                     runCatching { uploader.upload(imageUri, storagePath) }
                         .getOrElse {

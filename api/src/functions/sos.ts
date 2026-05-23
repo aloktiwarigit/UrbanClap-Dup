@@ -31,7 +31,7 @@ const sosInner: CustomerHttpHandler = async (req, ctx, customer) => {
     bookingId,
     customerId: customer.customerId,
     technicianId: booking.technicianId ?? '',
-    slotAddress: booking.addressText,
+    incidentId: bookingId,
   });
 
   // Couple the idempotency marker to a confirmed send so a transient FCM failure is retryable.

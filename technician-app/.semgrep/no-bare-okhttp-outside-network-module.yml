@@ -1,0 +1,14 @@
+rules:
+  - id: no-bare-okhttp-outside-network-module
+    languages: [kotlin]
+    severity: ERROR
+    message: |
+      OkHttpClient construction must live in data/network/di/NetworkModule.kt.
+      Per-feature modules consume the @AuthOkHttpClient or @UnauthOkHttpClient
+      client by Hilt injection. ADR-0021.
+    pattern: OkHttpClient.Builder()
+    paths:
+      include:
+        - "technician-app/app/src/main/kotlin/**/*.kt"
+      exclude:
+        - "technician-app/app/src/main/kotlin/com/homeservices/technician/data/network/di/NetworkModule.kt"

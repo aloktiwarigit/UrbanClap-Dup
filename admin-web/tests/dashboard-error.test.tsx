@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react';
 
 vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn() }));
 
-import DashboardError from '../app/(dashboard)/error';
+import DashboardError from '../app/[locale]/(dashboard)/error';
 
 describe('(dashboard)/error.tsx', () => {
   it('renders an editorial error block with eyebrow + headline', () => {

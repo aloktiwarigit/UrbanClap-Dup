@@ -3,7 +3,11 @@ package com.homeservices.technician.ui.activeJob
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.homeservices.corenav.PendingActionType
+import com.homeservices.technician.data.activeJob.BookingStatusEventBus
 import com.homeservices.technician.data.activeJob.ConnectivityObserver
+import com.homeservices.technician.data.auth.SessionManager
+import com.homeservices.technician.data.pendingaction.PendingActionStore
 import com.homeservices.technician.domain.activeJob.ActiveJobRepository
 import com.homeservices.technician.domain.activeJob.CompleteJobUseCase
 import com.homeservices.technician.domain.activeJob.MarkReachedUseCase
@@ -11,19 +15,25 @@ import com.homeservices.technician.domain.activeJob.StartTripUseCase
 import com.homeservices.technician.domain.activeJob.StartWorkUseCase
 import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
 import com.homeservices.technician.domain.activeJob.model.NavigationEvent
+import com.homeservices.technician.domain.auth.model.AuthState
 import com.homeservices.technician.domain.photo.UploadJobPhotoUseCase
 import com.homeservices.technician.domain.shield.FileShieldReportUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
+@Suppress("LongParameterList") // Hilt-injected dependencies for the active-job feature; extracting an aggregator would only hide the wiring
 internal class ActiveJobViewModel
     @Inject
     constructor(
@@ -36,16 +46,31 @@ internal class ActiveJobViewModel
         private val connectivityObserver: ConnectivityObserver,
         private val uploadJobPhotoUseCase: UploadJobPhotoUseCase,
         private val fileShieldReportUseCase: FileShieldReportUseCase,
+        private val bookingStatusEventBus: BookingStatusEventBus,
+        private val pendingActionStore: PendingActionStore,
+        private val sessionManager: SessionManager,
     ) : ViewModel() {
         private val bookingId: String = checkNotNull(savedStateHandle["bookingId"])
 
         private val _uiState = MutableStateFlow<ActiveJobUiState>(ActiveJobUiState.Loading)
         public val uiState: StateFlow<ActiveJobUiState> = _uiState.asStateFlow()
 
+        /**
+         * Latest snapshot of "is there an active PHOTO_UPLOAD_PENDING row for this booking?"
+         * Cached separately because the pending-action observer can emit BEFORE the polling
+         * observer transitions uiState out of Loading on cold start; Room won't re-emit until
+         * the table changes, so we must remember the value and apply it when Active is built.
+         */
+        @Volatile
+        private var cachedPhotoUploadPending: Boolean = false
+
         private val _navigationEvents = MutableSharedFlow<NavigationEvent>(extraBufferCapacity = 1)
         public val navigationEvents: SharedFlow<NavigationEvent> = _navigationEvents.asSharedFlow()
 
         init {
+            viewModelScope.launch {
+                repository.startObserving(bookingId)
+            }
             viewModelScope.launch {
                 repository.getActiveJob(bookingId).collect { job ->
                     val current = _uiState.value as? ActiveJobUiState.Active
@@ -68,6 +93,10 @@ internal class ActiveJobViewModel
                                 shieldReportSuccess = current?.shieldReportSuccess ?: false,
                                 shieldReportError = current?.shieldReportError,
                                 mockLocationWarning = current?.mockLocationWarning ?: false,
+                                // Prefer existing Active state, fall back to cached value so a
+                                // pending row emitted before the first Active state still shows the banner.
+                                photoUploadPending = current?.photoUploadPending ?: cachedPhotoUploadPending,
+                                awaitingCompletionConfirm = current?.awaitingCompletionConfirm ?: false,
                             )
                         }
                 }
@@ -84,6 +113,41 @@ internal class ActiveJobViewModel
                 connectivityObserver.isConnected.collect { connected ->
                     if (connected) repository.syncPendingTransitions()
                 }
+            }
+            // E11-S05a: react to server-confirmed booking-status pushes. Any matching
+            // event triggers a refresh — ActiveJobRepository.getActiveJob is backed by
+            // in-memory state, not polling, so without this the screen stays stale on
+            // ASSIGNED / EN_ROUTE / IN_PROGRESS transitions that arrive via FCM.
+            viewModelScope.launch {
+                bookingStatusEventBus.events.collect { event ->
+                    if (event.bookingId == bookingId) repository.startObserving(bookingId)
+                }
+            }
+            // E11-S05a: derive photoUploadPending from the local pending-actions table.
+            @OptIn(ExperimentalCoroutinesApi::class)
+            viewModelScope.launch {
+                sessionManager.authState
+                    .flatMapLatest { authState ->
+                        when (authState) {
+                            is AuthState.Authenticated ->
+                                pendingActionStore
+                                    .observeActive(authState.uid)
+                                    .map { actions ->
+                                        actions.any {
+                                            it.type == PendingActionType.PHOTO_UPLOAD_PENDING &&
+                                                it.entityId == bookingId
+                                        }
+                                    }
+                            AuthState.Unauthenticated -> flowOf(false)
+                        }
+                    }.collect { hasPending ->
+                        // Cache so the polling collector picks up the value on Loading→Active.
+                        cachedPhotoUploadPending = hasPending
+                        val current = _uiState.value as? ActiveJobUiState.Active ?: return@collect
+                        if (current.photoUploadPending != hasPending) {
+                            _uiState.value = current.copy(photoUploadPending = hasPending)
+                        }
+                    }
             }
         }
 
@@ -178,6 +242,10 @@ internal class ActiveJobViewModel
                     // Keep photoUploadInProgress = true until fireTransition completes so the
                     // Confirm button stays disabled and duplicate transitions are prevented.
                     _uiState.value = s.copy(uploadedStoragePath = storagePath)
+                    // Tombstone any queued retry row — best-effort cleanup, MUST NOT block
+                    // the transition. A Room I/O failure here would otherwise strand the
+                    // technician with a permanent spinner and an unadvanced job.
+                    runCatching { pendingActionStore.clearPhotoUploadPending(bookingId) }
                     fireTransition(stage)
                 } else {
                     val s = _uiState.value as? ActiveJobUiState.Active ?: return@launch
@@ -186,8 +254,41 @@ internal class ActiveJobViewModel
                             photoUploadInProgress = false,
                             photoUploadError = uploadResult.exceptionOrNull()?.message ?: "Upload failed",
                         )
+                    // Persist the failure so the retry banner survives process death and
+                    // surfaces on return to the screen. No-op if the user is somehow
+                    // unauthenticated mid-job — the in-memory error state is still set.
+                    persistPhotoUploadPending(stage)
                 }
             }
+        }
+
+        /**
+         * Writes a deterministic PHOTO_UPLOAD_PENDING row keyed on this booking so
+         * [ActiveJobScreen] can surface [PhotoUploadRetryBanner] on cold start.
+         * Uses the same id-derivation scheme as [PendingActionIngestor.buildIdFromIntent].
+         */
+        private suspend fun persistPhotoUploadPending(stage: String) {
+            val uid = (sessionManager.authState.value as? AuthState.Authenticated)?.uid ?: return
+            val nowMs = System.currentTimeMillis()
+            pendingActionStore.upsert(
+                com.homeservices.corenav.PendingAction(
+                    id = "PHOTO_UPLOAD_PENDING:technician:$uid:booking:$bookingId",
+                    userId = uid,
+                    role = "technician",
+                    type = PendingActionType.PHOTO_UPLOAD_PENDING,
+                    entityType = "booking",
+                    entityId = bookingId,
+                    routeUri = "homeservices://action/PHOTO_UPLOAD_PENDING?bookingId=$bookingId&stage=$stage",
+                    priority = com.homeservices.corenav.PendingActionPriority.NORMAL,
+                    status = com.homeservices.corenav.PendingActionStatus.ACTIVE,
+                    sourceStatus = stage,
+                    version = 1L,
+                    createdAt = nowMs,
+                    updatedAt = nowMs,
+                    expiresAt = null,
+                    resolvedAt = null,
+                ),
+            )
         }
 
         private fun fireTransition(stage: String) {
@@ -275,6 +376,58 @@ internal class ActiveJobViewModel
             val current = _uiState.value as? ActiveJobUiState.Active ?: return
             _uiState.value = current.copy(shieldReportError = null)
         }
+
+        // ── E11-S05a: completion-confirm + photo retry ────────────────────────────
+
+        /** Shows the completion confirmation dialog before [completeJob] fires. */
+        public fun requestCompletionConfirm() {
+            val current = _uiState.value as? ActiveJobUiState.Active ?: return
+            _uiState.value = current.copy(awaitingCompletionConfirm = true)
+        }
+
+        /** Dismisses the completion dialog without firing the transition. */
+        public fun cancelCompletionConfirm() {
+            val current = _uiState.value as? ActiveJobUiState.Active ?: return
+            _uiState.value = current.copy(awaitingCompletionConfirm = false)
+        }
+
+        /**
+         * Confirms completion — clears the dialog flag and routes through the standard
+         * photo-capture flow for the COMPLETED stage. We MUST NOT call [completeJob]
+         * directly here: the FR-5.4 evidence-photo invariant requires every stage
+         * transition (including final completion) to be preceded by a photo upload,
+         * which is enforced by the [PhotoCaptureScreen] that [onTransitionRequested]
+         * opens and the [fireTransition]("COMPLETED") path triggered on photo confirm.
+         */
+        public fun confirmCompletion() {
+            val current = _uiState.value as? ActiveJobUiState.Active ?: return
+            _uiState.value = current.copy(awaitingCompletionConfirm = false)
+            onTransitionRequested("COMPLETED")
+        }
+
+        /**
+         * Reopens [PhotoCaptureScreen] for the queued photo upload of the current
+         * stage so the technician can retry the upload that previously failed.
+         */
+        public fun onPhotoRetryRequested() {
+            val current = _uiState.value as? ActiveJobUiState.Active ?: return
+            val pendingStage = current.job.status.toStageName()
+            _uiState.value =
+                current.copy(
+                    pendingPhotoStage = pendingStage,
+                    photoUploadError = null,
+                )
+        }
+
+        /** Maps the current job status to the *target* stage of the next transition. */
+        private fun ActiveJobStatus.toStageName(): String =
+            when (this) {
+                ActiveJobStatus.ASSIGNED -> "EN_ROUTE"
+                ActiveJobStatus.EN_ROUTE -> "REACHED"
+                ActiveJobStatus.REACHED -> "IN_PROGRESS"
+                ActiveJobStatus.IN_PROGRESS -> "COMPLETED"
+                ActiveJobStatus.COMPLETED -> "COMPLETED"
+            }
 
         private fun ActiveJobStatus.toAction(): ActiveJobAction =
             when (this) {

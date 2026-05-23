@@ -44,7 +44,7 @@ describe('GET /v1/bookings', () => {
         id: 'bk-1',
         customerId: 'cust-1',
         serviceId: 'ac-deep-clean',
-        addressText: '101 Ayodhya',
+        addressText: '101%20Ayodhya',
         addressLatLng: { lat: 26.79, lng: 82.2 },
         status: 'ASSIGNED',
         slotDate: '2026-05-05',

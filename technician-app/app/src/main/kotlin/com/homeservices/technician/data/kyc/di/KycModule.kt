@@ -11,10 +11,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
-import retrofit2.converter.moshi.MoshiConverterFactory
 import javax.inject.Singleton
 
 @Module
@@ -31,20 +28,7 @@ public abstract class KycModule {
     public companion object {
         @Provides
         @Singleton
-        internal fun provideKycApiService(): KycApiService {
-            val logging =
-                HttpLoggingInterceptor().apply {
-                    level = HttpLoggingInterceptor.Level.BODY
-                }
-            val client = OkHttpClient.Builder().addInterceptor(logging).build()
-            return Retrofit
-                .Builder()
-                .baseUrl("https://func-homeservices-prod.azurewebsites.net/api/")
-                .client(client)
-                .addConverterFactory(MoshiConverterFactory.create())
-                .build()
-                .create(KycApiService::class.java)
-        }
+        internal fun provideKycApiService(retrofit: Retrofit): KycApiService = retrofit.create(KycApiService::class.java)
 
         @Provides
         @Singleton

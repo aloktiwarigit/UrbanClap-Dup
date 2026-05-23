@@ -79,7 +79,7 @@ test.describe('Login flow', () => {
       });
     });
 
-    await page.goto('/login');
+    await page.goto('/en/login');
     await page.fill('input[type="email"]', 'admin@test.com');
     await page.fill('input[type="password"]', 'password');
     await page.getByRole('button', { name: /sign in with password/i }).click();
@@ -110,7 +110,7 @@ test.describe('Login flow', () => {
       });
     });
 
-    await page.goto('/login');
+    await page.goto('/en/login');
     await page.fill('input[type="email"]', 'admin@test.com');
     await page.fill('input[type="password"]', 'password');
     await page.getByRole('button', { name: /sign in with password/i }).click();

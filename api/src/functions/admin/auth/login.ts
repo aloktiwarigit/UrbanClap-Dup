@@ -195,16 +195,16 @@ export async function adminLoginHandler(
   if (!adminUser.totpEnrolled) {
     const setupToken = await signSetupToken({ sub: adminUser.adminId, email: adminUser.email });
     // Deliver setupToken as an HttpOnly cookie (hs_setup) so the client never
-    // touches it via JS. Also include it in the JSON body for the deprecation
-    // window while old clients (if any) drain. Once all clients use the cookie
-    // path the JSON field can be dropped.
+    // touches it via JS. The cookie must be available to the Next.js
+    // /api/setup-token/exchange route, not just /setup, because the visible
+    // setup page is locale-prefixed.
     const setupCookie: Cookie = {
       name: 'hs_setup',
       value: setupToken,
       httpOnly: true,
       secure: true,
       sameSite: 'Strict',
-      path: '/setup',
+      path: '/',
       maxAge: 600,
     };
     return {

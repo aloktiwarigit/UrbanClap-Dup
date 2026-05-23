@@ -8,7 +8,7 @@
         errorLine2="    ~~~~~~~~">
         <location
             file="src/main/kotlin/com/homeservices/customer/ui/auth/AuthScreen.kt"
-            line="68"
+            line="91"
             column="5"/>
     </issue>
 
@@ -21,6 +21,358 @@
             file="src/main/kotlin/com/homeservices/customer/ui/profile/ProfileScreen.kt"
             line="66"
             column="5"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;data_export_title&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;data_export_title&quot;>Download my data&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="350"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;data_export_description&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;data_export_description&quot;>Your complete account data — profile, bookings, ratings, and complaints — will be downloaded as a JSON file to a location of your choice.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="351"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;data_export_privacy_note&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;data_export_privacy_note&quot;>Your data is downloaded directly to your device. It is never stored or processed by third parties.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="352"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;data_export_button&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;data_export_button&quot;>Download my data&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="353"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;data_export_loading&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;data_export_loading&quot;>Preparing your data export&amp;#8230;&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="354"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;data_export_success_toast&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;data_export_success_toast&quot;>Data saved successfully&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="355"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;data_export_error_unknown&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;data_export_error_unknown&quot;>Something went wrong. Please check your connection and try again.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="356"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;data_export_retry&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;data_export_retry&quot;>Try again&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="357"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;data_export_filename_prefix&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;data_export_filename_prefix&quot;>homeservices-data-export&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="358"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_account_title&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_account_title&quot;>Delete account&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="361"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_account_warning&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_account_warning&quot;>Your account and all associated data will be permanently deleted after a 7-day cool-off period. You can cancel the deletion any time during this window.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="362"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_account_what_deleted_label&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_account_what_deleted_label&quot;>What will be deleted&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="363"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_account_item_bookings&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_account_item_bookings&quot;>Bookings history&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="364"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_account_item_addresses&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_account_item_addresses&quot;>Saved addresses&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="365"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_account_item_payment_methods&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_account_item_payment_methods&quot;>Payment methods&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="366"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_account_item_preferences&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_account_item_preferences&quot;>App preferences &amp;amp; settings&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="367"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_account_continue_cta&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_account_continue_cta&quot;>Continue to delete&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="368"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_account_confirm_title&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_account_confirm_title&quot;>Confirm deletion&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="369"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_account_confirm_instruction&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_account_confirm_instruction&quot;>Type the phrase below exactly to confirm you want to delete your account.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="370"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_account_phrase_label&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_account_phrase_label&quot;>Confirmation phrase&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="371"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_my_account_confirmation_phrase&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_my_account_confirmation_phrase&quot;>DELETE MY ACCOUNT&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="372"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_account_phrase_mismatch&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_account_phrase_mismatch&quot;>Phrase does not match. Please type it exactly.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="373"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_account_pin_label&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_account_pin_label&quot;>Last 4 digits of your registered phone number&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="374"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_account_submit_cta&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_account_submit_cta&quot;>Delete my account&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="375"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_account_cancel_cta&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_account_cancel_cta&quot;>Cancel&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="376"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_account_coolOff_title&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_account_coolOff_title&quot;>Deletion scheduled&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="377"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_account_coolOff_subtitle&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_account_coolOff_subtitle&quot;>You can still revoke this deletion until your account is permanently removed.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="378"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_account_coolOff_countdown_format&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_account_coolOff_countdown_format&quot;>Account will be deleted in %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="379"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_account_revoke_cta&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_account_revoke_cta&quot;>Revoke deletion&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="380"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_account_revoke_success&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_account_revoke_success&quot;>Deletion cancelled. Your account is safe.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="381"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_account_close_cta&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_account_close_cta&quot;>Close&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="382"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;delete_account_error_unknown&quot; is not translated in &quot;hi&quot; (Hindi)"
+        errorLine1="    &lt;string name=&quot;delete_account_error_unknown&quot;>Something went wrong. Please try again.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="383"
+            column="13"/>
     </issue>
 
     <issue
@@ -47,6 +399,50 @@
 
     <issue
         id="UnusedResources"
+        message="The resource `R.color.ic_launcher_background` appears to be unused"
+        errorLine1="    &lt;color name=&quot;ic_launcher_background&quot;>#0B3D2E&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="3"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.mipmap.ic_launcher` appears to be unused"
+        errorLine1="&lt;adaptive-icon xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;>"
+        errorLine2="^">
+        <location
+            file="src/main/res/mipmap-anydpi/ic_launcher.xml"
+            line="2"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.drawable.ic_launcher_foreground` appears to be unused"
+        errorLine1="&lt;vector xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;"
+        errorLine2="^">
+        <location
+            file="src/main/res/drawable/ic_launcher_foreground.xml"
+            line="2"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.mipmap.ic_launcher_round` appears to be unused"
+        errorLine1="&lt;adaptive-icon xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;>"
+        errorLine2="^">
+        <location
+            file="src/main/res/mipmap-anydpi/ic_launcher_round.xml"
+            line="2"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
         message="The resource `R.string.catalogue_home_title` appears to be unused"
         errorLine1="    &lt;string name=&quot;catalogue_home_title&quot;>Book trusted home services&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
@@ -59,7 +455,7 @@
     <issue
         id="UnusedResources"
         message="The resource `R.string.catalogue_home_subtitle` appears to be unused"
-        errorLine1="    &lt;string name=&quot;catalogue_home_subtitle&quot;>Verified technicians, clear prices, and live updates from booking to completion.&lt;/string>"
+        errorLine1="    &lt;string name=&quot;catalogue_home_subtitle&quot;>Skilled technicians, clear prices, and live updates from booking to completion.&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
@@ -70,7 +466,7 @@
     <issue
         id="UnusedResources"
         message="The resource `R.string.catalogue_trust_chip` appears to be unused"
-        errorLine1="    &lt;string name=&quot;catalogue_trust_chip&quot;>Aadhaar verified pros&lt;/string>"
+        errorLine1="    &lt;string name=&quot;catalogue_trust_chip&quot;>Skilled pros&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
@@ -125,7 +521,7 @@
     <issue
         id="UnusedResources"
         message="The resource `R.string.trust_dossier_promise` appears to be unused"
-        errorLine1="    &lt;string name=&quot;trust_dossier_promise&quot;>All our technicians are Aadhaar-verified and background-checked.&lt;/string>"
+        errorLine1="    &lt;string name=&quot;trust_dossier_promise&quot;>Verification badges appear when a technician has completed those checks.&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
@@ -168,12 +564,474 @@
 
     <issue
         id="UnusedResources"
+        message="The resource `R.string.booking_error_failed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;booking_error_failed&quot;>Booking failed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="95"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.booking_error_confirmation_failed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;booking_error_confirmation_failed&quot;>Confirmation failed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="96"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.booking_error_payment_cancelled` appears to be unused"
+        errorLine1="    &lt;string name=&quot;booking_error_payment_cancelled&quot;>Payment cancelled: %s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="97"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
         message="The resource `R.string.booking_error_retry` appears to be unused"
         errorLine1="    &lt;string name=&quot;booking_error_retry&quot;>Retry&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="97"
+            line="117"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_payment_pending` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_payment_pending&quot;>Payment pending&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="210"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_booking_confirmed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_booking_confirmed&quot;>Booking confirmed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="211"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_finding_technician` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_finding_technician&quot;>Finding technician&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="212"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_technician_assigned` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_technician_assigned&quot;>Technician assigned&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="213"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_technician_on_way` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_technician_on_way&quot;>Technician on the way&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="214"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_technician_arrived` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_technician_arrived&quot;>Technician arrived&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="215"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_work_in_progress` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_work_in_progress&quot;>Work in progress&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="216"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_price_approval_needed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_price_approval_needed&quot;>Price approval needed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="217"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_service_completed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_service_completed&quot;>Service completed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="218"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_booking_closed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_booking_closed&quot;>Booking closed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="219"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_booking_cancelled` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_booking_cancelled&quot;>Booking cancelled&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="220"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_technician_unavailable` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_technician_unavailable&quot;>Technician unavailable&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="221"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.status_unavailable` appears to be unused"
+        errorLine1="    &lt;string name=&quot;status_unavailable&quot;>Status unavailable&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="222"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.complaint_error_unknown` appears to be unused"
+        errorLine1="    &lt;string name=&quot;complaint_error_unknown&quot;>Unknown error&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="258"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_account_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_account_title&quot;>Delete account&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="361"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_account_warning` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_account_warning&quot;>Your account and all associated data will be permanently deleted after a 7-day cool-off period. You can cancel the deletion any time during this window.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="362"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_account_what_deleted_label` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_account_what_deleted_label&quot;>What will be deleted&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="363"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_account_item_bookings` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_account_item_bookings&quot;>Bookings history&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="364"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_account_item_addresses` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_account_item_addresses&quot;>Saved addresses&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="365"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_account_item_payment_methods` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_account_item_payment_methods&quot;>Payment methods&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="366"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_account_item_preferences` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_account_item_preferences&quot;>App preferences &amp;amp; settings&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="367"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_account_continue_cta` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_account_continue_cta&quot;>Continue to delete&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="368"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_account_confirm_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_account_confirm_title&quot;>Confirm deletion&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="369"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_account_confirm_instruction` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_account_confirm_instruction&quot;>Type the phrase below exactly to confirm you want to delete your account.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="370"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_account_phrase_label` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_account_phrase_label&quot;>Confirmation phrase&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="371"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_my_account_confirmation_phrase` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_my_account_confirmation_phrase&quot;>DELETE MY ACCOUNT&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="372"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_account_phrase_mismatch` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_account_phrase_mismatch&quot;>Phrase does not match. Please type it exactly.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="373"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_account_pin_label` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_account_pin_label&quot;>Last 4 digits of your registered phone number&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="374"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_account_submit_cta` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_account_submit_cta&quot;>Delete my account&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="375"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_account_cancel_cta` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_account_cancel_cta&quot;>Cancel&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="376"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_account_coolOff_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_account_coolOff_title&quot;>Deletion scheduled&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="377"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_account_coolOff_subtitle` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_account_coolOff_subtitle&quot;>You can still revoke this deletion until your account is permanently removed.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="378"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_account_coolOff_countdown_format` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_account_coolOff_countdown_format&quot;>Account will be deleted in %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="379"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_account_revoke_cta` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_account_revoke_cta&quot;>Revoke deletion&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="380"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_account_revoke_success` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_account_revoke_success&quot;>Deletion cancelled. Your account is safe.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="381"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_account_close_cta` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_account_close_cta&quot;>Close&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="382"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_account_error_unknown` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_account_error_unknown&quot;>Something went wrong. Please try again.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="383"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.notification_permission_rationale_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;notification_permission_rationale_title&quot;>Allow notifications&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="386"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.notification_permission_rationale_body` appears to be unused"
+        errorLine1="    &lt;string name=&quot;notification_permission_rationale_body&quot;>Allow notifications to receive booking updates, add-on requests, and service reminders.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="387"
             column="13"/>
     </issue>
 
@@ -184,7 +1042,7 @@
         errorLine2="                                     ~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-hi/strings.xml"
-            line="8"
+            line="9"
             column="38"/>
     </issue>
 
@@ -211,14 +1069,38 @@
     </issue>
 
     <issue
-        id="TypographyEllipsis"
-        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
-        errorLine1="    &lt;string name=&quot;trust_dossier_loading&quot;>तकनीशियन प्रोफाइल लोड हो रही है...&lt;/string>"
-        errorLine2="                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        id="IconLauncherShape"
+        message="Launcher icon used as round icon did not have a circular shape">
         <location
-            file="src/main/res/values-hi/strings.xml"
-            line="106"
-            column="42"/>
+            file="src/main/res/mipmap-hdpi/ic_launcher_homeheroo.png"/>
+    </issue>
+
+    <issue
+        id="IconLauncherShape"
+        message="Launcher icon used as round icon did not have a circular shape">
+        <location
+            file="src/main/res/mipmap-mdpi/ic_launcher_homeheroo.png"/>
+    </issue>
+
+    <issue
+        id="IconLauncherShape"
+        message="Launcher icon used as round icon did not have a circular shape">
+        <location
+            file="src/main/res/mipmap-xhdpi/ic_launcher_homeheroo.png"/>
+    </issue>
+
+    <issue
+        id="IconLauncherShape"
+        message="Launcher icon used as round icon did not have a circular shape">
+        <location
+            file="src/main/res/mipmap-xxhdpi/ic_launcher_homeheroo.png"/>
+    </issue>
+
+    <issue
+        id="IconLauncherShape"
+        message="Launcher icon used as round icon did not have a circular shape">
+        <location
+            file="src/main/res/mipmap-xxxhdpi/ic_launcher_homeheroo.png"/>
     </issue>
 
     <issue

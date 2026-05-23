@@ -5,7 +5,12 @@
 // must fire BEFORE any JWT verification and return NextResponse.next() directly.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+
+vi.mock('next-intl/middleware', () => ({
+  default: () => (req: NextRequest) => NextResponse.next({ request: req }),
+}));
+
 import { middleware } from '../../middleware';
 
 const JWT_SECRET = 'test-secret-that-is-long-enough-for-hs256-minimum-32-chars!!';
