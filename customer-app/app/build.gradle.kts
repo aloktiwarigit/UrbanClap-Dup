@@ -425,9 +425,6 @@ kover {
                     // CustomerFirebaseMessagingService — Android OS entry-point, not unit-testable
                     "*.CustomerFirebaseMessagingService",
                     "*.CustomerFirebaseMessagingService\$*",
-                    // BookingRepositoryImpl — thin Retrofit wrapper, integration-tested via API layer
-                    "*.BookingRepositoryImpl",
-                    "*.BookingRepositoryImpl\$*",
                     // BookingModule — Hilt @Provides wiring + OkHttp/Retrofit construction,
                     // same rationale as data.auth.di.* and data.catalogue.di.*
                     "*.data.booking.di.*",
@@ -639,6 +636,7 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.hilt.testing)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.okhttp.mockwebserver)
     kspTest(libs.hilt.compiler)
 
     androidTestImplementation(libs.hilt.testing)
