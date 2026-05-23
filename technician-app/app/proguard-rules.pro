@@ -61,3 +61,7 @@
 # GrowthBook SDK
 -keep class com.sdk.growthbook.** { *; }
 -dontwarn com.sdk.growthbook.**
+
+# E11-S04 dashboard (Hilt ViewModel + Compose internals)
+-keep class com.homeservices.technician.ui.dashboard.TechnicianDashboardViewModel { *; }
+-keep class com.homeservices.technician.ui.dashboard.PendingActionCard { *; }

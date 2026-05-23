@@ -13,7 +13,7 @@ import type { BookingDoc } from '../schemas/booking.js';
 import { normalizeAddressText } from '../shared/address-text.js';
 
 const DISPATCH_RADIUS_KM = 10;
-const OFFER_WINDOW_MS = 30_000;
+const OFFER_WINDOW_MS = 90_000;
 const SLOT_GRACE_WINDOW_MS = 30 * 60 * 1_000;
 
 function slotStartUtcMs(slotDate: string, slotWindow: string): number {
@@ -66,7 +66,7 @@ async function dispatchBookingToTechs(
   // receive the same booking again via a redispatch.
   const candidates = (await getTechniciansWithinRadius(lat, lng, radiusKm, booking.serviceId))
     .filter((t) => haversine(lat, lng, t.location.coordinates[1], t.location.coordinates[0]) <= radiusKm)
-    .filter((t) => !excluded.has(t.id))
+    .filter((t) => !excluded.has(t.id) && !excluded.has(t.technicianId))
     .filter((t) => !(t.blockedCustomerIds ?? []).includes(booking.customerId));
 
   if (candidates.length === 0) {
@@ -83,13 +83,14 @@ async function dispatchBookingToTechs(
   }
 
   const selected = rankTechnicians(candidates, lat, lng)[0]!;
+  const selectedTechnicianId = selected.technicianId || selected.id;
   const sentAt = new Date();
   const expiresAt = new Date(sentAt.getTime() + OFFER_WINDOW_MS);
 
   const attempt: DispatchAttemptDoc = {
     id: randomUUID(),
     bookingId,
-    technicianIds: [selected.id],
+    technicianIds: [selectedTechnicianId],
     sentAt: sentAt.toISOString(),
     expiresAt: expiresAt.toISOString(),
     status: 'PENDING',
@@ -133,7 +134,7 @@ async function dispatchBookingToTechs(
     }
   }
 
-  console.log(`DISPATCH_SENT bookingId=${bookingId} technicianIds=${selected.id}`);
+  console.log(`DISPATCH_SENT bookingId=${bookingId} technicianIds=${selectedTechnicianId}`);
   return true;
 }
 
@@ -151,7 +152,10 @@ export const dispatcherService = {
     const bookings = await bookingRepo.getBookingsAwaitingDispatch(limit);
     let dispatched = 0;
     for (const booking of bookings.filter((b) => isStillDispatchable(b))) {
-      if (await dispatchBookingToTechs(booking.id, booking, DISPATCH_RADIUS_KM)) dispatched += 1;
+      const previouslyAttempted = await dispatchAttemptRepo.getAttemptedTechnicianIds(booking.id);
+      if (await dispatchBookingToTechs(booking.id, booking, DISPATCH_RADIUS_KM, previouslyAttempted)) {
+        dispatched += 1;
+      }
     }
     return { checked: bookings.length, dispatched };
   },

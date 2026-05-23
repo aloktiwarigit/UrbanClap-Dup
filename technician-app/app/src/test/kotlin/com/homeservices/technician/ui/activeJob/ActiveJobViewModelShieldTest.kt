@@ -1,7 +1,10 @@
 package com.homeservices.technician.ui.activeJob
 
 import androidx.lifecycle.SavedStateHandle
+import com.homeservices.technician.data.activeJob.BookingStatusEventBus
 import com.homeservices.technician.data.activeJob.ConnectivityObserver
+import com.homeservices.technician.data.auth.SessionManager
+import com.homeservices.technician.data.pendingaction.PendingActionStore
 import com.homeservices.technician.domain.activeJob.ActiveJobRepository
 import com.homeservices.technician.domain.activeJob.CompleteJobUseCase
 import com.homeservices.technician.domain.activeJob.MarkReachedUseCase
@@ -10,6 +13,7 @@ import com.homeservices.technician.domain.activeJob.StartWorkUseCase
 import com.homeservices.technician.domain.activeJob.model.ActiveJob
 import com.homeservices.technician.domain.activeJob.model.ActiveJobStatus
 import com.homeservices.technician.domain.activeJob.model.LatLng
+import com.homeservices.technician.domain.auth.model.AuthState
 import com.homeservices.technician.domain.photo.UploadJobPhotoUseCase
 import com.homeservices.technician.domain.shield.FileShieldReportUseCase
 import com.homeservices.technician.domain.shield.model.ShieldReportResult
@@ -19,6 +23,8 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -61,10 +67,16 @@ public class ActiveJobViewModelShieldTest {
         val completeJobUseCase: CompleteJobUseCase = mockk(relaxed = true)
         val connectivityObserver: ConnectivityObserver = mockk()
         val uploadJobPhotoUseCase: UploadJobPhotoUseCase = mockk(relaxed = true)
+        val bookingStatusEventBus: BookingStatusEventBus = mockk(relaxed = true)
+        val pendingActionStore: PendingActionStore = mockk(relaxed = true)
+        val sessionManager: SessionManager = mockk(relaxed = true)
         fileShieldReportUseCase = mockk()
         every { connectivityObserver.isConnected } returns emptyFlow()
         every { repository.getActiveJob("bk-1") } returns flowOf(aJob())
         every { repository.hasPendingTransitions } returns flowOf(false)
+        every { bookingStatusEventBus.events } returns MutableSharedFlow()
+        every { sessionManager.authState } returns MutableStateFlow(AuthState.Unauthenticated)
+        every { pendingActionStore.observeActive(any()) } returns flowOf(emptyList())
         val savedStateHandle = SavedStateHandle(mapOf("bookingId" to "bk-1"))
         viewModel =
             ActiveJobViewModel(
@@ -77,6 +89,9 @@ public class ActiveJobViewModelShieldTest {
                 connectivityObserver,
                 uploadJobPhotoUseCase,
                 fileShieldReportUseCase,
+                bookingStatusEventBus,
+                pendingActionStore,
+                sessionManager,
             )
     }
 

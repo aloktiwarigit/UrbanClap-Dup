@@ -1,6 +1,5 @@
 package com.homeservices.technician.data.activeJob
 
-import com.google.firebase.auth.FirebaseAuth
 import com.homeservices.technician.data.activeJob.db.ActiveJobDao
 import com.homeservices.technician.data.activeJob.db.PendingTransitionEntity
 import com.homeservices.technician.domain.activeJob.ActiveJobRepository
@@ -15,7 +14,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.tasks.await
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -26,7 +24,6 @@ public class ActiveJobRepositoryImpl
     internal constructor(
         private val api: ActiveJobApiService,
         private val dao: ActiveJobDao,
-        private val firebaseAuth: FirebaseAuth,
         private val currentLocationProvider: CurrentLocationProvider,
     ) : ActiveJobRepository {
         private val _activeJobState = MutableStateFlow<ActiveJob?>(null)
@@ -44,12 +41,7 @@ public class ActiveJobRepositoryImpl
 
         /** One-shot HTTP fetch to prime [activeJobState]. Called by the foreground service on start. */
         override suspend fun startObserving(bookingId: String) {
-            val token =
-                firebaseAuth.currentUser
-                    ?.getIdToken(false)
-                    ?.await()
-                    ?.token ?: return
-            val response = api.getActiveJob("Bearer $token", bookingId)
+            val response = api.getActiveJob(bookingId)
             if (response.isSuccessful) {
                 response.body()?.let { _activeJobState.value = it.toDomain() }
             }
@@ -67,19 +59,12 @@ public class ActiveJobRepositoryImpl
             bookingId: String,
             targetStatus: ActiveJobStatus,
             integrityToken: String?,
-        ): Result<ActiveJob> {
-            return try {
-                val token =
-                    firebaseAuth.currentUser
-                        ?.getIdToken(false)
-                        ?.await()
-                        ?.token
-                        ?: return Result.failure(IllegalStateException("Not authenticated"))
+        ): Result<ActiveJob> =
+            try {
                 val locationWithFidelity =
                     runCatching { currentLocationProvider.currentLocation() }.getOrNull()
                 val response =
                     api.transitionStatus(
-                        "Bearer $token",
                         bookingId,
                         TransitionRequest(
                             targetStatus = targetStatus.name,
@@ -95,9 +80,13 @@ public class ActiveJobRepositoryImpl
                         integrityToken = integrityToken,
                     )
                 if (response.isSuccessful) {
-                    val job = response.body()!!.toDomain()
-                    _activeJobState.value = job
-                    Result.success(job)
+                    response.body()?.let { body ->
+                        val job = body.toDomain()
+                        _activeJobState.value = job
+                        Result.success(job)
+                    } ?: Result.failure(
+                        IllegalStateException("Empty body on successful transition for $bookingId"),
+                    )
                 } else {
                     Result.failure(RuntimeException("Transition failed: HTTP ${response.code()}"))
                 }
@@ -112,20 +101,13 @@ public class ActiveJobRepositoryImpl
                 )
                 Result.failure(e)
             }
-        }
 
         override suspend fun syncPendingTransitions() {
-            val token =
-                firebaseAuth.currentUser
-                    ?.getIdToken(false)
-                    ?.await()
-                    ?.token ?: return
             val pending = dao.getPending()
             for (entry in pending) {
                 try {
                     val response =
                         api.transitionStatus(
-                            "Bearer $token",
                             entry.bookingId,
                             TransitionRequest(entry.targetStatus),
                         )
@@ -140,7 +122,7 @@ public class ActiveJobRepositoryImpl
 
         private fun ActiveJobResponse.toDomain(): ActiveJob =
             ActiveJob(
-                bookingId = bookingId,
+                bookingId = id,
                 customerId = customerId,
                 serviceId = serviceId,
                 serviceName = serviceName,

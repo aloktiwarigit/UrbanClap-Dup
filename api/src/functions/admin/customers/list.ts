@@ -4,6 +4,7 @@ import { requireAdmin } from '../../../middleware/requireAdmin.js';
 import type { AdminContext } from '../../../types/admin.js';
 import { getCustomerSummaries } from '../../../cosmos/booking-repository.js';
 import { getCustomerMetadata } from '../../../cosmos/customer-metadata-repository.js';
+import { getFirebaseAdmin } from '../../../services/firebaseAdmin.js';
 import type { AdminCustomer } from '../../../schemas/admin-customer.js';
 
 function maskPhone(phone: string): string {
@@ -21,19 +22,21 @@ export async function adminListCustomersHandler(
 
   const customerIds = summaries.map((s) => s.customerId);
 
-  // Batch fetch Firebase Auth users (100 at a time)
-  const firebaseAdmin = await import('firebase-admin');
-  const firebaseApp = firebaseAdmin.app();
   const authMap = new Map<string, { displayName?: string; phoneNumber?: string }>();
-  for (let i = 0; i < customerIds.length; i += 100) {
-    const chunk = customerIds.slice(i, i + 100);
-    const { users } = await firebaseApp.auth().getUsers(chunk.map((uid) => ({ uid })));
-    for (const u of users) {
-      const entry: { displayName?: string; phoneNumber?: string } = {};
-      if (u.displayName) entry.displayName = u.displayName;
-      if (u.phoneNumber) entry.phoneNumber = u.phoneNumber;
-      authMap.set(u.uid, entry);
+  try {
+    const auth = getFirebaseAdmin().auth();
+    for (let i = 0; i < customerIds.length; i += 100) {
+      const chunk = customerIds.slice(i, i + 100);
+      const { users } = await auth.getUsers(chunk.map((uid) => ({ uid })));
+      for (const u of users) {
+        const entry: { displayName?: string; phoneNumber?: string } = {};
+        if (u.displayName) entry.displayName = u.displayName;
+        if (u.phoneNumber) entry.phoneNumber = u.phoneNumber;
+        authMap.set(u.uid, entry);
+      }
     }
+  } catch {
+    // Firebase Auth metadata is best-effort; booking summaries still render without it.
   }
 
   const metadataMap = await getCustomerMetadata(customerIds);

@@ -16,6 +16,7 @@ public data class CreateBookingRequestDto(
     val addressText: String,
     val addressLatLng: LatLngDto,
     val paymentMethod: String = BookingPaymentMethod.RAZORPAY.name,
+    val applyCredit: Boolean = false,
 )
 
 @JsonClass(generateAdapter = true)
@@ -31,6 +32,7 @@ public data class CreateBookingResponseDto(
     val amount: Int,
     val requiresPayment: Boolean = true,
     val paymentMethod: String? = null,
+    val appliedCreditAmount: Int? = null,
 ) {
     public fun toDomain(): BookingResult =
         BookingResult(
@@ -42,6 +44,7 @@ public data class CreateBookingResponseDto(
                 paymentMethod
                     ?.let { runCatching { BookingPaymentMethod.valueOf(it) }.getOrNull() }
                     ?: BookingPaymentMethod.RAZORPAY,
+            appliedCreditAmount = appliedCreditAmount ?: 0,
         )
 }
 
@@ -111,6 +114,7 @@ public data class CustomerBookingDto(
     val amount: Long,
     val paymentMethod: String? = null,
     val createdAt: String,
+    val ratingSubmitted: Boolean = false,
 ) {
     public fun toDomain(): CustomerBooking =
         CustomerBooking(
@@ -130,5 +134,6 @@ public data class CustomerBookingDto(
                     ?.let { runCatching { BookingPaymentMethod.valueOf(it) }.getOrNull() }
                     ?: BookingPaymentMethod.RAZORPAY,
             createdAt = createdAt,
+            ratingSubmitted = ratingSubmitted,
         )
 }

@@ -8,7 +8,7 @@ import { bookingEventRepo } from '../cosmos/booking-event-repository.js';
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { haversine } from '../cosmos/geo.js';
 import { sendBookingStatusUpdatePush, sendLocationUpdatePush } from '../services/fcm.service.js';
-import type { BookingDoc } from '../schemas/booking.js';
+import type { BookingDoc as _BookingDoc } from '../schemas/booking.js';
 import { normalizeAddressText } from '../shared/address-text.js';
 
 const TRANSITION_ORDER = ['ASSIGNED', 'EN_ROUTE', 'REACHED', 'IN_PROGRESS', 'COMPLETED'] as const;
@@ -107,7 +107,7 @@ export const transitionStatusHandler: HttpHandler = async (req, ctx: InvocationC
   }
 
   const updated = await updateBookingFields(bookingId, {
-    status: body.targetStatus as BookingDoc['status'],
+    status: body.targetStatus,
     ...(body.targetStatus === 'COMPLETED' ? { completedAt: new Date().toISOString() } : {}),
   });
   if (!updated) return { status: 500, jsonBody: { code: 'UPDATE_FAILED' } };

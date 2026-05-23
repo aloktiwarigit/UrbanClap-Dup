@@ -1,6 +1,7 @@
 package com.homeservices.technician.data.jobOffer
 
 import com.homeservices.technician.domain.jobOffer.model.JobOffer
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -13,12 +14,17 @@ public class JobOfferEventBus
     constructor() {
         private val _events: MutableSharedFlow<JobOffer> =
             MutableSharedFlow(
-                replay = 0,
+                replay = 1,
                 extraBufferCapacity = 1,
             )
         public val events: SharedFlow<JobOffer> = _events.asSharedFlow()
 
         public fun tryEmit(offer: JobOffer): Unit {
             _events.tryEmit(offer)
+        }
+
+        @OptIn(ExperimentalCoroutinesApi::class)
+        public fun clearCurrentOffer(): Unit {
+            _events.resetReplayCache()
         }
     }

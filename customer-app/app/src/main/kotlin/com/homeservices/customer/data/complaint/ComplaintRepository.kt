@@ -12,4 +12,11 @@ public interface ComplaintRepository {
     ): Flow<Result<ComplaintResponseDto>>
 
     public fun getComplaintsForBooking(bookingId: String): Flow<Result<List<ComplaintResponseDto>>>
+
+    public fun reopenComplaint(id: String): Flow<Result<ComplaintResponseDto>>
+
+    public fun getComplaints(
+        page: Int = 1,
+        limit: Int = 20,
+    ): Flow<Result<List<ComplaintResponseDto>>>
 }

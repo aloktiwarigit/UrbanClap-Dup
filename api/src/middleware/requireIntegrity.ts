@@ -87,12 +87,12 @@ export function requireIntegrity(
         scope.setLevel('warning');
         Sentry.captureMessage('Play Integrity token missing on high-value mutation (non-strict mode)');
       });
-      return handler(req, ctx) as Promise<HttpResponseInit>;
+      return handler(req, ctx);
     }
 
     // ── Debug bypass (non-strict dev/staging only) ────────────────────────────
     if (token === DEBUG_BYPASS_TOKEN && isDevEnv()) {
-      return handler(req, ctx) as Promise<HttpResponseInit>;
+      return handler(req, ctx);
     }
 
     // ── Verify token with Google ──────────────────────────────────────────────
@@ -127,7 +127,7 @@ export function requireIntegrity(
         });
       }
 
-      return handler(req, ctx) as Promise<HttpResponseInit>;
+      return handler(req, ctx);
     } catch (err: unknown) {
       // Fail-open: Google API errors must not 503 real traffic
       Sentry.withScope((scope) => {
@@ -136,7 +136,7 @@ export function requireIntegrity(
           `Play Integrity API call failed (fail-open): ${err instanceof Error ? err.message : String(err)}`,
         );
       });
-      return handler(req, ctx) as Promise<HttpResponseInit>;
+      return handler(req, ctx);
     }
   };
 }

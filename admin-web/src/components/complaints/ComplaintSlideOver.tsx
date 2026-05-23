@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import FocusLock from 'react-focus-lock';
 import { useTranslations, useLocale } from 'next-intl';
 import { formatDateTime } from '@/lib/format/intl';
 import type { Complaint, ComplaintStatus, ComplaintResolutionCategory } from '@/types/complaint';
@@ -44,6 +45,14 @@ export function ComplaintSlideOver({
     setReassignInput(complaint.assigneeAdminId ?? '');
   }, [complaint.assigneeAdminId]);
 
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
   const handleAddNote = () => {
     if (noteText.trim()) {
       onAddNote(noteText.trim());
@@ -63,6 +72,7 @@ export function ComplaintSlideOver({
   return (
     <>
       <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} aria-hidden="true" />
+      <FocusLock returnFocus>
       <div
         role="dialog"
         aria-modal="true"
@@ -197,6 +207,7 @@ export function ComplaintSlideOver({
           )}
         </div>
       </div>
+      </FocusLock>
     </>
   );
 }

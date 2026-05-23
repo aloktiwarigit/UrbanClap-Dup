@@ -47,6 +47,10 @@ internal fun ActiveJobScreen(
         onPhotoCancelled = viewModel::onPhotoCancelled,
         onPhotoConfirmed = viewModel::onPhotoConfirmed,
         onPhotoRetake = viewModel::onPhotoRetake,
+        onPhotoRetryRequested = viewModel::onPhotoRetryRequested,
+        onCompleteConfirmRequest = viewModel::requestCompletionConfirm,
+        onCompleteConfirm = viewModel::confirmCompletion,
+        onCompleteCancel = viewModel::cancelCompletionConfirm,
         onBackToDashboard = onBackToDashboard,
         modifier = modifier,
     )
@@ -59,6 +63,10 @@ internal fun ActiveJobScreenContent(
     onPhotoCancelled: () -> Unit,
     onPhotoConfirmed: (filePath: String) -> Unit,
     onPhotoRetake: () -> Unit,
+    onPhotoRetryRequested: () -> Unit,
+    onCompleteConfirmRequest: () -> Unit,
+    onCompleteConfirm: () -> Unit,
+    onCompleteCancel: () -> Unit,
     modifier: Modifier = Modifier,
     onBackToDashboard: () -> Unit = {},
 ): Unit {
@@ -86,6 +94,8 @@ internal fun ActiveJobScreenContent(
                 ActiveJobContent(
                     state = uiState,
                     onTransitionRequested = onTransitionRequested,
+                    onCompleteConfirmRequest = onCompleteConfirmRequest,
+                    onPhotoRetryRequested = onPhotoRetryRequested,
                 )
                 uiState.pendingPhotoStage?.let { stage ->
                     var lastCapturedPath by remember { mutableStateOf<String?>(null) }
@@ -102,6 +112,12 @@ internal fun ActiveJobScreenContent(
                         onRetake = onPhotoRetake,
                     )
                 }
+                if (uiState.awaitingCompletionConfirm) {
+                    CompletionConfirmationDialog(
+                        onConfirm = onCompleteConfirm,
+                        onDismiss = onCompleteCancel,
+                    )
+                }
             }
         }
     }
@@ -111,6 +127,8 @@ internal fun ActiveJobScreenContent(
 private fun ActiveJobContent(
     state: ActiveJobUiState.Active,
     onTransitionRequested: (stage: String) -> Unit,
+    onCompleteConfirmRequest: () -> Unit,
+    onPhotoRetryRequested: () -> Unit,
     modifier: Modifier = Modifier,
 ): Unit {
     Column(
@@ -121,6 +139,9 @@ private fun ActiveJobContent(
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            if (state.photoUploadPending) {
+                PhotoUploadRetryBanner(onRetry = onPhotoRetryRequested)
+            }
             HsTrustBadge(text = statusLabel(state.job.status))
             HsSectionCard {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -166,7 +187,13 @@ private fun ActiveJobContent(
             }
         HsPrimaryButton(
             text = ctaLabel,
-            onClick = { if (ctaTargetStage.isNotEmpty()) onTransitionRequested(ctaTargetStage) },
+            onClick = {
+                if (state.availableAction == ActiveJobAction.COMPLETE_JOB) {
+                    onCompleteConfirmRequest()
+                } else if (ctaTargetStage.isNotEmpty()) {
+                    onTransitionRequested(ctaTargetStage)
+                }
+            },
             enabled = ctaEnabled,
             modifier = Modifier.fillMaxWidth(),
         )
