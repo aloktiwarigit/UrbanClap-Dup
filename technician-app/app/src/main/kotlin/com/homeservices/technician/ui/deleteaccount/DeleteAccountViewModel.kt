@@ -3,6 +3,7 @@ package com.homeservices.technician.ui.deleteaccount
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.homeservices.technician.R
+import com.homeservices.technician.data.auth.SessionManager
 import com.homeservices.technician.domain.erasure.ErasureSubmitResult
 import com.homeservices.technician.domain.erasure.SubmitErasureRequestUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,6 +34,7 @@ public class DeleteAccountViewModel
     @Inject
     constructor(
         private val submitErasureRequest: SubmitErasureRequestUseCase,
+        private val sessionManager: SessionManager,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<DeleteAccountUiState>(DeleteAccountUiState.Idle)
         public val uiState: StateFlow<DeleteAccountUiState> = _uiState.asStateFlow()
@@ -40,8 +42,14 @@ public class DeleteAccountViewModel
         public fun onConfirmDelete() {
             _uiState.value = DeleteAccountUiState.Submitting
             viewModelScope.launch {
+                val result = submitErasureRequest()
+                if (result is ErasureSubmitResult.Success) {
+                    // Persist a sign-out flag before updating UI so that if the user
+                    // kills the app before pressing Done, the next launch signs them out.
+                    sessionManager.markPendingDeletion()
+                }
                 _uiState.value =
-                    when (val result = submitErasureRequest()) {
+                    when (result) {
                         is ErasureSubmitResult.Success ->
                             DeleteAccountUiState.Done(result.scheduledDeletionAt)
                         is ErasureSubmitResult.ActiveJobExists ->

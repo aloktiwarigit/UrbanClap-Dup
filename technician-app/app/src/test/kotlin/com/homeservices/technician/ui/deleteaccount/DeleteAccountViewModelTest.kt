@@ -1,8 +1,11 @@
 package com.homeservices.technician.ui.deleteaccount
 
+import com.homeservices.technician.data.auth.SessionManager
 import com.homeservices.technician.domain.erasure.ErasureSubmitResult
 import com.homeservices.technician.domain.erasure.SubmitErasureRequestUseCase
 import io.mockk.coEvery
+import io.mockk.coJustRun
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -20,10 +23,12 @@ import org.junit.jupiter.api.Test
 public class DeleteAccountViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val submitUseCase: SubmitErasureRequestUseCase = mockk()
+    private val sessionManager: SessionManager = mockk()
 
     @BeforeEach
     public fun setUp() {
         Dispatchers.setMain(dispatcher)
+        coJustRun { sessionManager.markPendingDeletion() }
     }
 
     @AfterEach
@@ -31,7 +36,7 @@ public class DeleteAccountViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun vm() = DeleteAccountViewModel(submitUseCase)
+    private fun vm() = DeleteAccountViewModel(submitUseCase, sessionManager)
 
     @Test
     public fun `initial state is Idle`(): Unit =
@@ -52,6 +57,19 @@ public class DeleteAccountViewModelTest {
 
             advanceUntilIdle()
             assertThat(vm.uiState.value).isEqualTo(DeleteAccountUiState.Done(scheduled))
+            coVerify(exactly = 1) { sessionManager.markPendingDeletion() }
+        }
+
+    @Test
+    public fun `onConfirmDelete does NOT call markPendingDeletion when blocked by active job`(): Unit =
+        runTest {
+            coEvery { submitUseCase() } returns ErasureSubmitResult.ActiveJobExists
+            val vm = vm()
+
+            vm.onConfirmDelete()
+            advanceUntilIdle()
+
+            coVerify(exactly = 0) { sessionManager.markPendingDeletion() }
         }
 
     @Test

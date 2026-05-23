@@ -34,6 +34,10 @@ public class SessionManager
             const val KEY_AUTH_PROVIDER = "auth_provider"
             const val KEY_ONBOARDING_COMPLETE_LEGACY = "onboarding_complete"
             const val KEY_ONBOARDING_COMPLETE_PREFIX = "onboarding_complete_"
+
+            // Set when a deletion request is submitted; checked at next launch to
+            // ensure the session is cleared even if the app was killed before Done.
+            const val KEY_PENDING_DELETION_SIGN_OUT = "pending_deletion_sign_out"
             val SESSION_TTL_MS = TimeUnit.DAYS.toMillis(180)
         }
 
@@ -58,6 +62,12 @@ public class SessionManager
         }
 
         private fun readInitialState(): AuthState {
+            // If a deletion request was submitted before the app was killed,
+            // enforce sign-out on the next launch so the session is never stale.
+            if (prefs.getBoolean(KEY_PENDING_DELETION_SIGN_OUT, false)) {
+                clearSessionPrefs()
+                return AuthState.Unauthenticated
+            }
             val uid = prefs.getString(KEY_UID, null)
             val createdAt = prefs.getLong(KEY_SESSION_CREATED_AT, 0L)
             val sessionExpired =
@@ -173,6 +183,13 @@ public class SessionManager
 
         private fun onboardingCompleteKey(uid: String): String = "$KEY_ONBOARDING_COMPLETE_PREFIX$uid"
 
+        /** Writes a persistent flag so that the next app launch signs out if the process is killed before Done. */
+        public suspend fun markPendingDeletion() {
+            withContext(Dispatchers.IO) {
+                prefs.edit().putBoolean(KEY_PENDING_DELETION_SIGN_OUT, true).apply()
+            }
+        }
+
         private fun clearSessionPrefs() {
             prefs
                 .edit()
@@ -183,6 +200,7 @@ public class SessionManager
                 .remove(KEY_DISPLAY_NAME)
                 .remove(KEY_AUTH_PROVIDER)
                 .remove(KEY_ONBOARDING_COMPLETE_LEGACY)
+                .remove(KEY_PENDING_DELETION_SIGN_OUT)
                 .apply()
         }
     }

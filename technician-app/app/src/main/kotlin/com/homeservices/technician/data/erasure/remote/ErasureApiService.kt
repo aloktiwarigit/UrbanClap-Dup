@@ -1,5 +1,6 @@
 package com.homeservices.technician.data.erasure.remote
 
+import com.squareup.moshi.JsonClass
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -15,11 +16,13 @@ public interface ErasureApiService {
     public suspend fun revokeErasureRequest(): Response<Unit>
 }
 
+@JsonClass(generateAdapter = true)
 public data class ErasureSubmitRequestBody(
     val confirmationPhrase: String,
     val reason: String? = null,
 )
 
+@JsonClass(generateAdapter = true)
 public data class ErasureSubmitResponseBody(
     val erasureId: String,
     val scheduledDeletionAt: String,
