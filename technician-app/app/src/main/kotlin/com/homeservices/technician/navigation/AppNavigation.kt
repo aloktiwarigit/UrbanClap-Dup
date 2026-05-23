@@ -168,6 +168,7 @@ internal fun AppNavigation(
             homeGraph(
                 navController = navController,
                 authState = authState,
+                sessionManager = sessionManager,
                 onSignOut = { scope.launch { sessionManager.clearSession() } },
             )
         }

@@ -65,6 +65,32 @@
     <string name="settings_language_save">Save language</string>
     <string name="action_back">Back</string>
 
+    <!-- Account deletion (E20-S08) -->
+    <string name="settings_delete_account_title">Delete my account</string>
+    <string name="settings_delete_account_subtitle">Permanently remove your profile and data</string>
+    <string name="delete_account_title">Delete account</string>
+    <string name="delete_account_warning">This is permanent and cannot be undone</string>
+    <string name="delete_account_what_gets_deleted">What gets deleted</string>
+    <string name="delete_account_item_profile">Your profile and phone number</string>
+    <string name="delete_account_item_kyc">KYC documents (Aadhaar, PAN)</string>
+    <string name="delete_account_item_earnings">Earnings history and payout records</string>
+    <string name="delete_account_item_photos">Job photos and work history</string>
+    <string name="delete_account_item_ratings">Ratings received from customers</string>
+    <string name="delete_account_footnote">Data deleted within 7 days of confirmation</string>
+    <string name="delete_account_confirm_button">Yes, delete my account</string>
+    <string name="delete_account_cancel_button">Cancel</string>
+    <string name="delete_account_active_job_title">Job in progress</string>
+    <string name="delete_account_active_job_error">Complete or cancel your current job before deleting your account</string>
+    <string name="delete_account_active_job_ok">OK</string>
+    <string name="delete_account_duplicate_pending">A deletion request is already pending for your account</string>
+    <string name="delete_account_generic_error">Something went wrong. Please try again.</string>
+    <string name="account_deleted_title">Deletion request submitted</string>
+    <string name="account_deleted_body">Your account is scheduled for deletion on %1$s.</string>
+    <string name="account_deleted_revocation_hint">Changed your mind? Email support@homeheroo.in with subject \'Cancel account deletion\' and your phone number before %1$s.</string>
+    <string name="account_deleted_web_form_label">Lost access to the app? Request deletion here</string>
+    <string name="account_deleted_done">Done</string>
+    <string name="deletion_request_url">https://aloktiwarigit.github.io/homeheroo-privacy/deletion-request/</string>
+
     <!-- Photo capture screen (E06-S02-Codemod) -->
     <string name="photo_no_back_camera">No back camera available on this device</string>
     <string name="photo_go_back">Go back</string>

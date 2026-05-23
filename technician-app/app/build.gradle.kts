@@ -616,6 +616,23 @@ kover {
                     // same rationale as other *Kt screen exclusions (recomposition guards, palette logic).
                     "*.TechnicianDashboardScreenKt",
                     "*.TechnicianDashboardScreenKt\$*",
+                    // DeleteAccountScreen / AccountDeletedScreen — Compose UI composables (E20-S08);
+                    // same rationale as other *Kt screen exclusions: recomposition guards + slot-table
+                    // ops are only exercisable via Paparazzi / instrumented tests.
+                    "*.DeleteAccountScreenKt",
+                    "*.DeleteAccountScreenKt\$*",
+                    "*.AccountDeletedScreenKt",
+                    "*.AccountDeletedScreenKt\$*",
+                    // ErasureApiService is an internal Retrofit interface — methods invoked by
+                    // Retrofit runtime, not unit-testable directly (same rationale as other ApiService exclusions).
+                    "*.ErasureApiService",
+                    "*.ErasureApiService\$*",
+                    // ErasureModule — Hilt @Provides / @Binds methods are framework wiring,
+                    // same rationale as data.auth.di.* and other DI module exclusions.
+                    "*.data.erasure.di.*",
+                    // ErasureRepository$DefaultImpls — Kotlin compiler-generated delegation stubs
+                    // for interface default parameters; same rationale as Hilt-generated exclusions.
+                    "*.ErasureRepository\$DefaultImpls",
                 )
             }
         }
