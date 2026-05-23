@@ -48,6 +48,8 @@ import kotlinx.coroutines.delay
 public fun RatingScreen(
     modifier: Modifier = Modifier,
     viewModel: RatingViewModel = hiltViewModel(),
+    onBack: () -> Unit = {},
+    onSubmitted: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsState()
     val shieldState by viewModel.shieldState.collectAsState()
@@ -57,6 +59,14 @@ public fun RatingScreen(
     val behav by viewModel.behaviour.collectAsState()
     val comment by viewModel.comment.collectAsState()
     val canSubmit by viewModel.canSubmit.collectAsState()
+
+    androidx.activity.compose.BackHandler(onBack = onBack)
+
+    androidx.compose.runtime.LaunchedEffect(state) {
+        if (state is RatingUiState.AwaitingPartner || state is RatingUiState.Revealed) {
+            onSubmitted()
+        }
+    }
 
     RatingContent(
         state = state,

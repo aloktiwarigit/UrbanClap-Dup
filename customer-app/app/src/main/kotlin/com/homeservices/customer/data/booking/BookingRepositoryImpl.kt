@@ -39,6 +39,7 @@ internal class BookingRepositoryImpl
                                     addressLatLng = LatLngDto(lat = request.addressLat, lng = request.addressLng),
                                     paymentMethod = request.paymentMethod.name,
                                     applyCredit = request.applyCredit,
+                                    preferFemaleTechnician = request.preferFemaleTechnician,
                                 ),
                                 idempotencyKey = idempotencyKey,
                             ).toDomain()
@@ -101,4 +102,6 @@ internal class BookingRepositoryImpl
                     }.onFailure { Sentry.captureException(it) },
                 )
             }
+
+        override suspend fun cancelBooking(bookingId: String): Result<Unit> = runCatching { api.cancelBooking(bookingId) }.map { Unit }
     }

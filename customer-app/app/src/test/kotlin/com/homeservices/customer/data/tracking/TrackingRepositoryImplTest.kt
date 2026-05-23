@@ -56,6 +56,9 @@ public class TrackingRepositoryImplTest {
             serviceId: String,
             date: String,
         ): SlotAvailabilityResponseDto = error("not used")
+
+        override suspend fun cancelBooking(bookingId: String): com.homeservices.customer.data.booking.remote.dto.CancelBookingResponseDto =
+            error("not used")
     }
 
     @Test

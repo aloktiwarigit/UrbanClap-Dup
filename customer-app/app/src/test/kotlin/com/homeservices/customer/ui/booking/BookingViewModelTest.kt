@@ -3,6 +3,7 @@
 import androidx.fragment.app.FragmentActivity
 import com.google.common.truth.Truth.assertThat
 import com.homeservices.customer.data.booking.PaymentResultBus
+import com.homeservices.customer.data.catalogue.CatalogueRepository
 import com.homeservices.customer.domain.auth.BiometricGateUseCase
 import com.homeservices.customer.domain.booking.ConfirmBookingUseCase
 import com.homeservices.customer.domain.booking.CreateBookingUseCase
@@ -35,17 +36,19 @@ public class BookingViewModelTest {
     private val createBooking: CreateBookingUseCase = mockk()
     private val confirmBooking: ConfirmBookingUseCase = mockk()
     private val razorpayPayment = RazorpayPaymentUseCase(bus)
+    private val biometricGate: BiometricGateUseCase = mockk()
+    private val catalogueRepository: CatalogueRepository = mockk()
     private val slot = BookingSlot(date = "2026-05-01", window = "10:00-12:00")
 
     // Biometric gate stub: no hardware -> gate bypassed. Tests focus on booking logic.
     // Biometric-specific tests are in BookingViewModelBiometricTest.
-    private val biometricGate: BiometricGateUseCase = mockk()
     private val activity: FragmentActivity = mockk(relaxed = true)
 
     @Before
     public fun setUp(): Unit {
         Dispatchers.setMain(dispatcher)
         every { biometricGate.canUseBiometric(any()) } returns false
+        every { catalogueRepository.getCategories() } returns flowOf(Result.success(emptyList()))
     }
 
     @After
@@ -53,7 +56,15 @@ public class BookingViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun makeVm() = BookingViewModel(createBooking, confirmBooking, razorpayPayment, biometricGate, NoOpAnalyticsFacade())
+    private fun makeVm() =
+        BookingViewModel(
+            createBooking,
+            confirmBooking,
+            razorpayPayment,
+            biometricGate,
+            NoOpAnalyticsFacade(),
+            catalogueRepository,
+        )
 
     @Test
     public fun `setSlotAndAddress transitions to Ready`(): Unit =

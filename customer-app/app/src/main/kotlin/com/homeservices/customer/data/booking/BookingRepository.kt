@@ -29,4 +29,6 @@ public interface BookingRepository {
         bookingId: String,
         decisions: List<AddOnDecision>,
     ): Flow<Result<Int>>
+
+    public suspend fun cancelBooking(bookingId: String): Result<Unit>
 }

@@ -25,7 +25,6 @@ public class ComplaintScreenPaparazziTest {
                             description = "The service was incomplete and needs follow-up.",
                             submitEnabled = true,
                         ),
-                    onBack = {},
                     onRetry = {},
                     onReasonSelected = {},
                     onDescriptionChanged = {},

@@ -1,5 +1,6 @@
 package com.homeservices.customer.ui.booking
 
+import com.homeservices.customer.domain.booking.model.BookingRequest
 import com.homeservices.customer.domain.booking.model.BookingSlot
 
 public sealed class BookingUiState {
@@ -58,5 +59,10 @@ public sealed class BookingUiState {
 
     public data class Error(
         val message: String,
+    ) : BookingUiState()
+
+    public data class NetworkError(
+        val message: String,
+        val pendingRequest: BookingRequest,
     ) : BookingUiState()
 }

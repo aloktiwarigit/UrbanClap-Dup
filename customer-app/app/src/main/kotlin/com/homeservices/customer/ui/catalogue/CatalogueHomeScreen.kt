@@ -84,6 +84,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.catalogue.model.Category
+import com.homeservices.customer.ui.booking.PendingBookingResumeBanner
 import com.homeservices.customer.ui.bookings.CustomerBookingsScreen
 import com.homeservices.customer.ui.util.formatInr
 import com.homeservices.customer.ui.wallet.WalletBalanceChip
@@ -183,6 +184,9 @@ internal fun CatalogueHomeScreen(
     onPendingActionRoute: (String) -> Unit = {},
     onPriceApproval: (String) -> Unit = {},
     onManageConsentClick: () -> Unit = {},
+    onResumePayment: (bookingId: String, orderId: String, amount: Int) -> Unit = { _, _, _ -> },
+    onCancelPendingBooking: (bookingId: String) -> Unit = {},
+    onPrivacyAndDataClick: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val homeUiState by customerHomeViewModel.homeUiState.collectAsStateWithLifecycle()
@@ -202,6 +206,12 @@ internal fun CatalogueHomeScreen(
         onPendingActionRoute = onPendingActionRoute,
         onPriceApproval = onPriceApproval,
         onManageConsentClick = onManageConsentClick,
+        onResumePayment = onResumePayment,
+        onCancelPendingBooking = { id ->
+            customerHomeViewModel.cancelPendingBooking(id)
+            onCancelPendingBooking(id)
+        },
+        onPrivacyAndDataClick = onPrivacyAndDataClick,
     )
 }
 
@@ -222,6 +232,9 @@ internal fun CatalogueHomeContent(
     onPendingActionRoute: (String) -> Unit = {},
     onPriceApproval: (String) -> Unit = {},
     onManageConsentClick: () -> Unit = {},
+    onResumePayment: (bookingId: String, orderId: String, amount: Int) -> Unit = { _, _, _ -> },
+    onCancelPendingBooking: (bookingId: String) -> Unit = {},
+    onPrivacyAndDataClick: () -> Unit = {},
 ) {
     var selectedNav by remember { mutableIntStateOf(0) }
 
@@ -257,6 +270,9 @@ internal fun CatalogueHomeContent(
             onPendingActionRoute = onPendingActionRoute,
             onPriceApproval = onPriceApproval,
             onManageConsentClick = onManageConsentClick,
+            onResumePayment = onResumePayment,
+            onCancelPendingBooking = onCancelPendingBooking,
+            onPrivacyAndDataClick = onPrivacyAndDataClick,
         )
     }
 }
@@ -277,6 +293,9 @@ private fun HomeTabs(
     onPendingActionRoute: (String) -> Unit = {},
     onPriceApproval: (String) -> Unit = {},
     onManageConsentClick: () -> Unit = {},
+    onResumePayment: (bookingId: String, orderId: String, amount: Int) -> Unit = { _, _, _ -> },
+    onCancelPendingBooking: (bookingId: String) -> Unit = {},
+    onPrivacyAndDataClick: () -> Unit = {},
 ) {
     when (selectedNav) {
         0 ->
@@ -291,6 +310,8 @@ private fun HomeTabs(
                 onPriceApproval = onPriceApproval,
                 onRateBooking = onRateBooking,
                 onComplainBooking = onComplainBooking,
+                onResumePayment = onResumePayment,
+                onCancelPendingBooking = onCancelPendingBooking,
             )
         1 ->
             CustomerBookingsScreen(
@@ -311,6 +332,7 @@ private fun HomeTabs(
                 onLanguageClick = onProfileLanguageClick,
                 onBookingsClick = { onSelectNav(1) },
                 onManageConsentClick = onManageConsentClick,
+                onPrivacyAndDataClick = onPrivacyAndDataClick,
             )
     }
 }
@@ -327,6 +349,8 @@ private fun CatalogueTab(
     onPriceApproval: (String) -> Unit = {},
     onRateBooking: (String) -> Unit = {},
     onComplainBooking: (String) -> Unit = {},
+    onResumePayment: (bookingId: String, orderId: String, amount: Int) -> Unit = { _, _, _ -> },
+    onCancelPendingBooking: (bookingId: String) -> Unit = {},
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
@@ -341,6 +365,26 @@ private fun CatalogueTab(
                 onRateBooking = onRateBooking,
                 onComplainBooking = onComplainBooking,
             )
+        }
+        val pendingPaymentBooking = (homeUiState as? CustomerHomeUiState.Ready)?.pendingPaymentBooking
+        if (pendingPaymentBooking != null) {
+            item {
+                val orderId = pendingPaymentBooking.razorpayOrderId
+                if (orderId != null) {
+                    PendingBookingResumeBanner(
+                        serviceName = pendingPaymentBooking.serviceName,
+                        amountPaise = pendingPaymentBooking.amountPaise,
+                        onResumePayment = {
+                            onResumePayment(
+                                pendingPaymentBooking.bookingId,
+                                orderId,
+                                pendingPaymentBooking.amountPaise.toInt(),
+                            )
+                        },
+                        onCancel = { onCancelPendingBooking(pendingPaymentBooking.bookingId) },
+                    )
+                }
+            }
         }
         item { PromoSlider() }
         item { TrustStrip() }

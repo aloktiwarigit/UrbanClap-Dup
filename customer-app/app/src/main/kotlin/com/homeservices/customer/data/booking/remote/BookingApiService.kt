@@ -2,6 +2,7 @@ package com.homeservices.customer.data.booking.remote
 
 import com.homeservices.customer.data.booking.remote.dto.ApproveFinalPriceRequestDto
 import com.homeservices.customer.data.booking.remote.dto.ApproveFinalPriceResponseDto
+import com.homeservices.customer.data.booking.remote.dto.CancelBookingResponseDto
 import com.homeservices.customer.data.booking.remote.dto.ConfirmBookingRequestDto
 import com.homeservices.customer.data.booking.remote.dto.ConfirmBookingResponseDto
 import com.homeservices.customer.data.booking.remote.dto.CreateBookingRequestDto
@@ -50,4 +51,9 @@ public interface BookingApiService {
         @Path("id") serviceId: String,
         @Query("date") date: String,
     ): SlotAvailabilityResponseDto
+
+    @POST("v1/bookings/{id}/cancel")
+    public suspend fun cancelBooking(
+        @Path("id") bookingId: String,
+    ): CancelBookingResponseDto
 }

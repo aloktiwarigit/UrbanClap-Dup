@@ -12,6 +12,7 @@ public data class CustomerBooking(
     val paymentMethod: BookingPaymentMethod,
     val createdAt: String,
     val ratingSubmitted: Boolean = false,
+    val razorpayOrderId: String? = null,
 )
 
 public enum class CustomerBookingStatus {

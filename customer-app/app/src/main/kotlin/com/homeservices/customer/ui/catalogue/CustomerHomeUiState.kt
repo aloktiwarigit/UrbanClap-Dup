@@ -27,5 +27,6 @@ public sealed class CustomerHomeUiState {
         public val pendingActions: List<PendingAction>,
         public val activeBooking: CustomerBooking?,
         public val recentBookings: List<CustomerBooking>,
+        public val pendingPaymentBooking: CustomerBooking? = null,
     ) : CustomerHomeUiState()
 }

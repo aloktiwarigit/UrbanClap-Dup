@@ -468,4 +468,21 @@
     <string name="waitlist_error_retry">Try again</string>
     <string name="waitlist_rate_limited" tools:ignore="PluralsCandidate">Try again in %d minutes</string>
 
+    <!-- PRD-06: Network error retry -->
+    <string name="booking_network_error_title">No internet connection</string>
+    <string name="booking_network_error_retry">Retry</string>
+
+    <!-- PRD-07: Pending payment resume banner -->
+    <string name="pending_payment_banner_title">Payment pending</string>
+    <string name="pending_payment_banner_subtitle">%1$s — ₹%2$d</string>
+    <string name="pending_payment_banner_resume">Resume payment</string>
+    <string name="pending_payment_banner_cancel">Cancel booking</string>
+
+    <!-- PRD-08: Women-safe toggle -->
+    <string name="women_safe_toggle_label">Prefer female technician</string>
+
+    <!-- PRD-09: Privacy &amp; Data screen -->
+    <string name="privacy_data_title">Privacy &amp; Data</string>
+    <string name="privacy_data_body">Your name, phone, address, and booking information is used to provide services, assign technicians, handle support, and ensure safety. Your address is shared only with the assigned technician and owner support.</string>
+
 </resources>

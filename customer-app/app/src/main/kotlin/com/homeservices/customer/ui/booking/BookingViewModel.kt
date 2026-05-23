@@ -3,6 +3,7 @@
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.homeservices.customer.data.catalogue.CatalogueRepository
 import com.homeservices.customer.domain.auth.BiometricGateUseCase
 import com.homeservices.customer.domain.auth.model.BiometricResult
 import com.homeservices.customer.domain.booking.ConfirmBookingUseCase
@@ -21,10 +22,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.io.IOException
 import javax.inject.Inject
 
 private const val BOOKING_FAILED_FALLBACK = "Booking failed"
 private const val CONFIRMATION_FAILED_FALLBACK = "Confirmation failed"
+private const val WOMEN_SAFE_HOUR_THRESHOLD = 19
 
 @HiltViewModel
 internal class BookingViewModel
@@ -35,6 +38,7 @@ internal class BookingViewModel
         private val razorpayPayment: RazorpayPaymentUseCase,
         private val biometricGate: BiometricGateUseCase,
         private val analytics: AnalyticsFacade,
+        private val catalogueRepository: CatalogueRepository,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<BookingUiState>(BookingUiState.Idle)
         public val uiState: StateFlow<BookingUiState> = _uiState.asStateFlow()
@@ -45,8 +49,15 @@ internal class BookingViewModel
         private val _applyCreditToggle = MutableStateFlow(false)
         public val applyCreditToggle: StateFlow<Boolean> = _applyCreditToggle.asStateFlow()
 
+        private val _showWomenSafeToggle = MutableStateFlow(false)
+        public val showWomenSafeToggle: StateFlow<Boolean> = _showWomenSafeToggle.asStateFlow()
+
+        private val _preferFemaleTechnician = MutableStateFlow(false)
+        public val preferFemaleTechnician: StateFlow<Boolean> = _preferFemaleTechnician.asStateFlow()
+
         private var pendingBookingId: String? = null
         private var pendingAppliedCredit: Int = 0
+        private var lastNetworkErrorRequest: BookingRequest? = null
 
         public var pendingServiceId: String = ""
         public var pendingCategoryId: String = ""
@@ -73,6 +84,10 @@ internal class BookingViewModel
             _applyCreditToggle.value = checked
         }
 
+        public fun setPreferFemaleTechnician(checked: Boolean) {
+            _preferFemaleTechnician.value = checked
+        }
+
         public fun setSlotAndAddress(
             slot: BookingSlot,
             addressText: String,
@@ -80,6 +95,25 @@ internal class BookingViewModel
             lng: Double,
         ) {
             _uiState.value = BookingUiState.Ready(slot, addressText, lat, lng)
+            updateWomenSafeContext(slot)
+        }
+
+        public fun resumeFromPendingPayment(
+            bookingId: String,
+            razorpayOrderId: String,
+            amount: Int,
+        ) {
+            pendingBookingId = bookingId
+            _uiState.value =
+                BookingUiState.AwaitingPayment(
+                    bookingId = bookingId,
+                    razorpayOrderId = razorpayOrderId,
+                    amount = amount,
+                    slot = BookingSlot("", ""),
+                    addressText = "",
+                    lat = 0.0,
+                    lng = 0.0,
+                )
         }
 
         /**
@@ -139,46 +173,68 @@ internal class BookingViewModel
                         addressLng = state.lng,
                         paymentMethod = paymentMethod,
                         applyCredit = _applyCreditToggle.value,
+                        preferFemaleTechnician = _preferFemaleTechnician.value,
                     )
-                createBooking(request).first().fold(
-                    onSuccess = { result ->
-                        pendingBookingId = result.bookingId
-                        pendingAppliedCredit = result.appliedCreditAmount
-                        if (result.requiresPayment) {
-                            runCatching {
-                                analytics.track(
-                                    AnalyticsEvents.PAYMENT_INITIATED,
-                                    mapOf("booking_id" to result.bookingId),
-                                )
-                            }
-                            _uiState.value =
-                                BookingUiState.AwaitingPayment(
-                                    bookingId = result.bookingId,
-                                    razorpayOrderId = result.razorpayOrderId,
-                                    amount = result.amount,
-                                    slot = state.slot,
-                                    addressText = state.addressText,
-                                    lat = state.lat,
-                                    lng = state.lng,
-                                )
-                        } else {
-                            runCatching {
-                                analytics.track(
-                                    AnalyticsEvents.BOOKING_CREATE_SUCCESS,
-                                    mapOf("booking_id" to result.bookingId),
-                                )
-                            }
-                            _uiState.value =
-                                BookingUiState.BookingConfirmed(
-                                    bookingId = result.bookingId,
-                                    appliedCreditAmount = result.appliedCreditAmount,
-                                )
-                        }
-                    },
-                    // Error message key: R.string.booking_error_failed surfaced in UI layer
-                    onFailure = { _uiState.value = BookingUiState.Error(it.message ?: BOOKING_FAILED_FALLBACK) },
-                )
+                executeCreateBooking(request)
             }
+        }
+
+        public fun retryNetworkError() {
+            val request = lastNetworkErrorRequest ?: return
+            _uiState.value = BookingUiState.CreatingBooking
+            viewModelScope.launch { executeCreateBooking(request) }
+        }
+
+        private suspend fun executeCreateBooking(request: BookingRequest) {
+            createBooking(request).first().fold(
+                onSuccess = { result ->
+                    lastNetworkErrorRequest = null
+                    pendingBookingId = result.bookingId
+                    pendingAppliedCredit = result.appliedCreditAmount
+                    if (result.requiresPayment) {
+                        runCatching {
+                            analytics.track(
+                                AnalyticsEvents.PAYMENT_INITIATED,
+                                mapOf("booking_id" to result.bookingId),
+                            )
+                        }
+                        _uiState.value =
+                            BookingUiState.AwaitingPayment(
+                                bookingId = result.bookingId,
+                                razorpayOrderId = result.razorpayOrderId,
+                                amount = result.amount,
+                                slot = request.slot,
+                                addressText = request.addressText,
+                                lat = request.addressLat,
+                                lng = request.addressLng,
+                            )
+                    } else {
+                        runCatching {
+                            analytics.track(
+                                AnalyticsEvents.BOOKING_CREATE_SUCCESS,
+                                mapOf("booking_id" to result.bookingId),
+                            )
+                        }
+                        _uiState.value =
+                            BookingUiState.BookingConfirmed(
+                                bookingId = result.bookingId,
+                                appliedCreditAmount = result.appliedCreditAmount,
+                            )
+                    }
+                },
+                onFailure = { error ->
+                    if (error is IOException) {
+                        lastNetworkErrorRequest = request
+                        _uiState.value =
+                            BookingUiState.NetworkError(
+                                message = error.message ?: BOOKING_FAILED_FALLBACK,
+                                pendingRequest = request,
+                            )
+                    } else {
+                        _uiState.value = BookingUiState.Error(error.message ?: BOOKING_FAILED_FALLBACK)
+                    }
+                },
+            )
         }
 
         /** Re-opens the Razorpay checkout for the same order. */
@@ -264,4 +320,17 @@ internal class BookingViewModel
                 }
             }
         }
+
+        private fun updateWomenSafeContext(slot: BookingSlot) {
+            viewModelScope.launch {
+                val slotHour = parseSlotStartHour(slot.window)
+                val categories = catalogueRepository.getCategories().first().getOrNull() ?: emptyList()
+                val isSafetyCategory =
+                    categories.firstOrNull { it.id == pendingCategoryId }?.safetyTag ?: false
+                _showWomenSafeToggle.value = slotHour >= WOMEN_SAFE_HOUR_THRESHOLD || isSafetyCategory
+            }
+        }
+
+        private fun parseSlotStartHour(window: String): Int =
+            runCatching { window.substringBefore(":").toInt() }.getOrDefault(0)
     }
