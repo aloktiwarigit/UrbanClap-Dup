@@ -11,6 +11,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import java.util.concurrent.TimeUnit
@@ -64,10 +65,10 @@ public class ActiveJobApiServicePostLocationTest {
             )
 
         // Act: call the suspend function (using runTest for structured concurrency)
-        val response =
-            runTest {
-                apiService.postActiveJobLocation("bk-test-1", body)
-            }
+        lateinit var response: retrofit2.Response<Unit>
+        runTest {
+            response = apiService.postActiveJobLocation("bk-test-1", body)
+        }
 
         // Assert response is successful
         assertThat(response.isSuccessful).isTrue()

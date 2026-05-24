@@ -12,7 +12,7 @@ import javax.inject.Inject
 
 public class ShieldRepositoryImpl
     @Inject
-    constructor(
+    internal constructor(
         private val api: ShieldApiService,
         private val moshi: Moshi,
     ) : ShieldRepository {

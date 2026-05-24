@@ -8,6 +8,7 @@ import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.homeservices.technician.domain.auth.model.AuthResult
 import com.homeservices.technician.domain.auth.model.OtpSendResult
 import com.homeservices.technician.observability.analytics.AnalyticsTracker
@@ -110,7 +111,10 @@ public class FirebaseOtpUseCase
                                     e.errorCode == "ERROR_TOO_MANY_REQUESTS" ->
                                     AuthResult.Error.RateLimited
 
-                                else -> AuthResult.Error.General(e)
+                                else -> {
+                                    runCatching { FirebaseCrashlytics.getInstance().recordException(e) }
+                                    AuthResult.Error.General(e)
+                                }
                             }
                         trySend(mapped)
                         close()

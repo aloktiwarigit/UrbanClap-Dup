@@ -6,6 +6,7 @@ import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.assertThrows
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -68,10 +69,13 @@ public class AcceptJobOfferUseCaseTest {
         }
 
     @Test
-    public fun `invoke propagates IOException on network error`(): Unit =
-        runTest {
-            coEvery { api.acceptOffer(any()) } throws IOException("Connection reset")
+    public fun `invoke propagates IOException on network error`(): Unit {
+        coEvery { api.acceptOffer(any()) } throws IOException("Connection reset")
 
-            assertThrows<IOException> { useCase("booking-net-err") }
+        assertThrows<IOException> {
+            // Use runBlocking instead of runTest so assertThrows can intercept the exception
+            // synchronously (assertThrows does not support suspend lambdas).
+            kotlinx.coroutines.runBlocking { useCase("booking-net-err") }
         }
+    }
 }

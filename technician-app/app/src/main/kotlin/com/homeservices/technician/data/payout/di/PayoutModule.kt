@@ -20,6 +20,6 @@ public abstract class PayoutModule {
     public companion object {
         @Provides
         @Singleton
-        public fun providePayoutApiService(retrofit: Retrofit): PayoutApiService = retrofit.create(PayoutApiService::class.java)
+        internal fun providePayoutApiService(retrofit: Retrofit): PayoutApiService = retrofit.create(PayoutApiService::class.java)
     }
 }

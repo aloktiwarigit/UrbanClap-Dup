@@ -8,7 +8,7 @@ import javax.inject.Inject
 
 public class PayoutRepositoryImpl
     @Inject
-    constructor(
+    internal constructor(
         private val apiService: PayoutApiService,
     ) : PayoutRepository {
         public override suspend fun updatePayoutCadence(cadence: String): Result<PayoutCadenceResult> =

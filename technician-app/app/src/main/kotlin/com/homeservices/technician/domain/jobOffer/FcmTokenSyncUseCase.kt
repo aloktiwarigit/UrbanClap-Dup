@@ -1,5 +1,6 @@
 package com.homeservices.technician.domain.jobOffer
 
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.messaging.FirebaseMessaging
 import com.homeservices.technician.data.jobOffer.FcmTokenRequest
 import com.homeservices.technician.data.jobOffer.JobOfferApiService
@@ -18,8 +19,9 @@ public class FcmTokenSyncUseCase
             try {
                 val fcmToken = FirebaseMessaging.getInstance().token.await()
                 invokeWithFcmToken(fcmToken)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 // Token sync is best-effort; failures are non-fatal
+                runCatching { FirebaseCrashlytics.getInstance().recordException(e) }
             }
         }
 
@@ -30,8 +32,9 @@ public class FcmTokenSyncUseCase
         public suspend fun invokeWithFcmToken(fcmToken: String): Unit {
             try {
                 api.syncFcmToken(FcmTokenRequest(fcmToken))
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 // Token sync is best-effort; failures are non-fatal
+                runCatching { FirebaseCrashlytics.getInstance().recordException(e) }
             }
         }
     }

@@ -72,6 +72,12 @@ internal class JobOfferViewModel
                         eventBus.clearCurrentOffer()
                         scheduleReset(2_000L)
                     }
+                    is JobOfferResult.UnknownError -> {
+                        startOffer(
+                            offer = current.offer,
+                            errorMessage = "Server error (${result.httpCode}). Try again.",
+                        )
+                    }
                     null -> {
                         if (remainingSeconds(current.offer) <= 0) {
                             expireOffer()
