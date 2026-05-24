@@ -28,7 +28,7 @@ internal class FcmTokenRegisterWorker
         override suspend fun doWork(): Result {
             val token = inputData.getString(KEY_FCM_TOKEN) ?: return Result.failure()
             return runCatching {
-                fcmTokenSyncUseCase.invokeWithFcmToken(token)
+                fcmTokenSyncUseCase.syncTokenOrThrow(token)
                 deviceTokenRegistrar.register()
                 Result.success()
             }.getOrElse {

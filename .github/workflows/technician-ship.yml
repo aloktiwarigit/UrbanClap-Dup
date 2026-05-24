@@ -83,7 +83,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: technician-release-${{ env.GIT_SHA }}
-          path: app/build/outputs/bundle/release/app-release.aab
+          path: technician-app/app/build/outputs/bundle/release/app-release.aab
           retention-days: 7
 
       - name: ktlint + detekt + android lint

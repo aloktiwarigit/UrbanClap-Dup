@@ -64,21 +64,21 @@ public class FcmTokenRegisterWorkerTest {
     @Test
     public fun `doWork returns success on happy path`(): Unit =
         runTest {
-            coEvery { fcmTokenSyncUseCase.invokeWithFcmToken("test-fcm-token") } returns Unit
+            coEvery { fcmTokenSyncUseCase.syncTokenOrThrow("test-fcm-token") } returns Unit
             coEvery { deviceTokenRegistrar.register() } returns Unit
             val worker = buildWorker(runAttemptCount = 0)
 
             val result = worker.doWork()
 
             assertThat(result).isEqualTo(ListenableWorker.Result.success())
-            coVerify(exactly = 1) { fcmTokenSyncUseCase.invokeWithFcmToken("test-fcm-token") }
+            coVerify(exactly = 1) { fcmTokenSyncUseCase.syncTokenOrThrow("test-fcm-token") }
             coVerify(exactly = 1) { deviceTokenRegistrar.register() }
         }
 
     @Test
     public fun `doWork returns retry on exception at runAttemptCount=0`(): Unit =
         runTest {
-            coEvery { fcmTokenSyncUseCase.invokeWithFcmToken(any()) } throws RuntimeException("network error")
+            coEvery { fcmTokenSyncUseCase.syncTokenOrThrow(any()) } throws RuntimeException("network error")
             val worker = buildWorker(runAttemptCount = 0)
 
             val result = worker.doWork()
@@ -89,7 +89,7 @@ public class FcmTokenRegisterWorkerTest {
     @Test
     public fun `doWork returns failure on exception at runAttemptCount=3`(): Unit =
         runTest {
-            coEvery { fcmTokenSyncUseCase.invokeWithFcmToken(any()) } throws RuntimeException("network error")
+            coEvery { fcmTokenSyncUseCase.syncTokenOrThrow(any()) } throws RuntimeException("network error")
             val worker = buildWorker(runAttemptCount = 3)
 
             val result = worker.doWork()

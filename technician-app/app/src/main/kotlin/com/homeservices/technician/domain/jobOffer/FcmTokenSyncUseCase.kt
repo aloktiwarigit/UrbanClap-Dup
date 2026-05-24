@@ -39,4 +39,13 @@ public class FcmTokenSyncUseCase
                 runCatching { FirebaseCrashlytics.getInstance().recordException(e) }
             }
         }
+
+        /**
+         * Propagates failures to the caller instead of swallowing them.
+         * Used by [com.homeservices.technician.data.fcm.FcmTokenRegisterWorker] so that
+         * WorkManager can retry the request on network or server errors.
+         */
+        public suspend fun syncTokenOrThrow(fcmToken: String) {
+            api.syncFcmToken(FcmTokenRequest(fcmToken))
+        }
     }
