@@ -12,7 +12,7 @@ public data class BookingRequest(
     val addressText: String,
     val addressLat: Double,
     val addressLng: Double,
-    val paymentMethod: BookingPaymentMethod = BookingPaymentMethod.RAZORPAY,
+    val paymentMethod: BookingPaymentMethod = BookingPaymentMethod.CASH_ON_SERVICE,
     val applyCredit: Boolean = false,
     val preferFemaleTechnician: Boolean = false,
 )

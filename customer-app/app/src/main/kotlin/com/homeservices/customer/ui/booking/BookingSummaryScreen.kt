@@ -1,7 +1,6 @@
 package com.homeservices.customer.ui.booking
 
 import android.app.Activity
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,7 +23,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -35,10 +33,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -144,8 +139,6 @@ internal fun BookingSummaryContent(
     onPreferFemaleChange: (Boolean) -> Unit = {},
     onRetryNetworkError: () -> Unit = {},
 ) {
-    var selectedPaymentMethod by rememberSaveable { mutableStateOf(BookingPaymentMethod.RAZORPAY) }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -173,9 +166,7 @@ internal fun BookingSummaryContent(
                 is BookingUiState.Ready ->
                     ReadySummary(
                         state = state,
-                        selectedPaymentMethod = selectedPaymentMethod,
-                        onPaymentMethodSelected = { selectedPaymentMethod = it },
-                        onCreateBooking = { onCreateBooking(selectedPaymentMethod) },
+                        onCreateBooking = { onCreateBooking(BookingPaymentMethod.CASH_ON_SERVICE) },
                         walletBalanceInPaise = walletBalanceInPaise,
                         applyCreditToggle = applyCreditToggle,
                         onApplyCreditChanged = onApplyCreditChanged,
@@ -206,8 +197,6 @@ internal fun BookingSummaryContent(
 @Composable
 private fun ReadySummary(
     state: BookingUiState.Ready,
-    selectedPaymentMethod: BookingPaymentMethod,
-    onPaymentMethodSelected: (BookingPaymentMethod) -> Unit,
     onCreateBooking: () -> Unit,
     walletBalanceInPaise: Long = 0L,
     applyCreditToggle: Boolean = false,
@@ -260,25 +249,6 @@ private fun ReadySummary(
                 )
             }
             Spacer(Modifier.height(12.dp))
-            HsSectionCard(title = stringResource(R.string.booking_payment_method_title)) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    PaymentOptionRow(
-                        title = stringResource(R.string.booking_payment_online_title),
-                        body = stringResource(R.string.booking_payment_online_body),
-                        method = BookingPaymentMethod.RAZORPAY,
-                        selectedPaymentMethod = selectedPaymentMethod,
-                        onPaymentMethodSelected = onPaymentMethodSelected,
-                    )
-                    PaymentOptionRow(
-                        title = stringResource(R.string.booking_payment_cash_title),
-                        body = stringResource(R.string.booking_payment_cash_body),
-                        method = BookingPaymentMethod.CASH_ON_SERVICE,
-                        selectedPaymentMethod = selectedPaymentMethod,
-                        onPaymentMethodSelected = onPaymentMethodSelected,
-                    )
-                }
-            }
-            Spacer(Modifier.height(12.dp))
             HsSectionCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(
@@ -294,26 +264,12 @@ private fun ReadySummary(
                     }
                     Column(modifier = Modifier.padding(start = 12.dp)) {
                         Text(
-                            text =
-                                stringResource(
-                                    if (selectedPaymentMethod == BookingPaymentMethod.RAZORPAY) {
-                                        R.string.booking_payment_secure_title
-                                    } else {
-                                        R.string.booking_payment_cash_note_title
-                                    },
-                                ),
+                            text = stringResource(R.string.booking_payment_cash_note_title),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
                         )
                         Text(
-                            text =
-                                stringResource(
-                                    if (selectedPaymentMethod == BookingPaymentMethod.RAZORPAY) {
-                                        R.string.booking_payment_secure_body
-                                    } else {
-                                        R.string.booking_payment_cash_note_body
-                                    },
-                                ),
+                            text = stringResource(R.string.booking_payment_cash_note_body),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -324,14 +280,7 @@ private fun ReadySummary(
         }
         Spacer(Modifier.height(14.dp))
         HsPrimaryButton(
-            text =
-                stringResource(
-                    if (selectedPaymentMethod == BookingPaymentMethod.RAZORPAY) {
-                        R.string.booking_summary_pay_now
-                    } else {
-                        R.string.booking_summary_book_cash
-                    },
-                ),
+            text = stringResource(R.string.booking_summary_book_cash),
             onClick = onCreateBooking,
             modifier =
                 Modifier
@@ -339,58 +288,6 @@ private fun ReadySummary(
                     .navigationBarsPadding()
                     .height(56.dp),
         )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PaymentOptionRow(
-    title: String,
-    body: String,
-    method: BookingPaymentMethod,
-    selectedPaymentMethod: BookingPaymentMethod,
-    onPaymentMethodSelected: (BookingPaymentMethod) -> Unit,
-) {
-    val selected = method == selectedPaymentMethod
-    Surface(
-        onClick = { onPaymentMethodSelected(method) },
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color =
-            if (selected) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f)
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-            },
-        border =
-            BorderStroke(
-                width = 1.dp,
-                color =
-                    if (selected) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.outlineVariant
-                    },
-            ),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            RadioButton(selected = selected, onClick = { onPaymentMethodSelected(method) })
-            Column(modifier = Modifier.padding(start = 8.dp)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = body,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
     }
 }
 
