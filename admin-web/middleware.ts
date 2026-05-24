@@ -403,7 +403,8 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Match all paths except SWA health checks, Next.js static assets, image optimization,
+    // robots.txt (served from public/ — middleware would 500 when JWT_SECRET is absent),
     // and the Firebase service worker (must be served publicly from root for FCM push registration).
-    '/((?!\\.swa|_next/static|_next/image|favicon\\.ico|firebase-messaging-sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!\\.swa|_next/static|_next/image|favicon\\.ico|robots\\.txt|firebase-messaging-sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
