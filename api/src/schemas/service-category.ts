@@ -11,6 +11,12 @@ export const ServiceCategorySchema = z
     sortOrder: z.number().int().nonnegative(),
     /** PRD-08: When true, this category's services should trigger the women-safe filter by default. */
     safetyTag: z.boolean().optional(),
+    /**
+     * E21-S01: Optional commission override (basis points) for every service in this category.
+     * When absent, services fall through to the global default. A service-level `commissionBps`
+     * takes precedence over this category override.
+     */
+    commissionBps: z.number().int().min(1500).max(3500).optional(),
     isActive: z.boolean(),
     updatedBy: z.string().min(1),
     createdAt: z.string().datetime(),

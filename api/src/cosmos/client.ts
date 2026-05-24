@@ -96,6 +96,15 @@ export function getSystemContainer(): Container {
   return getCosmosClient().database(DB_NAME).container('system');
 }
 
+/**
+ * E21-S01: Commission owed by technicians to the platform (cash pilot).
+ * One doc per completed cash booking, partitioned by /technicianId so per-tech
+ * outstanding reads are single-partition. id === bookingId for idempotent settlement.
+ */
+export function getCommissionReceivablesContainer(): Container {
+  return getCosmosClient().database(DB_NAME).container('commission_receivables');
+}
+
 export function getPendingActionsContainer(): Container {
   return getCosmosClient().database(DB_NAME).container('pending_actions');
 }

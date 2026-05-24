@@ -34,6 +34,10 @@ export const BookingDocSchema = z.object({
   paymentOrderId: z.string(),
   paymentMethod: PaymentMethodSchema.optional(),
   cashCollectionStatus: CashCollectionStatusSchema.optional(),
+  /** E21-S01: ISO timestamp when the technician confirmed cash collection at job completion. Audit/visibility only — does not gate the commission receivable. */
+  cashCollectedAt: z.string().optional(),
+  /** E21-S01: Actual cash amount (paise) the technician confirmed collecting. May differ from finalAmount. */
+  cashCollectedAmount: z.number().int().nonnegative().optional(),
   paymentId: z.string().nullable(),
   paymentSignature: z.string().nullable(),
   amount: z.number().int().positive(),
