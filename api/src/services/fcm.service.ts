@@ -172,12 +172,13 @@ export async function sendTechnicianBookingStatusUpdatePush(payload: {
 
 export async function sendTechEarningsUpdate(
   technicianId: string,
-  payload: { bookingId: string; techAmount: number },
+  payload: { bookingId: string; techAmount?: number; commissionDue?: number },
 ): Promise<void> {
   await sendToUserTokens(technicianId, {
     type: 'EARNINGS_UPDATE',
     bookingId: payload.bookingId,
-    techAmount: String(payload.techAmount),
+    ...(payload.techAmount !== undefined ? { techAmount: String(payload.techAmount) } : {}),
+    ...(payload.commissionDue !== undefined ? { commissionDue: String(payload.commissionDue) } : {}),
   });
 }
 

@@ -406,6 +406,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/catalogue/commission-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get global commission rate (basis points) */
+        get: operations["getAdminCommissionConfig"];
+        /** Update global commission rate (super-admin only) */
+        put: operations["putAdminCommissionConfig"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/finance/commission-receivables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** All-technician commission outstanding dashboard */
+        get: operations["adminCommissionReceivablesDashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/finance/commission-receivables/{technicianId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** DUE commission entries for a specific technician */
+        get: operations["adminCommissionReceivablesPerTech"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/finance/commission-receivables/settle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark commission as remitted (received) or waived */
+        post: operations["markCommissionReceived"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/technicians/me/commission-due": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Technician's outstanding commission owed to the platform */
+        get: operations["techCommissionDue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/waitlist": {
         parameters: {
             query?: never;
@@ -642,6 +728,7 @@ export interface components {
             heroImageUrl: string;
             sortOrder: number;
             safetyTag?: boolean;
+            commissionBps?: number;
             isActive: boolean;
             updatedBy: string;
             /** Format: date-time */
@@ -659,8 +746,8 @@ export interface components {
             heroImageUrl: string;
             /** @description Price in paise (₹599 = 59900) */
             basePrice: number;
-            /** @description Commission in basis points (2250 = 22.5%) */
-            commissionBps: number;
+            /** @description Commission override in basis points (2250 = 22.5%). Optional (E21-S01): when absent, the booking falls through to the category override, then the global default. */
+            commissionBps?: number;
             durationMinutes: number;
             includes: string[];
             faq: {
@@ -874,6 +961,91 @@ export interface components {
             transferId: string;
             /** @enum {string} */
             status: "TRANSFERRED";
+        };
+        CommissionConfigDoc: {
+            /** @enum {string} */
+            id: "commission-config";
+            defaultCommissionBps: number;
+            updatedBy: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        UpdateCommissionConfigBody: {
+            defaultCommissionBps: number;
+        };
+        CommissionConfigResponse: {
+            defaultCommissionBps: number;
+            updatedBy: string;
+            updatedAt: string;
+            isDefault?: boolean;
+        };
+        CommissionReceivableEntry: {
+            id: string;
+            bookingId: string;
+            technicianId: string;
+            partitionKey: string;
+            serviceId: string;
+            categoryId: string;
+            bookingAmount: number;
+            cashCollectedAmount?: number;
+            commissionBps: number;
+            commissionDue: number;
+            /** @enum {string} */
+            commissionResolvedFrom: "SERVICE" | "CATEGORY" | "GLOBAL";
+            /** @enum {string} */
+            remittanceStatus: "DUE" | "REMITTED" | "WAIVED";
+            remittedAmount?: number;
+            remittedAt?: string;
+            remittanceRef?: string;
+            /** @enum {string} */
+            remittanceMethod?: "UPI" | "CASH_DEPOSIT" | "ADJUSTMENT";
+            markedByAdminId?: string;
+            waivedReason?: string;
+            createdAt: string;
+            updatedAt?: string;
+        };
+        TechnicianOutstandingSummary: {
+            technicianId: string;
+            technicianName: string;
+            dueCount: number;
+            totalCommissionDue: number;
+            oldestDueAt?: string;
+        };
+        CommissionReceivablesDashboard: {
+            technicians: {
+                technicianId: string;
+                technicianName: string;
+                dueCount: number;
+                totalCommissionDue: number;
+                oldestDueAt?: string;
+            }[];
+            totalOutstanding: number;
+        };
+        MarkCommissionReceivedBody: {
+            /** @enum {string} */
+            action: "REMIT";
+            bookingId: string;
+            technicianId: string;
+            remittedAmount: number;
+            /** @enum {string} */
+            remittanceMethod: "UPI" | "CASH_DEPOSIT" | "ADJUSTMENT";
+            remittanceRef: string;
+        } | {
+            /** @enum {string} */
+            action: "WAIVE";
+            bookingId: string;
+            technicianId: string;
+            waivedReason: string;
+        };
+        TechnicianCommissionDue: {
+            totalOutstandingPaise: number;
+            dueCount: number;
+            entries: {
+                bookingId: string;
+                bookingAmount: number;
+                commissionDue: number;
+                createdAt: string;
+            }[];
         };
         WaitlistRequest: {
             /** @example +916000000001 */
@@ -1201,6 +1373,7 @@ export interface operations {
                     heroImageUrl: string;
                     sortOrder: number;
                     safetyTag?: boolean;
+                    commissionBps?: number;
                 };
             };
         };
@@ -1291,6 +1464,7 @@ export interface operations {
                     heroImageUrl: string;
                     sortOrder: number;
                     safetyTag?: boolean;
+                    commissionBps?: number;
                 };
             };
         };
@@ -1385,8 +1559,8 @@ export interface operations {
                     heroImageUrl: string;
                     /** @description Price in paise (₹599 = 59900) */
                     basePrice: number;
-                    /** @description Commission in basis points (2250 = 22.5%) */
-                    commissionBps: number;
+                    /** @description Commission override in basis points (2250 = 22.5%). Optional (E21-S01): when absent, the booking falls through to the category override, then the global default. */
+                    commissionBps?: number;
                     durationMinutes: number;
                     includes: string[];
                     faq: {
@@ -1496,8 +1670,8 @@ export interface operations {
                     heroImageUrl: string;
                     /** @description Price in paise (₹599 = 59900) */
                     basePrice: number;
-                    /** @description Commission in basis points (2250 = 22.5%) */
-                    commissionBps: number;
+                    /** @description Commission override in basis points (2250 = 22.5%). Optional (E21-S01): when absent, the booking falls through to the category override, then the global default. */
+                    commissionBps?: number;
                     durationMinutes: number;
                     includes: string[];
                     faq: {
@@ -2069,6 +2243,320 @@ export interface operations {
             };
             /** @description Invalid levy status */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getAdminCommissionConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current global commission bps */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionConfigResponse"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putAdminCommissionConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    defaultCommissionBps: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated commission config */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionConfigResponse"];
+                };
+            };
+            /** @description Validation error (bps out of 1500–3500 range) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden (requires super-admin) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminCommissionReceivablesDashboard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Per-tech DUE summary + total outstanding */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        technicians: {
+                            technicianId: string;
+                            technicianName: string;
+                            dueCount: number;
+                            totalCommissionDue: number;
+                            oldestDueAt?: string;
+                        }[];
+                        totalOutstanding: number;
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminCommissionReceivablesPerTech: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                technicianId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Outstanding entries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        technicianId: string;
+                        entries: {
+                            id: string;
+                            bookingId: string;
+                            technicianId: string;
+                            partitionKey: string;
+                            serviceId: string;
+                            categoryId: string;
+                            bookingAmount: number;
+                            cashCollectedAmount?: number;
+                            commissionBps: number;
+                            commissionDue: number;
+                            /** @enum {string} */
+                            commissionResolvedFrom: "SERVICE" | "CATEGORY" | "GLOBAL";
+                            /** @enum {string} */
+                            remittanceStatus: "DUE" | "REMITTED" | "WAIVED";
+                            remittedAmount?: number;
+                            remittedAt?: string;
+                            remittanceRef?: string;
+                            /** @enum {string} */
+                            remittanceMethod?: "UPI" | "CASH_DEPOSIT" | "ADJUSTMENT";
+                            markedByAdminId?: string;
+                            waivedReason?: string;
+                            createdAt: string;
+                            updatedAt?: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    markCommissionReceived: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    action: "REMIT";
+                    bookingId: string;
+                    technicianId: string;
+                    remittedAmount: number;
+                    /** @enum {string} */
+                    remittanceMethod: "UPI" | "CASH_DEPOSIT" | "ADJUSTMENT";
+                    remittanceRef: string;
+                } | {
+                    /** @enum {string} */
+                    action: "WAIVE";
+                    bookingId: string;
+                    technicianId: string;
+                    waivedReason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated receivable entry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        bookingId: string;
+                        technicianId: string;
+                        partitionKey: string;
+                        serviceId: string;
+                        categoryId: string;
+                        bookingAmount: number;
+                        cashCollectedAmount?: number;
+                        commissionBps: number;
+                        commissionDue: number;
+                        /** @enum {string} */
+                        commissionResolvedFrom: "SERVICE" | "CATEGORY" | "GLOBAL";
+                        /** @enum {string} */
+                        remittanceStatus: "DUE" | "REMITTED" | "WAIVED";
+                        remittedAmount?: number;
+                        remittedAt?: string;
+                        remittanceRef?: string;
+                        /** @enum {string} */
+                        remittanceMethod?: "UPI" | "CASH_DEPOSIT" | "ADJUSTMENT";
+                        markedByAdminId?: string;
+                        waivedReason?: string;
+                        createdAt: string;
+                        updatedAt?: string;
+                    };
+                };
+            };
+            /** @description Validation error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Receivable not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    techCommissionDue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Outstanding commission summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        totalOutstandingPaise: number;
+                        dueCount: number;
+                        entries: {
+                            bookingId: string;
+                            bookingAmount: number;
+                            commissionDue: number;
+                            createdAt: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

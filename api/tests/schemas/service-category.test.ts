@@ -31,6 +31,22 @@ describe('ServiceCategorySchema', () => {
       ServiceCategorySchema.parse({ ...validCategory, heroImageUrl: 'not-a-url' })
     ).toThrow();
   });
+
+  it('accepts an optional commissionBps override in range', () => {
+    expect(() =>
+      ServiceCategorySchema.parse({ ...validCategory, commissionBps: 2000 })
+    ).not.toThrow();
+  });
+
+  it('parses with commissionBps absent (falls through to global)', () => {
+    expect(() => ServiceCategorySchema.parse(validCategory)).not.toThrow();
+  });
+
+  it('rejects commissionBps out of range', () => {
+    expect(() =>
+      ServiceCategorySchema.parse({ ...validCategory, commissionBps: 100 })
+    ).toThrow();
+  });
 });
 
 describe('CreateCategoryBodySchema', () => {

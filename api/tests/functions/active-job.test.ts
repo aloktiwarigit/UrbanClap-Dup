@@ -296,4 +296,46 @@ describe('PATCH /v1/technicians/active-job/:bookingId/transition', () => {
     expect(res.status).toBe(200);
     expect(Sentry.captureMessage).not.toHaveBeenCalled();
   });
+
+  describe('E21-S01: cash collection on COMPLETED transition', () => {
+    it('sets cashCollectionStatus=COLLECTED when cashCollected=true', async () => {
+      const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+      const { bookingRepo, updateBookingFields } = await import('../../src/cosmos/booking-repository.js');
+      const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
+
+      (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+      (bookingRepo.getById as MockFn).mockResolvedValue(aBooking('IN_PROGRESS'));
+      (updateBookingFields as MockFn).mockResolvedValue(aBooking('COMPLETED'));
+      (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue(aService());
+
+      await transitionHandler(
+        makePatchReq('bk-1', { targetStatus: 'COMPLETED', cashCollected: true, collectedAmount: 50000 }),
+        new InvocationContext(),
+      );
+
+      const [, fields] = (updateBookingFields as MockFn).mock.calls[0] as [string, Record<string, unknown>];
+      expect(fields['cashCollectionStatus']).toBe('COLLECTED');
+      expect(fields['cashCollectedAt']).toBeDefined();
+      expect(fields['cashCollectedAmount']).toBe(50000);
+    });
+
+    it('does NOT set cashCollectionStatus when cashCollected is absent', async () => {
+      const { verifyTechnicianToken } = await import('../../src/middleware/verifyTechnicianToken.js');
+      const { bookingRepo, updateBookingFields } = await import('../../src/cosmos/booking-repository.js');
+      const { catalogueRepo } = await import('../../src/cosmos/catalogue-repository.js');
+
+      (verifyTechnicianToken as MockFn).mockResolvedValue({ uid: 'tech-1' });
+      (bookingRepo.getById as MockFn).mockResolvedValue(aBooking('IN_PROGRESS'));
+      (updateBookingFields as MockFn).mockResolvedValue(aBooking('COMPLETED'));
+      (catalogueRepo.getServiceByIdCrossPartition as MockFn).mockResolvedValue(aService());
+
+      await transitionHandler(
+        makePatchReq('bk-1', { targetStatus: 'COMPLETED' }),
+        new InvocationContext(),
+      );
+
+      const [, fields] = (updateBookingFields as MockFn).mock.calls[0] as [string, Record<string, unknown>];
+      expect(fields['cashCollectionStatus']).toBeUndefined();
+    });
+  });
 });

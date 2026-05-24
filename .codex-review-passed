@@ -1,7 +1,7 @@
-codex-review-passed: 2026-05-23T21:14:08Z
-branch: fix/sprint7-architecture-cleanup
-base: main
+codex-review: passed
+branch: worktree-e20-cash-commission-api
+story: E21-S01
 model: gpt-5.5
-rounds: 2
-result: PASS — no discrete correctness issues
-p2-fixes: PaymentResultBus HOT revert + NoShowCreditEventBus StateFlow consume()
+date: 2026-05-24
+findings: 4 P2s (amount-below-due, no-op audit, ops-manager rbac, razorpay cascade)
+resolution: all 4 fixed in commit 8452c86e; smoke gate green (1535 tests)

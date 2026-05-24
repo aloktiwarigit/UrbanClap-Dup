@@ -530,6 +530,11 @@
           "safetyTag": {
             "type": "boolean"
           },
+          "commissionBps": {
+            "type": "integer",
+            "minimum": 1500,
+            "maximum": 3500
+          },
           "isActive": {
             "type": "boolean"
           },
@@ -594,7 +599,7 @@
             "type": "integer",
             "minimum": 1500,
             "maximum": 3500,
-            "description": "Commission in basis points (2250 = 22.5%)"
+            "description": "Commission override in basis points (2250 = 22.5%). Optional (E21-S01): when absent, the booking falls through to the category override, then the global default."
           },
           "durationMinutes": {
             "type": "integer",
@@ -712,7 +717,6 @@
           "shortDescription",
           "heroImageUrl",
           "basePrice",
-          "commissionBps",
           "durationMinutes",
           "includes",
           "faq",
@@ -1477,6 +1481,367 @@
           "status"
         ]
       },
+      "CommissionConfigDoc": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": [
+              "commission-config"
+            ]
+          },
+          "defaultCommissionBps": {
+            "type": "integer",
+            "minimum": 1500,
+            "maximum": 3500
+          },
+          "updatedBy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "defaultCommissionBps",
+          "updatedBy",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateCommissionConfigBody": {
+        "type": "object",
+        "properties": {
+          "defaultCommissionBps": {
+            "type": "integer",
+            "minimum": 1500,
+            "maximum": 3500
+          }
+        },
+        "required": [
+          "defaultCommissionBps"
+        ],
+        "additionalProperties": false
+      },
+      "CommissionConfigResponse": {
+        "type": "object",
+        "properties": {
+          "defaultCommissionBps": {
+            "type": "integer"
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "isDefault": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "defaultCommissionBps",
+          "updatedBy",
+          "updatedAt"
+        ]
+      },
+      "CommissionReceivableEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "bookingId": {
+            "type": "string"
+          },
+          "technicianId": {
+            "type": "string"
+          },
+          "partitionKey": {
+            "type": "string"
+          },
+          "serviceId": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "string"
+          },
+          "bookingAmount": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "cashCollectedAmount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "commissionBps": {
+            "type": "integer",
+            "minimum": 1500,
+            "maximum": 3500
+          },
+          "commissionDue": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "commissionResolvedFrom": {
+            "type": "string",
+            "enum": [
+              "SERVICE",
+              "CATEGORY",
+              "GLOBAL"
+            ]
+          },
+          "remittanceStatus": {
+            "type": "string",
+            "enum": [
+              "DUE",
+              "REMITTED",
+              "WAIVED"
+            ]
+          },
+          "remittedAmount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "remittedAt": {
+            "type": "string"
+          },
+          "remittanceRef": {
+            "type": "string"
+          },
+          "remittanceMethod": {
+            "type": "string",
+            "enum": [
+              "UPI",
+              "CASH_DEPOSIT",
+              "ADJUSTMENT"
+            ]
+          },
+          "markedByAdminId": {
+            "type": "string"
+          },
+          "waivedReason": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "bookingId",
+          "technicianId",
+          "partitionKey",
+          "serviceId",
+          "categoryId",
+          "bookingAmount",
+          "commissionBps",
+          "commissionDue",
+          "commissionResolvedFrom",
+          "remittanceStatus",
+          "createdAt"
+        ]
+      },
+      "TechnicianOutstandingSummary": {
+        "type": "object",
+        "properties": {
+          "technicianId": {
+            "type": "string"
+          },
+          "technicianName": {
+            "type": "string"
+          },
+          "dueCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalCommissionDue": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "oldestDueAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "technicianId",
+          "technicianName",
+          "dueCount",
+          "totalCommissionDue"
+        ]
+      },
+      "CommissionReceivablesDashboard": {
+        "type": "object",
+        "properties": {
+          "technicians": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "technicianId": {
+                  "type": "string"
+                },
+                "technicianName": {
+                  "type": "string"
+                },
+                "dueCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "totalCommissionDue": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "oldestDueAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "technicianId",
+                "technicianName",
+                "dueCount",
+                "totalCommissionDue"
+              ]
+            }
+          },
+          "totalOutstanding": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "technicians",
+          "totalOutstanding"
+        ]
+      },
+      "MarkCommissionReceivedBody": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "REMIT"
+                ]
+              },
+              "bookingId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "technicianId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "remittedAmount": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "remittanceMethod": {
+                "type": "string",
+                "enum": [
+                  "UPI",
+                  "CASH_DEPOSIT",
+                  "ADJUSTMENT"
+                ]
+              },
+              "remittanceRef": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "action",
+              "bookingId",
+              "technicianId",
+              "remittedAmount",
+              "remittanceMethod",
+              "remittanceRef"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "WAIVE"
+                ]
+              },
+              "bookingId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "technicianId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "waivedReason": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "action",
+              "bookingId",
+              "technicianId",
+              "waivedReason"
+            ]
+          }
+        ]
+      },
+      "TechnicianCommissionDue": {
+        "type": "object",
+        "properties": {
+          "totalOutstandingPaise": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "dueCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "bookingId": {
+                  "type": "string"
+                },
+                "bookingAmount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "commissionDue": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "createdAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "bookingId",
+                "bookingAmount",
+                "commissionDue",
+                "createdAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "totalOutstandingPaise",
+          "dueCount",
+          "entries"
+        ]
+      },
       "WaitlistRequest": {
         "type": "object",
         "properties": {
@@ -1925,6 +2290,11 @@
                   },
                   "safetyTag": {
                     "type": "boolean"
+                  },
+                  "commissionBps": {
+                    "type": "integer",
+                    "minimum": 1500,
+                    "maximum": 3500
                   }
                 },
                 "required": [
@@ -2040,6 +2410,11 @@
                   },
                   "safetyTag": {
                     "type": "boolean"
+                  },
+                  "commissionBps": {
+                    "type": "integer",
+                    "minimum": 1500,
+                    "maximum": 3500
                   }
                 },
                 "required": [
@@ -2189,7 +2564,7 @@
                     "type": "integer",
                     "minimum": 1500,
                     "maximum": 3500,
-                    "description": "Commission in basis points (2250 = 22.5%)"
+                    "description": "Commission override in basis points (2250 = 22.5%). Optional (E21-S01): when absent, the booking falls through to the category override, then the global default."
                   },
                   "durationMinutes": {
                     "type": "integer",
@@ -2292,7 +2667,6 @@
                   "shortDescription",
                   "heroImageUrl",
                   "basePrice",
-                  "commissionBps",
                   "durationMinutes",
                   "includes",
                   "faq",
@@ -2413,7 +2787,7 @@
                     "type": "integer",
                     "minimum": 1500,
                     "maximum": 3500,
-                    "description": "Commission in basis points (2250 = 22.5%)"
+                    "description": "Commission override in basis points (2250 = 22.5%). Optional (E21-S01): when absent, the booking falls through to the category override, then the global default."
                   },
                   "durationMinutes": {
                     "type": "integer",
@@ -2514,7 +2888,6 @@
                   "shortDescription",
                   "heroImageUrl",
                   "basePrice",
-                  "commissionBps",
                   "durationMinutes",
                   "includes",
                   "faq",
@@ -3236,6 +3609,607 @@
           },
           "409": {
             "description": "Invalid levy status"
+          }
+        }
+      }
+    },
+    "/v1/admin/catalogue/commission-config": {
+      "get": {
+        "operationId": "getAdminCommissionConfig",
+        "tags": [
+          "admin-catalogue"
+        ],
+        "summary": "Get global commission rate (basis points)",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current global commission bps",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommissionConfigResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      },
+      "put": {
+        "operationId": "putAdminCommissionConfig",
+        "tags": [
+          "admin-catalogue"
+        ],
+        "summary": "Update global commission rate (super-admin only)",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "defaultCommissionBps": {
+                    "type": "integer",
+                    "minimum": 1500,
+                    "maximum": 3500
+                  }
+                },
+                "required": [
+                  "defaultCommissionBps"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated commission config",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommissionConfigResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error (bps out of 1500–3500 range)"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden (requires super-admin)"
+          }
+        }
+      }
+    },
+    "/v1/admin/finance/commission-receivables": {
+      "get": {
+        "operationId": "adminCommissionReceivablesDashboard",
+        "tags": [
+          "admin-finance"
+        ],
+        "summary": "All-technician commission outstanding dashboard",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Per-tech DUE summary + total outstanding",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "technicians": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "technicianId": {
+                            "type": "string"
+                          },
+                          "technicianName": {
+                            "type": "string"
+                          },
+                          "dueCount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "totalCommissionDue": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "oldestDueAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "technicianId",
+                          "technicianName",
+                          "dueCount",
+                          "totalCommissionDue"
+                        ]
+                      }
+                    },
+                    "totalOutstanding": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "technicians",
+                    "totalOutstanding"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/v1/admin/finance/commission-receivables/{technicianId}": {
+      "get": {
+        "operationId": "adminCommissionReceivablesPerTech",
+        "tags": [
+          "admin-finance"
+        ],
+        "summary": "DUE commission entries for a specific technician",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "technicianId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Outstanding entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "technicianId": {
+                      "type": "string"
+                    },
+                    "entries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "bookingId": {
+                            "type": "string"
+                          },
+                          "technicianId": {
+                            "type": "string"
+                          },
+                          "partitionKey": {
+                            "type": "string"
+                          },
+                          "serviceId": {
+                            "type": "string"
+                          },
+                          "categoryId": {
+                            "type": "string"
+                          },
+                          "bookingAmount": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "cashCollectedAmount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "commissionBps": {
+                            "type": "integer",
+                            "minimum": 1500,
+                            "maximum": 3500
+                          },
+                          "commissionDue": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "commissionResolvedFrom": {
+                            "type": "string",
+                            "enum": [
+                              "SERVICE",
+                              "CATEGORY",
+                              "GLOBAL"
+                            ]
+                          },
+                          "remittanceStatus": {
+                            "type": "string",
+                            "enum": [
+                              "DUE",
+                              "REMITTED",
+                              "WAIVED"
+                            ]
+                          },
+                          "remittedAmount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "remittedAt": {
+                            "type": "string"
+                          },
+                          "remittanceRef": {
+                            "type": "string"
+                          },
+                          "remittanceMethod": {
+                            "type": "string",
+                            "enum": [
+                              "UPI",
+                              "CASH_DEPOSIT",
+                              "ADJUSTMENT"
+                            ]
+                          },
+                          "markedByAdminId": {
+                            "type": "string"
+                          },
+                          "waivedReason": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "bookingId",
+                          "technicianId",
+                          "partitionKey",
+                          "serviceId",
+                          "categoryId",
+                          "bookingAmount",
+                          "commissionBps",
+                          "commissionDue",
+                          "commissionResolvedFrom",
+                          "remittanceStatus",
+                          "createdAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "technicianId",
+                    "entries"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/v1/admin/finance/commission-receivables/settle": {
+      "post": {
+        "operationId": "markCommissionReceived",
+        "tags": [
+          "admin-finance"
+        ],
+        "summary": "Mark commission as remitted (received) or waived",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "action": {
+                        "type": "string",
+                        "enum": [
+                          "REMIT"
+                        ]
+                      },
+                      "bookingId": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "technicianId": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "remittedAmount": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "remittanceMethod": {
+                        "type": "string",
+                        "enum": [
+                          "UPI",
+                          "CASH_DEPOSIT",
+                          "ADJUSTMENT"
+                        ]
+                      },
+                      "remittanceRef": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "action",
+                      "bookingId",
+                      "technicianId",
+                      "remittedAmount",
+                      "remittanceMethod",
+                      "remittanceRef"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "action": {
+                        "type": "string",
+                        "enum": [
+                          "WAIVE"
+                        ]
+                      },
+                      "bookingId": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "technicianId": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "waivedReason": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "action",
+                      "bookingId",
+                      "technicianId",
+                      "waivedReason"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated receivable entry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "bookingId": {
+                      "type": "string"
+                    },
+                    "technicianId": {
+                      "type": "string"
+                    },
+                    "partitionKey": {
+                      "type": "string"
+                    },
+                    "serviceId": {
+                      "type": "string"
+                    },
+                    "categoryId": {
+                      "type": "string"
+                    },
+                    "bookingAmount": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "cashCollectedAmount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "commissionBps": {
+                      "type": "integer",
+                      "minimum": 1500,
+                      "maximum": 3500
+                    },
+                    "commissionDue": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "commissionResolvedFrom": {
+                      "type": "string",
+                      "enum": [
+                        "SERVICE",
+                        "CATEGORY",
+                        "GLOBAL"
+                      ]
+                    },
+                    "remittanceStatus": {
+                      "type": "string",
+                      "enum": [
+                        "DUE",
+                        "REMITTED",
+                        "WAIVED"
+                      ]
+                    },
+                    "remittedAmount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "remittedAt": {
+                      "type": "string"
+                    },
+                    "remittanceRef": {
+                      "type": "string"
+                    },
+                    "remittanceMethod": {
+                      "type": "string",
+                      "enum": [
+                        "UPI",
+                        "CASH_DEPOSIT",
+                        "ADJUSTMENT"
+                      ]
+                    },
+                    "markedByAdminId": {
+                      "type": "string"
+                    },
+                    "waivedReason": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "bookingId",
+                    "technicianId",
+                    "partitionKey",
+                    "serviceId",
+                    "categoryId",
+                    "bookingAmount",
+                    "commissionBps",
+                    "commissionDue",
+                    "commissionResolvedFrom",
+                    "remittanceStatus",
+                    "createdAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Receivable not found"
+          }
+        }
+      }
+    },
+    "/v1/technicians/me/commission-due": {
+      "get": {
+        "operationId": "techCommissionDue",
+        "tags": [
+          "technicians"
+        ],
+        "summary": "Technician's outstanding commission owed to the platform",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Outstanding commission summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "totalOutstandingPaise": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "dueCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "entries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "bookingId": {
+                            "type": "string"
+                          },
+                          "bookingAmount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "commissionDue": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "bookingId",
+                          "bookingAmount",
+                          "commissionDue",
+                          "createdAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "totalOutstandingPaise",
+                    "dueCount",
+                    "entries"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
           }
         }
       }

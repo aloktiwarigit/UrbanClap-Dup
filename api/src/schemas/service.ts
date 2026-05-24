@@ -29,7 +29,7 @@ export const ServiceSchema = z
     shortDescription: z.string().min(1).max(200),
     heroImageUrl: z.string().url(),
     basePrice: z.number().int().nonnegative().openapi({ description: 'Price in paise (₹599 = 59900)' }),
-    commissionBps: z.number().int().min(1500).max(3500).openapi({ description: 'Commission in basis points (2250 = 22.5%)' }),
+    commissionBps: z.number().int().min(1500).max(3500).optional().openapi({ description: 'Commission override in basis points (2250 = 22.5%). Optional (E21-S01): when absent, the booking falls through to the category override, then the global default.' }),
     durationMinutes: z.number().int().positive(),
     includes: z.array(z.string().min(1)),
     faq: z.array(FaqItemSchema),
