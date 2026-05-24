@@ -15,12 +15,12 @@ public class FcmTokenSyncUseCase
         private val api: JobOfferApiService,
     ) {
         /** Called from app startup / login flow. Fetches the FCM token internally. */
+        @Suppress("TooGenericExceptionCaught")
         public suspend operator fun invoke(): Unit {
             try {
                 val fcmToken = FirebaseMessaging.getInstance().token.await()
                 invokeWithFcmToken(fcmToken)
             } catch (e: Exception) {
-                // TooGenericExceptionCaught — token sync is best-effort; all exceptions handled identically
                 // Token sync is best-effort; failures are non-fatal
                 runCatching { FirebaseCrashlytics.getInstance().recordException(e) }
             }
