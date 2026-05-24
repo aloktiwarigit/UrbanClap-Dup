@@ -19,7 +19,7 @@ public class FcmTokenSyncUseCase
             try {
                 val fcmToken = FirebaseMessaging.getInstance().token.await()
                 invokeWithFcmToken(fcmToken)
-            } catch (e: Exception) {
+            } catch (e: Exception) { // TooGenericExceptionCaught — token sync is best-effort; all exceptions handled identically
                 // Token sync is best-effort; failures are non-fatal
                 runCatching { FirebaseCrashlytics.getInstance().recordException(e) }
             }
@@ -29,6 +29,7 @@ public class FcmTokenSyncUseCase
          * Testable entry point — accepts a pre-fetched FCM token.
          * Unit tests use this overload to avoid static FirebaseMessaging access.
          */
+        @Suppress("TooGenericExceptionCaught")
         public suspend fun invokeWithFcmToken(fcmToken: String): Unit {
             try {
                 api.syncFcmToken(FcmTokenRequest(fcmToken))

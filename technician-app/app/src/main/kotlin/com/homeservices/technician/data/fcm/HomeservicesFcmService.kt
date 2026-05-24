@@ -656,6 +656,7 @@ public class HomeservicesFcmService :
         serviceScope.cancel()
     }
 
+    @Suppress("ReturnCount")
     private fun parseJobOffer(
         data: Map<String, String>,
         sentTimeMs: Long = 0L,

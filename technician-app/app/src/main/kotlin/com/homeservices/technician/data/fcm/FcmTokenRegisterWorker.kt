@@ -35,11 +35,12 @@ internal class FcmTokenRegisterWorker
                 com.google.firebase.crashlytics.FirebaseCrashlytics
                     .getInstance()
                     .recordException(it)
-                if (runAttemptCount < 3) Result.retry() else Result.failure()
+                if (runAttemptCount < MAX_RETRY_ATTEMPTS) Result.retry() else Result.failure()
             }
         }
 
         public companion object {
             public const val KEY_FCM_TOKEN: String = "fcm_token"
+            private const val MAX_RETRY_ATTEMPTS = 3
         }
     }

@@ -39,6 +39,7 @@ internal class JobOfferViewModel
             }
         }
 
+        @Suppress("ReturnCount")
         public fun accept(): Unit {
             val current = _uiState.value as? JobOfferUiState.Offering ?: return
             if (current.isAccepting) return
@@ -129,7 +130,8 @@ internal class JobOfferViewModel
                 )
             countdownJob =
                 viewModelScope.launch {
-                    while (true) {
+                    @Suppress("LoopWithTooManyJumpStatements")
+                while (true) {
                         delay(1_000L)
                         val current = _uiState.value as? JobOfferUiState.Offering ?: break
                         if (current.offer.bookingId != offer.bookingId) break
