@@ -24,6 +24,31 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private val CUSTOMER_SESSION_TTL_MS = TimeUnit.DAYS.toMillis(180)
+
+private fun parseProvider(raw: String?): AuthProvider =
+    when (raw) {
+        "google" -> AuthProvider.Google
+        "email" -> AuthProvider.Email
+        else -> AuthProvider.Phone
+    }
+
+private fun inferProvider(user: FirebaseUser): AuthProvider =
+    when {
+        user.providerData.any { it.providerId == "google.com" } -> AuthProvider.Google
+        user.providerData.any { it.providerId == "password" } -> AuthProvider.Email
+        else -> AuthProvider.Phone
+    }
+
+private fun providerKey(provider: AuthProvider): String =
+    when (provider) {
+        AuthProvider.Phone -> "phone"
+        AuthProvider.Google -> "google"
+        AuthProvider.Email -> "email"
+    }
+
+private fun isSessionExpired(createdAt: Long): Boolean = createdAt == 0L || System.currentTimeMillis() - createdAt > CUSTOMER_SESSION_TTL_MS
+
 @Singleton
 public class SessionManager
     @Inject
@@ -42,7 +67,6 @@ public class SessionManager
             const val KEY_DISPLAY_NAME = "display_name"
             const val KEY_AUTH_PROVIDER = "auth_provider"
             const val PHONE_LAST_DIGITS = 4
-            val SESSION_TTL_MS = TimeUnit.DAYS.toMillis(180)
         }
 
         private val sessionScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -78,7 +102,7 @@ public class SessionManager
 
             val persistedUid = prefs.getString(KEY_UID, null)
             val createdAt = prefs.getLong(KEY_SESSION_CREATED_AT, 0L)
-            if (persistedUid == user.uid && isExpired(createdAt)) {
+            if (persistedUid == user.uid && isSessionExpired(createdAt)) {
                 invalidateSession(SessionInvalidationReason.LocalSessionExpired)
                 return
             }
@@ -93,9 +117,6 @@ public class SessionManager
         }
 
         private fun hasPersistedSession(): Boolean = prefs.getString(KEY_UID, null) != null
-
-        private fun isExpired(createdAt: Long): Boolean =
-            createdAt == 0L || System.currentTimeMillis() - createdAt > SESSION_TTL_MS
 
         private fun authStateFor(
             user: FirebaseUser,
@@ -130,27 +151,6 @@ public class SessionManager
                     },
             )
         }
-
-        private fun parseProvider(raw: String?): AuthProvider =
-            when (raw) {
-                "google" -> AuthProvider.Google
-                "email" -> AuthProvider.Email
-                else -> AuthProvider.Phone
-            }
-
-        private fun inferProvider(user: FirebaseUser): AuthProvider =
-            when {
-                user.providerData.any { it.providerId == "google.com" } -> AuthProvider.Google
-                user.providerData.any { it.providerId == "password" } -> AuthProvider.Email
-                else -> AuthProvider.Phone
-            }
-
-        private fun providerKey(provider: AuthProvider): String =
-            when (provider) {
-                AuthProvider.Phone -> "phone"
-                AuthProvider.Google -> "google"
-                AuthProvider.Email -> "email"
-            }
 
         public suspend fun saveSession(
             user: FirebaseUser,

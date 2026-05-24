@@ -209,9 +209,10 @@ public class SessionManagerSignOutTest {
             sessionManager.signOut()
 
             // signalSignIn should be called when saveSession is called after sign-out
-            val user = mockk<FirebaseUser>(relaxed = true) {
-                every { uid } returns "user-99"
-            }
+            val user =
+                mockk<FirebaseUser>(relaxed = true) {
+                    every { uid } returns "user-99"
+                }
             every { firebaseAuth.currentUser } returns user
 
             sessionManager.saveSession(
