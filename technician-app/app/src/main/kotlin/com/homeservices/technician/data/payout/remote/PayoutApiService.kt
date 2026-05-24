@@ -5,7 +5,7 @@ import com.homeservices.technician.data.payout.remote.dto.UpdatePayoutCadenceRes
 import retrofit2.http.Body
 import retrofit2.http.PATCH
 
-public interface PayoutApiService {
+internal interface PayoutApiService {
     @PATCH("v1/technicians/me/payout-cadence")
     public suspend fun updatePayoutCadence(
         @Body body: UpdatePayoutCadenceRequestDto,

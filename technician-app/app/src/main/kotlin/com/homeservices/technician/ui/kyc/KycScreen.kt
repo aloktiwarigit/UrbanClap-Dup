@@ -69,7 +69,12 @@ internal fun KycScreen(
         when (val state = uiState) {
             is KycUiState.AadhaarPending -> launchCustomTab(context, state.consentUrl)
             is KycUiState.Complete -> onComplete()
-            else -> Unit
+            is KycUiState.Idle -> Unit
+            is KycUiState.Loading -> Unit
+            is KycUiState.AadhaarDone -> Unit
+            is KycUiState.PanReady -> Unit
+            is KycUiState.PanUploading -> Unit
+            is KycUiState.Error -> Unit
         }
     }
 

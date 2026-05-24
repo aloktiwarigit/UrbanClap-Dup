@@ -17,7 +17,7 @@ public class AcceptJobOfferUseCase
                 response.isSuccessful -> JobOfferResult.Accepted(bookingId)
                 response.code() == HTTP_CONFLICT -> JobOfferResult.Conflict(bookingId)
                 response.code() == HTTP_GONE -> JobOfferResult.Expired(bookingId)
-                else -> throw RuntimeException("Accept offer failed: HTTP ${response.code()}")
+                else -> JobOfferResult.UnknownError(response.code())
             }
         }
 

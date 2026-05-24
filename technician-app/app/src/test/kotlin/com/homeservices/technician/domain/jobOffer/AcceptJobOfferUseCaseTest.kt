@@ -10,7 +10,6 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import retrofit2.Response
 import java.io.IOException
 
@@ -58,12 +57,14 @@ public class AcceptJobOfferUseCaseTest {
         }
 
     @Test
-    public fun `invoke throws RuntimeException on unexpected HTTP error`(): Unit =
+    public fun `invoke returns UnknownError on unexpected HTTP error`(): Unit =
         runTest {
             coEvery { api.acceptOffer("booking-500") } returns
                 Response.error(500, "".toResponseBody(null))
 
-            assertThrows<RuntimeException> { useCase("booking-500") }
+            val result = useCase("booking-500")
+
+            assertThat(result).isEqualTo(JobOfferResult.UnknownError(500))
         }
 
     @Test

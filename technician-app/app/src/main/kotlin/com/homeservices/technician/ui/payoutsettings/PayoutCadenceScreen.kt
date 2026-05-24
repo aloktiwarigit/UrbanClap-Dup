@@ -68,7 +68,8 @@ internal fun PayoutCadenceScreen(
             is PayoutCadenceUiState.Error -> {
                 snackbarHostState.showSnackbar(state.message)
             }
-            else -> Unit
+            is PayoutCadenceUiState.Loading -> Unit
+            is PayoutCadenceUiState.Ready -> Unit
         }
     }
 

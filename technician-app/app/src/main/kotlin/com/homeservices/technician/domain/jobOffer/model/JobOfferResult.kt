@@ -16,4 +16,8 @@ public sealed class JobOfferResult {
     public data class Conflict(
         val bookingId: String,
     ) : JobOfferResult()
+
+    public data class UnknownError(
+        val httpCode: Int,
+    ) : JobOfferResult()
 }

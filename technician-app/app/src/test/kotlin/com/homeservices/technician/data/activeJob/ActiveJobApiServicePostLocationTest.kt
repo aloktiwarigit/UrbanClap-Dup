@@ -3,6 +3,7 @@ package com.homeservices.technician.data.activeJob
 import com.homeservices.technician.data.activeJob.dto.PostLocationRequest
 import com.homeservices.technician.data.network.defaultMoshi
 import com.squareup.moshi.JsonAdapter
+import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -62,9 +63,9 @@ public class ActiveJobApiServicePostLocationTest {
                 attestation = LocationAttestationDto(isMock = false, gpsAccuracyM = 12.5f),
             )
 
-        // Act: call the suspend function (blocking via runBlocking since JUnit 5 test)
+        // Act: call the suspend function (using runTest for structured concurrency)
         val response =
-            kotlinx.coroutines.runBlocking {
+            runTest {
                 apiService.postActiveJobLocation("bk-test-1", body)
             }
 
@@ -108,7 +109,7 @@ public class ActiveJobApiServicePostLocationTest {
                 attestation = null,
             )
 
-        kotlinx.coroutines.runBlocking {
+        runTest {
             apiService.postActiveJobLocation("bk-test-2", body)
         }
 

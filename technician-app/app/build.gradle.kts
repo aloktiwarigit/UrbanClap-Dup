@@ -184,6 +184,7 @@ android {
             "\"${System.getenv("POSTHOG_HOST") ?: "https://us.i.posthog.com"}\"",
         )
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
+        resourceConfigurations += listOf("en", "hi")
     }
 
     buildTypes {

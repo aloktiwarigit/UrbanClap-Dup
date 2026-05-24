@@ -8,7 +8,7 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
 
-public interface ComplaintApiService {
+internal interface ComplaintApiService {
     @POST("v1/complaints")
     public suspend fun createComplaint(
         @Body body: CreateComplaintRequestDto,
