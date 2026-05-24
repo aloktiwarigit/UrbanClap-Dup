@@ -58,12 +58,12 @@ app.http('adminCommissionReceivablesDashboard', {
   methods: ['GET'],
   route: 'v1/admin/finance/commission-receivables',
   authLevel: 'anonymous',
-  handler: requireAdmin(['super-admin', 'finance'])(adminCommissionReceivablesDashboardHandler),
+  handler: requireAdmin(['super-admin', 'finance', 'ops-manager'])(adminCommissionReceivablesDashboardHandler),
 });
 
 app.http('adminCommissionReceivablesPerTech', {
   methods: ['GET'],
   route: 'v1/admin/finance/commission-receivables/{technicianId}',
   authLevel: 'anonymous',
-  handler: requireAdmin(['super-admin', 'finance'])(adminCommissionReceivablesPerTechHandler),
+  handler: requireAdmin(['super-admin', 'finance', 'ops-manager'])(adminCommissionReceivablesPerTechHandler),
 });

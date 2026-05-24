@@ -132,11 +132,21 @@ export async function settleBooking(bookingRaw: unknown, ctx: InvocationContext)
     Sentry.captureException(auditErr);
   }
 
-  const tech = await getTechnicianForSettlement(technicianId);
+  const [tech, globalBpsRazorpay, serviceRazorpay, categoryRazorpay] = await Promise.all([
+    getTechnicianForSettlement(technicianId),
+    getGlobalCommissionBps(),
+    catalogueRepo.getServiceByIdCrossPartition(booking.serviceId),
+    catalogueRepo.getCategoryById(booking.categoryId),
+  ]);
   const completedJobCount = tech?.completedJobCount ?? 0;
+  const { bps: resolvedBps } = resolveCommissionBps({
+    ...(serviceRazorpay?.commissionBps !== undefined ? { serviceBps: serviceRazorpay.commissionBps } : {}),
+    ...(categoryRazorpay?.commissionBps !== undefined ? { categoryBps: categoryRazorpay.commissionBps } : {}),
+    globalBps: globalBpsRazorpay,
+  });
   const { commissionBps, commissionAmount, techAmount: techAmountBeforeFee } = calculateCommission(
     bookingAmount,
-    2200,
+    resolvedBps,
   );
 
   const rawCadence = tech?.payoutCadence;

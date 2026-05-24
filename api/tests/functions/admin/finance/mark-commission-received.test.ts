@@ -11,15 +11,21 @@ import { markCommissionReceivedHandler } from '../../../../src/functions/admin/f
 
 const ctx = { adminId: 'admin-1', role: 'finance' as const, sessionId: 's1' };
 
-const remittedEntry = {
+const baseEntry = {
   id: 'booking-abc', bookingId: 'booking-abc', technicianId: 'tech-1', partitionKey: 'tech-1',
   serviceId: 'svc-1', categoryId: 'cat-1', bookingAmount: 50000, commissionBps: 2200,
-  commissionDue: 11000, commissionResolvedFrom: 'GLOBAL' as const, remittanceStatus: 'REMITTED' as const,
-  remittedAmount: 11000, remittedAt: new Date().toISOString(), remittanceMethod: 'UPI' as const,
-  remittanceRef: 'upi-ref-1', markedByAdminId: 'admin-1', createdAt: new Date().toISOString(),
+  commissionDue: 11000, commissionResolvedFrom: 'GLOBAL' as const,
+  createdAt: new Date().toISOString(),
 };
+const remittedEntry = {
+  ...baseEntry, remittanceStatus: 'REMITTED' as const,
+  remittedAmount: 11000, remittedAt: new Date().toISOString(), remittanceMethod: 'UPI' as const,
+  remittanceRef: 'upi-ref-1', markedByAdminId: 'admin-1',
+};
+const waivedEntry = { ...baseEntry, remittanceStatus: 'WAIVED' as const, waivedReason: 'customer dispute' };
 
-const waivedEntry = { ...remittedEntry, remittanceStatus: 'WAIVED' as const, waivedReason: 'customer dispute' };
+const remittedResult = { entry: remittedEntry, wasApplied: true };
+const waivedResult = { entry: waivedEntry, wasApplied: true };
 
 function makePostReq(body: unknown): HttpRequest {
   const req = new HttpRequest({
@@ -39,7 +45,7 @@ beforeEach(() => {
 describe('markCommissionReceivedHandler', () => {
   describe('REMIT action', () => {
     it('returns 200 and marks receivable as remitted', async () => {
-      vi.mocked(commissionReceivableRepo.markRemitted).mockResolvedValue(remittedEntry);
+      vi.mocked(commissionReceivableRepo.markRemitted).mockResolvedValue(remittedResult);
 
       const res = (await markCommissionReceivedHandler(
         makePostReq({
@@ -62,8 +68,8 @@ describe('markCommissionReceivedHandler', () => {
       );
     });
 
-    it('audits COMMISSION_REMITTED on success', async () => {
-      vi.mocked(commissionReceivableRepo.markRemitted).mockResolvedValue(remittedEntry);
+    it('audits COMMISSION_REMITTED when wasApplied=true', async () => {
+      vi.mocked(commissionReceivableRepo.markRemitted).mockResolvedValue(remittedResult);
 
       await markCommissionReceivedHandler(
         makePostReq({
@@ -77,6 +83,39 @@ describe('markCommissionReceivedHandler', () => {
       expect(appendAuditEntry).toHaveBeenCalledWith(
         expect.objectContaining({ action: 'COMMISSION_REMITTED' }),
       );
+    });
+
+    it('does not audit when wasApplied=false (already settled)', async () => {
+      vi.mocked(commissionReceivableRepo.markRemitted).mockResolvedValue({ entry: remittedEntry, wasApplied: false });
+
+      await markCommissionReceivedHandler(
+        makePostReq({
+          action: 'REMIT', bookingId: 'booking-abc', technicianId: 'tech-1',
+          remittedAmount: 11000, remittanceMethod: 'UPI', remittanceRef: 'ref-1',
+        }),
+        {} as never,
+        ctx,
+      );
+
+      expect(appendAuditEntry).not.toHaveBeenCalled();
+    });
+
+    it('returns 422 when remittedAmount is below commissionDue', async () => {
+      vi.mocked(commissionReceivableRepo.markRemitted).mockRejectedValue(
+        Object.assign(new Error('AMOUNT_BELOW_DUE'), { code: 'AMOUNT_BELOW_DUE' }),
+      );
+
+      const res = (await markCommissionReceivedHandler(
+        makePostReq({
+          action: 'REMIT', bookingId: 'booking-abc', technicianId: 'tech-1',
+          remittedAmount: 5000, remittanceMethod: 'UPI', remittanceRef: 'ref-1',
+        }),
+        {} as never,
+        ctx,
+      )) as HttpResponseInit;
+
+      expect(res.status).toBe(422);
+      expect((res.jsonBody as { code: string }).code).toBe('AMOUNT_BELOW_DUE');
     });
 
     it('returns 404 when receivable not found', async () => {
@@ -97,7 +136,7 @@ describe('markCommissionReceivedHandler', () => {
 
   describe('WAIVE action', () => {
     it('returns 200 and marks receivable as waived', async () => {
-      vi.mocked(commissionReceivableRepo.markWaived).mockResolvedValue(waivedEntry);
+      vi.mocked(commissionReceivableRepo.markWaived).mockResolvedValue(waivedResult);
 
       const res = (await markCommissionReceivedHandler(
         makePostReq({
@@ -118,8 +157,8 @@ describe('markCommissionReceivedHandler', () => {
       );
     });
 
-    it('audits COMMISSION_WAIVED on success', async () => {
-      vi.mocked(commissionReceivableRepo.markWaived).mockResolvedValue(waivedEntry);
+    it('audits COMMISSION_WAIVED when wasApplied=true', async () => {
+      vi.mocked(commissionReceivableRepo.markWaived).mockResolvedValue(waivedResult);
 
       await markCommissionReceivedHandler(
         makePostReq({
@@ -133,6 +172,21 @@ describe('markCommissionReceivedHandler', () => {
       expect(appendAuditEntry).toHaveBeenCalledWith(
         expect.objectContaining({ action: 'COMMISSION_WAIVED' }),
       );
+    });
+
+    it('does not audit when wasApplied=false (already settled)', async () => {
+      vi.mocked(commissionReceivableRepo.markWaived).mockResolvedValue({ entry: waivedEntry, wasApplied: false });
+
+      await markCommissionReceivedHandler(
+        makePostReq({
+          action: 'WAIVE', bookingId: 'booking-abc', technicianId: 'tech-1',
+          waivedReason: 'dispute',
+        }),
+        {} as never,
+        ctx,
+      );
+
+      expect(appendAuditEntry).not.toHaveBeenCalled();
     });
   });
 

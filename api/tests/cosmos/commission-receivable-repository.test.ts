@@ -128,7 +128,7 @@ describe('commissionReceivableRepo.getByBookingId', () => {
 describe('commissionReceivableRepo.markRemitted', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('transitions DUE → REMITTED and returns updated entry', async () => {
+  it('transitions DUE → REMITTED, returns { wasApplied: true, entry }', async () => {
     mockRead.mockResolvedValue({ resource: { ...baseDueEntry } });
     mockReplace.mockResolvedValue({});
     const result = await commissionReceivableRepo.markRemitted('bk-001', 'tech-1', {
@@ -138,17 +138,31 @@ describe('commissionReceivableRepo.markRemitted', () => {
       markedByAdminId: 'admin-7',
     });
     expect(result).not.toBeNull();
-    expect(result!.remittanceStatus).toBe('REMITTED');
-    expect(result!.remittedAmount).toBe(11980);
-    expect(result!.remittanceMethod).toBe('UPI');
-    expect(result!.remittanceRef).toBe('upi-txn-42');
-    expect(result!.markedByAdminId).toBe('admin-7');
-    expect(result!.remittedAt).toBeDefined();
-    expect(result!.updatedAt).toBeDefined();
+    expect(result!.wasApplied).toBe(true);
+    expect(result!.entry.remittanceStatus).toBe('REMITTED');
+    expect(result!.entry.remittedAmount).toBe(11980);
+    expect(result!.entry.remittanceMethod).toBe('UPI');
+    expect(result!.entry.remittanceRef).toBe('upi-txn-42');
+    expect(result!.entry.markedByAdminId).toBe('admin-7');
+    expect(result!.entry.remittedAt).toBeDefined();
+    expect(result!.entry.updatedAt).toBeDefined();
     expect(mockReplace).toHaveBeenCalledOnce();
   });
 
-  it('is idempotent: returns unchanged entry when already REMITTED', async () => {
+  it('rejects when remittedAmount < commissionDue', async () => {
+    mockRead.mockResolvedValue({ resource: { ...baseDueEntry } }); // commissionDue = 11980
+    await expect(
+      commissionReceivableRepo.markRemitted('bk-001', 'tech-1', {
+        remittedAmount: 5000,
+        remittanceMethod: 'UPI',
+        remittanceRef: 'ref-low',
+        markedByAdminId: 'admin-1',
+      }),
+    ).rejects.toMatchObject({ code: 'AMOUNT_BELOW_DUE' });
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('is no-op: returns { wasApplied: false } when already REMITTED', async () => {
     const alreadyRemitted: CommissionReceivableEntry = {
       ...baseDueEntry,
       remittanceStatus: 'REMITTED',
@@ -163,11 +177,12 @@ describe('commissionReceivableRepo.markRemitted', () => {
       remittanceRef: 'different-ref',
       markedByAdminId: 'admin-9',
     });
-    expect(result).toEqual(alreadyRemitted);
+    expect(result!.wasApplied).toBe(false);
+    expect(result!.entry).toEqual(alreadyRemitted);
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  it('is idempotent: returns unchanged entry when already WAIVED', async () => {
+  it('is no-op: returns { wasApplied: false } when already WAIVED', async () => {
     const waived: CommissionReceivableEntry = {
       ...baseDueEntry,
       remittanceStatus: 'WAIVED',
@@ -175,12 +190,13 @@ describe('commissionReceivableRepo.markRemitted', () => {
     };
     mockRead.mockResolvedValue({ resource: waived });
     const result = await commissionReceivableRepo.markRemitted('bk-001', 'tech-1', {
-      remittedAmount: 0,
+      remittedAmount: 11980,
       remittanceMethod: 'ADJUSTMENT',
       remittanceRef: 'adj-1',
       markedByAdminId: 'admin-1',
     });
-    expect(result).toEqual(waived);
+    expect(result!.wasApplied).toBe(false);
+    expect(result!.entry).toEqual(waived);
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
@@ -200,7 +216,7 @@ describe('commissionReceivableRepo.markRemitted', () => {
 describe('commissionReceivableRepo.markWaived', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('transitions DUE → WAIVED and returns updated entry', async () => {
+  it('transitions DUE → WAIVED, returns { wasApplied: true, entry }', async () => {
     mockRead.mockResolvedValue({ resource: { ...baseDueEntry } });
     mockReplace.mockResolvedValue({});
     const result = await commissionReceivableRepo.markWaived('bk-001', 'tech-1', {
@@ -208,14 +224,15 @@ describe('commissionReceivableRepo.markWaived', () => {
       markedByAdminId: 'admin-7',
     });
     expect(result).not.toBeNull();
-    expect(result!.remittanceStatus).toBe('WAIVED');
-    expect(result!.waivedReason).toBe('first-time goodwill');
-    expect(result!.markedByAdminId).toBe('admin-7');
-    expect(result!.updatedAt).toBeDefined();
+    expect(result!.wasApplied).toBe(true);
+    expect(result!.entry.remittanceStatus).toBe('WAIVED');
+    expect(result!.entry.waivedReason).toBe('first-time goodwill');
+    expect(result!.entry.markedByAdminId).toBe('admin-7');
+    expect(result!.entry.updatedAt).toBeDefined();
     expect(mockReplace).toHaveBeenCalledOnce();
   });
 
-  it('is idempotent: returns unchanged entry when already WAIVED', async () => {
+  it('is no-op: returns { wasApplied: false } when already WAIVED', async () => {
     const alreadyWaived: CommissionReceivableEntry = {
       ...baseDueEntry,
       remittanceStatus: 'WAIVED',
@@ -226,7 +243,8 @@ describe('commissionReceivableRepo.markWaived', () => {
       waivedReason: 'new reason',
       markedByAdminId: 'admin-5',
     });
-    expect(result).toEqual(alreadyWaived);
+    expect(result!.wasApplied).toBe(false);
+    expect(result!.entry).toEqual(alreadyWaived);
     expect(mockReplace).not.toHaveBeenCalled();
   });
 

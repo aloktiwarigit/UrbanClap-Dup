@@ -48,32 +48,39 @@ export const markCommissionReceivedHandler: AdminHttpHandler = async (
       return { status: 404, jsonBody: { code: 'RECEIVABLE_NOT_FOUND' } };
     }
 
-    const timestamp = new Date().toISOString();
-    await appendAuditEntry({
-      id: randomUUID(),
-      adminId: admin.adminId,
-      role: admin.role,
-      action: body.action === 'REMIT' ? 'COMMISSION_REMITTED' : 'COMMISSION_WAIVED',
-      resourceType: 'commission_receivable',
-      resourceId: bookingId,
-      payload: {
-        technicianId,
-        bookingId,
-        action: body.action,
-        ...(body.action === 'REMIT'
-          ? {
-              remittedAmount: body.remittedAmount,
-              remittanceMethod: body.remittanceMethod,
-              remittanceRef: body.remittanceRef,
-            }
-          : { waivedReason: body.waivedReason }),
-      },
-      timestamp,
-      partitionKey: timestamp.slice(0, 7),
-    }).catch(() => undefined);
+    // Only emit audit entry when the operation actually changed state; a
+    // no-op on an already-settled entry must not produce a spurious audit record.
+    if (result.wasApplied) {
+      const timestamp = new Date().toISOString();
+      await appendAuditEntry({
+        id: randomUUID(),
+        adminId: admin.adminId,
+        role: admin.role,
+        action: body.action === 'REMIT' ? 'COMMISSION_REMITTED' : 'COMMISSION_WAIVED',
+        resourceType: 'commission_receivable',
+        resourceId: bookingId,
+        payload: {
+          technicianId,
+          bookingId,
+          action: body.action,
+          ...(body.action === 'REMIT'
+            ? {
+                remittedAmount: body.remittedAmount,
+                remittanceMethod: body.remittanceMethod,
+                remittanceRef: body.remittanceRef,
+              }
+            : { waivedReason: body.waivedReason }),
+        },
+        timestamp,
+        partitionKey: timestamp.slice(0, 7),
+      }).catch(() => undefined);
+    }
 
-    return { status: 200, jsonBody: result };
-  } catch {
+    return { status: 200, jsonBody: result.entry };
+  } catch (err: unknown) {
+    if ((err as { code?: string }).code === 'AMOUNT_BELOW_DUE') {
+      return { status: 422, jsonBody: { code: 'AMOUNT_BELOW_DUE' } };
+    }
     return { status: 502, jsonBody: { code: 'UPSTREAM_ERROR' } };
   }
 };

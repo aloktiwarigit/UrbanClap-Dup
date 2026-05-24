@@ -52,13 +52,20 @@ export const commissionReceivableRepo = {
       remittanceRef: string;
       markedByAdminId: string;
     },
-  ): Promise<CommissionReceivableEntry | null> {
+  ): Promise<{ entry: CommissionReceivableEntry; wasApplied: boolean } | null> {
     const { resource } = await getCommissionReceivablesContainer()
       .item(bookingId, technicianId)
       .read<CommissionReceivableEntry>();
     if (!resource) return null;
-    // Idempotent: if already settled, return unchanged
-    if (resource.remittanceStatus !== 'DUE') return resource;
+    if (resource.remittanceStatus !== 'DUE') return { entry: resource, wasApplied: false };
+    // Reject partial payment — remitting less than due silently drops the remaining balance
+    if (opts.remittedAmount < resource.commissionDue) {
+      const err = Object.assign(new Error('AMOUNT_BELOW_DUE'), {
+        code: 'AMOUNT_BELOW_DUE',
+        commissionDue: resource.commissionDue,
+      });
+      throw err;
+    }
     const updated: CommissionReceivableEntry = {
       ...resource,
       remittanceStatus: 'REMITTED',
@@ -72,20 +79,19 @@ export const commissionReceivableRepo = {
     await getCommissionReceivablesContainer()
       .item(bookingId, technicianId)
       .replace<CommissionReceivableEntry>(updated);
-    return updated;
+    return { entry: updated, wasApplied: true };
   },
 
   async markWaived(
     bookingId: string,
     technicianId: string,
     opts: { waivedReason: string; markedByAdminId: string },
-  ): Promise<CommissionReceivableEntry | null> {
+  ): Promise<{ entry: CommissionReceivableEntry; wasApplied: boolean } | null> {
     const { resource } = await getCommissionReceivablesContainer()
       .item(bookingId, technicianId)
       .read<CommissionReceivableEntry>();
     if (!resource) return null;
-    // Idempotent: if already settled, return unchanged
-    if (resource.remittanceStatus !== 'DUE') return resource;
+    if (resource.remittanceStatus !== 'DUE') return { entry: resource, wasApplied: false };
     const updated: CommissionReceivableEntry = {
       ...resource,
       remittanceStatus: 'WAIVED',
@@ -96,7 +102,7 @@ export const commissionReceivableRepo = {
     await getCommissionReceivablesContainer()
       .item(bookingId, technicianId)
       .replace<CommissionReceivableEntry>(updated);
-    return updated;
+    return { entry: updated, wasApplied: true };
   },
 
   async getOutstandingByTechnician(technicianId: string): Promise<CommissionReceivableEntry[]> {
