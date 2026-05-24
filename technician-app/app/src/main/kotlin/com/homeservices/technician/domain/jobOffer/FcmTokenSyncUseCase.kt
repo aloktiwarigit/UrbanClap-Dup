@@ -19,7 +19,8 @@ public class FcmTokenSyncUseCase
             try {
                 val fcmToken = FirebaseMessaging.getInstance().token.await()
                 invokeWithFcmToken(fcmToken)
-            } catch (e: Exception) { // TooGenericExceptionCaught — token sync is best-effort; all exceptions handled identically
+            } catch (e: Exception) {
+                // TooGenericExceptionCaught — token sync is best-effort; all exceptions handled identically
                 // Token sync is best-effort; failures are non-fatal
                 runCatching { FirebaseCrashlytics.getInstance().recordException(e) }
             }

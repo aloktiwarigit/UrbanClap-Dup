@@ -131,7 +131,7 @@ internal class JobOfferViewModel
             countdownJob =
                 viewModelScope.launch {
                     @Suppress("LoopWithTooManyJumpStatements")
-                while (true) {
+                    while (true) {
                         delay(1_000L)
                         val current = _uiState.value as? JobOfferUiState.Offering ?: break
                         if (current.offer.bookingId != offer.bookingId) break
