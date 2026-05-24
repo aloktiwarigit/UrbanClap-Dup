@@ -12,7 +12,6 @@ import com.homeservices.corenav.NotificationRouter
 import com.homeservices.technician.MainActivity
 import com.homeservices.technician.data.activeJob.BookingStatusEvent
 import com.homeservices.technician.data.activeJob.BookingStatusEventBus
-import com.homeservices.technician.data.device.DeviceTokenRegistrar
 import com.homeservices.technician.data.earnings.EarningsUpdateEventBus
 import com.homeservices.technician.data.jobOffer.JobOfferEventBus
 import com.homeservices.technician.data.kyc.KycStatusEvent
@@ -20,7 +19,6 @@ import com.homeservices.technician.data.kyc.KycStatusEventBus
 import com.homeservices.technician.data.pendingaction.PendingActionStore
 import com.homeservices.technician.data.rating.RatingPromptEventBus
 import com.homeservices.technician.data.rating.RatingReceivedEventBus
-import com.homeservices.technician.domain.jobOffer.FcmTokenSyncUseCase
 import com.homeservices.technician.domain.jobOffer.model.JobOffer
 import com.homeservices.technician.observability.analytics.AnalyticsTracker
 import com.homeservices.technician.notification.PendingActionIngestor
@@ -140,9 +138,6 @@ public class HomeservicesFcmService :
     public lateinit var eventBus: JobOfferEventBus
 
     @Inject
-    public lateinit var fcmTokenSyncUseCase: FcmTokenSyncUseCase
-
-    @Inject
     public lateinit var ratingPromptEventBus: RatingPromptEventBus
 
     @Inject
@@ -165,9 +160,6 @@ public class HomeservicesFcmService :
 
     @Inject
     public lateinit var pendingActionStore: PendingActionStore
-
-    @Inject
-    public lateinit var deviceTokenRegistrar: DeviceTokenRegistrar
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -637,10 +629,24 @@ public class HomeservicesFcmService :
     }
 
     override fun onNewToken(token: String): Unit {
-        serviceScope.launch {
-            fcmTokenSyncUseCase.invokeWithFcmToken(token)
-            deviceTokenRegistrar.register()
-        }
+        val data = androidx.work.workDataOf(FcmTokenRegisterWorker.KEY_FCM_TOKEN to token)
+        val request =
+            androidx.work.OneTimeWorkRequestBuilder<FcmTokenRegisterWorker>()
+                .setInputData(data)
+                .setConstraints(
+                    androidx.work.Constraints.Builder()
+                        .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+                        .build(),
+                ).setBackoffCriteria(
+                    androidx.work.BackoffPolicy.EXPONENTIAL,
+                    androidx.work.WorkRequest.MIN_BACKOFF_MILLIS,
+                    java.util.concurrent.TimeUnit.MILLISECONDS,
+                ).build()
+        androidx.work.WorkManager.getInstance(applicationContext).enqueueUniqueWork(
+            "fcm_token_register",
+            androidx.work.ExistingWorkPolicy.REPLACE,
+            request,
+        )
     }
 
     public override fun onDestroy(): Unit {
