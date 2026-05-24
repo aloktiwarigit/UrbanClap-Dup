@@ -210,7 +210,7 @@ export async function settleBooking(bookingRaw: unknown, ctx: InvocationContext)
     return;
   }
 
-  const razorpay = new RazorpayRouteService(); // nosemgrep: cash-razorpay-guard
+  const razorpay = new RazorpayRouteService(); // nosemgrep: cash-razorpay-guard,api.cash-razorpay-guard
   let transferId: string;
   try {
     const result = await razorpay.transfer({
