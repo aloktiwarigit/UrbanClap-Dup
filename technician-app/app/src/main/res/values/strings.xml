@@ -14,7 +14,7 @@
     <string name="job_offer_distance_km">%.1f km away</string>
     <string name="job_offer_earnings">Earnings</string>
     <string name="job_offer_accept">Accept job</string>
-    <string name="job_offer_accepting">Accepting...</string>
+    <string name="job_offer_accepting">Accepting…</string>
     <string name="job_offer_decline">Decline</string>
     <string name="active_job_complete_title">Job complete</string>
     <string name="active_job_complete_body">Your completion is recorded. Earnings will update shortly.</string>
