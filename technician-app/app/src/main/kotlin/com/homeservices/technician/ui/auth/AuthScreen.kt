@@ -578,7 +578,7 @@ private fun OtpCodeContent(
     onOtpEntered: (String) -> Unit,
     onResendRequested: () -> Unit,
 ) {
-    var otp by remember { mutableStateOf("") }
+    var otp by rememberSaveable { mutableStateOf("") }
     val lastFour = phoneNumber.takeLast(PHONE_LAST_DIGITS).ifEmpty { "your number" }
 
     AuthFrame(
