@@ -117,6 +117,7 @@ plugins {
     alias(libs.plugins.google.services)
     alias(libs.plugins.crashlytics)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.sentry)
 }
 
 android {
@@ -194,6 +195,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            isDebuggable = false
             if (releaseSigning != null) {
                 signingConfig = signingConfigs.getByName("release")
             }
@@ -753,4 +755,9 @@ dependencies {
     androidTestImplementation(libs.hilt.testing)
     androidTestImplementation(libs.androidx.test.runner)
     kspAndroidTest(libs.hilt.compiler)
+}
+
+sentry {
+    autoUploadProguardMapping.set(true)
+    ignoredBuildTypes.set(setOf("debug"))
 }

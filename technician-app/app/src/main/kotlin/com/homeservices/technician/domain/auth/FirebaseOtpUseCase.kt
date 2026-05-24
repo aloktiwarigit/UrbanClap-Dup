@@ -10,6 +10,7 @@ import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
 import com.homeservices.technician.domain.auth.model.AuthResult
 import com.homeservices.technician.domain.auth.model.OtpSendResult
+import com.homeservices.technician.observability.analytics.AnalyticsTracker
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -87,6 +88,7 @@ public class FirebaseOtpUseCase
                     .addOnSuccessListener(executor) { result ->
                         val user = result.user
                         if (user != null) {
+                            AnalyticsTracker.capture("otp_verified")
                             trySend(AuthResult.Success(user))
                         } else {
                             trySend(AuthResult.Error.General(IllegalStateException("null user after sign-in")))

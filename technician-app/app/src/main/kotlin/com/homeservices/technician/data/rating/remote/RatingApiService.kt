@@ -8,7 +8,7 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
 
-public interface RatingApiService {
+internal interface RatingApiService {
     @POST("v1/ratings")
     public suspend fun submit(
         @Body body: SubmitRatingRequestDto,

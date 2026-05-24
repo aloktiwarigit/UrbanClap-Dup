@@ -15,13 +15,6 @@
 -keep class com.google.firebase.auth.GoogleAuthProvider { *; }
 -keep class com.google.firebase.auth.FirebaseAuthUserCollisionException { *; }
 
-# Razorpay SDK (mirrored for safety — technician-app does not process payments)
--keep class com.razorpay.** { *; }
--keep class proguard.annotation.** { *; }
--keepattributes JavascriptInterface
--keepclassmembers class * { @android.webkit.JavascriptInterface <methods>; }
--dontwarn com.razorpay.**
-
 # Google Maps + Places SDK
 -keep class com.google.android.gms.maps.** { *; }
 -keep class com.google.android.libraries.places.** { *; }
@@ -46,10 +39,20 @@
 # OkHttp / Retrofit
 -dontwarn okhttp3.**
 -dontwarn retrofit2.**
-# Retrofit services are instantiated through dynamic proxies. Keep the app's
-# service interfaces and members so release shrinking cannot remove or rewrite
-# methods that Retrofit needs to inspect at runtime.
--keep,allowobfuscation interface com.homeservices.technician.**.*ApiService { *; }
+# Retrofit service interfaces — explicit keeps (wildcard removed for security)
+-keep interface com.homeservices.technician.data.activeJob.ActiveJobApiService { *; }
+-keep interface com.homeservices.technician.data.availability.remote.TechnicianAvailabilityApiService { *; }
+-keep interface com.homeservices.technician.data.complaint.remote.ComplaintApiService { *; }
+-keep interface com.homeservices.technician.data.earnings.remote.EarningsApiService { *; }
+-keep interface com.homeservices.technician.data.erasure.remote.ErasureApiService { *; }
+-keep interface com.homeservices.technician.data.integrity.IntegrityApiService { *; }
+-keep interface com.homeservices.technician.data.jobOffer.JobOfferApiService { *; }
+-keep interface com.homeservices.technician.data.jobs.remote.TechnicianJobsApiService { *; }
+-keep interface com.homeservices.technician.data.payout.remote.PayoutApiService { *; }
+-keep interface com.homeservices.technician.data.photo.PhotoApiService { *; }
+-keep interface com.homeservices.technician.data.rating.remote.RatingApiService { *; }
+-keep interface com.homeservices.technician.data.serviceprofile.remote.ServiceProfileApiService { *; }
+-keep interface com.homeservices.technician.data.shield.remote.ShieldApiService { *; }
 
 # Sentry
 -dontwarn io.sentry.**

@@ -38,6 +38,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -530,7 +531,7 @@ private fun PhoneEntryContent(
     initialPhone: String,
     onPhoneSubmitted: (String) -> Unit,
 ) {
-    var phone by remember { mutableStateOf(initialPhone) }
+    var phone by rememberSaveable { mutableStateOf(initialPhone) }
     val normalizedPhone = PhoneNumberNormalizer.normalize(phone)
 
     AuthFrame(

@@ -22,6 +22,7 @@ import com.homeservices.technician.data.rating.RatingPromptEventBus
 import com.homeservices.technician.data.rating.RatingReceivedEventBus
 import com.homeservices.technician.domain.jobOffer.FcmTokenSyncUseCase
 import com.homeservices.technician.domain.jobOffer.model.JobOffer
+import com.homeservices.technician.observability.analytics.AnalyticsTracker
 import com.homeservices.technician.notification.PendingActionIngestor
 import com.homeservices.technician.ui.jobOffer.JobOfferFullScreenActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -269,6 +270,10 @@ public class HomeservicesFcmService :
             "JOB_OFFER" -> {
                 val offer = parseJobOffer(data, sentTimeMs) ?: return
                 eventBus.tryEmit(offer)
+                AnalyticsTracker.capture(
+                    "job_offer_received",
+                    mapOf("bookingId" to offer.bookingId, "serviceId" to offer.serviceId),
+                )
                 showJobOfferNotification(offer)
             }
             "RATING_PROMPT_TECHNICIAN" -> {

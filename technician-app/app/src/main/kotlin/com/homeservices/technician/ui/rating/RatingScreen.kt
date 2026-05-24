@@ -17,7 +17,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,12 +41,12 @@ public fun RatingScreen(
     onFileComplaint: (bookingId: String) -> Unit = {},
     viewModel: RatingViewModel = hiltViewModel(),
 ) {
-    val state by viewModel.uiState.collectAsState()
-    val overall by viewModel.overall.collectAsState()
-    val behav by viewModel.behaviour.collectAsState()
-    val comm by viewModel.communication.collectAsState()
-    val comment by viewModel.comment.collectAsState()
-    val canSubmit by viewModel.canSubmit.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val overall by viewModel.overall.collectAsStateWithLifecycle()
+    val behav by viewModel.behaviour.collectAsStateWithLifecycle()
+    val comm by viewModel.communication.collectAsStateWithLifecycle()
+    val comment by viewModel.comment.collectAsStateWithLifecycle()
+    val canSubmit by viewModel.canSubmit.collectAsStateWithLifecycle()
 
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
