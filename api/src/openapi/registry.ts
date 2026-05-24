@@ -37,6 +37,17 @@ import {
   SscLevyStatusSchema,
 } from '../schemas/ssc-levy.js';
 import { TechnicianCandidateListResponseSchema } from '../schemas/order.js';
+import {
+  CommissionConfigDocSchema,
+  UpdateCommissionConfigBodySchema,
+} from '../schemas/commission-config.js';
+import {
+  CommissionReceivableEntrySchema,
+  TechnicianOutstandingSummarySchema,
+  CommissionReceivablesDashboardSchema,
+  MarkCommissionReceivedBodySchema,
+  TechnicianCommissionDueSchema,
+} from '../schemas/commission-receivable.js';
 
 extendZodWithOpenApi(z);
 
@@ -496,6 +507,95 @@ registry.registerPath({
     403: { description: 'Forbidden' },
     404: { description: 'Levy not found' },
     409: { description: 'Invalid levy status' },
+  },
+});
+
+// ── E21-S01: Cash-pilot commission config + receivables ───────────────────────
+
+const CommissionConfigResponse = z.object({
+  defaultCommissionBps: z.number().int(),
+  updatedBy: z.string(),
+  updatedAt: z.string(),
+  isDefault: z.boolean().optional(),
+}).openapi('CommissionConfigResponse');
+
+registry.register('CommissionConfigDoc', CommissionConfigDocSchema.openapi('CommissionConfigDoc'));
+registry.register('UpdateCommissionConfigBody', UpdateCommissionConfigBodySchema.openapi('UpdateCommissionConfigBody'));
+registry.register('CommissionConfigResponse', CommissionConfigResponse);
+registry.register('CommissionReceivableEntry', CommissionReceivableEntrySchema.openapi('CommissionReceivableEntry'));
+registry.register('TechnicianOutstandingSummary', TechnicianOutstandingSummarySchema.openapi('TechnicianOutstandingSummary'));
+registry.register('CommissionReceivablesDashboard', CommissionReceivablesDashboardSchema.openapi('CommissionReceivablesDashboard'));
+registry.register('MarkCommissionReceivedBody', MarkCommissionReceivedBodySchema.openapi('MarkCommissionReceivedBody'));
+registry.register('TechnicianCommissionDue', TechnicianCommissionDueSchema.openapi('TechnicianCommissionDue'));
+
+registry.registerPath({
+  method: 'get', path: '/v1/admin/catalogue/commission-config', operationId: 'getAdminCommissionConfig',
+  tags: ['admin-catalogue'], summary: 'Get global commission rate (basis points)',
+  security: [{ cookieAuth: [] }],
+  responses: {
+    200: { description: 'Current global commission bps', content: { 'application/json': { schema: CommissionConfigResponse } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+  },
+});
+
+registry.registerPath({
+  method: 'put', path: '/v1/admin/catalogue/commission-config', operationId: 'putAdminCommissionConfig',
+  tags: ['admin-catalogue'], summary: 'Update global commission rate (super-admin only)',
+  security: [{ cookieAuth: [] }],
+  request: { body: { content: { 'application/json': { schema: UpdateCommissionConfigBodySchema } } } },
+  responses: {
+    200: { description: 'Updated commission config', content: { 'application/json': { schema: CommissionConfigResponse } } },
+    400: { description: 'Validation error (bps out of 1500–3500 range)' },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden (requires super-admin)' },
+  },
+});
+
+registry.registerPath({
+  method: 'get', path: '/v1/admin/finance/commission-receivables', operationId: 'adminCommissionReceivablesDashboard',
+  tags: ['admin-finance'], summary: 'All-technician commission outstanding dashboard',
+  security: [{ cookieAuth: [] }],
+  responses: {
+    200: { description: 'Per-tech DUE summary + total outstanding', content: { 'application/json': { schema: CommissionReceivablesDashboardSchema } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+  },
+});
+
+registry.registerPath({
+  method: 'get', path: '/v1/admin/finance/commission-receivables/{technicianId}', operationId: 'adminCommissionReceivablesPerTech',
+  tags: ['admin-finance'], summary: 'DUE commission entries for a specific technician',
+  security: [{ cookieAuth: [] }],
+  parameters: [{ name: 'technicianId', in: 'path', required: true, schema: { type: 'string' } }],
+  responses: {
+    200: { description: 'Outstanding entries', content: { 'application/json': { schema: z.object({ technicianId: z.string(), entries: z.array(CommissionReceivableEntrySchema) }) } } },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+  },
+});
+
+registry.registerPath({
+  method: 'post', path: '/v1/admin/finance/commission-receivables/settle', operationId: 'markCommissionReceived',
+  tags: ['admin-finance'], summary: 'Mark commission as remitted (received) or waived',
+  security: [{ cookieAuth: [] }],
+  request: { body: { content: { 'application/json': { schema: MarkCommissionReceivedBodySchema } } } },
+  responses: {
+    200: { description: 'Updated receivable entry', content: { 'application/json': { schema: CommissionReceivableEntrySchema } } },
+    400: { description: 'Validation error' },
+    401: { description: 'Unauthenticated' },
+    403: { description: 'Forbidden' },
+    404: { description: 'Receivable not found' },
+  },
+});
+
+registry.registerPath({
+  method: 'get', path: '/v1/technicians/me/commission-due', operationId: 'techCommissionDue',
+  tags: ['technicians'], summary: 'Technician\'s outstanding commission owed to the platform',
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: { description: 'Outstanding commission summary', content: { 'application/json': { schema: TechnicianCommissionDueSchema } } },
+    401: { description: 'Unauthenticated' },
   },
 });
 

@@ -177,6 +177,32 @@ rules:
     languages: [typescript]
     severity: ERROR
 
+  # E21-S01 — Cash-pilot settlement direction guard.
+  #
+  # The platform is cash-only in the pilot. Technicians collect cash directly;
+  # the platform never holds the money. Adding a new RazorpayRouteService()
+  # instantiation to the booking-completed settlement trigger without a RAZORPAY
+  # paymentMethod guard would silently try to transfer money for every completed
+  # cash booking — the exact bug this story fixes.
+  #
+  # Existing guarded instantiation is exempt via `// nosemgrep: cash-razorpay-guard`.
+  # Any NEW unguarded instantiation in the trigger file will fail CI.
+  #
+  # References: E21-S01, docs/stories/E21-S01-cash-commission-api.md
+  - id: cash-razorpay-guard
+    pattern: new RazorpayRouteService()
+    paths:
+      include:
+        - "api/src/functions/trigger-booking-completed.ts"
+    message: |
+      New RazorpayRouteService instantiation in the booking-completed settlement trigger.
+      Ensure this is inside a `paymentMethod === 'RAZORPAY' && hasRazorpayCredentials()` guard.
+      Cash bookings must NOT trigger Razorpay transfers — the tech already holds the cash.
+      If this instantiation is correctly guarded, add `// nosemgrep: cash-razorpay-guard`.
+      See: E21-S01, docs/stories/E21-S01-cash-commission-api.md
+    languages: [typescript]
+    severity: ERROR
+
   # E19-S03 — Cross-partition query tenant-filter guard (REMOVED 2026-05-18).
   #
   # The original WARNING-severity rule fired on all 3 existing cross-partition
