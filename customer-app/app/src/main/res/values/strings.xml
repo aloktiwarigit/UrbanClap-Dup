@@ -509,7 +509,7 @@
     <string name="promo_pro_title">Skilled professionals</string>
     <string name="promo_pro_subtitle">Matched by skill, distance and availability · 30-day guarantee</string>
     <string name="promo_pro_cta">Learn more</string>
-    <string name="promo_discount_title">10% off your first booking</string>
+    <string name="promo_discount_title">10%% off your first booking</string>
     <string name="promo_discount_subtitle">Coupon: PEHLI · applies to all services</string>
     <string name="promo_discount_cta">Apply coupon</string>
     <string name="promo_cta_with_arrow">%1$s →</string>
