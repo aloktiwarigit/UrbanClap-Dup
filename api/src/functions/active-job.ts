@@ -31,6 +31,10 @@ const TransitionBodySchema = z.object({
     isMock: z.boolean(),
     gpsAccuracyM: z.number(),
   }).optional(),
+  /** E21-S01: Set true on COMPLETED to confirm the technician collected cash from the customer. */
+  cashCollected: z.boolean().optional(),
+  /** E21-S01: Cash amount in paise the technician collected. Only honoured when cashCollected=true. */
+  collectedAmount: z.number().int().nonnegative().optional(),
 });
 
 export const getActiveJobHandler: HttpHandler = async (req, _ctx: InvocationContext) => {
@@ -106,9 +110,23 @@ export const transitionStatusHandler: HttpHandler = async (req, ctx: InvocationC
     });
   }
 
+  const now = new Date().toISOString();
   const updated = await updateBookingFields(bookingId, {
     status: body.targetStatus,
-    ...(body.targetStatus === 'COMPLETED' ? { completedAt: new Date().toISOString() } : {}),
+    ...(body.targetStatus === 'COMPLETED'
+      ? {
+          completedAt: now,
+          ...(body.cashCollected === true
+            ? {
+                cashCollectionStatus: 'COLLECTED' as const,
+                cashCollectedAt: now,
+                ...(body.collectedAmount !== undefined
+                  ? { cashCollectedAmount: body.collectedAmount }
+                  : {}),
+              }
+            : {}),
+        }
+      : {}),
   });
   if (!updated) return { status: 500, jsonBody: { code: 'UPDATE_FAILED' } };
 
