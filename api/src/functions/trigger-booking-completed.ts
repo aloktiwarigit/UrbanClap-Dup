@@ -67,8 +67,8 @@ export async function settleBooking(bookingRaw: unknown, ctx: InvocationContext)
     ]);
 
     const { bps, from: commissionResolvedFrom } = resolveCommissionBps({
-      serviceBps: service?.commissionBps,
-      categoryBps: category?.commissionBps,
+      ...(service?.commissionBps !== undefined ? { serviceBps: service.commissionBps } : {}),
+      ...(category?.commissionBps !== undefined ? { categoryBps: category.commissionBps } : {}),
       globalBps,
     });
     const commissionDue = Math.round((bookingAmount * bps) / 10000);
