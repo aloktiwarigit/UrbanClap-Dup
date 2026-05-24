@@ -248,6 +248,23 @@
     <string name="sos_consent_allow">Allow</string>
     <string name="sos_consent_skip">Skip</string>
 
+    <!-- DPDP consent screen -->
+    <string name="dpdp_consent_hero_title">Your privacy, your choice</string>
+    <string name="dpdp_consent_hero_subtitle">Before starting service, tell us what information we can use</string>
+    <string name="dpdp_consent_section_title">Data use consent</string>
+    <string name="dpdp_consent_section_subtitle">Choose what works for you:</string>
+    <string name="dpdp_consent_analytics_title">Improve app quality</string>
+    <string name="dpdp_consent_analytics_description">We learn how the app is used</string>
+    <string name="dpdp_consent_crash_title">Send crash reports</string>
+    <string name="dpdp_consent_crash_description">So bugs can be fixed faster</string>
+    <string name="dpdp_consent_marketing_title">Offers and updates</string>
+    <string name="dpdp_consent_marketing_description">Personalized offers and promotions</string>
+    <string name="dpdp_consent_legal_prefix">By continuing, you agree to our </string>
+    <string name="dpdp_consent_privacy_policy">Privacy Policy</string>
+    <string name="dpdp_consent_legal_suffix">.</string>
+    <string name="dpdp_consent_agree_continue">Agree and continue</string>
+    <string name="dpdp_consent_reject_all">Reject all</string>
+
     <!-- Complaint screen (E12-S02a) -->
     <string name="complaint_eyebrow">Customer support</string>
     <string name="complaint_title">File a complaint</string>

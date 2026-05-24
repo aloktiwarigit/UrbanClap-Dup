@@ -46,6 +46,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
@@ -60,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.homeservices.customer.R
 import kotlinx.coroutines.flow.collectLatest
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
@@ -275,7 +277,7 @@ internal fun DpdpConsentScreenContent(
                     }
 
                     Text(
-                        text = "गोपनीयता आपकी, चुनाव आपका",
+                        text = stringResource(R.string.dpdp_consent_hero_title),
                         style =
                             MaterialTheme.typography.headlineSmall.copy(
                                 fontWeight = FontWeight.Bold,
@@ -286,7 +288,7 @@ internal fun DpdpConsentScreenContent(
                     )
 
                     Text(
-                        text = "सेवा शुरू करने से पहले बताएं, हम क्या जानकारी इस्तेमाल कर सकते हैं",
+                        text = stringResource(R.string.dpdp_consent_hero_subtitle),
                         style = MaterialTheme.typography.bodyMedium.copy(fontSize = CONSENT_DESCRIPTION_SIZE_DP.sp),
                         color = Color.White.copy(alpha = HERO_SUBTITLE_ALPHA),
                         textAlign = TextAlign.Center,
@@ -317,13 +319,13 @@ internal fun DpdpConsentScreenContent(
                 ) {
                     // Section heading
                     Text(
-                        text = "डेटा उपयोग सहमति",
+                        text = stringResource(R.string.dpdp_consent_section_title),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = textPrimary,
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "अपनी पसंद के अनुसार चुनें:",
+                        text = stringResource(R.string.dpdp_consent_section_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = textMuted,
                     )
@@ -335,8 +337,8 @@ internal fun DpdpConsentScreenContent(
                         icon = Icons.Default.BarChart,
                         iconBg = AnalyticsBg,
                         iconTint = AnalyticsTint,
-                        title = "ऐप की गुणवत्ता सुधारें",
-                        description = "हम समझते हैं ऐप कैसे इस्तेमाल होता है",
+                        title = stringResource(R.string.dpdp_consent_analytics_title),
+                        description = stringResource(R.string.dpdp_consent_analytics_description),
                         checked = uiState.analyticsOptIn,
                         onChecked = onToggleAnalytics,
                     )
@@ -352,8 +354,8 @@ internal fun DpdpConsentScreenContent(
                         icon = Icons.Default.Security,
                         iconBg = CrashBg,
                         iconTint = CrashTint,
-                        title = "क्रैश रिपोर्ट भेजें",
-                        description = "बग जल्दी ठीक करने के लिए",
+                        title = stringResource(R.string.dpdp_consent_crash_title),
+                        description = stringResource(R.string.dpdp_consent_crash_description),
                         checked = uiState.crashOptIn,
                         onChecked = onToggleCrash,
                     )
@@ -369,8 +371,8 @@ internal fun DpdpConsentScreenContent(
                         icon = Icons.Default.Notifications,
                         iconBg = MarketingBg,
                         iconTint = MarketingTint,
-                        title = "ऑफर और अपडेट",
-                        description = "व्यक्तिगत ऑफर और प्रमोशन",
+                        title = stringResource(R.string.dpdp_consent_marketing_title),
+                        description = stringResource(R.string.dpdp_consent_marketing_description),
                         checked = uiState.marketingOptIn,
                         onChecked = onToggleMarketing,
                     )
@@ -422,7 +424,7 @@ internal fun DpdpConsentScreenContent(
                     )
                 } else {
                     Text(
-                        text = "सहमत हों और जारी रखें",
+                        text = stringResource(R.string.dpdp_consent_agree_continue),
                         style =
                             MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.ExtraBold,
@@ -440,7 +442,7 @@ internal fun DpdpConsentScreenContent(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = "सभी अस्वीकार करें",
+                    text = stringResource(R.string.dpdp_consent_reject_all),
                     style = MaterialTheme.typography.bodyMedium.copy(fontSize = CONSENT_DESCRIPTION_SIZE_DP.sp),
                     color = if (uiState.isLoading) TextMuted.copy(alpha = CTA_DISABLED_TEXT_ALPHA) else TextMuted,
                 )
@@ -521,7 +523,7 @@ private fun LegalCopyText(textMuted: Color) {
     val annotatedString =
         buildAnnotatedString {
             withStyle(SpanStyle(color = textMuted, fontSize = CONSENT_SMALL_TEXT_SIZE_DP.sp)) {
-                append("जारी रखकर आप हमारी ")
+                append(stringResource(R.string.dpdp_consent_legal_prefix))
             }
             withLink(
                 LinkAnnotation.Url(
@@ -538,10 +540,10 @@ private fun LegalCopyText(textMuted: Color) {
                         ),
                 ),
             ) {
-                append("गोपनीयता नीति")
+                append(stringResource(R.string.dpdp_consent_privacy_policy))
             }
             withStyle(SpanStyle(color = textMuted, fontSize = CONSENT_SMALL_TEXT_SIZE_DP.sp)) {
-                append(" से सहमत हैं")
+                append(stringResource(R.string.dpdp_consent_legal_suffix))
             }
         }
 

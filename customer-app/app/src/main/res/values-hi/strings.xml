@@ -222,6 +222,23 @@
     <string name="sos_consent_allow">अनुमति दें</string>
     <string name="sos_consent_skip">छोड़ें</string>
 
+    <!-- DPDP consent screen -->
+    <string name="dpdp_consent_hero_title">गोपनीयता आपकी, चुनाव आपका</string>
+    <string name="dpdp_consent_hero_subtitle">सेवा शुरू करने से पहले बताएं, हम क्या जानकारी इस्तेमाल कर सकते हैं</string>
+    <string name="dpdp_consent_section_title">डेटा उपयोग सहमति</string>
+    <string name="dpdp_consent_section_subtitle">अपनी पसंद के अनुसार चुनें:</string>
+    <string name="dpdp_consent_analytics_title">ऐप की गुणवत्ता सुधारें</string>
+    <string name="dpdp_consent_analytics_description">हम समझते हैं ऐप कैसे इस्तेमाल होता है</string>
+    <string name="dpdp_consent_crash_title">क्रैश रिपोर्ट भेजें</string>
+    <string name="dpdp_consent_crash_description">बग जल्दी ठीक करने के लिए</string>
+    <string name="dpdp_consent_marketing_title">ऑफर और अपडेट</string>
+    <string name="dpdp_consent_marketing_description">व्यक्तिगत ऑफर और प्रमोशन</string>
+    <string name="dpdp_consent_legal_prefix">जारी रखकर आप हमारी </string>
+    <string name="dpdp_consent_privacy_policy">गोपनीयता नीति</string>
+    <string name="dpdp_consent_legal_suffix"> से सहमत हैं</string>
+    <string name="dpdp_consent_agree_continue">सहमत हों और जारी रखें</string>
+    <string name="dpdp_consent_reject_all">सभी अस्वीकार करें</string>
+
     <!-- Complaint screen (E12-S02a) -->
     <string name="complaint_eyebrow">ग्राहक सहायता</string>
     <string name="complaint_title">शिकायत दर्ज करें</string>
