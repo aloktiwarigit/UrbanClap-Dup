@@ -185,6 +185,35 @@ async function main() {
     defaultTtl: 604800,
   });
   console.log("Container 'sos_incident_keys' ready.");
+
+  // E21-S01: Commission receivables — cash-pilot commission owed by technicians to platform.
+  // One doc per completed cash booking (id = bookingId for idempotency).
+  // Partitioned by /technicianId so per-tech outstanding reads are single-partition.
+  // MUST be provisioned before the first COMPLETED booking fires the settlement trigger.
+  await database.containers.createIfNotExists({
+    id: 'commission_receivables',
+    partitionKey: { paths: ['/technicianId'] },
+  });
+  console.log("Container 'commission_receivables' ready.");
+
+  // E21-S01: Seed the global commission-config doc in the system container (if not already set).
+  // defaultCommissionBps = 2200 matches the historical hardcoded default so P&L numbers don't jump.
+  const systemContainer = database.container('system');
+  try {
+    await systemContainer.items.create({
+      id: 'commission-config',
+      defaultCommissionBps: 2200,
+      updatedBy: 'system',
+      updatedAt: new Date().toISOString(),
+    });
+    console.log("Seeded 'commission-config' doc in system container (defaultCommissionBps=2200).");
+  } catch (err: unknown) {
+    if ((err as { code?: number }).code === 409) {
+      console.log("'commission-config' doc already exists in system container — skipping seed.");
+    } else {
+      throw err;
+    }
+  }
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
