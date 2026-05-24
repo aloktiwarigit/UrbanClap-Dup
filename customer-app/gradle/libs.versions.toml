@@ -31,6 +31,7 @@ growthbookOkHttp = "1.0.8"
 
 # Observability
 sentry = "7.17.0"
+sentryPlugin = "4.14.0"
 crashlyticsGradle = "3.0.2"
 posthog = "3.44.1"
 
@@ -204,3 +205,4 @@ android-junit5 = { id = "de.mannodermaus.android-junit5", version.ref = "android
 google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
 crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "crashlyticsGradle" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+sentry = { id = "io.sentry.android.gradle", version.ref = "sentryPlugin" }

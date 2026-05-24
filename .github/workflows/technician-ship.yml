@@ -1,6 +1,7 @@
 name: technician-ship
 
 on:
+  workflow_dispatch:
   pull_request:
     branches: [main]
     paths:
@@ -74,6 +75,16 @@ jobs:
 
       - name: assemble release (verify R8 + ProGuard)
         run: ./gradlew assembleRelease
+
+      - name: bundle release AAB
+        run: ./gradlew bundleRelease
+
+      - name: upload release AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: technician-release-${{ env.GIT_SHA }}
+          path: technician-app/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 7
 
       - name: ktlint + detekt + android lint
         run: ./gradlew ktlintCheck detekt lintDebug

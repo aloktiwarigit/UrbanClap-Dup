@@ -6,6 +6,7 @@ import com.google.firebase.auth.FirebaseUser
 import com.homeservices.technician.data.auth.SessionManager
 import com.homeservices.technician.domain.auth.model.AuthProvider
 import com.homeservices.technician.domain.auth.model.AuthResult
+import com.homeservices.technician.observability.analytics.AnalyticsTracker
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -30,6 +31,7 @@ public class SaveSessionUseCase
                 phoneLastFour = phoneLastFour,
                 authProvider = AuthProvider.Phone,
             )
+            AnalyticsTracker.capture("signup_completed")
         }
 
         public suspend fun saveWithGoogle(user: FirebaseUser) {
@@ -39,6 +41,7 @@ public class SaveSessionUseCase
                 displayName = user.displayName,
                 authProvider = AuthProvider.Google,
             )
+            AnalyticsTracker.capture("signup_completed")
         }
 
         public suspend fun saveWithEmail(user: FirebaseUser) {
@@ -48,6 +51,7 @@ public class SaveSessionUseCase
                 displayName = user.displayName,
                 authProvider = AuthProvider.Email,
             )
+            AnalyticsTracker.capture("signup_completed")
         }
 
         /**
@@ -67,6 +71,7 @@ public class SaveSessionUseCase
                     phoneLastFour = lastFour,
                     authProvider = AuthProvider.Phone,
                 )
+                AnalyticsTracker.capture("signup_completed")
                 AuthResult.Success(user)
             } catch (e: FirebaseException) {
                 AuthResult.Error.General(e)

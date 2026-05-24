@@ -7,7 +7,6 @@ import com.homeservices.technician.data.earnings.EarningsUpdateEventBus
 import com.homeservices.technician.data.jobOffer.JobOfferEventBus
 import com.homeservices.technician.data.rating.RatingPromptEventBus
 import com.homeservices.technician.data.rating.RatingReceivedEventBus
-import com.homeservices.technician.domain.jobOffer.FcmTokenSyncUseCase
 import com.homeservices.technician.notification.PendingActionIngestor
 import io.mockk.mockk
 import io.mockk.verify
@@ -33,7 +32,6 @@ public class HomeservicesFcmServiceBookingStatusTest {
         val ratingPromptEventBus: RatingPromptEventBus = mockk(relaxed = true)
         val earningsUpdateEventBus: EarningsUpdateEventBus = mockk(relaxed = true)
         val ratingReceivedEventBus: RatingReceivedEventBus = mockk(relaxed = true)
-        val fcmTokenSyncUseCase: FcmTokenSyncUseCase = mockk(relaxed = true)
         val router: NotificationRouter = mockk(relaxed = true)
         val ingestor: PendingActionIngestor = mockk(relaxed = true)
         bookingStatusEventBus = mockk(relaxed = true)
@@ -41,7 +39,6 @@ public class HomeservicesFcmServiceBookingStatusTest {
         service =
             HomeservicesFcmService().also {
                 it.eventBus = eventBus
-                it.fcmTokenSyncUseCase = fcmTokenSyncUseCase
                 it.ratingPromptEventBus = ratingPromptEventBus
                 it.earningsUpdateEventBus = earningsUpdateEventBus
                 it.ratingReceivedEventBus = ratingReceivedEventBus

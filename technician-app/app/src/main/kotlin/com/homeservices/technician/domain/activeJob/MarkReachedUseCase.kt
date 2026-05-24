@@ -22,7 +22,7 @@ public data class MarkReachedOutcome(
 @Singleton
 public class MarkReachedUseCase
     @Inject
-    constructor(
+    internal constructor(
         private val repository: ActiveJobRepository,
         private val integrityAttestor: IntegrityAttestor,
         private val integrityApiService: IntegrityApiService,

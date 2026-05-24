@@ -5,7 +5,6 @@ import com.homeservices.technician.data.earnings.EarningsUpdateEventBus
 import com.homeservices.technician.data.jobOffer.JobOfferEventBus
 import com.homeservices.technician.data.rating.RatingPromptEventBus
 import com.homeservices.technician.data.rating.RatingReceivedEventBus
-import com.homeservices.technician.domain.jobOffer.FcmTokenSyncUseCase
 import com.homeservices.technician.domain.jobOffer.model.JobOffer
 import com.homeservices.technician.notification.PendingActionIngestor
 import io.mockk.every
@@ -36,7 +35,6 @@ public class HomeservicesFcmServiceJobOfferTest {
     private lateinit var ratingPromptEventBus: RatingPromptEventBus
     private lateinit var earningsUpdateEventBus: EarningsUpdateEventBus
     private lateinit var ratingReceivedEventBus: RatingReceivedEventBus
-    private lateinit var fcmTokenSyncUseCase: FcmTokenSyncUseCase
 
     // router returns null for all FCM data by default (relaxed = true → null for nullable returns)
     private lateinit var router: NotificationRouter
@@ -65,7 +63,6 @@ public class HomeservicesFcmServiceJobOfferTest {
         ratingPromptEventBus = mockk(relaxed = true)
         earningsUpdateEventBus = mockk(relaxed = true)
         ratingReceivedEventBus = mockk(relaxed = true)
-        fcmTokenSyncUseCase = mockk(relaxed = true)
         router = mockk(relaxed = true)
         ingestor = mockk(relaxed = true)
 
@@ -77,7 +74,6 @@ public class HomeservicesFcmServiceJobOfferTest {
         service =
             HomeservicesFcmService().also {
                 it.eventBus = eventBus
-                it.fcmTokenSyncUseCase = fcmTokenSyncUseCase
                 it.ratingPromptEventBus = ratingPromptEventBus
                 it.earningsUpdateEventBus = earningsUpdateEventBus
                 it.ratingReceivedEventBus = ratingReceivedEventBus

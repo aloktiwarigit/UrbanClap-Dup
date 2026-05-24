@@ -10,7 +10,7 @@ import javax.inject.Inject
 
 public class EarningsRepositoryImpl
     @Inject
-    constructor(
+    internal constructor(
         private val apiService: EarningsApiService,
     ) : EarningsRepository {
         public override suspend fun getEarnings(): Result<EarningsSummary> =

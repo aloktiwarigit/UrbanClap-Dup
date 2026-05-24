@@ -20,6 +20,6 @@ public abstract class EarningsModule {
     public companion object {
         @Provides
         @Singleton
-        public fun provideEarningsApiService(retrofit: Retrofit): EarningsApiService = retrofit.create(EarningsApiService::class.java)
+        internal fun provideEarningsApiService(retrofit: Retrofit): EarningsApiService = retrofit.create(EarningsApiService::class.java)
     }
 }

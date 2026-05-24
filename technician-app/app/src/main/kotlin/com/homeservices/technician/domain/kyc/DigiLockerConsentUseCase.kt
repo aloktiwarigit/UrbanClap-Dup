@@ -10,7 +10,7 @@ import javax.inject.Inject
 
 public class DigiLockerConsentUseCase
     @Inject
-    constructor(
+    internal constructor(
         private val repository: KycRepository,
         private val integrityAttestor: IntegrityAttestor,
         private val integrityApiService: IntegrityApiService,

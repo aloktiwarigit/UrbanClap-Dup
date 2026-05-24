@@ -14,6 +14,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import retrofit2.Retrofit
 import javax.inject.Singleton
 
@@ -43,23 +45,24 @@ public object AuthModule {
     @AuthPrefs
     public fun provideAuthPrefs(
         @ApplicationContext context: Context,
-    ): SharedPreferences {
-        val masterKey =
-            MasterKey
-                .Builder(context)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-        val prefs =
-            EncryptedSharedPreferences.create(
-                context,
-                "tech_auth_session",
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-            )
-        // Silently migrate any session data written by the deprecated MasterKeys API.
-        // No-op if legacy key alias is absent (first install or already migrated).
-        SessionPrefsMigrator.migrateIfNeeded(context, prefs, "tech_auth_session")
-        return prefs
-    }
+    ): SharedPreferences =
+        runBlocking(Dispatchers.IO) {
+            val masterKey =
+                MasterKey
+                    .Builder(context)
+                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                    .build()
+            val prefs =
+                EncryptedSharedPreferences.create(
+                    context,
+                    "tech_auth_session",
+                    masterKey,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+                )
+            // Silently migrate any session data written by the deprecated MasterKeys API.
+            // No-op if legacy key alias is absent (first install or already migrated).
+            SessionPrefsMigrator.migrateIfNeeded(context, prefs, "tech_auth_session")
+            prefs
+        }
 }

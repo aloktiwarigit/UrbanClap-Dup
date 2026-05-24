@@ -20,6 +20,6 @@ public abstract class ShieldModule {
     public companion object {
         @Provides
         @Singleton
-        public fun provideShieldApiService(retrofit: Retrofit): ShieldApiService = retrofit.create(ShieldApiService::class.java)
+        internal fun provideShieldApiService(retrofit: Retrofit): ShieldApiService = retrofit.create(ShieldApiService::class.java)
     }
 }

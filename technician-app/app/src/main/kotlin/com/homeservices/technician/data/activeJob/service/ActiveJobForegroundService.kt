@@ -40,7 +40,13 @@ public class ActiveJobForegroundService : Service() {
     @Inject
     public lateinit var connectivityObserver: ConnectivityObserver
 
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val exceptionHandler =
+        kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
+            com.google.firebase.crashlytics.FirebaseCrashlytics
+                .getInstance()
+                .recordException(throwable)
+        }
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO + exceptionHandler)
 
     public override fun onStartCommand(
         intent: Intent?,

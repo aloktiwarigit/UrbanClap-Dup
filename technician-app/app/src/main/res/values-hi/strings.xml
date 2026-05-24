@@ -15,7 +15,7 @@
     <string name="job_offer_distance_km">%.1f किमी दूर</string>
     <string name="job_offer_earnings">कमाई</string>
     <string name="job_offer_accept">जॉब स्वीकार करें</string>
-    <string name="job_offer_accepting">&#x91C;&#x949;&#x92C; &#x938;&#x94D;&#x935;&#x940;&#x915;&#x93E;&#x930; &#x939;&#x94B; &#x930;&#x939;&#x940; &#x939;&#x948;...</string>
+    <string name="job_offer_accepting">&#x91C;&#x949;&#x92C; &#x938;&#x94D;&#x935;&#x940;&#x915;&#x93E;&#x930; &#x939;&#x94B; &#x930;&#x939;&#x940; &#x939;&#x948;…</string>
     <string name="job_offer_decline">अस्वीकार करें</string>
     <!-- Active job -->
     <string name="active_job_complete_title">जॉब पूरी हुई</string>

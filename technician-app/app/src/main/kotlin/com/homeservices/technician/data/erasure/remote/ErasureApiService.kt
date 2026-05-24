@@ -6,7 +6,7 @@ import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.POST
 
-public interface ErasureApiService {
+internal interface ErasureApiService {
     @POST("v1/users/me/erasure-request")
     public suspend fun submitErasureRequest(
         @Body body: ErasureSubmitRequestBody,

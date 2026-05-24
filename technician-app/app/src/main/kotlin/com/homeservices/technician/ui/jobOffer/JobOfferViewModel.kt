@@ -39,6 +39,7 @@ internal class JobOfferViewModel
             }
         }
 
+        @Suppress("ReturnCount")
         public fun accept(): Unit {
             val current = _uiState.value as? JobOfferUiState.Offering ?: return
             if (current.isAccepting) return
@@ -62,7 +63,8 @@ internal class JobOfferViewModel
                         scheduleReset(2_000L)
                     }
                     is JobOfferResult.Expired,
-                    is JobOfferResult.Conflict -> {
+                    is JobOfferResult.Conflict,
+                    -> {
                         _uiState.value = JobOfferUiState.Expired
                         eventBus.clearCurrentOffer()
                         scheduleReset(2_000L)
@@ -71,6 +73,12 @@ internal class JobOfferViewModel
                         _uiState.value = JobOfferUiState.Declined
                         eventBus.clearCurrentOffer()
                         scheduleReset(2_000L)
+                    }
+                    is JobOfferResult.UnknownError -> {
+                        startOffer(
+                            offer = current.offer,
+                            errorMessage = "Server error (${result.httpCode}). Try again.",
+                        )
                     }
                     null -> {
                         if (remainingSeconds(current.offer) <= 0) {
@@ -122,6 +130,7 @@ internal class JobOfferViewModel
                 )
             countdownJob =
                 viewModelScope.launch {
+                    @Suppress("LoopWithTooManyJumpStatements")
                     while (true) {
                         delay(1_000L)
                         val current = _uiState.value as? JobOfferUiState.Offering ?: break

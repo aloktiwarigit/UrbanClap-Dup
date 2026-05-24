@@ -11,7 +11,7 @@ private const val HTTP_CONFLICT = 409
 
 public class ErasureRepositoryImpl
     @Inject
-    constructor(
+    internal constructor(
         private val api: ErasureApiService,
     ) : ErasureRepository {
         public override suspend fun submitRequest(reason: String?): ErasureSubmitResult =
