@@ -62,7 +62,8 @@ internal class JobOfferViewModel
                         scheduleReset(2_000L)
                     }
                     is JobOfferResult.Expired,
-                    is JobOfferResult.Conflict -> {
+                    is JobOfferResult.Conflict,
+                    -> {
                         _uiState.value = JobOfferUiState.Expired
                         eventBus.clearCurrentOffer()
                         scheduleReset(2_000L)

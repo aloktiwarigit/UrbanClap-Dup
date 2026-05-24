@@ -20,8 +20,8 @@ import com.homeservices.technician.data.pendingaction.PendingActionStore
 import com.homeservices.technician.data.rating.RatingPromptEventBus
 import com.homeservices.technician.data.rating.RatingReceivedEventBus
 import com.homeservices.technician.domain.jobOffer.model.JobOffer
-import com.homeservices.technician.observability.analytics.AnalyticsTracker
 import com.homeservices.technician.notification.PendingActionIngestor
+import com.homeservices.technician.observability.analytics.AnalyticsTracker
 import com.homeservices.technician.ui.jobOffer.JobOfferFullScreenActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -631,10 +631,12 @@ public class HomeservicesFcmService :
     override fun onNewToken(token: String): Unit {
         val data = androidx.work.workDataOf(FcmTokenRegisterWorker.KEY_FCM_TOKEN to token)
         val request =
-            androidx.work.OneTimeWorkRequestBuilder<FcmTokenRegisterWorker>()
+            androidx.work
+                .OneTimeWorkRequestBuilder<FcmTokenRegisterWorker>()
                 .setInputData(data)
                 .setConstraints(
-                    androidx.work.Constraints.Builder()
+                    androidx.work.Constraints
+                        .Builder()
                         .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
                         .build(),
                 ).setBackoffCriteria(

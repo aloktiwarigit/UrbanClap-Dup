@@ -42,7 +42,9 @@ public class ActiveJobForegroundService : Service() {
 
     private val exceptionHandler =
         kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
-            com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(throwable)
+            com.google.firebase.crashlytics.FirebaseCrashlytics
+                .getInstance()
+                .recordException(throwable)
         }
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO + exceptionHandler)
 

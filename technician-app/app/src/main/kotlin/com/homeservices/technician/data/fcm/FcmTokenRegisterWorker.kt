@@ -32,7 +32,9 @@ internal class FcmTokenRegisterWorker
                 deviceTokenRegistrar.register()
                 Result.success()
             }.getOrElse {
-                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(it)
+                com.google.firebase.crashlytics.FirebaseCrashlytics
+                    .getInstance()
+                    .recordException(it)
                 if (runAttemptCount < 3) Result.retry() else Result.failure()
             }
         }
