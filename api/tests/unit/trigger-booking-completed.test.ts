@@ -1,22 +1,28 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { InvocationContext } from '@azure/functions';
 
+vi.mock('../../src/cosmos/commission-receivable-repository.js');
 vi.mock('../../src/cosmos/wallet-ledger-repository.js');
 vi.mock('../../src/cosmos/technician-repository.js');
 vi.mock('../../src/cosmos/audit-log-repository.js');
+vi.mock('../../src/cosmos/catalogue-repository.js');
+vi.mock('../../src/services/commission-config.service.js');
 vi.mock('../../src/services/fcm.service.js');
 vi.mock('../../src/services/razorpayRoute.service.js');
 
 import { settleBooking } from '../../src/functions/trigger-booking-completed.js';
+import { commissionReceivableRepo } from '../../src/cosmos/commission-receivable-repository.js';
 import { walletLedgerRepo } from '../../src/cosmos/wallet-ledger-repository.js';
 import * as techRepo from '../../src/cosmos/technician-repository.js';
 import * as auditRepo from '../../src/cosmos/audit-log-repository.js';
+import { catalogueRepo } from '../../src/cosmos/catalogue-repository.js';
+import * as configSvc from '../../src/services/commission-config.service.js';
 import * as fcmService from '../../src/services/fcm.service.js';
 import { RazorpayRouteService } from '../../src/services/razorpayRoute.service.js';
 
 const mockCtx = { log: vi.fn() } as unknown as InvocationContext;
 
-const completedBooking = {
+const cashBooking = {
   id: 'booking-abc',
   customerId: 'customer-1',
   serviceId: 'svc-1',
@@ -27,6 +33,7 @@ const completedBooking = {
   addressLatLng: { lat: 12.9, lng: 77.6 },
   status: 'COMPLETED',
   paymentOrderId: 'order-1',
+  paymentMethod: 'CASH_ON_SERVICE',
   paymentId: 'pay-1',
   paymentSignature: 'sig-1',
   amount: 50000,
@@ -38,6 +45,16 @@ const mockTransfer = vi.fn();
 
 beforeEach(() => {
   vi.resetAllMocks();
+
+  // CASH path defaults
+  vi.mocked(commissionReceivableRepo.getByBookingId).mockResolvedValue(null);
+  vi.mocked(commissionReceivableRepo.createDueEntry).mockResolvedValue(true);
+  vi.mocked(configSvc.getGlobalCommissionBps).mockResolvedValue(2200);
+  vi.mocked(configSvc.resolveCommissionBps).mockReturnValue({ bps: 2200, from: 'GLOBAL' });
+  vi.mocked(catalogueRepo.getServiceByIdCrossPartition).mockResolvedValue(null);
+  vi.mocked(catalogueRepo.getCategoryById).mockResolvedValue(null);
+
+  // Razorpay path defaults
   vi.mocked(walletLedgerRepo.getByBookingId).mockResolvedValue(null);
   vi.mocked(walletLedgerRepo.createPendingEntry).mockResolvedValue(true);
   vi.mocked(walletLedgerRepo.markPaid).mockResolvedValue(undefined);
@@ -46,8 +63,10 @@ beforeEach(() => {
     id: 'tech-1',
     completedJobCount: 5,
     razorpayLinkedAccountId: 'acc-rp-1',
-    payoutCadence: 'INSTANT', // default for existing tests: immediate transfer behaviour
+    payoutCadence: 'INSTANT',
   });
+
+  // Shared defaults
   vi.mocked(techRepo.incrementCompletedJobCount).mockResolvedValue(undefined);
   vi.mocked(auditRepo.appendAuditEntry).mockResolvedValue(undefined);
   vi.mocked(fcmService.sendTechEarningsUpdate).mockResolvedValue(undefined);
@@ -57,326 +76,246 @@ beforeEach(() => {
   }) as unknown as RazorpayRouteService);
 });
 
-describe('settleBooking', () => {
-  it('skips documents that are not COMPLETED status', async () => {
-    await settleBooking({ ...completedBooking, status: 'IN_PROGRESS' }, mockCtx);
+describe('settleBooking — common guards', () => {
+  it('skips non-COMPLETED status', async () => {
+    await settleBooking({ ...cashBooking, status: 'IN_PROGRESS' }, mockCtx);
+    expect(commissionReceivableRepo.createDueEntry).not.toHaveBeenCalled();
     expect(walletLedgerRepo.createPendingEntry).not.toHaveBeenCalled();
-    expect(mockTransfer).not.toHaveBeenCalled();
   });
 
   it('skips malformed documents silently', async () => {
     await settleBooking({ invalid: true }, mockCtx);
-    expect(walletLedgerRepo.createPendingEntry).not.toHaveBeenCalled();
+    expect(commissionReceivableRepo.createDueEntry).not.toHaveBeenCalled();
   });
 
   it('skips COMPLETED booking with no technicianId', async () => {
-    const noTech = { ...completedBooking, technicianId: undefined };
-    await settleBooking(noTech, mockCtx);
+    await settleBooking({ ...cashBooking, technicianId: undefined }, mockCtx);
+    expect(commissionReceivableRepo.createDueEntry).not.toHaveBeenCalled();
+  });
+});
+
+describe('settleBooking — CASH_ON_SERVICE path (pilot)', () => {
+  it('creates a DUE commission receivable with global bps when no service/category override', async () => {
+    await settleBooking(cashBooking, mockCtx);
+
+    expect(commissionReceivableRepo.createDueEntry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bookingId: 'booking-abc',
+        technicianId: 'tech-1',
+        serviceId: 'svc-1',
+        categoryId: 'cat-1',
+        bookingAmount: 50000,
+        commissionBps: 2200,
+        commissionDue: 11000,
+        commissionResolvedFrom: 'GLOBAL',
+      }),
+    );
+  });
+
+  it('resolves service-level bps when service has commissionBps override', async () => {
+    vi.mocked(configSvc.resolveCommissionBps).mockReturnValue({ bps: 2500, from: 'SERVICE' });
+    vi.mocked(catalogueRepo.getServiceByIdCrossPartition).mockResolvedValue(
+      { commissionBps: 2500 } as never,
+    );
+
+    await settleBooking(cashBooking, mockCtx);
+
+    expect(commissionReceivableRepo.createDueEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ commissionBps: 2500, commissionDue: 12500, commissionResolvedFrom: 'SERVICE' }),
+    );
+  });
+
+  it('resolves category-level bps when category has override but service does not', async () => {
+    vi.mocked(configSvc.resolveCommissionBps).mockReturnValue({ bps: 3000, from: 'CATEGORY' });
+    vi.mocked(catalogueRepo.getCategoryById).mockResolvedValue(
+      { commissionBps: 3000 } as never,
+    );
+
+    await settleBooking(cashBooking, mockCtx);
+
+    expect(commissionReceivableRepo.createDueEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ commissionBps: 3000, commissionDue: 15000, commissionResolvedFrom: 'CATEGORY' }),
+    );
+  });
+
+  it('passes cashCollectedAmount to createDueEntry when present on booking', async () => {
+    await settleBooking({ ...cashBooking, cashCollectedAmount: 50000 }, mockCtx);
+
+    expect(commissionReceivableRepo.createDueEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ cashCollectedAmount: 50000 }),
+    );
+  });
+
+  it('uses finalAmount over amount for commissionDue calculation', async () => {
+    // finalAmount=60000 at 2200 bps → commissionDue = round(60000*2200/10000) = 13200
+    await settleBooking({ ...cashBooking, finalAmount: 60000, amount: 50000 }, mockCtx);
+
+    expect(commissionReceivableRepo.createDueEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ bookingAmount: 60000, commissionDue: 13200 }),
+    );
+  });
+
+  it('does NOT call RazorpayRouteService or walletLedgerRepo', async () => {
+    await settleBooking(cashBooking, mockCtx);
+    expect(RazorpayRouteService).not.toHaveBeenCalled();
+    expect(walletLedgerRepo.createPendingEntry).not.toHaveBeenCalled();
+  });
+
+  it('audits COMMISSION_DUE_RECORDED on success', async () => {
+    await settleBooking(cashBooking, mockCtx);
+
+    const auditCall = vi.mocked(auditRepo.appendAuditEntry).mock.calls.find(
+      ([entry]) => entry.action === 'COMMISSION_DUE_RECORDED',
+    );
+    expect(auditCall).toBeDefined();
+  });
+
+  it('increments completedJobCount and sends FCM earnings update on success', async () => {
+    await settleBooking(cashBooking, mockCtx);
+    expect(techRepo.incrementCompletedJobCount).toHaveBeenCalledWith('tech-1');
+    expect(fcmService.sendTechEarningsUpdate).toHaveBeenCalledWith(
+      'tech-1',
+      expect.objectContaining({ bookingId: 'booking-abc', commissionDue: 11000 }),
+    );
+  });
+
+  it('treats undefined paymentMethod as CASH_ON_SERVICE', async () => {
+    const noMethod = { ...cashBooking, paymentMethod: undefined };
+    await settleBooking(noMethod, mockCtx);
+
+    expect(commissionReceivableRepo.createDueEntry).toHaveBeenCalled();
     expect(walletLedgerRepo.createPendingEntry).not.toHaveBeenCalled();
   });
 
   describe('idempotency', () => {
-    it('double-fire: second call does NOT create entry or call Razorpay when entry is PAID', async () => {
-      vi.mocked(walletLedgerRepo.getByBookingId).mockResolvedValue({
+    it('skips when commission receivable already exists (double-fire)', async () => {
+      vi.mocked(commissionReceivableRepo.getByBookingId).mockResolvedValue({
         id: 'booking-abc',
         bookingId: 'booking-abc',
         technicianId: 'tech-1',
         partitionKey: 'tech-1',
+        serviceId: 'svc-1',
+        categoryId: 'cat-1',
         bookingAmount: 50000,
-        completedJobCountAtSettlement: 5,
         commissionBps: 2200,
-        commissionAmount: 11000,
-        techAmount: 39000,
-        payoutStatus: 'PAID',
-        razorpayTransferId: 'trf-existing',
+        commissionDue: 11000,
+        commissionResolvedFrom: 'GLOBAL',
+        remittanceStatus: 'DUE',
         createdAt: '2026-04-24T10:00:00.000Z',
-        settledAt: '2026-04-24T10:00:01.000Z',
       });
 
-      await settleBooking(completedBooking, mockCtx);
+      await settleBooking(cashBooking, mockCtx);
 
-      expect(walletLedgerRepo.createPendingEntry).not.toHaveBeenCalled();
-      expect(mockTransfer).not.toHaveBeenCalled();
+      expect(commissionReceivableRepo.createDueEntry).not.toHaveBeenCalled();
     });
 
-    it('concurrent fire: returns early when createPendingEntry returns false (409 Conflict)', async () => {
-      vi.mocked(walletLedgerRepo.createPendingEntry).mockResolvedValue(false);
+    it('does not write audit when createDueEntry returns false (concurrent 409)', async () => {
+      vi.mocked(commissionReceivableRepo.createDueEntry).mockResolvedValue(false);
 
-      await settleBooking(completedBooking, mockCtx);
+      await settleBooking(cashBooking, mockCtx);
 
-      expect(mockTransfer).not.toHaveBeenCalled();
-    });
-
-    it('uses bookingId as Razorpay idempotency key', async () => {
-      await settleBooking(completedBooking, mockCtx);
-
-      expect(mockTransfer).toHaveBeenCalledWith(
-        expect.objectContaining({ idempotencyKey: 'booking-abc' }),
+      const dueCalls = vi.mocked(auditRepo.appendAuditEntry).mock.calls.filter(
+        ([e]) => e.action === 'COMMISSION_DUE_RECORDED',
       );
+      expect(dueCalls).toHaveLength(0);
     });
   });
+});
 
-  describe('commission', () => {
-    it('uses finalAmount over amount when both present', async () => {
-      await settleBooking({ ...completedBooking, finalAmount: 60000, amount: 50000 }, mockCtx);
-
-      expect(walletLedgerRepo.createPendingEntry).toHaveBeenCalledWith(
-        expect.objectContaining({ bookingAmount: 60000 }),
-      );
-    });
-
-    it('applies 22% commission for completedJobCount < 50 (INSTANT: fee also deducted)', async () => {
-      vi.mocked(techRepo.getTechnicianForSettlement).mockResolvedValue({
-        id: 'tech-1', completedJobCount: 49, razorpayLinkedAccountId: 'acc-rp-1', payoutCadence: 'INSTANT',
-      });
-
-      await settleBooking(completedBooking, mockCtx); // amount = 50000 paise
-
-      // commissionBps=2200, commission=11000, techAmountBeforeFee=39000, INSTANT fee=2500, techAmount=36500
-      expect(walletLedgerRepo.createPendingEntry).toHaveBeenCalledWith(
-        expect.objectContaining({ commissionBps: 2200, commissionAmount: 11000, techAmount: 36500 }),
-      );
-    });
-
-    it('applies 25% commission for completedJobCount >= 50 (INSTANT: fee also deducted)', async () => {
-      vi.mocked(techRepo.getTechnicianForSettlement).mockResolvedValue({
-        id: 'tech-1', completedJobCount: 50, razorpayLinkedAccountId: 'acc-rp-1', payoutCadence: 'INSTANT',
-      });
-
-      await settleBooking(completedBooking, mockCtx);
-
-      // commissionBps=2500, commission=12500, techAmountBeforeFee=37500, INSTANT fee=2500, techAmount=35000
-      expect(walletLedgerRepo.createPendingEntry).toHaveBeenCalledWith(
-        expect.objectContaining({ commissionBps: 2500, commissionAmount: 12500, techAmount: 35000 }),
-      );
-    });
+describe('settleBooking — RAZORPAY path (guarded, dead in cash pilot)', () => {
+  beforeEach(() => {
+    vi.stubEnv('RAZORPAY_KEY_ID', 'test-key-id');
+    vi.stubEnv('RAZORPAY_KEY_SECRET', 'test-key-secret');
   });
 
-  describe('audit logging', () => {
-    it('writes ROUTE_TRANSFER_ATTEMPT audit entry before Razorpay call', async () => {
-      const callOrder: string[] = [];
-      vi.mocked(auditRepo.appendAuditEntry).mockImplementation(async (entry) => {
-        callOrder.push(`audit:${entry.action}`);
-      });
-      mockTransfer.mockImplementation(async () => {
-        callOrder.push('razorpay:transfer');
-        return { transferId: 'trf-xyz' };
-      });
-
-      await settleBooking(completedBooking, mockCtx);
-
-      expect(callOrder[0]).toBe('audit:ROUTE_TRANSFER_ATTEMPT');
-      const razorpayIdx = callOrder.indexOf('razorpay:transfer');
-      const attemptIdx = callOrder.indexOf('audit:ROUTE_TRANSFER_ATTEMPT');
-      expect(attemptIdx).toBeLessThan(razorpayIdx);
-    });
-
-    it('writes ROUTE_TRANSFER_INSTANT audit entry on INSTANT success', async () => {
-      await settleBooking(completedBooking, mockCtx);
-
-      const successCall = vi.mocked(auditRepo.appendAuditEntry).mock.calls.find(
-        ([entry]) => entry.action === 'ROUTE_TRANSFER_INSTANT',
-      );
-      expect(successCall).toBeDefined();
-    });
-
-    it('writes ROUTE_TRANSFER_FAILED audit entry on Razorpay error', async () => {
-      mockTransfer.mockRejectedValue(new Error('Razorpay timeout'));
-
-      await settleBooking(completedBooking, mockCtx);
-
-      const failCall = vi.mocked(auditRepo.appendAuditEntry).mock.calls.find(
-        ([entry]) => entry.action === 'ROUTE_TRANSFER_FAILED',
-      );
-      expect(failCall).toBeDefined();
-    });
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
-  describe('payout cadence — conditional settlement (AC-3)', () => {
-    it('INSTANT: deducts ₹25 fee (2500 paise) from techAmount and transfers immediately', async () => {
-      vi.mocked(techRepo.getTechnicianForSettlement).mockResolvedValue({
-        id: 'tech-1', completedJobCount: 5, razorpayLinkedAccountId: 'acc-rp-1', payoutCadence: 'INSTANT',
-      });
+  const razorpayBooking = { ...cashBooking, paymentMethod: 'RAZORPAY' };
 
-      await settleBooking(completedBooking, mockCtx); // 50000 paise booking
+  it('skips gracefully when Razorpay credentials are not configured', async () => {
+    vi.unstubAllEnvs();
 
-      // 22% commission on 50000 = 11000, techAmount = 39000, minus INSTANT fee 2500 = 36500
-      expect(walletLedgerRepo.createPendingEntry).toHaveBeenCalledWith(
-        expect.objectContaining({
-          techAmount: 36500,
-          payoutFeeAmount: 2500,
-          payoutCadence: 'INSTANT',
-          heldForCadence: false,
-        }),
-      );
-      expect(mockTransfer).toHaveBeenCalled(); // immediate transfer
-    });
+    await settleBooking(razorpayBooking, mockCtx);
 
-    it('INSTANT: audits ROUTE_TRANSFER_INSTANT on success', async () => {
-      vi.mocked(techRepo.getTechnicianForSettlement).mockResolvedValue({
-        id: 'tech-1', completedJobCount: 5, razorpayLinkedAccountId: 'acc-rp-1', payoutCadence: 'INSTANT',
-      });
-
-      await settleBooking(completedBooking, mockCtx);
-
-      const successCall = vi.mocked(auditRepo.appendAuditEntry).mock.calls.find(
-        ([entry]) => entry.action === 'ROUTE_TRANSFER_INSTANT',
-      );
-      expect(successCall).toBeDefined();
-    });
-
-    it('NEXT_DAY: deducts ₹15 fee (1500 paise), creates PENDING with heldForCadence=true, no transfer', async () => {
-      vi.mocked(techRepo.getTechnicianForSettlement).mockResolvedValue({
-        id: 'tech-1', completedJobCount: 5, razorpayLinkedAccountId: 'acc-rp-1', payoutCadence: 'NEXT_DAY',
-      });
-
-      await settleBooking(completedBooking, mockCtx);
-
-      // 39000 - 1500 = 37500
-      expect(walletLedgerRepo.createPendingEntry).toHaveBeenCalledWith(
-        expect.objectContaining({
-          techAmount: 37500,
-          payoutFeeAmount: 1500,
-          payoutCadence: 'NEXT_DAY',
-          heldForCadence: true,
-        }),
-      );
-      expect(mockTransfer).not.toHaveBeenCalled(); // held — no immediate transfer
-    });
-
-    it('NEXT_DAY: audits SETTLEMENT_HELD_NEXT_DAY and does NOT audit ROUTE_TRANSFER_SUCCESS', async () => {
-      vi.mocked(techRepo.getTechnicianForSettlement).mockResolvedValue({
-        id: 'tech-1', completedJobCount: 5, razorpayLinkedAccountId: 'acc-rp-1', payoutCadence: 'NEXT_DAY',
-      });
-
-      await settleBooking(completedBooking, mockCtx);
-
-      const heldCall = vi.mocked(auditRepo.appendAuditEntry).mock.calls.find(
-        ([entry]) => entry.action === 'SETTLEMENT_HELD_NEXT_DAY',
-      );
-      expect(heldCall).toBeDefined();
-      const successCall = vi.mocked(auditRepo.appendAuditEntry).mock.calls.find(
-        ([entry]) => entry.action === 'ROUTE_TRANSFER_SUCCESS',
-      );
-      expect(successCall).toBeUndefined();
-    });
-
-    it('WEEKLY: no fee, creates PENDING with heldForCadence=true, no transfer', async () => {
-      vi.mocked(techRepo.getTechnicianForSettlement).mockResolvedValue({
-        id: 'tech-1', completedJobCount: 5, razorpayLinkedAccountId: 'acc-rp-1', payoutCadence: 'WEEKLY',
-      });
-
-      await settleBooking(completedBooking, mockCtx);
-
-      expect(walletLedgerRepo.createPendingEntry).toHaveBeenCalledWith(
-        expect.objectContaining({
-          techAmount: 39000,
-          payoutFeeAmount: 0,
-          payoutCadence: 'WEEKLY',
-          heldForCadence: true,
-        }),
-      );
-      expect(mockTransfer).not.toHaveBeenCalled();
-    });
-
-    it('WEEKLY: audits SETTLEMENT_HELD_WEEKLY', async () => {
-      vi.mocked(techRepo.getTechnicianForSettlement).mockResolvedValue({
-        id: 'tech-1', completedJobCount: 5, razorpayLinkedAccountId: 'acc-rp-1', payoutCadence: 'WEEKLY',
-      });
-
-      await settleBooking(completedBooking, mockCtx);
-
-      const heldCall = vi.mocked(auditRepo.appendAuditEntry).mock.calls.find(
-        ([entry]) => entry.action === 'SETTLEMENT_HELD_WEEKLY',
-      );
-      expect(heldCall).toBeDefined();
-    });
-
-    it('undefined cadence: treated as WEEKLY (legacy graceful degradation)', async () => {
-      vi.mocked(techRepo.getTechnicianForSettlement).mockResolvedValue({
-        id: 'tech-1', completedJobCount: 5, razorpayLinkedAccountId: 'acc-rp-1',
-        // no payoutCadence field
-      });
-
-      await settleBooking(completedBooking, mockCtx);
-
-      expect(walletLedgerRepo.createPendingEntry).toHaveBeenCalledWith(
-        expect.objectContaining({ payoutCadence: 'WEEKLY', heldForCadence: true }),
-      );
-      expect(mockTransfer).not.toHaveBeenCalled();
-    });
-
-    it('INSTANT minimum guard: if techAmount <= 2500 after commission, treats as WEEKLY (no fee, no transfer)', async () => {
-      // Very small booking: 3000 paise, 22% commission = 660, techAmount = 2340 < 2500
-      vi.mocked(techRepo.getTechnicianForSettlement).mockResolvedValue({
-        id: 'tech-1', completedJobCount: 5, razorpayLinkedAccountId: 'acc-rp-1', payoutCadence: 'INSTANT',
-      });
-
-      await settleBooking({ ...completedBooking, amount: 3000 }, mockCtx);
-
-      expect(walletLedgerRepo.createPendingEntry).toHaveBeenCalledWith(
-        expect.objectContaining({ payoutCadence: 'WEEKLY', payoutFeeAmount: 0, heldForCadence: true }),
-      );
-      expect(mockTransfer).not.toHaveBeenCalled();
-    });
-
-    it('NEXT_DAY minimum guard: if techAmount <= 1500 after commission, treats as WEEKLY', async () => {
-      // Very small booking: 1800 paise, 22% commission = 396, techAmount = 1404 < 1500
-      vi.mocked(techRepo.getTechnicianForSettlement).mockResolvedValue({
-        id: 'tech-1', completedJobCount: 5, razorpayLinkedAccountId: 'acc-rp-1', payoutCadence: 'NEXT_DAY',
-      });
-
-      await settleBooking({ ...completedBooking, amount: 1800 }, mockCtx);
-
-      expect(walletLedgerRepo.createPendingEntry).toHaveBeenCalledWith(
-        expect.objectContaining({ payoutCadence: 'WEEKLY', payoutFeeAmount: 0, heldForCadence: true }),
-      );
-      expect(mockTransfer).not.toHaveBeenCalled();
-    });
+    expect(walletLedgerRepo.createPendingEntry).not.toHaveBeenCalled();
+    expect(mockTransfer).not.toHaveBeenCalled();
   });
 
-  describe('failure isolation', () => {
-    it('marks wallet_ledger FAILED on Razorpay error — does NOT touch booking status', async () => {
-      mockTransfer.mockRejectedValue(new Error('network error'));
+  it('does NOT create commission receivable — uses wallet ledger instead', async () => {
+    await settleBooking(razorpayBooking, mockCtx);
 
-      await settleBooking(completedBooking, mockCtx);
+    expect(commissionReceivableRepo.createDueEntry).not.toHaveBeenCalled();
+    expect(walletLedgerRepo.createPendingEntry).toHaveBeenCalled();
+  });
 
-      expect(walletLedgerRepo.markFailed).toHaveBeenCalledWith('booking-abc', 'tech-1', 'network error');
-      expect(walletLedgerRepo.markPaid).not.toHaveBeenCalled();
+  it('transfers immediately for INSTANT cadence', async () => {
+    await settleBooking(razorpayBooking, mockCtx);
+    expect(mockTransfer).toHaveBeenCalledWith(
+      expect.objectContaining({ idempotencyKey: 'booking-abc' }),
+    );
+  });
+
+  it('is idempotent: skips if wallet entry already exists', async () => {
+    vi.mocked(walletLedgerRepo.getByBookingId).mockResolvedValue({
+      id: 'booking-abc', bookingId: 'booking-abc', technicianId: 'tech-1',
+      partitionKey: 'tech-1', bookingAmount: 50000, completedJobCountAtSettlement: 5,
+      commissionBps: 2200, commissionAmount: 11000, techAmount: 39000,
+      payoutStatus: 'PAID', razorpayTransferId: 'trf-existing',
+      createdAt: '2026-04-24T10:00:00.000Z', settledAt: '2026-04-24T10:00:01.000Z',
     });
 
-    it('marks FAILED with "no Razorpay linked account" when INSTANT tech has no account', async () => {
-      vi.mocked(techRepo.getTechnicianForSettlement).mockResolvedValue({
-        id: 'tech-1', completedJobCount: 5, payoutCadence: 'INSTANT',
-        // no razorpayLinkedAccountId
-      });
+    await settleBooking(razorpayBooking, mockCtx);
 
-      await settleBooking(completedBooking, mockCtx);
+    expect(walletLedgerRepo.createPendingEntry).not.toHaveBeenCalled();
+    expect(mockTransfer).not.toHaveBeenCalled();
+  });
 
-      expect(walletLedgerRepo.markFailed).toHaveBeenCalledWith(
-        'booking-abc', 'tech-1', 'no Razorpay linked account',
-      );
-      expect(mockTransfer).not.toHaveBeenCalled();
+  it('WEEKLY: no fee, heldForCadence=true, no transfer', async () => {
+    vi.mocked(techRepo.getTechnicianForSettlement).mockResolvedValue({
+      id: 'tech-1', completedJobCount: 5, razorpayLinkedAccountId: 'acc-rp-1', payoutCadence: 'WEEKLY',
     });
 
-    it('increments completedJobCount only on success', async () => {
-      await settleBooking(completedBooking, mockCtx);
-      expect(techRepo.incrementCompletedJobCount).toHaveBeenCalledWith('tech-1');
+    await settleBooking(razorpayBooking, mockCtx);
+
+    expect(walletLedgerRepo.createPendingEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ payoutCadence: 'WEEKLY', payoutFeeAmount: 0, heldForCadence: true }),
+    );
+    expect(mockTransfer).not.toHaveBeenCalled();
+  });
+
+  it('marks wallet entry FAILED and audits ROUTE_TRANSFER_FAILED on Razorpay error', async () => {
+    mockTransfer.mockRejectedValue(new Error('Razorpay timeout'));
+
+    await settleBooking(razorpayBooking, mockCtx);
+
+    expect(walletLedgerRepo.markFailed).toHaveBeenCalledWith('booking-abc', 'tech-1', 'Razorpay timeout');
+    const failCall = vi.mocked(auditRepo.appendAuditEntry).mock.calls.find(
+      ([e]) => e.action === 'ROUTE_TRANSFER_FAILED',
+    );
+    expect(failCall).toBeDefined();
+  });
+
+  it('marks wallet entry FAILED with "no Razorpay linked account" when INSTANT tech has no account', async () => {
+    vi.mocked(techRepo.getTechnicianForSettlement).mockResolvedValue({
+      id: 'tech-1', completedJobCount: 5, payoutCadence: 'INSTANT',
     });
 
-    it('does NOT increment completedJobCount on Razorpay failure', async () => {
-      mockTransfer.mockRejectedValue(new Error('fail'));
-      await settleBooking(completedBooking, mockCtx);
-      expect(techRepo.incrementCompletedJobCount).not.toHaveBeenCalled();
-    });
+    await settleBooking(razorpayBooking, mockCtx);
 
-    it('sends FCM earnings update to tech only on success (amount is post-fee for INSTANT)', async () => {
-      await settleBooking(completedBooking, mockCtx);
-      // INSTANT: 50000 booking, 22% commission (5 jobs) = 11000, techBeforeFee=39000, INSTANT fee=2500 → 36500
-      expect(fcmService.sendTechEarningsUpdate).toHaveBeenCalledWith('tech-1', {
-        bookingId: 'booking-abc',
-        techAmount: 36500,
-      });
-    });
+    expect(walletLedgerRepo.markFailed).toHaveBeenCalledWith(
+      'booking-abc', 'tech-1', 'no Razorpay linked account',
+    );
+    expect(mockTransfer).not.toHaveBeenCalled();
+  });
+
+  it('audits ROUTE_TRANSFER_INSTANT on INSTANT success', async () => {
+    await settleBooking(razorpayBooking, mockCtx);
+
+    const successCall = vi.mocked(auditRepo.appendAuditEntry).mock.calls.find(
+      ([entry]) => entry.action === 'ROUTE_TRANSFER_INSTANT',
+    );
+    expect(successCall).toBeDefined();
   });
 });

@@ -4,10 +4,13 @@ import type { InvocationContext } from '@azure/functions';
 import * as Sentry from '@sentry/node';
 import { randomUUID } from 'node:crypto';
 import { BookingDocSchema } from '../schemas/booking.js';
+import { catalogueRepo } from '../cosmos/catalogue-repository.js';
+import { commissionReceivableRepo } from '../cosmos/commission-receivable-repository.js';
 import { walletLedgerRepo } from '../cosmos/wallet-ledger-repository.js';
 import { getTechnicianForSettlement, incrementCompletedJobCount } from '../cosmos/technician-repository.js';
 import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
 import { calculateCommission } from '../services/commission.service.js';
+import { getGlobalCommissionBps, resolveCommissionBps } from '../services/commission-config.service.js';
 import { RazorpayRouteService } from '../services/razorpayRoute.service.js';
 import { sendTechEarningsUpdate } from '../services/fcm.service.js';
 
@@ -28,6 +31,10 @@ function systemAuditEntry(action: string, resourceId: string, payload: Record<st
   });
 }
 
+function hasRazorpayCredentials(): boolean {
+  return Boolean(process.env['RAZORPAY_KEY_ID'] && process.env['RAZORPAY_KEY_SECRET']);
+}
+
 export async function settleBooking(bookingRaw: unknown, ctx: InvocationContext): Promise<void> {
   const parsed = BookingDocSchema.safeParse(bookingRaw);
   if (!parsed.success || parsed.data.status !== 'COMPLETED') return;
@@ -40,15 +47,85 @@ export async function settleBooking(bookingRaw: unknown, ctx: InvocationContext)
     return;
   }
 
-  const existing = await walletLedgerRepo.getByBookingId(bookingId, technicianId);
-  if (existing) {
-    ctx.log(`settleBooking: entry already exists for ${bookingId} (status=${existing.payoutStatus}) — skipping`);
+  const paymentMethod = booking.paymentMethod ?? 'CASH_ON_SERVICE';
+  const bookingAmount = booking.finalAmount ?? booking.amount;
+
+  // ── CASH_ON_SERVICE path (pilot default) ────────────────────────────────────
+  // Technician already holds the cash; platform records a commission receivable.
+  // No money transfer to technician.
+  if (paymentMethod !== 'RAZORPAY') {
+    const existing = await commissionReceivableRepo.getByBookingId(bookingId, technicianId);
+    if (existing) {
+      ctx.log(`settleBooking: commission receivable already exists for ${bookingId} — skipping`);
+      return;
+    }
+
+    const [globalBps, service, category] = await Promise.all([
+      getGlobalCommissionBps(),
+      catalogueRepo.getServiceByIdCrossPartition(booking.serviceId),
+      catalogueRepo.getCategoryById(booking.categoryId),
+    ]);
+
+    const { bps, from: commissionResolvedFrom } = resolveCommissionBps({
+      serviceBps: service?.commissionBps,
+      categoryBps: category?.commissionBps,
+      globalBps,
+    });
+    const commissionDue = Math.round((bookingAmount * bps) / 10000);
+
+    const created = await commissionReceivableRepo.createDueEntry({
+      bookingId,
+      technicianId,
+      serviceId: booking.serviceId,
+      categoryId: booking.categoryId,
+      bookingAmount,
+      commissionBps: bps,
+      commissionDue,
+      commissionResolvedFrom,
+      ...(booking.cashCollectedAmount !== undefined
+        ? { cashCollectedAmount: booking.cashCollectedAmount }
+        : {}),
+    });
+    if (!created) {
+      ctx.log(`settleBooking: concurrent invocation already created commission receivable for ${bookingId} — skipping`);
+      return;
+    }
+
+    try {
+      await systemAuditEntry('COMMISSION_DUE_RECORDED', bookingId, {
+        technicianId,
+        bookingAmount,
+        commissionBps: bps,
+        commissionDue,
+        commissionResolvedFrom,
+      });
+    } catch (auditErr: unknown) {
+      Sentry.captureException(auditErr);
+    }
+
+    try {
+      await Promise.all([
+        incrementCompletedJobCount(technicianId),
+        sendTechEarningsUpdate(technicianId, { bookingId, commissionDue }),
+      ]);
+    } catch (err: unknown) {
+      Sentry.captureException(err);
+    }
     return;
   }
 
-  const bookingAmount = booking.finalAmount ?? booking.amount;
+  // ── RAZORPAY path (guarded — dead in cash pilot, preserved for re-enablement) ─
+  if (!hasRazorpayCredentials()) {
+    ctx.log(`settleBooking: RAZORPAY booking ${bookingId} but no Razorpay credentials configured — skipping`);
+    return;
+  }
 
-  // Best-effort: audit failure must not prevent settlement
+  const existingLedger = await walletLedgerRepo.getByBookingId(bookingId, technicianId);
+  if (existingLedger) {
+    ctx.log(`settleBooking: wallet entry already exists for ${bookingId} (status=${existingLedger.payoutStatus}) — skipping`);
+    return;
+  }
+
   try {
     await systemAuditEntry('ROUTE_TRANSFER_ATTEMPT', bookingId, { technicianId, bookingAmount });
   } catch (auditErr: unknown) {
@@ -58,18 +135,16 @@ export async function settleBooking(bookingRaw: unknown, ctx: InvocationContext)
   const tech = await getTechnicianForSettlement(technicianId);
   const completedJobCount = tech?.completedJobCount ?? 0;
   const { commissionBps, commissionAmount, techAmount: techAmountBeforeFee } = calculateCommission(
-    completedJobCount,
     bookingAmount,
+    2200,
   );
 
-  // Determine effective cadence — treat undefined (legacy) as WEEKLY
   const rawCadence = tech?.payoutCadence;
   const cadence: 'WEEKLY' | 'NEXT_DAY' | 'INSTANT' =
     rawCadence === 'INSTANT' || rawCadence === 'NEXT_DAY' || rawCadence === 'WEEKLY'
       ? rawCadence
       : 'WEEKLY';
 
-  // Compute fee and apply minimum-guard: if techAmount would be ≤ fee threshold, treat as WEEKLY
   let effectiveCadence = cadence;
   let payoutFeeAmount = 0;
   let techAmount = techAmountBeforeFee;
@@ -79,14 +154,14 @@ export async function settleBooking(bookingRaw: unknown, ctx: InvocationContext)
       payoutFeeAmount = 2500;
       techAmount = techAmountBeforeFee - 2500;
     } else {
-      effectiveCadence = 'WEEKLY'; // guard: avoid negative/zero payout
+      effectiveCadence = 'WEEKLY';
     }
   } else if (cadence === 'NEXT_DAY') {
     if (techAmountBeforeFee > 1500) {
       payoutFeeAmount = 1500;
       techAmount = techAmountBeforeFee - 1500;
     } else {
-      effectiveCadence = 'WEEKLY'; // guard
+      effectiveCadence = 'WEEKLY';
     }
   }
 
@@ -105,11 +180,10 @@ export async function settleBooking(bookingRaw: unknown, ctx: InvocationContext)
     heldForCadence,
   });
   if (!created) {
-    ctx.log(`settleBooking: concurrent invocation already created entry for ${bookingId} — skipping`);
+    ctx.log(`settleBooking: concurrent invocation already created wallet entry for ${bookingId} — skipping`);
     return;
   }
 
-  // NEXT_DAY and WEEKLY are held — audit and stop; cron/admin will release them
   if (heldForCadence) {
     const auditAction = effectiveCadence === 'NEXT_DAY' ? 'SETTLEMENT_HELD_NEXT_DAY' : 'SETTLEMENT_HELD_WEEKLY';
     try {
@@ -120,7 +194,6 @@ export async function settleBooking(bookingRaw: unknown, ctx: InvocationContext)
     return;
   }
 
-  // INSTANT — proceed with immediate Razorpay Route transfer
   if (!tech?.razorpayLinkedAccountId) {
     await walletLedgerRepo.markFailed(bookingId, technicianId, 'no Razorpay linked account');
     await systemAuditEntry('ROUTE_TRANSFER_FAILED', bookingId, { reason: 'no Razorpay linked account' });
@@ -145,11 +218,9 @@ export async function settleBooking(bookingRaw: unknown, ctx: InvocationContext)
     return;
   }
 
-  // Transfer succeeded — mark PAID and audit immediately
   await walletLedgerRepo.markPaid(bookingId, technicianId, transferId);
   await systemAuditEntry('ROUTE_TRANSFER_INSTANT', bookingId, { transferId, techAmount, payoutFeeAmount });
 
-  // Best-effort post-transfer notifications; never rollback PAID status
   try {
     await incrementCompletedJobCount(technicianId);
     await sendTechEarningsUpdate(technicianId, { bookingId, techAmount });
