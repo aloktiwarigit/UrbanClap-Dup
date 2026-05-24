@@ -84,6 +84,7 @@ public fun RatingScreen(
         onCommentChange = viewModel::setComment,
         onSubmit = viewModel::submit,
         onPostAnyway = viewModel::onPostAnyway,
+        onBack = onBack,
         modifier = modifier,
     )
 
@@ -114,6 +115,7 @@ internal fun RatingContent(
     onCommentChange: (String) -> Unit,
     onSubmit: () -> Unit,
     onPostAnyway: () -> Unit,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -123,11 +125,15 @@ internal fun RatingContent(
                     StatusMessage(
                         stringResource(R.string.rating_awaiting_title),
                         stringResource(R.string.rating_awaiting_body),
+                        actionLabel = stringResource(R.string.rating_back_home),
+                        onAction = onBack,
                     )
                 is RatingUiState.Revealed ->
                     StatusMessage(
                         stringResource(R.string.rating_revealed_title),
                         stringResource(R.string.rating_revealed_body),
+                        actionLabel = stringResource(R.string.rating_back_home),
+                        onAction = onBack,
                     )
                 is RatingUiState.Error ->
                     StatusMessage(stringResource(R.string.rating_error_title), state.message)
@@ -223,6 +229,8 @@ private fun RatingForm(
 private fun StatusMessage(
     title: String,
     body: String,
+    actionLabel: String? = null,
+    onAction: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -232,6 +240,14 @@ private fun StatusMessage(
         Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
         Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (actionLabel != null) {
+            Spacer(Modifier.height(24.dp))
+            HsPrimaryButton(
+                text = actionLabel,
+                onClick = onAction,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 

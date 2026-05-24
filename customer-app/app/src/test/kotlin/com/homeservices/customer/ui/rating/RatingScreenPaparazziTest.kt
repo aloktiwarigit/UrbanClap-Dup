@@ -32,6 +32,7 @@ public class RatingScreenPaparazziTest {
                     onCommentChange = {},
                     onSubmit = {},
                     onPostAnyway = {},
+                    onBack = {},
                 )
             }
         }

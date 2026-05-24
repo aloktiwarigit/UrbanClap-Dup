@@ -40,6 +40,7 @@ public class RatingShieldHindiPaparazziTest {
                     onCommentChange = {},
                     onSubmit = {},
                     onPostAnyway = {},
+                    onBack = {},
                 )
             }
         }

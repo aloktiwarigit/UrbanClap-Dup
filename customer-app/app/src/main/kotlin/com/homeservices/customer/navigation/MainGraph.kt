@@ -192,8 +192,20 @@ private fun NavGraphBuilder.bookingGraph(
         composable(
             route = RatingRoutes.ROUTE,
             arguments = listOf(navArgument("bookingId") { type = NavType.StringType }),
-        ) { RatingScreen() }
+        ) {
+            RatingScreen(
+                onBack = { navController.navigateBackFromRating() },
+            )
+        }
         complaintDestination(navController)
+    }
+}
+
+private fun NavController.navigateBackFromRating() {
+    if (!popBackStack()) {
+        navigate(CatalogueRoutes.HOME) {
+            launchSingleTop = true
+        }
     }
 }
 

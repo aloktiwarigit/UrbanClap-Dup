@@ -297,6 +297,7 @@
     <string name="rating_awaiting_body">We will reveal both ratings after the technician responds.</string>
     <string name="rating_revealed_title">Ratings revealed</string>
     <string name="rating_revealed_body">Thanks for keeping the service marketplace fair.</string>
+    <string name="rating_back_home">Back to Home</string>
     <string name="rating_error_title">Could not load rating</string>
     <string name="rating_loading_title">Loading rating</string>
     <string name="rating_loading_body">Preparing your service feedback form.</string>

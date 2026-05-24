@@ -271,6 +271,7 @@
     <string name="rating_awaiting_body">तकनीशियन के जवाब के बाद दोनों रेटिंग दिखाई जाएंगी।</string>
     <string name="rating_revealed_title">रेटिंग सामने आई</string>
     <string name="rating_revealed_body">सर्विस मार्केटप्लेस को निष्पक्ष रखने के लिए धन्यवाद।</string>
+    <string name="rating_back_home">होम पर वापस जाएं</string>
     <string name="rating_error_title">रेटिंग लोड नहीं हो सकी</string>
     <string name="rating_loading_title">रेटिंग लोड हो रही है</string>
     <string name="rating_loading_body">आपका सर्विस फीडबैक फॉर्म तैयार हो रहा है।</string>
