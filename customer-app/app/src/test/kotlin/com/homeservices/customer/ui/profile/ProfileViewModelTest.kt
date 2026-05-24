@@ -66,13 +66,13 @@ public class ProfileViewModelTest {
         }
 
     @Test
-    public fun `authState initial value is Unauthenticated (WhileSubscribed does not pre-start upstream)`(): Unit =
+    public fun `authState initial value is Initializing (WhileSubscribed does not pre-start upstream)`(): Unit =
         runTest(dispatcher) {
             // With WhileSubscribed, the upstream is NOT started until first subscriber.
-            // Initial value is Unauthenticated as configured in stateIn.
+            // Initial value is Initializing as configured in stateIn.
             every { sessionManager.authState } returns
                 MutableStateFlow(AuthState.Unauthenticated)
             val vm = ProfileViewModel(sessionManager)
-            assertThat(vm.authState.value).isEqualTo(AuthState.Unauthenticated)
+            assertThat(vm.authState.value).isEqualTo(AuthState.Initializing)
         }
 }

@@ -21,7 +21,7 @@ internal class ProfileViewModel
             sessionManager.authState.stateIn(
                 viewModelScope,
                 SharingStarted.WhileSubscribed(5_000),
-                AuthState.Unauthenticated,
+                AuthState.Initializing,
             )
 
         internal fun signOut() {

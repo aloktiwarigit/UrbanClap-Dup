@@ -26,7 +26,7 @@ public class SaveSessionUseCase
             phoneLastFour: String,
         ) {
             sessionManager.saveSession(
-                uid = user.uid,
+                user = user,
                 phoneLastFour = phoneLastFour,
                 authProvider = AuthProvider.Phone,
             )
@@ -34,7 +34,7 @@ public class SaveSessionUseCase
 
         public suspend fun saveWithGoogle(user: FirebaseUser) {
             sessionManager.saveSession(
-                uid = user.uid,
+                user = user,
                 email = user.email,
                 displayName = user.displayName,
                 authProvider = AuthProvider.Google,
@@ -43,7 +43,7 @@ public class SaveSessionUseCase
 
         public suspend fun saveWithEmail(user: FirebaseUser) {
             sessionManager.saveSession(
-                uid = user.uid,
+                user = user,
                 email = user.email,
                 displayName = user.displayName,
                 authProvider = AuthProvider.Email,
@@ -63,7 +63,7 @@ public class SaveSessionUseCase
                     )
                 val lastFour = phoneNumber.takeLast(PHONE_LAST_DIGITS)
                 sessionManager.saveSession(
-                    uid = user.uid,
+                    user = user,
                     phoneLastFour = lastFour,
                     authProvider = AuthProvider.Phone,
                 )

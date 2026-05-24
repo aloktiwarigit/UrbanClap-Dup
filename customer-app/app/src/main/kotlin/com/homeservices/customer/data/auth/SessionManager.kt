@@ -2,6 +2,7 @@ package com.homeservices.customer.data.auth
 
 import android.content.SharedPreferences
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.messaging.FirebaseMessaging
 import com.homeservices.customer.data.auth.di.AuthPrefs
 import com.homeservices.customer.data.device.DeviceTokenRegistrar
@@ -10,10 +11,13 @@ import com.homeservices.customer.domain.auth.model.AuthProvider
 import com.homeservices.customer.domain.auth.model.AuthState
 import io.sentry.Sentry
 import io.sentry.SentryLevel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
@@ -29,7 +33,7 @@ public class SessionManager
         private val firebaseMessaging: FirebaseMessaging,
         private val idTokenCache: IdTokenCache,
         private val deviceTokenRegistrar: DeviceTokenRegistrar,
-    ) {
+    ) : SessionInvalidator {
         private companion object {
             const val KEY_UID = "uid"
             const val KEY_PHONE_LAST_FOUR = "phone_last_four"
@@ -37,37 +41,107 @@ public class SessionManager
             const val KEY_EMAIL = "email"
             const val KEY_DISPLAY_NAME = "display_name"
             const val KEY_AUTH_PROVIDER = "auth_provider"
+            const val PHONE_LAST_DIGITS = 4
             val SESSION_TTL_MS = TimeUnit.DAYS.toMillis(180)
         }
 
-        private val _authState = MutableStateFlow(readInitialState())
+        private val sessionScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        private val _authState = MutableStateFlow<AuthState>(AuthState.Initializing)
         public val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
-        private fun readInitialState(): AuthState {
-            val uid = prefs.getString(KEY_UID, null)
-            val createdAt = prefs.getLong(KEY_SESSION_CREATED_AT, 0L)
-            val sessionExpired =
-                uid == null ||
-                    createdAt == 0L ||
-                    System.currentTimeMillis() - createdAt > SESSION_TTL_MS
-            return if (sessionExpired) {
-                if (uid != null) clearPrefs()
-                AuthState.Unauthenticated
-            } else {
-                AuthState.Authenticated(
-                    uid = uid!!,
-                    phoneLastFour = prefs.getString(KEY_PHONE_LAST_FOUR, null),
-                    email = prefs.getString(KEY_EMAIL, null),
-                    displayName = prefs.getString(KEY_DISPLAY_NAME, null),
-                    authProvider = parseProvider(prefs.getString(KEY_AUTH_PROVIDER, null)),
-                )
+        private val authStateListener =
+            FirebaseAuth.AuthStateListener { auth ->
+                reconcileFirebaseUser(auth.currentUser)
             }
+
+        init {
+            firebaseAuth.addAuthStateListener(authStateListener)
+            val currentUser = firebaseAuth.currentUser
+            if (currentUser != null) {
+                reconcileFirebaseUser(currentUser)
+            } else if (!hasPersistedSession()) {
+                idTokenCache.signalSignOut()
+                _authState.value = AuthState.Unauthenticated
+            }
+        }
+
+        private fun reconcileFirebaseUser(user: FirebaseUser?) {
+            if (user == null) {
+                if (hasPersistedSession() || _authState.value is AuthState.Authenticated) {
+                    invalidateSession(SessionInvalidationReason.FirebaseUserMissing)
+                } else {
+                    idTokenCache.signalSignOut()
+                    _authState.value = AuthState.Unauthenticated
+                }
+                return
+            }
+
+            val persistedUid = prefs.getString(KEY_UID, null)
+            val createdAt = prefs.getLong(KEY_SESSION_CREATED_AT, 0L)
+            if (persistedUid == user.uid && isExpired(createdAt)) {
+                invalidateSession(SessionInvalidationReason.LocalSessionExpired)
+                return
+            }
+
+            val state = authStateFor(user, persistedUid)
+            if (persistedUid != user.uid || createdAt == 0L) {
+                writeSessionMetadata(state)
+            }
+            if (publishAuthenticatedState(state)) {
+                sessionScope.launch { deviceTokenRegistrar.register() }
+            }
+        }
+
+        private fun hasPersistedSession(): Boolean = prefs.getString(KEY_UID, null) != null
+
+        private fun isExpired(createdAt: Long): Boolean =
+            createdAt == 0L || System.currentTimeMillis() - createdAt > SESSION_TTL_MS
+
+        private fun authStateFor(
+            user: FirebaseUser,
+            persistedUid: String?,
+        ): AuthState.Authenticated {
+            val usePersistedMetadata = persistedUid == user.uid
+            return AuthState.Authenticated(
+                uid = user.uid,
+                phoneLastFour =
+                    if (usePersistedMetadata) {
+                        prefs.getString(KEY_PHONE_LAST_FOUR, null)
+                    } else {
+                        user.phoneNumber?.takeLast(PHONE_LAST_DIGITS)
+                    },
+                email =
+                    if (usePersistedMetadata) {
+                        prefs.getString(KEY_EMAIL, null) ?: user.email
+                    } else {
+                        user.email
+                    },
+                displayName =
+                    if (usePersistedMetadata) {
+                        prefs.getString(KEY_DISPLAY_NAME, null) ?: user.displayName
+                    } else {
+                        user.displayName
+                    },
+                authProvider =
+                    if (usePersistedMetadata) {
+                        parseProvider(prefs.getString(KEY_AUTH_PROVIDER, null))
+                    } else {
+                        inferProvider(user)
+                    },
+            )
         }
 
         private fun parseProvider(raw: String?): AuthProvider =
             when (raw) {
                 "google" -> AuthProvider.Google
                 "email" -> AuthProvider.Email
+                else -> AuthProvider.Phone
+            }
+
+        private fun inferProvider(user: FirebaseUser): AuthProvider =
+            when {
+                user.providerData.any { it.providerId == "google.com" } -> AuthProvider.Google
+                user.providerData.any { it.providerId == "password" } -> AuthProvider.Email
                 else -> AuthProvider.Phone
             }
 
@@ -79,47 +153,28 @@ public class SessionManager
             }
 
         public suspend fun saveSession(
-            uid: String,
+            user: FirebaseUser,
             phoneLastFour: String? = null,
             email: String? = null,
             displayName: String? = null,
             authProvider: AuthProvider = AuthProvider.Phone,
         ) {
-            withContext(Dispatchers.IO) {
-                val editor =
-                    prefs
-                        .edit()
-                        .putString(KEY_UID, uid)
-                        .putString(KEY_AUTH_PROVIDER, providerKey(authProvider))
-                        .putLong(KEY_SESSION_CREATED_AT, System.currentTimeMillis())
-                if (phoneLastFour != null) {
-                    editor.putString(KEY_PHONE_LAST_FOUR, phoneLastFour)
-                } else {
-                    editor.remove(KEY_PHONE_LAST_FOUR)
-                }
-                if (email != null) {
-                    editor.putString(KEY_EMAIL, email)
-                } else {
-                    editor.remove(KEY_EMAIL)
-                }
-                if (displayName != null) {
-                    editor.putString(KEY_DISPLAY_NAME, displayName)
-                } else {
-                    editor.remove(KEY_DISPLAY_NAME)
-                }
-                editor.apply()
+            val currentUid = firebaseAuth.currentUser?.uid
+            if (currentUid != user.uid) {
+                invalidateSession(SessionInvalidationReason.FirebaseUserMismatch)
+                error("Cannot save a customer session for a non-current Firebase user")
             }
-            // Re-enable IdTokenCache refresh so the interceptor can serve bearer tokens
-            // immediately after sign-in (counterpart to signalSignOut in signOut()).
-            idTokenCache.signalSignIn()
-            _authState.value =
+
+            val state =
                 AuthState.Authenticated(
-                    uid = uid,
+                    uid = user.uid,
                     phoneLastFour = phoneLastFour,
-                    email = email,
-                    displayName = displayName,
+                    email = email ?: user.email,
+                    displayName = displayName ?: user.displayName,
                     authProvider = authProvider,
                 )
+            withContext(Dispatchers.IO) { writeSessionMetadata(state) }
+            publishAuthenticatedState(state)
             // Best-effort device token registration — ensures token is enrolled even when onNewToken
             // is not invoked (e.g. sign-in with an already-issued FCM token).
             runCatching { deviceTokenRegistrar.register() }
@@ -134,11 +189,53 @@ public class SessionManager
                 }
         }
 
+        private fun publishAuthenticatedState(state: AuthState.Authenticated): Boolean {
+            val previous = _authState.value as? AuthState.Authenticated
+            val userChanged = previous?.uid != state.uid
+            if (userChanged) {
+                idTokenCache.signalSignIn()
+            }
+            _authState.value = state
+            return userChanged
+        }
+
+        private fun writeSessionMetadata(state: AuthState.Authenticated) {
+            val editor =
+                prefs
+                    .edit()
+                    .putString(KEY_UID, state.uid)
+                    .putString(KEY_AUTH_PROVIDER, providerKey(state.authProvider))
+                    .putLong(KEY_SESSION_CREATED_AT, System.currentTimeMillis())
+            if (state.phoneLastFour != null) {
+                editor.putString(KEY_PHONE_LAST_FOUR, state.phoneLastFour)
+            } else {
+                editor.remove(KEY_PHONE_LAST_FOUR)
+            }
+            if (state.email != null) {
+                editor.putString(KEY_EMAIL, state.email)
+            } else {
+                editor.remove(KEY_EMAIL)
+            }
+            if (state.displayName != null) {
+                editor.putString(KEY_DISPLAY_NAME, state.displayName)
+            } else {
+                editor.remove(KEY_DISPLAY_NAME)
+            }
+            if (!editor.commit()) {
+                Sentry.addBreadcrumb("SessionManager.writeSessionMetadata: SharedPreferences commit failed")
+            }
+        }
+
         public suspend fun updateDisplayName(displayName: String?) {
             val current = _authState.value as? AuthState.Authenticated ?: return
+            val user =
+                firebaseAuth.currentUser ?: run {
+                    invalidateSession(SessionInvalidationReason.FirebaseUserMissing)
+                    return
+                }
             val normalizedName = displayName?.trim()?.takeIf { it.isNotEmpty() }
             saveSession(
-                uid = current.uid,
+                user = user,
                 phoneLastFour = current.phoneLastFour,
                 email = current.email,
                 displayName = normalizedName,
@@ -146,17 +243,58 @@ public class SessionManager
             )
         }
 
+        override fun invalidateSession(reason: SessionInvalidationReason) {
+            clearPrefs()
+            runCatching { idTokenCache.signalSignOut() }
+                .onFailure { e ->
+                    Sentry.addBreadcrumb(
+                        io.sentry.Breadcrumb().apply {
+                            category = "auth.invalidate"
+                            message = "idTokenCache.signalSignOut failed for $reason: ${e.message}"
+                            level = SentryLevel.WARNING
+                        },
+                    )
+                }
+            _authState.value = AuthState.Unauthenticated
+            if (reason == SessionInvalidationReason.FirebaseUserMismatch ||
+                reason == SessionInvalidationReason.LocalSessionExpired
+            ) {
+                runCatching { firebaseAuth.signOut() }
+                    .onFailure { e ->
+                        Sentry.addBreadcrumb(
+                            io.sentry.Breadcrumb().apply {
+                                category = "auth.invalidate"
+                                message = "firebaseAuth.signOut failed for $reason: ${e.message}"
+                                level = SentryLevel.WARNING
+                            },
+                        )
+                    }
+            }
+            sessionScope.launch {
+                runCatching { firebaseMessaging.deleteToken().await() }
+                    .onFailure { e ->
+                        Sentry.addBreadcrumb(
+                            io.sentry.Breadcrumb().apply {
+                                category = "auth.invalidate"
+                                message = "FCM deleteToken failed for $reason: ${e.message}"
+                                level = SentryLevel.WARNING
+                            },
+                        )
+                    }
+            }
+        }
+
         /**
          * Full sign-out orchestration.
          *
          * Local state is cleared **first** so that if the process is killed mid-flight
          * (e.g. FCM cleanup hangs), the persisted prefs are already gone and
-         * [readInitialState] will correctly return [AuthState.Unauthenticated] on the
+         * Firebase auth reconciliation will correctly return [AuthState.Unauthenticated] on the
          * next cold start rather than treating the stale [KEY_UID] as an active session.
          *
          * Sequence:
          * 1. Capture UID (needed for FCM topic name — must happen before prefs are cleared)
-         * 2. Clear persisted session prefs (commit-local, synchronous via [apply])
+         * 2. Clear persisted session prefs synchronously
          * 3. Transition [authState] to [AuthState.Unauthenticated] (UI immediately reflects sign-out)
          * 3.5. Best-effort [DeviceTokenRegistrar.unregister] — runs HERE while the cached bearer
          *    token is still valid and before [FirebaseMessaging.deleteToken] rotates the FCM token.
@@ -180,11 +318,7 @@ public class SessionManager
          */
         public suspend fun signOut() {
             // Step 1 — Capture uid BEFORE clearing prefs (needed for FCM topic name)
-            val uid =
-                (
-                    prefs.getString(KEY_UID, null)
-                        ?: (_authState.value as? AuthState.Authenticated)?.uid
-                ) ?: return
+            if (prefs.getString(KEY_UID, null) == null && _authState.value !is AuthState.Authenticated) return
 
             // Step 2 — Clear persisted session prefs (local-state-first: survives process kill)
             clearPrefs()
@@ -260,10 +394,15 @@ public class SessionManager
          */
         public suspend fun clearSession() {
             withContext(Dispatchers.IO) { clearPrefs() }
+            idTokenCache.signalSignOut()
             _authState.value = AuthState.Unauthenticated
         }
 
-        private fun clearPrefs() {
-            prefs.edit().clear().apply()
+        private fun clearPrefs(): Boolean {
+            val committed = prefs.edit().clear().commit()
+            if (!committed) {
+                Sentry.addBreadcrumb("SessionManager.clearPrefs: SharedPreferences commit failed")
+            }
+            return committed
         }
     }

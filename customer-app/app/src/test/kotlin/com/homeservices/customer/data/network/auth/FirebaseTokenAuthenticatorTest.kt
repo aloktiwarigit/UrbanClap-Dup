@@ -4,6 +4,8 @@ import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GetTokenResult
+import com.homeservices.customer.data.auth.SessionInvalidationReason
+import com.homeservices.customer.data.auth.SessionInvalidator
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
@@ -18,6 +20,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.util.concurrent.Executors
+import javax.inject.Provider
 
 /**
  * Unit tests for [FirebaseTokenAuthenticator].
@@ -36,6 +39,7 @@ public class FirebaseTokenAuthenticatorTest {
     private lateinit var firebaseAuth: FirebaseAuth
     private lateinit var firebaseUser: FirebaseUser
     private lateinit var tokenResult: GetTokenResult
+    private lateinit var sessionInvalidator: SessionInvalidator
     private lateinit var authenticator: FirebaseTokenAuthenticator
 
     /** Single-thread executor simulates the OkHttp worker thread. */
@@ -46,12 +50,13 @@ public class FirebaseTokenAuthenticatorTest {
         firebaseAuth = mockk(relaxed = true)
         firebaseUser = mockk(relaxed = true)
         tokenResult = mockk(relaxed = true)
+        sessionInvalidator = mockk(relaxed = true)
 
         every { firebaseAuth.currentUser } returns firebaseUser
         every { firebaseUser.getIdToken(true) } returns Tasks.forResult(tokenResult)
         every { tokenResult.token } returns "fresh-token-789"
 
-        authenticator = FirebaseTokenAuthenticator(firebaseAuth)
+        authenticator = FirebaseTokenAuthenticator(firebaseAuth, Provider { sessionInvalidator })
     }
 
     @After
@@ -101,6 +106,9 @@ public class FirebaseTokenAuthenticatorTest {
         val result = onWorkerThread { authenticator.authenticate(null, secondResponse) }
 
         assertThat(result).isNull()
+        verify {
+            sessionInvalidator.invalidateSession(SessionInvalidationReason.UnauthenticatedTokenRefresh)
+        }
     }
 
     @Test
@@ -117,6 +125,9 @@ public class FirebaseTokenAuthenticatorTest {
         val result = onWorkerThread { authenticator.authenticate(null, response) }
 
         assertThat(result).isNull()
+        verify {
+            sessionInvalidator.invalidateSession(SessionInvalidationReason.UnauthenticatedTokenRefresh)
+        }
     }
 
     @Test

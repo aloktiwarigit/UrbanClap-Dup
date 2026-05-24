@@ -67,7 +67,7 @@ public class IdTokenCache
          * Controls whether the refresh loop actively fetches tokens.
          * `true` = active (signed in); `false` = paused (signed out).
          */
-        private val refreshEnabled = AtomicBoolean(true)
+        private val refreshEnabled = AtomicBoolean(false)
 
         /**
          * Monotonic generation counter. Incremented on every [signalSignOut] and every

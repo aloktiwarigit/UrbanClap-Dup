@@ -7,6 +7,8 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessaging
+import com.homeservices.customer.data.auth.SessionInvalidator
+import com.homeservices.customer.data.auth.SessionManager
 import com.homeservices.customer.data.auth.SessionPrefsMigrator
 import dagger.Module
 import dagger.Provides
@@ -28,6 +30,10 @@ public object AuthModule {
     @Provides
     @Singleton
     public fun provideFirebaseMessaging(): FirebaseMessaging = FirebaseMessaging.getInstance()
+
+    @Provides
+    @Singleton
+    public fun provideSessionInvalidator(sessionManager: SessionManager): SessionInvalidator = sessionManager
 
     @Provides
     @Singleton

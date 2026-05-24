@@ -45,6 +45,7 @@ public object SentryContextBinder {
                     Sentry.setUser(user)
                 }
                 is AuthState.Unauthenticated -> Sentry.setUser(null)
+                is AuthState.Initializing -> Unit
             }
         }
     }

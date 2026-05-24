@@ -1,6 +1,7 @@
 package com.homeservices.customer.ui.catalogue
 
 import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -97,9 +98,9 @@ import kotlinx.coroutines.delay
 private data class PromoBanner(
     val gradientStart: Color,
     val gradientEnd: Color,
-    val title: String,
-    val subtitle: String,
-    val cta: String,
+    @StringRes val titleRes: Int,
+    @StringRes val subtitleRes: Int,
+    @StringRes val ctaRes: Int,
     @DrawableRes val imageRes: Int? = null,
 )
 
@@ -108,25 +109,25 @@ private val promoBanners =
         PromoBanner(
             Color(0xFF5A4A2D),
             Color(0xFF3E3324),
-            "गर्मी से पहले AC सर्विस",
-            "से ₹599 · आज की स्लॉट उपलब्ध",
-            "अभी बुक करें",
+            R.string.promo_ac_title,
+            R.string.promo_ac_subtitle,
+            R.string.promo_ac_cta,
             imageRes = com.homeservices.customer.R.drawable.banner_image_1,
         ),
         PromoBanner(
             Color(0xFF0B3D2E),
             Color(0xFF062A20),
-            "कुशल प्रोफेशनल",
-            "स्किल, दूरी और उपलब्धता के आधार पर मैच · 30 दिन गारंटी",
-            "और जानें",
+            R.string.promo_pro_title,
+            R.string.promo_pro_subtitle,
+            R.string.promo_pro_cta,
             imageRes = com.homeservices.customer.R.drawable.banner_image_2,
         ),
         PromoBanner(
             Color(0xFFB68A2C),
             Color(0xFF6B4C12),
-            "पहली बुकिंग पर 10% छूट",
-            "कूपन: PEHLI · सभी सेवाओं पर लागू",
-            "कूपन लगाएं",
+            R.string.promo_discount_title,
+            R.string.promo_discount_subtitle,
+            R.string.promo_discount_cta,
             imageRes = com.homeservices.customer.R.drawable.banner_image_3,
         ),
     )
@@ -154,16 +155,16 @@ private fun categoryStyle(id: String): CategoryStyle =
 
 // ── Nav items ─────────────────────────────────────────────────────────────────
 private data class NavItem(
-    val label: String,
+    @StringRes val labelRes: Int,
     val icon: ImageVector,
 )
 
 private val navItems =
     listOf(
-        NavItem("होम", Icons.Default.Home),
-        NavItem("बुकिंग", Icons.Default.Book),
-        NavItem("सहायता", Icons.Default.SupportAgent),
-        NavItem("प्रोफ़ाइल", Icons.Default.Person),
+        NavItem(R.string.nav_home, Icons.Default.Home),
+        NavItem(R.string.nav_bookings, Icons.Default.Book),
+        NavItem(R.string.nav_support, Icons.Default.SupportAgent),
+        NavItem(R.string.nav_profile, Icons.Default.Person),
     )
 
 // ── Entry ─────────────────────────────────────────────────────────────────────
@@ -249,7 +250,7 @@ internal fun CatalogueHomeContent(
                         walletBalanceInPaise = walletBalanceInPaise,
                         onWalletClick = onWalletClick,
                     )
-                1, 2 -> CompactTabBar(title = navItems[selectedNav].label)
+                1, 2 -> CompactTabBar(title = stringResource(navItems[selectedNav].labelRes))
                 else -> Unit
             }
         },
@@ -624,7 +625,7 @@ private fun PromoSlider() {
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            b.title,
+                            stringResource(b.titleRes),
                             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold, fontSize = 24.sp),
                             // Promo banners sit over photos with a fixed dark scrim — use Color.White
                             // so text is readable in both light and dark mode (onPrimary is dark in dark theme).
@@ -634,7 +635,7 @@ private fun PromoSlider() {
                         )
                         Spacer(Modifier.height(5.dp))
                         Text(
-                            b.subtitle,
+                            stringResource(b.subtitleRes),
                             style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
                             color = Color.White.copy(alpha = 0.85f),
                             maxLines = 2,
@@ -642,7 +643,7 @@ private fun PromoSlider() {
                         )
                         Spacer(Modifier.height(10.dp))
                         Text(
-                            "${b.cta} →",
+                            stringResource(R.string.promo_cta_with_arrow, stringResource(b.ctaRes)),
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
                             color = Color.White,
                         )
@@ -674,9 +675,9 @@ private fun TrustStrip() {
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 2.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        TrustChip(icon = Icons.Default.VerifiedUser, label = "स्किल मैच", modifier = Modifier.weight(1f))
-        TrustChip(icon = Icons.Default.Star, label = "4.8★ रेटिंग", modifier = Modifier.weight(1f))
-        TrustChip(icon = Icons.Default.Shield, label = "30 दिन गारंटी", modifier = Modifier.weight(1f))
+        TrustChip(icon = Icons.Default.VerifiedUser, label = stringResource(R.string.trust_skill_match), modifier = Modifier.weight(1f))
+        TrustChip(icon = Icons.Default.Star, label = stringResource(R.string.trust_rating), modifier = Modifier.weight(1f))
+        TrustChip(icon = Icons.Default.Shield, label = stringResource(R.string.trust_guarantee), modifier = Modifier.weight(1f))
     }
     Spacer(Modifier.height(4.dp))
 }
@@ -839,6 +840,7 @@ private fun GlassNavItem(
     modifier: Modifier = Modifier,
 ) {
     val itemColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    val label = stringResource(item.labelRes)
     Column(
         modifier =
             modifier
@@ -850,10 +852,10 @@ private fun GlassNavItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Icon(item.icon, contentDescription = item.label, tint = itemColor, modifier = Modifier.size(22.dp))
+        Icon(item.icon, contentDescription = label, tint = itemColor, modifier = Modifier.size(22.dp))
         Spacer(Modifier.height(2.dp))
         Text(
-            item.label,
+            label,
             style =
                 MaterialTheme.typography.labelSmall.copy(
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
@@ -909,31 +911,31 @@ private fun SupportTab(
         item {
             SupportActionCard(
                 icon = Icons.Default.SupportAgent,
-                title = "सपोर्ट को कॉल करें",
-                subtitle = "बुकिंग, भुगतान या सुरक्षा के लिए सीधे सहायता लें",
+                title = stringResource(R.string.support_call_title),
+                subtitle = stringResource(R.string.support_call_subtitle),
                 onClick = { uriHandler.openUri("tel:1800123456") },
             )
         }
         item {
             SupportActionCard(
                 icon = Icons.Default.Book,
-                title = "मेरी बुकिंग",
-                subtitle = "ट्रैकिंग, शिकायत और रेटिंग के लिए अपनी बुकिंग खोलें",
+                title = stringResource(R.string.support_my_bookings_title),
+                subtitle = stringResource(R.string.support_my_bookings_subtitle),
                 onClick = onOpenBookings,
             )
         }
         item {
             SupportInfoCard(
                 icon = Icons.Default.Shield,
-                title = "सुरक्षा और SOS",
-                subtitle = "लाइव ट्रैकिंग स्क्रीन से SOS भेजें। टीम बुकिंग और लोकेशन संदर्भ के साथ अलर्ट देखती है।",
+                title = stringResource(R.string.support_safety_title),
+                subtitle = stringResource(R.string.support_safety_subtitle),
             )
         }
         item {
             SupportActionCard(
                 icon = Icons.Default.Person,
-                title = "प्रोफ़ाइल और भाषा",
-                subtitle = "खाता, भाषा और भरोसे से जुड़ी सेटिंग देखें",
+                title = stringResource(R.string.support_profile_language_title),
+                subtitle = stringResource(R.string.support_profile_language_subtitle),
                 onClick = onOpenProfile,
             )
         }
@@ -967,18 +969,18 @@ private fun SupportHero() {
                 )
             }
             Text(
-                text = "मदद और सुरक्षा",
+                text = stringResource(R.string.support_hero_title),
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold),
                 color = MaterialTheme.colorScheme.onPrimary,
             )
             Text(
-                text = "बुकिंग, भुगतान, शिकायत और सुरक्षा मामलों के लिए Owner support उपलब्ध है।",
+                text = stringResource(R.string.support_hero_body),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.84f),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SupportPill("30 दिन गारंटी")
-                SupportPill("कुशल तकनीशियन")
+                SupportPill(stringResource(R.string.support_guarantee_pill))
+                SupportPill(stringResource(R.string.support_skilled_technicians_pill))
             }
         }
     }

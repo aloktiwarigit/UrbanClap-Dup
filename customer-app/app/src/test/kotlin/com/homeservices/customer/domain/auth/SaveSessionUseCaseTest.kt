@@ -41,7 +41,7 @@ public class SaveSessionUseCaseTest {
 
             coVerify {
                 sessionManager.saveSession(
-                    uid = "uid-abc",
+                    user = user,
                     phoneLastFour = "7890",
                     authProvider = AuthProvider.Phone,
                 )
@@ -63,7 +63,7 @@ public class SaveSessionUseCaseTest {
             assertThat(result).isInstanceOf(AppAuthResult.Success::class.java)
             coVerify {
                 sessionManager.saveSession(
-                    uid = "anon-uid",
+                    user = user,
                     phoneLastFour = "1234",
                     authProvider = AuthProvider.Phone,
                 )
@@ -104,7 +104,7 @@ public class SaveSessionUseCaseTest {
             useCase.saveWithGoogle(mockUser)
             coVerify {
                 sessionManager.saveSession(
-                    uid = "google-uid",
+                    user = mockUser,
                     email = "alice@gmail.com",
                     displayName = "Alice",
                     authProvider = AuthProvider.Google,
@@ -124,7 +124,7 @@ public class SaveSessionUseCaseTest {
             useCase.saveWithEmail(mockUser)
             coVerify {
                 sessionManager.saveSession(
-                    uid = "email-uid",
+                    user = mockUser,
                     email = "user@example.com",
                     displayName = null,
                     authProvider = AuthProvider.Email,

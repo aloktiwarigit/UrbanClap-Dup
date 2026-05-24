@@ -3,12 +3,15 @@ package com.homeservices.customer.data.network.auth
 import android.util.Log
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
+import com.homeservices.customer.data.auth.SessionInvalidationReason
+import com.homeservices.customer.data.auth.SessionInvalidator
 import io.sentry.Sentry
 import okhttp3.Authenticator
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.Route
 import javax.inject.Inject
+import javax.inject.Provider
 import javax.inject.Singleton
 
 /**
@@ -28,6 +31,7 @@ public class FirebaseTokenAuthenticator
     @Inject
     constructor(
         private val firebaseAuth: FirebaseAuth,
+        private val sessionInvalidator: Provider<SessionInvalidator>,
     ) : Authenticator {
         override fun authenticate(
             route: Route?,
@@ -36,12 +40,16 @@ public class FirebaseTokenAuthenticator
             // Infinite-retry guard: stop after the first retry attempt
             if (response.priorResponse != null) {
                 Log.w(TAG, "Stopping token retry — prior 401 already retried")
+                if (response.request.header("Authorization") != null) {
+                    sessionInvalidator.get().invalidateSession(SessionInvalidationReason.UnauthenticatedTokenRefresh)
+                }
                 return null
             }
 
             val user = firebaseAuth.currentUser
             if (user == null) {
                 Log.w(TAG, "No signed-in user — cannot refresh token")
+                sessionInvalidator.get().invalidateSession(SessionInvalidationReason.UnauthenticatedTokenRefresh)
                 return null
             }
 
@@ -61,6 +69,9 @@ public class FirebaseTokenAuthenticator
             } catch (e: Exception) {
                 Log.e(TAG, "Token force-refresh failed on 401", e)
                 Sentry.captureException(e)
+                if (firebaseAuth.currentUser == null) {
+                    sessionInvalidator.get().invalidateSession(SessionInvalidationReason.UnauthenticatedTokenRefresh)
+                }
                 null
             }
         }

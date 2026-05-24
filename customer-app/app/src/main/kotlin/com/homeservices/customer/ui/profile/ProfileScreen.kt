@@ -80,19 +80,19 @@ internal fun ProfileScreen(
     if (showSignOutDialog) {
         AlertDialog(
             onDismissRequest = { showSignOutDialog = false },
-            title = { Text("साइन आउट करें?") },
-            text = { Text("क्या आप वाकई साइन आउट करना चाहते हैं?") },
+            title = { Text(stringResource(R.string.profile_sign_out_title)) },
+            text = { Text(stringResource(R.string.profile_sign_out_body)) },
             confirmButton = {
                 TextButton(onClick = {
                     showSignOutDialog = false
                     viewModel.signOut()
                 }) {
-                    Text("हाँ, साइन आउट", color = DangerRed, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.profile_sign_out_confirm), color = DangerRed, fontWeight = FontWeight.SemiBold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showSignOutDialog = false }) {
-                    Text("रद्द करें", color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.profile_cancel), color = MaterialTheme.colorScheme.primary)
                 }
             },
         )
@@ -101,12 +101,12 @@ internal fun ProfileScreen(
     if (showNameDialog) {
         AlertDialog(
             onDismissRequest = { showNameDialog = false },
-            title = { Text("नाम संपादित करें") },
+            title = { Text(stringResource(R.string.profile_edit_name)) },
             text = {
                 OutlinedTextField(
                     value = draftName,
                     onValueChange = { draftName = it.take(80) },
-                    label = { Text("पूरा नाम") },
+                    label = { Text(stringResource(R.string.profile_full_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -119,12 +119,12 @@ internal fun ProfileScreen(
                     },
                     enabled = draftName.trim().isNotEmpty(),
                 ) {
-                    Text("सेव करें", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.profile_save), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showNameDialog = false }) {
-                    Text("रद्द करें", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.profile_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
         )
@@ -133,15 +133,15 @@ internal fun ProfileScreen(
     if (showPrivacyDialog) {
         AlertDialog(
             onDismissRequest = { showPrivacyDialog = false },
-            title = { Text("गोपनीयता नीति") },
+            title = { Text(stringResource(R.string.profile_privacy_policy)) },
             text = {
                 Text(
-                    "आपका नाम, फ़ोन, पता और बुकिंग जानकारी सेवा देने, तकनीशियन असाइन करने, सपोर्ट और सुरक्षा समीक्षा के लिए इस्तेमाल होती है। पता केवल असाइन किए गए तकनीशियन और Owner support के साथ साझा किया जाता है।",
+                    stringResource(R.string.profile_privacy_policy_body),
                 )
             },
             confirmButton = {
                 TextButton(onClick = { showPrivacyDialog = false }) {
-                    Text("ठीक है", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.profile_ok), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
                 }
             },
         )
@@ -156,11 +156,11 @@ internal fun ProfileScreen(
         // ── Account section ─────────────────────────────────────────────────
         item { Spacer(Modifier.height(16.dp)) }
         item {
-            SectionCard(title = "अकाउंट") {
+            SectionCard(title = stringResource(R.string.profile_account)) {
                 MenuRow(
                     icon = Icons.Default.Edit,
-                    label = "नाम संपादित करें",
-                    sublabel = user?.displayName ?: "अभी तक सेट नहीं",
+                    label = stringResource(R.string.profile_edit_name),
+                    sublabel = user?.displayName ?: stringResource(R.string.profile_name_not_set),
                     onClick = {
                         draftName = user?.displayName.orEmpty()
                         showNameDialog = true
@@ -179,11 +179,11 @@ internal fun ProfileScreen(
         // ── Bookings section ────────────────────────────────────────────────
         item { Spacer(Modifier.height(12.dp)) }
         item {
-            SectionCard(title = "मेरी बुकिंग") {
+            SectionCard(title = stringResource(R.string.profile_my_bookings)) {
                 MenuRow(
                     icon = Icons.Default.BookOnline,
-                    label = "बुकिंग इतिहास",
-                    sublabel = "ट्रैकिंग, शिकायत और रेटिंग देखें",
+                    label = stringResource(R.string.profile_booking_history),
+                    sublabel = stringResource(R.string.profile_booking_history_subtitle),
                     onClick = onBookingsClick,
                 )
             }
@@ -192,32 +192,32 @@ internal fun ProfileScreen(
         // ── Support section ─────────────────────────────────────────────────
         item { Spacer(Modifier.height(12.dp)) }
         item {
-            SectionCard(title = "सहायता") {
+            SectionCard(title = stringResource(R.string.profile_support)) {
                 MenuRow(
                     icon = Icons.Default.Headset,
-                    label = "ग्राहक सेवा",
+                    label = stringResource(R.string.profile_customer_service),
                     sublabel = "1800-123-456",
                     onClick = { uriHandler.openUri("tel:1800123456") },
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
                 MenuRow(
                     icon = Icons.Default.Shield,
-                    label = "गोपनीयता नीति",
+                    label = stringResource(R.string.profile_privacy_policy),
                     sublabel = null,
                     onClick = { showPrivacyDialog = true },
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
                 MenuRow(
                     icon = Icons.Default.Shield,
-                    label = "गोपनीयता प्रबंधित करें",
-                    sublabel = "डेटा सहमति अपडेट करें",
+                    label = stringResource(R.string.profile_manage_privacy),
+                    sublabel = stringResource(R.string.profile_manage_privacy_subtitle),
                     onClick = onManageConsentClick,
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
                 MenuRow(
                     icon = Icons.Default.Lock,
-                    label = "गोपनीयता और डेटा",
-                    sublabel = "आपका डेटा कैसे उपयोग होता है",
+                    label = stringResource(R.string.profile_privacy_and_data),
+                    sublabel = stringResource(R.string.profile_privacy_and_data_subtitle),
                     onClick = onPrivacyAndDataClick,
                 )
             }
@@ -248,7 +248,7 @@ internal fun ProfileScreen(
                         modifier = Modifier.size(20.dp),
                     )
                     Text(
-                        text = "साइन आउट",
+                        text = stringResource(R.string.profile_sign_out),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = DangerRed,
@@ -289,7 +289,7 @@ private fun ProfileHeader(user: AuthState.Authenticated?) {
             }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 HsScreenTitle(
-                    text = user?.displayName ?: "मेहमान",
+                    text = user?.displayName ?: stringResource(R.string.profile_guest),
                     style = MaterialTheme.typography.headlineMedium.copy(fontSize = 20.sp),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

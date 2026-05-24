@@ -3,6 +3,7 @@ package com.homeservices.customer.data.auth
 import android.content.SharedPreferences
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.messaging.FirebaseMessaging
 import com.homeservices.customer.data.device.DeviceTokenRegistrar
 import com.homeservices.customer.data.network.auth.IdTokenCache
@@ -63,10 +64,13 @@ public class SessionManagerSignOutTest {
         every { prefs.edit() } returns editor
         every { editor.clear() } returns editor
         every { editor.apply() } just runs
+        every { editor.commit() } returns true
         every { idTokenCache.signalSignOut() } just runs
         every { idTokenCache.signalSignIn() } just runs
         // currentSignOutGeneration returns a stable value (simulates the generation after signalSignOut)
         every { idTokenCache.currentSignOutGeneration() } returns 1
+        every { firebaseAuth.currentUser } returns null
+        every { firebaseAuth.addAuthStateListener(any()) } just runs
 
         // FCM deleteToken returns a real completed Task so .await() resolves correctly.
         every { firebaseMessaging.deleteToken() } returns Tasks.forResult(null)
@@ -123,6 +127,7 @@ public class SessionManagerSignOutTest {
             every { prefs.edit() } returns editor
             every { editor.clear() } returns editor
             every { editor.apply() } just runs
+            every { editor.commit() } returns true
 
             sessionManager.signOut()
 
@@ -204,7 +209,15 @@ public class SessionManagerSignOutTest {
             sessionManager.signOut()
 
             // signalSignIn should be called when saveSession is called after sign-out
-            sessionManager.saveSession(uid = "user-99", authProvider = com.homeservices.customer.domain.auth.model.AuthProvider.Phone)
+            val user = mockk<FirebaseUser>(relaxed = true) {
+                every { uid } returns "user-99"
+            }
+            every { firebaseAuth.currentUser } returns user
+
+            sessionManager.saveSession(
+                user = user,
+                authProvider = com.homeservices.customer.domain.auth.model.AuthProvider.Phone,
+            )
 
             verify { idTokenCache.signalSignIn() }
             assertThat(sessionManager.authState.value).isInstanceOf(AuthState.Authenticated::class.java)

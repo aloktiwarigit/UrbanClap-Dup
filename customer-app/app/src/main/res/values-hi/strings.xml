@@ -472,4 +472,60 @@
     <!-- PRD-08: Women-safe toggle -->
     <string name="women_safe_toggle_label">महिला तकनीशियन को प्राथमिकता दें</string>
 
+    <!-- Customer shell navigation, support, and profile -->
+    <string name="nav_home">होम</string>
+    <string name="nav_bookings">बुकिंग</string>
+    <string name="nav_support">सहायता</string>
+    <string name="nav_profile">प्रोफ़ाइल</string>
+    <string name="promo_ac_title">गर्मी से पहले AC सर्विस</string>
+    <string name="promo_ac_subtitle">से ₹599 · आज की स्लॉट उपलब्ध</string>
+    <string name="promo_ac_cta">अभी बुक करें</string>
+    <string name="promo_pro_title">कुशल प्रोफेशनल</string>
+    <string name="promo_pro_subtitle">स्किल, दूरी और उपलब्धता के आधार पर मैच · 30 दिन गारंटी</string>
+    <string name="promo_pro_cta">और जानें</string>
+    <string name="promo_discount_title">पहली बुकिंग पर 10% छूट</string>
+    <string name="promo_discount_subtitle">कूपन: PEHLI · सभी सेवाओं पर लागू</string>
+    <string name="promo_discount_cta">कूपन लगाएं</string>
+    <string name="promo_cta_with_arrow">%1$s →</string>
+    <string name="trust_skill_match">स्किल मैच</string>
+    <string name="trust_rating">4.8★ रेटिंग</string>
+    <string name="trust_guarantee">30 दिन गारंटी</string>
+    <string name="support_call_title">सपोर्ट को कॉल करें</string>
+    <string name="support_call_subtitle">बुकिंग, भुगतान या सुरक्षा के लिए सीधे सहायता लें</string>
+    <string name="support_my_bookings_title">मेरी बुकिंग</string>
+    <string name="support_my_bookings_subtitle">ट्रैकिंग, शिकायत और रेटिंग के लिए अपनी बुकिंग खोलें</string>
+    <string name="support_safety_title">सुरक्षा और SOS</string>
+    <string name="support_safety_subtitle">लाइव ट्रैकिंग स्क्रीन से SOS भेजें। टीम बुकिंग और लोकेशन संदर्भ के साथ अलर्ट देखती है।</string>
+    <string name="support_profile_language_title">प्रोफ़ाइल और भाषा</string>
+    <string name="support_profile_language_subtitle">खाता, भाषा और भरोसे से जुड़ी सेटिंग देखें</string>
+    <string name="support_hero_title">मदद और सुरक्षा</string>
+    <string name="support_hero_body">बुकिंग, भुगतान, शिकायत और सुरक्षा मामलों के लिए Owner support उपलब्ध है।</string>
+    <string name="support_guarantee_pill">30 दिन गारंटी</string>
+    <string name="support_skilled_technicians_pill">कुशल तकनीशियन</string>
+    <string name="profile_sign_out_title">साइन आउट करें?</string>
+    <string name="profile_sign_out_body">क्या आप वाकई साइन आउट करना चाहते हैं?</string>
+    <string name="profile_sign_out_confirm">हाँ, साइन आउट</string>
+    <string name="profile_cancel">रद्द करें</string>
+    <string name="profile_save">सेव करें</string>
+    <string name="profile_ok">ठीक है</string>
+    <string name="profile_edit_name">नाम संपादित करें</string>
+    <string name="profile_full_name">पूरा नाम</string>
+    <string name="profile_privacy_policy">गोपनीयता नीति</string>
+    <string name="profile_privacy_policy_body">आपका नाम, फ़ोन, पता और बुकिंग जानकारी सेवा देने, तकनीशियन असाइन करने, सपोर्ट और सुरक्षा समीक्षा के लिए इस्तेमाल होती है। पता केवल असाइन किए गए तकनीशियन और Owner support के साथ साझा किया जाता है।</string>
+    <string name="profile_account">अकाउंट</string>
+    <string name="profile_name_not_set">अभी तक सेट नहीं</string>
+    <string name="profile_my_bookings">मेरी बुकिंग</string>
+    <string name="profile_booking_history">बुकिंग इतिहास</string>
+    <string name="profile_booking_history_subtitle">ट्रैकिंग, शिकायत और रेटिंग देखें</string>
+    <string name="profile_support">सहायता</string>
+    <string name="profile_customer_service">ग्राहक सेवा</string>
+    <string name="profile_manage_privacy">गोपनीयता प्रबंधित करें</string>
+    <string name="profile_manage_privacy_subtitle">डेटा सहमति अपडेट करें</string>
+    <string name="profile_privacy_and_data">गोपनीयता और डेटा</string>
+    <string name="profile_privacy_and_data_subtitle">आपका डेटा कैसे उपयोग होता है</string>
+    <string name="profile_sign_out">साइन आउट</string>
+    <string name="profile_guest">मेहमान</string>
+    <string name="auth_hero_tagline">घर पर भरोसेमंद सेवा</string>
+    <string name="auth_hero_guarantee">भरोसेमंद सेवा · 30 दिन गारंटी</string>
+
 </resources>

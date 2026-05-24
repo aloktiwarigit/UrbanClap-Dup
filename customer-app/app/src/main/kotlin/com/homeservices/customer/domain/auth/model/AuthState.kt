@@ -1,6 +1,8 @@
 package com.homeservices.customer.domain.auth.model
 
 public sealed class AuthState {
+    public data object Initializing : AuthState()
+
     public data object Unauthenticated : AuthState()
 
     public data class Authenticated(

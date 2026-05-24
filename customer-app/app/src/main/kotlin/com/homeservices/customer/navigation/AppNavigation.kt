@@ -134,12 +134,17 @@ private fun AppNavigationReady(
 ) {
     val context = LocalContext.current
     val authState by sessionManager.authState.collectAsStateWithLifecycle()
+    if (!firstLaunchPending && !consentRequired && authState is AuthState.Initializing) {
+        Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {}
+        return
+    }
     val navController = rememberNavController()
     // Consent gate wins over locale picker; both win over auth.
     val startDestination =
         when {
             consentRequired -> LocaleRoutes.DPDP_CONSENT
             firstLaunchPending -> LocaleRoutes.FIRST_LAUNCH
+            authState is AuthState.Authenticated -> ROUTE_MAIN
             else -> ROUTE_AUTH
         }
     val notificationPermissionLauncher =
@@ -232,9 +237,6 @@ private fun AuthStateEffect(
                 }
             }
             is AuthState.Unauthenticated -> {
-                com.google.firebase.messaging.FirebaseMessaging
-                    .getInstance()
-                    .deleteToken()
                 navController.navigate(ROUTE_AUTH) {
                     // Single pop target: logout from main means stack is [main];
                     // first_launch is never on the stack at this point.
@@ -242,6 +244,7 @@ private fun AuthStateEffect(
                     launchSingleTop = true
                 }
             }
+            is AuthState.Initializing -> Unit
         }
     }
 }

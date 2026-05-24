@@ -3,10 +3,15 @@ package com.homeservices.customer.data.auth
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.messaging.FirebaseMessaging
 import com.homeservices.customer.data.device.DeviceTokenRegistrar
+import com.homeservices.customer.data.network.auth.IdTokenCache
 import com.homeservices.customer.domain.auth.model.AuthProvider
 import com.homeservices.customer.domain.auth.model.AuthState
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
@@ -19,6 +24,9 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 public class SessionManagerTest {
     private lateinit var prefs: SharedPreferences
+    private lateinit var firebaseAuth: FirebaseAuth
+    private lateinit var firebaseMessaging: FirebaseMessaging
+    private lateinit var idTokenCache: IdTokenCache
     private lateinit var deviceTokenRegistrar: DeviceTokenRegistrar
     private lateinit var sessionManager: SessionManager
 
@@ -26,7 +34,14 @@ public class SessionManagerTest {
     public fun setUp() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         prefs = context.getSharedPreferences("test_auth_session", Context.MODE_PRIVATE)
+        firebaseAuth = mockk(relaxed = true)
+        firebaseMessaging = mockk(relaxed = true)
+        idTokenCache = mockk(relaxed = true)
         deviceTokenRegistrar = mockk(relaxed = true)
+        every { firebaseAuth.currentUser } returns null
+        every { firebaseAuth.addAuthStateListener(any()) } answers {
+            firstArg<FirebaseAuth.AuthStateListener>().onAuthStateChanged(firebaseAuth)
+        }
         sessionManager = buildSessionManager(prefs)
     }
 
@@ -42,11 +57,24 @@ public class SessionManagerTest {
     ): SessionManager =
         SessionManager(
             prefs = sharedPrefs,
-            firebaseAuth = mockk(relaxed = true),
-            firebaseMessaging = mockk(relaxed = true),
-            idTokenCache = mockk(relaxed = true),
+            firebaseAuth = firebaseAuth,
+            firebaseMessaging = firebaseMessaging,
+            idTokenCache = idTokenCache,
             deviceTokenRegistrar = registrar,
         )
+
+    private fun firebaseUser(
+        uid: String,
+        email: String? = null,
+        displayName: String? = null,
+        phoneNumber: String? = null,
+    ): FirebaseUser =
+        mockk(relaxed = true) {
+            every { this@mockk.uid } returns uid
+            every { this@mockk.email } returns email
+            every { this@mockk.displayName } returns displayName
+            every { this@mockk.phoneNumber } returns phoneNumber
+        }
 
     @Test
     public fun `initial state is Unauthenticated when prefs are empty`() {
@@ -56,7 +84,10 @@ public class SessionManagerTest {
     @Test
     public fun `saveSession stores uid and phoneLastFour and transitions to Authenticated`(): Unit =
         runTest {
-            sessionManager.saveSession("uid-abc", "5678")
+            val user = firebaseUser("uid-abc")
+            every { firebaseAuth.currentUser } returns user
+
+            sessionManager.saveSession(user, "5678")
 
             assertThat(sessionManager.authState.value)
                 .isEqualTo(AuthState.Authenticated(uid = "uid-abc", phoneLastFour = "5678"))
@@ -67,7 +98,10 @@ public class SessionManagerTest {
     @Test
     public fun `saveSession calls deviceTokenRegistrar register for existing FCM token coverage`(): Unit =
         runTest {
-            sessionManager.saveSession("uid-abc", "5678")
+            val user = firebaseUser("uid-abc")
+            every { firebaseAuth.currentUser } returns user
+
+            sessionManager.saveSession(user, "5678")
 
             coVerify(exactly = 1) { deviceTokenRegistrar.register() }
         }
@@ -75,7 +109,10 @@ public class SessionManagerTest {
     @Test
     public fun `clearSession removes all prefs and transitions to Unauthenticated`(): Unit =
         runTest {
-            sessionManager.saveSession("uid-abc", "5678")
+            val user = firebaseUser("uid-abc")
+            every { firebaseAuth.currentUser } returns user
+
+            sessionManager.saveSession(user, "5678")
             sessionManager.clearSession()
 
             assertThat(sessionManager.authState.value).isEqualTo(AuthState.Unauthenticated)
@@ -84,6 +121,7 @@ public class SessionManagerTest {
 
     @Test
     public fun `initial state is Authenticated when valid session exists in prefs`() {
+        every { firebaseAuth.currentUser } returns firebaseUser("uid-xyz")
         prefs
             .edit()
             .putString("uid", "uid-xyz")
@@ -128,6 +166,7 @@ public class SessionManagerTest {
 
     @Test
     public fun `initial state handles null phoneLastFour in prefs gracefully`() {
+        every { firebaseAuth.currentUser } returns firebaseUser("uid-nophone")
         // Covers the `prefs.getString(KEY_PHONE_LAST_FOUR, "") ?: ""` null branch
         prefs
             .edit()
@@ -145,8 +184,11 @@ public class SessionManagerTest {
     @Test
     public fun `saveSession with email provider — round-trips email and displayName`(): Unit =
         runTest {
+            val user = firebaseUser("uid-email", email = "user@example.com", displayName = "Alice")
+            every { firebaseAuth.currentUser } returns user
+
             sessionManager.saveSession(
-                uid = "uid-email",
+                user = user,
                 email = "user@example.com",
                 displayName = "Alice",
                 authProvider = AuthProvider.Email,
@@ -161,8 +203,11 @@ public class SessionManagerTest {
     @Test
     public fun `saveSession with Google provider — round-trips displayName`(): Unit =
         runTest {
+            val user = firebaseUser("uid-google", email = "alice@gmail.com", displayName = "Alice G")
+            every { firebaseAuth.currentUser } returns user
+
             sessionManager.saveSession(
-                uid = "uid-google",
+                user = user,
                 email = "alice@gmail.com",
                 displayName = "Alice G",
                 authProvider = AuthProvider.Google,
@@ -174,6 +219,7 @@ public class SessionManagerTest {
 
     @Test
     public fun `old session missing new keys — defaults to Phone provider and null email`() {
+        every { firebaseAuth.currentUser } returns firebaseUser("old-uid")
         // Write a session without the new keys (simulates pre-E02-S05 data)
         prefs
             .edit()
@@ -191,8 +237,11 @@ public class SessionManagerTest {
     @Test
     public fun `updateDisplayName preserves current session fields`(): Unit =
         runTest {
+            val user = firebaseUser("uid-email", email = "user@example.com", displayName = "Old Name")
+            every { firebaseAuth.currentUser } returns user
+
             sessionManager.saveSession(
-                uid = "uid-email",
+                user = user,
                 phoneLastFour = "4321",
                 email = "user@example.com",
                 displayName = "Old Name",

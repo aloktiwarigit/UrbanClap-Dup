@@ -1,6 +1,8 @@
 package com.homeservices.customer.domain.auth
 
 import android.app.Activity
+import com.google.firebase.auth.FirebaseAuthException
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthProvider
 import com.homeservices.customer.domain.auth.gateway.OtpSender
@@ -28,4 +30,21 @@ public class FirebaseOtpUseCase
             verificationId: String,
             code: String,
         ): Flow<AuthResult> = otpSender.verifyOtp(verificationId, code)
+    }
+
+public fun mapFirebaseSignInError(error: Throwable): AuthResult.Error =
+    when {
+        error is FirebaseAuthInvalidCredentialsException &&
+            error.errorCode == "ERROR_INVALID_VERIFICATION_CODE" ->
+            AuthResult.Error.WrongCode
+
+        error is FirebaseAuthException &&
+            error.errorCode == "ERROR_SESSION_EXPIRED" ->
+            AuthResult.Error.CodeExpired
+
+        error is FirebaseAuthException &&
+            error.errorCode == "ERROR_TOO_MANY_REQUESTS" ->
+            AuthResult.Error.RateLimited
+
+        else -> AuthResult.Error.General(error)
     }

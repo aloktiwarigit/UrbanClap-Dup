@@ -481,5 +481,60 @@
     <!-- PRD-08: Women-safe toggle -->
     <string name="women_safe_toggle_label">Prefer female technician</string>
 
+    <!-- Customer shell navigation, support, and profile -->
+    <string name="nav_home">Home</string>
+    <string name="nav_bookings">Bookings</string>
+    <string name="nav_support">Support</string>
+    <string name="nav_profile">Profile</string>
+    <string name="promo_ac_title">AC service before summer</string>
+    <string name="promo_ac_subtitle">From ₹599 · slots available today</string>
+    <string name="promo_ac_cta">Book now</string>
+    <string name="promo_pro_title">Skilled professionals</string>
+    <string name="promo_pro_subtitle">Matched by skill, distance and availability · 30-day guarantee</string>
+    <string name="promo_pro_cta">Learn more</string>
+    <string name="promo_discount_title">10% off your first booking</string>
+    <string name="promo_discount_subtitle">Coupon: PEHLI · applies to all services</string>
+    <string name="promo_discount_cta">Apply coupon</string>
+    <string name="promo_cta_with_arrow">%1$s →</string>
+    <string name="trust_skill_match">Skill match</string>
+    <string name="trust_rating">4.8★ rating</string>
+    <string name="trust_guarantee">30-day guarantee</string>
+    <string name="support_call_title">Call support</string>
+    <string name="support_call_subtitle">Get direct help for bookings, payments, or safety</string>
+    <string name="support_my_bookings_title">My bookings</string>
+    <string name="support_my_bookings_subtitle">Open your bookings for tracking, complaints, and ratings</string>
+    <string name="support_safety_title">Safety and SOS</string>
+    <string name="support_safety_subtitle">Send SOS from the live tracking screen. The team sees alerts with booking and location context.</string>
+    <string name="support_profile_language_title">Profile and language</string>
+    <string name="support_profile_language_subtitle">Review account, language, and trust settings</string>
+    <string name="support_hero_title">Help and safety</string>
+    <string name="support_hero_body">Owner support is available for bookings, payments, complaints, and safety matters.</string>
+    <string name="support_guarantee_pill">30-day guarantee</string>
+    <string name="support_skilled_technicians_pill">Skilled technicians</string>
+    <string name="profile_sign_out_title">Sign out?</string>
+    <string name="profile_sign_out_body">Are you sure you want to sign out?</string>
+    <string name="profile_sign_out_confirm">Yes, sign out</string>
+    <string name="profile_cancel">Cancel</string>
+    <string name="profile_save">Save</string>
+    <string name="profile_ok">OK</string>
+    <string name="profile_edit_name">Edit name</string>
+    <string name="profile_full_name">Full name</string>
+    <string name="profile_privacy_policy">Privacy policy</string>
+    <string name="profile_privacy_policy_body">Your name, phone, address, and booking information are used to provide service, assign technicians, support you, and review safety. Your address is shared only with the assigned technician and Owner support.</string>
+    <string name="profile_account">Account</string>
+    <string name="profile_name_not_set">Not set yet</string>
+    <string name="profile_my_bookings">My bookings</string>
+    <string name="profile_booking_history">Booking history</string>
+    <string name="profile_booking_history_subtitle">View tracking, complaints, and ratings</string>
+    <string name="profile_support">Support</string>
+    <string name="profile_customer_service">Customer service</string>
+    <string name="profile_manage_privacy">Manage privacy</string>
+    <string name="profile_manage_privacy_subtitle">Update data consent</string>
+    <string name="profile_privacy_and_data">Privacy and data</string>
+    <string name="profile_privacy_and_data_subtitle">How your data is used</string>
+    <string name="profile_sign_out">Sign out</string>
+    <string name="profile_guest">Guest</string>
+    <string name="auth_hero_tagline">Trusted home services</string>
+    <string name="auth_hero_guarantee">Trusted service · 30-day guarantee</string>
 
 </resources>
