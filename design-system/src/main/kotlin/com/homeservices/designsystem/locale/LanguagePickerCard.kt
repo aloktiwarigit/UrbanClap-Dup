@@ -1,3 +1,5 @@
+@file:Suppress("MatchingDeclarationName") // composables + data class = 2 top-level decls; detekt counts only class-like nodes
+
 package com.homeservices.designsystem.locale
 
 import androidx.compose.foundation.layout.Arrangement
