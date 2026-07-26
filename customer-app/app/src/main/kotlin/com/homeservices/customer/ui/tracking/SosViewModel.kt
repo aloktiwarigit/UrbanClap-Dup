@@ -50,6 +50,9 @@ public class SosViewModel
         /** Set to true only when startRecording() completes successfully in this SOS session. */
         private var freshRecordingCaptured = false
 
+        /** SAFE-SOS-006: in-memory copy of evidence awaiting a successful upload, for retry. */
+        private var pendingEvidence: PendingEvidence? = null
+
         public fun onSosTapped() {
             viewModelScope.launch {
                 val consent = consentStore.getAudioConsent()
@@ -70,6 +73,8 @@ public class SosViewModel
 
         /** Dismiss the evidence-saved or evidence-error sheet after upload completes. */
         public fun onDismissEvidenceResult() {
+            // Drop the retained copy — the customer declined to retry, so do not hold audio in memory.
+            pendingEvidence = null
             _sosUiState.value = SosUiState.SosConfirmed
         }
 
@@ -176,16 +181,55 @@ public class SosViewModel
             if (customerId == null || !file.exists()) return
 
             val bytes = file.readBytes()
+            // Wipe from disk immediately (unchanged privacy behaviour) but retain in memory so a
+            // failed upload can be retried — SAFE-SOS-006. Previously the bytes were unrecoverable
+            // after the first failure, so safety evidence for a live emergency was simply lost.
             file.delete()
+            pendingEvidence = PendingEvidence(customerId, bytes)
+            uploadEvidence(customerId, bytes)
+        }
+
+        private suspend fun uploadEvidence(
+            customerId: String,
+            bytes: ByteArray,
+        ) {
             audioUploader.upload(customerId, bookingId, bytes).collect { progress ->
                 _sosUiState.value =
                     when (progress) {
                         is SosUploadProgress.Progress -> SosUiState.UploadingEvidence(progress.pct)
-                        is SosUploadProgress.Success -> SosUiState.EvidenceSaved
+                        is SosUploadProgress.Success -> {
+                            pendingEvidence = null
+                            SosUiState.EvidenceSaved
+                        }
                         is SosUploadProgress.Failure ->
                             SosUiState.EvidenceUploadError(progress.cause.message ?: "upload_failed")
                     }
             }
+        }
+
+        /** SAFE-SOS-006: re-attempt a failed evidence upload from the retained in-memory copy. */
+        public fun onRetryEvidenceUpload() {
+            val pending = pendingEvidence
+            if (pending == null) {
+                _sosUiState.value = SosUiState.SosConfirmed
+                return
+            }
+            viewModelScope.launch { uploadEvidence(pending.customerId, pending.bytes) }
+        }
+
+        private data class PendingEvidence(
+            val customerId: String,
+            val bytes: ByteArray,
+        ) {
+            override fun equals(other: Any?): Boolean =
+                this === other ||
+                    (
+                        other is PendingEvidence &&
+                            customerId == other.customerId &&
+                            bytes.contentEquals(other.bytes)
+                    )
+
+            override fun hashCode(): Int = 31 * customerId.hashCode() + bytes.contentHashCode()
         }
 
         private fun wipeStaleSosFile() {

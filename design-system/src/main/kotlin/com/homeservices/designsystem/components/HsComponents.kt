@@ -47,6 +47,36 @@ public fun HsPrimaryButton(
     }
 }
 
+/**
+ * Destructive / emergency primary action.
+ *
+ * Identical in weight to [HsPrimaryButton] but carries `colorScheme.error` rather than the brand
+ * colour, so an irreversible action is never visually indistinguishable from a routine one.
+ *
+ * Introduced for SAFE-SOS-004: the SOS send action was rendered with [HsPrimaryButton], giving an
+ * emergency dispatch the same brand-green treatment as "Book now". See docs/design/uiux-audit-2026.md.
+ */
+@Composable
+public fun HsDangerButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.height(LocalHomeservicesSpacing.current.space16),
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.error,
+                contentColor = MaterialTheme.colorScheme.onError,
+            ),
+    ) {
+        Text(text)
+    }
+}
+
 @Composable
 public fun HsSecondaryButton(
     text: String,

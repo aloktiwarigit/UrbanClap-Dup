@@ -31,7 +31,7 @@ public class SosBottomSheetPaparazziTest {
     @Ignore("Goldens recorded on CI Linux via paparazzi-record.yml workflow_dispatch")
     public fun sosBottomSheet_evidenceUploadError_lightTheme() {
         paparazzi.snapshot {
-            SosEvidenceUploadErrorSheet(message = "upload_failed", onDismiss = {})
+            SosEvidenceUploadErrorSheet(message = "upload_failed", onRetry = {}, onDismiss = {})
         }
     }
 }

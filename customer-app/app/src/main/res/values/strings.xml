@@ -200,6 +200,9 @@
     <string name="tracking_title">Track service</string>
     <string name="tracking_back_desc">Back</string>
     <string name="tracking_sos_desc">Safety alert</string>
+    <!-- SAFE-SOS-003: visible label on the SOS control. Icon-only is not acceptable for a
+         mixed-literacy audience on a control where guessing wrong has physical consequences. -->
+    <string name="tracking_sos_label">SOS</string>
     <string name="tracking_your_technician">Your technician</string>
     <string name="tracking_eta_chip">ETA %d min</string>
     <string name="tracking_service_progress">Service progress</string>
@@ -241,6 +244,8 @@
     <string name="sos_uploading_evidence">Uploading evidence… %1$d%%</string>
     <string name="sos_evidence_saved">Evidence saved securely</string>
     <string name="sos_evidence_upload_error">Could not save evidence. Help is already on the way.</string>
+    <string name="sos_evidence_retry">Try again</string>
+    <string name="sos_evidence_dismiss">Not now</string>
 
     <!-- SOS consent dialog (E12-S02a) -->
     <string name="sos_consent_title">Record audio with alert?</string>

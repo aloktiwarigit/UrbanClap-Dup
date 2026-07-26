@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -28,6 +30,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,6 +39,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -49,6 +54,7 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.tracking.model.BookingStatus
+import com.homeservices.customer.domain.tracking.model.isSosEligible
 import com.homeservices.customer.ui.shared.TrustDossierCard
 import com.homeservices.customer.ui.shared.TrustDossierUiState
 import com.homeservices.customer.ui.shared.TrustDossierViewModel
@@ -72,9 +78,12 @@ internal fun LiveTrackingScreen(
     val noShowEvent by noShowVm.event.collectAsStateWithLifecycle()
     val trustDossierUiState by trustDossierViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val isInProgress =
-        uiState is LiveTrackingUiState.Tracking &&
-            (uiState as LiveTrackingUiState.Tracking).status is BookingStatus.InProgress
+    // Hoisted: the semantics{} lambda below is not a composable scope.
+    val sosContentDescription = stringResource(R.string.tracking_sos_desc)
+    // SAFE-SOS-002: SOS must be reachable for the whole on-site window, not only while work is
+    // in progress. EN_ROUTE and REACHED are the highest-risk states, not the lowest.
+    val isSosAvailable =
+        (uiState as? LiveTrackingUiState.Tracking)?.status?.isSosEligible == true
 
     val technicianId = (uiState as? LiveTrackingUiState.Tracking)?.technicianId
     LaunchedEffect(technicianId) {
@@ -97,12 +106,26 @@ internal fun LiveTrackingScreen(
                     }
                 },
                 actions = {
-                    if (isInProgress) {
-                        IconButton(onClick = { sosViewModel.onSosTapped() }) {
-                            Icon(
-                                Icons.Filled.Warning,
-                                contentDescription = stringResource(R.string.tracking_sos_desc),
-                                tint = MaterialTheme.colorScheme.error,
+                    if (isSosAvailable) {
+                        // SAFE-SOS-003: icon + text, never icon alone — this is the one control
+                        // where guessing wrong has physical consequences.
+                        TextButton(
+                            onClick = { sosViewModel.onSosTapped() },
+                            colors =
+                                ButtonDefaults.textButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error,
+                                ),
+                            modifier =
+                                Modifier
+                                    .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                                    .semantics { contentDescription = sosContentDescription },
+                        ) {
+                            Icon(Icons.Filled.Warning, contentDescription = null)
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = stringResource(R.string.tracking_sos_label),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
                             )
                         }
                     }
@@ -163,7 +186,11 @@ private fun SosOverlay(
         is SosUiState.EvidenceSaved ->
             SosEvidenceSavedSheet(onDismiss = { sosViewModel.onDismissEvidenceResult() })
         is SosUiState.EvidenceUploadError ->
-            SosEvidenceUploadErrorSheet(message = sos.message, onDismiss = { sosViewModel.onDismissEvidenceResult() })
+            SosEvidenceUploadErrorSheet(
+                message = sos.message,
+                onRetry = { sosViewModel.onRetryEvidenceUpload() },
+                onDismiss = { sosViewModel.onDismissEvidenceResult() },
+            )
         else -> Unit
     }
 }

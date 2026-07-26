@@ -285,6 +285,92 @@ public class SosViewModelTest {
             tempDir.deleteRecursively()
         }
 
+    /**
+     * SAFE-SOS-006 — the evidence file is wiped from disk before the upload starts (privacy), so a
+     * failed upload was previously unrecoverable: the bytes were gone and the error sheet offered
+     * no retry. Evidence for a live emergency was silently lost. Retry must work from the retained
+     * in-memory copy, with the file still absent from disk.
+     */
+    @Test
+    public fun `failed_evidence_upload_can_be_retried_from_memory_after_file_is_wiped`(): Unit =
+        runTest(testDispatcher) {
+            val tempDir = createTempDirectory().toFile()
+            every { mockContext.filesDir } returns tempDir
+            every { featureFlags.sosAudioUploadEnabled() } returns true
+            every { sessionManager.authState } returns MutableStateFlow(AuthState.Authenticated("cust-1"))
+            coEvery { consentStore.getAudioConsent() } returns false
+            coEvery { sosUseCase.execute("bk-1") } returns Result.success(Unit)
+
+            val vm = buildVm()
+            vm.onSosTapped()
+            advanceTimeBy(1L)
+
+            vm.simulateFreshRecordingCapturedForTest()
+            val file =
+                File(File(tempDir, "sos"), "sos-bk-1.m4a").also {
+                    it.parentFile?.mkdirs()
+                    it.writeBytes(byteArrayOf(1, 2, 3))
+                }
+
+            // First attempt fails, second succeeds.
+            var attempt = 0
+            every { audioUploader.upload(any(), any(), any()) } answers {
+                attempt++
+                if (attempt == 1) {
+                    flowOf(SosUploadProgress.Failure(RuntimeException("net_error")))
+                } else {
+                    flowOf(SosUploadProgress.Success)
+                }
+            }
+
+            advanceUntilIdle()
+            assertThat(vm.sosUiState.value).isInstanceOf(SosUiState.EvidenceUploadError::class.java)
+            assertThat(file.exists()).isFalse()
+
+            vm.onRetryEvidenceUpload()
+            advanceUntilIdle()
+
+            assertThat(vm.sosUiState.value).isInstanceOf(SosUiState.EvidenceSaved::class.java)
+            assertThat(attempt).isEqualTo(2)
+            // The retried upload carried the original bytes even though the file was already gone.
+            coVerify { audioUploader.upload("cust-1", "bk-1", byteArrayOf(1, 2, 3)) }
+            tempDir.deleteRecursively()
+        }
+
+    /** SAFE-SOS-006 — declining retry must drop the retained audio rather than hold it in memory. */
+    @Test
+    public fun `dismissing_the_error_sheet_discards_the_retained_evidence`(): Unit =
+        runTest(testDispatcher) {
+            val tempDir = createTempDirectory().toFile()
+            every { mockContext.filesDir } returns tempDir
+            every { featureFlags.sosAudioUploadEnabled() } returns true
+            every { sessionManager.authState } returns MutableStateFlow(AuthState.Authenticated("cust-1"))
+            coEvery { consentStore.getAudioConsent() } returns false
+            coEvery { sosUseCase.execute("bk-1") } returns Result.success(Unit)
+            every { audioUploader.upload(any(), any(), any()) } returns
+                flowOf(SosUploadProgress.Failure(RuntimeException("net_error")))
+
+            val vm = buildVm()
+            vm.onSosTapped()
+            advanceTimeBy(1L)
+            vm.simulateFreshRecordingCapturedForTest()
+            File(File(tempDir, "sos"), "sos-bk-1.m4a").also {
+                it.parentFile?.mkdirs()
+                it.writeBytes(byteArrayOf(7))
+            }
+            advanceUntilIdle()
+            assertThat(vm.sosUiState.value).isInstanceOf(SosUiState.EvidenceUploadError::class.java)
+
+            vm.onDismissEvidenceResult()
+            assertThat(vm.sosUiState.value).isInstanceOf(SosUiState.SosConfirmed::class.java)
+
+            // Nothing retained: a subsequent retry must not re-upload, it just closes out.
+            vm.onRetryEvidenceUpload()
+            advanceUntilIdle()
+            assertThat(vm.sosUiState.value).isInstanceOf(SosUiState.SosConfirmed::class.java)
+            tempDir.deleteRecursively()
+        }
+
     @Test
     public fun `tmp_m4a_file_is_deleted_before_upload_starts`(): Unit =
         runTest(testDispatcher) {
