@@ -1,0 +1,604 @@
+{
+  "cluster": "customer/onboarding-auth",
+  "surfaces": [
+    {
+      "id": "customer.first-launch-language",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/locale/FirstLaunchLanguageScreen.kt",
+      "loc": 120,
+      "purpose": "First-run screen where the user picks English or Hindi before signing in.",
+      "entryPoints": "NavHost destination LocaleRoutes.FIRST_LAUNCH, registered at customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/AppNavigation.kt:192-201; reached either as startDestination when firstLaunchPending, or from the DPDP consent screen's onConsentComplete branch at AppNavigation.kt:184. On confirm it navigates to ROUTE_AUTH and pops itself (AppNavigation.kt:195-198).",
+      "composition": [
+        "Root full-screen Box, background = colorScheme.primary, statusBarsPadding (FirstLaunchLanguageScreen.kt:92)",
+        "Hero zone occupying top 30% of screen height (LANG_HERO_FRACTION = 0.30f, FirstLaunchLanguageScreen.kt:35; applied at :46)",
+        "Hero painted with drawBehind: vertical gradient brandPrimaryHover -> primary (:48), plus two decorative white circles at alpha 0.06 r=140dp (:49-53) and alpha 0.09 r=70dp (:54-62)",
+        "Hero bottom-start text column, padding start/end 28dp bottom 32dp, 4dp internal spacing (:66): brand wordmark 'HomeHeroo' via HsScreenTitle in headlineLarge/onPrimary (:67), then Hindi subtitle 'भाषा चुनें' in bodyLarge at 82% onPrimary alpha (:68-72)",
+        "Bottom sheet Surface anchored BottomCenter, 72% of screen height (LANG_FORM_FRACTION = 0.72f, :36; applied :95), top corners RoundedCornerShape 24dp (:96), color = colorScheme.background (:97), shadowElevation 8dp (:98)",
+        "Sheet content Column, horizontal padding 24dp, top 28dp, bottom 24dp, 16dp item spacing (:101-102)",
+        "Heading Text 'Choose your language' in headlineSmall (:104-108)",
+        "Sub-copy Text 'Language can be changed anytime from Settings.' in bodyMedium/onSurfaceVariant (:109-113)",
+        "LanguagePickerCard — two radio rows (English / हिन्दी) from DefaultLanguageOptions (:114; component at design-system/src/main/kotlin/com/homeservices/designsystem/locale/LanguagePickerCard.kt:33-77)",
+        "Spacer(weight 1f) pushing the CTA to the bottom of the sheet (:115)",
+        "Full-width HsPrimaryButton labelled 'Continue' (:116)"
+      ],
+      "states": {
+        "loading": {
+          "present": false,
+          "evidence": null,
+          "quality": "No loading affordance anywhere. onConfirm launches a coroutine that awaits setAppLocale before flipping confirmedFlow (customer-app/app/src/main/kotlin/com/homeservices/customer/ui/locale/FirstLaunchLanguageViewModel.kt:38-43) and the button stays enabled and unchanged during that window."
+        },
+        "empty": {
+          "present": false,
+          "evidence": null,
+          "quality": "N/A — option list is a hardcoded 2-item constant (LanguagePickerCard.kt:26-30)."
+        },
+        "error": {
+          "present": false,
+          "evidence": null,
+          "quality": "MAJOR ABSENCE. The ViewModel exposes only selectedTag and confirmedFlow (FirstLaunchLanguageViewModel.kt:23-26); there is no error field and setAppLocale failure is unhandled (:38-43). The screen has no error branch at all."
+        },
+        "success": {
+          "present": true,
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/locale/FirstLaunchLanguageScreen.kt:85-90",
+          "quality": "Success is invisible: a LaunchedEffect on confirmed resets the flag and calls onConfirmed(); no confirmation, no transition."
+        },
+        "offline": { "present": false, "evidence": null, "quality": "No offline handling; locale write is local so arguably not needed, but nothing is stated." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "N/A for this screen." }
+      },
+      "skeletonOrSpinner": {
+        "type": "none",
+        "evidence": null,
+        "note": "No CircularProgressIndicator and no HsSkeletonBlock anywhere in the file (verified by full read of all 120 lines)."
+      },
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "140.dp", "line": 51, "context": "decorative circle radius in hero drawBehind" },
+          { "value": "80.dp / 60.dp", "line": 52, "context": "decorative circle center offset" },
+          { "value": "70.dp", "line": 55, "context": "second decorative circle radius" },
+          { "value": "40.dp / 20.dp", "line": 59, "context": "second circle center offset (20.dp at :60 is off the 0/4/8/12/16/24/32/48/64 scale)" },
+          { "value": "28.dp", "line": 66, "context": "hero text start/end padding — off the spacing scale" },
+          { "value": "32.dp", "line": 66, "context": "hero text bottom padding (equals space8 but written as a literal)" },
+          { "value": "4.dp", "line": 66, "context": "hero column vertical spacing (equals space1, written as literal)" },
+          { "value": "8.dp", "line": 98, "context": "sheet shadowElevation (matches elev3=8 but hardcoded)" },
+          { "value": "24.dp", "line": 101, "context": "sheet horizontal padding (equals space6, written as literal)" },
+          { "value": "28.dp", "line": 101, "context": "sheet top padding — off the spacing scale" },
+          { "value": "24.dp", "line": 101, "context": "sheet bottom padding" },
+          { "value": "16.dp", "line": 102, "context": "sheet vertical arrangement spacing" }
+        ],
+        "hardcodedColors": [
+          { "value": "Color.White (alpha 0.06f)", "line": 50, "context": "hero decorative circle — literal white rather than colorScheme.onPrimary; AuthScreen.kt:195 does the same thing using onPrimary, so the two hero zones diverge" },
+          { "value": "Color.White (alpha 0.09f)", "line": 55, "context": "second hero decorative circle" }
+        ],
+        "unmappedTypographySlots": [
+          { "slot": "headlineSmall", "line": 106, "context": "primary in-sheet heading 'Choose your language' — unmapped slot, renders in Roboto not Geist/Noto" },
+          { "slot": "titleMedium", "line": 114, "context": "rendered inside LanguagePickerCard at design-system/src/main/kotlin/com/homeservices/designsystem/locale/LanguagePickerCard.kt:67 — the language names 'English' and 'हिन्दी' are the most prominent text on the screen and fall back to Roboto" }
+        ],
+        "offScaleRadius": [
+          { "value": "24.dp", "line": 96, "context": "sheet top corners — HomeservicesRadius tops out at xl=20" },
+          { "value": "16.dp", "line": 43, "context": "language option card corner radius, in design-system/.../LanguagePickerCard.kt:43 — 16 is not on the radius scale either" }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "HomeHeroo", "line": 67 },
+          { "text": "भाषा चुनें", "line": 69 },
+          { "text": "Choose your language", "line": 105 },
+          { "text": "Language can be changed anytime from Settings.", "line": 110 },
+          { "text": "Continue", "line": 116 }
+        ],
+        "usesStringResource": false,
+        "hindiRisk": "SEVERE. The one screen in the app whose entire job is language choice contains zero stringResource calls — every string is a literal (lines 67, 69, 105, 110, 116). It hardcodes a Hindi subtitle (:69) next to English body copy (:105, :110, :116), so every user sees a mixed-language screen regardless of device locale, and a Hindi-first Ayodhya user is asked to 'Continue' in English. Layout-wise the sheet is a fixed 72% fillMaxHeight with no verticalScroll (:95, :100), so if these strings were ever translated (Devanagari runs 15-30% longer and taller) the Spacer(weight 1f) at :115 would collapse and the Continue button could be pushed off the fixed-height sheet on small screens. INFERRED.",
+        "currencyFormatting": "N/A — no money is rendered on this screen (verified across all 120 lines)."
+      },
+      "a11y": {
+        "contentDescriptions": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/locale/FirstLaunchLanguageScreen.kt:67", "note": "Vacuously true: there are no Icon or Image composables in the file at all, so nothing needs a description." },
+        "touchTargetRisks": [],
+        "contrastRisks": [
+          { "line": 71, "note": "Hero subtitle 'भाषा चुनें' drawn at onPrimary.copy(alpha = 0.82f) on top of a gradient, so the effective contrast varies down the hero and is not verifiable against a fixed background." },
+          { "line": 112, "note": "Sub-copy uses onSurfaceVariant (#5F6C66) on background #FBF7EF at bodyMedium — the platform's borderline-body-text pairing." }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "HsScreenTitle at :67 marks the brand wordmark 'HomeHeroo' as the heading (design-system/.../HsScreenTitle.kt:41), but the real screen heading 'Choose your language' at :104 is a plain Text with no heading semantics. TalkBack heading navigation therefore lands on the logo, not the task. Otherwise reading order follows the visual order."
+      },
+      "imagery": {
+        "usesImages": false,
+        "sources": [],
+        "placeholderOrMissing": ["No painterResource / Image / R.drawable reference anywhere in the file (grep over the ui/locale package returned no matches). The 3 drawable/banner_image_*.png and 13 drawable-nodpi/service_hero_*.png assets that exist in customer-app/app/src/main/res are unused here; the hero is pure gradient + two translucent circles."],
+        "cite": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/locale/FirstLaunchLanguageScreen.kt:47-63"
+      },
+      "motion": {
+        "animationsUsed": [],
+        "usesMotionTokens": false,
+        "transitionsOnNav": "None. No animate*, AnimatedVisibility, or Crossfade in the file; selection of a language option swaps two static Surface colors with no transition (design-system/.../LanguagePickerCard.kt:44-49). Navigation to auth uses the NavHost default with no enter/exit spec (customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/AppNavigation.kt:195-198)."
+      },
+      "density": "Airy to the point of emptiness. The sheet is a fixed 72% of screen height (:95) holding only a heading, one line of sub-copy, two 16dp-padded radio rows, and a button, with a Spacer(weight 1f) at :115 absorbing the remainder — roughly the bottom third of the sheet is dead space on a typical phone. Padding values used: 28/24/24 sheet (:101), 16dp item spacing (:102), 16dp inside each option row (LanguagePickerCard.kt:61).",
+      "observations": [
+        { "severity": "high", "claim": "The language-selection screen — the literal first pixel of the product for an Ayodhya user — has zero localization: all five user-facing strings are Kotlin literals, and it mixes a hardcoded Hindi subtitle with hardcoded English body copy and CTA.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/locale/FirstLaunchLanguageScreen.kt:69", "confidence": "observed" },
+        { "severity": "high", "claim": "The most prominent text on the screen (the language names 'English' / 'हिन्दी') renders in the unmapped titleMedium slot, so it falls back to Roboto while the hero wordmark above it renders in Geist via headlineLarge — two typefaces visible simultaneously in the first frame of the app.", "evidence": "design-system/src/main/kotlin/com/homeservices/designsystem/locale/LanguagePickerCard.kt:67", "confidence": "observed" },
+        { "severity": "medium", "claim": "There is no loading, error, or disabled state on Continue; setAppLocale is awaited in a coroutine with no failure path, so a failed locale write silently strands the user on the screen.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/locale/FirstLaunchLanguageViewModel.kt:38-43", "confidence": "observed" },
+        { "severity": "medium", "claim": "The sheet radius (24dp, :96) is off the HomeservicesRadius scale (max xl=20) and the option cards inside it use a different radius (16dp), so three different corner radii stack within one screen.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/locale/FirstLaunchLanguageScreen.kt:96", "confidence": "observed" },
+        { "severity": "medium", "claim": "The sheet uses colorScheme.background (#FBF7EF) while the immediately following AuthScreen sheet — identical geometry, identical 24dp radius, identical 8dp elevation — uses colorScheme.surface (#FFFDF8), so the sheet colour shifts between two consecutive onboarding screens.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/locale/FirstLaunchLanguageScreen.kt:97", "confidence": "observed" },
+        { "severity": "medium", "claim": "No navigationBarsPadding on the sheet; the Continue button's 24dp bottom padding (:101) is the only clearance from the gesture bar, and HsPrimaryButton is a fixed 64dp tall (design-system HsComponents.kt:44).", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/locale/FirstLaunchLanguageScreen.kt:101", "confidence": "observed" },
+        { "severity": "medium", "claim": "Bottom third of the sheet is dead space — a Spacer(weight 1f) separates a 4-element form from the CTA inside a fixed 72%-height sheet, with no imagery, illustration, or value proposition to fill it.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/locale/FirstLaunchLanguageScreen.kt:115", "confidence": "observed" },
+        { "severity": "low", "claim": "Zero motion: language selection is an instant colour swap with no state transition, and no HomeservicesMotion token is referenced anywhere in the file.", "evidence": "design-system/src/main/kotlin/com/homeservices/designsystem/locale/LanguagePickerCard.kt:44-49", "confidence": "observed" },
+        { "severity": "low", "claim": "Hero decorative circles use literal Color.White while the visually identical hero on AuthScreen uses colorScheme.onPrimary for the same circles — the two heroes will diverge in dark theme.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/locale/FirstLaunchLanguageScreen.kt:50", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "customer.auth",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthScreen.kt",
+      "loc": 662,
+      "purpose": "Single multi-state screen where the user signs in or creates an account via Google, email+password, or phone OTP.",
+      "entryPoints": "composable(\"auth_screen\") inside navigation(route = ROUTE_AUTH) at customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/AuthGraph.kt:21-47; reached from FirstLaunchLanguageScreen.onConfirmed (AppNavigation.kt:195), from DpdpConsentScreen.onConsentComplete when locale is already set (AppNavigation.kt:184), and on logout via AuthStateEffect (AppNavigation.kt:239-244).",
+      "composition": [
+        "Root Surface, background colour, hosting a single `when (uiState)` dispatch over 11 AuthUiState branches (AuthScreen.kt:93-176)",
+        "SHARED SHELL — AuthFrame (:226-277): full-screen Box, background primary, statusBarsPadding (:235-241)",
+        "  AuthHeroZone occupying top 38% (AUTH_HERO_FRACTION = 0.38f, :70; applied :188): vertical gradient brandPrimaryHover -> primary (:190-193) plus two decorative onPrimary circles at alpha 0.06 r=140dp (:194-198) and alpha 0.09 r=70dp (:199-203)",
+        "  Hero bottom-start text column, padding 28/28/36dp, 4dp spacing (:207-210): 'HomeHeroo' wordmark headlineLarge (:211), tagline bodyLarge at 82% onPrimary (:212-216), guarantee line labelSmall at 65% onPrimary (:217-221)",
+        "  Bottom sheet Surface anchored BottomCenter at 65% height (AUTH_FORM_FRACTION = 0.65f, :71; applied :244), top corners 24dp (:245), color surface (:246), shadowElevation 8dp (:247)",
+        "  Sheet content Column: verticalScroll + imePadding, padding 24 horizontal / 28 top / 24 bottom, item spacing = spacing.space6 (:249-257)",
+        "  Decorative 40x2dp 'scroll handle' bar at 25% primary alpha, centered (:259-266)",
+        "  Header block, spacing.space3 (:267-271): HsTrustBadge eyebrow pill (:268), title in headlineSmall/Bold (:269), body in bodyLarge/onSurfaceVariant (:270)",
+        "  HsSectionCard wrapping the per-state content (:272)",
+        "  SecurityNote row — 16dp lock icon + centered labelMedium text (:273; component :362-382)",
+        "STATE: MethodSelection (:280-340) — inside the card, a 12dp-spaced column of three full-width HsActionButtons: Google (with a 22dp circle 'G' mark, :343-359), Email (Icons.Default.Email, :302-307), Phone (Icons.Default.Phone, :314-320); then a 12dp Spacer and two centered labelSmall footnotes (:325-338)",
+        "STATE: EmailEntry (:384-475) — a full-width TextButton 'Back to sign-in options' (:410-412), OutlinedTextField email (:413-421), 12dp Spacer, OutlinedTextField password with show/hide IconButton (:423-445), 20dp Spacer, HsPrimaryButton enabled only when email regex matches and password >= 6 (:397-398, :447-458), TextButton mode toggle (:459-464), and for sign-in only a TextButton 'Forgot password?' (:465-473)",
+        "STATE: EmailVerificationSent (:477-514) — optional centered message (:489-498), HsPrimaryButton 'I verified, continue' (:499-503), HsSecondaryButton 'Resend email' (:505-509), TextButton 'Use another sign-in method' (:510-512)",
+        "STATE: PhoneEntry (:516-560) — OutlinedTextField phone (:529-537), 12dp Spacer, bodySmall note (:539-543), 20dp Spacer, HsPrimaryButton 'Get OTP' gated on PhoneNumberNormalizer (:545-550), 12dp Spacer, centered labelSmall terms note (:552-558)",
+        "STATE: OtpCode (:562-595) — OutlinedTextField limited to 6 digits (:576-583), 20dp Spacer, HsPrimaryButton 'Verify and continue' enabled at length 6 (:585-590), TextButton 'Resend code' (:591-593)",
+        "STATE: Loading — used by Idle/TruecallerLoading/GoogleSigningIn/EmailSubmitting/OtpSending/OtpVerifying (:98-171); does NOT use AuthFrame. It is a bare centered Column: CircularProgressIndicator, then headlineSmall/Bold title and bodyMedium message, 32dp horizontal padding (:597-628)",
+        "STATE: Error (:630-662) — AuthFrame with eyebrow 'Action needed', title 'We could not sign you in', body = state.message (:638); optional pluralised attempts-remaining line (:640-655); HsPrimaryButton 'Try again' (:656-660)"
+      ],
+      "states": {
+        "loading": {
+          "present": true,
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthScreen.kt:597-628",
+          "quality": "BARE CENTERED SPINNER. Six of the eleven states route to LoadingContent, which is an unstyled CircularProgressIndicator on a plain background with two lines of text — no hero, no sheet, no brand, no skeleton. Every loading transition therefore blanks the entire branded shell and replaces it with a spinner on an empty screen."
+        },
+        "empty": { "present": false, "evidence": null, "quality": "N/A — this screen has no collections to be empty." },
+        "error": {
+          "present": true,
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthScreen.kt:630-662",
+          "quality": "Structurally present and reuses the branded AuthFrame, but the body text is state.message, which the ViewModel always populates with a hardcoded English literal (e.g. customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthViewModel.kt:376-378, :383, :387, :398, :402, :410). The error state also loses all context — the user's typed email/phone and the chosen method are gone, and 'Try again' is the only affordance (:656)."
+        },
+        "success": {
+          "present": true,
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/AppNavigation.kt:224-231",
+          "quality": "No in-screen success affordance; AuthStateEffect navigates away when authState becomes Authenticated. The user gets no confirmation moment."
+        },
+        "offline": {
+          "present": false,
+          "evidence": null,
+          "quality": "MAJOR ABSENCE. No connectivity state in AuthUiState (customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthUiState.kt:3-45). A network failure collapses into the generic Error state with the literal 'Sign-in failed. Please try again.' (AuthViewModel.kt:363) — no offline-specific messaging, which matters for rural UP connectivity."
+        },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "Not handled here; the POST_NOTIFICATIONS prompt is fired post-auth from AppNavigation.kt:235-237 with no UI on this screen." }
+      },
+      "skeletonOrSpinner": {
+        "type": "CircularProgressIndicator",
+        "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthScreen.kt:608",
+        "note": "Bare, default-styled, centered — no size, colour, or stroke override, and no HsSkeletonBlock usage anywhere in the file even though the design system ships one."
+      },
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [
+          { "value": "28.dp / 36.dp", "line": 208, "context": "hero text padding — 28 and 36 are both off the 0/4/8/12/16/24/32/48/64 scale" },
+          { "value": "24.dp", "line": 255, "context": "sheet horizontal padding written as a literal (space6 exists)" },
+          { "value": "28.dp / 24.dp", "line": 256, "context": "sheet top/bottom padding — 28 is off-scale" },
+          { "value": "40.dp / 2.dp", "line": 262, "context": "decorative scroll-handle bar width/height — 2.dp is off-scale" },
+          { "value": "12.dp", "line": 290, "context": "spacing between the three method buttons (space3 exists)" },
+          { "value": "20.dp", "line": 306, "context": "Email icon size — off-scale" },
+          { "value": "20.dp", "line": 319, "context": "Phone icon size — off-scale" },
+          { "value": "12.dp", "line": 324, "context": "Spacer above footnotes" },
+          { "value": "22.dp", "line": 348, "context": "GoogleMark circle diameter — off-scale, and different from the 20.dp used for the sibling Email/Phone icons at :306/:319" },
+          { "value": "16.dp", "line": 372, "context": "SecurityNote lock icon size" },
+          { "value": "8.dp", "line": 379, "context": "SecurityNote text start padding" },
+          { "value": "12.dp", "line": 422, "context": "Spacer between email and password fields" },
+          { "value": "20.dp", "line": 446, "context": "Spacer above the primary CTA — off-scale" },
+          { "value": "16.dp", "line": 497, "context": "Spacer under the verification message" },
+          { "value": "12.dp", "line": 504, "context": "Spacer between primary and secondary CTA" },
+          { "value": "12.dp / 20.dp / 12.dp", "line": 538, "context": "PhoneEntry Spacers at :538, :544, :551" },
+          { "value": "20.dp", "line": 584, "context": "OtpCode Spacer above CTA" },
+          { "value": "32.dp / 16.dp / 8.dp", "line": 604, "context": "LoadingContent padding :604 and spacings :606, :611 — none tokenised" },
+          { "value": "16.dp", "line": 654, "context": "ErrorContent Spacer" }
+        ],
+        "hardcodedColors": [
+          { "value": "Color(0xFF1A73E8)", "line": 355, "context": "Google brand blue on the fake 'G' mark — a literal hex, and the only brand-blue pixel in an otherwise green/gold palette" }
+        ],
+        "unmappedTypographySlots": [
+          { "slot": "headlineSmall", "line": 269, "context": "the primary title of every AuthFrame state (Sign in to book services, Enter your 6-digit code, etc.) — Roboto fallback" },
+          { "slot": "headlineSmall", "line": 615, "context": "LoadingContent title — Roboto fallback" },
+          { "slot": "labelMedium", "line": 353, "context": "the 'G' glyph in GoogleMark — Roboto fallback" },
+          { "slot": "labelMedium", "line": 375, "context": "SecurityNote text, shown on every AuthFrame state — Roboto fallback" }
+        ],
+        "offScaleRadius": [
+          { "value": "24.dp", "line": 245, "context": "sheet top corners — HomeservicesRadius max is xl=20" },
+          { "value": "1.dp", "line": 264, "context": "scroll-handle bar corner radius" },
+          { "value": "14.dp", "line": 78, "context": "HsActionButton corner radius, in design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt:78 — 14 is not on the radius scale, so the three method buttons do not match the 12dp (lg) or 20dp (xl) system radii" }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "HomeHeroo", "line": 211 },
+          { "text": "G", "line": 352 },
+          { "text": "all error body copy — state.message is always a Kotlin literal from the ViewModel, e.g. \"Incorrect code\" / \"Too many attempts. Try again later.\" / \"Code expired. Please resend.\" / \"An account already exists with this email.\"", "line": 638 }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "HIGH. (a) The three method buttons are HsActionButton, which fixes height at 52.dp and sets the label to maxLines = 1 with TextOverflow.Ellipsis (design-system/.../HsComponents.kt:77, :100-101) — Hindi labels for 'Continue with Google/email/phone' will ellipsize rather than wrap. (b) HsPrimaryButton fixes height at space16 = 64.dp with a plain Text and no maxLines (HsComponents.kt:44-46), so a longer Hindi CTA that wraps to two lines will be vertically clipped. INFERRED. (c) The sheet is a fixed 65% fillMaxHeight but does have verticalScroll + imePadding (:244, :253-254), which is the one genuine mitigation on this screen. (d) auth_method_body is a long sentence in Hindi (customer-app/app/src/main/res/values-hi/strings.xml:124) rendered at bodyLarge (:270), pushing the card further down. (e) Error copy is untranslatable at all since it never passes through strings.xml.",
+        "currencyFormatting": "N/A — no money is rendered on this screen (verified across all 662 lines)."
+      },
+      "a11y": {
+        "contentDescriptions": { "present": false, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthScreen.kt:304", "note": "Icons at :304 (Email), :317 (Phone), :370 (Lock) are all contentDescription = null. That is arguably correct for the two button leading icons (the label carries meaning) but the GoogleMark at :343-359 is a Text 'G' inside a Surface with no contentDescription at all, so TalkBack announces the literal letter G next to the button label. Only the password visibility toggle is properly described (:434-439)." },
+          "touchTargetRisks": [
+          { "line": 262, "size": "40x2dp", "note": "Decorative handle bar — non-interactive, but visually implies a draggable sheet that is not draggable." },
+          { "line": 348, "size": "22dp", "note": "GoogleMark is 22dp but sits inside the 52dp HsActionButton, so the tappable area is the button — no real risk, recorded for completeness." }
+        ],
+        "contrastRisks": [
+          { "line": 220, "note": "Hero guarantee line is labelSmall at onPrimary.copy(alpha = 0.65f) over a gradient — small type at 65% alpha is the lowest-contrast text in the whole onboarding flow." },
+          { "line": 215, "note": "Hero tagline at onPrimary.copy(alpha = 0.82f) over a gradient." },
+          { "line": 270, "note": "Body copy at onSurfaceVariant (#5F6C66) on surface (#FFFDF8)." },
+          { "line": 328, "note": "Two stacked labelSmall footnotes at onSurfaceVariant — smallest mapped slot at the platform's low-contrast body colour, and there are two of them in a row (:325-338)." },
+          { "line": 377, "note": "SecurityNote at labelMedium/onSurfaceVariant, repeated on every state." }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "HsScreenTitle (which applies semantics { heading() }, HsScreenTitle.kt:41) is used only for the 'HomeHeroo' wordmark at :211. The actual per-state title at :269 is a plain Text, so no state of this screen exposes its task heading to TalkBack heading navigation. Within EmailEntry the 'Back to sign-in options' TextButton is the FIRST focusable element inside the card (:410), before the email field — so keyboard/TalkBack users hit 'go back' before they reach the form."
+      },
+      "imagery": {
+        "usesImages": false,
+        "sources": [],
+        "placeholderOrMissing": ["No painterResource / Image / R.drawable anywhere in the file. The Google button uses a hand-drawn text 'G' in a circle (:343-359) instead of the official Google mark — a recognisability and brand-guideline problem on the single most-tapped auth affordance.", "banner_image_1..3.png and the 13 service_hero_*.png assets are not referenced."],
+        "cite": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthScreen.kt:343-359"
+      },
+      "motion": {
+        "animationsUsed": [],
+        "usesMotionTokens": false,
+        "transitionsOnNav": "NONE. Grep for animate/Animated/Crossfade over the file returns no matches. The `when (uiState)` at :97-176 hard-swaps between eleven wholly different layouts with no transition — most jarringly MethodSelection -> GoogleSigningIn, where the entire branded hero+sheet shell is replaced in one frame by a bare centered spinner (:111-115 -> :597-628). Nav transitions are NavHost defaults (AuthGraph.kt:22)."
+      },
+      "density": "Two incompatible densities in one screen. The AuthFrame states are airy — 24dp sheet padding, space6 (24dp) between blocks (:257), inside a card that itself adds space4 (design-system/.../HsComponents.kt:120) — while LoadingContent is a sparse, centre-of-void layout with 32dp padding and nothing else (:604). Within EmailEntry the vertical rhythm is inconsistent: 12dp between the fields (:422) but 20dp above the CTA (:446), then three stacked full-width TextButtons (:459, :466) with only default button padding between them.",
+      "observations": [
+        { "severity": "high", "claim": "Every error message the user can ever see on the auth screen is a hardcoded English string literal in the ViewModel, so a Hindi-locale user hits English error copy on the single most failure-prone screen in the app.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthViewModel.kt:376-378", "confidence": "observed" },
+        { "severity": "high", "claim": "Six of eleven auth states replace the entire branded hero+sheet shell with a bare, unstyled centered CircularProgressIndicator — the app visually disappears every time the user taps a sign-in method.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthScreen.kt:597-628", "confidence": "observed" },
+        { "severity": "high", "claim": "Flat-card-on-flat-sheet: HsSectionCard is given containerColor = colorScheme.surface and 1dp elevation, and AuthFrame's sheet is also colorScheme.surface, so the content card is the exact same colour as the surface behind it and is separated only by a 1dp shadow.", "evidence": "design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt:118-119", "confidence": "observed" },
+        { "severity": "high", "claim": "The Google sign-in button uses a hand-rolled circle containing the letter 'G' in Roboto (labelMedium is unmapped) tinted #1A73E8, rather than the official Google mark — it reads as a placeholder and is the primary CTA of the screen.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthScreen.kt:343-359", "confidence": "observed" },
+        { "severity": "medium", "claim": "Zero motion in a 662-line multi-state screen: eleven states hard-cut with no Crossfade or AnimatedContent, and no HomeservicesMotion/HomeservicesEasing token is imported.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthScreen.kt:97-176", "confidence": "observed" },
+        { "severity": "medium", "claim": "The three sign-in methods are rendered as three identical HsActionButtons with identical weight and styling — there is no visually preferred/primary path, so the user must read all three before choosing.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthScreen.kt:290-322", "confidence": "observed" },
+        { "severity": "medium", "claim": "Hindi labels on the three method buttons will be truncated rather than wrapped: HsActionButton pins height to 52.dp and the label to maxLines = 1 with ellipsis.", "evidence": "design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt:100-101", "confidence": "observed" },
+        { "severity": "medium", "claim": "A decorative 40x2dp bar is drawn at the top of the sheet, mimicking a bottom-sheet drag handle on a sheet that cannot be dragged.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthScreen.kt:259-266", "confidence": "observed" },
+        { "severity": "medium", "claim": "No TalkBack heading is exposed for the actual task title of any auth state — HsScreenTitle is only applied to the brand wordmark, while the per-state title at :269 is a plain Text.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthScreen.kt:269", "confidence": "observed" },
+        { "severity": "medium", "claim": "In EmailEntry the first focusable control inside the card is the 'Back to sign-in options' TextButton, placed above the email field, so assistive-tech and keyboard users reach the escape hatch before the form.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthScreen.kt:410-412", "confidence": "observed" },
+        { "severity": "medium", "claim": "No offline state exists in AuthUiState; connectivity failures degrade into the generic 'Sign-in failed. Please try again.' error, which is the wrong message for the target market's network conditions.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthUiState.kt:41-44", "confidence": "observed" },
+        { "severity": "medium", "claim": "The Error state discards all user context — the typed email/phone and the chosen method are not carried into AuthUiState.Error, so 'Try again' returns the user to a re-entry flow rather than to their filled form.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthUiState.kt:41-44", "confidence": "inferred" },
+        { "severity": "low", "claim": "OTP entry is a single OutlinedTextField labelled '6-digit code' rather than a segmented 6-box OTP field, which is the category convention for Indian consumer apps.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthScreen.kt:576-583", "confidence": "observed" },
+        { "severity": "low", "claim": "Off-grid icon sizing within a single button group: the Google mark is 22dp while the sibling Email and Phone icons are 20dp.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthScreen.kt:348", "confidence": "observed" },
+        { "severity": "low", "claim": "EmailEntry stacks three full-width TextButtons (mode toggle, forgot password, plus the back button above the form), producing an undifferentiated ladder of low-contrast text links.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthScreen.kt:459-473", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "customer.dpdp-consent",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/DpdpConsentScreen.kt",
+      "loc": 556,
+      "purpose": "DPDP-Act consent gate where the user toggles analytics / crash-reporting / marketing opt-ins before proceeding, and which doubles as the 'Manage consent' screen in Settings.",
+      "entryPoints": "composable(LocaleRoutes.DPDP_CONSENT) at customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/AppNavigation.kt:181-191 — the app's very first screen when consentRequired; also re-entered from Settings > Privacy at customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/SettingsGraph.kt:68-71 where onConsentComplete pops back instead of advancing.",
+      "composition": [
+        "Root Box, background = screenBg, a hardcoded #FBF7EF (light) / #0D1A16 (dark) chosen by a heuristic, not by the theme (DpdpConsentScreen.kt:192-204)",
+        "Scrollable body Column with verticalScroll and a bottom padding of 112.dp reserved for the sticky CTAs (:206-213)",
+        "  Hero Box at fillMaxHeight(0.40f) INSIDE the scrolling column (:215-219), painted with drawBehind: vertical gradient #062A20 -> #0B3D2E (:221-224) plus three glow circles — top-right white a=0.05 r=180dp (:226-234), bottom-left white a=0.08 r=90dp (:236-244), centre-right green #4CAF50 a=0.10 r=120dp (:246-254); statusBarsPadding and 24dp padding (:255-256)",
+        "  Hero content column, centered, 12dp spacing (:259-262): a 72dp white circle containing a 36dp Icons.Default.Eco leaf tinted #0B3D2E (:264-277), then the hero title in headlineSmall overridden to 26sp Bold in pure white (:279-288), then the hero subtitle in bodyMedium overridden to 14sp at 70% white (:290-295)",
+        "  Consent card Surface, offset y = -20dp to overlap the hero, top corners 24dp, elevation 4dp, colour cardBg = Color.White / #1A2E24 (:300-307), padded 28 top / 20 sides / 20 bottom (:309-318)",
+        "    Section heading in titleMedium Bold (:321-325), 4dp Spacer, section subtitle in bodySmall (:326-331), 16dp Spacer (:333)",
+        "    ConsentToggleRow — Analytics: BarChart icon in a 44dp #E8F5E8 rounded-12dp tile, title + description, Material3 Switch (:336-344; row component :454-519)",
+        "    HorizontalDivider 1dp (:346-350)",
+        "    ConsentToggleRow — Crash: Security icon, #E8EDF5 tile (:353-361)",
+        "    HorizontalDivider 1dp (:363-367)",
+        "    ConsentToggleRow — Marketing: Notifications icon, #FFF3E0 tile (:370-378)",
+        "    16dp Spacer, full-width divider, 12dp Spacer (:380-384)",
+        "    LegalCopyText — a centered BasicText annotated string: prefix + underlined 'Privacy Policy' link to https://homeservices.app/privacy + suffix, all at 12sp (:387; component :521-556)",
+        "Sticky CTA column pinned BottomCenter over the scroll body, background cardBg, padding 20 horizontal / 16 vertical, 8dp spacing (:395-402)",
+        "  Primary Button, full width, height 56dp, radius 16dp, containerColor hardcoded #0B3D2E; shows a 24dp white CircularProgressIndicator while loading, otherwise 'Agree and continue' in titleMedium ExtraBold at 16sp (:405-436)",
+        "  Secondary TextButton 'Reject all' in bodyMedium at 14sp, colour hardcoded #5F6C66 (:439-449)"
+      ],
+      "states": {
+        "loading": {
+          "present": true,
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/DpdpConsentScreen.kt:419-424",
+          "quality": "Good pattern — an in-button 24dp spinner replaces the CTA label and both buttons disable (:407, :441). This is the only in-place loading affordance in the whole cluster."
+        },
+        "empty": { "present": false, "evidence": null, "quality": "N/A — three fixed toggles." },
+        "error": {
+          "present": false,
+          "evidence": null,
+          "quality": "MAJOR ABSENCE AND A SILENT-FAILURE BUG. ConsentUiState carries an `error: String?` field (customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/ConsentUiState.kt:8) and the ViewModel populates it on both onConfirm and onDeclineAll failure (ConsentViewModel.kt:82, :103), but a full read of all 556 lines of DpdpConsentScreen.kt shows the screen never reads uiState.error. A failed consent write therefore just stops the spinner and leaves the user on the same screen with no feedback — on a legally mandated gate."
+        },
+        "success": {
+          "present": true,
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/DpdpConsentScreen.kt:158-160",
+          "quality": "No in-screen success feedback; a navigateNext channel fires onConsentComplete. When entered from Settings this pops back with no confirmation that the change was saved (SettingsGraph.kt:71)."
+        },
+        "offline": { "present": false, "evidence": null, "quality": "No offline branch; a network-backed consent write failure lands in the unrendered error field." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "N/A." }
+      },
+      "skeletonOrSpinner": {
+        "type": "CircularProgressIndicator (in-button)",
+        "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/DpdpConsentScreen.kt:420-424",
+        "note": "24dp, white, 2.5dp stroke, rendered inside the primary CTA — not a bare centered spinner. The initial read of stored consent state (ConsentViewModel.kt:38-49) has no loading affordance at all, so re-entering from Settings can briefly show factory defaults before the real values land."
+      },
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "72 / 36 / 12 / 24", "line": 95, "context": "HERO_ICON_SIZE_DP, HERO_ICON_INNER_SIZE_DP, HERO_SPACING_DP, HERO_PADDING_DP declared as raw Ints at :95-98 and converted with .dp at the call sites" },
+          { "value": "20 / 24 / 28 / 20 / 20 / 4", "line": 101, "context": "CARD_OVERLAP_DP, CARD_CORNER_RADIUS_DP, CARD_TOP_PADDING_DP, CARD_SIDE_PADDING_DP, CARD_BOTTOM_PADDING_DP, CARD_SHADOW_ELEVATION_DP at :101-106 — 20 and 28 are off the spacing scale" },
+          { "value": "10 / 12 / 44 / 12 / 22 / 2", "line": 113, "context": "TOGGLE_ROW_PADDING_DP=10, TOGGLE_ROW_SPACING_DP=12, TOGGLE_ICON_SIZE_DP=44, TOGGLE_ICON_RADIUS_DP=12, TOGGLE_ICON_INNER_SIZE_DP=22, TOGGLE_TEXT_SPACING_DP=2 at :113-119 — 10, 44, 22 and 2 are all off-scale" },
+          { "value": "56 / 16 / 20 / 16 / 8 / 24", "line": 120, "context": "CTA_HEIGHT_DP=56, CTA_CORNER_RADIUS_DP=16, CTA_PADDING_HORIZONTAL_DP=20, CTA_PADDING_VERTICAL_DP=16, CTA_SPACING_DP=8, PROGRESS_INDICATOR_SIZE_DP=24 at :120-126" },
+          { "value": "180 / 60 / 80 / 90 / 50 / 30 / 120", "line": 129, "context": "GLOW_* radii and offsets at :129-140" },
+          { "value": "112.dp", "line": 211, "context": "bottom padding hardcoded to 'reserve space for sticky CTAs' — the sticky column is actually 16+56+8+~40+16 = ~136dp tall (:401, :411, :402, :439), so the reservation under-shoots and the legal copy can sit behind the CTA bar. INFERRED" },
+          { "value": "4.dp / 16.dp / 12.dp", "line": 326, "context": "Spacers inside the card written as raw literals rather than the DP constants above — the file uses both conventions" },
+          { "value": "2.5.dp", "line": 423, "context": "progress stroke width" }
+        ],
+        "hardcodedColors": [
+          { "value": "Color(0xFF0B3D2E) HeroBg", "line": 68, "context": "duplicates colorScheme.primary as a literal" },
+          { "value": "Color(0xFF062A20) HeroBgDark", "line": 69, "context": "gradient start — not in the documented palette" },
+          { "value": "Color(0xFFFBF7EF) ScreenBgLight", "line": 70, "context": "duplicates light background token" },
+          { "value": "Color(0xFF0D1A16) ScreenBgDark", "line": 71, "context": "does NOT match the dark background token #071511" },
+          { "value": "Color.White CardBgLight", "line": 72, "context": "pure white, not the #FFFDF8 surface token" },
+          { "value": "Color(0xFF1A2E24) CardBgDark", "line": 73, "context": "does NOT match the dark surface token #0D1D18" },
+          { "value": "Color(0xFFEDE8E3) / Color(0xFF2A3E34)", "line": 74, "context": "dividers — neither matches the outline tokens #DED8CD / #2E423A" },
+          { "value": "Color(0xFF5F6C66) TextMuted", "line": 76, "context": "duplicates onSurfaceVariant" },
+          { "value": "Color(0xFF8FA899) / Color(0xFFE8F1EC)", "line": 77, "context": "dark-mode text colours, not from the theme" },
+          { "value": "Color(0xFF0B3D2E) / Color(0xFFC8E6C9) / Color(0xFFE0E0E0)", "line": 80, "context": "Switch thumb/track colours at :80-82 — C8E6C9 and E0E0E0 are stock Material 2 greens/greys, foreign to the palette" },
+          { "value": "Color(0xFFE8F5E8)/(0xFF0B3D2E), Color(0xFFE8EDF5)/(0xFF1A4B8C), Color(0xFFFFF3E0)/(0xFFE65100)", "line": 84, "context": "three icon-tile background/tint pairs at :84-89 — introduces a blue (#1A4B8C) and an orange (#E65100) that exist nowhere in the design system" },
+          { "value": "Color(0xFF18231F) TEXT_PRIMARY_LIGHT", "line": 143, "context": "duplicates onSurface" },
+          { "value": "Color(0xFF4CAF50) GLOW_CENTER_COLOR", "line": 144, "context": "Material 2 stock green used for the hero glow" },
+          { "value": "Color.White", "line": 267, "context": "hero icon circle" },
+          { "value": "Color.White", "line": 286, "context": "hero title" }
+        ],
+        "unmappedTypographySlots": [
+          { "slot": "headlineSmall", "line": 282, "context": "hero title — and it is then overridden to 26.sp anyway (:284), so the slot's own metrics are discarded" },
+          { "slot": "titleMedium", "line": 323, "context": "'Data use consent' section heading — Roboto fallback" },
+          { "slot": "titleMedium", "line": 429, "context": "the primary CTA label 'Agree and continue' — Roboto fallback on the single most important button of the gate" }
+        ],
+        "offScaleRadius": [
+          { "value": "24.dp", "line": 305, "context": "card top corners (CARD_CORNER_RADIUS_DP) — above the xl=20 max" },
+          { "value": "16.dp", "line": 412, "context": "primary CTA radius (CTA_CORNER_RADIUS_DP) — not on the scale, and different again from the 12dp icon tiles at :475 and the 24dp card at :305, giving three unrelated radii on one screen" }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "HIGH. (a) Font sizes are pinned in sp and override the type scale: 26sp hero title (:284), 14sp hero subtitle (:292), 14sp toggle title (:495), 12sp toggle description (:501), 12sp legal copy (:525, :536, :545), 16sp CTA (:431). Devanagari has taller ascenders/descenders and 12sp legal copy in Hindi is at the edge of legibility. (b) The primary CTA is a fixed 56dp-tall Button (:411) containing a single Text with no maxLines — the Hindi label 'सहमत हों और जारी रखें' (values-hi/strings.xml:239) is materially longer than 'Agree and continue' and will wrap-then-clip inside the fixed height. INFERRED. (c) Each ConsentToggleRow is a fixed Row with the text column at weight(1f) between a 44dp tile and a Switch (:474, :489, :507), so longer Hindi descriptions such as values-hi/strings.xml:231 force extra wrapping and desynchronise the three row heights. (d) The 112dp bottom reservation (:211) is computed for English content height.",
+        "currencyFormatting": "N/A — no money is rendered on this screen (verified across all 556 lines)."
+      },
+      "a11y": {
+        "contentDescriptions": { "present": false, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/DpdpConsentScreen.kt:272", "note": "Both Icons in the file are contentDescription = null — the hero brand icon (:272) and every ConsentToggleRow category icon (:481)." },
+        "touchTargetRisks": [
+          { "line": 464, "size": "row is not clickable", "note": "The toggle Row itself has no toggleable/clickable modifier (:464-470) — only the trailing Switch (:507) accepts input, so the title and description text are dead to touch. On a 44dp icon + text + switch row this is a large visually-interactive-looking area that does nothing." },
+          { "line": 439, "size": "TextButton default", "note": "'Reject all' is a bare TextButton with no minimum height set; it is the legally required decline path and is the least prominent control on the screen." }
+        ],
+        "contrastRisks": [
+          { "line": 497, "note": "CRITICAL DARK-MODE FAILURE: ConsentToggleRow hardcodes the title colour to TEXT_PRIMARY_LIGHT (#18231F) even though the parent computed a dark-aware textPrimary at :196 and never passes it in. In dark mode the card background is #1A2E24 (:73) so near-black title text sits on a near-black card." },
+          { "line": 503, "note": "Same defect for the toggle description, hardcoded to TextMuted (#5F6C66) against the #1A2E24 dark card." },
+          { "line": 447, "note": "'Reject all' is hardcoded to TextMuted (#5F6C66) in both themes — on the #1A2E24 dark CTA background it is barely legible, and even in light mode it is low-contrast small text for a mandatory legal choice." },
+          { "line": 293, "note": "Hero subtitle at Color.White.copy(alpha = 0.70f) over a gradient." },
+          { "line": 525, "note": "Legal copy at 12sp in textMuted, centered — smallest text on the screen and it carries the DPDP consent language." }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "No HsScreenTitle and no semantics { heading() } anywhere in the file — neither the hero title (:279) nor the 'Data use consent' section heading (:321) is exposed as a heading. Because the Row is not toggleable (:464), TalkBack announces the title, the description, and the Switch as three separate unlinked nodes, so the switch has no accessible label tying it to its category. INFERRED."
+      },
+      "imagery": {
+        "usesImages": false,
+        "sources": [],
+        "placeholderOrMissing": ["No painterResource / Image / R.drawable in the file. The hero's only figurative element is Icons.Default.Eco — a generic Material leaf glyph — standing in for brand identity on the app's first screen, and it does not appear on any other onboarding surface."],
+        "cite": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/DpdpConsentScreen.kt:270-275"
+      },
+      "motion": {
+        "animationsUsed": [
+          { "what": "Material3 Switch default thumb slide (the only motion on the screen, inherited from the component)", "line": 507 }
+        ],
+        "usesMotionTokens": false,
+        "transitionsOnNav": "None. No animate*/AnimatedVisibility/Crossfade in the file; the loading spinner appears by a hard `if` swap inside the button (:419). Navigation away is a default NavHost transition (AppNavigation.kt:185-188)."
+      },
+      "density": "Dense and unevenly rhythmed. Card padding is 28/20/20 (:313-317) while the CTA bar uses 20/16 (:401) and the hero uses 24 (:256) — three different gutters on one screen. Toggle rows are 10dp vertical (:468) separated by dividers with only 4dp of padding (:347), which reads cramped next to the 16dp Spacers at :333 and :380. The hero, at a nominal 40% of screen height with only an icon and two lines of text, is by contrast very airy.",
+      "observations": [
+        { "severity": "high", "claim": "ConsentToggleRow hardcodes its title and description colours to the light-theme values while the parent composable computes dark-aware colours and never passes them down, so in dark mode near-black text (#18231F) renders on a near-black card (#1A2E24) — the three consent options become unreadable.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/DpdpConsentScreen.kt:497", "confidence": "observed" },
+        { "severity": "high", "claim": "The screen never renders ConsentUiState.error, which the ViewModel does populate on failure — a failed consent write on a legally mandated gate produces zero user feedback.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/ConsentViewModel.kt:82", "confidence": "observed" },
+        { "severity": "high", "claim": "The file completely bypasses the design system: ~20 private Color literals (:68-89, :143-144) and ~40 raw Int dp/sp constants (:95-145) redefine the palette and spacing scale locally, and three of the redefined colours (#0D1A16, #1A2E24, #EDE8E3) do not match the real tokens they duplicate.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/DpdpConsentScreen.kt:68-89", "confidence": "observed" },
+        { "severity": "high", "claim": "Dark mode is detected by inspecting the red channel of the background colour (background.red < 0.5) rather than by reading the theme — a heuristic that silently breaks if the palette ever changes.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/DpdpConsentScreen.kt:192", "confidence": "observed" },
+        { "severity": "high", "claim": "The hero uses fillMaxHeight(0.40f) inside a verticalScroll Column; a scrollable parent passes an unbounded height constraint, so fillMaxHeight has no bounded height to take a fraction of and the hero collapses to its content height instead of the intended 40% — the designed hero proportion is not what renders.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/DpdpConsentScreen.kt:210-219", "confidence": "inferred" },
+        { "severity": "medium", "claim": "Three consecutive first-run screens each render a different hero: consent is a centered-icon 40% hero with three glows and hardcoded colours, the language picker is a bottom-aligned 30% hero with two glows, and auth is a bottom-aligned 38% hero with two glows — and only consent omits the 'HomeHeroo' wordmark entirely.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/DpdpConsentScreen.kt:259-296", "confidence": "observed" },
+        { "severity": "medium", "claim": "The sticky CTA bar is not given navigationBarsPadding, and the scroll body reserves only 112dp for a bar that measures roughly 136dp (16 + 56 + 8 + TextButton + 16), so the legal copy can be occluded by the CTA bar and the CTA bar by the gesture bar.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/DpdpConsentScreen.kt:211", "confidence": "inferred" },
+        { "severity": "medium", "claim": "The mandatory 'Reject all' path is a low-contrast grey TextButton hardcoded to #5F6C66 in both themes, visually subordinated beneath a 56dp ExtraBold brand-green Agree button — a dark-pattern-adjacent hierarchy on a DPDP consent gate.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/DpdpConsentScreen.kt:439-448", "confidence": "observed" },
+        { "severity": "medium", "claim": "Consent rows are not tappable — only the Switch itself accepts input; the icon tile, title, and description are inert.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/DpdpConsentScreen.kt:464-470", "confidence": "observed" },
+        { "severity": "medium", "claim": "The legal copy is rendered with BasicText and a bare TextStyle(textAlign) rather than a MaterialTheme typography slot, so it inherits the platform default font family (Roboto) instead of Geist/Noto, at 12sp.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/DpdpConsentScreen.kt:551-554", "confidence": "observed" },
+        { "severity": "medium", "claim": "The primary CTA label uses the unmapped titleMedium slot, so the single most important button in the consent gate renders in Roboto while the rest of the app renders in Geist.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/DpdpConsentScreen.kt:429", "confidence": "observed" },
+        { "severity": "medium", "claim": "The privacy policy link points at https://homeservices.app/privacy, a hardcoded URL using the placeholder project name, while the product brands itself 'HomeHeroo' two screens later.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/DpdpConsentScreen.kt:92", "confidence": "observed" },
+        { "severity": "low", "claim": "The category icon tiles introduce a blue (#1A4B8C) and an orange (#E65100) that exist nowhere in the design system, and their pale backgrounds are light-only so they do not adapt in dark mode.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/DpdpConsentScreen.kt:84-89", "confidence": "observed" },
+        { "severity": "low", "claim": "The Switch is coloured with stock Material 2 values (#C8E6C9 checked track, #E0E0E0 unchecked track) rather than the brand palette.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/DpdpConsentScreen.kt:81-82", "confidence": "observed" },
+        { "severity": "low", "claim": "Icons.Default.Eco (a leaf) is used as the hero symbol for a data-privacy consent screen — semantically wrong iconography on the app's first impression.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/DpdpConsentScreen.kt:271", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "customer.waitlist",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistScreen.kt",
+      "loc": 67,
+      "purpose": "Out-of-service-area fallback where the user leaves a phone number to be notified when the platform expands to their location.",
+      "entryPoints": "Nav destination in the main graph with lat/lng/serviceId args defaulting to the Ayodhya centre, at customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/MainGraph.kt:274-295; onBack pops the stack (MainGraph.kt:293).",
+      "composition": [
+        "Scaffold with a Material3 TopAppBar (WaitlistScreen.kt:41-54)",
+        "  TopAppBar title = HsScreenTitle(stringResource(waitlist_title)) — i.e. the sentence 'Get notified when we expand' as an app-bar title (:44)",
+        "  Navigation icon: AutoMirrored ArrowBack IconButton with contentDescription taken from R.string.service_detail_back_desc (:46-51)",
+        "Body = WaitlistScreenContent, padded by the Scaffold insets (:56-65). All remaining structure lives in customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistScreenContent.kt (206 lines):",
+        "  Root Column, 24dp horizontal padding, navigationBarsPadding (WaitlistScreenContent.kt:45-51)",
+        "  24dp Spacer (:52)",
+        "  WaitlistHeader — headlineMedium Bold title (the SAME waitlist_title string already in the app bar), 8dp Spacer, bodyLarge/onSurfaceVariant body copy (:53, component :183-196)",
+        "  32dp Spacer (:54)",
+        "  Then a `when (uiState)` over five states (:56-104):",
+        "  Form — OutlinedTextField phone with a hardcoded '+91 98765 43210' placeholder, 24dp Spacer, full-width HsPrimaryButton 'Join the waitlist' gated on isPhoneValid (:92-103; PhoneField :108-123, SubmitButton :125-136)",
+        "  Submitting — the same phone field but disabled, 24dp Spacer, a bare centered CircularProgressIndicator (:63-64, component :171-181)",
+        "  Confirmed — a primaryContainer Surface with MaterialTheme.shapes.medium, 24dp padding, a 48dp CheckCircle icon, titleLarge SemiBold headline, and bodyMedium body (:57, component :138-169)",
+        "  Error — phone field, 8dp Spacer, the raw reason string in bodyMedium/error colour, 24dp Spacer, HsPrimaryButton whose label flips between 'Try again' and 'Join the waitlist' and which is DISABLED when !retryable (:66-90)",
+        "  RateLimited — a single line of bodyLarge error-coloured text and nothing else (:59-61, component :198-206)"
+      ],
+      "states": {
+        "loading": {
+          "present": true,
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistScreenContent.kt:178-180",
+          "quality": "BARE CENTERED SPINNER. The submit button is removed entirely and replaced by a default CircularProgressIndicator in a Box, so the CTA disappears rather than entering a loading state."
+        },
+        "empty": { "present": false, "evidence": null, "quality": "N/A — single-field form." },
+        "error": {
+          "present": true,
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistScreenContent.kt:73-77",
+          "quality": "POOR. The body is uiState.reason, which the ViewModel fills with throwable.message — a raw exception string surfaced verbatim to the user (customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistViewModel.kt:103). It is rendered as plain red body text with no icon, container, or structure."
+        },
+        "success": {
+          "present": true,
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistScreenContent.kt:138-169",
+          "quality": "The best-realised state on the screen — a primaryContainer card with a 48dp check icon and a headline/body pair. But it is a terminal dead end: no CTA back to browsing, and the app-bar back arrow is the only exit."
+        },
+        "offline": { "present": false, "evidence": null, "quality": "MAJOR ABSENCE. No offline branch in WaitlistUiState (customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistUiState.kt:3-21); network failure becomes a retryable Error carrying the exception text." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "N/A." }
+      },
+      "skeletonOrSpinner": {
+        "type": "CircularProgressIndicator",
+        "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistScreenContent.kt:179",
+        "note": "Bare default spinner, centered, no size/colour override, replacing the submit button. No HsSkeletonBlock usage."
+      },
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "24.dp", "line": 49, "context": "root horizontal padding in WaitlistScreenContent.kt" },
+          { "value": "24.dp", "line": 52, "context": "top spacer" },
+          { "value": "32.dp", "line": 54, "context": "spacer under the header" },
+          { "value": "8.dp", "line": 72, "context": "spacer above the error text" },
+          { "value": "24.dp", "line": 78, "context": "spacer above the error CTA" },
+          { "value": "24.dp", "line": 98, "context": "spacer above the submit button" },
+          { "value": "24.dp", "line": 147, "context": "Confirmed card inner padding" },
+          { "value": "48.dp", "line": 153, "context": "Confirmed check-icon size (equals space12 but written as a literal)" },
+          { "value": "12.dp", "line": 155, "context": "Confirmed card internal spacer" },
+          { "value": "8.dp", "line": 161, "context": "Confirmed card internal spacer" },
+          { "value": "24.dp", "line": 177, "context": "Submitting spacer" },
+          { "value": "8.dp", "line": 190, "context": "header internal spacer" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "+91 98765 43210", "line": 118 },
+          { "text": "Session expired. Please sign in again.", "line": 41 },
+          { "text": "Please enter a valid Indian mobile number (+91XXXXXXXXXX).", "line": 76 },
+          { "text": "Something went wrong.", "line": 103 }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "MEDIUM-HIGH. (a) The three error reasons above are Kotlin literals in WaitlistViewModel.kt (:41, :76, :103) and are rendered directly at WaitlistScreenContent.kt:74, so Hindi users see English error copy. (b) waitlist_title is a full sentence ('विस्तार होने पर सूचना पाएँ', values-hi/strings.xml:472) used as a TopAppBar title (WaitlistScreen.kt:44) — Material3 single-line app-bar titles clip, and HsScreenTitle is called without maxLines/overflow so it defaults to TextOverflow.Clip (HsScreenTitle.kt:34). INFERRED. (c) The root Column has no verticalScroll (WaitlistScreenContent.kt:45-51), so longer Hindi header copy plus the field, error line, and button cannot scroll and will be clipped on small screens with the IME open — there is also no imePadding.",
+        "currencyFormatting": "N/A — no money is rendered (verified across both files, 67 + 206 lines)."
+      },
+      "a11y": {
+        "contentDescriptions": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistScreen.kt:49", "note": "The back arrow is described, but it borrows R.string.service_detail_back_desc from an unrelated screen. The Confirmed check icon is contentDescription = null (WaitlistScreenContent.kt:151), so the success signal is invisible to TalkBack apart from the text." },
+        "touchTargetRisks": [],
+        "contrastRisks": [
+          { "line": 76, "note": "Error text uses colorScheme.error (#D73C3C) on background #FBF7EF at bodyMedium — red-on-cream small text (WaitlistScreenContent.kt:76)." },
+          { "line": 204, "note": "RateLimited text uses the same error red at bodyLarge (WaitlistScreenContent.kt:204)." },
+          { "line": 194, "note": "Header body copy at onSurfaceVariant #5F6C66 (WaitlistScreenContent.kt:194)." }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "HsScreenTitle marks the TopAppBar title as a heading (WaitlistScreen.kt:44), but the duplicate on-screen H1 at WaitlistScreenContent.kt:185 is a plain Text with no heading semantics, so TalkBack sees one heading and then an unlabelled repeat of the same sentence."
+      },
+      "imagery": {
+        "usesImages": false,
+        "sources": [],
+        "placeholderOrMissing": ["No painterResource / Image / R.drawable in either file. The only graphic on the entire screen is the 48dp Material CheckCircle glyph in the success state — the Form state, which is what most users see, is a completely image-free wall of text plus one input."],
+        "cite": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistScreenContent.kt:149-154"
+      },
+      "motion": {
+        "animationsUsed": [],
+        "usesMotionTokens": false,
+        "transitionsOnNav": "None. No animate*/AnimatedVisibility/Crossfade in either file. Form -> Submitting -> Confirmed hard-cuts between three different layouts, so the success moment — the emotional payoff of the whole screen — arrives with no motion at all."
+      },
+      "density": "Airy at the top, empty at the bottom. 24dp side padding with 24/32dp stacked spacers (WaitlistScreenContent.kt:49, :52, :54) pushes the single input roughly a third of the way down, and because the Column has no weight/Spacer arrangement everything is top-aligned, leaving the entire lower half of the screen blank in every state. The RateLimited state is a single line of red text on an otherwise empty screen.",
+      "observations": [
+        { "severity": "high", "claim": "Raw exception text is surfaced to the user as error copy: the ViewModel puts throwable.message into uiState.reason and the screen renders it verbatim.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistViewModel.kt:103", "confidence": "observed" },
+        { "severity": "high", "claim": "The RateLimited state is a dead end — it renders one line of red text and removes the phone field, the submit button, and every other affordance, leaving the user with no action but the back arrow.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistScreenContent.kt:198-206", "confidence": "observed" },
+        { "severity": "high", "claim": "The session-expired path sets a non-retryable Error, which renders an enabled-looking phone field above a DISABLED 'Join the waitlist' button and an English-only 'Session expired' message, with no sign-in CTA — an unrecoverable screen.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistViewModel.kt:37-43", "confidence": "observed" },
+        { "severity": "high", "claim": "This screen has no hero, no gradient, no card shell and no design-system framing at all, so it looks like it belongs to a different product than the consent/language/auth screens it sits alongside — plain text on a flat background with one outlined field.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistScreenContent.kt:45-54", "confidence": "observed" },
+        { "severity": "medium", "claim": "The same string (waitlist_title, a full sentence) is rendered twice on one screen — once as the TopAppBar title and again as the in-body headline directly beneath it.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistScreen.kt:44", "confidence": "observed" },
+        { "severity": "medium", "claim": "The submit CTA vanishes during submission and is replaced by a bare centered spinner rather than the button entering a loading state.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistScreenContent.kt:171-181", "confidence": "observed" },
+        { "severity": "medium", "claim": "The phone placeholder '+91 98765 43210' is a hardcoded literal rather than a string resource, and it is duplicated verbatim in strings.xml as auth_mobile_placeholder for the auth screen.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistScreenContent.kt:118", "confidence": "observed" },
+        { "severity": "medium", "claim": "The form Column has neither verticalScroll nor imePadding, so with the numeric keyboard open on a small device the header, error line, and submit button can be pushed off-screen with no way to scroll to them.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistScreenContent.kt:45-51", "confidence": "inferred" },
+        { "severity": "medium", "claim": "The Confirmed state is terminal with no forward CTA — after joining the waitlist the only exit is the back arrow.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistScreenContent.kt:138-169", "confidence": "observed" },
+        { "severity": "low", "claim": "Phone validation is silent until submit: the field shows no isError styling or supporting text, only the submit button's enabled flag reflects validity.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistScreenContent.kt:114-122", "confidence": "observed" },
+        { "severity": "low", "claim": "The back-button contentDescription is borrowed from an unrelated screen's string (service_detail_back_desc).", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistScreen.kt:49", "confidence": "observed" },
+        { "severity": "low", "claim": "Zero motion — the success card appears by a hard state swap with no entrance animation.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistScreenContent.kt:56-57", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "customer.smoke-screen",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/SmokeScreen.kt",
+      "loc": 56,
+      "purpose": "Scaffold-era placeholder screen showing the app name, a 'skeleton — ready for development' line, and the build version/SHA.",
+      "entryPoints": "NONE in production. A repo-wide grep for 'SmokeScreen' across customer-app returns only its own definition (SmokeScreen.kt:22) and a Paparazzi test (customer-app/app/src/test/kotlin/com/homeservices/customer/ui/SmokeScreenPaparazziTest.kt:37, :46). It is not referenced from AppNavigation.kt, AuthGraph.kt, MainGraph.kt, or SettingsGraph.kt — it is dead code that still ships in the release APK.",
+      "composition": [
+        "Full-screen Surface, colour = colorScheme.background (SmokeScreen.kt:23-26)",
+        "Column, fillMaxSize, 24dp padding, horizontalAlignment Start, verticalArrangement SpaceBetween (:27-34)",
+        "Top block Column (:35-47): 'homeservices customer' in displayLarge/primary (:36-40), 8dp Spacer (:41), 'skeleton — ready for development' in bodyLarge/onBackground (:42-46)",
+        "Bottom line: 'v{version}  ·  {shortSha}' in bodySmall/onBackground (:49-53)"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "Static screen with no state." },
+        "empty": { "present": false, "evidence": null, "quality": "N/A." },
+        "error": { "present": false, "evidence": null, "quality": "N/A." },
+        "success": { "present": false, "evidence": null, "quality": "N/A." },
+        "offline": { "present": false, "evidence": null, "quality": "N/A." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "N/A." }
+      },
+      "skeletonOrSpinner": { "type": "none", "evidence": null, "note": "No loading affordance; nothing async." },
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "24.dp", "line": 18, "context": "private val ScreenPadding — equals space6 but declared locally instead of using LocalHomeservicesSpacing" },
+          { "value": "8.dp", "line": 19, "context": "private val TitleSubtitleSpacing — equals space2, declared locally" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "homeservices customer", "line": 37 },
+          { "text": "skeleton — ready for development", "line": 43 },
+          { "text": "v${buildInfo.version}  ·  ${buildInfo.shortSha}", "line": 50 }
+        ],
+        "usesStringResource": false,
+        "hindiRisk": "N/A in practice (unreachable), but every string is a literal and displayLarge on 'homeservices customer' would overflow badly in Devanagari inside a fixed non-scrolling Column (:27-33). The em-dash and the '·' separator are hardcoded Latin typography.",
+        "currencyFormatting": "N/A — no money rendered."
+      },
+      "a11y": {
+        "contentDescriptions": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/SmokeScreen.kt:36", "note": "Vacuously true — no Icon or Image composables in the file." },
+        "touchTargetRisks": [],
+        "contrastRisks": [
+          { "line": 52, "note": "Version footer at bodySmall in onBackground on background — small but high-contrast; the notable issue is that onBackground is used for de-emphasised metadata where onSurfaceVariant would be expected." }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "The title at :36 is a plain Text, not HsScreenTitle, so no heading semantics — the file does not import HsScreenTitle at all (imports end at :16)."
+      },
+      "imagery": {
+        "usesImages": false,
+        "sources": [],
+        "placeholderOrMissing": ["No painterResource / Image / R.drawable — the screen is pure text."],
+        "cite": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/SmokeScreen.kt:27-53"
+      },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "Not navigable." },
+      "density": "Extremely sparse: two text blocks at the top and one line at the bottom of a fillMaxSize Column with SpaceBetween (:33), so the middle ~70% of the screen is empty by construction.",
+      "observations": [
+        { "severity": "medium", "claim": "SmokeScreen is dead code that is still compiled into the shipping app — it is referenced only by its own definition and a Paparazzi test, never by any nav graph.", "evidence": "customer-app/app/src/test/kotlin/com/homeservices/customer/ui/SmokeScreenPaparazziTest.kt:37", "confidence": "observed" },
+        { "severity": "medium", "claim": "It hardcodes a third product name, 'homeservices customer', at displayLarge — the language and auth screens brand as 'HomeHeroo' and the consent screen's privacy URL uses homeservices.app, so three different identities exist in the codebase.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/SmokeScreen.kt:37", "confidence": "observed" },
+        { "severity": "low", "claim": "Ships developer-facing copy ('skeleton — ready for development') and a raw build SHA in a user-visible composable.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/SmokeScreen.kt:43", "confidence": "observed" },
+        { "severity": "low", "claim": "Declares its own private ScreenPadding/TitleSubtitleSpacing dp values instead of consuming LocalHomeservicesSpacing, and does not use HsScreenTitle for its heading.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/SmokeScreen.kt:18-19", "confidence": "observed" }
+      ]
+    }
+  ]
+}

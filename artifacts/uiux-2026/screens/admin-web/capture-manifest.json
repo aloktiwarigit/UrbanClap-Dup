@@ -1,0 +1,47 @@
+[
+  {
+    "name": "login-hi-desktop-1440",
+    "url": "http://localhost:3000/hi/login",
+    "width": 1440,
+    "height": 1100,
+    "finalUrl": "http://localhost:3000/hi/login",
+    "status": 200,
+    "title": "HomeHeroo — एडमिन"
+  },
+  {
+    "name": "login-hi-mobile-390",
+    "url": "http://localhost:3000/hi/login",
+    "width": 390,
+    "height": 844,
+    "finalUrl": "http://localhost:3000/hi/login",
+    "status": 200,
+    "title": "HomeHeroo — एडमिन"
+  },
+  {
+    "name": "login-en-desktop-1440",
+    "url": "http://localhost:3000/en/login",
+    "width": 1440,
+    "height": 1100,
+    "finalUrl": "http://localhost:3000/en/login",
+    "status": 200,
+    "title": "HomeHeroo — admin"
+  },
+  {
+    "name": "setup-hi-desktop-1440",
+    "url": "http://localhost:3000/hi/setup",
+    "width": 1440,
+    "height": 1100,
+    "finalUrl": "http://localhost:3000/hi/login",
+    "status": 200,
+    "title": "HomeHeroo — एडमिन"
+  },
+  {
+    "name": "setup-hi-mobile-390",
+    "url": "http://localhost:3000/hi/setup",
+    "width": 390,
+    "height": 844,
+    "finalUrl": "http://localhost:3000/hi/login",
+    "status": 200,
+    "title": "HomeHeroo — एडमिन"
+  }
+]
