@@ -1,7 +1,18 @@
-codex-review: passed
-branch: worktree-e20-cash-commission-api
-story: E21-S01
-model: gpt-5.5
-date: 2026-05-24
-findings: 4 P2s (amount-below-due, no-op audit, ops-manager rbac, razorpay cascade)
-resolution: all 4 fixed in commit 8452c86e; smoke gate green (1535 tests)
+{
+  "timestamp": "2026-07-26T21:44:55-04:00",
+  "reviewed_commit": "d98294ea8726744191511c580ab73e9059b93860",
+  "branch": "fix/p0-safety-sos-joboffer",
+  "reviewer": "codex",
+  "reviewer_version": "codex-cli 0.125.0",
+  "mode": "static (codex exec, read-only sandbox)",
+  "rounds": 2,
+  "round_1": { "critical": 0, "major": 3, "minor": 0 },
+  "round_2": { "critical": 0, "major": 0, "minor": 0 },
+  "resolution": {
+    "MAJOR-1_retry_no_inflight_guard": "fixed — guard claimed synchronously before launch",
+    "MAJOR-3_unknown_status_hid_sos": "fixed — Unknown now fails open",
+    "MAJOR-2_no_durable_recovery": "accepted via docs/adr/0028-sos-evidence-retry-is-in-memory-only.md; reasoning explicitly accepted by reviewer in round 2"
+  },
+  "smoke_gate": "tools/pre-codex-smoke.sh customer-app — all 6 steps passed, 812 tests",
+  "note": "reviewed_commit is the HEAD that was reviewed; this marker commit sits on top of it"
+}
