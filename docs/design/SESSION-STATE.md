@@ -1,8 +1,15 @@
 # UI/UX 2026 Session State
 
-Last updated: 2026-07-26 | Session: recovery/review + emulator/admin/auth capture + first verified audit slice | Phase: 1 repaired, screenshot capture started, Phase 3 verification in progress | Worktree: `C:\Alok\Business Projects\Urbanclap-dup` | Branch: `main`
+Last updated: 2026-07-26 | Session: recovery/review + emulator/admin/auth capture + first verified audit slice + **independent review & commit** | Phase: 1 repaired, screenshot capture partial, Phase 3 verification partial (214 of ~1009) | Worktree: `C:\Alok\Business Projects\Urbanclap-dup` | Branch: **`docs/uiux-2026-audit`**
 
 This file is the handoff contract. Trust disk over older conversation history.
+
+> **Parallel work in flight — read before touching customer-app.** The P0 SOS fixes are being done in a
+> **separate worktree**, not here:
+> `C:\Alok\Business Projects\homeservices-safety-p0` on branch **`fix/p0-safety-sos-joboffer`**
+> (commits `61d56257` SAFE-SOS-001/002/003/004/006, `3794a333` smoke-gate unblock; 11 files).
+> **This worktree still contains the unfixed code** — that is expected, not a regression. Do not
+> re-fix SOS here, and do not cite `LiveTrackingScreen.kt` line numbers from this tree as current.
 
 ## Current Verdict
 
@@ -130,7 +137,13 @@ Phase 1 is now usable, but only after repair in this session.
       Fix needs VM observation + finish-on-terminal + back-declines. Per root CLAUDE.md, step one of
       any technician-app story is copying `customer-app/gradle/libs.versions.toml` across.
 - [ ] Codex review gate not yet run on `fix/p0-safety-sos-joboffer`. Nothing pushed; no PR opened.
-- [ ] Commit/handoff per the original Claude prompt: not completed in this Codex session because the worktree is on `main` and already contains unrelated untracked changes.
+- [x] **Commit/handoff DONE 2026-07-26.** All audit artifacts committed to branch
+      **`docs/uiux-2026-audit`** (this worktree): `docs/design/{SESSION-STATE,design-language,
+      phase1-review,screenshot-capture-log,uiux-audit-2026}.md`, `docs/design/_inventory/`,
+      `docs/design/_verified/`, and `artifacts/uiux-2026/` (~10 MB: 2.0 MB JSON + 8.1 MB screenshots).
+      Deliberately **excluded**: `artifacts/*.aab` release binaries, the pre-existing loose
+      `artifacts/moto-g-*.png|xml` capture junk, `.serena/`, `.claire/` — none are audit evidence.
+      Nothing pushed; no PR opened.
 
 ## Decisions Made
 
@@ -267,7 +280,13 @@ roster table itself is uninventoried — only its route shell and loader were re
 ## Gaps And Risks
 
 - Screenshots are still the biggest evidentiary gap. Source-only UI review cannot prove Hindi clipping, 200% text behavior, visual hierarchy, or actual contrast in context. The emulator pass only covers two first-launch states.
-- Firebase test credentials: dedicated UI-audit Auth users exist in project `homeservices-prod-001`, but the current shell became unresponsive before refreshing or re-verifying their passwords in this turn. Use `api/.firebase-adminsdk.json` plus the app `google-services.json` API key to reset and verify the customer/technician UI-audit users before the next emulator login attempt. Do not commit or store passwords in repo files.
+- ~~Firebase test credentials~~ — **superseded 2026-07-26. Both UI-audit Auth users were DELETED from
+  `homeservices-prod-001`; see the "RESOLVED — production test accounts deleted" section above, which is
+  authoritative.** Do **not** recreate accounts in the production project and do **not** reset passwords
+  there. For further authenticated capture use a dedicated non-production Firebase project or the Auth
+  emulator (`firebase emulators:start --only auth`).
+  *(This bullet previously instructed the opposite. It was stale and contradicted the resolved section;
+  corrected during the 2026-07-26 review.)*
 - Customer first-run is currently blocked in emulator: the language picker remains on-screen after tapping English/Continue and Hindi/Continue. The Hindi option also was not exposed as a clickable node in inspected XML. Promoted to `CUST-LANG-001` in `docs/design/uiux-audit-2026.md`; exact failure mechanism still needs an instrumented UI test.
 - Some first-pass customer filenames say `dpdp-consent-*`, but XML inspection shows the visible state is the language picker. Use `docs/design/screenshot-capture-log.md` and XML contents before citing screenshots.
 - Technician authenticated onboarding is blocked on "Finding your location" after permissions and emulator geo fix. Promoted to `TECH-LOC-001` in `docs/design/uiux-audit-2026.md`; source confirms there is no explicit timeout around the current-location task.
