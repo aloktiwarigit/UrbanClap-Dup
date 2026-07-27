@@ -150,8 +150,40 @@ Phase 1 is now usable, but only after repair in this session.
 - [x] **BOTH PRs OPEN:**
       - **#293** — `fix/p0-safety-sos-joboffer` — P0 SOS safety + smoke-gate unblock (4 commits)
       - **#294** — `docs/uiux-2026-audit` — audit + implementation plan (3 commits, 90 files)
-- [ ] **SAFE-JOB-001/002/003 still outstanding** — scoped as story **S-02** in the implementation
-      plan. Own PR, technician-app, `libs.versions.toml` sync first.
+- [x] **SAFE-JOB-001/002/003 DONE — PR #295**, worktree `homeservices-joboffer-p0`, branch
+      `fix/p0-safety-joboffer`. Codex: 0 CRITICAL / 3 MAJOR → MAJOR-1 and MAJOR-2 fixed, MAJOR-3
+      recorded as follow-up. **The whole P0 batch is now closed.**
+      MAJOR-2 was a real hole in the first fix: `scheduleReset(2_000L)` flips terminal states back to
+      `Idle`, so `repeatOnLifecycle(STARTED)` missed them while stopped and re-created the exact
+      stranding bug. Collects on `CREATED` now.
+      MAJOR-3 (a second offer arriving while the Activity is finishing may be lost) is NOT fixed —
+      every candidate fix is worse than the bug; it is a pre-existing property of the single-instance
+      lock-screen Activity.
+
+## Paparazzi goldens — resolved, and the reasoning is worth keeping
+
+`main`'s CI has been **red since 2026-05-24** on `customer-app :app:lintDebug`. PR #293 fixes that,
+which let CI reach `verifyPaparazziDebug` for the first time in two months and exposed 2 stale
+`CatalogueHomeScreen` goldens underneath.
+
+Re-recorded on CI Linux via `paparazzi-record.yml` and **inspected image-by-image before accepting**
+rather than re-recorded on trust. Exactly 2 of 30 changed — a host-OS font/antialiasing drift would
+have changed all 30.
+
+The diff initially looked alarming: the old golden was **Hindi**, the new render **English**. It is
+not a regression. Goldens were captured at `fcd804c4` (2026-05-23 **15:45**); five hours later
+`c96cc1fa` (**20:33**) added the `promo_*` keys to `values/` (English) *and* `values-hi/` (Hindi).
+Before that the keys did not exist in `values/`, so the unqualified render produced Hindi; after it,
+English is correctly the default resource set. **Hindi is not lost** — `values-hi/` still carries
+every string and the app applies it via `setApplicationLocales`.
+
+The inspection still paid for itself: it surfaced **A11Y-004**, a genuine defect invisible in source —
+the English chip renders `30-day guara…` truncated where the Hindi `30 दिन गारंटी` fit. It **inverts**
+the audit's usual i18n assumption, so layouts must be checked at *both* locales, not just for
+Devanagari overflow.
+
+**Open item for the owner:** `main` being red for two months is not covered anywhere in the audit and
+deserves its own look — it meant no screenshot test ran across the entire Sprint 8 window.
 
 ## Worked example — why adversarial verification is not optional
 
