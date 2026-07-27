@@ -309,6 +309,27 @@ ASCII `"Rs"` ships at 2 live Android sites (`HsComponents.kt:172` → 2 call sit
 `TechnicianHomeScreen.kt:1350` → 5 call sites) plus 1 dead site
 (`TechnicianDashboardScreen.kt:129`, orphaned composable). `HsPriceText` also integer-truncates paise.
 
+## A11Y-004 — English chip truncates where Hindi fit: "30-day guara…"
+
+Found by pixel inspection of the re-recorded `CatalogueHomeScreenTest` goldens (2026-07-26), not by
+source reading — it is invisible in code.
+
+The trust chip renders **`30-day guara…`**, ellipsised, in the default English resource set. The
+Hindi string `30 दिन गारंटी` fit the same chip without truncation. Evidence:
+`customer-app/app/src/test/snapshots/images/…CatalogueHomeScreenTest_catalogue_home_success_state.png`.
+
+Notable because it **inverts** the usual assumption. Every i18n finding in this audit warns that
+Devanagari runs 15-30% longer and will overflow layouts sized for English. Here the opposite holds:
+the layout was sized while Hindi was the default render, and English — with `30-day guarantee` — is
+the string that does not fit.
+
+**Consequence for the plan:** layouts must be verified at **both** locales, not just checked for
+Devanagari overflow. A single-locale check would have passed this screen in either direction.
+
+**Fix:** size the chip for the longer of the two strings, or drop `maxLines`/ellipsis in favour of a
+wrapping or scrollable chip row. Do not fix by shortening the English copy alone — that hides the
+sizing bug rather than fixing it.
+
 ## A11Y-003 — Contrast
 
 `onSurfaceVariant` `#5F6C66` on surface `#FFFDF8` is annotated in-code as "large-text per NFR-A-5"
