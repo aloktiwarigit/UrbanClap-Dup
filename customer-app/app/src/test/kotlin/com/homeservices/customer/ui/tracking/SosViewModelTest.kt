@@ -337,6 +337,48 @@ public class SosViewModelTest {
             tempDir.deleteRecursively()
         }
 
+    /**
+     * Codex review MAJOR-1 — a double-tap on "Try again" must not launch two uploads. Without the
+     * re-entry guard both coroutines collect the flow and write state, so a slow Failure can land
+     * after a fast Success, showing an upload error for evidence that was actually saved.
+     */
+    @Test
+    public fun `double_tapping_retry_does_not_launch_a_second_upload`(): Unit =
+        runTest(testDispatcher) {
+            val tempDir = createTempDirectory().toFile()
+            every { mockContext.filesDir } returns tempDir
+            every { featureFlags.sosAudioUploadEnabled() } returns true
+            every { sessionManager.authState } returns MutableStateFlow(AuthState.Authenticated("cust-1"))
+            coEvery { consentStore.getAudioConsent() } returns false
+            coEvery { sosUseCase.execute("bk-1") } returns Result.success(Unit)
+
+            val vm = buildVm()
+            vm.onSosTapped()
+            advanceTimeBy(1L)
+            vm.simulateFreshRecordingCapturedForTest()
+            File(File(tempDir, "sos"), "sos-bk-1.m4a").also {
+                it.parentFile?.mkdirs()
+                it.writeBytes(byteArrayOf(4, 5))
+            }
+
+            var uploadCount = 0
+            every { audioUploader.upload(any(), any(), any()) } answers {
+                uploadCount++
+                flowOf(SosUploadProgress.Failure(RuntimeException("net_error")))
+            }
+            advanceUntilIdle()
+            assertThat(uploadCount).isEqualTo(1)
+
+            // Two taps before the first retry can settle.
+            vm.onRetryEvidenceUpload()
+            vm.onRetryEvidenceUpload()
+            advanceUntilIdle()
+
+            // One initial attempt + exactly one retry, not two.
+            assertThat(uploadCount).isEqualTo(2)
+            tempDir.deleteRecursively()
+        }
+
     /** SAFE-SOS-006 — declining retry must drop the retained audio rather than hold it in memory. */
     @Test
     public fun `dismissing_the_error_sheet_discards_the_retained_evidence`(): Unit =

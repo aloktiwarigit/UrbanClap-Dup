@@ -1,0 +1,642 @@
+diff --git a/customer-app/app/src/main/kotlin/com/homeservices/customer/domain/tracking/model/BookingStatusSosEligibility.kt b/customer-app/app/src/main/kotlin/com/homeservices/customer/domain/tracking/model/BookingStatusSosEligibility.kt
+new file mode 100644
+index 00000000..475a05f4
+--- /dev/null
++++ b/customer-app/app/src/main/kotlin/com/homeservices/customer/domain/tracking/model/BookingStatusSosEligibility.kt
+@@ -0,0 +1,37 @@
++package com.homeservices.customer.domain.tracking.model
++
++/**
++ * SAFE-SOS-002 — whether the customer-facing SOS control must be offered for this booking status.
++ *
++ * SOS is offered for the whole window in which a technician is dispatched to, travelling to,
++ * standing at, or working inside the customer's home — not only while work is in progress.
++ *
++ * `EnRoute` and `Reached` are the highest-risk states, not the lowest: the customer is alone,
++ * a stranger is arriving, and they have the least context about who is at the door. Gating SOS on
++ * `InProgress` removed the control from exactly those moments.
++ *
++ * `AwaitingPriceApproval` is included because the technician is still physically on site.
++ *
++ * Deliberately exhaustive with no `else` branch: adding a new [BookingStatus] will fail compilation
++ * here, forcing an explicit safety decision rather than silently defaulting to "no SOS".
++ */
++public val BookingStatus.isSosEligible: Boolean
++    get() =
++        when (this) {
++            BookingStatus.Assigned,
++            BookingStatus.EnRoute,
++            BookingStatus.Reached,
++            BookingStatus.InProgress,
++            BookingStatus.AwaitingPriceApproval,
++            -> true
++
++            BookingStatus.PendingPayment,
++            BookingStatus.Paid,
++            BookingStatus.Searching,
++            BookingStatus.Completed,
++            BookingStatus.Cancelled,
++            BookingStatus.Closed,
++            BookingStatus.Unfulfilled,
++            BookingStatus.Unknown,
++            -> false
++        }
+diff --git a/customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/LiveTrackingScreen.kt b/customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/LiveTrackingScreen.kt
+index f1fc08ce..e250f2fa 100644
+--- a/customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/LiveTrackingScreen.kt
++++ b/customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/LiveTrackingScreen.kt
+@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
+ import androidx.compose.foundation.layout.Column
+ import androidx.compose.foundation.layout.Row
+ import androidx.compose.foundation.layout.Spacer
++import androidx.compose.foundation.layout.defaultMinSize
+ import androidx.compose.foundation.layout.fillMaxSize
+ import androidx.compose.foundation.layout.fillMaxWidth
+ import androidx.compose.foundation.layout.height
+@@ -18,6 +19,7 @@ import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.automirrored.filled.ArrowBack
+ import androidx.compose.material.icons.filled.Warning
+ import androidx.compose.material3.AssistChip
++import androidx.compose.material3.ButtonDefaults
+ import androidx.compose.material3.CircularProgressIndicator
+ import androidx.compose.material3.ExperimentalMaterial3Api
+ import androidx.compose.material3.Icon
+@@ -28,6 +30,7 @@ import androidx.compose.material3.SnackbarHost
+ import androidx.compose.material3.SnackbarHostState
+ import androidx.compose.material3.Surface
+ import androidx.compose.material3.Text
++import androidx.compose.material3.TextButton
+ import androidx.compose.material3.TopAppBar
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.LaunchedEffect
+@@ -36,6 +39,8 @@ import androidx.compose.runtime.remember
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.res.stringResource
++import androidx.compose.ui.semantics.contentDescription
++import androidx.compose.ui.semantics.semantics
+ import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.text.style.TextAlign
+ import androidx.compose.ui.unit.dp
+@@ -49,6 +54,7 @@ import com.google.maps.android.compose.MarkerState
+ import com.google.maps.android.compose.rememberCameraPositionState
+ import com.homeservices.customer.R
+ import com.homeservices.customer.domain.tracking.model.BookingStatus
++import com.homeservices.customer.domain.tracking.model.isSosEligible
+ import com.homeservices.customer.ui.shared.TrustDossierCard
+ import com.homeservices.customer.ui.shared.TrustDossierUiState
+ import com.homeservices.customer.ui.shared.TrustDossierViewModel
+@@ -72,9 +78,12 @@ internal fun LiveTrackingScreen(
+     val noShowEvent by noShowVm.event.collectAsStateWithLifecycle()
+     val trustDossierUiState by trustDossierViewModel.uiState.collectAsStateWithLifecycle()
+     val snackbarHostState = remember { SnackbarHostState() }
+-    val isInProgress =
+-        uiState is LiveTrackingUiState.Tracking &&
+-            (uiState as LiveTrackingUiState.Tracking).status is BookingStatus.InProgress
++    // Hoisted: the semantics{} lambda below is not a composable scope.
++    val sosContentDescription = stringResource(R.string.tracking_sos_desc)
++    // SAFE-SOS-002: SOS must be reachable for the whole on-site window, not only while work is
++    // in progress. EN_ROUTE and REACHED are the highest-risk states, not the lowest.
++    val isSosAvailable =
++        (uiState as? LiveTrackingUiState.Tracking)?.status?.isSosEligible == true
+ 
+     val technicianId = (uiState as? LiveTrackingUiState.Tracking)?.technicianId
+     LaunchedEffect(technicianId) {
+@@ -97,12 +106,26 @@ internal fun LiveTrackingScreen(
+                     }
+                 },
+                 actions = {
+-                    if (isInProgress) {
+-                        IconButton(onClick = { sosViewModel.onSosTapped() }) {
+-                            Icon(
+-                                Icons.Filled.Warning,
+-                                contentDescription = stringResource(R.string.tracking_sos_desc),
+-                                tint = MaterialTheme.colorScheme.error,
++                    if (isSosAvailable) {
++                        // SAFE-SOS-003: icon + text, never icon alone — this is the one control
++                        // where guessing wrong has physical consequences.
++                        TextButton(
++                            onClick = { sosViewModel.onSosTapped() },
++                            colors =
++                                ButtonDefaults.textButtonColors(
++                                    contentColor = MaterialTheme.colorScheme.error,
++                                ),
++                            modifier =
++                                Modifier
++                                    .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
++                                    .semantics { contentDescription = sosContentDescription },
++                        ) {
++                            Icon(Icons.Filled.Warning, contentDescription = null)
++                            Spacer(Modifier.width(4.dp))
++                            Text(
++                                text = stringResource(R.string.tracking_sos_label),
++                                style = MaterialTheme.typography.labelLarge,
++                                fontWeight = FontWeight.Bold,
+                             )
+                         }
+                     }
+@@ -163,7 +186,11 @@ private fun SosOverlay(
+         is SosUiState.EvidenceSaved ->
+             SosEvidenceSavedSheet(onDismiss = { sosViewModel.onDismissEvidenceResult() })
+         is SosUiState.EvidenceUploadError ->
+-            SosEvidenceUploadErrorSheet(message = sos.message, onDismiss = { sosViewModel.onDismissEvidenceResult() })
++            SosEvidenceUploadErrorSheet(
++                message = sos.message,
++                onRetry = { sosViewModel.onRetryEvidenceUpload() },
++                onDismiss = { sosViewModel.onDismissEvidenceResult() },
++            )
+         else -> Unit
+     }
+ }
+diff --git a/customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/SosBottomSheet.kt b/customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/SosBottomSheet.kt
+index 38f4cc06..92a6dd51 100644
+--- a/customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/SosBottomSheet.kt
++++ b/customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/SosBottomSheet.kt
+@@ -9,6 +9,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
+ import androidx.compose.material3.LinearProgressIndicator
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.ModalBottomSheet
++import androidx.compose.material3.ModalBottomSheetProperties
+ import androidx.compose.material3.Text
+ import androidx.compose.material3.rememberModalBottomSheetState
+ import androidx.compose.runtime.Composable
+@@ -20,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.text.style.TextAlign
+ import androidx.compose.ui.unit.dp
+ import com.homeservices.customer.R
++import com.homeservices.designsystem.components.HsDangerButton
+ import com.homeservices.designsystem.components.HsPrimaryButton
+ import com.homeservices.designsystem.components.HsSecondaryButton
+ 
+@@ -31,7 +33,15 @@ internal fun SosBottomSheet(
+     onConfirmNow: () -> Unit,
+ ) {
+     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+-    ModalBottomSheet(onDismissRequest = onCancel, sheetState = sheetState) {
++    // SAFE-SOS-001: an armed SOS must NOT be disarmed by an incidental gesture. Swipe-down, scrim
++    // tap and system back previously all routed to onCancel, so a customer fumbling their phone
++    // during the exact incident SOS exists for would silently cancel it. Dismissal is now inert;
++    // cancelling requires the explicit "Cancel alert" action below.
++    ModalBottomSheet(
++        onDismissRequest = {},
++        sheetState = sheetState,
++        properties = ModalBottomSheetProperties(shouldDismissOnBackPress = false),
++    ) {
+         Column(
+             modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
+             horizontalAlignment = Alignment.CenterHorizontally,
+@@ -56,7 +66,8 @@ internal fun SosBottomSheet(
+                 textAlign = TextAlign.Center,
+             )
+             Spacer(Modifier.height(24.dp))
+-            HsPrimaryButton(
++            // SAFE-SOS-004: emergency dispatch carries danger colour, not brand primary.
++            HsDangerButton(
+                 text = stringResource(R.string.sos_send_now),
+                 onClick = onConfirmNow,
+                 modifier = Modifier.fillMaxWidth(),
+@@ -119,11 +130,17 @@ internal fun SosEvidenceSavedSheet(onDismiss: () -> Unit) {
+     }
+ }
+ 
++/**
++ * SAFE-SOS-006: the upload failure reason was previously computed, passed in as [message], and then
++ * discarded behind `@Suppress("UnusedParameter")` — the sheet rendered a generic string and offered
++ * dismissal only, so safety evidence tied to a live emergency was lost with no way to recover it.
++ * The reason is now shown, and [onRetry] re-attempts the upload.
++ */
+ @OptIn(ExperimentalMaterial3Api::class)
+ @Composable
+-@Suppress("UnusedParameter")
+ internal fun SosEvidenceUploadErrorSheet(
+     message: String,
++    onRetry: () -> Unit,
+     onDismiss: () -> Unit,
+ ) {
+     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+@@ -138,6 +155,27 @@ internal fun SosEvidenceUploadErrorSheet(
+                 color = MaterialTheme.colorScheme.error,
+                 textAlign = TextAlign.Center,
+             )
++            if (message.isNotBlank()) {
++                Spacer(Modifier.height(4.dp))
++                Text(
++                    text = message,
++                    style = MaterialTheme.typography.bodySmall,
++                    color = MaterialTheme.colorScheme.onSurfaceVariant,
++                    textAlign = TextAlign.Center,
++                )
++            }
++            Spacer(Modifier.height(16.dp))
++            HsPrimaryButton(
++                text = stringResource(R.string.sos_evidence_retry),
++                onClick = onRetry,
++                modifier = Modifier.fillMaxWidth(),
++            )
++            Spacer(Modifier.height(8.dp))
++            HsSecondaryButton(
++                text = stringResource(R.string.sos_evidence_dismiss),
++                onClick = onDismiss,
++                modifier = Modifier.fillMaxWidth(),
++            )
+             Spacer(Modifier.height(16.dp))
+         }
+     }
+diff --git a/customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/SosViewModel.kt b/customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/SosViewModel.kt
+index 6155ccc9..24d37de4 100644
+--- a/customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/SosViewModel.kt
++++ b/customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/SosViewModel.kt
+@@ -50,6 +50,9 @@ public class SosViewModel
+         /** Set to true only when startRecording() completes successfully in this SOS session. */
+         private var freshRecordingCaptured = false
+ 
++        /** SAFE-SOS-006: in-memory copy of evidence awaiting a successful upload, for retry. */
++        private var pendingEvidence: PendingEvidence? = null
++
+         public fun onSosTapped() {
+             viewModelScope.launch {
+                 val consent = consentStore.getAudioConsent()
+@@ -70,6 +73,8 @@ public class SosViewModel
+ 
+         /** Dismiss the evidence-saved or evidence-error sheet after upload completes. */
+         public fun onDismissEvidenceResult() {
++            // Drop the retained copy — the customer declined to retry, so do not hold audio in memory.
++            pendingEvidence = null
+             _sosUiState.value = SosUiState.SosConfirmed
+         }
+ 
+@@ -176,18 +181,57 @@ public class SosViewModel
+             if (customerId == null || !file.exists()) return
+ 
+             val bytes = file.readBytes()
++            // Wipe from disk immediately (unchanged privacy behaviour) but retain in memory so a
++            // failed upload can be retried — SAFE-SOS-006. Previously the bytes were unrecoverable
++            // after the first failure, so safety evidence for a live emergency was simply lost.
+             file.delete()
++            pendingEvidence = PendingEvidence(customerId, bytes)
++            uploadEvidence(customerId, bytes)
++        }
++
++        private suspend fun uploadEvidence(
++            customerId: String,
++            bytes: ByteArray,
++        ) {
+             audioUploader.upload(customerId, bookingId, bytes).collect { progress ->
+                 _sosUiState.value =
+                     when (progress) {
+                         is SosUploadProgress.Progress -> SosUiState.UploadingEvidence(progress.pct)
+-                        is SosUploadProgress.Success -> SosUiState.EvidenceSaved
++                        is SosUploadProgress.Success -> {
++                            pendingEvidence = null
++                            SosUiState.EvidenceSaved
++                        }
+                         is SosUploadProgress.Failure ->
+                             SosUiState.EvidenceUploadError(progress.cause.message ?: "upload_failed")
+                     }
+             }
+         }
+ 
++        /** SAFE-SOS-006: re-attempt a failed evidence upload from the retained in-memory copy. */
++        public fun onRetryEvidenceUpload() {
++            val pending = pendingEvidence
++            if (pending == null) {
++                _sosUiState.value = SosUiState.SosConfirmed
++                return
++            }
++            viewModelScope.launch { uploadEvidence(pending.customerId, pending.bytes) }
++        }
++
++        private data class PendingEvidence(
++            val customerId: String,
++            val bytes: ByteArray,
++        ) {
++            override fun equals(other: Any?): Boolean =
++                this === other ||
++                    (
++                        other is PendingEvidence &&
++                            customerId == other.customerId &&
++                            bytes.contentEquals(other.bytes)
++                    )
++
++            override fun hashCode(): Int = 31 * customerId.hashCode() + bytes.contentHashCode()
++        }
++
+         private fun wipeStaleSosFile() {
+             freshRecordingCaptured = false
+             runCatching { File(File(context.filesDir, "sos"), "sos-$bookingId.m4a").delete() }
+diff --git a/customer-app/app/src/main/res/values-hi/strings.xml b/customer-app/app/src/main/res/values-hi/strings.xml
+index 5342c807..2e32a7e3 100644
+--- a/customer-app/app/src/main/res/values-hi/strings.xml
++++ b/customer-app/app/src/main/res/values-hi/strings.xml
+@@ -174,6 +174,9 @@
+     <string name="tracking_title">सर्विस ट्रैक करें</string>
+     <string name="tracking_back_desc">वापस</string>
+     <string name="tracking_sos_desc">सुरक्षा अलर्ट</string>
++    <!-- SAFE-SOS-003: "मदद" (help) rather than the Latin acronym "SOS", which a mixed-literacy
++         Hindi-first user in rural UP cannot be assumed to read. -->
++    <string name="tracking_sos_label">मदद</string>
+     <string name="tracking_your_technician">आपके तकनीशियन</string>
+     <string name="tracking_eta_chip">ETA %d मिनट</string>
+     <string name="tracking_service_progress">सर्विस प्रगति</string>
+@@ -215,6 +218,8 @@
+     <string name="sos_uploading_evidence">साक्ष्य अपलोड हो रहा है… %1$d%%</string>
+     <string name="sos_evidence_saved">साक्ष्य सुरक्षित रूप से सहेजा गया</string>
+     <string name="sos_evidence_upload_error">साक्ष्य नहीं सहेजा जा सका। मदद रास्ते में है।</string>
++    <string name="sos_evidence_retry">फिर कोशिश करें</string>
++    <string name="sos_evidence_dismiss">अभी नहीं</string>
+ 
+     <!-- SOS consent dialog (E12-S02a) -->
+     <string name="sos_consent_title">अलर्ट के साथ ऑडियो रिकॉर्ड करें?</string>
+diff --git a/customer-app/app/src/main/res/values/strings.xml b/customer-app/app/src/main/res/values/strings.xml
+index 1e0d69a0..84be2a33 100644
+--- a/customer-app/app/src/main/res/values/strings.xml
++++ b/customer-app/app/src/main/res/values/strings.xml
+@@ -86,16 +86,23 @@
+     <string name="booking_summary_subtitle">Choose online payment or pay cash when the technician reaches your home.</string>
+     <string name="booking_summary_slot_label">Slot</string>
+     <string name="booking_summary_address_label">Address</string>
+-    <string name="booking_payment_method_title">Payment method</string>
+-    <string name="booking_payment_online_title">Pay online now</string>
+-    <string name="booking_payment_online_body">Use Razorpay with UPI, cards, or wallets.</string>
+-    <string name="booking_payment_cash_title">Cash when technician arrives</string>
+-    <string name="booking_payment_cash_body">Create the service order now and pay at your doorstep.</string>
+-    <string name="booking_payment_secure_title">Secure Razorpay payment</string>
+-    <string name="booking_payment_secure_body">You will get live assignment updates after payment confirmation.</string>
++    <!--
++      Dormant during the cash-only pilot: the Razorpay payment-method chooser was hidden in
++      13fa7280, which orphaned these strings and turned lintDebug red on main for every branch.
++      Kept (with their hi translations) rather than deleted because they return verbatim when
++      online payment is re-enabled. Drop the tools:ignore at that point.
++    -->
++    <string name="booking_payment_method_title" tools:ignore="UnusedResources">Payment method</string>
++    <string name="booking_payment_online_title" tools:ignore="UnusedResources">Pay online now</string>
++    <string name="booking_payment_online_body" tools:ignore="UnusedResources">Use Razorpay with UPI, cards, or wallets.</string>
++    <string name="booking_payment_cash_title" tools:ignore="UnusedResources">Cash when technician arrives</string>
++    <string name="booking_payment_cash_body" tools:ignore="UnusedResources">Create the service order now and pay at your doorstep.</string>
++    <string name="booking_payment_secure_title" tools:ignore="UnusedResources">Secure Razorpay payment</string>
++    <string name="booking_payment_secure_body" tools:ignore="UnusedResources">You will get live assignment updates after payment confirmation.</string>
+     <string name="booking_payment_cash_note_title">Cash payment selected</string>
+     <string name="booking_payment_cash_note_body">We will assign a technician now. Please pay the listed amount when they reach.</string>
+-    <string name="booking_summary_pay_now">Pay Now</string>
++    <!-- Dormant during the cash-only pilot — see the booking_payment_* note above. -->
++    <string name="booking_summary_pay_now" tools:ignore="UnusedResources">Pay Now</string>
+     <string name="booking_summary_book_cash">Book with Cash</string>
+     <string name="booking_error_title">Booking could not continue</string>
+     <string name="booking_error_failed">Booking failed</string>
+@@ -200,6 +207,9 @@
+     <string name="tracking_title">Track service</string>
+     <string name="tracking_back_desc">Back</string>
+     <string name="tracking_sos_desc">Safety alert</string>
++    <!-- SAFE-SOS-003: visible label on the SOS control. Icon-only is not acceptable for a
++         mixed-literacy audience on a control where guessing wrong has physical consequences. -->
++    <string name="tracking_sos_label">SOS</string>
+     <string name="tracking_your_technician">Your technician</string>
+     <string name="tracking_eta_chip">ETA %d min</string>
+     <string name="tracking_service_progress">Service progress</string>
+@@ -241,6 +251,8 @@
+     <string name="sos_uploading_evidence">Uploading evidence… %1$d%%</string>
+     <string name="sos_evidence_saved">Evidence saved securely</string>
+     <string name="sos_evidence_upload_error">Could not save evidence. Help is already on the way.</string>
++    <string name="sos_evidence_retry">Try again</string>
++    <string name="sos_evidence_dismiss">Not now</string>
+ 
+     <!-- SOS consent dialog (E12-S02a) -->
+     <string name="sos_consent_title">Record audio with alert?</string>
+diff --git a/customer-app/app/src/test/kotlin/com/homeservices/customer/domain/tracking/BookingStatusSosEligibilityTest.kt b/customer-app/app/src/test/kotlin/com/homeservices/customer/domain/tracking/BookingStatusSosEligibilityTest.kt
+new file mode 100644
+index 00000000..2497a17d
+--- /dev/null
++++ b/customer-app/app/src/test/kotlin/com/homeservices/customer/domain/tracking/BookingStatusSosEligibilityTest.kt
+@@ -0,0 +1,71 @@
++package com.homeservices.customer.domain.tracking
++
++import com.homeservices.customer.domain.tracking.model.BookingStatus
++import com.homeservices.customer.domain.tracking.model.isSosEligible
++import org.assertj.core.api.Assertions.assertThat
++import org.junit.Test
++
++/**
++ * SAFE-SOS-002 — the SOS control must be reachable for the whole window in which a technician
++ * is dispatched to, travelling to, standing at, or working inside the customer's home.
++ *
++ * Before this change `LiveTrackingScreen` gated SOS on `status is BookingStatus.InProgress`, so the
++ * control was absent during EN_ROUTE and REACHED — precisely the window in which a customer is alone
++ * with an arriving stranger and has the least context. See docs/design/uiux-audit-2026.md.
++ */
++public class BookingStatusSosEligibilityTest {
++    @Test
++    public fun `sos is available once a technician is assigned`(): Unit {
++        assertThat(BookingStatus.Assigned.isSosEligible).isTrue()
++    }
++
++    @Test
++    public fun `sos is available while the technician is travelling`(): Unit {
++        assertThat(BookingStatus.EnRoute.isSosEligible).isTrue()
++    }
++
++    @Test
++    public fun `sos is available when the technician has reached the address`(): Unit {
++        assertThat(BookingStatus.Reached.isSosEligible).isTrue()
++    }
++
++    @Test
++    public fun `sos is available while work is in progress`(): Unit {
++        assertThat(BookingStatus.InProgress.isSosEligible).isTrue()
++    }
++
++    @Test
++    public fun `sos is available while awaiting price approval because the tech is still on site`(): Unit {
++        assertThat(BookingStatus.AwaitingPriceApproval.isSosEligible).isTrue()
++    }
++
++    @Test
++    public fun `sos is not offered before a technician is dispatched`(): Unit {
++        assertThat(BookingStatus.PendingPayment.isSosEligible).isFalse()
++        assertThat(BookingStatus.Paid.isSosEligible).isFalse()
++        assertThat(BookingStatus.Searching.isSosEligible).isFalse()
++    }
++
++    @Test
++    public fun `sos is not offered once the visit has ended`(): Unit {
++        assertThat(BookingStatus.Completed.isSosEligible).isFalse()
++        assertThat(BookingStatus.Cancelled.isSosEligible).isFalse()
++        assertThat(BookingStatus.Closed.isSosEligible).isFalse()
++        assertThat(BookingStatus.Unfulfilled.isSosEligible).isFalse()
++    }
++
++    @Test
++    public fun `unknown status does not offer sos`(): Unit {
++        assertThat(BookingStatus.Unknown.isSosEligible).isFalse()
++    }
++
++    @Test
++    public fun `every on-site status parsed from fcm is sos eligible`(): Unit {
++        listOf("ASSIGNED", "EN_ROUTE", "REACHED", "IN_PROGRESS", "AWAITING_PRICE_APPROVAL")
++            .forEach { raw ->
++                assertThat(BookingStatus.fromFcmString(raw).isSosEligible)
++                    .describedAs("SOS must be reachable for FCM status %s", raw)
++                    .isTrue()
++            }
++    }
++}
+diff --git a/customer-app/app/src/test/kotlin/com/homeservices/customer/ui/tracking/SosBottomSheetPaparazziTest.kt b/customer-app/app/src/test/kotlin/com/homeservices/customer/ui/tracking/SosBottomSheetPaparazziTest.kt
+index dbeb00c5..8bfcfd7a 100644
+--- a/customer-app/app/src/test/kotlin/com/homeservices/customer/ui/tracking/SosBottomSheetPaparazziTest.kt
++++ b/customer-app/app/src/test/kotlin/com/homeservices/customer/ui/tracking/SosBottomSheetPaparazziTest.kt
+@@ -31,7 +31,7 @@ public class SosBottomSheetPaparazziTest {
+     @Ignore("Goldens recorded on CI Linux via paparazzi-record.yml workflow_dispatch")
+     public fun sosBottomSheet_evidenceUploadError_lightTheme() {
+         paparazzi.snapshot {
+-            SosEvidenceUploadErrorSheet(message = "upload_failed", onDismiss = {})
++            SosEvidenceUploadErrorSheet(message = "upload_failed", onRetry = {}, onDismiss = {})
+         }
+     }
+ }
+diff --git a/customer-app/app/src/test/kotlin/com/homeservices/customer/ui/tracking/SosViewModelTest.kt b/customer-app/app/src/test/kotlin/com/homeservices/customer/ui/tracking/SosViewModelTest.kt
+index aebfa261..df8255c4 100644
+--- a/customer-app/app/src/test/kotlin/com/homeservices/customer/ui/tracking/SosViewModelTest.kt
++++ b/customer-app/app/src/test/kotlin/com/homeservices/customer/ui/tracking/SosViewModelTest.kt
+@@ -285,6 +285,92 @@ public class SosViewModelTest {
+             tempDir.deleteRecursively()
+         }
+ 
++    /**
++     * SAFE-SOS-006 — the evidence file is wiped from disk before the upload starts (privacy), so a
++     * failed upload was previously unrecoverable: the bytes were gone and the error sheet offered
++     * no retry. Evidence for a live emergency was silently lost. Retry must work from the retained
++     * in-memory copy, with the file still absent from disk.
++     */
++    @Test
++    public fun `failed_evidence_upload_can_be_retried_from_memory_after_file_is_wiped`(): Unit =
++        runTest(testDispatcher) {
++            val tempDir = createTempDirectory().toFile()
++            every { mockContext.filesDir } returns tempDir
++            every { featureFlags.sosAudioUploadEnabled() } returns true
++            every { sessionManager.authState } returns MutableStateFlow(AuthState.Authenticated("cust-1"))
++            coEvery { consentStore.getAudioConsent() } returns false
++            coEvery { sosUseCase.execute("bk-1") } returns Result.success(Unit)
++
++            val vm = buildVm()
++            vm.onSosTapped()
++            advanceTimeBy(1L)
++
++            vm.simulateFreshRecordingCapturedForTest()
++            val file =
++                File(File(tempDir, "sos"), "sos-bk-1.m4a").also {
++                    it.parentFile?.mkdirs()
++                    it.writeBytes(byteArrayOf(1, 2, 3))
++                }
++
++            // First attempt fails, second succeeds.
++            var attempt = 0
++            every { audioUploader.upload(any(), any(), any()) } answers {
++                attempt++
++                if (attempt == 1) {
++                    flowOf(SosUploadProgress.Failure(RuntimeException("net_error")))
++                } else {
++                    flowOf(SosUploadProgress.Success)
++                }
++            }
++
++            advanceUntilIdle()
++            assertThat(vm.sosUiState.value).isInstanceOf(SosUiState.EvidenceUploadError::class.java)
++            assertThat(file.exists()).isFalse()
++
++            vm.onRetryEvidenceUpload()
++            advanceUntilIdle()
++
++            assertThat(vm.sosUiState.value).isInstanceOf(SosUiState.EvidenceSaved::class.java)
++            assertThat(attempt).isEqualTo(2)
++            // The retried upload carried the original bytes even though the file was already gone.
++            coVerify { audioUploader.upload("cust-1", "bk-1", byteArrayOf(1, 2, 3)) }
++            tempDir.deleteRecursively()
++        }
++
++    /** SAFE-SOS-006 — declining retry must drop the retained audio rather than hold it in memory. */
++    @Test
++    public fun `dismissing_the_error_sheet_discards_the_retained_evidence`(): Unit =
++        runTest(testDispatcher) {
++            val tempDir = createTempDirectory().toFile()
++            every { mockContext.filesDir } returns tempDir
++            every { featureFlags.sosAudioUploadEnabled() } returns true
++            every { sessionManager.authState } returns MutableStateFlow(AuthState.Authenticated("cust-1"))
++            coEvery { consentStore.getAudioConsent() } returns false
++            coEvery { sosUseCase.execute("bk-1") } returns Result.success(Unit)
++            every { audioUploader.upload(any(), any(), any()) } returns
++                flowOf(SosUploadProgress.Failure(RuntimeException("net_error")))
++
++            val vm = buildVm()
++            vm.onSosTapped()
++            advanceTimeBy(1L)
++            vm.simulateFreshRecordingCapturedForTest()
++            File(File(tempDir, "sos"), "sos-bk-1.m4a").also {
++                it.parentFile?.mkdirs()
++                it.writeBytes(byteArrayOf(7))
++            }
++            advanceUntilIdle()
++            assertThat(vm.sosUiState.value).isInstanceOf(SosUiState.EvidenceUploadError::class.java)
++
++            vm.onDismissEvidenceResult()
++            assertThat(vm.sosUiState.value).isInstanceOf(SosUiState.SosConfirmed::class.java)
++
++            // Nothing retained: a subsequent retry must not re-upload, it just closes out.
++            vm.onRetryEvidenceUpload()
++            advanceUntilIdle()
++            assertThat(vm.sosUiState.value).isInstanceOf(SosUiState.SosConfirmed::class.java)
++            tempDir.deleteRecursively()
++        }
++
+     @Test
+     public fun `tmp_m4a_file_is_deleted_before_upload_starts`(): Unit =
+         runTest(testDispatcher) {
+diff --git a/design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt b/design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt
+index 952c267b..bccba09a 100644
+--- a/design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt
++++ b/design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt
+@@ -47,6 +47,36 @@ public fun HsPrimaryButton(
+     }
+ }
+ 
++/**
++ * Destructive / emergency primary action.
++ *
++ * Identical in weight to [HsPrimaryButton] but carries `colorScheme.error` rather than the brand
++ * colour, so an irreversible action is never visually indistinguishable from a routine one.
++ *
++ * Introduced for SAFE-SOS-004: the SOS send action was rendered with [HsPrimaryButton], giving an
++ * emergency dispatch the same brand-green treatment as "Book now". See docs/design/uiux-audit-2026.md.
++ */
++@Composable
++public fun HsDangerButton(
++    text: String,
++    onClick: () -> Unit,
++    modifier: Modifier = Modifier,
++    enabled: Boolean = true,
++) {
++    Button(
++        onClick = onClick,
++        enabled = enabled,
++        modifier = modifier.height(LocalHomeservicesSpacing.current.space16),
++        colors =
++            ButtonDefaults.buttonColors(
++                containerColor = MaterialTheme.colorScheme.error,
++                contentColor = MaterialTheme.colorScheme.onError,
++            ),
++    ) {
++        Text(text)
++    }
++}
++
+ @Composable
+ public fun HsSecondaryButton(
+     text: String,
+diff --git a/design-system/src/main/kotlin/com/homeservices/designsystem/locale/LanguagePickerCard.kt b/design-system/src/main/kotlin/com/homeservices/designsystem/locale/LanguagePickerCard.kt
+index a9566c2e..bc3be717 100644
+--- a/design-system/src/main/kotlin/com/homeservices/designsystem/locale/LanguagePickerCard.kt
++++ b/design-system/src/main/kotlin/com/homeservices/designsystem/locale/LanguagePickerCard.kt
+@@ -1,3 +1,5 @@
++@file:Suppress("MatchingDeclarationName") // composables + data class = 2 top-level decls; detekt counts only class-like nodes
++
+ package com.homeservices.designsystem.locale
+ 
+ import androidx.compose.foundation.layout.Arrangement

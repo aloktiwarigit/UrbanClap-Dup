@@ -14,6 +14,8 @@ package com.homeservices.customer.domain.tracking.model
  *
  * Deliberately exhaustive with no `else` branch: adding a new [BookingStatus] will fail compilation
  * here, forcing an explicit safety decision rather than silently defaulting to "no SOS".
+ *
+ * [BookingStatus.Unknown] FAILS OPEN — see below.
  */
 public val BookingStatus.isSosEligible: Boolean
     get() =
@@ -25,6 +27,21 @@ public val BookingStatus.isSosEligible: Boolean
             BookingStatus.AwaitingPriceApproval,
             -> true
 
+            // Fails OPEN, deliberately (Codex review MAJOR-3).
+            //
+            // The compile-time exhaustiveness above only protects statuses this client knows about.
+            // `BookingStatus.fromFcmString` maps every unrecognised server string to `Unknown`
+            // (BookingStatus.kt:46), so a NEW backend status — say ON_SITE or TECHNICIAN_WAITING —
+            // arrives at an already-installed client as `Unknown`. Those are exactly the high-risk
+            // on-site states, and an app store rollout does not reach every rural handset quickly.
+            //
+            // The two failure directions are not symmetric: a spurious SOS control on a finished
+            // booking is mild noise for owner support, while a missing one during an on-site
+            // emergency is the failure this feature exists to prevent. So an unrecognised status
+            // shows the control.
+            BookingStatus.Unknown,
+            -> true
+
             BookingStatus.PendingPayment,
             BookingStatus.Paid,
             BookingStatus.Searching,
@@ -32,6 +49,5 @@ public val BookingStatus.isSosEligible: Boolean
             BookingStatus.Cancelled,
             BookingStatus.Closed,
             BookingStatus.Unfulfilled,
-            BookingStatus.Unknown,
             -> false
         }

@@ -54,9 +54,25 @@ public class BookingStatusSosEligibilityTest {
         assertThat(BookingStatus.Unfulfilled.isSosEligible).isFalse()
     }
 
+    /**
+     * Codex review MAJOR-3 — an unrecognised status must FAIL OPEN.
+     *
+     * `fromFcmString` maps every unknown server string to `Unknown`, so a new backend status
+     * reaches already-installed clients as `Unknown`. If that hid the SOS control, adding a
+     * high-risk on-site status server-side would silently disarm safety on every handset that had
+     * not yet updated. A spurious control is mild noise; a missing one is the failure this feature
+     * exists to prevent.
+     */
     @Test
-    public fun `unknown status does not offer sos`(): Unit {
-        assertThat(BookingStatus.Unknown.isSosEligible).isFalse()
+    public fun `unrecognised status still offers sos - fails open`(): Unit {
+        assertThat(BookingStatus.Unknown.isSosEligible).isTrue()
+    }
+
+    @Test
+    public fun `an unrecognised server status string fails open`(): Unit {
+        assertThat(BookingStatus.fromFcmString("ON_SITE").isSosEligible)
+            .describedAs("a future server-side status must not silently hide SOS on old clients")
+            .isTrue()
     }
 
     @Test
