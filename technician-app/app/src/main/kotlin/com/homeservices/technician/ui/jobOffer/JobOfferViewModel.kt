@@ -96,6 +96,12 @@ internal class JobOfferViewModel
 
         public fun decline(): Unit {
             val current = _uiState.value as? JobOfferUiState.Offering ?: return
+            // Codex review MAJOR-1: never decline an offer that is mid-accept. accept() leaves the
+            // state as Offering(isAccepting = true) while the use case is in flight, so a decline
+            // arriving in that window — most easily via system back on the lock-screen Activity —
+            // would fire a decline request for a booking the technician already chose to accept,
+            // and whichever request resolved last would win.
+            if (current.isAccepting) return
             countdownJob?.cancel()
             viewModelScope.launch {
                 declineUseCase(current.offer.bookingId)

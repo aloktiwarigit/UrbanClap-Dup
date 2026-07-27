@@ -1,0 +1,187 @@
+diff --git a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferFullScreenActivity.kt b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferFullScreenActivity.kt
+index 56172fec..79984f69 100644
+--- a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferFullScreenActivity.kt
++++ b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferFullScreenActivity.kt
+@@ -4,13 +4,19 @@ import android.content.Context
+ import android.content.Intent
+ import android.os.Bundle
+ import androidx.activity.ComponentActivity
++import androidx.activity.addCallback
+ import androidx.activity.compose.setContent
++import androidx.activity.viewModels
+ import androidx.compose.foundation.layout.navigationBarsPadding
+ import androidx.compose.ui.Modifier
++import androidx.lifecycle.Lifecycle
++import androidx.lifecycle.lifecycleScope
++import androidx.lifecycle.repeatOnLifecycle
+ import com.homeservices.designsystem.theme.HomeservicesTheme
+ import com.homeservices.technician.data.jobOffer.JobOfferEventBus
+ import com.homeservices.technician.domain.jobOffer.model.JobOffer
+ import dagger.hilt.android.AndroidEntryPoint
++import kotlinx.coroutines.launch
+ import javax.inject.Inject
+ 
+ /**
+@@ -98,9 +104,40 @@ public class JobOfferFullScreenActivity : ComponentActivity() {
+         }
+     }
+ 
++    private val viewModel: JobOfferViewModel by viewModels()
++
+     override fun onCreate(savedInstanceState: Bundle?) {
+         super.onCreate(savedInstanceState)
++
++        // SAFE-JOB-002: fail closed on a malformed payload. offerFromIntent returns null when any
++        // extra is missing; previously setContent ran anyway, leaving Idle rendered as a dead
++        // full-screen page over the lock screen with no way out.
++        if (!shouldRenderOffer(offerFromIntent(intent))) {
++            finish()
++            return
++        }
+         emitIntentOffer(intent)
++
++        // SAFE-JOB-003: system back must resolve the offer, not silently discard it. decline()
++        // no-ops unless the state is Offering, so this cannot double-resolve an already-settled
++        // offer; the state observer below then finishes the Activity.
++        onBackPressedDispatcher.addCallback(this) {
++            viewModel.decline()
++        }
++
++        // SAFE-JOB-001: observe terminal states and finish. The Activity previously called
++        // setContent once and never observed the ViewModel, so Accept / Decline / Expiry all left
++        // the technician stranded on a static message over the lock screen.
++        // JobOfferScreen resolves its ViewModel via hiltViewModel(), which uses this Activity's
++        // ViewModelStore — so `by viewModels()` is the same instance the UI drives.
++        lifecycleScope.launch {
++            repeatOnLifecycle(Lifecycle.State.STARTED) {
++                viewModel.uiState.collect { state ->
++                    if (shouldFinishForState(state)) finish()
++                }
++            }
++        }
++
+         setContent {
+             HomeservicesTheme {
+                 JobOfferScreen(modifier = Modifier.navigationBarsPadding())
+@@ -118,3 +155,27 @@ public class JobOfferFullScreenActivity : ComponentActivity() {
+         intent?.let(::offerFromIntent)?.let(eventBus::tryEmit)
+     }
+ }
++
++/**
++ * SAFE-JOB-001 — whether [state] is terminal and the lock-screen Activity should finish.
++ *
++ * `Idle` deliberately does NOT finish: the offer may still be arriving over the event bus when the
++ * Activity first composes. Only an offer that has actually resolved closes the screen.
++ */
++internal fun shouldFinishForState(state: JobOfferUiState): Boolean =
++    when (state) {
++        is JobOfferUiState.Accepted,
++        JobOfferUiState.Declined,
++        JobOfferUiState.Expired,
++        -> true
++
++        JobOfferUiState.Idle,
++        is JobOfferUiState.Offering,
++        -> false
++    }
++
++/**
++ * SAFE-JOB-002 — whether there is a usable offer to render. A null offer means the FCM payload was
++ * malformed, and the Activity must fail closed rather than present an empty lock-screen takeover.
++ */
++internal fun shouldRenderOffer(offer: JobOffer?): Boolean = offer != null
+diff --git a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferFullScreenActivityLogicTest.kt b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferFullScreenActivityLogicTest.kt
+new file mode 100644
+index 00000000..2ba31cac
+--- /dev/null
++++ b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferFullScreenActivityLogicTest.kt
+@@ -0,0 +1,88 @@
++package com.homeservices.technician.ui.jobOffer
++
++import org.assertj.core.api.Assertions.assertThat
++import org.junit.jupiter.api.Test
++
++/**
++ * SAFE-JOB-001 / SAFE-JOB-003 — decision logic for the lock-screen job-offer Activity.
++ *
++ * `JobOfferFullScreenActivity` previously called `setContent` once in `onCreate` and never observed
++ * the ViewModel, so it reacted to none of the terminal states: after Accept, Decline or Expiry the
++ * technician was left on a static full-screen message over the lock screen with no button and no
++ * navigation. Following the codebase convention (see `MainActivityNavTest` / `navigateFromExtra`),
++ * the decision is extracted as a pure function and tested here rather than instrumenting the
++ * Activity.
++ */
++public class JobOfferFullScreenActivityLogicTest {
++    @Test
++    public fun `accepting an offer finishes the activity`() {
++        assertThat(shouldFinishForState(JobOfferUiState.Accepted("bk-1"))).isTrue()
++    }
++
++    @Test
++    public fun `declining an offer finishes the activity`() {
++        assertThat(shouldFinishForState(JobOfferUiState.Declined)).isTrue()
++    }
++
++    @Test
++    public fun `an expired offer finishes the activity`() {
++        assertThat(shouldFinishForState(JobOfferUiState.Expired)).isTrue()
++    }
++
++    @Test
++    public fun `an offer still being decided keeps the activity open`() {
++        val offering =
++            JobOfferUiState.Offering(
++                offer = sampleOffer(),
++                remainingSeconds = 12,
++            )
++        assertThat(shouldFinishForState(offering)).isFalse()
++    }
++
++    @Test
++    public fun `an offer mid-accept keeps the activity open until it resolves`() {
++        val accepting =
++            JobOfferUiState.Offering(
++                offer = sampleOffer(),
++                remainingSeconds = 3,
++                isAccepting = true,
++            )
++        assertThat(shouldFinishForState(accepting)).isFalse()
++    }
++
++    @Test
++    public fun `idle does not finish - the offer may still be arriving over the event bus`() {
++        assertThat(shouldFinishForState(JobOfferUiState.Idle)).isFalse()
++    }
++
++    /**
++     * SAFE-JOB-002 — a malformed FCM payload must fail closed.
++     *
++     * `offerFromIntent` returns null when any extra is missing, but `emitIntentOffer` no-opped and
++     * `setContent` ran regardless, leaving `Idle` rendered as a dead full-screen page over the lock
++     * screen. The Activity must decide not to render at all.
++     */
++    @Test
++    public fun `a malformed payload must not render`() {
++        assertThat(shouldRenderOffer(null)).isFalse()
++    }
++
++    @Test
++    public fun `a well-formed payload renders`() {
++        assertThat(shouldRenderOffer(sampleOffer())).isTrue()
++    }
++
++    private fun sampleOffer() =
++        com.homeservices.technician.domain.jobOffer.model.JobOffer(
++            bookingId = "bk-1",
++            serviceId = "svc-1",
++            serviceName = "AC service",
++            addressText = "Ayodhya",
++            slotDate = "2026-07-27",
++            slotWindow = "08:00-10:00",
++            amountPaise = 45_000L,
++            distanceKm = 4.3,
++            expiresAtMs = 1_785_000_000_000L,
++            serverClockOffsetMs = 0L,
++        )
++}

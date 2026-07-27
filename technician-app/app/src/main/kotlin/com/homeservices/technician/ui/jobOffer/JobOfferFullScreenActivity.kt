@@ -130,10 +130,17 @@ public class JobOfferFullScreenActivity : ComponentActivity() {
         // the technician stranded on a static message over the lock screen.
         // JobOfferScreen resolves its ViewModel via hiltViewModel(), which uses this Activity's
         // ViewModelStore — so `by viewModels()` is the same instance the UI drives.
+        // CREATED, not STARTED (Codex review MAJOR-2). The ViewModel calls scheduleReset(2_000L)
+        // after every terminal state, flipping it back to Idle two seconds later. Collecting only
+        // while STARTED means a terminal state emitted while the Activity is stopped — a call, a
+        // system overlay, a keyguard transition — is missed entirely, and on restart the collector
+        // sees only Idle and never finishes. That would strand the technician over the lock screen
+        // again, which is the exact defect this change exists to fix. CREATED keeps collecting for
+        // the whole lifetime, and finish() from a stopped Activity is legal.
         lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
+            repeatOnLifecycle(Lifecycle.State.CREATED) {
                 viewModel.uiState.collect { state ->
-                    if (shouldFinishForState(state)) finish()
+                    if (shouldFinishForState(state) && !isFinishing) finish()
                 }
             }
         }
