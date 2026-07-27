@@ -1,0 +1,775 @@
+{
+  "cluster": "T2",
+  "surfaces": [
+    {
+      "id": "technician.home-shell",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt",
+      "loc": 1350,
+      "purpose": "The technician's primary workspace: a 5-tab bottom-nav shell (Today / Jobs / Pay / Slots / Profile) where the partner goes online, sees the next job, checks earnings, sets work windows, and manages the account.",
+      "entryPoints": [
+        "Nav graph start destination of the 'home' graph: HomeGraph.kt:47 navigation(startDestination = HOME_DASHBOARD_ROUTE, route = HOME_GRAPH_ROUTE); route composable HomeGraph.kt:48; composed at HomeGraph.kt:148",
+        "Reached after auth or onboarding: AppNavigation.kt:64 navigate to 'home' when sessionManager.isOnboardingComplete; AppNavigation.kt:154 after onboarding gate completes",
+        "Returned to from ActiveJob via HomeGraph.kt:196 returnToDashboard()"
+      ],
+      "composition": [
+        "Scaffold with background container color and SnackbarHost — TechnicianHomeScreen.kt:126-129",
+        "Floating pill bottom bar: Surface(shape=RoundedCornerShape(28.dp), color=Color.White.copy(alpha=0.94f), tonalElevation=10.dp, shadowElevation=16.dp) wrapping a transparent M3 NavigationBar — TechnicianHomeScreen.kt:223-236, items at :237-257",
+        "Tab body swapped by a bare `when (selectedTab)` with no transition — TechnicianHomeScreen.kt:143-202",
+        "TAB 1 Today (LazyColumn, contentPadding start/top/end 18.dp bottom 118.dp, spacedBy 16.dp) — TechnicianHomeScreen.kt:276-279",
+        "  PartnerHeader: 'HomeHeroo Partner' headlineLarge + display name + StatusPill(Online/Offline) + FieldSwitch — TechnicianHomeScreen.kt:329-357",
+        "  PendingActionCard list (only when non-empty) — TechnicianHomeScreen.kt:288-292, card impl dashboard/PendingActionCard.kt:59-102",
+        "  NextJobHero: white rounded 26.dp card with a white→#F0ECE2 linear gradient, left column (label 'Next job', service name, slot line, Open-job Button or StatusPill) and a 126.dp wide AC-service photo — TechnicianHomeScreen.kt:361-446",
+        "  QuickStatsRow: three 94.dp tall StatTiles (Today rupees / Jobs count / Status Live-Off) — TechnicianHomeScreen.kt:449-483, tile impl :486-525",
+        "  SectionHeader \"Today's queue\" with a Refresh IconButton — TechnicianHomeScreen.kt:307-316",
+        "  JobsPreview: up to 3 JobCards, or LoadingCard / ErrorCard / EmptyJobsCard — TechnicianHomeScreen.kt:711-731",
+        "TAB 2 Jobs: SectionHeader + Loading / Error / Empty / list of JobCard — TechnicianHomeScreen.kt:661-708; JobCard (status pill, rupee amount, service title, schedule line, address line, conditional Continue button) :734-779",
+        "TAB 3 Pay: SectionHeader, PayHero (displaySmall rupee figure), two StatTiles (This week / Held), two SettingCards (Ratings impact, Payout settings) — TechnicianHomeScreen.kt:528-588, PayHero :591-626",
+        "TAB 4 Slots: SectionHeader, 'Accepting jobs' SettingCard with switch, 'Work windows' label, three fixed Morning/Afternoon/Evening SettingCards, AvailabilitySyncCard — TechnicianHomeScreen.kt:807-888, sync card :896-928",
+        "TAB 5 Profile: SectionHeader, ProfileHero (initial avatar circle + name + subtitle + Active pill), then 8 SettingCards — services, ratings, payout, language, call support, email support, sign out, delete account — TechnicianHomeScreen.kt:931-1034, hero :1037-1082"
+      ],
+      "states": {
+        "loading": {
+          "present": true,
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:1212",
+          "quality": "LoadingCard draws three flat 18.dp bars filled with colorScheme.outline (#DED8CD) inside a white card — no shimmer, no motion, and it is not shaped like the JobCard it replaces, so it reads as a broken row rather than a skeleton (:1222-1228)"
+        },
+        "empty": {
+          "present": true,
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:1269",
+          "quality": "EmptyJobsCard for the jobs list only: 56.dp rounded box with a Badge icon, title and one supporting line, no CTA (:1275-1301). Pay, Slots and Profile tabs have no empty state at all; a zero-earning day falls through to PayHero copy 'No completed jobs today yet.' (:617)"
+        },
+        "error": {
+          "present": true,
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:1234",
+          "quality": "ErrorCard prints the raw uiState.message under a fixed 'Could not refresh jobs' title (:1249-1258) with an OutlinedButton retry. EarningsErrorCard is a separate hand-rolled variant with different copy (:629-658). Availability errors render as plain text inside AvailabilitySyncCard (:913). Three different error treatments in one screen."
+        },
+        "success": {
+          "present": true,
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:691",
+          "quality": "Ready state renders JobCards; availability toggle confirms via snackbar (:154-162)"
+        },
+        "offline": {
+          "present": false,
+          "evidence": null,
+          "quality": "MAJOR: no connectivity banner or offline affordance anywhere in the 1350-line file. A technician in a low-signal Ayodhya block sees only the generic ErrorCard. ActiveJobScreen has an offline strip (ActiveJobScreen.kt:170) — the home shell does not."
+        },
+        "permissionDenied": {
+          "present": false,
+          "evidence": null,
+          "quality": "POST_NOTIFICATIONS is requested silently from the nav layer (AppNavigation.kt:71) with no pre-permission rationale and no denied state — a technician who declines gets no job offers and no explanation on this screen. [inferred from absence in file]"
+        }
+      },
+      "skeletonOrSpinner": "Custom LoadingCard made of three flat outline-coloured bars (TechnicianHomeScreen.kt:1212-1231). Does NOT use the shared HsSkeletonBlock even though ActiveJobScreen does (ActiveJobScreen.kt:258). No CircularProgressIndicator anywhere on this screen.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "14.dp / 10.dp", "line": 227, "context": "bottom bar outer padding — neither on the 4/8/12/16/24 scale" },
+          { "value": "28.dp", "line": 228, "context": "bottom bar corner radius" },
+          { "value": "18.dp", "line": 278, "context": "Today tab content padding (repeated at :536, :668, :817, :943)" },
+          { "value": "118.dp", "line": 278, "context": "magic bottom inset to clear the floating bar" },
+          { "value": "18.dp", "line": 384, "context": "NextJobHero inner padding" },
+          { "value": "14.dp", "line": 386, "context": "hero row spacing" },
+          { "value": "126.dp", "line": 438, "context": "hero image width" },
+          { "value": "10.dp", "line": 456, "context": "QuickStatsRow gap (also :553, :725, :1220)" },
+          { "value": "94.dp", "line": 493, "context": "StatTile fixed height" },
+          { "value": "18.dp", "line": 599, "context": "PayHero padding" },
+          { "value": "58.dp", "line": 1052, "context": "profile avatar diameter" },
+          { "value": "42.dp", "line": 1111, "context": "SettingCard icon chip — under the 48.dp target" },
+          { "value": "14.dp", "line": 1104, "context": "SettingCard row padding" },
+          { "value": "18.dp", "line": 1224, "context": "LoadingCard bar height" },
+          { "value": "56.dp / 28.dp", "line": 1278, "context": "EmptyJobsCard icon box and icon" }
+        ],
+        "hardcodedColors": [
+          { "value": "Color(0xFFF2E7CF)", "line": 97, "context": "WarningSoft — file-level constant, self-documented as having 'no DS token equivalent'" },
+          { "value": "Color.White.copy(alpha = 0.94f)", "line": 229, "context": "bottom navigation bar surface" },
+          { "value": "Color.White", "line": 369, "context": "NextJobHero card" },
+          { "value": "Color(0xFFF0ECE2)", "line": 379, "context": "hero gradient end stop" },
+          { "value": "Color.White", "line": 496, "context": "StatTile" },
+          { "value": "Color.White", "line": 594, "context": "PayHero" },
+          { "value": "Color.White", "line": 632, "context": "EarningsErrorCard" },
+          { "value": "Color.White", "line": 741, "context": "JobCard" },
+          { "value": "Color.White", "line": 1042, "context": "ProfileHero" },
+          { "value": "Color.White", "line": 1061, "context": "avatar initial text colour" },
+          { "value": "Color.White", "line": 1100, "context": "SettingCard" },
+          { "value": "Color(0xFFFBEAEA)", "line": 1113, "context": "destructive icon chip background" },
+          { "value": "Color.White", "line": 1201, "context": "FieldSwitch checked thumb (also uncheckedThumbColor :1204)" },
+          { "value": "Color.White", "line": 1216, "context": "LoadingCard" },
+          { "value": "Color.White", "line": 1239, "context": "ErrorCard" }
+        ],
+        "unmappedTypographySlots": [
+          { "slot": "headlineSmall", "line": 398 },
+          { "slot": "titleMedium", "line": 511 },
+          { "slot": "labelMedium", "line": 518 },
+          { "slot": "displaySmall", "line": 610 },
+          { "slot": "titleMedium", "line": 642 },
+          { "slot": "titleMedium", "line": 753 },
+          { "slot": "titleMedium", "line": 837 },
+          { "slot": "titleMedium", "line": 1125 },
+          { "slot": "headlineSmall", "line": 1156 },
+          { "slot": "labelMedium", "line": 1184 },
+          { "slot": "titleMedium", "line": 1250 },
+          { "slot": "titleMedium", "line": 1291 }
+        ],
+        "offScaleRadius": [
+          { "value": "28.dp", "line": 228 },
+          { "value": "26.dp", "line": 368 },
+          { "value": "22.dp", "line": 440 },
+          { "value": "18.dp", "line": 494 },
+          { "value": "24.dp", "line": 594 },
+          { "value": "20.dp", "line": 630 },
+          { "value": "20.dp", "line": 740 },
+          { "value": "18.dp", "line": 901 },
+          { "value": "24.dp", "line": 1040 },
+          { "value": "18.dp", "line": 1099 },
+          { "value": "14.dp", "line": 1112 },
+          { "value": "999.dp", "line": 1178 },
+          { "value": "20.dp", "line": 1215 },
+          { "value": "20.dp", "line": 1239 },
+          { "value": "20.dp", "line": 1279 }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "\"Today\" / \"Jobs\" / \"Pay\" / \"Slots\" / \"Profile\" — the five bottom-nav labels", "line": 211 },
+          { "text": "\"Availability sync requested\" snackbar", "line": 186 },
+          { "text": "\"Today's queue\"", "line": 309 },
+          { "text": "\"Refresh jobs\" contentDescription", "line": 312 },
+          { "text": "\"HomeHeroo Partner\"", "line": 340 },
+          { "text": "\"Online\" / \"Offline\"", "line": 352 },
+          { "text": "\"Next job\"", "line": 390 },
+          { "text": "\"No active job\"", "line": 397 },
+          { "text": "\"New offers will appear here automatically.\" / \"Go online when you are ready for requests.\"", "line": 409 },
+          { "text": "\"Ready for requests\" / \"Not accepting jobs\"", "line": 428 },
+          { "text": "StatTile labels \"Today\" / \"Jobs\" / \"Status\", values \"Live\" / \"Off\"", "line": 459 },
+          { "text": "\"Pay\" + \"Earnings, held balance and payout timing\"", "line": 541 },
+          { "text": "\"This week\" / \"Held\"", "line": 557 },
+          { "text": "\"Ratings impact\" / \"See score, trend and appeal options\"", "line": 572 },
+          { "text": "\"Payout settings\" / \"Choose weekly, next-day or instant payout\"", "line": 580 },
+          { "text": "\"Today's earnings\"", "line": 603 },
+          { "text": "\"No completed jobs today yet.\" / \"N completed jobs today\"", "line": 616 },
+          { "text": "\"Could not load pay details\" + \"Completed jobs still count. Retry when the API is reachable.\"", "line": 641 },
+          { "text": "\"Jobs\" / \"Assigned and in-progress work\"", "line": 673 },
+          { "text": "\"Availability\" / \"Synced to dispatch for new job matching\"", "line": 822 },
+          { "text": "\"Accepting jobs\" / \"Online for nearby requests\" / \"Offline until you switch on\"", "line": 829 },
+          { "text": "\"Work windows\"", "line": 836 },
+          { "text": "\"Morning\" \"08:00 - 12:00\" (Afternoon :858, Evening :871)", "line": 845 },
+          { "text": "\"Loading availability from your profile.\" / \"Saving availability to dispatch.\" / \"Availability is synced with dispatch for future job matching.\"", "line": 911 },
+          { "text": "\"Profile\" / \"Account, trust and support\"", "line": 948 },
+          { "text": "\"My services\" / \"Update which services you offer\"", "line": 958 },
+          { "text": "\"Call partner support\" / \"+91 98765 43210\"", "line": 990 },
+          { "text": "\"Email support\" / \"partners@homeheroo.in\"", "line": 1000 },
+          { "text": "\"Sign out\" / \"Remove this device session\"", "line": 1015 },
+          { "text": "\"Active\" pill", "line": 1079 },
+          { "text": "\"Could not refresh jobs\"", "line": 1249 },
+          { "text": "\"No assigned jobs right now\" + \"New requests arrive as full-screen offers with accept and decline actions.\"", "line": 1290 },
+          { "text": "All nine booking status labels: Assigned / En route / Arrived / Working / Approval / Complete / Paid / Closed / Updated", "line": 1316 },
+          { "text": "\"Technician\" / \"Partner NNNN\" fallback display name", "line": 1331 },
+          { "text": "\"Signed out\" / \"Phone ending NNNN\"", "line": 1340 }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "SEVERE. Only 6 stringResource calls exist in the whole file (R.string.home_open_job :424, home_retry :654/:923/:1262, home_continue_job :774, settings_language_title/subtitle :982-983, settings_delete_account_* :1027-1028, home_availability_online/offline :157-160) against 35+ hardcoded English literals. values-hi/strings.xml has full parity for the keys that exist (163 strings in both values/ and values-hi/), so the Hindi build will render a bilingual mongrel: Hindi buttons inside English cards. Layout-wise the five bottom-tab labels are single English words in `maxLines = 1` (:247) — Hindi equivalents (\"उपलब्धता\", \"कमाई\") are longer and will ellipsize. StatTile is height-locked at 94.dp with maxLines=1 labels (:493, :514, :520) so longer Devanagari will truncate rather than wrap. SettingCard subtitles are capped at maxLines = 2 (:1133).",
+        "currencyFormatting": "formatRupees(paise) = \"Rs %,.0f\".format(paise / 100.0) — TechnicianHomeScreen.kt:1350. Uses ASCII 'Rs ' not the ₹ glyph; %,.0f applies the default JVM locale grouping, which under an English/Hindi (India) locale gives Western thousands grouping in most JVM configurations rather than the Indian lakh/crore pattern (1,00,000) that Ayodhya technicians read — [inferred, depends on runtime locale provider]. Paise are rounded away, so ₹499.50 shows as 'Rs 500'. Rendered at :465, :557, :563, :609, :752."
+      },
+      "a11y": {
+        "contentDescriptions": true,
+        "contentDescriptionsEvidence": "Nav icons carry the tab label (:244); refresh icons described at :312, :652, :677, :921, :1260; the Route icon on Open-job at :422. Decorative icons are explicitly null with a justifying comment at :504, :792, :1118, :1284 — this file is the best-documented of the cluster.",
+        "touchTargetRisks": [
+          { "line": 418, "size": "M3 Button default min height 40.dp", "note": "The primary 'Open job' CTA in NextJobHero is a default-sized Button, below the 48.dp target [inferred from M3 ButtonDefaults.MinHeight]" },
+          { "line": 651, "size": "OutlinedButton default 40.dp", "note": "Earnings retry" },
+          { "line": 920, "size": "OutlinedButton default 40.dp", "note": "Availability retry" },
+          { "line": 1259, "size": "OutlinedButton default 40.dp", "note": "Jobs retry" },
+          { "line": 1111, "size": "42.dp", "note": "SettingCard icon chip is 42.dp — not itself interactive (the whole Surface is clickable at :1096) but reads as a tappable affordance" }
+        ],
+        "contrastRisks": [
+          { "line": 369, "note": "NextJobHero card is hardcoded Color.White while its text uses theme onBackground (:400) and onSurfaceVariant (:414). In dark theme those resolve to #F4FBF6 and #B7C6BD on pure white — roughly 1.1:1 and 1.8:1, i.e. invisible. The same defect repeats on every Color.White surface: :496, :594, :632, :741, :1042, :1100, :1216, :1239. [inferred from the documented dark palette]" },
+          { "line": 1226, "note": "LoadingCard bars are colorScheme.outline (#DED8CD) on Color.White — about 1.3:1, so the skeleton is nearly invisible in light theme too" },
+          { "line": 1186, "note": "StatusPill inactive state paints secondary (#B68A2C gold) text on WarningSoft #F2E7CF — approx 2.6:1, below AA for the labelMedium size used [inferred]" }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "No Modifier.semantics { heading() } and no focus-order overrides anywhere in the file (verified by grep for 'heading()|semantics {|liveRegion|testTag' across all five cluster files — zero hits). TalkBack traverses the LazyColumn in source order with no section landmarks, so a partner cannot jump between the header, stats and job list."
+      },
+      "imagery": {
+        "usesImages": true,
+        "sources": ["R.drawable.tech_field_ac_service — the only photographic drawable in the entire technician app (res/drawable-nodpi/ contains exactly one file)"],
+        "placeholderOrMissing": [
+          "The same AC-service photo is shown for every job regardless of service type — NextJobHero passes a fixed painterResource with no mapping from job.serviceName (TechnicianHomeScreen.kt:433-442)",
+          "JobCard has zero imagery — no service icon, no customer avatar, no map thumbnail (:734-779)",
+          "ProfileHero uses a text-initial circle instead of a partner photo (:1049-1063)",
+          "EmptyJobsCard uses a generic Material 'Badge' icon rather than an illustration (:1283)",
+          "When no job is active the hero still renders the AC photo next to the words 'No active job' (:397 beside :434), pairing an equipment photo with an empty state"
+        ],
+        "cite": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:433"
+      },
+      "motion": {
+        "animationsUsed": [],
+        "usesMotionTokens": false,
+        "transitionsOnNav": "None. Tab switching is a raw `when` swap with no AnimatedContent or Crossfade (:143-202), so all five tabs hard-cut. No animateFloatAsState, no AnimatedVisibility, no item placement animation on the LazyColumns, no press-state choreography beyond M3 defaults. HomeservicesMotion / HomeservicesEasing are not imported. The online/offline switch — the single most consequential control on the screen — changes with no confirming motion, only a snackbar (:154-162)."
+      },
+      "density": "Airy but arbitrary. Screen gutter is 18.dp (:278), list gap 16.dp on Today but 14.dp on the other four tabs (:279 vs :537, :669, :818, :944), card padding oscillates between 18.dp (:384, :599, :1045), 16.dp (:745, :1219, :1245) and 14.dp (:906, :1104). Nothing lands on the 4/8/12/16/24 token scale, so the vertical rhythm never repeats and the eye finds no grid.",
+      "observations": [
+        { "severity": "high", "claim": "Fifteen surfaces are painted with a hardcoded Color.White while their text colours come from the theme, so the whole screen inverts into illegibility in dark mode", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:369", "confidence": "inferred" },
+        { "severity": "high", "claim": "35+ user-facing strings are hardcoded English in an app whose target users are Hindi-speaking technicians in rural UP; values-hi/strings.xml exists with full 163-key parity but this screen bypasses it almost entirely", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:211", "confidence": "observed" },
+        { "severity": "high", "claim": "Twelve typography calls use unmapped M3 slots (displaySmall, headlineSmall, titleMedium, labelMedium), which fall back to Roboto — the hero earnings figure, every card title and every stat tile render in a different typeface from the Geist/Noto text around them", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:610", "confidence": "observed" },
+        { "severity": "high", "claim": "Zero animation in 1350 lines — tab switches hard-cut, list mutations pop, and the online toggle gives no motion feedback", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:143", "confidence": "observed" },
+        { "severity": "high", "claim": "No offline state anywhere despite being the daily driver for field workers on patchy rural data; failures collapse into a generic 'Could not refresh jobs' card with a raw message", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:1249", "confidence": "observed" },
+        { "severity": "medium", "claim": "PendingActionCard injects a second, unrelated colour system (Amber #B86B00, Teal #006064, Blue #1565C0, Purple #6A1B9A, Green #1B5E20 — stock Material 2014 hues) directly into the Today feed, clashing with the #0B3D2E/#B68A2C brand palette", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/PendingActionCard.kt:35", "confidence": "observed" },
+        { "severity": "medium", "claim": "The pending-action countdown reads System.currentTimeMillis() during composition and never recomposes, so a time-critical 'expires soon' badge displays a frozen number", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/PendingActionCard.kt:93", "confidence": "observed" },
+        { "severity": "medium", "claim": "The loading affordance is three flat outline-coloured bars at roughly 1.3:1 contrast on white — it neither shimmers nor matches the shape of the JobCard it stands in for, and it ignores the shared HsSkeletonBlock the sibling ActiveJob screen uses", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:1222", "confidence": "observed" },
+        { "severity": "medium", "claim": "Fifteen distinct corner radii (14/18/20/22/24/26/28/999.dp) coexist on one screen; none is the DS token value", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:228", "confidence": "observed" },
+        { "severity": "medium", "claim": "A single AC-unit photo stands in for every service type and is even shown beside the 'No active job' empty copy", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:434", "confidence": "observed" },
+        { "severity": "medium", "claim": "Three separate hand-rolled error card implementations with different copy, shape and retry treatment live in one file instead of one component", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:629", "confidence": "observed" },
+        { "severity": "medium", "claim": "Work windows are three hardcoded Morning/Afternoon/Evening rows with literal times, not data — a technician cannot express any other schedule", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:842", "confidence": "observed" },
+        { "severity": "low", "claim": "Support phone number and email are hardcoded placeholder-looking values ('+91 98765 43210') shipped as tappable dial/mail intents", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:991", "confidence": "observed" },
+        { "severity": "low", "claim": "Bottom-bar clearance is a magic 118.dp bottom contentPadding repeated in five places rather than derived from the bar height", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:278", "confidence": "observed" },
+        { "severity": "low", "claim": "Money truncates paise ('Rs %,.0f' on paise/100.0) and uses ASCII 'Rs' rather than ₹", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:1350", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "technician.dashboard-orphan",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/TechnicianDashboardScreen.kt",
+      "loc": 304,
+      "purpose": "Nominally a single-page technician operations overview (availability, today's snapshot, links to earnings/ratings/KYC, assignment and offer status) — in practice an unreachable design mock.",
+      "entryPoints": [
+        "NONE. A repo-wide grep for 'TechnicianDashboardScreen' across all .kt files returns only its own declaration at TechnicianDashboardScreen.kt:39 (plus the identical copy inside the .claude/worktrees/e20-cash-commission-api worktree). It is absent from AppNavigation.kt:144-175 and from every composable() in HomeGraph.kt:47-93. The route constant HOME_DASHBOARD_ROUTE (HomeGraph.kt:39) resolves to TechnicianHomeScreen instead (HomeGraph.kt:148). This screen is DEAD CODE.",
+        "Its sibling in the same package, TechnicianDashboardViewModel, IS live — injected at HomeGraph.kt:134 and consumed by TechnicianHomeScreen.kt:114"
+      ],
+      "composition": [
+        "Scaffold with a plain M3 TopAppBar titled 'Technician home' — TechnicianDashboardScreen.kt:47-49",
+        "LazyColumn, contentPadding 16.dp, spacedBy 14.dp — TechnicianDashboardScreen.kt:51-55",
+        "DashboardHeader: HsTrustBadge('Live workspace') + headlineMedium title + body line — TechnicianDashboardScreen.kt:79-94",
+        "AvailabilityCard: HsSectionCard with 'Available for jobs'/'Paused' label and a bare M3 Switch — the only live control on the screen — TechnicianDashboardScreen.kt:96-122",
+        "TodaySnapshot: three MetricTiles in a Row — TechnicianDashboardScreen.kt:124-146; tile impl :148-185",
+        "WorkflowCard: HsSectionCard 'Core workflow' with three DashboardNavRows (Earnings / Ratings / KYC and documents) separated by HorizontalDividers — TechnicianDashboardScreen.kt:187-215; row impl :217-250",
+        "ActiveAssignmentCard: StatusPill('No active job') + a paragraph describing what would happen — TechnicianDashboardScreen.kt:252-263",
+        "JobOffersCard: StatusPill('Standby') + a descriptive paragraph — TechnicianDashboardScreen.kt:265-276",
+        "SupportCard: StatusPill('No open issues') + a descriptive paragraph — TechnicianDashboardScreen.kt:278-289",
+        "StatusPill: extraLarge-shaped secondaryContainer chip — TechnicianDashboardScreen.kt:291-304"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "MAJOR: no loading branch. The screen renders literal values immediately; only availabilityUiState is collected (:46) and its isLoading flag is never read." },
+        "empty": { "present": false, "evidence": null, "quality": "Not applicable in the honest sense — every 'empty' reading is a hardcoded constant, not a state. 'No active job' (:255), 'Standby' (:268) and 'No open issues' (:281) are string literals that never change." },
+        "error": { "present": false, "evidence": null, "quality": "MAJOR: no error branch anywhere in 304 lines. AvailabilityViewModel exposes errorMessage (used at TechnicianHomeScreen.kt:913) but this screen ignores it — a failed availability toggle silently reverts with no user feedback." },
+        "success": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/TechnicianDashboardScreen.kt:59", "quality": "Only the availability switch reflects real state (isOnline from availabilityUiState). Everything else is static." },
+        "offline": { "present": false, "evidence": null, "quality": "Absent." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "Not applicable — no permission-gated capability on this screen." }
+      },
+      "skeletonOrSpinner": "NONE — neither HsSkeletonBlock nor CircularProgressIndicator appears in the file. Content renders instantly because it is hardcoded.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "16.dp", "line": 53, "context": "list contentPadding (on-scale value but written literally, not LocalHomeservicesSpacing.current.space4)" },
+          { "value": "14.dp", "line": 54, "context": "item spacing — off-scale" },
+          { "value": "8.dp", "line": 80, "context": "header spacing" },
+          { "value": "3.dp", "line": 107, "context": "availability text spacing — off-scale (also :161)" },
+          { "value": "10.dp", "line": 126, "context": "metric tile row gap — off-scale (also :256, :269, :282)" },
+          { "value": "1.dp", "line": 159, "context": "metric tile border stroke" },
+          { "value": "12.dp", "line": 161, "context": "metric tile padding" },
+          { "value": "2.dp", "line": 233, "context": "nav row text spacing — off-scale" },
+          { "value": "12.dp", "line": 229, "context": "nav row vertical padding — yields a ~44.dp row, under the 48.dp target" },
+          { "value": "6.dp", "line": 301, "context": "status pill vertical padding — off-scale" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [
+          { "slot": "titleMedium", "line": 110 },
+          { "slot": "titleSmall", "line": 234 },
+          { "slot": "labelMedium", "line": 299 }
+        ],
+        "offScaleRadius": [
+          { "value": "8.dp RoundedCornerShape on MetricTile while every sibling card uses HsSectionCard's shape", "line": 157 }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "\"Technician home\" (top bar title)", "line": 49 },
+          { "text": "\"Live workspace\"", "line": 81 },
+          { "text": "\"Technician operations\"", "line": 83 },
+          { "text": "\"Track availability, jobs, payouts, ratings, and support from one place.\"", "line": 89 },
+          { "text": "\"Available for jobs\" / \"Paused\"", "line": 109 },
+          { "text": "\"Live requests appear as timed offers when dispatch assigns one.\"", "line": 114 },
+          { "text": "\"Today\" / \"Rs 0\" / \"Earnings\"", "line": 128 },
+          { "text": "\"Queue\" / \"0\" / \"Active jobs\"", "line": 134 },
+          { "text": "\"Rating\" / \"New\" / \"No reviews\"", "line": 140 },
+          { "text": "\"Core workflow\"", "line": 193 },
+          { "text": "\"Earnings\" / \"Payout totals and 7-day activity\" / \"Open\"", "line": 195 },
+          { "text": "\"Ratings\" / \"Customer feedback and score breakdown\" / \"Open\"", "line": 202 },
+          { "text": "\"KYC and documents\" / \"Identity and PAN verification flow\" / \"Review\"", "line": 209 },
+          { "text": "\"Current assignment\" / \"No active job\" + description paragraph", "line": 254 },
+          { "text": "\"Job offers\" / \"Standby\" + description paragraph", "line": 267 },
+          { "text": "\"Support and complaints\" / \"No open issues\" + description paragraph", "line": 280 }
+        ],
+        "usesStringResource": false,
+        "hindiRisk": "TOTAL. The file does not import androidx.compose.ui.res.stringResource at all (imports end at :35) — every one of the ~25 user-facing strings is an English literal. If this screen were ever wired up it would be 100% untranslated. Layout-wise the three MetricTiles are equal-weight columns with maxLines = 1 + Ellipsis on all three text rows (:166-167, :173-174, :180-181), so Hindi labels such as 'सक्रिय जॉब' would truncate rather than wrap.",
+        "currencyFormatting": "Hardcoded literal string \"Rs 0\" — TechnicianDashboardScreen.kt:129. No formatter, no paise handling, no ₹ glyph, no Indian digit grouping."
+      },
+      "a11y": {
+        "contentDescriptions": false,
+        "contentDescriptionsEvidence": "No Icon composables and no contentDescription parameters exist anywhere in the file (import list :3-35 contains no material3.Icon). The Switch at :119 is unlabelled for TalkBack beyond its adjacent text, which is not associated via mergeDescendants.",
+        "touchTargetRisks": [
+          { "line": 229, "size": "~44.dp", "note": "DashboardNavRow is clickable with only 12.dp vertical padding around a two-line text block; the row's own hit area is not padded to 48.dp minimum" },
+          { "line": 119, "size": "M3 Switch 52x32.dp visual", "note": "Bare Switch with no enlarged hit target and no accompanying toggleable row semantics" }
+        ],
+        "contrastRisks": [
+          { "line": 116, "note": "bodySmall in onSurfaceVariant (#5F6C66) — at bodySmall's small size the ~5.6:1 ratio passes AA but the copy is long-form explanatory text set at the smallest scale step, which is a legibility problem for older field technicians in daylight [inferred]" },
+          { "line": 164, "note": "MetricTile label AND supporting text are both labelSmall in onSurfaceVariant, so the tile has two near-identical low-emphasis rows sandwiching the value — no hierarchy" }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "No semantics modifiers of any kind (grep confirmed zero hits for heading()/semantics{}/liveRegion/testTag across this file). Traversal is raw source order."
+      },
+      "imagery": {
+        "usesImages": false,
+        "sources": [],
+        "placeholderOrMissing": [
+          "No images, no icons, no illustrations anywhere in 304 lines — the screen is pure text in bordered rectangles, the textbook flat-gray-card presentation",
+          "MetricTile is an unfilled Surface with a 1.dp outlineVariant border and three stacked text rows (:155-184) with no icon, sparkline or accent"
+        ],
+        "cite": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/TechnicianDashboardScreen.kt:155"
+      },
+      "motion": {
+        "animationsUsed": [],
+        "usesMotionTokens": false,
+        "transitionsOnNav": "None — no animation APIs are imported. The screen has no navigation transitions because it has no navigation entry."
+      },
+      "density": "Cramped and inconsistent. 16.dp gutter with 14.dp item gaps (:53-54), then 3.dp intra-card text spacing (:107, :161) and 2.dp in nav rows (:233) — the text blocks are tighter than the design system's smallest 4.dp step, so labels crowd their values. MetricTile's 12.dp padding (:161) against HsSectionCard's 16.dp internal padding makes the tile row visually denser than everything above and below it.",
+      "observations": [
+        { "severity": "high", "claim": "The entire screen is unreachable — no navigation graph, composable() call, or any other file references TechnicianDashboardScreen, so 304 lines of UI ship in the APK and can never be seen", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/TechnicianDashboardScreen.kt:39", "confidence": "observed" },
+        { "severity": "high", "claim": "Every metric is a hardcoded placeholder: 'Rs 0', '0' and 'New' are string literals passed to MetricTile, not data", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/TechnicianDashboardScreen.kt:129", "confidence": "observed" },
+        { "severity": "high", "claim": "Three of the six cards contain no functional content at all — they are prose descriptions of features that live elsewhere ('Accepted bookings open the live tracker...', 'New requests are shown as a full-screen offer...')", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/TechnicianDashboardScreen.kt:258", "confidence": "observed" },
+        { "severity": "high", "claim": "No loading and no error state in the entire file despite consuming a network-backed availability flow; a failed toggle silently reverts", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/TechnicianDashboardScreen.kt:46", "confidence": "observed" },
+        { "severity": "high", "claim": "stringResource is never imported — 100% of user-facing copy is hardcoded English in a Hindi-first product", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/TechnicianDashboardScreen.kt:49", "confidence": "observed" },
+        { "severity": "medium", "claim": "Textbook flat-gray-card syndrome: six borderless/hairline-bordered rectangles of stacked text with zero iconography, imagery, colour accent or elevation differentiation", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/TechnicianDashboardScreen.kt:155", "confidence": "observed" },
+        { "severity": "medium", "claim": "The three workflow rows are all rendered with an identical 'Open'/'Review' text affordance in primary colour, so nothing distinguishes the KYC row (a blocking compliance action) from the informational earnings row", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/TechnicianDashboardScreen.kt:243", "confidence": "observed" },
+        { "severity": "medium", "claim": "MetricTile invents an 8.dp radius plus a 1.dp outlineVariant border that matches nothing else on the screen, since every sibling uses HsSectionCard's shape", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/TechnicianDashboardScreen.kt:157", "confidence": "observed" },
+        { "severity": "medium", "claim": "Three unmapped typography slots (titleMedium, titleSmall, labelMedium) mean every card heading, nav-row title and status pill renders in Roboto rather than the brand face", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/TechnicianDashboardScreen.kt:110", "confidence": "observed" },
+        { "severity": "low", "claim": "Clickable nav rows are ~44.dp tall (12.dp vertical padding around text), below the 48.dp touch target", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/TechnicianDashboardScreen.kt:229", "confidence": "inferred" },
+        { "severity": "low", "claim": "This screen and TechnicianHomeScreen both title themselves the technician home and both render an availability switch from the same AvailabilityViewModel — two divergent visual languages for the same job", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/TechnicianDashboardScreen.kt:49", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "technician.job-offer",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferScreen.kt",
+      "loc": 282,
+      "purpose": "The money moment: a full-screen, countdown-timed offer where the technician accepts or declines an incoming booking before the timer runs out.",
+      "entryPoints": [
+        "Not a nav destination. Rendered as a raw sibling of the NavHost inside the root Box whenever the offer state is neither Idle nor Accepted — AppNavigation.kt:176-181",
+        "State is driven by JobOfferEventBus events collected in the ViewModel init — JobOfferViewModel.kt:34-40 (fed by FCM)",
+        "On acceptance the nav layer routes to activeJob/{bookingId} — AppNavigation.kt:90-97"
+      ],
+      "composition": [
+        "Root Surface filling the screen in colorScheme.background — JobOfferScreen.kt:81-84",
+        "State switch: Idle / Offering / Accepted / Declined / Expired — JobOfferScreen.kt:85-116",
+        "OFFERING — outer Column, fillMaxSize, 16.dp padding, Arrangement.SpaceBetween, centre-aligned, NO scroll container — JobOfferScreen.kt:142-149",
+        "  Top block: HsTrustBadge('New job request') then an 18.dp spacer — JobOfferScreen.kt:150-152",
+        "  Countdown: 104.dp determinate CircularProgressIndicator, 7.dp stroke, colour flips from primary to error at <=5s, with the remaining-seconds number (headlineMedium) and 'sec' label stacked in its centre — JobOfferScreen.kt:153-173",
+        "  Middle: HsSectionCard containing centred service name (headlineSmall) + 'Matched to you for skill, distance, and current availability.' — JobOfferScreen.kt:176-191",
+        "  HsInfoRow 'Customer address' — JobOfferScreen.kt:192",
+        "  HsInfoRow 'Service slot' (slotDate + slotWindow concatenated) — JobOfferScreen.kt:193-196",
+        "  Distance/Earnings Row: left column distance, right column HsPriceText — JobOfferScreen.kt:197-218",
+        "  Bottom block: optional inline error text, then full-width HsPrimaryButton (Accept job / Accepting…) and full-width HsSecondaryButton (Decline) separated by 10.dp — JobOfferScreen.kt:222-252",
+        "RESULT STATES — JobOfferResultContent: a single centred HsSectionCard with one headlineSmall line and no action — JobOfferScreen.kt:256-282",
+        "Haptic tick fired from LaunchedEffect(uiState) whenever remainingSeconds is in 1..5 — JobOfferScreen.kt:51-64"
+      ],
+      "states": {
+        "loading": {
+          "present": false,
+          "evidence": null,
+          "quality": "There is no loading state. During the accept network call the primary button merely swaps its label to 'Accepting…' and disables (JobOfferScreen.kt:236-243) — no spinner, no progress. On a rural 2G connection the technician sees a dead button for seconds with no indication anything is happening."
+        },
+        "empty": {
+          "present": true,
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferScreen.kt:86",
+          "quality": "Idle renders 'Offer unavailable' in a centred card. It is a dead end — no dismiss button, no way back; the screen only disappears when the ViewModel state changes (AppNavigation.kt:176)."
+        },
+        "error": {
+          "present": true,
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferScreen.kt:226",
+          "quality": "Inline red bodySmall above the buttons. The message text is built in the ViewModel and leaks the HTTP status to the technician: \"Server error (${result.httpCode}). Try again.\" (JobOfferViewModel.kt:80). The network-failure variant is friendlier (JobOfferViewModel.kt:89) but both are hardcoded English constructed in the ViewModel, so neither can be translated."
+        },
+        "success": {
+          "present": true,
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferScreen.kt:101",
+          "quality": "A plain 'Offer Accepted!' card shown for 2 seconds (JobOfferViewModel.kt:63 scheduleReset(2_000L)) with no celebration, no job summary carry-over and no motion — for the highest-value action in the app."
+        },
+        "offline": {
+          "present": false,
+          "evidence": null,
+          "quality": "MAJOR: no connectivity awareness. The countdown keeps running while offline and the only signal is the post-hoc 'Could not accept job. Check your connection and try again.' (JobOfferViewModel.kt:89) — by which time seconds have been burned off a 30-second window."
+        },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "Not applicable to this surface." }
+      },
+      "skeletonOrSpinner": "The only CircularProgressIndicator is repurposed as the countdown ring (JobOfferScreen.kt:154-159) — determinate, 104.dp, 7.dp stroke. There is no loading spinner for the accept call.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "18.dp", "line": 152, "context": "gap under the trust badge — off-scale" },
+          { "value": "104.dp", "line": 156, "context": "countdown ring diameter" },
+          { "value": "7.dp", "line": 158, "context": "countdown stroke width" },
+          { "value": "16.dp", "line": 146, "context": "screen padding written literally instead of LocalHomeservicesSpacing.current.space4" },
+          { "value": "14.dp", "line": 177, "context": "card content spacing — off-scale" },
+          { "value": "10.dp", "line": 224, "context": "gap between Accept and Decline — off-scale and dangerously tight for a pair of full-width buttons" },
+          { "value": "24.dp", "line": 263, "context": "result-state padding" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [
+          { "slot": "headlineSmall", "line": 181 },
+          { "slot": "labelMedium", "line": 201 },
+          { "slot": "labelMedium", "line": 213 },
+          { "slot": "headlineSmall", "line": 269 }
+        ],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "\"$remainingSeconds\" — Western-Arabic numerals only, never localized to Devanagari digits", "line": 162 },
+          { "text": "\"${offer.slotDate} ${offer.slotWindow}\" — raw server strings concatenated with a space, no date formatter", "line": 195 },
+          { "text": "errorMessage rendered verbatim; its content is the hardcoded English \"Server error (503). Try again.\" built at JobOfferViewModel.kt:80", "line": 228 }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "HIGH. Copy is properly externalized (12 job_offer_* keys, all present in values-hi/strings.xml) but the LAYOUT cannot absorb Hindi. The Offering column is fillMaxSize with Arrangement.SpaceBetween and no verticalScroll (JobOfferScreen.kt:142-149), so a longer Hindi service name (headlineSmall, no maxLines at :179-184) plus a multi-line Devanagari address in HsInfoRow will push the accept/decline buttons off-screen on a small handset with no way to scroll to them — the technician physically cannot accept the job. Note also that job_offer_accepting in values-hi is stored as numeric character references rather than literal Devanagari (values-hi/strings.xml:18) while its neighbours are literal text, an inconsistency worth verifying renders correctly.",
+        "currencyFormatting": "HsPriceText(pricePaise = offer.amountPaise.toInt()) — JobOfferScreen.kt:216, which renders \"Rs ${pricePaise / 100}\" at design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt:172. ASCII 'Rs' not ₹, integer division silently truncates paise, and there is no digit grouping at all — so ₹12,500 displays as 'Rs 12500' with no lakh/crore or even thousands separator. The Long→Int cast at :216 is also a narrowing conversion."
+      },
+      "a11y": {
+        "contentDescriptions": false,
+        "contentDescriptionsEvidence": "No contentDescription appears anywhere in the file — the countdown CircularProgressIndicator (:154) has no semantics, so a TalkBack user gets no announcement of the ring at all and only hears the bare number '17' with the label 'sec' as a separate node.",
+        "touchTargetRisks": [
+          { "line": 235, "size": "64.dp", "note": "HsPrimaryButton is height space16 = 64.dp (HsComponents.kt:44) — comfortably above target" },
+          { "line": 246, "size": "48.dp", "note": "HsSecondaryButton is height space12 = 48.dp (HsComponents.kt:60) — exactly at the minimum, sitting only 10.dp below a 64.dp Accept button of identical width" }
+        ],
+        "contrastRisks": [
+          { "line": 170, "note": "The 'sec' label is labelSmall in onSurfaceVariant printed inside the ring against the background — the smallest type on the most time-critical element" },
+          { "line": 133, "note": "The countdown flips to colorScheme.error (#D73C3C) only in the last 5 seconds; before that primary #0B3D2E on background #FBF7EF gives a dark-green ring with no urgency encoding for the first 25 seconds" }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "No semantics modifiers (grep confirmed). Crucially there is no Modifier.semantics { liveRegion = LiveRegionMode.Assertive } on the countdown or the error text, so neither the diminishing timer nor an accept failure is announced to a screen-reader user — on a surface that expires in 30 seconds."
+      },
+      "imagery": {
+        "usesImages": false,
+        "sources": [],
+        "placeholderOrMissing": [
+          "Zero imagery on the single most important screen in the technician app: no map or route preview for the address (JobOfferScreen.kt:192), no service icon or photo for the job type (:180), no customer avatar or name, no distance visualisation",
+          "The technician-app has only one photographic drawable available (res/drawable-nodpi/tech_field_ac_service.png) and this screen references none"
+        ],
+        "cite": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferScreen.kt:176"
+      },
+      "motion": {
+        "animationsUsed": [
+          { "what": "animateFloatAsState on the countdown ring progress, label 'countdown', default spring — not a HomeservicesMotion duration/easing", "line": 137 },
+          { "what": "Haptic EFFECT_TICK vibration in the final 5 seconds, fired from LaunchedEffect(uiState); because the key is the whole uiState it re-fires on every one-second tick from 5 down to 1", "line": 51 }
+        ],
+        "usesMotionTokens": false,
+        "transitionsOnNav": "None. The screen is drawn as a bare conditional child of the root Box (AppNavigation.kt:176-181) with no AnimatedVisibility, so a full-screen, high-stakes interrupt materialises and vanishes as an instant hard cut. The Offering→Accepted/Declined/Expired transitions inside the screen (:85-116) are equally uncrossfaded — the whole layout snaps to a single centred card."
+      },
+      "density": "Top-heavy and hollow. Arrangement.SpaceBetween over fillMaxSize with only three children (:147) means whatever vertical slack exists is dumped as two large voids — between the countdown and the detail card, and between the card and the buttons. On a tall device the screen reads as three islands floating in dead space; on a short device the same layout overflows with no scroll. Padding values are 16 / 18 / 14 / 10 / 24.dp — five different rhythms in 282 lines.",
+      "observations": [
+        { "severity": "high", "claim": "The Offering layout is a non-scrolling fillMaxSize Column, so on a small screen or with longer Hindi/Devanagari content the Accept and Decline buttons are pushed out of the viewport and the offer becomes impossible to act on", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferScreen.kt:142", "confidence": "inferred" },
+        { "severity": "high", "claim": "The countdown ring divides by a hardcoded 30f rather than the offer's actual TTL, so if dispatch issues any window other than 30 seconds the ring is desynchronised from the number inside it", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferScreen.kt:138", "confidence": "observed" },
+        { "severity": "high", "claim": "Accept and Decline are both full-width, both stacked, and separated by only 10.dp — the accept action is not unmistakable, and a mis-tap on a bouncing scroll-free layout permanently forfeits the job", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferScreen.kt:224", "confidence": "observed" },
+        { "severity": "high", "claim": "Decline fires immediately with no confirmation — a single tap irreversibly rejects the offer and clears it from the bus", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferViewModel.kt:97", "confidence": "observed" },
+        { "severity": "high", "claim": "Error copy exposes a raw HTTP status code to a rural technician and is hardcoded English inside the ViewModel, so it can never be translated", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferViewModel.kt:80", "confidence": "observed" },
+        { "severity": "high", "claim": "The countdown has no accessibility semantics and no live region, so a screen-reader user is never told how much time remains on a 30-second irreversible decision", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferScreen.kt:154", "confidence": "observed" },
+        { "severity": "medium", "claim": "No imagery, map, route preview or customer identity — the technician is asked to commit travel time on the strength of one line of address text", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferScreen.kt:192", "confidence": "observed" },
+        { "severity": "medium", "claim": "The accept action shows no spinner — only a label swap to 'Accepting…' on a disabled button, which on a slow rural connection is indistinguishable from a frozen app", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferScreen.kt:236", "confidence": "observed" },
+        { "severity": "medium", "claim": "The full-screen interrupt appears and disappears as a hard cut with no enter/exit transition, which is jarring and gives no spatial explanation of where it came from", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/navigation/AppNavigation.kt:176", "confidence": "observed" },
+        { "severity": "medium", "claim": "The urgency signal is binary — the ring stays calm primary green for 25 of 30 seconds then abruptly turns red, with no progressive escalation of colour, scale or motion", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferScreen.kt:131", "confidence": "observed" },
+        { "severity": "medium", "claim": "Money renders as 'Rs 12500' — ASCII Rs, paise truncated by integer division, and no digit grouping whatsoever, on the screen where the technician decides whether the job is worth taking", "evidence": "design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt:172", "confidence": "observed" },
+        { "severity": "medium", "claim": "The haptic is keyed on the whole uiState inside LaunchedEffect, so it re-triggers on each one-second recomposition from 5 to 1 — five separate ticks rather than a designed escalation pattern", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferScreen.kt:51", "confidence": "observed" },
+        { "severity": "medium", "claim": "All four terminal states (unavailable / accepted / declined / expired) collapse into the same single-line centred card with no differentiating iconography, colour treatment or next-step action — success and failure look identical apart from the text colour", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferScreen.kt:256", "confidence": "observed" },
+        { "severity": "low", "claim": "Slot is rendered by concatenating two raw server strings with a space and no date/time formatting or localization", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferScreen.kt:195", "confidence": "observed" },
+        { "severity": "low", "claim": "amountPaise is a Long narrowed with .toInt() to satisfy HsPriceText's Int parameter", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferScreen.kt:216", "confidence": "observed" },
+        { "severity": "low", "claim": "Four unmapped typography slots (two headlineSmall, two labelMedium) put the service name and the distance/earnings labels in Roboto", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferScreen.kt:181", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "technician.active-job",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt",
+      "loc": 305,
+      "purpose": "The live job tracker: shows the accepted booking's details and stage progress and drives the technician through Start trip → Arrived → Start work → Complete with a photo gate at each transition.",
+      "entryPoints": [
+        "Route 'activeJob/{bookingId}' registered at HomeGraph.kt:72-77 and composed via ActiveJobRoute at HomeGraph.kt:190",
+        "Entered from the home screen's Open-job / Continue-job buttons — HomeGraph.kt:150 (navigate(\"activeJob/$bookingId\"))",
+        "Entered from a pending JOB_OFFER action tap — HomeGraph.kt:160",
+        "Entered automatically after an offer is accepted — AppNavigation.kt:93",
+        "Exits via onBackToDashboard → returnToDashboard() — HomeGraph.kt:192"
+      ],
+      "composition": [
+        "Root Surface fillMaxSize in colorScheme.background — ActiveJobScreen.kt:73-76",
+        "State switch: Loading / Completed / Error / Active — ActiveJobScreen.kt:77-122",
+        "ACTIVE — outer Column, fillMaxSize, 16.dp padding, Arrangement.SpaceBetween — ActiveJobScreen.kt:134-140",
+        "  Optional PhotoUploadRetryBanner (tertiaryContainer strip with cloud icon + Retry) — ActiveJobScreen.kt:142-144, impl PhotoUploadRetryBanner.kt:37-68",
+        "  HsTrustBadge showing the current status label — ActiveJobScreen.kt:145",
+        "  Job card: HsSectionCard with service name (headlineSmall) + HsInfoRow address + HsInfoRow slot — ActiveJobScreen.kt:146-159",
+        "  Progress card: HsSectionCard 'Job progress' wrapping StatusStepper — ActiveJobScreen.kt:160-162",
+        "  Optional offline strip: errorContainer Surface with centred 'Offline - status will sync on reconnect' — ActiveJobScreen.kt:163-177",
+        "  Bottom: single full-width HsPrimaryButton whose label and target stage are derived from availableAction — ActiveJobScreen.kt:180-199",
+        "StatusStepper: a Row of five 58.dp-wide columns, each a 16.dp extraSmall square over a labelSmall caption, no connecting line — ActiveJobScreen.kt:204-253",
+        "PhotoCaptureScreen overlay when pendingPhotoStage is non-null — ActiveJobScreen.kt:100-114",
+        "CompletionConfirmationDialog when awaitingCompletionConfirm — ActiveJobScreen.kt:115-120, impl CompletionConfirmationDialog.kt:20-34",
+        "ActiveJobSkeleton for Loading: four HsSkeletonBlocks with a weight spacer — ActiveJobScreen.kt:256-264",
+        "CenterMessage for Completed and Error: centred title + body + full-width HsSecondaryButton — ActiveJobScreen.kt:266-295"
+      ],
+      "states": {
+        "loading": {
+          "present": true,
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt:256",
+          "quality": "Good — the only surface in the cluster that uses the shared HsSkeletonBlock, and the block heights (32/132/108/56.dp) roughly mirror the real layout. No shimmer animation though (HsComponents.kt:134-142 is a static Surface)."
+        },
+        "empty": { "present": false, "evidence": null, "quality": "Not applicable — the screen is always scoped to one booking." },
+        "error": {
+          "present": true,
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt:86",
+          "quality": "MAJOR DEFECT: the Error branch is unreachable. A repo-wide grep for 'ActiveJobUiState.Error' across technician-app/app/src returns exactly one hit — this render site — and zero construction sites in ActiveJobViewModel. A failure to load the booking therefore leaves the screen stuck on the skeleton forever. Additionally, when the branch is somehow reached it prints uiState.message raw as the body (:89), and the ViewModel's message strings elsewhere are raw exception text (ActiveJobViewModel.kt:255 exceptionOrNull()?.message, :329 'Transition failed — tap Retry')."
+        },
+        "success": {
+          "present": true,
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt:79",
+          "quality": "Completed shows a centred 'Job complete' message with a Back-to-dashboard secondary button — functional but celebration-free: no earnings figure, no rating prompt link, no imagery"
+        },
+        "offline": {
+          "present": true,
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt:163",
+          "quality": "Best-in-cluster: an errorContainer strip announces 'Offline - status will sync on reconnect' when transitions are queued. But it is styled in the ERROR colour role for what is a normal, benign, recoverable condition (:167), which over-alarms; a warning or info role would be correct."
+        },
+        "permissionDenied": {
+          "present": false,
+          "evidence": null,
+          "quality": "The screen itself handles none. Location is captured by the ViewModel/foreground service and camera permission is handled inside the PhotoCaptureScreen overlay (PhotoCaptureScreen.kt:312) — if location permission is missing the technician gets no explanation here. [inferred from absence in file]"
+        }
+      },
+      "skeletonOrSpinner": "HsSkeletonBlock x4 (ActiveJobScreen.kt:258-262) — the correct shared component. No CircularProgressIndicator on this screen; the in-flight transition after tapping the CTA has no progress affordance at all (:188-199).",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "16.dp", "line": 138, "context": "screen padding as a literal rather than LocalHomeservicesSpacing.current.space4" },
+          { "value": "14.dp", "line": 141, "context": "content block spacing — off-scale (repeated :257)" },
+          { "value": "12.dp", "line": 147, "context": "job card inner spacing" },
+          { "value": "12.dp", "line": 174, "context": "offline strip padding" },
+          { "value": "58.dp", "line": 226, "context": "fixed stepper column width — the source of the Hindi truncation risk" },
+          { "value": "16.dp", "line": 236, "context": "stepper dot size" },
+          { "value": "32.dp / 132.dp / 108.dp / 56.dp", "line": 258, "context": "skeleton block heights (:258-262), all off-scale" },
+          { "value": "24.dp", "line": 274, "context": "CenterMessage padding" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [
+          { "slot": "headlineSmall", "line": 150 },
+          { "slot": "headlineSmall", "line": 278 }
+        ],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "\"${state.job.slotDate} ${state.job.slotWindow}\" — raw server strings concatenated, no formatter", "line": 156 },
+          { "text": "uiState.message rendered verbatim as the error body; upstream values are raw exception text (ActiveJobViewModel.kt:255, :329)", "line": 89 }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "HIGH on the stepper. All 18 active_job_* keys are externalized and present in values-hi/strings.xml, but StatusStepper hard-locks each of the five steps to a 58.dp column (ActiveJobScreen.kt:226) with a labelSmall caption and no maxLines/overflow guard (:239-249). English 'En route' barely fits; the Hindi 'रास्ते में' / 'पहुँच गए' are wider and taller and will wrap into an unaligned two-line mess or clip. The outer Column is also non-scrolling fillMaxSize with SpaceBetween (:134-140), so a long Devanagari address in HsInfoRow can push the primary CTA off-screen mid-job.",
+        "currencyFormatting": "Absent — the active job screen never shows the job amount at all. A technician cannot see what the job pays once accepted (verified across the full 305-line file). [observed absence]"
+      },
+      "a11y": {
+        "contentDescriptions": false,
+        "contentDescriptionsEvidence": "Zero contentDescription parameters in the file. The five StatusStepper dots are bare Surfaces with empty content (:228-237) so they carry no semantics whatsoever; a screen reader hears only the caption words with no completed/pending distinction.",
+        "touchTargetRisks": [
+          { "line": 188, "size": "64.dp", "note": "Primary CTA is HsPrimaryButton at space16 = 64.dp (HsComponents.kt:44) — good for gloved field use" },
+          { "line": 288, "size": "48.dp", "note": "CenterMessage secondary action is HsSecondaryButton at space12 = 48.dp — at the minimum" },
+          { "line": 64, "size": "TextButton default 40.dp", "note": "PhotoUploadRetryBanner's Retry is a default TextButton, below target (PhotoUploadRetryBanner.kt:64)" },
+          { "line": 25, "size": "TextButton default 40.dp", "note": "Both actions in CompletionConfirmationDialog are default TextButtons (CompletionConfirmationDialog.kt:25, :30)" }
+        ],
+        "contrastRisks": [
+          { "line": 167, "note": "The offline strip uses errorContainer/onErrorContainer for a benign sync-pending condition — semantically wrong colour role, reads as a failure" },
+          { "line": 241, "note": "Incomplete stepper captions are labelSmall in onSurfaceVariant (#5F6C66) and the incomplete dots are surfaceVariant (#E8F1EC) on surface (#FFFDF8) — roughly 1.2:1, so upcoming steps are effectively invisible and the stepper communicates almost nothing" }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "No semantics modifiers of any kind (grep confirmed zero hits across the file). The stage transition — the core state change of the whole screen — is not announced via a live region, so a TalkBack user gets no confirmation that 'Start trip' succeeded."
+      },
+      "imagery": {
+        "usesImages": false,
+        "sources": [],
+        "placeholderOrMissing": [
+          "No map, no route line, no ETA and no navigate affordance despite the app having full maps plumbing — StartTripUseCase.kt:20 emits NavigationEvent.Maps and HomeGraph.kt:181 launches the maps intent, but that fires only as a side effect of the Start-trip transition; there is no visible 'Navigate' button the technician can tap again later",
+          "No customer name, photo, or call/message button anywhere on the screen — verified across all 305 lines",
+          "The stepper uses five bare coloured squares instead of stage iconography (:228-237)",
+          "The completion state has no imagery or confirmation graphic (:79-85)"
+        ],
+        "cite": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt:146"
+      },
+      "motion": {
+        "animationsUsed": [],
+        "usesMotionTokens": false,
+        "transitionsOnNav": "None. No animation imports at all. Stage advances — the emotional beat of the whole screen — swap the stepper dot colours instantly with no progress animation, no dot fill transition and no haptic. The Loading→Active handoff is a hard cut from skeleton to content. The PhotoCaptureScreen overlay (:102) and CompletionConfirmationDialog (:116) both appear with no enter transition beyond M3 dialog defaults."
+      },
+      "density": "Reasonable and the most disciplined of the cluster: 16.dp gutter, 14.dp between blocks, 12.dp inside cards. The failure is horizontal — StatusStepper spreads five fixed 58.dp columns with Arrangement.SpaceBetween across the full width (:217-221), so on a wide device the dots drift far apart with nothing connecting them, and the 16.dp dots leave the row looking sparse and unfinished.",
+      "observations": [
+        { "severity": "high", "claim": "The Error state is dead code — ActiveJobUiState.Error is rendered here but never constructed anywhere in the app, so a booking that fails to load leaves the technician staring at a skeleton indefinitely with no error and no way out", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt:86", "confidence": "observed" },
+        { "severity": "high", "claim": "The safety escalation feature is built but never shown: ActiveJobViewModel sets showShieldSheet = true (ActiveJobViewModel.kt:338) and ShieldReportSheet.kt:30 exists, but ActiveJobScreen never renders it and no other file references it — a technician in danger has no reachable panic affordance", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobUiState.kt:24", "confidence": "observed" },
+        { "severity": "high", "claim": "The mock-GPS warning is computed and stored in state (ActiveJobViewModel.kt:321, :330) but the screen never renders mockLocationWarning, so a spoofed-location detection is silently swallowed", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobUiState.kt:29", "confidence": "observed" },
+        { "severity": "high", "claim": "There is no way to contact the customer — no name, no phone, no call or message button anywhere on the live job screen", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt:146", "confidence": "observed" },
+        { "severity": "high", "claim": "There is no visible Navigate/maps affordance; the maps intent only auto-fires once as a side effect of the Start-trip transition, so a technician who dismisses it cannot re-open directions", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/navigation/HomeGraph.kt:181", "confidence": "observed" },
+        { "severity": "high", "claim": "Tapping the primary CTA gives no in-flight feedback — no spinner, no disabled state, no optimistic stage advance — so on a slow connection the technician taps repeatedly", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt:188", "confidence": "observed" },
+        { "severity": "medium", "claim": "The stepper's incomplete steps use surfaceVariant dots on surface (~1.2:1) with onSurfaceVariant captions, so four of the five stages are visually near-invisible and the component fails to communicate progress", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt:234", "confidence": "inferred" },
+        { "severity": "medium", "claim": "Stepper columns are hard-locked to 58.dp with unbounded labelSmall captions and no overflow handling — Hindi stage labels will wrap or clip", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt:226", "confidence": "inferred" },
+        { "severity": "medium", "claim": "The stepper has no connecting line or rail between dots, so five isolated squares spread by SpaceBetween do not read as a sequence — and the shared HsTimelineStep component that exists for exactly this purpose is unused", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt:217", "confidence": "observed" },
+        { "severity": "medium", "claim": "The benign 'transitions queued, will sync' condition is painted in the error colour role, over-alarming a technician who is simply in a low-signal area", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt:167", "confidence": "observed" },
+        { "severity": "medium", "claim": "Photo-upload and transition failures surface raw exception messages to the user", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobViewModel.kt:255", "confidence": "observed" },
+        { "severity": "medium", "claim": "Zero motion on a screen whose entire purpose is progression through stages — dot colours snap, skeleton hard-cuts to content, no haptic on stage completion", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt:204", "confidence": "observed" },
+        { "severity": "medium", "claim": "The job amount is never displayed on the active job screen, so after acceptance the technician has no in-app record of what the job pays", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt:146", "confidence": "observed" },
+        { "severity": "low", "claim": "The completion state is a bare centred text block with no earnings summary, no rating handoff and no celebratory treatment for the end of a job", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt:79", "confidence": "observed" },
+        { "severity": "low", "claim": "Slot is raw server date + window concatenated with a space, unformatted and unlocalized", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt:156", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "technician.photo-capture",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/PhotoCaptureScreen.kt",
+      "loc": 374,
+      "purpose": "Full-screen CameraX overlay that gates every active-job stage transition: the technician shoots an evidence photo, reviews it, and confirms the upload before the stage advances.",
+      "entryPoints": [
+        "Not a nav destination — rendered as an overlay from ActiveJobScreen when uiState.pendingPhotoStage is non-null: ActiveJobScreen.kt:100-113",
+        "pendingPhotoStage is set by the ViewModel when a stage transition is requested (ActiveJobViewModel drives onTransitionRequested, wired at ActiveJobScreen.kt:46)"
+      ],
+      "composition": [
+        "Root Box fillMaxSize with a hardcoded Color.Black background — PhotoCaptureScreen.kt:107",
+        "BRANCH A no camera permission → PermissionDeniedContent centred: one line of text, a filled Grant-permission Button, a white-text Cancel TextButton — PhotoCaptureScreen.kt:108-115, impl :312-327",
+        "BRANCH B no back camera → centred white text + Go-back TextButton — PhotoCaptureScreen.kt:117-127",
+        "BRANCH C capture mode (capturedPath == null):",
+        "  Full-bleed CameraX PreviewView via AndroidView — PhotoCaptureScreen.kt:130-159",
+        "  Top scrim strip: stagePrompt text (titleMedium, white) on 55%-black, full width, status-bar padded — PhotoCaptureScreen.kt:161-172",
+        "  Bottom-centre shutter: a default M3 filled Button labelled 'Capture', navigation-bar padded plus 48.dp bottom offset — PhotoCaptureScreen.kt:174-202",
+        "  Bottom-start Cancel TextButton in white — PhotoCaptureScreen.kt:204-211",
+        "BRANCH D review mode (capturedPath != null):",
+        "  Full-bleed captured Image with ContentScale.Crop — PhotoCaptureScreen.kt:213-224",
+        "  Top scrim column: stagePrompt + hardcoded 'Photo captured' — PhotoCaptureScreen.kt:226-246",
+        "  If uploadError: centred 65%-black column with the failure text, a Retry-upload Button and a Retake TextButton — PhotoCaptureScreen.kt:248-268",
+        "  Else: bottom-centre 55%-black Row with an OutlinedButton 'Retake' and a filled Button 'Confirm & Upload' that swaps to a 20.dp CircularProgressIndicator while uploading — PhotoCaptureScreen.kt:269-307",
+        "stagePrompt(): hardcoded English prompt per stage — PhotoCaptureScreen.kt:329-336",
+        "decodePreviewBitmap()/calculateSampleSize(): downsampling helpers targeting 1080x1920 — PhotoCaptureScreen.kt:55-56, :338-374"
+      ],
+      "states": {
+        "loading": {
+          "present": true,
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/PhotoCaptureScreen.kt:296",
+          "quality": "Upload progress is a bare 20.dp CircularProgressIndicator swapped in place of the 'Confirm & Upload' label — the button silently changes width as the label disappears, and there is no percentage, no byte count and no cancel. There is NO loading state for camera initialisation: between mount and ProcessCameraProvider resolving (:133-155) the technician sees a pure black screen with a prompt floating on it and no indication the camera is starting."
+        },
+        "empty": { "present": false, "evidence": null, "quality": "Not applicable to a camera surface." },
+        "error": {
+          "present": true,
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/PhotoCaptureScreen.kt:248",
+          "quality": "PARTIAL AND LEAKY. The upload-failure overlay interpolates the raw exception message into R.string.photo_upload_failed ('Upload failed: %s', values/strings.xml:101) — the source value is exceptionOrNull()?.message from ActiveJobViewModel.kt:255, so a technician can be shown a Java exception string. Worse, the CAPTURE failure path is completely silent: ImageCapture.OnImageSavedCallback.onError has an empty body with a comment (:193), so a shutter that fails leaves capturedPath null and the button appears simply not to work."
+        },
+        "success": {
+          "present": false,
+          "evidence": null,
+          "quality": "MAJOR: there is no success confirmation. On a successful upload the overlay simply disappears (driven by the parent clearing pendingPhotoStage) — no checkmark, no 'photo saved', no haptic. The technician gets no positive proof that the evidence photo, which gates their payment, was actually stored."
+        },
+        "offline": {
+          "present": false,
+          "evidence": null,
+          "quality": "No connectivity check before or during upload. An offline technician taps Confirm & Upload, waits on a spinner, and eventually receives a raw exception string. The queue-and-retry machinery exists (PhotoUploadRetryBanner.kt:33) but this overlay never tells the user that queueing is an option."
+        },
+        "permissionDenied": {
+          "present": true,
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/PhotoCaptureScreen.kt:312",
+          "quality": "Present but minimal: 'Camera permission required' (values/strings.xml:106) with no explanation of WHY the photo is needed, no illustration, and — critically — no handling of permanent denial. Once the user selects 'Don't allow' twice, permissionLauncher.launch (:110) is a no-op on Android 11+, so the Grant-permission button becomes a dead button with no route to app settings. [permanent-denial behaviour inferred from Android platform semantics]"
+        }
+      },
+      "skeletonOrSpinner": "A bare 20.dp CircularProgressIndicator inside the confirm button during upload (PhotoCaptureScreen.kt:296-301). No skeleton, and no spinner at all for camera warm-up. HsSkeletonBlock is not used.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "24.dp", "line": 119, "context": "no-camera message padding (also :254, :319)" },
+          { "value": "12.dp", "line": 121, "context": "spacing in fallback branches (also :256, :321)" },
+          { "value": "16.dp", "line": 171, "context": "top scrim padding (also :210, :233, :276)" },
+          { "value": "48.dp", "line": 201, "context": "magic bottom offset lifting the shutter above the nav bar" },
+          { "value": "16.dp", "line": 277, "context": "gap between Retake and Confirm" },
+          { "value": "20.dp", "line": 298, "context": "upload spinner diameter" },
+          { "value": "2.dp", "line": 299, "context": "spinner stroke" }
+        ],
+        "hardcodedColors": [
+          { "value": "Color.Black", "line": 107, "context": "root background — defensible for a camera surface" },
+          { "value": "Color.White", "line": 123, "context": "no-camera message text" },
+          { "value": "Color.White", "line": 124, "context": "go-back label" },
+          { "value": "Color.Black.copy(alpha = 0.55f)", "line": 169, "context": "top scrim — magic alpha, repeated at :231 and :275" },
+          { "value": "Color.White", "line": 164, "context": "stage prompt text (also :239, :244)" },
+          { "value": "Color.White", "line": 211, "context": "cancel label" },
+          { "value": "Color.Black.copy(alpha = 0.65f)", "line": 253, "context": "error overlay scrim — a third distinct alpha value" },
+          { "value": "Color.White", "line": 258, "context": "error text (also :266)" },
+          { "value": "Color.White", "line": 290, "context": "'Retake' label placed inside an OutlinedButton whose theme-derived outline and container are NOT overridden, so a light-theme outline sits around white-on-transparent text" }
+        ],
+        "unmappedTypographySlots": [
+          { "slot": "titleMedium", "line": 163 },
+          { "slot": "titleMedium", "line": 238 }
+        ],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "\"Photo captured\" — the review-mode confirmation line", "line": 242 },
+          { "text": "\"Starting Trip - Take a photo of your transport\"", "line": 331 },
+          { "text": "\"Arrived - Take a photo of the site\"", "line": 332 },
+          { "text": "\"Starting Work - Take a photo of the work area\"", "line": 333 },
+          { "text": "\"Completing - Take a photo of the finished work\"", "line": 334 },
+          { "text": "\"Take a photo to continue\" — fallback prompt", "line": 335 }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "HIGH. Eleven photo_* keys are externalized and translated (values-hi/strings.xml:81 confirms photo_confirm_upload), but the SINGLE MOST IMPORTANT copy on the screen — the instruction telling the technician what to photograph — is a hardcoded English `when` block (:329-336). A Hindi-speaking technician sees translated buttons wrapping an English instruction. Layout-wise the prompt is a full-width single Text with no maxLines (:161-172), so longer Hindi prompts will grow the top scrim and eat into the viewfinder; and the bottom action Row (:270-278) places two buttons side by side with a fixed 16.dp gap and no wrapping, so 'पुष्टि करें & अपलोड करें' next to 'दोबारा लें' risks horizontal overflow on a narrow device.",
+        "currencyFormatting": "Not applicable — no monetary values on this surface."
+      },
+      "a11y": {
+        "contentDescriptions": false,
+        "contentDescriptionsEvidence": "The captured evidence photo is rendered with contentDescription = null (:219), and the CameraX PreviewView inside AndroidView (:130-159) carries no semantics at all — a low-vision technician has no way to know whether the camera is even showing anything.",
+        "touchTargetRisks": [
+          { "line": 174, "size": "M3 Button default min height 40.dp", "note": "The SHUTTER — the primary action of the entire screen — is a default-sized text Button, not a camera-style shutter control, and sits below the 48.dp target [inferred from ButtonDefaults.MinHeight]" },
+          { "line": 204, "size": "TextButton default 40.dp", "note": "Cancel, bottom-start" },
+          { "line": 259, "size": "Button default 40.dp", "note": "Retry upload" },
+          { "line": 260, "size": "TextButton default 40.dp", "note": "Retake in the error overlay" },
+          { "line": 279, "size": "OutlinedButton default 40.dp", "note": "Retake in the review bar" },
+          { "line": 292, "size": "Button default 40.dp", "note": "Confirm & Upload" },
+          { "line": 324, "size": "Button default 40.dp", "note": "Grant permission" }
+        ],
+        "contrastRisks": [
+          { "line": 169, "note": "White text over a 55%-black scrim over an arbitrary live camera frame — a bright outdoor scene at midday in Ayodhya can leave the prompt at well under 4.5:1. The scrim alpha is fixed, not adaptive. [inferred]" },
+          { "line": 290, "note": "'Retake' is forced Color.White inside an OutlinedButton whose container/outline still come from the theme, so in light theme the label is white on a light-outlined transparent button over a photo — an unpredictable and likely failing combination" },
+          { "line": 323, "note": "The permission-denied message is white text on the root black Box with no scrim or card, floating unanchored in the centre of a black screen" }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "No semantics modifiers anywhere (grep confirmed zero hits). The overlay is drawn as a sibling inside ActiveJobScreen's Surface (ActiveJobScreen.kt:102) rather than as a Dialog, so there is nothing preventing TalkBack focus from escaping into the ActiveJob content underneath it, and no system back handling is declared in this file.",
+        "focusOrderConfidence": "inferred"
+      },
+      "imagery": {
+        "usesImages": true,
+        "sources": ["Live CameraX PreviewView via AndroidView — PhotoCaptureScreen.kt:130-159", "The technician's own captured JPEG, downsampled to 1080x1920 for review — PhotoCaptureScreen.kt:213-224"],
+        "placeholderOrMissing": [
+          "No framing guide, grid, or target overlay to tell the technician what a valid evidence photo looks like",
+          "No thumbnail of a previously captured stage photo for reference",
+          "The permission-denied and no-camera branches have no illustration — plain white text on black (:123, :323)"
+        ],
+        "cite": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/PhotoCaptureScreen.kt:130"
+      },
+      "motion": {
+        "animationsUsed": [],
+        "usesMotionTokens": false,
+        "transitionsOnNav": "None. No animation APIs are imported. The overlay appears as an instant hard cut over the active job (ActiveJobScreen.kt:102). There is no shutter flash, no capture animation, no transition from viewfinder to review, and no haptic on capture — pressing 'Capture' produces zero immediate feedback, so on a slow device the technician cannot tell whether the shutter fired (compounded by the silent onError at :193)."
+      },
+      "density": "Two competing rhythms. The camera branches use full-bleed scrims with 16.dp padding (:171, :210, :233, :276) which is fine, but the fallback branches (permission denied :319, no camera :119, upload error :254) all use 24.dp padding with 12.dp spacing on unanchored centred columns, so the error and permission states float as loose text in a black void with no card, no surface and no visual containment. The 48.dp magic bottom offset on the shutter (:201) sits it awkwardly above the nav-bar padding while the Cancel button beside it uses only 16.dp (:210), so the two bottom controls are on different baselines.",
+      "observations": [
+        { "severity": "high", "claim": "Capture failures are silently swallowed — ImageCapture.OnImageSavedCallback.onError has an empty body, so a failed shutter is indistinguishable from an unresponsive button and the technician is stuck at the stage gate", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/PhotoCaptureScreen.kt:193", "confidence": "observed" },
+        { "severity": "high", "claim": "There is no success confirmation after upload — the overlay just vanishes, giving no proof that the payment-gating evidence photo was stored", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/PhotoCaptureScreen.kt:292", "confidence": "observed" },
+        { "severity": "high", "claim": "The stage instruction — the most important copy on the screen — is a hardcoded English when-block, so Hindi-speaking technicians are told what to photograph in English inside otherwise-translated chrome", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/PhotoCaptureScreen.kt:329", "confidence": "observed" },
+        { "severity": "high", "claim": "The shutter is a default 40.dp M3 text Button labelled 'Capture' rather than a camera-style shutter control — undersized for gloved, one-handed, outdoor field use and visually indistinguishable from any other button in the app", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/PhotoCaptureScreen.kt:174", "confidence": "observed" },
+        { "severity": "high", "claim": "Upload errors interpolate the raw exception message into user-visible copy", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/PhotoCaptureScreen.kt:258", "confidence": "observed" },
+        { "severity": "high", "claim": "Permanent permission denial has no escape hatch — the Grant-permission button re-launches a request that Android silently no-ops after two refusals, with no route to app settings", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/PhotoCaptureScreen.kt:110", "confidence": "inferred" },
+        { "severity": "medium", "claim": "No camera-initialisation state — the screen is pure black with a floating prompt until ProcessCameraProvider resolves, reading as a crash on slower devices", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/PhotoCaptureScreen.kt:133", "confidence": "observed" },
+        { "severity": "medium", "claim": "Zero capture feedback — no shutter flash, no sound cue in-app, no haptic, no viewfinder-to-review transition", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/PhotoCaptureScreen.kt:185", "confidence": "observed" },
+        { "severity": "medium", "claim": "'Retake' is forced to Color.White inside an OutlinedButton whose container and outline still resolve from the theme, producing an unpredictable white-on-light label", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/PhotoCaptureScreen.kt:290", "confidence": "observed" },
+        { "severity": "medium", "claim": "Three different scrim alphas (0.55, 0.55, 0.65) and no design-system elevation or scrim token — the error overlay is a different darkness from the chrome around it", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/PhotoCaptureScreen.kt:253", "confidence": "observed" },
+        { "severity": "medium", "claim": "The captured evidence photo has contentDescription = null and the live preview has no semantics at all", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/PhotoCaptureScreen.kt:219", "confidence": "observed" },
+        { "severity": "medium", "claim": "Permission-denied and no-camera states are unanchored white text floating on black with no card, illustration or explanation of why the camera is needed", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/PhotoCaptureScreen.kt:312", "confidence": "observed" },
+        { "severity": "medium", "claim": "The overlay is a plain Box sibling rather than a Dialog, so nothing traps focus or back-navigation inside the modal camera surface", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt:102", "confidence": "inferred" },
+        { "severity": "low", "claim": "The 'Photo captured' review label is a hardcoded English literal sitting directly beneath a translated prompt", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/PhotoCaptureScreen.kt:242", "confidence": "observed" },
+        { "severity": "low", "claim": "No framing guide, grid or example thumbnail to define what a valid evidence photo looks like, in a flow where a rejected photo blocks payment", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/PhotoCaptureScreen.kt:161", "confidence": "observed" },
+        { "severity": "low", "claim": "Shutter and Cancel sit on different bottom baselines (48.dp offset vs 16.dp padding), so the bottom control row is visibly misaligned", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/PhotoCaptureScreen.kt:201", "confidence": "observed" }
+      ]
+    }
+  ]
+}

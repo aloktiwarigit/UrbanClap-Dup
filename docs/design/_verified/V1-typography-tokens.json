@@ -1,0 +1,285 @@
+{
+  "theme": "V1-typography-tokens",
+  "method": "Every count in this theme was re-run independently (fresh grep loops + two independent Python AST-free scanners over customer-app/app/src/main, technician-app/app/src/main, design-system/src/main). Every cited file was opened. The central distinction applied throughout: a token with ZERO direct textual references is not necessarily dead — HomeservicesRadius reaches consumers through the MaterialTheme.shapes mapping at HomeservicesTheme.kt:52-59, and HomeservicesElevation reaches them through LocalHomeservicesElevation.current.elev1 at HsComponents.kt:117 inside HsSectionCard. Reachability, not reference count, decides deadness.",
+  "verdicts": [
+    {
+      "claim": "customer-app uses the five UNMAPPED M3 slots 76 times: titleMedium 33, headlineSmall 19, labelMedium 13, titleSmall 10, displaySmall 1. Every one renders in Roboto, not Geist Sans / Noto Devanagari.",
+      "citation": "customer-app/app/src/main/**/*.kt (grep typography.<slot>)",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Re-ran the loop: titleMedium=33, titleSmall=10, labelMedium=13, headlineSmall=19, displaySmall=1; combined regex total = 76. Exact match on every one of the six numbers. Mechanism verified by construction at design-system/src/main/kotlin/com/homeservices/designsystem/theme/Typography.kt:149-221 — HomeservicesTypography passes only the 10 mapped slots to the Typography() constructor, so the other 5 retain M3's defaults, which resolve to FontFamily.SansSerif (Roboto on Android). Typography.kt:145-147 states this is deliberate: 'Unmapped M3 slots (displaySmall, headlineSmall, titleMedium, titleSmall, labelMedium) retain M3's built-in Roboto-based defaults per brainstorm sec.7 decision. This is intentional.'",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "technician-app uses them 54 times: titleMedium 18, headlineSmall 17, labelMedium 11, titleSmall 5, displaySmall 3.",
+      "citation": "technician-app/app/src/main/**/*.kt (grep typography.<slot>)",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "titleMedium=18, titleSmall=5, labelMedium=11, headlineSmall=17, displaySmall=3; combined total = 54. Exact match on all six numbers.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The design-system module ITSELF leaks Roboto into every consumer: 4 shared components use unmapped slots, so any screen using HsSectionCard, HsInfoRow, HsTimelineStep or LanguagePickerCard renders mixed-typeface text.",
+      "citation": "design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt:123,155,198; design-system/src/main/kotlin/com/homeservices/designsystem/locale/LanguagePickerCard.kt:67",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "grep for unmapped slots across design-system/src/main returns exactly 4 hits at exactly the 4 cited lines. HsComponents.kt:123 'style = MaterialTheme.typography.titleMedium' (HsSectionCard title), :155 'style = MaterialTheme.typography.labelMedium' (HsInfoRow label), :198 'style = MaterialTheme.typography.titleSmall' (HsTimelineStep title), LanguagePickerCard.kt:67 'style = MaterialTheme.typography.titleMedium'. Blast radius verified: HsSectionCard has 10 customer + 27 technician call sites, HsTimelineStep 3 + 7, HsInfoRow 1 + 4. Amplification claim holds.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "LanguagePickerCard.kt:67 is the single most damaging instance: the Devanagari word 'हिन्दी' is rendered through titleMedium — i.e. Roboto, not Noto Devanagari.",
+      "citation": "design-system/src/main/kotlin/com/homeservices/designsystem/locale/LanguagePickerCard.kt:29,66-67",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "Lines are exact: :29 'LanguageOption(tag = \"hi\", displayLabel = \"Hindi\", nativeName = \"हिन्दी\")', :66 'text = option.nativeName', :67 'style = MaterialTheme.typography.titleMedium'. But the stated MECHANISM is wrong. Roboto contains no Devanagari glyphs at all, so 'हिन्दी' cannot render in Roboto. Android's platform font-fallback chain resolves the Devanagari codepoints to the SYSTEM Noto Sans Devanagari. The Hindi word neither tofus nor renders in Roboto. What I actually saw that IS a defect, and is sharper: :70-72 renders option.displayLabel at bodySmall, which IS mapped to HomeservicesFontFamily (Typography.kt:200-206). So the two Text calls are stacked vertically in the same Column (:64-75) with :66 unmapped and :71 mapped. On the English row (:28, nativeName = 'English', displayLabel = 'English') the SAME string renders twice, one line above the other, in two different typefaces — Roboto then Geist. That is a directly visible typeface mismatch on the first-launch language chooser.",
+      "correctedStatement": "LanguagePickerCard.kt:67 uses the unmapped titleMedium slot for the native-name line while :72 uses the mapped bodySmall slot for the label line directly beneath it. Consequence is NOT 'Hindi renders in Roboto' — Devanagari falls through to the platform Noto Sans Devanagari rather than the bundled, weight-bucketed one registered at Typography.kt:64-83, losing the Medium/SemiBold/Bold Devanagari weight buckets. The visible defect is on the ENGLISH row: LanguagePickerCard.kt:28 sets both displayLabel and nativeName to 'English', so the identical string renders in Roboto (:66-67) directly above the same string in Geist (:71-72). Fix is one line — map titleMedium in Typography.kt, or switch :67 to titleLarge.",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Worst-offender consumer files, customer-app: BookingSummaryScreen.kt 6, TrustDossierCard.kt 5, CustomerBookingsScreen.kt 5, RatingScreen.kt 4, ServiceDetailScreen.kt 4, CustomerHomeTabContent.kt 4, AuthScreen.kt 4, LiveTrackingScreen.kt 3, DpdpConsentScreen.kt 3, ComplaintScreen.kt 3, CatalogueVisualImage.kt 3, CatalogueHomeScreen.kt 3.",
+      "citation": "customer-app/app/src/main — per-file count of unmapped-slot lines",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Re-ran the per-file count and sorted: 6 BookingSummaryScreen.kt, 5 TrustDossierCard.kt, 5 CustomerBookingsScreen.kt, 4 RatingScreen.kt, 4 ServiceDetailScreen.kt, 4 CustomerHomeTabContent.kt, 4 AuthScreen.kt, 3 LiveTrackingScreen.kt, 3 DpdpConsentScreen.kt, 3 ComplaintScreen.kt, 3 CatalogueVisualImage.kt, 3 CatalogueHomeScreen.kt. Every file and every count matches, in the same order. (Tail continues: PriceApprovalScreen.kt 3, BookingConfirmedScreen.kt 3 — not listed but harmless.)",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "technician-app worst offender is extreme: TechnicianHomeScreen.kt alone contains 12 unmapped-slot lines. Then MyRatingsScreen.kt 5, JobOfferScreen.kt 4, AuthScreen.kt 4, ServiceSelectionScreen.kt 3, KycScreen.kt 3, EarningsScreen.kt 3, TechnicianDashboardScreen.kt 3, ComplaintScreen.kt 3, ActiveJobScreen.kt 3.",
+      "citation": "technician-app/app/src/main — per-file count of unmapped-slot lines",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Exact match, same order: 12 TechnicianHomeScreen.kt, 5 MyRatingsScreen.kt, 4 JobOfferScreen.kt, 4 AuthScreen.kt, 3 ServiceSelectionScreen.kt, 3 KycScreen.kt, 3 EarningsScreen.kt, 3 TechnicianDashboardScreen.kt, 3 ComplaintScreen.kt, 3 ActiveJobScreen.kt. Opened TechnicianHomeScreen.kt and enumerated the 12: :398 headlineSmall, :511 titleMedium, :518 labelMedium, :610 displaySmall, :642/:753/:837/:1125 titleMedium, :1156 headlineSmall, :1184 labelMedium, :1250/:1291 titleMedium. The :610 displaySmall is the hero earnings figure.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": "T2 technician.home-shell 'Twelve typography calls use unmapped M3 slots'"
+    },
+    {
+      "claim": "customer-app hardcodes 97 raw Color(0x...) literals. Worst files: DpdpConsentScreen.kt 22, CatalogueHomeScreen.kt 14, PhotoFirstCategoryCard.kt 11, CatalogueVisualImage.kt 11, ComplaintListScreen.kt 10, CustomerHomeTabContent.kt 7, ServiceDetailScreen.kt 4, WalletScreen.kt 3.",
+      "citation": "customer-app/app/src/main — grep 'Color(0x'",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "grep -rn 'Color(0x' | wc -l returns 97, and every per-file number in the claim reproduces exactly. But 97 is a LINE count, not a literal count. grep -rno on the same tree returns 123 occurrences — 27% more than stated. My independent regex scanner (re.findall over file text) also returns 123. The per-file ranking changes materially once you count literals instead of lines: CatalogueVisualImage.kt has 31 literals on 11 lines (claim ranks it 4th; it is actually 1st), CatalogueHomeScreen.kt 20 on 14 lines, DpdpConsentScreen.kt 22 on 22 lines, PhotoFirstCategoryCard.kt 11, ComplaintListScreen.kt 10, CustomerHomeTabContent.kt 7, ServiceDetailScreen.kt 4, WalletScreen.kt 3.",
+      "correctedStatement": "customer-app hardcodes 123 raw Color(0x...) literals on 97 source lines. Ranked by literal count the worst files are CatalogueVisualImage.kt 31, DpdpConsentScreen.kt 22, CatalogueHomeScreen.kt 20, PhotoFirstCategoryCard.kt 11, ComplaintListScreen.kt 10, CustomerHomeTabContent.kt 7, ServiceDetailScreen.kt 4, WalletScreen.kt 3. Any remediation estimate built on '97' undercounts by 27% and points at the wrong top file.",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "technician-app hardcodes 14 raw Color(0x literals: PendingActionCard.kt 10, TechnicianHomeScreen.kt 3, AuthScreen.kt 1. By comparison the design-system module defines 40 (expected — that is the palette).",
+      "citation": "technician-app/app/src/main and design-system/src/main — grep 'Color(0x'",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "technician-app: 14 by both line count and occurrence count (no line carries two literals), split exactly PendingActionCard.kt 10, TechnicianHomeScreen.kt 3, AuthScreen.kt 1. design-system: 40 occurrences. One refinement worth recording — the 40 are NOT all palette: 32 are in theme/Color.kt (the genuine palette) and 8 are in theme/Elevation.kt:59-93, the pre-multiplied shadow alpha values (0x14000000, 0x1F000000, 0x29000000, 0x66000000, 0x80000000, 0x99000000, 0xB3000000). The 'expected — that is the palette' framing is true of 32, not 40.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Spacing scale is effectively not enforced. customer-app: 878 .dp literals of which 416 (47.4%) are OFF the {0,4,8,12,16,24,32,48,64,96} scale. technician-app: 396 literals, 180 off-scale (45.5%). Even the design-system module is 18/72 off-scale (25%).",
+      "citation": "customer-app, technician-app, design-system /src/main — regex (?<![\\w.])(\\d+(?:\\.\\d+)?)\\.dp\\b",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "I reproduced all six numbers EXACTLY with an independent scanner: customer 878 total / 416 off (47.4%), technician 396 / 180 (45.5%), design-system 72 / 18 (25.0%). The arithmetic is sound. What is wrong is the METRIC: a single spacing scale is applied to four different token categories, so it simultaneously overstates and understates. I re-ran with line-context classification. customer-app: 727 literals are in spacing/size context, of which 316 are off the spacing scale (43.5%, not 47.4%); 35 are in stroke/border context (BorderStroke, .border(, dividers — 1.dp x40 dominates the off-scale list and is overwhelmingly '.border(1.dp, MaterialTheme.colorScheme.outline, ...)' at CatalogueHomeScreen.kt:496,540,697,736,818,1038 and BorderStroke(1.dp, ...) at AuthScreen.kt:347, ServiceDetailScreen.kt:372,403 — there is no border-width token to violate); 23 are elevation context; and 93 are radius context, of which 67 are off the RADIUS scale {4,8,12,20,9999} — a category of violation the flat metric misses entirely, because 16.dp is on the spacing scale and therefore scored compliant even when it is a corner radius. Off-radius values customer-app: 14dp x19, 16dp x12, 1dp x10, 24dp x9, 18dp x4, 10dp x3, 28dp x3. technician-app: 338 spacing-context / 149 off (44.1%), 30 radius-context / 20 off radius scale (24dp x9, 18dp x4). The design-system 25% is the most misleading number in the set: of its 18, five are Elevation.kt's own elev/shadow Dp values (1dp, 2dp, 20dp/48dp blur) and two are Radius.kt's own declarations (20.dp, 9999.dp) — legitimate non-spacing tokens declaring themselves. Only HsComponents.kt (5) and TokenGallery.kt (6) are real violations.",
+      "correctedStatement": "Neither spacing nor radius is enforced, and they are two separate defects. Genuine spacing violations: customer-app 316/727 (43.5%), technician-app 149/338 (44.1%). Genuine RADIUS violations, previously unquantified because they hide behind the spacing scale: customer-app 67 of 93 radius-context literals off {4,8,12,20,9999} (14dp x19, 16dp x12, 24dp x9), technician-app 20 of 30. A third bucket — 48 stroke/border literals across both apps, nearly all 1.dp — is not a violation at all, because no border-width token exists; that is a gap in the token set, not consumer indiscipline. The design-system module's real violation count is 11 (HsComponents.kt 5, TokenGallery.kt 6), not 18 — the other 7 are Elevation.kt and Radius.kt declaring their own non-spacing scales. Verified with a grep: NO detekt or lint rule in customer-app/detekt.yml or technician-app/detekt.yml forbids raw .dp or Color(0x, so nothing enforces any of the three scales.",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Most frequent off-scale dp values, customer-app: 20dp x59, 14dp x57, 1dp x40, 6dp x31, 10dp x31, 18dp x30, 2dp x15, 28dp x12, 52dp x12, 44dp x12, 56dp x10, 36dp x9, 22dp x9. technician-app: 18dp x27, 20dp x21, 14dp x19, 10dp x18, 28dp x11, 56dp x10, 2dp x10, 118dp x5, 140dp x4, 132dp x3. The 118/132/140dp values are magic pixel-pushed heights.",
+      "citation": "same regex scan, Counter of off-scale literal values",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "My independent Counter reproduces every single value and count, in the same rank order. customer-app: 20:59, 14:57, 1:40, 6:31, 10:31, 18:30, 2:15, 28:12, 52:12, 44:12, 56:10, 36:9, 22:9. technician-app: 18:27, 20:21, 14:19, 10:18, 28:11, 56:10, 2:10, then 1:8, 40:6, 6:6, 80:5, 118:5, 140:4, 132:3. Zero drift.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Worst off-scale files. customer-app: CatalogueHomeScreen.kt 73, CustomerHomeTabContent.kt 31, ServiceDetailScreen.kt 24, AuthScreen.kt 20, CustomerBookingsScreen.kt 20, TrustDossierCard.kt 19, ServiceListScreen.kt 18, WalletScreen.kt 16. technician-app: TechnicianHomeScreen.kt 73, AuthScreen.kt 21, KycScreen.kt 11, TechnicianDashboardScreen.kt 10, EarningsScreen.kt 10, OnboardingScreen.kt 10. The two highest-traffic screens are the two worst offenders.",
+      "citation": "same regex scan, Counter keyed by file path",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Exact reproduction, both apps, same order. customer: 73 CatalogueHomeScreen.kt, 31 CustomerHomeTabContent.kt, 24 ServiceDetailScreen.kt, 20 AuthScreen.kt, 20 CustomerBookingsScreen.kt, 19 TrustDossierCard.kt, 18 ServiceListScreen.kt, 16 WalletScreen.kt (then 15 DeleteAccountConfirmScreen.kt). technician: 73 TechnicianHomeScreen.kt, 21 AuthScreen.kt, 11 KycScreen.kt, 10 TechnicianDashboardScreen.kt, 10 EarningsScreen.kt, 10 OnboardingScreen.kt. The 73/73 symmetry on the two highest-traffic screens is real and not a coincidence of rounding.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The design system contradicts its own scale: HsActionButton hardcodes height 52.dp, shape RoundedCornerShape(14.dp), leading box 22.dp and spacer 10.dp — none of which are HomeservicesSpacing or HomeservicesRadius values. LanguagePickerCard hardcodes 12.dp gap, RoundedCornerShape(16.dp) and 16.dp padding instead of tokens.",
+      "citation": "design-system/.../HsComponents.kt:77,78,92,95; design-system/.../LanguagePickerCard.kt:39,43,61,64",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "All eight line citations are exact. HsComponents.kt:77 '.height(52.dp)', :78 'shape = RoundedCornerShape(14.dp)', :92 'Modifier.size(22.dp)', :95 'Modifier.width(10.dp)'. LanguagePickerCard.kt:39 'Arrangement.spacedBy(12.dp)', :43 'shape = RoundedCornerShape(16.dp)', :61 'Modifier.padding(16.dp)', :64 'Modifier.padding(start = 12.dp)'. The HsActionButton half is fully correct — 52, 14, 22 and 10 are all absent from both scales (Spacing.kt:20-50 = 0,4,8,12,16,24,32,48,64,96; Radius.kt:20-35 = 4,8,12,20,9999). The LanguagePickerCard half is NOT correct as written. 12.dp (:39, :64) is HomeservicesSpacing.space3 and 16.dp (:61) is space4 — both are ON the spacing scale, just written as literals instead of token references. Only RoundedCornerShape(16.dp) at :43 is genuinely off-scale, against the radius scale.",
+      "correctedStatement": "HsActionButton (HsComponents.kt:77,78,92,95) uses four values that exist on neither scale — 52dp height, 14dp radius, 22dp icon box, 10dp spacer — a true scale contradiction. LanguagePickerCard is a weaker, different problem: :39 and :64 use 12.dp and :61 uses 16.dp, which ARE spacing-scale values (space3, space4) merely hardcoded rather than tokenised; only :43 RoundedCornerShape(16.dp) is genuinely off-scale, since the radius scale is {4,8,12,20,9999}. Treat the two as separate fixes: HsActionButton needs re-tokenising to real values, LanguagePickerCard needs a mechanical literal-to-token substitution plus one radius correction 16→20.",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "HsPrimaryButton and HsSecondaryButton set their heights from SPACING tokens, which is a token-category error and produces a 64dp primary vs 48dp secondary button pair — inconsistent with HsActionButton's 52dp.",
+      "citation": "design-system/.../HsComponents.kt:44,60,77",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "HsComponents.kt:44 'modifier = modifier.height(LocalHomeservicesSpacing.current.space16)', :60 'modifier = modifier.height(LocalHomeservicesSpacing.current.space12)', :77 'modifier = modifier.height(52.dp)'. Cross-checked the token values in Spacing.kt: :46 'space16: Dp = 64.dp', :43 'space12: Dp = 48.dp'. So the three primary CTAs in the system are 64dp, 48dp and 52dp tall — three different heights from three different sourcing strategies (spacing token, spacing token, raw literal). The token-category error is real: there is no height/size token category in the module at all (Spacing.kt, Radius.kt, Elevation.kt, Motion.kt are the only Dp-bearing token files), so spacing tokens are being borrowed as a stand-in.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "CONSUMER-USAGE TABLE: HomeservicesMotion=0; HomeservicesEasing=0; HomeservicesShadow=0; HomeservicesElevationShadowsLight=0; HomeservicesElevationShadowsDark=0; HomeservicesExtendedColors=0; LocalHomeservicesElevation=0; LocalHomeservicesRadius=0; LocalHomeservicesMotion=0; HomeservicesSpacing=0; HomeservicesRadius=0; HomeservicesElevation=0; LocalHomeservicesExtendedColors=8; LocalHomeservicesSpacing=9. TWELVE of fourteen token entry points are DEAD.",
+      "citation": "customer-app/app/src + technician-app/app/src — word-boundary grep per token name",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "I re-ran all fourteen greps. EVERY NUMBER IS EXACTLY RIGHT — twelve zeros, LocalHomeservicesExtendedColors=8, LocalHomeservicesSpacing=9. The measurement is impeccable. The word DEAD is where it fails, and it fails on the three tokens whose remediation would be most expensive. (a) HomeservicesRadius is NOT dead. HomeservicesTheme.kt:52-59 maps all five radius tokens into the M3 Shapes object — extraSmall=sm, small=md, medium=lg, large=xl, extraLarge=full. The apps then read MaterialTheme.shapes 26 times (customer-app 19, technician-app 7; by slot: medium 14, small 4, extraSmall 3, extraLarge 3, large 2), plus HsSkeletonBlock.kt-side HsComponents.kt:141 'MaterialTheme.shapes.small', :192 'MaterialTheme.shapes.extraSmall', :217 'MaterialTheme.shapes.extraLarge'. Every one of those 29 reads returns a HomeservicesRadius value. The radius scale reaches pixels. (b) HomeservicesElevation is NOT dead. HomeservicesTheme.kt:45 provides it; HsComponents.kt:117 reads 'LocalHomeservicesElevation.current.elev1' for HsSectionCard's card elevation; HsSectionCard has 10 customer + 27 technician call sites. (c) HomeservicesSpacing / HomeservicesExtendedColors / HomeservicesMotion scoring 0 is the DESIGNED behaviour, not a defect. Spacing.kt:4-8, Radius.kt:4-8, Elevation.kt:4-8 and Motion.kt:4-8 all carry an identical 'Dual-exposure pattern' docblock instructing composable consumers to prefer the Local form and reserving the object form for non-Compose code. Counting object and Local as two independent 'entry points' and then scoring the object dead inverts the module's own written contract — there are 7 token sets exposed two ways, not 14 entry points. The same falsification kills the framing outright: HomeservicesTypography also greps to 0 in both apps, yet it reaches every one of the 533 Text calls via HomeservicesTheme.kt:51, and HomeservicesTheme itself has 181 app references.",
+      "correctedStatement": "The census numbers are correct but 'twelve of fourteen dead' overcounts by half. There are 7 token sets, each dual-exposed as an object plus a CompositionLocal. Genuinely unreachable — no code path from declaration to pixel: HomeservicesMotion, HomeservicesEasing, LocalHomeservicesMotion, HomeservicesShadow, HomeservicesElevationShadowsLight, HomeservicesElevationShadowsDark. That is the motion layer and the entire elevation-shadow spec, 6 of 14 names, 2 of 7 token sets. Reachable but under-adopted: spacing (8 real token reads against 1,274 raw .dp literals) and extended colours (4 reads, all of one field). Reachable and healthy, and must NOT appear in a remediation plan as dead: radius (29 reads via the MaterialTheme.shapes mapping at HomeservicesTheme.kt:52-59), elevation (37 HsSectionCard call sites via HsComponents.kt:117), colour, and typography. An implementation plan that acts on '12 dead tokens' would delete or rebuild the radius and elevation layers that are currently the two best-functioning parts of the system.",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "HomeservicesShadow is dead even INSIDE the design system: all 11 references are in Elevation.kt where the shadow objects are declared, and nothing ever applies them. The full elevation-shadow spec (elev0-elev4 with distinct light/dark alpha ramps) is unreachable code.",
+      "citation": "design-system/src/main/kotlin/com/homeservices/designsystem/theme/Elevation.kt:42-93",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Word-boundary grep for HomeservicesShadow across design-system/src + both apps returns 11 hits, 11 of 11 in Elevation.kt. Opened the file: :42 'public data class HomeservicesShadow(', then Light elev0-4 at :59,62,65,68,71 and Dark elev0-4 at :81,84,87,90,93 — 1 + 5 + 5 = 11, matching exactly. Zero references anywhere else in the repo. No Modifier.shadow call consumes them. The docblock at :36-41 even anticipates the intended consumption ('so consumers can apply them via Modifier.shadow or a custom DrawScope extension') which never happened. This is the cleanest confirmed instance of unreachable token code in the module.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "HomeservicesMotion has 16 references inside the design system, but 5 are TokenGallery printing values as text and 4 are its own unit test — no composable ever animates with them. HomeservicesEasing has 4 references: 1 in Motion.kt and 3 in MotionTokensTest.kt.",
+      "citation": "design-system/src — per-file grep distribution",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "HomeservicesMotion per-file: 5 gallery/TokenGallery.kt, 1 theme/HomeservicesTheme.kt, 6 theme/Motion.kt, 4 test/MotionTokensTest.kt = 16. Exact. HomeservicesEasing: 1 theme/Motion.kt, 3 test/MotionTokensTest.kt = 4. Exact. Opened Motion.kt: HomeservicesMotion (:24-36, fast/base/medium/slow), HomeservicesEasing (:39-51, standard/emphasizedDecelerate), LocalHomeservicesMotion (:59-60). The single HomeservicesTheme.kt reference is line 46, 'LocalHomeservicesMotion provides HomeservicesMotion' — a provide, not a consume. Confirmed: nothing animates.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "LocalHomeservicesRadius and LocalHomeservicesMotion exist only to be provided and tested — never read by a screen. LocalHomeservicesElevation is read exactly twice, both inside HsSectionCard.",
+      "citation": "design-system/.../HsComponents.kt:31,117 and per-file distributions",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "The distributions are exact. LocalHomeservicesRadius: 2 HomeservicesTheme.kt, 2 Radius.kt, 1 RadiusTokensTest.kt, 0 in apps. LocalHomeservicesMotion: 2 HomeservicesTheme.kt, 2 Motion.kt, 1 MotionTokensTest.kt, 0 in apps. LocalHomeservicesElevation: 2 HsComponents.kt (:31 import, :117 'elevation = CardDefaults.cardElevation(defaultElevation = LocalHomeservicesElevation.current.elev1)'), 2 Elevation.kt, 2 HomeservicesTheme.kt, 1 test. All correct. The problem is the inference drawn for RADIUS. LocalHomeservicesRadius being unread does not mean the radius scale is unread — HomeservicesTheme.kt:52-59 bypasses the CompositionLocal entirely and injects the same HomeservicesRadius values into MaterialTheme.shapes, which the apps read 26 times. What is dead is the OVERRIDE PATH (the ability to swap radii per-theme via CompositionLocalProvider), not the scale. Same distinction applies to LocalHomeservicesElevation: 2 reads sounds vestigial, but those 2 reads sit inside HsSectionCard, which has 37 call sites across the two apps.",
+      "correctedStatement": "LocalHomeservicesMotion is genuinely dead — provided at HomeservicesTheme.kt:46, read nowhere, and its backing HomeservicesMotion animates nothing. LocalHomeservicesRadius is dead as an OVERRIDE MECHANISM only; the radius values it carries reach 26 app call sites and 3 design-system call sites through the parallel MaterialTheme.shapes mapping at HomeservicesTheme.kt:52-59, so removing HomeservicesRadius would break shapes across both apps. LocalHomeservicesElevation's 2 reads at HsComponents.kt:31,117 are not vestigial: they are the sole elevation source for HsSectionCard, used at 10 customer + 27 technician call sites.",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The 8 LocalHomeservicesExtendedColors consumer usages are 4 imports + 4 reads, and ALL 4 reads pull the same single field (brandPrimaryHover). 'verified' and 'neighbourhood' — the trust-dossier semantic colours — have zero app consumers.",
+      "citation": "customer-app/app/src + technician-app/app/src — grep LocalHomeservicesExtendedColors",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "Exactly 8 hits, all in customer-app, zero in technician-app: AuthScreen.kt:65 import + :181 'val heroStart = LocalHomeservicesExtendedColors.current.brandPrimaryHover'; ServiceDetailScreen.kt:62 import + :209 '...current.brandPrimaryHover,'; ServiceListScreen.kt:51 import + :66 'val appBarStart = ...brandPrimaryHover'; FirstLaunchLanguageScreen.kt:33 import + :40 'val heroStart = ...brandPrimaryHover'. Four imports, four reads, all brandPrimaryHover — confirmed. But the dead-field list is incomplete. ExtendedColors.kt:46-49 declares four fields: verified, neighbourhood, brandAccent, brandPrimaryHover. brandAccent has zero app consumers too, and the claim does not mention it.",
+      "correctedStatement": "Three of the four extended-colour fields have zero app consumers, not two: 'verified' (ExtendedColors.kt:46), 'neighbourhood' (:47) and 'brandAccent' (:48). Only 'brandPrimaryHover' (:49) is read, four times, all in customer-app, all as a gradient start colour (AuthScreen.kt:181, ServiceDetailScreen.kt:209, ServiceListScreen.kt:66, FirstLaunchLanguageScreen.kt:40). technician-app reads the extended palette zero times, so the trust semantics are absent from the app where trust signalling matters most.",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The 9 LocalHomeservicesSpacing consumer usages are 4 imports + 5 reads across only 4 files, 3 of the 4 in the technician app. Against 878 raw .dp literals in customer-app and 396 in technician-app, spacing tokens account for well under 1% of spacing decisions.",
+      "citation": "customer-app/app/src + technician-app/app/src — grep LocalHomeservicesSpacing",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "The 9 hits are exact and in the 4 named files: customer AuthScreen.kt:66,234; technician AuthScreen.kt:63,188; technician KycScreen.kt:49,143; technician ServiceSelectionScreen.kt:60,104,182. Correctly 4 imports + 5 reads, 3 of 4 files in technician-app. But the '5 reads' are not 5 spacing decisions — every one is a binding of the form 'val spacing = LocalHomeservicesSpacing.current', which could then feed dozens of call sites. I chased it: 'spacing.spaceN' appears only 8 times total across both apps (customer AuthScreen 2, technician AuthScreen 2, technician KycScreen 1, technician ServiceSelectionScreen 3). So the claim understates its own case — it stops one level short of the number that matters.",
+      "correctedStatement": "Spacing tokens drive 8 actual layout values across both apps (customer AuthScreen.kt 2, technician AuthScreen.kt 2, KycScreen.kt 1, ServiceSelectionScreen.kt 3), reached through 5 'val spacing = LocalHomeservicesSpacing.current' bindings in 4 files. Against 1,274 raw .dp literals (878 customer + 396 technician) that is 0.6% of spacing decisions — the claim's 'well under 1%' is right but arrives there by counting bindings rather than reads, which happens to understate the finding.",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The token layer is a Paparazzi-test artefact rather than a working design system: TokenGallery is the primary (often only) consumer of Motion, Radius, Elevation and Spacing token objects, and its own file comment states it is 'Consumed exclusively by TokenGalleryPaparazziTest'.",
+      "citation": "design-system/src/main/kotlin/com/homeservices/designsystem/gallery/TokenGallery.kt:6-8",
+      "verdict": "REFUTED",
+      "whatIActuallySaw": "The quotes are close but the line numbers drift and the conclusion does not survive. TokenGallery.kt:6 reads 'Consumed exclusively by [TokenGalleryPaparazziTest] via Paparazzi V_SCROLL rendering.' — correct. The second quote, 'Static content only — no state, no remember, no animations, no click handlers.', is at :9, not :8. On substance: I counted TokenGallery's token references — HomeservicesSpacing 23, HomeservicesRadius 7, HomeservicesElevation 6, HomeservicesMotion 5, HomeservicesColors 6. It is indeed the largest single-file consumer of the Motion, Elevation and Spacing OBJECT forms. But 'primary (often only) consumer of ... Radius' is false: HomeservicesRadius reaches 26 app call sites and 3 design-system call sites via the MaterialTheme.shapes mapping at HomeservicesTheme.kt:52-59, far more than TokenGallery's 7. 'Primary consumer of Elevation' is also false in effect: HsComponents.kt:117 routes elev1 into HsSectionCard's 37 call sites. And the headline inference — 'the token layer is a Paparazzi-test artefact rather than a working design system' — is contradicted by four of the seven token sets: colour reaches every screen via selectColorScheme (HomeservicesTheme.kt:39), typography reaches all 533 Text calls via :51, radius via :52-59, elevation via HsComponents.kt:117. HomeservicesTheme itself has 181 app references. Only motion and elevation-shadow are test-only.",
+      "correctedStatement": "The correct narrow statement, already captured by the HomeservicesShadow and HomeservicesMotion verdicts in this file: two of seven token sets (motion, elevation-shadow) are unreachable and exist only to be printed by TokenGallery and asserted by MotionTokensTest/ElevationTokensTest. The other five — colour, typography, radius, elevation-Dp, spacing — all have live paths to rendered pixels, though spacing's is vanishingly thin at 8 reads. Do not carry 'the token layer is a test artefact' into the implementation plan; it would justify demolishing working infrastructure.",
+      "correctedSeverity": "low",
+      "mergedWith": ""
+    },
+    {
+      "claim": "customer-app shared-component call sites (grep line count including imports): HsPrimaryButton 28, HsScreenTitle 27, HsSecondaryButton 13, HsSectionCard 10, HsTrustBadge 4, HsSkeletonBlock 4, HsActionButton 3, HsTimelineStep 3, LanguagePickerCard 2, HsInfoRow 1, HsPriceText 1. Total ~96 references.",
+      "citation": "customer-app/app/src/main — word-boundary grep per component",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "The eleven NUMBERS are all correct, but the evidence string describes the wrong method and would not reproduce them. Running the stated command — grep -rnw per component, line count INCLUDING imports — I get roughly double: HsPrimaryButton 44, HsSecondaryButton 24, HsActionButton 4, HsSectionCard 18, HsSkeletonBlock 6, HsInfoRow 2, HsPriceText 2, HsTimelineStep 4, HsTrustBadge 8, HsScreenTitle 54, LanguagePickerCard 4. Filtering out lines beginning with 'import ' reproduces the claim exactly: 28, 13, 3, 10, 4, 1, 1, 3, 4, 27, 2. So the quoted figures are import-excluded call-site counts — which is the RIGHT metric — but anyone re-running the documented command gets 2x and will think the audit is wrong.",
+      "correctedStatement": "customer-app call sites, imports excluded (the correct metric, but not the method the evidence describes): HsPrimaryButton 28, HsScreenTitle 27, HsSecondaryButton 13, HsSectionCard 10, HsTrustBadge 4, HsSkeletonBlock 4, HsActionButton 3, HsTimelineStep 3, LanguagePickerCard 2, HsInfoRow 1, HsPriceText 1. Raw grep line counts including imports are approximately double these and must not be mixed with the raw-M3-primitive counts, which are occurrence counts.",
+      "correctedSeverity": "low",
+      "mergedWith": ""
+    },
+    {
+      "claim": "technician-app shared-component call sites: HsSectionCard 27, HsPrimaryButton 20, HsSecondaryButton 10, HsTrustBadge 9, HsTimelineStep 7, HsInfoRow 4, HsSkeletonBlock 4, HsActionButton 3, LanguagePickerCard 1, HsPriceText 1, HsScreenTitle 0.",
+      "citation": "technician-app/app/src/main — word-boundary grep per component",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Import-excluded call sites reproduce every number exactly: HsSectionCard 27, HsPrimaryButton 20, HsSecondaryButton 10, HsTrustBadge 9, HsTimelineStep 7, HsInfoRow 4, HsSkeletonBlock 4, HsActionButton 3, LanguagePickerCard 1, HsPriceText 1, HsScreenTitle 0. (Same method caveat as the customer-app entry: raw grep including imports gives 38/32/17/16/9/6/5/4/2/2/0.) Note the inversion worth flagging: technician-app has BETTER container adoption than customer-app (27 vs 10 HsSectionCard) while having zero HsScreenTitle adoption.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "HsScreenTitle has ZERO usages in technician-app, and heading() semantics appear 0 times in either app's own source — meaning the entire technician app has no TalkBack heading navigation, directly violating the component's own contract.",
+      "citation": "design-system/src/main/kotlin/com/homeservices/designsystem/components/HsScreenTitle.kt:19-22",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "HsScreenTitle in technician-app/app/src/main: 0 hits. heading() in technician-app: 0. heading() in customer-app: 0. heading() in design-system: exactly 1, at HsScreenTitle.kt:42 'modifier = modifier.semantics { heading() }'. The contract sentence is at HsScreenTitle.kt:18-19 — 'Every customer-app and technician-app screen MUST use this for its primary visible heading.' (the claim's cited range 19-22 is off by one at the start but covers it). The conclusion is sound and the reasoning survives the trap it sets for itself: heading() scoring 0 in customer-app source is NOT a customer-app defect, because customer-app gets heading semantics through its 27 HsScreenTitle call sites, which apply it internally at :42. The defect is technician-only, and the claim correctly scopes its conclusion to technician-app. Severity high is right for a Hindi-first, mixed-literacy user base where TalkBack heading navigation is a primary access route.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Raw M3 primitives (word-boundary matched) — customer-app: Button( 11, OutlinedButton( 3, TextButton( 16, Card( 3, IconButton( 23, Surface( 98, Text( 304. technician-app: Button( 10, OutlinedButton( 7, TextButton( 16, Card( 3, IconButton( 6, Surface( 39, Text( 229.",
+      "citation": "grep -rnoE '(^|[^A-Za-z0-9_])<primitive>\\(' per app",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "All fourteen numbers reproduce exactly: customer 11/3/16/3/23/98/304, technician 10/7/16/3/6/39/229. I verified the regex does what it claims — the leading (^|[^A-Za-z0-9_]) correctly excludes OutlinedButton/TextButton/IconButton from the Button( count and excludes HsPrimaryButton( etc. from all of them, so wrapper call sites are not double-counted as raw primitives.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Adoption ratios. Buttons — customer-app 44 Hs vs 30 raw = 59%; technician-app 33 vs 33 = 50%. Containers — customer-app 10 HsSectionCard vs 101 raw (3 Card + 98 Surface) = 9%; technician-app 27 vs 42 = 39%. Surface( is used as an unstyled ad-hoc card 98 times in customer-app, which is why the 416 off-scale dp literals and 97 raw colour literals exist.",
+      "citation": "arithmetic over the component and primitive counts",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "The arithmetic all checks out against my verified inputs: customer buttons 28+13+3=44 vs 11+3+16=30 → 59.5%; technician 20+10+3=33 vs 10+7+16=33 → 50.0%; customer containers 10 vs 3+98=101 → 9.0%; technician 27 vs 3+39=42 → 39.1%. The container-adoption gap is real and is the strongest structural finding in this cluster. The CAUSAL clause at the end is asserted rather than demonstrated, and is partly wrong. I checked where the raw colour literals actually live in customer-app: CatalogueVisualImage.kt 31, DpdpConsentScreen.kt 22, CatalogueHomeScreen.kt 20, PhotoFirstCategoryCard.kt 11, ComplaintListScreen.kt 10. CatalogueVisualImage.kt and PhotoFirstCategoryCard.kt are gradient/illustration files — their literals are Brush stops, not Surface-as-card styling — and DpdpConsentScreen.kt is a consent-document screen. The colour literals are not caused by Surface adoption. The dp correlation is defensible (CatalogueHomeScreen.kt tops both the off-scale-dp list at 73 and the Surface-heavy files), but it is correlation.",
+      "correctedStatement": "Button adoption is 59% (customer) and 50% (technician); container adoption is 9% (customer) and 39% (technician) — a 4x gap between the two apps on the same design system, and the single most actionable structural number in this theme. Surface( appearing 98 times in customer-app as an ad-hoc card is the correct diagnosis for the off-scale dp literals. It is NOT the cause of the raw colour literals: 64 of customer-app's 123 colour literals sit in three gradient/illustration/consent files (CatalogueVisualImage.kt 31, DpdpConsentScreen.kt 22, PhotoFirstCategoryCard.kt 11) that need a Brush/gradient token category, which the design system does not have — a different fix from container adoption.",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "TextButton( at 16 sites per app has NO design-system equivalent — there is no HsTextButton / HsTertiaryButton in the 11-component set, so every low-emphasis action in the product is unsystematised.",
+      "citation": "design-system/.../HsComponents.kt:35-231",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Read HsComponents.kt end to end. It declares exactly nine public composables at exactly the cited lines: HsPrimaryButton :35, HsSecondaryButton :51, HsActionButton :67, HsSectionCard :109, HsSkeletonBlock :134, HsInfoRow :147, HsPriceText :167, HsTimelineStep :181, HsTrustBadge :211. Plus HsScreenTitle.kt:28 and LanguagePickerCard.kt:33 makes the 11-component set. No text/tertiary/low-emphasis button exists. TextButton( = 16 in each app, verified independently. The three button wrappers cover filled (Button), outlined (OutlinedButton x2) and nothing else, so all 32 low-emphasis actions across the product bypass the system entirely.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "HsInfoRow (1 usage) and HsPriceText (1 usage) in customer-app are effectively vestigial — HsPriceText is the canonical money component and it is used exactly once per app.",
+      "citation": "grep HsPriceText / HsInfoRow per app",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "HsPriceText: 1 call site in customer-app, 1 in technician-app — confirmed, and genuinely damning for a component that formats currency (HsComponents.kt:167-178 renders 'Rs ${pricePaise / 100}'). HsInfoRow: 1 call site in customer-app — confirmed — but 4 in technician-app, not 1. The claim's own technician-app table two observations earlier says HsInfoRow 4, so this is an internal contradiction within the cluster, and I verified 4 is correct.",
+      "correctedStatement": "HsPriceText is vestigial in both apps (exactly 1 call site each) despite being the canonical money component — the more serious of the two, since money display is the highest-trust surface for both audiences. HsInfoRow is vestigial in customer-app only (1 call site); technician-app uses it 4 times. Do not scope a remediation as 'HsInfoRow is unused' — it has real technician-side consumers that a signature change would break.",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "HsPrimaryButton and HsSecondaryButton pass no style/colors/contentPadding and wrap Text with no maxLines — so a 3.2x-longer Hindi 'पुनः प्रयास करें' inside a 64dp-tall primary button will wrap to two lines and be vertically clipped rather than ellipsised.",
+      "citation": "design-system/.../HsComponents.kt:41-63",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "The code observation is exact. HsComponents.kt:41-47 is 'Button(onClick, enabled, modifier.height(space16)) { Text(text) }' and :57-63 is 'OutlinedButton(...modifier.height(space12)) { Text(text) }' — no style, no colors, no contentPadding, no maxLines, no overflow, no autosize. But the worked example picks the wrong button. HsPrimaryButton is 64dp (Spacing.kt:46 space16 = 64.dp). Its Text inherits labelLarge from Button's ProvideTextStyle, which Typography.kt:207-213 defines as 14sp/20sp lineHeight. Two lines = 40dp, plus M3 ButtonDefaults vertical content padding 8dp x2 = 56dp — which FITS inside 64dp. The primary button will not clip; it will just look unbalanced. The button that actually clips is HsSecondaryButton at 48dp (Spacing.kt:43 space12 = 48.dp): the same 56dp of two-line content in a 48dp fixed height, an 8dp overflow. HsActionButton is immune — HsComponents.kt:101-102 sets 'maxLines = 1, overflow = TextOverflow.Ellipsis'. One further correction in the system's favour: because Button provides labelLarge and labelLarge IS a mapped slot, the Hs buttons' own label text renders in Geist/Noto, not Roboto.",
+      "correctedStatement": "Neither HsPrimaryButton (HsComponents.kt:41-47) nor HsSecondaryButton (:57-63) sets maxLines or overflow, and both fix their height with Modifier.height, so long Devanagari labels wrap unconstrained inside a rigid box. The clipping case is HsSecondaryButton at 48dp: two lines of labelLarge (14sp/20sp, Typography.kt:207-213) plus ButtonDefaults vertical padding is ~56dp against a 48dp fixed height. HsPrimaryButton at 64dp absorbs two lines without clipping but loses its vertical rhythm. HsActionButton is already safe via maxLines=1 + TextOverflow.Ellipsis at :101-102 — that is the pattern the other two should adopt. Severity is high for HsSecondaryButton (13 customer + 10 technician call sites, clipped text on an entry Android device in Hindi) and low for HsPrimaryButton.",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "[T2 technician.home-shell] Twelve typography calls use unmapped M3 slots (displaySmall, headlineSmall, titleMedium, labelMedium) — the hero earnings figure, every card title and every stat.",
+      "citation": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Enumerated all twelve: :398 headlineSmall, :511 titleMedium, :518 labelMedium, :610 displaySmall, :642 titleMedium, :753 titleMedium, :837 titleMedium, :1125 titleMedium, :1156 headlineSmall, :1184 labelMedium, :1250 titleMedium, :1291 titleMedium. Count and slot mix both match. :610 displaySmall is the single largest number on the technician's home screen. Duplicate of the cross.roboto-fallback technician worst-offender observation at surface granularity.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": "cross.roboto-fallback 'technician-app worst offender is extreme: TechnicianHomeScreen.kt alone contains 12 unmapped-slot lines'"
+    },
+    {
+      "claim": "[T3 technician.my-ratings] Five unmapped M3 slots are used including both displaySmall hero elements — the technician's rating, the largest number on the screen, renders in Roboto while the rest of the app is Geist.",
+      "citation": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Exactly five: :96 titleMedium, :123 displaySmall, :132 displaySmall, :163 titleMedium, :211 titleMedium. Both displaySmall instances are the hero pair — :123 the numeric rating value and :132 the star beside it. Since displaySmall is unmapped (Typography.kt:145-147), both render through M3's default sans-serif. Duplicate of the cross.roboto-fallback technician per-file observation, which also records MyRatingsScreen.kt at 5.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": "cross.roboto-fallback technician worst-offender list (MyRatingsScreen.kt 5)"
+    },
+    {
+      "claim": "[T3 technician.my-ratings] Rating stars are literal star/hollow-star text glyphs rather than icons — they inherit the Roboto fallback, cannot be tinted per-half-star, render at typography sizes that vary by locale, and are unreadable.",
+      "citation": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "grep for the literal characters returns nothing, which is the trap — the glyph is source-escaped. MyRatingsScreen.kt:132 is: Text(\"\\u2605\", style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.primary). So there is exactly ONE star, U+2605 BLACK STAR, and no U+2606 hollow star anywhere in the file. There is no five-star row and therefore no per-half-star tinting problem to have. The mechanism claim is also imprecise: U+2605 is absent from Roboto as well, so it resolves through Android's platform symbol-font fallback, not through Roboto — meaning the glyph's weight and metrics vary by OEM font stack on entry Android devices, which is worse than the claim states. It IS tinted, at :132, via colorScheme.primary.",
+      "correctedStatement": "MyRatingsScreen.kt:132 renders a single U+2605 star as a text glyph at displaySmall beside the numeric rating at :123 — not a five-star row. Two real defects: (1) the glyph resolves through the device's platform symbol-font fallback (U+2605 is in neither Geist nor Roboto), so its weight, size and vertical alignment against the adjacent number vary across OEM font stacks on entry Android — exactly the Moto-G-class target; (2) displaySmall is unmapped, so the number at :123 and the star at :132 both leave the bundled type ramp. Fix is an Icons vector star plus mapping displaySmall, not a per-half-star tinting system.",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    }
+  ]
+}
