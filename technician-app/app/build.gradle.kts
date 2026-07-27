@@ -758,6 +758,31 @@ dependencies {
 }
 
 sentry {
-    autoUploadProguardMapping.set(true)
+    // Upload ProGuard mappings only when Sentry credentials are actually present.
+    //
+    // The plugin resolves org/project/token from SENTRY_ORG, SENTRY_PROJECT and
+    // SENTRY_AUTH_TOKEN. No workflow in .github/workflows/ sets any of them, so with
+    // autoUploadProguardMapping hardcoded to true every release build failed at
+    // :app:uploadSentryProguardMappingsRelease with:
+    //
+    //     error: An organization ID or slug is required (provide with --org)
+    //
+    // That has broken technician-ship on main since 2026-05-23 (last green run
+    // 26343728547, 21:14), when the Sentry plugin landed in fe8a9a3b.
+    //
+    // Gating on the credentials keeps upload working wherever they ARE configured — a
+    // local release build with a token, or CI once the secrets are added — while letting
+    // credential-less builds succeed instead of failing on an unconfigurable step.
+    val hasSentryCredentials =
+        !System.getenv("SENTRY_AUTH_TOKEN").isNullOrBlank() &&
+            !System.getenv("SENTRY_ORG").isNullOrBlank()
+
+    // BOTH flags are required. autoUploadProguardMapping alone is not enough — it controls
+    // whether the upload runs automatically, but the task is still created and wired into
+    // assembleRelease by includeProguardMapping (default true), so the build still fails on
+    // the unconfigurable step. Gating includeProguardMapping removes the task entirely when
+    // there are no credentials to use it with.
+    includeProguardMapping.set(hasSentryCredentials)
+    autoUploadProguardMapping.set(hasSentryCredentials)
     ignoredBuildTypes.set(setOf("debug"))
 }
