@@ -1,0 +1,614 @@
+{
+  "cluster": "C4",
+  "surfaces": [
+    {
+      "id": "customer.bookings",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/bookings/CustomerBookingsScreen.kt",
+      "loc": 453,
+      "purpose": "Customer sees the list of their bookings and jumps to tracking, rating, or filing a complaint.",
+      "entryPoints": [
+        "Bottom-nav tab index 1 inside the catalogue home shell — customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/CatalogueHomeScreen.kt:317-323",
+        "Support tab 'My bookings' row calls onSelectNav(1) — customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/CatalogueHomeScreen.kt:326",
+        "Profile tab 'Bookings' row calls onSelectNav(1) — customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/CatalogueHomeScreen.kt:334"
+      ],
+      "composition": [
+        "Root Box hosting content plus an overlaid no-show credit banner aligned TopCenter with 16dp/8dp padding — CustomerBookingsScreen.kt:88-106",
+        "LazyColumn, contentPadding start/top/end 18dp and bottom 118dp, item spacing 14dp — CustomerBookingsScreen.kt:118-122",
+        "Header row: HsScreenTitle 'Bookings' at headlineSmall + bodyMedium subtitle in onSurfaceVariant, with a trailing Refresh IconButton — CustomerBookingsScreen.kt:123-146",
+        "State switch: Loading -> LoadingCard, Error -> ErrorCard, Ready+empty -> EmptyBookingsCard centred in fillParentMaxSize, else items(bookings) -> BookingCard — CustomerBookingsScreen.kt:148-171",
+        "BookingCard: Surface RoundedCornerShape(20.dp), tonalElevation 1dp, inner padding 16dp, vertical spacing 12dp — CustomerBookingsScreen.kt:182-191",
+        "BookingCard row 1: StatusPill on the left, formatInr amount at titleMedium Bold on the right — CustomerBookingsScreen.kt:192-204",
+        "BookingCard row 2: service name at titleLarge Bold, maxLines 2 — CustomerBookingsScreen.kt:205-212",
+        "BookingCard rows 3-6: four identical InfoLine rows (calendar date, schedule window, address, payment method), each an 18dp icon + bodyMedium onSurfaceVariant text — CustomerBookingsScreen.kt:213-216, 262-280",
+        "BookingCard action stack: full-width HsPrimaryButton track/view-status when trackable, then full-width HsPrimaryButton 'Rate' plus full-width HsSecondaryButton 'File complaint' when post-service — CustomerBookingsScreen.kt:217-222, 234-259",
+        "StatusPill: pill Surface RoundedCornerShape(999.dp), surfaceVariant when active else fixed WarningSoft amber, labelMedium SemiBold — CustomerBookingsScreen.kt:284-302",
+        "LoadingCard: a single surface card containing three flat 18dp-high surfaceVariant bars, no shimmer — CustomerBookingsScreen.kt:305-324",
+        "ErrorCard: titleMedium title, bodyMedium body, full-width HsSecondaryButton retry — CustomerBookingsScreen.kt:327-356",
+        "EmptyBookingsCard: 56dp rounded surfaceVariant tile holding a 28dp BookOnline icon, titleMedium title, centred bodyMedium body — CustomerBookingsScreen.kt:359-392"
+      ],
+      "states": {
+        "loading": {
+          "present": true,
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/bookings/CustomerBookingsScreen.kt:149,305-324",
+          "quality": "Three static grey bars inside one card; no shimmer, does not mirror the real card layout, and only one placeholder card is shown for what will become a list."
+        },
+        "empty": {
+          "present": true,
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/bookings/CustomerBookingsScreen.kt:152-160,359-392",
+          "quality": "Icon tile + title + body, centred. No CTA to browse services, so it is a dead end for a first-time user."
+        },
+        "error": {
+          "present": true,
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/bookings/CustomerBookingsScreen.kt:150,327-356",
+          "quality": "Fully localized copy (bookings_error_title / bookings_error_body) with a retry button; the best error state in this cluster."
+        },
+        "success": {
+          "present": true,
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/bookings/CustomerBookingsScreen.kt:161-170",
+          "quality": "keyed items(bookings) rendering BookingCard."
+        },
+        "offline": {
+          "present": false,
+          "evidence": null,
+          "quality": "No offline branch; a network failure collapses into the generic Error state (CustomerBookingsViewModel.kt:35). No cached-data indicator."
+        },
+        "permissionDenied": {
+          "present": false,
+          "evidence": null,
+          "quality": "Not applicable — screen requests no runtime permissions."
+        }
+      },
+      "skeletonOrSpinner": "Hand-rolled static skeleton: three Surface bars of height 18dp in surfaceVariant, not the shared HsSkeletonBlock and with no shimmer animation — CustomerBookingsScreen.kt:315-321",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "16.dp / 8.dp", "line": 103, "context": "no-show banner overlay padding" },
+          { "value": "18.dp, 118.dp", "line": 120, "context": "LazyColumn contentPadding — 18 and 118 are off the 4/8/12/16/24/32/48/64 scale" },
+          { "value": "14.dp", "line": 121, "context": "vertical item spacing — off scale" },
+          { "value": "20.dp", "line": 184, "context": "BookingCard corner radius literal" },
+          { "value": "1.dp", "line": 186, "context": "tonalElevation literal instead of HomeservicesElevation.elev1" },
+          { "value": "16.dp", "line": 189, "context": "card inner padding" },
+          { "value": "12.dp", "line": 190, "context": "card vertical arrangement" },
+          { "value": "8.dp", "line": 269, "context": "InfoLine icon/text gap" },
+          { "value": "18.dp", "line": 271, "context": "InfoLine icon size — off scale" },
+          { "value": "999.dp", "line": 289, "context": "StatusPill corner radius (token full = 9999)" },
+          { "value": "10.dp / 6.dp", "line": 294, "context": "StatusPill text padding — off scale" },
+          { "value": "20.dp", "line": 309, "context": "LoadingCard corner radius" },
+          { "value": "16.dp / 10.dp", "line": 312, "context": "LoadingCard padding and spacing" },
+          { "value": "18.dp", "line": 317, "context": "skeleton bar height — off scale" },
+          { "value": "8.dp", "line": 318, "context": "skeleton bar corner radius literal" },
+          { "value": "20.dp", "line": 330, "context": "ErrorCard corner radius" },
+          { "value": "16.dp / 10.dp", "line": 335, "context": "ErrorCard padding and spacing" },
+          { "value": "32.dp / 12.dp", "line": 361, "context": "EmptyBookingsCard padding and spacing" },
+          { "value": "56.dp / 20.dp", "line": 368, "context": "empty-state icon tile size and radius — 56 off scale" },
+          { "value": "28.dp", "line": 376, "context": "empty-state icon size — off scale" }
+        ],
+        "hardcodedColors": [
+          { "value": "Color(0xFFF2E7CF)", "line": 59, "context": "WarningSoft — fixed light amber StatusPill background, identical in dark theme" },
+          { "value": "Color(0xFFB68A2C)", "line": 299, "context": "fixed amber pill foreground, explicitly acknowledged in a comment at lines 296-298" }
+        ],
+        "unmappedTypographySlots": [
+          { "slot": "headlineSmall", "line": 131 },
+          { "slot": "titleMedium", "line": 200 },
+          { "slot": "labelMedium", "line": 295 },
+          { "slot": "titleMedium", "line": 340 },
+          { "slot": "titleMedium", "line": 381 }
+        ],
+        "offScaleRadius": [
+          { "value": "999.dp", "line": 289 },
+          { "value": "18.dp height / 8.dp radius pairing", "line": 318 }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "StatusPill and price share one Row with no weight on the pill (lines 192-204); a long Hindi status such as 'पुनः असाइन किया जा रहा है' (booking_status_reassigning) will compete with the amount for width and can push it off-screen. HsPrimaryButton is a fixed 64dp-tall single-line Button (design-system HsComponents.kt:44), so longer Hindi CTA labels have no wrapping room. INFERRED, not measured.",
+        "currencyFormatting": "formatInr(booking.amountPaise) at CustomerBookingsScreen.kt:199 -> customer-app/app/src/main/kotlin/com/homeservices/customer/ui/util/CurrencyFormat.kt:23-26 uses NumberFormat.getCurrencyInstance(Locale(\"en\",\"IN\")), so the rupee glyph and lakh grouping are correct but the fraction digits are always rendered ('₹1,299.00') and the digits stay Latin even under the Hindi locale."
+      },
+      "a11y": {
+        "contentDescriptions": "Partial — refresh IconButton is labelled (line 142); decorative icons correctly pass null (lines 271, 374).",
+        "touchTargetRisks": [],
+        "contrastRisks": [
+          { "line": 299, "note": "Fixed amber #B68A2C text on fixed #F2E7CF background is roughly 2.3:1 — well below 4.5:1 for the labelMedium pill text. INFERRED (computed from the two literals, not measured on device)." },
+          { "line": 136, "note": "onSurfaceVariant #5F6C66 used for the subtitle and, at lines 275 and 388, for every secondary line of the card and empty state; on surface #FFFDF8 that is roughly 5.5:1 — passes body text but means all supporting information sits at one low-emphasis level. INFERRED." }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "Default composition order: title, refresh, then cards. No focus groups or traversal ordering declared; each card exposes up to three separate full-width buttons in sequence."
+      },
+      "imagery": {
+        "usesImages": false,
+        "sources": [],
+        "placeholderOrMissing": [
+          "No R.drawable / painterResource / Image( reference anywhere in the file (verified by grep across the file) — booking cards show no service thumbnail even though customer-app ships 13 drawable-nodpi/service_hero_*.png assets.",
+          "Empty state uses a Material vector icon (Icons.Default.BookOnline, line 373) rather than any illustration."
+        ],
+        "cite": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/bookings/CustomerBookingsScreen.kt:373"
+      },
+      "motion": {
+        "animationsUsed": [],
+        "usesMotionTokens": false,
+        "transitionsOnNav": "None declared here; navigation to tracking/rating/complaint is a plain navController.navigate from CatalogueHomeScreen callbacks (MainGraph.kt:95-97) with default transitions."
+      },
+      "density": "Off-grid and slightly inconsistent: outer contentPadding 18dp (line 120), item gap 14dp (line 121), card padding 16dp with 12dp internal spacing (lines 189-190). Cards are information-dense — four consecutive InfoLine rows in the same weight and colour (lines 213-216) — while the action area stacks up to three full-width buttons of two different heights.",
+      "observations": [
+        { "severity": "high", "claim": "Loading state is three flat grey bars in a single card rather than a skeleton that mirrors the booking card, and no HsSkeletonBlock/shimmer is used — it reads as a broken card, not as loading.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/bookings/CustomerBookingsScreen.kt:315-321", "confidence": "observed" },
+        { "severity": "high", "claim": "The card can render two full-width HsPrimaryButtons back to back (track/view-status and rate) so there is no single dominant action.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/bookings/CustomerBookingsScreen.kt:235-252", "confidence": "observed" },
+        { "severity": "high", "claim": "Primary and secondary buttons stacked in the same action column have different fixed heights (HsPrimaryButton is space16 = 64dp, HsSecondaryButton is space12 = 48dp), producing a visibly uneven button stack.", "evidence": "design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt:44,60", "confidence": "observed" },
+        { "severity": "medium", "claim": "Every ON_RESUME triggers a full refresh which resets state to Loading, so returning to the tab replaces the whole list with the grey placeholder card.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/bookings/CustomerBookingsViewModel.kt:29", "confidence": "observed" },
+        { "severity": "medium", "claim": "Four consecutive InfoLine rows share the same 18dp icon, bodyMedium size and onSurfaceVariant colour, so date, time, address and payment method have zero hierarchy between them.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/bookings/CustomerBookingsScreen.kt:213-216,262-280", "confidence": "observed" },
+        { "severity": "medium", "claim": "StatusPill uses a hardcoded light-amber pair that is not theme-aware; against the dark background #071511 the #F2E7CF pill becomes a bright block.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/bookings/CustomerBookingsScreen.kt:59,290,299", "confidence": "inferred" },
+        { "severity": "medium", "claim": "No booking card carries any imagery — no service thumbnail, no technician avatar — despite the app shipping service hero art.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/bookings/CustomerBookingsScreen.kt:182-225", "confidence": "observed" },
+        { "severity": "medium", "claim": "Empty state offers no CTA back into the catalogue; the only interactive control on the empty screen is the refresh icon.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/bookings/CustomerBookingsScreen.kt:359-392", "confidence": "observed" },
+        { "severity": "low", "claim": "Screen uses five unmapped M3 slots (headlineSmall, titleMedium x3, labelMedium) which fall back to Roboto, mixing typefaces with the Geist-mapped titleLarge and bodyMedium on the same card.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/bookings/CustomerBookingsScreen.kt:131,200,295,340,381", "confidence": "observed" },
+        { "severity": "low", "claim": "Zero animation on the screen: no shimmer, no card enter transition, no state cross-fade between Loading/Ready/Error.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/bookings/CustomerBookingsScreen.kt:148-171", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "customer.rating",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/rating/RatingScreen.kt",
+      "loc": 343,
+      "purpose": "Customer rates a completed booking on four dimensions, optionally leaves a comment, and can be intercepted by a low-rating 'shield' escalation flow.",
+      "entryPoints": [
+        "RatingRoutes.ROUTE composable inside the booking nested graph — customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/MainGraph.kt:192-199",
+        "'Rate' button on a completed booking card — customer-app/app/src/main/kotlin/com/homeservices/customer/ui/bookings/CustomerBookingsScreen.kt:248-252 routed via MainGraph.kt:96",
+        "RATING_PROMPT_CUSTOMER pending-action deep link — customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/MainGraph.kt:112-113"
+      ],
+      "composition": [
+        "Full-bleed Surface in colorScheme.background, Column padded 24dp with 16dp vertical rhythm — RatingScreen.kt:121-122",
+        "State switch: AwaitingPartner / Revealed / Error / Loading render StatusMessage; every other state (including Submitting) falls through to RatingForm — RatingScreen.kt:123-162",
+        "RatingForm is a verticalScroll Column with 16dp spacing — RatingScreen.kt:184",
+        "HsTrustBadge eyebrow pill ('Service feedback') — RatingScreen.kt:185",
+        "HsScreenTitle at headlineSmall then a bodyMedium onSurfaceVariant lede paragraph — RatingScreen.kt:186-194",
+        "HsSectionCard holding four StarRows (overall, punctuality, skill, behaviour) separated by explicit 12dp Spacers — RatingScreen.kt:195-203",
+        "StarRow: labelLarge label above a Row of five Unicode ★/☆ glyphs styled headlineSmall, each with 6dp end padding and a clickable modifier carrying a plural onClickLabel — RatingScreen.kt:321-343",
+        "OutlinedTextField comment box, minLines 3, supportingText shows a raw 'n/500' counter — RatingScreen.kt:204-211",
+        "Footer: when shield is Escalated a CountdownChip row, otherwise a full-width HsPrimaryButton submit gated on canSubmit — RatingScreen.kt:212-224",
+        "Inline TODO comment marking an unimplemented tip-chip surface — RatingScreen.kt:221-223",
+        "StatusMessage (used for loading, error, submitted, revealed): centred Column with headlineSmall Bold title, bodyMedium body, optional full-width primary action — RatingScreen.kt:228-252",
+        "ShieldBottomSheet: ModalBottomSheet with titleMedium Bold heading, bodyMedium body, full-width primary 'send to support' and full-width secondary 'post now' — RatingScreen.kt:254-293",
+        "CountdownChip: an M3 SuggestionChip with a no-op onClick plus a TextButton 'post anyway', refreshed once a minute — RatingScreen.kt:295-319"
+      ],
+      "states": {
+        "loading": {
+          "present": true,
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/rating/RatingScreen.kt:140-144",
+          "quality": "Text-only: a centred title + body with no spinner, no skeleton and no motion — the screen looks like an empty message rather than a load."
+        },
+        "empty": {
+          "present": false,
+          "evidence": null,
+          "quality": "Not applicable — form screen with no collection to be empty."
+        },
+        "error": {
+          "present": true,
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/rating/RatingScreen.kt:138-139",
+          "quality": "Title is localized but the body renders state.message verbatim, which the ViewModel populates from Throwable.message with English fallbacks 'load failed', 'escalation failed', 'submit failed' (RatingViewModel.kt:147,252,292). No retry affordance in the error branch."
+        },
+        "success": {
+          "present": true,
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/rating/RatingScreen.kt:124-137",
+          "quality": "AwaitingPartner and Revealed both use the same StatusMessage layout with a 'back home' primary; visually identical apart from the copy."
+        },
+        "offline": { "present": false, "evidence": null, "quality": "No offline branch — a network failure surfaces as the raw-message Error state." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "Not applicable — no runtime permissions used." }
+      },
+      "skeletonOrSpinner": "None. There is no CircularProgressIndicator and no HsSkeletonBlock anywhere in the file; the Loading branch is a text block (RatingScreen.kt:140-144) and the Submitting state is not matched at all so it falls into the `else` form branch (RatingScreen.kt:145).",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "24.dp / 16.dp", "line": 122, "context": "screen padding and vertical rhythm" },
+          { "value": "16.dp", "line": 184, "context": "form vertical arrangement" },
+          { "value": "12.dp", "line": 197, "context": "spacer between star rows (repeated at 199, 201)" },
+          { "value": "8.dp", "line": 241, "context": "StatusMessage title/body gap" },
+          { "value": "24.dp", "line": 244, "context": "StatusMessage gap before the action button" },
+          { "value": "24.dp / 16.dp", "line": 264, "context": "bottom-sheet padding" },
+          { "value": "8.dp", "line": 270, "context": "sheet title/body gap (repeated at 283)" },
+          { "value": "16.dp", "line": 276, "context": "sheet gap before primary (repeated at 290)" },
+          { "value": "8.dp", "line": 316, "context": "gap between countdown chip and text button" },
+          { "value": "4.dp", "line": 327, "context": "StarRow label/stars gap" },
+          { "value": "6.dp", "line": 337, "context": "per-star end padding — off scale and the only thing enlarging the star hit area" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [
+          { "slot": "headlineSmall", "line": 188 },
+          { "slot": "headlineSmall", "line": 240 },
+          { "slot": "titleMedium", "line": 267 },
+          { "slot": "headlineSmall", "line": 333 }
+        ],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "\"${comment.length}/500\"", "line": 208 },
+          { "text": "\"$hours:${minutes.toString().padStart(2, '0')}\" (countdown time inserted into the localized template)", "line": 310 },
+          { "text": "\"★\" / \"☆\"", "line": 332 }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "The countdown footer packs a SuggestionChip and a TextButton into a single un-wrapping Row (lines 311-317); 'Private review: %s left' plus 'Post anyway' in Hindi is materially longer and will overflow horizontally. StarRow labels sit above the stars so they wrap safely, but the four labels inside HsSectionCard are separated by fixed 12dp spacers (lines 197-201), so a wrapped Hindi label changes the card rhythm. INFERRED — not measured on device, although a Hindi Paparazzi test exists for the shield sheet only (customer-app/app/src/test/kotlin/com/homeservices/customer/ui/rating/RatingShieldHindiPaparazziTest.kt:27).",
+        "currencyFormatting": "No money is rendered on this screen."
+      },
+      "a11y": {
+        "contentDescriptions": "N/A for icons (the screen contains no Icon composable); stars carry a plural onClickLabel — RatingScreen.kt:338",
+        "touchTargetRisks": [
+          { "line": 335, "size": "approximately 30dp (headlineSmall glyph plus a single 6dp end padding)", "note": "Each star is a Text with a clickable modifier and only 6dp of end padding — well under the 48dp minimum, and the four rows of five stars are the screen's primary interaction." }
+        ],
+        "contrastRisks": [
+          { "line": 334, "note": "Unselected stars are drawn in onSurfaceVariant #5F6C66 — a low-emphasis colour for the main affordance, making the empty/filled distinction rely on glyph shape at small size. INFERRED." },
+          { "line": 242, "note": "StatusMessage body uses onSurfaceVariant on background #FBF7EF, roughly 5.3:1 — passes but keeps all supporting copy at one flat level. INFERRED." }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "Composition order: eyebrow, title, body, 20 individually focusable star Texts, comment field, submit. Twenty sequential star stops with no grouping is a heavy TalkBack traversal; the stars are Text nodes with clickable, not Role.RadioButton, so no selection state is announced."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No drawable, painter or Image reference in the file; no technician photo is shown on the screen where the customer is judging that technician."], "cite": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/rating/RatingScreen.kt:184-225" },
+      "motion": {
+        "animationsUsed": [
+          { "what": "Countdown text recomputed on a 60-second delay loop (value snaps, no transition)", "line": 301 }
+        ],
+        "usesMotionTokens": false,
+        "transitionsOnNav": "onSubmitted fires a LaunchedEffect that navigates away as soon as state becomes AwaitingPartner or Revealed (lines 65-69), so the success message can be replaced immediately by the caller's navigation with no transition."
+      },
+      "density": "Airy by numbers — 24dp screen padding with 16dp block rhythm (line 122) — but the star rows are visually cramped: 5 glyphs with 6dp gaps (line 337) inside a card whose padding comes from HsSectionCard's space4 = 16dp (HsComponents.kt:119).",
+      "observations": [
+        { "severity": "high", "claim": "RatingUiState.Submitting is never matched by the state switch, so during submission the form re-renders as if idle with no progress indicator and an enabled submit button.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/rating/RatingScreen.kt:123-161", "confidence": "observed" },
+        { "severity": "high", "claim": "The error body is a raw Throwable message with hardcoded English fallbacks ('load failed', 'escalation failed', 'submit failed') shown directly to the user.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/rating/RatingViewModel.kt:147,252,292", "confidence": "observed" },
+        { "severity": "high", "claim": "Star tap targets are roughly 30dp — a Text glyph with 6dp end padding — for the screen's primary and only rating control.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/rating/RatingScreen.kt:331-339", "confidence": "observed" },
+        { "severity": "medium", "claim": "Stars are Unicode ★/☆ characters rather than vector icons, so their weight, size and rendering depend on the system font fallback and cannot be animated or half-filled.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/rating/RatingScreen.kt:332", "confidence": "observed" },
+        { "severity": "medium", "claim": "Loading state is a plain centred title+body with no spinner or skeleton.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/rating/RatingScreen.kt:140-144", "confidence": "observed" },
+        { "severity": "medium", "claim": "The countdown CountdownChip is a SuggestionChip with an empty onClick — it renders with tappable chip affordance but does nothing.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/rating/RatingScreen.kt:312-315", "confidence": "observed" },
+        { "severity": "medium", "claim": "The comment counter is a hardcoded interpolated string with Latin digits and no localization or plural handling.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/rating/RatingScreen.kt:208", "confidence": "observed" },
+        { "severity": "medium", "claim": "Tapping a star gives no micro-interaction at all — no scale, no colour transition, no haptic — the glyph simply swaps character.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/rating/RatingScreen.kt:331-339", "confidence": "observed" },
+        { "severity": "low", "claim": "A production UI file carries an unimplemented-feature TODO for the tip chip, i.e. a planned post-rating surface is simply absent.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/rating/RatingScreen.kt:221-223", "confidence": "observed" },
+        { "severity": "low", "claim": "Four unmapped M3 slots (headlineSmall x3, titleMedium) fall back to Roboto, so the screen title and the star glyph row use a different typeface than the mapped bodyMedium/labelLarge copy around them.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/rating/RatingScreen.kt:188,240,267,333", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "customer.complaint-file",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintScreen.kt",
+      "loc": 291,
+      "purpose": "Customer files a complaint against a booking (reason, description, optional photo) and then tracks its acknowledgement/resolution status.",
+      "entryPoints": [
+        "ComplaintRoutes.ROUTE composable inside the booking graph — customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/MainGraph.kt:415-427",
+        "'File complaint' secondary button on a completed booking card — customer-app/app/src/main/kotlin/com/homeservices/customer/ui/bookings/CustomerBookingsScreen.kt:254-258 routed via MainGraph.kt:97",
+        "'File complaint' from live tracking — customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/MainGraph.kt:410",
+        "Tapping a row in the complaint list — customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/MainGraph.kt:71",
+        "COMPLAINT_UPDATE pending-action deep link — customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/MainGraph.kt:116-117"
+      ],
+      "composition": [
+        "Full-bleed Surface in colorScheme.background wrapping a four-way state switch — ComplaintScreen.kt:94-109",
+        "IdleState: verticalScroll Column, 24dp padding, 16dp rhythm — ComplaintScreen.kt:121-124",
+        "HsTrustBadge eyebrow ('Customer support') — ComplaintScreen.kt:125",
+        "HsScreenTitle at headlineSmall then bodyMedium onSurfaceVariant lede — ComplaintScreen.kt:126-134",
+        "ComplaintFormCard inside HsSectionCard: readOnly ExposedDropdownMenuBox for issue type with a trailing chevron — ComplaintScreen.kt:159-180",
+        "14dp spacer, then description OutlinedTextField minLines 4 / maxLines 8 with an 'n/2000' supporting counter — ComplaintScreen.kt:181-190",
+        "14dp spacer, then a full-width HsSecondaryButton whose label toggles between 'Attach photo' and 'Photo attached' — ComplaintScreen.kt:191-201",
+        "Full-width HsPrimaryButton submit, disabled until state.submitEnabled — ComplaintScreen.kt:141-146",
+        "SuccessState: centred Column, headlineSmall Bold 'Complaint received', bodyMedium status line, optional CountdownChip for the acknowledgement SLA, wrap-width primary 'Back' and optional wrap-width secondary 'Reopen' — ComplaintScreen.kt:205-241",
+        "LoadingState (covers both PhotoUploading and Submitting): centred CircularProgressIndicator + caption — ComplaintScreen.kt:243-254",
+        "ErrorState: left-aligned centred-vertically Column, headlineSmall Bold title, raw error message in colorScheme.error, wrap-width primary retry — ComplaintScreen.kt:256-272"
+      ],
+      "states": {
+        "loading": {
+          "present": true,
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintScreen.kt:98,243-254",
+          "quality": "Bare centred CircularProgressIndicator with a caption; it replaces the entire form, and it is reused for photo upload as well as submission, so the caption ('Submitting complaint') is wrong during a photo upload."
+        },
+        "empty": { "present": false, "evidence": null, "quality": "Not applicable — form screen." },
+        "error": {
+          "present": true,
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintScreen.kt:99,256-272",
+          "quality": "Localized title but the body is the raw Throwable message (ComplaintViewModel.kt:143,166) with an English 'Unknown error' fallback (ComplaintViewModel.kt:44). Retry simply resets to an empty Idle state (ComplaintViewModel.kt:79-81), silently discarding everything the user typed."
+        },
+        "success": {
+          "present": true,
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintScreen.kt:96-97,205-241",
+          "quality": "Centred confirmation with an SLA countdown chip when acknowledged; does not display the complaint reference id even though ComplaintUiState.Success carries complaintId (ComplaintViewModel.kt:32)."
+        },
+        "offline": { "present": false, "evidence": null, "quality": "No offline branch; failures land in the raw-message Error state." },
+        "permissionDenied": {
+          "present": false,
+          "evidence": null,
+          "quality": "The photo picker uses ActivityResultContracts.GetContent (no runtime permission), and a null result is silently swallowed with `uri ?: return@rememberLauncherForActivityResult` (ComplaintScreen.kt:60-61) — a cancelled or failed pick produces no feedback."
+        }
+      },
+      "skeletonOrSpinner": "Bare centred CircularProgressIndicator with default size and colour — ComplaintScreen.kt:250",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "24.dp / 16.dp", "line": 122, "context": "IdleState padding and rhythm" },
+          { "value": "14.dp", "line": 181, "context": "spacer between dropdown and description — off scale" },
+          { "value": "14.dp", "line": 191, "context": "spacer between description and photo button — off scale" },
+          { "value": "24.dp", "line": 212, "context": "SuccessState padding" },
+          { "value": "8.dp", "line": 221, "context": "SuccessState title/body gap" },
+          { "value": "12.dp", "line": 228, "context": "gap before countdown chip" },
+          { "value": "24.dp", "line": 231, "context": "gap before primary action" },
+          { "value": "12.dp", "line": 234, "context": "gap before reopen action" },
+          { "value": "12.dp", "line": 251, "context": "LoadingState spinner/caption gap" },
+          { "value": "24.dp", "line": 261, "context": "ErrorState padding" },
+          { "value": "8.dp / 16.dp", "line": 267, "context": "ErrorState gaps" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [
+          { "slot": "headlineSmall", "line": 128 },
+          { "slot": "headlineSmall", "line": 218 },
+          { "slot": "headlineSmall", "line": 264 }
+        ],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "\"${state.description.length}/2000\"", "line": 186 },
+          { "text": "state.message rendered verbatim (English exception text)", "line": 268 }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "The issue-type field is a single-line readOnly OutlinedTextField (lines 161-168) whose value is a translated reason label; longer Hindi labels such as complaint_reason_technician_behaviour will ellipsize against the trailing chevron. HsSecondaryButton is a fixed 48dp single-line OutlinedButton (HsComponents.kt:60), so the 'Photo attached'/'Attach photo' label has no wrap room in Hindi. SuccessState/ErrorState buttons are wrap-width (lines 232, 270) so they grow with the Hindi label instead of holding a stable shape. INFERRED.",
+        "currencyFormatting": "No money rendered on this screen."
+      },
+      "a11y": {
+        "contentDescriptions": "None declared — the only icon is the default ExposedDropdownMenuDefaults.TrailingIcon (line 166).",
+        "touchTargetRisks": [
+          { "line": 192, "size": "48dp fixed height (design-system HsComponents.kt:60)", "note": "Exactly at the minimum, with no extra padding; acceptable but with no margin." }
+        ],
+        "contrastRisks": [
+          { "line": 268, "note": "Error text is drawn in colorScheme.error #D73C3C on background #FBF7EF, roughly 4.0:1 — below 4.5:1 for the default body size used here. INFERRED (computed from palette values)." },
+          { "line": 133, "note": "Lede and status copy use onSurfaceVariant #5F6C66. INFERRED." }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "Idle: eyebrow, title, lede, dropdown, description, photo button, submit — logical. Success and Error titles are plain Text (lines 216, 262), not HsScreenTitle, so those states expose no heading to TalkBack."
+      },
+      "imagery": {
+        "usesImages": false,
+        "sources": [],
+        "placeholderOrMissing": [
+          "The photo attachment produces no thumbnail — only a button label swap (lines 193-198) — so the user never sees what they attached.",
+          "No illustration or icon on the success confirmation (lines 211-240)."
+        ],
+        "cite": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintScreen.kt:192-201"
+      },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "State transitions swap whole subtrees with no crossfade (lines 95-108); onComplaintSubmitted pops back to catalogue home (MainGraph.kt:424)." },
+      "density": "Consistent 24dp screen padding and 16dp rhythm (line 122), but the card's internal spacers are 14dp (lines 181, 191) — off both the surrounding rhythm and the token scale. The Success and Loading states are vertically centred with large empty regions while the Error state is left-aligned, so the three non-form states do not read as one family.",
+      "observations": [
+        { "severity": "high", "claim": "Error copy renders the raw exception message with an English 'Unknown error' fallback, straight to a Hindi-first rural audience.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintScreen.kt:268", "confidence": "observed" },
+        { "severity": "high", "claim": "Retry from the error state resets the ViewModel to a blank Idle, discarding the reason, description and photo the user had already entered.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintViewModel.kt:79-81", "confidence": "observed" },
+        { "severity": "high", "claim": "A photo upload swaps the entire form for a full-screen spinner captioned 'Submitting complaint', so the user loses sight of their draft and is told the wrong thing.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintScreen.kt:98,244-253", "confidence": "observed" },
+        { "severity": "medium", "claim": "Attaching a photo shows no thumbnail or filename — only a button label change — and a failed upload leaves photoStoragePath null with no error surfaced.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintScreen.kt:192-201 and ComplaintViewModel.kt:108-113", "confidence": "observed" },
+        { "severity": "medium", "claim": "Submit is disabled until the description reaches 10 characters, but nothing in the UI communicates that rule — the button just stays dead.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintViewModel.kt:176 with ComplaintScreen.kt:141-146", "confidence": "observed" },
+        { "severity": "medium", "claim": "The success confirmation never shows a complaint reference number even though the state carries complaintId, so the customer has nothing to quote to support.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintScreen.kt:216-232 with ComplaintViewModel.kt:32", "confidence": "observed" },
+        { "severity": "medium", "claim": "Success and Error use wrap-width buttons while the form uses full-width buttons, so the primary action changes shape between states of the same screen.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintScreen.kt:145,232,270", "confidence": "observed" },
+        { "severity": "low", "claim": "Error state is left-aligned while Loading and Success are horizontally centred — the three states do not share an alignment language.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintScreen.kt:213,246,261", "confidence": "observed" },
+        { "severity": "low", "claim": "Complaint status is matched on raw uppercase server strings with a silent default, so any new backend status renders the generic default copy.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintScreen.kt:274-280", "confidence": "observed" },
+        { "severity": "low", "claim": "Three unmapped headlineSmall slots fall back to Roboto for the screen title and both status titles.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintScreen.kt:128,218,264", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "customer.complaint-list",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintListScreen.kt",
+      "loc": 256,
+      "purpose": "Customer reviews all complaints they have filed and opens one for detail.",
+      "entryPoints": [
+        "ComplaintRoutes.LIST composable in the catalogue nested graph, described in a comment as reachable from Settings -> My Complaints — customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/MainGraph.kt:68-74"
+      ],
+      "composition": [
+        "Full-bleed Surface in colorScheme.background, Column with statusBarsPadding — ComplaintListScreen.kt:66-67",
+        "Header Row with 4dp horizontal / 8dp vertical padding: a 44dp back IconButton with a null contentDescription, an 8dp spacer, then HsScreenTitle at headlineSmall — ComplaintListScreen.kt:68-84",
+        "State switch — ComplaintListScreen.kt:86-118",
+        "Loading: full-size Box with a centred default CircularProgressIndicator — ComplaintListScreen.kt:87-91",
+        "Ready: LazyColumn, contentPadding 16dp/8dp, item spacing 12dp — ComplaintListScreen.kt:106-116",
+        "ComplaintCard: clickable Surface RoundedCornerShape(16.dp), shadowElevation 2dp, padding 16dp — ComplaintListScreen.kt:130-137",
+        "ComplaintCard row 1: raw reasonCode string at titleSmall SemiBold with weight(1f), and a status pill Surface (corner 50, hardcoded pastel background, labelSmall text in a hardcoded ink colour, 10dp/4dp padding) — ComplaintListScreen.kt:138-164",
+        "ComplaintCard row 2 after a 4dp spacer: raw createdAt string at bodySmall in onSurfaceVariant — ComplaintListScreen.kt:165-170",
+        "EmptyState: centred Column with 32dp padding, a 64dp SentimentDissatisfied icon in onSurfaceVariant, titleLarge Bold title, bodyMedium body — ComplaintListScreen.kt:175-201",
+        "ErrorState: centred Column with 32dp padding, the raw message in colorScheme.error, 16dp gap, HsPrimaryButton retry — ComplaintListScreen.kt:203-221",
+        "statusTokens(): a five-branch colour/label mapper over raw server status strings with a default branch that echoes the raw status back — ComplaintListScreen.kt:223-256"
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintListScreen.kt:87-91", "quality": "Bare centred CircularProgressIndicator over an empty screen — no skeleton rows for a list surface." },
+        "empty": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintListScreen.kt:93-95,175-201", "quality": "Icon + localized title + localized body, but no CTA and a 'sad face' icon that reads as an error rather than a positive 'nothing has gone wrong' state." },
+        "error": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintListScreen.kt:97-102,203-221", "quality": "Renders the raw Throwable message with no title and no explanatory copy; the ViewModel's fallback is the English literal 'Unknown error' (ComplaintListViewModel.kt:59)." },
+        "success": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintListScreen.kt:104-117", "quality": "Unkeyed items() over ComplaintResponseDto — the UI layer consumes a network DTO directly rather than a domain model." },
+        "offline": { "present": false, "evidence": null, "quality": "No offline branch." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "Not applicable." }
+      },
+      "skeletonOrSpinner": "Bare centred CircularProgressIndicator, default size and colour — ComplaintListScreen.kt:89",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "4.dp / 8.dp", "line": 69, "context": "header row padding — 4dp horizontal leaves the back button flush to the edge" },
+          { "value": "44.dp", "line": 72, "context": "back IconButton forced size, below the 48dp minimum" },
+          { "value": "8.dp", "line": 79, "context": "spacer between back button and title" },
+          { "value": "16.dp / 8.dp", "line": 107, "context": "list contentPadding" },
+          { "value": "12.dp", "line": 108, "context": "item spacing" },
+          { "value": "16.dp", "line": 132, "context": "card corner radius — not on the {4,8,12,20} radius scale" },
+          { "value": "2.dp", "line": 134, "context": "shadowElevation literal, not an elevation token" },
+          { "value": "16.dp", "line": 137, "context": "card padding" },
+          { "value": "4.dp", "line": 165, "context": "title/date spacer" },
+          { "value": "32.dp", "line": 178, "context": "empty state padding" },
+          { "value": "64.dp", "line": 186, "context": "empty state icon size" },
+          { "value": "16.dp / 8.dp", "line": 188, "context": "empty state gaps (also 194)" },
+          { "value": "32.dp / 16.dp", "line": 209, "context": "error state padding and gap (also 218)" },
+          { "value": "50 / 10 / 4", "line": 43, "context": "STATUS_CHIP_CORNER_RADIUS, STATUS_CHIP_H_PADDING_DP, STATUS_CHIP_V_PADDING_DP constants (43-45)" }
+        ],
+        "hardcodedColors": [
+          { "value": "Color(0xFF1565C0)", "line": 47, "context": "StatusOpen ink" },
+          { "value": "Color(0xFFE3F2FD)", "line": 48, "context": "StatusOpenBg pastel" },
+          { "value": "Color(0xFFE65100)", "line": 49, "context": "StatusAcknowledged ink" },
+          { "value": "Color(0xFFFFF3E0)", "line": 50, "context": "StatusAcknowledgedBg pastel" },
+          { "value": "Color(0xFF2E7D32)", "line": 51, "context": "StatusResolved ink" },
+          { "value": "Color(0xFFE8F5E9)", "line": 52, "context": "StatusResolvedBg pastel" },
+          { "value": "Color(0xFF6A1B9A)", "line": 53, "context": "StatusReopened ink" },
+          { "value": "Color(0xFFF3E5F5)", "line": 54, "context": "StatusReopenedBg pastel" },
+          { "value": "Color(0xFF37474F)", "line": 55, "context": "StatusDefault ink" },
+          { "value": "Color(0xFFECEFF1)", "line": 56, "context": "StatusDefaultBg pastel" }
+        ],
+        "unmappedTypographySlots": [
+          { "slot": "headlineSmall", "line": 82 },
+          { "slot": "titleSmall", "line": 145 }
+        ],
+        "offScaleRadius": [
+          { "value": "16.dp", "line": 132 },
+          { "value": "RoundedCornerShape(50) (percent-based, not the `full` token)", "line": 150 }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "complaint.reasonCode — raw backend code such as SERVICE_QUALITY used as the card's primary title", "line": 144 },
+          { "text": "complaint.createdAt — raw ISO-8601 timestamp string", "line": 167 },
+          { "text": "status echoed back verbatim in the default statusTokens branch", "line": 254 },
+          { "text": "state.message — raw exception text ('Unknown error' fallback from ComplaintListViewModel.kt:59)", "line": 214 }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "The card header is a SpaceBetween Row where the title takes weight(1f) and the status chip is intrinsic (lines 138-163); Hindi status labels (e.g. complaint_list_status_acknowledged) are noticeably wider than 'Acknowledged' and will squeeze the title. The card body is only two short lines so extra Hindi height is absorbed, but the untranslated reasonCode and ISO date mean a Hindi user sees English machine text on every row regardless of locale. INFERRED for width; the untranslated strings are OBSERVED.",
+        "currencyFormatting": "No money rendered on this screen."
+      },
+      "a11y": {
+        "contentDescriptions": "No — the back IconButton passes contentDescription = null, leaving the only navigation control unlabelled for TalkBack (line 75). The empty-state icon correctly passes null as decorative (line 184).",
+        "touchTargetRisks": [
+          { "line": 72, "size": "44dp", "note": "IconButton is explicitly constrained to Modifier.size(44.dp), overriding the 48dp default minimum touch target." },
+          { "line": 131, "size": "card height driven by content (two text lines + 16dp padding)", "note": "Whole card is clickable so target size is fine; no ripple customisation, and there is no chevron or other affordance signalling that the row is tappable." }
+        ],
+        "contrastRisks": [
+          { "line": 150, "note": "Status chip uses a fixed pastel background against a themed card; in the dark palette (surface #0D1D18) a #E3F2FD or #FFF3E0 chip becomes a glaring light block, and the fixed ink colours are tuned only for the light pastel. INFERRED." },
+          { "line": 155, "note": "Chip label uses labelSmall (the smallest mapped slot) on a pastel background; at that size the fixed inks are the only contrast lever. INFERRED." }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "Back button, title, then card list. Each card is one focus stop but announces the raw reasonCode and the raw ISO date, so the spoken output is machine text."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No drawable/painter reference; the empty state uses Icons.Default.SentimentDissatisfied (line 183) as its only visual."], "cite": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintListScreen.kt:182-187" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "Card tap navigates via ComplaintRoutes.route(...) with default transitions — MainGraph.kt:71" },
+      "density": "Cards are very sparse: 16dp padding around a single title line, a chip, and a date line (lines 137-170) — a lot of dead space and no complaint description, booking reference, service name or SLA indicator. List spacing 12dp with a 16dp/8dp contentPadding, while the header uses only 4dp horizontal padding (line 69), so the back button sits closer to the screen edge than the cards do.",
+      "observations": [
+        { "severity": "high", "claim": "The card's primary title renders the raw backend reasonCode (e.g. 'SERVICE_QUALITY') even though fully localized reason labels already exist in the sibling screen.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintListScreen.kt:144 versus ComplaintScreen.kt:283-291", "confidence": "observed" },
+        { "severity": "high", "claim": "The date line prints the raw ISO-8601 createdAt string from the DTO with no formatting at all.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintListScreen.kt:167 with ComplaintDtos.kt:21", "confidence": "observed" },
+        { "severity": "high", "claim": "The back button has a null contentDescription and is force-sized to 44dp, so it is both unlabelled for screen readers and under the minimum touch target.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintListScreen.kt:72-77", "confidence": "observed" },
+        { "severity": "high", "claim": "Ten hardcoded pastel/ink colour literals drive the status chips, bypassing the theme entirely, so the chips do not adapt to dark mode.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintListScreen.kt:47-56,150-160", "confidence": "observed" },
+        { "severity": "high", "claim": "Tapping a card passes complaint.id into a callback typed bookingId, which the nav graph feeds to ComplaintRoutes.route(bookingId) and the detail screen then uses as a bookingId for loadStatus — the detail screen is therefore keyed on the wrong identifier.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintListScreen.kt:113 with MainGraph.kt:71 and ComplaintScreen.kt:57", "confidence": "observed" },
+        { "severity": "medium", "claim": "Error state is a bare red sentence with no title, no icon and no explanatory copy, and the sentence is a raw exception message.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintListScreen.kt:208-220 with ComplaintListViewModel.kt:59", "confidence": "observed" },
+        { "severity": "medium", "claim": "List loading is a single centred spinner instead of skeleton rows, so the layout jumps from empty screen to full list.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintListScreen.kt:87-91", "confidence": "observed" },
+        { "severity": "medium", "claim": "The empty state offers no action and uses a sad-face icon, framing 'you have no complaints' as a negative rather than a neutral or positive state.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintListScreen.kt:176-200", "confidence": "observed" },
+        { "severity": "medium", "claim": "The UI layer consumes the network DTO ComplaintResponseDto directly, which is why raw codes and timestamps leak into the visual layer.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintListScreen.kt:125 with ComplaintDtos.kt:14-22", "confidence": "observed" },
+        { "severity": "low", "claim": "Card corner radius 16dp is off the design-system radius scale (4/8/12/20), and the chip uses RoundedCornerShape(50) percent rather than the `full` token, so this screen's shapes differ from the 20dp cards on the bookings screen.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintListScreen.kt:132,150 versus CustomerBookingsScreen.kt:184,289", "confidence": "observed" },
+        { "severity": "low", "claim": "items() is called without a key, so list diffing and animation are position-based.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/complaint/ComplaintListScreen.kt:110", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "customer.wallet",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/wallet/WalletScreen.kt",
+      "loc": 332,
+      "purpose": "Customer views their credit balance and the ledger of credits issued, applied and refunded.",
+      "entryPoints": [
+        "WalletRoutes.WALLET composable in the catalogue nested graph — customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/MainGraph.kt:129-134",
+        "Wallet balance chip on catalogue home, shown only when the walletVisible feature flag is on — customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/MainGraph.kt:102-104"
+      ],
+      "composition": [
+        "Scaffold with background container colour and a custom top bar — WalletScreen.kt:73-83",
+        "WalletTopBar: Row with statusBarsPadding and 8dp/4dp padding, back IconButton tinted primary with a content description, 4dp spacer, HsScreenTitle at titleLarge Bold — WalletScreen.kt:135-159",
+        "WalletContent LazyColumn with only bottom contentPadding of 24dp — WalletScreen.kt:94-97",
+        "BalanceHeroCard item: Box padded 16dp/12dp, clipped to RoundedCornerShape(20.dp), filled with a horizontal gradient from colorScheme.primary to hardcoded BrandGreenDark — WalletScreen.kt:99,166-173",
+        "Hero Loading: 100dp-tall Box with a 32dp CircularProgressIndicator in onPrimary — WalletScreen.kt:176-182",
+        "Hero Error: centred bodyMedium message at 85% onPrimary plus a translucent (20% onPrimary) Button retry — WalletScreen.kt:183-200",
+        "Hero Ready (BalanceReadyContent): 20dp wallet icon + 'Available Balance' labelLarge at 80% alpha, then the formatted balance at displaySmall ExtraBold — WalletScreen.kt:201-233",
+        "Section header 'Transaction History' at titleMedium Bold with 20dp horizontal padding, wrapped in 16dp/8dp spacers — WalletScreen.kt:101-110",
+        "Ledger Loading: 160dp-tall Box with a centred 32dp spinner — WalletScreen.kt:112-120",
+        "Ledger Error: LedgerErrorState, a centred message plus a filled retry Button — WalletScreen.kt:121-122,300-318",
+        "Ledger Empty: LedgerEmptyState, a single centred line of onSurfaceVariant bodyLarge inside a 40dp-padded Box — WalletScreen.kt:124-125,286-297",
+        "LedgerEntryRow: Row padded 16dp/5dp, clipped to RoundedCornerShape(14.dp), surface fill plus a 1dp outline border, inner 14dp/12dp padding — WalletScreen.kt:236-253",
+        "LedgerEntryRow left: 40dp rounded surfaceVariant tile with a 22dp type icon in primary — WalletScreen.kt:254-262",
+        "LedgerEntryRow middle: server-supplied reason at bodyMedium SemiBold maxLines 2, then the formatted date at labelSmall overridden to 11sp — WalletScreen.kt:263-276",
+        "LedgerEntryRow right: signed amount at bodyMedium Bold in hardcoded CreditColor or DebitColor — WalletScreen.kt:277-281"
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/wallet/WalletScreen.kt:112-120,176-182", "quality": "Two independent bare spinners — one inside the gradient hero, one in a 160dp empty box where the ledger will be. No skeleton rows, so the page height jumps when data lands." },
+        "empty": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/wallet/WalletScreen.kt:124-125,286-297", "quality": "One line of grey text, no icon, no title, no CTA — the weakest empty state in the cluster and the one a brand-new customer is most likely to see." },
+        "error": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/wallet/WalletScreen.kt:121-122,183-200,300-318", "quality": "Both branches use localized copy (wallet_balance_error / wallet_ledger_error) with a retry — no raw exception text, because the ViewModel collapses failures to a stateless Error object (WalletViewModel.kt:67,77). Best-behaved error handling in the cluster, but the two retry buttons are styled differently (translucent vs filled)." },
+        "success": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/wallet/WalletScreen.kt:126-130,201-233", "quality": "Gradient hero plus unkeyed ledger rows." },
+        "offline": { "present": false, "evidence": null, "quality": "No offline branch; failure collapses to the generic Error object." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "Not applicable." }
+      },
+      "skeletonOrSpinner": "Two bare CircularProgressIndicators (32dp) — one on the hero at WalletScreen.kt:181 and one in a 160dp placeholder box at WalletScreen.kt:118. HsSkeletonBlock is not used.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "24.dp", "line": 96, "context": "LazyColumn bottom contentPadding; note there is no horizontal contentPadding, each child re-declares its own" },
+          { "value": "16.dp / 8.dp", "line": 102, "context": "spacers around the section header (also 109)" },
+          { "value": "20.dp", "line": 107, "context": "section header horizontal padding — does not match the 16dp used by the hero and ledger rows" },
+          { "value": "160.dp", "line": 115, "context": "ledger loading placeholder height" },
+          { "value": "32.dp", "line": 118, "context": "spinner size (also 181)" },
+          { "value": "8.dp / 4.dp", "line": 143, "context": "top bar padding" },
+          { "value": "4.dp", "line": 153, "context": "top bar spacer" },
+          { "value": "16.dp / 12.dp", "line": 170, "context": "hero outer padding" },
+          { "value": "20.dp", "line": 171, "context": "hero corner radius literal" },
+          { "value": "100.dp", "line": 178, "context": "hero loading height — differs from the loaded hero height, so the card resizes when data arrives" },
+          { "value": "24.dp / 10.dp", "line": 186, "context": "hero error padding and gap" },
+          { "value": "24.dp / 20.dp", "line": 210, "context": "hero content padding" },
+          { "value": "20.dp / 8.dp", "line": 218, "context": "hero label icon size and gap" },
+          { "value": "16.dp / 5.dp", "line": 246, "context": "ledger row outer padding — 5dp vertical is off scale" },
+          { "value": "14.dp", "line": 247, "context": "ledger row corner radius — off the radius scale (also 249)" },
+          { "value": "1.dp", "line": 249, "context": "border width literal" },
+          { "value": "14.dp / 12.dp", "line": 250, "context": "ledger row inner padding — 14dp off scale" },
+          { "value": "40.dp / 12.dp", "line": 258, "context": "icon tile size and radius" },
+          { "value": "22.dp", "line": 261, "context": "ledger icon size — off scale" },
+          { "value": "40.dp", "line": 288, "context": "empty state padding — off scale" },
+          { "value": "24.dp / 12.dp", "line": 302, "context": "ledger error padding and gap" },
+          { "value": "11.sp", "line": 273, "context": "font size override on labelSmall for the ledger date" }
+        ],
+        "hardcodedColors": [
+          { "value": "Color(0xFF1A7A4A)", "line": 61, "context": "CreditColor — fixed green for credit amounts in both themes" },
+          { "value": "Color(0xFFC0392B)", "line": 62, "context": "DebitColor — fixed red for debit amounts in both themes" },
+          { "value": "Color(0xFF1A5C44)", "line": 63, "context": "BrandGreenDark — second stop of the hero gradient" }
+        ],
+        "unmappedTypographySlots": [
+          { "slot": "titleMedium", "line": 105 },
+          { "slot": "displaySmall", "line": 229 }
+        ],
+        "offScaleRadius": [
+          { "value": "14.dp", "line": 247 },
+          { "value": "14.dp", "line": 249 }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "\"+\" / \"−\" amount sign prefix", "line": 238 },
+          { "text": "\"$amountSign${formatInr(entry.amountInPaise)}\"", "line": 278 },
+          { "text": "entry.reason — server-supplied free text used as the row's primary label, with no localization path", "line": 265 }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "The ledger row is a three-column Row (icon tile, weighted text column, amount) with no minimum width reserved for the amount (lines 242-281); a two-line Hindi reason plus a long amount such as '₹1,29,999.00' will compress the amount column. The hero balance uses displaySmall ExtraBold on a single line (lines 227-231) with no maxLines guard. INFERRED.",
+        "currencyFormatting": "formatInr at lines 228 and 278 -> CurrencyFormat.kt:23-26. Correct rupee glyph and Indian lakh grouping via Locale(\"en\",\"IN\"), but fraction digits are always shown so the hero balance reads '₹500.00' rather than '₹500', and numerals stay Latin under the Hindi locale. The ledger date formatter is pinned to Locale.ENGLISH (lines 327-330), so dates render as '12 Jul 2026, 3:05 pm' even in Hindi, and it falls back to echoing the raw ISO string if parsing fails (line 332)."
+      },
+      "a11y": {
+        "contentDescriptions": "Partial — the back button is labelled (line 149); the hero wallet icon and the ledger type icons are decorative nulls (lines 216, 261), which is correct, but the type icon is the only signal distinguishing credit issued / refund / applied and it carries no text alternative.",
+        "touchTargetRisks": [
+          { "line": 242, "size": "not interactive", "note": "LedgerEntryRow has card styling (radius, border, surface fill) but no clickable modifier, so it looks tappable and is not — despite LedgerEntry carrying a bookingId (WalletModels.kt:21)." }
+        ],
+        "contrastRisks": [
+          { "line": 239, "note": "CreditColor #1A7A4A on the dark-theme surface #0D1D18 is roughly 2.4:1 and DebitColor #C0392B roughly 3.0:1 — both below 4.5:1 for the amount text, which is the most important number in each row. INFERRED (computed from palette literals)." },
+          { "line": 273, "note": "Ledger date is labelSmall overridden to 11sp in onSurfaceVariant — below a comfortable minimum body size for an older, rural-skewing audience. INFERRED." },
+          { "line": 224, "note": "Hero label is onPrimary at 80% alpha over a green gradient; the alpha reduction cuts an otherwise strong contrast pair. INFERRED." }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "Back button, screen title (heading), hero, then rows. The 'Transaction History' section header is a plain Text (lines 103-108), not HsScreenTitle, so it is not exposed as a heading and TalkBack heading navigation skips straight past it."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No drawable/painter/Image reference; the hero is a two-stop linear gradient (line 172) and every other visual is a Material vector icon (lines 215, 261, 322-324)."], "cite": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/wallet/WalletScreen.kt:166-173" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "Back pops the stack (MainGraph.kt:132) with default transitions; no shared-element or hero transition from the home wallet chip." },
+      "density": "Two competing card languages on one screen: a 20dp-radius gradient hero with 24dp/20dp padding (lines 171, 210) and 14dp-radius bordered ledger rows with 14dp/12dp padding and only 5dp between rows (lines 246-250). The section header is inset 20dp while the hero and rows are inset 16dp (lines 107, 170, 246), so nothing shares a left edge.",
+      "observations": [
+        { "severity": "high", "claim": "The ledger empty state is a single line of grey text with no icon, title or CTA — and it is the state every new customer sees, since a fresh account has no credits.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/wallet/WalletScreen.kt:286-297", "confidence": "observed" },
+        { "severity": "high", "claim": "The ledger row's primary label is entry.reason, a raw server-supplied string with no localization path, so Hindi users see whatever English text the backend wrote.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/wallet/WalletScreen.kt:265 with WalletModels.kt:22", "confidence": "observed" },
+        { "severity": "high", "claim": "The ledger date formatter is hardcoded to Locale.ENGLISH, so month names and am/pm never localize.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/wallet/WalletScreen.kt:327-330", "confidence": "observed" },
+        { "severity": "high", "claim": "Both loading states are bare spinners, and the hero loading box is 100dp tall versus a taller loaded hero, so the layout visibly jumps when the balance arrives.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/wallet/WalletScreen.kt:112-120,176-182,208-232", "confidence": "observed" },
+        { "severity": "medium", "claim": "Credit/debit amount colours and the hero gradient's second stop are hardcoded literals that do not adapt to the dark palette.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/wallet/WalletScreen.kt:61-63,172,239", "confidence": "observed" },
+        { "severity": "medium", "claim": "Ledger rows have full card styling (clip, surface fill, 1dp border) but no click handler, so they read as tappable and are not — even though the entry carries a bookingId to drill into.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/wallet/WalletScreen.kt:242-252 with WalletModels.kt:21", "confidence": "observed" },
+        { "severity": "medium", "claim": "The hero balance always renders two decimal places, e.g. '₹500.00', because formatInr uses the default currency fraction digits — noisy for a headline number in a whole-rupee product.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/wallet/WalletScreen.kt:228 with CurrencyFormat.kt:23-25", "confidence": "observed" },
+        { "severity": "medium", "claim": "The ledger date is forced to 11sp, smaller than any mapped type slot, on a screen whose target users skew older and rural.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/wallet/WalletScreen.kt:273", "confidence": "observed" },
+        { "severity": "medium", "claim": "The two retry buttons on the same screen are styled differently — a 20%-alpha translucent button in the hero and a solid primary button in the ledger — so the same action has two visual identities.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/wallet/WalletScreen.kt:194-199,311-316", "confidence": "observed" },
+        { "severity": "low", "claim": "Hero, section header and ledger rows use three different left insets (16dp, 20dp, 16dp with a further 14dp inner) so no vertical alignment line runs down the screen.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/wallet/WalletScreen.kt:107,170,246,250", "confidence": "observed" },
+        { "severity": "low", "claim": "The hero balance uses displaySmall, an unmapped M3 slot, so the single most prominent number on the screen renders in Roboto while the rest of the screen uses the mapped Geist slots.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/wallet/WalletScreen.kt:229", "confidence": "observed" },
+        { "severity": "low", "claim": "REFUND uses an Add icon and CREDIT_APPLIED uses a Remove icon, so the ledger's iconography is arithmetic symbols rather than semantic imagery.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/wallet/WalletScreen.kt:320-325", "confidence": "observed" }
+      ]
+    }
+  ]
+}

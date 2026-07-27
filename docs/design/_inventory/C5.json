@@ -1,0 +1,777 @@
+{
+  "cluster": "customer/account-privacy",
+  "surfaces": [
+    {
+      "id": "customer.profile",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/profile/ProfileScreen.kt",
+      "loc": 401,
+      "purpose": "Fourth bottom-nav tab where the customer views their identity, edits their display name, jumps to bookings/language/privacy, and signs out.",
+      "entryPoints": "Not a nav destination. Rendered as bottom-nav tab index 3 inside CatalogueHomeScreen at customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/CatalogueHomeScreen.kt:331; its callbacks are wired in customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/MainGraph.kt:94 (language), MainGraph.kt:123 (manage consent), MainGraph.kt:124 (privacy & data).",
+      "composition": [
+        {"block": "Three mutually-exclusive AlertDialogs rendered above everything (sign-out confirm, edit-name with OutlinedTextField, privacy-policy text)", "cite": "ProfileScreen.kt:80-148"},
+        {"block": "Root LazyColumn on colorScheme.background — no TopAppBar, no back affordance, no 'Profile' screen title", "cite": "ProfileScreen.kt:150-152"},
+        {"block": "ProfileHeader: surface-coloured band, 64dp circular initials avatar tinted primary@10%, then display name (HsScreenTitle, headlineMedium overridden to 20sp), masked phone '+91 xxxxxx1234', optional email", "cite": "ProfileScreen.kt:154, ProfileScreen.kt:264-314"},
+        {"block": "16dp gap, then 'Account' SectionCard: labelLarge section caption + bordered surface card containing MenuRow 'Edit name' (sublabel = current name or 'Not set yet'), 0.5dp divider, MenuRow 'Language'", "cite": "ProfileScreen.kt:157-177"},
+        {"block": "12dp gap, then 'My bookings' SectionCard with a single MenuRow 'Booking history'", "cite": "ProfileScreen.kt:180-190"},
+        {"block": "12dp gap, then 'Support' SectionCard with four MenuRows separated by 0.5dp dividers: Customer service (tel: link), Privacy policy (opens dialog), Manage privacy, Privacy and data", "cite": "ProfileScreen.kt:193-224"},
+        {"block": "12dp gap, then a standalone destructive Sign-out Surface: red-tinted 1dp border at 20% alpha, logout icon + 15sp semibold red label", "cite": "ProfileScreen.kt:227-258"},
+        {"block": "80dp bottom spacer to clear the bottom nav bar", "cite": "ProfileScreen.kt:259"}
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": null, "quality": "ProfileViewModel seeds authState with AuthState.Initializing (ProfileViewModel.kt:24) but ProfileScreen only casts to Authenticated (ProfileScreen.kt:73); during init the screen renders the fully-populated chrome with name 'Guest' and avatar '?' — a flash of wrong content, not a loading state."},
+        "empty": {"present": false, "evidence": null, "quality": "No empty state exists or is needed — the menu is static."},
+        "error": {"present": false, "evidence": null, "quality": "signOut() and updateDisplayName() are fire-and-forget viewModelScope.launch with no result surface (ProfileViewModel.kt:27-35); a failed name update or sign-out shows the user nothing."},
+        "success": {"present": false, "evidence": null, "quality": "Saving a new name dismisses the dialog (ProfileScreen.kt:118) with no snackbar, toast, or optimistic confirmation."},
+        "offline": {"present": false, "evidence": null, "quality": "No connectivity awareness anywhere in the file."},
+        "permissionDenied": {"present": false, "evidence": null, "quality": "The tel: intent at ProfileScreen.kt:200 is not wrapped — no handling if no dialer exists."}
+      },
+      "skeletonOrSpinner": "none — no CircularProgressIndicator and no HsSkeletonBlock appear in the file (verified across ProfileScreen.kt:1-401).",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          {"value": "12.dp", "line": 60, "context": "CardShape corner radius constant"},
+          {"value": "16.dp", "line": 157, "context": "Spacer after header (on-scale value but literal, not LocalHomeservicesSpacing)"},
+          {"value": "12.dp", "line": 180, "context": "inter-section Spacer"},
+          {"value": "12.dp", "line": 193, "context": "inter-section Spacer"},
+          {"value": "12.dp", "line": 227, "context": "Spacer before sign-out"},
+          {"value": "80.dp", "line": 259, "context": "bottom spacer, off scale"},
+          {"value": "0.5.dp", "line": 169, "context": "HorizontalDivider thickness, off scale"},
+          {"value": "20.dp / 18.dp", "line": 271, "context": "ProfileHeader padding start=20,end=20,top=18,bottom=18 — 18 and 20 are both off the 4/8/12/16/24 scale"},
+          {"value": "64.dp", "line": 279, "context": "avatar box"},
+          {"value": "14.dp", "line": 355, "context": "MenuRow vertical padding, off scale"},
+          {"value": "14.dp", "line": 357, "context": "MenuRow horizontalArrangement spacing, off scale"},
+          {"value": "18.dp", "line": 364, "context": "MenuRow leading icon size, off scale"},
+          {"value": "16.dp", "line": 388, "context": "trailing chevron size"},
+          {"value": "20.dp", "line": 248, "context": "sign-out icon size, off scale"}
+        ],
+        "hardcodedColors": [
+          {"value": "Color(0xFFDC2626)", "line": 59, "context": "DangerRed used for sign-out border/icon/label and the sign-out dialog confirm button; not the design-system error #D73C3C and not theme-aware"}
+        ],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": [
+          {"value": "8.dp", "line": 359, "context": "MenuRow icon chip — on scale (radius.md)"}
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          {"text": "1800-123-456", "line": 199},
+          {"text": "+91 xxxxxx${user.phoneLastFour}", "line": 299}
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "MEDIUM. The header name is capped at maxLines=1 with ellipsis (ProfileScreen.kt:294-295) so long Devanagari names truncate. MenuRow label/sublabel have no maxLines cap, so longer Hindi sublabels such as 'ट्रैकिंग, शिकायत और रेटिंग देखें' (values-hi/strings.xml:537) and 'आपका डेटा कैसे उपयोग होता है' (values-hi/strings.xml:543) will wrap and re-flow the row — no fixed height so no clipping, but rhythm breaks. The privacy-policy AlertDialog body (ProfileScreen.kt:138-140) is a long paragraph with no verticalScroll, so the Hindi translation risks clipping on short screens (inferred).",
+        "currencyFormatting": "Not applicable — no monetary values are rendered on this screen (verified ProfileScreen.kt:1-401)."
+      },
+      "a11y": {
+        "contentDescriptions": {"present": false, "cite": "ProfileScreen.kt:246 (logout icon), ProfileScreen.kt:362 (MenuRow leading icon), ProfileScreen.kt:385 (chevron) — every Icon passes contentDescription = null"},
+        "touchTargetRisks": [
+          {"line": 350, "size": "~62dp tall", "note": "MenuRow = 14dp vertical padding x2 + ~34dp icon chip; comfortably above 48dp. OK."},
+          {"line": 237, "size": "~52dp tall", "note": "Sign-out Surface = 16dp padding x2 + 20dp icon. OK."}
+        ],
+        "contrastRisks": [
+          {"line": 300, "note": "bodySmall masked phone in onSurfaceVariant #5F6C66 on surface #FFFDF8 — small text at ~4.9:1, marginal against WCAG AA 4.5:1 for 12sp (inferred)"},
+          {"line": 377, "note": "MenuRow sublabel is bodySmall in onSurfaceVariant; same marginal-contrast issue and it carries real information ('Not set yet', current language)"},
+          {"line": 378, "note": "when disabled=true the sublabel colour is multiplied by 0.45f alpha, dropping far below AA (inferred; the disabled path is not currently exercised by any call site)"}
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "HsScreenTitle at ProfileScreen.kt:291 supplies heading() semantics — but it is applied to the *user's display name*, not to a screen title, so TalkBack heading navigation lands on a data value. The three SectionCard captions ('Account', 'My bookings', 'Support') at ProfileScreen.kt:322-328 are plain Text with no heading semantics, so the screen has exactly one (mislabelled) heading and no section landmarks."
+      },
+      "imagery": {"usesImages": false, "sources": [], "placeholderOrMissing": ["avatar is a text-initials fallback only — no photo upload, no drawable, no Coil/AsyncImage anywhere in the file"], "cite": "ProfileScreen.kt:277-289"},
+      "motion": {"animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None. No AnimatedVisibility, animateContentSize, Crossfade, or animate*AsState in the file. Dialogs pop in with default Material behaviour; the three sections and the sign-out card appear instantly."},
+      "density": "Inconsistent. The header uses 20/18dp padding while every card below uses 16dp horizontal (ProfileScreen.kt:271 vs :321), and inter-section gaps are 16dp once then 12dp three times (:157 vs :180/:193/:227). MenuRow's 14dp vertical padding is off the 4dp grid. Overall the list reads as a stock Android settings list — dense, evenly grey, with no visual weighting between 'Edit name' and 'Sign out' beyond a thin red border.",
+      "observations": [
+        {"severity": "high", "claim": "Sign-out uses Color(0xFFDC2626), a fourth distinct red in this cluster and not the design-system error token #D73C3C; it is a literal so it does not adapt in dark theme.", "evidence": "ProfileScreen.kt:59", "confidence": "observed"},
+        {"severity": "high", "claim": "Every icon on the screen has contentDescription = null, including the actionable sign-out affordance, so screen-reader users get an unlabelled control.", "evidence": "ProfileScreen.kt:246", "confidence": "observed"},
+        {"severity": "high", "claim": "The AuthState.Initializing case is unhandled — the screen renders 'Guest' with a '?' avatar during session restore instead of a skeleton, so cold-start shows wrong identity data.", "evidence": "ProfileScreen.kt:73 with ProfileViewModel.kt:24", "confidence": "observed"},
+        {"severity": "medium", "claim": "The support phone number is hardcoded in the composable rather than a string/config resource, and the display form '1800-123-456' does not match the dialled form 'tel:1800123456'.", "evidence": "ProfileScreen.kt:199-200", "confidence": "observed"},
+        {"severity": "medium", "claim": "Four raw sp values (24sp avatar initials, 20sp name override, 15sp labels x2) bypass the mapped typography scale entirely.", "evidence": "ProfileScreen.kt:284, ProfileScreen.kt:293, ProfileScreen.kt:252, ProfileScreen.kt:370", "confidence": "observed"},
+        {"severity": "medium", "claim": "Flat-gray-card syndrome: all three SectionCards and the sign-out card use the identical surface fill + 1dp outline + 12dp radius, so a destructive action is visually near-identical to 'Booking history'.", "evidence": "ProfileScreen.kt:329-334 vs ProfileScreen.kt:229-237", "confidence": "observed"},
+        {"severity": "medium", "claim": "Two near-duplicate privacy entries sit adjacent in the Support section — 'Manage privacy' (consent screen) and 'Privacy and data' (the privacy hub that itself contains consent) — plus a third 'Privacy policy' dialog, giving three shield-icon rows in a row.", "evidence": "ProfileScreen.kt:203-222", "confidence": "observed"},
+        {"severity": "medium", "claim": "Name edit and sign-out produce zero feedback: no snackbar, no progress, no error path; ProfileViewModel launches both without observing the result.", "evidence": "ProfileViewModel.kt:27-35", "confidence": "observed"},
+        {"severity": "low", "claim": "The screen has no title and no back/close affordance of its own; the only heading semantics are attached to the user's name.", "evidence": "ProfileScreen.kt:291", "confidence": "observed"},
+        {"severity": "low", "claim": "0.5dp dividers will round to a sub-pixel hairline on low-density screens common in this rural market segment.", "evidence": "ProfileScreen.kt:169", "confidence": "inferred"}
+      ]
+    },
+    {
+      "id": "customer.settings-root",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/settings/SettingsScreen.kt",
+      "loc": 144,
+      "purpose": "Settings hub listing Language, Privacy & data, and My complaints as three large tappable rows.",
+      "entryPoints": "Route LocaleRoutes.SETTINGS registered at customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/SettingsGraph.kt:42; navigated from MainGraph.kt:93 via onSettingsClick.",
+      "composition": [
+        {"block": "Full-bleed Surface on colorScheme.background", "cite": "SettingsScreen.kt:45"},
+        {"block": "Column with 20dp padding and 18dp inter-item spacing", "cite": "SettingsScreen.kt:46-49"},
+        {"block": "Top bar Row: 44dp IconButton back arrow + 8dp spacer + HsScreenTitle 'Settings' (headlineMedium default)", "cite": "SettingsScreen.kt:50-58"},
+        {"block": "Language row — 88dp tall bordered card, 52dp surfaceVariant icon chip (14dp radius) with Language glyph, titleLarge bold title, bodyMedium subtitle showing the current language, trailing chevron", "cite": "SettingsScreen.kt:60-71"},
+        {"block": "Privacy & data row — same 88dp card, Shield glyph, no subtitle", "cite": "SettingsScreen.kt:73-84"},
+        {"block": "My complaints row — same 88dp card, SupportAgent glyph, rendered only when onMyComplaintsClick != null (it is non-null in SettingsGraph.kt:47, so always shown in production)", "cite": "SettingsScreen.kt:86-99"},
+        {"block": "Remaining vertical space is empty — the Column has no weight/spacer and no footer, leaving roughly two-thirds of the viewport blank below the third row", "cite": "SettingsScreen.kt:46-100"}
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": null, "quality": "Screen is fully static — it takes no ViewModel and reads no state."},
+        "empty": {"present": false, "evidence": null, "quality": "N/A — fixed list."},
+        "error": {"present": false, "evidence": null, "quality": "No error surface exists."},
+        "success": {"present": false, "evidence": null, "quality": "N/A."},
+        "offline": {"present": false, "evidence": null, "quality": "No connectivity awareness."},
+        "permissionDenied": {"present": false, "evidence": null, "quality": "N/A."}
+      },
+      "skeletonOrSpinner": "none — no loading affordance of any kind (verified SettingsScreen.kt:1-144).",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          {"value": "20.dp", "line": 47, "context": "screen padding, off the 4/8/12/16/24 scale"},
+          {"value": "18.dp", "line": 48, "context": "vertical arrangement spacing, off scale"},
+          {"value": "44.dp", "line": 51, "context": "back IconButton size, below the 48dp minimum"},
+          {"value": "8.dp", "line": 54, "context": "spacer after back button"},
+          {"value": "52.dp", "line": 63, "context": "icon chip size, off scale"},
+          {"value": "52.dp", "line": 76, "context": "icon chip size"},
+          {"value": "52.dp", "line": 90, "context": "icon chip size"},
+          {"value": "88.dp", "line": 118, "context": "fixed row height, off scale"},
+          {"value": "1.dp", "line": 114, "context": "border stroke"},
+          {"value": "16.dp", "line": 122, "context": "row horizontal padding"},
+          {"value": "14.dp", "line": 126, "context": "spacer between icon and text, off scale"}
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": [
+          {"value": "14.dp", "line": 62, "context": "icon chip radius — between radius.lg 12 and radius.xl 20"},
+          {"value": "14.dp", "line": 75, "context": "icon chip radius"},
+          {"value": "14.dp", "line": 89, "context": "icon chip radius"},
+          {"value": "20.dp", "line": 112, "context": "row card radius — equals radius.xl, on scale"}
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "HIGH. SettingsRow is pinned to a fixed 88.dp height (SettingsScreen.kt:118) while the title uses titleLarge Bold with no maxLines cap (SettingsScreen.kt:128-132). Devanagari has taller ascenders/descenders and the Hindi 'गोपनीयता और डेटा' (values-hi/strings.xml:379) plus a wrapped subtitle can exceed the fixed height and clip, because the Row fills the fixed-height parent rather than growing.",
+        "currencyFormatting": "Not applicable — no money on this screen."
+      },
+      "a11y": {
+        "contentDescriptions": {"present": false, "cite": "SettingsScreen.kt:52 (back arrow), SettingsScreen.kt:64, :77, :91 (row glyphs), SettingsScreen.kt:141 (chevron) — all null"},
+        "touchTargetRisks": [
+          {"line": 51, "size": "44.dp", "note": "Back IconButton is explicitly sized to 44dp, below the 48dp Material/WCAG minimum."}
+        ],
+        "contrastRisks": [
+          {"line": 137, "note": "subtitle in onSurfaceVariant #5F6C66 at bodyMedium on surface #FFFDF8 — ~4.9:1, marginal (inferred)"}
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "HsScreenTitle at SettingsScreen.kt:55 provides the single heading(). Rows are clickable Surfaces via Modifier.clickable (SettingsScreen.kt:119) with no Role.Button semantics, so TalkBack announces them as generic double-tappable containers."
+      },
+      "imagery": {"usesImages": false, "sources": [], "placeholderOrMissing": ["icon-only; no illustration, no brand imagery, no drawable references"], "cite": "SettingsScreen.kt:18-23"},
+      "motion": {"animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None — no animation APIs imported or used anywhere in the file; row taps produce only the default ripple."},
+      "density": "Airy to the point of emptiness. Three 88dp rows separated by 18dp inside 20dp padding fill roughly 320dp of a ~800dp viewport; the bottom two-thirds is dead space with no footer, version string, or account summary.",
+      "observations": [
+        {"severity": "high", "claim": "Roughly two-thirds of the screen is dead space — the Column ends after the third row with no filler, footer, or bottom-anchored content.", "evidence": "SettingsScreen.kt:46-100", "confidence": "observed"},
+        {"severity": "high", "claim": "Fixed 88dp row height with an uncapped titleLarge Bold title is a Hindi clipping trap.", "evidence": "SettingsScreen.kt:118 with SettingsScreen.kt:128-132", "confidence": "inferred"},
+        {"severity": "medium", "claim": "The back IconButton is forced to 44dp, under the 48dp minimum touch target, and this exact pattern is copy-pasted into all seven other screens in this cluster.", "evidence": "SettingsScreen.kt:51", "confidence": "observed"},
+        {"severity": "medium", "claim": "Icon chips use a 14dp corner radius that exists on no token in HomeservicesRadius (4/8/12/20/9999).", "evidence": "SettingsScreen.kt:62", "confidence": "observed"},
+        {"severity": "medium", "claim": "This screen duplicates functionality already present on the Profile tab (Language and Privacy & data appear in both), and there is no back-link relationship between them.", "evidence": "SettingsScreen.kt:60-84 vs ProfileScreen.kt:170-222", "confidence": "observed"},
+        {"severity": "low", "claim": "The row card radius (20dp) is 8dp larger than the ProfileScreen card radius (12dp), so the two account surfaces in the same app read as different design systems.", "evidence": "SettingsScreen.kt:112 vs ProfileScreen.kt:60", "confidence": "observed"},
+        {"severity": "low", "claim": "'My complaints' is nominally optional but is always wired non-null in the graph, so the conditional adds indirection without behavioural value.", "evidence": "SettingsScreen.kt:86 with SettingsGraph.kt:47", "confidence": "observed"}
+      ]
+    },
+    {
+      "id": "customer.language-settings",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/settings/LanguageSettingsScreen.kt",
+      "loc": 66,
+      "purpose": "Lets the customer switch the app locale between English and Hindi and persist the choice.",
+      "entryPoints": "Route LocaleRoutes.LANGUAGE_SETTINGS registered at SettingsGraph.kt:50; reached from SettingsScreen (SettingsGraph.kt:44) and from the Profile tab's Language row (MainGraph.kt:94).",
+      "composition": [
+        {"block": "Surface on colorScheme.background, Column with 24dp padding and 16dp spacing", "cite": "LanguageSettingsScreen.kt:44-48"},
+        {"block": "HsTrustBadge pill with the literal text \"Settings\" — a primaryContainer chip acting as an eyebrow label", "cite": "LanguageSettingsScreen.kt:49"},
+        {"block": "HsScreenTitle 'Choose language' explicitly styled headlineSmall", "cite": "LanguageSettingsScreen.kt:50-53"},
+        {"block": "LanguagePickerCard — two selectable Surfaces (16dp radius, primaryContainer when selected / surfaceVariant when not), each a RadioButton + native name (titleMedium) + English label (bodySmall)", "cite": "LanguageSettingsScreen.kt:54-58 with design-system/src/main/kotlin/com/homeservices/designsystem/locale/LanguagePickerCard.kt:41-76"},
+        {"block": "HsPrimaryButton 'Save', full width, immediately below the picker — not bottom-anchored", "cite": "LanguageSettingsScreen.kt:59-63"},
+        {"block": "No back button, no top bar; all remaining vertical space below Save is empty", "cite": "LanguageSettingsScreen.kt:44-64"}
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": null, "quality": "selectedTag defaults to 'en' (LanguageSettingsViewModel.kt:22) and is overwritten asynchronously in init (LanguageSettingsViewModel.kt:27-31), so the picker briefly shows English selected even for a Hindi user — a wrong-state flash rather than a loading state."},
+        "empty": {"present": false, "evidence": null, "quality": "N/A — options list is a constant of two."},
+        "error": {"present": false, "evidence": null, "quality": "onSave() calls setAppLocale with no try/catch and no error channel (LanguageSettingsViewModel.kt:37-42); a persistence failure is silently swallowed and the screen still navigates away."},
+        "success": {"present": true, "evidence": "LanguageSettingsScreen.kt:37-42", "quality": "Success is only an implicit pop via onSaved() — no confirmation toast, no snackbar, no visible acknowledgement that the language changed."},
+        "offline": {"present": false, "evidence": null, "quality": "Not relevant (local persistence) but also unmodelled."},
+        "permissionDenied": {"present": false, "evidence": null, "quality": "N/A."}
+      },
+      "skeletonOrSpinner": "none — the Save button does not switch to a busy state while setAppLocale runs (LanguageSettingsScreen.kt:59-63).",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          {"value": "24.dp", "line": 46, "context": "screen padding (matches space6 numerically but is a literal)"},
+          {"value": "16.dp", "line": 47, "context": "vertical arrangement spacing"}
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [
+          {"slot": "headlineSmall", "line": 52},
+          {"slot": "titleMedium", "line": 67, "note": "inside the shared LanguagePickerCard — design-system/src/main/kotlin/com/homeservices/designsystem/locale/LanguagePickerCard.kt:67"}
+        ],
+        "offScaleRadius": [
+          {"value": "16.dp", "line": 43, "context": "LanguagePickerCard option surface radius — design-system/.../LanguagePickerCard.kt:43; between radius.lg 12 and radius.xl 20"}
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          {"text": "\"Settings\"", "line": 49}
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "MEDIUM. The screen title is deliberately downsized to headlineSmall (LanguageSettingsScreen.kt:52) which falls back to Roboto, so the Hindi title renders in a different typeface from every other screen title. The eyebrow badge is a hard English literal that never translates. Option rows have no fixed height so Devanagari wrapping is safe.",
+        "currencyFormatting": "Not applicable — no money on this screen."
+      },
+      "a11y": {
+        "contentDescriptions": {"present": false, "cite": "No Icon composables exist in LanguageSettingsScreen.kt:1-66; the RadioButtons in LanguagePickerCard.kt:64 pass onClick = null and rely on the parent selectable() Role.RadioButton at LanguagePickerCard.kt:52-56 — this part is correct."},
+        "touchTargetRisks": [
+          {"line": 61, "size": "n/a", "note": "Option rows are 16dp padding + RadioButton (48dp default) so they clear the minimum (LanguagePickerCard.kt:61-63)."}
+        ],
+        "contrastRisks": [
+          {"line": 71, "note": "the English display label under each native name is bodySmall in onSurfaceVariant on surfaceVariant #E8F1EC — onSurfaceVariant #5F6C66 on #E8F1EC is a lower-contrast pairing than on plain surface (design-system/.../LanguagePickerCard.kt:69-72) (inferred)"}
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "HsScreenTitle at LanguageSettingsScreen.kt:50 gives one heading(). The HsTrustBadge 'Settings' pill precedes the heading in focus order and reads as unlabelled decorative text."
+      },
+      "imagery": {"usesImages": false, "sources": [], "placeholderOrMissing": ["no flags, no illustration, no imagery of any kind for a language-choice screen"], "cite": "LanguageSettingsScreen.kt:1-66"},
+      "motion": {"animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None. Selection change swaps a container colour with no crossfade or animateColorAsState (LanguagePickerCard.kt:44-50). No motion tokens used."},
+      "density": "Very sparse — 24dp padding, 16dp gaps, four elements total; the Save button floats mid-screen with a large empty region beneath it because the Column has no weight spacer to bottom-anchor the CTA.",
+      "observations": [
+        {"severity": "high", "claim": "The eyebrow badge text \"Settings\" is a hardcoded English literal in a screen whose entire purpose is choosing Hindi — it remains English after the user switches locale.", "evidence": "LanguageSettingsScreen.kt:49", "confidence": "observed"},
+        {"severity": "high", "claim": "The screen title uses headlineSmall, an unmapped M3 slot, so it renders in Roboto rather than Geist Sans / Noto Devanagari — a visible typeface mismatch against every other screen title in the app.", "evidence": "LanguageSettingsScreen.kt:52", "confidence": "observed"},
+        {"severity": "high", "claim": "There is no back button and no top bar; a user who enters from Settings can only leave with the system back gesture.", "evidence": "LanguageSettingsScreen.kt:44-64", "confidence": "observed"},
+        {"severity": "medium", "claim": "The picker briefly shows 'English' selected for Hindi users because selectedTag is seeded to 'en' before the async read resolves.", "evidence": "LanguageSettingsViewModel.kt:22 with LanguageSettingsViewModel.kt:27-31", "confidence": "observed"},
+        {"severity": "medium", "claim": "Save has no pending or success state — it fires, the screen pops, and a persistence failure is invisible.", "evidence": "LanguageSettingsViewModel.kt:37-42", "confidence": "observed"},
+        {"severity": "medium", "claim": "The primary CTA sits directly under the picker rather than bottom-anchored, leaving a large dead region and an unresolved visual hierarchy.", "evidence": "LanguageSettingsScreen.kt:59-63", "confidence": "observed"},
+        {"severity": "low", "claim": "The shared LanguagePickerCard uses titleMedium (unmapped → Roboto) for the native language names, so 'हिन्दी' renders in a fallback face on the very screen that sells Hindi support.", "evidence": "design-system/src/main/kotlin/com/homeservices/designsystem/locale/LanguagePickerCard.kt:67", "confidence": "observed"},
+        {"severity": "low", "claim": "Selection is signalled only by a container-colour swap; there is no checkmark, no border weight change, and no motion.", "evidence": "design-system/src/main/kotlin/com/homeservices/designsystem/locale/LanguagePickerCard.kt:44-50", "confidence": "observed"}
+      ]
+    },
+    {
+      "id": "customer.privacy-and-data-DEAD",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/settings/PrivacyAndDataScreen.kt",
+      "loc": 147,
+      "purpose": "Intended Privacy & data hub with 'Download my data' and a flag-gated 'Delete account' row. DEAD CODE — see entryPoints.",
+      "entryPoints": "NONE. A repo-wide grep for 'PrivacyAndDataScreen' across customer-app finds only its own declaration (PrivacyAndDataScreen.kt:52) and its Paparazzi test (customer-app/app/src/test/kotlin/com/homeservices/customer/ui/settings/PrivacyAndDataScreenPaparazziTest.kt:38 and :56). SettingsGraph.kt:21 imports and SettingsGraph.kt:56 renders PrivacyDataScreen instead. CONFIRMED DEAD CODE — the composable is unreachable at runtime.",
+      "composition": [
+        {"block": "Surface on background, Column with 20dp padding and 18dp spacing", "cite": "PrivacyAndDataScreen.kt:63-71"},
+        {"block": "Top bar: 44dp IconButton back arrow + 8dp spacer + HsScreenTitle 'Privacy & data'", "cite": "PrivacyAndDataScreen.kt:73-85"},
+        {"block": "'Download my data' PrivacyListItem — 72dp bordered card, 44dp surfaceVariant icon chip with CloudDownload, titleMedium semibold label, trailing chevron", "cite": "PrivacyAndDataScreen.kt:88-92"},
+        {"block": "'Delete account' PrivacyListItem, rendered only when onDeleteAccountClick != null", "cite": "PrivacyAndDataScreen.kt:97-103"},
+        {"block": "Remaining viewport empty", "cite": "PrivacyAndDataScreen.kt:64-104"}
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": null, "quality": "Stateless composable with no ViewModel."},
+        "empty": {"present": false, "evidence": null, "quality": "When onDeleteAccountClick is null the screen degrades to a single row with no explanatory copy — an implicit empty state that is never designed."},
+        "error": {"present": false, "evidence": null, "quality": "None."},
+        "success": {"present": false, "evidence": null, "quality": "N/A."},
+        "offline": {"present": false, "evidence": null, "quality": "None."},
+        "permissionDenied": {"present": false, "evidence": null, "quality": "N/A."}
+      },
+      "skeletonOrSpinner": "none — no loading affordance (verified PrivacyAndDataScreen.kt:1-147).",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          {"value": "20.dp", "line": 69, "context": "screen padding, off scale"},
+          {"value": "18.dp", "line": 70, "context": "item spacing, off scale"},
+          {"value": "44.dp", "line": 74, "context": "back IconButton, under 48dp"},
+          {"value": "8.dp", "line": 81, "context": "spacer"},
+          {"value": "1.dp", "line": 117, "context": "border stroke"},
+          {"value": "72.dp", "line": 121, "context": "fixed row height, off scale"},
+          {"value": "16.dp", "line": 125, "context": "row horizontal padding"},
+          {"value": "44.dp", "line": 129, "context": "icon chip, off scale"},
+          {"value": "14.dp", "line": 133, "context": "spacer, off scale"}
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [
+          {"slot": "titleMedium", "line": 136}
+        ],
+        "offScaleRadius": [
+          {"value": "20.dp", "line": 115, "context": "card radius — equals radius.xl, on scale"},
+          {"value": "14.dp", "line": 128, "context": "icon chip radius, off scale"}
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "HIGH (if it were reachable). Fixed 72dp row height (PrivacyAndDataScreen.kt:121) with an uncapped titleMedium label; the Hindi 'मेरा डेटा डाउनलोड करें' (values-hi/strings.xml:380) would wrap and clip.",
+        "currencyFormatting": "Not applicable."
+      },
+      "a11y": {
+        "contentDescriptions": {"present": false, "cite": "PrivacyAndDataScreen.kt:77 (back arrow), :130 (row glyph), :142 (chevron) — all null"},
+        "touchTargetRisks": [
+          {"line": 74, "size": "44.dp", "note": "back IconButton under 48dp"}
+        ],
+        "contrastRisks": [
+          {"line": 143, "note": "chevron in onSurfaceVariant #5F6C66 — decorative, low impact (inferred)"}
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "HsScreenTitle at PrivacyAndDataScreen.kt:82 is the only heading."
+      },
+      "imagery": {"usesImages": false, "sources": [], "placeholderOrMissing": ["icon-only"], "cite": "PrivacyAndDataScreen.kt:21-22"},
+      "motion": {"animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None — no animation APIs in the file."},
+      "density": "Same 20/18dp rhythm as SettingsScreen but with shorter 72dp rows; visually a third variant of the same list pattern (ProfileScreen 12dp cards, Settings 88dp/20dp cards, this 72dp/20dp cards).",
+      "observations": [
+        {"severity": "high", "claim": "PrivacyAndDataScreen is dead code — it is referenced only by its own Paparazzi test and never by the nav graph, while SettingsGraph renders the near-identical PrivacyDataScreen instead.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/SettingsGraph.kt:56", "confidence": "observed"},
+        {"severity": "high", "claim": "The file's own KDoc admits the duplication ('Whichever of E15-S01 or E15-S02 merges first wins the scaffold') and the merge conflict was never resolved — both files shipped.", "evidence": "PrivacyAndDataScreen.kt:48-49", "confidence": "observed"},
+        {"severity": "medium", "claim": "Paparazzi CI still renders and snapshot-guards a screen no user can reach, so review effort and golden churn are spent on dead UI.", "evidence": "customer-app/app/src/test/kotlin/com/homeservices/customer/ui/settings/PrivacyAndDataScreenPaparazziTest.kt:38", "confidence": "observed"},
+        {"severity": "medium", "claim": "Row height (72dp) and icon chip (44dp) differ from the live PrivacyDataScreen's (80dp / 48dp) for the same visual component, so the two copies have already drifted.", "evidence": "PrivacyAndDataScreen.kt:121 and :129 vs PrivacyDataScreen.kt:153 and :161", "confidence": "observed"},
+        {"severity": "low", "claim": "Uses titleMedium (unmapped → Roboto) for row labels.", "evidence": "PrivacyAndDataScreen.kt:136", "confidence": "observed"}
+      ]
+    },
+    {
+      "id": "customer.privacy-data",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/settings/PrivacyDataScreen.kt",
+      "loc": 179,
+      "purpose": "The LIVE Privacy & data hub — routes to data export, consent management, and account deletion, each behind its own gate.",
+      "entryPoints": "Route LocaleRoutes.PRIVACY_DATA registered at SettingsGraph.kt:55-65; reached from SettingsScreen (SettingsGraph.kt:45) and from the Profile tab 'Privacy and data' row (MainGraph.kt:124).",
+      "composition": [
+        {"block": "Surface on background, Column with 20dp padding and 18dp spacing", "cite": "PrivacyDataScreen.kt:75-83"},
+        {"block": "Top bar: 44dp IconButton back arrow + 8dp spacer + HsScreenTitle 'Privacy & data'", "cite": "PrivacyDataScreen.kt:85-97"},
+        {"block": "'Download my data' row — CONDITIONAL on onDownloadData != null; SettingsGraph.kt:60 passes null, so this row is NEVER rendered in the shipped app", "cite": "PrivacyDataScreen.kt:100-108"},
+        {"block": "'Manage privacy consent' row — 80dp bordered card, 48dp icon chip filled with the hardcoded ShieldBlue #E8EDF5 and ManageAccounts glyph tinted #1A4B8C, titleMedium bold label, chevron. This is the only row visible in the default build", "cite": "PrivacyDataScreen.kt:111-119"},
+        {"block": "'Delete account' row — CONDITIONAL on showDeleteAccount, which is featureFlags.dpdpSelfServiceEnabled() and defaults to false, so also never rendered by default", "cite": "PrivacyDataScreen.kt:122-131"},
+        {"block": "Everything below the single visible row is empty", "cite": "PrivacyDataScreen.kt:76-132"}
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": null, "quality": "Stateless composable, no ViewModel."},
+        "empty": {"present": false, "evidence": null, "quality": "MAJOR GAP: with both gates closed the screen renders a title plus one row and roughly 85% blank space. There is no explanatory copy, no illustration, and no designed empty/degraded state."},
+        "error": {"present": false, "evidence": null, "quality": "None."},
+        "success": {"present": false, "evidence": null, "quality": "N/A."},
+        "offline": {"present": false, "evidence": null, "quality": "None."},
+        "permissionDenied": {"present": false, "evidence": null, "quality": "N/A."}
+      },
+      "skeletonOrSpinner": "none (verified PrivacyDataScreen.kt:1-179).",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          {"value": "20.dp", "line": 81, "context": "screen padding, off scale"},
+          {"value": "18.dp", "line": 82, "context": "item spacing, off scale"},
+          {"value": "44.dp", "line": 86, "context": "back IconButton, under 48dp"},
+          {"value": "8.dp", "line": 93, "context": "spacer"},
+          {"value": "1.dp", "line": 149, "context": "border stroke"},
+          {"value": "80.dp", "line": 153, "context": "fixed row height, off scale"},
+          {"value": "16.dp", "line": 157, "context": "row horizontal padding"},
+          {"value": "48.dp", "line": 161, "context": "icon chip size"},
+          {"value": "14.dp", "line": 165, "context": "spacer, off scale"}
+        ],
+        "hardcodedColors": [
+          {"value": "Color(0xFFE8EDF5)", "line": 40, "context": "ShieldBlue icon-chip background for the Manage-consent row — a blue not present in the light or dark palette, and a fixed light value that will glow in dark theme"},
+          {"value": "Color(0xFF1A4B8C)", "line": 41, "context": "ShieldBlueTint icon colour — same problem"}
+        ],
+        "unmappedTypographySlots": [
+          {"slot": "titleMedium", "line": 168}
+        ],
+        "offScaleRadius": [
+          {"value": "20.dp", "line": 147, "context": "card radius — radius.xl, on scale"},
+          {"value": "14.dp", "line": 160, "context": "icon chip radius, off scale"}
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "HIGH. Fixed 80dp row height (PrivacyDataScreen.kt:153) with an uncapped titleMedium Bold label (PrivacyDataScreen.kt:166-171). The Hindi consent label 'गोपनीयता सहमति प्रबंधित करें' (values-hi/strings.xml:381) is materially longer than 'Manage privacy consent' and will wrap to two lines inside a fixed-height row that also contains a 48dp icon and a chevron — clipping is likely on narrow devices.",
+        "currencyFormatting": "Not applicable."
+      },
+      "a11y": {
+        "contentDescriptions": {"present": false, "cite": "PrivacyDataScreen.kt:89 (back arrow), :162 (row glyph), :174 (chevron) — all null"},
+        "touchTargetRisks": [
+          {"line": 86, "size": "44.dp", "note": "back IconButton under 48dp"}
+        ],
+        "contrastRisks": [
+          {"line": 114, "note": "ShieldBlue #E8EDF5 chip is a fixed light fill; in dark theme (surface #0D1D18) it becomes a bright near-white block, and the #1A4B8C tint on it is fine in light but the whole chip is off-brand (inferred for dark)"},
+          {"line": 126, "note": "the delete row label uses colorScheme.error on a plain surface card — no destructive container fill, so the row's severity is signalled by text colour alone"}
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "HsScreenTitle at PrivacyDataScreen.kt:94 is the only heading; rows are clickable Surfaces with no Role semantics (PrivacyDataScreen.kt:154)."
+      },
+      "imagery": {"usesImages": false, "sources": [], "placeholderOrMissing": ["icon-only; no illustration on a screen that is nearly empty in the default configuration"], "cite": "PrivacyDataScreen.kt:21-23"},
+      "motion": {"animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None — rows appear/disappear on flag change with no AnimatedVisibility."},
+      "density": "Effectively one card floating under a title. In the default build this is the emptiest screen in the cluster.",
+      "observations": [
+        {"severity": "high", "claim": "In the shipped default configuration this screen renders exactly ONE row: the download row is hidden because SettingsGraph passes onDownloadData = null, and the delete row is hidden because dpdpSelfServiceEnabled() returns false by default.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/SettingsGraph.kt:60 and customer-app/app/src/main/kotlin/com/homeservices/customer/domain/flags/GrowthBookFeatureFlags.kt:72", "confidence": "observed"},
+        {"severity": "high", "claim": "A one-row screen with a full title bar and ~85% blank viewport has no designed empty/degraded state — no explanatory copy about what data rights exist, no illustration, no fallback.", "evidence": "PrivacyDataScreen.kt:76-132", "confidence": "observed"},
+        {"severity": "high", "claim": "ShieldBlue #E8EDF5 / #1A4B8C are hardcoded literals outside the entire palette (which is green-and-gold), and are fixed light values that break in dark theme.", "evidence": "PrivacyDataScreen.kt:40-41", "confidence": "observed"},
+        {"severity": "medium", "claim": "This screen duplicates PrivacyAndDataScreen with drifted metrics (80dp row / 48dp chip vs 72dp / 44dp) — two implementations of one component in the same package.", "evidence": "PrivacyDataScreen.kt:153 vs PrivacyAndDataScreen.kt:121", "confidence": "observed"},
+        {"severity": "medium", "claim": "LocaleRoutes declares two constants with the identical string value 'privacy_data', a latent nav-collision hazard.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/AppNavigation.kt:44-45", "confidence": "observed"},
+        {"severity": "medium", "claim": "Three visually different icon-chip treatments coexist in one 3-row list: surfaceVariant/primary, hardcoded blue, and errorContainer/error.", "evidence": "PrivacyDataScreen.kt:103-104, :114, :125-126", "confidence": "observed"},
+        {"severity": "low", "claim": "Row labels use titleMedium (unmapped → Roboto fallback).", "evidence": "PrivacyDataScreen.kt:168", "confidence": "observed"}
+      ]
+    },
+    {
+      "id": "customer.data-export",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/dataexport/DataExportScreen.kt",
+      "loc": 324,
+      "purpose": "DPDP data-portability screen: fetches the customer's full account JSON and writes it to a user-chosen file via the Storage Access Framework.",
+      "entryPoints": "NONE AT RUNTIME. The route constant LocaleRoutes.DATA_EXPORT = \"data_export\" is declared at customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/AppNavigation.kt:45 but a repo-wide grep for DATA_EXPORT across customer-app/app/src finds only that declaration — no composable() registers it, and SettingsGraph.kt:60 passes onDownloadData = null. The screen is unreachable.",
+      "composition": [
+        {"block": "Scaffold with background container colour and a SnackbarHost", "cite": "DataExportScreen.kt:110-113"},
+        {"block": "Column, 20dp padding, 20dp spacing", "cite": "DataExportScreen.kt:137-144"},
+        {"block": "Top bar: 44dp IconButton back arrow (only when onBack != null) + 8dp spacer + HsScreenTitle 'Download my data'", "cite": "DataExportScreen.kt:156-170"},
+        {"block": "Hero card: 20dp-radius bordered surface, Row with 52dp surfaceVariant CloudDownload chip + titleLarge bold title (the SAME string as the screen title, repeated), then a bodyMedium description paragraph", "cite": "DataExportScreen.kt:176-211"},
+        {"block": "Privacy note: HsSectionCard with a 20dp Lock icon and bodySmall reassurance copy", "cite": "DataExportScreen.kt:214-234"},
+        {"block": "Spacer(weight=1f) pushing everything below to the bottom of the viewport", "cite": "DataExportScreen.kt:146"},
+        {"block": "State area — Idle: full-width HsPrimaryButton 'Download my data' (the string a THIRD time); Loading/Ready/Saved: bare centred CircularProgressIndicator + caption; Error: pink panel + 'Try again' HsSecondaryButton", "cite": "DataExportScreen.kt:243-273"},
+        {"block": "16dp bottom spacer", "cite": "DataExportScreen.kt:148"}
+      ],
+      "states": {
+        "loading": {"present": true, "evidence": "DataExportScreen.kt:276-289", "quality": "A bare centred CircularProgressIndicator with a caption — no skeleton, no progress percentage, no HsSkeletonBlock. The same indicator is reused for three distinct states (Loading, Ready, Saved) at DataExportScreen.kt:253, :259, :266, so the user cannot distinguish 'fetching' from 'opening file picker' from 'saved'."},
+        "empty": {"present": false, "evidence": null, "quality": "No empty state — not strictly applicable, but there is also no 'you have no data yet' path."},
+        "error": {"present": true, "evidence": "DataExportScreen.kt:292-324", "quality": "A pink panel with a fixed generic message and a retry button. The panel ALWAYS shows R.string.data_export_error_unknown (DataExportScreen.kt:311) and discards state.message entirely, so network vs auth vs storage failures are indistinguishable and untriageable."},
+        "success": {"present": true, "evidence": "DataExportScreen.kt:95-100", "quality": "Snackbar only, then immediate reset to Idle — no persistent confirmation, no 'open file' action, no file name shown."},
+        "offline": {"present": false, "evidence": null, "quality": "Collapsed into the generic error panel; no offline-specific copy or affordance."},
+        "permissionDenied": {"present": false, "evidence": null, "quality": "The SAF cancel path resets to Idle silently (DataExportScreen.kt:86-89) with no message; a null output stream from a revoked provider becomes the same generic error (DataExportViewModel.kt:131)."}
+      },
+      "skeletonOrSpinner": "Bare centred CircularProgressIndicator at DataExportScreen.kt:282 — no HsSkeletonBlock anywhere in the file.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          {"value": "20.dp", "line": 142, "context": "screen padding, off scale"},
+          {"value": "20.dp", "line": 143, "context": "vertical spacing"},
+          {"value": "16.dp", "line": 148, "context": "bottom spacer"},
+          {"value": "44.dp", "line": 158, "context": "back IconButton, under 48dp"},
+          {"value": "8.dp", "line": 165, "context": "spacer"},
+          {"value": "20.dp", "line": 183, "context": "hero card inner padding"},
+          {"value": "52.dp", "line": 186, "context": "hero icon chip, off scale"},
+          {"value": "14.dp", "line": 194, "context": "spacer, off scale"},
+          {"value": "16.dp", "line": 217, "context": "privacy note padding"},
+          {"value": "20.dp", "line": 225, "context": "lock icon size, off scale"},
+          {"value": "12.dp", "line": 280, "context": "spinner column spacing"},
+          {"value": "16.dp", "line": 301, "context": "error panel padding"},
+          {"value": "20.dp", "line": 308, "context": "error icon size, off scale"},
+          {"value": "12.dp", "line": 318, "context": "spacer before retry"}
+        ],
+        "hardcodedColors": [
+          {"value": "Color(0xFFB00020)", "line": 56, "context": "ErrorRed — the legacy Material-1 error red, a THIRD distinct red in this cluster; used for the error icon and error text"},
+          {"value": "0xFFFFF0F0", "line": 58, "context": "ERROR_SURFACE_COLOR — fixed light pink error panel fill, applied at DataExportScreen.kt:295 with no dark-theme variant"},
+          {"value": "0xFFFFCDD2", "line": 59, "context": "ERROR_BORDER_COLOR — fixed light pink border, applied at DataExportScreen.kt:296"}
+        ],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": [
+          {"value": "20.dp", "line": 178, "context": "hero card radius — radius.xl, on scale"},
+          {"value": "14.dp", "line": 185, "context": "icon chip radius, off scale"},
+          {"value": "16.dp", "line": 294, "context": "error panel radius, off scale"}
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          {"text": "\"yyyyMMdd-HHmmss\" with Locale.US applied to the generated filename", "line": 105}
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "CRITICAL. All nine data_export_* strings exist in customer-app/app/src/main/res/values/strings.xml:382-390 but NONE of them exist in values-hi/strings.xml — a set-difference of the two files' string names returns exactly data_export_button, data_export_description, data_export_error_unknown, data_export_filename_prefix, data_export_loading, data_export_privacy_note, data_export_retry, data_export_success_toast, data_export_title. A Hindi user would see this entire screen in English. Layout-wise the screen is scroll-free with no fixed-height rows, so wrapping is safe once translated.",
+        "currencyFormatting": "Not applicable — no money on this screen."
+      },
+      "a11y": {
+        "contentDescriptions": {"present": false, "cite": "DataExportScreen.kt:161 (back arrow), :189 (hero glyph), :223 (lock), :306 (error icon) — all null"},
+        "touchTargetRisks": [
+          {"line": 158, "size": "44.dp", "note": "back IconButton under 48dp"}
+        ],
+        "contrastRisks": [
+          {"line": 313, "note": "ErrorRed #B00020 on ERROR_SURFACE_COLOR #FFF0F0 passes in light theme, but both are fixed values — in dark theme this becomes a bright pink block on a near-black background, a jarring luminance spike (inferred)"},
+          {"line": 230, "note": "privacy-note copy is bodySmall in onSurfaceVariant #5F6C66 — the smallest text on the screen carrying the trust message, at ~4.9:1 (inferred)"}
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "HsScreenTitle at DataExportScreen.kt:167 gives one heading; the hero card repeats the same title text as a non-heading Text at DataExportScreen.kt:196, so a screen reader hears the title twice in a row."
+      },
+      "imagery": {"usesImages": false, "sources": [], "placeholderOrMissing": ["a data-export screen with a large weighted empty middle region and no illustration or graphic"], "cite": "DataExportScreen.kt:146"},
+      "motion": {"animationsUsed": [{"what": "CircularProgressIndicator intrinsic rotation", "line": 282}], "usesMotionTokens": false, "transitionsOnNav": "No AnimatedContent or Crossfade between Idle → Loading → Error; the bottom area swaps instantly (DataExportScreen.kt:243-273), so the primary button vanishes and a spinner appears with no continuity."},
+      "density": "Top-heavy then hollow: hero card + privacy note occupy the top third, Spacer(weight=1f) at line 146 creates a large void, and the CTA sits at the bottom. The void is unfilled by any illustration or content.",
+      "observations": [
+        {"severity": "high", "claim": "The entire screen is unreachable — no composable() registers LocaleRoutes.DATA_EXPORT and the only entry point passes onDownloadData = null.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/SettingsGraph.kt:60", "confidence": "observed"},
+        {"severity": "high", "claim": "None of the nine data_export_* strings have Hindi translations, so the screen is English-only in a bilingual app (en file has them at values/strings.xml:382-390; values-hi/strings.xml contains no data_export_* key).", "evidence": "customer-app/app/src/main/res/values/strings.xml:382-390", "confidence": "observed"},
+        {"severity": "high", "claim": "Loading is a bare centred CircularProgressIndicator, and the identical indicator is reused for Loading, Ready and Saved so three semantically different states are visually identical.", "evidence": "DataExportScreen.kt:253, DataExportScreen.kt:259, DataExportScreen.kt:266", "confidence": "observed"},
+        {"severity": "high", "claim": "Error rendering discards DataExportUiState.Error.message and always prints the same generic sentence, collapsing network, auth and storage failures into one indistinguishable panel.", "evidence": "DataExportScreen.kt:311 with DataExportViewModel.kt:69", "confidence": "observed"},
+        {"severity": "medium", "claim": "The error panel colours are three fixed light hex literals with no dark-theme variant, so the panel stays pink-on-pink over a near-black background.", "evidence": "DataExportScreen.kt:56-59 used at DataExportScreen.kt:295-296", "confidence": "observed"},
+        {"severity": "medium", "claim": "The string 'Download my data' appears three times on one screen — as the screen title, the hero card title, and the CTA label.", "evidence": "DataExportScreen.kt:168, DataExportScreen.kt:196, DataExportScreen.kt:246", "confidence": "observed"},
+        {"severity": "medium", "claim": "SAF cancel silently resets to Idle with no message, so a user who backs out of the file picker sees the screen revert with no explanation.", "evidence": "DataExportScreen.kt:86-89", "confidence": "observed"},
+        {"severity": "low", "claim": "The export filename timestamp is formatted with Locale.US, which is correct for filesystem safety but means the file name is never localized while the prefix string is a translatable resource — an inconsistency.", "evidence": "DataExportScreen.kt:105", "confidence": "observed"}
+      ]
+    },
+    {
+      "id": "customer.delete-account-entry",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/deleteaccount/DeleteAccountScreen.kt",
+      "loc": 248,
+      "purpose": "Step 1 of 3 in the DPDP erasure flow — warns the customer what deletion means and lists what will be destroyed before letting them continue.",
+      "entryPoints": "Route LocaleRoutes.DELETE_ACCOUNT registered at SettingsGraph.kt:94; reached only from PrivacyDataScreen's delete row (SettingsGraph.kt:61), which is itself gated by featureFlags.dpdpSelfServiceEnabled() (SettingsGraph.kt:62) — false by default (GrowthBookFeatureFlags.kt:72), so the whole flow is dark in the shipped build.",
+      "composition": [
+        {"block": "Surface on background, verticalScroll Column with 20dp padding and 20dp spacing", "cite": "DeleteAccountScreen.kt:97-106"},
+        {"block": "Top bar: 44dp back IconButton + 8dp spacer + HsScreenTitle 'Delete account'", "cite": "DeleteAccountScreen.kt:107, DeleteAccountScreen.kt:121-134"},
+        {"block": "Warning card: fixed light-pink ErrorRedSurface fill, 30%-alpha red border, 20dp radius, 24dp Warning glyph + bodyMedium red warning copy", "cite": "DeleteAccountScreen.kt:109, DeleteAccountScreen.kt:138-163"},
+        {"block": "'What will be deleted' card: neutral bordered surface, titleMedium bold caption, then four DeletionItem rows (Bookings history / Saved addresses / Payment methods / App preferences) separated by full-width HorizontalDividers", "cite": "DeleteAccountScreen.kt:111, DeleteAccountScreen.kt:166-204"},
+        {"block": "Spacer(weight=1f) — inside a verticalScroll Column, so it has no effect and the CTA is NOT bottom-anchored", "cite": "DeleteAccountScreen.kt:113"},
+        {"block": "Continue CTA: 56dp full-width Button, 16dp radius, hardcoded ErrorRed container with Color.White content, DeleteForever icon + titleMedium bold label", "cite": "DeleteAccountScreen.kt:115, DeleteAccountScreen.kt:207-230"}
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": null, "quality": "No loading state exists; the screen always starts Idle (documented at DeleteAccountScreen.kt:57-58) and does no network work."},
+        "empty": {"present": false, "evidence": null, "quality": "N/A — content is static."},
+        "error": {"present": false, "evidence": null, "quality": "MAJOR GAP: the ViewModel can emit DeleteAccountUiState.Error (DeleteAccountUiState.kt:83-86) but this screen's LaunchedEffect falls through to 'else -> Unit', so any Error state that lands here renders nothing at all."},
+        "success": {"present": false, "evidence": null, "quality": "Success is a navigation side-effect only (DeleteAccountScreen.kt:86-95)."},
+        "offline": {"present": false, "evidence": null, "quality": "None."},
+        "permissionDenied": {"present": false, "evidence": null, "quality": "N/A."}
+      },
+      "skeletonOrSpinner": "none — no CircularProgressIndicator or skeleton in the file (verified DeleteAccountScreen.kt:1-248).",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          {"value": "20.dp", "line": 104, "context": "screen padding, off scale"},
+          {"value": "20.dp", "line": 105, "context": "vertical spacing"},
+          {"value": "44.dp", "line": 123, "context": "back IconButton, under 48dp"},
+          {"value": "8.dp", "line": 130, "context": "spacer"},
+          {"value": "16.dp", "line": 146, "context": "warning card padding"},
+          {"value": "12.dp", "line": 148, "context": "warning row spacing"},
+          {"value": "24.dp", "line": 154, "context": "warning icon size"},
+          {"value": "16.dp", "line": 173, "context": "deleted-items card padding"},
+          {"value": "12.dp", "line": 182, "context": "spacer under caption"},
+          {"value": "8.dp", "line": 187, "context": "divider vertical padding"},
+          {"value": "56.dp", "line": 210, "context": "CTA height, off scale"},
+          {"value": "8.dp", "line": 221, "context": "icon-to-label spacer"},
+          {"value": "20.dp", "line": 241, "context": "DeletionItem icon size, off scale"}
+        ],
+        "hardcodedColors": [
+          {"value": "Color(0xFFB3261E)", "line": 50, "context": "ErrorRed — a fourth distinct red in this cluster; used for the warning border/icon/text and as the CTA container"},
+          {"value": "Color(0xFFFFF0EE)", "line": 51, "context": "ErrorRedSurface — fixed light pink warning-card fill, applied at DeleteAccountScreen.kt:141 with no dark-theme variant"},
+          {"value": "Color.White", "line": 217, "context": "CTA content colour, deliberately hardcoded per the inline comment at DeleteAccountScreen.kt:215-216 to work around the non-themed ErrorRed container"}
+        ],
+        "unmappedTypographySlots": [
+          {"slot": "titleMedium", "line": 177},
+          {"slot": "titleMedium", "line": 225}
+        ],
+        "offScaleRadius": [
+          {"value": "20.dp", "line": 140, "context": "warning card radius — radius.xl, on scale"},
+          {"value": "20.dp", "line": 168, "context": "items card radius — on scale"},
+          {"value": "16.dp", "line": 211, "context": "CTA radius, off scale (between lg 12 and xl 20)"}
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "MEDIUM. The 56dp fixed-height CTA (DeleteAccountScreen.kt:210) contains an icon + 8dp spacer + titleMedium bold label; the Hindi CTA 'हटाने के लिए आगे बढ़ें' (values-hi/strings.xml:396) is longer than 'Continue to delete' and, being a single-line Button row, will either shrink-fit or ellipsize rather than wrap. The warning paragraph and card content are free-flowing so they are safe.",
+        "currencyFormatting": "Not applicable — no money on this screen."
+      },
+      "a11y": {
+        "contentDescriptions": {"present": false, "cite": "DeleteAccountScreen.kt:126 (back arrow), :152 (warning glyph), :220 (CTA icon), :241 (item glyphs) — all null"},
+        "touchTargetRisks": [
+          {"line": 123, "size": "44.dp", "note": "back IconButton under 48dp"},
+          {"line": 210, "size": "56.dp", "note": "CTA height is fine"}
+        ],
+        "contrastRisks": [
+          {"line": 159, "note": "ErrorRed #B3261E on ErrorRedSurface #FFF0EE is ~6:1 in light theme and passes, but both are fixed literals so in dark theme the entire warning card stays light pink — a blinding block on the #071511 dark background (inferred)"},
+          {"line": 241, "note": "DeletionItem glyphs are onSurfaceVariant #5F6C66; the labels next to them are onSurface, so icon and label have visibly different weights"}
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "HsScreenTitle at DeleteAccountScreen.kt:131 is the only heading; the 'What will be deleted' caption at DeleteAccountScreen.kt:174-181 is a plain Text with no heading semantics despite being a section header."
+      },
+      "imagery": {"usesImages": false, "sources": [], "placeholderOrMissing": ["no illustration on the most emotionally loaded screen in the app"], "cite": "DeleteAccountScreen.kt:20-25"},
+      "motion": {"animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None. Navigation to the confirm screen is a LaunchedEffect side-effect on state change (DeleteAccountScreen.kt:86-95) with no shared-element or directional transition."},
+      "density": "Moderate but structurally broken: Spacer(Modifier.weight(1f)) at line 113 sits inside a verticalScroll Column (line 103) where weight is a no-op, so the intended bottom-anchored CTA actually floats directly under the items card, leaving whatever space remains blank at the bottom.",
+      "observations": [
+        {"severity": "high", "claim": "Spacer(Modifier.weight(1f)) is placed inside a Column with verticalScroll, where weight cannot resolve against an infinite height constraint — the CTA is not bottom-anchored as intended and the layout leaves an unstyled gap.", "evidence": "DeleteAccountScreen.kt:113 with DeleteAccountScreen.kt:103", "confidence": "inferred"},
+        {"severity": "high", "claim": "ErrorRedSurface #FFF0EE and ErrorRed #B3261E are fixed light-mode literals used for the full-bleed warning card, so the card does not invert in dark theme.", "evidence": "DeleteAccountScreen.kt:50-51 used at DeleteAccountScreen.kt:141-142", "confidence": "observed"},
+        {"severity": "high", "claim": "This cluster now contains four different hardcoded reds — #DC2626 (profile), #B3261E (delete flow), #B00020 (data export), plus the theme error #D73C3C — with no single destructive token.", "evidence": "DeleteAccountScreen.kt:50 vs ProfileScreen.kt:59 vs DataExportScreen.kt:56", "confidence": "observed"},
+        {"severity": "medium", "claim": "The ViewModel's Error state is unhandled on this screen — the LaunchedEffect when-block falls through to 'else -> Unit', so an error arriving here is silently swallowed with no snackbar and no UI change.", "evidence": "DeleteAccountScreen.kt:93", "confidence": "observed"},
+        {"severity": "medium", "claim": "There is no step indicator anywhere in the 3-screen flow — the user has no signal that 'Continue to delete' leads to two further screens rather than executing the deletion.", "evidence": "DeleteAccountScreen.kt:107-115", "confidence": "observed"},
+        {"severity": "medium", "claim": "Both section headings use titleMedium, an unmapped M3 slot, so the card caption and the CTA label render in Roboto while HsScreenTitle above them renders in Geist/Noto.", "evidence": "DeleteAccountScreen.kt:177 and DeleteAccountScreen.kt:225", "confidence": "observed"},
+        {"severity": "low", "claim": "The four deletion items are separated by full-width dividers with 8dp vertical padding, producing a dense ledger-like list with no icons-to-text weighting and no positive framing of what is retained.", "evidence": "DeleteAccountScreen.kt:183-201", "confidence": "observed"}
+      ]
+    },
+    {
+      "id": "customer.delete-account-confirm",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/deleteaccount/DeleteAccountConfirmScreen.kt",
+      "loc": 357,
+      "purpose": "Step 2 of 3 — double-gate confirmation: the customer must type the exact confirmation phrase and the last 4 digits of their registered phone number before the destructive submit unlocks.",
+      "entryPoints": "Route LocaleRoutes.DELETE_ACCOUNT_CONFIRM registered at SettingsGraph.kt:112; reached from DeleteAccountScreen's Continue CTA via SettingsGraph.kt:99. Shares the parent back-stack entry's DeleteAccountViewModel (SettingsGraph.kt:117-119).",
+      "composition": [
+        {"block": "BackHandler intercepting system back so it routes through the same onBack lambda", "cite": "DeleteAccountConfirmScreen.kt:92"},
+        {"block": "Outer Column (statusBarsPadding) containing a weighted scrollable Column, a submit bar, and a SnackbarHost as siblings", "cite": "DeleteAccountConfirmScreen.kt:113-155"},
+        {"block": "Top bar: 44dp back IconButton + 8dp spacer + HsScreenTitle 'Confirm deletion'", "cite": "DeleteAccountConfirmScreen.kt:128, DeleteAccountConfirmScreen.kt:160-174"},
+        {"block": "Instruction card: fixed light-pink ErrorRedSurface, 20dp radius, 20dp Warning glyph + bodyMedium red instruction copy", "cite": "DeleteAccountConfirmScreen.kt:130, DeleteAccountConfirmScreen.kt:177-202"},
+        {"block": "Phrase field group: labelLarge semibold label, then the expected phrase echoed in quotes in labelMedium bold red, then a full-width OutlinedTextField (14dp radius, red focus border) with an inline mismatch supportingText", "cite": "DeleteAccountConfirmScreen.kt:132, DeleteAccountConfirmScreen.kt:205-255"},
+        {"block": "PIN field group: Lock glyph + labelLarge semibold label, then a NumberPassword OutlinedTextField with isError but NO supportingText", "cite": "DeleteAccountConfirmScreen.kt:138, DeleteAccountConfirmScreen.kt:257-304"},
+        {"block": "Submit bar (outside the scroll region): 56dp full-width ErrorRed Button that swaps to a 22dp white spinner while submitting, then a full-width TextButton 'Cancel' in onSurfaceVariant", "cite": "DeleteAccountConfirmScreen.kt:145, DeleteAccountConfirmScreen.kt:306-357"},
+        {"block": "SnackbarHost placed inline as the LAST child of the outer Column, below the submit bar", "cite": "DeleteAccountConfirmScreen.kt:152-154"}
+      ],
+      "states": {
+        "loading": {"present": true, "evidence": "DeleteAccountConfirmScreen.kt:328-333", "quality": "In-button 22dp CircularProgressIndicator replacing the label — good pattern; fields also disable via enabled = !isSubmitting (DeleteAccountConfirmScreen.kt:252, :301)."},
+        "empty": {"present": false, "evidence": null, "quality": "N/A — form screen."},
+        "error": {"present": true, "evidence": "DeleteAccountConfirmScreen.kt:101-105", "quality": "Two mechanisms: an inline supportingText for phrase mismatch (DeleteAccountConfirmScreen.kt:245-250) and a red snackbar for submit failures. The snackbar text is err.message, which the ViewModel populates with raw exception text — DeleteAccountViewModel.kt:143 does message = err.message ?: \"Unknown error\", so an OkHttp/Retrofit exception string can be shown verbatim to a rural Hindi-speaking customer."},
+        "success": {"present": false, "evidence": null, "quality": "No success state on this screen — a successful submit immediately navigates to cool-off (DeleteAccountConfirmScreen.kt:99)."},
+        "offline": {"present": false, "evidence": null, "quality": "Folded into the raw-message snackbar."},
+        "permissionDenied": {"present": false, "evidence": null, "quality": "Biometric/activity unavailability produces the hardcoded English string 'Authentication context unavailable' (DeleteAccountViewModel.kt:110) surfaced in the snackbar."}
+      },
+      "skeletonOrSpinner": "In-button CircularProgressIndicator at DeleteAccountConfirmScreen.kt:329 with strokeWidth 2.dp — not a bare centred spinner. This is the best loading treatment in the cluster.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          {"value": "20.dp", "line": 125, "context": "scroll column padding, off scale"},
+          {"value": "20.dp", "line": 126, "context": "vertical spacing"},
+          {"value": "44.dp", "line": 162, "context": "back IconButton, under 48dp"},
+          {"value": "8.dp", "line": 169, "context": "spacer"},
+          {"value": "16.dp", "line": 185, "context": "instruction card padding"},
+          {"value": "12.dp", "line": 187, "context": "instruction row spacing"},
+          {"value": "20.dp", "line": 193, "context": "warning icon size, off scale"},
+          {"value": "6.dp", "line": 214, "context": "phrase group spacing, off scale"},
+          {"value": "6.dp", "line": 266, "context": "pin group spacing, off scale"},
+          {"value": "6.dp", "line": 269, "context": "pin label row spacing, off scale"},
+          {"value": "16.dp", "line": 276, "context": "lock icon size"},
+          {"value": "20.dp / 16.dp", "line": 313, "context": "submit bar padding horizontal=20 vertical=16"},
+          {"value": "56.dp", "line": 317, "context": "submit button height, off scale"},
+          {"value": "22.dp", "line": 330, "context": "in-button spinner size, off scale"},
+          {"value": "2.dp", "line": 332, "context": "spinner stroke width"},
+          {"value": "8.dp", "line": 336, "context": "icon-to-label spacer"}
+        ],
+        "hardcodedColors": [
+          {"value": "Color(0xFFB3261E)", "line": 58, "context": "ErrorRed — instruction card border/icon/text, echoed phrase, text-field focus border, submit container, snackbar container"},
+          {"value": "Color(0xFFFFF0EE)", "line": 59, "context": "ErrorRedSurface — fixed light instruction-card fill at DeleteAccountConfirmScreen.kt:180"},
+          {"value": "Color.White", "line": 323, "context": "submit content colour, with disabled variant Color.White.copy(alpha=0.6f) at line 325"}
+        ],
+        "unmappedTypographySlots": [
+          {"slot": "labelMedium", "line": 227},
+          {"slot": "titleMedium", "line": 340}
+        ],
+        "offScaleRadius": [
+          {"value": "20.dp", "line": 179, "context": "instruction card radius — radius.xl, on scale"},
+          {"value": "14.dp", "line": 236, "context": "phrase text-field radius, off scale"},
+          {"value": "14.dp", "line": 290, "context": "pin text-field radius, off scale"},
+          {"value": "16.dp", "line": 318, "context": "submit button radius, off scale"}
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          {"text": "\"\\\"$phraseExpected\\\"\" — straight ASCII double-quotes wrapped around the phrase rather than locale-appropriate quotation marks", "line": 225}
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "HIGH. The confirmation phrase gate requires the user to type an exact string; in Hindi that string is 'मेरा खाता हटाएं' (values-hi/strings.xml:400), which demands a Devanagari IME and exact matra/nukta reproduction — a materially harder gate than typing 'DELETE MY ACCOUNT' in English, and typedPhrase == phraseExpected is a strict equality with no normalization (DeleteAccountUiState.kt:40). The PIN label 'अपने पंजीकृत फोन नंबर के अंतिम 4 अंक' (values-hi/strings.xml:402) is long and sits in a Row next to a 16dp icon with no maxLines, so it will wrap.",
+        "currencyFormatting": "Not applicable — no money on this screen."
+      },
+      "a11y": {
+        "contentDescriptions": {"present": false, "cite": "DeleteAccountConfirmScreen.kt:165 (back arrow), :191 (warning glyph), :273 (lock glyph), :335 (submit icon) — all null"},
+        "touchTargetRisks": [
+          {"line": 162, "size": "44.dp", "note": "back IconButton under 48dp"},
+          {"line": 347, "size": "TextButton default", "note": "the 'Cancel' TextButton has no explicit height; Material3 TextButton min height is 40dp, below the 48dp target"}
+        ],
+        "contrastRisks": [
+          {"line": 230, "note": "the echoed expected phrase is labelMedium (small) in ErrorRed #B3261E on the plain background #FBF7EF — it is the single most important string on the screen rendered at the smallest size"},
+          {"line": 325, "note": "disabled submit label is Color.White at 0.6 alpha on ErrorRed at 0.38 alpha — the compound alpha puts the disabled label far below AA (inferred)"},
+          {"line": 353, "note": "'Cancel' in onSurfaceVariant #5F6C66 — the only escape hatch on a destructive screen is the lowest-contrast element on it"}
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "HsScreenTitle at DeleteAccountConfirmScreen.kt:170 is the only heading. The phrase label (line 215) and PIN label (line 277) are plain Texts adjacent to their fields rather than TextField labels/placeholders, so TalkBack does not associate them with the inputs — both OutlinedTextFields have no label, no placeholder and no contentDescription (DeleteAccountConfirmScreen.kt:232-253, :286-302)."
+      },
+      "imagery": {"usesImages": false, "sources": [], "placeholderOrMissing": ["no imagery"], "cite": "DeleteAccountConfirmScreen.kt:20-24"},
+      "motion": {"animationsUsed": [{"what": "in-button CircularProgressIndicator during submit", "line": 329}], "usesMotionTokens": false, "transitionsOnNav": "No AnimatedVisibility on the mismatch supportingText — it pops in and the whole column jumps because the field grows (DeleteAccountConfirmScreen.kt:245-250)."},
+      "density": "Reasonable in the scroll region (20dp padding, 20dp group gaps, 6dp intra-group gaps) but the submit bar is a separate unpadded-top block (line 313) with no divider or elevation separating it from the scrolling content, so at rest it reads as part of the form rather than a persistent action bar.",
+      "observations": [
+        {"severity": "high", "claim": "Submit-failure snackbars display raw exception text: the ViewModel sets message = err.message ?: \"Unknown error\" and the screen renders it verbatim.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/deleteaccount/DeleteAccountViewModel.kt:142-143 rendered at DeleteAccountConfirmScreen.kt:103", "confidence": "observed"},
+        {"severity": "high", "claim": "The SnackbarHost is an inline sibling in the outer Column below the submit bar rather than a Scaffold snackbarHost or a Box overlay, so showing a snackbar consumes layout height and shifts the submit bar upward instead of floating over it.", "evidence": "DeleteAccountConfirmScreen.kt:152-154", "confidence": "inferred"},
+        {"severity": "high", "claim": "Neither OutlinedTextField has a label, placeholder, or contentDescription — the visible labels are separate sibling Texts, so screen-reader users focusing either field hear an unlabelled edit box.", "evidence": "DeleteAccountConfirmScreen.kt:232-236 and DeleteAccountConfirmScreen.kt:286-290", "confidence": "observed"},
+        {"severity": "medium", "claim": "The PIN field sets isError but supplies no supportingText, so a wrong last-4 turns the border red with zero explanation, unlike the phrase field which does explain.", "evidence": "DeleteAccountConfirmScreen.kt:299 compared with DeleteAccountConfirmScreen.kt:245-250", "confidence": "observed"},
+        {"severity": "medium", "claim": "The single most important instruction — the exact phrase to type — is rendered in labelMedium, an unmapped slot (Roboto) and the smallest text style on the screen.", "evidence": "DeleteAccountConfirmScreen.kt:227", "confidence": "observed"},
+        {"severity": "medium", "claim": "'Authentication context unavailable' is a hardcoded English developer string that can reach the user's snackbar.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/deleteaccount/DeleteAccountViewModel.kt:110", "confidence": "observed"},
+        {"severity": "medium", "claim": "The Hindi confirmation phrase 'मेरा खाता हटाएं' must be typed with exact character equality and no normalization, which is a substantially harder gate than the English path for the app's primary target audience.", "evidence": "customer-app/app/src/main/res/values-hi/strings.xml:400 with DeleteAccountUiState.kt:40", "confidence": "observed"},
+        {"severity": "low", "claim": "The Cancel escape hatch is a low-contrast onSurfaceVariant TextButton under a 40dp min-height, making the safe path the least prominent and hardest to hit control on a destructive screen.", "evidence": "DeleteAccountConfirmScreen.kt:347-354", "confidence": "observed"}
+      ]
+    },
+    {
+      "id": "customer.delete-account-cooloff",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/deleteaccount/DeleteAccountCoolOffScreen.kt",
+      "loc": 349,
+      "purpose": "Step 3 of 3 — shows the countdown to permanent deletion and offers a 'Revoke deletion' escape during the 7-day cool-off window.",
+      "entryPoints": "Route template 'delete_account_cool_off/{requestId}/{scheduledDeletionEpochMs}' registered at SettingsGraph.kt:137-144; navigated to from the entry screen (SettingsGraph.kt:105) and from the confirm screen (SettingsGraph.kt:130), both with popUpTo(DELETE_ACCOUNT){inclusive=true}.",
+      "composition": [
+        {"block": "Surface on background containing a Column AND a SnackbarHost as two sibling children", "cite": "DeleteAccountCoolOffScreen.kt:100-123"},
+        {"block": "Column: 20dp padding, 20dp spacing, no scroll", "cite": "DeleteAccountCoolOffScreen.kt:101-104"},
+        {"block": "Top bar: 44dp back IconButton + 8dp spacer + HsScreenTitle 'Deletion scheduled'", "cite": "DeleteAccountCoolOffScreen.kt:105, DeleteAccountCoolOffScreen.kt:164-178"},
+        {"block": "8dp spacer, then the countdown card: 24dp radius, fixed light-pink ErrorRedSurface fill, 30%-alpha red border, 24dp inner padding, centre-aligned", "cite": "DeleteAccountCoolOffScreen.kt:106-110, DeleteAccountCoolOffScreen.kt:185-195"},
+        {"block": "Inside the card: a 64dp Box containing a 20dp-radius Surface at ErrorRed@12% containing another 64dp Box containing a 36dp HourglassTop glyph (triple-nested, redundant)", "cite": "DeleteAccountCoolOffScreen.kt:224-237"},
+        {"block": "Then either the 'pending, exact date unavailable' titleMedium message or the raw countdownText in titleLarge bold red, then a bodyMedium onSurfaceVariant subtitle", "cite": "DeleteAccountCoolOffScreen.kt:197-218"},
+        {"block": "Revoked banner: surfaceVariant card with CheckCircle + primary-coloured success copy, shown only during the transient Revoked state before navigation", "cite": "DeleteAccountCoolOffScreen.kt:111, DeleteAccountCoolOffScreen.kt:240-263"},
+        {"block": "Spacer(weight=1f), then the actions: 56dp full-width primary Button 'Revoke deletion' (swaps to a 22dp spinner while revoking) and a 48dp full-width OutlinedButton 'Close'", "cite": "DeleteAccountCoolOffScreen.kt:112-118, DeleteAccountCoolOffScreen.kt:266-313"}
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": null, "quality": "No entry loading state — state is rehydrated synchronously from nav args via SavedStateHandle (SettingsGraph.kt:145-147), so there is no spinner, but there is also no handling of a failed rehydration."},
+        "empty": {"present": true, "evidence": "DeleteAccountCoolOffScreen.kt:197-204", "quality": "Partially handled: the ExistingRequestDetected path shows 'Deletion pending — exact date unavailable'. But if formatCountdown returns \"\" (parse failure or already-past date, DeleteAccountCoolOffScreen.kt:325-347) while coolOff != null, the else branch at line 206-211 renders an EMPTY Text — the countdown card shows an hourglass, a blank line, and a subtitle referring to a countdown that isn't there."},
+        "error": {"present": true, "evidence": "DeleteAccountCoolOffScreen.kt:138-141", "quality": "Red snackbar carrying uiState.message, which the ViewModel populates with raw exception text (DeleteAccountViewModel.kt:159-160). Same raw-exception problem as the confirm screen."},
+        "success": {"present": true, "evidence": "DeleteAccountCoolOffScreen.kt:240-263", "quality": "A revoked banner exists but is only shown during the transient Revoked state, immediately followed by onRevoked() navigation (DeleteAccountCoolOffScreen.kt:137) — the user almost certainly never sees it, and the destination (pop back to SETTINGS, SettingsGraph.kt:151) shows no confirmation."},
+        "offline": {"present": false, "evidence": null, "quality": "Folded into the raw-message snackbar."},
+        "permissionDenied": {"present": false, "evidence": null, "quality": "N/A."}
+      },
+      "skeletonOrSpinner": "In-button CircularProgressIndicator at DeleteAccountCoolOffScreen.kt:286 during revoke — no page-level loading affordance.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          {"value": "20.dp", "line": 102, "context": "screen padding, off scale"},
+          {"value": "20.dp", "line": 103, "context": "vertical spacing"},
+          {"value": "8.dp", "line": 106, "context": "spacer under top bar"},
+          {"value": "16.dp", "line": 120, "context": "SnackbarHost padding"},
+          {"value": "44.dp", "line": 166, "context": "back IconButton, under 48dp"},
+          {"value": "8.dp", "line": 173, "context": "spacer"},
+          {"value": "24.dp", "line": 192, "context": "countdown card inner padding"},
+          {"value": "12.dp", "line": 194, "context": "countdown card item spacing"},
+          {"value": "64", "line": 64, "context": "COUNTDOWN_ICON_SIZE constant, applied as .dp at lines 225 and 227"},
+          {"value": "36.dp", "line": 232, "context": "hourglass glyph size, off scale"},
+          {"value": "16.dp", "line": 250, "context": "revoked banner padding"},
+          {"value": "12.dp", "line": 252, "context": "revoked banner row spacing"},
+          {"value": "56.dp", "line": 275, "context": "revoke button height, off scale"},
+          {"value": "22.dp", "line": 287, "context": "in-button spinner size, off scale"},
+          {"value": "2.dp", "line": 289, "context": "spinner stroke width"},
+          {"value": "48.dp", "line": 304, "context": "close button height"}
+        ],
+        "hardcodedColors": [
+          {"value": "Color(0xFFB3261E)", "line": 58, "context": "ErrorRed — countdown card border, hourglass tint and chip fill, countdown text, snackbar container"},
+          {"value": "Color(0xFFFFF0EE)", "line": 59, "context": "ErrorRedSurface — fixed light countdown-card fill at DeleteAccountCoolOffScreen.kt:187, no dark variant"}
+        ],
+        "unmappedTypographySlots": [
+          {"slot": "titleMedium", "line": 201},
+          {"slot": "titleMedium", "line": 295}
+        ],
+        "offScaleRadius": [
+          {"value": "24.dp", "line": 186, "context": "countdown card radius — off scale, and 4dp larger than every other card in the flow which use 20dp"},
+          {"value": "20.dp", "line": 226, "context": "hourglass chip radius"},
+          {"value": "20.dp", "line": 244, "context": "revoked banner radius"},
+          {"value": "16.dp", "line": 276, "context": "revoke button radius, off scale"},
+          {"value": "14.dp", "line": 305, "context": "close button radius, off scale"}
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          {"text": "\"$days day${if (days != 1L) \"s\" else \"\"}\" — English day/plural built in code", "line": 337},
+          {"text": "\", \" separator", "line": 338},
+          {"text": "\"$hours hour${if (hours != 1L) \"s\" else \"\"}\" — English hour/plural built in code", "line": 341}
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "CRITICAL. formatCountdown assembles the countdown entirely in English with English pluralization, so a Hindi user on the most consequential screen in the app sees '6 days, 14 hours' in English. Worse, the translated framing string delete_account_coolOff_countdown_format ('खाता %1$s में हटाया जाएगा', values-hi/strings.xml:407; English at values/strings.xml:411) EXISTS but is never referenced anywhere in the file — the raw fragment is rendered bare at DeleteAccountCoolOffScreen.kt:207, so even English users see '6 days, 14 hours' with no sentence around it.",
+        "currencyFormatting": "Not applicable — no money on this screen."
+      },
+      "a11y": {
+        "contentDescriptions": {"present": false, "cite": "DeleteAccountCoolOffScreen.kt:169 (back arrow), :230 (hourglass), :254 (check glyph) — all null"},
+        "touchTargetRisks": [
+          {"line": 166, "size": "44.dp", "note": "back IconButton under 48dp"},
+          {"line": 304, "size": "48.dp", "note": "Close OutlinedButton exactly at the 48dp minimum"}
+        ],
+        "contrastRisks": [
+          {"line": 209, "note": "countdown text is ErrorRed #B3261E on fixed ErrorRedSurface #FFF0EE — passes in light theme but both are fixed literals, so in dark theme the countdown card remains a bright pink block (inferred)"},
+          {"line": 216, "note": "the explanatory subtitle is bodyMedium in onSurfaceVariant #5F6C66 rendered on the pink ErrorRedSurface card, not on the surface it was designed against — an unvalidated colour pairing"},
+          {"line": 310, "note": "'Close' label in onSurfaceVariant on an OutlinedButton with an outline-coloured border — the lowest-contrast control on the screen"}
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "HsScreenTitle at DeleteAccountCoolOffScreen.kt:174 is the only heading. The countdown value itself has no liveRegion semantics, so its 60-second updates (DeleteAccountCoolOffScreen.kt:151-156) are never announced."
+      },
+      "imagery": {"usesImages": false, "sources": [], "placeholderOrMissing": ["an hourglass icon is the only visual on a screen whose whole job is emotional reassurance"], "cite": "DeleteAccountCoolOffScreen.kt:224-237"},
+      "motion": {"animationsUsed": [{"what": "in-button CircularProgressIndicator during revoke", "line": 286}, {"what": "60-second polling tick that recomputes the countdown string", "line": 151}], "usesMotionTokens": false, "transitionsOnNav": "The countdown text swaps instantly on each tick with no animation; the revoked banner appears with no AnimatedVisibility (DeleteAccountCoolOffScreen.kt:242)."},
+      "density": "Top-loaded then hollow — a large 24dp-padded countdown card, then Spacer(weight=1f) at line 112 opening a wide void, then two stacked buttons at the bottom with no gap control other than the parent's 20dp arrangement.",
+      "observations": [
+        {"severity": "high", "claim": "The countdown string is built in English in Kotlin with English pluralization ('days'/'hours'), so Hindi users see English on the most consequential screen in the app.", "evidence": "DeleteAccountCoolOffScreen.kt:337 and DeleteAccountCoolOffScreen.kt:341", "confidence": "observed"},
+        {"severity": "high", "claim": "The translated framing string delete_account_coolOff_countdown_format exists in both locales but is never used — the bare fragment is rendered with no surrounding sentence.", "evidence": "customer-app/app/src/main/res/values/strings.xml:411 and values-hi/strings.xml:407, never referenced in DeleteAccountCoolOffScreen.kt (rendered raw at DeleteAccountCoolOffScreen.kt:207)", "confidence": "observed"},
+        {"severity": "high", "claim": "formatCountdown returns an empty string on parse failure or a past target date, and the else branch renders that empty string with no fallback, producing a countdown card containing an hourglass and a blank line.", "evidence": "DeleteAccountCoolOffScreen.kt:325-347 with DeleteAccountCoolOffScreen.kt:206-211", "confidence": "observed"},
+        {"severity": "high", "claim": "The SnackbarHost is a second direct child of Surface alongside the Column; Material3 Surface stacks its children in a propagate-min-constraints Box, so the snackbar renders overlapping the top bar rather than at the bottom.", "evidence": "DeleteAccountCoolOffScreen.kt:100-122", "confidence": "inferred"},
+        {"severity": "medium", "claim": "Revoke-failure snackbars carry raw exception text from the ViewModel.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/deleteaccount/DeleteAccountViewModel.kt:159-160 rendered at DeleteAccountCoolOffScreen.kt:139", "confidence": "observed"},
+        {"severity": "medium", "claim": "The revoked success banner is dead UI — the Revoked state simultaneously triggers navigation away, so the confirmation is drawn for one frame at most and the user lands on Settings with no acknowledgement.", "evidence": "DeleteAccountCoolOffScreen.kt:137 with DeleteAccountCoolOffScreen.kt:242", "confidence": "observed"},
+        {"severity": "medium", "claim": "The countdown icon is triple-nested — a 64dp Box wrapping a Surface wrapping another 64dp Box — so the 12%-alpha chip fills the outer box exactly and the visual is indistinguishable from a single Surface.", "evidence": "DeleteAccountCoolOffScreen.kt:225-227", "confidence": "observed"},
+        {"severity": "medium", "claim": "The countdown card uses a 24dp radius while every other card in the same three-screen flow uses 20dp, so the flow's corner language is inconsistent within itself.", "evidence": "DeleteAccountCoolOffScreen.kt:186 vs DeleteAccountScreen.kt:140 and DeleteAccountConfirmScreen.kt:179", "confidence": "observed"},
+        {"severity": "low", "claim": "The countdown value updates every 60 seconds with no liveRegion semantics and no animation, so neither sighted nor screen-reader users perceive the change.", "evidence": "DeleteAccountCoolOffScreen.kt:151-156", "confidence": "observed"}
+      ]
+    }
+  ]
+}

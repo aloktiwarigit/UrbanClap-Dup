@@ -1,0 +1,626 @@
+{
+  "theme": "V4-states-motion",
+  "verdicts": [
+    {
+      "claim": "ZERO navigation transitions are declared anywhere in either Android app. Grepping enterTransition|exitTransition|popEnterTransition|popExitTransition across customer-app/app/src, technician-app/app/src and design-system/src returns 0 matches. Every screen-to-screen move is a hard instant cut.",
+      "citation": "customer-app/app/src, technician-app/app/src, design-system/src (grep); customer-app/gradle/libs.versions.toml:11; technician-app/gradle/libs.versions.toml:11",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "The grep half is exactly right - I re-ran it: enterTransition|exitTransition|popEnterTransition|popExitTransition returns 0 in customer-app/app/src, 0 in technician-app/app/src, 0 in design-system/src. But the CONCLUSION 'hard instant cut' is wrong. Both apps pin androidxNavigationCompose = \"2.8.9\". I unzipped navigation-compose-2.8.9.aar from the Gradle cache and disassembled the default-argument lambdas: NavHostKt$NavHost$3.invoke compiles to `sipush 700 ... AnimationSpecKt.tween$default ... EnterExitTransitionKt.fadeIn$default` and NavHostKt$NavHost$4 to the same with fadeOut. NavHost therefore applies fadeIn(tween(700))/fadeOut(tween(700)) to every destination, and popEnter/popExit default to the same lambdas. Screens do NOT cut instantly - they cross-fade for 700ms.",
+      "correctedStatement": "Neither Android app declares a single navigation transition (0 matches for enterTransition/exitTransition/popEnterTransition/popExitTransition across customer-app/app/src, technician-app/app/src and design-system/src), so every screen-to-screen move falls back to navigation-compose 2.8.9's library default: a non-directional 700ms fadeIn(tween(700))/fadeOut(tween(700)) crossfade, identical for forward and back. That default is the defect, not an instant cut: 700ms is 2.3x the app's own HomeservicesMotion.medium (300ms) content-transition token and more than 2x M3 guidance, so on an entry Android device every navigation reads as sluggish mush; there is no shared-axis or directional choreography to tell forward from back; and the design system's own motion tokens are bypassed entirely. Fix = declare enter/exit/popEnter/popExit per NavHost using HomeservicesMotion + HomeservicesEasing, not 'add transitions where there are none'.",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "X1 assignment premise: zero motion primitives (AnimatedVisibility / AnimatedContent / Crossfade / tween / spring) in technician-app.",
+      "citation": "technician-app/app/src (grep); technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferScreen.kt:6,137",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "Exact re-run counts, per app, over --include=*.kt. technician-app/app/src: AnimatedVisibility 0, AnimatedContent 0, Crossfade 0, tween( 0, spring( 0, updateTransition 0, animateContentSize 0, rememberInfiniteTransition 0 - BUT animate*AsState = 2 lines, both in JobOfferScreen.kt (import at :6, use at :137 `val progress by animateFloatAsState(targetValue = (remainingSeconds / 30f)..., label = \"countdown\")`). customer-app/app/src: AnimatedVisibility 2 (AddressPickerScreenContent.kt:3,125), animate*AsState 4 (CatalogueHomeScreen.kt:6,723; PhotoFirstCategoryCard.kt:4,86), rememberInfiniteTransition 4 (ConfidenceScoreRow.kt:5,98; CustomerHomeTabContent.kt:7,492), AnimatedContent 0, Crossfade 0, tween( 0, spring( 0. design-system/src: 0 for every single primitive.",
+      "correctedStatement": "technician-app is not literally at zero motion: it has exactly one animation, animateFloatAsState driving the job-offer countdown ring (JobOfferScreen.kt:137). Beyond that single call it has no AnimatedVisibility, AnimatedContent, Crossfade, updateTransition, animateContentSize, rememberInfiniteTransition, tween( or spring(. customer-app has 10 motion call-sites total (2 AnimatedVisibility, 4 animate*AsState, 4 rememberInfiniteTransition lines covering 2 shimmer sites). The design-system module - which SHIPS HomeservicesMotion and HomeservicesEasing - contains zero uses of any animation primitive, so the motion tokens are declared and never consumed anywhere in the repo. Also note no file in either app calls tween() or spring() at all, meaning every one of these 11 animations runs on Compose's default spec and none is tied to the design system's duration/easing scale.",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The technician full-screen job-offer takeover is rendered as a sibling in a Box and toggled by a plain `if` - it pops in and out with no animation at all. This is the app's single highest-drama moment (a timed job offer) and it has zero motion choreography.",
+      "citation": "technician-app/app/src/main/kotlin/com/homeservices/technician/navigation/AppNavigation.kt:143,176-181",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "AppNavigation.kt:143 `Box(modifier = modifier.fillMaxSize().navigationBarsPadding()) {`, NavHost at :144-175, then :176 `if (jobOfferState !is JobOfferUiState.Idle && jobOfferState !is JobOfferUiState.Accepted) {` wrapping `JobOfferScreen(modifier = Modifier.fillMaxSize(), viewModel = jobOfferViewModel)` at :177-180. A bare `if` in a Box - no AnimatedVisibility, no Crossfade, no scrim fade. Because it is a sibling of NavHost and not a destination, it does not even get NavHost's default 700ms fade: this is one of the very few places in either app where a screen genuinely does hard-cut in and out.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The flagship Live Ops dashboard has no loading state at all - no loading.tsx sibling exists, unlike orders, finance, complaints, audit-log and technicians which all ship one - so it renders blank while two API calls resolve.",
+      "citation": "admin-web/app/[locale]/(dashboard)/dashboard/page.tsx:1,34-40",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "`find app/[locale]/(dashboard) -name loading.tsx` returns exactly five: audit-log, complaints, finance, orders, technicians. The dashboard folder contains only page.tsx. There is also no loading.tsx at app/, app/[locale]/, or app/[locale]/(dashboard)/ - I checked all three, none exist, so there is no inherited Suspense boundary either. page.tsx:1 is `export const dynamic = 'force-dynamic'` and :34-40 is an async server component awaiting Promise.allSettled over /v1/admin/dashboard/summary and /tech-locations. So the missing-boundary fact is right. 'Renders blank' is the wrong mechanism: with no loading.tsx, Next.js App Router client-side navigation blocks on the server render and keeps the PREVIOUS page fully painted with zero indication anything is happening; only a cold URL entry or hard refresh shows nothing.",
+      "correctedStatement": "The Live Ops dashboard is the only force-dynamic route in the (dashboard) group with no loading.tsx, and there is no parent loading.tsx at app/, app/[locale]/ or app/[locale]/(dashboard)/ to inherit. Rather than rendering blank, a soft navigation to /dashboard freezes the operator on whatever page they were already on - no skeleton, no top progress bar, no pending state on the Rail link - for the duration of two serial-awaited admin API calls; a cold load shows an empty document. This is worse than 'blank' for diagnosis because it looks like the click did not register.",
+      "correctedSeverity": "high",
+      "mergedWith": "admin.customers-page missing loading.tsx (same defect class, different route)"
+    },
+    {
+      "claim": "Customers is the only route in this cluster with no loading.tsx while also being force-dynamic, so navigation to it hangs on the blank previous page with zero feedback.",
+      "citation": "admin-web/app/[locale]/(dashboard)/customers/page.tsx",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "Customers indeed has no loading.tsx - but neither does dashboard (the flagship route). The find over app/[locale]/(dashboard) returned loading.tsx for audit-log, complaints, finance, orders and technicians only. So 'the only route with no loading.tsx' is false; there are two, and the other one is the primary landing surface. Same 'hangs on previous page, not blank' mechanism correction as the dashboard finding applies.",
+      "correctedStatement": "Two force-dynamic routes in the (dashboard) group ship no loading.tsx - customers AND dashboard - against five that do (audit-log, complaints, finance, orders, technicians). Both hang the operator on the previously-rendered page with no feedback during the server fetch. Treat as one finding: loading-boundary coverage is inconsistent across the console.",
+      "correctedSeverity": "medium",
+      "mergedWith": "admin.liveops-dashboard no loading.tsx"
+    },
+    {
+      "claim": "There is no loading state - before the first poll resolves the component renders the 'The feed is quiet' empty state, actively telling the operator there is no activity when the data has simply not arrived.",
+      "citation": "admin-web/src/components/dashboard/OrderFeed.tsx:41,54-81,103-108",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "OrderFeed.tsx:41 `const [events, setEvents] = useState<BookingEvent[]>([])` - initialised to an empty array with no separate isLoading flag. The render at :103 is `) : events.length === 0 ? (` -> EmptyState headline 'The feed is quiet' copy 'New bookings, assignments, and complaints will land here as they happen.' The first poll is only kicked off in useEffect at :71. So between mount and the first resolved fetch the operator is told, in confident copy, that nothing is happening.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The utilisation chart renders 24 hardcoded fake percentages as if they were live operational data, with no 'sample data' label, no disabled styling and no empty state - an operations console presenting fiction as fact.",
+      "citation": "admin-web/src/components/dashboard/UtilStrip.tsx:3,5-8,27; admin-web/app/[locale]/(dashboard)/dashboard/page.tsx:90",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "UtilStrip.tsx:3 `// TODO(E09-S02): wire to /v1/admin/dashboard/utilisation`; :5-8 `const SEED_DATA: number[] = [15, 22, 18, 30, 45, 60, 72, 85, 90, 88, 76, 65, 70, 78, 82, 88, 92, 85, 75, 60, 48, 35, 22, 10]`; :27 `const data = utilData ?? SEED_DATA`. Crucially I checked the call site: dashboard/page.tsx:90 renders `<UtilStrip />` with NO utilData prop, so the fallback is always taken - this is not a dormant default, it is what production shows. The section is labelled 'Utilisation - 24h' with role=\"img\" aria-label 'Bar chart of technician utilisation over 24 hours' and per-bar title tooltips reading e.g. '9am: 90%'. Nothing anywhere marks it as sample data.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The component emits className=\"empty-state\" but no such rule exists anywhere in globals.css, so the shared class hook is dead and all styling is inline.",
+      "citation": "admin-web/src/components/EmptyState.tsx:15; admin-web/app/globals.css",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "EmptyState.tsx:15 `className=\"empty-state\"` with every visual property set inline at :16-23 (dashed 1px border, transparent background, var(--space-8)/var(--space-6) padding). `grep -n \"empty-state\" app/globals.css` returns nothing; the only nearby state primitive is `.skeleton` at globals.css:639-649. The class is a dead hook.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": "A1 admin.design-tokens-web 'stylesheet emits no .empty-state rule' - identical defect, same two files, merge into one"
+    },
+    {
+      "claim": "The props interface has no icon or illustration slot, guaranteeing that every empty state across the product is a text-only dashed box - the single largest contributor to the 'unfinished' feel of the console.",
+      "citation": "admin-web/src/components/EmptyState.tsx:4-9,51",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "EmptyStateProps at :4-9 is `{ eyebrow: string; headline: string; copy?: string; action?: ReactNode }`. No icon/illustration slot - true. But 'guaranteeing every empty state is text-only' is wrong: line 8 declares `action?: ReactNode` and line 51 renders `{action !== undefined && <div style={{ marginTop: 'var(--space-2)' }}>{action}</div>}`, so a CTA button IS supported. What is actually true is that no caller in the repo passes one - OrderFeed.tsx:98-108 (both the error and the quiet branches) and TechMap.tsx:92-97 all omit `action`.",
+      "correctedStatement": "EmptyState has no icon/illustration slot (EmptyState.tsx:4-9), so every empty state is typographic on a dashed border. It DOES expose an `action?: ReactNode` slot (:8, rendered :51) - but no call site in the repo passes one, including the two dashboard cases where recovery matters most (OrderFeed's 'Feed unavailable' error branch at OrderFeed.tsx:98-102 and TechMap's overlay). The fix is two-part: add an icon slot, and start passing `action` - not 'the component cannot render actions'. 'Single largest contributor to the unfinished feel' is editorial and unverifiable.",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "There is no loading state for the orders fetch - the table is conditionally rendered only when data is non-null, so first paint and every filter/pagination change blanks the content region with no skeleton or spinner.",
+      "citation": "admin-web/src/components/orders/OrdersClient.tsx:63,84-92,141",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "OrdersClient.tsx:63 `const [data, setData] = useState<OrderListResponse | null>(null)`; :141 `{data && (<OrdersTable ... />)}`. First-paint half confirmed. The filter/pagination half is WRONG: the effect at :84-92 is `setError(null); fetchOrders(...).then(d => { if (!cancelled) setData(d) })` - it never resets `data` to null. So on a filter change or page turn the previously fetched table stays mounted and fully visible; nothing blanks. A developer told 'every filter change blanks the region' would go add a skeleton to a code path that does not blank.",
+      "correctedStatement": "OrdersClient has two distinct and different loading defects. (1) First paint: `data` starts null (:63) and the table is gated `{data && ...}` (:141), so after the route-level orders/loading.tsx skeleton is dismissed on hydration the operator gets an empty content region until the client fetch resolves. (2) Refetch: `data` is deliberately NOT cleared in the effect (:84-92), so every filter change and page turn silently serves stale rows with zero indication a refetch is running - the opposite failure mode from a blank, and arguably worse on a live ops console because the operator can act on rows that no longer match the filter they just applied.",
+      "correctedSeverity": "high",
+      "mergedWith": "A2 orders-loading 'route-level skeleton is dead weight ... renders nothing at all while data is null' - same first-paint defect"
+    },
+    {
+      "claim": "The table's isLoading prop is hardcoded to false and then discarded by the table (`void isLoading`), so the loading affordance is wired up but permanently dead.",
+      "citation": "admin-web/src/components/orders/OrdersClient.tsx:148; admin-web/src/components/orders/OrdersTable.tsx:16,21,23",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "OrdersClient.tsx:148 `isLoading={false}` literal. OrdersTable.tsx:16 declares `isLoading: boolean` in the props interface, :21 destructures it, :23 is `void isLoading;` on the line right after `void pageSize;`. The prop is plumbed end-to-end and consumed by nothing. This is the exact hook that the stale-refetch defect above needs.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": "A2 orders-table 'isLoading is accepted then discarded via void isLoading' - same defect, caller and callee sides; report once"
+    },
+    {
+      "claim": "The slide-over has NO enter/exit animation - no transform, transition, or duration anywhere in the file; it is a hard mount/unmount of a fixed panel.",
+      "citation": "admin-web/src/components/orders/OrderSlideOver.tsx:63,69; admin-web/src/components/complaints/ComplaintSlideOver.tsx",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "`grep -niE \"transition|animate|duration|transform|translate\"` over OrderSlideOver.tsx returns ZERO lines, and the same grep over ComplaintSlideOver.tsx also returns ZERO lines. OrderSlideOver.tsx:63 is the scrim `<div className=\"fixed inset-0 bg-black/30 z-40\">` (no fade) and :69 the panel `className=\"fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-xl z-50 overflow-y-auto\"` - no translate-x, no data-state, no transition utility. Both panels and both scrims hard mount and unmount.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": "A2 complaint-slideover 'No panel-level enter/exit animation - hard-mounts exactly like the orders one' - verified identical, merge"
+    },
+    {
+      "claim": "There is no empty state for the complaints board - zero complaints renders three bare gray drop zones with no message, so 'all clear' and 'the data failed to load' look identical.",
+      "citation": "admin-web/app/[locale]/(dashboard)/complaints/ComplaintsClient.tsx:274-280; admin-web/src/components/complaints/KanbanBoard.tsx:71-117",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "ComplaintsClient.tsx:274-280 renders `<KanbanBoard complaints={complaints} ... />` unconditionally - no `complaints.length === 0` guard before it. KanbanBoard.tsx:72 maps COLUMNS (:18 = NEW, INVESTIGATING, RESOLVED) and the Droppable body at :84-88 is `className=\"space-y-2 min-h-[100px] bg-gray-50 rounded-lg p-2\"` containing only `{columnComplaints.map(...)}{provided.placeholder}`. With zero complaints that is three 100px light-gray rectangles and nothing else.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": "A2 kanban-board 'Empty columns have no empty state' - same rectangle, board level vs column level"
+    },
+    {
+      "claim": "Empty columns have no empty state - just a 100px near-white rectangle, so a board with no INVESTIGATING items communicates nothing.",
+      "citation": "admin-web/src/components/complaints/KanbanBoard.tsx:76-81,87",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "Line 87 is `className=\"space-y-2 min-h-[100px] bg-gray-50 rounded-lg p-2\"` with no empty-state child - confirmed. But 'communicates nothing' is not accurate: :76-81 renders a per-column header with the localized column title AND a count chip, `<span className=\"...rounded-full px-2 py-0.5\">{columnComplaints.length}</span>`, which reads '0'. Also worth flagging alongside it: bg-gray-50 is a raw Tailwind gray hardcoded into a token-driven warm-ink console.",
+      "correctedStatement": "Empty Kanban columns render a bare 100px min-height bg-gray-50 rectangle with no empty-state copy, illustration or CTA (KanbanBoard.tsx:87). The column header does carry a '0' count chip (:78-80), so the state is not literally unlabelled - what is missing is the reassurance/next-action layer ('No complaints under investigation' + a way in), not the count itself.",
+      "correctedSeverity": "medium",
+      "mergedWith": "A2 complaints-client 'no empty state for the complaints board'"
+    },
+    {
+      "claim": "The table is gated on `!loading`, so it fully unmounts and the page collapses to a single line of text on every filter change and every page turn - a full-height layout jump on the densest compliance surface, with no skeleton and no stale-data retention.",
+      "citation": "admin-web/src/components/audit-log/AuditLogClient.tsx:74-76,82",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "AuditLogClient.tsx:82 `{!loading && data && <AuditLogTable entries={data.entries} />}` and :74-76 `{loading && (<p className=\"text-sm text-[var(--color-text-muted)] mb-[var(--space-3)]\">{t('loading')}</p>)}`. Confirmed: the table unmounts on every fetch, the substitute is one muted line of text, and unlike OrdersClient there is no stale-data retention because the render is gated on `!loading` rather than on data alone. The pagination buttons at :85-100 stay mounted below, so the collapse yanks them up the viewport.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Error copy is a raw exception string containing the HTTP status and the untruncated response body, rendered straight into the UI.",
+      "citation": "admin-web/app/[locale]/(dashboard)/catalogue/new/page.tsx:31-33; admin-web/src/components/catalogue/CategoryForm.tsx:53,166-168",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "catalogue/new/page.tsx:31-33 `const text = await res.text().catch(() => 'Unknown error'); throw new Error(\\`Failed to create category: ${res.status} ${text}\\`);` - the full response body, untruncated, English-only, into the Error message. CategoryForm.tsx:53 `setError(err instanceof Error ? err.message : t('form.submissionError'))` - the instanceof branch wins for every server failure, so the translated fallback is unreachable in practice. Rendered verbatim at :165-169 `<p role=\"alert\" style={{ color: 'var(--color-danger)' ... }}>{error}</p>`.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "If the summary fetch fails, the entire P&L section (KPIs + chart) silently renders nothing below the date pickers - no error panel, no empty state, no retry, only a toast.",
+      "citation": "admin-web/src/components/finance/FinanceClient.tsx:54-62,143",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "FinanceClient.tsx:54-62: `try { setSummary(await fetchFinanceSummary(from, to)) } catch { setToast({ message: t('errors.loadSummaryFailed'), type: 'error' }) }` - `summary` is left at its previous value (null on first load) and no error state is stored. Render at :143 `{!summaryLoading && summary && (<>...KPI grid...<PnLChart .../></>)}`. On a first-load failure the region below the date pickers is empty with only a transient toast. One point in the code's favour that the claim does not mention: the toast copy IS localized via t('errors.loadSummaryFailed'), not a raw exception.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "A single global pendingKey disables every action button in both tables during any request, and no button changes label or shows a spinner - the entire console goes inert with zero feedback.",
+      "citation": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:63,67,212,237,305",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "ComplianceClient.tsx:63 `const [pendingKey, setPendingKey] = useState<string | null>(null)`; :67 `setPendingKey(\\`execute:${request.id}\\`)`. Every action button gates on the null-check, not on its own key: :212 `disabled={pendingKey !== null || executionBlocked}` (Execute), :237 `disabled={pendingKey !== null}` (Deny), :305 `disabled={pendingKey !== null}` (Approve levy, a different table entirely). None of the three swaps its label or renders a spinner - :215/:240/:308 are static t() calls. The per-request key is computed and then never used to scope the disable. Feedback arrives only as a toast on completion (:80-82).",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Six of eleven auth states replace the entire branded hero+sheet shell with a bare, unstyled centered CircularProgressIndicator - the app visually disappears every time the user taps a sign-in method.",
+      "citation": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthScreen.kt:98-172,597-628",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "The count is right: the when block at :98-173 has eleven arms (Idle, TruecallerLoading, MethodSelection, GoogleSigningIn, EmailEntry, EmailSubmitting, EmailVerificationSent, OtpEntry, OtpSending, OtpVerifying, Error) and LoadingContent is dispatched from six of them (:99, :112, :128, :162, :168 - Idle and TruecallerLoading share arm :98-99). 'Bare, unstyled' is wrong: LoadingContent at :598-628 renders a centred Column with 16dp spacing containing CircularProgressIndicator, a headlineSmall Bold centred title, and a bodyMedium onSurfaceVariant centred message. It has copy and hierarchy. What it does NOT do is go through AuthFrame - the branded eyebrow+title+sheet wrapper used by all five other arms (:285, :400, :484, :524, :571, and Error at :635).",
+      "correctedStatement": "Six of AuthScreen's eleven states (Idle, TruecallerLoading, GoogleSigningIn, EmailSubmitting, OtpSending, OtpVerifying) route to LoadingContent, which is the ONLY composable in the file that does not wrap itself in AuthFrame. It is not bare - it has a spinner, a bold headlineSmall title and a bodyMedium body (AuthScreen.kt:598-628) - but because it bypasses AuthFrame the branded hero and sheet chrome vanish and reappear on every method tap, so the flow flickers between two entirely different page architectures. The fix is to render LoadingContent INSIDE AuthFrame, not to add copy to it. Note the headlineSmall it uses is one of the unmapped M3 slots that falls back to Roboto.",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Raw exception text is surfaced to the user as error copy: the ViewModel puts throwable.message into uiState.reason and the screen renders it verbatim.",
+      "citation": "customer-app/.../ui/waitlist/WaitlistViewModel.kt:102-105; WaitlistScreenContent.kt:73-77",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "WaitlistViewModel.kt:102-105 `WaitlistUiState.Error(reason = throwable.message ?: \"Something went wrong.\", retryable = true)` - both the raw message and the English fallback are non-localized. WaitlistScreenContent.kt:73-77 `Text(text = uiState.reason, style = bodyMedium, color = colorScheme.error)`. Verbatim, in red, to a Hindi-first user.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": "Same defect class as SlotPickerViewModel:60/72, BookingViewModel:230/234/297, ComplaintViewModel:143/166, DeleteAccountViewModel:142, PayoutCadenceViewModel:56, ActiveJobViewModel:255/329 - eight ViewModels across both apps. Report once as a systemic finding."
+    },
+    {
+      "claim": "The session-expired path sets a non-retryable Error, which renders an enabled-looking phone field above a DISABLED 'Join the waitlist' button and an English-only 'Session expired' message, with no sign-in CTA - an unrecoverable screen.",
+      "citation": "customer-app/.../ui/waitlist/WaitlistViewModel.kt:36-43; WaitlistScreenContent.kt:66-90",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "WaitlistViewModel.kt:36-43 - on AuthState.Unauthenticated the init block sets `WaitlistUiState.Error(reason = \"Session expired. Please sign in again.\", retryable = false)`, a hardcoded English literal. WaitlistScreenContent.kt:66-90 Error branch: PhoneField with `enabled = true` (:70), the reason text (:73-77), then HsPrimaryButton whose label is the plain submit string when !retryable (:84) and whose `enabled = uiState.retryable` (:87) - i.e. false. So the user gets a live, typable phone field above a permanently dead button labelled 'Join the waitlist', and nothing navigates to sign-in. Exactly as described.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "No empty state for the category grid. The Success branch prints the 'Our services' heading and then iterates the list with no isEmpty() guard, so a zero-category response yields a heading floating over blank space.",
+      "citation": "customer-app/.../ui/catalogue/CatalogueHomeScreen.kt:395-424",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "CatalogueHomeScreen.kt:395-424: the Success arm emits the R.string.catalogue_our_services heading item (:396-403) unconditionally, then `val rows = uiState.categories.chunked(2)` and `items(rows) {...}`. chunked(2) on an empty list yields an empty list, so zero categories produces the heading and nothing under it. No isEmpty() branch exists - contrast ServiceListScreen.kt:142-145 which does have one.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The error state offers no recovery. ErrorState() takes no parameters and contains only two Text lines - no Retry button, no illustration, no icon. The error message the ViewModel captured is thrown away.",
+      "citation": "customer-app/.../ui/catalogue/CatalogueHomeScreen.kt:394,878-896",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "CatalogueHomeScreen.kt:878-896 `private fun ErrorState()` - literally zero parameters, a Box+Column with exactly two Texts (R.string.catalogue_error_title titleMedium SemiBold, R.string.catalogue_error bodyMedium). No button, no icon, no onRetry lambda. Dispatched at :394 `is CatalogueHomeUiState.Error -> item { ErrorState() }` - the state's captured message is never read. This is the app's primary landing surface.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The error state is a single naked centered Text with no title, no icon, no card frame and no retry - visibly less designed than the empty state sitting 40 lines below it.",
+      "citation": "customer-app/.../ui/catalogue/ServiceListScreen.kt:120-128 vs :164-202",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "ServiceListScreen.kt:120-128 - the Error arm is `Box(fillMaxSize, center) { Text(stringResource(R.string.catalogue_error), color = onSurfaceVariant, modifier = Modifier.padding(24.dp)) }`. One Text. Meanwhile EmptyServiceList at :164-202 has a PillShape Surface holding a tinted Icons.Filled.Build icon, an 18sp Bold title, and a 14sp supporting line. The empty state is materially better designed than the error state in the same file, which is the inversion the claim describes.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The error state prints a raw throwable message to the user. (slot picker)",
+      "citation": "customer-app/.../ui/booking/SlotPickerViewModel.kt:60,72; SlotPickerScreen.kt:205-215",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "SlotPickerViewModel.kt:60 and :72 both do `SlotPickerUiState.Error(err.message ?: \"Unknown error\")` - raw, English fallback. Confirmed. But the screen is better than the claim implies: ErrorBlock at :196-217 leads with a localized R.string.slot_picker_error_label in error colour (:205-209), shows the raw message only as a secondary bodySmall onSurfaceVariant line and only `if (message.isNotBlank())` (:210-212), and DOES provide an OutlinedButton retry with R.string.slot_picker_retry_button (:213-215). So this is not a dead-end error state.",
+      "correctedStatement": "SlotPickerViewModel.kt:60,72 pass `err.message ?: \"Unknown error\"` into the UI state, and SlotPickerScreen.kt:211 renders it. Unlike the other raw-message sites, this one is correctly framed: a localized error label above it (:206) and a working retry button below it (:213). The defect here is narrow - drop the raw secondary line and the English 'Unknown error' fallback - not 'the error state is raw'.",
+      "correctedSeverity": "medium",
+      "mergedWith": "systemic raw-throwable finding"
+    },
+    {
+      "claim": "Both terminal error surfaces print a raw exception message under a localized title, with no retry path on BookingError.",
+      "citation": "customer-app/.../ui/booking/BookingSummaryScreen.kt:189,424-443,445-470; BookingViewModel.kt:229-234,297",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "BookingViewModel.kt:230 `NetworkError(message = error.message ?: BOOKING_FAILED_FALLBACK)`, :234 `BookingUiState.Error(error.message ?: BOOKING_FAILED_FALLBACK)`, :297 `BookingUiState.Error(it.message ?: CONFIRMATION_FAILED_FALLBACK)`. BookingSummaryScreen.kt:189 `is BookingUiState.Error -> BookingError(message = state.message)`; BookingError at :425-443 = localized titleMedium (R.string.booking_error_title) + `Text(text = message)` and NOTHING else - no button of any kind. NetworkErrorCard at :446-470 has the same raw-message shape but does end with an HsPrimaryButton retry (:467-469). So the asymmetry the claim calls out is exactly right: the terminal booking failure, which is the one that costs money, is the one with no way out.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": "systemic raw-throwable finding"
+    },
+    {
+      "claim": "There is no moment of delight: the success affordance is a static Icons.Filled.CheckCircle inside a tinted Surface, with zero animation, zero motion tokens, no haptic and no sound - the whole file contains no animate*/AnimatedVisibility call.",
+      "citation": "customer-app/.../ui/booking/BookingConfirmedScreen.kt:157-170",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "Verified by grep: `grep -cniE \"animate|AnimatedVisibility|Crossfade|Haptic|infiniteTransition\"` over BookingConfirmedScreen.kt returns 0. ConfirmationSuccessIcon at :158-170 is a Surface(shape = shapes.large, color = primaryContainer) wrapping a static Icons.Filled.CheckCircle at 52dp with 18dp padding. Every fact in the claim holds. Severity is what I would move: this is a delight/polish gap on a screen that otherwise works, sits behind a completed payment, and blocks nothing - it does not belong at the same severity as the dead ActiveJob error state or the fake utilisation chart.",
+      "correctedStatement": "BookingConfirmedScreen contains no animation, haptic or motion-token usage at all (0 grep hits); the payment-success moment is a static filled check icon on a primaryContainer surface (:158-170). Real against the aspirational design bar, but it is a polish gap on a working screen, not a defect - severity medium, and it should be scheduled with the broader 'design-system motion tokens have zero consumers' work rather than as a standalone fix.",
+      "correctedSeverity": "medium",
+      "mergedWith": "cross.dead-tokens HomeservicesMotion=0 consumers"
+    },
+    {
+      "claim": "LiveTrackingUiState has no Error variant, so any failure leaves the user on an indefinite bare centred spinner with no retry and no message.",
+      "citation": "customer-app/.../ui/tracking/LiveTrackingUiState.kt:6-21; LiveTrackingViewModel.kt:34-56; LiveTrackingScreen.kt:180-184",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "LiveTrackingUiState.kt:6-21 declares exactly two subclasses, Loading and Tracking. No Error. LiveTrackingViewModel.kt:34-56 builds the state with `combine(getLiveLocationUseCase.execute, trackBookingStatusUseCase.execute, liveLocationFromBus) {...}.stateIn(..., initialValue = LiveTrackingUiState.Loading)` - there is no `.catch {}` on the combine, so an upstream failure either cancels the flow (state frozen at Loading forever) or, if swallowed downstream, never emits. LiveTrackingScreen.kt:180-184 renders Loading as `Box(fillMaxSize, center) { CircularProgressIndicator() }` - genuinely bare, no copy, no action. The `when` at :179-191 is exhaustive over two arms, so there is nowhere for an error to go. This is the screen a customer stares at while waiting for a technician on intermittent rural 4G.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Loading state is three flat grey bars in a single card rather than a skeleton that mirrors the booking card, and no HsSkeletonBlock/shimmer is used - it reads as a broken card, not as loading.",
+      "citation": "customer-app/.../ui/bookings/CustomerBookingsScreen.kt:304-324; design-system/.../components/HsComponents.kt:133-144",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "CustomerBookingsScreen.kt:305-324 LoadingCard = a 20dp-radius surface containing `repeat(3) { Surface(fillMaxWidth().height(18.dp), RoundedCornerShape(8.dp), color = surfaceVariant) {} }`. Three flat bars - confirmed, and it does not mirror the real booking card. But the claim's implied remedy is wrong. I opened HsSkeletonBlock (HsComponents.kt:133-144): it is `Surface(modifier.fillMaxWidth(widthFraction).height(height), shape = shapes.small, color = colorScheme.surfaceVariant) {}` - a STATIC surfaceVariant rectangle with no shimmer, no animation, byte-for-byte the same visual as the hand-rolled bars. Swapping to HsSkeletonBlock would change nothing on screen. Confirming this claim as written would send someone to do a no-op refactor.",
+      "correctedStatement": "CustomerBookingsScreen's LoadingCard (:305-324) hand-rolls three 18dp surfaceVariant bars that do not mirror the booking card's real structure. The shared primitive it should use, HsSkeletonBlock (HsComponents.kt:134-144), is itself a static surfaceVariant Surface with NO shimmer - so the actual finding is bigger: neither app has an animating skeleton anywhere, because the design system's skeleton primitive does not animate. admin-web by contrast ships a real one (.skeleton with skeletonShimmer keyframes, globals.css:634-651). Fix order: add shimmer to HsSkeletonBlock first, then adopt it at the ~7 call sites (BookingSummaryScreen:344-345, PriceApprovalScreen:205-206, ActiveJobScreen:258-262) plus this one.",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Error copy renders the raw exception message with an English 'Unknown error' fallback, straight to a Hindi-first rural audience. (customer complaint)",
+      "citation": "customer-app/.../ui/complaint/ComplaintViewModel.kt:44,143,166; ComplaintScreen.kt:268",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "ComplaintViewModel.kt:44 `private const val UNKNOWN_ERROR_FALLBACK = \"Unknown error\"`, used at :143 and :166 as `ComplaintUiState.Error(e.message ?: UNKNOWN_ERROR_FALLBACK)`. ComplaintScreen.kt:268 `Text(message, color = MaterialTheme.colorScheme.error)` inside ErrorState. The title above it IS localized (R.string.complaint_error_title, :263) and there IS a retry (:269), but the message line is raw.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": "systemic raw-throwable finding"
+    },
+    {
+      "claim": "Retry from the error state resets the ViewModel to a blank Idle, discarding the reason, description and photo the user had already entered.",
+      "citation": "customer-app/.../ui/complaint/ComplaintViewModel.kt:79-81; technician-app/.../ui/complaint/ComplaintViewModel.kt:66-67",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "customer-app ComplaintViewModel.kt:79-81 `public fun onRetry() { _uiState.value = ComplaintUiState.Idle() }` - default-constructed, so selectedReason, description and photo path are all reset. The technician-app has the identical bug: technician-app ComplaintViewModel.kt:66-67 `public fun onRetry() { _uiState.value = ComplaintUiState.Idle() }`, and its ComplaintUiState.Error (:33-35) likewise carries only `message`. Both 'Try again' buttons return the user to a blank form after they have already typed a description and taken a photo - on an entry Android phone, on rural data.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": "T3 technician.complaint 'Entering the Error state destroys the user's input' - verified to be the same bug in both apps; report as one cross-app finding with both citations"
+    },
+    {
+      "claim": "A photo upload swaps the entire form for a full-screen spinner captioned 'Submitting complaint', so the user loses sight of their draft and is told the wrong thing.",
+      "citation": "customer-app/.../ui/complaint/ComplaintScreen.kt:95,243-253",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "ComplaintScreen.kt:95 `is ComplaintUiState.PhotoUploading, ComplaintUiState.Submitting -> LoadingState()` - two semantically different states share one arm. LoadingState at :244-253 is a fillMaxSize centred Column with a CircularProgressIndicator and `Text(stringResource(R.string.complaint_submitting))`. So during a photo upload the entire form is replaced and the caption asserts the complaint is being submitted. The technician-app repeats this exactly (technician ComplaintScreen.kt:90).",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The ledger empty state is a single line of grey text with no icon, title or CTA - and it is the state every new customer sees, since a fresh account has no credits.",
+      "citation": "customer-app/.../ui/wallet/WalletScreen.kt:124-125,285-297",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "WalletScreen.kt:124-125 `if (ledgerState.entries.isEmpty()) { item { LedgerEmptyState() } }`; LedgerEmptyState at :286-297 is `Box(fillMaxWidth().padding(40.dp), center) { Text(stringResource(R.string.wallet_no_transactions), style = bodyLarge, color = onSurfaceVariant) }`. One localized line, nothing else. It is unavoidably the first-run state.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Both loading states are bare spinners, and the hero loading box is 100dp tall versus a taller loaded hero, so the layout visibly jumps when the balance arrives.",
+      "citation": "customer-app/.../ui/wallet/WalletScreen.kt:112-120,176-182,207-233",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "Bare-spinner half confirmed exactly: ledger loading at :113-120 is `Box(fillMaxWidth().height(160.dp), center) { CircularProgressIndicator(...size(32.dp)) }` with no caption; hero loading at :177-182 is `Box(height(100.dp).fillMaxWidth(), center) { CircularProgressIndicator(color = onPrimary, size 32.dp) }`, also captionless. The jump half I cannot substantiate as written: BalanceReadyContent (:208-233) has no fixed height - it is 20dp vertical padding x2 plus a labelLarge row (~20dp) plus a displaySmall amount (~45dp), which lands around 105dp against the 100dp placeholder. That is a ~5dp settle, not a visible jump. The ledger side is the reverse problem: a fixed 160dp placeholder collapses to however many rows actually arrive.",
+      "correctedStatement": "Both of WalletScreen's loading states are uncaptioned bare CircularProgressIndicators inside fixed-height boxes (:177-182 hero at 100dp, :113-120 ledger at 160dp) rather than skeletons shaped like the content they stand in for - notable because the loaded hero is a gradient card and the loaded ledger is a row list, neither of which a centred spinner previews. The specific 'hero jumps because 100dp is shorter than the loaded hero' mechanism does not hold: the Ready content measures to roughly the same 100-105dp. The genuine mis-sizing is the ledger's fixed 160dp box, which reflows to an arbitrary height once rows arrive.",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The AuthState.Initializing case is unhandled - the screen renders 'Guest' with a '?' avatar during session restore instead of a skeleton, so cold-start shows wrong identity data.",
+      "citation": "customer-app/.../ui/profile/ProfileViewModel.kt:20-25; ProfileScreen.kt:73,292,394",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "ProfileViewModel.kt:20-25 - `sessionManager.authState.stateIn(viewModelScope, WhileSubscribed(5_000), AuthState.Initializing)`, so Initializing is the guaranteed first emission. ProfileScreen.kt:73 `val user = authState as? AuthState.Authenticated` collapses Initializing and Unauthenticated into the same null. The consequences are exactly where the claim says: :292 `text = user?.displayName ?: stringResource(R.string.profile_guest)` and :394 `val name = user?.displayName ?: return \"?\"`. During session restore a signed-in user is shown 'Guest' and a '?' avatar. There is no Initializing arm anywhere in the file.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Loading is a bare centred CircularProgressIndicator, and the identical indicator is reused for Loading, Ready and Saved so three semantically different states are visually identical.",
+      "citation": "customer-app/.../ui/dataexport/DataExportScreen.kt:243-272,275-290",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "The indicator is NOT bare: DataExportLoadingIndicator (:275-290) is a Column with 12dp spacing containing CircularProgressIndicator plus `Text(stringResource(R.string.data_export_loading), style = bodyMedium)`. And the three-way reuse is deliberate and documented in-source: :257-259 'SAF picker is launched via LaunchedEffect... This state is transient; show a loading indicator while the picker opens'; :263-266 'Transient: DataExportScreen's LaunchedEffect shows a snackbar then calls onSaved() to reset to Idle.' Ready and Saved are sub-frame states, not states a user dwells in. Presenting this as three states looking identical overstates it considerably.",
+      "correctedStatement": "DataExportScreen's Loading indicator carries a caption (:275-290), and its reuse for the Ready and Saved arms is an intentional, commented choice because both are transient hand-off frames (SAF picker opening; snackbar window before reset to Idle). The only residual defect is copy accuracy: during Saved the caption still reads data_export_loading ('preparing') after the export has already succeeded. Low severity. Separately - and this IS the real issue on this screen - all nine data_export_* keys have no values-hi translation, so the whole DPDP surface renders in English; that belongs to the i18n finding, not to states/motion.",
+      "correctedSeverity": "low",
+      "mergedWith": "cross.i18n-parity data_export_* keys missing from values-hi"
+    },
+    {
+      "claim": "Submit-failure snackbars display raw exception text: the ViewModel sets message = err.message ?: \"Unknown error\" and the screen renders it verbatim.",
+      "citation": "customer-app/.../ui/deleteaccount/DeleteAccountViewModel.kt:141-144; DeleteAccountConfirmScreen.kt:101-104",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "DeleteAccountViewModel.kt:141-144 `Error(message = err.message ?: \"Unknown error\", previousState = current)`. DeleteAccountConfirmScreen.kt:101-104 `is DeleteAccountUiState.Error -> { val err = s; snackbarHostState.showSnackbar(err.message.ifEmpty { errorUnknown }); viewModel.onErrorDismissed() }`. Note the localized `errorUnknown` fallback only fires on an EMPTY string - a non-empty raw exception message always wins, so the localized copy is effectively unreachable. Account deletion is a DPDP-mandated surface.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": "systemic raw-throwable finding"
+    },
+    {
+      "claim": "The retry affordance is gated on English string matching - `uiState.errorMessage.startsWith(\"Could not load\")` - so the moment error copy is localized to Hindi the retry button silently disappears.",
+      "citation": "technician-app/.../ui/serviceprofile/ServiceSelectionScreen.kt:159-166; ServiceSelectionViewModel.kt:64",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "ServiceSelectionScreen.kt:164 `showRetry = !uiState.isSaving && uiState.errorMessage.startsWith(\"Could not load\")`. The producing side, ServiceSelectionViewModel.kt:64, is `errorMessage = \"Could not load your saved services. You can still save this form.\"` - a hardcoded English literal in the ViewModel. The retry button's existence is coupled to an untranslated string prefix, on a Hindi-first product. Translating that one string silently removes the only recovery path from the technician onboarding screen.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Loading is additive rather than substitutive: the spinner card is inserted above an already-interactive service list, and the fetch then overwrites the user's selections, so a technician can toggle skills that are silently discarded.",
+      "citation": "technician-app/.../ui/serviceprofile/ServiceSelectionScreen.kt:141-151; ServiceSelectionViewModel.kt:35-45",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "ServiceSelectionScreen.kt:141-143 `if (uiState.isLoading) { item { LoadingCard() } }` - an ADDITIONAL LazyColumn item, not a replacement. The very next item at :144-150 is ServiceListCard with `enabled = !uiState.isSaving` - gated on isSaving, NOT isLoading, so the skill toggles are live during the fetch. (The LocationCard right below it at :152-157 correctly uses `enabled = !uiState.isSaving && !uiState.isLoading` - so the inconsistency is visible within ten lines of itself.) ServiceSelectionViewModel.kt:35-45: refresh() sets isLoading=true then on success does `_uiState.value.copy(selectedSkillIds = selectedSkillIds, ...)` where selectedSkillIds is rebuilt purely from the server profile - anything the technician toggled meanwhile is overwritten with no notice.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Zero animation in 1350 lines - tab switches hard-cut, list mutations pop, and the online toggle gives no motion feedback.",
+      "citation": "technician-app/.../ui/home/TechnicianHomeScreen.kt",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "`wc -l` = 1350 lines exactly. `grep -cniE \"animate|AnimatedVisibility|Crossfade|Transition\"` over the file returns 0 - not one match for any motion construct, including the substring 'animate' which would also catch animateFloatAsState/animateContentSize. The technician daily-driver shell has no motion whatsoever.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "No offline state anywhere despite being the daily driver for field workers on patchy rural data; failures collapse into a generic 'Could not refresh jobs' card with a raw message.",
+      "citation": "technician-app/.../ui/home/TechnicianHomeScreen.kt:1248-1264",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "The error card at ~:1248-1264 opens with a hardcoded English `text = \"Could not refresh jobs\"` (titleMedium Bold), then `Text(text = message, style = bodyMedium)` - the raw upstream message - then an OutlinedButton with a Refresh icon and R.string.home_retry. So there IS a retry, which the claim does not deny. On offline: I grepped the file for offline|connectiv|isConnected|network and the only three hits (:159 home_availability_offline, :352 'Online'/'Offline' label, :830 'Online for nearby requests'/'Offline until you switch on') are all about the technician's AVAILABILITY toggle, not network connectivity - no ConnectivityObserver is consumed here at all, even though ActiveJobViewModel injects one. Network loss and API failure are indistinguishable to the technician, and the card is hardcoded English on a Hindi-first app.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "No loading and no error state in the entire file despite consuming a network-backed availability flow; a failed toggle silently reverts.",
+      "citation": "technician-app/.../ui/dashboard/TechnicianDashboardScreen.kt",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "The facts hold - `grep -niE \"loading|error|CircularProgress\"` over all 304 lines returns zero matches, and :46-60 collects availabilityViewModel.uiState and feeds AvailabilityCard directly with no state handling. But I then grepped the ENTIRE technician-app/app/src for the symbol: `grep -rn \"TechnicianDashboardScreen\" .` returns exactly one line - its own declaration at :39. Nothing routes it, nothing previews it, no test references it. It is unreachable dead code, so no technician can ever see these missing states.",
+      "correctedStatement": "TechnicianDashboardScreen.kt has no loading and no error handling for its network-backed availability flow (0 grep hits across 304 lines), but the screen is unreachable: `grep -rn TechnicianDashboardScreen technician-app/app/src` returns only its own declaration at :39 - no navigation graph, preview or test references it. The finding is therefore 'delete this orphan or route it', not 'add loading/error states to a shipping screen'. This also demotes the sibling i18n finding about its hardcoded 'Available for jobs'/'Rs 0' strings - those are dead strings. Leaving it at high severity would send someone to polish a file no user reaches.",
+      "correctedSeverity": "low",
+      "mergedWith": "X1 cross.i18n-parity hardcoded English in TechnicianDashboardScreen.kt:109,114,128-130 - same dead file"
+    },
+    {
+      "claim": "The Error state is dead code - ActiveJobUiState.Error is rendered here but never constructed anywhere in the app, so a booking that fails to load leaves the technician staring at a skeleton indefinitely with no error and no way out.",
+      "citation": "technician-app/.../ui/activeJob/ActiveJobScreen.kt:78,86-92; ActiveJobUiState.kt:49-51; ActiveJobViewModel.kt:55,73-102",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "This is the strongest finding in the theme and it verifies completely. ActiveJobUiState.kt:49-51 declares `data class Error(val message: String)`. ActiveJobScreen.kt:86-92 renders it as a CenterMessage with a back-to-dashboard action. I grepped every non-test .kt under technician-app/app/src for 'ActiveJobUiState': the ViewModel constructs Loading (:55), Completed (:79) and Active (:81) and NEVER Error - all 14 other references are `as? ActiveJobUiState.Active` casts. And the failure path is worse than 'no error is shown': ActiveJobViewModel.kt:73-102 is `repository.getActiveJob(bookingId).collect { job -> ... }` with no .catch and no try/catch, inside a viewModelScope.launch, while _uiState is initialised to Loading (:55). A failing load leaves the state at Loading forever, which ActiveJobScreen.kt:78 renders as ActiveJobSkeleton(). A technician standing at a customer's door sees an indefinite skeleton with no message and no retry.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "There is no visible Navigate/maps affordance; the maps intent only auto-fires once as a side effect of the Start-trip transition, so a technician who dismisses it cannot re-open directions.",
+      "citation": "technician-app/.../navigation/HomeGraph.kt:175-193; ui/activeJob/ActiveJobViewModel.kt:154-161; ui/activeJob/ActiveJobScreen.kt",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "`grep -niE \"maps|navigate|direction\"` over the whole of ActiveJobScreen.kt returns ZERO lines - there is no button, icon or row anywhere on the screen that opens directions. HomeGraph.kt:179-189 collects viewModel.navigationEvents and, on NavigationEvent.Maps, fires `Intent(ACTION_VIEW, Uri.parse(event.uri))`. The only emission of that event is ActiveJobViewModel.kt:154-161 `startTrip() { val (result, navEvent) = startTripUseCase(bookingId); if (result.isSuccess && navEvent != null) _navigationEvents.emit(navEvent) }` (plus one more at :301 on the same pattern). It is a fire-once side effect of a state transition; the technician cannot re-trigger it without an app restart, and the transition cannot be repeated.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Tapping the primary CTA gives no in-flight feedback - no spinner, no disabled state, no optimistic stage advance - so on a slow connection the technician taps repeatedly.",
+      "citation": "technician-app/.../ui/activeJob/ActiveJobScreen.kt:163-177,180-199",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "ActiveJobScreen.kt:180-186: `val (ctaLabel, ctaEnabled, ctaTargetStage) = when (state.availableAction) { START_TRIP -> Triple(..., true, \"EN_ROUTE\") ... NONE -> Triple(..., false, \"\") }` - `ctaEnabled` is a literal true for every real action and false only for NONE, and the HsPrimaryButton at :188-198 passes exactly that. Confirmed: no spinner, no in-flight disable, no label change. But 'no feedback at all' is not quite right - the state carries `hasPendingTransitions`, and :163-177 renders an errorContainer banner with R.string.active_job_offline_sync above the CTA when a transition is queued. That banner is real feedback; it is just detached from the button, framed as an offline-sync warning rather than 'working...', and it only covers the queued-offline path.",
+      "correctedStatement": "The ActiveJob primary CTA never reflects in-flight state: ctaEnabled is hardcoded per availableAction (ActiveJobScreen.kt:180-186) and passed straight to HsPrimaryButton (:188-198), so there is no spinner, no disable and no label swap while a stage transition is in flight - repeated taps enqueue repeated transitions. The screen is not feedback-free: a hasPendingTransitions offline-sync banner renders above the CTA (:163-177). Fix is to bind the button's enabled/label to that same flag, not to invent a feedback mechanism from scratch.",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Upload errors interpolate the raw exception message into user-visible copy.",
+      "citation": "technician-app/.../ui/activeJob/PhotoCaptureScreen.kt:258; ActiveJobViewModel.kt:255,329",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "PhotoCaptureScreen.kt:258 `Text(stringResource(R.string.photo_upload_failed, uploadError), color = Color.White)` - a localized template with the raw value as its format argument. Source confirmed at ActiveJobViewModel.kt:255 `photoUploadError = uploadResult.exceptionOrNull()?.message ?: \"Upload failed\"` and :329 `transitionResult.exceptionOrNull()?.message ?: \"Transition failed - tap Retry\"`. Both fallbacks are English literals too. Mitigating: the panel does offer Retry and Retake buttons (:259-268), so it is not a dead end.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": "systemic raw-throwable finding"
+    },
+    {
+      "claim": "The error snackbar shows a raw exception message. (payout cadence)",
+      "citation": "technician-app/.../ui/payoutsettings/PayoutCadenceViewModel.kt:56; PayoutCadenceScreen.kt:68-70",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "PayoutCadenceViewModel.kt:56 `onFailure = { PayoutCadenceUiState.Error(it.message ?: \"Unknown error\") }`; PayoutCadenceScreen.kt:68-70 `is PayoutCadenceUiState.Error -> { snackbarHostState.showSnackbar(state.message) }`. Verbatim. Adjacent to it at :65 I also saw `snackbarHostState.showSnackbar(\"सेटिंग सेव हो गई\")` - a hardcoded Hindi string literal rather than a stringResource, which is the mirror-image i18n bug in the same when block.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": "systemic raw-throwable finding"
+    },
+    {
+      "claim": "The screen has no Scaffold, no TopAppBar and no back control in any state; combined with an Error state that has no retry button, a failed load is a dead end.",
+      "citation": "technician-app/.../ui/rating/RatingScreen.kt:51-55,79",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "RatingScreen.kt:51 `Surface(modifier = modifier.fillMaxSize(), color = colorScheme.background) {` then :52-55 `Column(fillMaxSize().padding(24.dp), spacedBy(16.dp))` - no Scaffold, no TopAppBar, no IconButton back anywhere in the when block (:56-95+). Line 79 `is RatingUiState.Error -> StatusMessage(\"Could not load rating\", current.message)` - a two-line message composable with no action parameter. Loading and Submitting (:57-64) share one bare 56dp CircularProgressIndicator. A failed load is a genuine dead end reachable only by system back.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The error state renders the raw failure message straight from RatingUiState.Error.",
+      "citation": "technician-app/.../ui/rating/RatingScreen.kt:79",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "RatingScreen.kt:79 `is RatingUiState.Error -> StatusMessage(\"Could not load rating\", current.message)`. Both halves are defective: the title is a hardcoded English literal (not even a stringResource) and the body is the raw state message. The surrounding screen is full of hardcoded English too (:80 'Customer feedback', :83 'Rate your customer', :92 'Overall', :94 'Behaviour').",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": "technician.rate-customer no-Scaffold/no-retry finding - same screen, adjacent lines; consider reporting as one 'RatingScreen is unfinished' item"
+    },
+    {
+      "claim": "Motion durations diverge: web fast/base/slow = 120/220/420ms, Android fast/base/medium/slow = 150/200/300/500ms. Easing curves DO align (web --ease-out == Android emphasizedDecelerate; web --ease-in-out == Android standard).",
+      "citation": "admin-web/app/globals.css:173-178; design-system/.../theme/Motion.kt:24-52",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "globals.css:174-178 `--duration-fast: 120ms; --duration-base: 220ms; --duration-slow: 420ms; --ease-out: cubic-bezier(0.22, 1, 0.36, 1); --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);`. Motion.kt: fast 150ms, base 200ms, medium 300ms, slow 500ms; HomeservicesEasing.standard = CubicBezierEasing(0.4f, 0f, 0.2f, 1f) and emphasizedDecelerate = CubicBezierEasing(0.22f, 1f, 0.36f, 1f). Every number and both easing equivalences check out exactly, including the asymmetry that Android has a 4th 'medium' step web lacks. Unusually precise observation.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The document's stated motion default (200ms) contradicts the implemented --duration-base (220ms), so the only concrete number in the doc is already wrong.",
+      "citation": "admin-web/DESIGN.md:30; admin-web/app/globals.css:175",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "DESIGN.md:30 `Default duration: 200ms. Easing: \\`cubic-bezier(0.4, 0, 0.2, 1)\\`. Reduce-motion respected.` vs globals.css:175 `--duration-base: 220ms`. Worth adding: the doc's stated default easing cubic-bezier(0.4,0,0.2,1) is the web's --ease-in-out, but the .btn primitive (globals.css:428) actually transitions with --ease-out (0.22,1,0.36,1) - so the doc is wrong on BOTH numbers it states. It is also the value Android's Motion.kt base uses (200ms), suggesting the doc was written against the Android token set.",
+      "correctedStatement": "",
+      "correctedSeverity": "low",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The QR loading affordance is a bare grey animate-pulse square that bypasses the project's own .skeleton shimmer primitive.",
+      "citation": "admin-web/app/[locale]/setup/page.tsx:146; admin-web/app/globals.css:634-651",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "setup/page.tsx:146 `<div className=\"h-52 w-52 animate-pulse bg-[var(--color-surface-raised)]\" />` - Tailwind's generic opacity pulse. globals.css:634-651 defines `@keyframes skeletonShimmer` and `.skeleton` with a marigold-tinted 200% linear-gradient sweep at 1400ms var(--ease-in-out), plus a prefers-reduced-motion guard at :650-651. Two different loading languages in one product; the branded one is the one not used here. Note the animate-pulse version also has no reduced-motion guard of its own (Tailwind's does not add one).",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Loading is communicated only by swapping button text; there is no spinner, progress bar or skeleton anywhere on the sign-in flow, so a slow rural connection reads as a frozen page.",
+      "citation": "admin-web/app/[locale]/login/page.tsx:397-403,415-421,457-465",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "No spinner/progress/skeleton anywhere on the page - confirmed. But it is not 'only' a text swap: every button also disables. :397-403 `disabled={loading !== null || mfaCode.length !== 6}` with label `{loading === 'mfa' ? t('form.mfa.verifyingButton') : t('form.mfa.verifyButton')}`; :415-421 Google button `disabled={loading !== null}` with openingButton/continueButton swap; :457-465 password submit `disabled={loading !== null}` with submittingButton/submitButton swap. Disabled state plus label change is meaningful feedback, so 'reads as a frozen page' overstates it.",
+      "correctedStatement": "The admin sign-in flow has no spinner, progress bar or skeleton on any of its three submit paths (login/page.tsx:397-403 MFA, :415-421 Google, :457-465 password). Feedback is a localized label swap plus a disabled state - adequate but minimal, and with no aria-live region the change is not announced. Lower severity than 'frozen page' implies.",
+      "correctedSeverity": "low",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The step-1 -> step-2 swap replaces the entire form body with no transition or focus move, so after a successful password the OTP field is not focused and the change is not announced.",
+      "citation": "admin-web/app/[locale]/login/page.tsx",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "`grep -niE \"autofocus|\\.focus\\(|useRef|aria-live|role=\\\"status\\\"\"` over the entire login/page.tsx returns ZERO lines. No autoFocus attribute, no ref-based focus call, no live region anywhere in the file. Combined with the conditional `{challenge ? (<>MFA block</>) : (<>Google + password block</>)}` structure, the form body is swapped wholesale with no focus management and nothing for a screen reader to announce. The transition half is also true - no transition/animate class is applied to the swap.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "No route-transition feedback of any kind - no top progress bar, no pending state on Rail links - on an app whose pages are server components doing network fetches.",
+      "citation": "admin-web/app/[locale]/(dashboard)/layout.tsx; admin-web/src/components/dashboard/Rail.tsx:92-110,145-161",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "`grep -niE \"progress|pending|useLinkStatus|transition|loading\"` over (dashboard)/layout.tsx returns ZERO lines. Rail.tsx has aria-current (:99, :152) and isActive styling (:107-109), and a `transition: 'background 120ms, color 120ms, border-color 120ms'` at :110 - but that is hover/active colour easing, not navigation feedback; nothing reads a pending/loading state. This compounds directly with the two routes that have no loading.tsx: for /dashboard and /customers there is neither a route-level skeleton nor a nav-level pending indicator, so the click has no observable effect at all until the server render lands.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": "admin.liveops-dashboard / customers missing loading.tsx - these compound; fix together"
+    },
+    {
+      "claim": "There is no loading, empty or stale state - a zero-data day and a failed refresh look identical to a real zero.",
+      "citation": "admin-web/src/components/dashboard/CounterStrip.tsx:66-100; admin-web/app/[locale]/(dashboard)/dashboard/page.tsx:12-32",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "CounterStrip.tsx:66-100 does render six Tiles straight from the `summary` prop with no zero/empty differentiation - that half holds. But 'a failed refresh looks identical to a real zero' is wrong, and I checked the producing route to be sure: dashboard/page.tsx:21-32 unwrapDashboardResult calls handleDashboardApiError on a rejected result, which redirects on 401/403 and otherwise `throw error` (:18), and throws again if data is undefined (:28). A failed summary fetch therefore propagates to the route error boundary - the page does not render a strip of zeros. Since CounterStrip is a pure presentational child of a server component, there is also no loading state for it to have.",
+      "correctedStatement": "CounterStrip renders six KPI tiles with no treatment distinguishing a genuine zero day from a meaningful value - no comparison, no trend, no 'no bookings yet today' framing (CounterStrip.tsx:66-100). It does not conflate failure with zero: dashboard/page.tsx:12-32 throws on a failed or dataless fetch and hands off to the route error boundary. And as a presentational child of a server component it cannot own a loading state - that gap belongs to the missing dashboard/loading.tsx finding.",
+      "correctedSeverity": "low",
+      "mergedWith": "admin.liveops-dashboard no loading.tsx"
+    },
+    {
+      "claim": "New events appear with no motion, no highlight and no unread affordance on a 30-second poll cycle - the 'live' feed has no liveness.",
+      "citation": "admin-web/src/components/dashboard/OrderFeed.tsx:13,44-52,124-177",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "OrderFeed.tsx:13 `const POLL_INTERVAL_MS = 30_000`. mergeEvents (:44-52) prepends new items with no read/unread marking - it only dedupes by id and slices to 50. The <li> at :125-137 has no transition, no data-new attribute, no highlight; the only per-item colour is a static 3px borderLeft from KIND_COLORS. Nothing distinguishes an event that arrived one second ago from one 25 minutes old except the timestamp. One credit the claim omits: the <ol> does carry aria-live=\"polite\" (:111), so screen-reader users DO get announced - the failure is purely visual.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The error card has no retry action; recovery requires waiting a full 30-second poll or reloading the page.",
+      "citation": "admin-web/src/components/dashboard/OrderFeed.tsx:97-102,13",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "OrderFeed.tsx:97-102 `{loadError !== null ? (<EmptyState eyebrow=\"Live feed\" headline=\"Feed unavailable\" copy={loadError} />)` - the `action` prop that EmptyState supports (EmptyState.tsx:8,51) is not passed, so there is no retry control. The next attempt comes from the setInterval at :73-75 on the 30_000ms cycle. The copy is also a hardcoded English sentence built at :66.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": "EmptyState action-slot-never-used finding"
+    },
+    {
+      "claim": "The empty state is wrapped in pointer-events:none, permanently disabling any action the shared EmptyState component might render.",
+      "citation": "admin-web/src/components/dashboard/TechMap.tsx:84-99; admin-web/src/components/EmptyState.tsx:51",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "TechMap.tsx:85-91 is an absolutely-positioned inset-0 flex overlay with `pointerEvents: 'none'`, wrapping `<EmptyState eyebrow=\"Field map\" headline=\"No technicians on duty\" copy=\"Pins will appear here once techs come online.\" />` at :92-97. The mechanism is exactly as described. What makes it a correction rather than a confirmation: this call site passes no `action`, so nothing is being disabled today - it is a latent trap that will silently swallow the first CTA anyone adds, not a live bug. pointer-events:none is also load-bearing here (the overlay sits over an interactive map), so the fix is a scoped pointer-events:auto on the action, not removing the rule.",
+      "correctedStatement": "TechMap's empty-state overlay sets pointerEvents:'none' on the wrapper (TechMap.tsx:90) so that map interaction passes through. EmptyState renders its optional `action` inside that wrapper (EmptyState.tsx:51), so any CTA added to this call site would render but be unclickable. No action is passed today, so this is a latent trap rather than a current defect - fix by adding pointerEvents:'auto' to EmptyState's action container, and keep the wrapper rule.",
+      "correctedSeverity": "low",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The empty state is bespoke small italic faint text rather than the shared EmptyState component, giving the dashboard three different empty-state treatments (EmptyState card in OrderFeed, EmptyState overlay in TechMap, italic line here).",
+      "citation": "admin-web/src/components/dashboard/PayoutQueue.tsx:79-91",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "PayoutQueue.tsx:79-91 `{payoutsPending === 0 ? (<p style={{ margin: 0, marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--color-text-faint)', fontStyle: 'italic' }}>Nothing pending - payouts cleared.</p>)`. Bespoke, text-xs, faint, italic, hardcoded English, and the file does not import EmptyState. Three treatments on one dashboard, exactly as counted. Italic is also a poor choice for the Devanagari secondary script.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Loading skeleton does not mirror the real Orders layout - one h-10 bar substitutes for an 8-control filter row and 8 identical h-12 bars substitute for a 9-column table with a header band and pagination footer, so the layout visibly jumps on hydration.",
+      "citation": "admin-web/app/[locale]/(dashboard)/orders/loading.tsx:1-12; admin-web/src/components/orders/OrdersTable.tsx:26-36",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "orders/loading.tsx is 12 lines total: an h-8 w-48 title bar, one h-10 w-full bar, and `Array.from({ length: 8 }).map(...)` of h-12 w-full bars. The real screen has a 9-column table (OrdersTable.tsx:26-36 lists orderId, customer, service, technician, status, city, scheduled, amount, action), a header band, an export button in the title row, the multi-control OrderFilters, and a pagination footer. The skeleton previews none of that structure. It does at least use the branded .skeleton shimmer class, unlike setup/page.tsx.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": "A2 technicians loading skeleton is a copy of the orders one - same root cause"
+    },
+    {
+      "claim": "The skeleton shows two kanban columns but the real board renders three (NEW, INVESTIGATING, RESOLVED), so the layout visibly reflows on hydration.",
+      "citation": "admin-web/app/[locale]/(dashboard)/complaints/loading.tsx:5-18; admin-web/src/components/complaints/KanbanBoard.tsx:18",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "complaints/loading.tsx contains exactly two `<div className=\"flex-1 space-y-3\">` column blocks (each a h-6 w-32 header plus five h-20 cards). KanbanBoard.tsx:18 `const COLUMNS: ComplaintStatus[] = ['NEW', 'INVESTIGATING', 'RESOLVED']` - three. Two flex-1 columns become three on hydration, so every card width shrinks by a third mid-load. Precisely as claimed.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The raw exception message is deliberately forwarded to the UI as an operator-visible diagnostic, per the code comment - shipping developer error text to a Hindi-first non-technical operator. Plus: the error alert prefixes the raw exception with a hardcoded English string 'customers list failed:'.",
+      "citation": "admin-web/app/[locale]/(dashboard)/customers/page.tsx:24-30; CustomerListClient.tsx:226-230",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "customers/page.tsx:25-28 carries the comment verbatim ('Surface the error inline instead of silently rendering empty... acts as a diagnostic when the backend rejects (e.g. missing Cosmos container, 403, network)') and :29 `fetchError = err instanceof Error ? err.message : String(err)`. CustomerListClient.tsx:227-230 renders `<p role=\"alert\" className=\"alert alert-danger\">customers list failed: {fetchError}</p>` - the prefix is a bare English literal, not a t() call, on a bilingual console. Both halves confirmed; they are one defect on two files.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": "A2 customer-list-client 'error alert prefixes the raw exception with hardcoded English' - same defect, producer and renderer"
+    },
+    {
+      "claim": "Cancel remains enabled and un-styled during an in-flight destructive request, and the confirm button gives only a text swap with no spinner or progress affordance.",
+      "citation": "admin-web/src/components/orders/ConfirmModal.tsx:110-123",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "ConfirmModal.tsx:111-116 - the Cancel button has an onClick and className only; no `disabled` prop and no loading-dependent styling, so it stays fully live while a destructive override is in flight. :117-123 confirm is `disabled={isDisabled}` with `{loading ? t('confirmModal.submitButton.loading') : t('confirmModal.submitButton.label')}` - label swap, no spinner. Cancelling mid-request on an order override leaves the modal state and the server state able to diverge.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Submit and Cancel are hand-rolled inline-styled buttons that duplicate and diverge from the .btn primitive - different height (~36px vs 44px), different radius (4px vs 2px), no uppercase/letter-spacing, no hover transition - so the two catalogue forms look like they were built by different teams.",
+      "citation": "admin-web/src/components/catalogue/ServiceForm.tsx:201-235 vs CategoryForm.tsx:171-178 and app/globals.css:413-433",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "ServiceForm.tsx:202-218 and :219-234 are raw <button> elements with inline style objects: padding var(--space-2) var(--space-4), borderRadius var(--radius-md), no min-height, no textTransform, no letterSpacing, no transition. CategoryForm.tsx:172-177 uses `className=\"btn btn-primary\"` and `className=\"btn btn-ghost\"`. globals.css:413-433 .btn: min-height 2.75rem (44px), border-radius var(--radius-sm) (2px per :404), text-transform uppercase, letter-spacing 0.04em, `transition: all var(--duration-base) var(--ease-out)`. Every divergence listed checks out - and because inline styles cannot express :hover, ServiceForm's buttons have no hover feedback at all, which is the micro-interaction half of the claim.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The component defines no hover, active or pressed styling at all - only a disabled opacity - so it provides no micro-interaction feedback.",
+      "citation": "admin-web/src/components/Button.tsx:27-36",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Button.tsx:27-36 builds one flat CSSProperties object: borderRadius, fontWeight, cursor (disabled-dependent), opacity (disabled-dependent), `transition: 'opacity var(--duration-base) var(--ease-out)'`, then size and variant styles. Because it renders `<button style={merged}>` (:37) with inline styles, :hover/:active/:focus-visible are structurally impossible to express - the component cannot have press feedback without being rewritten to classes. The lone transition only eases the disabled-state opacity. Note this is the second button system in the console alongside globals.css .btn, which does have hover rules.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Export button gives no progress feedback beyond a text swap - no spinner, no row count, no aria-live, on an operation that pages through the full result set.",
+      "citation": "admin-web/src/components/orders/OrdersClient.tsx:95-103,123-129",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "OrdersClient.tsx:123-129 `<button onClick={...} disabled={isExporting} className=\"btn btn-ghost\">{isExporting ? t('list.exportButton.loading') : t('list.exportButton.label')}</button>` - label swap plus disable, no spinner, no counter, and no aria-live region anywhere in the file. handleExport (:95-103) awaits fetchAllOrdersForExport over the full filtered set with no progress reporting and no error handling in the try (only a finally), so an export failure is completely silent - the button simply re-enables. That last part is worse than the claim states.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Evidence photos have no loading placeholder, no error/broken-image fallback, and no lightbox - clicking opens the raw storage URL in a new tab, dumping the operator out of the console.",
+      "citation": "admin-web/src/components/orders/OrderSlideOver.tsx:97-112",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "OrderSlideOver.tsx:98-111 `<a key={...} href={url} target=\"_blank\" rel=\"noreferrer\" className=\"block overflow-hidden rounded border border-gray-200 bg-gray-50\"><img src={url} alt={...} className=\"h-28 w-full object-cover\" loading=\"lazy\" /></a>`. No onError handler, no placeholder/skeleton, no <picture> fallback, no modal viewer - the anchor navigates the browser to the raw Firebase Storage URL. `loading=\"lazy\"` is present but that is deferral, not a placeholder. On complaint adjudication this is where the operator most needs to compare photos side by side.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The six trigger buttons are never disabled while an action is in flight - `loading` is only forwarded to the modal - so a modal-adjacent double-trigger path is not guarded at the panel level.",
+      "citation": "admin-web/src/components/orders/OverridePanel.tsx:170-178",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "OverridePanel.tsx:170-178 renders the trigger buttons with onClick handlers that set the active override, and no `disabled` prop referencing the loading flag; `loading` is passed down to ConfirmModal only. Combined with the verified ConfirmModal defect (Cancel stays enabled mid-flight, ConfirmModal.tsx:111-116), there is a real path where an operator cancels an in-flight override and immediately triggers a second one from the still-live panel.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": "A2 confirm-modal 'Cancel remains enabled during an in-flight destructive request' - these two compose into one double-submit hazard"
+    }
+  ]
+}

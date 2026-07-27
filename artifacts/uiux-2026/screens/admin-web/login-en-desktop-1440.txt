@@ -1,0 +1,29 @@
+HOMEHEROO ADMIN
+
+Secure operations access
+
+Google or password proves identity. Microsoft Authenticator approves admin access.
+
+1
+
+Verify identity
+
+Continue with Google or admin email and password.
+
+2
+
+Approve with Microsoft Authenticator
+
+Use the 6-digit code for HomeHeroo admin. It is not a Gmail OTP.
+
+STEP 1 OF 2
+
+Choose how to sign in
+
+Start with Google sign-in or admin email and password. The Microsoft Authenticator step appears next.
+
+CONTINUE WITH GOOGLE
+OR USE ADMIN PASSWORD
+Email address
+Password
+SIGN IN WITH PASSWORD

@@ -1,0 +1,599 @@
+{
+  "theme": "V2-i18n-hindi",
+  "verdicts": [
+    {
+      "claim": "admin-web: en.json and hi.json both flatten to exactly 434 leaf keys, 0 missing, 0 extra. 14 leaf values are byte-identical; 13 of those contain no Devanagari.",
+      "citation": "admin-web/messages/en.json, admin-web/messages/hi.json",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Reproduced exactly with a recursive flatten: en 434 leaves, hi 434 leaves, missing=[] extra=[]. Identical count = 14. Of those, exactly 13 contain no Devanagari: locale.switcher.en, technicians.columns.kyc, catalogue.form.idLabel, catalogue.form.heroImagePlaceholder, catalogue.form.sortOrderPlaceholder, catalogue.serviceForm.idLabel, catalogue.serviceForm.heroImagePlaceholder, catalogue.serviceForm.pricePlaceholder, catalogue.serviceForm.durationPlaceholder, catalogue.serviceForm.commissionPlaceholder, adminUsers.columns.totp, compliance.sscLevy.columns.gmv, notFound.title. The 14th (locale.switcher.hi = 'हिन्दी') is correctly identical because it IS Devanagari. A2's key-parity half is exact.",
+      "correctedStatement": "",
+      "correctedSeverity": "info",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The real admin-web defect is ~35 strings that never route through next-intl at all (A2's framing).",
+      "citation": "admin-web/src/components/**, admin-web/app/[locale]/(dashboard)/**",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "A2's own surface inventory lists 48 hardcoded user-facing string entries across 16 of its 27 surfaces, not ~35 — and that is only the A2 cluster. Adding the A1 dashboard-shell cluster (Topbar 3, CounterStrip 6, OrderFeed, PayoutQueue 9, TechMap, ThemeToggle 2, UtilStrip), the A3 catalogue cluster, app/not-found.tsx (3), app/global-error.tsx, app/layout.tsx meta description, app/[locale]/setup/page.tsx (~20) and app/[locale]/(dashboard)/not-authorized/page.tsx (4) puts the real figure well above 100. Only 1 of the 7 files in src/components/dashboard/ imports next-intl (Rail.tsx).",
+      "correctedStatement": "admin-web has ZERO en/hi key-parity defects (434/434). The defect is bypass, not gaps — well over 100 user-facing strings never call useTranslations/getTranslations, concentrated in the Live Ops dashboard widgets, the TOTP setup page, the not-authorized page, both 404s, global-error, and raw enum rendering in orders/complaints/audit-log. Sizing the remediation at ~35 strings will under-scope it by ~3x.",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The entire Live Ops dashboard is untranslated English served under the default Hindi locale — there is no 'dashboard' namespace in either message catalogue.",
+      "citation": "admin-web/src/components/dashboard/CounterStrip.tsx:84-99, OrderFeed.tsx:95, PayoutQueue.tsx:41, UtilStrip.tsx:41",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "'no dashboard namespace' is TRUE — top-level namespaces are adminUsers, auditLog, catalogue, complaints, compliance, customers, finance, globalError, locale, login, meta, nav, notFound, orders, technicians, topbar. But 'the entire dashboard is untranslated' is overstated: `grep -ln next-intl admin-web/src/components/dashboard/*.tsx` returns exactly one file, Rail.tsx, which does `const t = useTranslations('nav')` at :45 and renders `<span>{t(labelKey)}</span>` at :119 and :169. The left rail and mobile bottom bar ARE fully translated. Six of seven components (CounterStrip, OrderFeed, PayoutQueue, TechMap, Topbar, UtilStrip) are not.",
+      "correctedStatement": "6 of the 7 Live Ops dashboard components bypass next-intl entirely; only Rail.tsx (nav namespace) is wired. There is no 'dashboard' namespace — but a fully translated 'topbar' namespace already exists and is orphaned, so the fix is 'wire 6 components', not 'author a whole new namespace from scratch'.",
+      "correctedSeverity": "high",
+      "mergedWith": "admin.topbar hardcoded-English claim"
+    },
+    {
+      "claim": "Every Topbar string is hardcoded English while fully-translated Hindi equivalents already exist unused in messages/hi.json under the 'topbar' namespace.",
+      "citation": "admin-web/src/components/dashboard/Topbar.tsx:45,46,51,53",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Topbar.tsx imports no next-intl. :45 `<span className=\"topbar__title\">Operations Observatory</span>`, :51 `aria-label=\"System status: live\"`, :53 `<span className=\"topbar__live-label\">LIVE</span>`. hi.json topbar = {title:'ऑपरेशंस ऑब्ज़र्वेटरी', city:'अयोध्या', live:'लाइव', liveLabel:'सिस्टम स्थिति: लाइव'} — a complete, correct, entirely dead namespace. Nit: the cited :46 is `{CITY}` from `process.env.NEXT_PUBLIC_CITY ?? 'Ayodhya'` (:5), i.e. env-derived, not a source literal — 3 of the 4 cited lines are literals.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "All six KPI labels are hardcoded English with no i18n namespace, including the untranslated finance jargon 'GMV'.",
+      "citation": "admin-web/src/components/dashboard/CounterStrip.tsx:84-99",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "No next-intl import in the file. Lines 84-99: label=\"Bookings · Today\", \"GMV · Today\", \"Commission\", \"Payouts · Pending\", \"Complaints · Open\", \"Techs · On duty\". Exactly six, exactly at the cited range, 'GMV' present verbatim.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Eight of the fourteen order statuses are absent from CATALOG_STATUSES, so they bypass translation and render their raw English enum identifier to a Hindi-first operator.",
+      "citation": "admin-web/src/components/orders/StatusBadge.tsx:24-33",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "STATUS_STYLES (:6-21) enumerates 14 OrderStatus values. CATALOG_STATUSES (:24-27) = {NEW, PENDING_PAYMENT, SEARCHING, ACCEPTED, EN_ROUTE, ARRIVED, IN_PROGRESS, COMPLETED, CANCELLED, REFUNDED}. Intersection is exactly 6 (PENDING_PAYMENT, SEARCHING, EN_ROUTE, IN_PROGRESS, COMPLETED, CANCELLED), so 8 fall through :33 `const label = CATALOG_STATUSES.has(status) ? t(...) : status;` — ASSIGNED, REACHED, AWAITING_PRICE_APPROVAL, PAID, CLOSED, UNFULFILLED, CUSTOMER_CANCELLED, NO_SHOW_REDISPATCH. Both cited examples correct. Also: CATALOG_STATUSES contains 4 keys (NEW, ACCEPTED, ARRIVED, REFUNDED) that are not valid OrderStatus values at all — orders.statuses in en.json/hi.json is keyed to a stale enum.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "All 14 status option labels render the raw English enum in monospace as the user-facing label AND as the checkbox aria-label.",
+      "citation": "admin-web/src/components/orders/StatusFilterMenu.tsx:91-96",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "OrderFilters.tsx:12-27 ALL_STATUSES has exactly 14 entries and is passed at :41. StatusFilterMenu.tsx:91 `aria-label={status}` and :96 `<span className=\"font-mono text-xs\">{status}</span>`. The file does use useTranslations for the trigger/menu/apply/clear chrome (:14, :39-42, :80, :108, :115), which makes the raw-enum option list a deliberate-looking gap rather than an unwired file.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The Trust Dossier is entirely untranslated — it never imports next-intl and hardcodes eleven English strings including 'Trust Profile', '✓ Aadhaar' and '✓ Background Check'.",
+      "citation": "admin-web/src/components/technicians/TrustDossierPanel.tsx:40-67",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "No next-intl import. Literals: :26 'Failed to load', :40 'Trust Profile', :44 'Loading…', :45 'Could not load: ', :50 'jobs · ' and ' yr exp', :53 '✓ Aadhaar', :54 '✓ Background Check', :56 '✓ Trained: ', :60 'Certifications: ', :63 'Languages: ', :67 'Recent Reviews'. Twelve by strict count; 'eleven' is within the cited 40-67 window.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Hindi error copy is broken by design: an English verb is interpolated into a Devanagari sentence template.",
+      "citation": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:34 with messages/hi.json catalogue.serviceList.toggleError",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "ServiceList.tsx:34 `setError(t('serviceList.toggleError', { action: service.isActive ? 'unpublish' : 'publish', name: service.name }))`. hi.json catalogue.serviceList.toggleError = '{name} को {action} करने में विफल।'. Renders literally as 'AC Deep Clean को unpublish करने में विफल।'. Note the same namespace already ships translated publishButton='प्रकाशित करें' / unpublishButton='अप्रकाशित करें', so the correct verb strings exist two keys away and are not used.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The entire TOTP setup screen is untranslated English — the file never imports next-intl — on a product whose default locale is Hindi.",
+      "citation": "admin-web/app/[locale]/setup/page.tsx:1-5,98-110,128-133",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Imports (:1-5) are useEffect/useState, next/navigation, @/api/base — no next-intl. Roughly 20 literals including :81 'That Microsoft Authenticator code did not match. Try the next 6-digit code.', :98 'First admin sign-in', :100 'Set up Microsoft Authenticator', :108-110 the three-step list, :125 aria-label, :130 'Scan the QR code', :142 img alt, :157 label, :167 placeholder, :177 'Confirming...' / 'Confirm Microsoft Authenticator'. This is the mandatory first-run screen for every new admin.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "All four setup redirects use unprefixed paths ('/login', '/dashboard') inside a localePrefix:'always' routing config, so they do not preserve the user's locale segment.",
+      "citation": "admin-web/app/[locale]/setup/page.tsx:25,31,35,50,53,86 vs admin-web/src/i18n/config.ts:6",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "src/i18n/config.ts:4-6 defineRouting({locales:['en','hi'], defaultLocale:'hi', localePrefix:'always'}). setup/page.tsx:4 imports useRouter from 'next/navigation' (NOT next-intl's navigation), then router.replace('/login') at :25, :31, :35, :50, :53 and router.push('/dashboard') at :86. Six unprefixed navigations (the claim says 'four' in prose but cites all six lines). An /en admin is bounced to the hi default by middleware.",
+      "correctedStatement": "Six unprefixed navigations, not four: :25, :31, :35, :50, :53 (replace '/login') and :86 (push '/dashboard'). Root cause is importing useRouter from 'next/navigation' instead of the next-intl navigation wrapper.",
+      "correctedSeverity": "medium",
+      "mergedWith": "admin.liveops-dashboard 401/403 unprefixed redirect claim"
+    },
+    {
+      "claim": "The dashboard's 401 and 403 redirects omit the locale prefix under a localePrefix:'always' config.",
+      "citation": "admin-web/app/[locale]/(dashboard)/dashboard/page.tsx:14-15 vs admin-web/src/i18n/config.ts:6",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": ":3 `import { redirect } from 'next/navigation'`; :14 `if (error.status === 401) redirect('/login');` :15 `if (error.status === 403) redirect('/not-authorized');`. Exact. Same root cause as the setup-page redirects — merge into one remediation.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": "admin.setup-totp unprefixed redirect claim"
+    },
+    {
+      "claim": "The login page has no language switcher; LocaleSwitcher is mounted only inside the authenticated dashboard layout.",
+      "citation": "admin-web/app/[locale]/login/page.tsx:1-18 vs admin-web/app/[locale]/(dashboard)/layout.tsx:69",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "`grep -rn LocaleSwitcher admin-web/app admin-web/src --include=*.tsx` (minus stories) returns exactly three lines: layout.tsx:11 import, layout.tsx:69 `<Topbar rightSlot={<><LocaleSwitcher /><ThemeToggle /></>} />`, and the component definition. login/page.tsx does import useTranslations (:4) so the login copy itself IS translated — the defect is precisely that the locale cannot be changed pre-auth, which is what the claim says.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The not-authorized RBAC screen is fully untranslated English.",
+      "citation": "admin-web/app/[locale]/(dashboard)/not-authorized/page.tsx:46,57,69,77",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "No useTranslations/getTranslations anywhere in the file. :46 'Access control', :57 'You do not have access to this admin area.', :67 `Your role is not allowed to open ${requestedPath}.`, :69 'Your role does not include any dashboard capabilities.', :77 'Go to allowed area'. All four cited lines land on literals.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Every string on the root 404 is a hardcoded English literal even though the exact translations already exist in messages/hi.json under 'notFound'; and the CTA hardcodes /hi/dashboard.",
+      "citation": "admin-web/app/not-found.tsx:10,18,25,21",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": ":10 'HomeHeroo admin', :13 aria-label='Page not found', :18 'Page not found', :24 'Back to dashboard' (the claim cites :25, which is the closing </Link> — one line off). :21 `href=\"/hi/dashboard\"` confirmed. hi.json notFound = {eyebrow:'HomeHeroo एडमिन', title:'404', description:'पृष्ठ नहीं मिला', backHome:'डैशबोर्ड पर वापस जाएं'} — all four keys present and unused here. :7 `lang=\"en\"` is also forced on <main>.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": "admin.root-not-found lang=en claim"
+    },
+    {
+      "claim": "global-error.tsx is hardcoded lang=\"hi\" while its content is 90% English, and its one Hindi phrase contradicts the translated globalError.title already in messages/hi.json.",
+      "citation": "admin-web/app/global-error.tsx:17,58",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": ":17 `<html lang=\"hi\">`. :58 `Something went wrong&nbsp;•&nbsp;कुछ रुका`. hi.json globalError.title = 'कुछ गड़बड़ हो गई' — a different phrase, and globalError.description/reload are also translated and unused. Both cited lines exact.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The .eyebrow and .chip primitives apply uppercase + wide tracking with no :lang(hi) reset, while nav labels do get one — inconsistent Devanagari handling.",
+      "citation": "admin-web/app/globals.css:257-258,500-501 vs 103-106",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Every cited line is exact. :102 comment 'Nav labels: reset letter-spacing so matra spacing isn't disrupted', :103-104 the two nav selectors, :105 letter-spacing:0. .eyebrow :257 text-transform:uppercase, :258 letter-spacing:0.22em — no :lang(hi) override anywhere. .chip :500 text-transform:uppercase, :501 letter-spacing:0.08em — same. 0.22em tracking on Devanagari is materially worse than on Latin because matras attach above/below the base glyph. Severity should be raised: .eyebrow is used on nearly every admin page header.",
+      "correctedStatement": "Correct as written, but 'low' understates it — .eyebrow is a site-wide page-header primitive, so 0.22em uppercase tracking with no :lang(hi) reset degrades Devanagari on essentially every admin route. The codebase proves it knows the fix (globals.css:102-106).",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "'Dark' and 'Light' are hardcoded English with no theme namespace in either message catalogue.",
+      "citation": "admin-web/src/components/theme/ThemeToggle.tsx:6-9",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": ":6-9 `const OPTIONS: ReadonlyArray<{value: Theme; label: string}> = [{value:'dark',label:'Dark'},{value:'light',label:'Light'}]`. No next-intl import. Confirmed no 'theme' key in the 16 top-level namespaces of en.json/hi.json.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The ServiceForm price field asks the operator to enter raw paise ('Base Price (paise — INR 599 = 59900)') and the commission field asks for basis points — raw domain-model units leaked into the UI.",
+      "citation": "admin-web/src/components/catalogue/ServiceForm.tsx:147-159, 178-193 with messages/en.json catalogue.serviceForm",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "en.json catalogue.serviceForm.priceLabel = 'Base Price (paise — INR 599 = 59900)' and commissionLabel = 'Commission (basis points — 2250 = 22.5%, range 1500–3500)', verbatim. pricePlaceholder='59900', commissionPlaceholder='2250', and both placeholders are among the 13 hi-values byte-identical to en. So the Hindi operator gets the numeric hint but the unit explanation only inside a translated label.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "CategoryCard surfaces raw internal identifiers (category ID slug, sort order integer) as first-class card content with hardcoded English labels.",
+      "citation": "admin-web/src/components/catalogue/CategoryCard.tsx:53-59",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": ":54 `ID: {category.id}` and :58 `Sort order: {category.sortOrder}` — both literal English labels rendering raw internal values, and the surrounding status chip at :49 DOES use t('card.statusActive'/'card.statusInactive'). So the finding is real. But this is a two-line cosmetic/IA nit on an internal owner-only catalogue admin screen, not a Hindi-first user-facing blocker.",
+      "correctedStatement": "CategoryCard.tsx:54 and :58 render 'ID:' and 'Sort order:' as untranslated English labels beside raw internal values, inside a card whose status chip is otherwise translated. Real drift, but cosmetic and owner-facing only — 'high' is inflated.",
+      "correctedSeverity": "low",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Evidence-photo stage labels are a hardcoded English lookup with an enum-underscore fallback.",
+      "citation": "admin-web/src/components/orders/OrderSlideOver.tsx:22-30",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": ":22-26 `const PHOTO_STAGE_LABELS: Record<string,string> = {EN_ROUTE:'Start trip', REACHED:'Arrived', IN_PROGRESS:'Work started', COMPLETED:'Completed'}` and :28-30 `photoStageLabel` falling back to `stage.replaceAll('_',' ')`. The file DOES import useTranslations at :5, so this is a bypass inside an otherwise-wired component. It also feeds the img alt at :107, so the screen-reader description is untranslated too.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": "order-slideover img alt hardcoded-English claim"
+    },
+    {
+      "claim": "The complaint status select's option labels are raw English enums while the resolution select in the same panel is fully translated.",
+      "citation": "admin-web/src/components/complaints/ComplaintSlideOver.tsx:108-117",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": ":109 `aria-label=\"Status\"`, :114-116 `{STATUS_OPTIONS.map((s) => (<option key={s} value={s}>{s}</option>))}` — raw enum. Twenty lines lower at :197 the resolution select does `{t(`resolutionCategories.${cat}`)}`. The same-file contrast the claim asserts is real and visible.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "customer-app: en 483 <string> + 3 <plurals>; hi 474 + 3. Delta = 9 missing Hindi strings, and those 9 are the entire DPDP Data Export screen.",
+      "citation": "customer-app/app/src/main/res/values/strings.xml vs values-hi/strings.xml",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Reproduced by XML parse: en 483 / hi 474, plurals 3/3, extra-in-hi = []. Missing set is exactly and only: data_export_button, data_export_description, data_export_error_unknown, data_export_filename_prefix, data_export_loading, data_export_privacy_note, data_export_retry, data_export_success_toast, data_export_title. The legally-mandated DPDP export surface is the app's only untranslated screen — a striking and precisely-stated finding.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": "customer.data-export nine-strings claim"
+    },
+    {
+      "claim": "technician-app: en 163 and hi 163 <string> entries, 0 missing, 0 extra — but that parity is MISLEADING: 112 UI-string literal lines across 13 Kotlin files are hardcoded English that never reach strings.xml. Worst: AuthScreen 23, TechnicianHomeScreen 22, TechnicianDashboardScreen 17, KycScreen 13, RatingScreen 9, ServiceSelectionScreen 8. customer-app: only 5 hits in 3 files.",
+      "citation": "technician-app/app/src/main/**.kt",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Reproduced the scan exactly: technician-app 112 lines in 13 files with the per-file counts 23/22/17/13/9/8 in that order; customer-app 5 lines in 3 files (SmokeScreen 2, FirstLaunchLanguageScreen 2, NoShowCreditHandler 1). Strings.xml parity confirmed 163/163, 0 missing, 0 extra. This is the single most load-bearing number in the whole i18n theme and it reproduces to the digit. Minor caveat: 2 of the 112 are in ui/SmokeScreen.kt, a dev harness, so the shipped-surface figure is ~110.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The technician login screen — the first screen every partner sees — is entirely hardcoded English: eyebrow 'Homeservices Partner' (:304), title 'Sign in to manage jobs' (:305), body (:306), and CTAs at :310/:316/:329.",
+      "citation": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/auth/AuthScreen.kt:304,305,306,310,316,329",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Every single line number is exact. :304 eyebrow = \"Homeservices Partner\", :305 title = \"Sign in to manage jobs\", :306 body = \"Use Google, email, or phone to receive job offers, manage payouts, and track ratings.\", :310 text = \"Continue with Google\", :316 text = \"Continue with email\", :329 text = \"Continue with phone\". Bonus defect the inventory missed: the hero at :225 says \"HomeHeroo Partner\" while :304 and :538 say \"Homeservices Partner\" — two different brand names on the same screen.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": "technician.auth 48-hardcoded-strings claim"
+    },
+    {
+      "claim": "Roughly 48 user-facing strings are hardcoded English literals in technician AuthScreen despite the app shipping values-hi/strings.xml.",
+      "citation": "technician-app/.../ui/auth/AuthScreen.kt:101-171, 290, 304-306, 344, 351, 419-425, 461, 476, 498-500, 513, 538-540, 553, 559, 585-587, 599, 653-668",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "An attribute-assignment scan (excluding any line containing stringResource) yields 40 literals; adding positional Text(\"…\") calls and when-branch strings puts it in the mid-40s. File does contain 11 stringResource calls, so it is partially wired — which is worse, not better, since it proves the resource path was available. Cited line clusters :101-171, :290, :304-306, :344, :351, :498-500, :513, :538-540, :553, :559, :585-587, :599, :653-668 all land on literals in my scan. 'Roughly 48' is a fair estimate.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Two Devanagari brand strings are hardcoded in Kotlin at AuthScreen.kt:231 and :236, so an English-locale technician sees mixed-script chrome.",
+      "citation": "technician-app/.../ui/auth/AuthScreen.kt:231,236",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": ":231 `text = \"रोज़ काम, रोज़ कमाई\"` and :236 `text = \"सत्यापित पार्टनर प्रोग्राम\"`, sitting directly under :225 `text = \"HomeHeroo Partner\"`. Exact line numbers. The independent Devanagari-in-Kotlin scan also reports exactly 2 Devanagari lines in this file, corroborating.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Attempts-remaining is pluralised by English string concatenation in code, not pluralStringResource — the customer app does this correctly.",
+      "citation": "technician AuthScreen.kt:659 vs customer-app/.../ui/auth/AuthScreen.kt:641-646",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "technician :659 `text = \"${state.retriesLeft} attempt${if (state.retriesLeft == 1) \"\" else \"s\"} remaining\"`. customer :641-646 `pluralStringResource(R.plurals.auth_attempts_remaining, state.retriesLeft, state.retriesLeft)` — exactly the contrast claimed. Corroborated structurally: technician-app strings.xml has ZERO <plurals> elements in either locale; customer-app has 3 in each.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "KycScreen — the most compliance-critical screen in the technician app — contains zero localized strings; stringResource is not imported at all.",
+      "citation": "technician-app/.../ui/kyc/KycScreen.kt:1-50, 93, 238-240, 296-298, 343-344, 358-360",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "`stringResource` occurs 0 times in the file. 28 hardcoded literals, and every cited line lands: :93 'Processing verification', :238 'Step 1 of 2', :239 'Verify your identity', :240 the DigiLocker body, :296 'Upload PAN card', :297 the PAN body, :343 'Action needed', :344 'Verification did not complete', :358 'Submitted', :359 'KYC under review', :360 the review body. Aadhaar + PAN submission performed 100% in English.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The service-selection retry affordance is gated on English string matching — uiState.errorMessage.startsWith(\"Could not load\") — so the moment error copy is localized to Hindi the retry button silently disappears.",
+      "citation": "technician-app/.../ui/serviceprofile/ServiceSelectionScreen.kt:164; ServiceSelectionViewModel.kt:64",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "ServiceSelectionScreen.kt:164 `showRetry = !uiState.isSaving && uiState.errorMessage.startsWith(\"Could not load\"),`. ServiceSelectionViewModel.kt:64 `errorMessage = \"Could not load your saved services. You can still save this form.\",`. Both line numbers exact. This is the highest-value finding in the theme: it is a latent regression trap that fires the moment anyone does the i18n work everything else in this theme asks for.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "All 13 service names and 6 group names are hardcoded English strings in Kotlin with no stringResource path.",
+      "citation": "technician-app/.../ui/serviceprofile/ServiceCatalogue.kt:10-25; ServiceSelectionScreen.kt:236, 277",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "ServiceCatalogue.kt:12-24 has exactly 13 ServiceCatalogueItem entries with hardcoded English names ('AC Deep Clean' … 'Borewell Servicing') — that half is exact. But the distinct group values are FIVE, not six: 'AC', 'Plumbing', 'Electrical', 'Water Purifier', 'Water Pump'. Also both screen citations are one line off: `text = group` is at :235 (not :236) and `text = item.name` is at :276 (not :277).",
+      "correctedStatement": "ServiceCatalogue.kt:12-24 hardcodes 13 English service names and 5 (not 6) English group names, rendered at ServiceSelectionScreen.kt:235 (group heading) and :276 (service name, maxLines=1 + Ellipsis at :279-280). The trade-identification screen is untranslatable for a low-literacy Hindi-speaking technician.",
+      "correctedSeverity": "high",
+      "mergedWith": "technician.service-selection maxLines=1 truncation claim"
+    },
+    {
+      "claim": "The technician dashboard's online/offline hero and today's-earnings tiles are hardcoded English AND hardcoded ASCII currency; stringResource is never imported.",
+      "citation": "technician-app/.../ui/dashboard/TechnicianDashboardScreen.kt:49, 109, 114, 128, 129, 130",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "`stringResource` occurs 0 times in the file; 28 hardcoded literals total. :109 `text = if (isOnline) \"Available for jobs\" else \"Paused\",` :114 `text = \"Live requests appear as timed offers when dispatch assigns one.\",` :128 `label = \"Today\",` :129 `value = \"Rs 0\",` :130 `supportingText = \"Earnings\",`. Every single line number exact, including the ASCII 'Rs 0' placeholder.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": "cross.money-formatting SITE 7 'Rs 0' claim"
+    },
+    {
+      "claim": "35+ user-facing strings are hardcoded English in TechnicianHomeScreen; values-hi/strings.xml exists with full 163-key parity but this screen bypasses it almost entirely.",
+      "citation": "technician-app/.../ui/home/TechnicianHomeScreen.kt:211",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "39 attribute literals from the strict scan, plus 5 more in the private enum TechTab at :211-215 — the cited :211 is `Today(\"Today\", Icons.Default.Home)`, i.e. the bottom-nav tab label, a genuinely user-facing string and a good citation. File has only 10 stringResource calls against ~44 literals. '35+' is conservative.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The photo-capture stage instruction is a hardcoded English when-block, so Hindi-speaking technicians are told what to photograph in English inside otherwise-translated chrome.",
+      "citation": "technician-app/.../ui/activeJob/PhotoCaptureScreen.kt:329",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": ":329 `private fun stagePrompt(stage: String): String =` with the when at :330-336 returning 'Starting Trip - Take a photo of your transport', 'Arrived - Take a photo of the site', 'Starting Work - Take a photo of the work area', 'Completing - Take a photo of the finished work', 'Take a photo to continue'. The rest of the file uses stringResource 13 times (e.g. :323-325 permission dialog) — so the 'otherwise-translated chrome' framing is exactly right. Only one other literal in the file, 'Photo captured' at :242.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": "technician.photo-capture 'Photo captured' claim"
+    },
+    {
+      "claim": "All payout option copy, fees and the Save button are hardcoded Devanagari literals, bypassing the fully-populated values-hi resource file — an English-locale technician gets a half-Hindi money screen.",
+      "citation": "technician-app/.../ui/payoutsettings/PayoutCadenceScreen.kt:44-49, 65, 138",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": ":46-48 CadenceOption(\"WEEKLY\",\"साप्ताहिक (मुफ्त)\",\"हर सोमवार\",\"मुफ्त\") / (\"NEXT_DAY\",\"अगले दिन (₹15)\",\"सुबह 10 बजे तक\",\"₹15/पेमेंट\") / (\"INSTANT\",\"तुरंत (₹25)\",\"जॉब के 30 मिनट में\",\"₹25/पेमेंट\"). :65 `snackbarHostState.showSnackbar(\"सेटिंग सेव हो गई\")`. :138 `text = if (state.isSaving) \"Saving...\" else \"सेव करें\"` — the Save button is literally half-English half-Hindi in a single expression, which is even worse than claimed. Meanwhile :77 and :124 DO use stringResource, proving the wiring exists.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": "cross.i18n-parity reverse-defect payout-cadence claim"
+    },
+    {
+      "claim": "~19 user-facing strings are hardcoded English on the technician rate-customer screen, including the screen title, all three rating dimension labels and the submit button.",
+      "citation": "technician-app/.../ui/rating/RatingScreen.kt:81, 83, 88, 93, 95, 97, 108, 126, 149",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Every cited line lands on a literal. :81 'Customer feedback', :83 'Rate your customer', :88 the body, :93 'Overall', :95 'Behaviour', :97 'Communication' (the three dimensions), :108 'Submit rating', :126 `StatusMessage(\"Rating submitted\", \"We will reveal both ratings after the customer responds.\")`, :149 `StatusMessage(\"Ratings revealed\", …)`. 15 by strict attribute scan plus positional StatusMessage/HsTrustBadge/HsSectionCard args ≈ 19. File also has 11 stringResource calls — partially wired.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "All four complaint reason labels and all three status messages are hardcoded English `when` expressions, on a screen whose surrounding labels are translated.",
+      "citation": "technician-app/.../ui/complaint/ComplaintScreen.kt:211-224",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Exact. :211 `private fun statusMessage(status: String): String =` with :213-215 returning 'Owner support is reviewing this issue.' / 'This issue has been resolved.' / 'Owner support will respond within 2 hours.'. :218 `private fun TechComplaintReason.displayLabel(): String =` with :220-223 'Customer misconduct' / 'Payment not received' / 'Safety concern' / 'Other'. The immediately preceding lines :203 and :207 use stringResource and a hardcoded 'Try again' respectively — the mixed-discipline framing is right.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "MyRatings sub-score labels 'Punctuality'/'Skill'/'Behaviour' are hardcoded English while the screen title next to them comes from values-hi — guaranteed mixed-language rendering.",
+      "citation": "technician-app/.../ui/myratings/MyRatingsScreen.kt:138-140 vs :62",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": ":138 SubScoreColumn(\"Punctuality\", …), :139 SubScoreColumn(\"Skill\", …), :140 SubScoreColumn(\"Behaviour\", …). :62 `title = { Text(stringResource(R.string.my_ratings_title)) }`. Both citations exact. Confirmed my_ratings_title has a values-hi translation. A Hindi TopAppBar sitting directly above three English column headers.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Job-offer error copy exposes a raw HTTP status code to a rural technician and is hardcoded English inside the ViewModel, so it can never be translated.",
+      "citation": "technician-app/.../ui/jobOffer/JobOfferViewModel.kt:80",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": ":80 `errorMessage = \"Server error (${result.httpCode}). Try again.\",`. Exact. A sibling at :89 has `errorMessage = \"Could not accept job. Check your connection and try again.\"` — same defect, second instance the inventory did not cite.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The onboarding-gate screen's only string is a hardcoded English literal and uses the unmapped titleMedium slot.",
+      "citation": "OnboardingGateScreen.kt:59, :60",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "File is at technician-app/app/src/main/kotlin/com/homeservices/technician/navigation/OnboardingGateScreen.kt (the inventory gave a bare filename). :59 `text = \"Checking partner profile\",` :60 `style = MaterialTheme.typography.titleMedium,`. Both exact; titleMedium is one of the five unmapped M3 slots per the design baseline, so it renders in Roboto.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The technician onboarding checklist is a non-scrollable fixed-height card plus bottom-pinned CTA — a Hindi clipping hazard.",
+      "citation": "OnboardingScreen.kt:103-120, 136-141",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": ":103 is literally the comment `// Form card — NON-scrollable: Spacer(weight(1f)) anchors the button to bottom`. :104-109 Surface with .fillMaxHeight(ONBOARDING_FORM_FRACTION), :114-120 inner Column .fillMaxSize() with no verticalScroll, :135 Spacer(weight(1f)), :136-140 HsPrimaryButton(text = \"Continue setup\"). The checklist body ('Setup checklist', 'Verify identity', 'Go online', 'Track earnings' + three descriptions at :121-127) is also hardcoded English. Exact, and the code comment shows the constraint was a conscious choice made without considering Devanagari height.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The JobOffer 'Offering' layout is a non-scrolling fillMaxSize Column, so with longer Hindi content the Accept and Decline buttons are pushed out of the viewport.",
+      "citation": "technician-app/.../ui/jobOffer/JobOfferScreen.kt:142",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": ":142 `Column(` with :144-146 `modifier.fillMaxSize().padding(16.dp)` and :147 `verticalArrangement = Arrangement.SpaceBetween` — no verticalScroll anywhere. Under SpaceBetween with overflowing content Compose packs from the top and clips the tail, so the Accept/Decline pair is the thing that disappears. Mechanism slightly different from 'pushed out of the viewport' (it is clipped, not pushed) but the outcome the claim asserts — an unactionable offer — is correct.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "AccountDeletedScreen's content Column is fillMaxSize + Arrangement.Center with NO verticalScroll, so in Hindi the 'Done' button can be pushed off-screen — compare DeleteAccountScreen.kt:116 which does add verticalScroll.",
+      "citation": "technician-app/.../ui/deleteaccount/AccountDeletedScreen.kt:67-74 vs DeleteAccountScreen.kt:116",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "AccountDeletedScreen.kt:67 `Column(`, :70 `.fillMaxSize()`, :71 `.padding(horizontal = 24.dp)`, :73 `verticalArrangement = Arrangement.Center` — no scroll. DeleteAccountScreen.kt:116 `.verticalScroll(rememberScrollState())` — present. The in-repo contrast the claim relies on is exact.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The customer first-launch language screen has zero localization: all five user-facing strings are Kotlin literals, mixing a hardcoded Hindi subtitle with hardcoded English body copy and CTA.",
+      "citation": "customer-app/.../ui/locale/FirstLaunchLanguageScreen.kt:69",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "No stringResource import. :67 \"HomeHeroo\", :69 \"भाषा चुनें\", :105 \"Choose your language\", :110 \"Language can be changed anytime from Settings.\", :116 \"Continue\". Five literals as claimed, with the Devanagari/Latin mix exactly as described. Nit: one of the five is the brand name 'HomeHeroo', which is legitimately untranslated — so four translatable strings plus a brand token. The first pixel of the product is nonetheless unlocalizable.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Every error message on the customer auth screen is a hardcoded English string literal in the ViewModel.",
+      "citation": "customer-app/.../ui/auth/AuthViewModel.kt:376-378",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "The cited :377 is `message = \"Incorrect code\",`. Grepping the file surfaces ~20 more on the same pattern: :76 'Sign-in failed. Please use OTP.', :149, :181, :212, :227, :245, :275, :318, :336, :344, :354-363 (the whole error-mapping when-block), :383, :387, :398, :400, :402, :410. Not one goes through stringResource. Note the customer AuthScreen itself is otherwise fully localized (it uses pluralStringResource, stringResource throughout), so the ViewModel is the single leak point — which makes this cheap to fix and worth flagging as such.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The live-tracking status chip label — the primary information on the screen — is hardcoded English via statusLabel().",
+      "citation": "customer-app/.../ui/tracking/LiveTrackingScreen.kt:369-384",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "I specifically checked the 'it exists elsewhere' failure mode here because :365-368 carries a comment claiming a composable overload exists ('Composable callers (like TrackingBody) should use the composable overload above'). Grep for statusLabel returns exactly three hits: the comment, the definition at :369, and ONE live call at :232 `AssistChip(onClick = {}, label = { Text(statusLabel(state.status)) })`. There is no composable overload of statusLabel. StatusTimeline (:332-338) is localized but covers only 4 of the 13 statuses and does not feed the chip. So the chip really does render all 13 hardcoded English labels, and the reassuring code comment is false.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The language-settings eyebrow badge text 'Settings' is a hardcoded English literal in a screen whose entire purpose is choosing Hindi; and the screen title uses headlineSmall, an unmapped M3 slot.",
+      "citation": "customer-app LanguageSettingsScreen.kt:49, :52",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": ":49 `HsTrustBadge(text = \"Settings\")` — the ONE literal on a screen where :51 title, :59 save CTA and everything else use stringResource. :52 `style = MaterialTheme.typography.headlineSmall,`. Both line numbers exact.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The delete-account cool-off countdown is built in English in Kotlin with English pluralization ('days'/'hours'); and the translated framing string delete_account_coolOff_countdown_format exists in both locales but is never used.",
+      "citation": "DeleteAccountCoolOffScreen.kt:337, :341, :207; strings.xml:411 / values-hi:407",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": ":337 `append(\"$days day${if (days != 1L) \"s\" else \"\"}\")` and :341 `append(\"$hours hour${if (hours != 1L) \"s\" else \"\"}\")` — exact. :207 `text = countdownText,` renders the bare fragment. `grep -rn delete_account_coolOff_countdown_format customer-app/app/src/main/` returns only the two resource definitions (values/strings.xml:411 'Account will be deleted in %1$s', values-hi/strings.xml:407 'खाता %1$s में हटाया जाएगा') and zero Kotlin references. Every element of both claims verified.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Rating error bodies are raw Throwable messages with hardcoded English fallbacks ('load failed', 'escalation failed', 'submit failed').",
+      "citation": "customer-app/.../ui/rating/RatingViewModel.kt:147, 252, 292",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": ":147 `.onFailure { _uiState.value = RatingUiState.Error(it.message ?: \"load failed\") }`, :252 `RatingUiState.Error(it.message ?: \"escalation failed\")`, :292 `RatingUiState.Error(it.message ?: \"submit failed\")`. All three line numbers exact, all three lowercase developer-register English.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Customer complaint error copy renders the raw exception message with an English 'Unknown error' fallback, straight to a Hindi-first rural audience.",
+      "citation": "customer-app/.../ui/complaint/ComplaintScreen.kt:268",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": "ComplaintScreen.kt:268 is `Text(message, color = MaterialTheme.colorScheme.error)` — it renders a message but contains no 'Unknown error' literal. The literal lives in ComplaintViewModel.kt:44 `private const val UNKNOWN_ERROR_FALLBACK = \"Unknown error\"`, applied at :143 and :166 (and independently at ComplaintListViewModel.kt:59). Worse: ComplaintViewModel.kt:142 carries the comment `// error message surfaced via R.string.complaint_error_unknown in the UI layer` — which is false; ComplaintScreen.kt:268 renders the raw string with no resource lookup. A developer reading only the cited line would fix nothing.",
+      "correctedStatement": "The untranslated 'Unknown error' fallback is defined at ComplaintViewModel.kt:44 and applied at :143 and :166 (also ComplaintListViewModel.kt:59); ComplaintScreen.kt:268 then renders that string verbatim via `Text(message, …)`. The code comment at ComplaintViewModel.kt:142 claims the UI maps it to R.string.complaint_error_unknown — it does not. Fix at the ViewModel, not the screen.",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The wallet ledger row's primary label is entry.reason, a raw server-supplied string with no localization path.",
+      "citation": "customer-app/.../ui/wallet/WalletScreen.kt:265 with WalletModels.kt:22",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": ":265 `text = entry.reason,` as the bodyMedium SemiBold primary label of the row (maxLines = 2, Ellipsis at :268-269). Server-authored text rendered as the dominant string in a money ledger, with no mapping layer.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Fixed 88dp settings row height with an uncapped titleLarge Bold title is a Hindi clipping trap.",
+      "citation": "customer-app SettingsScreen.kt:118 with :128-132",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": ":118 `.height(88.dp)` on the Surface, :121-122 inner Row `.fillMaxSize()`, :128-131 `Text(text = title, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), …)` with no maxLines/overflow, followed by an optional bodyMedium subtitle at :133+. Both citations exact. Two stacked uncapped text styles inside a hard 88dp box, with Devanagari line boxes running 15-30% taller.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Booking slot time windows are rendered as raw API strings with no localisation; and DATE_DISPLAY is a file-level DateTimeFormatter created without a Locale.",
+      "citation": "customer-app SlotPickerScreen.kt:283, :52",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": ":283 `label = { Text(slot.window) }` inside the FilterChip — raw API string, no formatting. :52 `private val DATE_DISPLAY = DateTimeFormatter.ofPattern(\"EEE, d MMM\")` — no Locale argument, so it binds the JVM default at class-init and will not follow an in-app locale switch. Both line numbers exact.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The booking summary slot is a raw concatenation of the ISO date and the raw API window, e.g. '2026-07-25 09:00-11:00'.",
+      "citation": "customer-app BookingSummaryScreen.kt:229",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": ":229 `value = \"${state.slot.date} ${state.slot.window}\",` — and the sibling label on :228 IS `stringResource(R.string.booking_summary_slot_label)`. Translated label, machine-formatted value, on the final confirmation screen. Exact.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "When reverse geocoding fails after a pin drag, the confirmed address shown to the user is the literal string 'Lat 26.79, Lng 82.19' — raw coordinates presented as an address.",
+      "citation": "customer-app AddressPickerViewModel.kt:208",
+      "verdict": "CORRECTED",
+      "whatIActuallySaw": ":208 `?: \"Lat $lat, Lng $lng\"` — the fallback exists exactly where claimed and does become formattedAddress. But the interpolation uses the raw Doubles with no rounding, so the user actually sees something like 'Lat 26.792201948165894, Lng 82.19980312138796', not the tidy 2-decimal example in the claim. That makes it materially uglier than the finding suggests.",
+      "correctedStatement": "AddressPickerViewModel.kt:208 falls back to `\"Lat $lat, Lng $lng\"` with unrounded Double interpolation, so a failed reverse-geocode presents a ~40-character full-precision coordinate string as the user's confirmed delivery address — untranslated and unreadable.",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The Hindi confirmation phrase 'मेरा खाता हटाएं' must be typed with exact character equality and no normalization.",
+      "citation": "customer-app values-hi/strings.xml:400 with DeleteAccountUiState.kt:40",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "values-hi/strings.xml:400 `<string name=\"delete_my_account_confirmation_phrase\">मेरा खाता हटाएं</string>` — exact line. The comparison is at DeleteAccountUiState.kt:42 (`get() = typedPhrase == phraseExpected && typedPin == last4Expected`), two lines below the cited :40 which is its KDoc comment. No trim(), no Unicode normalization, no whitespace tolerance. A rural user on a Devanagari IME must produce 15 characters including a conjunct and a matra exactly.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "customer-app uses the five UNMAPPED M3 slots 76 times: titleMedium 33, headlineSmall 19, labelMedium 13, titleSmall 10, displaySmall 1 — all rendering in Roboto, not Geist Sans / Noto Devanagari.",
+      "citation": "customer-app/app/src/main/**.kt",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Reproduced per-slot exactly: titleMedium 33, titleSmall 10, labelMedium 13, headlineSmall 19, displaySmall 1 = 76. Every number matches to the digit.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The design-system module itself leaks Roboto into every consumer: HsSectionCard title (titleMedium), HsInfoRow label (labelMedium), HsTimelineStep title (titleSmall), and LanguagePickerCard native-name row (titleMedium) — including the Devanagari word 'हिन्दी' on the first-launch chooser.",
+      "citation": "design-system/.../HsComponents.kt:123, :155, :198; locale/LanguagePickerCard.kt:29, :66, :67",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Every citation exact. HsComponents.kt:123 `style = MaterialTheme.typography.titleMedium` (HsSectionCard title), :155 `labelMedium` (HsInfoRow label), :198 `titleSmall` (HsTimelineStep title). LanguagePickerCard.kt:29 `LanguageOption(tag = \"hi\", displayLabel = \"Hindi\", nativeName = \"हिन्दी\")`, :66 `text = option.nativeName`, :67 `style = MaterialTheme.typography.titleMedium`. The word 'हिन्दी' on the screen that sells Hindi support renders through an unmapped slot — the claim's 'single most damaging instance' framing is fair.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": "cross.roboto-fallback LanguagePickerCard claim"
+    },
+    {
+      "claim": "Long Hindi labels land in single-line, ellipsis-clipping UI: customer-app has 28 maxLines=1 sites and technician-app 8; HsActionButton hard-codes maxLines=1 + TextOverflow.Ellipsis inside a fixed 52.dp pill.",
+      "citation": "design-system/.../HsComponents.kt:77, :101, :102; grep maxLines = 1 -> 28 / 8",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "grep counts reproduce exactly: customer-app 28, technician-app 8. HsComponents.kt:77 `modifier = modifier.height(52.dp),`, :101 `maxLines = 1,`, :102 `overflow = TextOverflow.Ellipsis,`. All three exact. (A sibling observation cites :100-101 for the same pair — that one is one line off; :100 is fontWeight.)",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": "customer.auth HsActionButton truncation claim"
+    },
+    {
+      "claim": "HsPrimaryButton and HsSecondaryButton wrap Text with no maxLines, so a 3.2x-longer Hindi 'पुनः प्रयास करें' inside a 64dp-tall primary button will wrap to two lines and be vertically clipped rather than ellipsised.",
+      "citation": "design-system/.../HsComponents.kt:41-47, :57-63",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": ":41-47 `Button(onClick, enabled, modifier = modifier.height(LocalHomeservicesSpacing.current.space16)) { Text(text) }` and :57-63 the OutlinedButton equivalent at space12. Spacing.kt:46 `space16: Dp = 64.dp` and :43 `space12: Dp = 48.dp`, so the '64dp-tall' figure is correct. No maxLines/overflow/autosize on either. Caveat on the consequence: two lines of labelLarge fit inside 64dp, so the primary button will more likely just look unbalanced than hard-clip; the 48dp secondary is the one genuinely at risk.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Hindi grows 1.6x-3.2x on SHORT labels: 'Retry'->'पुनः प्रयास करें' 3.2x, 'OK'->'ठीक है' 3.0x, 'Done'->'पूरा हो गया' 2.75x, 'Save'/'Rate' 2.0x; technician 'Decline' 1.86x, 'Working' 1.86x, 'Accepting…' 2.2x.",
+      "citation": "python ratio over keys where len(en)<=28",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Reproduced: slot_picker_retry_button / wallet_retry_cta / booking_network_error_retry all 'Retry'->'पुनः प्रयास करें' at exactly 3.20x; profile_ok 'OK'->'ठीक है' 3.00x; status_done 'Done'->'पूरा हो गया' 2.75x; profile_save/settings_language_save 'Save'->'सेव करें' 2.00x; home_recent_booking_rate 'Rate'->'रेट करें' 2.00x. technician: home_retry 3.20x, job_offer_decline 'Decline'->'अस्वीकार करें' 1.86x, active_job_status_working 'Working'->'काम चल रहा है' 1.86x. job_offer_accepting decodes to 2.2x as claimed (the raw file stores it as &#xNNNN; entities). The inventory missed the true outlier: dpdp_consent_legal_suffix goes '.' -> ' से सहमत हैं' (12x) — a sentence fragment shipped as a punctuation key.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "Literal Devanagari lives in Kotlin source rather than resources: customer-app 3 files / 38 lines; technician-app 9 files / 29 lines.",
+      "citation": "python Devanagari-range scan of .kt files",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Reproduced exactly. customer-app: 3 files / 38 lines — HindiLocaleNames.kt 31, ComplaintReason.kt 6, FirstLaunchLanguageScreen.kt 1. technician-app: 9 files / 29 lines — HomeservicesFcmService.kt 10, TechComplaintReason.kt 4, PayoutCadenceScreen.kt 4, ActiveJobForegroundService.kt 2, ShieldReportSheet.kt 2, AuthScreen.kt 2, RatingAppealSheet.kt 2, PayoutCadenceViewModel.kt 2, OnboardingScreen.kt 1. Every count matches.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "ASCII 'Rs' (not ₹) appears at 3 live rendering sites — HsComponents.kt:172, TechnicianHomeScreen.kt:1350, TechnicianDashboardScreen.kt:129 — plus a doc-comment at CurrencyFormat.kt:19.",
+      "citation": "grep over customer-app / technician-app / design-system .kt",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "grep returns exactly those four hits and no others: design-system HsComponents.kt:172 `text = \"Rs ${pricePaise / 100}\",`, TechnicianHomeScreen.kt:1350 `private fun formatRupees(paise: Long): String = \"Rs %,.0f\".format(paise / 100.0)`, TechnicianDashboardScreen.kt:129 `value = \"Rs 0\",`, and the doc-comment at CurrencyFormat.kt:19. Note HsComponents.kt:172 is in the SHARED design-system module, so the ASCII 'Rs' propagates to every consumer of that component in both apps.",
+      "correctedStatement": "",
+      "correctedSeverity": "high",
+      "mergedWith": ""
+    },
+    {
+      "claim": "The customer waitlist phone placeholder '+91 98765 43210' is a hardcoded literal, and it is duplicated verbatim in strings.xml as auth_mobile_placeholder.",
+      "citation": "customer-app WaitlistScreenContent.kt:118",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": ":118 `placeholder = { Text(\"+91 98765 43210\") },` — sitting directly under :117 `label = { Text(stringResource(R.string.waitlist_phone_label)) }`. The resource auth_mobile_placeholder exists and is one of the three customer-app keys whose hi value is byte-identical to en (i.e. legitimately untranslated), so the resource route was both available and already correct.",
+      "correctedStatement": "",
+      "correctedSeverity": "medium",
+      "mergedWith": ""
+    },
+    {
+      "claim": "customer-app values-hi has 3 keys byte-identical to English and 4 with no Devanagari at all; technician-app has 5 identical (2 URLs, 1 format-only, 2 genuine untranslated placeholders).",
+      "citation": "python parse + compare of both strings.xml pairs",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "customer-app identical = auth_email_placeholder, auth_mobile_placeholder, promo_cta_with_arrow (3); no-Devanagari = those three plus pending_payment_banner_subtitle (4). technician-app identical = deletion_request_url, complaint_char_count, auth_email_placeholder, auth_mobile_placeholder, privacy_policy_url (5). Every element matches. Additional finding not in the inventory: technician-app has 3 MORE hi values with no Devanagari that are NOT identical to English — job_offer_accepting, active_job_back_to_dashboard, settings_language_current — because they are stored as &#xNNNN; numeric character references rather than literal UTF-8, an encoding inconsistency inside a single file.",
+      "correctedStatement": "",
+      "correctedSeverity": "low",
+      "mergedWith": ""
+    },
+    {
+      "claim": "admin-web PASSES the mixed-literacy bar on navigation: both the desktop rail and the mobile bottom bar pair every icon with a translated text label and mark the icon aria-hidden.",
+      "citation": "admin-web/src/components/dashboard/Rail.tsx:117-119, :167-169",
+      "verdict": "CONFIRMED",
+      "whatIActuallySaw": "Rail.tsx:9 imports useTranslations, :45 `const t = useTranslations('nav')`, :117 `<Icon size={18} aria-hidden=\"true\" strokeWidth={1.75} />` with :119 `<span>{t(labelKey)}</span>`, and the identical pairing at :167/:169 for mobile. Exact. Worth preserving in the report as the one admin-web surface that meets the icon+text baseline — and as the counter-example proving the other six dashboard components chose not to.",
+      "correctedStatement": "",
+      "correctedSeverity": "info",
+      "mergedWith": ""
+    }
+  ]
+}

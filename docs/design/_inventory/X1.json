@@ -1,0 +1,530 @@
+{
+  "cluster": "X1",
+  "surfaces": [
+    {
+      "id": "cross.nav-transitions",
+      "title": "Navigation motion — both Android apps",
+      "platform": "android",
+      "files": [
+        "customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/AppNavigation.kt",
+        "technician-app/app/src/main/kotlin/com/homeservices/technician/navigation/AppNavigation.kt",
+        "customer-app/app/src/main/kotlin/com/homeservices/customer/MainActivity.kt",
+        "technician-app/app/src/main/kotlin/com/homeservices/technician/MainActivity.kt"
+      ],
+      "observations": [
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "ZERO navigation transitions are declared anywhere in either Android app. Grepping enterTransition|exitTransition|popEnterTransition|popExitTransition across customer-app/app/src, technician-app/app/src and design-system/src returns 0 matches. Every screen-to-screen move is a hard instant cut.",
+          "evidence": "grep -rn \"enterTransition\\|exitTransition\\|popEnterTransition\\|popExitTransition\" customer-app/app/src technician-app/app/src design-system/src  -> 0 lines",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "claim": "customer-app NavHost is declared with only navController/startDestination/modifier — no transition parameters at the NavHost level and none on any composable() destination inside it.",
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/AppNavigation.kt:178 `NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {`; destinations at :181 composable(LocaleRoutes.DPDP_CONSENT), :192 composable(LocaleRoutes.FIRST_LAUNCH); sub-graphs at :202 authGraph, :203 mainGraph, :204 settingsGraph",
+          "line": "178-205"
+        },
+        {
+          "tag": "observed",
+          "claim": "technician-app NavHost likewise declares only navController + startDestination, with sub-graphs authGraph/onboardingGraph/homeGraph and one inline composable — no transitions.",
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/navigation/AppNavigation.kt:144-147 `NavHost(\\n navController = navController,\\n startDestination = \"auth\",\\n ) {`; :148 authGraph, :149 composable(\"onboarding_gate\"), :168 onboardingGraph, :169 homeGraph",
+          "line": "144-175"
+        },
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "The technician full-screen job-offer takeover is rendered as a sibling in a Box and toggled by a plain `if` — it pops in and out with no animation at all. This is the app's single highest-drama moment (a timed job offer) and it has zero motion choreography.",
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/navigation/AppNavigation.kt:176 `if (jobOfferState !is JobOfferUiState.Idle && jobOfferState !is JobOfferUiState.Accepted) {` wrapping JobOfferScreen at :177-180, inside Box at :143",
+          "line": "143-182"
+        },
+        {
+          "tag": "observed",
+          "claim": "Both MainActivity files wire HomeservicesTheme -> AppNavigation with no shared-element / predictive-back / window transition setup. customer-app calls enableEdgeToEdge(); technician-app does not.",
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/MainActivity.kt:85 `enableEdgeToEdge()`, :101 `setContent {`, :102 `HomeservicesTheme {`, :106 `AppNavigation(`; technician-app/app/src/main/kotlin/com/homeservices/technician/MainActivity.kt:39 `setContent {`, :40 `HomeservicesTheme {`, :41 `AppNavigation(` — no enableEdgeToEdge anywhere in the technician MainActivity",
+          "line": "customer 85-106 / technician 39-41"
+        },
+        {
+          "tag": "observed",
+          "severity": "medium",
+          "claim": "Motion primitives are near-absent overall. Whole-app counts: customer-app AnimatedVisibility=2, animateFloatAsState=4, rememberInfiniteTransition=4, tween(=4, spring(=2, AnimatedContent=0, Crossfade=0, animateColorAsState=0, animateDpAsState=0. technician-app: animateFloatAsState=2 and NOTHING else — AnimatedVisibility=0, AnimatedContent=0, Crossfade=0, tween(=0, spring(=0.",
+          "evidence": "for m in AnimatedVisibility animateFloatAsState animateColorAsState animateDpAsState AnimatedContent Crossfade rememberInfiniteTransition 'tween(' 'spring(' ; do grep -rnoF \"$m\" <app>/app/src/main --include=*.kt | wc -l ; done",
+          "line": "n/a"
+        },
+        {
+          "tag": "inferred",
+          "claim": "Because HomeservicesMotion (fast/base/medium/slow) and HomeservicesEasing have zero consumers (see cross.dead-tokens), the motion token layer is decorative: the durations exist only to be rendered as text in TokenGallery.",
+          "evidence": "design-system/src/main/kotlin/com/homeservices/designsystem/gallery/TokenGallery.kt:355-378 SectionMotion() prints `\"fast: ${HomeservicesMotion.fast}\"` etc. as Text; grep for HomeservicesMotion in both apps -> 0",
+          "line": "TokenGallery.kt 355-378"
+        }
+      ]
+    },
+    {
+      "id": "cross.i18n-parity",
+      "title": "Hindi/English string parity — customer-app, technician-app, admin-web",
+      "platform": "cross",
+      "files": [
+        "customer-app/app/src/main/res/values/strings.xml",
+        "customer-app/app/src/main/res/values-hi/strings.xml",
+        "technician-app/app/src/main/res/values/strings.xml",
+        "technician-app/app/src/main/res/values-hi/strings.xml",
+        "admin-web/messages/en.json",
+        "admin-web/messages/hi.json"
+      ],
+      "observations": [
+        {
+          "tag": "observed",
+          "claim": "customer-app: en 483 <string> + 3 <plurals>; hi 474 <string> + 3 <plurals>. Delta = 9 missing Hindi strings.",
+          "evidence": "grep -o '<string name=\"[^\"]*\"' customer-app/app/src/main/res/values/strings.xml | wc -l -> 483; same on values-hi -> 474; grep -c '<plurals name=' -> 3 and 3",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "The 9 customer-app keys with NO Hindi translation are the entire DPDP Data Export screen — a legally-mandated privacy surface that renders 100% in English for a Hindi-first user: data_export_button, data_export_description, data_export_error_unknown, data_export_filename_prefix, data_export_loading, data_export_privacy_note, data_export_retry, data_export_success_toast, data_export_title.",
+          "evidence": "comm -23 <(grep -o '<string name=\"[^\"]*\"' customer-app/.../values/strings.xml | sed 's/<string name=\"//;s/\"//' | sort) <(same for values-hi)",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "claim": "technician-app: en 163 and hi 163 <string> entries, 0 missing keys, 0 extra keys — nominally perfect parity.",
+          "evidence": "grep -o '<string name=\"[^\"]*\"' technician-app/app/src/main/res/values/strings.xml | wc -l -> 163; values-hi -> 163; comm -23/-13 on sorted key lists -> empty both directions",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "technician-app's 163/163 parity is MISLEADING: 112 UI-string literal lines across 13 Kotlin files are hardcoded English that never reach strings.xml, so they can never be Hindi. Worst files: ui/auth/AuthScreen.kt (23), ui/home/TechnicianHomeScreen.kt (22), ui/dashboard/TechnicianDashboardScreen.kt (17), ui/kyc/KycScreen.kt (13), ui/rating/RatingScreen.kt (9), ui/serviceprofile/ServiceSelectionScreen.kt (8).",
+          "evidence": "python scan: for every .kt line NOT containing 'stringResource', regex (?<![A-Za-z0-9_])(?:Text|label|title|text|contentDescription|supportingText|placeholder)\\s*(?:=\\s*)?\\(?\\s*\"([^\"\\\\$]{3,})\" requiring a space and a letter in the capture -> 112 hits in 13 files (customer-app: only 5 hits in 3 files)",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "Concrete instance — the technician login screen, the first screen every partner sees, is entirely hardcoded English: eyebrow 'Homeservices Partner', title 'Sign in to manage jobs', body 'Use Google, email, or phone to receive job offers, manage payouts, and track ratings.', and the three CTAs 'Continue with Google' / 'Continue with email' / 'Continue with phone'. None is a stringResource.",
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/auth/AuthScreen.kt:304 eyebrow = \"Homeservices Partner\", :305 title = \"Sign in to manage jobs\", :306 body = \"Use Google, email, or phone...\", :310 text = \"Continue with Google\", :316 text = \"Continue with email\", :329 text = \"Continue with phone\"",
+          "line": "303-332"
+        },
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "Second concrete instance — the technician dashboard's online/offline hero and today's-earnings tiles are hardcoded English AND hardcoded ASCII currency: 'Available for jobs'/'Paused', 'Live requests appear as timed offers when dispatch assigns one.', label = \"Today\", value = \"Rs 0\", supportingText = \"Earnings\".",
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/TechnicianDashboardScreen.kt:109 `text = if (isOnline) \"Available for jobs\" else \"Paused\"`, :114 `text = \"Live requests appear as timed offers when dispatch assigns one.\"`, :128 `label = \"Today\"`, :129 `value = \"Rs 0\"`, :130 `supportingText = \"Earnings\"`",
+          "line": "100-133"
+        },
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "The REVERSE defect also exists: technician payout-cadence options are hardcoded Hindi-only in Kotlin, so an English-locale technician sees Devanagari with no English fallback.",
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/payoutsettings/PayoutCadenceScreen.kt:46 CadenceOption(\"WEEKLY\", \"साप्ताहिक (मुफ्त)\", \"हर सोमवार\", \"मुफ्त\"), :47 CadenceOption(\"NEXT_DAY\", \"अगले दिन (₹15)\", ...), :48 CadenceOption(\"INSTANT\", \"तुरंत (₹25)\", ...)",
+          "line": "45-49"
+        },
+        {
+          "tag": "observed",
+          "claim": "Literal Devanagari also lives in Kotlin source rather than resources on the customer side: 31 lines in the catalogue data layer and 6 in the complaint domain enum.",
+          "evidence": "python Devanagari-range scan of .kt files: customer-app 3 files / 38 lines — data/catalogue/HindiLocaleNames.kt (31 lines, e.g. :38 \"ac-deep-clean\" to \"केमिकल वॉश, गैस चेक, फिल्टर सफाई — पूरी तरह से ₹599 में।\", :41 water-pump-repair), domain/complaint/ComplaintReason.kt (6), ui/locale/FirstLaunchLanguageScreen.kt (1). technician-app 9 files / 29 lines.",
+          "line": "HindiLocaleNames.kt 38,41"
+        },
+        {
+          "tag": "observed",
+          "claim": "customer-app values-hi has 3 keys whose value is byte-identical to English (untranslated) and 4 with no Devanagari at all: auth_email_placeholder, auth_mobile_placeholder, promo_cta_with_arrow (identical); plus pending_payment_banner_subtitle (format-only, benign).",
+          "evidence": "python: parse both XMLs, compare stripped values; then regex [\\u0900-\\u097F] presence test on the hi value",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "claim": "technician-app values-hi has 5 identical-to-English values: deletion_request_url, privacy_policy_url (URLs — benign), complaint_char_count (format-only), auth_email_placeholder, auth_mobile_placeholder (genuine untranslated placeholders).",
+          "evidence": "same python comparison over technician-app values/values-hi",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "claim": "admin-web: en.json and hi.json both flatten to exactly 434 leaf keys, 0 missing, 0 extra. 14 leaf values are byte-identical between the two files; 13 of those contain no Devanagari.",
+          "evidence": "python json.load + recursive flatten on admin-web/messages/en.json and hi.json -> 434/434; identical values = locale.switcher.en, locale.switcher.hi, technicians.columns.kyc, catalogue.form.idLabel, catalogue.form.heroImagePlaceholder, catalogue.form.sortOrderPlaceholder, catalogue.serviceForm.idLabel, catalogue.serviceForm.heroImagePlaceholder, catalogue.serviceForm.pricePlaceholder, catalogue.serviceForm.durationPlaceholder, catalogue.serviceForm.commissionPlaceholder, adminUsers.columns.totp, compliance.sscLevy.columns.gmv, notFound.title",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "claim": "TEN LONGEST HINDI STRINGS — customer-app (hi_len | en_len | ratio): confidence_methodology_body 201|194|1.04; profile_privacy_policy_body 194|207|0.94; delete_account_warning 133|152|0.88; trust_dossier_unavailable_body 109|120|0.91; service_detail_quality_body 95|97|0.98; support_safety_subtitle 86|95|0.91; auth_phone_body 85|101|0.84; sos_consent_body 84|88|0.95; address_picker_refused_subtitle 81|77|1.05; delete_account_confirm_instruction 78|73|1.07. All are multi-line body copy — character-count growth is modest, but Devanagari line HEIGHT (matras above and below baseline) is the real risk, not width.",
+          "evidence": "python: parse values-hi/strings.xml, sort by len(value) desc, take 10, join with the en value by key",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "The real overflow risk is in SHORT labels, where Hindi grows 1.6x-3.2x. Worst customer-app ratios among English labels <=28 chars: 'Retry'->'पुनः प्रयास करें' (5->16, 3.2x) in slot_picker_retry_button / wallet_retry_cta / booking_network_error_retry; 'OK'->'ठीक है' (3.0x); 'Done'->'पूरा हो गया' (2.75x); 'Track'->'ट्रैक करें' (2.0x); 'Rate'->'रेट करें' (2.0x); 'Save'->'सेव करें' (2.0x); 'Approve'->'अनुमोदित करें' (1.86x); 'Working'->'काम चल रहा है' (1.86x). technician-app: 'Retry'->'पुनः प्रयास करें' 3.2x (home_retry), 'Accepting…'->'जॉब स्वीकार हो रही है…' 2.2x (job_offer_accepting), 'Decline'->'अस्वीकार करें' 1.86x, 'Assigned'->'असाइन किया गया' 1.75x, 'Accept job'->'जॉब स्वीकार करें' 1.6x, 'Start trip'->'यात्रा शुरू करें' 1.6x.",
+          "evidence": "python: for keys where len(en)<=28, sort by len(hi)/len(en) desc",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "Those long Hindi labels land in single-line, ellipsis-clipping UI. customer-app has 28 `maxLines = 1` sites and technician-app 8; the shared HsActionButton hard-codes maxLines=1 + TextOverflow.Ellipsis inside a fixed 52.dp-high pill. Named overflow candidates: (a) HsActionButton — the auth-provider buttons in both apps; (b) PhotoFirstServiceCard 'Book Now' CTA (en 8 -> hi 12 chars, 'अभी बुक करें'); (c) ServiceDetailScreen support CTA 'Trust checks shown before confirmation' -> 'कन्फर्मेशन से पहले ट्रस्ट चेक दिखाए जाते हैं' (38 -> 45 chars, maxLines=1); (d) CatalogueHomeScreen location chip; (e) technician job-offer Accept/Decline pair.",
+          "evidence": "design-system/.../components/HsComponents.kt:77 `.height(52.dp)`, :101 `maxLines = 1`, :102 `overflow = TextOverflow.Ellipsis`; customer-app/.../catalogue/PhotoFirstServiceCard.kt:196 text = stringResource(R.string.book_now) with :199 maxLines = 1; customer-app/.../catalogue/ServiceDetailScreen.kt:512 stringResource(R.string.service_detail_cta_support) with :515 maxLines = 1; customer-app/.../catalogue/CatalogueHomeScreen.kt:481 catalogue_location_display with :484 maxLines = 1; grep -rn 'maxLines = 1' <app>/app/src/main --include=*.kt | wc -l -> 28 / 8",
+          "line": "HsComponents.kt 77,101-102"
+        }
+      ]
+    },
+    {
+      "id": "cross.roboto-fallback",
+      "title": "Unmapped M3 type slots falling back to Roboto",
+      "platform": "android",
+      "observations": [
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "customer-app uses the five UNMAPPED M3 slots 76 times: titleMedium 33, headlineSmall 19, labelMedium 13, titleSmall 10, displaySmall 1. Every one of those renders in Roboto, not Geist Sans / Noto Devanagari.",
+          "evidence": "for slot in titleMedium titleSmall labelMedium headlineSmall displaySmall; do grep -rn \"typography.$slot\" customer-app/app/src/main --include=*.kt | wc -l; done  -> 33,10,13,19,1 ; combined regex total = 76",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "technician-app uses them 54 times: titleMedium 18, headlineSmall 17, labelMedium 11, titleSmall 5, displaySmall 3.",
+          "evidence": "same loop against technician-app/app/src/main -> 18,5,11,17,3 ; combined total = 54",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "The design-system module ITSELF leaks Roboto into every consumer: 4 shared components use unmapped slots, so any screen using HsSectionCard, HsInfoRow, HsTimelineStep or LanguagePickerCard renders mixed-typeface text regardless of how disciplined the screen author was.",
+          "evidence": "design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt:123 `style = MaterialTheme.typography.titleMedium` (HsSectionCard title), :155 `style = MaterialTheme.typography.labelMedium` (HsInfoRow label), :198 `style = MaterialTheme.typography.titleSmall` (HsTimelineStep title); design-system/src/main/kotlin/com/homeservices/designsystem/locale/LanguagePickerCard.kt:67 `style = MaterialTheme.typography.titleMedium` (the Hindi native-name row 'हिन्दी')",
+          "line": "123,155,198 / 67"
+        },
+        {
+          "tag": "observed",
+          "claim": "LanguagePickerCard.kt:67 is the single most damaging instance: it is the FIRST-LAUNCH language chooser, and the Devanagari word 'हिन्दी' (LanguagePickerCard.kt:29) is rendered through titleMedium — i.e. Roboto, not Noto Devanagari.",
+          "evidence": "design-system/src/main/kotlin/com/homeservices/designsystem/locale/LanguagePickerCard.kt:29 `LanguageOption(tag = \"hi\", displayLabel = \"Hindi\", nativeName = \"हिन्दी\")`; :66 `text = option.nativeName`, :67 `style = MaterialTheme.typography.titleMedium`",
+          "line": "29,66-67"
+        },
+        {
+          "tag": "observed",
+          "claim": "Worst-offender consumer files (count of unmapped-slot lines per file). customer-app: BookingSummaryScreen.kt 6, ui/shared/TrustDossierCard.kt 5, CustomerBookingsScreen.kt 5, RatingScreen.kt 4, ServiceDetailScreen.kt 4, CustomerHomeTabContent.kt 4, ui/auth/AuthScreen.kt 4, LiveTrackingScreen.kt 3, DpdpConsentScreen.kt 3, ComplaintScreen.kt 3, CatalogueVisualImage.kt 3, CatalogueHomeScreen.kt 3.",
+          "evidence": "grep -rl \"typography.\\\\(titleMedium\\\\|titleSmall\\\\|labelMedium\\\\|headlineSmall\\\\|displaySmall\\\\)\" customer-app/app/src/main --include=*.kt | while read f; do echo \"$(grep -c ... \"$f\") $f\"; done | sort -rn",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "claim": "technician-app worst offender is extreme: TechnicianHomeScreen.kt alone contains 12 unmapped-slot lines. Then MyRatingsScreen.kt 5, JobOfferScreen.kt 4, ui/auth/AuthScreen.kt 4, ServiceSelectionScreen.kt 3, KycScreen.kt 3, EarningsScreen.kt 3, TechnicianDashboardScreen.kt 3, ComplaintScreen.kt 3, ActiveJobScreen.kt 3.",
+          "evidence": "same per-file count loop against technician-app/app/src/main",
+          "line": "n/a"
+        }
+      ]
+    },
+    {
+      "id": "cross.offscale-values",
+      "title": "Off-scale raw colour and spacing literals",
+      "platform": "android",
+      "observations": [
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "customer-app hardcodes 97 raw `Color(0x...)` literals in app source, entirely bypassing the theme palette. Worst files: ui/consent/DpdpConsentScreen.kt 22, ui/catalogue/CatalogueHomeScreen.kt 14, ui/catalogue/PhotoFirstCategoryCard.kt 11, ui/catalogue/CatalogueVisualImage.kt 11, ui/complaint/ComplaintListScreen.kt 10, ui/catalogue/CustomerHomeTabContent.kt 7, ui/catalogue/ServiceDetailScreen.kt 4, ui/wallet/WalletScreen.kt 3.",
+          "evidence": "grep -rn \"Color(0x\" customer-app/app/src/main --include=*.kt | wc -l -> 97 ; per-file: grep -rl \"Color(0x\" ... | while read f; do echo \"$(grep -c 'Color(0x' \"$f\") $f\"; done | sort -rn",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "claim": "technician-app hardcodes 14 raw Color(0x literals: ui/dashboard/PendingActionCard.kt 10, ui/home/TechnicianHomeScreen.kt 3, ui/auth/AuthScreen.kt 1. By comparison the design-system module defines 40 (expected — that is the palette).",
+          "evidence": "grep -rn \"Color(0x\" technician-app/app/src/main --include=*.kt | wc -l -> 14 ; design-system/src/main -> 40",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "Spacing scale is effectively not enforced. customer-app: 878 `.dp` literals of which 416 (47.4%) are OFF the {0,4,8,12,16,24,32,48,64,96} scale. technician-app: 396 literals, 180 off-scale (45.5%). Even the design-system module is 18/72 off-scale (25%).",
+          "evidence": "python: regex (?<![\\w.])(\\d+(?:\\.\\d+)?)\\.dp\\b over every .kt under <app>/app/src/main, bucketed against allowed={0,4,8,12,16,24,32,48,64,96}",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "claim": "Most frequent off-scale dp values, customer-app: 20dp x59, 14dp x57, 1dp x40, 6dp x31, 10dp x31, 18dp x30, 2dp x15, 28dp x12, 52dp x12, 44dp x12, 56dp x10, 36dp x9, 22dp x9. technician-app: 18dp x27, 20dp x21, 14dp x19, 10dp x18, 28dp x11, 56dp x10, 2dp x10, 118dp x5, 140dp x4, 132dp x3. The 118/132/140dp values are magic pixel-pushed heights.",
+          "evidence": "same python scan, Counter of off-scale literal values",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "Worst off-scale files. customer-app: ui/catalogue/CatalogueHomeScreen.kt 73, ui/catalogue/CustomerHomeTabContent.kt 31, ui/catalogue/ServiceDetailScreen.kt 24, ui/auth/AuthScreen.kt 20, ui/bookings/CustomerBookingsScreen.kt 20, ui/shared/TrustDossierCard.kt 19, ui/catalogue/ServiceListScreen.kt 18, ui/wallet/WalletScreen.kt 16. technician-app: ui/home/TechnicianHomeScreen.kt 73, ui/auth/AuthScreen.kt 21, ui/kyc/KycScreen.kt 11, ui/dashboard/TechnicianDashboardScreen.kt 10, ui/earnings/EarningsScreen.kt 10, ui/onboarding/OnboardingScreen.kt 10. The two highest-traffic screens in the product (customer catalogue home, technician home) are the two worst offenders.",
+          "evidence": "same python scan, Counter keyed by file path",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "claim": "The design system contradicts its own scale: HsActionButton hardcodes height 52.dp, shape RoundedCornerShape(14.dp), leading box 22.dp and spacer 10.dp — none of which are HomeservicesSpacing or HomeservicesRadius values. LanguagePickerCard hardcodes 12.dp gap, RoundedCornerShape(16.dp) and 16.dp padding instead of tokens.",
+          "evidence": "design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt:77 `.height(52.dp)`, :78 `shape = RoundedCornerShape(14.dp)`, :92 `Modifier.size(22.dp)`, :95 `Modifier.width(10.dp)`; design-system/src/main/kotlin/com/homeservices/designsystem/locale/LanguagePickerCard.kt:39 `Arrangement.spacedBy(12.dp)`, :43 `shape = RoundedCornerShape(16.dp)`, :61 `Modifier.padding(16.dp)`, :64 `padding(start = 12.dp)`",
+          "line": "77-95 / 39-64"
+        },
+        {
+          "tag": "observed",
+          "claim": "HsPrimaryButton and HsSecondaryButton set their heights from SPACING tokens, which is a token-category error and produces a 64dp primary vs 48dp secondary button pair — inconsistent with HsActionButton's 52dp.",
+          "evidence": "design-system/.../HsComponents.kt:44 `modifier.height(LocalHomeservicesSpacing.current.space16)` (=64dp) in HsPrimaryButton; :60 `modifier.height(LocalHomeservicesSpacing.current.space12)` (=48dp) in HsSecondaryButton; :77 `.height(52.dp)` in HsActionButton",
+          "line": "44,60,77"
+        }
+      ]
+    },
+    {
+      "id": "cross.dead-tokens",
+      "title": "Design token consumer usage — dead token census",
+      "platform": "android",
+      "observations": [
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "CONSUMER-USAGE TABLE (usages in customer-app/app/src + technician-app/app/src, i.e. excluding the design-system module and its tests): HomeservicesMotion=0; HomeservicesEasing=0; HomeservicesShadow=0; HomeservicesElevationShadowsLight=0; HomeservicesElevationShadowsDark=0; HomeservicesExtendedColors=0; LocalHomeservicesElevation=0; LocalHomeservicesRadius=0; LocalHomeservicesMotion=0; HomeservicesSpacing=0; HomeservicesRadius=0; HomeservicesElevation=0; LocalHomeservicesExtendedColors=8; LocalHomeservicesSpacing=9. TWELVE of fourteen token entry points are DEAD.",
+          "evidence": "for t in HomeservicesMotion HomeservicesEasing HomeservicesShadow HomeservicesElevationShadowsLight HomeservicesElevationShadowsDark HomeservicesExtendedColors LocalHomeservicesExtendedColors LocalHomeservicesElevation LocalHomeservicesRadius LocalHomeservicesMotion LocalHomeservicesSpacing HomeservicesSpacing HomeservicesRadius HomeservicesElevation; do grep -rn \"\\\\b$t\\\\b\" customer-app/app/src technician-app/app/src --include=*.kt | wc -l; done",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "HomeservicesShadow is dead even INSIDE the design system: all 11 references are in Elevation.kt where the shadow objects are declared, and nothing ever applies them. The full elevation-shadow spec (elev0-elev4 with distinct light/dark alpha ramps) is unreachable code.",
+          "evidence": "grep -rn \"HomeservicesShadow\" design-system/src --include=*.kt -> 11 lines, all in design-system/src/main/kotlin/com/homeservices/designsystem/theme/Elevation.kt (:42 data class, :59/:62/:65/:68/:71 Light elev0-4, :81/:84/:87/:90/:93 Dark elev0-4); 0 references anywhere else in the repo",
+          "line": "Elevation.kt 42-93"
+        },
+        {
+          "tag": "observed",
+          "claim": "HomeservicesMotion has 16 references inside the design system, but 5 of them are TokenGallery printing the values as text and 4 are its own unit test — i.e. no composable ever animates with them. HomeservicesEasing has 4 references total: 1 declaration in Motion.kt and 3 in MotionTokensTest.kt.",
+          "evidence": "grep -rn \"\\\\bHomeservicesMotion\\\\b\" design-system/src --include=*.kt | sed 's/:.*//' | sort | uniq -c -> 5 gallery/TokenGallery.kt, 1 theme/HomeservicesTheme.kt, 6 theme/Motion.kt, 4 test/.../MotionTokensTest.kt ; same for HomeservicesEasing -> 1 theme/Motion.kt, 3 test/.../MotionTokensTest.kt",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "claim": "LocalHomeservicesRadius and LocalHomeservicesMotion exist only to be provided and tested — never read by a screen. LocalHomeservicesElevation is read exactly twice, both inside HsSectionCard.",
+          "evidence": "LocalHomeservicesRadius: 2 in theme/HomeservicesTheme.kt, 2 in theme/Radius.kt, 1 in test/RadiusTokensTest.kt, 0 in apps. LocalHomeservicesMotion: 2 HomeservicesTheme.kt, 2 Motion.kt, 1 MotionTokensTest.kt, 0 in apps. LocalHomeservicesElevation: 2 components/HsComponents.kt (:31 import, :117 cardElevation), 2 theme/Elevation.kt, 2 theme/HomeservicesTheme.kt, 1 test",
+          "line": "HsComponents.kt 31,117"
+        },
+        {
+          "tag": "observed",
+          "claim": "The 8 LocalHomeservicesExtendedColors consumer usages are 4 imports + 4 reads, and ALL 4 reads pull the same single field (brandPrimaryHover) for a gradient start colour. `verified` and `neighbourhood` — the trust-dossier semantic colours — have zero app consumers.",
+          "evidence": "grep -rn \"LocalHomeservicesExtendedColors\" customer-app/app/src technician-app/app/src --include=*.kt -> customer-app ui/auth/AuthScreen.kt:65 import, :181 `val heroStart = LocalHomeservicesExtendedColors.current.brandPrimaryHover`; ui/catalogue/ServiceDetailScreen.kt:62, :209; ui/catalogue/ServiceListScreen.kt:51, :66; ui/locale/FirstLaunchLanguageScreen.kt:33, :40. technician-app: 0",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "claim": "The 9 LocalHomeservicesSpacing consumer usages are 4 imports + 5 reads across only 4 files, and 3 of the 4 files are in the technician app. Against 878 raw .dp literals in customer-app and 396 in technician-app, spacing tokens account for well under 1% of spacing decisions.",
+          "evidence": "grep -rn \"LocalHomeservicesSpacing\" customer-app/app/src technician-app/app/src --include=*.kt -> customer-app ui/auth/AuthScreen.kt:66, :234; technician-app ui/auth/AuthScreen.kt:63, :188; ui/kyc/KycScreen.kt:49, :143; ui/serviceprofile/ServiceSelectionScreen.kt:60, :104, :182",
+          "line": "n/a"
+        },
+        {
+          "tag": "inferred",
+          "claim": "The token layer is a Paparazzi-test artefact rather than a working design system: TokenGallery is the primary (often only) consumer of Motion, Radius, Elevation and Spacing token objects, and its own file comment states it is 'Consumed exclusively by TokenGalleryPaparazziTest'.",
+          "evidence": "design-system/src/main/kotlin/com/homeservices/designsystem/gallery/TokenGallery.kt:6 `Consumed exclusively by [TokenGalleryPaparazziTest] via Paparazzi V_SCROLL rendering.`, :8 `Static content only — no state, no remember, no animations, no click handlers.`",
+          "line": "6-8"
+        }
+      ]
+    },
+    {
+      "id": "cross.ds-adoption",
+      "title": "Shared-component adoption vs raw Material 3 bypass",
+      "platform": "android",
+      "observations": [
+        {
+          "tag": "observed",
+          "claim": "customer-app shared-component call sites (grep line count including imports): HsPrimaryButton 28, HsScreenTitle 27, HsSecondaryButton 13, HsSectionCard 10, HsTrustBadge 4, HsSkeletonBlock 4, HsActionButton 3, HsTimelineStep 3, LanguagePickerCard 2, HsInfoRow 1, HsPriceText 1. Total ~96 references.",
+          "evidence": "for c in HsPrimaryButton HsSecondaryButton HsActionButton HsSectionCard HsSkeletonBlock HsInfoRow HsPriceText HsTimelineStep HsTrustBadge HsScreenTitle LanguagePickerCard; do grep -rn \"\\\\b$c\\\\b\" customer-app/app/src/main --include=*.kt | wc -l; done",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "claim": "technician-app shared-component call sites: HsSectionCard 27, HsPrimaryButton 20, HsSecondaryButton 10, HsTrustBadge 9, HsTimelineStep 7, HsInfoRow 4, HsSkeletonBlock 4, HsActionButton 3, LanguagePickerCard 1, HsPriceText 1, HsScreenTitle 0.",
+          "evidence": "same loop against technician-app/app/src/main",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "HsScreenTitle has ZERO usages in technician-app, and `heading()` semantics appear 0 times in either app's own source — meaning the entire technician app has no TalkBack heading navigation, directly violating the component's own contract.",
+          "evidence": "grep -rn \"\\\\bHsScreenTitle\\\\b\" technician-app/app/src/main --include=*.kt | wc -l -> 0 ; grep -rn \"heading()\" technician-app/app/src/main --include=*.kt | wc -l -> 0 ; design-system/src/main/kotlin/com/homeservices/designsystem/components/HsScreenTitle.kt:20-21 states 'Every customer-app and technician-app screen MUST use this for its primary visible heading.'",
+          "line": "HsScreenTitle.kt 19-22"
+        },
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "Button adoption ratio is good; CONTAINER adoption is catastrophic. Raw M3 primitives (word-boundary matched, so wrappers are excluded) — customer-app: Button( 11, OutlinedButton( 3, TextButton( 16, Card( 3, IconButton( 23, Surface( 98, Text( 304. technician-app: Button( 10, OutlinedButton( 7, TextButton( 16, Card( 3, IconButton( 6, Surface( 39, Text( 229.",
+          "evidence": "for r in 'Button\\(' 'OutlinedButton\\(' 'TextButton\\(' 'Card\\(' 'IconButton\\(' 'Surface\\(' 'Text\\('; do grep -rnoE \"(^|[^A-Za-z0-9_])$r\" <root> --include=*.kt | wc -l; done",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "Adoption ratios. Buttons — customer-app: 44 Hs buttons (28+13+3) vs 30 raw button primitives (11 Button + 3 OutlinedButton + 16 TextButton) = 59% adoption; technician-app: 33 Hs vs 33 raw = 50%. Containers — customer-app: 10 HsSectionCard vs 101 raw containers (3 Card + 98 Surface) = 9% adoption; technician-app: 27 HsSectionCard vs 42 raw (3 Card + 39 Surface) = 39%. Surface( is being used as an unstyled ad-hoc card 98 times in customer-app, which is why the 416 off-scale dp literals and 97 raw colour literals exist.",
+          "evidence": "arithmetic over the two count blocks above",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "claim": "TextButton( at 16 sites per app has NO design-system equivalent at all — there is no HsTextButton / HsTertiaryButton in the 11-component set, so every low-emphasis action in the product is unsystematised.",
+          "evidence": "design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt declares exactly HsPrimaryButton (:35), HsSecondaryButton (:51), HsActionButton (:67), HsSectionCard (:109), HsSkeletonBlock (:134), HsInfoRow (:147), HsPriceText (:167), HsTimelineStep (:181), HsTrustBadge (:211) — no text/tertiary button; grep -rnoE '(^|[^A-Za-z0-9_])TextButton\\(' returns 16 per app",
+          "line": "HsComponents.kt 35-231"
+        },
+        {
+          "tag": "observed",
+          "claim": "HsInfoRow (1 usage) and HsPriceText (1 usage) in customer-app are effectively vestigial — HsPriceText is the canonical money component and it is used exactly once per app.",
+          "evidence": "grep -rn '\\\\bHsPriceText\\\\b' customer-app/app/src/main --include=*.kt | wc -l -> 1 ; technician-app -> 1 ; grep -rn '\\\\bHsInfoRow\\\\b' customer-app -> 1",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "claim": "HsPrimaryButton and HsSecondaryButton pass no `style`/`colors`/`contentPadding` and wrap Text with no maxLines — so a 3.2x-longer Hindi 'पुनः प्रयास करें' inside a 64dp-tall primary button will wrap to two lines and be vertically clipped rather than ellipsised.",
+          "evidence": "design-system/.../HsComponents.kt:41-47 Button { Text(text) } with only height set; :57-63 OutlinedButton { Text(text) } likewise — no maxLines, no overflow, no autosize",
+          "line": "41-63"
+        }
+      ]
+    },
+    {
+      "id": "cross.money-formatting",
+      "title": "Currency rendering — every distinct formatting site",
+      "platform": "cross",
+      "observations": [
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "There are NINE mutually inconsistent money formatters across the three surfaces, producing at least five visually different outputs for the same amount: '₹1,299.00', '₹1,299', '₹1299', 'Rs 1,299', 'Rs 12', 'INR 1,299', 'INR 1,299.00'.",
+          "evidence": "aggregated from the per-site citations below",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "SITE 1 (design-system, canonical component) — HsPriceText renders ASCII 'Rs ' with INTEGER DIVISION and no thousands grouping: 129900 paise renders as 'Rs 1299', and 99950 paise renders as 'Rs 999' (50 paise silently discarded). This is the design system's own price primitive.",
+          "evidence": "design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt:172 `text = \"Rs ${pricePaise / 100}\",`",
+          "line": "172"
+        },
+        {
+          "tag": "observed",
+          "claim": "SITE 2 (customer-app, correct one) — formatInr uses NumberFormat.getCurrencyInstance(Locale(\"en\",\"IN\")), giving '₹1,299.00' with lakh/crore grouping. But it is hard-pinned to the en-IN locale, so a Hindi user gets Latin digits and en-IN grouping regardless of app locale.",
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/util/CurrencyFormat.kt:8 `NumberFormat.getCurrencyInstance(Locale(\"en\", \"IN\"))`, :23-25 `public fun formatInr(paise: Long): String { val rupees = paise / PAISE_PER_RUPEE; return INR_FORMAT_LOCAL.get()?.format(rupees) ?: \"₹$rupees\" }`",
+          "line": "6-26"
+        },
+        {
+          "tag": "observed",
+          "claim": "SITE 3 (customer-app catalogue card) — bypasses formatInr with its own '₹' + integer division, no grouping: '₹1299'.",
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/PhotoFirstServiceCard.kt:238 `private fun formatServicePrice(pricePaise: Int): String = \"₹${pricePaise / PAISE_PER_RUPEE}\"`",
+          "line": "238"
+        },
+        {
+          "tag": "observed",
+          "claim": "SITE 4 (customer-app service detail) — a THIRD private formatter, again '₹' + integer division with a magic 100.",
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/ServiceDetailScreen.kt:621 `private fun formatPrice(pricePaise: Int): String = \"₹${pricePaise / 100}\"`",
+          "line": "621"
+        },
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "SITE 5 (technician-app home, the earnings surface) — ASCII 'Rs' with %,.0f, i.e. no rupee glyph and Java's default grouping (which for the default locale is western 1,234,567 not Indian 12,34,567).",
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:1350 `private fun formatRupees(paise: Long): String = \"Rs %,.0f\".format(paise / 100.0)`",
+          "line": "1350"
+        },
+        {
+          "tag": "observed",
+          "claim": "SITE 6 (technician-app earnings screen) — a near-duplicate of SITE 5 but with '₹' instead of 'Rs'. Two screens in the SAME app showing the same earnings number in two different currency notations.",
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt:384 `private fun formatRupees(paise: Long): String = \"₹%,.0f\".format(paise / 100.0)` vs TechnicianHomeScreen.kt:1350 using \"Rs %,.0f\"",
+          "line": "384"
+        },
+        {
+          "tag": "observed",
+          "claim": "SITE 7 (technician-app dashboard) — a literal hardcoded string 'Rs 0' with no formatter at all.",
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/TechnicianDashboardScreen.kt:129 `value = \"Rs 0\",`",
+          "line": "129"
+        },
+        {
+          "tag": "observed",
+          "claim": "SITE 8 (technician-app FCM notification + payout settings) — rupee amounts baked into Hindi literals in Kotlin, so the notification title and the payout fee labels can never be English.",
+          "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/data/fcm/HomeservicesFcmService.kt:325 `.setContentTitle(\"नया काम आया! ₹$amountRs\")`; technician-app/app/src/main/kotlin/com/homeservices/technician/ui/payoutsettings/PayoutCadenceScreen.kt:47 `\"अगले दिन (₹15)\"` / `\"₹15/पेमेंट\"`, :48 `\"तुरंत (₹25)\"` / `\"₹25/पेमेंट\"`",
+          "line": "325 / 47-48"
+        },
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "SITE 9 (admin-web) — SIX different currency renderings in one app: formatINR (proper Intl currency, locale-aware) used by orders; '₹' + toLocaleString('en-IN') on the dashboard counter strip; 'INR ' + toLocaleString('en-IN') in the payout queue; 'INR ' + toLocaleString in catalogue; 'INR ' + toLocaleString with fraction digits in compliance; '₹' + toLocaleString with 2 fixed digits in the finance API layer. Three of the six hard-pin 'en-IN' so the Hindi admin locale is ignored.",
+          "evidence": "admin-web/src/lib/format/intl.ts:1-7 formatINR via Intl.NumberFormat(locale==='hi'?'hi-IN':'en-IN', {style:'currency',currency:'INR'}); admin-web/src/components/dashboard/CounterStrip.tsx:10 `return \\`₹${(paise / 100).toLocaleString('en-IN')}\\`;`; admin-web/src/components/dashboard/PayoutQueue.tsx:14 `return \\`INR ${(paise / 100).toLocaleString('en-IN')}\\`;`; admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:17 `return \\`INR ${(paise / 100).toLocaleString('en-IN')}\\`;`; admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:33 `return \\`INR ${(paise / 100).toLocaleString('en-IN', {`; admin-web/src/api/finance.ts:40 `return \\`₹${(paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\\`;`; admin-web/src/components/finance/PnLChart.tsx:27 `return \\`₹${(value / 100).toLocaleString(localeStr, { maximumFractionDigits: 0 })}\\`;`",
+          "line": "intl.ts 1-7; CounterStrip.tsx 10; PayoutQueue.tsx 14; ServiceList.tsx 17; ComplianceClient.tsx 33; finance.ts 40; PnLChart.tsx 27"
+        },
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "ASCII 'Rs' (not ₹) appears at 3 live rendering sites — HsComponents.kt:172, TechnicianHomeScreen.kt:1350, TechnicianDashboardScreen.kt:129 — and 'INR ' at 3 admin-web sites. Six of the nine formatters therefore fail the Hindi-first bar outright, and none of the nine implements Indian lakh/crore grouping via an explicit hi-IN locale except formatINR on admin-web.",
+          "evidence": "grep -rn '\"Rs \\|Rs %\\|Rs ${' customer-app/app/src/main technician-app/app/src/main design-system/src/main --include=*.kt -> HsComponents.kt:172, TechnicianHomeScreen.kt:1350, TechnicianDashboardScreen.kt:129 (plus a doc-comment reference at customer-app/.../ui/util/CurrencyFormat.kt:19)",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "claim": "Only 5 rupee-bearing strings exist in customer-app strings.xml, so most money rendering is code-side and therefore invisible to the translation pipeline.",
+          "evidence": "grep -rn '₹\\|Rs ' customer-app/app/src/main/res/values/strings.xml technician-app/app/src/main/res/values/strings.xml -> customer strings.xml:465 wallet_apply_credit_toggle, :466 wallet_credit_original_price, :467 wallet_credit_applied_banner, :495 pending_payment_banner_subtitle, :508 promo_ac_subtitle; technician strings.xml -> 0 matches",
+          "line": "465-508"
+        }
+      ]
+    },
+    {
+      "id": "cross.icon-system",
+      "title": "Iconography — spec vs reality",
+      "platform": "cross",
+      "observations": [
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "CONFIRMED: Phosphor Icons is absent from the entire codebase. A case-insensitive grep for 'phosphor' across customer-app, technician-app, admin-web, design-system and docs returns only three hits, all in prose documents — the spec itself and a prior session note acknowledging the gap. It is not a Gradle dependency, not an npm dependency, not imported anywhere.",
+          "evidence": "grep -rni 'phosphor' --include=*.kt --include=*.kts --include=*.toml --include=*.json --include=*.ts --include=*.tsx --include=*.md customer-app technician-app admin-web design-system docs -> docs/ux-design.md:253 '**Phosphor Icons** (free, 6000+ icons, 6 weights). Default weight: `regular`. Active/selected: `fill`. Navigation: `duotone`.'; docs/design/SESSION-STATE.md:157-158",
+          "line": "ux-design.md 253"
+        },
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "Android reality: androidx.compose.material.icons ONLY, and effectively only the `filled` weight. customer-app has 94 `material.icons.filled` imports vs 24 `material.icons.automirrored` (57 distinct icon imports total); technician-app has 36 filled vs 5 automirrored (29 distinct). Zero `outlined`, `rounded`, `sharp` or `twotone` imports — so the spec's 6-weight system collapses to a single weight, and there is no visual distinction between an active and an inactive icon.",
+          "evidence": "grep -rho 'import androidx.compose.material.icons.[a-z]*\\.[A-Za-z]*' <app>/app/src/main --include=*.kt | sed 's/\\.[A-Za-z]*$//' | sort | uniq -c -> customer-app: 94 filled, 24 automirrored; technician-app: 36 filled, 5 automirrored. grep -rho 'import androidx.compose.material.icons\\..*' | sort -u | wc -l -> 57 and 29",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "claim": "Icon call-site counts: customer-app 89 `Icon(` + 4 `painterResource`; technician-app 30 `Icon(` + 2 `painterResource`. So icon sources per Android surface = 2 (Material Icons vector set + a handful of drawable painters).",
+          "evidence": "grep -rnoE '(^|[^A-Za-z0-9_])Icon\\(' <app>/app/src/main --include=*.kt | wc -l -> 89 / 30 ; grep -rno 'painterResource' -> 4 / 2",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "claim": "Web reality: lucide-react ^1.14.0 is the only icon dependency in admin-web, and it is imported in just 3 places. There is exactly 1 inline <svg> in the app (a map marker). So admin-web's icon source count is 2 (lucide + one bespoke SVG) — a THIRD icon vocabulary distinct from both the spec (Phosphor) and Android (Material Icons).",
+          "evidence": "admin-web/package.json:38 `\"lucide-react\": \"^1.14.0\",`; grep -rn \"from 'lucide-react'\" admin-web/src admin-web/app --include=*.tsx | wc -l -> 3 (admin-web/src/components/dashboard/Rail.tsx:7-8, admin-web/src/components/orders/StatusFilterMenu.tsx:4); grep -rno '<svg' admin-web/src admin-web/app --include=*.tsx | wc -l -> 1 (admin-web/src/components/dashboard/TechMap.tsx)",
+          "line": "package.json 38"
+        },
+        {
+          "tag": "observed",
+          "claim": "Three different icon vocabularies are therefore in play across one product: Phosphor (specified, unimplemented), Material Icons filled (both Android apps), lucide-react (admin-web). Material's filled/geometric idiom and lucide's 1.75-stroke outline idiom are visually incompatible.",
+          "evidence": "docs/ux-design.md:253 (spec) vs the Android import census above vs admin-web/src/components/dashboard/Rail.tsx:3-8 importing Activity, ClipboardList, LayoutGrid, IndianRupee, MessageCircleWarning, ScrollText, ShieldUser, Scale, Wrench, Users2 from 'lucide-react' and rendering them at :117 `<Icon size={18} aria-hidden=\"true\" strokeWidth={1.75} />`",
+          "line": "Rail.tsx 3-8, 117"
+        },
+        {
+          "tag": "observed",
+          "claim": "MIXED-LITERACY BAR — admin-web PASSES on navigation: both the desktop rail and the mobile bottom bar pair every icon with a translated text label, and mark the icon aria-hidden.",
+          "evidence": "admin-web/src/components/dashboard/Rail.tsx:117-119 `<Icon size={18} aria-hidden=\"true\" strokeWidth={1.75} />` followed by `<span>{t(labelKey)}</span>` (desktop); :167-169 the same pairing in the mobile bar",
+          "line": "117-119, 167-169"
+        },
+        {
+          "tag": "observed",
+          "severity": "high",
+          "claim": "MIXED-LITERACY BAR — customer-app FAILS: 9 icon-only interactive controls have neither a visible text label nor a contentDescription (contentDescription = null), so they are invisible to TalkBack AND unlabelled for a low-literacy user. All are primary back/close affordances plus the address-search clear button.",
+          "evidence": "python scan: every line matching (^|[^A-Za-z0-9_])IconButton\\( whose following 9-line window contains 'contentDescription = null' and no Text( -> customer-app/app/src/main/kotlin/com/homeservices/customer/ui/settings/SettingsScreen.kt:51 (Icon at :52 `Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, ...)`), ui/settings/PrivacyAndDataScreen.kt:74, ui/settings/PrivacyDataScreen.kt:86, ui/dataexport/DataExportScreen.kt:158, ui/deleteaccount/DeleteAccountScreen.kt:123, ui/deleteaccount/DeleteAccountConfirmScreen.kt:162, ui/deleteaccount/DeleteAccountCoolOffScreen.kt:166, ui/complaint/ComplaintListScreen.kt:72, ui/booking/AddressPickerScreenContent.kt:171",
+          "line": "SettingsScreen.kt 51-53"
+        },
+        {
+          "tag": "observed",
+          "claim": "`contentDescription = null` appears 75 times in customer-app and 21 times in technician-app. Most are legitimately decorative icons inside labelled rows, but the raw volume combined with the 9 confirmed unlabelled controls above indicates null is the default rather than a considered decision.",
+          "evidence": "grep -rn 'contentDescription = null' customer-app/app/src/main --include=*.kt | wc -l -> 75 ; technician-app -> 21 ; IconButton( totals: 23 (customer) / 6 (technician)",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "claim": "technician-app has 0 icon-only unlabelled IconButtons by the same scan — but that is because it has only 6 IconButton sites at all, not because it labels them better.",
+          "evidence": "same python scan -> technician-app 0 hits; grep -rnoE '(^|[^A-Za-z0-9_])IconButton\\(' technician-app/app/src/main --include=*.kt | wc -l -> 6",
+          "line": "n/a"
+        },
+        {
+          "tag": "observed",
+          "claim": "Design-system drift instances on web (beyond the known headline token-set divergence): 258 inline `style={{` blocks and 55 Tailwind `text-gray-*`/`bg-gray-*` utility uses that bypass the Editorial Command Center CSS variables entirely, plus 25 raw hex literals in .tsx.",
+          "evidence": "grep -rno 'style={{' admin-web/src admin-web/app --include=*.tsx | wc -l -> 258 ; grep -rno 'text-gray-[0-9]*\\|bg-gray-[0-9]*' -> 55 ; grep -rnoE '#[0-9a-fA-F]{3,8}\\b' --include=*.tsx -> 25 (files: CounterStrip.stories.tsx, OrderFeed.stories.tsx, TechMap.stories.tsx, LocaleSwitcher.stories.tsx, app/global-error.tsx). Concrete: admin-web/src/components/orders/OrderSlideOver.tsx:87 `className=\"text-xs text-gray-500 font-medium mb-1\"`",
+          "line": "OrderSlideOver.tsx 87"
+        }
+      ]
+    }
+  ]
+}

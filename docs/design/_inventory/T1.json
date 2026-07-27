@@ -1,0 +1,659 @@
+{
+  "cluster": "T1",
+  "surfaces": [
+    {
+      "id": "technician.auth",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/auth/AuthScreen.kt",
+      "loc": 673,
+      "purpose": "Partner (technician) signs in or creates an account via Google, email+password, or phone OTP before receiving jobs.",
+      "entryPoints": "NavHost start destination: technician-app/app/src/main/kotlin/com/homeservices/technician/navigation/AppNavigation.kt:146 (startDestination = \"auth\"); route graph technician-app/app/src/main/kotlin/com/homeservices/technician/navigation/AuthGraph.kt:21-22 (navigation(startDestination = \"auth_screen\", route = \"auth\") { composable(\"auth_screen\") }); also re-entered on logout via AppNavigation.kt:82-85.",
+      "composition": [
+        { "block": "Root Surface, background = colorScheme.background, hosts a 10-branch `when(uiState)` dispatch", "cite": "AuthScreen.kt:94-176" },
+        { "block": "AuthFrame root Box, fillMaxSize, background = AuthHeroEnd (static brand primary), statusBarsPadding", "cite": "AuthScreen.kt:189-195" },
+        { "block": "Hero zone Box, fillMaxHeight(0.38f), drawBehind: vertical gradient primaryHover->primary + two decorative white circles (r=140dp offset top-right, r=70dp offset bottom-left)", "cite": "AuthScreen.kt:197-217" },
+        { "block": "Hero text stack bottom-start, padded 28/28/36: 'HomeHeroo Partner' headlineLarge ExtraBold white; Devanagari tagline 'रोज़ काम, रोज़ कमाई' bodyLarge white@82%; 'सत्यापित पार्टनर प्रोग्राम' labelSmall white@65%", "cite": "AuthScreen.kt:220-240" },
+        { "block": "Form card Surface anchored BottomCenter, fillMaxHeight(0.65f) (so it overlaps the hero by ~3% of screen), top corners 24dp, color = hardcoded Color.White, shadowElevation 8dp", "cite": "AuthScreen.kt:244-253" },
+        { "block": "Scrollable Column inside card: verticalScroll + imePadding, padding horizontal 24 / top 28 / bottom 24, item gap = spacing.space6 (24dp)", "cite": "AuthScreen.kt:254-263" },
+        { "block": "Decorative 'scroll handle' pill, 40dp x 2dp, brand primary @25% alpha, radius 1dp, centered", "cite": "AuthScreen.kt:265-274" },
+        { "block": "Header group: HsTrustBadge(eyebrow) -> title Text (headlineSmall, Bold) -> body Text (bodyLarge, onSurfaceVariant), gap space3", "cite": "AuthScreen.kt:275-287" },
+        { "block": "HsSectionCard wrapping the per-state form content (elev1 card on white card — card-on-card)", "cite": "AuthScreen.kt:288" },
+        { "block": "SecurityNote footer row: 16dp Lock icon + centered labelMedium caption", "cite": "AuthScreen.kt:289-291, 380-400" },
+        { "block": "MethodSelection body: three full-width HsActionButtons (Google mark / Email icon / Phone icon) stacked 12dp apart, then two centered labelSmall legal/verification captions", "cite": "AuthScreen.kt:307-357" },
+        { "block": "EmailEntry body: 'Back to sign-in options' TextButton, email OutlinedTextField, password OutlinedTextField with visibility toggle, HsPrimaryButton, mode-toggle TextButton, forgot-password TextButton", "cite": "AuthScreen.kt:427-487" },
+        { "block": "EmailVerificationSent body: optional message text, 'I verified, continue' primary, 'Resend email' secondary, 'Use another sign-in method' TextButton", "cite": "AuthScreen.kt:501-526" },
+        { "block": "PhoneEntry body: mobile OutlinedTextField, helper bodySmall, 'Get OTP' HsPrimaryButton (enabled only when normalizer returns non-null), terms caption", "cite": "AuthScreen.kt:541-572" },
+        { "block": "OtpCode body: 6-digit OutlinedTextField (single-line, NumberPassword), 'Verify and continue' primary, 'Resend code' TextButton — no per-digit OTP boxes, no auto-read, no resend countdown", "cite": "AuthScreen.kt:588-607" },
+        { "block": "LoadingContent (5 of the 10 states): full-screen centered 56dp CircularProgressIndicator (strokeWidth 4dp) + headlineSmall title + bodyMedium message", "cite": "AuthScreen.kt:611-645" },
+        { "block": "ErrorContent: AuthFrame with eyebrow 'Action needed', title 'We could not sign you in', body = raw VM message, optional attempts-remaining line, 'Try again' primary", "cite": "AuthScreen.kt:648-673" }
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "AuthScreen.kt:99-103, 611-645", "quality": "Five distinct loading states all render the same bare centered spinner; no skeleton of the form beneath, so every async step is a full-screen context wipe." },
+        "empty": { "present": false, "evidence": null, "quality": "Not applicable to an auth screen." },
+        "error": { "present": true, "evidence": "AuthScreen.kt:174-175, 648-673", "quality": "Full-screen takeover rather than inline field errors; body is the unfiltered ViewModel message (AuthScreen.kt:655); no error illustration, no support/contact affordance, no way to switch method from the error state." },
+        "success": { "present": false, "evidence": null, "quality": "No success confirmation; navigation is driven externally by authState in AppNavigation.kt:60-74 with no transition or acknowledgement." },
+        "offline": { "present": false, "evidence": null, "quality": "No offline detection or offline copy anywhere in the file; a dropped connection lands in the generic Error state." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "No permission surface in this screen; POST_NOTIFICATIONS is requested silently after auth in AppNavigation.kt:70-72 with no rationale UI." }
+      },
+      "skeletonOrSpinner": "Bare centered CircularProgressIndicator, size 56.dp, strokeWidth 4.dp — AuthScreen.kt:621-625. HsSkeletonBlock is never imported or used.",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [
+          { "value": "28.dp / 28.dp / 36.dp", "line": 221, "context": "hero text column padding (start/end/bottom) — 28 and 36 are off the 4/8/12/16/24/32/48/64 scale" },
+          { "value": "4.dp", "line": 222, "context": "hero text stack gap (raw, not spacing.space1)" },
+          { "value": "140.dp / 80.dp / 60.dp / 70.dp / 40.dp / 20.dp", "line": "207-216", "context": "decorative circle radii and offsets in drawBehind" },
+          { "value": "24.dp", "line": 250, "context": "form card top corner radius — off the HomeservicesRadius scale (sm4/md8/lg12/xl20/full)" },
+          { "value": "8.dp", "line": 252, "context": "shadowElevation raw dp instead of HomeservicesElevation.elev3" },
+          { "value": "24.dp / 28.dp / 24.dp", "line": "260-261", "context": "form column padding raw instead of spacing tokens" },
+          { "value": "40.dp / 2.dp / 1.dp", "line": "268-272", "context": "scroll-handle pill width/height/radius" },
+          { "value": "12.dp", "line": 308, "context": "method-button stack gap" },
+          { "value": "20.dp", "line": 324, "context": "Email leading icon size" },
+          { "value": "20.dp", "line": 337, "context": "Phone leading icon size" },
+          { "value": "12.dp", "line": 342, "context": "spacer above captions" },
+          { "value": "22.dp", "line": 366, "context": "GoogleMark circle size" },
+          { "value": "16.dp", "line": 390, "context": "Lock icon size in SecurityNote" },
+          { "value": "8.dp", "line": 397, "context": "SecurityNote text start padding" },
+          { "value": "12.dp", "line": 440, "context": "spacer between email and password fields" },
+          { "value": "20.dp", "line": 459, "context": "spacer above primary CTA" },
+          { "value": "16.dp", "line": 510, "context": "spacer under verification message" },
+          { "value": "12.dp", "line": 517, "context": "spacer between primary and secondary" },
+          { "value": "12.dp / 20.dp / 12.dp", "line": "551-564", "context": "phone entry spacers" },
+          { "value": "20.dp", "line": 597, "context": "OTP spacer" },
+          { "value": "32.dp", "line": 617, "context": "LoadingContent horizontal padding" },
+          { "value": "16.dp", "line": 619, "context": "LoadingContent stack gap" },
+          { "value": "56.dp / 4.dp", "line": "622-624", "context": "spinner size and stroke width" },
+          { "value": "8.dp", "line": 628, "context": "loading title/message gap" },
+          { "value": "16.dp", "line": 665, "context": "spacer under attempts-remaining line" }
+        ],
+        "hardcodedColors": [
+          { "value": "HomeservicesColors.Brand.primaryHover (light-only literal)", "line": 69, "context": "AuthHeroStart — Color.kt:67-68 documents these as LIGHT variants only, so the hero never adapts to dark theme" },
+          { "value": "HomeservicesColors.Brand.primary (light-only literal)", "line": 70, "context": "AuthHeroEnd + root background at line 193" },
+          { "value": "Color.White.copy(alpha = 0.06f)", "line": 208, "context": "decorative circle" },
+          { "value": "Color.White.copy(alpha = 0.09f)", "line": 214, "context": "decorative circle" },
+          { "value": "Color.White", "line": 228, "context": "hero brand title colour instead of colorScheme.onPrimary" },
+          { "value": "Color.White.copy(alpha = 0.82f)", "line": 233, "context": "hero tagline" },
+          { "value": "Color.White.copy(alpha = 0.65f)", "line": 238, "context": "hero eyebrow" },
+          { "value": "Color.White", "line": 251, "context": "form card surface colour — pinned white in both themes" },
+          { "value": "Color(0xFF1A73E8)", "line": 374, "context": "Google blue 'G' glyph" }
+        ],
+        "unmappedTypographySlots": [
+          { "slot": "headlineSmall", "line": 279 },
+          { "slot": "labelMedium", "line": 371 },
+          { "slot": "labelMedium", "line": 394 },
+          { "slot": "headlineSmall", "line": 632 }
+        ],
+        "offScaleRadius": [
+          { "value": "24.dp (topStart/topEnd)", "line": 250 },
+          { "value": "1.dp", "line": 272 }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Checking Truecaller", "line": 101 },
+          { "text": "We are verifying your partner number before falling back to OTP.", "line": 102 },
+          { "text": "Signing in with Google", "line": 114 },
+          { "text": "Choose your Google account to continue.", "line": 115 },
+          { "text": "Creating account / Signing in", "line": "132-134" },
+          { "text": "Keep this screen open while we verify ${uiState.email}.", "line": 136 },
+          { "text": "Sending OTP", "line": 164 },
+          { "text": "Keep this screen open while we send your secure code.", "line": 165 },
+          { "text": "Verifying code", "line": 170 },
+          { "text": "This usually takes a few seconds.", "line": 171 },
+          { "text": "HomeHeroo Partner", "line": 225 },
+          { "text": "रोज़ काम, रोज़ कमाई (Devanagari literal baked into code, not in values-hi)", "line": 231 },
+          { "text": "सत्यापित पार्टनर प्रोग्राम (Devanagari literal baked into code)", "line": 236 },
+          { "text": "Secure partner sign-in. Job offers, payouts, and documents stay protected.", "line": 290 },
+          { "text": "Homeservices Partner", "line": 304 },
+          { "text": "Sign in to manage jobs", "line": 305 },
+          { "text": "Use Google, email, or phone to receive job offers, manage payouts, and track ratings.", "line": 306 },
+          { "text": "Continue with Google", "line": 310 },
+          { "text": "Continue with email", "line": 316 },
+          { "text": "Continue with phone", "line": 329 },
+          { "text": "Email sign-up requires verification before partner access.", "line": 344 },
+          { "text": "By continuing, you agree to the Partner Terms and Privacy Policy.", "line": 351 },
+          { "text": "Create account / Email sign in", "line": 419 },
+          { "text": "Create your email login / Sign in with email", "line": 420 },
+          { "text": "We will send a verification email before enabling partner access.", "line": 423 },
+          { "text": "Use your verified email and password to continue.", "line": 425 },
+          { "text": "Hide password / Show password (accessibility contentDescription)", "line": 452 },
+          { "text": "Create account / Sign in (button)", "line": 461 },
+          { "text": "Already have an account? Sign in / New here? Create account", "line": 476 },
+          { "text": "Email verification", "line": 498 },
+          { "text": "Check your inbox", "line": 499 },
+          { "text": "We sent a verification link to ${state.email}. Open it, then return here to continue.", "line": 500 },
+          { "text": "I verified, continue", "line": 513 },
+          { "text": "Resend email", "line": 519 },
+          { "text": "Homeservices Partner", "line": 538 },
+          { "text": "Start earning with verified jobs", "line": 539 },
+          { "text": "Sign in to receive service requests, complete KYC, track active jobs, and manage payouts.", "line": 540 },
+          { "text": "Use the number linked to your partner profile and payout account.", "line": 553 },
+          { "text": "Get OTP", "line": 559 },
+          { "text": "By continuing, you agree to the Partner Terms and Privacy Policy.", "line": 566 },
+          { "text": "your number (fallback)", "line": 582 },
+          { "text": "Verification", "line": 585 },
+          { "text": "Enter your 6-digit code", "line": 586 },
+          { "text": "We sent an OTP to the mobile number ending in $lastFour.", "line": 587 },
+          { "text": "Verify and continue", "line": 599 },
+          { "text": "Action needed", "line": 653 },
+          { "text": "We could not sign you in", "line": 654 },
+          { "text": "${state.retriesLeft} attempt${if (retriesLeft == 1) \"\" else \"s\"} remaining — manual English pluralisation in code", "line": 659 },
+          { "text": "Try again", "line": 668 }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "stringResource is used for only 8 short field labels (AuthScreen.kt:429, 434, 435, 444, 484, 524, 545-546, 592, 605); ~48 user-facing strings including every title, body, CTA and error heading are hardcoded English and will NOT switch to Hindi. Two Devanagari strings are hardcoded in Kotlin (231, 236) so they cannot switch to English either — the hero is permanently bilingual-mixed. The form card is a fixed fillMaxHeight(0.65f) (AuthScreen.kt:249) but is verticalScroll (258), so Devanagari growth scrolls rather than clips; the hero stack at 220-240 is NOT scrollable and is bottom-anchored inside a fixed 0.38f box, so longer Hindi taglines would push against the hero edge. HsActionButton text is maxLines=1 + Ellipsis (HsComponents.kt:101-102), so longer Hindi CTA labels ('Continue with Google' etc.) will truncate mid-word.",
+        "currencyFormatting": "No currency rendered on this surface (no ₹/Rs/price token anywhere in AuthScreen.kt)."
+      },
+      "a11y": {
+        "contentDescriptions": "Partial — decorative icons correctly null (AuthScreen.kt:321, 334, 388) but the only meaningful one, the password visibility toggle, is a hardcoded English literal (AuthScreen.kt:452) so Hindi TalkBack users hear English.",
+        "touchTargetRisks": [
+          { "line": 366, "size": "22.dp", "note": "GoogleMark surface — decorative, inside a 52dp HsActionButton (HsComponents.kt:77), so not itself a tap target. Low risk." },
+          { "line": 449, "size": "IconButton default 48dp", "note": "Password visibility IconButton meets 48dp; no risk observed." }
+        ],
+        "contrastRisks": [
+          { "line": 285, "note": "Body text uses colorScheme.onSurfaceVariant on a card whose colour is hardcoded Color.White (line 251). In dark theme onSurfaceVariant is #B7C6BD — light grey on white — an estimated ~1.7:1 ratio, far below 4.5:1. INFERRED from the token table plus the literal at 251." },
+          { "line": 238, "note": "Hero eyebrow is Color.White at 65% alpha over primary #0B3D2E at labelSmall size; effective ~#8FA79E on dark green is a marginal small-text ratio." },
+          { "line": 346, "note": "labelSmall (small type) in onSurfaceVariant #5F6C66 on #FFFFFF ≈ 5.4:1 in light theme — passes, but is the lowest-contrast text on the screen and carries the legal/terms copy." }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "No explicit focus management. No focusRequester on the phone or OTP field, no KeyboardActions/ImeAction wiring (KeyboardOptions at 436, 445, 547, 593 set only keyboardType), so the keyboard 'next/done' does not advance email->password or submit the OTP. No autofill hints and no SMS auto-retrieval for the OTP field."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No illustration, no partner photography, no brand logo asset — the hero is a flat gradient plus two low-alpha circles (AuthScreen.kt:202-217). technician-app ships exactly one content drawable, tech_field_ac_service.png, referenced only by TechnicianHomeScreen.kt:434."], "cite": "AuthScreen.kt:202-217" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None. The `when(uiState)` at AuthScreen.kt:98-176 swaps whole screens with no Crossfade/AnimatedContent, so every state change (method -> phone -> OTP -> verifying) is an instant hard cut. HomeservicesMotion/HomeservicesEasing are never imported." },
+      "density": "Airy-to-empty. Hero occupies 38% of the screen (line 201) for three lines of text; the form card gets 65% (line 249) with 24dp item gaps (spacing.space6, line 262). MethodSelection renders three 52dp buttons plus two caption lines inside a card inside a card, leaving substantial dead vertical space on a 6-inch device. Padding is inconsistent: 28/36 in the hero (221) vs 24/28/24 in the card (260-261) vs 32 in loading (617).",
+      "observations": [
+        { "severity": "high", "claim": "Roughly 48 user-facing strings are hardcoded English literals despite the app shipping values-hi/strings.xml — the whole partner sign-in flow is untranslatable for the Ayodhya/rural-UP target user.", "evidence": "AuthScreen.kt:101-171, 290, 304-306, 344, 351, 419-425, 461, 476, 498-500, 513, 538-540, 553, 559, 585-587, 599, 653-668", "confidence": "observed" },
+        { "severity": "high", "claim": "Attempts-remaining is pluralised by English string concatenation in code, not pluralStringResource — the customer app does this correctly, proving the pattern was available and skipped here.", "evidence": "AuthScreen.kt:659 vs customer-app/app/src/main/kotlin/com/homeservices/customer/ui/auth/AuthScreen.kt:641-646", "confidence": "observed" },
+        { "severity": "high", "claim": "The screen is hard-pinned to light theme: root and hero use HomeservicesColors.Brand.* which Color.kt:67-68 explicitly documents as LIGHT-only, and the form card is literal Color.White, while its text still reads from colorScheme.onSurfaceVariant — in dark mode that is #B7C6BD on white.", "evidence": "AuthScreen.kt:69-70, 193, 251, 285; design-system/.../theme/Color.kt:67-72", "confidence": "observed" },
+        { "severity": "high", "claim": "Two Devanagari brand strings are hardcoded in Kotlin, so an English-locale technician sees mixed-script chrome and a Hindi-locale technician still sees English body copy — the hero is permanently in the wrong language for someone.", "evidence": "AuthScreen.kt:231, 236", "confidence": "observed" },
+        { "severity": "high", "claim": "Direct divergence from customer-app: the customer AuthScreen resolves every string through stringResource and every colour through MaterialTheme/LocalHomeservicesExtendedColors; the technician file is a stale fork of the same layout with literals substituted back in. Same layout, different engineering standard — they will drift visibly as soon as either is touched.", "evidence": "customer-app/.../ui/auth/AuthScreen.kt:100-102, 181-183, 211, 239, 246, 286-288, 636-637 vs technician-app/.../ui/auth/AuthScreen.kt:101-102, 69-70, 224-229, 193, 251, 304-306, 653-654", "confidence": "observed" },
+        { "severity": "medium", "claim": "Five of ten states collapse to one identical full-screen bare spinner with no skeleton and no progress context — the user loses the form entirely on every async hop.", "evidence": "AuthScreen.kt:99-103, 112-116, 128-137, 162-172, 611-645", "confidence": "observed" },
+        { "severity": "medium", "claim": "Four typography usages land on unmapped M3 slots and therefore render in Roboto next to Geist Sans in the same visual block (headlineSmall title sits directly above bodyLarge body).", "evidence": "AuthScreen.kt:279, 371, 394, 632", "confidence": "observed" },
+        { "severity": "medium", "claim": "OTP entry is a single generic OutlinedTextField with no per-digit boxes, no resend countdown, no auto-fill/SMS-retriever hint and no auto-advance — below the 2026 bar for every Indian consumer app and materially harder for a low-literacy user.", "evidence": "AuthScreen.kt:589-606", "confidence": "observed" },
+        { "severity": "medium", "claim": "Card-on-card: HsSectionCard (elev1, colorScheme.surface #FFFDF8) is nested inside a Color.White card, producing a near-invisible 1dp elevation seam rather than deliberate layering — the 'flat-gray-card' failure mode.", "evidence": "AuthScreen.kt:251, 288; design-system/.../components/HsComponents.kt:114-118", "confidence": "observed" },
+        { "severity": "medium", "claim": "The error state is a full-screen takeover carrying the raw ViewModel message as body copy, with only a 'Try again' button — no inline field validation, no way to switch sign-in method, no support route.", "evidence": "AuthScreen.kt:648-672", "confidence": "observed" },
+        { "severity": "low", "claim": "No motion whatsoever: no Crossfade/AnimatedContent between the ten auth states and no import of HomeservicesMotion/HomeservicesEasing, so every transition is a hard cut.", "evidence": "AuthScreen.kt:98-176", "confidence": "observed" },
+        { "severity": "low", "claim": "Off-grid spacing throughout (28/36/22/56/2/1 dp) alongside correctly-tokenised gaps, so the rhythm reads as accidental rather than systematic.", "evidence": "AuthScreen.kt:221, 262, 268-272, 366, 622", "confidence": "observed" },
+        { "severity": "low", "claim": "Technician uses rememberSaveable for phone/OTP input where customer uses plain remember — a behavioural divergence (technician survives rotation, customer does not) inside supposedly identical screens.", "evidence": "AuthScreen.kt:534, 581 vs customer-app/.../ui/auth/AuthScreen.kt:521, 568", "confidence": "observed" },
+        { "severity": "low", "claim": "String resource keys were forked rather than shared: technician uses auth_back_to_sign_in / auth_use_another_method where customer uses auth_back_to_options / auth_use_other_method for the same UI.", "evidence": "AuthScreen.kt:429, 524; technician-app/app/src/main/res/values/strings.xml:149, 154; customer-app/.../ui/auth/AuthScreen.kt:411, 511", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "technician.onboarding-gate",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/navigation/OnboardingGateScreen.kt",
+      "loc": 67,
+      "purpose": "Invisible routing interstitial that decides, after login, whether the technician goes straight to home or into onboarding.",
+      "entryPoints": "AppNavigation.kt:149-167 composable(\"onboarding_gate\"); reached from AppNavigation.kt:64 when authState becomes Authenticated and sessionManager.isOnboardingComplete is false.",
+      "composition": [
+        { "block": "LaunchedEffect on uiState that fires onComplete()/onNeedsOnboarding() as soon as the ViewModel resolves", "cite": "OnboardingGateScreen.kt:33-39" },
+        { "block": "Root Surface, colorScheme.background", "cite": "OnboardingGateScreen.kt:41-44" },
+        { "block": "Centered Box, horizontal padding 32dp", "cite": "OnboardingGateScreen.kt:45-48" },
+        { "block": "Column, 16dp gap: 56dp CircularProgressIndicator (strokeWidth 4dp) then a single line of text 'Checking partner profile' (titleMedium, SemiBold, centered)", "cite": "OnboardingGateScreen.kt:49-64" }
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "OnboardingGateScreen.kt:53-63", "quality": "This screen IS the loading state — bare 56dp spinner and one line. No brand mark, no skeleton, no timeout, no cancel." },
+        "empty": { "present": false, "evidence": null, "quality": "N/A." },
+        "error": { "present": false, "evidence": null, "quality": "MAJOR GAP: there is no error branch. OnboardingGateUiState has only Checking/Complete/NeedsOnboarding (OnboardingGateViewModel.kt:57-63) and the profile fetch swallows failure with getOrNull() (OnboardingGateViewModel.kt:38), so a network failure silently routes an already-onboarded technician back through onboarding." },
+        "success": { "present": false, "evidence": null, "quality": "No success affordance — it navigates away instantly." },
+        "offline": { "present": false, "evidence": null, "quality": "Absent. If getServiceProfile() never returns, the spinner runs forever with no retry (OnboardingGateViewModel.kt:37-45)." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "N/A." }
+      },
+      "skeletonOrSpinner": "Bare centered CircularProgressIndicator, size 56.dp, strokeWidth 4.dp — OnboardingGateScreen.kt:53-57.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "32.dp", "line": 46, "context": "horizontal padding (matches space8 numerically but uses a raw literal)" },
+          { "value": "16.dp", "line": 51, "context": "column gap" },
+          { "value": "56.dp", "line": 54, "context": "spinner size — off the spacing scale" },
+          { "value": "4.dp", "line": 56, "context": "spinner stroke width" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [ { "slot": "titleMedium", "line": 60 } ],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [ { "text": "Checking partner profile", "line": 59 } ],
+        "usesStringResource": false,
+        "hindiRisk": "The single string is a hardcoded English literal; stringResource is not even imported. A Hindi-locale technician sees English at the very first post-login moment. The text is centered in an unbounded Column so a longer Hindi string will wrap rather than clip — layout risk is low, language risk is total.",
+        "currencyFormatting": "None on this surface."
+      },
+      "a11y": {
+        "contentDescriptions": "No icons on this surface; the CircularProgressIndicator carries no progress semantics or stateDescription (OnboardingGateScreen.kt:53-57), so TalkBack announces nothing about what is happening.",
+        "touchTargetRisks": [],
+        "contrastRisks": [],
+        "semanticsHeadings": false,
+        "focusOrder": "No focusable content; screen readers land on an unlabelled progress indicator."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No brand mark or illustration on the first post-login screen — a pure grey-on-cream spinner."], "cite": "OnboardingGateScreen.kt:49-64" },
+      "motion": { "animationsUsed": [ { "what": "CircularProgressIndicator indeterminate rotation (implicit)", "line": 53 } ], "usesMotionTokens": false, "transitionsOnNav": "None; navigation fires immediately from LaunchedEffect (OnboardingGateScreen.kt:33-39) with no exit animation." },
+      "density": "Empty. One spinner and one line of text on an otherwise blank full screen, 32dp side padding (line 46).",
+      "observations": [
+        { "severity": "high", "claim": "No error or timeout state exists — the ViewModel discards any failure with getOrNull() and defaults to NeedsOnboarding, so a transient network failure re-routes a fully-onboarded technician through onboarding again with no explanation.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/navigation/OnboardingGateViewModel.kt:38-44, 57-63", "confidence": "observed" },
+        { "severity": "medium", "claim": "The very first screen after a successful login is an unbranded bare spinner with one English sentence — no logo, no welcome, no progress context.", "evidence": "OnboardingGateScreen.kt:53-63", "confidence": "observed" },
+        { "severity": "medium", "claim": "The only string on the screen is a hardcoded English literal; stringResource is not imported at all.", "evidence": "OnboardingGateScreen.kt:59 (and absence of androidx.compose.ui.res.stringResource in imports, lines 1-22)", "confidence": "observed" },
+        { "severity": "medium", "claim": "Uses titleMedium, an unmapped M3 slot, so the one line of text renders in Roboto rather than Geist Sans/Noto Devanagari.", "evidence": "OnboardingGateScreen.kt:60", "confidence": "observed" },
+        { "severity": "low", "claim": "Spinner geometry (56dp/4dp) is duplicated verbatim in AuthScreen.kt:622-624 and KycScreen.kt:393-395 rather than being a shared component — three copies of the same magic numbers.", "evidence": "OnboardingGateScreen.kt:54-56; AuthScreen.kt:622-624; KycScreen.kt:393-395", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "technician.onboarding-checklist",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/onboarding/OnboardingScreen.kt",
+      "loc": 146,
+      "purpose": "Intended 'setup checklist' welcome screen listing the three things a partner must do before going live — currently unreachable dead code.",
+      "entryPoints": "NONE. onboardingGraph declares only \"kyc\" and \"service_selection\" (OnboardingGraph.kt:18-38) and OnboardingScreen is never referenced by any navigation file; the ViewModel KDoc states this explicitly at OnboardingViewModel.kt:34-37.",
+      "composition": [
+        { "block": "Root Box, background = OnboardingHeroEnd (static brand primary), statusBarsPadding", "cite": "OnboardingScreen.kt:49-55" },
+        { "block": "Hero zone Box, fillMaxHeight(0.38f), drawBehind gradient + two decorative white circles — byte-identical to AuthScreen's hero", "cite": "OnboardingScreen.kt:57-77" },
+        { "block": "Hero text stack padded 28/28/36: 'HomeHeroo Partner' headlineLarge ExtraBold white; 'कमाई शुरू करें' bodyLarge white@82%; 'Quick setup · 3 steps' labelSmall white@65%", "cite": "OnboardingScreen.kt:80-100" },
+        { "block": "Form card Surface, BottomCenter, fillMaxHeight(0.65f), top corners 24dp, color = colorScheme.background (NOT surface, and NOT the Color.White used by the sibling Auth/Kyc frames), shadowElevation 8dp", "cite": "OnboardingScreen.kt:104-113" },
+        { "block": "NON-scrollable Column, uniform 20dp padding, 16dp gaps", "cite": "OnboardingScreen.kt:114-120" },
+        { "block": "HsSectionCard titled 'Setup checklist' containing three HsTimelineStep rows (Verify identity / Go online / Track earnings), 12dp apart", "cite": "OnboardingScreen.kt:121-127" },
+        { "block": "Conditional offline chip: labelSmall onSurfaceVariant text from stringResource(onboarding_kyc_queued_offline), shown when kycSubmitQueued", "cite": "OnboardingScreen.kt:128-135" },
+        { "block": "Spacer(weight(1f)) then a full-width 'Continue setup' HsPrimaryButton pinned to the bottom, plus a 4dp tail spacer", "cite": "OnboardingScreen.kt:136-142" }
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "None — the screen is static content only." },
+        "empty": { "present": false, "evidence": null, "quality": "N/A (checklist is hardcoded)." },
+        "error": { "present": false, "evidence": null, "quality": "MAJOR GAP: no error path at all; the ViewModel exposes only a boolean (OnboardingViewModel.kt:46-47)." },
+        "success": { "present": false, "evidence": null, "quality": "The three checklist rows are static HsTimelineStep entries with no completed/pending state — the technician cannot see which steps are done." },
+        "offline": { "present": true, "evidence": "OnboardingScreen.kt:128-135", "quality": "Present but weak: a labelSmall grey caption with no icon, no colour, no container — the lowest-emphasis element on the screen is carrying the 'your KYC has not been sent yet' message." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "Absent." }
+      },
+      "skeletonOrSpinner": "None — no loading affordance of any kind exists in this file.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "140.dp / 80.dp / 60.dp / 70.dp / 40.dp / 20.dp", "line": "67-76", "context": "decorative circle radii/offsets" },
+          { "value": "28.dp / 28.dp / 36.dp", "line": 81, "context": "hero text padding, off-scale" },
+          { "value": "4.dp", "line": 82, "context": "hero stack gap" },
+          { "value": "24.dp", "line": 110, "context": "card top corner radius, off the radius scale" },
+          { "value": "8.dp", "line": 112, "context": "shadowElevation raw dp" },
+          { "value": "20.dp", "line": 118, "context": "card content padding — off-scale, and different from the 24dp used by AuthScreen.kt:260 and KycScreen.kt:216" },
+          { "value": "16.dp", "line": 119, "context": "column gap (raw, not spacing.space4)" },
+          { "value": "12.dp", "line": 122, "context": "timeline step gap" },
+          { "value": "4.dp", "line": 133, "context": "offline chip horizontal padding" },
+          { "value": "4.dp", "line": 142, "context": "tail spacer under the CTA" }
+        ],
+        "hardcodedColors": [
+          { "value": "HomeservicesColors.Brand.primaryHover (light-only)", "line": 37, "context": "OnboardingHeroStart" },
+          { "value": "HomeservicesColors.Brand.primary (light-only)", "line": 38, "context": "OnboardingHeroEnd + root background at line 53" },
+          { "value": "Color.White.copy(alpha = 0.06f)", "line": 68, "context": "decorative circle" },
+          { "value": "Color.White.copy(alpha = 0.09f)", "line": 73, "context": "decorative circle" },
+          { "value": "Color.White", "line": 88, "context": "hero title" },
+          { "value": "Color.White.copy(alpha = 0.82f)", "line": 93, "context": "hero tagline" },
+          { "value": "Color.White.copy(alpha = 0.65f)", "line": 98, "context": "hero eyebrow" }
+        ],
+        "unmappedTypographySlots": [
+          { "slot": "titleMedium (via HsSectionCard title param)", "line": 121 },
+          { "slot": "titleSmall (via HsTimelineStep title, HsComponents.kt:198)", "line": 123 },
+          { "slot": "titleSmall (via HsTimelineStep title)", "line": 124 },
+          { "slot": "titleSmall (via HsTimelineStep title)", "line": 125 }
+        ],
+        "offScaleRadius": [ { "value": "24.dp topStart/topEnd", "line": 110 } ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "HomeHeroo Partner", "line": 85 },
+          { "text": "कमाई शुरू करें (Devanagari literal in code)", "line": 91 },
+          { "text": "Quick setup · 3 steps", "line": 96 },
+          { "text": "Setup checklist", "line": 121 },
+          { "text": "Verify identity / Finish Aadhaar and PAN checks securely.", "line": 123 },
+          { "text": "Go online / Receive nearby fixed-price service jobs.", "line": 124 },
+          { "text": "Track earnings / Review daily payouts, ratings, and support cases.", "line": 125 },
+          { "text": "Continue setup", "line": 138 }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "Only ONE of nine user-facing strings goes through stringResource (line 130, onboarding_kyc_queued_offline — which IS translated at technician-app/app/src/main/res/values-hi/strings.xml:167). The rest are hardcoded, and one is a hardcoded Devanagari literal (line 91), so the screen is permanently mixed-script. Critically, the form card is fillMaxHeight(0.65f) (line 109) and the Column is NOT scrollable (comment at line 103 confirms this is deliberate) — three HsTimelineStep bodies plus the offline chip growing 15-30% taller in Devanagari will be squeezed by the Spacer(weight(1f)) at line 136 and can clip the bottom-pinned CTA.",
+        "currencyFormatting": "None on this surface, despite 'Track earnings' being one of the three promises (line 125)."
+      },
+      "a11y": {
+        "contentDescriptions": "No Icons on this surface at all — the three checklist steps are marked only by HsTimelineStep's 12dp solid square (HsComponents.kt:187-194), which carries no semantics.",
+        "touchTargetRisks": [],
+        "contrastRisks": [
+          { "line": 98, "note": "labelSmall at Color.White 65% over primary #0B3D2E — smallest type on the screen at the lowest alpha." },
+          { "line": 132, "note": "The offline warning uses onSurfaceVariant #5F6C66 at labelSmall on background #FBF7EF; it is styled as de-emphasised caption text despite being an actionable status warning." }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "Nothing focusable except the single CTA; the checklist is inert text."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No imagery. The 'checklist' is three 12dp coloured squares (HsComponents.kt:187-194) with text — for a low-literacy rural technician there is no pictorial cue for Aadhaar, going online, or earnings."], "cite": "OnboardingScreen.kt:121-127" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None; onContinue is a plain lambda (line 139) with no transition." },
+      "density": "Top-heavy and hollow. Hero takes 38% of the screen for three lines (line 61); the card takes 65% but holds only one small checklist card, leaving a Spacer(weight(1f)) (line 136) of pure dead space between the content and the bottom CTA on any normal-height phone.",
+      "observations": [
+        { "severity": "high", "claim": "The entire screen is dead code — it is not composed into any nav graph, a fact acknowledged in the ViewModel KDoc but never fixed, so the technician never sees a 'what you must do' overview and drops straight into service selection.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/onboarding/OnboardingViewModel.kt:34-37; OnboardingGraph.kt:18-38", "confidence": "observed" },
+        { "severity": "high", "claim": "The step model contradicts the rest of the cluster: this screen advertises '3 steps' (Verify identity / Go online / Track earnings) while KycScreen labels itself 'Step 1 of 2' and 'Step 2 of 2' and ServiceSelection labels itself 'Step 3 of 3' — three mutually inconsistent progress vocabularies in one onboarding.", "evidence": "OnboardingScreen.kt:96, 123-125; KycScreen.kt:238, 296; ServiceSelectionScreen.kt:184", "confidence": "observed" },
+        { "severity": "high", "claim": "The checklist has no completion state — the three HsTimelineStep rows are static and identical whether the technician has finished KYC or not, so the screen cannot function as progress.", "evidence": "OnboardingScreen.kt:123-125; HsComponents.kt:181-208 (HsTimelineStep takes only title+body, no state param)", "confidence": "observed" },
+        { "severity": "medium", "claim": "Inconsistent card surface within one design language: this frame's card is colorScheme.background while the visually identical Auth and Kyc frames use literal Color.White, so the three hero screens do not match.", "evidence": "OnboardingScreen.kt:111 vs AuthScreen.kt:251 vs KycScreen.kt:208", "confidence": "observed" },
+        { "severity": "medium", "claim": "The hero block (gradient, two circles at identical radii/offsets, 28/28/36 padding, 4dp gap, headlineLarge/bodyLarge/labelSmall stack) is copy-pasted across three files rather than extracted — the customer app extracted it as AuthHeroZone.", "evidence": "OnboardingScreen.kt:57-100; AuthScreen.kt:197-240; KycScreen.kt:152-197; customer-app/.../ui/auth/AuthScreen.kt:180-224", "confidence": "observed" },
+        { "severity": "medium", "claim": "Non-scrollable fixed-height card plus bottom-pinned CTA is a Hindi clipping hazard: Devanagari runs 15-30% longer/taller and there is no verticalScroll escape.", "evidence": "OnboardingScreen.kt:103-120, 136-141", "confidence": "inferred" },
+        { "severity": "medium", "claim": "Four of the screen's text styles resolve to unmapped M3 slots (titleMedium for the card title, titleSmall for each step title), so the checklist renders in Roboto against Geist Sans elsewhere.", "evidence": "OnboardingScreen.kt:121, 123-125; HsComponents.kt:123, 198", "confidence": "observed" },
+        { "severity": "low", "claim": "The offline/queued KYC warning — the only dynamic information on the screen — is styled as the lowest-emphasis element (labelSmall, onSurfaceVariant, no icon, no container).", "evidence": "OnboardingScreen.kt:128-135", "confidence": "observed" },
+        { "severity": "low", "claim": "Light-only brand colours and Color.White literals mean this screen would not render correctly in dark theme either.", "evidence": "OnboardingScreen.kt:37-38, 53, 68, 73, 88, 93, 98; design-system/.../theme/Color.kt:67-72", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "technician.kyc",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/kyc/KycScreen.kt",
+      "loc": 414,
+      "purpose": "Technician completes Aadhaar verification via DigiLocker and uploads a PAN card photo so payouts can be enabled.",
+      "entryPoints": "Declared at OnboardingGraph.kt:19 as composable(\"kyc\") inside the \"main\" graph, but NO navigate(\"kyc\") call exists anywhere in main source — the graph starts at \"service_selection\" (OnboardingGraph.kt:18) and MainActivity.kt:53-63 only posts the DigiLocker code to a bus without navigating. The route appears unreachable in-app.",
+      "composition": [
+        { "block": "LaunchedEffect state router: AadhaarPending auto-launches a Chrome Custom Tab to the DigiLocker consent URL; Complete calls onComplete()", "cite": "KycScreen.kt:68-79, 408-414" },
+        { "block": "Root Surface (colorScheme.background) wrapping a Box that dispatches 8 KycUiState branches", "cite": "KycScreen.kt:81-120" },
+        { "block": "KycFrame shell: root Box background = KycHeroEnd (static brand primary) + statusBarsPadding", "cite": "KycScreen.kt:144-150" },
+        { "block": "Hero zone, fillMaxHeight(0.32f), gradient + the same two decorative white circles as Auth/Onboarding", "cite": "KycScreen.kt:152-172" },
+        { "block": "Hero content bottom-start, padded 28/28/28: a translucent white pill chip carrying the step eyebrow (labelLarge, white@75%, extraLarge shape, 12/4 padding) then the step title (headlineSmall, Bold, white)", "cite": "KycScreen.kt:175-196" },
+        { "block": "Form card Surface, BottomCenter, fillMaxHeight(0.70f), top corners 24dp, color = literal Color.White, shadowElevation 8dp", "cite": "KycScreen.kt:200-209" },
+        { "block": "Scrollable Column, verticalScroll + imePadding, padding 24 horizontal / 28 top / 24 bottom, gap = spacing.space6", "cite": "KycScreen.kt:210-219" },
+        { "block": "Body paragraph (bodyLarge, onSurfaceVariant) then HsSectionCard containing the step content", "cite": "KycScreen.kt:220-226" },
+        { "block": "Step 1 (Aadhaar): eyebrow 'Step 1 of 2', title 'Verify your identity', two HsTimelineStep explainer rows, 'Verify with DigiLocker' HsPrimaryButton, 'Skip for now, complete later' HsSecondaryButton", "cite": "KycScreen.kt:232-265" },
+        { "block": "Step 2 (PAN): eyebrow 'Step 2 of 2', title 'Upload PAN card', two HsTimelineStep quality/review rows, primary button that toggles label 'Upload PAN card photo'/'Change photo', then (only when a URI exists) a centered bodySmall confirmation line and a 'Submit for review' HsSecondaryButton", "cite": "KycScreen.kt:288-332" },
+        { "block": "Review/Complete: eyebrow 'Submitted', title 'KYC under review', a 'Current status' labelMedium label above the raw enum name in titleLarge Bold", "cite": "KycScreen.kt:356-374" },
+        { "block": "Error variant of the same frame: eyebrow 'Action needed', title 'Verification did not complete', body = the raw error message, single 'Try again' HsPrimaryButton", "cite": "KycScreen.kt:341-355" },
+        { "block": "KycLoadingContent: full-screen centered 56dp spinner + headlineSmall message — replaces the entire frame for Loading / AadhaarPending / PanUploading", "cite": "KycScreen.kt:93-94, 111, 378-406" },
+        { "block": "Overlay: PhotoUploadRetryBanner pinned TopCenter (statusBarsPadding, 16/12 padding) when a queued photo upload exists — brand-hover pill, CloudUpload icon, white text, trailing Retry TextButton", "cite": "KycScreen.kt:121-130; technician-app/app/src/main/kotlin/com/homeservices/technician/ui/kyc/PhotoUploadRetryBanner.kt:44-78" }
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "KycScreen.kt:93-94, 111, 378-406", "quality": "Three different operations (verification exchange, DigiLocker handoff, PAN upload) all render the same bare 56dp spinner over a blank background; the upload has no percentage, no thumbnail, no cancel." },
+        "empty": { "present": false, "evidence": null, "quality": "N/A — the flow is always populated." },
+        "error": { "present": true, "evidence": "KycScreen.kt:113-119, 341-355", "quality": "WEAK AND INHUMANE: the error headline is fixed ('Verification did not complete') and the explanatory body is whatever string the ViewModel produced, including `result.message` passed straight through from the DigiLocker ApiError and PAN OcrError paths (KycViewModel.kt:117, 149). Only affordance is 'Try again' — no support number, no 'what do I do now', no way to switch to PAN-only or contact the operations team." },
+        "success": { "present": true, "evidence": "KycScreen.kt:112, 356-374", "quality": "Presents the raw enum constant (PAN_DONE / MANUAL_REVIEW / UNKNOWN) as the headline status in titleLarge Bold (KycScreen.kt:369) — a machine token shown to a rural technician. No ETA, no next-step guidance beyond 'you will be notified'." },
+        "offline": { "present": true, "evidence": "KycScreen.kt:121-130; PhotoUploadRetryBanner.kt:44-78", "quality": "Partial. A queued-upload banner exists and is translated (values-hi/strings.xml:165), but it only covers the PAN photo retry case; there is no offline handling for the DigiLocker step, and the banner overlays the hero rather than integrating with the step content." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "Not needed for the picker (ActivityResultContracts.GetContent at KycScreen.kt:275 requires no runtime permission), but there is also no camera capture path — the technician must already have a PAN photo in the gallery." }
+      },
+      "skeletonOrSpinner": "Bare centered CircularProgressIndicator, size 56.dp, strokeWidth 4.dp — KycScreen.kt:392-396. No HsSkeletonBlock, no determinate upload progress.",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [
+          { "value": "16.dp / 12.dp", "line": 128, "context": "retry banner overlay padding" },
+          { "value": "140.dp / 80.dp / 60.dp / 70.dp / 40.dp / 20.dp", "line": "162-171", "context": "decorative circle radii/offsets" },
+          { "value": "28.dp / 28.dp / 28.dp", "line": 176, "context": "hero content padding — off-scale (and differs from the 28/28/36 used by Auth and Onboarding heroes)" },
+          { "value": "12.dp / 4.dp", "line": 188, "context": "eyebrow chip padding" },
+          { "value": "24.dp", "line": 206, "context": "form card corner radius, off the radius scale" },
+          { "value": "8.dp", "line": 209, "context": "shadowElevation raw dp" },
+          { "value": "24.dp / 28.dp / 24.dp", "line": "216-217", "context": "form column padding" },
+          { "value": "16.dp / 24.dp / 12.dp", "line": "247, 252, 258", "context": "Aadhaar step spacers" },
+          { "value": "16.dp / 24.dp / 12.dp / 16.dp", "line": "304, 309, 316, 324", "context": "PAN step spacers" },
+          { "value": "32.dp / 16.dp / 56.dp / 4.dp", "line": "388, 390, 393, 395", "context": "loading content padding, gap, spinner size, stroke" },
+          { "value": "12.dp", "line": 50, "context": "PhotoUploadRetryBanner corner radius (off-scale vs radius.lg=12 — numerically matches but uses a literal)" },
+          { "value": "16.dp / 10.dp", "line": 51, "context": "PhotoUploadRetryBanner padding; 10.dp is off-scale" },
+          { "value": "20.dp / 12.dp", "line": "60, 62", "context": "PhotoUploadRetryBanner icon size and gap" }
+        ],
+        "hardcodedColors": [
+          { "value": "HomeservicesColors.Brand.primaryHover (light-only)", "line": 52, "context": "KycHeroStart" },
+          { "value": "HomeservicesColors.Brand.primary (light-only)", "line": 53, "context": "KycHeroEnd + root background at line 148" },
+          { "value": "Color.White.copy(alpha = 0.06f)", "line": 163, "context": "decorative circle" },
+          { "value": "Color.White.copy(alpha = 0.09f)", "line": 169, "context": "decorative circle" },
+          { "value": "Color.White.copy(alpha = 0.75f)", "line": 182, "context": "eyebrow chip text" },
+          { "value": "Color.White.copy(alpha = 0.15f)", "line": 186, "context": "eyebrow chip background" },
+          { "value": "Color.White", "line": 194, "context": "hero title" },
+          { "value": "Color.White", "line": 208, "context": "form card surface pinned white in both themes" },
+          { "value": "HomeservicesColors.Brand.primaryHover", "line": 49, "context": "PhotoUploadRetryBanner background — light-only" },
+          { "value": "Color.White", "line": 59, "context": "PhotoUploadRetryBanner icon tint" },
+          { "value": "Color.White", "line": 66, "context": "PhotoUploadRetryBanner label" },
+          { "value": "Color.White", "line": 73, "context": "PhotoUploadRetryBanner TextButton contentColor" }
+        ],
+        "unmappedTypographySlots": [
+          { "slot": "headlineSmall", "line": 192 },
+          { "slot": "titleSmall (via HsTimelineStep, HsComponents.kt:198)", "line": 243 },
+          { "slot": "titleSmall (via HsTimelineStep)", "line": 248 },
+          { "slot": "titleSmall (via HsTimelineStep)", "line": 300 },
+          { "slot": "titleSmall (via HsTimelineStep)", "line": 305 },
+          { "slot": "labelMedium", "line": 365 },
+          { "slot": "headlineSmall", "line": 399 }
+        ],
+        "offScaleRadius": [ { "value": "24.dp topStart/topEnd", "line": 206 } ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Processing verification", "line": 93 },
+          { "text": "Opening DigiLocker", "line": 94 },
+          { "text": "Uploading PAN card", "line": 111 },
+          { "text": "Step 1 of 2", "line": 238 },
+          { "text": "Verify your identity", "line": 239 },
+          { "text": "Complete Aadhaar verification through DigiLocker before you can receive live jobs.", "line": 240 },
+          { "text": "DigiLocker consent / You approve access directly with DigiLocker. We only store the verification outcome.", "line": "244-245" },
+          { "text": "Secure profile unlock / Verified partners can continue to PAN upload and job activation.", "line": "249-250" },
+          { "text": "Verify with DigiLocker", "line": 254 },
+          { "text": "Skip for now, complete later", "line": 260 },
+          { "text": "Step 2 of 2", "line": 296 },
+          { "text": "Upload PAN card", "line": 297 },
+          { "text": "Add a clear PAN card image so finance can approve payouts and tax records.", "line": 298 },
+          { "text": "Photo quality / Keep all corners visible, avoid glare, and make sure the PAN number is readable.", "line": "301-302" },
+          { "text": "Review / Most document checks complete quickly after submission.", "line": "306-307" },
+          { "text": "Upload PAN card photo / Change photo", "line": 311 },
+          { "text": "Photo selected. Submit it for verification.", "line": 318 },
+          { "text": "Submit for review", "line": 326 },
+          { "text": "Action needed", "line": 343 },
+          { "text": "Verification did not complete", "line": 344 },
+          { "text": "Try again", "line": 350 },
+          { "text": "Submitted", "line": 358 },
+          { "text": "KYC under review", "line": 359 },
+          { "text": "Your documents are with the verification team. You will be notified once approved.", "line": 360 },
+          { "text": "Current status", "line": 364 },
+          { "text": "UNKNOWN (fallback status literal)", "line": 369 },
+          { "text": "PAN_DONE / MANUAL_REVIEW (raw enum name rendered as UI copy)", "line": 369 }
+        ],
+        "usesStringResource": false,
+        "hindiRisk": "TOTAL: androidx.compose.ui.res.stringResource is not imported anywhere in KycScreen.kt (imports, lines 1-50) — every one of the ~27 user-facing strings in the highest-stakes flow in the app (identity + tax documents) is hardcoded English. Only the overlaid PhotoUploadRetryBanner uses stringResource (PhotoUploadRetryBanner.kt:64, 76). Layout-wise the form card IS scrollable (line 214) so Devanagari growth will not clip, but the 0.32f hero (line 156) bottom-anchors a headlineSmall title (line 192) that will grow taller in Devanagari and can collide with the eyebrow chip above it.",
+        "currencyFormatting": "No currency on this surface, although the copy promises payout enablement (line 298)."
+      },
+      "a11y": {
+        "contentDescriptions": "PhotoUploadRetryBanner's CloudUpload icon is correctly null (PhotoUploadRetryBanner.kt:58) as the adjacent text carries meaning. KycScreen itself renders no Icons at all — the two-step progress is conveyed purely by the English text 'Step 1 of 2' (line 238), which is invisible to a non-reader.",
+        "touchTargetRisks": [
+          { "line": 260, "size": "HsSecondaryButton height = space12 = 48.dp (HsComponents.kt:60)", "note": "Meets the 48dp floor exactly, with no margin." },
+          { "line": 69, "size": "TextButton default (~48dp) inside a 40dp-tall banner row", "note": "PhotoUploadRetryBanner's Row has only 10dp vertical padding (PhotoUploadRetryBanner.kt:51) around a 20dp icon; the TextButton enforces its own minimum so the banner is taller than it looks, but the visual and touch bounds diverge." }
+        ],
+        "contrastRisks": [
+          { "line": 223, "note": "Body copy uses onSurfaceVariant on a card hardcoded to Color.White (line 208); in dark theme that is #B7C6BD on white — well under 4.5:1. INFERRED from the token table plus the literal." },
+          { "line": 182, "note": "Eyebrow chip is white@75% text on a white@15% fill over the primary gradient — a low-contrast label carrying the only progress information on the screen." },
+          { "line": 320, "note": "The 'Photo selected. Submit it for verification.' confirmation is bodySmall in onSurfaceVariant — the lowest-emphasis treatment for the screen's key confirmation." }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "No focus management, no semantics blocks. The step title (line 190-195) is a plain Text, not marked as a heading, so TalkBack gives no structural jump target. The retry banner (line 121-130) appears as an overlay with no liveRegion announcement."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No PAN card sample/frame illustration despite the copy instructing on corners and glare (line 302).", "No thumbnail preview of the selected photo — after picking an image the user sees only the sentence 'Photo selected. Submit it for verification.' (line 318), with no way to check they picked the right file.", "No DigiLocker or Aadhaar brand marks despite asking for a government identity handoff.", "No success illustration on the 'KYC under review' state (lines 356-374)."], "cite": "KycScreen.kt:315-330" },
+      "motion": { "animationsUsed": [ { "what": "CircularProgressIndicator indeterminate rotation only", "line": 392 } ], "usesMotionTokens": false, "transitionsOnNav": "None. The 8-branch when at lines 86-120 hard-cuts between steps with no AnimatedContent, and the retry banner (121-130) pops in and out with no enter/exit animation." },
+      "density": "Airy but hollow, and the hero/card fractions are inconsistent with its siblings (0.32/0.70 here vs 0.38/0.65 in Auth and Onboarding — KycScreen.kt:54-55 vs AuthScreen.kt:71-72). Each step card holds only two explainer rows plus buttons inside a 70%-height card, so there is significant dead space beneath the CTA on a normal phone.",
+      "observations": [
+        { "severity": "high", "claim": "The single most compliance-critical screen in the technician app contains zero localized strings — stringResource is not imported at all — so a Hindi-locale rural technician performs Aadhaar and PAN submission entirely in English.", "evidence": "KycScreen.kt:1-50 (imports) and KycScreen.kt:93, 238-240, 296-298, 343-344, 358-360", "confidence": "observed" },
+        { "severity": "high", "claim": "The success/review state displays the raw Kotlin enum constant as its headline status ('PAN_DONE', 'MANUAL_REVIEW', or the literal 'UNKNOWN') in titleLarge Bold — a machine token presented as the primary information.", "evidence": "KycScreen.kt:368-372; technician-app/.../ui/kyc/KycUiState.kt:22-24", "confidence": "observed" },
+        { "severity": "high", "claim": "KYC failure is not humane: a fixed English headline plus the unfiltered ViewModel/server message as body, with 'Try again' as the only action — no support contact, no explanation of consequences, no alternate path.", "evidence": "KycScreen.kt:341-355; technician-app/.../ui/kyc/KycViewModel.kt:113-118, 149, 152, 191", "confidence": "observed" },
+        { "severity": "high", "claim": "After choosing a PAN photo the user never sees the image — only a bodySmall sentence — so there is no way to confirm the correct, legible document was selected before submitting a tax document.", "evidence": "KycScreen.kt:315-323", "confidence": "observed" },
+        { "severity": "high", "claim": "Action hierarchy is inverted on the PAN step: the terminal, irreversible action ('Submit for review') is a secondary outlined button while the reversible picker action ('Change photo') is the primary filled button.", "evidence": "KycScreen.kt:310-329", "confidence": "observed" },
+        { "severity": "high", "claim": "The route is declared but appears unreachable — no navigate(\"kyc\") exists in main source, the graph starts at service_selection, and the deep-link handler only posts to a bus without navigating. KYC may be unreachable in the shipped flow.", "evidence": "OnboardingGraph.kt:18-19; MainActivity.kt:53-63; grep for 'navigate(\"kyc\")' over technician-app/app/src/main/kotlin returns no hits", "confidence": "observed" },
+        { "severity": "medium", "claim": "Progress is text-only: 'Step 1 of 2'/'Step 2 of 2' in a low-contrast translucent chip, with no stepper, no bar, no numerals-as-graphics — for a low-literacy user there is no non-textual sense of how far along they are, and the numbering contradicts ServiceSelection's 'Step 3 of 3'.", "evidence": "KycScreen.kt:179-189, 238, 296; ServiceSelectionScreen.kt:184", "confidence": "observed" },
+        { "severity": "medium", "claim": "Icon-to-text ratio on the whole KYC flow is zero — KycScreen renders no Icon composable at any point; every instruction (Aadhaar consent, photo quality, glare, corners) is prose.", "evidence": "KycScreen.kt:1-414 (no androidx.compose.material3.Icon import; only HsTimelineStep's 12dp squares from HsComponents.kt:187-194)", "confidence": "observed" },
+        { "severity": "medium", "claim": "Uploading a document shows an indeterminate spinner with no percentage, no thumbnail, no size/time estimate and no cancel — on a rural 2G/3G connection this is an unbounded blank wait.", "evidence": "KycScreen.kt:111, 378-406", "confidence": "observed" },
+        { "severity": "medium", "claim": "Seven typography usages land on unmapped M3 slots (headlineSmall x2, titleSmall x4 via HsTimelineStep, labelMedium), so the step titles and every explainer heading render in Roboto beside Geist Sans body copy.", "evidence": "KycScreen.kt:192, 243, 248, 300, 305, 365, 399; HsComponents.kt:198", "confidence": "observed" },
+        { "severity": "medium", "claim": "Hero/card proportions diverge from the sibling hero screens (0.32/0.70 vs 0.38/0.65) and the hero bottom padding differs (28 vs 36), so moving between Auth and KYC produces a visible jump in the same visual language.", "evidence": "KycScreen.kt:54-55, 176 vs AuthScreen.kt:71-72, 221", "confidence": "observed" },
+        { "severity": "medium", "claim": "Light-theme-only colours: brand literals plus a Color.White card while text still reads from the theme, so dark mode produces light-grey body text on a white card.", "evidence": "KycScreen.kt:52-53, 148, 208, 223; design-system/.../theme/Color.kt:67-72", "confidence": "observed" },
+        { "severity": "low", "claim": "'Skip for now, complete later' is offered on the Aadhaar step with no statement of what the technician loses by skipping, and no equivalent skip on the PAN step — an asymmetric, unexplained escape hatch.", "evidence": "KycScreen.kt:259-263 vs KycScreen.kt:310-329", "confidence": "observed" },
+        { "severity": "low", "claim": "The queued-upload banner overlays the hero at the top of the screen with no animation and no liveRegion, so it can appear/disappear silently mid-interaction.", "evidence": "KycScreen.kt:121-130", "confidence": "observed" },
+        { "severity": "low", "claim": "Two different components named PhotoUploadRetryBanner exist with different palettes (brand-hover/white here, tertiaryContainer in activeJob), documented as intentional but read as inconsistency to a user who encounters both.", "evidence": "technician-app/.../ui/kyc/PhotoUploadRetryBanner.kt:28-38, 49; technician-app/.../ui/activeJob/ActiveJobScreen.kt:143", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "technician.service-selection",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/serviceprofile/ServiceSelectionScreen.kt",
+      "loc": 519,
+      "purpose": "Technician picks which of 13 services they perform and captures their starting service area (GPS), completing onboarding.",
+      "entryPoints": "OnboardingGraph.kt:18 declares navigation(startDestination = \"service_selection\", route = \"main\"); reached from AppNavigation.kt:160-165 (onNeedsOnboarding -> navigate(\"main\")). Also re-used in Edit mode via ServiceSelectionMode.Edit (ServiceSelectionScreen.kt:175-178).",
+      "composition": [
+        { "block": "Root Surface (colorScheme.background) containing a single LazyColumn, statusBarsPadding, contentPadding = spacing.space6 (24dp), item gap = spacing.space4 (16dp). No TopAppBar and no back affordance.", "cite": "ServiceSelectionScreen.kt:129-137" },
+        { "block": "Header item: HsTrustBadge 'Step 3 of 3' (or 'My services' in Edit mode) -> headlineMedium Bold title -> bodyLarge onSurfaceVariant subtitle", "cite": "ServiceSelectionScreen.kt:138-140, 180-201" },
+        { "block": "Conditional LoadingCard item — an HsSectionCard with a default-size CircularProgressIndicator + 'Loading saved service profile' — rendered ABOVE the service list, not instead of it", "cite": "ServiceSelectionScreen.kt:141-143, 426-441" },
+        { "block": "ServiceListCard: HsSectionCard titled 'Services you provide' containing the 13 catalogue items grouped by category; each group prints a titleSmall Bold primary-coloured header then its ServiceRows", "cite": "ServiceSelectionScreen.kt:144-151, 225-251" },
+        { "block": "ServiceRow: clickable full-width Row, 6dp vertical padding — M3 Checkbox + 8dp spacer + single-line ellipsised bodyLarge SemiBold name. No icon, no image, no price, no description.", "cite": "ServiceSelectionScreen.kt:254-284" },
+        { "block": "LocationCard: HsSectionCard titled 'Service area' — LocationOn icon + explanatory bodyMedium + ServiceAreaPreview + full-width 'Use current location' HsSecondaryButton", "cite": "ServiceSelectionScreen.kt:152-158, 287-317" },
+        { "block": "ServiceAreaPreview dispatch: no coords -> EmptyLocationPreview (132dp surfaceVariant box, MyLocation icon, 'Tap Use current location' titleSmall + bodySmall hint, or a spinner+label while locating); coords + no MAPS_API_KEY -> CapturedLocationPreview (132dp primaryContainer box with label and raw lat/lng to 5 decimals); coords + key -> live GoogleMap at 180dp with a marker", "cite": "ServiceSelectionScreen.kt:319-347, 350-383, 386-421" },
+        { "block": "Conditional ErrorCard item: HsSectionCard with an Icons.Default.Work glyph tinted error, the message in bodyMedium onSurfaceVariant, an optional 'Retry profile load' HsSecondaryButton, and a trailing non-clickable Refresh icon", "cite": "ServiceSelectionScreen.kt:159-167, 444-481" },
+        { "block": "SaveButton item: full-width HsPrimaryButton whose label swaps to 'Saving services' while saving; disabled during save/load/locate", "cite": "ServiceSelectionScreen.kt:168-170, 204-222" }
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "ServiceSelectionScreen.kt:141-143, 426-441", "quality": "A spinner card is INSERTED ABOVE the fully-rendered service list rather than replacing it, so the user sees a live-looking checkbox list and a 'loading' card simultaneously and can toggle skills that are about to be overwritten by the fetch (ServiceSelectionViewModel.kt:43-45)." },
+        "empty": { "present": false, "evidence": null, "quality": "No empty state. The catalogue is a hardcoded 13-item list (ServiceCatalogue.kt:10-25) so it can never be empty — but that also means a technician whose trade is not in the list has no path forward and no 'other' option." },
+        "error": { "present": true, "evidence": "ServiceSelectionScreen.kt:159-167, 444-481", "quality": "Present but poor: the message text is rendered in onSurfaceVariant (not error colour), the leading glyph is a briefcase (Icons.Default.Work), and a decorative Refresh icon sits beside a real retry button. Whether retry shows at all is decided by string-matching the English prose 'Could not load' (line 164)." },
+        "success": { "present": false, "evidence": null, "quality": "No confirmation. On save the screen simply navigates away via LaunchedEffect (ServiceSelectionScreen.kt:75-77) with no toast, checkmark, or transition." },
+        "offline": { "present": false, "evidence": null, "quality": "No offline concept. A failed load produces the generic 'Could not load your saved services. You can still save this form.' (ServiceSelectionViewModel.kt:64) and a failed save produces 'Could not save services. Check your connection and try again.' (ServiceSelectionViewModel.kt:169) — text only, no queueing, no retry banner like KYC has." },
+        "permissionDenied": { "present": true, "evidence": "ServiceSelectionScreen.kt:111-113", "quality": "Minimal: a denial collapses into the same generic ErrorCard with the string 'Allow location access to set your service area.' — no rationale before the prompt, no deep link to app settings, no handling of permanent 'don't ask again' denial." }
+      },
+      "skeletonOrSpinner": "Two bare default-size CircularProgressIndicators — one inside LoadingCard (ServiceSelectionScreen.kt:432) and one inside EmptyLocationPreview while locating (ServiceSelectionScreen.kt:359). HsSkeletonBlock is never used.",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [
+          { "value": "8.dp / 4.dp", "line": 239, "context": "group header top/bottom padding" },
+          { "value": "6.dp", "line": 265, "context": "ServiceRow vertical padding — off-scale" },
+          { "value": "8.dp", "line": 273, "context": "checkbox-to-label spacer" },
+          { "value": "6.dp", "line": 298, "context": "LocationOn icon top padding — off-scale" },
+          { "value": "12.dp", "line": 300, "context": "icon-to-content spacer" },
+          { "value": "12.dp", "line": 301, "context": "location content gap" },
+          { "value": "180.dp", "line": 339, "context": "GoogleMap height" },
+          { "value": "132.dp", "line": 352, "context": "EmptyLocationPreview height — off-scale and 48dp shorter than the map it replaces" },
+          { "value": "12.dp / 8.dp", "line": "360, 366", "context": "locating-row spacer and icon gap" },
+          { "value": "16.dp", "line": 356, "context": "EmptyLocationPreview inner padding" },
+          { "value": "132.dp", "line": 392, "context": "CapturedLocationPreview height" },
+          { "value": "16.dp", "line": 397, "context": "CapturedLocationPreview padding" },
+          { "value": "8.dp", "line": 406, "context": "icon-to-label spacer" },
+          { "value": "8.dp / 16.dp", "line": "429, 433", "context": "LoadingCard padding and spacer" },
+          { "value": "12.dp", "line": 456, "context": "ErrorCard icon spacer" },
+          { "value": "12.dp", "line": 464, "context": "ErrorCard retry spacer" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [
+          { "slot": "titleSmall", "line": 236 },
+          { "slot": "titleSmall", "line": 369 },
+          { "slot": "titleSmall", "line": 409 },
+          { "slot": "titleMedium (via HsSectionCard title, HsComponents.kt:123)", "line": 231 },
+          { "slot": "titleMedium (via HsSectionCard title)", "line": 292 }
+        ],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Allow location access to set your service area.", "line": 112 },
+          { "text": "Step 3 of 3 / My services", "line": 184 },
+          { "text": "Choose your services / Update your services", "line": 186 },
+          { "text": "Jobs are matched from these services and your approximate starting area.", "line": 193 },
+          { "text": "Changes apply to future job offers matched from your skills and starting area.", "line": 195 },
+          { "text": "Saving services / Save and continue / Save services", "line": "211-216" },
+          { "text": "Services you provide", "line": 231 },
+          { "text": "Service area", "line": 292 },
+          { "text": "Set where you usually start service calls. We use this only for nearby job matching.", "line": 303 },
+          { "text": "Finding your location / Use current location", "line": 309 },
+          { "text": "Service area (map marker title)", "line": 344 },
+          { "text": "Tap Use current location", "line": 368 },
+          { "text": "No latitude or longitude entry needed.", "line": 374 },
+          { "text": "Location selected: ${lat}, ${lng}", "line": 414 },
+          { "text": "Loading saved service profile", "line": 435 },
+          { "text": "Retry profile load", "line": 466 },
+          { "text": "Could not find your location. Check GPS and try again.", "line": "508, 512, 517" },
+          { "text": "All 13 service names + 6 group names (AC Deep Clean, Leak Fix, Ceiling Fan Installation, ...)", "line": "ServiceCatalogue.kt:12-24" },
+          { "text": "Service area not set / Saved service area / Current location captured", "line": "ServiceSelectionUiState.kt:8; ServiceSelectionViewModel.kt:50, 52, 104, 159" },
+          { "text": "Could not load your saved services. You can still save this form.", "line": "ServiceSelectionViewModel.kt:64" },
+          { "text": "Select at least one service. / Use current location to set your service area. / Location latitude is outside the supported range.", "line": "ServiceSelectionViewModel.kt:180-192" },
+          { "text": "Could not save services. Check your connection and try again.", "line": "ServiceSelectionViewModel.kt:169" }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "Only ONE string on the screen is localized — stringResource(R.string.service_finding_area) at line 361 (translated at values-hi/strings.xml:122). Everything else, including all 13 service names and 6 group names in ServiceCatalogue.kt:12-24 and every validation message in the ViewModel, is a hardcoded English literal. This is the screen where a rural technician must identify their own trade, and the trade names are English-only. Layout: ServiceRow names are maxLines=1 with TextOverflow.Ellipsis (lines 279-280), so a Hindi service name ~25% longer than 'Tap / Faucet Installation' or 'Ceiling Fan Installation' will truncate — the technician would be selecting a trade they cannot fully read. HsPrimaryButton wraps a plain Text (HsComponents.kt:46) inside a fixed 64dp height, so a longer Hindi 'Save and continue' can wrap and clip.",
+        "currencyFormatting": "No currency on this surface, even though the services carry fixed prices elsewhere in the product; the technician chooses trades with no visible earning information."
+      },
+      "a11y": {
+        "contentDescriptions": "All four icons pass contentDescription = null: LocationOn (line 296), MyLocation (line 365), MyLocation (line 403), Work-as-error (line 453), Refresh (line 475). The Refresh icon at 473-477 is purely decorative yet visually identical to an action, and the error icon is null-described so a screen-reader user gets no signal that the following text is an error.",
+        "touchTargetRisks": [
+          { "line": 265, "size": "Row padding vertical 6.dp around an M3 Checkbox", "note": "The Row itself adds only 12dp of height; the M3 Checkbox enforces its own minimum interactive size so the effective row is likely ≥48dp, but the visible row is far denser than that and adjacent rows have no separation — a mis-tap between two adjacent trades is easy. INFERRED for the exact resolved height." },
+          { "line": 473, "size": "24dp Refresh icon", "note": "Rendered at action size and error-adjacent but has no clickable modifier — an affordance that looks tappable and is not." }
+        ],
+        "contrastRisks": [
+          { "line": 460, "note": "Error message text is rendered in colorScheme.onSurfaceVariant, not colorScheme.error — the error copy has the same visual weight as ordinary helper text." },
+          { "line": 376, "note": "bodySmall in onSurfaceVariant (#5F6C66) on surfaceVariant (#E8F1EC) ≈ 4.6:1 — right at the AA boundary for small text." },
+          { "line": 416, "note": "The raw coordinate line is bodySmall onPrimaryContainer inside a primaryContainer box — small type over a tinted fill." }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "No semantics blocks anywhere. The ServiceRow exposes both a clickable Row and a Checkbox with its own onCheckedChange (lines 264, 269), producing a duplicated/ambiguous accessibility node per row instead of a single toggleable node with role=Checkbox. No group semantics for the category headers."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No service icons or photos for any of the 13 trades — ServiceCatalogueItem has only id/name/group (ServiceCatalogue.kt:3-7), so the entire trade picker is 13 rows of English text with checkboxes.", "The customer app ships 13 drawable-nodpi/service_hero_*.png assets; technician-app ships exactly one content drawable (tech_field_ac_service.png), used only by TechnicianHomeScreen.kt:434 — none of these images reach the technician's own service picker.", "Map preview degrades to a flat coloured box with raw decimal coordinates when MAPS_API_KEY is blank (lines 328-330, 386-421)."], "cite": "ServiceSelectionScreen.kt:254-284; ServiceCatalogue.kt:3-25" },
+      "motion": { "animationsUsed": [ { "what": "CircularProgressIndicator indeterminate rotation", "line": 359 }, { "what": "CircularProgressIndicator indeterminate rotation", "line": 432 } ], "usesMotionTokens": false, "transitionsOnNav": "None. LoadingCard, ErrorCard and the location preview swap in and out of the LazyColumn with no AnimatedVisibility (lines 141-167), and the 132dp placeholder is replaced by a 180dp map with no crossfade — a 48dp layout jump." },
+      "density": "Inconsistent. The list uses 24dp screen padding and 16dp card gaps (lines 135-136) but the rows inside the trade card are packed at 6dp vertical (line 265) with no dividers, so 13 checkboxes read as a dense undifferentiated block while the surrounding cards are airy. Two different placeholder heights (132dp) versus the map (180dp) make the page height shift.",
+      "observations": [
+        { "severity": "high", "claim": "The retry affordance is gated on English string matching — `uiState.errorMessage.startsWith(\"Could not load\")` — so the moment error copy is localized to Hindi the retry button silently disappears.", "evidence": "ServiceSelectionScreen.kt:164; ServiceSelectionViewModel.kt:64", "confidence": "observed" },
+        { "severity": "high", "claim": "All 13 service names and 6 group names are hardcoded English strings in Kotlin with no stringResource path, on the one screen where a low-literacy Hindi-speaking technician must identify their own trade.", "evidence": "technician-app/.../ui/serviceprofile/ServiceCatalogue.kt:10-25; ServiceSelectionScreen.kt:236, 277", "confidence": "observed" },
+        { "severity": "high", "claim": "Zero iconography or imagery for the trades: each service is a bare checkbox plus a one-line, single-line-clipped English label, so the picker offers no pictorial route for a non-reader.", "evidence": "ServiceSelectionScreen.kt:260-283; ServiceCatalogue.kt:3-7", "confidence": "observed" },
+        { "severity": "high", "claim": "The step badge says 'Step 3 of 3' while the KYC screens in the same onboarding say 'Step 1 of 2' and 'Step 2 of 2', and the (dead) onboarding checklist says '3 steps' with a different list of steps — the user is given three contradictory progress models.", "evidence": "ServiceSelectionScreen.kt:184; KycScreen.kt:238, 296; OnboardingScreen.kt:96, 123-125", "confidence": "observed" },
+        { "severity": "high", "claim": "Loading is additive rather than substitutive: the spinner card is inserted above an already-interactive service list, and the fetch then overwrites the user's selections, so a technician can toggle skills that are silently discarded.", "evidence": "ServiceSelectionScreen.kt:141-151; ServiceSelectionViewModel.kt:43-45", "confidence": "observed" },
+        { "severity": "medium", "claim": "The error card uses Icons.Default.Work (a briefcase) as its error glyph and pairs a real 'Retry profile load' button with a decorative, non-clickable Refresh icon — two competing signals, one of them a lie.", "evidence": "ServiceSelectionScreen.kt:450-479", "confidence": "observed" },
+        { "severity": "medium", "claim": "The captured-location fallback shows raw decimal coordinates ('Location selected: 26.79220, 82.19980') as user-facing confirmation, formatted with Locale.US — meaningless to the target technician and locale-incorrect for Devanagari numerals.", "evidence": "ServiceSelectionScreen.kt:413-418, 423", "confidence": "observed" },
+        { "severity": "medium", "claim": "Location permission has no pre-prompt rationale and no recovery: denial routes into the generic error card with a single English sentence, with no settings deep link and no handling of permanent denial.", "evidence": "ServiceSelectionScreen.kt:106-127, 159-167", "confidence": "observed" },
+        { "severity": "medium", "claim": "Error copy is not visually treated as error — the message renders in onSurfaceVariant inside a standard HsSectionCard with no error container, border, or colour.", "evidence": "ServiceSelectionScreen.kt:449, 458-462", "confidence": "observed" },
+        { "severity": "medium", "claim": "Five typography usages resolve to unmapped M3 slots (titleSmall x3 directly, titleMedium x2 via HsSectionCard titles), so every card title and group header on the screen renders in Roboto.", "evidence": "ServiceSelectionScreen.kt:231, 236, 292, 369, 409; HsComponents.kt:123", "confidence": "observed" },
+        { "severity": "medium", "claim": "Service names are maxLines = 1 with ellipsis, so longer Hindi trade names will truncate on the screen where the technician commits to what work they will receive.", "evidence": "ServiceSelectionScreen.kt:276-281", "confidence": "observed" },
+        { "severity": "medium", "claim": "The location preview changes height between states (132dp placeholder vs 180dp map) with no animation, causing a 48dp content jump the moment GPS resolves.", "evidence": "ServiceSelectionScreen.kt:339, 352, 392", "confidence": "observed" },
+        { "severity": "low", "claim": "The screen has no app bar, title bar, or back affordance — it is a bare LazyColumn, so the technician cannot navigate back out of onboarding.", "evidence": "ServiceSelectionScreen.kt:129-137", "confidence": "observed" },
+        { "severity": "low", "claim": "Each ServiceRow exposes both a clickable Row and an independently checkable Checkbox, producing duplicated accessibility nodes instead of one toggleable node.", "evidence": "ServiceSelectionScreen.kt:260-272", "confidence": "observed" },
+        { "severity": "low", "claim": "Selected-state feedback is only the checkbox tick — the row itself does not change background, border, or elevation, so a scan of 13 dense rows gives no at-a-glance sense of what is selected.", "evidence": "ServiceSelectionScreen.kt:260-283", "confidence": "observed" },
+        { "severity": "low", "claim": "This screen breaks the visual language of the rest of the onboarding cluster: Auth, Onboarding and KYC are all gradient-hero + white sheet frames; this one is a plain cream LazyColumn of cards with no hero at all.", "evidence": "ServiceSelectionScreen.kt:129-137 vs AuthScreen.kt:189-253, KycScreen.kt:144-209, OnboardingScreen.kt:49-113", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "technician.smoke",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/SmokeScreen.kt",
+      "loc": 56,
+      "purpose": "Scaffolding placeholder that displays the app name and build stamp; not a user-facing product screen.",
+      "entryPoints": "NONE in the app. The only reference in the repository outside its own definition is the Paparazzi test at technician-app/app/src/test/kotlin/com/homeservices/technician/ui/SmokeScreenPaparazziTest.kt:30, 39 — it is not present in AppNavigation.kt's NavHost (lines 144-175).",
+      "composition": [
+        { "block": "Root Surface, colorScheme.background, fillMaxSize", "cite": "SmokeScreen.kt:23-26" },
+        { "block": "SpaceBetween Column with 24dp padding, start-aligned", "cite": "SmokeScreen.kt:27-34" },
+        { "block": "Top group: 'homeservices technician' in displayLarge primary, 8dp spacer, 'skeleton — ready for development' in bodyLarge onBackground", "cite": "SmokeScreen.kt:35-47" },
+        { "block": "Bottom line: 'v{version}  ·  {shortSha}' in bodySmall onBackground", "cite": "SmokeScreen.kt:49-53" }
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "None — purely static." },
+        "empty": { "present": false, "evidence": null, "quality": "N/A." },
+        "error": { "present": false, "evidence": null, "quality": "None." },
+        "success": { "present": false, "evidence": null, "quality": "N/A." },
+        "offline": { "present": false, "evidence": null, "quality": "None." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "N/A." }
+      },
+      "skeletonOrSpinner": "None.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "24.dp", "line": 18, "context": "private val ScreenPadding — numerically matches space6 but declared as a local literal rather than the token" },
+          { "value": "8.dp", "line": 19, "context": "private val TitleSubtitleSpacing — numerically matches space2 but declared as a local literal" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "homeservices technician", "line": 37 },
+          { "text": "skeleton — ready for development", "line": 43 },
+          { "text": "v${buildInfo.version}  ·  ${buildInfo.shortSha}", "line": 50 }
+        ],
+        "usesStringResource": false,
+        "hindiRisk": "N/A — developer-facing placeholder, but note it hardcodes the pre-rebrand product name 'homeservices technician' (line 37) while every live screen in this cluster uses 'HomeHeroo Partner' (AuthScreen.kt:225, OnboardingScreen.kt:85).",
+        "currencyFormatting": "None."
+      },
+      "a11y": {
+        "contentDescriptions": "No icons or images on this surface.",
+        "touchTargetRisks": [],
+        "contrastRisks": [ { "line": 52, "note": "bodySmall build stamp in onBackground — small but full-contrast; no risk observed." } ],
+        "semanticsHeadings": false,
+        "focusOrder": "No interactive elements."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No logo or app icon even on the screen whose only job is to identify the app."], "cite": "SmokeScreen.kt:35-47" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "N/A — not navigable." },
+      "density": "Two text blocks at opposite ends of an otherwise empty 24dp-padded screen (lines 31-33).",
+      "observations": [
+        { "severity": "medium", "claim": "Dead scaffolding still in main source and still pixel-locked by a Paparazzi golden — it is not in the NavHost and its only consumer is its own screenshot test, so CI is spending regression budget protecting a placeholder.", "evidence": "SmokeScreen.kt:22; AppNavigation.kt:144-175; technician-app/app/src/test/kotlin/com/homeservices/technician/ui/SmokeScreenPaparazziTest.kt:30, 39", "confidence": "observed" },
+        { "severity": "low", "claim": "Carries a stale product name ('homeservices technician') that contradicts the 'HomeHeroo Partner' branding used on every live screen in the cluster.", "evidence": "SmokeScreen.kt:37 vs AuthScreen.kt:225 and OnboardingScreen.kt:85", "confidence": "observed" },
+        { "severity": "low", "claim": "Spacing is declared as file-local private dp vals rather than pulled from LocalHomeservicesSpacing, so it does not track the token scale.", "evidence": "SmokeScreen.kt:18-19, 31, 41", "confidence": "observed" }
+      ]
+    }
+  ]
+}
