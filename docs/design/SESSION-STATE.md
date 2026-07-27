@@ -103,10 +103,13 @@ Phase 1 is now usable, but only after repair in this session.
 - [ ] Authenticated admin screenshots are not captured yet; Firebase Auth user alone is insufficient without admin user/session/TOTP setup data.
 - [x] `docs/design/uiux-audit-2026.md`: **written** from verified findings only. P0 safety (9 findings),
       P0 flow blockers (2), P1 token fracture (6), P1 a11y (3), P2 content/state/motion (4).
-- [ ] `docs/design/uiux-implementation-plan.md`: **not created — this is the next artifact.**
-      Sequence it so the D1 token-core re-derivation lands first; every per-screen fix depends on it.
-      Size money-formatting work against **13** formatters, not 9. Do **not** plan work against
-      `HomeservicesRadius`/`HomeservicesElevation` — verified alive (26 and 37 call sites).
+- [x] `docs/design/uiux-implementation-plan.md`: **WRITTEN** — artifact 2 of 2 complete.
+      5 phases, 20 stories, work-stream structured per root CLAUDE.md, each sized and executable by
+      a Sonnet subagent without further design decisions. Opens with a "do not believe the raw
+      inventory" table covering the 4 corrections that change scope materially. Sequenced:
+      P0 safety → token core (D1) → **enforcement** → sweeps → per-surface craft.
+      Enforcement sits at position 3 deliberately: no detekt rule currently forbids raw `.dp` or
+      `Color(0x` in either app, so the sweeps regenerate without it.
 - [x] Adversarial verification: **214 claims done** (159/53/2). ~760 observations remain unverified
       and must get the same treatment before promotion — they are NOT in the audit.
 - [x] **P0 customer SOS defects FIXED** — worktree `C:\Alok\Business Projects\homeservices-safety-p0`,
