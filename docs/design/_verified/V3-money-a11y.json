@@ -1,0 +1,437 @@
+{
+ "theme": "V3-money-a11y",
+ "verdicts": [
+  {
+   "claim": "SITE 1 (design-system, canonical component) - HsPriceText renders ASCII 'Rs ' with INTEGER DIVISION and no thousands grouping: 129900 paise renders as 'Rs 1299', 99950 paise as 'Rs 999' (50 paise silently discarded).",
+   "citation": "design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt:172",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": "Line 172 verbatim: `text = \"Rs ${pricePaise / 100}\",` inside `public fun HsPriceText(pricePaise: Int, ...)`. Int division truncates, no grouping, ASCII 'Rs'. Additionally verified it is NOT dead code: 2 live call sites - customer-app/.../ui/booking/PriceApprovalScreen.kt:147 `HsPriceText(pricePaise = addOn.price)` and technician-app/.../ui/jobOffer/JobOfferScreen.kt:216 `HsPriceText(pricePaise = offer.amountPaise.toInt())`. Both are money-decision screens (add-on approval, 30s job-offer accept).",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": ""
+  },
+  {
+   "claim": "ASCII 'Rs' (not the rupee glyph) appears at 3 live rendering sites - HsComponents.kt:172, TechnicianHomeScreen.kt:1350, TechnicianDashboardScreen.kt:129 - and 'INR ' at 3 admin-web sites. Six of the nine formatters fail the Hindi-first bar, and none implements Indian lakh/crore grouping except formatINR on admin-web.",
+   "citation": "design-system/.../HsComponents.kt:172; technician-app/.../ui/home/TechnicianHomeScreen.kt:1350; technician-app/.../ui/dashboard/TechnicianDashboardScreen.kt:129",
+   "verdict": "CORRECTED",
+   "whatIActuallySaw": "Two of three parts hold, one does not. (a) HsComponents.kt:172 and TechnicianHomeScreen.kt:1350 are live - confirmed. (b) TechnicianDashboardScreen.kt:129 is `value = \"Rs 0\"` - a HARDCODED literal zero, not a formatter, AND the whole composable is orphaned: `grep TechnicianDashboardScreen` over technician-app returns exactly one hit, its own declaration at :39 (`internal fun`), with zero call sites; build.gradle.kts:623-626 excludes `*.TechnicianDashboardScreenKt` from Kover, confirming it is unrendered UI. (c) The lakh/crore sub-claim is wrong: JS `toLocaleString('en-IN')` and Java `NumberFormat.getCurrencyInstance(Locale(\"en\",\"IN\"))` BOTH emit Indian grouping (12,34,567) - all 6 admin-web formatters and customer-app formatInr already group correctly. Only the `\"%,.0f\".format()` sites (EarningsScreen.kt:384, TechnicianHomeScreen.kt:1350) are locale-of-device dependent, and the 4 integer-division sites emit no grouping at all.",
+   "correctedStatement": "ASCII 'Rs' ships at 2 live Android rendering sites (HsComponents.kt:172 -> 2 call sites; TechnicianHomeScreen.kt:1350 -> 5 call sites) plus 1 dead site (TechnicianDashboardScreen.kt:129, orphaned composable). 'INR ' ships at 3 live admin-web sites. Indian lakh/crore grouping is already correct wherever a locale-aware formatter is used; the grouping defect is confined to the 4 integer-division Kotlin helpers and the 2 `%,.0f` helpers.",
+   "correctedSeverity": "medium",
+   "mergedWith": ""
+  },
+  {
+   "claim": "There are NINE mutually inconsistent money formatters across the three surfaces, producing at least five visually different outputs for the same amount.",
+   "citation": "aggregated across customer-app, technician-app, design-system, admin-web",
+   "verdict": "CORRECTED",
+   "whatIActuallySaw": "The problem is real and WORSE than stated. A repo-wide grep for the rupee glyph / formatRupees / formatInr / formatPaise / formatPrice / formatINR turns up at least 13 distinct implementations, not nine. The inventory missed at least three, ALL of which use the rupee glyph (not ASCII): customer-app/.../ui/catalogue/PhotoFirstServiceCard.kt:238 `private fun formatServicePrice(pricePaise: Int): String = \"\\u20b9${pricePaise / PAISE_PER_RUPEE}\"` (a 4th integer-division site, unlisted); technician-app/.../data/fcm/HomeservicesFcmService.kt:325 `.setContentTitle(\"<hindi> \\u20b9$amountRs\")` (money rendered in a push notification, outside every formatter); technician-app/.../ui/payoutsettings/PayoutCadenceScreen.kt:47-48 hardcoded Devanagari fee literals '\\u20b915/<hindi>', '\\u20b925/<hindi>'.",
+   "correctedStatement": "There are at least THIRTEEN distinct money-rendering implementations across the four surfaces (7 Android + 6 admin-web), producing at least six different outputs for the same amount. Any remediation plan sized against 'nine' will miss PhotoFirstServiceCard.kt:238, HomeservicesFcmService.kt:325 and the hardcoded payout-fee literals in PayoutCadenceScreen.kt:47-48.",
+   "correctedSeverity": "high",
+   "mergedWith": ""
+  },
+  {
+   "claim": "SITE 9 (admin-web) - SIX different currency renderings in one app: formatINR, '\u20b9'+toLocaleString('en-IN'), 'INR '+toLocaleString('en-IN'), 'INR '+toLocaleString in catalogue, 'INR '+toLocaleString with fraction digits in compliance, '\u20b9'+toLocaleString with 2 fixed digits in finance. Three hard-pin 'en-IN'.",
+   "citation": "admin-web/src/lib/format/intl.ts:1-7; dashboard/CounterStrip.tsx:10; dashboard/PayoutQueue.tsx:14; catalogue/[categoryId]/ServiceList.tsx:17; compliance/ComplianceClient.tsx:33; src/api/finance.ts:40; finance/PnLChart.tsx:27",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": "All seven citations open and read exactly as quoted. intl.ts:3 `new Intl.NumberFormat(locale === 'hi' ? 'hi-IN' : 'en-IN', {style:'currency',currency:'INR'})`. CounterStrip.tsx:10 rupee-glyph + toLocaleString('en-IN'). PayoutQueue.tsx:14 and ServiceList.tsx:17 both `INR ${(paise/100).toLocaleString('en-IN')}`. ComplianceClient.tsx:33 same with min/maxFractionDigits 2. finance.ts:40 rupee-glyph with 2 fixed digits. PnLChart.tsx:27 rupee-glyph with locale-aware localeStr. The 'three hard-pin en-IN' count is exact (PayoutQueue, ServiceList, Compliance) - CounterStrip is a fourth hard-pin, so the claim is if anything conservative.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": ""
+  },
+  {
+   "claim": "Price formatting is broken for any amount over 999 rupees: integer division with no digit grouping renders 250000 paise as '2500' rather than '2,500', and silently truncates sub-rupee remainders. Contradicts the shared formatInr() used on the previous screen.",
+   "citation": "customer-app/.../ui/catalogue/ServiceListScreen.kt:400 vs CatalogueHomeScreen.kt:781 -> ui/util/CurrencyFormat.kt:23-26",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": "ServiceListScreen.kt:400 verbatim: `private fun formatPrice(pricePaise: Int): String = \"\\u20B9${pricePaise / 100}\"`, called at :264 for every service row. CatalogueHomeScreen.kt:781 does call `formatInr(category.minPricePaise.toLong())`, and CurrencyFormat.kt:23-26 returns NumberFormat currency output ('Rs.1,299.00'). The two-formatters-one-tap-apart framing is exact. Verified against real seed data: api/src/cosmos/seeds/catalogue.ts:81 basePrice 69900 and :86 add-on 250000 - so the >999 case is not hypothetical.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": ""
+  },
+  {
+   "claim": "Price formatting on the conversion screen truncates and omits Indian digit grouping in all three places it appears (metric tile, add-on pill, sticky bar), so seeded add-ons at 250000/150000 paise render as '2500' / '1500'.",
+   "citation": "customer-app/.../ui/catalogue/ServiceDetailScreen.kt:621 with call sites 165, 311, 506; api/src/cosmos/seeds/catalogue.ts:86,251",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": "ServiceDetailScreen.kt:621 `private fun formatPrice(pricePaise: Int): String = \"\\u20b9${pricePaise / 100}\"`. Call sites verified line-exact: :165 `AddOnRow(name = addOn.name, price = formatPrice(addOn.price))`, :311 `value = formatPrice(service.basePrice)` in the metric tile, :506 `text = formatPrice(service.basePrice)` in the sticky CTA block. Seeds verified: catalogue.ts:86 `price: 250000` (Motor rewinding) and :251 `price: 150000` (RO membrane replacement).",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": "Same root defect as the ServiceListScreen.kt:400 finding and PhotoFirstServiceCard.kt:238 - one integer-division idiom copied to three customer-app files."
+  },
+  {
+   "claim": "Two different currency renderings appear within ~45 lines of each other - 'Rs 499' for each add-on and 'Rs.499.00' for the total.",
+   "citation": "customer-app/.../ui/booking/PriceApprovalScreen.kt:147",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": ":147 `HsPriceText(pricePaise = addOn.price)` which resolves to `\"Rs ${pricePaise / 100}\"` (HsComponents.kt:172); :193 `text = formatInr(approvedTotal)` which resolves to NumberFormat currency output. 46 lines apart, both inside the same scrolling screen, and this is the screen where the customer approves an in-job price increase - the single highest-stakes money comparison in the customer app.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": ""
+  },
+  {
+   "claim": "Two different rupee renderings ship in the same app: 'Rs.%,.0f' in EarningsScreen vs ASCII 'Rs %,.0f' in the live Pay tab.",
+   "citation": "technician-app/.../ui/earnings/EarningsScreen.kt:384 vs technician-app/.../ui/home/TechnicianHomeScreen.kt:1350",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": "EarningsScreen.kt:384 `private fun formatRupees(paise: Long): String = \"\\u20b9%,.0f\".format(paise / 100.0)`. TechnicianHomeScreen.kt:1350 `private fun formatRupees(paise: Long): String = \"Rs %,.0f\".format(paise / 100.0)`. Identical function name, identical signature, different glyph - a copy-paste divergence. The Home one has 5 call sites (:465, :557, :563, :609, :752), the Earnings one 3 (:282, :312 x2).",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": ""
+  },
+  {
+   "claim": "SITE 5 (technician-app home) - ASCII 'Rs' with %,.0f, i.e. no rupee glyph and Java's default grouping (which for the default locale is western 1,234,567 not Indian 12,34,567).",
+   "citation": "technician-app/.../ui/home/TechnicianHomeScreen.kt:1350",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": "Line 1350 verbatim as quoted. The grouping sub-claim is also right in mechanism: `String.format` without an explicit Locale uses Locale.getDefault(Locale.Category.FORMAT), so grouping follows device locale, not the product's Indian convention - on a device set to en-US this yields 1,234,567.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": ""
+  },
+  {
+   "claim": "`pendingHeldPaise` - the only money field representing un-paid-out balance - exists on the model but is never rendered on this screen.",
+   "citation": "technician-app/.../domain/earnings/model/EarningsSummary.kt:32; EarningsScreen.kt:1-384",
+   "verdict": "CORRECTED",
+   "whatIActuallySaw": "The literal statement is true for EarningsScreen.kt, but the implied conclusion (the technician cannot see held money) is false. A repo grep for `pendingHeld` returns 4 hits: EarningsDtos.kt:32, EarningsRepositoryImpl.kt:25, EarningsSummary.kt:32, and technician-app/.../ui/home/TechnicianHomeScreen.kt:563 `value = formatRupees(uiState.summary.pendingHeldPaise)` - rendered as a visible 'Held' StatTile with a wallet icon in the Pay tab, beside 'This week'. So the field IS surfaced, just not on the dedicated Earnings screen.",
+   "correctedStatement": "Held balance IS rendered - as a 'Held' StatTile at TechnicianHomeScreen.kt:557-566 in the Pay tab. The real defect is that the app has two competing earnings surfaces (Pay tab and EarningsScreen) that show different subsets of the same EarningsSummary with different currency glyphs; EarningsScreen omits held balance while the Pay tab shows it.",
+   "correctedSeverity": "medium",
+   "mergedWith": ""
+  },
+  {
+   "claim": "Currency is rendered as 'INR 1,234' in the payout queue while the KPI tile directly above renders the rupee glyph for the same paise value - two currency conventions on one screen.",
+   "citation": "admin-web/src/components/dashboard/PayoutQueue.tsx:14 vs CounterStrip.tsx:10",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": "PayoutQueue.tsx:13-15 `function formatPaise(paise: number): string { return `INR ${(paise / 100).toLocaleString('en-IN')}`; }`, rendered at :57 as the 'Total pending' figure in --ember. CounterStrip.tsx:9-11 identical body but with the rupee glyph. Both components are rendered on the same dashboard route.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": ""
+  },
+  {
+   "claim": "Currency formatting hardcodes 'en-IN' and sets no fraction-digit policy, so a paise value that is not a whole rupee renders with a ragged single decimal place and breaks numeric alignment across tiles.",
+   "citation": "admin-web/src/components/dashboard/CounterStrip.tsx:9-11",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": "Line 10 `return `\\u20b9${(paise / 100).toLocaleString('en-IN')}`;`. With Intl defaults (min 0 / max 3 fraction digits) 100050 paise renders '1,000.5' and 123456 paise renders '1,234.56' - ragged widths confirmed. Note the grouping itself is correct Indian grouping; the defect is fraction-digit policy and the hard-pinned locale (the hi admin locale is ignored even though intl.ts:3 already implements the hi-IN branch).",
+   "correctedStatement": "",
+   "correctedSeverity": "medium",
+   "mergedWith": ""
+  },
+  {
+   "claim": "Money is rendered as ASCII 'INR 599' with no decimals and a locale hardcoded to en-IN, in a bilingual product - one of three mutually inconsistent money formatters in this cluster.",
+   "citation": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:16-18",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": "ServiceList.tsx:16-18 verbatim `function formatPaise(paise: number): string { return `INR ${(paise / 100).toLocaleString('en-IN')}`; }`. Cross-checked against the two other cluster formatters: finance.ts:40 (rupee glyph + 2 fixed digits) and ComplianceClient.tsx:32-37 (INR + 2 fixed digits). Three different outputs for the same value in one product area - confirmed.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": ""
+  },
+  {
+   "claim": "The price field asks the operator to enter raw paise ('Base Price (paise - INR 599 = 59900)') - a database unit leaked into the UI, guaranteeing 100x pricing errors.",
+   "citation": "admin-web/src/components/catalogue/ServiceForm.tsx:147-159 with messages/en.json catalogue.serviceForm.priceLabel",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": "messages/en.json:543 `\"priceLabel\": \"Base Price (paise - INR 599 = 59900)\"` and :544 `\"pricePlaceholder\": \"59900\"`; messages/hi.json:543 carries the same paise leak in Devanagari. ServiceForm.tsx:147-159 binds that label to a bare `<input type=\"number\" min={0}>` with no divide-by-100 on submit and no formatted echo of what the operator typed. The worked example in the label mitigates but does not remove the 100x risk.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": ""
+  },
+  {
+   "claim": "The refund amount is a bare number input with no rupee affix, no unit hint and no formatted echo; formatINR is never imported into this file, so the only monetary workflow in the customers module has zero currency rendering.",
+   "citation": "admin-web/app/[locale]/(dashboard)/customers/CustomerListClient.tsx:688-707",
+   "verdict": "CORRECTED",
+   "whatIActuallySaw": "Two of four sub-claims are wrong. There IS a unit hint: :698 `placeholder={t('refundForm.amountLabel')}` resolves to messages/en.json:169 `\"amountLabel\": \"Amount (\\u20b9)\"`. And the unit is unambiguous end-to-end - :147 `parseFloat(expandedState.refundAmount)` feeds `refundCredit(customerId, amount, reason)` whose signature is `refundCredit(id: string, amountRupees: number, reason: string)` (src/api/customers.ts:33), posting `{ amountRupees }`. So there is no paise/rupee confusion here. Confirmed true: no `formatINR` import anywhere in the file, no persistent affix, no formatted echo of the typed value, and no `<label>` element - the rupee hint lives only in a placeholder that disappears the moment the operator types.",
+   "correctedStatement": "The refund amount field carries its rupee unit only in a placeholder ('Amount (\\u20b9)', messages/en.json:169) which vanishes on first keystroke; there is no <label>, no persistent \\u20b9 prefix affix, and no formatted echo of the entered value. The unit itself is correct and unambiguous (rupees, per refundCredit(amountRupees) in src/api/customers.ts:33) - there is no 100x risk here, unlike the catalogue ServiceForm.",
+   "correctedSeverity": "medium",
+   "mergedWith": ""
+  },
+  {
+   "claim": "Monetary amounts in refund/waive-fee audit entries appear only inside that JSON blob as raw integers - no rupee glyph, no paise conversion, no Indian grouping - so the financial audit trail has no currency formatting at all.",
+   "citation": "admin-web/src/components/audit-log/AuditLogTable.tsx:60",
+   "verdict": "CORRECTED",
+   "whatIActuallySaw": "Line 60 is `{JSON.stringify(entry.payload, null, 2)}` inside a `<pre>` - literally accurate. But the framing over-states it: this is an expandable raw-payload evidence dump, and byte-fidelity to the stored audit record is a defensible (arguably required) property of an audit log. The table's own columns (timestamp / adminId / action / resourceType / resourceId, :31-38) carry no money column at all, so there is no formatted money that a raw payload is contradicting.",
+   "correctedStatement": "The audit log has no human-readable monetary summary: money appears only inside the raw `JSON.stringify(entry.payload)` evidence dump, which is appropriate for an audit record. The gap is the absence of a formatted amount column or amount summary line for money-moving actions (refund, waive-fee) - not that the raw payload is unformatted.",
+   "correctedSeverity": "low",
+   "mergedWith": ""
+  },
+  {
+   "claim": "The currency column does not use the tabular-nums helper that globals.css:280 defines (.tnum), and is left-aligned, so rupee amounts misalign down the column. CustomerCell and TechnicianCell do apply tabular-nums to IDs/phones, making the omission inconsistent.",
+   "citation": "admin-web/src/components/orders/OrdersTable.tsx:68",
+   "verdict": "CORRECTED",
+   "whatIActuallySaw": "The .tnum omission is real at :68 (`<td className=\"px-4 py-3 font-medium\">{formatINR(order.amount, locale)}</td>` - no tnum class, no text-right), and CustomerCell.tsx:26 does use `font-mono tabular-nums`. BUT the 'amounts misalign' conclusion does not hold in the product's default locale: globals.css:89-96 sets `:lang(hi) table td, :lang(hi) table th { font-feature-settings: ... \"tnum\" 1, \"lnum\" 1; }` with the explicit comment 'tnum + lnum keep amounts tabular-aligned next to Devanagari status text', and app/layout.tsx:50-51 renders `<html lang={lang}>` from getLocale(). So in the Hindi locale every table cell already gets tabular figures; only the English locale is affected.",
+   "correctedStatement": "In the English admin locale the amount column loses tabular figures (no .tnum, no Tailwind tabular-nums) while sibling cells have them; in the Hindi locale globals.css:89-96 already forces tnum/lnum on all table cells so figures are tabular. The locale-independent defect is that the money column is left-aligned (`px-4 py-3 font-medium`, no `text-right`), which is the alignment failure that actually shows in both locales.",
+   "correctedSeverity": "medium",
+   "mergedWith": ""
+  },
+  {
+   "claim": "`outline: 'none'` is applied inline to every desktop nav link, defeating the global :focus-visible ring and leaving the primary navigation with no visible keyboard focus indicator.",
+   "citation": "admin-web/src/components/dashboard/Rail.tsx:111 vs admin-web/app/globals.css:402-406",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": "Rail.tsx:100-115 is a `<Link>` with an inline `style` object containing `outline: 'none'` at :111. globals.css:402-406 is `:focus-visible { outline: 2px solid var(--marigold); outline-offset: 3px; border-radius: 2px; }` with no `!important`. Inline styles win over author stylesheet declarations of equal importance, so the ring is dead on all 10 desktop rail links. Verified the mobile bar links (:149-165) do NOT set outline:none - they keep the ring, so the failure is desktop-only, exactly as claimed. WCAG 2.4.7 failure on primary navigation.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": ""
+  },
+  {
+   "claim": "Both desktop (~34px) and mobile (~40px) nav targets fall below the 44px minimum touch target.",
+   "citation": "admin-web/src/components/dashboard/Rail.tsx:104,159",
+   "verdict": "CORRECTED",
+   "whatIActuallySaw": "I measured the actual modifier/style chains. Desktop (:100-115): `padding: '8px 10px'`, content is an 18px lucide icon flex-centred with 13px text -> height = 8 + ~19.5 + 8 = ~35px. Below 44px - confirmed. Mobile (:153-165): `flexDirection: 'column'`, `padding: '6px 8px'`, `gap: '3px'`, 18px icon + 0.68rem (10.88px) label at normal line-height (~13px) -> height = 6 + 18 + 3 + 13 + 6 = ~46px, and the bar itself sets `minHeight: '60px'` (:135). The mobile target MEETS 44px; the claim's ~40px figure is wrong.",
+   "correctedStatement": "Desktop rail links compute to ~35px tall, below the 44px AAA target-size guideline (they still pass WCAG 2.2 AA's 24x24 minimum, and this is a mouse-driven admin console). Mobile bottom-bar links compute to ~46px and meet 44px - no defect there.",
+   "correctedSeverity": "low",
+   "mergedWith": ""
+  },
+  {
+   "claim": "Table rows are not keyboard operable - <tr onClick> with no tabIndex/role/onKeyDown means opening an order detail is impossible without a mouse, and the 'View' affordance in the last column is inert text, not a button or link.",
+   "citation": "admin-web/src/components/orders/OrdersTable.tsx:52-56",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": ":52-56 `<tr key={order.id} onClick={() => onRowClick(order)} className=\"cursor-pointer hover:...\">` - no tabIndex, no role, no onKeyDown. :69 `<td className=\"px-4 py-3 text-[var(--marigold)]\">{t('table.viewAction')}</td>` - styled like a link, is a plain table cell with no handler at all. The only keyboard-reachable controls in the component are the two pagination buttons (:78-81), which do carry aria-labels.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": ""
+  },
+  {
+   "claim": "Row expansion is mouse-only (<tr onClick> with no tabIndex/role/keyboard handler), so the notes and refund workflows are entirely unreachable by keyboard.",
+   "citation": "admin-web/app/[locale]/(dashboard)/customers/CustomerListClient.tsx:265-274",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": ":265-274 `<tr key={customer.id} onClick={() => handleRowClick(customer.id)} style={{...cursor:'pointer'...}}>` - no tabIndex, role, or key handler. Since the refund form at :688-707 only mounts inside the expanded row, the entire money-moving workflow in the customers module sits behind a mouse-only disclosure.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": "Same defect class as OrdersTable.tsx:52-56 and AuditLogTable.tsx:44-47 - three <tr onClick> disclosure patterns; fix once as a shared keyboard-operable row primitive."
+  },
+  {
+   "claim": "Expanding an audit entry is mouse-only - the row is a <tr onClick> with no tabIndex, role or key handler - so the payload evidence for every admin action is keyboard-inaccessible.",
+   "citation": "admin-web/src/components/audit-log/AuditLogTable.tsx:44-47",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": ":44-47 `<tr onClick={() => toggle(entry.id)} className=\"border-t ... cursor-pointer hover:...\">` - no tabIndex, role, or onKeyDown. The expanded payload row (:56-64) is the only place the evidence is shown.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": "Same defect class as OrdersTable.tsx:52-56 and CustomerListClient.tsx:265-274."
+  },
+  {
+   "claim": "Drag-and-drop IS keyboard operable via the library's drag handle, but there is no keyboard path to OPEN a complaint - the card is role=presentation with onClick only, a limitation the code comments acknowledge as unresolved.",
+   "citation": "admin-web/src/components/complaints/ComplaintCard.tsx:54-64",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": "Both halves check out. :54-58 is a verbatim source comment: 'Rendered as <div> not <button> because @hello-pangea/dnd already wraps this node in a role=\"button\" tabindex=\"0\" drag handle; a nested <button> would fail WCAG 4.1.2 (nested-interactive). Mouse clicks still open the slide-over; keyboard activation flows through the drag handle. Dedicated keyboard \"open\" affordance (e.g. dblclick or detail icon) tracked separately.' :60-64 `<div role=\"presentation\" onClick={onClick} ...>`. An unusually honest inventory entry.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": ""
+  },
+  {
+   "claim": "Six of eight filter controls have no visible or programmatic label - they rely entirely on placeholders, which vanish once a value is entered.",
+   "citation": "admin-web/src/components/orders/OrderFilters.tsx:46-52",
+   "verdict": "CORRECTED",
+   "whatIActuallySaw": "I counted the actual controls at :38-52. Eight total. FIVE are placeholder-only with no label of any kind: city (:46), customerPhone (:47), technicianId (:48), minAmount (:51), maxAmount (:52). The two date inputs DO carry programmatic labels - :49 `aria-label=\"Date from\"` and :50 `aria-label=\"Date to\"` (hardcoded English, but present). The status control (:38-44) has a visible `<span>` label at :39 - visible but not programmatically associated, since it is a span not a <label htmlFor>. So 'six of eight ... entirely' overstates by one and misses the aria-labels.",
+   "correctedStatement": "Five of eight order filters (city, phone, technicianId, minAmount, maxAmount) are placeholder-only with no accessible name. The two date inputs carry aria-label but in hardcoded English; the status control has a visible <span> that is not programmatically associated with the menu button. Note the money filters minAmount/maxAmount also carry their rupee unit only in the vanishing placeholder ('Min \\u20b9' / 'Max \\u20b9', messages/en.json:217-218).",
+   "correctedSeverity": "medium",
+   "mergedWith": ""
+  },
+  {
+   "claim": "The popover has no Escape-key dismissal and no focus containment - only a mousedown click-outside listener - so it is a keyboard trap-adjacent control that cannot be closed without a mouse.",
+   "citation": "admin-web/src/components/orders/StatusFilterMenu.tsx:26-35",
+   "verdict": "CORRECTED",
+   "whatIActuallySaw": ":26-35 is exactly one `document.addEventListener('mousedown', handle)` effect - no keydown listener, no Escape handling, no focus trap, no focus return to the trigger; confirmed by reading the whole component. But 'keyboard trap-adjacent ... cannot be closed without a mouse' is wrong: there is no focus containment at all, so Tab moves straight out of the popover, and the trigger button (:63-74) is a real <button> that toggles `open` - a keyboard user can shift-Tab back to it and press Enter to close. The trigger also already has aria-haspopup=\"dialog\", aria-expanded, aria-controls, and the panel has role=\"dialog\" + aria-label (:66-68, :79-80).",
+   "correctedStatement": "The status popover lacks Escape-to-dismiss, focus containment, and focus return to the trigger - the standard dialog keyboard contract. It is not a keyboard trap (Tab exits freely and the toggle button can be re-reached), and its ARIA wiring (haspopup/expanded/controls, role=dialog, aria-label) is already correct.",
+   "correctedSeverity": "medium",
+   "mergedWith": ""
+  },
+  {
+   "claim": "All 14 status option labels render the raw English enum in monospace as the user-facing label AND as the checkbox aria-label, so the primary orders filter is entirely untranslated.",
+   "citation": "admin-web/src/components/orders/StatusFilterMenu.tsx:91-96",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": ":91 `aria-label={status}` and :96 `<span className=\"font-mono text-xs\">{status}</span>` - the raw status token is both the visible label and the accessible name, while every other string in the component (:39-42 triggerLabel, :80 menuLabel) goes through useTranslations. Additionally `text-xs` = 12px, below the 14px admin body floor.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": ""
+  },
+  {
+   "claim": "Ratings are drawn as repeated star text characters with no numeric value and no aria-label, making the rating inaccessible to screen readers and unreadable if the glyph is missing.",
+   "citation": "admin-web/src/components/technicians/TrustDossierPanel.tsx:70",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": ":70 `<span>{'\\u2605'.repeat(Math.round(r.rating))}</span>` - no aria-label, no title, no adjacent numeric value; the sibling spans at :71-72 are the review text and date only. A screen reader announces the glyph name repeatedly ('black star, black star, ...') with no rating number, and Math.round destroys half-star precision. Also noted while reading: :71-72 use raw `text-gray-700` / `text-gray-400` Tailwind greys rather than the admin token set.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": ""
+  },
+  {
+   "claim": "Data values are reachable only through a native `title` tooltip, so keyboard, touch and screen-reader users can never read a single number from the chart.",
+   "citation": "admin-web/src/components/dashboard/UtilStrip.tsx:45,60",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": ":57-69 each bar is a non-focusable `<div>` whose only data carrier is `title={`${HOURS[index]}: ${value}%`}` at :60. The wrapper at :43-45 is `role=\"img\" aria-label=\"Bar chart of technician utilisation over 24 hours\"`, which by design hides the children from AT and contributes no numbers. `title` is not exposed on touch and not keyboard-reachable on a non-focusable div. Confirmed on all three access paths.",
+   "correctedStatement": "",
+   "correctedSeverity": "medium",
+   "mergedWith": ""
+  },
+  {
+   "claim": "aria-live=\"polite\" is set on the entire 50-item list rather than on newly-added rows, so each poll risks re-announcing the whole feed.",
+   "citation": "admin-web/src/components/dashboard/OrderFeed.tsx:111-112",
+   "verdict": "CORRECTED",
+   "whatIActuallySaw": ":110-112 is `<ol aria-live=\"polite\" aria-label=\"Order events\">` - the attribute placement is as claimed. But the consequence does not follow: aria-live defaults to `aria-relevant=\"additions text\"` and `aria-atomic=\"false\"`, so only mutated nodes are announced, and :124-126 keys each `<li>` by `event.id`, so React patches in only genuinely new rows on each poll. The whole feed is not re-announced.",
+   "correctedStatement": "The live region is scoped to the whole <ol> rather than to new rows, which is acceptable given aria-atomic defaults and stable event.id keys - only new entries are announced. The residual risk is announcement volume on a busy feed (no throttling, no aria-relevant narrowing), not whole-list re-announcement.",
+   "correctedSeverity": "low",
+   "mergedWith": ""
+  },
+  {
+   "claim": "Two adjacent controls in the same Topbar slot implement radiogroup semantics differently - LocaleSwitcher has roving tabindex and arrow-key navigation, ThemeToggle has neither.",
+   "citation": "admin-web/src/components/theme/ThemeToggle.tsx:20-35 vs admin-web/src/components/i18n/LocaleSwitcher.tsx:28-43,101",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": "ThemeToggle.tsx:15-36 declares `role=\"radiogroup\"` with children `role=\"radio\" aria-checked` but no tabIndex management and no onKeyDown - every option stays in the tab order and arrow keys do nothing, which violates the radiogroup keyboard contract it opts into. LocaleSwitcher.tsx:28-43 implements a full `handleKeyDown` with ArrowRight/Down and ArrowLeft/Up plus `focusPill()` (:45-47) to move DOM focus. Two different implementations of the same pattern, confirmed.",
+   "correctedStatement": "",
+   "correctedSeverity": "medium",
+   "mergedWith": ""
+  },
+  {
+   "claim": "No skip-link is rendered before the Rail, so every keyboard/screen-reader user traverses 10 nav links before reaching page content.",
+   "citation": "admin-web/app/layout.tsx:55-57",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": "layout.tsx:54-57 body content is exactly `<body><ThemeProvider initialTheme={theme}>{children}</ThemeProvider></body>` - nothing before it. A repo-wide grep across admin-web/app and admin-web/src for 'skip-link', 'Skip to', 'skipToContent' and '#main' returns zero hits in .tsx and .css. Combined with the Rail's dead focus ring (Rail.tsx:111), a keyboard operator has neither a bypass nor a visible focus position while traversing the nav.",
+   "correctedStatement": "",
+   "correctedSeverity": "medium",
+   "mergedWith": ""
+  },
+  {
+   "claim": "The primary call-to-action is styled as a low-contrast grey box - --fog-0 text on --ink-3 - with no hover, focus or active state, so the money action on the dashboard is the least prominent element in its own card.",
+   "citation": "admin-web/src/components/dashboard/PayoutQueue.tsx:100-118",
+   "verdict": "CORRECTED",
+   "whatIActuallySaw": "I computed the pair from globals.css:24 (--fog-0 #877A6D) and :20 (--ink-3 #221C15): 4.04:1 - below the 4.5:1 AA floor for its 0.8125rem/13px text. So the contrast failure is real and now quantified. The 'no focus state' half is wrong: unlike Rail.tsx:111, this Link's inline style (:102-115) does NOT set `outline: 'none'`, so the global `:focus-visible` marigold ring at globals.css:402-406 does apply. Hover and active states are genuinely absent (inline styles cannot express them).",
+   "correctedStatement": "The dashboard payout CTA renders --fog-0 on --ink-3 = 4.04:1 (computed), failing WCAG AA 4.5:1 at 13px, and has no hover or active state because it is styled with an inline style object. It DOES receive the global marigold :focus-visible ring. Ironically --fog-0's own token comment (globals.css:24) certifies it only against --ink-0/--ink-1, not against the raised --ink-3 surface it is used on here.",
+   "correctedSeverity": "high",
+   "mergedWith": ""
+  },
+  {
+   "claim": "Flat-gray-card syndrome plus contrast failure: the card is border + text only, and its two coloured elements (#fff on #5BA38E) both fail WCAG AA.",
+   "citation": "admin-web/src/components/catalogue/CategoryCard.tsx:16-27,45-46,70-71",
+   "verdict": "CORRECTED",
+   "whatIActuallySaw": "Both coloured elements are conditional, not both green. :45 the status chip is `--color-success` (#5BA38E, globals.css:129) when active else `--color-danger` (#B6385C, :131); :70 the button is the inverse. Computed: #fff on #5BA38E = 2.97:1 - fails AA and even the 3:1 large-text floor. #fff on #B6385C = 5.66:1 - PASSES AA. So exactly one of the two visible elements fails at any given time, and which one depends on isActive. The flat-card half is accurate (:16-27 is border + var(--shadow-sm) + no imagery).",
+   "correctedStatement": "Every #5BA38E-backed element on the category card fails WCAG AA at 2.97:1 with #fff text (computed) - that is the active-status chip and the 'Activate' button. The #B6385C (danger) counterparts pass at 5.66:1. The fix is the success token's luminance, not both tokens.",
+   "correctedSeverity": "high",
+   "mergedWith": ""
+  },
+  {
+   "claim": "The back button has a null contentDescription and is force-sized to 44dp, so it is both unlabelled for screen readers and under the minimum touch target.",
+   "citation": "customer-app/.../ui/complaint/ComplaintListScreen.kt:72-77",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": ":72 `IconButton(onClick = onBack, modifier = Modifier.size(44.dp))` wrapping :73-77 `Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = ...)`. There is no adjacent text inside the IconButton (the HsScreenTitle at :80 is a sibling in the Row, so it does not merge into the button's semantics). Both halves confirmed. The 44dp is a 4dp shortfall of the 48dp guideline rather than a gross failure - the missing accessible name is the severe half.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": "Same systemic pattern as the 9-site icon-only finding; ComplaintListScreen.kt:72 is one instance of it."
+  },
+  {
+   "claim": "MIXED-LITERACY BAR - customer-app FAILS: 9 icon-only interactive controls have neither a visible text label nor a contentDescription, so they are invisible to TalkBack AND unlabelled for a low-literacy user.",
+   "citation": "customer-app: settings/SettingsScreen.kt:51, settings/PrivacyAndDataScreen.kt:74, settings/PrivacyDataScreen.kt:86, dataexport/DataExportScreen.kt:158, deleteaccount/DeleteAccountScreen.kt:123, deleteaccount/DeleteAccountConfirmScreen.kt:162, deleteaccount/DeleteAccountCoolOffScreen.kt:166, complaint/ComplaintListScreen.kt:72, booking/AddressPickerScreenContent.kt:171",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": "Spot-opened three of the nine and they are identical in shape. SettingsScreen.kt:51-53 `IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, ...) }`. DeleteAccountConfirmScreen.kt:162-167 same. ComplaintListScreen.kt:72-77 same. In every case the IconButton contains only the Icon - no Text child - so nothing supplies an accessible name, and TalkBack announces a bare 'Button'. Note the scan is correctly scoped: it excludes icons that sit beside a Text in the same clickable, which is why ProfileScreen is not on this list.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": "Absorbs the ComplaintListScreen.kt:72 back-button finding; these are one systemic pattern (icon-only back affordance forced to 44dp with contentDescription = null), fixable with a single shared HsBackButton."
+  },
+  {
+   "claim": "Every icon on the screen has contentDescription = null, including the actionable sign-out affordance, so screen-reader users get an unlabelled control.",
+   "citation": "customer-app/.../ui/profile/ProfileScreen.kt:246",
+   "verdict": "REFUTED",
+   "whatIActuallySaw": "The file contains exactly 3 `Icon(` calls (:246, :362, :385) and all three are decorative icons paired with visible text inside the SAME clickable node - which is the correct Compose idiom, not a defect. :246 is a Logout icon inside a `Surface(onClick = { showSignOutDialog = true })` (:237) whose Row also contains `Text(text = stringResource(R.string.profile_sign_out))` at :250-255; Compose merges those semantics, so TalkBack announces 'Sign out, button'. :362 is a leading icon inside a row that renders `Text(text = label)` at :367-372, and :385 is a trailing chevron in the same row. Setting contentDescription = null on these is required to avoid duplicate announcements. The sign-out control is labelled.",
+   "correctedStatement": "",
+   "correctedSeverity": "none",
+   "mergedWith": ""
+  },
+  {
+   "claim": "Neither OutlinedTextField has a label, placeholder, or contentDescription - the visible labels are separate sibling Texts, so screen-reader users focusing either field hear an unlabelled edit box.",
+   "citation": "customer-app/.../ui/deleteaccount/DeleteAccountConfirmScreen.kt:232-236 and :286-290",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": "Phrase field :232-253: `OutlinedTextField(value = phraseTyped, onValueChange = onPhraseChanged, modifier = Modifier.fillMaxWidth(), shape, colors, isError, supportingText = if (isPhraseError) {...} else null, singleLine, enabled)` - no `label`, no `placeholder`, no semantics. Its visible label is a sibling Text at :215-222. PIN field :286-305: same shape, visible label is a sibling Text at :277-284. The only text that ever merges in is `supportingText`, and both are `null` unless an error is already showing - so on first focus both announce as unlabelled edit boxes. This is the account-deletion confirmation gate, so the stakes are real.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": ""
+  },
+  {
+   "claim": "Star tap targets are roughly 30dp - a Text glyph with 6dp end padding - for the screen's primary and only rating control.",
+   "citation": "customer-app/.../ui/rating/RatingScreen.kt:331-339",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": "I measured the real modifier chain: :336-339 `Modifier.padding(end = 6.dp).clickable(onClickLabel = pluralStringResource(...)) { onChange(i) }`. Because `padding` precedes `clickable`, the padding is OUTSIDE the interactive node - the touch target excludes it. The Text is `MaterialTheme.typography.headlineSmall`, which Typography.kt:145-147 documents as deliberately unmapped, so it falls back to M3's Roboto default of 24sp/32sp line height. Measured target is therefore ~24dp wide x ~32dp tall - slightly SMALLER than the claim's ~30dp, and there is no minimumInteractiveComponentSize() anywhere in the chain to expand it. Conclusion stands and is understated. Credit where due: the control does carry an onClickLabel, so it is not unlabelled.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": "Identical implementation to technician-app/.../ui/rating/RatingScreen.kt:210-218 - one shared HsStarRating component fixes both."
+  },
+  {
+   "claim": "Star tap targets are text glyphs with 6.dp padding - far under the 48.dp minimum on the screen's primary control.",
+   "citation": "technician-app/.../ui/rating/RatingScreen.kt:210-218",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": ":210-218 is a line-for-line twin of the customer-app StarRow: `Text(text = if (i <= value) star else hollow-star, style = MaterialTheme.typography.headlineSmall, ... modifier = Modifier.padding(end = 6.dp).clickable(onClickLabel = \"rate $i stars\") { onChange(i) })`. Same measurement: ~24dp x ~32dp interactive area, padding sits outside the clickable. Note the onClickLabel here is a hardcoded English literal, unlike the customer app's pluralStringResource.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": "Duplicate of the customer-app RatingScreen.kt:331-339 star-target finding."
+  },
+  {
+   "claim": "Rating stars are literal star text glyphs rather than icons - they inherit the Roboto fallback, cannot be tinted per-half-star, render at typography sizes that vary by locale, and are unreadable to screen readers.",
+   "citation": "technician-app/.../ui/myratings/MyRatingsScreen.kt:132, 204-213",
+   "verdict": "CORRECTED",
+   "whatIActuallySaw": ":132 `Text(\"\\u2605\", style = MaterialTheme.typography.displaySmall, color = ...)` and :201-213 `repeat(5) { i -> Text(if (i < rating.overall) star else hollow-star, style = titleMedium, color = primary) }`. Glyph-not-icon: confirmed. Roboto fallback: confirmed - displaySmall and titleMedium are both on Typography.kt:145's unmapped list. Per-half-star tinting: confirmed impossible. But 'unreadable to screen readers' is wrong - a Compose Text IS in the semantics tree; TalkBack reads it, announcing the glyph name five times per row, which is noisy rather than silent. And the header star at :132 sits directly beside a numeric average rendered at :121 `\"%.1f\".format(summary.averageOverall)`, so that instance is decorative and the number IS available. The unlabelled case is the per-review row at :201-213, which has no numeric value anywhere.",
+   "correctedStatement": "Rating stars are text glyphs on unmapped (Roboto-fallback) type slots and cannot express half-stars. For screen readers they are announced, not silent - as five repeated glyph names. The genuinely inaccessible instance is the per-review star row (:201-213), which carries no numeric value and no contentDescription; the summary star at :132 is decorative beside the numeric average at :121 and only needs to be hidden from AT.",
+   "correctedSeverity": "medium",
+   "mergedWith": ""
+  },
+  {
+   "claim": "The primary conversion button 'Book Now' is 36.dp tall - 12dp under the WCAG/Material 48dp minimum target - and produces no press feedback because both default and pressed elevation are forced to 0.dp.",
+   "citation": "customer-app/.../ui/catalogue/ServiceListScreen.kt:271-284",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": ":271-284 `Button(onClick = onClick, modifier = Modifier.height(36.dp), shape = PillShape, colors = ..., elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp), contentPadding = PaddingValues(horizontal = 16.dp))`. M3 `Button` does not apply minimumInteractiveComponentSize, and an explicit `.height(36.dp)` overrides ButtonDefaults.MinHeight (40.dp), so the measured target really is 36dp. Label is 13sp (:286-289), also below the 16sp customer body floor. This is the price-to-cart conversion control on the service list.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": ""
+  },
+  {
+   "claim": "Primary and secondary buttons stacked in the same action column have different fixed heights (HsPrimaryButton is space16 = 64dp, HsSecondaryButton is space12 = 48dp), producing a visibly uneven button stack.",
+   "citation": "design-system/.../components/HsComponents.kt:44,60",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": "HsComponents.kt:44 `modifier = modifier.height(LocalHomeservicesSpacing.current.space16)` and :60 `modifier = modifier.height(LocalHomeservicesSpacing.current.space12)`. Spacing.kt:43 `public val space12: Dp = 48.dp` and :46 `public val space16: Dp = 64.dp`. A 16dp height delta between the two primitives, both hard-coded rather than parameterised. Separately worth noting for this theme: 64dp is unusually tall for a primary button, and both are comfortably above the 48dp touch floor, so this is a rhythm defect, not an a11y one.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": ""
+  },
+  {
+   "claim": "The countdown has no accessibility semantics and no live region, so a screen-reader user is never told how much time remains on a 30-second irreversible decision.",
+   "citation": "technician-app/.../ui/jobOffer/JobOfferScreen.kt:154",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": ":154-159 `CircularProgressIndicator(progress = { progress }, modifier = Modifier.size(104.dp), color = countdownColor, strokeWidth = 7.dp)` with no contentDescription and no semantics modifier; the numeral at :161-166 is a plain `Text(text = \"$remainingSeconds\", ...)`. A grep of the whole file for 'liveRegion|semantics|contentDescription' returns zero hits. Broader check: `liveRegion` appears ZERO times in any .kt file in the entire repository, so no Android screen in either app has a live region. Colour is also the only signal for the last-5-seconds state (:130-136, error colour), with no text or haptic alternate.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": ""
+  },
+  {
+   "claim": "HsScreenTitle has ZERO usages in technician-app, and heading() semantics appear 0 times in either app's own source - the entire technician app has no TalkBack heading navigation, violating the component's own contract.",
+   "citation": "technician-app/app/src/main (grep); design-system/.../components/HsScreenTitle.kt:20-21",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": "Grep for HsScreenTitle across technician-app/app/src/main: 0 matches. Grep for `heading()` across all .kt in the repo: exactly 1 file, HsScreenTitle.kt itself (:42 `modifier = modifier.semantics { heading() }`). HsScreenTitle.kt:18-19 states verbatim 'Every customer-app and technician-app screen MUST use this for its primary visible heading.' Counter-check for fairness: customer-app uses it in 27 files, so it does get heading navigation - the failure is technician-app-specific, exactly as scoped.",
+   "correctedStatement": "",
+   "correctedSeverity": "high",
+   "mergedWith": ""
+  },
+  {
+   "claim": "The stepper's incomplete steps use surfaceVariant dots on surface (~1.2:1) with onSurfaceVariant captions, so four of the five stages are visually near-invisible.",
+   "citation": "technician-app/.../ui/activeJob/ActiveJobScreen.kt:234",
+   "verdict": "CORRECTED",
+   "whatIActuallySaw": "Dot half confirmed and quantified: :228-237 `Surface(shape = extraSmall, color = if (isDone) primary else surfaceVariant, modifier = Modifier.size(16.dp))`. Computed surfaceVariant #E8F1EC on surface #FFFDF8 = 1.13:1 (claim said ~1.2:1 - close). Caption half is wrong: :239-247 uses onSurfaceVariant #5F6C66 on #FFFDF8 = 5.40:1 computed, which PASSES WCAG AA 4.5:1 - the captions are legible, not near-invisible.",
+   "correctedStatement": "Incomplete stepper dots are effectively invisible at a computed 1.13:1 (#E8F1EC on #FFFDF8) - real and severe. The step captions are fine for contrast at a computed 5.40:1; their actual problem is size: `labelSmall` maps to 11sp (Typography.kt:143), well under the 16sp customer / 14sp floor, at Devanagari metrics.",
+   "correctedSeverity": "medium",
+   "mergedWith": ""
+  },
+  {
+   "claim": "The loading affordance is three flat outline-coloured bars at roughly 1.3:1 contrast on white.",
+   "citation": "technician-app/.../ui/home/TechnicianHomeScreen.kt:1222",
+   "verdict": "CONFIRMED",
+   "whatIActuallySaw": ":1213-1227 `Surface(color = Color.White) { Column { repeat(3) { Surface(modifier = Modifier.fillMaxWidth().height(18.dp), color = MaterialTheme.colorScheme.outline) {} } } }`. Computed outline #DED8CD on Color.White = 1.42:1 (claim said ~1.3:1 - close enough to stand). Also confirms a second defect the claim only gestures at: the card colour is a literal `Color.White` (:1216), not colorScheme.surface, so this skeleton is theme-pinned.",
+   "correctedStatement": "",
+   "correctedSeverity": "medium",
+   "mergedWith": ""
+  },
+  {
+   "claim": "The mandatory 'Reject all' path is a low-contrast grey TextButton hardcoded to #5F6C66 in both themes, visually subordinated beneath a 56dp ExtraBold brand-green Agree button - a dark-pattern-adjacent hierarchy on a DPDP consent gate.",
+   "citation": "customer-app/.../ui/consent/DpdpConsentScreen.kt:439-448",
+   "verdict": "CORRECTED",
+   "whatIActuallySaw": "The hardcoding is real and sharper than stated: :76 `private val TextMuted = Color(0xFF5F6C66)`, and :447 uses that raw constant - even though the SAME FILE already computes a theme-aware `val textMuted = if (isDark) TextOnDarkMuted else TextMuted` at :197 and simply fails to use it here (and at :502). But 'low-contrast' is only half true. Computed: #5F6C66 on light background #FBF7EF = 5.14:1, which PASSES WCAG AA 4.5:1. On the dark background #071511 it is 3.40:1, which FAILS. So the contrast defect exists only in dark mode. The hierarchy point stands independently: TextButton vs a 56dp ExtraBold filled button.",
+   "correctedStatement": "The 'Reject all' consent path hardcodes #5F6C66 instead of the theme-aware `textMuted` the same file computes at :197. Computed contrast: 5.14:1 in light (passes AA, misses the owner's 7:1 target) and 3.40:1 in dark (fails AA). The dark-pattern hierarchy concern - equal-weight consent choices rendered as a 56dp filled button vs a bare TextButton - is valid regardless of contrast, as is the 14sp label size against the 16sp customer floor.",
+   "correctedSeverity": "medium",
+   "mergedWith": ""
+  },
+  {
+   "claim": "The Cancel escape hatch is a low-contrast onSurfaceVariant TextButton under a 40dp min-height, making the safe path the least prominent and hardest to hit control on a destructive screen.",
+   "citation": "customer-app/.../ui/deleteaccount/DeleteAccountConfirmScreen.kt:347-354",
+   "verdict": "CORRECTED",
+   "whatIActuallySaw": "Two of three sub-claims fail. :347-355 is `TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text(text = stringResource(R.string.delete_account_cancel_cta), color = MaterialTheme.colorScheme.onSurfaceVariant) }`. (1) Contrast: onSurfaceVariant #5F6C66 on surface #FFFDF8 computes to 5.40:1 - PASSES WCAG AA 4.5:1. It is visually quiet, not inaccessible. (2) 'Hardest to hit': it is `fillMaxWidth()` at M3's ButtonDefaults.MinHeight of 40dp, so the target is full-screen-width x 40dp - one of the LARGEST hit areas on the screen. Only the visual-hierarchy point survives.",
+   "correctedStatement": "On the delete-account confirmation screen the Cancel path is styled as a quiet full-width TextButton while the destructive path is a filled button - a visual-hierarchy inversion on a safety control. It is not a contrast failure (computed 5.40:1, passes AA) and not a small target (full-width x 40dp).",
+   "correctedSeverity": "low",
+   "mergedWith": ""
+  }
+ ]
+}

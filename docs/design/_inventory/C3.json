@@ -1,0 +1,618 @@
+{
+  "cluster": "customer/booking-funnel",
+  "surfaces": [
+    {
+      "id": "customer.booking-slot-picker",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/SlotPickerScreen.kt",
+      "loc": 312,
+      "purpose": "Funnel step 1: user picks a service date (next 7 days) and an arrival time window before entering their address.",
+      "entryPoints": "Start destination of the booking nav graph; reached from a service detail CTA with serviceId+categoryId args (customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/MainGraph.kt:182 sets startDestination = BookingRoutes.SLOT_PICKER; destination declared at MainGraph.kt:216-243).",
+      "composition": [
+        "TopAppBar with title 'Choose Date & Time' + ArrowBack navigation icon (SlotPickerScreen.kt:71-83)",
+        "Scrollable body Column, 16.dp padding, 16.dp item spacing (SlotPickerScreen.kt:110-117)",
+        "HsScreenTitle 'Choose your slot' (SlotPickerScreen.kt:118-120)",
+        "bodyMedium subtitle in onSurfaceVariant (SlotPickerScreen.kt:121-125)",
+        "DateChipsRow — a Card titled 'Date' containing a FlowRow of 7 FilterChips formatted 'EEE, d MMM' (SlotPickerScreen.kt:161-178)",
+        "State branch: LoadingBlock / ErrorBlock / LoadedBlock (SlotPickerScreen.kt:133-137)",
+        "LoadedBlock renders up to 3 SlotCards — Morning / Afternoon / Evening — each a Card with a FlowRow of FilterChips labelled with the raw API window string (SlotPickerScreen.kt:220-270, chip label at :283)",
+        "Bottom sticky Surface, shadowElevation 8.dp, containing a full-width Material3 Button 'Confirm Slot' (SlotPickerScreen.kt:140-154)"
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/SlotPickerScreen.kt:180-193", "quality": "Bare centered CircularProgressIndicator inside 32.dp padding; no skeleton of the chip grid even though HsSkeletonBlock exists in the design system. Does carry a semantics contentDescription (:188)." },
+        "empty": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/SlotPickerScreen.kt:232-239", "quality": "A single bodyLarge line 'No slots available for this date' in onSurfaceVariant. No illustration, no icon, no suggested next date, no CTA — a dead end mid-funnel." },
+        "error": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/SlotPickerScreen.kt:195-217", "quality": "Centered error label + Retry OutlinedButton, but line :211 renders the raw `message` string, which SlotPickerViewModel.kt:60 and :72 populate from `err.message ?: \"Unknown error\"` — an untranslated exception string reaches the user." },
+        "success": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/SlotPickerScreen.kt:219-249", "quality": "Sections only appear if non-empty; selection state is FilterChip default checkmark styling only." },
+        "offline": { "present": false, "evidence": null, "quality": "No offline-specific branch; SlotPickerUiState has only Loading/Loaded/Error (SlotPickerUiState.kt:6-18), so a dropped connection renders the generic raw-message error." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "N/A — no permissions used on this screen." }
+      },
+      "skeletonOrSpinner": "Bare centered CircularProgressIndicator (customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/SlotPickerScreen.kt:191).",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "16.dp", "line": 115, "context": "body Column padding" },
+          { "value": "16.dp", "line": 116, "context": "verticalArrangement.spacedBy" },
+          { "value": "8.dp", "line": 168, "context": "date FlowRow gaps" },
+          { "value": "8.dp", "line": 140, "context": "bottom bar shadowElevation" },
+          { "value": "16.dp", "line": 141, "context": "bottom bar padding" },
+          { "value": "32.dp", "line": 186, "context": "LoadingBlock padding" },
+          { "value": "16.dp", "line": 201, "context": "ErrorBlock padding" },
+          { "value": "12.dp", "line": 202, "context": "ErrorBlock item spacing" },
+          { "value": "8.dp", "line": 260, "context": "slot FlowRow gaps" },
+          { "value": "1.dp", "line": 300, "context": "SlotCard elevation (duplicates HomeservicesElevation.elev1 by hand)" },
+          { "value": "16.dp", "line": 302, "context": "SlotCard inner padding" },
+          { "value": "10.dp", "line": 302, "context": "SlotCard content spacing — off the 4dp scale" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [
+          { "slot": "titleMedium", "line": 303, "context": "SlotCard section title ('Date' / 'Morning' / 'Afternoon' / 'Evening') — falls back to Roboto, not Geist/Noto" }
+        ],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "Section titles and the sticky CTA are single-line-ish, but the date chips use a fixed pattern and the FlowRow of 7 chips will reflow to more rows under Devanagari; subtitle at :121 is a 2-line English sentence whose Hindi translation (values-hi/strings.xml:348) is longer and will push the chip grid further down on small screens. INFERRED.",
+        "currencyFormatting": "No money is rendered anywhere on this screen (verified across SlotPickerScreen.kt:99-312) — the user picks a slot with zero price context."
+      },
+      "a11y": {
+        "contentDescriptions": true,
+        "contentDescriptionsEvidence": "Back icon described at customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/SlotPickerScreen.kt:78; loading region described at :182,:188.",
+        "touchTargetRisks": [
+          { "line": 170, "size": "FilterChip default height 32.dp", "note": "Date chips are the primary interaction and sit below Material's 48dp minimum; no minimumInteractiveComponentSize override." },
+          { "line": 279, "size": "FilterChip default height 32.dp", "note": "Time-window chips — same issue, and they are the single most-tapped control in the funnel." }
+        ],
+        "contrastRisks": [
+          { "line": 124, "note": "Subtitle uses onSurfaceVariant #5F6C66 on background #FBF7EF at bodyMedium — borderline for a rural low-end-device audience." },
+          { "line": 286, "note": "Disabled slot chips use onSurface at alpha 0.38 — well under 4.5:1; unavailable slots become almost unreadable." }
+        ],
+        "semanticsHeadings": true,
+        "semanticsHeadingsEvidence": "HsScreenTitle applies Modifier.semantics { heading() } (design-system/src/main/kotlin/com/homeservices/designsystem/components/HsScreenTitle.kt:42) and is used at SlotPickerScreen.kt:118.",
+        "focusOrder": "Natural top-to-bottom Column order; no explicit focus management. Selecting a date reloads the list and drops the user's slot selection (SlotPickerViewModel.kt:69 sets selected = null) with no announcement."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No illustration in the empty state (SlotPickerScreen.kt:232-239)", "No icon or illustration in the error state (SlotPickerScreen.kt:195-217)"], "cite": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/SlotPickerScreen.kt:1-312 contains no painterResource / R.drawable / Image reference." },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "No enterTransition/exitTransition anywhere in customer-app navigation (grep for enterTransition across customer-app/app/src/main returns nothing); destination declared at MainGraph.kt:216 uses defaults." },
+      "density": "Airy-to-loose: 16.dp outer padding with 16.dp gaps between four stacked cards, but SlotCard inner spacing is 10.dp (SlotPickerScreen.kt:302), so inner and outer rhythms disagree. Cards are flat surface-coloured with 1.dp elevation (:299-300) — classic flat-gray-card stack with no hierarchy between the Date card and the time cards.",
+      "observations": [
+        { "severity": "high", "claim": "No step indicator anywhere in the funnel — the user has no idea this is step 1 of 4; the body Column goes straight from title to chips (SlotPickerScreen.kt:110-137).", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/SlotPickerScreen.kt:110", "confidence": "observed" },
+        { "severity": "high", "claim": "Time windows are rendered as raw API strings (e.g. '09:00-11:00') with no localisation, no AM/PM, and no Devanagari numerals.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/SlotPickerScreen.kt:283", "confidence": "observed" },
+        { "severity": "high", "claim": "The error state prints a raw throwable message to the user.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/SlotPickerScreen.kt:211", "confidence": "observed" },
+        { "severity": "medium", "claim": "Screen bypasses the design system: uses raw Material3 Button (:144) and raw Card (:297) rather than HsPrimaryButton / HsSectionCard used by every other funnel screen, so the primary CTA here is visually different from the CTA on Address and Summary.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/SlotPickerScreen.kt:144", "confidence": "observed" },
+        { "severity": "medium", "claim": "DATE_DISPLAY is a file-level DateTimeFormatter created without a Locale, so the date chips are formatted with the JVM default locale captured at class load and will not follow an in-app en/hi locale switch.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/SlotPickerScreen.kt:52", "confidence": "inferred" },
+        { "severity": "medium", "claim": "Selecting a slot produces no visual confirmation beyond the default FilterChip checkmark, and the sticky CTA gives no summary of what was chosen.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/SlotPickerScreen.kt:140-152", "confidence": "observed" },
+        { "severity": "low", "claim": "Section bucketing is derived by string-parsing the hour out of the window label, so a malformed window silently sorts into 'Morning'.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/SlotPickerScreen.kt:312", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "customer.booking-address-legacy",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressScreen.kt",
+      "loc": 467,
+      "purpose": "Funnel step 2 (legacy variant): user types a free-text service address and captures GPS coordinates before continuing to the booking summary.",
+      "entryPoints": "Navigated from SlotPicker only when the placesAutocompleteEnabled feature flag is OFF (customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/MainGraph.kt:235-239); destination declared at MainGraph.kt:299-313.",
+      "composition": [
+        "TopAppBar 'Your Address' + ArrowBack (AddressScreen.kt:171-181)",
+        "Root Column, innerPadding + 16.dp (AddressScreen.kt:184-190)",
+        "AddressScreenHeading — HsScreenTitle in headlineSmall, 6.dp gap, bodyMedium subtitle, 18.dp gap (AddressScreen.kt:213-226)",
+        "AddressLocationCard (HsSectionCard) — icon chip in primaryContainer + 'Service location' titleSmall + bodySmall note (AddressScreen.kt:238-263)",
+        "OutlinedTextField, minLines = 4, label 'Enter your full address' (AddressScreen.kt:265-271)",
+        "LocationCapturePanel — LocationPreview then a full-width HsSecondaryButton 'Use current location' (AddressScreen.kt:315-338)",
+        "LocationPreview — a real GoogleMap 156.dp tall once lat/lng are known and a Maps key exists (AddressScreen.kt:347-362), otherwise a 132.dp flat Surface holding either a spinner+text row or a MyLocation icon + status text (AddressScreen.kt:365-401)",
+        "Spacer(weight 1f) pushing the footer down (AddressScreen.kt:201)",
+        "AddressConfirmSection — bodySmall privacy note then full-width HsPrimaryButton 'Next' (AddressScreen.kt:283-313)"
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressScreen.kt:376-381", "quality": "Inline CircularProgressIndicator + 'Finding your service location' inside the 132.dp preview box; the CTA label also swaps to 'Finding your location' (:328-332). Reasonable, but a bare spinner rather than a map skeleton." },
+        "empty": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressScreen.kt:382-398", "quality": "Flat surfaceVariant box with a MyLocation icon and 'Location not set' — functional but visually inert; the same box is reused for success and for every error message." },
+        "error": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressScreen.kt:387", "quality": "GPS failure is surfaced only by swapping the `message` string inside the same neutral grey box (set at :115 and :130 from R.string.address_location_error). No error colour, no icon change, no retry affordance distinct from the normal CTA." },
+        "success": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressScreen.kt:347-362", "quality": "Shows a live GoogleMap with a marker once coordinates resolve — the strongest visual moment on the screen, but it silently degrades to the flat 132.dp box when BuildConfig.MAPS_API_KEY is blank (:347)." },
+        "offline": { "present": false, "evidence": null, "quality": "No offline branch. Reverse geocoding failure is swallowed by runCatching (:448-455) and only downgrades the message to 'enter the address manually'." },
+        "permissionDenied": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressScreen.kt:118-120", "quality": "Sets locationMessage to R.string.address_location_permission_denied, rendered as plain text in the grey box; there is no path to app settings and no rationale shown before the system dialog." }
+      },
+      "skeletonOrSpinner": "CircularProgressIndicator inline in the preview box (customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressScreen.kt:378). No HsSkeletonBlock use.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "16.dp", "line": 189, "context": "root padding" },
+          { "value": "6.dp", "line": 219, "context": "title→subtitle gap — off the 4dp scale" },
+          { "value": "18.dp", "line": 225, "context": "heading block bottom gap — off scale" },
+          { "value": "8.dp", "line": 248, "context": "icon chip padding" },
+          { "value": "12.dp", "line": 251, "context": "icon→text gap" },
+          { "value": "16.dp", "line": 264, "context": "card gap before text field" },
+          { "value": "14.dp", "line": 272, "context": "text field→location panel gap — off scale" },
+          { "value": "12.dp", "line": 296, "context": "privacy note→CTA gap" },
+          { "value": "56.dp", "line": 311, "context": "CTA height — off scale and it fights HsPrimaryButton's own space16 (64.dp) height (design-system/.../HsComponents.kt:44)" },
+          { "value": "10.dp", "line": 325, "context": "preview→secondary button gap — off scale" },
+          { "value": "156.dp", "line": 354, "context": "GoogleMap height — off scale" },
+          { "value": "132.dp", "line": 366, "context": "placeholder box height — off scale, and it differs from the 156.dp map so the layout jumps when GPS resolves" },
+          { "value": "12.dp", "line": 379, "context": "spinner→text gap" },
+          { "value": "8.dp", "line": 385, "context": "icon→text gap in placeholder" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [
+          { "slot": "headlineSmall", "line": 217, "context": "primary screen heading — UNMAPPED, renders in Roboto instead of Geist/Noto" },
+          { "slot": "titleSmall", "line": 254, "context": "'Service location' card label — UNMAPPED → Roboto" },
+          { "slot": "titleSmall", "line": 388, "context": "location status text — UNMAPPED → Roboto" }
+        ],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "The 132.dp fixed-height placeholder box (AddressScreen.kt:366) contains a centred two-line title plus a help line; the Hindi strings (address_location_captured_manual, address_location_assign_help) are materially longer and will clip or overflow inside a fixed-height Box with 16.dp padding. INFERRED.",
+        "currencyFormatting": "No money is rendered on this screen (verified across AddressScreen.kt:156-402)."
+      },
+      "a11y": {
+        "contentDescriptions": true,
+        "contentDescriptionsEvidence": "Back icon described at customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressScreen.kt:177; decorative icons correctly null at :246 and :384.",
+        "touchTargetRisks": [],
+        "contrastRisks": [
+          { "line": 223, "note": "Subtitle onSurfaceVariant #5F6C66 at bodyMedium on background #FBF7EF." },
+          { "line": 294, "note": "Privacy note is bodySmall in onSurfaceVariant — the smallest, lowest-contrast text on the screen sits directly above the primary CTA." },
+          { "line": 395, "note": "Helper line inside the placeholder is bodySmall onSurfaceVariant over surfaceVariant #E8F1EC — variant-on-variant, the weakest pairing in the palette." }
+        ],
+        "semanticsHeadings": true,
+        "semanticsHeadingsEvidence": "HsScreenTitle used at customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressScreen.kt:215.",
+        "focusOrder": "Natural order. The 'Next' CTA is disabled until text + coordinates both exist (:306) but nothing tells the user why it is disabled — no inline validation message."
+      },
+      "imagery": { "usesImages": false, "sources": ["Google Maps tile render when MAPS_API_KEY is present (customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressScreen.kt:353)"], "placeholderOrMissing": ["132.dp flat surfaceVariant box stands in for the map when no key/coords (AddressScreen.kt:365-374)"], "cite": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressScreen.kt:1-467 contains no painterResource / R.drawable reference." },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None; the placeholder→map swap at AddressScreen.kt:347 is an abrupt recomposition with a 132.dp→156.dp height jump and no crossfade." },
+      "density": "Airy but irregular: gaps run 6 / 18 / 16 / 14 / 10 / 12 dp (lines 219, 225, 264, 272, 325, 296) — six different values in one column, none of which except 16 and 12 exist on the token scale. The whole middle of the screen is one flat card and one flat grey box.",
+      "observations": [
+        { "severity": "high", "claim": "Two different address-entry screens exist behind a feature flag with different visual languages (this one is a form + flat preview box; the other is a full-bleed map), so the funnel's step 2 is visually inconsistent depending on flag state.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/MainGraph.kt:235", "confidence": "observed" },
+        { "severity": "high", "claim": "No step indicator and no price/slot recap — the user has already picked a slot but sees no reminder of it here.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressScreen.kt:184-209", "confidence": "observed" },
+        { "severity": "medium", "claim": "The disabled 'Next' button silently blocks progress: enabled requires addressText non-blank AND lat AND lng, but no message explains that GPS capture is mandatory.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressScreen.kt:306", "confidence": "observed" },
+        { "severity": "medium", "claim": "Six distinct status messages (captured / captured-manual / permission-denied / GPS error / not set / finding) all render in the same neutral grey box with the same typography — no semantic colour, so success and failure are visually identical.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressScreen.kt:386-391", "confidence": "observed" },
+        { "severity": "medium", "claim": "Call-site .height(56.dp) on HsPrimaryButton conflicts with the component's internal .height(space16 = 64.dp), so the design-system button height token is overridden here and on Summary/Confirmed/PriceApproval.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressScreen.kt:311", "confidence": "inferred" },
+        { "severity": "low", "claim": "Reverse-geocode runs on Dispatchers.IO inside a rememberCoroutineScope tied to composition, so a rotation mid-lookup drops the result.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressScreen.kt:92-104", "confidence": "inferred" }
+      ]
+    },
+    {
+      "id": "customer.booking-address-picker",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressPickerScreen.kt",
+      "loc": 100,
+      "purpose": "Funnel step 2 (Places variant): user searches or drags a map pin to set the service address, and is refused into a waitlist if the pin is outside the Ayodhya service area.",
+      "entryPoints": "Navigated from SlotPicker when placesAutocompleteEnabled is ON (customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/MainGraph.kt:235-236); destination declared at MainGraph.kt:246-268. Stateless body lives in AddressPickerScreenContent.kt (414 loc).",
+      "composition": [
+        "TopAppBar with HsScreenTitle 'Where should we come?' + ArrowBack (AddressPickerScreen.kt:59-72)",
+        "Full-bleed GoogleMap filling the Box, centred on AYODHYA_CENTER 26.7958,82.1947 at zoom 13 when nothing is selected (AddressPickerScreenContent.kt:60-61, :96-104, :306-313)",
+        "Top overlay Column — SearchPanel: a Surface at 4.dp shadow holding an OutlinedTextField with Search leading icon and conditional Close trailing icon, plus a LinearProgressIndicator while searching (AddressPickerScreenContent.kt:146-194)",
+        "AnimatedVisibility predictions panel — Surface at 8.dp shadow, LazyColumn capped at 240.dp, each PredictionRow = LocationOn icon + primary/secondary text + ChevronRight, divided by HorizontalDivider inset 48.dp (AddressPickerScreenContent.kt:125-133, :196-265)",
+        "Bottom CTA bar — Surface at 8.dp shadow anchored BottomCenter, branching by state (AddressPickerScreenContent.kt:137-142, :316-358)",
+        "InServiceCtaBar — bodySmall formatted address (max 2 lines) above a full-width 56.dp HsPrimaryButton 'Confirm address' (AddressPickerScreenContent.kt:360-385)",
+        "RefusalBanner — errorContainer Surface with titleSmall 'We don't serve this area yet', bodySmall subtitle, and an HsSecondaryButton 'Notify me when available' (AddressPickerScreenContent.kt:387-414)"
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressPickerScreenContent.kt:186-191", "quality": "LinearProgressIndicator under the search field for query search, plus a 24.dp CircularProgressIndicator centred in a 72.dp bottom bar (:343-353). Two different loading idioms for the same state on one screen." },
+        "empty": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressPickerScreenContent.kt:205-211", "quality": "Zero-prediction case shows one bodySmall line telling the user to drag the pin. No icon, no visual weight — easy to miss under the search bar." },
+        "error": { "present": false, "evidence": null, "quality": "MAJOR: AddressPickerUiState.Error is produced by the ViewModel on both search failure (AddressPickerViewModel.kt:185) and place-resolve failure (:107), but AddressPickerScreenContent never renders it — the `when` in BottomCtaBar falls through to `else -> InServiceCtaBar(formattedAddress = null, ...)` (AddressPickerScreenContent.kt:354), i.e. the user sees a silently disabled Confirm button and no message at all." },
+        "success": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressPickerScreenContent.kt:333-342", "quality": "Selected address echoed as bodySmall grey text above the CTA — the smallest type on the screen carries the most important confirmation." },
+        "offline": { "present": false, "evidence": null, "quality": "No offline branch; a Places failure degrades to the invisible Error state described above." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "This screen never requests location permission — there is no 'use my location' affordance at all; the user must search or drag from the Ayodhya default centre (AddressPickerScreenContent.kt:89-94)." }
+      },
+      "skeletonOrSpinner": "LinearProgressIndicator (AddressPickerScreenContent.kt:187) for search; bare 24.dp CircularProgressIndicator (AddressPickerScreenContent.kt:351) in the bottom bar. No skeleton rows for the predictions list.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "240.dp", "line": 62, "context": "PREDICTIONS_MAX_HEIGHT constant — off scale" },
+          { "value": "4.dp", "line": 154, "context": "search panel shadowElevation (matches elev? — no token used)" },
+          { "value": "16.dp / 8.dp", "line": 184, "context": "text field padding" },
+          { "value": "8.dp", "line": 204, "context": "predictions panel shadowElevation" },
+          { "value": "48.dp", "line": 216, "context": "divider start inset" },
+          { "value": "16.dp / 12.dp", "line": 233, "context": "prediction row padding" },
+          { "value": "20.dp", "line": 240, "context": "prediction leading icon size — off scale" },
+          { "value": "12.dp", "line": 242, "context": "icon→text gap" },
+          { "value": "16.dp", "line": 263, "context": "chevron icon size" },
+          { "value": "8.dp", "line": 325, "context": "bottom bar shadowElevation" },
+          { "value": "72.dp", "line": 348, "context": "searching-state bar height — off scale" },
+          { "value": "24.dp", "line": 351, "context": "spinner size" },
+          { "value": "16.dp / 12.dp", "line": 365, "context": "CTA bar padding" },
+          { "value": "8.dp", "line": 372, "context": "address→button gap" },
+          { "value": "56.dp", "line": 382, "context": "CTA height — off scale, overrides HsPrimaryButton's space16" },
+          { "value": "16.dp", "line": 393, "context": "refusal banner padding" },
+          { "value": "4.dp", "line": 400, "context": "refusal title→subtitle gap" },
+          { "value": "12.dp", "line": 406, "context": "subtitle→button gap" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [
+          { "slot": "titleSmall", "line": 396, "context": "'We don't serve this area yet' — the single most important refusal message renders in Roboto, not the brand face" }
+        ],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "\"Lat $lat, Lng $lng\"", "line": 208, "context": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressPickerViewModel.kt:208 — reverse-geocode fallback; this raw debug-looking string is rendered to the user as the confirmed address at AddressPickerScreenContent.kt:368" },
+          { "text": "\"Failed to resolve place\"", "line": 108, "context": "AddressPickerViewModel.kt:108 English fallback in Error state (currently unrendered)" },
+          { "text": "\"Search failed\"", "line": 186, "context": "AddressPickerViewModel.kt:186 English fallback in Error state (currently unrendered)" }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "RefusalBanner stacks title + subtitle + full-width button inside the bottom overlay (AddressPickerScreenContent.kt:393-411); the Hindi refusal subtitle (values-hi/strings.xml:467) wraps to 3 lines and pushes the banner over roughly a third of the map. The search placeholder 'Search for your address or landmark' in Hindi is longer than the single-line field width. INFERRED.",
+        "currencyFormatting": "No money rendered (verified across AddressPickerScreenContent.kt:70-414)."
+      },
+      "a11y": {
+        "contentDescriptions": false,
+        "contentDescriptionsEvidence": "Back icon is described (AddressPickerScreen.kt:67), but the Search icon (:164), Clear-query IconButton icon (:174), prediction LocationOn (:238) and ChevronRight (:260) all pass contentDescription = null — the clear-query button in particular is an interactive control with no label for TalkBack.",
+        "touchTargetRisks": [
+          { "line": 233, "size": "12.dp vertical padding around bodyMedium+bodySmall", "note": "PredictionRow height depends on text; a single-line prediction lands near ~44dp, under the 48dp minimum." }
+        ],
+        "contrastRisks": [
+          { "line": 370, "note": "The confirmed address — the primary reassurance before commit — is bodySmall in onSurfaceVariant #5F6C66." },
+          { "line": 209, "note": "The 'search unavailable, drag the pin' instruction is bodySmall onSurfaceVariant." }
+        ],
+        "semanticsHeadings": true,
+        "semanticsHeadingsEvidence": "HsScreenTitle used inside the TopAppBar title slot at customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressPickerScreen.kt:62.",
+        "focusOrder": "Search field → predictions overlay → bottom bar. The predictions Surface overlays the map without a scrim, so touches near the boundary are ambiguous (AddressPickerScreenContent.kt:107-134)."
+      },
+      "imagery": { "usesImages": false, "sources": ["Google Maps tiles (AddressPickerScreenContent.kt:306)"], "placeholderOrMissing": ["No fallback UI at all if the Maps key is absent — unlike AddressScreen.kt:347 this screen renders GoogleMap unconditionally (AddressPickerScreenContent.kt:306)"], "cite": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressPickerScreenContent.kt:1-414 contains no painterResource / R.drawable reference." },
+      "motion": { "animationsUsed": [{ "what": "AnimatedVisibility expandVertically+fadeIn / shrinkVertically+fadeOut on the predictions panel", "line": 125 }], "usesMotionTokens": false, "transitionsOnNav": "Default nav transitions (no enterTransition in MainGraph.kt). This is the ONLY animation in the entire seven-screen booking funnel, and it uses Compose defaults rather than HomeservicesMotion durations/easings." },
+      "density": "The best-composed screen in the cluster — full-bleed map with floating panels reads modern. Weakened by: search field padded 16/8 inside a Surface that itself has no corner radius (AddressPickerScreenContent.kt:153-156), so the panel is a square-edged slab against a rounded-idiom design system.",
+      "observations": [
+        { "severity": "high", "claim": "AddressPickerUiState.Error is emitted by the ViewModel but has no UI branch; the state machine silently falls into the default CTA branch, leaving the user with a disabled button and zero explanation.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressPickerScreenContent.kt:354", "confidence": "observed" },
+        { "severity": "high", "claim": "When reverse geocoding fails after a pin drag, the confirmed address shown to the user is the literal string 'Lat 26.79, Lng 82.19' — raw coordinates presented as an address, untranslated.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressPickerViewModel.kt:208", "confidence": "observed" },
+        { "severity": "medium", "claim": "No 'use my current location' control exists on the Places variant even though the legacy AddressScreen has one — a rural user with a low-literacy profile must type a query or drag a pin.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressPickerScreenContent.kt:146-194", "confidence": "observed" },
+        { "severity": "medium", "claim": "The 'Notify me' refusal CTA reuses onConfirm, so a refused user and a confirming user hit the same ViewModel entry point; the button label promises a subscription the screen does not visibly perform.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressPickerScreen.kt:93", "confidence": "observed" },
+        { "severity": "medium", "claim": "Marker is only rendered once coordinates exist, so on first open the user sees a bare map of Ayodhya with no pin and no instruction of what to do.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressPickerScreenContent.kt:310-312", "confidence": "observed" },
+        { "severity": "low", "claim": "Two shadow elevations (4.dp search, 8.dp predictions and bottom bar) are hand-typed rather than taken from HomeservicesElevation.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressPickerScreenContent.kt:154", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "customer.booking-summary",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingSummaryScreen.kt",
+      "loc": 473,
+      "purpose": "Funnel step 3: the final review-and-commit screen where the user confirms slot + address, optionally applies wallet credit and a women-safe preference, and creates the booking (cash-on-service in the current pilot).",
+      "entryPoints": "Navigated from AddressPicker (MainGraph.kt:260) or legacy AddressScreen (MainGraph.kt:309); destination declared at MainGraph.kt:317-331, and re-entered for a pending payment at MainGraph.kt:335-361.",
+      "composition": [
+        "TopAppBar 'Booking Summary' + ArrowBack, SnackbarHost (BookingSummaryScreen.kt:142-157)",
+        "State switch on BookingUiState: Ready / progress / PaymentFailed / NetworkError / Error (BookingSummaryScreen.kt:165-191)",
+        "ReadySummary root Column, 16.dp padding, scrollable body + pinned CTA (BookingSummaryScreen.kt:208-214)",
+        "HsScreenTitle 'Review and book' in headlineSmall, 6.dp gap, bodyMedium subtitle, 18.dp gap (BookingSummaryScreen.kt:215-225)",
+        "HsSectionCard with two HsInfoRows — Slot (raw ISO date + raw window string) and Address (BookingSummaryScreen.kt:226-235)",
+        "Conditional CreditToggleRow — HsSectionCard with titleSmall 'Apply ₹N credit' + Switch, and a strikethrough original price when on (BookingSummaryScreen.kt:236-243, :294-331)",
+        "Conditional WomenSafeFilterToggle — Shield icon + label + Switch (BookingSummaryScreen.kt:244-250, WomenSafeFilterToggle.kt:27-49)",
+        "HsSectionCard 'Cash payment selected' — Lock icon chip in primaryContainer + titleSmall title + bodySmall body (BookingSummaryScreen.kt:252-278)",
+        "Pinned full-width HsPrimaryButton 'Book with Cash' at 56.dp (BookingSummaryScreen.kt:282-290)"
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingSummaryScreen.kt:341-354", "quality": "BookingProgress uses HsSkeletonBlock twice plus three static 92.dp surfaceVariant blocks — the best loading treatment in the cluster, but the blocks are static (no shimmer) and the skeleton shape does not match the Ready layout it replaces." },
+        "empty": { "present": false, "evidence": null, "quality": "N/A conceptually, but BookingUiState.Idle falls into `else -> Unit` (BookingSummaryScreen.kt:190), producing a completely blank screen under the app bar if the state machine is ever Idle here." },
+        "error": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingSummaryScreen.kt:424-443", "quality": "Centered title + `message`; line :438 renders the raw throwable message from BookingViewModel.kt:234 (`error.message ?: \"Booking failed\"`). No retry, no back-out — a terminal dead end at the moment of purchase." },
+        "success": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingSummaryScreen.kt:101-104", "quality": "No success UI on this screen; BookingConfirmed immediately navigates away via onConfirmed." },
+        "offline": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingSummaryScreen.kt:445-473", "quality": "Dedicated NetworkErrorCard with a Retry HsPrimaryButton driven by IOException detection in BookingViewModel.kt:226. Good pattern — but line :462 again prints the raw exception message under a localized title, and there is no icon or illustration." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "N/A — no permissions on this screen." }
+      },
+      "skeletonOrSpinner": "HsSkeletonBlock + static grey surfaces (customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingSummaryScreen.kt:344-351). No spinner.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "16.dp", "line": 208, "context": "root padding" },
+          { "value": "6.dp", "line": 219, "context": "title→subtitle gap — off scale" },
+          { "value": "18.dp", "line": 225, "context": "heading block gap — off scale" },
+          { "value": "12.dp", "line": 237, "context": "card gaps (repeated at :245, :251, :279)" },
+          { "value": "8.dp", "line": 262, "context": "Lock icon chip padding" },
+          { "value": "12.dp", "line": 265, "context": "icon→text gap" },
+          { "value": "14.dp", "line": 281, "context": "body→CTA gap — off scale" },
+          { "value": "56.dp", "line": 289, "context": "CTA height — off scale, overrides HsPrimaryButton space16" },
+          { "value": "8.dp", "line": 303, "context": "credit card inner spacing" },
+          { "value": "14.dp", "line": 343, "context": "skeleton spacing — off scale" },
+          { "value": "28.dp", "line": 344, "context": "skeleton title height — off scale" },
+          { "value": "92.dp", "line": 348, "context": "skeleton card height — off scale" },
+          { "value": "24.dp", "line": 375, "context": "PaymentFailed padding" },
+          { "value": "20.dp", "line": 385, "context": "error card inner padding — off scale" },
+          { "value": "52.dp", "line": 410, "context": "retry button height — off scale (and differs from the 56.dp primary CTA)" },
+          { "value": "52.dp", "line": 417, "context": "cancel button height — off scale" },
+          { "value": "24.dp", "line": 427, "context": "BookingError padding (repeated :451)" },
+          { "value": "20.dp", "line": 466, "context": "network error gap before retry — off scale" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [
+          { "slot": "headlineSmall", "line": 217, "context": "screen heading → Roboto" },
+          { "slot": "titleSmall", "line": 268, "context": "'Cash payment selected' card title → Roboto" },
+          { "slot": "titleSmall", "line": 311, "context": "'Apply ₹N credit' label → Roboto" },
+          { "slot": "titleMedium", "line": 397, "context": "'Payment not completed' title → Roboto" },
+          { "slot": "titleMedium", "line": 434, "context": "'Booking could not continue' title → Roboto" },
+          { "slot": "titleMedium", "line": 458, "context": "'No internet connection' title → Roboto" },
+          { "slot": "labelMedium", "line": 155, "context": "HsInfoRow label style (design-system/.../HsComponents.kt:155) used by both summary rows → Roboto" }
+        ],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "RAZORPAY_KEY_ID env var is blank — payment will fail. Set it in local.properties or env.", "line": 82, "context": "debug-only snackbar, guarded by BuildConfig.DEBUG at :78" }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "CreditToggleRow puts a titleSmall label and a Switch in one Row with weight(1f) on the text (BookingSummaryScreen.kt:309-318) — the Hindi 'Apply ₹N credit' string wraps to two lines and vertically misaligns against the Switch. The cash-note card's two-line body (:271-275) grows ~25% in Hindi inside a Row whose leading icon is fixed. INFERRED.",
+        "currencyFormatting": "CRITICAL GAP: the screen renders NO price, NO line items, and NO total anywhere — BookingUiState.Ready carries only slot/addressText/lat/lng (BookingUiState.kt:9-14) and ReadySummary shows only slot + address + toggles (BookingSummaryScreen.kt:226-278). The only money on screen is the wallet-credit label, computed by integer division `walletBalanceInPaise / 100` (:301) so 12350 paise renders as '₹123', silently discarding ₹0.50; the ₹ glyph itself comes from the string resource (values/strings.xml:465-466) and there is no lakh/crore grouping and no Devanagari numeral handling."
+      },
+      "a11y": {
+        "contentDescriptions": true,
+        "contentDescriptionsEvidence": "Back icon described at customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingSummaryScreen.kt:150; the Lock icon is correctly decorative null at :260 and the Warning icon at :391.",
+        "touchTargetRisks": [
+          { "line": 315, "size": "Material3 Switch, ~32dp visual", "note": "The Switch is the only tap target for applying credit; the surrounding Row is not clickable, so the effective hit area is the switch thumb/track only." },
+          { "line": 45, "size": "Switch in WomenSafeFilterToggle.kt:45", "note": "Same pattern — row not clickable, only the switch." }
+        ],
+        "contrastRisks": [
+          { "line": 223, "note": "Subtitle onSurfaceVariant at bodyMedium." },
+          { "line": 274, "note": "Cash-note body is bodySmall onSurfaceVariant — the sentence that tells the user they must have cash ready is the lowest-contrast text on the screen." },
+          { "line": 325, "note": "Struck-through original price is bodySmall onSurfaceVariant with TextDecoration.LineThrough — compounding low contrast with a strike." }
+        ],
+        "semanticsHeadings": true,
+        "semanticsHeadingsEvidence": "HsScreenTitle at customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingSummaryScreen.kt:215.",
+        "focusOrder": "Natural. The primary CTA is never disabled (:282-290), so a duplicate tap is guarded only in the ViewModel (BookingViewModel.kt:154-158) — no visual pressed/loading state on the button itself."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No service thumbnail, no technician imagery, no trust badges — the commit screen is entirely text and flat cards (BookingSummaryScreen.kt:226-278)", "customer-app has drawable-nodpi/service_hero_*.png assets but none are referenced here"], "cite": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingSummaryScreen.kt:1-473 contains no painterResource / R.drawable reference." },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None. The Ready → BookingProgress skeleton swap at :177-180 is an instant hard cut with no crossfade." },
+      "density": "Uniform 16.dp outer padding with 12.dp between three or four identically-styled HsSectionCards (surface colour, elev1) — textbook flat-gray-card syndrome: every block on the most important screen in the funnel has exactly the same visual weight, so nothing signals 'this is the commit'.",
+      "observations": [
+        { "severity": "high", "claim": "The booking-summary screen shows no price, no total and no line items at any point before the user taps 'Book with Cash' — BookingUiState.Ready has no amount field and ReadySummary renders only slot, address and toggles.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingSummaryScreen.kt:226-235", "confidence": "observed" },
+        { "severity": "high", "claim": "The slot is displayed as a raw concatenation of the ISO date and the raw API window, e.g. '2026-07-25 09:00-11:00' — machine formatting on the final confirmation screen for a rural Hindi-first audience.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingSummaryScreen.kt:229", "confidence": "observed" },
+        { "severity": "high", "claim": "Both terminal error surfaces print a raw exception message under a localized title, with no retry path on BookingError.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingSummaryScreen.kt:438", "confidence": "observed" },
+        { "severity": "medium", "claim": "Wallet credit is rendered by integer division of paise, truncating any sub-rupee remainder in the customer's favour-or-detriment without disclosure.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingSummaryScreen.kt:301", "confidence": "observed" },
+        { "severity": "medium", "claim": "Three button heights coexist on one screen — 56.dp primary CTA, 52.dp payment-failed retry, 52.dp cancel — none of which is the design system's space16 token.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingSummaryScreen.kt:289", "confidence": "observed" },
+        { "severity": "medium", "claim": "No step indicator and no edit affordance: the user cannot tap the Slot or Address row to go back and change it; the only way back is the app-bar arrow.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingSummaryScreen.kt:227-234", "confidence": "observed" },
+        { "severity": "low", "claim": "BookingUiState.Idle renders a completely blank screen because of the `else -> Unit` catch-all.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingSummaryScreen.kt:190", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "customer.booking-price-approval",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/PriceApprovalScreen.kt",
+      "loc": 215,
+      "purpose": "Mid-job consent screen: the technician has found extra work, and the customer approves or declines each add-on before the bill changes.",
+      "entryPoints": "Deep-linked destination inside the booking graph keyed by bookingId (customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/MainGraph.kt:387-399); on completion it simply popBackStack (MainGraph.kt:396).",
+      "composition": [
+        "TopAppBar 'Price Approval' with NO navigation icon (PriceApprovalScreen.kt:58)",
+        "State switch: Loading/BiometricPending → skeleton, Error → centred text, PendingApproval → list (PriceApprovalScreen.kt:73-127)",
+        "HsScreenTitle 'Approve extra work' in headlineSmall, 6.dp gap, bodyMedium subtitle, 16.dp gap (PriceApprovalScreen.kt:90-100)",
+        "LazyColumn of AddOnDecisionCards with 10.dp spacing (PriceApprovalScreen.kt:101-113)",
+        "AddOnDecisionCard — HsSectionCard: Row of [titleMedium name + bodySmall trigger description] and HsPriceText on the right, then a Row of two equal-weight Approve / Decline buttons (PriceApprovalScreen.kt:130-172)",
+        "TotalDecisionSummary — primaryContainer Surface, 14.dp padding, labelLarge label + titleMedium formatted total (PriceApprovalScreen.kt:174-200)",
+        "Full-width HsPrimaryButton 'Confirm Decisions' at 56.dp, enabled only when every add-on has a decision (PriceApprovalScreen.kt:117-124)"
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/PriceApprovalScreen.kt:202-215", "quality": "PriceApprovalSkeleton — two HsSkeletonBlocks plus two static 132.dp surfaceVariant cards. Static, no shimmer, and the same skeleton is reused for BiometricPending so the user gets no signal that a fingerprint prompt is coming (:74-76)." },
+        "empty": { "present": false, "evidence": null, "quality": "MAJOR: PendingApproval with an empty addOns list renders an empty LazyColumn, a ₹0.00 total, and an ENABLED Confirm button because `decisions.size == uiState.addOns.size` is 0 == 0 (PriceApprovalScreen.kt:122). INFERRED from the enable predicate." },
+        "error": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/PriceApprovalScreen.kt:77-85", "quality": "A single centred line of error-coloured text formatted as 'Error: %s' (values/strings.xml:127) wrapping the raw exception message — no icon, no retry, no back button, so the user is trapped." },
+        "success": { "present": false, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/PriceApprovalScreen.kt:54-57", "quality": "Approved state renders nothing at all and immediately calls onApprovalComplete() — no confirmation, no summary of what was approved, no receipt." },
+        "offline": { "present": false, "evidence": null, "quality": "No offline branch; failures land in the generic Error state." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "Biometric refusal has no distinct UI — BiometricPending shares the loading skeleton (PriceApprovalScreen.kt:74-76)." }
+      },
+      "skeletonOrSpinner": "PriceApprovalSkeleton — HsSkeletonBlock + static grey surfaces (customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/PriceApprovalScreen.kt:205-212).",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "24.dp", "line": 82, "context": "error text padding" },
+          { "value": "16.dp", "line": 89, "context": "root padding" },
+          { "value": "6.dp", "line": 94, "context": "title→subtitle gap — off scale" },
+          { "value": "16.dp", "line": 100, "context": "subtitle→list gap" },
+          { "value": "10.dp", "line": 103, "context": "list item spacing — off scale" },
+          { "value": "14.dp", "line": 114, "context": "list→total gap — off scale" },
+          { "value": "12.dp", "line": 116, "context": "total→CTA gap" },
+          { "value": "56.dp", "line": 123, "context": "CTA height — off scale, overrides HsPrimaryButton space16" },
+          { "value": "8.dp", "line": 149, "context": "Approve/Decline gap" },
+          { "value": "14.dp", "line": 185, "context": "total row padding — off scale" },
+          { "value": "14.dp", "line": 204, "context": "skeleton spacing — off scale" },
+          { "value": "30.dp", "line": 205, "context": "skeleton title height — off scale" },
+          { "value": "132.dp", "line": 209, "context": "skeleton card height — off scale" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [
+          { "slot": "headlineSmall", "line": 92, "context": "screen heading → Roboto" },
+          { "slot": "titleMedium", "line": 140, "context": "add-on name → Roboto" },
+          { "slot": "titleMedium", "line": 194, "context": "approved total → Roboto — the most consequential number on the screen renders in a fallback typeface" }
+        ],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "\"Rs ${pricePaise / 100}\"", "line": 172, "context": "design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt:172 — HsPriceText, used at PriceApprovalScreen.kt:147; not a stringResource and not localizable" }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "AddOnDecisionCard puts the name and description in a weight(1f) Column with the price beside it (PriceApprovalScreen.kt:138-148); Hindi add-on names and the longer 'triggerDescription' will squeeze the price column. The two side-by-side buttons at :149-170 carry labels that grow ~25% in Hindi inside weight(1f) halves. INFERRED.",
+        "currencyFormatting": "BROKEN AND INCONSISTENT ON THE SAME SCREEN: per-add-on prices use HsPriceText → 'Rs 499' (ASCII 'Rs', integer paise truncation, no digit grouping — design-system/.../HsComponents.kt:172), while the total directly below uses formatInr → '₹499.00' with the ₹ glyph, Indian grouping and 2 decimals (PriceApprovalScreen.kt:193, customer-app/.../ui/util/CurrencyFormat.kt:23-26). Two currency symbols and two precisions inches apart."
+      },
+      "a11y": {
+        "contentDescriptions": false,
+        "contentDescriptionsEvidence": "The screen has no icons at all and no contentDescription calls anywhere in customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/PriceApprovalScreen.kt:1-215; there is also no back icon to describe (:58).",
+        "touchTargetRisks": [],
+        "contrastRisks": [
+          { "line": 144, "note": "The add-on trigger description — the justification for charging more money — is bodySmall in onSurfaceVariant #5F6C66." }
+        ],
+        "semanticsHeadings": true,
+        "semanticsHeadingsEvidence": "HsScreenTitle at customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/PriceApprovalScreen.kt:90.",
+        "focusOrder": "Natural, but there is no focus/announcement when a decision is recorded — the only feedback is the button label text changing from 'Approve' to 'Approved' (:151-156)."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No photo of the discovered problem, despite this being a 'trust me, you owe more money' screen (PriceApprovalScreen.kt:137-148)"], "cite": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/PriceApprovalScreen.kt:1-215 contains no painterResource / R.drawable reference." },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None; state changes and the running total update with no animation." },
+      "density": "Cramped decision cards: name+description+price+two buttons packed into one HsSectionCard with 16.dp internal padding (HsComponents.kt:119) and no separation between the info Row and the button Row (PriceApprovalScreen.kt:138 → :149 have no Spacer at all), so the buttons touch the description.",
+      "observations": [
+        { "severity": "high", "claim": "Two different currency renderings appear within ~45 lines of each other — 'Rs 499' for each add-on and '₹499.00' for the total.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/PriceApprovalScreen.kt:147", "confidence": "observed" },
+        { "severity": "high", "claim": "The screen has no back/close affordance at all: the TopAppBar declares only a title, so a user who does not want to decide right now cannot leave except via the system back gesture.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/PriceApprovalScreen.kt:58", "confidence": "observed" },
+        { "severity": "high", "claim": "Approve and Decline are given identical prominence and identical weight — a filled HsPrimaryButton and an outlined HsSecondaryButton side by side — but they also render at different heights because HsPrimaryButton is space16 (64.dp) and HsSecondaryButton is space12 (48.dp), so the two halves of the decision row are visibly mismatched.", "evidence": "design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt:44", "confidence": "observed" },
+        { "severity": "high", "claim": "Selection state is communicated only by swapping the button label text ('Approve'→'Approved'); there is no colour, fill, icon or elevation change, so a glanceable read of which add-ons were approved is impossible.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/PriceApprovalScreen.kt:151-168", "confidence": "observed" },
+        { "severity": "medium", "claim": "The error state renders a raw exception inside 'Error: %s' with no retry and no exit.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/PriceApprovalScreen.kt:79-83", "confidence": "observed" },
+        { "severity": "medium", "claim": "An empty add-on list produces an enabled Confirm button over an empty list and a zero total.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/PriceApprovalScreen.kt:122", "confidence": "inferred" },
+        { "severity": "low", "claim": "Decisions are held in a composition-local mutableStateMapOf keyed on bookingId rather than in the ViewModel, so process death loses every decision the user made.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/PriceApprovalScreen.kt:88", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "customer.booking-confirmed",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingConfirmedScreen.kt",
+      "loc": 190,
+      "purpose": "Funnel terminus: confirms the booking was created and routes the user onward to live tracking or back to the catalogue home.",
+      "entryPoints": "Navigated from BookingSummary with popUpTo(BOOKING_GRAPH){inclusive=true} so the funnel is cleared (customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/MainGraph.kt:325-327); destination declared at MainGraph.kt:365-385.",
+      "composition": [
+        "No Scaffold and no TopAppBar — a bare Column, fillMaxSize, 16.dp padding, centre-aligned (BookingConfirmedScreen.kt:92-95)",
+        "28.dp top spacer, then ConfirmationSuccessIcon — a primaryContainer Surface with shapes.large corners wrapping a static Icons.Filled.CheckCircle at 52.dp with 18.dp padding (BookingConfirmedScreen.kt:96-97, :157-170)",
+        "HsScreenTitle 'Booking Confirmed!' in headlineSmall (BookingConfirmedScreen.kt:99-102)",
+        "bodyMedium centred body 'We are assigning a technician for your slot.' (BookingConfirmedScreen.kt:104-109)",
+        "labelMedium 'Booking ID: <raw id>' in onSurfaceVariant (BookingConfirmedScreen.kt:111-115)",
+        "Conditional tertiaryContainer credit-applied pill (BookingConfirmedScreen.kt:116-134)",
+        "ConfirmationTimeline — HsSectionCard with three HsTimelineSteps: Booking confirmed / Technician assignment / Live tracking next (BookingConfirmedScreen.kt:172-190)",
+        "Conditional compact TrustDossierCard when technicianId is non-null (BookingConfirmedScreen.kt:139-141)",
+        "Spacer(weight 1f), then full-width HsPrimaryButton 'Track your service' at 56.dp and HsSecondaryButton 'Back to Home' at 52.dp (BookingConfirmedScreen.kt:142-153)"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "None needed for the confirmation itself, but the optional TrustDossierCard loads asynchronously (BookingConfirmedScreen.kt:61-63) and its loading appearance is delegated entirely to that component." },
+        "empty": { "present": false, "evidence": null, "quality": "N/A." },
+        "error": { "present": false, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingConfirmedScreen.kt:139", "quality": "A TrustDossier error is handled by simply not rendering the card, leaving a silent gap in the layout." },
+        "success": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingConfirmedScreen.kt:157-170", "quality": "A static tinted CheckCircle icon. No animation, no scale/pop, no confetti, no haptic, no sound — it is a still image of a checkmark." },
+        "offline": { "present": false, "evidence": null, "quality": "No offline handling; the screen is purely presentational off nav args." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "N/A." }
+      },
+      "skeletonOrSpinner": "None on this screen (no loading affordance appears anywhere in customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingConfirmedScreen.kt:83-155).",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "16.dp", "line": 93, "context": "root padding" },
+          { "value": "28.dp", "line": 96, "context": "top spacer — off scale" },
+          { "value": "18.dp", "line": 98, "context": "icon→title gap — off scale (repeated at :110 and :135)" },
+          { "value": "8.dp", "line": 103, "context": "title→body gap" },
+          { "value": "12.dp", "line": 117, "context": "credit pill gap" },
+          { "value": "12.dp / 6.dp", "line": 131, "context": "credit pill padding — 6.dp is off scale" },
+          { "value": "14.dp", "line": 137, "context": "timeline→trust gap — off scale" },
+          { "value": "56.dp", "line": 146, "context": "primary CTA height — off scale" },
+          { "value": "8.dp", "line": 148, "context": "CTA→secondary gap" },
+          { "value": "52.dp", "line": 152, "context": "secondary CTA height — off scale, and it disagrees with the 56.dp primary above it" },
+          { "value": "18.dp + 52.dp", "line": 167, "context": "success icon padding and size — both off scale" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [
+          { "slot": "headlineSmall", "line": 101, "context": "'Booking Confirmed!' — the hero line of the whole funnel renders in Roboto, not Geist/Noto" },
+          { "slot": "labelMedium", "line": 113, "context": "Booking ID line → Roboto" },
+          { "slot": "labelMedium", "line": 128, "context": "credit-applied pill → Roboto" },
+          { "slot": "titleSmall", "line": 198, "context": "HsTimelineStep title style (design-system/.../HsComponents.kt:198), used three times here → Roboto" }
+        ],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "Everything is centre-aligned in a fixed Column with a weight(1f) spacer before the CTAs (BookingConfirmedScreen.kt:142); adding a wrapped Hindi title plus a 3-line timeline body plus the optional TrustDossierCard will consume the spacer and can push the two stacked 56.dp+52.dp buttons off-screen since the Column is not scrollable (:92). INFERRED.",
+        "currencyFormatting": "Only the credit pill shows money: `appliedCreditAmount / PAISE_PER_RUPEE` integer division at BookingConfirmedScreen.kt:126 feeding '₹%1$s credit applied' (values/strings.xml:467). Sub-rupee amounts are truncated silently; no digit grouping; the ₹ glyph is hard-coded in the resource rather than produced by a formatter, so it diverges from formatInr elsewhere."
+      },
+      "a11y": {
+        "contentDescriptions": true,
+        "contentDescriptionsEvidence": "The success icon is correctly decorative (contentDescription = null) at customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingConfirmedScreen.kt:165; it is the only icon on the screen.",
+        "touchTargetRisks": [],
+        "contrastRisks": [
+          { "line": 107, "note": "Body copy onSurfaceVariant at bodyMedium." },
+          { "line": 114, "note": "Booking ID is labelMedium in onSurfaceVariant — the reference number a user may need for support is the smallest, faintest text on the screen." },
+          { "line": 204, "note": "HsTimelineStep body is bodySmall onSurfaceVariant (design-system/.../HsComponents.kt:204), so all three timeline explanations are low-contrast." }
+        ],
+        "semanticsHeadings": true,
+        "semanticsHeadingsEvidence": "HsScreenTitle at customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingConfirmedScreen.kt:99.",
+        "focusOrder": "Natural. No screen-reader announcement of the success event (no liveRegion), so TalkBack users get no confirmation cue beyond focus landing on the title."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No celebratory illustration, no service thumbnail, no technician avatar — the entire moment of delight is a vector CheckCircle glyph (BookingConfirmedScreen.kt:163-168)"], "cite": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingConfirmedScreen.kt:1-190 contains no painterResource / R.drawable reference." },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None — no enterTransition on the CONFIRMED destination (MainGraph.kt:365) and no entry animation inside the screen. The screen simply appears fully formed." },
+      "density": "Airy and centred, but hollow: after the timeline card there is a weight(1f) spacer (BookingConfirmedScreen.kt:142) that on a tall device leaves a large empty band between the timeline and the buttons, with nothing to fill it when technicianId is null.",
+      "observations": [
+        { "severity": "high", "claim": "There is no moment of delight: the success affordance is a static Icons.Filled.CheckCircle inside a tinted Surface, with zero animation, zero motion tokens, no haptic and no sound — the whole file contains no animate*/AnimatedVisibility call.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingConfirmedScreen.kt:157-170", "confidence": "observed" },
+        { "severity": "high", "claim": "The confirmation recaps nothing the user bought — no service name, no date/time slot, no address, no amount payable in cash. The only booking-specific datum on the screen is the raw booking ID.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingConfirmedScreen.kt:111-115", "confidence": "observed" },
+        { "severity": "medium", "claim": "The three timeline steps all render with an identical primary-coloured square dot because HsTimelineStep hard-codes colorScheme.primary, so 'done', 'in progress' and 'not started' are visually indistinguishable.", "evidence": "design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt:193", "confidence": "observed" },
+        { "severity": "medium", "claim": "The Column is not scrollable, so on a small screen with Hindi text plus the TrustDossierCard the two stacked CTAs can be pushed out of reach.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingConfirmedScreen.kt:92", "confidence": "inferred" },
+        { "severity": "medium", "claim": "The two stacked CTAs have mismatched heights (56.dp over 52.dp) and neither matches the design-system button token.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/BookingConfirmedScreen.kt:146", "confidence": "observed" },
+        { "severity": "low", "claim": "TrustDossierCard is wired but the nav destination never passes technicianId (MainGraph.kt:378-383 supplies only bookingId and appliedCredit), so in production the card never renders on this screen.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/MainGraph.kt:378", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "customer.live-tracking",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/LiveTrackingScreen.kt",
+      "loc": 384,
+      "purpose": "Post-booking tracking: shows the assigned technician, live map position, status timeline, an SOS control while work is in progress, and a complaint entry point once closed.",
+      "entryPoints": "Reached from BookingConfirmed's 'Track your service' CTA (customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/MainGraph.kt:381); destination declared at MainGraph.kt:401-413.",
+      "composition": [
+        "TopAppBar with HsScreenTitle 'Track service', ArrowBack, and a conditional error-tinted Warning/SOS IconButton shown only while InProgress (LiveTrackingScreen.kt:88-111)",
+        "Body switches Loading → centred spinner vs Tracking → TrackingBody (LiveTrackingScreen.kt:178-192)",
+        "TrackingTechHeader — plain Text technician name in headlineSmall Bold, then a Row of AssistChips for status and ETA (LiveTrackingScreen.kt:220-238)",
+        "TrackingMapSection — a 300.dp GoogleMap with a marker when coordinates exist (LiveTrackingScreen.kt:240-266)",
+        "MapPlaceholder fallback — a 300.dp primaryContainer block with titleMedium + bodySmall centred copy (LiveTrackingScreen.kt:302-329)",
+        "TrackingServiceProgressCard — a surface-coloured Surface at 1.dp tonal elevation containing 'Service progress' and StatusTimeline (LiveTrackingScreen.kt:268-300)",
+        "StatusTimeline — four rows (En route / Reached / In progress / Done), each a 14.dp or 10.dp square dot plus a label whose typography and colour change with active state (LiveTrackingScreen.kt:331-363)",
+        "Conditional HsSecondaryButton 'File a complaint' when status is Closed (LiveTrackingScreen.kt:292-298)",
+        "Conditional full TrustDossierCard when technicianId is non-null (LiveTrackingScreen.kt:206-216)",
+        "Floating NoShowCreditBanner overlay aligned TopCenter (LiveTrackingScreen.kt:119-128)",
+        "SosOverlay — consent dialog / countdown sheet / upload-progress sheet / saved / error sheets (LiveTrackingScreen.kt:135-169)"
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/LiveTrackingScreen.kt:180-184", "quality": "Bare centred CircularProgressIndicator on a full-screen background — no skeleton of the header/map/timeline, and no contentDescription on this one (unlike SlotPicker's)." },
+        "empty": { "present": false, "evidence": null, "quality": "No empty concept; if no technician is assigned yet the header falls back to the generic 'Your technician' string (LiveTrackingScreen.kt:227)." },
+        "error": { "present": false, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/LiveTrackingUiState.kt:6-8", "quality": "MAJOR: LiveTrackingUiState has only Loading and Tracking — there is no Error variant at all, so a failed subscription leaves the user on an indefinite bare spinner with no retry." },
+        "success": { "present": true, "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/LiveTrackingScreen.kt:196-218", "quality": "Full tracking body; but there is no 'last updated' timestamp even though liveCapturedAt exists in state (LiveTrackingUiState.kt:19) and is populated by the ViewModel (LiveTrackingViewModel.kt:50) — it is never rendered." },
+        "offline": { "present": false, "evidence": null, "quality": "No offline branch and no stale-data indicator; a frozen marker is indistinguishable from a stationary technician." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "N/A for the map (customer position is not requested); SOS evidence-upload failure has its own sheet (LiveTrackingScreen.kt:165-166)." }
+      },
+      "skeletonOrSpinner": "Bare centered CircularProgressIndicator (customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/LiveTrackingScreen.kt:182).",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "16.dp / 8.dp", "line": 126, "context": "NoShowCreditBanner overlay padding" },
+          { "value": "16.dp", "line": 213, "context": "TrustDossierCard horizontal padding" },
+          { "value": "16.dp", "line": 214, "context": "TrustDossierCard bottom padding" },
+          { "value": "16.dp", "line": 225, "context": "header padding" },
+          { "value": "12.dp", "line": 225, "context": "header item spacing" },
+          { "value": "8.dp", "line": 231, "context": "chip row spacing" },
+          { "value": "300.dp", "line": 255, "context": "map height — off scale" },
+          { "value": "16.dp", "line": 274, "context": "progress card outer padding" },
+          { "value": "14.dp", "line": 275, "context": "progress card spacing — off scale" },
+          { "value": "1.dp", "line": 281, "context": "tonalElevation typed by hand instead of HomeservicesElevation.elev1" },
+          { "value": "16.dp", "line": 283, "context": "progress card inner padding" },
+          { "value": "12.dp", "line": 283, "context": "progress card inner spacing" },
+          { "value": "300.dp", "line": 307, "context": "map placeholder height — off scale" },
+          { "value": "24.dp", "line": 312, "context": "placeholder padding" },
+          { "value": "6.dp", "line": 320, "context": "placeholder title→body gap — off scale" },
+          { "value": "3.dp", "line": 344, "context": "timeline row vertical padding — off scale, extremely tight" },
+          { "value": "14.dp / 10.dp", "line": 346, "context": "timeline dot sizes — both off scale" },
+          { "value": "12.dp", "line": 355, "context": "dot→label gap" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [
+          { "slot": "headlineSmall", "line": 228, "context": "technician name → Roboto" },
+          { "slot": "titleMedium", "line": 286, "context": "'Service progress' → Roboto" },
+          { "slot": "titleMedium", "line": 315, "context": "map placeholder title → Roboto" }
+        ],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Payment pending / Booking confirmed / Finding technician / Technician assigned / Technician on the way / Technician arrived / Work in progress / Price approval needed / Service completed / Booking closed / Booking cancelled / Technician unavailable / Status unavailable", "line": 371, "context": "statusLabel() at LiveTrackingScreen.kt:369-384 returns hard-coded English; it is rendered in the status AssistChip at :232, so the single most-glanced label on the tracking screen is never translated to Hindi. A TODO at :368 acknowledges this." }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "The chip Row at LiveTrackingScreen.kt:231-236 lays status + ETA chips horizontally with no FlowRow, so a longer Hindi status label plus the ETA chip will overflow the row on a narrow device. The 300.dp fixed-height MapPlaceholder (:307) holds centred title+body that grows in Hindi. INFERRED.",
+        "currencyFormatting": "No money is rendered by this screen itself; the NoShowCreditBanner receives creditAmountPaise at LiveTrackingScreen.kt:121 and formats it inside its own component."
+      },
+      "a11y": {
+        "contentDescriptions": true,
+        "contentDescriptionsEvidence": "Back icon described at customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/LiveTrackingScreen.kt:95 and the SOS icon at :104.",
+        "touchTargetRisks": [
+          { "line": 232, "size": "AssistChip default 32.dp height", "note": "AssistChips are declared with onClick = {} — they are focusable, ripple-able controls that do nothing, so TalkBack announces actionable elements that have no action." },
+          { "line": 234, "size": "AssistChip default 32.dp height", "note": "Same for the ETA chip." }
+        ],
+        "contrastRisks": [
+          { "line": 324, "note": "MapPlaceholder body is bodySmall onPrimaryContainer over primaryContainer — a fully saturated 300.dp block of brand colour." },
+          { "line": 359, "note": "Inactive timeline labels are bodySmall in onSurfaceVariant #5F6C66, and inactive dots are surfaceVariant #E8F1EC on surface — nearly invisible." }
+        ],
+        "semanticsHeadings": true,
+        "semanticsHeadingsEvidence": "HsScreenTitle used in the TopAppBar at customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/LiveTrackingScreen.kt:90; note the in-body technician name at :226 is a plain Text with no heading semantics.",
+        "focusOrder": "Natural top-to-bottom. Status changes are not announced (no liveRegion), so a screen-reader user must re-scan the timeline to notice the technician arrived."
+      },
+      "imagery": { "usesImages": false, "sources": ["Google Maps tiles (LiveTrackingScreen.kt:254)"], "placeholderOrMissing": ["techPhotoUrl is carried all the way into the UI state (LiveTrackingUiState.kt:14) and populated by the ViewModel (LiveTrackingViewModel.kt:45) but is never rendered — there is no technician avatar anywhere on the tracking screen", "MapPlaceholder is a flat 300.dp block of primaryContainer with no map illustration (LiveTrackingScreen.kt:302-329)"], "cite": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/LiveTrackingScreen.kt:1-384 contains no painterResource / R.drawable / AsyncImage reference." },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None. Status transitions in StatusTimeline swap dot size 10.dp→14.dp and typography instantly with no animateDpAsState; the map camera is set once at composition (LiveTrackingScreen.kt:251-253) so live position updates do not animate the camera." },
+      "density": "Inconsistent: 16.dp padding around the header and progress card but 3.dp vertical padding between timeline rows (LiveTrackingScreen.kt:344), so the status timeline is visually cramped inside an otherwise airy layout. The 300.dp map and the 300.dp placeholder dominate the fold, pushing the progress card below it.",
+      "observations": [
+        { "severity": "high", "claim": "The status chip label — the primary piece of information on the tracking screen — is hard-coded English via statusLabel(), in an app whose target market is Hindi-speaking Ayodhya.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/LiveTrackingScreen.kt:369-384", "confidence": "observed" },
+        { "severity": "high", "claim": "LiveTrackingUiState has no Error variant, so any failure leaves the user on an indefinite bare centred spinner with no retry and no message.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/LiveTrackingUiState.kt:6-8", "confidence": "observed" },
+        { "severity": "high", "claim": "The technician's photo is fetched and carried into UI state but never displayed — the trust-critical avatar is missing from a screen about a stranger entering your home.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/LiveTrackingUiState.kt:14", "confidence": "observed" },
+        { "severity": "medium", "claim": "Both AssistChips are declared with onClick = {} — they look and behave like interactive controls (ripple, focus, TalkBack 'button') but do nothing.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/LiveTrackingScreen.kt:232", "confidence": "observed" },
+        { "severity": "medium", "claim": "liveCapturedAt is populated in state but no 'last updated' or staleness indicator is rendered, so a frozen live location is indistinguishable from a stationary technician.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/LiveTrackingScreen.kt:245-262", "confidence": "observed" },
+        { "severity": "medium", "claim": "The map camera position is set once in rememberCameraPositionState and never re-centred as the marker moves, so the technician can drift out of the visible viewport.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/LiveTrackingScreen.kt:250-253", "confidence": "inferred" },
+        { "severity": "medium", "claim": "The SOS control only exists while status is InProgress; before arrival (EnRoute/Reached) there is no safety affordance at all.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/LiveTrackingScreen.kt:100", "confidence": "observed" },
+        { "severity": "low", "claim": "The technician name is rendered as a plain Text in headlineSmall rather than HsScreenTitle, so it carries no heading semantics for TalkBack navigation.", "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/LiveTrackingScreen.kt:226-230", "confidence": "observed" }
+      ]
+    }
+  ]
+}

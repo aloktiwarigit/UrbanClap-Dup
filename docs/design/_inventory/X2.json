@@ -1,0 +1,1276 @@
+{
+  "cluster": "X2",
+  "note": "Coverage-gap sweep. Phase 0 globbed *Screen.kt / page.tsx and therefore missed every dialog, bottom sheet, banner, chip, extracted *Content composable, Next.js router special file, and non-page client component. 27 surfaces inventoried here. Type-scale ground truth used throughout: design-system/src/main/kotlin/com/homeservices/designsystem/theme/Typography.kt:134-145 documents bodyLarge=16sp, bodyMedium=14sp, bodySmall=12sp, labelLarge=14sp, labelSmall=11sp, titleLarge=18sp, headlineMedium=22sp, and explicitly names displaySmall/headlineSmall/titleMedium/titleSmall/labelMedium as UNMAPPED (Roboto fallback). Customer min body is 16sp, so bodyMedium/bodySmall/labelSmall are all below floor on customer surfaces.",
+  "surfaces": [
+    {
+      "id": "customer.sos-bottom-sheet",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/SosBottomSheet.kt",
+      "loc": 145,
+      "purpose": "SAFETY-CRITICAL. Four ModalBottomSheet variants that carry the entire customer emergency-alert flow during a live job: the 30-second countdown-to-send sheet, the evidence-upload progress sheet, the evidence-saved sheet, and the evidence-upload-error sheet.",
+      "entryPoints": [
+        "Triggered only from an unlabeled IconButton in the LiveTrackingScreen TopAppBar — LiveTrackingScreen.kt:101-107, rendered only when isInProgress (LiveTrackingScreen.kt:100)",
+        "Dispatched by state in SosOverlay — LiveTrackingScreen.kt:136-168"
+      ],
+      "composition": [
+        "SosBottomSheet: ModalBottomSheet(skipPartiallyExpanded=true), onDismissRequest=onCancel — SosBottomSheet.kt:33-34",
+        "  Title 'Safety alert' titleLarge/Bold — SosBottomSheet.kt:39-43",
+        "  Countdown 'Sending in N sec' headlineMedium/Bold in colorScheme.error — SosBottomSheet.kt:45-50",
+        "  Body copy bodySmall (12sp) onSurfaceVariant, centered — SosBottomSheet.kt:52-57",
+        "  HsPrimaryButton 'Send now' fillMaxWidth (64dp tall, brand primary fill) — SosBottomSheet.kt:59-63",
+        "  HsSecondaryButton 'Cancel alert' fillMaxWidth (48dp tall, outlined) — SosBottomSheet.kt:65-69",
+        "SosUploadingEvidenceSheet: percent text bodyMedium + LinearProgressIndicator — SosBottomSheet.kt:87-96",
+        "SosEvidenceSavedSheet: single bodyMedium line in colorScheme.primary — SosBottomSheet.kt:111-116",
+        "SosEvidenceUploadErrorSheet: single bodyMedium line in colorScheme.error — SosBottomSheet.kt:135-140"
+      ],
+      "states": {
+        "loading": {"present": true, "evidence": "SosUploadingEvidenceSheet with determinate LinearProgressIndicator — SosBottomSheet.kt:93-96", "quality": "adequate"},
+        "empty": {"present": false, "evidence": "n/a for this surface", "quality": "n/a"},
+        "error": {"present": true, "evidence": "SosEvidenceUploadErrorSheet — SosBottomSheet.kt:125-144", "quality": "poor: the `message: String` parameter carrying the real failure reason is annotated @Suppress(\"UnusedParameter\") at SosBottomSheet.kt:124 and never rendered; a fixed generic string R.string.sos_evidence_upload_error is shown instead, and there is no retry affordance"},
+        "success": {"present": true, "evidence": "SosEvidenceSavedSheet — SosBottomSheet.kt:104-120", "quality": "thin: one line of 14sp text, no icon, no dismiss button — relies on scrim tap"},
+        "offline": {"present": false, "evidence": "No connectivity branch anywhere in the file; an SOS fired with no data path surfaces only through the generic snackbar at LiveTrackingScreen.kt:158-160", "quality": "missing"},
+        "permissionDenied": {"present": false, "evidence": "RECORD_AUDIO denial is handled in SosViewModel (SosUiState.RequestAudioPermission) but this file renders no sheet for it; SosOverlay's `else -> Unit` at LiveTrackingScreen.kt:167 swallows it silently", "quality": "missing"}
+      },
+      "tokenUsage": {
+        "hardcodedDp": ["24.dp/16.dp padding ×4 sheets — SosBottomSheet.kt:36,84,108,132", "8.dp/4.dp/12.dp/16.dp spacers — SosBottomSheet.kt:44,51,58,64,70,92,97,117,141"],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "hindiRisk": "MEDIUM-HIGH. All strings are resourced and Hindi translations exist (customer-app/app/src/main/res/values-hi/strings.xml:205-217). But the Hindi body copy at values-hi/strings.xml:210 leaves 'Owner support' in Latin script inside a Devanagari sentence ('Owner support को चुपके से सूचित किया जाएगा'), and it is rendered at bodySmall = 12sp (Typography.kt:141) with TextAlign.Center — Devanagari at 12sp centered in a two-line wrap is the worst possible legibility case in sunlight for the target user.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "touchTargetRisks": ["None inside the sheet: HsPrimaryButton is 64dp (HsComponents.kt:44 → Spacing.kt:46 space16=64.dp), HsSecondaryButton 48dp (HsComponents.kt:60 → Spacing.kt:43 space12=48.dp). The risk is at the entry point, not the sheet."],
+        "contrastRisks": ["Countdown uses colorScheme.error on the default ModalBottomSheet surface — SosBottomSheet.kt:48. Not verified against 4.5:1 in either theme.", "Body copy uses onSurfaceVariant at 12sp — SosBottomSheet.kt:54-55; onSurfaceVariant is the lowest-contrast text role and is being used for the sentence that explains what SOS actually does."],
+        "contentDescriptions": ["No semantics on any sheet. No liveRegion on the ticking countdown, so a screen-reader user gets no announcement that an emergency alert is counting down."]
+      },
+      "motion": "Default ModalBottomSheet slide-in only. The countdown number changes with no animation and no haptic — contrast with the technician job-offer countdown which does fire haptics in the last 5 seconds (JobOfferScreen.kt:52-64).",
+      "density": "Comfortable. 24dp horizontal gutters, generous vertical rhythm.",
+      "observations": [
+        {"severity": "high", "claim": "The SOS countdown sheet cancels the emergency on any incidental dismissal — swipe-down, scrim tap, or system back all route to onCancel with no confirmation.", "evidence": "SosBottomSheet.kt:34 `ModalBottomSheet(onDismissRequest = onCancel, ...)`; LiveTrackingScreen.kt:152 wires onCancel to `sosViewModel.onCancelCountdown()`. No ModalBottomSheetProperties(shouldDismissOnBackPress=false) and no confirm-to-cancel step. A phone jostled in a pocket or bag during the 30-second window silently aborts the alert and the user is given no notification that it was aborted.", "confidence": "high"},
+        {"severity": "high", "claim": "SOS takes 30 seconds to fire, which is presented as the default path with no immediate-send option that skips confirmation.", "evidence": "SosViewModel.kt:114-118 `for (sec in 30 downTo 1) { _sosUiState.value = SosUiState.Countdown(sec); delay(1_000L) }`. The only way to shorten it is to find and tap 'Send now' (SosBottomSheet.kt:59-63) — i.e. two deliberate taps on a screen the user must first reach. For a distress control this is a long unassisted window.", "confidence": "high"},
+        {"severity": "high", "claim": "The emergency-send action carries brand-primary styling, not danger styling, and is visually a peer of the cancel action.", "evidence": "SosBottomSheet.kt:59-69 stacks HsPrimaryButton (filled, brand primary — HsComponents.kt:41-47 uses bare M3 Button with theme colors) directly above HsSecondaryButton, both fillMaxWidth. The only red on the sheet is the countdown numeral (SosBottomSheet.kt:48). Under panic + sunlight, two stacked full-width buttons with no colour differentiation on the destructive/urgent axis is a mis-tap generator.", "confidence": "high"},
+        {"severity": "high", "claim": "The evidence-upload error sheet throws away the real error and cannot be retried.", "evidence": "SosBottomSheet.kt:124-127 — `@Suppress(\"UnusedParameter\") internal fun SosEvidenceUploadErrorSheet(message: String, onDismiss: () -> Unit)`; the `message` param is never referenced in the body (lines 129-143), which renders only stringResource(R.string.sos_evidence_upload_error). LiveTrackingScreen.kt:166 passes `sos.message` into it. No retry button exists.", "confidence": "high"},
+        {"severity": "medium", "claim": "The sentence that tells the user what SOS actually does — that support is notified silently and the technician will not see it — is set at 12sp, the smallest body size in the scale, on the lowest-contrast text role.", "evidence": "SosBottomSheet.kt:52-57 uses `MaterialTheme.typography.bodySmall` (12sp per Typography.kt:141) with `color = MaterialTheme.colorScheme.onSurfaceVariant`. Customer baseline floor is 16sp body.", "confidence": "high"},
+        {"severity": "medium", "claim": "The uploading-evidence sheet has a no-op dismiss handler, so the user cannot get out of it.", "evidence": "LiveTrackingScreen.kt:162 `SosUploadingEvidenceSheet(pct = sos.pct, onDismiss = {})`. Swipe-down and back-press both resolve to an empty lambda while the upload runs.", "confidence": "high"},
+        {"severity": "medium", "claim": "The countdown gets no haptic or audio reinforcement, unlike the technician-side offer countdown.", "evidence": "No Vibrator usage anywhere in SosBottomSheet.kt or SosViewModel.kt:107-119; compare JobOfferScreen.kt:52-64 which fires VibrationEffect.EFFECT_TICK for remainingSeconds in 1..5. A customer who cannot look at the screen has no feedback that the alert is arming.", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "customer.sos-entry-control",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/LiveTrackingScreen.kt",
+      "loc": 107,
+      "purpose": "SAFETY-CRITICAL. The single affordance by which a customer initiates an emergency alert during a live job. Inventoried separately from SosBottomSheet because Phase 0 audited LiveTrackingScreen as a screen and did not judge this control as a safety surface.",
+      "composition": [
+        "TopAppBar action slot, gated on isInProgress — LiveTrackingScreen.kt:100",
+        "IconButton wrapping Icons.Filled.Warning tinted colorScheme.error — LiveTrackingScreen.kt:101-107"
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "empty": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "error": {"present": true, "evidence": "Snackbar via LiveTrackingScreen.kt:158-160 on SosUiState.SosError", "quality": "poor: a transient snackbar is the only failure feedback for an emergency send"},
+        "success": {"present": true, "evidence": "Snackbar via LiveTrackingScreen.kt:155-157", "quality": "poor: transient snackbar; nothing persistent tells the user help is on the way"},
+        "offline": {"present": false, "evidence": "no branch", "quality": "missing"},
+        "permissionDenied": {"present": false, "evidence": "SosUiState.RequestAudioPermission falls into `else -> Unit` at LiveTrackingScreen.kt:167", "quality": "missing"}
+      },
+      "tokenUsage": {"hardcodedDp": [], "hardcodedColors": [], "unmappedTypographySlots": [], "offScaleRadius": []},
+      "i18n": {"hardcodedUserFacingStrings": [], "hindiRisk": "LOW for the control itself (it has no visible text at all — see observation).", "currencyFormatting": "n/a"},
+      "a11y": {
+        "touchTargetRisks": ["M3 IconButton is 48dp so the target itself is compliant — LiveTrackingScreen.kt:101"],
+        "contrastRisks": ["Warning glyph tinted colorScheme.error against the TopAppBar container — LiveTrackingScreen.kt:105. A single small error-tinted glyph on a coloured app bar is the exact case that fails in outdoor sunlight."],
+        "contentDescriptions": ["contentDescription = R.string.tracking_sos_desc = 'Safety alert' / 'सुरक्षा अलर्ट' — LiveTrackingScreen.kt:104. Present for TalkBack, invisible to a sighted low-literacy user."]
+      },
+      "motion": "None. No pulse, no attention state.",
+      "density": "n/a",
+      "observations": [
+        {"severity": "high", "claim": "The emergency control is a bare 24dp warning-triangle icon with no visible label, directly violating the owner-locked 'icon + text, never icon alone' rule — and it is the one control where guessing wrong has physical consequences.", "evidence": "LiveTrackingScreen.kt:101-107: `IconButton(onClick = { sosViewModel.onSosTapped() }) { Icon(Icons.Filled.Warning, contentDescription = stringResource(R.string.tracking_sos_desc), tint = MaterialTheme.colorScheme.error) }`. There is no Text sibling. Icons.Filled.Warning is a generic caution triangle, not a distress/SOS glyph, so it is equally readable as 'something is wrong with this booking'.", "confidence": "high"},
+        {"severity": "high", "claim": "SOS is reachable only while the job is IN_PROGRESS; it disappears in the EN_ROUTE and REACHED windows.", "evidence": "LiveTrackingScreen.kt:100 `if (isInProgress) {` wraps the entire IconButton. The technician arriving at the door and the technician being inside before work starts are both states where the control is not rendered.", "confidence": "high"},
+        {"severity": "medium", "claim": "SOS lives in an overflow-adjacent TopAppBar action slot — the smallest, highest, hardest-to-hit region of the screen for one-handed use on an entry Android device.", "evidence": "LiveTrackingScreen.kt:100-109 places it in the Scaffold topBar `actions` lambda. No persistent bottom-anchored or long-press-anywhere alternative exists in the file.", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "customer.sos-consent-dialog",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/tracking/SosConsentDialog.kt",
+      "loc": 29,
+      "purpose": "SAFETY-CRITICAL, one-time consent gate asking whether a short local audio recording may be attached to the safety alert. Blocks the SOS countdown until answered.",
+      "entryPoints": ["SosUiState.ShowConsent → LiveTrackingScreen.kt:144-148"],
+      "composition": [
+        "Bare M3 AlertDialog, onDismissRequest = onDenied — SosConsentDialog.kt:15-16",
+        "title Text (default AlertDialog headlineSmall — UNMAPPED slot) — SosConsentDialog.kt:17",
+        "text Text (default AlertDialog bodyMedium = 14sp) — SosConsentDialog.kt:18-20",
+        "confirmButton TextButton 'Allow' — SosConsentDialog.kt:21-23",
+        "dismissButton TextButton 'Skip' — SosConsentDialog.kt:24-26"
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": "no branch", "quality": "n/a"},
+        "empty": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "error": {"present": false, "evidence": "no branch", "quality": "n/a"},
+        "success": {"present": false, "evidence": "dialog closes, no confirmation", "quality": "n/a"},
+        "offline": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "permissionDenied": {"present": false, "evidence": "This dialog collects app-level consent; the follow-on OS RECORD_AUDIO denial path (SosViewModel.kt:128-135, SosUiState.RequestAudioPermission) has no UI in this cluster", "quality": "missing"}
+      },
+      "tokenUsage": {"hardcodedDp": [], "hardcodedColors": [], "unmappedTypographySlots": ["AlertDialog title defaults to headlineSmall — UNMAPPED per Typography.kt:145, so the dialog headline renders in Roboto, not Geist/Noto Devanagari — SosConsentDialog.kt:17"], "offScaleRadius": []},
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "hindiRisk": "HIGH. values-hi/strings.xml:221 keeps 'Owner support' in Latin inside the Devanagari consent body, and the whole dialog is unstyled M3 defaults, so the Hindi title at Roboto headlineSmall will fall back to a font with no Devanagari design intent.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "touchTargetRisks": ["'Allow' and 'Skip' are bare M3 TextButtons — SosConsentDialog.kt:22,25. ButtonDefaults.MinHeight is 40dp, under the 48dp floor, and TextButtons have no container so the perceived target is only the text bounds."],
+        "contrastRisks": ["All-default colours; 'Allow' and 'Skip' render identically (both TextButton, both primary), giving no visual weight to the recommended action — SosConsentDialog.kt:21-26"],
+        "contentDescriptions": ["n/a, all text"]
+      },
+      "motion": "Default AlertDialog scale/fade.",
+      "density": "M3 AlertDialog defaults.",
+      "observations": [
+        {"severity": "medium", "claim": "A consent prompt for recording audio during an emergency is rendered as a zero-effort default AlertDialog with two identical text buttons and no icon, no privacy framing, and no indication that answering it delays the alert.", "evidence": "SosConsentDialog.kt:15-27 is 13 lines of unstyled M3 AlertDialog. Both actions are `TextButton` (lines 22 and 25) with no colour or weight differentiation. It sits in front of the countdown: SosViewModel gates startCountdown behind consent resolution (SosViewModel.kt:127+).", "confidence": "high"},
+        {"severity": "medium", "claim": "Dismissing the consent dialog by tapping outside is silently treated as 'deny'.", "evidence": "SosConsentDialog.kt:16 `onDismissRequest = onDenied`. A scrim tap is recorded as an explicit privacy decision and, per SosConsentStore usage, is persisted.", "confidence": "medium"},
+        {"severity": "low", "claim": "The dialog title uses the AlertDialog default headlineSmall slot, which the design system leaves unmapped and therefore renders in Roboto.", "evidence": "SosConsentDialog.kt:17 passes a bare Text with no style override; Typography.kt:145 names headlineSmall as unmapped.", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "technician.job-offer-fullscreen-activity",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/jobOffer/JobOfferFullScreenActivity.kt",
+      "loc": 121,
+      "purpose": "The lock-screen presentation shell for an inbound job offer. Declared showWhenLocked + turnScreenOn so an FCM job offer wakes the device and surfaces the accept/decline UI without unlocking. T2 audited JobOfferScreen.kt (the content); this Activity — the chrome, the dismissal path, and the exit behaviour — was never audited.",
+      "entryPoints": [
+        "JobOfferFullScreenActivity.intentFor(context, offer) — JobOfferFullScreenActivity.kt:45-60, launched from the FCM service with FLAG_ACTIVITY_NEW_TASK|CLEAR_TOP|SINGLE_TOP (lines 40-43)",
+        "Manifest: android:exported=false, android:showWhenLocked=true, android:turnScreenOn=true — technician-app/app/src/main/AndroidManifest.xml:101-104"
+      ],
+      "composition": [
+        "onCreate → emitIntentOffer(intent) then setContent — JobOfferFullScreenActivity.kt:101-109",
+        "HomeservicesTheme { JobOfferScreen(modifier = Modifier.navigationBarsPadding()) } — JobOfferFullScreenActivity.kt:105-107. That is the entire chrome: no Scaffold, no TopAppBar, no close affordance, no statusBarsPadding, no enableEdgeToEdge.",
+        "onNewIntent re-emits on a second offer arriving while visible — JobOfferFullScreenActivity.kt:111-115",
+        "30s offer timeout is presented purely inside the content composable: CircularProgressIndicator(progress = remainingSeconds/30f) 104.dp with strokeWidth 7.dp, numeral at headlineMedium, unit label at labelSmall (11sp), colour flips to colorScheme.error at <=5s — JobOfferScreen.kt:131-172",
+        "Haptic tick each second in the last 5 — JobOfferScreen.kt:52-64"
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": "No loading chrome in the Activity; JobOfferScreen renders from the event-bus state immediately", "quality": "n/a"},
+        "empty": {"present": true, "evidence": "JobOfferUiState.Idle → JobOfferResultContent(R.string.job_offer_unavailable) — JobOfferScreen.kt:87-91", "quality": "poor: this is what a malformed intent lands on, see observations — a dead-end full-screen page with no button"},
+        "error": {"present": true, "evidence": "errorMessage threaded into JobOfferContent — JobOfferScreen.kt:96-102", "quality": "adequate inside the content, but the Activity adds no recovery path"},
+        "success": {"present": true, "evidence": "JobOfferUiState.Accepted → JobOfferResultContent(R.string.job_offer_accepted, isSuccess=true) — JobOfferScreen.kt:103-107", "quality": "poor: static message with no CTA and the Activity never finishes — see observations"},
+        "offline": {"present": false, "evidence": "No connectivity branch in the Activity or in JobOfferScreenContent's when block (JobOfferScreen.kt:85-116)", "quality": "missing"},
+        "permissionDenied": {"present": false, "evidence": "n/a — no runtime permission required to display", "quality": "n/a"}
+      },
+      "tokenUsage": {
+        "hardcodedDp": ["Content-side: 104.dp ring, 7.dp stroke, 18.dp spacer, 14.dp spacedBy — JobOfferScreen.kt:153,155,150,175. 7, 14, 18 and 104 are all off the 0/4/8/12/16/24/32/48/64/96 spacing scale."],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "hindiRisk": "MEDIUM. The unit label under the numeral is labelSmall = 11sp (JobOfferScreen.kt:167-171); Devanagari at 11sp inside a 104.dp ring will clip or crowd the numeral at ~15-30% greater glyph height.",
+        "currencyFormatting": "Delegated to HsPriceText (imported JobOfferScreen.kt:35), not verified in this cluster."
+      },
+      "a11y": {
+        "touchTargetRisks": ["None introduced by the Activity."],
+        "contrastRisks": ["No statusBarsPadding: JobOfferFullScreenActivity.kt:106 applies only navigationBarsPadding(). Over the lock screen the content top can sit under the status bar / notch cutout, where the HsTrustBadge (JobOfferScreen.kt:149) is drawn."],
+        "contentDescriptions": ["The countdown ring has no semantics/liveRegion — JobOfferScreen.kt:151-156. TalkBack announces nothing as the offer expires."]
+      },
+      "motion": "animateFloatAsState on the ring progress with default spec — JobOfferScreen.kt:137-140. No entry transition for the Activity itself.",
+      "density": "16.dp screen padding — JobOfferScreen.kt:146.",
+      "observations": [
+        {"severity": "high", "claim": "The Activity never finishes itself. After Accept, Decline, or Expiry the technician is left on a static full-screen result message over the lock screen with no button and no navigation.", "evidence": "JobOfferFullScreenActivity.kt:101-119 contains no finish() call, no back-press callback, and no state collection — it only calls setContent once. JobOfferScreen.kt:103-116 renders Accepted/Declined/Expired as JobOfferResultContent(message, isSuccess), which is a message-only composable. The only exit is a system back gesture the user has to guess at.", "confidence": "high"},
+        {"severity": "high", "claim": "A malformed FCM payload produces a blank/dead full-screen page over the lock screen instead of failing closed.", "evidence": "JobOfferFullScreenActivity.kt:63-85 `offerFromIntent` returns null when any extra is missing, and emitIntentOffer (lines 117-119) then does nothing. onCreate (101-109) still calls setContent unconditionally, so JobOfferScreen renders whatever the event bus holds — for a cold launch, JobOfferUiState.Idle → 'job offer unavailable' (JobOfferScreen.kt:87-91). The device has been woken and unlocked-over for a screen with no offer and no way out.", "confidence": "high"},
+        {"severity": "high", "claim": "System back silently discards the offer without sending a decline, on a screen whose whole purpose is a timed accept/decline decision.", "evidence": "No OnBackPressedCallback is registered anywhere in JobOfferFullScreenActivity.kt (the file has only onCreate, onNewIntent, emitIntentOffer, and the companion). Default ComponentActivity back finishes the Activity. The 30s timer then expires server-side rather than the technician's intent being recorded.", "confidence": "high"},
+        {"severity": "medium", "claim": "After accepting from the lock screen there is no keyguard dismissal, so the technician taps Accept and is left behind the lock screen with no route into the job.", "evidence": "JobOfferFullScreenActivity.kt has no KeyguardManager.requestDismissKeyguard call and no navigation on accept; the manifest only grants showWhenLocked/turnScreenOn (AndroidManifest.xml:103-104), which permits display but does not unlock.", "confidence": "high"},
+        {"severity": "medium", "claim": "The lock-screen presentation has no top inset handling, so content can render under the status bar and camera cutout.", "evidence": "JobOfferFullScreenActivity.kt:106 `JobOfferScreen(modifier = Modifier.navigationBarsPadding())` — bottom inset only. No statusBarsPadding(), no enableEdgeToEdge(), no WindowCompat call.", "confidence": "high"},
+        {"severity": "medium", "claim": "The 30-second window is hardcoded as a magic divisor in the progress calculation, so if the server ever issues a different TTL the ring lies.", "evidence": "JobOfferScreen.kt:138 `targetValue = (remainingSeconds / 30f).coerceIn(0f, 1f)`. The offer itself carries expiresAtMs (JobOfferFullScreenActivity.kt:59) — the true window is data, the ring assumes 30.", "confidence": "high"},
+        {"severity": "low", "claim": "The countdown's supporting unit label sits at 11sp, the smallest size in the scale, on a screen the technician reads at arm's length in ~5 seconds of pressure.", "evidence": "JobOfferScreen.kt:167-171 uses MaterialTheme.typography.labelSmall (11sp per Typography.kt:143).", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "technician.completion-confirmation-dialog",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/CompletionConfirmationDialog.kt",
+      "loc": 36,
+      "purpose": "Irreversible-action gate before COMPLETE_JOB fires. Per its own KDoc (lines 10-14), completion notifies the customer and archives the job.",
+      "composition": [
+        "Bare M3 AlertDialog — CompletionConfirmationDialog.kt:20-34",
+        "title / text / confirmButton TextButton / dismissButton TextButton — lines 22, 23, 24-28, 29-33"
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": "No isSubmitting parameter in the signature — CompletionConfirmationDialog.kt:16-19. Double-tapping confirm is not guarded here.", "quality": "missing"},
+        "empty": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "error": {"present": false, "evidence": "no branch", "quality": "missing"},
+        "success": {"present": false, "evidence": "dialog just closes", "quality": "n/a"},
+        "offline": {"present": false, "evidence": "no branch", "quality": "missing"},
+        "permissionDenied": {"present": false, "evidence": "n/a", "quality": "n/a"}
+      },
+      "tokenUsage": {"hardcodedDp": [], "hardcodedColors": [], "unmappedTypographySlots": ["AlertDialog title default headlineSmall — unmapped, Roboto fallback — CompletionConfirmationDialog.kt:22"], "offScaleRadius": []},
+      "i18n": {"hardcodedUserFacingStrings": [], "hindiRisk": "MEDIUM — resourced and translated, but rendered at M3 defaults with an unmapped Roboto title slot.", "currencyFormatting": "n/a"},
+      "a11y": {
+        "touchTargetRisks": ["Both actions are bare TextButtons (40dp M3 default, under the 48dp floor) — CompletionConfirmationDialog.kt:25,30"],
+        "contrastRisks": ["Confirm and cancel are visually identical TextButtons with identical colour — CompletionConfirmationDialog.kt:24-33. Nothing marks which one is irreversible."],
+        "contentDescriptions": ["n/a, all text"]
+      },
+      "motion": "M3 default.",
+      "density": "M3 default.",
+      "observations": [
+        {"severity": "medium", "claim": "The gate on an explicitly irreversible action gives the destructive choice no visual weight and no in-flight protection.", "evidence": "CompletionConfirmationDialog.kt:24-33 — confirmButton and dismissButton are both plain TextButton with no colors override; the signature (lines 16-19) has no isSubmitting/enabled flag, so nothing disables confirm after the first tap.", "confidence": "high"},
+        {"severity": "low", "claim": "Duplicate design pattern with SosConsentDialog: both are 13-line default AlertDialogs with identical twin TextButtons. Merge these into one finding about an unstyled dialog primitive rather than fixing them one at a time.", "evidence": "CompletionConfirmationDialog.kt:20-34 vs SosConsentDialog.kt:15-27 — structurally identical. No HsDialog / HsConfirmDialog exists in design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt.", "confidence": "high", "mergeCandidate": "customer.sos-consent-dialog"}
+      ]
+    },
+    {
+      "id": "technician.shield-report-sheet",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheet.kt",
+      "loc": 97,
+      "purpose": "Safety-adjacent. Lets a technician report a customer from inside an active job — free-text description up to 500 chars, submitted to the shield/abuse pipeline.",
+      "composition": [
+        "ModalBottomSheet(skipPartiallyExpanded=true) — ShieldReportSheet.kt:37-43",
+        "Title 'ग्राहक रिपोर्ट करें' titleLarge — ShieldReportSheet.kt:51-54",
+        "Subtitle 'क्या हुआ बताएं (वैकल्पिक)' bodyMedium onSurfaceVariant — ShieldReportSheet.kt:55-59",
+        "OutlinedTextField height 120.dp maxLines 4, 500-char clamp in onValueChange — ShieldReportSheet.kt:60-72",
+        "Character counter labelSmall (11sp) in colorScheme.outline — ShieldReportSheet.kt:73-78",
+        "HsPrimaryButton, label swaps to 'Submitting...' — ShieldReportSheet.kt:85-92 (pointlessly wrapped in a single-child Row, lines 80-93)"
+      ],
+      "states": {
+        "loading": {"present": true, "evidence": "isSubmitting swaps the button label and disables the field + button — ShieldReportSheet.kt:71,86,91", "quality": "poor: label-swap only, no spinner, and the swapped label is hardcoded English"},
+        "empty": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "error": {"present": false, "evidence": "No error parameter in the signature (ShieldReportSheet.kt:30-35) and no error slot in the body. A failed report submission renders nothing in this sheet.", "quality": "missing"},
+        "success": {"present": false, "evidence": "No success state; the sheet has no confirmation that a safety report was actually filed", "quality": "missing"},
+        "offline": {"present": false, "evidence": "no branch", "quality": "missing"},
+        "permissionDenied": {"present": false, "evidence": "n/a", "quality": "n/a"}
+      },
+      "tokenUsage": {
+        "hardcodedDp": ["120.dp text-field height — ShieldReportSheet.kt:68 (off the spacing scale)", "24/16 padding, 12/8 spacing — lines 48,49,79,82"],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          "ShieldReportSheet.kt:52 — `text = \"ग्राहक रिपोर्ट करें\"` (Devanagari literal in Kotlin source)",
+          "ShieldReportSheet.kt:56 — `text = \"क्या हुआ बताएं (वैकल्पिक)\"`",
+          "ShieldReportSheet.kt:74 — `text = \"${description.length}/500\"`",
+          "ShieldReportSheet.kt:86 — `if (isSubmitting) \"Submitting...\" else \"Submit report\"`"
+        ],
+        "hindiRisk": "HIGH and inverted. The title and subtitle are hardcoded Devanagari, so an English-locale user sees Hindi; the submit button is hardcoded English, so a Hindi-locale user sees English. The same sheet is bilingual in the wrong direction on both axes. values/strings.xml and values-hi/strings.xml are otherwise fully in sync (only 9 data_export_* keys differ across the whole customer app; technician app has zero missing keys), so this is a code-level regression, not a translation gap.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "touchTargetRisks": ["No dismiss/cancel button at all — the only exit is a swipe or scrim tap on a sheet with an in-progress text field (ShieldReportSheet.kt:39-43)"],
+        "contrastRisks": ["Character counter uses colorScheme.outline at 11sp — ShieldReportSheet.kt:75-76. `outline` is a border role, not a text role; it is not contrast-guaranteed for text."],
+        "contentDescriptions": ["No semantics on the counter, so TalkBack does not announce remaining characters."]
+      },
+      "motion": "Default ModalBottomSheet.",
+      "density": "Comfortable, 24dp gutters.",
+      "observations": [
+        {"severity": "high", "claim": "Four user-facing strings are hardcoded in Kotlin — two in Devanagari, two in English — on a safety-reporting surface, in an app whose string resources are otherwise 100% translated.", "evidence": "ShieldReportSheet.kt:52, :56, :74, :86. Verified against technician-app/app/src/main/res: `comm -23` of the en and hi key sets returns empty, i.e. every resourced string IS translated. These four simply never became resources.", "confidence": "high"},
+        {"severity": "medium", "claim": "A safety report can be submitted with no confirmation and no failure surface — the technician has no way to know whether the report was filed.", "evidence": "ShieldReportSheet.kt:30-35 signature exposes only onDismiss/onSubmit/isSubmitting; there is no error or success parameter, and the composable body (39-95) has no branch for either.", "confidence": "high"},
+        {"severity": "low", "claim": "The submit button is wrapped in a Row that contains exactly one fillMaxWidth child — dead layout.", "evidence": "ShieldReportSheet.kt:80-93: `Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { HsPrimaryButton(modifier = Modifier.fillMaxWidth(), ...) }`.", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "technician.rating-appeal-sheet",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheet.kt",
+      "loc": 91,
+      "purpose": "Lets a technician appeal a customer rating that affects their standing and earnings. Requires a minimum 20-character reason.",
+      "composition": [
+        "ModalBottomSheet(skipPartiallyExpanded=true) — RatingAppealSheet.kt:39-43",
+        "Title 'रेटिंग अपील' titleLarge — RatingAppealSheet.kt:51-54",
+        "Instruction 'क्यों रेटिंग गलत है? (कम से कम 20 अक्षर)' bodyMedium — RatingAppealSheet.kt:55-59",
+        "OutlinedTextField height 140.dp maxLines 5, 500-char clamp — RatingAppealSheet.kt:60-72",
+        "Counter labelSmall in colorScheme.outline — RatingAppealSheet.kt:73-78",
+        "HsPrimaryButton gated on canSubmit — RatingAppealSheet.kt:80-87"
+      ],
+      "states": {
+        "loading": {"present": true, "evidence": "isSubmitting → label swap + field disable — RatingAppealSheet.kt:71,81", "quality": "poor: label swap only, hardcoded English"},
+        "empty": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "error": {"present": false, "evidence": "No error parameter (signature RatingAppealSheet.kt:28-34)", "quality": "missing"},
+        "success": {"present": false, "evidence": "no branch", "quality": "missing"},
+        "offline": {"present": false, "evidence": "no branch", "quality": "missing"},
+        "permissionDenied": {"present": false, "evidence": "n/a", "quality": "n/a"}
+      },
+      "tokenUsage": {"hardcodedDp": ["140.dp text-field height — RatingAppealSheet.kt:68 (off-scale)", "24/16/12/8 elsewhere — lines 48,49,79"], "hardcodedColors": [], "unmappedTypographySlots": [], "offScaleRadius": []},
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          "RatingAppealSheet.kt:52 — `\"रेटिंग अपील\"`",
+          "RatingAppealSheet.kt:56 — `\"क्यों रेटिंग गलत है? (कम से कम 20 अक्षर)\"`",
+          "RatingAppealSheet.kt:74 — `\"${reason.length}/500\"`",
+          "RatingAppealSheet.kt:81 — `if (isSubmitting) \"Submitting...\" else \"Submit appeal\"`"
+        ],
+        "hindiRisk": "HIGH, same inverted pattern as ShieldReportSheet.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "touchTargetRisks": ["No cancel button; swipe/scrim only — RatingAppealSheet.kt:39-43"],
+        "contrastRisks": ["Counter on colorScheme.outline at 11sp — RatingAppealSheet.kt:75-76"],
+        "contentDescriptions": ["The 20-character gate is enforced silently: canSubmit (line 37) just disables the button. Nothing tells the user why the button is dead — the requirement is buried in the instruction line and never restated as a live validation message."]
+      },
+      "motion": "Default ModalBottomSheet.",
+      "density": "Comfortable.",
+      "observations": [
+        {"severity": "high", "claim": "Identical hardcoded-string defect to ShieldReportSheet — two Devanagari literals and one English literal per sheet. These two sheets are the same underlying defect and should be fixed as one change.", "evidence": "RatingAppealSheet.kt:52,56,74,81 mirror ShieldReportSheet.kt:52,56,74,86 line-for-line, including the identical `if (isSubmitting) \"Submitting...\"` construction.", "confidence": "high", "mergeCandidate": "technician.shield-report-sheet"},
+        {"severity": "medium", "claim": "The submit button is disabled until 20 characters are typed with no live feedback, so the control reads as broken rather than as gated.", "evidence": "RatingAppealSheet.kt:37 `val canSubmit = reason.length >= 20 && !isSubmitting`, applied at line 86 as `enabled = canSubmit`. The only mention of the 20-character rule is inside the static instruction Text at line 56; the counter at line 74 counts up to 500 and never surfaces the 20 threshold.", "confidence": "high"},
+        {"severity": "medium", "claim": "An appeal that affects the technician's earnings can fail with no visible error.", "evidence": "RatingAppealSheet.kt:28-34 exposes no error channel; the body has no error branch.", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "technician.photo-upload-retry-banner.activejob",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/PhotoUploadRetryBanner.kt",
+      "loc": 70,
+      "purpose": "Persistent strip above active-job content when a job photo upload is queued offline. Does not auto-dismiss (KDoc lines 24-27).",
+      "composition": [
+        "Surface(shape = MaterialTheme.shapes.medium, color = colorScheme.tertiaryContainer) — PhotoUploadRetryBanner.kt:37-41",
+        "Row padding 12/8, SpaceBetween — lines 42-49",
+        "CloudUpload icon 20.dp, contentDescription=null, tint onTertiaryContainer — lines 51-56",
+        "Label bodyMedium (14sp) onTertiaryContainer — lines 58-62",
+        "Trailing TextButton 'Retry' — lines 64-66"
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": "No in-flight state after tapping Retry — the banner does not change — PhotoUploadRetryBanner.kt:64-66", "quality": "missing"},
+        "empty": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "error": {"present": true, "evidence": "The banner IS the error/queued state", "quality": "adequate"},
+        "success": {"present": false, "evidence": "Caller removes the banner when the pending row is tombstoned; no success confirmation is shown", "quality": "thin"},
+        "offline": {"present": true, "evidence": "This is the offline-queue affordance", "quality": "adequate"},
+        "permissionDenied": {"present": false, "evidence": "n/a", "quality": "n/a"}
+      },
+      "tokenUsage": {"hardcodedDp": ["12.dp/8.dp padding — line 46", "20.dp icon — line 55", "12.dp spacer — line 57"], "hardcodedColors": [], "unmappedTypographySlots": [], "offScaleRadius": []},
+      "i18n": {"hardcodedUserFacingStrings": [], "hindiRisk": "MEDIUM. R.string.photo_upload_pending_banner's Hindi (values-hi/strings.xml:149) is 'फोटो अपलोड बाकी है — जारी रखने के लिए Retry दबाएं' — it instructs the user to press a button named 'Retry' in Latin script while the button's own label comes from a separate key. If that key is ever localised the instruction will point at a word that no longer appears on screen.", "currencyFormatting": "n/a"},
+      "a11y": {
+        "touchTargetRisks": ["TextButton at M3 default 40dp height — PhotoUploadRetryBanner.kt:64"],
+        "contrastRisks": ["tertiaryContainer/onTertiaryContainer pair — not verified at 4.5:1 in this cluster"],
+        "contentDescriptions": ["Icon contentDescription = null (line 53) — acceptable, the adjacent text carries meaning"]
+      },
+      "motion": "None.",
+      "density": "Compact: 8dp vertical padding.",
+      "observations": [
+        {"severity": "medium", "claim": "Two components with the identical public name PhotoUploadRetryBanner exist in two packages and have visually diverged — same job, two different visual languages.", "evidence": "activeJob/PhotoUploadRetryBanner.kt:37-41 uses Surface + MaterialTheme.shapes.medium + colorScheme.tertiaryContainer with 12/8 padding; kyc/PhotoUploadRetryBanner.kt:44-51 uses a bare Row with .background(HomeservicesColors.Brand.primaryHover, RoundedCornerShape(12.dp)) with 16/10 padding and hardcoded Color.White foregrounds. Different string keys too (photo_upload_pending_banner/_retry vs photo_upload_retry_banner_label/_action). The divergence is documented as intentional in the KDoc at kyc/PhotoUploadRetryBanner.kt:33-34, which makes it a deliberate fracture rather than an accident.", "confidence": "high", "mergeCandidate": "technician.photo-upload-retry-banner.kyc"},
+        {"severity": "low", "claim": "Tapping Retry produces no visible feedback — no spinner, no label change, no disable — so on a slow 4G link the technician will tap repeatedly.", "evidence": "PhotoUploadRetryBanner.kt:33-36 signature has only onRetry and modifier; the TextButton at line 64 has no enabled/loading handling.", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "technician.photo-upload-retry-banner.kyc",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/kyc/PhotoUploadRetryBanner.kt",
+      "loc": 80,
+      "purpose": "The KYC-screen twin of the above: retry strip for a queued PAN photo upload, styled to match the KYC hero gradient.",
+      "composition": [
+        "Row with .background(HomeservicesColors.Brand.primaryHover, RoundedCornerShape(12.dp)).padding(16/10) — PhotoUploadRetryBanner.kt:44-51",
+        "CloudUpload icon 20.dp tinted Color.White — lines 56-61",
+        "Label bodyMedium in Color.White — lines 63-67",
+        "TextButton with ButtonDefaults.textButtonColors(contentColor = Color.White) — lines 69-77"
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": "Same as the twin — no in-flight state (signature lines 40-43)", "quality": "missing"},
+        "empty": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "error": {"present": true, "evidence": "The banner is the queued/error state", "quality": "adequate"},
+        "success": {"present": false, "evidence": "no branch", "quality": "thin"},
+        "offline": {"present": true, "evidence": "offline-queue affordance", "quality": "adequate"},
+        "permissionDenied": {"present": false, "evidence": "n/a", "quality": "n/a"}
+      },
+      "tokenUsage": {
+        "hardcodedDp": ["10.dp vertical padding — line 51 (off the 0/4/8/12/16/24/32/48/64/96 scale)", "16.dp horizontal — line 51", "20.dp icon — line 60", "12.dp spacer — line 62"],
+        "hardcodedColors": ["Color.White ×3 — lines 59, 66, 73. Hardcoded absolute white foreground with no dark-theme escape."],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": ["RoundedCornerShape(12.dp) — line 50. 12 is on the radius scale (4/8/12/20/9999) but is applied via a raw literal rather than MaterialTheme.shapes, unlike the activeJob twin."]
+      },
+      "i18n": {"hardcodedUserFacingStrings": [], "hindiRisk": "LOW — both keys are resourced and translated (values-hi/strings.xml:165 for the label).", "currencyFormatting": "n/a"},
+      "a11y": {
+        "touchTargetRisks": ["TextButton at 40dp default — line 69"],
+        "contrastRisks": ["White text and white icon on HomeservicesColors.Brand.primaryHover — PhotoUploadRetryBanner.kt:49,59,66,73. A 'hover' colour token is by definition a lighter/interaction variant of the brand colour and is the wrong base to guarantee 4.5:1 against white; this is on the KYC path, which is the technician's income gate."]
+        , "contentDescriptions": ["Icon contentDescription = null — line 58, acceptable"]
+      },
+      "motion": "None.",
+      "density": "Compact: 10dp vertical.",
+      "observations": [
+        {"severity": "medium", "claim": "Same-name, same-purpose component diverged into a second visual language — see the merged finding on the activeJob twin.", "evidence": "kyc/PhotoUploadRetryBanner.kt:44-51 vs activeJob/PhotoUploadRetryBanner.kt:37-46.", "confidence": "high", "mergeCandidate": "technician.photo-upload-retry-banner.activejob"},
+        {"severity": "medium", "claim": "White-on-primaryHover is an unverified contrast pairing on the KYC gate, and the hardcoded Color.White means it cannot adapt if the brand token moves.", "evidence": "kyc/PhotoUploadRetryBanner.kt:49 `color = HomeservicesColors.Brand.primaryHover`, with `tint = Color.White` (59), `color = Color.White` (66), and `contentColor = Color.White` (73).", "confidence": "medium"},
+        {"severity": "low", "claim": "10.dp vertical padding is off the spacing scale.", "evidence": "kyc/PhotoUploadRetryBanner.kt:51 `.padding(horizontal = 16.dp, vertical = 10.dp)`.", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "technician.pending-action-card",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/PendingActionCard.kt",
+      "loc": 146,
+      "purpose": "The dashboard row that surfaces a queued pending action (job offer, rating prompt, rating received, earnings update) with a colour-coded icon tile and an optional expiry countdown.",
+      "entryPoints": ["Rendered in the technician home Today tab — TechnicianHomeScreen.kt:288-292"],
+      "composition": [
+        "Clickable Surface, RoundedCornerShape(18.dp), colour from a per-type palette — PendingActionCard.kt:59-64",
+        "Row padding 14.dp, spacedBy 12.dp — lines 65-68",
+        "Icon tile: Surface 40.dp, RoundedCornerShape(12.dp), accent at 12% alpha, icon 24.dp with 8.dp padding — lines 70-84",
+        "Label titleSmall/SemiBold in the accent colour — lines 86-91",
+        "Optional countdown '{n}s' labelSmall at 70% accent alpha — lines 92-99",
+        "cardVisuals() palette + label mapping — lines 112-145"
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "empty": {"present": false, "evidence": "Caller hides the section when the list is empty", "quality": "n/a"},
+        "error": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "success": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "offline": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "permissionDenied": {"present": false, "evidence": "n/a", "quality": "n/a"}
+      },
+      "tokenUsage": {
+        "hardcodedDp": ["14.dp row padding — line 66", "40.dp icon tile — line 73", "8.dp icon inset + 24.dp icon — lines 81-82. 14 and 40 are off the spacing scale."],
+        "hardcodedColors": ["Amber #FFB86B00 — line 35", "AmberSoft #FFFFF3E0 — line 36", "Teal #FF006064 — line 37", "TealSoft #FFE0F7FA — line 38", "Blue #FF1565C0 — line 39", "BlueSoft #FFE3F2FD — line 40", "Purple #FF6A1B9A — line 41", "PurpleSoft #FFF3E5F5 — line 42", "Green #FF1B5E20 — line 43", "GreenSoft #FFE8F5E9 — line 44. Ten literals, all stock Material Design 2014 palette values (Amber 900, Cyan 900, Blue 800, Purple 800, Green 900 + their 50 tints). Not one is marigold #E2A04A, forest #0B3D2E, or brass #B68A2C."],
+        "unmappedTypographySlots": ["titleSmall — PendingActionCard.kt:88. UNMAPPED per Typography.kt:145, so the card's only headline renders in Roboto."],
+        "offScaleRadius": ["RoundedCornerShape(18.dp) — line 62. The radius scale is 4/8/12/20/9999; 18 is not on it.", "RoundedCornerShape(12.dp) icon tile — line 71 (on-scale but raw)."]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          "PendingActionCard.kt:95 — `text = \"${remaining}s\"`. The 's' unit suffix is a hardcoded Latin letter, and the numeral is not locale-formatted.",
+          "PendingActionCard.kt:144 — `CardVisuals(Green, GreenSoft, Icons.Default.Work, type.name)`. The else branch renders the raw enum constant (e.g. 'ADDON_APPROVAL_REQUESTED') as the card's user-facing title."
+        ],
+        "hindiRisk": "HIGH. Any PendingActionType outside the four mapped cases puts a SCREAMING_SNAKE_CASE English identifier on a Hindi-first dashboard.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "touchTargetRisks": ["Card height is 14+40+14 = 68dp — compliant."],
+        "contrastRisks": ["Label text is drawn in the accent colour on the soft tint of the same hue (e.g. Amber #B86B00 on AmberSoft #FFF3E0) — lines 63, 90. These pairings are plausible but unverified, and the 12%-alpha icon tile at line 72 plus the 70%-alpha countdown at line 97 both push toward the contrast floor.", "The whole palette is fixed-light (soft tints as backgrounds) with no dark-theme branch, so in dark mode these cards become bright light blocks."],
+        "contentDescriptions": ["Icon contentDescription = null — line 77. The icon is the only type differentiator besides colour, and colour alone is not a valid channel."]
+      },
+      "motion": "None.",
+      "density": "Compact.",
+      "observations": [
+        {"severity": "high", "claim": "The expiry countdown is computed once at composition and never ticks — a card that says '28s' will keep saying '28s' until something else recomposes the dashboard.", "evidence": "PendingActionCard.kt:93 `val remaining = ((expiresAt - System.currentTimeMillis()) / MS_PER_SECOND).coerceAtLeast(0)` is a plain read inside the composable body with no State, no LaunchedEffect, and no ticking source. Contrast CountdownChip.kt:60-66, which drives a 1s LaunchedEffect loop over mutableLongStateOf. On a job-offer card this is a countdown that lies about how long the technician has.", "confidence": "high"},
+        {"severity": "high", "claim": "Ten stock Material-2014 palette literals hardcoded at the top of the file — this single component is the technician app's largest concentration of non-token colour outside the catalogue.", "evidence": "PendingActionCard.kt:35-44. Amber/Teal/Blue/Purple/Green plus five soft tints, applied at lines 63, 72, 78, 90, 97 via cardVisuals (112-145). Zero of these derive from HomeservicesColors.", "confidence": "high"},
+        {"severity": "medium", "claim": "The fallback branch prints a raw enum name as the card title.", "evidence": "PendingActionCard.kt:143-144 `else -> CardVisuals(Green, GreenSoft, Icons.Default.Work, type.name)`. PendingActionType has more members than the four cases handled at lines 115-142 (customer-side code at CustomerHomeTabContent.kt:231-238 handles RATING_PROMPT_CUSTOMER, ADDON_APPROVAL_REQUESTED, COMPLAINT_UPDATE, SUPPORT_FOLLOWUP — a disjoint set), so this branch is reachable.", "confidence": "high"},
+        {"severity": "medium", "claim": "The card's only headline uses titleSmall, an unmapped slot, so it silently falls back to Roboto and breaks the Geist/Noto Devanagari commitment.", "evidence": "PendingActionCard.kt:88 `style = MaterialTheme.typography.titleSmall`; Typography.kt:145 lists titleSmall among the unmapped slots.", "confidence": "high"},
+        {"severity": "low", "claim": "18.dp card radius is off the 4/8/12/20/9999 radius scale.", "evidence": "PendingActionCard.kt:62 `shape = RoundedCornerShape(18.dp)`.", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "customer.pending-booking-resume-banner",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/PendingBookingResumeBanner.kt",
+      "loc": 81,
+      "purpose": "Money-path banner offering to resume or cancel a booking whose payment was left incomplete.",
+      "composition": [
+        "Surface errorContainer + shapes.medium — PendingBookingResumeBanner.kt:34-41",
+        "Title titleSmall/SemiBold onErrorContainer — lines 43-48",
+        "Subtitle bodySmall (12sp) with service name + rupee amount — lines 50-59",
+        "Action row: TextButton cancel + HsPrimaryButton resume, right-aligned — lines 61-77"
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": "No in-flight state on either action (signature lines 27-32)", "quality": "missing"},
+        "empty": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "error": {"present": false, "evidence": "no branch", "quality": "missing"},
+        "success": {"present": false, "evidence": "no branch", "quality": "n/a"},
+        "offline": {"present": false, "evidence": "no branch", "quality": "missing"},
+        "permissionDenied": {"present": false, "evidence": "n/a", "quality": "n/a"}
+      },
+      "tokenUsage": {"hardcodedDp": ["16/8 outer, 16 inner, 4/12/8 spacers — lines 40,42,49,60,72"], "hardcodedColors": [], "unmappedTypographySlots": ["titleSmall — line 45, Roboto fallback"], "offScaleRadius": []},
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "hindiRisk": "MEDIUM. Right-aligned action row (line 63 `Arrangement.End`) with a longer Devanagari CTA plus a Devanagari cancel label will crowd or wrap at Hindi metrics; there is no wrap handling.",
+        "currencyFormatting": "INCONSISTENT — divides paise by a local PAISE_PER_RUPEE constant (line 24) and passes a bare Long into the format string (lines 52-56) rather than using the shared `formatInr` helper that WalletBalanceChip.kt:33 and NoShowCreditBanner.kt:51 use. No thousands grouping, no ₹ symbol from a single source."
+      },
+      "a11y": {
+        "touchTargetRisks": ["Cancel is a bare TextButton at 40dp — line 66. It sits next to a 64dp HsPrimaryButton, so the destructive action is both smaller and visually weaker."],
+        "contrastRisks": ["Cancel label is forced to onErrorContainer inside a TextButton (lines 67-70), overriding the button's own content colour; the pairing is unverified."],
+        "contentDescriptions": ["None needed — all text."]
+      },
+      "motion": "None — the banner appears/disappears with no transition.",
+      "density": "Comfortable.",
+      "observations": [
+        {"severity": "medium", "claim": "A money-recovery banner formats currency by hand instead of using the app's shared formatter, so the rupee amount here will render differently from the same amount elsewhere in the app.", "evidence": "PendingBookingResumeBanner.kt:24 `private const val PAISE_PER_RUPEE = 100L` and lines 52-56 pass `amountPaise / PAISE_PER_RUPEE` into a string resource. Compare customer-app/.../ui/wallet/WalletBalanceChip.kt:33 and NoShowCreditBanner.kt:51 which both call `formatInr(...)` from com.homeservices.customer.ui.util.", "confidence": "high"},
+        {"severity": "medium", "claim": "The explanatory line on a payment-recovery banner is 12sp — a quarter below the 16sp customer floor.", "evidence": "PendingBookingResumeBanner.kt:57 `style = MaterialTheme.typography.bodySmall` (12sp per Typography.kt:141).", "confidence": "high"},
+        {"severity": "low", "claim": "Title uses the unmapped titleSmall slot → Roboto.", "evidence": "PendingBookingResumeBanner.kt:45.", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "customer.no-show-credit-banner",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/wallet/NoShowCreditBanner.kt",
+      "loc": 96,
+      "purpose": "Toast-style banner announcing a wallet credit issued for a technician no-show. Auto-dismisses after 5 seconds.",
+      "entryPoints": ["Overlaid on LiveTrackingScreen — LiveTrackingScreen.kt:118-127, aligned TopCenter"],
+      "composition": [
+        "Surface primary fill, RoundedCornerShape(12.dp), tonal+shadow elevation 4.dp, semantics contentDescription = full banner text — NoShowCreditBanner.kt:54-63",
+        "Wallet icon 20.dp onPrimary, contentDescription null — lines 68-73",
+        "Message text at an explicit 14.sp with FontWeight.Medium — lines 75-81",
+        "Dismiss IconButton 32.dp containing an 18.dp Close icon — lines 82-92"
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "empty": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "error": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "success": {"present": true, "evidence": "The banner IS the success surface", "quality": "adequate"},
+        "offline": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "permissionDenied": {"present": false, "evidence": "n/a", "quality": "n/a"}
+      },
+      "tokenUsage": {
+        "hardcodedDp": ["10.dp vertical padding — line 65 (off-scale)", "10.dp spacer — line 74 (off-scale)", "20.dp icon — line 72", "32.dp IconButton — line 84 (off-scale)", "18.dp Close icon — line 90 (off-scale)", "4.dp elevations — lines 61-62"],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": ["RoundedCornerShape(12.dp) raw literal — line 59 (on-scale value, raw application)"]
+      },
+      "i18n": {"hardcodedUserFacingStrings": [], "hindiRisk": "HIGH. The message is a single non-wrapping-constrained Text in a `weight(1f)` slot (lines 75-81) at a fixed 14.sp; the Hindi string (values-hi) plus a rupee amount will be 15-30% longer and taller, and the banner has no maxLines/overflow policy, so it will grow the banner vertically over the map or clip against the 32.dp dismiss button.", "currencyFormatting": "Uses the shared `formatInr` helper — NoShowCreditBanner.kt:51. Correct."},
+      "a11y": {
+        "touchTargetRisks": ["The dismiss button is explicitly sized DOWN to 32.dp — NoShowCreditBanner.kt:84 `IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp))`. M3 IconButton defaults to 48dp; this override cuts it to 32dp, well under the 48dp floor, on an entry Android device used outdoors."],
+        "contrastRisks": ["onPrimary on primary — the standard pair, low risk."],
+        "contentDescriptions": ["Good: the whole banner carries `semantics { contentDescription = bannerText }` (line 58) and the dismiss icon has a real label (line 88)."]
+      },
+      "motion": "None on entry or exit. It appears and vanishes instantly; the 5s auto-dismiss (lines 46-49) fires with no fade.",
+      "density": "Compact.",
+      "observations": [
+        {"severity": "medium", "claim": "The dismiss target is deliberately shrunk to 32dp, below the 48dp minimum.", "evidence": "NoShowCreditBanner.kt:82-85 `IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp))`.", "confidence": "high"},
+        {"severity": "medium", "claim": "A money notification auto-dismisses after 5 seconds with no motion and no persistence — a user who looks away misses that they were credited.", "evidence": "NoShowCreditBanner.kt:32 `AUTO_DISMISS_MS = 5_000L`; lines 46-49 `LaunchedEffect(true) { delay(AUTO_DISMISS_MS); onDismiss() }`. There is no AnimatedVisibility wrapper at the call site either (LiveTrackingScreen.kt:117-127).", "confidence": "high"},
+        {"severity": "low", "claim": "Font size is set as a raw 14.sp literal rather than a type-scale slot, bypassing the scale entirely.", "evidence": "NoShowCreditBanner.kt:78 `fontSize = 14.sp` with no `style =` argument at all.", "confidence": "high"},
+        {"severity": "low", "claim": "Four off-scale dp values in a 96-line component (10, 10, 32, 18).", "evidence": "NoShowCreditBanner.kt:65, 74, 84, 90.", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "customer.countdown-chip",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/components/CountdownChip.kt",
+      "loc": 104,
+      "purpose": "Pill chip showing HH:MM:SS remaining until a complaint-window deadline. Ticks once per second. Self-hiding when null or expired.",
+      "composition": [
+        "Row with .background(secondaryContainer, RoundedCornerShape(50 percent)) padding 12/6 — CountdownChip.kt:73-79",
+        "Timer icon 16.dp onSecondaryContainer, contentDescription null — lines 83-88",
+        "6.dp spacer — line 89",
+        "Label labelMedium onSecondaryContainer — lines 90-94",
+        "formatCountdown produces zero-padded %02d:%02d:%02d — lines 98-103"
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "empty": {"present": true, "evidence": "Returns early when deadlineIso is null — CountdownChip.kt:51-56", "quality": "adequate (silent hide is the right call here)"},
+        "error": {"present": true, "evidence": "`runCatching { Instant.parse(it).epochSecond }.getOrNull()` then `?: return` — CountdownChip.kt:53-56. An unparseable deadline silently renders nothing.", "quality": "poor: a malformed server timestamp makes the complaint deadline vanish with no trace"},
+        "success": {"present": true, "evidence": "Expiry hides the chip — line 68", "quality": "poor: the chip disappearing is the only signal that the complaint window closed"},
+        "offline": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "permissionDenied": {"present": false, "evidence": "n/a", "quality": "n/a"}
+      },
+      "tokenUsage": {
+        "hardcodedDp": ["CHIP_VERTICAL_PADDING_DP = 6 — line 32 (off-scale)", "ICON_SPACER_DP = 6 — line 34 (off-scale)", "CHIP_HORIZONTAL_PADDING_DP = 12 — line 31", "ICON_SIZE_DP = 16 — line 33"],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": ["labelMedium — CountdownChip.kt:92. UNMAPPED per Typography.kt:145 → the ticking digits render in Roboto."],
+        "offScaleRadius": ["RoundedCornerShape(CHIP_CORNER_RADIUS = 50) — lines 30, 78. This resolves to the Int/percent overload, i.e. a 50% pill, which matches the 9999 pill token in intent. Not a true off-scale radius — noting so it is not miscounted as one."]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "hindiRisk": "MEDIUM. The digits are Latin ASCII produced by `\"%02d:%02d:%02d\".format(...)` (line 102) with the default locale; the surrounding phrase is resourced (R.string.complaint_countdown_remaining, values/strings.xml:423 '%1$s remaining').",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "touchTargetRisks": ["None — the chip is non-interactive (no onClick anywhere in the file). Its ~28dp height is therefore acceptable."],
+        "contrastRisks": ["secondaryContainer/onSecondaryContainer at labelMedium's small size — lines 86, 93."],
+        "contentDescriptions": ["Timer icon contentDescription = null (line 85) — fine, the label carries it. But there is no liveRegion, so TalkBack never re-announces the ticking value."]
+      },
+      "motion": "Digits swap instantly each second — no crossfade, no tabular figures.",
+      "density": "Very compact.",
+      "observations": [
+        {"severity": "medium", "claim": "The ticking countdown uses labelMedium, an unmapped slot, so the one place in the app where numerals change every second renders in Roboto with proportional (non-tabular) figures — the whole chip will jitter horizontally on each tick.", "evidence": "CountdownChip.kt:92 `style = MaterialTheme.typography.labelMedium`; Typography.kt:145 lists labelMedium as unmapped. The design core specifies JetBrains Mono for numerals, which is not applied here.", "confidence": "high"},
+        {"severity": "low", "claim": "A malformed deadline timestamp makes the complaint-window countdown disappear entirely with no fallback text.", "evidence": "CountdownChip.kt:51-56 — `runCatching { Instant.parse(it).epochSecond }.getOrNull() } ?: return`.", "confidence": "high"},
+        {"severity": "low", "claim": "Two off-scale 6dp values.", "evidence": "CountdownChip.kt:32 and :34.", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "customer.women-safe-filter-toggle",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/WomenSafeFilterToggle.kt",
+      "loc": 51,
+      "purpose": "Safety-preference control: request a female technician. Appears in the booking flow.",
+      "composition": [
+        "Row fillMaxWidth padding 16/8 — WomenSafeFilterToggle.kt:27-33",
+        "Shield icon tinted primary, contentDescription null — lines 34-38",
+        "12.dp spacer — line 39",
+        "Label bodyMedium (14sp) with weight(1f) — lines 40-44",
+        "M3 Switch — lines 45-48"
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "empty": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "error": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "success": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "offline": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "permissionDenied": {"present": false, "evidence": "n/a", "quality": "n/a"}
+      },
+      "tokenUsage": {"hardcodedDp": ["16/8 padding — line 31", "12.dp spacer — line 39"], "hardcodedColors": [], "unmappedTypographySlots": [], "offScaleRadius": []},
+      "i18n": {"hardcodedUserFacingStrings": [], "hindiRisk": "MEDIUM. 'Prefer female technician' (values/strings.xml:500) is a full sentence; in Devanagari it will wrap to two lines inside a weight(1f) slot next to a fixed-width Switch, and there is no maxLines policy — the row will grow and the Switch will stay vertically centred against a taller label.", "currencyFormatting": "n/a"},
+      "a11y": {
+        "touchTargetRisks": ["Only the Switch is tappable. The icon and the label are inert — there is no Modifier.toggleable on the Row (lines 27-33) and no clickable on the Text (40-44). The tap target for a safety preference is the ~52x32dp Switch thumb area at the far right edge of the screen."],
+        "contrastRisks": ["Default M3 Switch colours; label is default onSurface. Low risk."],
+        "contentDescriptions": ["Shield icon contentDescription = null — line 36. The Switch has no `Modifier.semantics` role/state description either, so TalkBack reads the label and the switch as two separate nodes rather than one labelled toggle."]
+      },
+      "motion": "M3 Switch thumb animation only.",
+      "density": "Compact: 8dp vertical padding.",
+      "observations": [
+        {"severity": "medium", "claim": "The label and icon are not part of the tap target, so on a safety preference the only way to toggle is to hit the Switch itself — the standard Compose pattern (Row.toggleable with Role.Switch and a null onCheckedChange on the Switch) is not used.", "evidence": "WomenSafeFilterToggle.kt:27-33 — the Row modifier chain is `fillMaxWidth().padding(...)` only, no `.toggleable(...)`. The Switch at lines 45-48 owns the entire interaction.", "confidence": "high"},
+        {"severity": "low", "claim": "Label is 14sp, below the 16sp customer body floor.", "evidence": "WomenSafeFilterToggle.kt:42 `style = MaterialTheme.typography.bodyMedium` (14sp per Typography.kt:140).", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "customer.wallet-balance-chip",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/wallet/WalletBalanceChip.kt",
+      "loc": 54,
+      "purpose": "Compact chip on HomeScreen showing wallet balance; taps through to WalletScreen. Shown only when balance > 0 and the wallet flag is on (KDoc lines 17-22).",
+      "composition": [
+        "M3 AssistChip with onClick — WalletBalanceChip.kt:29-52",
+        "Label: formatInr(balance) at labelMedium/SemiBold in primary — lines 31-37",
+        "leadingIcon: wallet icon with a real contentDescription, tinted primary — lines 38-44",
+        "colors: surfaceVariant container — lines 45-49",
+        "border: primary at 30% alpha — line 50"
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": "n/a — caller gates visibility", "quality": "n/a"},
+        "empty": {"present": true, "evidence": "Caller hides the chip at balance 0 per KDoc line 20; not enforced in this file", "quality": "adequate"},
+        "error": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "success": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "offline": {"present": false, "evidence": "A stale cached balance is indistinguishable from a fresh one", "quality": "missing"},
+        "permissionDenied": {"present": false, "evidence": "n/a", "quality": "n/a"}
+      },
+      "tokenUsage": {"hardcodedDp": [], "hardcodedColors": [], "unmappedTypographySlots": ["labelMedium — WalletBalanceChip.kt:34. UNMAPPED → the wallet rupee figure renders in Roboto."], "offScaleRadius": []},
+      "i18n": {"hardcodedUserFacingStrings": [], "hindiRisk": "LOW — the chip is a currency figure only.", "currencyFormatting": "Uses the shared `formatInr` helper — line 33. Correct, and the counter-example to PendingBookingResumeBanner.kt:52-56."},
+      "a11y": {
+        "touchTargetRisks": ["M3 AssistChip height is 32dp by spec and is not overridden here (WalletBalanceChip.kt:29-52 passes no height modifier). This is a clickable navigation control at 32dp — 16dp under the floor."],
+        "contrastRisks": ["primary-on-surfaceVariant for the label (lines 35, 47) plus a 30%-alpha primary border (line 50). Brand marigold on a light neutral is the classic sub-4.5:1 pairing and this is the only place a money figure appears on the home screen."],
+        "contentDescriptions": ["Good — leadingIcon carries R.string.wallet_chip_content_desc (line 41)."]
+      },
+      "motion": "None.",
+      "density": "Compact chip.",
+      "observations": [
+        {"severity": "medium", "claim": "A tappable navigation control sits at the M3 AssistChip default height of 32dp, below the 48dp floor.", "evidence": "WalletBalanceChip.kt:29-52 — `AssistChip(onClick = onClick, ...)` with `modifier = modifier` (line 51) and no height override anywhere in the chain.", "confidence": "high"},
+        {"severity": "medium", "claim": "The wallet balance — a money figure — renders in labelMedium, an unmapped slot, so it falls back to Roboto rather than the design core's JetBrains Mono numerals.", "evidence": "WalletBalanceChip.kt:34 `style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)`; Typography.kt:145.", "confidence": "high"},
+        {"severity": "low", "claim": "Brand primary as the text colour on surfaceVariant is an unverified contrast pairing for a numeric value the customer needs to read at a glance.", "evidence": "WalletBalanceChip.kt:35 `color = MaterialTheme.colorScheme.primary` on `containerColor = MaterialTheme.colorScheme.surfaceVariant` (line 47).", "confidence": "medium"}
+      ]
+    },
+    {
+      "id": "customer.address-picker-content",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/booking/AddressPickerScreenContent.kt",
+      "loc": 415,
+      "purpose": "The real address-selection UI: full-bleed Google Map with a draggable pin, a search-with-predictions overlay, and a state-driven bottom CTA bar including the out-of-service-area refusal path. Extracted from AddressPickerScreen for Paparazzi (KDoc lines 64-69), which is exactly why the *Screen.kt glob missed it.",
+      "composition": [
+        "Box root — AddressPickerScreenContent.kt:96",
+        "AddressMap full-bleed, Ayodhya default centre (26.7958, 82.1947) at zoom 13 — lines 98-104, 60-61, 268-314",
+        "SearchPanel: Surface elevation 4, OutlinedTextField with Search leading icon and conditional Close trailing icon, plus a LinearProgressIndicator while searching — lines 146-194",
+        "PredictionsPanel: Surface elevation 8; empty→'search unavailable, drop a pin' bodySmall; else LazyColumn heightIn max 240.dp of PredictionRow + inset HorizontalDivider — lines 196-221",
+        "PredictionRow: LocationOn 20.dp + primary/secondary text + ChevronRight 16.dp — lines 223-265",
+        "BottomCtaBar: state switch over RefusedOutOfArea / Selected(inService?) / Searching / else — lines 316-358",
+        "InServiceCtaBar: address bodySmall + 56.dp HsPrimaryButton — lines 360-385",
+        "RefusalBanner: errorContainer surface, titleSmall title, bodySmall subtitle, HsSecondaryButton 'notify me' — lines 387-414"
+      ],
+      "states": {
+        "loading": {"present": true, "evidence": "LinearProgressIndicator in the search panel (lines 186-191) and a 72.dp CircularProgressIndicator block in the CTA bar (lines 343-353)", "quality": "good — two distinct loading affordances for two distinct waits"},
+        "empty": {"present": true, "evidence": "PredictionsPanel empty branch — lines 205-211", "quality": "adequate, and the copy correctly redirects to dropping a pin"},
+        "error": {"present": true, "evidence": "RefusalBanner for out-of-service-area — lines 387-414, reached from both RefusedOutOfArea and Selected(!isInService)", "quality": "good — has a title, an explanation, and a recovery CTA"},
+        "success": {"present": true, "evidence": "InServiceCtaBar with the resolved address and an enabled confirm — lines 360-385", "quality": "adequate"},
+        "offline": {"present": false, "evidence": "No connectivity branch. A Places-API failure surfaces as an empty predictions list (line 205) with copy that says 'search unavailable', which conflates 'no results' with 'network down'.", "quality": "poor"},
+        "permissionDenied": {"present": false, "evidence": "No ACCESS_FINE_LOCATION branch anywhere in the file, and no 'use my current location' control exists at all — the user must either type or drag the pin", "quality": "missing"}
+      },
+      "tokenUsage": {
+        "hardcodedDp": ["PREDICTIONS_MAX_HEIGHT = 240.dp — line 62 (off-scale)", "72.dp searching block — line 348 (off-scale)", "56.dp confirm button — line 382 (off-scale)", "48.dp divider inset — line 216", "20.dp / 16.dp icons — lines 240, 262", "4.dp / 8.dp elevations — lines 154, 202, 324"],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": ["titleSmall in the refusal banner — line 396. Roboto fallback on the one message that tells a user their village is not served."],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "hindiRisk": "HIGH. The refusal banner (lines 394-405) is the app's most consequential message for a rural user and is set at titleSmall + bodySmall (12sp); Devanagari at 12sp inside an errorContainer surface with no maxLines is both small and wrap-prone. Google Map POI/road labels are rendered by the Maps SDK and will be in whatever the map style provides, not necessarily Devanagari — a mixed-script screen.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "touchTargetRisks": ["PredictionRow is 12+12 padding around a two-line block — comfortably over 48dp (lines 228-233).", "The map marker is the only fine-positioning control (line 311 `Marker(state = markerState, draggable = true)`) — a drag gesture on a small pin is the least accessible possible input for setting a service address."],
+        "contrastRisks": ["Address confirmation text uses bodySmall + onSurfaceVariant — lines 369-370. The user's own address, the thing they must verify before paying, is rendered in the smallest, faintest combination available."],
+        "contentDescriptions": ["The clear-query IconButton has contentDescription = null — AddressPickerScreenContent.kt:171-177. This is an unlabeled interactive control, not a decorative icon.", "Search, LocationOn and ChevronRight icons are all null (lines 165, 238, 260) — acceptable as decoration.", "GoogleMap has no semantics at all (lines 306-313) — the map and its draggable pin are invisible to TalkBack."]
+      },
+      "motion": "AnimatedVisibility expandVertically+fadeIn / shrinkVertically+fadeOut on the predictions panel — lines 125-129. This is the best motion treatment in the whole X2 cluster.",
+      "density": "Comfortable.",
+      "observations": [
+        {"severity": "high", "claim": "There is no 'use my current location' control and no location-permission path anywhere in the address picker — a rural user with an unmappable address must type a Places query or drag a pin on a satellite-free map.", "evidence": "AddressPickerScreenContent.kt has no ACCESS_FINE_LOCATION reference, no FusedLocationProvider usage, and no locate button; the only inputs are the OutlinedTextField (lines 158-185) and the draggable Marker (line 311). GoogleMap is constructed with no `properties = MapProperties(isMyLocationEnabled = ...)` and no uiSettings (lines 306-309).", "confidence": "high"},
+        {"severity": "medium", "claim": "The clear-search IconButton is an interactive control with no accessible label.", "evidence": "AddressPickerScreenContent.kt:171-177 — `IconButton(onClick = onClearQuery) { Icon(Icons.Default.Close, contentDescription = null, ...) }`.", "confidence": "high"},
+        {"severity": "medium", "claim": "A Places API failure and a genuine zero-result search are rendered identically.", "evidence": "AddressPickerScreenContent.kt:205-211 — the single empty branch renders R.string.address_picker_search_unavailable_drop_pin whenever `predictions.isEmpty()`, and PredictionsPanel is only reachable from AddressPickerUiState.PredictionsAvailable (lines 120-124).", "confidence": "high"},
+        {"severity": "medium", "claim": "The out-of-service-area refusal — the single highest-stakes message for the Ayodhya rollout — is typeset at titleSmall (unmapped, Roboto) over bodySmall (12sp).", "evidence": "AddressPickerScreenContent.kt:396 and :403.", "confidence": "high"},
+        {"severity": "low", "claim": "The confirmed address is shown at 12sp in the faintest text role, capped at 2 lines with no overflow marker.", "evidence": "AddressPickerScreenContent.kt:367-373 — bodySmall + onSurfaceVariant + `maxLines = 2` with no `overflow` argument.", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "customer.waitlist-content",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/waitlist/WaitlistScreenContent.kt",
+      "loc": 207,
+      "purpose": "Capture-a-phone-number form for users outside the service area — the terminal screen of the refusal path from the address picker. Extracted from WaitlistScreen for Paparazzi (KDoc lines 31-36).",
+      "composition": [
+        "Column, 24.dp horizontal gutters, navigationBarsPadding — lines 45-51",
+        "WaitlistHeader: headlineMedium/Bold title + bodyLarge body — lines 183-196",
+        "State switch: Confirmed / RateLimited / Submitting / Error / Form — lines 56-104",
+        "PhoneField: OutlinedTextField with label + placeholder — lines 108-123",
+        "SubmitButton: HsPrimaryButton fillMaxWidth gated on isPhoneValid — lines 125-136",
+        "ConfirmedContent: primaryContainer surface, 48.dp CheckCircle, titleLarge + bodyMedium — lines 138-169",
+        "RateLimitedContent: a single bodyLarge error-coloured line — lines 198-206"
+      ],
+      "states": {
+        "loading": {"present": true, "evidence": "SubmittingContent disables the field and shows a centred CircularProgressIndicator — lines 171-181", "quality": "good"},
+        "empty": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "error": {"present": true, "evidence": "WaitlistUiState.Error branch — lines 66-90, with retryable-aware CTA label", "quality": "poor: renders the raw server reason string, see observations"},
+        "success": {"present": true, "evidence": "ConfirmedContent — lines 138-169", "quality": "good — icon + title + body in a tinted container"},
+        "offline": {"present": false, "evidence": "Collapsed into the generic Error branch", "quality": "poor"},
+        "permissionDenied": {"present": false, "evidence": "n/a", "quality": "n/a"}
+      },
+      "tokenUsage": {"hardcodedDp": ["24/32/8/12/48 — lines 49,52,54,72,78,98,147,153,155,161,177,190. All on the spacing scale."], "hardcodedColors": [], "unmappedTypographySlots": [], "offScaleRadius": []},
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          "WaitlistScreenContent.kt:118 — `placeholder = { Text(\"+91 98765 43210\") }` (hardcoded Latin-digit example)",
+          "WaitlistScreenContent.kt:74 — `text = uiState.reason` renders a server-supplied string verbatim as the user-facing error"
+        ],
+        "hindiRisk": "HIGH for the error path specifically: whatever the API returns is displayed unmodified in colorScheme.error, and API error strings will be English.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "touchTargetRisks": ["HsPrimaryButton is 64dp — compliant.", "RateLimited state has NO interactive element at all (lines 198-206) — the screen becomes a dead end."],
+        "contrastRisks": ["colorScheme.error on the default background for the error line (line 76) and the rate-limit line (line 204)."],
+        "contentDescriptions": ["CheckCircle contentDescription = null (line 151) — acceptable, the title carries meaning."]
+      },
+      "motion": "None. State transitions swap content instantly.",
+      "density": "Generous — 24dp gutters, 32dp header gap.",
+      "observations": [
+        {"severity": "medium", "claim": "The error state prints the raw server reason string directly to the user with no mapping to a localised message.", "evidence": "WaitlistScreenContent.kt:73-77 — `Text(text = uiState.reason, style = ..., color = MaterialTheme.colorScheme.error)`. Nothing translates or sanitises `reason`.", "confidence": "high"},
+        {"severity": "medium", "claim": "The rate-limited state is a dead end — one line of red text, no button, no way forward or back from within the content.", "evidence": "WaitlistScreenContent.kt:198-206 — RateLimitedContent renders exactly one Text and nothing else. Note the Error branch (lines 66-90) does render a retry CTA, so the omission is inconsistent within the same file.", "confidence": "high"},
+        {"severity": "low", "claim": "Phone placeholder is a hardcoded literal with Latin digits.", "evidence": "WaitlistScreenContent.kt:118.", "confidence": "high"},
+        {"severity": "low", "claim": "This is the cleanest token discipline in the X2 cluster — every dp is on-scale and every type slot is mapped. Worth recording as the positive control that the scale IS followable.", "evidence": "WaitlistScreenContent.kt: dp values used are 8/12/24/32/48 only; type slots used are headlineMedium, bodyLarge, bodyMedium, titleLarge — all mapped per Typography.kt:134-143.", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "customer.home-tab-content",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/CustomerHomeTabContent.kt",
+      "loc": 552,
+      "purpose": "The three 'durable hook' sections at the top of the customer home tab — pending actions, active booking, recent bookings — plus a shimmer skeleton. Extracted for Paparazzi (KDoc line 66).",
+      "composition": [
+        "Loading→DurableHooksSkeleton / Ready→DurableHooksReady — lines 89-103",
+        "PendingActionsSection: SectionLabel + PendingActionCard list — lines 144-161",
+        "PendingActionCard (customer variant, distinct from the technician file of the same name): 14.dp-radius clipped Row with border, 36.dp icon box at 10.dp radius, title + 'tap to continue' hint + ArrowForward — lines 163-226",
+        "ActiveBookingSection: 16.dp-radius bordered card, TrackChanges icon + label, service name, status label, inline CTA + arrow — lines 251-347",
+        "RecentBookingsSection / RecentBookingCard: 14.dp-radius bordered row, 36.dp bookmark box, name + slot date, and a rate-or-complain text pill — lines 363-470",
+        "SectionLabel — lines 474-482",
+        "DurableHooksSkeleton: infinite linear-gradient shimmer over 60/76/56.dp blocks — lines 486-551"
+      ],
+      "states": {
+        "loading": {"present": true, "evidence": "DurableHooksSkeleton with a 1200ms LinearEasing infinite shimmer — lines 486-551", "quality": "good — the skeleton geometry mirrors the real blocks"},
+        "empty": {"present": true, "evidence": "Each section is conditionally omitted — lines 119, 125, 132; the KDoc at lines 62-63 states this is deliberate ('no placeholder text is shown')", "quality": "adequate by design"},
+        "error": {"present": false, "evidence": "CustomerHomeUiState has only Loading and Ready branches — the `when` at lines 89-103 is exhaustive over two states. A failed durable-hooks fetch is indistinguishable from having nothing pending.", "quality": "missing"},
+        "success": {"present": true, "evidence": "DurableHooksReady — lines 108-140", "quality": "good"},
+        "offline": {"present": false, "evidence": "No branch", "quality": "missing"},
+        "permissionDenied": {"present": false, "evidence": "n/a", "quality": "n/a"}
+      },
+      "tokenUsage": {
+        "hardcodedDp": ["6.dp vertical section padding ×4 — lines 153, 288, 373, 519", "6.dp spacedBy — line 294", "14.dp padding — lines 186, 293, 401", "36.dp icon box ×2 — lines 194, 409", "18.dp icon — line 304", "11.dp icon — line 435", "2.dp label inset — line 480", "10.dp spacedBy — line 519", "60/76/56.dp skeleton heights — lines 525, 534, 543. Off the 0/4/8/12/16/24/32/48/64/96 scale: 6, 14, 36, 18, 11, 2, 10, 60, 76, 56 = 10 distinct off-scale values across 17 sites."],
+        "hardcodedColors": ["ActiveAccentSoft #FFF5EFE4 — line 52", "HighPriorityRed #FFB5271B — line 53", "HighPriorityRedSoft #FFFAECEB — line 54", "Color(0xFF18231F) — lines 175 and 266", "Color(0xFF5F6C66) — lines 176 and 269. Five literals, seven application sites. The file's own comment at line 51 concedes them: '// ── Colour tokens (non-design-system — keep as raw values)'."],
+        "unmappedTypographySlots": ["labelMedium ×3 — lines 308, 326, 335", "titleSmall ×1 — line 478. Four Roboto-fallback sites, including the section headers (SectionLabel) and the active-booking CTA."],
+        "offScaleRadius": ["RoundedCornerShape(14.dp) ×6 — lines 182, 184, 398, 400, 526, 545", "RoundedCornerShape(16.dp) ×3 — lines 289, 291, 535", "RoundedCornerShape(10.dp) ×2 — lines 195, 410. Radius scale is 4/8/12/20/9999 → 14, 16 and 10 are all off it. Eleven off-scale radius sites."]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": ["CustomerHomeTabContent.kt:239-243 — the `else` branch of pendingActionTitle prettifies the raw enum name (`action.type.name.replace('_',' ').lowercase().replaceFirstChar { it.uppercase() }`) and shows it as the card title. Produces English sentence-case identifiers on a Hindi-first home screen."],
+        "hindiRisk": "SEVERE. Twelve explicit `fontSize` overrides pin text to fixed sp values — 14sp (207, 422), 11sp (214, 439, 447, 459), 12sp (308, 326), 15sp (314), 13sp (335, 478) — and eight of those are combined with `maxLines = 1` (209, 216, 316, 424) or single-line pill layouts (445-467). Devanagari at 11-13sp with maxLines=1 on a card whose width is fixed by a weight(1f) column is a guaranteed truncation. This is the home screen.",
+        "currencyFormatting": "n/a on this surface"
+      },
+      "a11y": {
+        "touchTargetRisks": ["The rate/complain pills are Text composables with `.clickable` and 8/4 padding — lines 449-455 and 461-467. At labelSmall 11sp plus 4dp vertical padding the effective target is roughly 22dp tall, less than half the 48dp floor, and they are the entry point to rating and complaint flows.", "PendingActionCard (14+12+36+12+14) and ActiveBookingSection are comfortably over 48dp."],
+        "contrastRisks": ["Fixed-light literals used as backgrounds with dark-literal foregrounds to survive dark mode — the code comments at lines 173-174 and 263-264 state this explicitly ('use dark foregrounds so cards stay readable in dark mode'). That is a workaround, not a token, and it means these cards ignore the theme entirely.", "Subtitle/hint text at 11sp in onSurfaceVariant — lines 212-217, 437-441.", "Arrow icons drawn at 70% accent alpha — line 222."],
+        "contentDescriptions": ["Every Icon in the file passes contentDescription = null — lines 199, 302, 221, 341, 414, 433. Including the ArrowForward affordances that signal 'this navigates'."]
+      },
+      "motion": "Shimmer skeleton (lines 492-517) is the only motion. Real content appears with no transition from the skeleton.",
+      "density": "Dense — 6dp section gaps, 11-15sp type.",
+      "observations": [
+        {"severity": "high", "claim": "CONFIRMS X1's charge that this is the worst off-scale-value offender in the customer app: 10 distinct off-scale dp values across 17 sites, 11 off-scale radius applications (14/16/10dp), and — the part X1 did not quantify — 12 explicit `fontSize` overrides that bypass the type scale entirely.", "evidence": "Off-scale dp: CustomerHomeTabContent.kt:153,288,294,373,519 (6dp), 186,293,401 (14dp), 194,409 (36dp), 304 (18dp), 435 (11dp), 480 (2dp), 519 (10dp), 525 (60dp), 534 (76dp), 543 (56dp). Off-scale radius: 182,184,398,400,526,545 (14dp), 289,291,535 (16dp), 195,410 (10dp). fontSize overrides: 207,214,308,314,326,335,422,439,447,459,478 plus lineHeight-free copies.", "confidence": "high"},
+        {"severity": "high", "claim": "PARTIALLY REFUTES X1 on Roboto fallback: this file has exactly 4 unmapped-slot usages (labelMedium ×3, titleSmall ×1), which is real but is NOT the worst in the app — CatalogueVisualImage.kt has 3 in 245 lines and TrustDossierCard.kt has 4 in a much smaller surface. The more damaging typography defect here is the 12 hardcoded fontSize overrides, which X1 did not name.", "evidence": "Unmapped slots at CustomerHomeTabContent.kt:308, 326, 335 (labelMedium) and 478 (titleSmall), cross-checked against Typography.kt:145. Compare TrustDossierCard.kt:65,113,140,166 (titleMedium ×4) and CatalogueVisualImage.kt:126,136,163.", "confidence": "high"},
+        {"severity": "high", "claim": "The rate-a-booking and file-a-complaint controls on the home screen are 11sp text pills roughly 22dp tall.", "evidence": "CustomerHomeTabContent.kt:444-468 — both branches render a `Text` with `style = labelSmall.copy(fontSize = 11.sp)` and `.clickable(...).padding(horizontal = 8.dp, vertical = 4.dp)`. No minimumInteractiveComponentSize, no sizeIn.", "confidence": "high"},
+        {"severity": "high", "claim": "Body and label text on the primary customer screen runs at 11-15sp against a 16sp floor, with maxLines=1 on the Devanagari-critical fields.", "evidence": "CustomerHomeTabContent.kt:207 (14sp, maxLines 1 at 209), 214 (11sp), 308 (12sp), 314 (15sp, maxLines 1 at 316), 326 (12sp), 335 (13sp), 422 (14sp, maxLines 1 at 424), 439 (11sp), 447 (11sp), 459 (11sp), 478 (13sp).", "confidence": "high"},
+        {"severity": "medium", "claim": "There is no error state — a failed fetch of pending actions and active booking renders as an empty home screen.", "evidence": "CustomerHomeTabContent.kt:89-103 — the `when (homeState)` has exactly two branches, Loading and Ready.", "confidence": "high"},
+        {"severity": "medium", "claim": "Unhandled PendingActionTypes are surfaced as prettified English enum names.", "evidence": "CustomerHomeTabContent.kt:239-243.", "confidence": "high"},
+        {"severity": "medium", "claim": "Dark mode is defeated by design on two of the three sections: fixed light literals are used as card backgrounds with fixed dark literals as foregrounds, so these cards stay light while the rest of the app inverts.", "evidence": "CustomerHomeTabContent.kt:173-176 and 263-269, with the intent stated in the adjacent comments.", "confidence": "high"},
+        {"severity": "low", "claim": "Every icon in the file, including the navigation-affordance arrows, has contentDescription = null.", "evidence": "CustomerHomeTabContent.kt:199, 221, 302, 341, 414, 433.", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "customer.trust-dossier-card",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/shared/TrustDossierCard.kt",
+      "loc": 371,
+      "purpose": "The trust surface: shows who is coming to the customer's home — photo, name, Aadhaar/police-check badges, training, certifications, languages, recent reviews. Renders compact (in-tracking) or expanded, with Loading / Error / Unavailable / Loaded states.",
+      "composition": [
+        "Surface shapes.large, outlineVariant border, tonalElevation 1.dp — lines 39-45",
+        "LoadingContent: header + titleMedium line + two 14.dp placeholder lines + two 34.dp placeholder blocks — lines 56-75",
+        "ErrorContent: header + titleMedium error title + bodyMedium body — lines 77-96",
+        "UnavailableContent: header + titleMedium + optional body + TrustSignalList — lines 98-126",
+        "CompactContent: 48.dp avatar + header + name + badge row — lines 128-151",
+        "ExpandedContent: 68.dp avatar + name + jobs/years line + badges + trained-by + certifications + languages + reviews — lines 153-220",
+        "TrustDossierHeader: circular primaryContainer lock chip (7.dp pad / 16.dp icon) + labelLarge title — lines 222-245",
+        "TrustSignalRow: 7.dp dot + bodyMedium label — lines 256-275",
+        "ProfileAvatar: Coil AsyncImage or initial-letter fallback — lines 292-328",
+        "BadgeChip: extraLarge pill, labelSmall (11sp) — lines 330-346"
+      ],
+      "states": {
+        "loading": {"present": true, "evidence": "LoadingContent — lines 56-75", "quality": "good — a real skeleton, though static (no shimmer)"},
+        "empty": {"present": true, "evidence": "UnavailableContent with a generic trust-signal list — lines 98-126", "quality": "good — it explains what verification means even when the profile is missing"},
+        "error": {"present": true, "evidence": "ErrorContent — lines 77-96", "quality": "adequate, but no retry affordance"},
+        "success": {"present": true, "evidence": "Compact and Expanded — lines 128-220", "quality": "good"},
+        "offline": {"present": false, "evidence": "AsyncImage at line 321 has no error/placeholder argument — a failed photo load on 4G leaves the avatar slot blank rather than falling back to the initials Surface at lines 306-319, which is only reachable when photoUrl is null/blank (line 305)", "quality": "poor"},
+        "permissionDenied": {"present": false, "evidence": "n/a", "quality": "n/a"}
+      },
+      "tokenUsage": {
+        "hardcodedDp": ["14.dp ×3 — lines 68, 69, 157", "34.dp ×2 — lines 71, 72", "6.dp ×5 — lines 81, 105, 136, 145, 179", "68.dp — line 160", "5.dp — line 161", "7.dp ×2 — lines 234, 264", "2.dp — line 203", "10.dp ×2 — lines 261, 341. Off-scale values: 14, 34, 6, 68, 5, 7, 2, 10 = 8 distinct, 16 sites."],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": ["titleMedium ×4 — lines 65, 113, 140, 166. Every name/headline in the card, including the technician's own display name in both compact and expanded modes, renders in Roboto."],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          "TrustDossierCard.kt:205 — `text = \"Rating ${\"%.1f\".format(review.rating)}/5\"`. 'Rating' and '/5' are hardcoded English; the numeral is formatted with the default locale.",
+          "TrustDossierCard.kt:211 — `review.date.take(10)` renders the first 10 characters of a raw ISO timestamp as the review date, with no date formatting and no locale.",
+          "TrustDossierCard.kt:194 — `profile.languages.joinToString(\", \")` uses a hardcoded Latin comma-space separator.",
+          "TrustDossierCard.kt:304 — `?: \"P\"` fallback avatar initial is a Latin letter."
+        ],
+        "hindiRisk": "HIGH. BadgeChip is labelSmall = 11sp with maxLines = 1 and Ellipsis (lines 338, 342-343); 'आधार सत्यापित' / 'पुलिस सत्यापन' at 11sp in a horizontal Row of two or three chips (lines 145-148, 179-182) will ellipsize on a narrow entry-device screen — the verification badges are precisely the content that must not truncate.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "touchTargetRisks": ["Nothing in the card is interactive — no touch-target risk, but also no way to expand the compact variant or open a full profile."],
+        "contrastRisks": ["Badge chips are onPrimaryContainer on primaryContainer at 11sp — lines 338-339. Small text on a tinted container is the highest-risk combination in the file and it carries the Aadhaar/police-check claim.", "Review body and the jobs/years line use bodySmall (12sp) — lines 174, 209."],
+        "contentDescriptions": ["Lock icon contentDescription = null — line 232, acceptable.", "AsyncImage uses the display name as its description — line 323, good.", "The initials-fallback avatar (lines 306-319) has no contentDescription at all, so when the photo is missing the avatar is invisible to TalkBack."]
+      },
+      "motion": "None anywhere. The loading placeholders are static Surfaces (lines 349-370) with no shimmer, unlike CustomerHomeTabContent's skeleton.",
+      "density": "Comfortable — 16dp padding, 12-14dp spacing.",
+      "observations": [
+        {"severity": "high", "claim": "CONFIRMS X1's Roboto-fallback charge, with an exact count and a sharper consequence: 4 titleMedium usages, and they are the technician's display name in both variants plus the loading/unavailable/error headlines. The trust card's every headline is off-brand font.", "evidence": "TrustDossierCard.kt:65 (loading title), :113 (unavailable title), :140 (compact display name), :166 (expanded display name), all `MaterialTheme.typography.titleMedium`, which Typography.kt:145 names as unmapped.", "confidence": "high"},
+        {"severity": "high", "claim": "REFUTES X1's implication that this file is among the worst hardcoded-colour offenders. TrustDossierCard.kt contains zero Color literals — every colour comes from MaterialTheme.colorScheme. The colour-literal offenders in this cluster are CatalogueVisualImage.kt (31 literals), PhotoFirstCategoryCard.kt (11), PendingActionCard.kt (10) and CustomerHomeTabContent.kt (5).", "evidence": "Grep of TrustDossierCard.kt for `Color(0x` returns nothing; colour references are at lines 42, 43, 88, 93, 120, 175, 213, 228, 233, 241, 266, 271, 309, 315, 334, 339, 356, 368 and are all colorScheme roles.", "confidence": "high"},
+        {"severity": "medium", "claim": "The review block renders an unlocalised 'Rating X/5' label and a raw ISO-date substring.", "evidence": "TrustDossierCard.kt:204-214 — `Text(text = \"Rating ${\"%.1f\".format(review.rating)}/5\", ...)` and `Text(review.date.take(10), ...)`.", "confidence": "high"},
+        {"severity": "medium", "claim": "A failed technician-photo load leaves an empty avatar rather than falling back to initials, because the fallback is gated on a null URL rather than on load failure.", "evidence": "TrustDossierCard.kt:305 `if (photoUrl.isNullOrBlank())` chooses the fallback; the else branch's AsyncImage (lines 321-326) passes no `error`, `placeholder`, or `onState` handler. Compare PhotoFirstCategoryCard.kt:136-138 and CatalogueVisualImage.kt:63, which both DO handle the error state.", "confidence": "high"},
+        {"severity": "medium", "claim": "Verification badges — the highest-value content on the highest-trust surface — are 11sp, single-line, and ellipsized.", "evidence": "TrustDossierCard.kt:336-344 — `style = MaterialTheme.typography.labelSmall` (11sp), `maxLines = 1`, `overflow = TextOverflow.Ellipsis`.", "confidence": "high"},
+        {"severity": "low", "claim": "Eight distinct off-scale dp values across 16 sites in a 371-line file.", "evidence": "TrustDossierCard.kt:68,69,157 (14), 71,72 (34), 81,105,136,145,179 (6), 160 (68), 161 (5), 234,264 (7), 203 (2), 261,341 (10).", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "customer.photo-first-category-card",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/PhotoFirstCategoryCard.kt",
+      "loc": 255,
+      "purpose": "Photo-first catalogue category tile (E16-S03 AC-1): full-bleed CDN image with a bottom scrim and overlaid name + starting price, falling back to a coloured icon tile when the image is blank or fails.",
+      "composition": [
+        "148.dp Box with press-scale animation, 16.dp radius clip, outline border, detectTapGestures — lines 96-113",
+        "PhotoCardImageContent: fillMaxSize AsyncImage + 80.dp bottom black-scrim gradient + name/price column at 10.dp insets — lines 126-171",
+        "PhotoCardIconFallback: 36.dp icon box at 12.dp radius, 21.dp icon, name, price — lines 173-204",
+        "categoryStyle(): five hardcoded per-category palettes + a themed default — lines 209-248"
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": "AsyncImage has no placeholder — lines 131-139. The card shows the surface colour until the image lands.", "quality": "missing"},
+        "empty": {"present": true, "evidence": "shouldRenderCdnImage(category.imageUrl) gate — line 94", "quality": "good"},
+        "error": {"present": true, "evidence": "onState → AsyncImagePainter.State.Error → imageLoadFailed → icon fallback — lines 136-138, 93-94, 115-122", "quality": "good — this is the correct pattern and should be the template for TrustDossierCard"},
+        "success": {"present": true, "evidence": "PhotoCardImageContent — lines 126-171", "quality": "good"},
+        "offline": {"present": true, "evidence": "Covered by the error→icon-fallback path; the KDoc at line 74 states 'preserving offline usability'", "quality": "good"},
+        "permissionDenied": {"present": false, "evidence": "n/a", "quality": "n/a"}
+      },
+      "tokenUsage": {
+        "hardcodedDp": ["148.dp card height — line 99 (off-scale)", "80.dp scrim — line 144 (off-scale)", "10.dp insets ×3 — line 151 (off-scale)", "36.dp icon box — line 181 (off-scale)", "21.dp icon — line 183 (off-scale)", "3.dp spacer — line 194 (off-scale)", "12.dp fallback padding — line 178"],
+        "hardcodedColors": ["AcRepairIconBg #FFEAF4F7 / Tint #FF246174 — lines 54-55", "WaterPumpIconBg #FFEAF1F8 / Tint #FF355F8A — lines 56-57", "PlumbingIconBg #FFEAF4EE / Tint #FF2E6B4F — lines 58-59", "ElectricalIconBg #FFF5EFE4 / Tint #FF80622F — lines 60-61", "WaterPurifierIconBg #FFEAF4EE / Tint #FF2E6B4F — lines 62-63", "PhotoCardScrim #FF000000 — line 66. Eleven literals. Color.White forced for both overlay texts — lines 158, 166."],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": ["PhotoCardShape = RoundedCornerShape(16.dp) — line 65 (radius scale is 4/8/12/20/9999)", "RoundedCornerShape(12.dp) icon box — line 181 (on-scale, raw)"]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "hindiRisk": "HIGH. The overlaid category name is 14sp with lineHeight 17sp and maxLines = 2 inside a fixed 148.dp card over an 80.dp scrim (lines 155-160). Devanagari at 15-30% greater line height with a 17sp lineHeight cap will clip ascenders/matras; two Devanagari lines will not fit the scrim band and will overflow onto the photo.",
+        "currencyFormatting": "Uses the shared `formatInr` — lines 164, 196. Correct."
+      },
+      "a11y": {
+        "touchTargetRisks": ["148.dp card — compliant."],
+        "contrastRisks": ["White text over a photo with only a 55%-alpha black gradient (lines 147, 158, 166). Over a bright photo — which is exactly what a marketing-quality category image is — white-on-photo will not hold 4.5:1, and the price line is further reduced to 88% alpha at 11sp (lines 165-166). This is the outdoor-sunlight worst case.", "Five hardcoded pale icon backgrounds paired with mid-tone tints (lines 54-63) are used only in the fallback and are unverified."],
+        "contentDescriptions": ["Image contentDescription = category.name — line 133, good.", "Fallback icon contentDescription = null — line 183, acceptable (name text follows)."]
+      },
+      "motion": "Press-scale to 0.96 with a StiffnessMediumLow spring — lines 86-90. Good, restrained.",
+      "density": "Compact — 10dp insets on the overlay.",
+      "observations": [
+        {"severity": "high", "claim": "Overlay text is white on an arbitrary CDN photo with only a 55%-alpha scrim, and the price line is dropped to 88% alpha at 11sp — no contrast guarantee is possible.", "evidence": "PhotoFirstCategoryCard.kt:147 `Brush.verticalGradient(listOf(Color.Transparent, PhotoCardScrim.copy(alpha = 0.55f)))`, :158 `color = Color.White`, :165-166 `labelSmall.copy(fontSize = 11.sp)` with `Color.White.copy(alpha = 0.88f)`.", "confidence": "high"},
+        {"severity": "high", "claim": "Eleven hardcoded colour literals define a five-category palette that has no relationship to the marigold/forest token core — teal, steel blue, green, ochre.", "evidence": "PhotoFirstCategoryCard.kt:54-63 plus the scrim at :66; applied via categoryStyle() at lines 209-248.", "confidence": "high"},
+        {"severity": "medium", "claim": "Category name is pinned to 14sp with a 17sp lineHeight and maxLines 2 inside a fixed-height card — the Devanagari failure case is structural, not incidental.", "evidence": "PhotoFirstCategoryCard.kt:99 (`.height(148.dp)`), :155 (`fontSize = 14.sp, lineHeight = 17.sp`), :159 (`maxLines = 2`).", "confidence": "high"},
+        {"severity": "medium", "claim": "The photo has no loading placeholder, so on intermittent 4G the grid shows empty bordered rectangles rather than the icon fallback the file already implements.", "evidence": "PhotoFirstCategoryCard.kt:131-139 — AsyncImage passes model/contentDescription/contentScale/modifier/onState but no `placeholder`. The icon fallback is only reached on State.Error (line 137), not on State.Loading.", "confidence": "high"},
+        {"severity": "low", "claim": "Six off-scale dp values (148, 80, 10, 36, 21, 3) plus a 16.dp radius off the 4/8/12/20 scale.", "evidence": "PhotoFirstCategoryCard.kt:99, 144, 151, 181, 183, 194, 65.", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "customer.photo-first-service-card",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/PhotoFirstServiceCard.kt",
+      "loc": 239,
+      "purpose": "Photo-first service card (E16-S03 AC-2): 164.dp hero image, name, description, duration chip, price, and a Book-now pill.",
+      "composition": [
+        "Card with 12.dp radius, 2.dp elevation, outline border, 16/6 outer padding — lines 67-74",
+        "PhotoServiceHeroImage: 164.dp AsyncImage with error fallback — lines 82-102",
+        "PhotoServiceFallbackHero: 164.dp placeholder surface with headlineLarge two-letter initials at 40% primary alpha — lines 104-123",
+        "PhotoServiceInfoBlock: name 16sp/Bold, description 13sp, action row — lines 125-154",
+        "PhotoServiceActionRow: duration chip + 20sp price + 36.dp Book pill — lines 156-203",
+        "PhotoServiceDurationChip: pill surface, 14.dp icon, 12sp label — lines 205-234"
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": "AsyncImage lines 88-98 has no placeholder", "quality": "missing"},
+        "empty": {"present": true, "evidence": "shouldRenderCdnImage gate — line 85", "quality": "good"},
+        "error": {"present": true, "evidence": "onState → State.Error → imageLoadFailed → PhotoServiceFallbackHero — lines 93-97, 100", "quality": "good"},
+        "success": {"present": true, "evidence": "hero + info block", "quality": "good"},
+        "offline": {"present": true, "evidence": "Falls back to the initials hero", "quality": "adequate"},
+        "permissionDenied": {"present": false, "evidence": "n/a", "quality": "n/a"}
+      },
+      "tokenUsage": {
+        "hardcodedDp": ["6.dp outer vertical — line 69 (off-scale)", "164.dp hero ×2 — lines 92, 107 (off-scale)", "10.dp spacers ×2 — lines 147, 178 (off-scale)", "36.dp button height — line 181 (off-scale AND under the touch floor)", "14.dp chip icon — line 223 (off-scale)", "2.dp elevation — line 72"],
+        "hardcodedColors": ["PhotoServicePlaceholderBg #FFEDE7DD — line 48"],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": ["PhotoServiceCardShape = RoundedCornerShape(12.dp) — line 46 (on-scale)", "PhotoServicePillShape = RoundedCornerShape(percent = 50) — line 47 (pill, fine)"]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": ["PhotoFirstServiceCard.kt:238 — `private fun formatServicePrice(pricePaise: Int): String = \"₹${pricePaise / PAISE_PER_RUPEE}\"`. A second, private currency formatter with a hand-rolled ₹ prefix and no grouping."],
+        "hindiRisk": "HIGH. Service name is 16sp with `maxLines = 1` (lines 134, 136) and description is 13sp with `maxLines = 2` (143-145); both are hard caps with Ellipsis on a two-line-tolerant layout, and the Book-now button label is 13sp inside a 36.dp pill with `maxLines = 1` (lines 197, 199) — 'अभी बुक करें' at 13sp in a 36dp pill will ellipsize.",
+        "currencyFormatting": "BROKEN CONSISTENCY. This file defines its own `formatServicePrice` (line 238) while its sibling PhotoFirstCategoryCard.kt:164 uses the shared `formatInr`. The same catalogue screen therefore renders prices two different ways."
+      },
+      "a11y": {
+        "touchTargetRisks": ["The Book-now Button is explicitly constrained to 36.dp — PhotoFirstServiceCard.kt:181 `modifier = Modifier.height(36.dp)`. That is 12dp under the floor on the primary conversion control of the catalogue."],
+        "contrastRisks": ["Fallback hero initials are `primary.copy(alpha = 0.40f)` on a hardcoded #EDE7DD — lines 108, 118. At 40% alpha this is decorative-only contrast on text that is standing in for the product image.", "Description at 13sp in onSurfaceVariant — lines 142-143."],
+        "contentDescriptions": ["Hero image uses R.string.service_image_desc with the service name — line 90, good.", "The fallback hero (lines 105-123) has no contentDescription, so when the image fails a screen reader gets nothing.", "Duration chip icon contentDescription = null — line 221, acceptable."]
+      },
+      "motion": "None.",
+      "density": "Compact — 12dp info padding, 13sp description.",
+      "observations": [
+        {"severity": "high", "claim": "The Book-now button — the catalogue's primary conversion control — is hard-capped at 36.dp height, 12dp under the touch floor.", "evidence": "PhotoFirstServiceCard.kt:179-181 `Button(onClick = onClick, modifier = Modifier.height(36.dp), ...)`.", "confidence": "high"},
+        {"severity": "high", "claim": "A second, divergent currency formatter is defined privately in this file while the sibling card in the same package uses the shared helper — the same rupee amount will render inconsistently on the same screen.", "evidence": "PhotoFirstServiceCard.kt:236-238 defines `PAISE_PER_RUPEE` and `formatServicePrice` returning `\"₹${...}\"` with no grouping; PhotoFirstCategoryCard.kt:51 imports and line 164 calls `formatInr`. Both render catalogue prices.", "confidence": "high"},
+        {"severity": "medium", "claim": "Every text size in the card is a raw sp literal — the type scale is bypassed entirely for name, description, price, button and chip.", "evidence": "PhotoFirstServiceCard.kt:134 (16sp), :143 (13sp), :174 (20sp), :197 (13sp), :229 (12sp). None of these Texts pass a `style =` argument at all.", "confidence": "high"},
+        {"severity": "medium", "claim": "The image-failure fallback hero is invisible to screen readers.", "evidence": "PhotoFirstServiceCard.kt:104-123 — PhotoServiceFallbackHero renders a Surface and a Text of uppercased initials with no contentDescription and no semantics.", "confidence": "high"},
+        {"severity": "low", "claim": "Five off-scale dp values (6, 164, 10, 36, 14).", "evidence": "PhotoFirstServiceCard.kt:69, 92/107, 147/178, 181, 223.", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "customer.catalogue-visual-image",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/CatalogueVisualImage.kt",
+      "loc": 245,
+      "purpose": "Generic catalogue image slot with a generated-gradient placeholder underneath: keyword-derived palette, decorative bar motif, initials tile, and optional title/supporting overlay. Three size variants (Category / ServiceCard / Hero).",
+      "composition": [
+        "Box: placeholder always composed underneath, AsyncImage layered on top when the URL is non-blank and has not failed — lines 50-66",
+        "CatalogueImagePlaceholder: Surface(palette.start) + linearGradient(start→end) + variant padding — lines 69-94",
+        "VisualBars: three stepped bars at increasing alpha — lines 95-99, 171-196",
+        "InitialsTile: 44/52/68.dp rounded tile with titleMedium initials — lines 100-114, 148-169",
+        "Title/supporting overlay, Category variant only — lines 115-143",
+        "paletteFor(): keyword→palette mapping with a hash-indexed fallback set — lines 205-234"
+      ],
+      "states": {
+        "loading": {"present": true, "evidence": "The generated placeholder is always composed beneath the image (lines 51-56), so there is never a blank frame", "quality": "excellent — this is the strongest loading pattern in the cluster"},
+        "empty": {"present": true, "evidence": "`imageUrl.isNotBlank()` gate — line 57", "quality": "good"},
+        "error": {"present": true, "evidence": "`onError = { imageFailed = true }` — line 63, reverting to the placeholder", "quality": "good"},
+        "success": {"present": true, "evidence": "AsyncImage over the placeholder — lines 58-64", "quality": "good"},
+        "offline": {"present": true, "evidence": "Placeholder-first architecture means offline degrades gracefully", "quality": "excellent"},
+        "permissionDenied": {"present": false, "evidence": "n/a", "quality": "n/a"}
+      },
+      "tokenUsage": {
+        "hardcodedDp": ["10/14/24.dp variant padding — lines 79-81 (10 and 14 off-scale)", "44/52/68.dp tile sizes — lines 105-107 (all off-scale)", "8/12.dp bar widths — line 177", "22/34.dp base heights — line 178 (both off-scale)", "7/10.dp height steps — line 179 (7 off-scale)", "3/5.dp bar spacing — line 182 (both off-scale)", "2.dp column spacing — line 118 (off-scale). Off-scale set: 10, 14, 44, 52, 68, 22, 34, 7, 3, 5, 2 = 11 distinct values."],
+        "hardcodedColors": ["Default text #FF18202A — line 202", "clean: #FFE7F4F1 / #FFD3ECE7 / #FF00796B — line 209", "repair/electric/plumb: #FFE8F0FB / #FFD7E5F7 / #FF2E5EAA — line 211", "beauty/salon/spa: #FFF7E8EE / #FFF0D8E2 / #FF9C3B63 — line 213", "appliance/ac/fridge: #FFFFF3DF / #FFF8E4BC / #FF9A6500 — line 215", "paint/carpenter: #FFEDECF6 / #FFDDD9EF / #FF5A4E9A — line 217", "five fallback palettes ×3 colours — lines 224-228. Total: 31 hardcoded Color literals in one file."],
+        "unmappedTypographySlots": ["titleSmall — line 126", "labelMedium — line 136", "titleMedium — line 163. Three unmapped slots; every text this component draws is Roboto."],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": ["CatalogueVisualImage.kt:243 — `return initials.ifBlank { \"HS\" }` (Latin fallback initials)"],
+        "hindiRisk": "SEVERE and structural. `paletteFor(title)` (lines 205-220) branches on English substrings — 'clean', 'repair', 'electric', 'plumb', 'beauty', 'salon', 'spa', 'appliance', 'ac', 'fridge', 'paint', 'carpenter'. When the catalogue is localised, a Hindi category title matches none of them and every card silently falls through to the hash-indexed fallback palette at line 218. The visual colour-coding of the entire catalogue collapses in Hindi. Separately, `initialsFor` (lines 236-244) splits on ' ', '-', '&', '/' and uppercases the first character — `uppercaseChar()` is a no-op on Devanagari, so Hindi titles yield raw first-consonant glyphs (or matras) as 'initials'.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "touchTargetRisks": ["Non-interactive."],
+        "contrastRisks": ["`palette.text` defaults to a single fixed near-black #18202A (line 202) used across all 11 palettes with no per-palette verification — lines 129, 137. The supporting line further drops to 72% alpha (line 137).", "The initials tile uses `onPrimary.copy(alpha = 0.58f)` as its background (line 158) with the palette accent as the text colour (line 165) — a semi-transparent background over a gradient means the effective contrast is unknowable at author time.", "None of the 31 literals participates in dark mode; the whole component is fixed-light."],
+        "contentDescriptions": ["The AsyncImage takes a caller-supplied contentDescription — line 60, good.", "The always-present placeholder (lines 51-56) has no semantics, so when the image fails the placeholder is invisible to TalkBack."]
+      },
+      "motion": "None.",
+      "density": "Variant-dependent.",
+      "observations": [
+        {"severity": "high", "claim": "This is the single largest concentration of hardcoded colour in the audited codebase — 31 Color literals defining 11 palettes, none of which derives from the marigold/forest token core.", "evidence": "CatalogueVisualImage.kt:202 (1), 209, 211, 213, 215, 217 (3 each = 15), 224-228 (3 each = 15). Applied at lines 86, 92, 129, 137, 165, 192.", "confidence": "high"},
+        {"severity": "high", "claim": "The catalogue's colour-coding is keyed off English substrings, so it silently degrades to a hash fallback the moment titles are Hindi — a Hindi-first product whose visual taxonomy only works in English.", "evidence": "CatalogueVisualImage.kt:205-220 — `val key = title.lowercase()` then `key.contains(\"clean\")`, `contains(\"repair\") || contains(\"electric\") || contains(\"plumb\")`, etc., with `else -> fallbackPalettes[stableIndex(title, ...)]` at line 218.", "confidence": "high"},
+        {"severity": "medium", "claim": "The initials generator is Latin-only: it uppercases the first character and falls back to the Latin string 'HS'.", "evidence": "CatalogueVisualImage.kt:236-244 — `it.first().uppercaseChar().toString()` and `initials.ifBlank { \"HS\" }`. Kotlin's uppercaseChar() has no effect on Devanagari, so Hindi titles yield an unmodified consonant or, for a title starting with a matra, a stray diacritic.", "confidence": "high"},
+        {"severity": "medium", "claim": "All three text slots the component uses (titleSmall, labelMedium, titleMedium) are unmapped, so 100% of its text renders in Roboto.", "evidence": "CatalogueVisualImage.kt:126, 136, 163 against Typography.kt:145.", "confidence": "high"},
+        {"severity": "low", "claim": "Dead branch: the title style checks `visualSize == CatalogueVisualSize.Hero` inside a block that is only entered when visualSize is Category, so the titleLarge arm can never execute.", "evidence": "CatalogueVisualImage.kt:115 `if (visualSize == CatalogueVisualSize.Category) {` wraps the Column; line 123 then tests `if (visualSize == CatalogueVisualSize.Hero)` to pick titleLarge. The Hero variant therefore never renders its title at all.", "confidence": "high"},
+        {"severity": "low", "claim": "Eleven distinct off-scale dp values.", "evidence": "CatalogueVisualImage.kt:79-81, 105-107, 118, 177-179, 182.", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "customer.confidence-score-row",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/ConfidenceScoreRow.kt",
+      "loc": 120,
+      "purpose": "Row of trust/confidence AssistChips (on-time %, area rating, nearest ETA) with a shared methodology explainer bottom sheet. Includes a 'new area — limited data' variant.",
+      "composition": [
+        "State switch: Hidden / Loading / Limited / Loaded — lines 40-75",
+        "Limited: a single 'new area' AssistChip — lines 43-50",
+        "Loaded: on-time chip, optional area-rating chip, optional ETA chip — lines 51-74",
+        "Methodology ModalBottomSheet: titleMedium heading + bodyMedium body — lines 77-93",
+        "ConfidenceScoreShimmer: three 90×32.dp alpha-pulsing boxes at 50% radius — lines 96-119"
+      ],
+      "states": {
+        "loading": {"present": true, "evidence": "ConfidenceScoreShimmer — lines 42, 96-119", "quality": "adequate — an alpha pulse, not a gradient sweep"},
+        "empty": {"present": true, "evidence": "Hidden → Unit (line 41) and the Limited variant (lines 43-50) which explains WHY there is no score", "quality": "good — the Limited state is a genuinely thoughtful empty state"},
+        "error": {"present": false, "evidence": "ConfidenceScoreUiState has no Error member handled here; a failed score fetch presumably maps to Hidden and disappears silently", "quality": "missing"},
+        "success": {"present": true, "evidence": "Loaded — lines 51-74", "quality": "good"},
+        "offline": {"present": false, "evidence": "no branch", "quality": "missing"},
+        "permissionDenied": {"present": false, "evidence": "n/a", "quality": "n/a"}
+      },
+      "tokenUsage": {
+        "hardcodedDp": ["4.dp row padding ×3 — lines 44, 54, 105", "8.dp spacing — lines 55, 106", "90.dp shimmer width — line 112 (off-scale)", "32.dp shimmer height — line 113 (off-scale)", "16/8/24.dp sheet padding — lines 85, 90"],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": ["titleMedium — line 84. The methodology sheet's heading renders in Roboto.", "AssistChip labels use the M3 default labelLarge (mapped), not overridden — lines 47, 59, 64, 70."],
+        "offScaleRadius": ["RoundedCornerShape(50) on the shimmer — line 115. Int/percent overload, i.e. a pill, matching the AssistChip it stands in for. Correct."]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "hindiRisk": "HIGH. Three AssistChips are laid out in a plain Row with `spacedBy(8.dp)` and no wrapping (lines 53-73) — no FlowRow, no horizontalScroll. 'समय पर 92%', 'क्षेत्र रेटिंग 4.6', 'निकटतम ETA 12 मिनट' at Devanagari width will overflow the screen edge on a Moto G and the third chip will simply be clipped off, unreachable.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "touchTargetRisks": ["All four chips are M3 AssistChips at the 32dp default height with onClick handlers — lines 45-48, 57-60, 62-65, 68-71. Four tappable controls, all 16dp under the floor. Same defect class as WalletBalanceChip."],
+        "contrastRisks": ["Default AssistChip colours (no colors override anywhere) — low risk."],
+        "contentDescriptions": ["No chip conveys that it is tappable or that tapping explains the methodology; there is no trailing icon and no semantics hint."]
+      },
+      "motion": "Alpha pulse 0.3→0.7 over 800ms tween, infinite — lines 98-103. Note `infiniteRepeatable(animation = tween(800))` without `repeatMode = RepeatMode.Reverse`, so it snaps back to 0.3 each cycle rather than breathing.",
+      "density": "Compact.",
+      "observations": [
+        {"severity": "medium", "claim": "Up to three tappable chips are laid out in a non-wrapping Row, so at Devanagari string widths the trailing chip is clipped off-screen with no scroll.", "evidence": "ConfidenceScoreRow.kt:53-73 — `Row(modifier = modifier.padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp))` containing up to three AssistChips. No FlowRow import, no horizontalScroll modifier.", "confidence": "high"},
+        {"severity": "medium", "claim": "Four interactive chips sit at the 32dp AssistChip default height.", "evidence": "ConfidenceScoreRow.kt:45, 57, 62, 68 — all `AssistChip(onClick = { showMethodology = true }, label = ...)` with no size modifier.", "confidence": "high"},
+        {"severity": "low", "claim": "The shimmer snaps rather than breathes because RepeatMode.Reverse is omitted.", "evidence": "ConfidenceScoreRow.kt:101 `animationSpec = infiniteRepeatable(animation = tween(800))` — the repeatMode parameter defaults to Restart.", "confidence": "high"},
+        {"severity": "low", "claim": "Methodology sheet heading uses the unmapped titleMedium slot.", "evidence": "ConfidenceScoreRow.kt:84.", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "admin.dashboard-error-boundary",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/(dashboard)/error.tsx",
+      "loc": 63,
+      "purpose": "React error boundary for the entire authenticated dashboard segment. Reports to Sentry and offers a reset.",
+      "composition": [
+        "'use client' + useEffect → Sentry.captureException — lines 1-15",
+        "section role=\"alert\", inline flex column, --space-12/--space-6 padding, max-width 48rem — lines 18-28",
+        "'Console' eyebrow — lines 29-31",
+        "h2.display at --text-3xl — lines 32-37",
+        "Explanatory paragraph in --color-text-muted — lines 38-41",
+        "'Try again' btn btn-primary calling reset() — lines 42-46",
+        "Conditional monospace digest line at --text-xs / --color-text-faint — lines 47-59"
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "empty": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "error": {"present": true, "evidence": "This surface IS the error state", "quality": "structurally good — role=\"alert\", a recovery action, and a support reference id"},
+        "success": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "offline": {"present": false, "evidence": "No distinction between a network failure and an application fault", "quality": "missing"},
+        "permissionDenied": {"present": false, "evidence": "A 403 from the admin API surfaces here as a generic 'Something stalled.'", "quality": "missing"}
+      },
+      "tokenUsage": {
+        "hardcodedDp": ["max-width '48rem' — line 25 (raw, not a token)"],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          "error.tsx:30 — 'Console'",
+          "error.tsx:36 — 'Something stalled.'",
+          "error.tsx:39-41 — 'The page hit an unexpected error. The incident has been logged. Try once more, then refresh the whole dashboard if it persists.'",
+          "error.tsx:44 — 'Try again'",
+          "error.tsx:57 — 'ref · '"
+        ],
+        "hindiRisk": "SEVERE. The file imports no next-intl API at all (imports are only react and @sentry/nextjs, lines 3-4) and is not an async server component, so it cannot call getTranslations. Every string is English. Its sibling admin-web/app/[locale]/not-found.tsx IS fully translated via getTranslations (lines 1-6, 11-25), which proves the omission is an oversight rather than policy.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "touchTargetRisks": ["btn btn-primary — sized by the shared stylesheet, not verified here."],
+        "contrastRisks": ["Digest line uses --color-text-faint at --text-xs — lines 52-53. The faintest role at the smallest size for the one string a user would have to read aloud to support."],
+        "contentDescriptions": ["role=\"alert\" on the section (line 19) is correct and is the best a11y touch in the admin files inventoried here."]
+      },
+      "motion": "None.",
+      "density": "Generous — --space-12 vertical.",
+      "observations": [
+        {"severity": "high", "claim": "The dashboard-wide error boundary is 100% untranslated English in a bilingual Hindi-first admin, while the adjacent not-found route is fully translated.", "evidence": "admin-web/app/[locale]/(dashboard)/error.tsx:1-4 imports only `react` and `@sentry/nextjs` — no next-intl; strings hardcoded at lines 30, 36, 39-41, 44, 57. Contrast admin-web/app/[locale]/not-found.tsx:1 `import { getTranslations, getLocale } from 'next-intl/server'` with every string from `t()` at lines 11, 16, 19, 25, backed by messages/hi.json → notFound.{eyebrow,title,description,backHome}.", "confidence": "high"},
+        {"severity": "medium", "claim": "'Something stalled.' is opaque failure copy that tells the operator nothing about what broke or whether their last action was saved.", "evidence": "error.tsx:36. The body (39-41) adds only 'The page hit an unexpected error.'", "confidence": "medium"},
+        {"severity": "low", "claim": "The support reference id is rendered at the smallest size in the faintest colour role.", "evidence": "error.tsx:52-53 `fontSize: 'var(--text-xs)', color: 'var(--color-text-faint)'`.", "confidence": "high"},
+        {"severity": "low", "claim": "Inline style objects rather than the shared stylesheet for everything except .eyebrow/.display/.btn/.font-mono.", "evidence": "error.tsx:20-27, 34, 50-55.", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "admin.locale-not-found",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/not-found.tsx",
+      "loc": 31,
+      "purpose": "Locale-scoped 404 page. Async server component, fully localised.",
+      "composition": [
+        "main: min-h-100dvh grid place-items-center on --color-surface — line 9",
+        "section card: max-w-40rem, --ink-1 background, --color-border, --space-8 padding, --shadow-lg — line 10",
+        "eyebrow — line 11",
+        "h1.display at clamp(4rem,10vw,7.5rem) with tabular-nums and aria-label — lines 12-17",
+        "description in --color-text-muted — lines 18-20",
+        "btn btn-primary Link back to /{locale}/dashboard — lines 21-26"
+      ],
+      "states": {
+        "loading": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "empty": {"present": true, "evidence": "This surface IS the not-found state", "quality": "good"},
+        "error": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "success": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "offline": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "permissionDenied": {"present": false, "evidence": "A 403 is not distinguished from a 404", "quality": "n/a"}
+      },
+      "tokenUsage": {
+        "hardcodedDp": ["max-w-[40rem] — line 10 (raw)", "text-[clamp(4rem,10vw,7.5rem)] — line 13 (raw, no --text-* token)"],
+        "hardcodedColors": ["bg-[var(--ink-1)] — line 10. Uses a raw palette-ramp variable as a surface rather than a semantic --color-surface-* role, so it is pinned to the dark ramp."],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": ["No radius class at all on the card — line 10 has border and shadow but no rounded-*, so it renders as a hard-cornered rectangle while the admin design language ships 2/4/6 radii."]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "hindiRisk": "LOW. Fully translated (messages/hi.json → notFound). The 'HomeHeroo एडमिन' eyebrow correctly mixes the brand name in Latin with a Devanagari noun.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "touchTargetRisks": ["btn btn-primary from the shared stylesheet."],
+        "contrastRisks": ["--color-text-muted for the only explanatory line — line 18."],
+        "contentDescriptions": ["Good: `aria-label={t('description')}` on the giant '404' h1 (line 14) so screen readers get 'पृष्ठ नहीं मिला' rather than a bare number."]
+      },
+      "motion": "None.",
+      "density": "Generous.",
+      "observations": [
+        {"severity": "low", "claim": "Positive control for the admin i18n story — this file does exactly what error.tsx fails to do, which is what makes the error.tsx finding a confirmed regression rather than an unimplemented feature.", "evidence": "not-found.tsx:1-6 and 11-25 vs error.tsx:1-4 and 29-58.", "confidence": "high"},
+        {"severity": "low", "claim": "The card hardcodes the dark-ramp variable --ink-1 as its surface and applies no border radius.", "evidence": "not-found.tsx:10 `className=\"w-full max-w-[40rem] bg-[var(--ink-1)] border border-[var(--color-border)] p-[var(--space-8)] shadow-[var(--shadow-lg)]\"` — no rounded-* class.", "confidence": "high"},
+        {"severity": "low", "claim": "The display numeral is sized by a raw clamp() rather than a --text-* token.", "evidence": "not-found.tsx:13.", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "admin.finance-loading",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/(dashboard)/finance/loading.tsx",
+      "loc": 13,
+      "purpose": "Route-level Suspense fallback for the finance dashboard.",
+      "composition": [
+        "div.p-6.space-y-4 — line 3",
+        "h-8 w-48 title bar — line 4",
+        "h-64 full-width chart block — line 5",
+        "h-10 full-width filter bar — line 6",
+        "six h-12 full-width rows — lines 7-9"
+      ],
+      "states": {
+        "loading": {"present": true, "evidence": "The whole file is the loading state; `.skeleton` provides a shimmer keyframe at admin-web/app/globals.css:635-651 including a prefers-reduced-motion opt-out at line 651", "quality": "adequate visually"},
+        "empty": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "error": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "success": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "offline": {"present": false, "evidence": "A hung request renders this skeleton forever with no timeout copy", "quality": "missing"},
+        "permissionDenied": {"present": false, "evidence": "n/a", "quality": "n/a"}
+      },
+      "tokenUsage": {
+        "hardcodedDp": ["Tailwind numeric utilities p-6, h-8, w-48, h-64, h-10, h-12, space-y-4, mb-2 — lines 3-8. These are Tailwind's own scale, not the admin --space-* tokens defined at globals.css:148-160."],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {"hardcodedUserFacingStrings": [], "hindiRisk": "NONE — no text.", "currencyFormatting": "n/a"},
+      "a11y": {
+        "touchTargetRisks": [],
+        "contrastRisks": [],
+        "contentDescriptions": ["No role=\"status\", no aria-busy, no aria-live, and no visually-hidden 'Loading…' text anywhere in the file (lines 1-12). A screen-reader user gets complete silence during the wait."]
+      },
+      "motion": "Inherited shimmer from .skeleton (globals.css:639-651), correctly disabled under prefers-reduced-motion.",
+      "density": "n/a",
+      "observations": [
+        {"severity": "medium", "claim": "Both admin loading routes are silent to assistive technology — no role=\"status\", aria-busy, or screen-reader text.", "evidence": "finance/loading.tsx:1-12 and technicians/loading.tsx:1-11 contain only div elements with className. Neither has an aria-* or role attribute.", "confidence": "high", "mergeCandidate": "admin.technicians-loading"},
+        {"severity": "low", "claim": "Skeleton geometry uses Tailwind's numeric scale rather than the admin --space-* token set, so the placeholder rhythm is not guaranteed to match the real layout.", "evidence": "finance/loading.tsx:3-8 (p-6, space-y-4, h-8, w-48, h-64, h-10, h-12) against the token definitions at admin-web/app/globals.css:148-160.", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "admin.technicians-loading",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/(dashboard)/technicians/loading.tsx",
+      "loc": 12,
+      "purpose": "Route-level Suspense fallback for the technician roster.",
+      "composition": [
+        "div.p-6.space-y-3 — line 3",
+        "h-8 w-48 title bar — line 4",
+        "h-10 full-width filter bar — line 5",
+        "eight h-14 full-width rows — lines 6-8"
+      ],
+      "states": {
+        "loading": {"present": true, "evidence": "The whole file", "quality": "adequate visually"},
+        "empty": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "error": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "success": {"present": false, "evidence": "n/a", "quality": "n/a"},
+        "offline": {"present": false, "evidence": "no timeout copy", "quality": "missing"},
+        "permissionDenied": {"present": false, "evidence": "n/a", "quality": "n/a"}
+      },
+      "tokenUsage": {"hardcodedDp": ["p-6, space-y-3, h-8, w-48, mb-4, h-10, h-14 — lines 3-7"], "hardcodedColors": [], "unmappedTypographySlots": [], "offScaleRadius": []},
+      "i18n": {"hardcodedUserFacingStrings": [], "hindiRisk": "NONE — no text.", "currencyFormatting": "n/a"},
+      "a11y": {"touchTargetRisks": [], "contrastRisks": [], "contentDescriptions": ["Same silence as finance/loading.tsx — no role, no aria-busy."]},
+      "motion": "Inherited .skeleton shimmer.",
+      "density": "n/a",
+      "observations": [
+        {"severity": "medium", "claim": "Silent to assistive technology — merged with the finance loading finding.", "evidence": "technicians/loading.tsx:1-11 has no aria-* or role attribute.", "confidence": "high", "mergeCandidate": "admin.finance-loading"},
+        {"severity": "low", "claim": "The skeleton advertises a card/list layout (8 × h-14 rounded blocks) but the real surface is a dense HTML table with ~37px rows and an 8-column header — the transition from skeleton to content is a visual jump, not a resolve.", "evidence": "technicians/loading.tsx:6-8 renders eight `h-14` (56px) full-width blocks; TechnicianRosterClient.tsx:110-121 renders a `<table>` whose header cells are padded 8px 12px and whose body cells are padded 10px 12px at 0.8125rem, giving a materially shorter row.", "confidence": "high"}
+      ]
+    },
+    {
+      "id": "admin.technician-roster-client",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/(dashboard)/technicians/TechnicianRosterClient.tsx",
+      "loc": 216,
+      "purpose": "The technician roster: search, status filter, and a table with per-row status transitions (on-duty / off-duty / suspend / reactivate), KYC status + document link, active-job count, and inline super-admin commission editing. Missed by the page.tsx glob because it is a co-located client component.",
+      "composition": [
+        "Header row: h1 + search input + status select — lines 79-104",
+        "Empty state paragraph — line 107",
+        "Scroll container + table, 8 columns (7 for non-super-admin) — lines 109-121",
+        "Row: avatar initials chip + name; mono phone; category chips; status pill; KYC pill + doc link; inline commission editor; active-job count; action buttons — lines 124-207"
+      ],
+      "states": {
+        "loading": {"present": true, "evidence": "`loading === tech.id` disables the row's buttons — lines 163, 182, 188, 194, 200", "quality": "poor: disable-only. No spinner, no aria-busy, no optimistic indicator. On a slow link the operator sees a dead button and nothing else."},
+        "empty": {"present": true, "evidence": "`filtered.length === 0` branch — lines 106-107", "quality": "poor: one centred grey line of untranslated English with no illustration, no 'clear filters' action, and no distinction between 'no technicians exist' and 'your filter matched nothing'"},
+        "error": {"present": false, "evidence": "Both mutation handlers use try/finally with NO catch — handleStatusChange lines 50-60 and handleCommissionSave lines 62-75. A rejected patchTechnician throws through the finally, the loading flag clears, and the UI shows nothing.", "quality": "MISSING — see observations"},
+        "success": {"present": true, "evidence": "Optimistic local state update — lines 54-56 and 68-70", "quality": "poor: silent. No toast, no row flash. The operator cannot distinguish a successful suspend from a no-op."},
+        "offline": {"present": false, "evidence": "No branch", "quality": "missing"},
+        "permissionDenied": {"present": true, "evidence": "`isSuperAdmin` hides the commission column — lines 30, 118, 157", "quality": "adequate for the column; there is no feedback if a server-side 403 rejects a status change, because there is no error path at all"}
+      },
+      "tokenUsage": {
+        "hardcodedDp": ["padding '1.5rem' — line 78", "gap '1rem' / '0.75rem' / '0.5rem' — lines 78, 79, 83", "input padding '6px 10px' and minWidth '220px' — lines 90, 96", "cell padding '8px 12px' and '10px 12px' — lines 113-120, 126-179", "avatar width/height 28 — line 128", "commission input width 52 — line 162", "button padding '3px 8px', '3px 6px', '4px 8px', '2px 6px' — lines 138, 143, 149, 162-170, 183-201", "padding '3rem 0' on the empty state — line 107. Essentially every dimension in the file is a raw literal; the --space-* tokens at globals.css:148-160 are not used once."],
+        "hardcodedColors": ["No hex literals — colours come from --teal / --rose / --ember / --marigold / --fog-0..3 / --ink-0..4 (lines 16-25, 80-204). These are ramp variables rather than semantic roles, and --teal/--rose/--ember are a status palette outside the marigold core (the accepted headline fracture)."],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": ["`borderRadius: 3` as a bare number ×6 — lines 162, 164, 170, 183, 189, 195, 201 (renders as 3px)", "`borderRadius: '3px'` — line 138", "`borderRadius: '4px'` ×2 — lines 143, 149. The admin radius scale is 2/4/6; 3px is off it, and it is the most-used radius in the file."]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          "TechnicianRosterClient.tsx:107 — `<p ...>No technicians found.</p>`. The empty state is the ONLY visible string in the component not routed through t().",
+          "TechnicianRosterClient.tsx:95 — `aria-label=\"Filter by status\"` hardcoded English, while the sibling search input at line 89 correctly uses `aria-label={t('searchPlaceholder')}`.",
+          "TechnicianRosterClient.tsx:138 — service category codes rendered raw (`{cat}`) with no lookup.",
+          "TechnicianRosterClient.tsx:171 — `{tech.commissionPct}%` with a hardcoded percent sign and no Intl.NumberFormat."
+        ],
+        "hindiRisk": "HIGH. Verified against admin-web/messages/hi.json: the `technicians` namespace contains title, searchPlaceholder, filterAll, columns.*, status.*, kyc.*, actions.* — and NO key for an empty state or a filter aria-label. Both gaps are therefore genuine missing keys, not lookup mistakes. Separately, the four action buttons (lines 182-204) are 12px labels in a flex-wrap row inside a table cell; Hindi labels ('ऑन ड्यूटी करें', 'निलंबित करें') are materially wider and will wrap the cell, stretching every row.",
+        "currencyFormatting": "n/a — no currency on this surface. Commission is a bare integer + '%' (line 171)."
+      },
+      "a11y": {
+        "touchTargetRisks": [
+          "The commission confirm/cancel buttons are `padding: '3px 8px'` / `'3px 6px'` around a 12px glyph — TechnicianRosterClient.tsx:164, 166. Roughly 18-20px tall. These edit a money field.",
+          "The four status-action buttons are `padding: '4px 8px'` at 12px font — lines 183, 189, 195, 201. Roughly 22px tall, under the WCAG 2.2 AA 24px minimum target size.",
+          "The 'view KYC' link is 0.7rem (11.2px) inline text — line 153."
+        ],
+        "contrastRisks": [
+          "Body text is 0.8125rem (13px) — line 110 — against the owner-locked 14px admin minimum. Badges, chips and every button are 0.75rem (12px) — lines 138, 143, 149, 164, 166, 183, 189, 195, 201 — and the KYC link and category chips are 0.7rem (11.2px) — lines 138, 153. The entire roster renders below the admin type floor.",
+          "Status and KYC pills use `color-mix(in srgb, <accent> 15%, transparent)` as the background with the same accent as the text — lines 143, 149. A 15% tint of the text colour as its own background is the definition of a low-contrast pill.",
+          "The KYC document link is --marigold at 11.2px — line 153."
+        ],
+        "contentDescriptions": [
+          "The commission save/cancel buttons render bare HTML entities `&#x2713;` and `&#x2715;` with NO aria-label, no title, and no text — lines 164 and 166. Two unlabeled icon-only controls that write a commission percentage.",
+          "The table has no <caption>, no scope=\"col\" on the header cells (lines 113-120), and no aria-live region for the filtered result count.",
+          "Status changes are announced to nobody — the optimistic setState at lines 54-56 has no aria-live partner."
+        ]
+      },
+      "motion": "None anywhere — no row transition, no button feedback, no toast.",
+      "density": "Very dense: 10px/12px cell padding at 13px type.",
+      "observations": [
+        {"severity": "high", "claim": "Both mutation handlers swallow failures completely — try/finally with no catch and no error state, on operations that suspend a technician's ability to earn and rewrite their commission percentage.", "evidence": "TechnicianRosterClient.tsx:50-60 `async function handleStatusChange(...) { setLoading(id); try { await patchTechnician(id, { status: newStatus }); setTechnicians(...) } finally { setLoading(null) } }` and lines 62-75 for handleCommissionSave. There is no catch block, no error state variable in the component (state declared at lines 32-37), and no error UI anywhere in the render.", "confidence": "high"},
+        {"severity": "high", "claim": "The commission save and cancel controls are unlabeled bare glyphs — icon-only controls that write money, violating the owner-locked 'icon + text, never icon alone' rule and giving screen readers nothing at all.", "evidence": "TechnicianRosterClient.tsx:163-166 — `<button onClick={...}>&#x2713;</button>` and `<button onClick={...}>&#x2715;</button>`. No aria-label, no title, no visually-hidden text, no <span> label.", "confidence": "high"},
+        {"severity": "high", "claim": "The entire roster renders below the 14px admin type minimum: 13px table body, 12px on every badge and button, 11.2px on category chips and the KYC document link.", "evidence": "TechnicianRosterClient.tsx:110 `fontSize: '0.8125rem'` on the table; 12px at lines 143, 149, 164, 166, 183, 189, 195, 201; 11.2px at lines 128, 138, 153; phone column at 0.75rem (line 134).", "confidence": "high"},
+        {"severity": "high", "claim": "Suspending a technician is a single unconfirmed click with no dialog and no undo.", "evidence": "TechnicianRosterClient.tsx:193-198 — the Suspend button calls `void handleStatusChange(tech.id, 'SUSPENDED')` directly on click. No window.confirm, no dialog component, and the optimistic update at lines 54-56 immediately rewrites local state.", "confidence": "high"},
+        {"severity": "medium", "claim": "The empty state and the status-filter aria-label are the only two untranslated strings in an otherwise fully-translated component, and both correspond to keys that do not exist in the messages file.", "evidence": "TechnicianRosterClient.tsx:107 'No technicians found.' and :95 aria-label=\"Filter by status\", against admin-web/messages/hi.json `technicians` namespace which contains only title, searchPlaceholder, filterAll, columns{8}, status{3}, kyc{3}, actions{5}.", "confidence": "high"},
+        {"severity": "medium", "claim": "Every action button is roughly 20-22px tall, under the WCAG 2.2 AA 24px target-size minimum.", "evidence": "TechnicianRosterClient.tsx:183, 189, 195, 201 — `padding: '4px 8px'` with `fontSize: '0.75rem'`; and lines 164, 166 at `padding: '3px 8px'`/'3px 6px'.", "confidence": "high"},
+        {"severity": "medium", "claim": "Invalid commission input is rejected silently — the handler returns with no message, so the operator sees the editor stay open and nothing happen.", "evidence": "TechnicianRosterClient.tsx:63-64 `const pct = parseInt(commissionDraft, 10); if (isNaN(pct) || pct < 0 || pct > 100) return;`.", "confidence": "high"},
+        {"severity": "medium", "claim": "The component uses zero shared stylesheet classes — roughly 45 inline style objects reimplement buttons, inputs, pills and table chrome that globals.css already defines (.btn, .card, .eyebrow are used elsewhere in the admin).", "evidence": "TechnicianRosterClient.tsx:78-206 — every element carries a `style={{...}}` literal; the only className in the file is none. Compare admin-web/app/[locale]/(dashboard)/error.tsx:29,33,43,49 which does use `.eyebrow`, `.display`, `.btn btn-primary`, `.font-mono`.", "confidence": "high"},
+        {"severity": "low", "claim": "borderRadius 3px is used 7 times and is off the admin 2/4/6 radius scale; three more sites use 4px, so the same file mixes two radii for the same button class.", "evidence": "TechnicianRosterClient.tsx:162, 164, 170, 183, 189, 195, 201 (3), 138 ('3px'), 143, 149 ('4px').", "confidence": "high"},
+        {"severity": "low", "claim": "Status and KYC pills derive their background from a 15% mix of their own text colour, guaranteeing a low-contrast pill.", "evidence": "TechnicianRosterClient.tsx:143 and 149 — `background: color-mix(in srgb, ${STATUS_COLORS[tech.status]} 15%, transparent), color: STATUS_COLORS[tech.status]`.", "confidence": "high"}
+      ]
+    }
+  ]
+}

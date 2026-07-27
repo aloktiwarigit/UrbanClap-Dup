@@ -1,0 +1,848 @@
+{
+  "cluster": "C2",
+  "surfaces": [
+    {
+      "id": "customer.catalogue-home",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/CatalogueHomeScreen.kt",
+      "loc": 1088,
+      "purpose": "Landing surface where the customer sees promo banners, trust chips and a 2-column grid of service categories, and taps a category to drill into its service list; also hosts the app's 4-tab bottom navigation (Home / Bookings / Support / Profile).",
+      "entryPoints": "Nav route CatalogueRoutes.HOME registered at customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/MainGraph.kt:82 and composed at MainGraph.kt:89; category tap navigates to CatalogueRoutes.serviceList(id) at MainGraph.kt:92.",
+      "composition": [
+        {
+          "block": "Scaffold with containerColor = colorScheme.background",
+          "evidence": "CatalogueHomeScreen.kt:242-243"
+        },
+        {
+          "block": "topBar switches on selected tab: StickyHero for tab 0, CompactTabBar for tabs 1/2, nothing for tab 3 (Profile has no top bar at all)",
+          "evidence": "CatalogueHomeScreen.kt:244-256"
+        },
+        {
+          "block": "StickyHero: Column with statusBarsPadding + padding(start=20,end=20,top=10,bottom=10)",
+          "evidence": "CatalogueHomeScreen.kt:437-443"
+        },
+        {
+          "block": "HeroTopRow: left Column with brand wordmark 'HomeHeroo' (headlineMedium, ExtraBold, 22.sp, primary) + 4dp spacer + LocationOn icon (15.dp) and location label 'Ayodhya, Uttar Pradesh'; right 42.dp circular IconButton with Settings icon on surface with 1dp outline border",
+          "evidence": "CatalogueHomeScreen.kt:459-505"
+        },
+        {
+          "block": "10dp spacer, then HeroSearchBar: full-width 52.dp M3 TextField, RoundedCornerShape(18.dp), surface fill, transparent indicators, 1dp outline border, Search leading icon 23.dp, placeholder 'Search AC, plumber, electrician…'",
+          "evidence": "CatalogueHomeScreen.kt:446-447, 509-541"
+        },
+        {
+          "block": "Optional WalletBalanceChip below search when showWalletChip && balance > 0",
+          "evidence": "CatalogueHomeScreen.kt:448-454"
+        },
+        {
+          "block": "Body = LazyColumn (CatalogueTab) with contentPadding bottom=16.dp",
+          "evidence": "CatalogueHomeScreen.kt:356-359"
+        },
+        {
+          "block": "Item 1: CustomerHomeTabContent (durable-hooks pending actions, active booking, recent bookings) — external composable in CustomerHomeTabContent.kt",
+          "evidence": "CatalogueHomeScreen.kt:360-369"
+        },
+        {
+          "block": "Item 2 (conditional): PendingBookingResumeBanner when a pending-payment booking with a razorpay order exists",
+          "evidence": "CatalogueHomeScreen.kt:370-389"
+        },
+        {
+          "block": "Item 3: PromoSlider — auto-advancing HorizontalPager (4s delay, tween 600), 196.dp tall pages, 24.dp radius, shadow 10.dp, contentPadding horizontal 16.dp, pageSpacing 12.dp; each page = full-bleed banner_image_N photo + black 0.62 alpha vertical scrim + bottom-aligned title (24.sp ExtraBold white) / subtitle (15.sp white 0.85) / CTA text line",
+          "evidence": "CatalogueHomeScreen.kt:390, 566-653"
+        },
+        {
+          "block": "PromoSlider dot indicators row: active = 18x5.dp rounded bar in primary, inactive = 5x5.dp circle in hardcoded Color(0xFFD1D5DB)",
+          "evidence": "CatalogueHomeScreen.kt:655-667"
+        },
+        {
+          "block": "Item 4: TrustStrip — 3 equal-weight 44.dp TrustChips (Skill match / 4.8★ rating / 30-day guarantee), radius 14.dp, surface fill, 1dp outline, 18.dp icon + 10.sp SemiBold label; horizontal padding 20.dp",
+          "evidence": "CatalogueHomeScreen.kt:391, 673-712"
+        },
+        {
+          "block": "Item 5 (state-dependent): Loading -> LoadingState (200.dp box, centered CircularProgressIndicator); Error -> ErrorState (title + body, no action); Success -> section heading + category grid",
+          "evidence": "CatalogueHomeScreen.kt:392-425"
+        },
+        {
+          "block": "Success: section heading 'Our services' (titleLarge Bold overridden to 19.sp), padding horizontal 20.dp vertical 12.dp",
+          "evidence": "CatalogueHomeScreen.kt:396-403"
+        },
+        {
+          "block": "Success: categories chunked into pairs, each row padded horizontal 16.dp vertical 6.dp with 12.dp gap; each cell is PhotoFirstCategoryCard (flag on) or CategoryCard (flag off); a lone trailing card is balanced with Spacer(weight 1f)",
+          "evidence": "CatalogueHomeScreen.kt:404-423"
+        },
+        {
+          "block": "CategoryCard (default, flag off): 126.dp tall Box, radius 16.dp, surface fill, 1dp outline; inside — 36.dp tinted icon tile (radius 12.dp) + right-aligned 16.dp ArrowForward chevron at 55% alpha, 8dp gap, category name (bodyLarge SemiBold 15.sp, 2 lines), then 'From ₹x' starting price in primary 13.sp",
+          "evidence": "CatalogueHomeScreen.kt:716-793"
+        },
+        {
+          "block": "bottomBar: HomeBottomNav — floating 'glass' bar, 68.dp tall, radius 28.dp, shadow 24.dp, surface at 74% alpha with a 86%-alpha surface border, horizontal margin 18.dp; 4 GlassNavItems each 52.dp tall with 22.dp icon + 10.sp label, selected item gets surfaceVariant 95% pill at radius 22.dp",
+          "evidence": "CatalogueHomeScreen.kt:257, 798-868"
+        },
+        {
+          "block": "Tab 2 (Support) content lives in this same file: SupportHero gradient card + 3 SupportActionCards + 1 SupportInfoCard",
+          "evidence": "CatalogueHomeScreen.kt:899-943"
+        }
+      ],
+      "states": {
+        "loading": {
+          "present": true,
+          "evidence": "CatalogueHomeScreen.kt:393, 871-876",
+          "quality": "Bare centered CircularProgressIndicator in a fixed 200.dp box — no skeleton of the category grid, so the page visibly jumps from spinner to a 2-column grid. HsSkeletonBlock from the design system is not used."
+        },
+        "empty": {
+          "present": false,
+          "evidence": null,
+          "quality": "MAJOR GAP. The Success branch renders the 'Our services' heading then iterates uiState.categories.chunked(2) with no isEmpty() guard (CatalogueHomeScreen.kt:395-423). An empty catalogue renders a heading over dead space with no explanation and no action."
+        },
+        "error": {
+          "present": true,
+          "evidence": "CatalogueHomeScreen.kt:394, 878-896",
+          "quality": "Weak. Title + one body line, centered, no icon, no illustration, and NO retry button anywhere in the file (grep for 'retry' across the catalogue package returns zero hits). The ViewModel's captured error message (CatalogueHomeViewModel.kt:40) is discarded — ErrorState() takes no parameters, so the user gets a generic string with no way to recover except killing the app. The promo slider and trust strip still render above it, so the screen looks half-populated."
+        },
+        "success": {
+          "present": true,
+          "evidence": "CatalogueHomeScreen.kt:395-424",
+          "quality": "Category grid renders; no result count, no sort/filter, no 'popular'/'near you' merchandising rails."
+        },
+        "offline": {
+          "present": false,
+          "evidence": null,
+          "quality": "No offline-specific affordance. Grep for 'offline' across the catalogue package matches only a doc comment at PhotoFirstCategoryCard.kt:73. Network failure collapses into the generic ErrorState."
+        },
+        "permissionDenied": {
+          "present": false,
+          "evidence": null,
+          "quality": "Not applicable to this screen — no runtime permission is requested here. Note the location label at CatalogueHomeScreen.kt:481 is a hardcoded string resource, not a real device location, so no permission is ever needed."
+        }
+      },
+      "skeletonOrSpinner": "CircularProgressIndicator — bare, centered in a 200.dp Box (CatalogueHomeScreen.kt:873-875). No shimmer, no HsSkeletonBlock, no grid-shaped placeholder.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "20.dp", "line": 443, "context": "StickyHero horizontal padding — off the 4/8/12/16/24 scale" },
+          { "value": "10.dp", "line": 443, "context": "StickyHero top/bottom padding" },
+          { "value": "10.dp", "line": 446, "context": "spacer between hero top row and search bar" },
+          { "value": "15.dp", "line": 478, "context": "LocationOn icon size" },
+          { "value": "42.dp", "line": 493, "context": "settings IconButton size" },
+          { "value": "21.dp", "line": 502, "context": "settings icon size" },
+          { "value": "52.dp", "line": 539, "context": "search field height" },
+          { "value": "23.dp", "line": 522, "context": "search leading icon size" },
+          { "value": "14.dp", "line": 552, "context": "CompactTabBar vertical padding" },
+          { "value": "6.dp / 12.dp", "line": 577, "context": "PromoSlider column padding top=6 bottom=12" },
+          { "value": "196.dp", "line": 588, "context": "promo banner height" },
+          { "value": "10.dp", "line": 589, "context": "promo banner shadow elevation — not on the elevation token scale (0/1/4/8/16)" },
+          { "value": "22.dp / 20.dp", "line": 624, "context": "promo banner inner padding" },
+          { "value": "5.dp", "line": 636, "context": "spacer between promo title and subtitle" },
+          { "value": "3.dp", "line": 661, "context": "dot indicator horizontal padding" },
+          { "value": "18.dp / 5.dp", "line": 662, "context": "active/inactive dot indicator size" },
+          { "value": "2.dp", "line": 675, "context": "TrustStrip vertical padding" },
+          { "value": "44.dp", "line": 694, "context": "TrustChip height" },
+          { "value": "18.dp", "line": 702, "context": "TrustChip icon size" },
+          { "value": "126.dp", "line": 732, "context": "CategoryCard height" },
+          { "value": "36.dp", "line": 754, "context": "CategoryCard icon tile size" },
+          { "value": "21.dp", "line": 757, "context": "CategoryCard icon size" },
+          { "value": "3.dp", "line": 776, "context": "spacer between category name and price" },
+          { "value": "18.dp", "line": 807, "context": "bottom nav horizontal margin" },
+          { "value": "68.dp", "line": 814, "context": "bottom nav bar height" },
+          { "value": "24.dp", "line": 815, "context": "bottom nav shadow elevation" },
+          { "value": "52.dp", "line": 847, "context": "GlassNavItem height" },
+          { "value": "22.dp", "line": 855, "context": "nav icon size" },
+          { "value": "46.dp", "line": 961, "context": "SupportHero icon tile size" },
+          { "value": "26.dp", "line": 968, "context": "SupportHero icon size" },
+          { "value": "18.dp", "line": 953, "context": "SupportHero padding" },
+          { "value": "44.dp", "line": 1059, "context": "SupportCardContent icon tile size" },
+          { "value": "15.dp", "line": 1059, "context": "SupportCardContent icon tile corner radius" }
+        ],
+        "hardcodedColors": [
+          { "value": "Color(0xFF5A4A2D) / Color(0xFF3E3324)", "line": 110, "context": "promo banner 1 gradient fallback" },
+          { "value": "Color(0xFF0B3D2E) / Color(0xFF062A20)", "line": 118, "context": "promo banner 2 gradient fallback — 0xFF0B3D2E duplicates the theme primary literal instead of reading colorScheme.primary" },
+          { "value": "Color(0xFFB68A2C) / Color(0xFF6B4C12)", "line": 126, "context": "promo banner 3 gradient — 0xFFB68A2C duplicates the theme secondary/accent literal" },
+          { "value": "Color(0xFFEAF4F7) / Color(0xFF246174)", "line": 145, "context": "ac-repair category icon tile palette" },
+          { "value": "Color(0xFFEAF1F8) / Color(0xFF355F8A)", "line": 146, "context": "water-pump category icon tile palette" },
+          { "value": "Color(0xFFEAF4EE) / Color(0xFF2E6B4F)", "line": 147, "context": "plumbing category icon tile palette" },
+          { "value": "Color(0xFFF5EFE4) / Color(0xFF80622F)", "line": 148, "context": "electrical category icon tile palette" },
+          { "value": "Color(0xFFEAF4EE) / Color(0xFF2E6B4F)", "line": 149, "context": "water-purifier palette — byte-identical to plumbing, so two of the five categories are visually indistinguishable by colour" },
+          { "value": "Color(0xFFE8F1EC) / Color(0xFF0B3D2E)", "line": 150, "context": "default category style — duplicates surfaceVariant and primary literals" },
+          { "value": "Color.Black.copy(alpha = 0.62f)", "line": 607, "context": "promo banner photo scrim" },
+          { "value": "Color.White", "line": 632, "context": "promo title (intentional — fixed dark scrim, documented at 630-631)" },
+          { "value": "Color(0xFFD1D5DB)", "line": 664, "context": "inactive pager dot — a Tailwind grey with no equivalent in the warm-neutral palette (outline is #DED8CD)" },
+          { "value": "Color(0xFF123B32)", "line": 952, "context": "SupportHero gradient end" }
+        ],
+        "unmappedTypographySlots": [
+          { "slot": "titleMedium", "line": 884, "context": "ErrorState title — falls back to Roboto next to Geist body copy on the same screen" },
+          { "slot": "headlineSmall", "line": 973, "context": "SupportHero title — Roboto fallback" },
+          { "slot": "titleSmall", "line": 1066, "context": "SupportActionCard/SupportInfoCard title — Roboto fallback on every support card" }
+        ],
+        "offScaleRadius": [
+          { "value": "18.dp", "line": 525, "context": "search field shape — not on the sm4/md8/lg12/xl20/full scale" },
+          { "value": "18.dp", "line": 540, "context": "search field border shape" },
+          { "value": "24.dp", "line": 589, "context": "promo banner shape" },
+          { "value": "3.dp", "line": 663, "context": "active pager dot shape" },
+          { "value": "14.dp", "line": 695, "context": "TrustChip shape" },
+          { "value": "14.dp", "line": 697, "context": "TrustChip border shape" },
+          { "value": "16.dp", "line": 734, "context": "CategoryCard shape" },
+          { "value": "12.dp", "line": 755, "context": "category icon tile — this one IS on scale (lg)" },
+          { "value": "28.dp", "line": 816, "context": "bottom nav bar shape" },
+          { "value": "22.dp", "line": 848, "context": "selected nav pill shape" },
+          { "value": "24.dp", "line": 951, "context": "SupportHero shape" },
+          { "value": "16.dp", "line": 962, "context": "SupportHero icon tile shape" },
+          { "value": "999.dp", "line": 997, "context": "SupportPill — should be HomeservicesRadius.full" },
+          { "value": "18.dp", "line": 1036, "context": "SupportCardFrame shape" },
+          { "value": "15.dp", "line": 1059, "context": "Support card icon tile shape" }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "HomeHeroo", "line": 467, "context": "brand wordmark rendered as a Kotlin literal, not a string resource — untranslatable and unversioned" },
+          { "text": "tel:1800123456", "line": 916, "context": "support phone number hardcoded in the URI handler" }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "HIGH on the trust strip: three equal-weight chips at 10.sp with maxLines=1 + Ellipsis inside a 44.dp pill sharing the screen width with 8.dp gaps (CatalogueHomeScreen.kt:678-680, 706-709). Hindi values are 'स्किल मैच' / '4.8★ रेटिंग' / '30 दिन गारंटी' (values-hi/strings.xml:508-510) — Devanagari matras add ascender/descender height that 10.sp barely accommodates, and the third label will almost certainly ellipsize. MEDIUM on CategoryCard: name is capped at maxLines=2 at 15.sp/18.sp lineHeight inside a fixed 126.dp card (CatalogueHomeScreen.kt:732, 768-774); 'वाटर पंप / बोरवेल' and 'आरओ / वाटर प्यूरीफायर' (HindiLocaleNames.kt:13,16) are long enough to consume both lines and squeeze the price row. MEDIUM on promo banners: title maxLines=2 at 24.sp inside a fixed 196.dp box (CatalogueHomeScreen.kt:588, 629-634). The bottom-nav labels are 10.sp maxLines=1 with no ellipsis declared (CatalogueHomeScreen.kt:857-866) — Hindi labels will hard-clip. Category names come from the API in English and are swapped client-side (CatalogueHomeViewModel.kt:37 -> CatalogueLocalizer), so any category id missing from HindiLocaleNames.categoryHindiNames stays English inside an otherwise Hindi screen.",
+        "currencyFormatting": "Uses formatInr() (CatalogueHomeScreen.kt:781) which is java.text.NumberFormat.getCurrencyInstance(Locale('en','IN')) — correct ₹ glyph, correct lakh/crore grouping, but always emits two decimal places ('₹599.00'), see customer-app/app/src/main/kotlin/com/homeservices/customer/ui/util/CurrencyFormat.kt:15,23-26. It is also locale-pinned to en-IN, so under a Hindi UI the numerals and grouping stay Latin/en-IN rather than following the app locale. This is INCONSISTENT with the sibling catalogue screens, which use a raw string-template formatPrice() with integer division (ServiceListScreen.kt:400, ServiceDetailScreen.kt:621, PhotoFirstServiceCard.kt:238) producing '₹599' with no decimals and no digit grouping — so the same price renders as '₹599.00' on home and '₹599' one tap later."
+      },
+      "a11y": {
+        "contentDescriptions": "PARTIAL — bottom-nav icons are labelled (CatalogueHomeScreen.kt:855 contentDescription = label) and promo banner images are intentionally decorative, but the settings IconButton has contentDescription = null (CatalogueHomeScreen.kt:500) making the only top-bar action unreachable/unnamed for TalkBack. Also null at 474 (location icon), 522 (search icon), 702 (trust chip icons), 757/762 (category icon + chevron), 966 (support hero icon), 1061/1082 (support card icon + chevron).",
+        "touchTargetRisks": [
+          { "line": 493, "size": "42.dp", "note": "Settings IconButton constrained to 42.dp — below the 48dp minimum" },
+          { "line": 729, "size": "126.dp tall card, full-tap", "note": "OK for size, but the tap is wired via pointerInput/detectTapGestures (CatalogueHomeScreen.kt:737-746) instead of Modifier.clickable, so the card exposes no click semantics/role to TalkBack and gets no ripple" },
+          { "line": 691, "size": "44.dp", "note": "TrustChip is 44.dp but non-interactive, so not a target risk; flagged only because 44.dp reads as a button" },
+          { "line": 658, "size": "5.dp x 5.dp", "note": "Pager dot indicators are 5.dp and non-interactive — no way to jump to a banner; the pager also auto-advances every 4s with no pause affordance" }
+        ],
+        "contrastRisks": [
+          { "line": 483, "note": "Location label uses onSurfaceVariant #5F6C66 at 14.sp on background #FBF7EF — approx 5.0:1, passes AA for normal text but is the weakest text on the hero" },
+          { "line": 640, "note": "Promo subtitle is Color.White at 0.85 alpha over a 0.62-alpha black scrim on an arbitrary photograph — contrast is image-dependent and unverifiable; a bright banner photo can drop it below AA" },
+          { "line": 664, "note": "Inactive pager dot Color(0xFFD1D5DB) on background #FBF7EF is roughly 1.3:1 — effectively invisible, so the user cannot tell how many banners exist" },
+          { "line": 706, "note": "TrustChip label is 10.sp, below the 12sp practical floor for body-adjacent text and well under the 11sp Material caption minimum" },
+          { "line": 817, "note": "Bottom nav uses surface at 74% alpha with a 86%-alpha surface border over scrolling content — a scrolled photo card behind the bar will bleed through and degrade label contrast unpredictably (no blur is applied, only alpha)" }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "OBSERVED: the brand wordmark uses HsScreenTitle (CatalogueHomeScreen.kt:466) which applies semantics { heading() } (design-system HsScreenTitle.kt:39), so TalkBack heading navigation lands on 'HomeHeroo' — a brand name, not a screen purpose. The 'Our services' section heading (CatalogueHomeScreen.kt:397) is a plain Text with NO heading semantics, so the actual content section is not reachable by heading gesture. INFERRED: the 4 bottom-nav destinations are a `when(selectedNav)` swap inside a single composable (CatalogueHomeScreen.kt:301-338) with no announcement on tab change, so screen-reader users get no notification that the whole content region was replaced."
+      },
+      "imagery": {
+        "usesImages": true,
+        "sources": [
+          "R.drawable.banner_image_1/2/3 — the three promo banners (CatalogueHomeScreen.kt:115, 123, 131), the ONLY raster images this screen ever renders in its default configuration",
+          "Category.imageUrl via Coil AsyncImage — only when photoFirstCatalogueEnabled is true, delegated to PhotoFirstCategoryCard.kt:131-139"
+        ],
+        "placeholderOrMissing": [
+          "Category cards ship with ZERO photography by default: FeatureFlags.photoFirstCatalogueEnabled() defaults to false (customer-app/app/src/main/kotlin/com/homeservices/customer/domain/flags/FeatureFlags.kt:86, GrowthBookFeatureFlags.kt:76 falls back to false), so CatalogueHomeScreen.kt:418 renders CategoryCard — a flat surface card with a 36.dp Material icon glyph. The commercial heart of the app is five grey-ish icon tiles.",
+          "There are NO local category drawables at all. res/drawable-nodpi contains 13 service_hero_*.png but no category_*.png, and the 13 service heroes are referenced only by ServiceDetailScreen.kt:287-299 — never by this screen. So even the photo-first path depends entirely on remote Firebase Storage URLs seeded at api/src/cosmos/seeds/catalogue.ts:11-15.",
+          "Two category palettes are byte-identical (plumbing and water-purifier both Color(0xFFEAF4EE)/Color(0xFF2E6B4F), CatalogueHomeScreen.kt:147 and 149), so the icon-tile fallback gives 5 categories only 4 distinct colour identities.",
+          "PromoBanner.imageRes is nullable with a gradient fallback path (CatalogueHomeScreen.kt:104, 612-621); a stale comment at CatalogueHomeScreen.kt:96-97 still instructs a developer to drop banner_1.jpg into assets/, which is not how the current code loads them."
+        ],
+        "cite": "CatalogueHomeScreen.kt:107-133, 592-621; customer-app/app/src/main/res/drawable/ listing"
+      },
+      "motion": {
+        "animationsUsed": [
+          { "what": "PromoSlider auto-advance every 4000ms with tween(600) scroll", "line": "568-576" },
+          { "what": "CategoryCard press scale 1f -> 0.96f via animateFloatAsState with spring(StiffnessMediumLow)", "line": "722-727" }
+        ],
+        "usesMotionTokens": false,
+        "transitionsOnNav": "None declared. Tab switching is a bare `when(selectedNav)` swap with no AnimatedContent / Crossfade (CatalogueHomeScreen.kt:301-338), so the entire content region hard-cuts. The top bar also swaps composable identity between StickyHero and CompactTabBar (CatalogueHomeScreen.kt:245-255) producing a jarring header height jump. Tween/spring durations are literals (600, StiffnessMediumLow) rather than HomeservicesMotion.medium/HomeservicesEasing. No press feedback on TrustChip, the search bar, or the settings button; GlassNavItem uses plain Modifier.clickable (line 850) so it gets a default ripple but no scale/colour choreography."
+      },
+      "density": "INCONSISTENT — three different horizontal gutters coexist on one scroll: 20.dp for the hero (line 443), the section heading (line 401) and the trust strip (line 675); 16.dp for the promo pager (line 580) and the category grid rows (line 407); 18.dp for the bottom nav (line 807). The result is that the 'Our services' heading is visibly indented 4dp further than the cards it labels. Vertical rhythm is equally ad hoc: 10/5/3/2/6/12 dp spacers appear within ~200 lines (446, 636, 661, 675, 577, 767, 776). Card interiors are cramped: CategoryCard packs an icon tile, chevron, 2-line title and a price into 126.dp with only 12.dp padding (lines 732, 748), while the promo banner directly above it is 196.dp with 22/20.dp padding — a density whiplash between adjacent blocks.",
+      "observations": [
+        {
+          "severity": "high",
+          "claim": "The hero search bar is entirely non-functional decoration — it holds a local `query` string and nothing else. There is no onSearch callback, no search results surface, no navigation, and no suggestion list anywhere in the composable.",
+          "evidence": "CatalogueHomeScreen.kt:509-541 (var query by remember at 510, onValueChange = { query = it } at 513, no other reference to `query` in the file)",
+          "confidence": "observed"
+        },
+        {
+          "severity": "high",
+          "claim": "Flat-icon-card syndrome at the commercial core: with the photo-first flag off by default, the category grid is five bordered surface cards each carrying a generic Material icon glyph — no photography, no service imagery, no rating, no review count, no trust badge, no 'X bookings this week' proof. Category.serviceCount and Category.safetyTag exist on the model but are never rendered.",
+          "evidence": "CatalogueHomeScreen.kt:411-419 with FeatureFlags.kt:86 (default false); CategoryCard body at CatalogueHomeScreen.kt:748-792 renders only icon, name and price; Category model fields at customer-app/app/src/main/kotlin/com/homeservices/customer/domain/catalogue/model/Category.kt:7-8",
+          "confidence": "observed"
+        },
+        {
+          "severity": "high",
+          "claim": "No empty state for the category grid. The Success branch prints the 'Our services' heading and then iterates the list with no isEmpty() guard, so a zero-category response yields a heading floating over blank space.",
+          "evidence": "CatalogueHomeScreen.kt:395-424",
+          "confidence": "observed"
+        },
+        {
+          "severity": "high",
+          "claim": "The error state offers no recovery. ErrorState() takes no parameters and contains only two Text lines — no Retry button, no illustration, no icon. The error message the ViewModel captured is thrown away.",
+          "evidence": "CatalogueHomeScreen.kt:878-896; CatalogueHomeViewModel.kt:40 builds Error(it.message) which is never read by the UI",
+          "confidence": "observed"
+        },
+        {
+          "severity": "medium",
+          "claim": "Loading is a bare centered CircularProgressIndicator rather than a skeleton of the grid, and it renders BELOW an already-populated promo slider and trust strip — so the screen shows finished chrome with a spinner hole in the middle.",
+          "evidence": "CatalogueHomeScreen.kt:390-393, 871-876",
+          "confidence": "observed"
+        },
+        {
+          "severity": "medium",
+          "claim": "Comment/code drift on the primary merchandising card: the section header claims 'Codex: 148dp, radius 20dp, icon tile 56dp, 17sp title' but the implementation is 126.dp tall, radius 16.dp, 36.dp icon tile and 15.sp title — a reviewed design spec that was silently shrunk.",
+          "evidence": "CatalogueHomeScreen.kt:714 (comment) vs 732, 734, 754, 770",
+          "confidence": "observed"
+        },
+        {
+          "severity": "medium",
+          "claim": "Three unmapped M3 typography slots are used on this screen, each silently falling back to Roboto beside Geist Sans body copy: titleMedium on the error title, headlineSmall on the support hero, titleSmall on every support card title.",
+          "evidence": "CatalogueHomeScreen.kt:884, 973, 1066",
+          "confidence": "observed"
+        },
+        {
+          "severity": "medium",
+          "claim": "Typography tokens are systematically overridden with raw sp at the call site (19/22/14/16/24/15/13/10 sp), so the design system's type scale governs almost nothing on this screen.",
+          "evidence": "CatalogueHomeScreen.kt:399, 468, 482, 517, 629, 639, 647, 706, 770, 786, 862",
+          "confidence": "observed"
+        },
+        {
+          "severity": "medium",
+          "claim": "The settings button — the only action in the top bar — is 42.dp (below the 48dp target) and carries contentDescription = null, so it is both hard to hit and unnamed for TalkBack.",
+          "evidence": "CatalogueHomeScreen.kt:489-503 (size at 493, contentDescription at 500)",
+          "confidence": "observed"
+        },
+        {
+          "severity": "medium",
+          "claim": "The promo carousel auto-advances every 4 seconds with no pause-on-touch, no swipe hint, and 5.dp near-invisible page dots — a WCAG 2.2.2 (pause/stop/hide) problem and a usability problem for slow readers, which the Ayodhya rural audience skews toward.",
+          "evidence": "CatalogueHomeScreen.kt:568-576, 655-667",
+          "confidence": "observed"
+        },
+        {
+          "severity": "medium",
+          "claim": "Two of the five categories (plumbing, water-purifier) share byte-identical icon-tile colours, collapsing the colour-coding system that is the only visual differentiator in the no-photo default.",
+          "evidence": "CatalogueHomeScreen.kt:147 and CatalogueHomeScreen.kt:149",
+          "confidence": "observed"
+        },
+        {
+          "severity": "medium",
+          "claim": "The 'glass' bottom nav is alpha-only (surface at 74%) with no blur, so scrolling content bleeds through behind the labels; combined with the 24.dp shadow and 86%-alpha border it reads as a translucency artefact rather than an intentional material.",
+          "evidence": "CatalogueHomeScreen.kt:814-818",
+          "confidence": "inferred"
+        },
+        {
+          "severity": "medium",
+          "claim": "Currency is formatted two different ways in the same user journey: formatInr on this screen renders '₹599.00' while the very next screen renders '₹599'.",
+          "evidence": "CatalogueHomeScreen.kt:781 -> CurrencyFormat.kt:23-26 vs ServiceListScreen.kt:400",
+          "confidence": "observed"
+        },
+        {
+          "severity": "low",
+          "claim": "Brand name is a hardcoded Kotlin literal, not a string resource, and the file's own header comment (lines 96-97) describes a banner-loading mechanism (assets/banner_1.jpg) that the code no longer uses.",
+          "evidence": "CatalogueHomeScreen.kt:467 and CatalogueHomeScreen.kt:96-97",
+          "confidence": "observed"
+        },
+        {
+          "severity": "low",
+          "claim": "Tab switching and top-bar swapping happen with no transition at all — content and header hard-cut between the four destinations.",
+          "evidence": "CatalogueHomeScreen.kt:245-255, 301-338",
+          "confidence": "observed"
+        },
+        {
+          "severity": "low",
+          "claim": "The category card handles taps via pointerInput/detectTapGestures rather than Modifier.clickable, so it has no click semantics/role for accessibility services and no ripple — only a scale animation.",
+          "evidence": "CatalogueHomeScreen.kt:737-746",
+          "confidence": "observed"
+        },
+        {
+          "severity": "low",
+          "claim": "The location chip is a static string resource, not a real detected or user-selectable location — there is no tap target to change city/locality.",
+          "evidence": "CatalogueHomeScreen.kt:480-486 with values/strings.xml:359 ('Ayodhya, Uttar Pradesh')",
+          "confidence": "observed"
+        }
+      ]
+    },
+    {
+      "id": "customer.service-list",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/ServiceListScreen.kt",
+      "loc": 400,
+      "purpose": "Shows the bookable services inside one category as a vertical list of price-forward cards, letting the customer compare fixed prices and tap through to a service detail (or straight into booking via 'Book Now').",
+      "entryPoints": "Nav route CatalogueRoutes.SERVICE_LIST with a required `categoryId` string arg, registered at customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/MainGraph.kt:138-152; reached from a category tap on the catalogue home (MainGraph.kt:92). Service tap navigates to CatalogueRoutes.serviceDetail(id) (MainGraph.kt:147).",
+      "composition": [
+        {
+          "block": "Scaffold, containerColor = colorScheme.background",
+          "evidence": "ServiceListScreen.kt:68-69"
+        },
+        {
+          "block": "TopAppBar painted with a horizontal gradient from extendedColors.brandPrimaryHover to colorScheme.primary (container colours forced Transparent so the gradient shows); title = HsScreenTitle('Services'), navigationIcon = ArrowBack IconButton",
+          "evidence": "ServiceListScreen.kt:66, 71-98"
+        },
+        {
+          "block": "Body = Surface(background) hosting a three-way when on ServiceListUiState",
+          "evidence": "ServiceListScreen.kt:117-118"
+        },
+        {
+          "block": "Loading -> ServiceListSkeleton: LazyColumn of 3 static placeholder cards, each 128.dp tall at radius 12.dp with 2.dp shadow and 1dp outline, containing 4 left-hand PlaceholderLines (0.72/0.92/0.78/0.34 width) and a right 88.dp column with 2 more",
+          "evidence": "ServiceListScreen.kt:119, 346-386"
+        },
+        {
+          "block": "Error -> a single centered Text of the generic catalogue_error string in a full-size Box with 24.dp padding. No title, no icon, no retry.",
+          "evidence": "ServiceListScreen.kt:120-128"
+        },
+        {
+          "block": "Success -> LazyColumn(contentPadding vertical 16.dp); first item is the subtitle line 'Compare fixed-price services…' in bodyMedium/onSurfaceVariant at horizontal 16.dp vertical 6.dp",
+          "evidence": "ServiceListScreen.kt:129-141"
+        },
+        {
+          "block": "Success + empty list -> EmptyServiceList: centered column with a pill Surface wrapping a 24.dp Build icon, 16dp gap, 18.sp Bold title, 8dp gap, 14.sp body — inside 24.dp horizontal / 96.dp vertical padding",
+          "evidence": "ServiceListScreen.kt:142-145, 165-202"
+        },
+        {
+          "block": "Success + items -> per service either PhotoFirstServiceCard (flag on) or ServiceCard (flag off, default)",
+          "evidence": "ServiceListScreen.kt:147-156"
+        },
+        {
+          "block": "ServiceCard: M3 Card, full width, horizontal 16.dp / vertical 6.dp margin, radius 12.dp, surface fill, 2.dp elevation, 1dp outline border; inner Row with 16.dp padding",
+          "evidence": "ServiceListScreen.kt:209-227"
+        },
+        {
+          "block": "ServiceCard left (weight 1f, end padding 12.dp): service name 16.sp Bold maxLines 1, 4dp gap, description 13.sp onSurfaceVariant maxLines 2, 10dp gap, ServiceDurationChip (pill, surfaceVariant, 14.dp Build icon + 12.sp '%d min')",
+          "evidence": "ServiceListScreen.kt:231-254, 298-322"
+        },
+        {
+          "block": "ServiceCard right (end-aligned column): price at 22.sp Bold primary, 12dp gap, 36.dp-tall pill 'Book Now' Button with zero elevation and 16.dp horizontal content padding",
+          "evidence": "ServiceListScreen.kt:258-295"
+        }
+      ],
+      "states": {
+        "loading": {
+          "present": true,
+          "evidence": "ServiceListScreen.kt:119, 346-386",
+          "quality": "GOOD structurally — a 3-card skeleton that mirrors the real card layout. But it is completely static: no shimmer, no pulse, no animation of any kind, and the placeholder fill is a hardcoded Color(0xFFEDE7DD) (line 53) rather than a token, so it does not adapt to dark theme."
+        },
+        "empty": {
+          "present": true,
+          "evidence": "ServiceListScreen.kt:142-145, 165-202",
+          "quality": "Present and reasonable: icon medallion + title + explanatory copy. But there is no action — no 'Browse other categories' button, no back CTA — so the user's only exit is the system/app back arrow. Copy is honest ('This category is not bookable yet')."
+        },
+        "error": {
+          "present": true,
+          "evidence": "ServiceListScreen.kt:120-128",
+          "quality": "POOR. A single unstyled centered Text using the generic body string only — no catalogue_error_title, no icon, no card frame, no retry action. It is markedly weaker than the empty state directly beside it and weaker than the sibling ServiceDetailError (ServiceDetailScreen.kt:543-572) which at least frames the message in a card with a title. The ViewModel's captured message (ServiceListViewModel.kt:40) is discarded."
+        },
+        "success": {
+          "present": true,
+          "evidence": "ServiceListScreen.kt:129-158",
+          "quality": "Renders a flat list with no result count, no sort, no filter, no price range, no grouping, and no 'most booked' ordering — pure API order."
+        },
+        "offline": {
+          "present": false,
+          "evidence": null,
+          "quality": "No offline branch; network failure collapses into the single-line Error text."
+        },
+        "permissionDenied": {
+          "present": false,
+          "evidence": null,
+          "quality": "Not applicable — this screen requests no runtime permission."
+        }
+      },
+      "skeletonOrSpinner": "Static skeleton cards (ServiceListScreen.kt:346-386) built from Surface blocks filled with the hardcoded SkeletonLine colour (line 53, 396). No CircularProgressIndicator and no use of the shared HsSkeletonBlock component.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "24.dp", "line": 126, "context": "error text padding — on scale (space6) but written as a literal" },
+          { "value": "6.dp", "line": 139, "context": "subtitle vertical padding" },
+          { "value": "96.dp", "line": 170, "context": "empty-state vertical padding — very large, pushes content well below the fold" },
+          { "value": "14.dp", "line": 182, "context": "empty-state icon medallion padding" },
+          { "value": "6.dp", "line": 211, "context": "ServiceCard vertical margin" },
+          { "value": "2.dp", "line": 214, "context": "ServiceCard elevation — not on the 0/1/4/8/16 elevation token scale" },
+          { "value": "10.dp", "line": 252, "context": "gap before duration chip" },
+          { "value": "36.dp", "line": 273, "context": "Book Now button height — below the 48dp touch minimum" },
+          { "value": "128.dp", "line": 357, "context": "skeleton card height, which does not match any real card height" },
+          { "value": "88.dp", "line": 377, "context": "skeleton right column width" },
+          { "value": "18.dp / 12.dp / 22.dp / 24.dp / 36.dp", "line": 369, "context": "skeleton placeholder line heights, all literals" }
+        ],
+        "hardcodedColors": [
+          { "value": "Color(0xFFEDE7DD)", "line": 53, "context": "SkeletonLine — a fixed light beige used for every loading placeholder; in dark theme (background #071511) these bars will glow as bright cream blocks. Duplicated independently in ServiceDetailScreen.kt:66 and PhotoFirstServiceCard.kt:48." },
+          { "value": "Color.Transparent", "line": 93, "context": "TopAppBar container colours forced transparent so the gradient modifier shows — intentional" }
+        ],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": [
+          { "value": "12.dp", "line": 54, "context": "ServiceCardShape — on scale (lg) but declared as a file-local literal instead of HomeservicesRadius.lg" },
+          { "value": "RoundedCornerShape(percent = 50)", "line": 55, "context": "PillShape — percent-based rather than HomeservicesRadius.full; redeclared identically in ServiceDetailScreen.kt:67 and PhotoFirstServiceCard.kt:47" }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "HIGH on the service card title: maxLines = 1 with Ellipsis at 16.sp inside a weight(1f) column that shares the row with a 22.sp price and a Book Now button (ServiceListScreen.kt:236-243, 258-295). Hindi service names such as 'नल / फॉसेट इंस्टॉलेशन' and 'सीलिंग फैन इंस्टॉलेशन' (HindiLocaleNames.kt:27, 29) will truncate mid-word. HIGH on the Book Now button: 'अभी बुक करें' (values-hi/strings.xml:22) is roughly 60% wider than 'Book Now' inside a fixed 36.dp-tall pill with maxLines = 1 and only 16.dp of horizontal content padding (ServiceListScreen.kt:271-292) — the button will either shrink the description column or clip. MEDIUM on the description: maxLines = 2 at 13.sp, and the Hindi short descriptions are long (e.g. 'सरफेस + सबमर्सिबल पंप समस्या निवारण और मरम्मत — पूरी तरह से ₹699 में।', HindiLocaleNames.kt:41) so the second line will ellipsize. Note the Hindi short descriptions embed hardcoded rupee amounts in the copy (HindiLocaleNames.kt:38, 41), so a price change silently desyncs the description from the displayed price.",
+        "currencyFormatting": "DEFECTIVE. formatPrice is a raw string template with integer division: `\"₹${pricePaise / 100}\"` (ServiceListScreen.kt:400). It (a) truncates any sub-rupee remainder, (b) applies NO Indian lakh/crore digit grouping, so 250000 paise renders as '₹2500' instead of '₹2,500' — the seed already contains a 250000-paise add-on (api/src/cosmos/seeds/catalogue.ts:86), (c) does not localize numerals for Hindi, and (d) contradicts the shared formatInr() helper used one screen earlier (CatalogueHomeScreen.kt:781), which the codebase comment claims 'replaces all Rs ... literals' (CurrencyFormat.kt:21). This is the price the customer compares on — the single most commercially important number on the screen."
+      },
+      "a11y": {
+        "contentDescriptions": "PARTIAL — the back arrow is labelled (ServiceListScreen.kt:86). Every other icon is contentDescription = null: empty-state medallion (179), duration-chip icon (309). Acceptable for decoration, but the duration chip conveys real information only through its adjacent text.",
+        "touchTargetRisks": [
+          { "line": 273, "size": "36.dp", "note": "'Book Now' — the primary conversion action on the screen — is height-constrained to 36.dp, 12dp under the 48dp minimum. Repeated identically in PhotoFirstServiceCard.kt:181." },
+          { "line": 209, "size": "full card", "note": "The card itself is clickable AND contains a nested Book Now button that fires the SAME onClick lambda (ServiceListScreen.kt:210 and 225 both pass `onClick`), so the button is a redundant target that duplicates the card action while looking like a distinct commitment step" }
+        ],
+        "contrastRisks": [
+          { "line": 247, "note": "Description text is onSurfaceVariant #5F6C66 at 13.sp on surface #FFFDF8 — roughly 5.2:1, passes AA but is the smallest body text on the screen" },
+          { "line": 318, "note": "Duration chip text is 12.sp primary #0B3D2E on surfaceVariant #E8F1EC — high contrast, but 12.sp with no minimum-size guard is at the accessibility floor" },
+          { "line": 396, "note": "Skeleton fill Color(0xFFEDE7DD) is a fixed light value; under dark theme it inverts the intended figure/ground relationship entirely" }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "OBSERVED: the app-bar title uses HsScreenTitle (ServiceListScreen.kt:77) so it carries heading semantics; the in-list subtitle (line 135) and the empty-state title (line 186) are plain Text with none. Each service card is a single M3 Card(onClick=…) so it is one focus stop, but the nested Book Now Button (line 271) adds a SECOND focus stop firing the identical action — TalkBack users hear the same destination announced twice per card with no way to distinguish them.",
+        "hindiNote": null
+      },
+      "imagery": {
+        "usesImages": false,
+        "sources": [
+          "None in the default path. PhotoFirstServiceCard (used only when photoFirstCatalogueEnabled is true, ServiceListScreen.kt:148-152) loads Service.imageUrl through Coil AsyncImage at PhotoFirstServiceCard.kt:88-98."
+        ],
+        "placeholderOrMissing": [
+          "CRITICAL MERCHANDISING GAP: 13 local hero photographs exist at customer-app/app/src/main/res/drawable-nodpi/service_hero_*.png and cover EVERY service id in the seed catalogue, but they are referenced from exactly one place — the serviceHeroImageRes lookup in ServiceDetailScreen.kt:285-301. The service LIST, where the customer actually chooses, never touches them. The default ServiceCard has no image slot at all (ServiceListScreen.kt:217-226 is a two-column text/price Row).",
+          "ServiceImageFallback (ServiceListScreen.kt:324-343) — an initials tile intended as an image placeholder — is DEAD CODE: grep across customer-app/app/src returns only its own declaration.",
+          "CatalogueVisualImage.kt (244 lines, entry at line 40) is a fully-built image component with placeholder handling and three size variants that is likewise never referenced anywhere in app/src.",
+          "The photo-first path depends on Service.imageUrl coming from the API; the seed points every service at a https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/... URL (api/src/cosmos/seeds/catalogue.ts:25), and the card silently falls back to a 2-letter initials tile on any load error (PhotoFirstServiceCard.kt:93-101)."
+        ],
+        "cite": "ServiceListScreen.kt:147-156, 324-343; ServiceDetailScreen.kt:285-301; customer-app/app/src/main/res/drawable-nodpi/ listing"
+      },
+      "motion": {
+        "animationsUsed": [],
+        "usesMotionTokens": false,
+        "transitionsOnNav": "NONE. There is not a single animation API imported or used in this file — no animateFloatAsState, no AnimatedVisibility, no Crossfade. The skeleton does not shimmer, the state transition from skeleton to list is an instantaneous swap (ServiceListScreen.kt:118-160), the cards have no press-scale (unlike CategoryCard on the previous screen, which does), and Book Now explicitly zeroes its elevation in both default and pressed states (ServiceListScreen.kt:280-284) so tapping the primary CTA produces no visual feedback beyond the default ripple."
+      },
+      "density": "AIRY-TO-EMPTY. Each ServiceCard is a 16.dp-padded Row whose right column holds only a price and a 36.dp button, leaving a large dead gutter between the description and the price when service names are short. The subtitle sits at vertical 6.dp while cards sit at vertical 6.dp margin + 16.dp interior — so the header does not read as a distinct zone. The empty state uses 96.dp of vertical padding (line 170), pushing the message far below the fold on a short device. Skeleton cards are 128.dp (line 357) but real cards are content-sized to roughly 96-104.dp, so the layout visibly shrinks when data arrives.",
+      "observations": [
+        {
+          "severity": "high",
+          "claim": "The service list — the screen where the purchase decision is made — has zero imagery in its default configuration, despite 13 matching hero photographs already shipping in the APK. The photo path is behind a feature flag that defaults to false.",
+          "evidence": "ServiceListScreen.kt:148-155 with customer-app/app/src/main/kotlin/com/homeservices/customer/domain/flags/FeatureFlags.kt:86; unused drawables enumerated at ServiceDetailScreen.kt:287-299",
+          "confidence": "observed"
+        },
+        {
+          "severity": "high",
+          "claim": "Price formatting is broken for any amount over ₹999: integer division with no digit grouping renders 250000 paise as '₹2500' rather than '₹2,500', and it silently truncates sub-rupee remainders. It also contradicts the shared formatInr() helper used on the previous screen, so the same value renders differently one tap apart.",
+          "evidence": "ServiceListScreen.kt:400 (`\"₹${pricePaise / 100}\"`) vs CatalogueHomeScreen.kt:781 -> CurrencyFormat.kt:23-26",
+          "confidence": "observed"
+        },
+        {
+          "severity": "high",
+          "claim": "The error state is a single naked centered Text with no title, no icon, no card frame and no retry — visibly less designed than the empty state sitting 40 lines below it and less designed than the sibling detail screen's error.",
+          "evidence": "ServiceListScreen.kt:120-128 vs ServiceListScreen.kt:165-202 vs ServiceDetailScreen.kt:543-572",
+          "confidence": "observed"
+        },
+        {
+          "severity": "high",
+          "claim": "The primary conversion button 'Book Now' is 36.dp tall — 12dp under the WCAG/Material 48dp minimum target — and produces no press feedback because both default and pressed elevation are forced to 0.dp.",
+          "evidence": "ServiceListScreen.kt:271-284",
+          "confidence": "observed"
+        },
+        {
+          "severity": "medium",
+          "claim": "The card and its nested Book Now button invoke the identical onClick lambda, so the button is a decoy: it looks like a commit action but merely repeats the card tap. Every card therefore exposes two identical accessibility targets.",
+          "evidence": "ServiceListScreen.kt:154 (onClick = { onServiceClick(service.id) }) flowing to both Card onClick at 210 and ServiceActionColumn onClick at 225/272",
+          "confidence": "observed"
+        },
+        {
+          "severity": "medium",
+          "claim": "Two fully-built image components are dead code: ServiceImageFallback in this file and the entire 244-line CatalogueVisualImage.kt. Neither is referenced anywhere under app/src.",
+          "evidence": "ServiceListScreen.kt:324-343; customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/CatalogueVisualImage.kt:40",
+          "confidence": "observed"
+        },
+        {
+          "severity": "medium",
+          "claim": "The skeleton is static — no shimmer or pulse — and its placeholder fill is a hardcoded light beige that will read as bright cream blocks on the dark-theme background (#071511).",
+          "evidence": "ServiceListScreen.kt:53, 346-398 (no animation import in the file)",
+          "confidence": "observed"
+        },
+        {
+          "severity": "medium",
+          "claim": "The screen carries no trust or social-proof signals whatsoever — no rating, no review count, no completed-jobs number, no warranty badge, no 'verified technician' chip — even though HsTrustBadge exists in the shared design system and the home screen above it advertises a '4.8★ rating'.",
+          "evidence": "ServiceListScreen.kt:231-295 (card renders only name, description, duration chip, price, button) vs CatalogueHomeScreen.kt:679",
+          "confidence": "observed"
+        },
+        {
+          "severity": "medium",
+          "claim": "The skeleton card height (128.dp) does not match the content-sized real card, so the list visibly reflows/shrinks the moment data lands.",
+          "evidence": "ServiceListScreen.kt:357 vs ServiceListScreen.kt:209-227 (no height constraint on the real card)",
+          "confidence": "inferred"
+        },
+        {
+          "severity": "medium",
+          "claim": "Typography is applied as raw fontSize/fontWeight on Text rather than through MaterialTheme.typography slots for the entire card and empty state, so the design-system type scale is bypassed on this screen.",
+          "evidence": "ServiceListScreen.kt:190, 197, 239, 248, 266, 289, 318",
+          "confidence": "observed"
+        },
+        {
+          "severity": "low",
+          "claim": "Shape and colour constants are redeclared file-locally (SkeletonLine, ServiceCardShape, PillShape) instead of consumed from HomeservicesRadius/tokens, and the same three constants are duplicated verbatim in ServiceDetailScreen.kt and PhotoFirstServiceCard.kt.",
+          "evidence": "ServiceListScreen.kt:53-55; ServiceDetailScreen.kt:66-68; PhotoFirstServiceCard.kt:46-48",
+          "confidence": "observed"
+        },
+        {
+          "severity": "low",
+          "claim": "The empty state has no action — no button back to categories — so the user's only escape is the app-bar back arrow.",
+          "evidence": "ServiceListScreen.kt:165-202",
+          "confidence": "observed"
+        },
+        {
+          "severity": "low",
+          "claim": "The gradient app bar (brandPrimaryHover -> primary) is unique to this screen; the catalogue home has no app bar and the service detail uses a photo hero, so the three screens in one journey have three unrelated header treatments.",
+          "evidence": "ServiceListScreen.kt:71-98 vs CatalogueHomeScreen.kt:431-456 vs ServiceDetailScreen.kt:177-282",
+          "confidence": "observed"
+        }
+      ]
+    },
+    {
+      "id": "customer.service-detail",
+      "app": "customer-app",
+      "file": "customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/ServiceDetailScreen.kt",
+      "loc": 621,
+      "purpose": "The conversion screen: a photo hero plus price/duration metrics, trust dossier, confidence score, what's-included list and add-ons, with a sticky bottom bar carrying the fixed price and the Book Now CTA into the slot picker.",
+      "entryPoints": "Nav route CatalogueRoutes.SERVICE_DETAIL with a required `serviceId` and an optional nullable `techId` arg, registered at customer-app/app/src/main/kotlin/com/homeservices/customer/navigation/MainGraph.kt:155-175; reached from a service tap on the service list (MainGraph.kt:147). Book Now navigates to BookingRoutes.slotPicker(svcId, catId) (MainGraph.kt:170).",
+      "composition": [
+        {
+          "block": "Scaffold(containerColor = background) wrapping a Surface and a three-way when on ServiceDetailUiState",
+          "evidence": "ServiceDetailScreen.kt:88-97, 109-123"
+        },
+        {
+          "block": "Body root = Column with a weight(1f) verticalScroll region above a fixed bottom booking bar",
+          "evidence": "ServiceDetailScreen.kt:135-173"
+        },
+        {
+          "block": "ServiceHero: Box at aspectRatio 1.18 (roughly 4:3.4). Image source resolution order — local drawable via serviceHeroImageRes(service.id), else Coil AsyncImage on service.imageUrl, else a vertical brandPrimaryHover->primary gradient",
+          "evidence": "ServiceDetailScreen.kt:182-216, 285-301"
+        },
+        {
+          "block": "Hero scrim: bottom-aligned 160.dp Box with a transparent->black-0.72 vertical gradient",
+          "evidence": "ServiceDetailScreen.kt:219-230"
+        },
+        {
+          "block": "Hero back affordance: top-start CircleShape Surface at black-0.40 containing a 40.dp IconButton with a white ArrowBack",
+          "evidence": "ServiceDetailScreen.kt:233-251"
+        },
+        {
+          "block": "Hero text stack, bottom-start, 16.dp insets, 4.dp gaps: eyebrow 'Home-ready service' (labelLarge SemiBold, white 0.80), HsScreenTitle with the service name in white, description bodyMedium white-0.80 maxLines 2",
+          "evidence": "ServiceDetailScreen.kt:254-280"
+        },
+        {
+          "block": "Content column below the hero: horizontal + vertical 16.dp padding, 14.dp gaps between all sections",
+          "evidence": "ServiceDetailScreen.kt:138-141"
+        },
+        {
+          "block": "ServiceMetricRow: two equal-weight tiles 12.dp apart — 'Fixed price' (emphasized: surfaceVariant fill, primary-20% border, primary 22.sp Bold value) and duration ('%d min') on the fixed light MetricNeutralBg with hardcoded dark foregrounds",
+          "evidence": "ServiceDetailScreen.kt:304-364"
+        },
+        {
+          "block": "TrustDossierCard (external, com.homeservices.customer.ui.shared) — full width, non-compact",
+          "evidence": "ServiceDetailScreen.kt:143-147"
+        },
+        {
+          "block": "ConfidenceScoreRow (ConfidenceScoreRow.kt) — renders nothing when Hidden, a shimmer when Loading, or AssistChips opening a methodology bottom sheet; only ever populated when a techId arg was supplied",
+          "evidence": "ServiceDetailScreen.kt:148-151; ConfidenceScoreRow.kt:40-50; ServiceDetailViewModel.kt:35, 42, 68"
+        },
+        {
+          "block": "ServiceQualityPanel: bordered surface card, 16.dp padding, titleMedium heading + bodyMedium body ('Professional service, no surprises')",
+          "evidence": "ServiceDetailScreen.kt:152, 367-391"
+        },
+        {
+          "block": "ServiceSection 'What's included': bordered card with title + subtitle then one ServiceCheckRow per include — 16.dp CheckCircle icon in primary + bodyMedium text",
+          "evidence": "ServiceDetailScreen.kt:153-158, 394-447"
+        },
+        {
+          "block": "ServiceSection 'Add-ons' (conditional on service.addOns being non-empty): same card frame, each row = add-on name + a right-aligned pill showing '+₹x' in primary",
+          "evidence": "ServiceDetailScreen.kt:159-168, 449-479"
+        },
+        {
+          "block": "80.dp bottom spacer to clear the sticky bar",
+          "evidence": "ServiceDetailScreen.kt:169"
+        },
+        {
+          "block": "ServiceBookingBar (sticky, outside the scroll): Surface with 12.dp shadow, navigationBarsPadding, horizontal 16 / vertical 12 padding; left column = 'Fixed price' label (labelMedium), price at 24.sp Bold primary, support line 'Trust checks shown before confirmation' (bodySmall, maxLines 1); right = 52.dp pill Book Now button",
+          "evidence": "ServiceDetailScreen.kt:172, 482-540"
+        }
+      ],
+      "states": {
+        "loading": {
+          "present": true,
+          "evidence": "ServiceDetailScreen.kt:111, 575-595",
+          "quality": "GOOD structural fidelity — hero block at the same aspectRatio(1.18f), then 3 placeholder lines, a 2-up 72.dp tile row, and 3x 112.dp section blocks that mirror the real layout. But entirely static (no shimmer/pulse) and every fill uses the hardcoded light SkeletonLine (line 66), which will not invert for dark theme."
+        },
+        "empty": {
+          "present": false,
+          "evidence": null,
+          "quality": "N/A at screen level (a service either loads or errors), but there is NO empty handling for service.includes: ServiceSection 'What's included' is rendered unconditionally (ServiceDetailScreen.kt:153-158) and iterates the list, so a service with no includes shows a titled card containing a title, a subtitle and nothing else. The add-ons section is correctly guarded by isNotEmpty() (line 159), so the two adjacent sections are inconsistent."
+        },
+        "error": {
+          "present": true,
+          "evidence": "ServiceDetailScreen.kt:112, 543-572",
+          "quality": "Best of the three catalogue screens — a centred bordered card with title + body, both centre-aligned. Still has NO retry action and NO back affordance (the back button lives inside the hero, which does not render in the error branch), so a failed load leaves the user on a nearly blank screen with only the system back gesture. The ViewModel's message (ServiceDetailViewModel.kt:62) is discarded in favour of a generic string."
+        },
+        "success": {
+          "present": true,
+          "evidence": "ServiceDetailScreen.kt:113-121",
+          "quality": "Renders hero + metrics + trust + includes + add-ons + sticky CTA. Missing: ratings/reviews, FAQ, before/after gallery, cancellation policy, technician preview."
+        },
+        "offline": {
+          "present": false,
+          "evidence": null,
+          "quality": "No offline branch. Note the hero degrades gracefully offline for the 13 seeded services because it prefers the bundled local drawable (ServiceDetailScreen.kt:185-192) — an unusually good decision that the rest of the screen does not match."
+        },
+        "permissionDenied": {
+          "present": false,
+          "evidence": null,
+          "quality": "Location permission is silently swallowed: resolveGps() catches everything and falls back to the (0.0, 0.0) sentinel (ServiceDetailViewModel.kt:93-98), and a confidence-score failure maps to ConfidenceScoreUiState.Hidden (ServiceDetailViewModel.kt:81) which renders literally nothing (ConfidenceScoreRow.kt:41). The user is never told that a trust signal was suppressed."
+        }
+      },
+      "skeletonOrSpinner": "Static shape-matched skeleton (ServiceDetailScreen.kt:575-619) using PlaceholderLine/PlaceholderBlock filled with the hardcoded SkeletonLine colour. No CircularProgressIndicator, no shimmer, and no reuse of the shared HsSkeletonBlock.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "14.dp", "line": 140, "context": "vertical gap between every content section — off the 4/8/12/16/24 scale" },
+          { "value": "80.dp", "line": 169, "context": "bottom spacer for the sticky bar; a magic number rather than a measured bar height" },
+          { "value": "160.dp", "line": 223, "context": "hero scrim height" },
+          { "value": "12.dp", "line": 239, "context": "back button inset" },
+          { "value": "40.dp", "line": 243, "context": "back IconButton size — below the 48dp target" },
+          { "value": "14.dp / 12.dp", "line": 342, "context": "metric tile padding" },
+          { "value": "3.dp", "line": 343, "context": "metric tile internal gap" },
+          { "value": "2.dp", "line": 438, "context": "check-row icon top nudge" },
+          { "value": "16.dp", "line": 438, "context": "check icon size" },
+          { "value": "12.dp", "line": 487, "context": "booking bar shadow elevation — not on the elevation token scale" },
+          { "value": "52.dp", "line": 522, "context": "Book Now button height (this one is compliant)" },
+          { "value": "72.dp / 112.dp", "line": 589, "context": "skeleton block heights" }
+        ],
+        "hardcodedColors": [
+          { "value": "Color(0xFFF5F4F0)", "line": 65, "context": "MetricNeutralBg — a fixed light grey applied to the duration tile regardless of theme (used at line 334)" },
+          { "value": "Color(0xFFEDE7DD)", "line": 66, "context": "SkeletonLine — fixed light beige for every loading placeholder" },
+          { "value": "Color.Black.copy(alpha = 0.72f)", "line": 227, "context": "hero scrim" },
+          { "value": "Color.Black.copy(alpha = 0.40f)", "line": 241, "context": "back button circle" },
+          { "value": "Color.White / Color.White.copy(0.80f)", "line": 247, "context": "hero back icon and text — documented as intentional at lines 264-265" },
+          { "value": "Color(0xFF5F6C66)", "line": 350, "context": "duration tile label — literal duplicate of the onSurfaceVariant token, hardcoded to compensate for the fixed-light tile background" },
+          { "value": "Color(0xFF18231F)", "line": 358, "context": "duration tile value — literal duplicate of the onSurface token, same compensation" }
+        ],
+        "unmappedTypographySlots": [
+          { "slot": "titleMedium", "line": 380, "context": "ServiceQualityPanel heading — Roboto fallback" },
+          { "slot": "titleMedium", "line": 412, "context": "ServiceSection title ('What's included' and 'Add-ons') — Roboto fallback on the two most-read headings on the screen" },
+          { "slot": "titleMedium", "line": 558, "context": "ServiceDetailError title — Roboto fallback" },
+          { "slot": "labelMedium", "line": 502, "context": "'Fixed price' label in the sticky booking bar — Roboto fallback directly above a Geist-rendered price" }
+        ],
+        "offScaleRadius": [
+          { "value": "RoundedCornerShape(percent = 50)", "line": 67, "context": "PillShape — not HomeservicesRadius.full" },
+          { "value": "12.dp", "line": 68, "context": "CardShape — matches the lg token value but declared as a file literal" }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "HIGH on the metric tiles: both values are maxLines = 1 with Ellipsis at 22.sp inside two weight(1f) tiles with 14.dp horizontal padding (ServiceDetailScreen.kt:342, 354-361); the Hindi duration string '%d मिनट' (values-hi/strings.xml:17) plus a 3-digit value can exceed the tile, and the labels 'फिक्स्ड कीमत' (line 24) are already at maxLines 1. HIGH on the sticky bar: the support line 'कन्फर्मेशन से पहले ट्रस्ट चेक दिखाए जाते हैं' (values-hi/strings.xml:32) is capped at maxLines = 1 with Ellipsis inside a weight(1f) column that also holds a 24.sp price, while the Book Now button 'अभी बुक करें' takes width from the same row (ServiceDetailScreen.kt:499-537) — this trust reassurance will visibly truncate in Hindi at the exact moment of commitment. MEDIUM on the hero description: maxLines = 2 at bodyMedium over a photo (line 273-279). MEDIUM on the section titles/subtitles which are unbounded and will simply grow, pushing the layout. Devanagari also renders taller than Latin, so the 14.dp inter-section gaps will feel tighter in Hindi.",
+        "currencyFormatting": "DEFECTIVE and used in three places on this screen — the metric tile (line 311), the add-on pill (line 165) and the sticky booking bar (line 506) — all via `\"₹${pricePaise / 100}\"` at ServiceDetailScreen.kt:621. No lakh/crore grouping, no decimal handling, no locale awareness. The seed contains add-ons priced at 250000 and 150000 paise (api/src/cosmos/seeds/catalogue.ts:86, 251) which will render as '+₹2500' and '+₹1500' rather than '+₹2,500' / '+₹1,500'. The same value also renders as '₹599.00' on the catalogue home via formatInr — three screens, two formats."
+      },
+      "a11y": {
+        "contentDescriptions": "GOOD on imagery — the hero image carries stringResource(R.string.service_image_desc, service.name) in both the local-drawable and Coil branches (ServiceDetailScreen.kt:188, 196) and the back button is labelled (line 246). Decorative check icons are correctly null (line 436).",
+        "touchTargetRisks": [
+          { "line": 243, "size": "40.dp", "note": "Hero back IconButton constrained to 40.dp — under the 48dp minimum, and it sits over a photograph where a mis-tap has no fallback" },
+          { "line": 522, "size": "52.dp", "note": "Book Now is 52.dp — compliant. Note this is a different height from the identical-labelled 36.dp button on the service list (ServiceListScreen.kt:273), so the same CTA is two different sizes one screen apart." }
+        ],
+        "contrastRisks": [
+          { "line": 266, "note": "Hero eyebrow is Color.White at 0.80 alpha over a photo-dependent black-0.72 gradient — the gradient only covers the bottom 160.dp, and the eyebrow's actual contrast varies with the underlying photograph; unverifiable without rendering" },
+          { "line": 276, "note": "Hero description at white-0.80 over the same photo scrim — same risk, and it is the smallest text over imagery" },
+          { "line": 334, "note": "The duration metric tile uses a fixed light MetricNeutralBg (#F5F4F0) with hardcoded dark foregrounds (#5F6C66 / #18231F) so it stays a light-grey card in DARK theme — a bright rectangle sitting beside a correctly-themed emphasized tile. The workaround comment at lines 323 and 348-349 acknowledges this rather than fixing it." },
+          { "line": 419, "note": "Section subtitles use bodySmall in onSurfaceVariant #5F6C66 on surface #FFFDF8 — the smallest low-contrast text on the screen" }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "OBSERVED: only the hero service name gets heading semantics via HsScreenTitle (ServiceDetailScreen.kt:269). Every section heading — 'Professional service, no surprises' (line 378), 'What's included' (line 410), 'Add-ons' — is a plain Text with no heading role, so TalkBack heading navigation on the longest screen in the cluster offers exactly one stop. INFERRED: the sticky booking bar is the last element in the Column, so linear focus traversal reaches the primary CTA only after every include row and add-on row — on a service with many includes the CTA is deep in the traversal order despite being visually pinned."
+        },
+      "imagery": {
+        "usesImages": true,
+        "sources": [
+          "13 bundled local heroes via serviceHeroImageRes() (ServiceDetailScreen.kt:285-301) — service_hero_ac_deep_clean, ac_gas_refill, ac_installation, water_pump_repair, borewell_servicing, plumbing_leak_fix, plumbing_tap_install, plumbing_pipe_repair, electrical_fan_install, electrical_switchboard_fix, electrical_wiring, ro_installation, ro_service_amc",
+          "Coil AsyncImage on service.imageUrl as the second-choice source (ServiceDetailScreen.kt:193-200)",
+          "Brand gradient as the final fallback (ServiceDetailScreen.kt:201-215)"
+        ],
+        "placeholderOrMissing": [
+          "CROSS-CHECK RESULT: the 13 local hero ids in serviceHeroImageRes (ServiceDetailScreen.kt:287-299) map 1:1 onto the 13 service ids in the seed catalogue (api/src/cosmos/seeds/catalogue.ts:21, 39, 57, 76, 94, 113, 131, 149, 168, 186, 204, 223, 241) and onto the 13 Hindi name keys (HindiLocaleNames.kt:21-33). Every currently-seeded service therefore HAS a bundled hero. No service is missing an image on this screen.",
+          "CONSEQUENCE: any NEW service added to the catalogue after these 13 falls straight through to the Coil branch and then to a flat brand gradient with no illustration and no initials — the hardcoded when-block at ServiceDetailScreen.kt:286-301 is an unmaintainable id-to-drawable table that will silently degrade as the catalogue grows.",
+          "The 13 heroes are used ONLY here. The service list and the category grid never reference them (verified by grep — the only service_hero_ references in app/src are in this file), so the customer sees the product photography only AFTER they have already committed to a service.",
+          "There is no image gallery, no before/after pair, and no work-sample imagery anywhere on the detail screen — a single hero is the entire visual merchandising budget for the conversion screen."
+        ],
+        "cite": "ServiceDetailScreen.kt:182-216, 285-301; api/src/cosmos/seeds/catalogue.ts:21-251; customer-app/app/src/main/res/drawable-nodpi/ listing"
+      },
+      "motion": {
+        "animationsUsed": [],
+        "usesMotionTokens": false,
+        "transitionsOnNav": "NONE in this file — no animation import, no AnimatedVisibility, no parallax on the hero as the content scrolls, no collapsing-toolbar behaviour (the hero simply scrolls away, ServiceDetailScreen.kt:136-137), no elevation change on the sticky bar when content scrolls under it (shadowElevation is a constant 12.dp, line 487), and no state-change crossfade from skeleton to content (line 110-122). The only motion reachable from this screen is the shimmer inside the external ConfidenceScoreRow (ConfidenceScoreRow.kt:3-5 imports rememberInfiniteTransition), which renders only when a techId was passed — i.e. the one animated element is usually absent."
+      },
+      "density": "AIRY AND UNIFORM TO THE POINT OF FLATNESS. Every section below the hero is the same recipe: bordered surface card, radius 12.dp, 16.dp padding, separated by identical 14.dp gaps (ServiceDetailScreen.kt:140, 368-372, 399-403, 545-549). Quality panel, includes and add-ons are visually indistinguishable frames, so nothing on the page has visual priority except the hero and the price. There is no grouping, no divider hierarchy, no accent, no alternating background — a vertical stack of same-weight rectangles. The metric tiles are the only element with a differentiated treatment (surfaceVariant + primary-tinted border, line 334-339) and even then only one of the two tiles is emphasized.",
+      "observations": [
+        {
+          "severity": "high",
+          "claim": "The duration metric tile is hardcoded to a fixed light background (#F5F4F0) with hardcoded dark foregrounds, so in dark theme it renders as a bright light-grey card sitting immediately beside a correctly-themed dark tile. The code comments acknowledge the problem as a deliberate workaround rather than fixing the token.",
+          "evidence": "ServiceDetailScreen.kt:65, 334, 348-350, 358 (with the @Suppress(\"MagicNumber\") justification at line 323)",
+          "confidence": "observed"
+        },
+        {
+          "severity": "high",
+          "claim": "Price formatting on the conversion screen truncates and omits Indian digit grouping in all three places it appears (metric tile, add-on pill, sticky bar), so seeded add-ons at 250000/150000 paise render as '+₹2500' / '+₹1500'.",
+          "evidence": "ServiceDetailScreen.kt:621 with call sites at 165, 311, 506; seed values at api/src/cosmos/seeds/catalogue.ts:86 and 251",
+          "confidence": "observed"
+        },
+        {
+          "severity": "high",
+          "claim": "The screen carries no ratings, no review count, no review text and no FAQ — the strongest conversion levers on any Urban Company-class detail page. The seed data even contains a populated `faq` array per service that the client can never display because the Kotlin Service model has no faq field.",
+          "evidence": "customer-app/app/src/main/kotlin/com/homeservices/customer/domain/catalogue/model/Service.kt:3-13 (fields: id, categoryId, name, description, basePrice, durationMinutes, imageUrl, includes, addOns) vs api/src/cosmos/seeds/catalogue.ts:30 (faq array); ServiceDetailScreen.kt:142-168 renders no rating element",
+          "confidence": "observed"
+        },
+        {
+          "severity": "high",
+          "claim": "Flat-card syndrome: quality panel, includes and add-ons are three identical bordered surface rectangles at the same radius, padding and gap, so the page has no visual hierarchy below the hero and reads as an undifferentiated stack.",
+          "evidence": "ServiceDetailScreen.kt:140 (uniform 14.dp gaps), 368-372, 399-403 (identical Surface recipe)",
+          "confidence": "observed"
+        },
+        {
+          "severity": "medium",
+          "claim": "Four unmapped M3 typography slots are used — titleMedium three times and labelMedium once — so every section heading and the sticky-bar price label render in Roboto beside Geist Sans body copy on the same card.",
+          "evidence": "ServiceDetailScreen.kt:380, 412, 558, 502",
+          "confidence": "observed"
+        },
+        {
+          "severity": "medium",
+          "claim": "The error state has no retry and no back affordance: the only back button lives inside ServiceHero, which is not rendered in the Error branch, leaving the user on a near-blank screen dependent on the system gesture.",
+          "evidence": "ServiceDetailScreen.kt:110-113 (Error -> ServiceDetailError()) and 543-572 (no navigation or action in the error composable); back button is at 233-251 inside ServiceHero",
+          "confidence": "observed"
+        },
+        {
+          "severity": "medium",
+          "claim": "The service-hero image mapping is a hardcoded 13-entry when-block keyed on service id, so any new service silently degrades to a flat brand gradient with no illustration or initials fallback.",
+          "evidence": "ServiceDetailScreen.kt:285-301 with the gradient fallback at 201-215",
+          "confidence": "observed"
+        },
+        {
+          "severity": "medium",
+          "claim": "The hero back button is 40.dp — under the 48dp minimum — and sits over photography where a missed tap has no alternative target.",
+          "evidence": "ServiceDetailScreen.kt:243",
+          "confidence": "observed"
+        },
+        {
+          "severity": "medium",
+          "claim": "The same 'Book Now' CTA is 52.dp here but 36.dp on the immediately preceding service list, and this one has default elevation while the list one is forced to 0.dp — the primary action is inconsistent in size, weight and feedback across one journey.",
+          "evidence": "ServiceDetailScreen.kt:520-528 vs ServiceListScreen.kt:271-284",
+          "confidence": "observed"
+        },
+        {
+          "severity": "medium",
+          "claim": "The 'What's included' section is rendered unconditionally while 'Add-ons' is guarded by isNotEmpty(), so a service with no includes shows an empty titled card — inconsistent empty handling between two adjacent sections.",
+          "evidence": "ServiceDetailScreen.kt:153-158 (unguarded) vs 159-168 (guarded)",
+          "confidence": "observed"
+        },
+        {
+          "severity": "medium",
+          "claim": "There is no motion anywhere: no hero parallax, no collapsing toolbar, no elevation response on the sticky bar when content scrolls beneath it, and no crossfade between skeleton and content — the screen is fully static.",
+          "evidence": "ServiceDetailScreen.kt:110-122, 136-137, 486-490 (constant shadowElevation, no scroll-state coupling); no animation import in the file's import block at lines 1-62",
+          "confidence": "observed"
+        },
+        {
+          "severity": "low",
+          "claim": "The 80.dp bottom spacer that clears the sticky booking bar is a magic number unrelated to the bar's actual measured height (12.dp vertical padding + 52.dp button + navigation-bar inset), so on tall gesture-nav devices the last add-on row can sit awkwardly close to or under the bar.",
+          "evidence": "ServiceDetailScreen.kt:169 vs 491-537",
+          "confidence": "inferred"
+        },
+        {
+          "severity": "low",
+          "claim": "The confidence-score trust signal is invisible in the common case: it only populates when a `techId` nav arg was supplied, and any failure (including a denied location permission) maps to Hidden, which renders nothing with no explanation.",
+          "evidence": "ServiceDetailViewModel.kt:35, 42, 68, 81, 93-98; ConfidenceScoreRow.kt:41",
+          "confidence": "observed"
+        },
+        {
+          "severity": "low",
+          "claim": "SkeletonLine, PillShape and CardShape are redeclared verbatim in this file rather than shared, duplicating the identical constants in ServiceListScreen.kt and PhotoFirstServiceCard.kt.",
+          "evidence": "ServiceDetailScreen.kt:66-68; ServiceListScreen.kt:53-55; PhotoFirstServiceCard.kt:46-48",
+          "confidence": "observed"
+        }
+      ]
+    }
+  ]
+}

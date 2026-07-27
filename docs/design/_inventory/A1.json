@@ -1,0 +1,1685 @@
+{
+  "cluster": "A1",
+  "surfaces": [
+    {
+      "id": "admin.design-tokens-web",
+      "app": "admin-web",
+      "file": "admin-web/app/globals.css",
+      "loc": 653,
+      "purpose": "Single global stylesheet that defines the entire admin-web design token set, primitives (.btn/.chip/.alert/.skeleton/.eyebrow/.display), form theming, topbar chrome and the light-mode override.",
+      "entryPoints": "Imported once by the root layout — admin-web/app/layout.tsx:8",
+      "composition": [
+        "Font family vars --font-display (Fraunces serif) / --font-body / --font-mono — globals.css:11-13",
+        "Warm-ink ramp --ink-0..--ink-5 (#0E0B08 → #3E3528) — globals.css:17-22",
+        "Text ramp --fog-0..--fog-3 (#877A6D → #F1E9D8) — globals.css:24-27",
+        "Single accent --marigold #E2A04A / -soft / -dim — globals.css:30-32",
+        "Status spectrum teal/coral/ember/rose/lavender — globals.css:36-44",
+        "Paper (light) palette --paper-0..--paper-text-2 — globals.css:47-53",
+        "Rail namespace tokens — globals.css:58-62",
+        ":lang(hi) Devanagari overrides (font, line-height 1.45, font-feature-settings, font-synthesis:none) — globals.css:70-106",
+        "prefers-reduced-motion global kill switch — globals.css:108-114",
+        "@theme block: semantic colors, type scale, spacing scale, radii, shadows, motion — globals.css:117-179",
+        "html.light / [data-theme=light] override that re-maps ink-*/fog-* onto paper — globals.css:183-213",
+        "Paper-grain SVG noise overlay on html::before — globals.css:220-229",
+        "Editorial helpers .eyebrow/.display/.numeral/.italic-serif/.hairline — globals.css:253-294",
+        ".live-dot breathing pulse keyframes — globals.css:300-312",
+        ".rise / .rise-1..6 staggered page-load reveal — globals.css:318-328",
+        "Global input/select/textarea theming — globals.css:335-392",
+        ":focus-visible marigold ring — globals.css:402-406",
+        ".btn/.btn-primary/.btn-ghost/.btn-link/.btn-success — globals.css:413-463, 527-536",
+        ".alert + variants — globals.css:469-486",
+        ".chip + variants + .chip-numeral — globals.css:492-524",
+        ".theme-toggle__option — globals.css:542-567",
+        ".topbar__* chrome — globals.css:573-621",
+        "@media(max-width:900px) rail/grid collapse — globals.css:627-632",
+        ".skeleton shimmer — globals.css:635-652"
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "admin-web/app/globals.css:639-649", "quality": ".skeleton shimmer primitive exists and is reduced-motion aware (globals.css:650-652) — but it is not used by any surface in this cluster" },
+        "empty": { "present": false, "evidence": null, "quality": "No .empty-state rule exists in the stylesheet even though EmptyState.tsx:15 emits className=\"empty-state\" — the class is inert" },
+        "error": { "present": true, "evidence": "admin-web/app/globals.css:485", "quality": ".alert-danger left-border treatment; no icon, no dismiss, no severity iconography" },
+        "success": { "present": true, "evidence": "admin-web/app/globals.css:483", "quality": "colour-only differentiation" },
+        "offline": { "present": false, "evidence": null, "quality": "No offline/degraded-connection token, class or banner anywhere in the stylesheet" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "No locked/disabled/no-access primitive" }
+      },
+      "skeletonOrSpinner": ".skeleton gradient shimmer (globals.css:639-649). No spinner primitive is defined anywhere in the stylesheet.",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [
+          { "value": "52px", "line": 574, "context": ".topbar height — not on the --space-* scale" },
+          { "value": "7px", "line": 602, "context": ".topbar__live-dot width/height — off-grid" },
+          { "value": "0.9375rem", "line": 586, "context": ".topbar__title font-size — not a --text-* token" },
+          { "value": "0.625rem", "line": 593, "context": ".topbar__city font-size — not a --text-* token (10px)" },
+          { "value": "0.8125rem", "line": 617, "context": ".topbar__clock font-size — not a --text-* token" },
+          { "value": "0.625rem", "line": 610, "context": ".topbar__live-label font-size — 10px" },
+          { "value": "0.625rem/0.75rem", "line": 419, "context": ".btn padding 0 1.125rem — 18px, off the 4px grid" },
+          { "value": "0.625rem 0.75rem", "line": 342, "context": "global input padding — 10px vertical, off the 4px grid" },
+          { "value": "900px", "line": 627, "context": "sole responsive breakpoint, no token" },
+          { "value": "72px", "line": 631, "context": "main padding-bottom for mobile rail" }
+        ],
+        "hardcodedColors": [
+          { "value": "#B0A382", "line": 192, "context": "--color-border-strong light-mode value defined inline, not lifted into the paper-* namespace" },
+          { "value": "#DFD4B8", "line": 199, "context": "--ink-3 light remap, inline hex" },
+          { "value": "rgba(0,0,0,0.85)", "line": 171, "context": "--shadow-lg" },
+          { "value": "white 8%", "line": 123, "context": "n/a — see LocaleSwitcher; stylesheet itself uses color-mix white in components" }
+        ],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": [
+          { "value": "2px", "line": 405, "context": ":focus-visible border-radius literal instead of var(--radius-sm)" },
+          { "value": "50%", "line": 307, "context": ".live-dot" },
+          { "value": "999px", "line": 519, "context": ".chip-numeral literal instead of var(--radius-pill)" }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": false,
+        "hindiRisk": "Devanagari handling is unusually thorough for a stylesheet (globals.css:70-106) — :lang(hi) resets letter-spacing on nav labels and tables. BUT .eyebrow (globals.css:258) applies letter-spacing:0.22em and .chip (globals.css:501) 0.08em with text-transform:uppercase, and neither is reset under :lang(hi); uppercase is a no-op for Devanagari and the wide tracking breaks matra spacing on Hindi eyebrows/chips.",
+        "currencyFormatting": "No currency token or utility class in the stylesheet; .tnum (globals.css:280) is the only numeric affordance. Formatting is left to each component, which is why ₹ and 'INR ' both ship (CounterStrip.tsx:10 vs PayoutQueue.tsx:14)."
+      },
+      "a11y": {
+        "contentDescriptions": false,
+        "touchTargetRisks": [
+          { "line": 418, "size": "min-height 2.75rem (44px)", "note": ".btn meets 44px but is below the 48dp Android/WCAG-2.2-AAA target used by the mobile apps" },
+          { "line": 553, "size": "~13px tall", "note": ".theme-toggle__option has padding 0 0 2px and 11px text — the entire hit area is roughly 13px tall" },
+          { "line": 456, "size": "no min-height", "note": ".btn-link sets min-height:0 explicitly" }
+        ],
+        "contrastRisks": [
+          { "line": 24, "note": "--fog-0 #877A6D is documented at 4.54:1 vs --ink-1 only. It is used on --ink-2 (#1A1610) and --ink-3 (#221C15) by CounterStrip/PayoutQueue, where the ratio drops below the 4.5:1 AA floor" },
+          { "line": 552, "note": ".theme-toggle__option resting colour is --color-text-faint at 11px — small text at the AA boundary" },
+          { "line": 498, "note": ".chip uses --text-eyebrow (11px) mono uppercase in --color-text-muted — dense status text near the contrast floor" }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "A global :focus-visible ring is defined (globals.css:402-406) which is better than most codebases; no skip-link class and no :focus-within affordances exist."
+      },
+      "imagery": {
+        "usesImages": true,
+        "sources": ["Inline SVG feTurbulence noise data-URI for paper grain — globals.css:228"],
+        "placeholderOrMissing": ["No image, illustration, logo or empty-state art token of any kind"],
+        "cite": "admin-web/app/globals.css:220-229"
+      },
+      "motion": {
+        "animationsUsed": [
+          { "what": "liveBreath pulse", "line": 300 },
+          { "what": "editorialRise staggered page reveal", "line": 318 },
+          { "what": "skeletonShimmer", "line": 635 }
+        ],
+        "usesMotionTokens": true,
+        "transitionsOnNav": "No route-transition or view-transition rules; .rise-* (globals.css:322-328) is the only orchestration and it is opt-in per element."
+      },
+      "density": "Deliberately editorial and airy at the primitive level — .btn 44px tall with 18px side padding (globals.css:418-419), inputs 10px/12px (globals.css:342), --space-5 (20px) as the default page gutter. The stylesheet is disciplined; the density problems all appear in the components that bypass it with inline styles.",
+      "observations": [
+        { "severity": "high", "claim": "The web token set is a wholly different brand from the Android design system: web brand is marigold #E2A04A on near-black warm ink #0E0B08, while the Android palette is deep-green primary #0B3D2E on cream #FBF7EF. There is no green primary anywhere in globals.css.", "evidence": "admin-web/app/globals.css:119 vs design-system/src/main/kotlin/com/homeservices/designsystem/theme/Color.kt:15", "confidence": "observed" },
+        { "severity": "high", "claim": "Radius scales diverge by ~2x: web sm/md/lg = 2/4/6px, Android sm/md/lg/xl = 4/8/12/20dp. A card in the admin console and a card in the customer app cannot look like the same product.", "evidence": "admin-web/app/globals.css:163-166 vs design-system/src/main/kotlin/com/homeservices/designsystem/theme/Radius.kt:22-31", "confidence": "observed" },
+        { "severity": "medium", "claim": "Motion durations diverge: web fast/base/slow = 120/220/420ms, Android fast/base/medium/slow = 150/200/300/500ms. Easing curves DO align (web --ease-out == Android emphasizedDecelerate; web --ease-in-out == Android standard).", "evidence": "admin-web/app/globals.css:174-178 vs design-system/src/main/kotlin/com/homeservices/designsystem/theme/Motion.kt:26-35,44,50", "confidence": "observed" },
+        { "severity": "medium", "claim": "Web adds a serif display face (Fraunces) that has no counterpart in the Android type system, so the brand's headline voice exists on web only.", "evidence": "admin-web/app/layout.tsx:10-16 and admin-web/app/globals.css:11", "confidence": "observed" },
+        { "severity": "medium", "claim": "Web spacing scale introduces a 2px step (--space-0-5) and a 20px step (--space-5) that are off the Android 4px/8px token grid, so 'the same gap' is unreproducible across platforms.", "evidence": "admin-web/app/globals.css:148,152", "confidence": "inferred" },
+        { "severity": "medium", "claim": "Semantic status colours diverge from Android: web success #5BA38E / warn #E9B44C / danger #B6385C vs Android success #10A85E / warning #EBA53A / error #D73C3C. An 'error' badge is a different hue on each platform.", "evidence": "admin-web/app/globals.css:129-131", "confidence": "observed" },
+        { "severity": "medium", "claim": "The stylesheet emits no .empty-state rule despite EmptyState.tsx tagging every empty state with that class — the hook for a shared empty-state visual language exists but is unimplemented.", "evidence": "admin-web/src/components/EmptyState.tsx:15", "confidence": "observed" },
+        { "severity": "low", "claim": "The .eyebrow and .chip primitives apply uppercase + wide tracking with no :lang(hi) reset, while nav labels and table cells do get one — inconsistent Devanagari handling.", "evidence": "admin-web/app/globals.css:257-258,500-501 vs 103-106", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.design-doc",
+      "app": "admin-web",
+      "file": "admin-web/DESIGN.md",
+      "loc": 42,
+      "purpose": "Intended to be the client brand-token contract for admin-web.",
+      "entryPoints": "Referenced by the agency workflow (frontend-design / Impeccable); not imported by any code.",
+      "composition": [
+        "TODO banner — DESIGN.md:3",
+        "Voice section with placeholder sentence — DESIGN.md:6-7",
+        "Colour token block with literal '#...' placeholders — DESIGN.md:9-16",
+        "Type token block with '<family>' placeholders — DESIGN.md:18-24",
+        "Spacing 4px grid note — DESIGN.md:26-27",
+        "Motion default 200ms / cubic-bezier(0.4,0,0.2,1) — DESIGN.md:29-30",
+        "Anti-pattern guardrails — DESIGN.md:32-37",
+        "References with 'TODO' brand-guide link — DESIGN.md:39-41"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "n/a — document" },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": false, "evidence": null, "quality": "n/a" },
+        "success": { "present": false, "evidence": null, "quality": "n/a" },
+        "offline": { "present": false, "evidence": null, "quality": "n/a" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "n/a" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": { "usesSpacingTokens": false, "hardcodedDp": [], "hardcodedColors": [], "unmappedTypographySlots": [], "offScaleRadius": [] },
+      "i18n": { "hardcodedUserFacingStrings": [], "usesStringResource": false, "hindiRisk": "Document does not mention Devanagari, Hindi line-height, or bilingual layout at all despite the product shipping hi as default locale.", "currencyFormatting": "Not specified — no ₹ / paise / lakh-grouping rule is documented anywhere, which is the root cause of the ₹ vs 'INR ' split in the dashboard." },
+      "a11y": { "contentDescriptions": false, "touchTargetRisks": [], "contrastRisks": [], "semanticsHeadings": false, "focusOrder": "n/a" },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["Brand guide link is literally '<link or TODO>' — DESIGN.md:40"], "cite": "admin-web/DESIGN.md:40" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "n/a" },
+      "density": "n/a",
+      "observations": [
+        { "severity": "high", "claim": "DESIGN.md is still the untouched scaffold template — every token value is a '#...' or '<family>' placeholder — while a fully-specified 653-line token system ships in globals.css. There is no written design contract for the shipped design.", "evidence": "admin-web/DESIGN.md:3,11-16,20-23", "confidence": "observed" },
+        { "severity": "medium", "claim": "The document's stated motion default (200ms) contradicts the implemented --duration-base (220ms), so the only concrete number in the doc is already wrong.", "evidence": "admin-web/DESIGN.md:30 vs admin-web/app/globals.css:175", "confidence": "observed" },
+        { "severity": "low", "claim": "The doc's own anti-pattern list forbids 'generic rounded-card' aesthetics; the dashboard widgets are exactly flat 1px-bordered rectangles with no elevation or imagery, which is the opposite failure mode and is not covered.", "evidence": "admin-web/DESIGN.md:35", "confidence": "inferred" }
+      ]
+    },
+    {
+      "id": "admin.root-layout",
+      "app": "admin-web",
+      "file": "admin-web/app/layout.tsx",
+      "loc": 60,
+      "purpose": "Root HTML document — loads the four webfonts, sets lang/data-theme, mounts ThemeProvider around the whole app.",
+      "entryPoints": "Next.js App Router root; wraps every route including /[locale]/*.",
+      "composition": [
+        "next/font loaders: Fraunces (display, 4 weights + italic) — layout.tsx:10-16",
+        "Geist (body) — layout.tsx:18-22",
+        "JetBrains Mono — layout.tsx:24-28",
+        "Noto Sans Devanagari (400/500/600) — layout.tsx:30-35",
+        "generateMetadata → title from t('meta') — layout.tsx:37-43",
+        "<html lang={locale} data-theme={theme} + font variable classes> — layout.tsx:50-54",
+        "<body><ThemeProvider>{children}</ThemeProvider></body> — layout.tsx:55-57"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "No root loading.tsx; font display:'swap' (layout.tsx:13,21,27,33) is the only FOUT mitigation" },
+        "empty": { "present": false, "evidence": null, "quality": "n/a for a layout" },
+        "error": { "present": true, "evidence": "admin-web/app/global-error.tsx:11", "quality": "Root error boundary exists as a sibling file" },
+        "success": { "present": false, "evidence": null, "quality": "n/a" },
+        "offline": { "present": false, "evidence": null, "quality": "No offline banner or navigator.onLine listener at the shell level" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "n/a at root" }
+      },
+      "skeletonOrSpinner": "none — no root loading.tsx exists",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Owner console for the HomeHeroo field-operations platform.", "line": 41 }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "lang is set correctly from getLocale() (layout.tsx:51), which is what activates the :lang(hi) block in globals.css:70 — this is the single most important i18n wiring in the app and it is correct. The meta description, however, is English-only even on /hi.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "contentDescriptions": false,
+        "touchTargetRisks": [],
+        "contrastRisks": [],
+        "semanticsHeadings": false,
+        "focusOrder": "No skip-to-content link is rendered at the top of <body> (layout.tsx:55-57); keyboard users must tab the entire 10-item Rail on every page."
+      },
+      "imagery": {
+        "usesImages": false,
+        "sources": [],
+        "placeholderOrMissing": ["No favicon/icon/apple-icon file in app/ (ls app/ shows only global-error.tsx, globals.css, layout.tsx, not-found.tsx, page.tsx); the console ships the default Next.js favicon", "No og:image / twitter card in generateMetadata — layout.tsx:39-42"],
+        "cite": "admin-web/app/layout.tsx:37-43"
+      },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None declared at root." },
+      "density": "n/a — no visual chrome of its own.",
+      "observations": [
+        { "severity": "medium", "claim": "No skip-link is rendered before the Rail, so every keyboard/screen-reader user traverses 10 nav links before reaching page content.", "evidence": "admin-web/app/layout.tsx:55-57", "confidence": "observed" },
+        { "severity": "medium", "claim": "Four font families are loaded on every route (Fraunces with 4 weights + italics, Geist, JetBrains Mono, Noto Devanagari) — a heavy payload for a rural-UP audience on 3G, and Fraunces italic is used by exactly one helper class.", "evidence": "admin-web/app/layout.tsx:10-35 and admin-web/app/globals.css:282-286", "confidence": "inferred" },
+        { "severity": "low", "claim": "The meta description is a hardcoded English literal while every other metadata string is translated.", "evidence": "admin-web/app/layout.tsx:41", "confidence": "observed" },
+        { "severity": "low", "claim": "No app icon asset exists — public/ contains only firebase-messaging-sw.js and robots.txt, and app/ has no icon.* file.", "evidence": "admin-web/app/layout.tsx:37-43", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.root-redirect",
+      "app": "admin-web",
+      "file": "admin-web/app/page.tsx",
+      "loc": 8,
+      "purpose": "Server-side redirect from / to the default-locale login screen.",
+      "entryPoints": "Any hit on the bare origin.",
+      "composition": ["redirect(`/${routing.defaultLocale}/login`) — page.tsx:7 (defaultLocale is 'hi', src/i18n/config.ts:5)"],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "No UI — redirect only" },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": false, "evidence": null, "quality": "n/a" },
+        "success": { "present": false, "evidence": null, "quality": "n/a" },
+        "offline": { "present": false, "evidence": null, "quality": "n/a" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "n/a" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": { "usesSpacingTokens": false, "hardcodedDp": [], "hardcodedColors": [], "unmappedTypographySlots": [], "offScaleRadius": [] },
+      "i18n": { "hardcodedUserFacingStrings": [], "usesStringResource": false, "hindiRisk": "None — redirect target is locale-derived, not hardcoded.", "currencyFormatting": "n/a" },
+      "a11y": { "contentDescriptions": false, "touchTargetRisks": [], "contrastRisks": [], "semanticsHeadings": false, "focusOrder": "n/a" },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": [], "cite": "admin-web/app/page.tsx:7" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "n/a" },
+      "density": "n/a",
+      "observations": [
+        { "severity": "low", "claim": "There is no marketing/landing surface at all — the bare origin goes straight to a login form, so the product has no first impression for anyone who is not already an admin.", "evidence": "admin-web/app/page.tsx:6-8", "confidence": "observed" },
+        { "severity": "low", "claim": "This route correctly derives the locale from routing.defaultLocale, unlike app/not-found.tsx:21 which hardcodes /hi/dashboard.", "evidence": "admin-web/app/page.tsx:7", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.root-not-found",
+      "app": "admin-web",
+      "file": "admin-web/app/not-found.tsx",
+      "loc": 29,
+      "purpose": "404 page for requests that fall outside the [locale] segment.",
+      "entryPoints": "Next.js root not-found boundary — any unmatched non-locale path.",
+      "composition": [
+        "<main> full-viewport centered grid on --color-surface, lang hardcoded to 'en' — not-found.tsx:5-8",
+        "<section> max-w-40rem card on --ink-1 with 1px border and --shadow-lg — not-found.tsx:9",
+        "Eyebrow 'HomeHeroo admin' — not-found.tsx:10",
+        "Giant serif 404 numeral, clamp(4rem,10vw,7.5rem), tabular-nums — not-found.tsx:11-16",
+        "'Page not found' body copy in --color-text-muted — not-found.tsx:17-19",
+        "'Back to dashboard' .btn.btn-primary linking to /hi/dashboard — not-found.tsx:20-25"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "n/a" },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": true, "evidence": "admin-web/app/not-found.tsx:3-28", "quality": "This IS the 404 surface; visually the strongest page in the cluster — huge serif numeral, real hierarchy, one clear CTA" },
+        "success": { "present": false, "evidence": null, "quality": "n/a" },
+        "offline": { "present": false, "evidence": null, "quality": "n/a" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "n/a" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [
+          { "value": "40rem", "line": 9, "context": "max-w-[40rem] arbitrary Tailwind value" },
+          { "value": "clamp(4rem,10vw,7.5rem)", "line": 12, "context": "arbitrary font-size, bypasses the --text-* scale which tops out at --text-display 7.5rem" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": [
+          { "value": "0 (no radius)", "line": 9, "context": "card has border but no radius token applied — relies on the editorial sharp-corner default" }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "HomeHeroo admin", "line": 10 },
+          { "text": "Page not found", "line": 18 },
+          { "text": "Back to dashboard", "line": 25 },
+          { "text": "Page not found (aria-label)", "line": 13 }
+        ],
+        "usesStringResource": false,
+        "hindiRisk": "lang is hardcoded to 'en' (not-found.tsx:7), which suppresses the :lang(hi) Devanagari rules — but the sibling admin-web/app/[locale]/not-found.tsx renders the identical layout using t('notFound') keys. Translations for eyebrow/title/description/backHome exist in messages/hi.json ('पृष्ठ नहीं मिला', 'डैशबोर्ड पर वापस जाएं') and are simply not used here.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "contentDescriptions": true,
+        "touchTargetRisks": [],
+        "contrastRisks": [
+          { "line": 17, "note": "--color-text-muted body copy at default 16px on --ink-1; acceptable in dark, but the page is also the light-mode 404 where --color-text-muted maps to --paper-text-1 #4A4135 (fine)" }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "Single focusable element (the CTA link); trivially correct."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No illustration or brand mark — the '404' numeral is the only visual"], "cite": "admin-web/app/not-found.tsx:11-16" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "The .rise reveal classes (globals.css:322) exist but are not applied here." },
+      "density": "Airy — space-8 card padding, space-4/space-8 rhythm between blocks (not-found.tsx:9,12,17,22). One of the few well-spaced surfaces in the cluster.",
+      "observations": [
+        { "severity": "medium", "claim": "Every string on this 404 is a hardcoded English literal even though the exact translations already exist in messages/hi.json under the 'notFound' namespace and are used by the sibling [locale]/not-found.tsx.", "evidence": "admin-web/app/not-found.tsx:10,18,25", "confidence": "observed" },
+        { "severity": "medium", "claim": "The CTA hardcodes /hi/dashboard, so an English admin who hits a root 404 is bounced into the Hindi console.", "evidence": "admin-web/app/not-found.tsx:21", "confidence": "observed" },
+        { "severity": "low", "claim": "lang=\"en\" is forced on the <main>, which would disable Devanagari shaping rules for any Hindi content rendered inside this boundary.", "evidence": "admin-web/app/not-found.tsx:7", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.global-error",
+      "app": "admin-web",
+      "file": "admin-web/app/global-error.tsx",
+      "loc": 103,
+      "purpose": "Last-resort error boundary that replaces the whole document when the root layout itself throws; reports to Sentry and offers a reset.",
+      "entryPoints": "Next.js global-error boundary — any uncaught throw above the [locale] layout.",
+      "composition": [
+        "Sentry.captureException on mount — global-error.tsx:12-14",
+        "<html lang=\"hi\"> hardcoded — global-error.tsx:17",
+        "<body> full-viewport centered grid, inline background #0E0B08, colour #F1E9D8, font-family system-ui — global-error.tsx:18-29",
+        "<section> max-w-40rem card, background #14110C, 1px #2A251E border, 2rem padding — global-error.tsx:30-38",
+        "'HomeHeroo admin' eyebrow, 0.6875rem uppercase 0.12em — global-error.tsx:39-49",
+        "Bilingual headline 'Something went wrong • कुछ रुका', clamp(1.5rem,4vw,2.5rem) — global-error.tsx:50-59",
+        "Body copy 'An unexpected error occurred. Please reload.' — global-error.tsx:60-67",
+        "Conditional monospace 'Incident: {digest}' line — global-error.tsx:68-80",
+        "Marigold 'Reload' button, inline #E2A04A, no border-radius — global-error.tsx:82-98"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "Reset button has no pending/disabled state — global-error.tsx:82-98" },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": true, "evidence": "admin-web/app/global-error.tsx:16-101", "quality": "This IS the error surface. Copy is human ('An unexpected error occurred. Please reload.') not a raw exception, and the digest is surfaced as an 'Incident:' reference — good practice" },
+        "success": { "present": false, "evidence": null, "quality": "n/a" },
+        "offline": { "present": false, "evidence": null, "quality": "The most likely real cause in rural UP — a dropped connection — is not distinguished from an app crash" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "n/a" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "2rem", "line": 27, "context": "body padding literal instead of var(--space-8)" },
+          { "value": "2rem", "line": 36, "context": "section padding literal" },
+          { "value": "40rem", "line": 33, "context": "maxWidth literal" },
+          { "value": "0.6875rem", "line": 42, "context": "eyebrow font-size literal instead of var(--text-eyebrow)" },
+          { "value": "0.875rem", "line": 64, "context": "body font-size literal instead of var(--text-sm)" },
+          { "value": "0.75rem", "line": 74, "context": "digest font-size literal" },
+          { "value": "0.75rem 1.5rem", "line": 86, "context": "button padding literal — computed height ≈ 38px, below the 44px .btn floor" }
+        ],
+        "hardcodedColors": [
+          { "value": "#0E0B08", "line": 24, "context": "body background — duplicates --color-surface" },
+          { "value": "#F1E9D8", "line": 25, "context": "body colour — duplicates --fog-3" },
+          { "value": "#14110C", "line": 34, "context": "card background — duplicates --ink-1" },
+          { "value": "#2A251E", "line": 35, "context": "card border — NOT a value in the token set; nearest tokens are --ink-4 #2E2719 and --ink-3 #221C15" },
+          { "value": "#9A9082", "line": 45, "context": "eyebrow colour" },
+          { "value": "#9A9082", "line": 62, "context": "body colour" },
+          { "value": "#6E665B", "line": 75, "context": "digest colour — this is the pre-remediation value that globals.css:24 explicitly documents as failing AA at 3.33:1" },
+          { "value": "#E2A04A", "line": 88, "context": "button background" },
+          { "value": "#14110C", "line": 89, "context": "button foreground" }
+        ],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": [
+          { "value": "none", "line": 85, "context": "Reload button has no borderRadius at all, while .btn uses var(--radius-sm)" }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "HomeHeroo admin", "line": 48 },
+          { "text": "Something went wrong • कुछ रुका", "line": 58 },
+          { "text": "An unexpected error occurred. Please reload.", "line": 67 },
+          { "text": "Incident: {digest}", "line": 78 },
+          { "text": "Reload", "line": 97 }
+        ],
+        "usesStringResource": false,
+        "hindiRisk": "lang=\"hi\" is hardcoded (global-error.tsx:17) so an English admin's crash screen is declared Hindi. The Hindi fragment 'कुछ रुका' is hand-written and does not match messages/hi.json globalError.title 'कुछ गड़बड़ हो गई'; the body copy and button are English-only. Translations for title/description/reload exist in both catalogues and are unused.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "contentDescriptions": false,
+        "touchTargetRisks": [
+          { "line": 86, "size": "≈38px tall (0.75rem padding + 0.875rem text)", "note": "Below the 44px minimum; it is also the only action on the page" }
+        ],
+        "contrastRisks": [
+          { "line": 75, "note": "#6E665B on #14110C is 3.33:1 by the project's own measurement in globals.css:24 — the incident reference fails AA" },
+          { "line": 62, "note": "#9A9082 at 0.875rem for the primary body copy" }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "Single button; no role=\"alert\" or aria-live on the message, so a screen reader on a soft-navigated crash may not announce it."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No brand mark, no illustration — the crash screen carries zero brand"], "cite": "admin-web/app/global-error.tsx:39-49" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None; the Reload button has no transition or hover state at all." },
+      "density": "2rem uniform padding, generous but generic; the whole card is a flat dark rectangle with a flat marigold rectangle button — no elevation, no radius, no hover.",
+      "observations": [
+        { "severity": "high", "claim": "The global error screen re-implements the entire design system as inline hex literals (9 raw colours, 7 raw sizes) and uses system-ui instead of the brand fonts, so the app's worst-case screen is the one that looks least like the product.", "evidence": "admin-web/app/global-error.tsx:19-29,31-38,85-95", "confidence": "observed" },
+        { "severity": "high", "claim": "#2A251E is used as the card border but is not a token anywhere in globals.css — it is an invented value that will drift from --ink-4 (#2E2719) forever.", "evidence": "admin-web/app/global-error.tsx:35", "confidence": "observed" },
+        { "severity": "high", "claim": "The incident-reference text uses #6E665B, the exact colour globals.css:24 documents as a 3.33:1 AA failure that was already remediated everywhere else.", "evidence": "admin-web/app/global-error.tsx:75 vs admin-web/app/globals.css:24", "confidence": "observed" },
+        { "severity": "medium", "claim": "The document is hardcoded lang=\"hi\" while its content is 90% English, and its one Hindi phrase contradicts the translated globalError.title already in messages/hi.json.", "evidence": "admin-web/app/global-error.tsx:17,58", "confidence": "observed" },
+        { "severity": "medium", "claim": "Because it is inline-styled with dark hex values, this screen ignores the light-theme override entirely — a light-mode admin gets a black crash screen.", "evidence": "admin-web/app/global-error.tsx:24-25 vs admin-web/app/globals.css:183-193", "confidence": "inferred" },
+        { "severity": "low", "claim": "The Reload button has no hover, focus or active styling and no border-radius, unlike every other button in the app.", "evidence": "admin-web/app/global-error.tsx:85-95", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.locale-layout",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/layout.tsx",
+      "loc": 31,
+      "purpose": "Validates the :locale segment, sets the request locale and injects the next-intl message catalogue for every localized route.",
+      "entryPoints": "Wraps /en/* and /hi/* — routing.locales from src/i18n/config.ts:4",
+      "composition": [
+        "Locale allow-list check → notFound() — layout.tsx:15-17",
+        "setRequestLocale + getMessages — layout.tsx:19-20",
+        "<NextIntlClientProvider> wrapping children — layout.tsx:22-26",
+        "generateStaticParams over routing.locales — layout.tsx:29-31"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "No loading.tsx at the locale level; message-catalogue fetch is server-side" },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": true, "evidence": "admin-web/app/[locale]/layout.tsx:16", "quality": "Invalid locale → notFound(), which renders [locale]/not-found.tsx" },
+        "success": { "present": false, "evidence": null, "quality": "n/a" },
+        "offline": { "present": false, "evidence": null, "quality": "n/a" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "n/a" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": { "usesSpacingTokens": false, "hardcodedDp": [], "hardcodedColors": [], "unmappedTypographySlots": [], "offScaleRadius": [] },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "This layer is correct: the full message catalogue is passed to the client provider (layout.tsx:20,23). The i18n plumbing is sound — the failures downstream are components that never call useTranslations.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": { "contentDescriptions": false, "touchTargetRisks": [], "contrastRisks": [], "semanticsHeadings": false, "focusOrder": "n/a" },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": [], "cite": "admin-web/app/[locale]/layout.tsx:22" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "No locale-change transition; LocaleSwitcher does a router.replace which is a hard content swap." },
+      "density": "n/a",
+      "observations": [
+        { "severity": "low", "claim": "The whole message catalogue is shipped to the client on every localized route via NextIntlClientProvider with no namespace narrowing — a payload cost on rural 3G.", "evidence": "admin-web/app/[locale]/layout.tsx:20,23", "confidence": "inferred" }
+      ]
+    },
+    {
+      "id": "admin.locale-root-redirect",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/page.tsx",
+      "loc": 12,
+      "purpose": "Redirects /:locale to /:locale/login.",
+      "entryPoints": "/hi or /en with no further path.",
+      "composition": ["redirect(`/${locale}/login`) — page.tsx:11"],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "n/a" },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": false, "evidence": null, "quality": "n/a" },
+        "success": { "present": false, "evidence": null, "quality": "n/a" },
+        "offline": { "present": false, "evidence": null, "quality": "n/a" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "n/a" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": { "usesSpacingTokens": false, "hardcodedDp": [], "hardcodedColors": [], "unmappedTypographySlots": [], "offScaleRadius": [] },
+      "i18n": { "hardcodedUserFacingStrings": [], "usesStringResource": false, "hindiRisk": "None — preserves the incoming locale.", "currencyFormatting": "n/a" },
+      "a11y": { "contentDescriptions": false, "touchTargetRisks": [], "contrastRisks": [], "semanticsHeadings": false, "focusOrder": "n/a" },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": [], "cite": "admin-web/app/[locale]/page.tsx:11" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "n/a" },
+      "density": "n/a",
+      "observations": [
+        { "severity": "low", "claim": "Redirects an already-authenticated admin to /login rather than /dashboard — there is no session check here, so the logged-in landing experience depends entirely on the login page's own refresh probe.", "evidence": "admin-web/app/[locale]/page.tsx:11 vs admin-web/app/[locale]/login/page.tsx:98-120", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.login",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/login/page.tsx",
+      "loc": 472,
+      "purpose": "Two-step admin sign-in: Google or email+password, then a Microsoft Authenticator TOTP challenge.",
+      "entryPoints": "/:locale/login — reached from app/page.tsx:7, app/[locale]/page.tsx:11, the dashboard layout's unauthenticated redirect (app/[locale]/(dashboard)/layout.tsx:50,53), and middleware redirects with ?next=",
+      "composition": [
+        "<main> full-viewport centered grid on --color-surface — login/page.tsx:304",
+        "<section> two-column split card (0.9fr / 1.1fr on md+), max-w-64rem, 1px border, --shadow-lg — login/page.tsx:305",
+        "LEFT <aside> on --ink-1: eyebrow 'HomeHeroo admin' — login/page.tsx:306-307",
+        "  Serif display headline clamp(2rem,4vw,3.5rem) — login/page.tsx:308-310",
+        "  Subtitle in --color-text-muted, max-w-26rem — login/page.tsx:311-313",
+        "  Two-step progress list: step 1 numbered square with marigold border — login/page.tsx:315-329",
+        "  step 2 numbered square with --color-border-strong, opacity-90 — login/page.tsx:330-343",
+        "RIGHT <form>: eyebrow ('Step 1 of 2' / 'Step 2 of 2') — login/page.tsx:352-355",
+        "  h2 heading at --text-2xl — login/page.tsx:356-358",
+        "  description paragraph — login/page.tsx:359-361",
+        "  conditional error banner role=alert .alert.alert-danger — login/page.tsx:364-368",
+        "  MFA branch: identity card showing signed-in email — login/page.tsx:372-379",
+        "    6-digit code input, mono, centered, tracking 0.18em, min-h-12 — login/page.tsx:381-395",
+        "    'Verify' .btn.btn-primary full width — login/page.tsx:397-403",
+        "    'Use a different sign-in' .btn.btn-ghost — login/page.tsx:405-412",
+        "  Credential branch: 'Continue with Google' .btn.btn-primary — login/page.tsx:416-425",
+        "    hairline OR divider — login/page.tsx:427-431",
+        "    email field — login/page.tsx:433-443",
+        "    password field — login/page.tsx:445-455",
+        "    'Sign in' .btn.btn-ghost — login/page.tsx:457-465"
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "admin-web/app/[locale]/login/page.tsx:422-424,462-464,402", "quality": "Text-swap only — the button label changes to 'Opening Google…' / 'Verifying…'. No spinner, no skeleton, no progress indicator anywhere on the page" },
+        "empty": { "present": false, "evidence": null, "quality": "n/a for a form" },
+        "error": { "present": true, "evidence": "admin-web/app/[locale]/login/page.tsx:364-368", "quality": "Single shared banner at the top of the form; no per-field inline validation messages. Error content is sometimes a translated string and sometimes a raw Firebase exception message" },
+        "success": { "present": false, "evidence": null, "quality": "No success confirmation — the page navigates immediately (login/page.tsx:193), so there is no 'signed in' moment" },
+        "offline": { "present": false, "evidence": null, "quality": "A network failure falls through to err.message (login/page.tsx:213-215), producing a browser-generated string like 'Failed to fetch'" },
+        "permissionDenied": { "present": true, "evidence": "admin-web/app/[locale]/login/page.tsx:66-67", "quality": "ADMIN_NOT_FOUND maps to a translated message" }
+      },
+      "skeletonOrSpinner": "none — no CircularProgressIndicator equivalent and no .skeleton usage; loading is communicated purely by changing button text (login/page.tsx:402,422-424,462-464).",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [
+          { "value": "64rem", "line": 305, "context": "max-w-[64rem] arbitrary" },
+          { "value": "0.9fr_1.1fr", "line": 305, "context": "arbitrary grid template" },
+          { "value": "clamp(2rem,4vw,3.5rem)", "line": 308, "context": "arbitrary headline size, bypasses --text-* scale" },
+          { "value": "26rem", "line": 311, "context": "max-w-[26rem] arbitrary measure" },
+          { "value": "2rem", "line": 317, "context": "grid-cols-[2rem_1fr] arbitrary" },
+          { "value": "h-8 w-8 (32px)", "line": 320, "context": "step numeral square — Tailwind default scale, not --space-*" },
+          { "value": "gap-2", "line": 381, "context": "Tailwind default spacing scale mixed with gap-[var(--space-5)] on line 349 — two spacing systems in one component" },
+          { "value": "gap-3", "line": 427, "context": "same" },
+          { "value": "0.18em", "line": 393, "context": "arbitrary tracking on the OTP input" },
+          { "value": "0.12em", "line": 373, "context": "arbitrary tracking on the identity-card label" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": [
+          { "value": "0", "line": 305, "context": "card, aside, identity card and step squares all have zero radius; the design intent is 'editorial sharp', but it means nothing on this page uses --radius-* at all" }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "raw Firebase err.message surfaced to the user (Google redirect path)", "line": 142 },
+          { "text": "raw Firebase err.message surfaced to the user (password path)", "line": 214 },
+          { "text": "raw Firebase err.message surfaced to the user (mobile redirect path)", "line": 235 },
+          { "text": "raw Firebase err.message surfaced to the user (popup path)", "line": 258 },
+          { "text": "raw err.message surfaced to the user (MFA path)", "line": 291 }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "All chrome copy is translated (login.* namespace, both catalogues). Risk is layout, not text: the two-column split is fixed at 0.9fr/1.1fr (line 305) and the left rail's step descriptions are dense two-line blocks (lines 325-327, 339-341) — Hindi runs 15-30% longer and the Devanagari line-height override (globals.css:73) makes them taller, so the aside will grow past the form column height. The step-number squares are fixed h-8 w-8 (line 320) and will not grow with the text beside them.",
+        "currencyFormatting": "n/a — no money on this surface"
+      },
+      "a11y": {
+        "contentDescriptions": true,
+        "touchTargetRisks": [],
+        "contrastRisks": [
+          { "line": 325, "note": "step descriptions are text-xs (12px) in --color-text-muted — small muted text as the primary explanatory copy" },
+          { "line": 373, "note": "identity-card label is text-xs in --color-text-faint, the faintest token in the ramp" },
+          { "line": 427, "note": "the OR divider label is text-xs uppercase in --color-text-muted" }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "Logical DOM order (aside then form). aria-current=\"step\" is applied to the progress items (lines 318,332) which is a nice touch. The error banner has role=\"alert\" (line 365). No autofocus on the email field or the OTP field, so every sign-in starts with a manual click."
+      },
+      "imagery": {
+        "usesImages": false,
+        "sources": [],
+        "placeholderOrMissing": [
+          "No logo or wordmark — the brand is a 0.6875rem uppercase text eyebrow (line 307)",
+          "The 'Continue with Google' button has no Google G mark (line 416-425), which breaks the near-universal convention and reduces trust",
+          "No hero image, illustration, pattern or photography on the left panel — it is a flat --ink-1 rectangle"
+        ],
+        "cite": "admin-web/app/[locale]/login/page.tsx:306-343"
+      },
+      "motion": {
+        "animationsUsed": [],
+        "usesMotionTokens": false,
+        "transitionsOnNav": "The step-1 → step-2 (MFA) transition is an unanimated conditional swap of the entire form body (line 370), so the panel content jumps. The .rise stagger classes from globals.css:322-328 are not used here."
+      },
+      "density": "The form column is airy (space-6 padding, space-5 row gap — lines 349) but the left aside mixes space-4/space-5/space-8/space-3 (lines 308,311,315,317) without a clear rhythm, and the step list is visually cramped against the headline block.",
+      "observations": [
+        { "severity": "high", "claim": "Raw Firebase exception messages are rendered directly into the user-facing error banner in five separate code paths, so an admin can see strings like 'Firebase: Error (auth/network-request-failed).'", "evidence": "admin-web/app/[locale]/login/page.tsx:142-143,213-215,235,257-258,291", "confidence": "observed" },
+        { "severity": "high", "claim": "The login page has no language switcher. LocaleSwitcher is mounted only inside the authenticated dashboard layout, so a Hindi-preferring admin landing on /en/login (or an English admin on the /hi default) cannot change language before signing in.", "evidence": "admin-web/app/[locale]/login/page.tsx:1-18 (no LocaleSwitcher import) vs admin-web/app/[locale]/(dashboard)/layout.tsx:69", "confidence": "observed" },
+        { "severity": "high", "claim": "'Continue with Google' renders as a bare marigold text button with no Google mark, while the email/password submit is a ghost button — the OAuth affordance is unrecognisable and looks like a generic primary CTA.", "evidence": "admin-web/app/[locale]/login/page.tsx:416-425", "confidence": "observed" },
+        { "severity": "medium", "claim": "Loading is communicated only by swapping button text; there is no spinner, progress bar or skeleton anywhere on the sign-in flow, so a slow rural connection reads as a frozen page.", "evidence": "admin-web/app/[locale]/login/page.tsx:402,422-424,462-464", "confidence": "observed" },
+        { "severity": "medium", "claim": "No password-visibility toggle, no 'forgot password' link and no caps-lock hint on the password field.", "evidence": "admin-web/app/[locale]/login/page.tsx:445-455", "confidence": "observed" },
+        { "severity": "medium", "claim": "Two spacing systems are mixed inside one component — arbitrary CSS-var utilities (gap-[var(--space-5)], line 349) alongside Tailwind's default numeric scale (gap-2 line 381, gap-3 line 427).", "evidence": "admin-web/app/[locale]/login/page.tsx:349,381,427", "confidence": "observed" },
+        { "severity": "medium", "claim": "The step-1 → step-2 swap replaces the entire form body with no transition or focus move, so after a successful password the OTP field is not focused and the change is not announced.", "evidence": "admin-web/app/[locale]/login/page.tsx:370-414", "confidence": "observed" },
+        { "severity": "low", "claim": "The left panel is a flat single-colour rectangle carrying only text — no imagery, pattern, product screenshot or brand mark on the single most-seen unauthenticated screen.", "evidence": "admin-web/app/[locale]/login/page.tsx:306-345", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.setup-totp",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/setup/page.tsx",
+      "loc": 183,
+      "purpose": "First-run enrolment: exchanges the hs_setup cookie for a token, shows the Microsoft Authenticator QR code, and confirms with a 6-digit TOTP.",
+      "entryPoints": "router.push(`/${locale}/setup`) after a login response with requiresSetup — admin-web/app/[locale]/login/page.tsx:176",
+      "composition": [
+        "<main> full-viewport centered grid — setup/page.tsx:95",
+        "<section> two-column 1fr/1fr split card, max-w-58rem, 1px border, --shadow-lg — setup/page.tsx:96",
+        "LEFT <aside> on --ink-1: eyebrow 'First admin sign-in' — setup/page.tsx:97-98",
+        "  Serif display headline clamp(2rem,4vw,3.3rem) — setup/page.tsx:99-101",
+        "  Explanatory paragraph max-w-25rem — setup/page.tsx:102-104",
+        "  Three-step ordered list with marigold numbered squares — setup/page.tsx:106-119",
+        "RIGHT <form>: eyebrow + h2 'Scan the QR code' + description — setup/page.tsx:127-135",
+        "  QR frame: 208px img on white, or an animate-pulse grey block while loading — setup/page.tsx:137-148",
+        "  conditional .alert.alert-danger — setup/page.tsx:150-154",
+        "  6-digit code input, mono centered tracking 0.18em, min-h-12 — setup/page.tsx:156-170",
+        "  'Confirm Microsoft Authenticator' .btn.btn-primary full width — setup/page.tsx:172-178"
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "admin-web/app/[locale]/setup/page.tsx:146", "quality": "A bare 208x208 Tailwind animate-pulse grey block. It does not use the project's own .skeleton shimmer (globals.css:639) and it does not resemble a QR code, so the loading state reads as a broken image" },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": true, "evidence": "admin-web/app/[locale]/setup/page.tsx:150-154", "quality": "Two authored messages (lines 81-82) plus a generic catch-all (line 88); copy is human, not exception text" },
+        "success": { "present": false, "evidence": null, "quality": "On success it silently router.push('/dashboard') (line 86) — no confirmation that MFA enrolment succeeded, which is a security-relevant moment" },
+        "offline": { "present": false, "evidence": null, "quality": "A network failure during init silently redirects to /login (lines 34-37,52-54) with no explanation — the user is bounced with no message" },
+        "permissionDenied": { "present": true, "evidence": "admin-web/app/[locale]/setup/page.tsx:24-26", "quality": "Failed cookie exchange redirects to /login, again with no message" }
+      },
+      "skeletonOrSpinner": "Tailwind `animate-pulse` block (setup/page.tsx:146) — not the project .skeleton class, and no spinner. The submit button shows only a text swap 'Confirming...' (line 177).",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [
+          { "value": "58rem", "line": 96, "context": "max-w-[58rem] arbitrary — and different from login's 64rem (login/page.tsx:305) for the same visual pattern" },
+          { "value": "clamp(2rem,4vw,3.3rem)", "line": 99, "context": "arbitrary headline — and 3.3rem differs from login's 3.5rem for the identical headline role" },
+          { "value": "25rem", "line": 102, "context": "max-w-[25rem] vs login's 26rem for the same paragraph role" },
+          { "value": "h-52 w-52 (208px)", "line": 143, "context": "QR size, off any scale" },
+          { "value": "h-52 w-52 (208px)", "line": 146, "context": "loading block" },
+          { "value": "p-2", "line": 143, "context": "Tailwind default scale" },
+          { "value": "0.18em", "line": 168, "context": "arbitrary tracking" }
+        ],
+        "hardcodedColors": [
+          { "value": "bg-white", "line": 143, "context": "The QR code sits on a literal white plate — the only pure-white surface in the entire dark console" }
+        ],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "First admin sign-in", "line": 98 },
+          { "text": "Set up Microsoft Authenticator", "line": 100 },
+          { "text": "Admin access requires a 6-digit code from Microsoft Authenticator after Google or password sign-in.", "line": 103 },
+          { "text": "Open Microsoft Authenticator on your phone.", "line": 108 },
+          { "text": "Add an account and scan this QR code.", "line": 109 },
+          { "text": "Enter the 6-digit code shown for HomeHeroo admin.", "line": 110 },
+          { "text": "Authenticator setup", "line": 128 },
+          { "text": "Scan the QR code", "line": 130 },
+          { "text": "Use Microsoft Authenticator, not a Gmail or email OTP screen.", "line": 133 },
+          { "text": "Microsoft Authenticator setup QR code (alt)", "line": 142 },
+          { "text": "Microsoft Authenticator setup (aria-label)", "line": 125 },
+          { "text": "That Microsoft Authenticator code did not match. Try the next 6-digit code.", "line": 81 },
+          { "text": "Microsoft Authenticator setup failed. Sign in again.", "line": 82 },
+          { "text": "An error occurred. Please try again.", "line": 88 },
+          { "text": "Microsoft Authenticator code", "line": 157 },
+          { "text": "6-digit code", "line": 167 },
+          { "text": "Confirming... / Confirm Microsoft Authenticator", "line": 177 }
+        ],
+        "usesStringResource": false,
+        "hindiRisk": "The file never imports next-intl (setup/page.tsx:1-5) — this screen is 100% English on a product whose default locale is hi (src/i18n/config.ts:5). It sits between login and the dashboard, so every first-time Hindi admin hits a wall of English at the highest-anxiety moment of the flow.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "contentDescriptions": true,
+        "touchTargetRisks": [],
+        "contrastRisks": [
+          { "line": 116, "note": "step copy in --color-text-muted at text-sm" }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "Form has an aria-label (line 125) and the QR has alt text (line 142). No autofocus on the code field. The loading block (line 146) has no aria-busy or status text, so a screen-reader user hears nothing while the QR loads."
+      },
+      "imagery": {
+        "usesImages": true,
+        "sources": ["Data-URI QR code from /v1/admin/auth/setup-totp — setup/page.tsx:140-144"],
+        "placeholderOrMissing": [
+          "No Microsoft Authenticator app icon or store badge despite naming the app 7 times",
+          "Loading placeholder is an unbranded grey rectangle — setup/page.tsx:146"
+        ],
+        "cite": "admin-web/app/[locale]/setup/page.tsx:137-148"
+      },
+      "motion": { "animationsUsed": [{ "what": "Tailwind animate-pulse on the QR placeholder", "line": 146 }], "usesMotionTokens": false, "transitionsOnNav": "None." },
+      "density": "Mirrors the login split-card but with different max-widths (58rem vs 64rem) and headline clamp (3.3rem vs 3.5rem) — the two screens in the same flow are near-identical yet measurably misaligned.",
+      "observations": [
+        { "severity": "high", "claim": "The entire setup screen is untranslated English — the file never imports next-intl — on a product whose default locale is Hindi.", "evidence": "admin-web/app/[locale]/setup/page.tsx:1-5,98-110,128-133", "confidence": "observed" },
+        { "severity": "high", "claim": "Every failure path in the init effect silently router.replace('/login') with no message, so an admin whose network blips during enrolment is dumped back at sign-in with no explanation.", "evidence": "admin-web/app/[locale]/setup/page.tsx:25,31,35,50,53", "confidence": "observed" },
+        { "severity": "high", "claim": "All four redirects use unprefixed paths ('/login', '/dashboard') inside a localePrefix:'always' routing config, so they do not preserve the user's locale segment.", "evidence": "admin-web/app/[locale]/setup/page.tsx:25,31,35,50,53,86 vs admin-web/src/i18n/config.ts:6", "confidence": "observed" },
+        { "severity": "medium", "claim": "The setup card duplicates the login card's layout with drifted values — 58rem vs 64rem max-width, 3.3rem vs 3.5rem headline clamp, 25rem vs 26rem measure — so two consecutive screens in one flow do not line up.", "evidence": "admin-web/app/[locale]/setup/page.tsx:96,99,102 vs admin-web/app/[locale]/login/page.tsx:305,308,311", "confidence": "observed" },
+        { "severity": "medium", "claim": "The QR loading affordance is a bare grey animate-pulse square that bypasses the project's own .skeleton shimmer primitive.", "evidence": "admin-web/app/[locale]/setup/page.tsx:146 vs admin-web/app/globals.css:639-649", "confidence": "observed" },
+        { "severity": "low", "claim": "Successful MFA enrolment produces no confirmation — the user is pushed straight to /dashboard with no 'you're protected' moment on a security-critical action.", "evidence": "admin-web/app/[locale]/setup/page.tsx:86", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.dashboard-shell",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/(dashboard)/layout.tsx",
+      "loc": 80,
+      "purpose": "Authenticated app shell — verifies the hs_access JWT, provides auth + GrowthBook context, and renders Rail + Topbar + scrollable main.",
+      "entryPoints": "Wraps every authenticated route under /:locale/(dashboard)/*",
+      "composition": [
+        "JWT secret validation, throws if missing — layout.tsx:27-33",
+        "hs_access cookie read + jwtVerify, redirect to /:locale/login on failure — layout.tsx:35-54",
+        "<GrowthBookClientProvider> → <AdminAuthProvider> — layout.tsx:57-58",
+        "Root flex row, minHeight 100vh, background var(--ink-0) — layout.tsx:59-66",
+        "<Rail /> — layout.tsx:67",
+        "Column: <Topbar rightSlot={<LocaleSwitcher/><ThemeToggle/>} /> — layout.tsx:68-69",
+        "<main style={{flex:1, overflow:'auto'}}>{children}</main> — layout.tsx:70"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "No shell-level loading.tsx; the JWT verify is synchronous server-side so the whole shell blocks" },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/error.tsx:17-61", "quality": "Sibling error boundary with authored copy and a 'Try again' reset; it renders INSIDE the shell so nav is preserved — good" },
+        "success": { "present": false, "evidence": null, "quality": "n/a" },
+        "offline": { "present": false, "evidence": null, "quality": "No connectivity indicator in the shell; the Topbar's 'LIVE' dot is a static decoration (Topbar.tsx:52), not a real health signal" },
+        "permissionDenied": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/layout.tsx:43,50", "quality": "Invalid role → redirect to login rather than to the not-authorized page" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "100vh", "line": 62, "context": "minHeight — combined with Rail's own minHeight:100vh (Rail.tsx:55) and main's overflow:auto (line 70), scroll ownership is split" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "JWT_SECRET env var is required", "line": 31 }
+        ],
+        "usesStringResource": false,
+        "hindiRisk": "setRequestLocale is called correctly (line 25). The shell itself renders no copy, so the risk sits in Topbar/Rail.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "contentDescriptions": false,
+        "touchTargetRisks": [],
+        "contrastRisks": [],
+        "semanticsHeadings": false,
+        "focusOrder": "Rail → Topbar → main, matching DOM order. There is no skip link and no landmark for the Topbar beyond <header> (Topbar.tsx:42). <main> exists (line 70) which is correct."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["The only brand mark in the authenticated shell is a 40px teal square containing the letters 'HS' — Rail.tsx:71-89"], "cite": "admin-web/app/[locale]/(dashboard)/layout.tsx:67" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "No route-change transition, no progress bar during server-component navigation — clicking a Rail item produces a dead pause with no feedback on a slow link." },
+      "density": "The shell is styled entirely with inline React style objects rather than the token utilities or CSS classes used elsewhere (layout.tsx:59-71) — three styling systems now coexist in the codebase (Tailwind arbitrary vars, global CSS classes, inline style objects).",
+      "observations": [
+        { "severity": "high", "claim": "The authenticated shell has no sign-out control. `logout` is implemented in the auth context but is never called from any component in the app.", "evidence": "admin-web/app/[locale]/(dashboard)/layout.tsx:56-72 and admin-web/src/lib/auth/context.tsx:34-46 (no caller in src/ or app/)", "confidence": "observed" },
+        { "severity": "high", "claim": "The shell shows no signed-in identity — no name, email, role badge or avatar anywhere in Topbar or Rail — despite the layout already holding adminId and role in initialAuth.", "evidence": "admin-web/app/[locale]/(dashboard)/layout.tsx:44-48,69", "confidence": "observed" },
+        { "severity": "medium", "claim": "A role that fails normalizeAdminRole is redirected to /login instead of the purpose-built not-authorized page, so the RBAC explanation screen is unreachable from the shell.", "evidence": "admin-web/app/[locale]/(dashboard)/layout.tsx:43,50 vs admin-web/app/[locale]/(dashboard)/not-authorized/page.tsx:19", "confidence": "observed" },
+        { "severity": "medium", "claim": "No route-transition feedback of any kind — no top progress bar, no pending state on Rail links — on an app whose pages are server components doing network fetches.", "evidence": "admin-web/app/[locale]/(dashboard)/layout.tsx:70", "confidence": "inferred" },
+        { "severity": "low", "claim": "The shell is written entirely in inline style objects while its own children use Tailwind arbitrary values and global CSS classes — a third styling paradigm in one file.", "evidence": "admin-web/app/[locale]/(dashboard)/layout.tsx:59-71", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.liveops-dashboard",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/(dashboard)/dashboard/page.tsx",
+      "loc": 98,
+      "purpose": "The Live Ops landing page — six KPI tiles, a technician map, a live event feed, a 24h utilisation strip and the payout queue.",
+      "entryPoints": "Rail nav item '/dashboard' (Rail.tsx:29 maps it to nav.dashboard 'Live Ops'); default post-login destination via getSafeNextPath.",
+      "composition": [
+        "Server fetch of summary + tech-locations via Promise.allSettled — page.tsx:37-40",
+        "Outer column: padding 1.25rem, gap 1.25rem, maxWidth 1400px, centred — page.tsx:55-65",
+        "<CounterStrip summary> — six KPI tiles — page.tsx:66",
+        "Row 1 grid minmax(0,1fr) / 340px: <TechMap> + <OrderFeed> — page.tsx:68-79",
+        "Row 2 grid minmax(0,1fr) / 280px: <UtilStrip> + <PayoutQueue> — page.tsx:81-95"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "MAJOR: there is no loading.tsx in the dashboard folder, unlike orders/finance/complaints/audit-log/technicians which all have one. The primary landing page blocks on two sequential-awaited API calls with a blank screen" },
+        "empty": { "present": true, "evidence": "admin-web/src/components/dashboard/TechMap.tsx:82-99 and admin-web/src/components/dashboard/OrderFeed.tsx:103-108", "quality": "Only two of the five widgets have an empty state; CounterStrip and UtilStrip have none" },
+        "error": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/dashboard/page.tsx:12-19,28", "quality": "401→/login, 403→/not-authorized, everything else rethrows into (dashboard)/error.tsx. A missing `data` field throws a developer-facing string ('Dashboard summary response did not include data', line 28) which becomes the digest-only crash screen" },
+        "success": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/dashboard/page.tsx:54-96", "quality": "n/a — steady state" },
+        "offline": { "present": false, "evidence": null, "quality": "None. OrderFeed polls every 30s (OrderFeed.tsx:13) and shows a feed-specific error card, but the page has no global stale/disconnected indicator" },
+        "permissionDenied": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/dashboard/page.tsx:15", "quality": "403 redirects to /not-authorized — but without a locale prefix (line 14,15)" }
+      },
+      "skeletonOrSpinner": "none — no loading.tsx, no skeleton, no spinner. The page is blank until both server fetches resolve.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "1.25rem", "line": 57, "context": "page padding literal (= --space-5 but written raw)" },
+          { "value": "1.25rem", "line": 60, "context": "column gap literal" },
+          { "value": "1400px", "line": 61, "context": "max content width — not a token, and different from every other max-width in the app" },
+          { "value": "340px", "line": 72, "context": "OrderFeed column width" },
+          { "value": "1.25rem", "line": 73, "context": "grid gap literal" },
+          { "value": "280px", "line": 85, "context": "PayoutQueue column width — a different sidebar width from row 1's 340px, so the two rows' right edges do not align" },
+          { "value": "1.25rem", "line": 86, "context": "grid gap literal" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Dashboard summary response did not include data (thrown to the UI)", "line": 28 }
+        ],
+        "usesStringResource": false,
+        "hindiRisk": "There is no `dashboard` namespace in messages/en.json or messages/hi.json at all — the top-level keys are meta, login, topbar, nav, locale, technicians, customers, orders, complaints, finance, auditLog, catalogue, adminUsers, compliance, notFound, globalError. Every widget on this page is therefore hardcoded English, served by default at /hi/dashboard.",
+        "currencyFormatting": "Delegated to the widgets, which disagree: CounterStrip.tsx:10 renders '₹' + en-IN grouping, PayoutQueue.tsx:14 renders 'INR ' + en-IN grouping. Both divide paise by 100 without fixing fraction digits, so ₹1,234.5 can render with one decimal place."
+      },
+      "a11y": {
+        "contentDescriptions": false,
+        "touchTargetRisks": [],
+        "contrastRisks": [],
+        "semanticsHeadings": false,
+        "focusOrder": "DOM order matches visual order. There is no <h1> on the page — every widget opens at <h2> (OrderFeed.tsx:85, PayoutQueue.tsx:31, UtilStrip.tsx:31) and the only page-level title is a <span> in the Topbar (Topbar.tsx:45), so the document has no top-level heading."
+      },
+      "imagery": {
+        "usesImages": false,
+        "sources": [],
+        "placeholderOrMissing": ["Zero imagery on the flagship screen — the 'map' is a CSS grid (TechMap.tsx:50-79), the chart is coloured divs (UtilStrip.tsx:57-70), and there are no icons on any KPI tile"],
+        "cite": "admin-web/app/[locale]/(dashboard)/dashboard/page.tsx:54-96"
+      },
+      "motion": {
+        "animationsUsed": [{ "what": "none at page level", "line": 55 }],
+        "usesMotionTokens": false,
+        "transitionsOnNav": "The .rise / .rise-1..6 staggered reveal built for exactly this kind of dashboard (globals.css:318-328) is not applied to any of the five widgets."
+      },
+      "density": "Uniform 1.25rem padding and gaps throughout (lines 57,60,73,86) — mechanically even, with no visual weighting between the KPI strip, the map and the secondary widgets. Two different sidebar widths (340px line 72, 280px line 85) break the vertical alignment of the right-hand column.",
+      "observations": [
+        { "severity": "high", "claim": "The flagship Live Ops dashboard has no loading state at all — no loading.tsx sibling exists, unlike orders, finance, complaints, audit-log and technicians which all ship one — so it renders blank while two API calls resolve.", "evidence": "admin-web/app/[locale]/(dashboard)/dashboard/page.tsx:34-52 (no sibling loading.tsx in that folder)", "confidence": "observed" },
+        { "severity": "high", "claim": "The entire dashboard is untranslated English served under the default Hindi locale — there is no 'dashboard' namespace in either message catalogue.", "evidence": "admin-web/src/components/dashboard/CounterStrip.tsx:84-99, OrderFeed.tsx:95, PayoutQueue.tsx:41, UtilStrip.tsx:41", "confidence": "observed" },
+        { "severity": "high", "claim": "The page has no <h1>; the highest heading is <h2> inside widgets and the page title lives in a Topbar <span>, so heading hierarchy starts at level 2 with nothing above it.", "evidence": "admin-web/app/[locale]/(dashboard)/dashboard/page.tsx:54-96 and admin-web/src/components/dashboard/Topbar.tsx:45", "confidence": "observed" },
+        { "severity": "medium", "claim": "Two dead className hooks are applied to the grids — 'dashboard-grid-feed' and 'dashboard-grid-payout' have no rule anywhere in globals.css, so the intended per-row responsive behaviour does not exist; only the generic .dashboard-grid single-column collapse fires below 900px.", "evidence": "admin-web/app/[locale]/(dashboard)/dashboard/page.tsx:69,82 vs admin-web/app/globals.css:627-632", "confidence": "observed" },
+        { "severity": "medium", "claim": "The right-hand columns of the two rows are different widths (340px then 280px), so the dashboard's right edge steps inward halfway down the page.", "evidence": "admin-web/app/[locale]/(dashboard)/dashboard/page.tsx:72,85", "confidence": "observed" },
+        { "severity": "medium", "claim": "A malformed API response throws a developer sentence into the user-facing error boundary rather than a handled empty/degraded state.", "evidence": "admin-web/app/[locale]/(dashboard)/dashboard/page.tsx:27-29", "confidence": "observed" },
+        { "severity": "medium", "claim": "The 401 and 403 redirects omit the locale prefix under a localePrefix:'always' config.", "evidence": "admin-web/app/[locale]/(dashboard)/dashboard/page.tsx:14-15 vs admin-web/src/i18n/config.ts:6", "confidence": "observed" },
+        { "severity": "low", "claim": "Every spacing value on the page is a raw literal (1.25rem, 1400px, 340px, 280px) with no --space-* token in the file.", "evidence": "admin-web/app/[locale]/(dashboard)/dashboard/page.tsx:57,60,61,72,85", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.not-authorized",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/(dashboard)/not-authorized/page.tsx",
+      "loc": 83,
+      "purpose": "Explains to a signed-in admin that their role cannot open the requested area, and offers a link to somewhere they can go.",
+      "entryPoints": "403 redirect from dashboard data loads (dashboard/page.tsx:15) and from middleware capability checks; rendered inside the authenticated shell so Rail + Topbar remain.",
+      "composition": [
+        "Centred flex wrapper, minHeight calc(100vh - 72px) — page.tsx:25-33",
+        "<section aria-labelledby> card, max 560px, 1px border, --radius-md, --color-surface bg, space-6 padding — page.tsx:34-44",
+        "'Access control' eyebrow — page.tsx:45-47",
+        "h1 'You do not have access to this admin area.' at --text-2xl weight 700 — page.tsx:48-58",
+        "Conditional explanatory paragraph naming the blocked path — page.tsx:59-70",
+        "Conditional 'Go to allowed area' .btn.btn-primary — page.tsx:71-79"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "n/a — static server component" },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": false, "evidence": null, "quality": "n/a" },
+        "success": { "present": false, "evidence": null, "quality": "n/a" },
+        "offline": { "present": false, "evidence": null, "quality": "n/a" },
+        "permissionDenied": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/not-authorized/page.tsx:19-82", "quality": "This IS the permission-denied surface. It safely validates the `from`/`next` params (lines 12-17) and degrades to generic copy when absent — solid logic, plain visuals" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [
+          { "value": "calc(100vh - 72px)", "line": 29, "context": "magic 72px offset — the Topbar is actually 52px (globals.css:574), so this vertical centring is wrong by 20px" },
+          { "value": "560px", "line": 37, "context": "maxWidth literal — a fourth distinct card width in the cluster (40rem, 58rem, 64rem, 560px)" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": [
+          { "value": "var(--radius-md) (4px)", "line": 40, "context": "This card is rounded while the login, setup and 404 cards are square (login/page.tsx:305, setup/page.tsx:96, not-found.tsx:9) — the same 'centred card' pattern has two different corner treatments" }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Not authorized - HomeHeroo admin (metadata title)", "line": 5 },
+          { "text": "Access control", "line": 46 },
+          { "text": "You do not have access to this admin area.", "line": 57 },
+          { "text": "Your role is not allowed to open ${requestedPath}.", "line": 68 },
+          { "text": "Your role does not include any dashboard capabilities.", "line": 69 },
+          { "text": "Go to allowed area", "line": 77 }
+        ],
+        "usesStringResource": false,
+        "hindiRisk": "No next-intl import (page.tsx:1-2) — fully English. Line 68 also interpolates a raw URL path into a sentence, which cannot be translated grammatically into Hindi word order without restructuring.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "contentDescriptions": false,
+        "touchTargetRisks": [],
+        "contrastRisks": [
+          { "line": 62, "note": "explanatory copy in --color-text-muted at --text-sm" }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "aria-labelledby ties the section to the h1 (lines 35,49). The CTA is conditional (line 71), so in the common case where no `next` param is supplied the page is a dead end with no action at all."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No lock icon, illustration or any visual signal of the 'blocked' state — it is a text card"], "cite": "admin-web/app/[locale]/(dashboard)/not-authorized/page.tsx:34-80" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None." },
+      "density": "Reasonable — space-6 padding, space-2/3/4 rhythm (lines 42,45,61,75). Visually it is a flat bordered rectangle on the same colour as the page behind it (background: var(--color-surface), line 41), so the card barely separates from its container.",
+      "observations": [
+        { "severity": "high", "claim": "When no `next` param is present — the normal case for a middleware 403 — the page renders with no action at all: no link back, no contact-owner path, no sign-out. It is a dead end.", "evidence": "admin-web/app/[locale]/(dashboard)/not-authorized/page.tsx:71-79", "confidence": "observed" },
+        { "severity": "medium", "claim": "Fully untranslated English on an RBAC screen that a Hindi-speaking operator is most likely to hit.", "evidence": "admin-web/app/[locale]/(dashboard)/not-authorized/page.tsx:46,57,69,77", "confidence": "observed" },
+        { "severity": "medium", "claim": "The card uses --radius-md while every other centred card in the cluster is square-cornered, and its background equals the page background so it reads as an unstyled block.", "evidence": "admin-web/app/[locale]/(dashboard)/not-authorized/page.tsx:40,41", "confidence": "observed" },
+        { "severity": "low", "claim": "Vertical centring uses calc(100vh - 72px) but the Topbar is 52px tall, so the card sits 20px off centre.", "evidence": "admin-web/app/[locale]/(dashboard)/not-authorized/page.tsx:29 vs admin-web/app/globals.css:574", "confidence": "observed" },
+        { "severity": "low", "claim": "A raw URL path is interpolated into an English sentence, which is both unlocalisable and exposes internal routing to the user.", "evidence": "admin-web/app/[locale]/(dashboard)/not-authorized/page.tsx:68", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.topbar",
+      "app": "admin-web",
+      "file": "admin-web/src/components/dashboard/Topbar.tsx",
+      "loc": 68,
+      "purpose": "Persistent 52px header strip showing the console name, city, a LIVE indicator, a ticking clock and a right-hand slot for locale/theme controls.",
+      "entryPoints": "Mounted once by the dashboard shell — admin-web/app/[locale]/(dashboard)/layout.tsx:69",
+      "composition": [
+        "<header className=\"topbar\"> — Topbar.tsx:42 (styles at globals.css:573-582)",
+        "Brand block: 'Operations Observatory' serif title + CITY caption — Topbar.tsx:44-47",
+        "Right group: LIVE dot + label with aria-live — Topbar.tsx:51-54",
+        "  <time> mono clock, updated every 1000ms client-side — Topbar.tsx:56-62",
+        "  rightSlot (LocaleSwitcher + ThemeToggle) — Topbar.tsx:64"
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "admin-web/src/components/dashboard/Topbar.tsx:27-28", "quality": "The clock renders as an empty string on SSR and first paint, so the header visibly reflows when the time appears — a deliberate hydration fix (documented lines 22-26) with a visual cost" },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": false, "evidence": null, "quality": "n/a" },
+        "success": { "present": false, "evidence": null, "quality": "n/a" },
+        "offline": { "present": false, "evidence": null, "quality": "The 'LIVE' indicator is unconditional — it pulses green whether or not any data is actually flowing. It is decoration presented as a status signal" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "n/a" }
+      },
+      "skeletonOrSpinner": "none — the clock area is simply blank until the first effect tick (Topbar.tsx:27,30-39).",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [
+          { "value": "52px", "line": 42, "context": "height comes from .topbar in globals.css:574 — a raw px height, not a token" },
+          { "value": "0.9375rem / 0.625rem / 0.8125rem", "line": 42, "context": "all .topbar__* font sizes are literals outside the --text-* scale (globals.css:586,593,610,617)" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Operations Observatory", "line": 45 },
+          { "text": "LIVE", "line": 53 },
+          { "text": "System status: live (aria-label)", "line": 51 },
+          { "text": "Ayodhya (env fallback default)", "line": 5 }
+        ],
+        "usesStringResource": false,
+        "hindiRisk": "Translations for every one of these strings already exist and are unused: messages/en.json topbar = {title, city, live, liveLabel}; messages/hi.json topbar = {'ऑपरेशंस ऑब्ज़र्वेटरी', 'अयोध्या', 'लाइव', 'सिस्टम स्थिति: लाइव'}. The component never imports next-intl. Note the Hindi title is ~40% wider than the English inside a fixed 52px-tall bar with .topbar__title line-height 1.1 (globals.css:589).",
+        "currencyFormatting": "n/a — but the clock is locked to toLocaleTimeString('en-IN', hour12:false) (Topbar.tsx:8-13), i.e. Latin numerals regardless of locale"
+      },
+      "a11y": {
+        "contentDescriptions": true,
+        "touchTargetRisks": [
+          { "line": 64, "size": "inherits from slot children", "note": "The Topbar's only interactive elements are the LocaleSwitcher pills (22px tall, LocaleSwitcher.tsx:106) and ThemeToggle text buttons (~13px, globals.css:553-556) — both far below 44px, in a 52px bar" }
+        ],
+        "contrastRisks": [
+          { "line": 46, "note": ".topbar__city is 10px in --color-text-faint (globals.css:592-594) — the smallest and faintest text in the shell" },
+          { "line": 45, "note": ".topbar__title uses --color-text-muted, not --color-text, so the product name is the dimmest heading on screen (globals.css:587)" }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "The header is a landmark but contains no heading; the brand is a <span> (line 45). aria-live=\"polite\" is on the static LIVE container (line 51), which will announce nothing, while the clock that actually changes every second is correctly excluded."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No logo in the header at all — brand presence is a muted serif text string"], "cite": "admin-web/src/components/dashboard/Topbar.tsx:44-47" },
+      "motion": { "animationsUsed": [{ "what": "liveBreath pulse on the LIVE dot, 2s infinite", "line": 52 }], "usesMotionTokens": true, "transitionsOnNav": "No transition; the clock updates by direct text replacement every second (line 37)." },
+      "density": "Very tight — a 52px bar containing a two-line brand stack (globals.css:583-597), a status dot, a clock and two control groups. The brand title at 0.9375rem with line-height 1.1 stacked above a 0.625rem caption leaves almost no vertical breathing room.",
+      "observations": [
+        { "severity": "high", "claim": "Every Topbar string is hardcoded English while fully-translated Hindi equivalents already exist unused in messages/hi.json under the 'topbar' namespace.", "evidence": "admin-web/src/components/dashboard/Topbar.tsx:45,46,51,53", "confidence": "observed" },
+        { "severity": "high", "claim": "The 'LIVE' indicator is hardcoded and unconditional — it pulses regardless of connection or data freshness, so it is a false status signal on an operations console.", "evidence": "admin-web/src/components/dashboard/Topbar.tsx:51-54", "confidence": "observed" },
+        { "severity": "medium", "claim": "The product name is rendered in --color-text-muted, making the brand the dimmest text in the header while a 24px ticking clock sits beside it — the hierarchy is inverted.", "evidence": "admin-web/src/components/dashboard/Topbar.tsx:45 and admin-web/app/globals.css:584-590", "confidence": "observed" },
+        { "severity": "medium", "claim": "The clock is empty on first paint and then appears, reflowing the right-hand group; there is no reserved-width placeholder.", "evidence": "admin-web/src/components/dashboard/Topbar.tsx:27,56-62", "confidence": "observed" },
+        { "severity": "medium", "claim": "The city name comes from an env var with an 'Ayodhya' literal fallback baked into the client bundle, so a mis-set env silently ships the wrong city into the header.", "evidence": "admin-web/src/components/dashboard/Topbar.tsx:5", "confidence": "observed" },
+        { "severity": "low", "claim": "The header contains no search, no notifications, no account menu and no breadcrumb — an operations console topbar with only a clock.", "evidence": "admin-web/src/components/dashboard/Topbar.tsx:41-66", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.rail",
+      "app": "admin-web",
+      "file": "admin-web/src/components/dashboard/Rail.tsx",
+      "loc": 176,
+      "purpose": "Primary navigation — a 192px desktop sidebar and a fixed bottom bar below 900px, both filtered by role capability.",
+      "entryPoints": "Mounted by the dashboard shell — admin-web/app/[locale]/(dashboard)/layout.tsx:67",
+      "composition": [
+        "Icon map for 10 lucide icons — Rail.tsx:15-26",
+        "Route→i18n key map for 10 routes — Rail.tsx:28-39",
+        "DESKTOP <nav aria-label=\"Primary navigation\"> 192px, sticky, 1px right border — Rail.tsx:50-69",
+        "  40px teal square logo mark containing the letters 'HS' — Rail.tsx:71-89",
+        "  Nav links: 18px lucide icon + 0.8125rem translated label, active = teal-dim pill + 2px marigold left border — Rail.tsx:91-122",
+        "MOBILE <nav aria-label=\"Primary navigation (mobile)\"> fixed bottom, 60px, space-around — Rail.tsx:126-143",
+        "  First five nav items only, icon over 0.68rem label — Rail.tsx:144-172"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "navItemsForRole(auth?.role) renders an empty nav while auth is null — no skeleton, the sidebar simply shows only the logo" },
+        "empty": { "present": false, "evidence": null, "quality": "A role with zero capabilities produces a completely empty rail with no message — Rail.tsx:91,144" },
+        "error": { "present": false, "evidence": null, "quality": "n/a" },
+        "success": { "present": false, "evidence": null, "quality": "n/a" },
+        "offline": { "present": false, "evidence": null, "quality": "n/a" },
+        "permissionDenied": { "present": true, "evidence": "admin-web/src/components/dashboard/Rail.tsx:44", "quality": "Capability filtering hides disallowed routes entirely — correct, but combined with the empty-state gap it can yield a blank nav" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "192px", "line": 54, "context": "sidebar width" },
+          { "value": "12px", "line": 61, "context": "paddingLeft — off the 4px/8px rhythm used elsewhere" },
+          { "value": "12px", "line": 62, "context": "paddingRight" },
+          { "value": "2px", "line": 63, "context": "link gap" },
+          { "value": "40px", "line": 73, "context": "logo square" },
+          { "value": "0.9rem", "line": 83, "context": "logo letter size — off the --text-* scale" },
+          { "value": "10px", "line": 103, "context": "icon/label gap" },
+          { "value": "8px 10px", "line": 104, "context": "link padding — 10px horizontal is off-grid" },
+          { "value": "0.8125rem", "line": 113, "context": "desktop label size — off the --text-* scale" },
+          { "value": "60px", "line": 135, "context": "mobile bar min-height, below the 64px conventional bottom-nav height" },
+          { "value": "3px", "line": 157, "context": "mobile icon/label gap" },
+          { "value": "6px 8px", "line": 159, "context": "mobile link padding" },
+          { "value": "0.68rem", "line": 163, "context": "mobile label size ≈ 10.9px — an arbitrary rem value not on any scale" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Primary navigation (aria-label)", "line": 51 },
+          { "text": "Primary navigation (mobile) (aria-label)", "line": 127 },
+          { "text": "HS (logo letters)", "line": 88 }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "Labels are translated (t(labelKey), lines 119,169) and globals.css:103-106 explicitly resets letter-spacing for Devanagari nav labels — good. But the rail is a fixed 192px with 12px side padding (lines 54,61-62) leaving ~150px for icon+gap+label, and Hindi labels like 'एडमिन उपयोगकर्ता' (admin users) are substantially longer than 'Admin Users'; there is no wrap, ellipsis or title attribute, so overflow behaviour is undefined. On the mobile bar the label box is even tighter at 0.68rem with space-around distribution (lines 140,163).",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "contentDescriptions": true,
+        "touchTargetRisks": [
+          { "line": 104, "size": "≈34px tall (8px + 18px icon + 8px)", "note": "Desktop nav links fall below the 44px minimum" },
+          { "line": 159, "size": "≈40px tall (6px + 18px icon + 3px + 11px label + 6px)", "note": "Mobile bottom-bar targets are below 44px on the surface most likely to be touched" }
+        ],
+        "contrastRisks": [
+          { "line": 108, "note": "Inactive links use --rail-text (--fog-1 #9A9082) which globals.css:56 measures at 5.95:1 — this one is fine and deliberately documented" },
+          { "line": 80, "note": "The 'HS' logo letters are --ink-0 on --teal (#5BA38E) at 0.9rem weight 800 — acceptable, but the logo is aria-hidden (line 86) so it contributes no accessible brand name" }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "Links are in DOM order. `outline: 'none'` is set on every desktop nav link (Rail.tsx:111) — the global :focus-visible ring (globals.css:402) is an outline, so this inline outline:none removes the keyboard focus indicator from the primary navigation."
+      },
+      "imagery": {
+        "usesImages": false,
+        "sources": ["lucide-react icons — Rail.tsx:3-8,117,167"],
+        "placeholderOrMissing": ["The logo is a text placeholder: a teal square containing 'HS' (Rail.tsx:71-89) while the product is branded 'HomeHeroo' (messages meta.title, layout metadata). No SVG or image logo asset exists in public/"],
+        "cite": "admin-web/src/components/dashboard/Rail.tsx:71-89"
+      },
+      "motion": {
+        "animationsUsed": [{ "what": "background/color/border-color transition 120ms on nav links", "line": 110 }],
+        "usesMotionTokens": false,
+        "transitionsOnNav": "120ms literals rather than var(--duration-fast); no animated active indicator (the marigold left border snaps between items); the mobile bar has no transition at all (Rail.tsx:153-165)."
+      },
+      "density": "Tight: 2px gaps between links (line 63) with 8px vertical padding (line 104) produces a compressed 10-item list with no grouping, no section labels and no dividers. The 40px logo has a 1rem bottom margin (line 84) that is the only breathing room in the column.",
+      "observations": [
+        { "severity": "high", "claim": "`outline: 'none'` is applied inline to every desktop nav link, which defeats the global :focus-visible ring and leaves the primary navigation with no visible keyboard focus indicator.", "evidence": "admin-web/src/components/dashboard/Rail.tsx:111 vs admin-web/app/globals.css:402-406", "confidence": "observed" },
+        { "severity": "high", "claim": "The mobile bottom bar renders only the first five nav items with no overflow or 'More' affordance, so up to five capability-granted sections (audit log, admin users, compliance, technicians, customers for a super-admin) are unreachable below 900px.", "evidence": "admin-web/src/components/dashboard/Rail.tsx:144 and admin-web/app/globals.css:627-629", "confidence": "observed" },
+        { "severity": "medium", "claim": "The brand mark is a placeholder — a teal square with the letters 'HS' — on a product named HomeHeroo, and it is aria-hidden so it carries no accessible brand identity either.", "evidence": "admin-web/src/components/dashboard/Rail.tsx:71-89", "confidence": "observed" },
+        { "severity": "medium", "claim": "Ten navigation items are rendered as one flat undifferentiated list with 2px gaps — no sections, no dividers, no grouping between operational (Live Ops, Orders) and governance (Audit Log, Compliance) areas.", "evidence": "admin-web/src/components/dashboard/Rail.tsx:63,91-122", "confidence": "observed" },
+        { "severity": "medium", "claim": "Every dimension in the Rail is a raw literal — 192px, 12px, 10px, 0.8125rem, 0.68rem — with no --space-* or --text-* token used anywhere in the file.", "evidence": "admin-web/src/components/dashboard/Rail.tsx:54,61-63,103-104,113,163", "confidence": "observed" },
+        { "severity": "medium", "claim": "Both desktop (~34px) and mobile (~40px) nav targets fall below the 44px minimum touch target.", "evidence": "admin-web/src/components/dashboard/Rail.tsx:104,159", "confidence": "inferred" },
+        { "severity": "low", "claim": "A role whose capability set yields no nav items renders a completely blank rail with no message or fallback.", "evidence": "admin-web/src/components/dashboard/Rail.tsx:44,91", "confidence": "observed" },
+        { "severity": "low", "claim": "The rail cannot be collapsed and has no icon-only mode, permanently consuming 192px on a data-dense operations console.", "evidence": "admin-web/src/components/dashboard/Rail.tsx:54", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.counter-strip",
+      "app": "admin-web",
+      "file": "admin-web/src/components/dashboard/CounterStrip.tsx",
+      "loc": 102,
+      "purpose": "Six KPI tiles across the top of the Live Ops dashboard: bookings, GMV, commission, pending payouts, open complaints, techs on duty.",
+      "entryPoints": "Rendered by the dashboard page — admin-web/app/[locale]/(dashboard)/dashboard/page.tsx:66",
+      "composition": [
+        "Auto-fit grid, minmax(160px,1fr), 0.75rem gap — CounterStrip.tsx:76-83",
+        "Tile: --ink-2 background, 1px --ink-4 border, --radius-sm, 1rem/1.25rem padding — CounterStrip.tsx:24-33",
+        "  Label: 0.6875rem mono uppercase 0.08em tracking in --fog-0 — CounterStrip.tsx:35-45",
+        "  Value: 1.5rem serif display, colour switched by accent (teal/ember/coral) — CounterStrip.tsx:46-61",
+        "Six tiles in fixed order: Bookings·Today, GMV·Today, Commission, Payouts·Pending, Complaints·Open, Techs·On duty — CounterStrip.tsx:84-99"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "None — the component is a pure server-rendered function of props with no skeleton variant" },
+        "empty": { "present": false, "evidence": null, "quality": "A zero-value day renders six '0' / '₹0' tiles indistinguishable from a data outage" },
+        "error": { "present": false, "evidence": null, "quality": "None — errors are handled a level up by throwing (dashboard/page.tsx:28)" },
+        "success": { "present": true, "evidence": "admin-web/src/components/dashboard/CounterStrip.tsx:76-100", "quality": "n/a" },
+        "offline": { "present": false, "evidence": null, "quality": "No staleness/last-updated indicator on any tile" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "Financial KPIs (GMV, commission, payouts) are shown to every role with no capability gate, unlike PayoutQueue which gates its CTA behind finance.read (PayoutQueue.tsx:93)" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "1rem 1.25rem", "line": 29, "context": "tile padding literals" },
+          { "value": "0.25rem", "line": 32, "context": "label/value gap literal" },
+          { "value": "0.6875rem", "line": 37, "context": "label size — equals --text-eyebrow but written raw" },
+          { "value": "0.08em", "line": 40, "context": "tracking literal" },
+          { "value": "1.5rem", "line": 48, "context": "value size — equals --text-2xl but written raw" },
+          { "value": "1.1", "line": 57, "context": "line-height literal" },
+          { "value": "160px", "line": 80, "context": "grid minmax floor" },
+          { "value": "0.75rem", "line": 82, "context": "grid gap literal" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Bookings · Today", "line": 84 },
+          { "text": "GMV · Today", "line": 85 },
+          { "text": "Commission", "line": 89 },
+          { "text": "Payouts · Pending", "line": 95 },
+          { "text": "Complaints · Open", "line": 98 },
+          { "text": "Techs · On duty", "line": 99 }
+        ],
+        "usesStringResource": false,
+        "hindiRisk": "No next-intl import (CounterStrip.tsx:1). 'GMV' is an untranslated finance acronym that will be meaningless to a rural-UP operator in either language. Labels use a '·' separator pattern ('Payouts · Pending') that does not survive translation into Hindi phrase order, and the grid floor is 160px (line 80) with a single-line label — longer Hindi labels will wrap and break tile height consistency across the row.",
+        "currencyFormatting": "`₹${(paise/100).toLocaleString('en-IN')}` — CounterStrip.tsx:10. Uses the ₹ glyph and en-IN lakh grouping (correct), but hardcodes the 'en-IN' locale rather than the active locale, and sets no minimumFractionDigits, so ₹1,250.5 renders with a single decimal while ₹1,250 renders with none — the column of numbers will not align."
+      },
+      "a11y": {
+        "contentDescriptions": false,
+        "touchTargetRisks": [],
+        "contrastRisks": [
+          { "line": 41, "note": "Tile labels use --fog-0 (#877A6D) on --ink-2 (#1A1610). globals.css:24 documents --fog-0 as 4.54:1 against --ink-1 (#14110C); --ink-2 is lighter, so the ratio here falls below the 4.5:1 AA floor for this 11px text" },
+          { "line": 54, "note": "The 'coral' accent (#C26B47) is used for the Complaints value on --ink-2 — a saturated mid-tone at 1.5rem, near the large-text AA boundary" }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "Tiles are non-interactive <div>s with no heading, no <dl>/<dt>/<dd> semantics and no aria-label; a screen reader reads six orphaned label/number pairs with no group name."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No icons, sparklines, trend arrows or deltas on any tile — six identical flat rectangles differentiated only by the colour of the number"], "cite": "admin-web/src/components/dashboard/CounterStrip.tsx:20-63" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "No count-up, no value-change highlight, no transition of any kind on a live-ops metric strip." },
+      "density": "Uniform 1rem/1.25rem padding with a 0.25rem label-to-value gap (lines 29,32) — the label sits almost on top of the number, and with a 160px minimum the six tiles compress to a very tight row on a 1400px canvas.",
+      "observations": [
+        { "severity": "high", "claim": "Textbook flat-gray-card syndrome: six identical --ink-2 rectangles with a 1px border, 2px radius, no icon, no trend, no delta, no sparkline — differentiated only by the hue of the numeral.", "evidence": "admin-web/src/components/dashboard/CounterStrip.tsx:20-63", "confidence": "observed" },
+        { "severity": "high", "claim": "All six KPI labels are hardcoded English with no i18n namespace, including the untranslated finance jargon 'GMV'.", "evidence": "admin-web/src/components/dashboard/CounterStrip.tsx:84-99", "confidence": "observed" },
+        { "severity": "medium", "claim": "Currency formatting hardcodes the 'en-IN' locale and sets no fraction-digit policy, so a paise value that is not a whole rupee renders with a ragged single decimal place and breaks numeric alignment across tiles.", "evidence": "admin-web/src/components/dashboard/CounterStrip.tsx:9-11", "confidence": "observed" },
+        { "severity": "medium", "claim": "Tile labels at 11px in --fog-0 sit on --ink-2, a lighter background than the --ink-1 the token's 4.54:1 measurement was taken against, so they fall below AA.", "evidence": "admin-web/src/components/dashboard/CounterStrip.tsx:37-42 vs admin-web/app/globals.css:24", "confidence": "inferred" },
+        { "severity": "medium", "claim": "There is no loading, empty or stale state — a zero-data day and a failed refresh look identical to a real zero.", "evidence": "admin-web/src/components/dashboard/CounterStrip.tsx:66-100", "confidence": "observed" },
+        { "severity": "medium", "claim": "Revenue-sensitive figures (GMV, commission, pending payouts) render for every role with no capability gate, while the far less sensitive payout CTA is gated behind finance.read.", "evidence": "admin-web/src/components/dashboard/CounterStrip.tsx:85-97 vs admin-web/src/components/dashboard/PayoutQueue.tsx:92-99", "confidence": "observed" },
+        { "severity": "low", "claim": "Every dimension is a raw literal that shadows an existing token (0.6875rem = --text-eyebrow, 1.5rem = --text-2xl), so the tiles will not follow a future scale change.", "evidence": "admin-web/src/components/dashboard/CounterStrip.tsx:37,48", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.order-feed",
+      "app": "admin-web",
+      "file": "admin-web/src/components/dashboard/OrderFeed.tsx",
+      "loc": 182,
+      "purpose": "Right-hand live activity stream of booking/assignment/completion/alert/payout/complaint events, polled every 30 seconds.",
+      "entryPoints": "Rendered by the dashboard page — admin-web/app/[locale]/(dashboard)/dashboard/page.tsx:78",
+      "composition": [
+        "Kind→colour map for six event kinds — OrderFeed.tsx:15-22",
+        "30s polling effect with de-duplication and a 50-item cap — OrderFeed.tsx:12-13,44-81",
+        "<section aria-label=\"Live order feed\"> — OrderFeed.tsx:84",
+        "h2 'Live Feed', 0.75rem mono uppercase in --fog-0 — OrderFeed.tsx:85-96",
+        "Error branch: <EmptyState eyebrow='Live feed' headline='Feed unavailable'> — OrderFeed.tsx:97-102",
+        "Empty branch: <EmptyState headline='The feed is quiet'> — OrderFeed.tsx:103-108",
+        "List: <ol aria-live=\"polite\">, max-height 400px, 2px row gap — OrderFeed.tsx:110-123",
+        "  Row: --ink-2 background, 3px kind-coloured left border, title 0.8125rem + optional 0.6875rem mono detail + 0.625rem mono timestamp — OrderFeed.tsx:124-177"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "MAJOR GAP: the initial mount renders the 'The feed is quiet' empty state (line 103) because events is [] before the first fetch resolves — the loading state is misreported to the user as 'no activity'" },
+        "empty": { "present": true, "evidence": "admin-web/src/components/dashboard/OrderFeed.tsx:103-108", "quality": "Well-written copy ('New bookings, assignments, and complaints will land here as they happen') but no icon, no illustration, and no action" },
+        "error": { "present": true, "evidence": "admin-web/src/components/dashboard/OrderFeed.tsx:97-102", "quality": "Authored message, not a raw exception (line 66) — the best error handling in the cluster. But it offers no retry button; the user must wait 30s or reload" },
+        "success": { "present": true, "evidence": "admin-web/src/components/dashboard/OrderFeed.tsx:110-178", "quality": "n/a" },
+        "offline": { "present": false, "evidence": null, "quality": "A dropped connection collapses into the same generic 'Feed unavailable' card; there is no distinct offline treatment and no last-successful-update timestamp" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "A 403 from the feed endpoint renders as a generic 'Feed unavailable' — line 35 turns every non-OK status into the same string" }
+      },
+      "skeletonOrSpinner": "none — the first paint shows the empty state rather than a skeleton (OrderFeed.tsx:41,103).",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "0.75rem", "line": 87, "context": "h2 size literal" },
+          { "value": "0.5rem", "line": 92, "context": "h2 margin literal" },
+          { "value": "2px", "line": 119, "context": "row gap" },
+          { "value": "400px", "line": 120, "context": "max-height of the scroll region" },
+          { "value": "0.5rem 0.75rem", "line": 132, "context": "row padding" },
+          { "value": "3px", "line": 135, "context": "kind border width" },
+          { "value": "0.8125rem", "line": 142, "context": "title size" },
+          { "value": "0.6875rem", "line": 154, "context": "detail size" },
+          { "value": "2px", "line": 157, "context": "detail margin-top" },
+          { "value": "0.625rem", "line": 167, "context": "timestamp size — 10px" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "The live feed could not be loaded. Refresh or check API status.", "line": 66 },
+          { "text": "Live order feed (aria-label)", "line": 84 },
+          { "text": "Live Feed", "line": 95 },
+          { "text": "Live feed / Feed unavailable", "line": 99 },
+          { "text": "Live feed / The feed is quiet", "line": 105 },
+          { "text": "New bookings, assignments, and complaints will land here as they happen.", "line": 107 },
+          { "text": "Order events (aria-label)", "line": 112 }
+        ],
+        "usesStringResource": false,
+        "hindiRisk": "No next-intl import (OrderFeed.tsx:1-8). Event titles and details come straight from the API (lines 148,160) so they will be whatever language the backend emits — a bilingual feed is likely. Rows use a rigid 1fr/auto grid (line 130) with a nowrap timestamp (line 171); longer Hindi titles will wrap inside a 340px column (dashboard/page.tsx:72) producing ragged row heights.",
+        "currencyFormatting": "Timestamps hardcode toLocaleTimeString('en-IN') (OrderFeed.tsx:26) — Latin numerals regardless of locale. No money rendered."
+      },
+      "a11y": {
+        "contentDescriptions": true,
+        "touchTargetRisks": [],
+        "contrastRisks": [
+          { "line": 155, "note": "Event detail at 0.6875rem (11px) in --fog-0 on --ink-2 — below AA per the globals.css:24 measurement baseline" },
+          { "line": 167, "note": "Timestamps at 0.625rem (10px) in --fog-0 — the smallest text on the dashboard" },
+          { "line": 15, "note": "Event kind is encoded ONLY as a 3px left-border colour (line 135); colour is the sole channel distinguishing 'alert' from 'completed'" }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "The list has aria-live=\"polite\" on a 50-item container (line 111) — every poll that adds items will re-announce, and there is no aria-relevant scoping. The scroll region (max-height 400px, line 120) is not focusable, so keyboard users cannot scroll it."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No per-event-kind icon — 'alert', 'payout' and 'booking' are visually identical rows distinguished only by border hue", "EmptyState renders no illustration"], "cite": "admin-web/src/components/dashboard/OrderFeed.tsx:124-177" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "New items are prepended with no enter animation, no highlight and no flash (OrderFeed.tsx:49) — on a 30s poll, several rows can appear silently at once with nothing drawing the operator's eye." },
+      "density": "Very tight: 2px between rows and 0.5rem/0.75rem row padding (lines 119,132) produce a compressed log-file feel rather than a scannable feed. Three type sizes stack inside each 10px-to-13px row.",
+      "observations": [
+        { "severity": "high", "claim": "There is no loading state — before the first poll resolves the component renders the 'The feed is quiet' empty state, actively telling the operator there is no activity when the data has simply not arrived.", "evidence": "admin-web/src/components/dashboard/OrderFeed.tsx:41,103-108", "confidence": "observed" },
+        { "severity": "high", "claim": "Event kind is communicated by a 3px border colour alone with no icon or text label, so alerts and completions are indistinguishable to a colour-blind operator.", "evidence": "admin-web/src/components/dashboard/OrderFeed.tsx:15-22,135", "confidence": "observed" },
+        { "severity": "medium", "claim": "New events appear with no motion, no highlight and no unread affordance on a 30-second poll cycle — the 'live' feed has no liveness.", "evidence": "admin-web/src/components/dashboard/OrderFeed.tsx:49,124-177", "confidence": "observed" },
+        { "severity": "medium", "claim": "The error card has no retry action; recovery requires waiting a full 30-second poll or reloading the page.", "evidence": "admin-web/src/components/dashboard/OrderFeed.tsx:97-102", "confidence": "observed" },
+        { "severity": "medium", "claim": "All feed chrome is hardcoded English on the Hindi-default dashboard.", "evidence": "admin-web/src/components/dashboard/OrderFeed.tsx:95,99-107", "confidence": "observed" },
+        { "severity": "medium", "claim": "aria-live=\"polite\" is set on the entire 50-item list rather than on newly-added rows, so each poll risks re-announcing the whole feed.", "evidence": "admin-web/src/components/dashboard/OrderFeed.tsx:111-112", "confidence": "inferred" },
+        { "severity": "low", "claim": "Timestamps render at 10px in the faintest text colour — effectively unreadable at normal viewing distance.", "evidence": "admin-web/src/components/dashboard/OrderFeed.tsx:164-175", "confidence": "observed" },
+        { "severity": "low", "claim": "Feed rows are not clickable — there is no route from an event to the underlying order, technician or complaint.", "evidence": "admin-web/src/components/dashboard/OrderFeed.tsx:124-177", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.tech-map",
+      "app": "admin-web",
+      "file": "admin-web/src/components/dashboard/TechMap.tsx",
+      "loc": 176,
+      "purpose": "Spatial overview of on-duty technicians plotted by lat/lng inside a fixed Ayodhya bounding box.",
+      "entryPoints": "Rendered by the dashboard page — admin-web/app/[locale]/(dashboard)/dashboard/page.tsx:77",
+      "composition": [
+        "Ayodhya bounding-box constants 26.70–26.88 N, 82.10–82.30 E — TechMap.tsx:13-17",
+        "State→colour map (active/enroute/idle/alert) — TechMap.tsx:27-32",
+        "Container: 16/9 aspect ratio, --ink-1 background, 1px --ink-4 border, role=\"img\" — TechMap.tsx:34-48",
+        "Decorative SVG graticule — 4 vertical + 3 horizontal lines at 12% opacity — TechMap.tsx:50-79",
+        "Empty overlay <EmptyState 'No technicians on duty'> with pointer-events:none — TechMap.tsx:82-99",
+        "Tech pins — 10px dots with a double ring shadow, absolutely positioned by percentage — TechMap.tsx:102-127",
+        "Legend — bottom-right pill on rgba(14,20,22,0.85) with four 6px swatches — TechMap.tsx:130-173"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "None — techs arrive as a server prop; while the parent awaits, nothing renders at all" },
+        "empty": { "present": true, "evidence": "admin-web/src/components/dashboard/TechMap.tsx:82-99", "quality": "Present, but rendered inside a pointer-events:none wrapper (line 90), so the EmptyState's `action` slot would be permanently unclickable if one were ever supplied" },
+        "error": { "present": false, "evidence": null, "quality": "No error branch — a failed tech-locations call throws in the parent (dashboard/page.tsx:26)" },
+        "success": { "present": true, "evidence": "admin-web/src/components/dashboard/TechMap.tsx:102-127", "quality": "n/a" },
+        "offline": { "present": false, "evidence": null, "quality": "No staleness indicator — pins from a 10-minute-old payload look identical to live ones" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "No gating; technician names and live positions render for any role that can load the dashboard" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "16/9", "line": 42, "context": "aspect ratio literal" },
+          { "value": "10px", "line": 118, "context": "pin width/height" },
+          { "value": "8px", "line": 133, "context": "legend bottom offset" },
+          { "value": "8px", "line": 134, "context": "legend right offset" },
+          { "value": "8px", "line": 136, "context": "legend gap" },
+          { "value": "4px 8px", "line": 139, "context": "legend padding" },
+          { "value": "0.625rem", "line": 156, "context": "legend label size — 10px" },
+          { "value": "6px", "line": 163, "context": "legend swatch size" },
+          { "value": "0.12", "line": 52, "context": "graticule opacity literal" }
+        ],
+        "hardcodedColors": [
+          { "value": "rgba(14, 20, 22, 0.85)", "line": 137, "context": "Legend background. This is a BLUE-grey (R14 G20 B22) with no relationship to the warm-ink palette (--ink-0 is #0E0B08 = R14 G11 B8). It is also hardcoded dark, so it does not flip in light mode" }
+        ],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": [
+          { "value": "50%", "line": 120, "context": "pin — circle, acceptable" },
+          { "value": "50%", "line": 165, "context": "legend swatch" }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Technician locations map — Ayodhya operational zone (aria-label)", "line": 38 },
+          { "text": "Field map / No technicians on duty", "line": 94 },
+          { "text": "Pins will appear here once techs come online.", "line": 96 },
+          { "text": "Active", "line": 144 },
+          { "text": "En route", "line": 145 },
+          { "text": "Idle", "line": 146 },
+          { "text": "Alert", "line": 147 }
+        ],
+        "usesStringResource": false,
+        "hindiRisk": "No next-intl import (TechMap.tsx:1-4). The legend is a horizontal flex row of four labels in a fixed bottom-right pill (lines 130-141) with no wrapping — Hindi equivalents ('सक्रिय', 'रास्ते में', 'निष्क्रिय', 'चेतावनी') are wider and will overflow or push the pill past the container edge.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "contentDescriptions": true,
+        "touchTargetRisks": [
+          { "line": 118, "size": "10px", "note": "Pins are 10px and explicitly cursor:'default' (line 123) — non-interactive, so there is no way to identify a technician by pointing at their pin" }
+        ],
+        "contrastRisks": [
+          { "line": 157, "note": "Legend labels are 10px --fog-1 on a hardcoded rgba(14,20,22,0.85). In LIGHT mode --fog-1 remaps to --paper-text-1 #4A4135 (globals.css:203), i.e. dark text on a still-dark plate — an unreadable legend" },
+          { "line": 31, "note": "The 'idle' pin colour is --fog-0, the same token used for body text, so idle technicians are nearly invisible against --ink-1" }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "The container is role=\"img\" (line 36) with role=\"img\" children (line 111), so every pin is announced as a nested image inside an image; the map has no heading, unlike its sibling widgets which all have an h2."
+      },
+      "imagery": {
+        "usesImages": false,
+        "sources": ["Inline decorative SVG graticule — TechMap.tsx:50-79"],
+        "placeholderOrMissing": [
+          "There is NO map. No tiles, no roads, no river, no landmarks, no city outline — seven straight lines at 12% opacity stand in for Ayodhya",
+          "A code comment concedes it is a placeholder pending Maps billing — TechMap.tsx:6"
+        ],
+        "cite": "admin-web/src/components/dashboard/TechMap.tsx:50-79"
+      },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "Pins snap between renders with no transition; an 'alert' pin does not pulse despite globals.css:300-312 shipping a liveBreath keyframe built for exactly this." },
+      "density": "The 16:9 panel is mostly empty — a handful of 10px dots on a near-black field with a 12%-opacity grid. It is the largest element on the dashboard and carries the least information per pixel.",
+      "observations": [
+        { "severity": "high", "claim": "The largest widget on the flagship dashboard is not a map — it is seven 12%-opacity straight lines with coloured dots on top, with no basemap, roads, landmarks or city outline.", "evidence": "admin-web/src/components/dashboard/TechMap.tsx:50-79 and the placeholder comment at TechMap.tsx:6", "confidence": "observed" },
+        { "severity": "high", "claim": "The legend plate uses a hardcoded blue-grey rgba(14,20,22,0.85) that is neither a token nor part of the warm-ink palette, and it does not respond to the light theme — in light mode dark --fog-1 text sits on a dark plate.", "evidence": "admin-web/src/components/dashboard/TechMap.tsx:137,157 vs admin-web/app/globals.css:203", "confidence": "observed" },
+        { "severity": "high", "claim": "Pins are non-interactive 10px dots (cursor:'default'), so an operator cannot click, hover or tap a technician to see who they are or what they are on — the map is decorative.", "evidence": "admin-web/src/components/dashboard/TechMap.tsx:118-123", "confidence": "observed" },
+        { "severity": "medium", "claim": "The bounding box is hardcoded to a ~10km Ayodhya window; any technician outside it computes a percentage below 0 or above 100 and is clipped by overflow:hidden, silently disappearing from the operations view.", "evidence": "admin-web/src/components/dashboard/TechMap.tsx:14-25,45", "confidence": "inferred" },
+        { "severity": "medium", "claim": "The empty state is wrapped in pointer-events:none, permanently disabling any action the shared EmptyState component might render.", "evidence": "admin-web/src/components/dashboard/TechMap.tsx:90 and admin-web/src/components/EmptyState.tsx:51", "confidence": "observed" },
+        { "severity": "medium", "claim": "Legend and empty-state copy are hardcoded English, and the legend is a fixed-width no-wrap row that will overflow with longer Hindi labels.", "evidence": "admin-web/src/components/dashboard/TechMap.tsx:94-96,144-147", "confidence": "observed" },
+        { "severity": "low", "claim": "The 'idle' state uses --fog-0, the body-text token, making idle pins nearly indistinguishable from the background grid.", "evidence": "admin-web/src/components/dashboard/TechMap.tsx:30", "confidence": "observed" },
+        { "severity": "low", "claim": "Unlike every sibling widget, the map has no h2 heading — only an aria-label — so it is unlabeled visually.", "evidence": "admin-web/src/components/dashboard/TechMap.tsx:36-38", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.payout-queue",
+      "app": "admin-web",
+      "file": "admin-web/src/components/dashboard/PayoutQueue.tsx",
+      "loc": 124,
+      "purpose": "Compact summary of pending technician payouts with a capability-gated link into the Finance area.",
+      "entryPoints": "Rendered by the dashboard page — admin-web/app/[locale]/(dashboard)/dashboard/page.tsx:91-94",
+      "composition": [
+        "<section aria-label=\"Payout queue\"> on --ink-2 with 1px --ink-4 border, --radius-sm, 1rem/1.25rem padding — PayoutQueue.tsx:22-30",
+        "h2 'Payout Queue' 0.6875rem mono uppercase — PayoutQueue.tsx:31-42",
+        "Row 1 'Total pending' → 1.25rem serif --ember amount — PayoutQueue.tsx:45-59",
+        "Row 2 'Technicians' → mono count — PayoutQueue.tsx:61-68",
+        "Row 3 'Schedule' → 'Weekly - Sun 23:59 IST' — PayoutQueue.tsx:70-77",
+        "Zero branch: italic 'Nothing pending - payouts cleared.' — PayoutQueue.tsx:79-90",
+        "Non-zero branch: FeatureGate(finance.read) → full-width link, label switches on finance.approvePayouts — PayoutQueue.tsx:92-120",
+        "  Gate fallback: 'Finance access is required to review payouts.' — PayoutQueue.tsx:94-98"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "None — pure prop-driven server render" },
+        "empty": { "present": true, "evidence": "admin-web/src/components/dashboard/PayoutQueue.tsx:79-90", "quality": "Present, and the copy is good, but it is rendered as small italic faint text rather than using the shared EmptyState component — a third empty-state treatment in one dashboard" },
+        "error": { "present": false, "evidence": null, "quality": "No error branch" },
+        "success": { "present": true, "evidence": "admin-web/src/components/dashboard/PayoutQueue.tsx:44-121", "quality": "n/a" },
+        "offline": { "present": false, "evidence": null, "quality": "None" },
+        "permissionDenied": { "present": true, "evidence": "admin-web/src/components/dashboard/PayoutQueue.tsx:92-99", "quality": "The best permission-denied treatment in the cluster — an explanatory fallback instead of a hidden element" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [
+          { "value": "1rem 1.25rem", "line": 28, "context": "section padding literal" },
+          { "value": "0.6875rem", "line": 33, "context": "h2 size literal" },
+          { "value": "0.75rem", "line": 38, "context": "h2 margin literal" },
+          { "value": "0.5rem", "line": 44, "context": "row gap literal" },
+          { "value": "0.8125rem", "line": 46, "context": "row label size literal (repeated at 62, 71)" },
+          { "value": "1.25rem", "line": 53, "context": "amount size literal" },
+          { "value": "0.875rem", "line": 65, "context": "tech count size literal" },
+          { "value": "0.5rem 1rem", "line": 106, "context": "CTA padding — computed height ≈33px, below the 44px minimum" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Payout queue (aria-label)", "line": 23 },
+          { "text": "Payout Queue", "line": 41 },
+          { "text": "Total pending", "line": 47 },
+          { "text": "Technicians", "line": 63 },
+          { "text": "Schedule", "line": 72 },
+          { "text": "Weekly - Sun 23:59 IST", "line": 75 },
+          { "text": "Nothing pending - payouts cleared.", "line": 89 },
+          { "text": "Finance access is required to review payouts.", "line": 96 },
+          { "text": "Approve payouts in Finance / Review payout queue", "line": 117 }
+        ],
+        "usesStringResource": false,
+        "hindiRisk": "No next-intl import (PayoutQueue.tsx:1-6). Rows are justify-between label/value pairs (line 45) inside a 280px column (dashboard/page.tsx:85); a longer Hindi label such as 'कुल लंबित' plus a ₹ amount will collide or wrap in that width. 'Weekly - Sun 23:59 IST' embeds an English weekday abbreviation and a timezone code in the value slot.",
+        "currencyFormatting": "`INR ${(paise/100).toLocaleString('en-IN')}` — PayoutQueue.tsx:14. Uses the ASCII string 'INR ' where the sibling CounterStrip uses the ₹ glyph (CounterStrip.tsx:10). Same hardcoded 'en-IN' locale and same missing fraction-digit policy."
+      },
+      "a11y": {
+        "contentDescriptions": true,
+        "touchTargetRisks": [
+          { "line": 106, "size": "≈33px tall", "note": "The section's only action — the Finance CTA — is below the 44px minimum" }
+        ],
+        "contrastRisks": [
+          { "line": 111, "note": "The CTA renders --fog-0 (#877A6D) text on --ink-3 (#221C15). globals.css:24 measures --fog-0 at 4.54:1 against the DARKER --ink-1; against the lighter --ink-3 the ratio drops below the 4.5:1 AA floor for this 0.8125rem text" },
+          { "line": 86, "note": "The zero-state message is --color-text-faint at --text-xs, italic — the faintest, smallest, hardest-to-read type treatment on the dashboard" }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "Single link, in DOM order. No aria-describedby tying the CTA to the amount it acts on."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No icon on the section, the amount or the CTA"], "cite": "admin-web/src/components/dashboard/PayoutQueue.tsx:22-42" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "The CTA has no hover, focus or active styling of any kind — it is a static grey box that happens to be a link." },
+      "density": "0.5rem row gaps inside 1rem/1.25rem padding (lines 28,44) — reasonably comfortable, but every row is the same visual weight so the headline number does not read as the primary datum.",
+      "observations": [
+        { "severity": "high", "claim": "Currency is rendered as 'INR 1,234' here while the KPI tile directly above renders '₹1,234' for the same paise value — two currency conventions on one screen.", "evidence": "admin-web/src/components/dashboard/PayoutQueue.tsx:14 vs admin-web/src/components/dashboard/CounterStrip.tsx:10", "confidence": "observed" },
+        { "severity": "high", "claim": "The primary call-to-action is styled as a low-contrast grey box — --fog-0 text on --ink-3 — with no hover, focus or active state, so the money action on the dashboard is the least prominent element in its own card.", "evidence": "admin-web/src/components/dashboard/PayoutQueue.tsx:100-118", "confidence": "observed" },
+        { "severity": "medium", "claim": "The empty state is bespoke small italic faint text rather than the shared EmptyState component, giving the dashboard three different empty-state treatments (EmptyState card in OrderFeed, EmptyState overlay in TechMap, italic line here).", "evidence": "admin-web/src/components/dashboard/PayoutQueue.tsx:79-90 vs admin-web/src/components/EmptyState.tsx:11", "confidence": "observed" },
+        { "severity": "medium", "claim": "All nine strings including the payout schedule are hardcoded English on the Hindi-default dashboard.", "evidence": "admin-web/src/components/dashboard/PayoutQueue.tsx:41,47,63,72,75,89,96,117", "confidence": "observed" },
+        { "severity": "medium", "claim": "The payout schedule 'Weekly - Sun 23:59 IST' is a hardcoded string, not derived from configuration, so it will silently lie if the schedule changes.", "evidence": "admin-web/src/components/dashboard/PayoutQueue.tsx:75", "confidence": "observed" },
+        { "severity": "low", "claim": "Copy uses ASCII hyphens as sentence dashes ('Nothing pending - payouts cleared.', 'Weekly - Sun') while the rest of the product uses proper en/em dashes and middots.", "evidence": "admin-web/src/components/dashboard/PayoutQueue.tsx:75,89", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.util-strip",
+      "app": "admin-web",
+      "file": "admin-web/src/components/dashboard/UtilStrip.tsx",
+      "loc": 95,
+      "purpose": "24-hour technician utilisation bar chart across the bottom-left of the dashboard.",
+      "entryPoints": "Rendered by the dashboard page with NO props — admin-web/app/[locale]/(dashboard)/dashboard/page.tsx:90",
+      "composition": [
+        "SEED_DATA — 24 hardcoded percentages — UtilStrip.tsx:5-8",
+        "barColor thresholds: >75 coral, <15 fog-0, else teal — UtilStrip.tsx:14-18",
+        "HOURS label array (12-hour am/pm) — UtilStrip.tsx:20-24",
+        "<section aria-label> + h2 'Utilisation · 24h' 0.6875rem mono uppercase — UtilStrip.tsx:30-42",
+        "Chart: 48px-tall flex row of 24 bars on --ink-2, 6px radius, 2px gaps — UtilStrip.tsx:43-56",
+        "  Bars: flex 1, height = value%, 2px top radius, native title tooltip — UtilStrip.tsx:57-70",
+        "Axis: five fixed labels 12am/6am/12pm/6pm/12am at 0.5625rem — UtilStrip.tsx:72-92"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "None — and none is possible, because the component never fetches" },
+        "empty": { "present": false, "evidence": null, "quality": "An empty utilData array would render an empty 48px strip with no message; in practice the seed fallback masks it (line 27)" },
+        "error": { "present": false, "evidence": null, "quality": "None" },
+        "success": { "present": true, "evidence": "admin-web/src/components/dashboard/UtilStrip.tsx:43-71", "quality": "The 'success' state is fabricated data" },
+        "offline": { "present": false, "evidence": null, "quality": "n/a" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "n/a" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "0.6875rem", "line": 33, "context": "h2 size literal" },
+          { "value": "0.5rem", "line": 38, "context": "h2 margin literal" },
+          { "value": "2px", "line": 49, "context": "bar gap" },
+          { "value": "48px", "line": 51, "context": "chart height — the entire chart is 48px tall" },
+          { "value": "6px 8px 0", "line": 53, "context": "chart padding — 6px is off the 4px grid" },
+          { "value": "2px", "line": 76, "context": "axis margin-top" },
+          { "value": "8px", "line": 77, "context": "axis padding-inline" },
+          { "value": "0.5625rem", "line": 85, "context": "axis label size = 9px — the smallest text in the entire application" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": [
+          { "value": "6px", "line": 52, "context": "chart container radius — matches no token (--radius-lg is 6px but written raw), and every sibling widget uses --radius-sm (2px)" },
+          { "value": "2px 2px 0 0", "line": 66, "context": "bar radius literal" }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Technician utilisation — 24h (aria-label)", "line": 30 },
+          { "text": "Utilisation · 24h", "line": 41 },
+          { "text": "Bar chart of technician utilisation over 24 hours (aria-label)", "line": 45 },
+          { "text": "12am / 6am / 12pm / 6pm / 12am", "line": 80 },
+          { "text": "1am…12pm hour labels in the tooltip", "line": 22 }
+        ],
+        "usesStringResource": false,
+        "hindiRisk": "No next-intl import (UtilStrip.tsx:1-3). Time is rendered in 12-hour am/pm form (lines 20-24, 80) which is an anglophone convention; the Topbar clock beside it uses 24-hour (Topbar.tsx:12) — the same screen shows both. Axis labels sit in a justify-between row (line 74) at 9px and cannot absorb longer Devanagari equivalents.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "contentDescriptions": true,
+        "touchTargetRisks": [],
+        "contrastRisks": [
+          { "line": 87, "note": "Axis labels at 0.5625rem (9px) in --fog-0 — below any reasonable legibility floor and below AA for that size" },
+          { "line": 15, "note": "High utilisation (>75%) is coloured --coral, the same alarm hue used for open complaints in CounterStrip.tsx:98 — high technician utilisation is signalled as a problem" }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "role=\"img\" with a single generic aria-label (line 45) — no accessible values, no data table fallback. The only way to read a number is the native `title` tooltip (line 60), which is mouse-only and unavailable to keyboard and touch users."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["The chart has no axis lines, no gridlines, no y-scale and no value labels — 24 coloured rectangles in a 48px band"], "cite": "admin-web/src/components/dashboard/UtilStrip.tsx:43-71" },
+      "motion": { "animationsUsed": [{ "what": "height transition 200ms ease on bars", "line": 67 }], "usesMotionTokens": false, "transitionsOnNav": "'200ms ease' is a literal; the token pair would be var(--duration-base) var(--ease-out) (globals.css:175,177). The transition is also inert because the data never changes." },
+      "density": "A 48px-tall chart with 9px axis labels beneath it — the whole widget is under 70px tall while occupying a full grid column beside the 340px-wide feed, creating a large band of dead space in the second dashboard row.",
+      "observations": [
+        { "severity": "high", "claim": "The utilisation chart renders 24 hardcoded fake percentages as if they were live operational data, with no 'sample data' label, no disabled styling and no empty state — an operations console presenting fiction as fact.", "evidence": "admin-web/src/components/dashboard/UtilStrip.tsx:5-8,27 and the TODO at UtilStrip.tsx:3", "confidence": "observed" },
+        { "severity": "high", "claim": "The dashboard page renders <UtilStrip /> with no props at all, so the seed fallback is guaranteed to be what ships.", "evidence": "admin-web/app/[locale]/(dashboard)/dashboard/page.tsx:90 and admin-web/src/components/dashboard/UtilStrip.tsx:27", "confidence": "observed" },
+        { "severity": "medium", "claim": "Data values are reachable only through a native `title` tooltip, so keyboard, touch and screen-reader users can never read a single number from the chart.", "evidence": "admin-web/src/components/dashboard/UtilStrip.tsx:45,60", "confidence": "observed" },
+        { "severity": "medium", "claim": "Axis labels are 9px — the smallest type in the application and roughly half the body size — rendered in the faintest text token.", "evidence": "admin-web/src/components/dashboard/UtilStrip.tsx:83-88", "confidence": "observed" },
+        { "severity": "medium", "claim": "The widget uses a 6px container radius while every sibling dashboard widget uses --radius-sm (2px), so one card in the row has visibly rounder corners than the rest.", "evidence": "admin-web/src/components/dashboard/UtilStrip.tsx:52 vs admin-web/src/components/dashboard/CounterStrip.tsx:28, PayoutQueue.tsx:27, TechMap.tsx:43", "confidence": "observed" },
+        { "severity": "medium", "claim": "The colour semantics are inverted: >75% utilisation is painted --coral, the same alarm colour used for open complaints, so a highly productive workforce reads as an incident.", "evidence": "admin-web/src/components/dashboard/UtilStrip.tsx:14-18 vs admin-web/src/components/dashboard/CounterStrip.tsx:98", "confidence": "observed" },
+        { "severity": "low", "claim": "The chart uses 12-hour am/pm labels while the Topbar clock on the same screen uses 24-hour time.", "evidence": "admin-web/src/components/dashboard/UtilStrip.tsx:20-24,80 vs admin-web/src/components/dashboard/Topbar.tsx:8-13", "confidence": "observed" },
+        { "severity": "low", "claim": "A 48px-tall chart occupies a full grid column beside a 340px feed, leaving a large band of dead space in the second dashboard row.", "evidence": "admin-web/src/components/dashboard/UtilStrip.tsx:51 and admin-web/app/[locale]/(dashboard)/dashboard/page.tsx:81-95", "confidence": "inferred" }
+      ]
+    },
+    {
+      "id": "admin.theme-provider",
+      "app": "admin-web",
+      "file": "admin-web/src/components/theme/ThemeProvider.tsx",
+      "loc": 75,
+      "purpose": "Client context holding the active theme; optimistically stamps data-theme on <html> and coalesces cookie writes to a Server Action.",
+      "entryPoints": "Wraps the entire app in the root layout — admin-web/app/layout.tsx:56",
+      "composition": [
+        "ThemeContext creation — ThemeProvider.tsx:12",
+        "Local state seeded from the server-read cookie — ThemeProvider.tsx:21",
+        "Single-flight coalesced cookie writer with a desired/flushing ref pair — ThemeProvider.tsx:26-48",
+        "setTheme: optimistic document.documentElement.dataset.theme then queue the write — ThemeProvider.tsx:50-60",
+        "useTheme hook that throws outside the provider — ThemeProvider.tsx:69-75"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "None needed — the theme is resolved server-side from the cookie (app/layout.tsx:46,52), so there is no flash of wrong theme. This is the correct pattern" },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": true, "evidence": "admin-web/src/components/theme/ThemeProvider.tsx:38-42", "quality": "A failed Server Action is silently swallowed — the DOM stays correct but the preference is not persisted and the user is never told" },
+        "success": { "present": false, "evidence": null, "quality": "No confirmation; the visual change is the confirmation, which is appropriate" },
+        "offline": { "present": false, "evidence": null, "quality": "Offline toggling silently fails to persist (lines 38-42)" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "n/a" }
+      },
+      "skeletonOrSpinner": "none — none needed.",
+      "tokenUsage": { "usesSpacingTokens": false, "hardcodedDp": [], "hardcodedColors": [], "unmappedTypographySlots": [], "offScaleRadius": [] },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "useTheme must be used inside <ThemeProvider> (developer error)", "line": 72 }
+        ],
+        "usesStringResource": false,
+        "hindiRisk": "None — no user-facing copy.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": { "contentDescriptions": false, "touchTargetRisks": [], "contrastRisks": [], "semanticsHeadings": false, "focusOrder": "n/a" },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": [], "cite": "admin-web/src/components/theme/ThemeProvider.tsx:62-66" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "Theme changes are instantaneous — no colour cross-fade. Every token flips at once with no transition declared on html/body (globals.css:231-247)." },
+      "density": "n/a",
+      "observations": [
+        { "severity": "medium", "claim": "There is no 'system' / 'auto' theme option — DEFAULT_THEME is hardcoded to 'dark' in src/lib/theme.ts and prefers-color-scheme is never consulted, so a first-time visitor on a light-configured OS gets a near-black console.", "evidence": "admin-web/src/components/theme/ThemeProvider.tsx:21 and admin-web/src/lib/theme.ts DEFAULT_THEME = 'dark'", "confidence": "observed" },
+        { "severity": "low", "claim": "A failed cookie write is silently swallowed, so a user whose preference does not persist gets no feedback and will re-toggle on every page load.", "evidence": "admin-web/src/components/theme/ThemeProvider.tsx:38-42", "confidence": "observed" },
+        { "severity": "low", "claim": "The theme flip is instantaneous with no colour transition on html/body, so switching light↔dark is a hard strobe across the full viewport.", "evidence": "admin-web/src/components/theme/ThemeProvider.tsx:54 and admin-web/app/globals.css:231-247", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.theme-toggle",
+      "app": "admin-web",
+      "file": "admin-web/src/components/theme/ThemeToggle.tsx",
+      "loc": 38,
+      "purpose": "Two-option Dark/Light radiogroup in the Topbar right slot.",
+      "entryPoints": "Topbar rightSlot — admin-web/app/[locale]/(dashboard)/layout.tsx:69",
+      "composition": [
+        "OPTIONS array: dark, light — ThemeToggle.tsx:6-9",
+        "<div role=\"radiogroup\" aria-label=\"Theme\" className=\"theme-toggle\"> — ThemeToggle.tsx:15-19 (styles at globals.css:542-546)",
+        "Two <button role=\"radio\"> with data-active, styled by .theme-toggle__option — ThemeToggle.tsx:20-35 (styles at globals.css:547-567)"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "n/a" },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": false, "evidence": null, "quality": "n/a" },
+        "success": { "present": true, "evidence": "admin-web/app/globals.css:564-567", "quality": "Active option gets full-strength text plus a marigold bottom border — subtle but legible" },
+        "offline": { "present": false, "evidence": null, "quality": "n/a" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "n/a" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [
+          { "value": "0.16em", "line": 18, "context": "letter-spacing literal in globals.css:551 (class applied here)" },
+          { "value": "0 0 2px 0", "line": 18, "context": "padding literal in globals.css:554 — yields a ~13px tall hit area" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Dark", "line": 7 },
+          { "text": "Light", "line": 8 },
+          { "text": "Theme (aria-label)", "line": 17 }
+        ],
+        "usesStringResource": false,
+        "hindiRisk": "No next-intl import (ThemeToggle.tsx:1-4) and no 'theme' namespace exists in either message catalogue, so 'Dark'/'Light' stay English on /hi. The labels are uppercase with 0.16em tracking (globals.css:550-551), which is meaningless for Devanagari if they were ever translated.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "contentDescriptions": false,
+        "touchTargetRisks": [
+          { "line": 30, "size": "≈13px tall × ~30px wide", "note": "11px text with 0 vertical padding (globals.css:553-554) — roughly a quarter of the 44px minimum, sitting in a 52px topbar" }
+        ],
+        "contrastRisks": [
+          { "line": 30, "note": "Inactive options use --color-text-faint (globals.css:552) at 11px — the faintest token at the smallest size" }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "role=\"radiogroup\" + role=\"radio\" + aria-checked are correct (lines 16,26,27), but unlike the LocaleSwitcher there is no roving tabindex and no arrow-key handling, so the two radios behave as two independent tab stops — inconsistent with the sibling control beside it (LocaleSwitcher.tsx:28-43,101)."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No sun/moon iconography — the toggle is two words of 11px uppercase mono text"], "cite": "admin-web/src/components/theme/ThemeToggle.tsx:32" },
+      "motion": { "animationsUsed": [{ "what": "colour + border-color transition var(--duration-fast)", "line": 30 }], "usesMotionTokens": true, "transitionsOnNav": "Uses the motion tokens correctly (globals.css:558-559) — one of the few places that does." },
+      "density": "Extremely compressed: two 11px text buttons with a var(--space-3) gap (globals.css:545) inside a 52px bar. It reads as body text rather than a control.",
+      "observations": [
+        { "severity": "high", "claim": "The toggle's hit area is roughly 13px tall — 11px text with zero vertical padding — making it one of the smallest interactive targets in the product.", "evidence": "admin-web/src/components/theme/ThemeToggle.tsx:30 and admin-web/app/globals.css:549-556", "confidence": "observed" },
+        { "severity": "medium", "claim": "Two adjacent controls in the same Topbar slot implement radiogroup semantics differently — LocaleSwitcher has roving tabindex and arrow-key navigation, ThemeToggle has neither.", "evidence": "admin-web/src/components/theme/ThemeToggle.tsx:20-35 vs admin-web/src/components/i18n/LocaleSwitcher.tsx:28-43,101", "confidence": "observed" },
+        { "severity": "medium", "claim": "'Dark' and 'Light' are hardcoded English with no theme namespace in either message catalogue.", "evidence": "admin-web/src/components/theme/ThemeToggle.tsx:6-9", "confidence": "observed" },
+        { "severity": "low", "claim": "The two controls sitting side by side are also visually inconsistent — LocaleSwitcher is a bordered segmented pill track, ThemeToggle is naked underlined text.", "evidence": "admin-web/src/components/i18n/LocaleSwitcher.tsx:78-87 vs admin-web/app/globals.css:542-556", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.empty-state",
+      "app": "admin-web",
+      "file": "admin-web/src/components/EmptyState.tsx",
+      "loc": 54,
+      "purpose": "Shared empty/zero-data block — eyebrow, serif headline, optional body copy, optional action slot.",
+      "entryPoints": "Used by OrderFeed (OrderFeed.tsx:98,104) and TechMap (TechMap.tsx:93) in this cluster.",
+      "composition": [
+        "<section aria-label={headline} className=\"empty-state\"> with 1px DASHED --color-border and transparent background — EmptyState.tsx:13-24",
+        "Eyebrow span using the .eyebrow class — EmptyState.tsx:25-27",
+        "h3 with the .display serif class at --text-2xl — EmptyState.tsx:28-37",
+        "Optional copy paragraph, --color-text-muted, max-width 40ch — EmptyState.tsx:38-50",
+        "Optional action slot with a --space-2 top margin — EmptyState.tsx:51"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "n/a" },
+        "empty": { "present": true, "evidence": "admin-web/src/components/EmptyState.tsx:11-53", "quality": "This IS the empty-state primitive. Typographically well-considered (eyebrow + serif headline + 40ch measure) but visually inert — a dashed rectangle with no icon, no illustration and no default action" },
+        "error": { "present": false, "evidence": null, "quality": "It is reused as an ERROR surface by OrderFeed (OrderFeed.tsx:97-102) with no error variant, so 'Feed unavailable' and 'The feed is quiet' render identically" },
+        "success": { "present": false, "evidence": null, "quality": "n/a" },
+        "offline": { "present": false, "evidence": null, "quality": "No variant" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "No variant" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [
+          { "value": "40ch", "line": 45, "context": "measure — a sensible unit but a raw literal" },
+          { "value": "1.55", "line": 44, "context": "line-height literal duplicating the body default at globals.css:243" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": [
+          { "value": "none", "line": 21, "context": "No border-radius at all, so the dashed frame is square while it sits inside the 2px-radius widget cards" }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": false,
+        "hindiRisk": "All copy is injected by callers, every one of which passes English literals. The 40ch measure (line 45) is a Latin-calibrated unit — Devanagari at the same ch count renders wider, and combined with the space-8/space-6 padding (line 20) the block will overflow the 340px OrderFeed column.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "contentDescriptions": true,
+        "touchTargetRisks": [],
+        "contrastRisks": [
+          { "line": 42, "note": "Body copy in --color-text-muted at --text-sm — acceptable in dark, at the boundary in light" }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "Uses h3 unconditionally (line 28), so an empty state inside a section whose heading is h2 nests correctly — but on the dashboard the page has no h1 at all, so the document heading tree starts at h2→h3 with no root."
+      },
+      "imagery": {
+        "usesImages": false,
+        "sources": [],
+        "placeholderOrMissing": ["The props interface offers no icon or illustration slot (EmptyState.tsx:4-9) — every empty state in the product is guaranteed to be text-only"],
+        "cite": "admin-web/src/components/EmptyState.tsx:4-9"
+      },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None." },
+      "density": "space-8 vertical / space-6 horizontal padding with space-3 gaps (lines 19-20) — generous and well-proportioned in isolation, but oversized when dropped into a 340px feed column or overlaid on the map.",
+      "observations": [
+        { "severity": "high", "claim": "The component emits className=\"empty-state\" but no such rule exists anywhere in globals.css, so the shared class hook is dead and all styling is inline.", "evidence": "admin-web/src/components/EmptyState.tsx:15 vs admin-web/app/globals.css (no .empty-state selector)", "confidence": "observed" },
+        { "severity": "high", "claim": "The props interface has no icon or illustration slot, guaranteeing that every empty state across the product is a text-only dashed box — the single largest contributor to the 'unfinished' feel of the console.", "evidence": "admin-web/src/components/EmptyState.tsx:4-9", "confidence": "observed" },
+        { "severity": "medium", "claim": "There is no severity or variant prop, so OrderFeed uses the identical treatment for a benign empty feed and a hard API failure.", "evidence": "admin-web/src/components/EmptyState.tsx:4-9 vs admin-web/src/components/dashboard/OrderFeed.tsx:97-108", "confidence": "observed" },
+        { "severity": "medium", "claim": "The `action` slot exists but no caller in this cluster passes one, and TechMap wraps the component in pointer-events:none so an action would be unclickable there anyway.", "evidence": "admin-web/src/components/EmptyState.tsx:51 and admin-web/src/components/dashboard/TechMap.tsx:90", "confidence": "observed" },
+        { "severity": "low", "claim": "A dashed border is a wireframe convention that reads as unfinished UI in a production console.", "evidence": "admin-web/src/components/EmptyState.tsx:21", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.button-component",
+      "app": "admin-web",
+      "file": "admin-web/src/components/Button.tsx",
+      "loc": 38,
+      "purpose": "Nominal shared button primitive with primary/secondary/ghost variants and sm/md/lg sizes.",
+      "entryPoints": "None in application code — the only importer in the repository is admin-web/tests/Button.test.tsx:3",
+      "composition": [
+        "ButtonProps type: variant + size + native button attrs — Button.tsx:3-6",
+        "sizeStyles map using --space-* and --text-* tokens — Button.tsx:8-12",
+        "variantStyles map using --color-brand / --color-surface-alt / transparent — Button.tsx:14-18",
+        "Merged style object with --radius-md, weight 600, disabled opacity 0.5, opacity transition — Button.tsx:27-36",
+        "Bare <button> spread — Button.tsx:37"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "No loading/pending variant, no spinner slot" },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": false, "evidence": null, "quality": "No destructive variant despite --color-danger existing (globals.css:131)" },
+        "success": { "present": false, "evidence": null, "quality": "No success variant despite .btn-success existing in CSS (globals.css:527)" },
+        "offline": { "present": false, "evidence": null, "quality": "n/a" },
+        "permissionDenied": { "present": true, "evidence": "admin-web/src/components/Button.tsx:30-31", "quality": "Disabled renders as opacity 0.5 + not-allowed cursor only — no aria-disabled reasoning, no tooltip" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [
+          { "value": "600", "line": 29, "context": "font-weight literal" },
+          { "value": "0.5", "line": 31, "context": "disabled opacity literal" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": [
+          { "value": "var(--radius-md) = 4px", "line": 28, "context": "The CSS .btn primitive that the app actually uses is var(--radius-sm) = 2px (globals.css:418) — the two button systems disagree on corner radius" }
+        ]
+      },
+      "i18n": { "hardcodedUserFacingStrings": [], "usesStringResource": false, "hindiRisk": "No copy of its own; no min-width or wrapping policy, so a longer Hindi label simply stretches the button.", "currencyFormatting": "n/a" },
+      "a11y": {
+        "contentDescriptions": false,
+        "touchTargetRisks": [
+          { "line": 9, "size": "sm ≈ 4px + text", "note": "No min-height on any size; the sm variant computes to roughly 22px tall" },
+          { "line": 10, "size": "md ≈ 8px + text", "note": "≈32px — still below 44px, whereas the CSS .btn enforces min-height 2.75rem (globals.css:418)" }
+        ],
+        "contrastRisks": [
+          { "line": 17, "note": "The ghost variant is transparent with a transparent border — it has no visible affordance at rest" }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "Inherits the global :focus-visible ring (globals.css:402). No hover or active styling is defined at all — only an opacity transition (line 32)."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No icon slot, no leading/trailing adornment support"], "cite": "admin-web/src/components/Button.tsx:3-6" },
+      "motion": { "animationsUsed": [{ "what": "opacity transition var(--duration-base) var(--ease-out)", "line": 32 }], "usesMotionTokens": true, "transitionsOnNav": "n/a" },
+      "density": "Sizes are token-driven and sane on paper (space-1/3, space-2/4, space-3/6) but no size reaches a 44px touch target.",
+      "observations": [
+        { "severity": "high", "claim": "The app has two competing button systems: this React component and the .btn/.btn-primary/.btn-ghost CSS classes. Every real screen uses the CSS classes; the React component is imported only by its own test file, so the 'shared primitive' is dead code.", "evidence": "admin-web/src/components/Button.tsx:20-38 (only importer is admin-web/tests/Button.test.tsx:3)", "confidence": "observed" },
+        { "severity": "medium", "claim": "The two systems disagree on fundamentals — radius 4px here vs 2px in .btn, no min-height here vs 44px in .btn, no uppercase/tracking here vs uppercase 0.04em in .btn — so adopting the component would visibly change every button.", "evidence": "admin-web/src/components/Button.tsx:28 and 8-12 vs admin-web/app/globals.css:413-424", "confidence": "observed" },
+        { "severity": "medium", "claim": "The component defines no hover, active or pressed styling at all — only a disabled opacity — so it provides no micro-interaction feedback.", "evidence": "admin-web/src/components/Button.tsx:27-36", "confidence": "observed" },
+        { "severity": "low", "claim": "No loading state and no icon slot, despite both being required by the login and setup flows (which is likely why those screens fell back to raw .btn classes plus manual text swaps).", "evidence": "admin-web/src/components/Button.tsx:3-6 vs admin-web/app/[locale]/login/page.tsx:397-403", "confidence": "observed" },
+        { "severity": "low", "claim": "The ghost variant has a transparent background AND a transparent border, so at rest it is indistinguishable from plain text.", "evidence": "admin-web/src/components/Button.tsx:17", "confidence": "observed" }
+      ]
+    }
+  ]
+}

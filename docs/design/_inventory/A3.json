@@ -1,0 +1,1256 @@
+{
+  "cluster": "A3",
+  "surfaces": [
+    {
+      "id": "admin.catalogue-list",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/(dashboard)/catalogue/page.tsx",
+      "loc": 72,
+      "purpose": "Owner/ops browses all service categories in the catalogue and jumps to create a new one.",
+      "entryPoints": "Primary sidebar rail item 'Catalogue' -> /catalogue (admin-web/src/admin/capabilities.ts:67, capability catalogue.manage)",
+      "composition": [
+        { "block": "Page shell: flex column, padding var(--space-6), gap var(--space-6)", "line": "admin-web/app/[locale]/(dashboard)/catalogue/page.tsx:37-44" },
+        { "block": "Header row: space-between, h1 'Service Catalogue' at var(--text-2xl)/700 + right-aligned 'New Category' .btn.btn-primary Link", "line": "admin-web/app/[locale]/(dashboard)/catalogue/page.tsx:45-59" },
+        { "block": "Conditional: EmptyState (eyebrow/headline/copy, dashed border) when zero categories", "line": "admin-web/app/[locale]/(dashboard)/catalogue/page.tsx:61-66" },
+        { "block": "Else: <CatalogueCategoryList> responsive card grid", "line": "admin-web/app/[locale]/(dashboard)/catalogue/page.tsx:68" }
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "No loading.tsx exists for the catalogue route segment (verified: only audit-log/complaints/finance/orders/technicians have loading.tsx). RSC with cache:'no-store' at page.tsx:20 means a blank/frozen page during the API round-trip." },
+        "empty": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/page.tsx:61-66", "quality": "Best empty state in the cluster — uses the shared EmptyState component with eyebrow + headline + copy. But it passes no `action` prop (EmptyState.tsx:51 supports one), so the empty state has no CTA even though the page's only meaningful next step is 'New Category'." },
+        "error": { "present": false, "evidence": null, "quality": "handleAdminFetchError(res,...) at page.tsx:23 throws; caught only by the segment-level app/[locale]/(dashboard)/error.tsx generic 'Something stalled.' screen. No catalogue-specific error or retry." },
+        "success": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/page.tsx:68", "quality": "Card grid." },
+        "offline": { "present": false, "evidence": null, "quality": "No offline handling anywhere in the cluster." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "No in-page 403 treatment; capability gating happens at the nav/route layer (src/admin/capabilities.ts:67)." }
+      },
+      "skeletonOrSpinner": "none — no spinner, no HsSkeletonBlock/.skeleton equivalent on this route (no loading.tsx for the segment)",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "Header is a two-item space-between flex with no wrap (page.tsx:45). Hindi 'नई श्रेणी' is short, but the h1 has no min-width guard; a longer Devanagari title plus button on a narrow viewport will squeeze the button. INFERRED.",
+        "currencyFormatting": "n/a — no money on this surface"
+      },
+      "a11y": {
+        "contentDescriptions": { "value": true, "cite": "admin-web/src/components/EmptyState.tsx:14 aria-label={headline}" },
+        "touchTargetRisks": [
+          { "line": "admin-web/app/globals.css:418", "size": "min-height 2.75rem = 44px", "note": ".btn primitive used by the 'New Category' link is 44px tall — under the 48dp/48px WCAG 2.2 AAA target size, meets the 44px AA minimum only." }
+        ],
+        "contrastRisks": [],
+        "semanticsHeadings": true,
+        "focusOrder": "DOM order = visual order; single h1 then grid. Global :focus-visible marigold ring at globals.css:402-406."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No category hero image is rendered anywhere on this page even though heroImageUrl is a required field on CategoryForm (admin-web/src/components/catalogue/CategoryForm.tsx:130-138)"], "cite": "admin-web/app/[locale]/(dashboard)/catalogue/page.tsx:36-70" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "none declared; only the global .btn `transition: all var(--duration-base) var(--ease-out)` at globals.css:430" },
+      "density": "Airy at the shell level (var(--space-6)=24px padding, var(--space-6)=24px gap at page.tsx:39-42) but the page carries only a title, one button and a grid — no counts, no filters, no search, no sort control.",
+      "observations": [
+        { "severity": "medium", "claim": "No loading state for the catalogue segment — the route is force-dynamic with cache:'no-store' so navigation blocks on the API with no skeleton.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/page.tsx:1,20", "confidence": "observed" },
+        { "severity": "low", "claim": "EmptyState supports an `action` slot but the catalogue empty state ships without a CTA, so the dead-end screen offers no primary action.", "evidence": "admin-web/src/components/EmptyState.tsx:51 vs admin-web/app/[locale]/(dashboard)/catalogue/page.tsx:62-66", "confidence": "observed" },
+        { "severity": "low", "claim": "No search, filter, sort or result count on a list surface intended to grow — bare header + grid.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/page.tsx:45-69", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.catalogue-category-list-client",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/(dashboard)/catalogue/CatalogueCategoryList.tsx",
+      "loc": 55,
+      "purpose": "Client grid that renders CategoryCards and optimistically applies the activate/deactivate toggle.",
+      "entryPoints": "Rendered by admin-web/app/[locale]/(dashboard)/catalogue/page.tsx:68",
+      "composition": [
+        { "block": "CSS grid, repeat(auto-fill, minmax(280px, 1fr)), gap var(--space-4)", "line": "admin-web/app/[locale]/(dashboard)/catalogue/CatalogueCategoryList.tsx:31-37" },
+        { "block": "Per category: flex column gap var(--space-2)", "line": "admin-web/app/[locale]/(dashboard)/catalogue/CatalogueCategoryList.tsx:39" },
+        { "block": "<CategoryCard> with onToggle", "line": "admin-web/app/[locale]/(dashboard)/catalogue/CatalogueCategoryList.tsx:40" },
+        { "block": "Underlined 'View services' text link sitting OUTSIDE and below the card", "line": "admin-web/app/[locale]/(dashboard)/catalogue/CatalogueCategoryList.tsx:41-50" }
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/CatalogueCategoryList.tsx:19", "quality": "useTransition's isPending is destructured as `_isPending` and never used, so the toggle has zero in-flight feedback — no disabled state, no spinner, no optimistic tint." },
+        "empty": { "present": false, "evidence": null, "quality": "Handled by the parent page, not here." },
+        "error": { "present": false, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/CatalogueCategoryList.tsx:23-27", "quality": "MAJOR: toggleCategoryAction returns null on any non-ok response (actions.ts:25) and the client silently drops it (`if (updated !== null)`). A failed activate/deactivate produces no toast, no alert, no revert — the card just does nothing." },
+        "success": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/CatalogueCategoryList.tsx:25", "quality": "Card state swaps in place, no animation or confirmation feedback." },
+        "offline": { "present": false, "evidence": null, "quality": "absent" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "A 403 from the toggle endpoint is indistinguishable from success-with-no-change." }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [
+          { "value": "280px", "line": "admin-web/app/[locale]/(dashboard)/catalogue/CatalogueCategoryList.tsx:34", "context": "grid minmax track floor — arbitrary breakpoint value not on any token scale" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "'View services' -> Hindi is longer; it is a free-floating underlined link on its own line so it wraps safely. Low risk.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "contentDescriptions": { "value": false, "cite": "admin-web/app/[locale]/(dashboard)/catalogue/CatalogueCategoryList.tsx:41-50 — link text is the generic 'View services' repeated once per card with no accessible name disambiguation (no aria-label with the category name)" },
+        "touchTargetRisks": [
+          { "line": "admin-web/app/[locale]/(dashboard)/catalogue/CatalogueCategoryList.tsx:41-50", "size": "text-sm inline link, no padding/min-height", "note": "~17px tall tap target, far below 44px." }
+        ],
+        "contrastRisks": [],
+        "semanticsHeadings": false,
+        "focusOrder": "Per card: toggle button (inside card) then 'View services' link (outside card) — the navigation affordance is focused AFTER the destructive toggle."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["Category grid is text-only cards"], "cite": "admin-web/app/[locale]/(dashboard)/catalogue/CatalogueCategoryList.tsx:38-52" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "none" },
+      "density": "Grid gap var(--space-4)=16px between cards, but the 'View services' link is only var(--space-2)=8px below its card and 16px above the next card — the link visually belongs to the wrong card cluster (8px vs 16px proximity is too weak a grouping signal).",
+      "observations": [
+        { "severity": "high", "claim": "Category activate/deactivate failures are silently swallowed — no error surface, no revert, no pending state.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/CatalogueCategoryList.tsx:23-27", "confidence": "observed" },
+        { "severity": "medium", "claim": "isPending from useTransition is deliberately discarded as `_isPending`, so the toggle gives no in-flight feedback at all.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/CatalogueCategoryList.tsx:19", "confidence": "observed" },
+        { "severity": "medium", "claim": "The primary navigation affordance ('View services') is a bare underlined text link parked outside the card instead of the card itself being clickable — the card reads as inert.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/CatalogueCategoryList.tsx:41-50", "confidence": "observed" },
+        { "severity": "low", "claim": "Spacing inverts the visual grouping: 8px between a card and its own link vs 16px grid gap — but the link sits in the same flex column, so on a multi-column grid the link can align next to a neighbouring card.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/CatalogueCategoryList.tsx:36,39", "confidence": "inferred" }
+      ]
+    },
+    {
+      "id": "admin.catalogue-category-card",
+      "app": "admin-web",
+      "file": "admin-web/src/components/catalogue/CategoryCard.tsx",
+      "loc": 79,
+      "purpose": "Card summarising one service category with a status pill and an inline activate/deactivate button.",
+      "entryPoints": "Rendered by admin-web/app/[locale]/(dashboard)/catalogue/CatalogueCategoryList.tsx:40",
+      "composition": [
+        { "block": "Card container: 1px border, var(--radius-md)=4px, padding var(--space-4), background var(--color-surface), box-shadow var(--shadow-sm), flex column gap var(--space-2)", "line": "admin-web/src/components/catalogue/CategoryCard.tsx:16-27" },
+        { "block": "Header row space-between: h3 category name at var(--text-lg)/600", "line": "admin-web/src/components/catalogue/CategoryCard.tsx:28-38" },
+        { "block": "Status pill: var(--text-xs)/600, padding '2px 8px', var(--radius-sm), solid success/danger fill, #fff text", "line": "admin-web/src/components/catalogue/CategoryCard.tsx:39-50" },
+        { "block": "Line 'ID: {id}' at var(--text-sm) muted", "line": "admin-web/src/components/catalogue/CategoryCard.tsx:53-55" },
+        { "block": "Line 'Sort order: {n}' at var(--text-xs) muted", "line": "admin-web/src/components/catalogue/CategoryCard.tsx:57-59" },
+        { "block": "Self-start Activate/Deactivate button, solid success/danger fill, #fff text, no min-height", "line": "admin-web/src/components/catalogue/CategoryCard.tsx:61-76" }
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "Button has no disabled/pending prop at all — CategoryCardProps only accepts `onToggle` (CategoryCard.tsx:8-11)." },
+        "empty": { "present": false, "evidence": null, "quality": "n/a for a card" },
+        "error": { "present": false, "evidence": null, "quality": "No error slot; failures handled (badly) upstream." },
+        "success": { "present": true, "evidence": "admin-web/src/components/catalogue/CategoryCard.tsx:45,49", "quality": "Status conveyed by pill fill + label." },
+        "offline": { "present": false, "evidence": null, "quality": "absent" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "Toggle is always rendered regardless of capability." }
+      },
+      "skeletonOrSpinner": "none — no loading affordance on the toggle",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [
+          { "value": "2px 8px", "line": "admin-web/src/components/catalogue/CategoryCard.tsx:43", "context": "status pill padding — 2px is off the --space-* scale entirely (nearest is --space-0-5 = 0.125rem = 2px, unused here)" }
+        ],
+        "hardcodedColors": [
+          { "value": "#fff", "line": "admin-web/src/components/catalogue/CategoryCard.tsx:46", "context": "status pill foreground — bypasses --color-brand-fg / token layer, will not adapt in light theme" },
+          { "value": "#fff", "line": "admin-web/src/components/catalogue/CategoryCard.tsx:71", "context": "toggle button foreground — same problem" }
+        ],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "ID: ", "line": "admin-web/src/components/catalogue/CategoryCard.tsx:54" },
+          { "text": "Sort order: ", "line": "admin-web/src/components/catalogue/CategoryCard.tsx:58" }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "The header row is space-between with the pill un-shrunk; Hindi 'निष्क्रिय' plus a long Devanagari category name will collide on a 280px grid track (CatalogueCategoryList.tsx:34) because neither element has min-width:0 or overflow handling. INFERRED.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "contentDescriptions": { "value": false, "cite": "admin-web/src/components/catalogue/CategoryCard.tsx:61-76 — button label is bare 'Activate'/'Deactivate' with no aria-label naming the category, so a screen-reader list of buttons is N identical labels" },
+        "touchTargetRisks": [
+          { "line": "admin-web/src/components/catalogue/CategoryCard.tsx:61-73", "size": "padding var(--space-1)=4px vertical + var(--text-sm)=14px text, no min-height", "note": "~30px tall — well under 44px/48px. Does not use the .btn primitive which sets min-height 2.75rem (globals.css:418)." }
+        ],
+        "contrastRisks": [
+          { "line": "admin-web/src/components/catalogue/CategoryCard.tsx:45-46", "note": "#fff on --color-success #5BA38E = ~2.97:1 at 12px (var(--text-xs)) — FAILS WCAG AA 4.5:1 for normal text. The 'Active' pill, the default state, is the least readable element on the card." },
+          { "line": "admin-web/src/components/catalogue/CategoryCard.tsx:70-71", "note": "#fff on --color-success #5BA38E at 14px (var(--text-sm)) for the 'Activate' button — same ~2.97:1 failure." }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "Only one focusable element (the toggle). Card itself is not focusable."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["Category card renders no hero image although heroImageUrl is a required field on the create/edit form (CategoryForm.tsx:130-138)"], "cite": "admin-web/src/components/catalogue/CategoryCard.tsx:16-77" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "none; the hand-rolled button at :63-73 has no transition, unlike the .btn primitive (globals.css:430)" },
+      "density": "padding var(--space-4)=16px with gap var(--space-2)=8px between four stacked text/controls — cramped for a card that is 280px wide minimum. The two metadata lines (ID, Sort order) are debug data given equal prominence to the name.",
+      "observations": [
+        { "severity": "high", "claim": "Flat-gray-card syndrome plus contrast failure: the card is border + text only, and its two coloured elements (#fff on #5BA38E) both fail WCAG AA.", "evidence": "admin-web/src/components/catalogue/CategoryCard.tsx:16-27,45-46,70-71", "confidence": "observed" },
+        { "severity": "high", "claim": "Raw internal identifiers (category ID slug, sort order integer) are surfaced as first-class card content with hardcoded English labels — a developer-console aesthetic, not a product surface.", "evidence": "admin-web/src/components/catalogue/CategoryCard.tsx:53-59", "confidence": "observed" },
+        { "severity": "medium", "claim": "Deactivate is a destructive-class action rendered as a solid red button with no confirmation and no pending state.", "evidence": "admin-web/src/components/catalogue/CategoryCard.tsx:61-76", "confidence": "observed" },
+        { "severity": "medium", "claim": "Hand-rolled inline button bypasses the .btn primitive, so it has a different height, radius (--radius-sm vs .btn's --radius-sm but no min-height), no uppercase/letter-spacing treatment and no hover transition — visually inconsistent with every other button in the cluster.", "evidence": "admin-web/src/components/catalogue/CategoryCard.tsx:63-73 vs admin-web/app/globals.css:413-433", "confidence": "observed" },
+        { "severity": "medium", "claim": "Hardcoded '#fff' twice will not invert under the light theme (html[data-theme=\"light\"] block at globals.css:183-204 does not remap --color-success/--color-danger either, so the pill stays dark-tuned on paper).", "evidence": "admin-web/src/components/catalogue/CategoryCard.tsx:46,71; admin-web/app/globals.css:129-131,183-204", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.catalogue-category-new",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/(dashboard)/catalogue/new/page.tsx",
+      "loc": 58,
+      "purpose": "Create a new service category.",
+      "entryPoints": "'New Category' button on the catalogue list (admin-web/app/[locale]/(dashboard)/catalogue/page.tsx:56)",
+      "composition": [
+        { "block": "Shell: padding var(--space-6), flex column gap var(--space-4)", "line": "admin-web/app/[locale]/(dashboard)/catalogue/new/page.tsx:38-45" },
+        { "block": "Underlined 'Back to catalogue' text link in --color-brand", "line": "admin-web/app/[locale]/(dashboard)/catalogue/new/page.tsx:46-51" },
+        { "block": "h1 'New Category' at var(--text-2xl)/700", "line": "admin-web/app/[locale]/(dashboard)/catalogue/new/page.tsx:52-54" },
+        { "block": "<CategoryForm> with onSubmit/onCancel", "line": "admin-web/app/[locale]/(dashboard)/catalogue/new/page.tsx:55" }
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "admin-web/src/components/catalogue/CategoryForm.tsx:172-174", "quality": "Only the submit button label swaps to 'Saving…'; no form-level lock (other fields remain editable), no overlay." },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/new/page.tsx:29-32", "quality": "MAJOR quality failure: the thrown Error message is the literal string `Failed to create category: ${res.status} ${text}` where `text` is the raw response body, and CategoryForm.tsx:54 renders err.message verbatim to the operator. Users see raw HTTP status codes and JSON/HTML error bodies." },
+        "success": { "present": false, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/new/page.tsx:33-34", "quality": "No success toast or confirmation — router.push + refresh, silent redirect." },
+        "offline": { "present": false, "evidence": null, "quality": "absent" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "A 403 renders as the same raw error string." }
+      },
+      "skeletonOrSpinner": "none — submit button label text swap only (CategoryForm.tsx:173)",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Failed to create category: <status> <raw body>", "line": "admin-web/app/[locale]/(dashboard)/catalogue/new/page.tsx:31" },
+          { "text": "Unknown error", "line": "admin-web/app/[locale]/(dashboard)/catalogue/new/page.tsx:30" }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "The English-only raw error string will appear untranslated inside an otherwise Hindi form.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "contentDescriptions": { "value": true, "cite": "admin-web/src/components/catalogue/CategoryForm.tsx:71-81 label/htmlFor pairs on every field" },
+        "touchTargetRisks": [
+          { "line": "admin-web/app/[locale]/(dashboard)/catalogue/new/page.tsx:46-51", "size": "inline text link, var(--text-sm), no padding", "note": "~17px tall back link." }
+        ],
+        "contrastRisks": [],
+        "semanticsHeadings": true,
+        "focusOrder": "Back link -> h1 -> form fields. No autofocus on the first field."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["Form asks for a Hero Image URL but shows no preview thumbnail"], "cite": "admin-web/src/components/catalogue/CategoryForm.tsx:130-138" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "none" },
+      "density": "Airy: var(--space-6)=24px shell padding, var(--space-4)=16px gap. Form is capped at 520px (CategoryForm.tsx:66) on a full-width dashboard canvas — large dead space to the right with nothing (no help panel, no preview).",
+      "observations": [
+        { "severity": "high", "claim": "Error copy is a raw exception string containing the HTTP status and the untruncated response body, rendered straight into the UI.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/new/page.tsx:29-32 -> admin-web/src/components/catalogue/CategoryForm.tsx:54,166-168", "confidence": "observed" },
+        { "severity": "low", "claim": "No success confirmation after creating a category — silent redirect back to the list.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/new/page.tsx:33-34", "confidence": "observed" },
+        { "severity": "low", "claim": "Form occupies at most 520px of an otherwise empty full-width canvas; no preview, guidance, or two-column layout fills the dead space.", "evidence": "admin-web/src/components/catalogue/CategoryForm.tsx:66", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.catalogue-category-form",
+      "app": "admin-web",
+      "file": "admin-web/src/components/catalogue/CategoryForm.tsx",
+      "loc": 181,
+      "purpose": "Shared create/edit form for a service category (id slug, name, hero image URL, sort order).",
+      "entryPoints": "admin-web/app/[locale]/(dashboard)/catalogue/new/page.tsx:55 and admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/edit/EditCategoryClient.tsx:54",
+      "composition": [
+        { "block": "<form> flex column, gap var(--space-4), maxWidth 520px", "line": "admin-web/src/components/catalogue/CategoryForm.tsx:60-68" },
+        { "block": "Field 1 (create only): 'ID (slug)' label above a text input, pattern=[a-z0-9-]+", "line": "admin-web/src/components/catalogue/CategoryForm.tsx:69-93" },
+        { "block": "Field 2: 'Name' label above text input", "line": "admin-web/src/components/catalogue/CategoryForm.tsx:95-116" },
+        { "block": "Field 3: 'Hero Image URL' label above url input", "line": "admin-web/src/components/catalogue/CategoryForm.tsx:118-139" },
+        { "block": "Field 4: 'Sort Order' label above number input, min=0", "line": "admin-web/src/components/catalogue/CategoryForm.tsx:141-163" },
+        { "block": "Form-level error paragraph, role='alert', --color-danger, var(--text-sm)", "line": "admin-web/src/components/catalogue/CategoryForm.tsx:165-169" },
+        { "block": "Action row: submit .btn.btn-primary + cancel .btn.btn-ghost, gap var(--space-3)", "line": "admin-web/src/components/catalogue/CategoryForm.tsx:171-178" }
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "admin-web/src/components/catalogue/CategoryForm.tsx:172-174", "quality": "Submit disabled + label swaps to t('form.savingState'). Inputs stay enabled; cancel stays enabled mid-submit." },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": true, "evidence": "admin-web/src/components/catalogue/CategoryForm.tsx:165-169", "quality": "Single form-level paragraph at the BOTTOM of the form, above the buttons. No field-level errors, no scroll-to-error, no aria-invalid/aria-describedby wiring to the offending input. The only client-side rule is the sort-order integer check at :37-41." },
+        "success": { "present": false, "evidence": null, "quality": "Success is entirely the caller's redirect; the form shows nothing." },
+        "offline": { "present": false, "evidence": null, "quality": "absent" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "absent" }
+      },
+      "skeletonOrSpinner": "none — text-swap only on the submit button (CategoryForm.tsx:173)",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [
+          { "value": "520px", "line": "admin-web/src/components/catalogue/CategoryForm.tsx:66", "context": "form maxWidth — arbitrary, and its sibling ServiceForm uses 480px (ServiceForm.tsx:83), so the two forms are different widths" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "Labels are block-level above their inputs (display:block at :74,:99,:122,:145) so longer Hindi labels wrap without breaking layout — this is the safest form pattern in the cluster. Hindi 'ID (slug)' is untranslated in hi.json (verified: hi.catalogue.serviceForm.idLabel = 'ID (slug)').",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": {
+        "contentDescriptions": { "value": true, "cite": "admin-web/src/components/catalogue/CategoryForm.tsx:71-81, 96-106, 119-129, 142-152 — every input has an explicit <label htmlFor>" },
+        "touchTargetRisks": [],
+        "contrastRisks": [],
+        "semanticsHeadings": false,
+        "focusOrder": "Natural DOM order. No autofocus. On validation failure focus stays on the submit button while the error appears above it — a screen reader gets the role='alert' but keyboard focus is not moved to the bad field."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["Hero Image URL field has no thumbnail preview, no upload, no URL-reachability check — the operator pastes a URL blind"], "cite": "admin-web/src/components/catalogue/CategoryForm.tsx:130-138" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "Error paragraph appears/disappears with no transition (:165). Global input border transition at globals.css:343-344." },
+      "density": "Consistent: gap var(--space-4)=16px between fields, var(--space-1)=4px label-to-input. Reasonable rhythm; the weakness is aesthetic flatness (no section grouping, no card, no helper text) rather than spacing.",
+      "observations": [
+        { "severity": "high", "claim": "No required-field marking anywhere: all four inputs carry the HTML `required` attribute but nothing visually or textually indicates which fields are mandatory.", "evidence": "admin-web/src/components/catalogue/CategoryForm.tsx:86,111,134,158 (required) vs :80,105,128,151 (labels with no asterisk/'required' text)", "confidence": "observed" },
+        { "severity": "high", "claim": "No unsaved-changes protection: Cancel calls the caller's router.push immediately with no dirty check or confirm dialog, discarding all typed input.", "evidence": "admin-web/src/components/catalogue/CategoryForm.tsx:175-177 -> admin-web/app/[locale]/(dashboard)/catalogue/new/page.tsx:55", "confidence": "observed" },
+        { "severity": "medium", "claim": "Validation is submit-only and form-level — no onBlur validation, no per-field error message, no aria-invalid, no focus move to the failing field.", "evidence": "admin-web/src/components/catalogue/CategoryForm.tsx:33-41,165-169", "confidence": "observed" },
+        { "severity": "medium", "claim": "The error slot doubles as the server-error slot and renders `err.message` verbatim, so a friendly validation message and a raw HTTP dump share the same treatment.", "evidence": "admin-web/src/components/catalogue/CategoryForm.tsx:53-56,166-168", "confidence": "observed" },
+        { "severity": "low", "claim": "Sibling forms disagree on width (520px here, 480px in ServiceForm) and on button implementation (.btn classes here, inline styles there).", "evidence": "admin-web/src/components/catalogue/CategoryForm.tsx:66,172,175 vs admin-web/src/components/catalogue/ServiceForm.tsx:83,205-215,222-231", "confidence": "observed" },
+        { "severity": "low", "claim": "'ID (slug)' is a database concept exposed as a required user-entered field with a regex pattern and no explanation of consequences (it becomes the permanent identifier).", "evidence": "admin-web/src/components/catalogue/CategoryForm.tsx:80,87", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.catalogue-category-detail",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx",
+      "loc": 127,
+      "purpose": "View one category's metadata and manage the services inside it.",
+      "entryPoints": "'View services' link on each category card (admin-web/app/[locale]/(dashboard)/catalogue/CatalogueCategoryList.tsx:41-50)",
+      "composition": [
+        { "block": "Shell: padding var(--space-6), flex column gap var(--space-6)", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:61-67" },
+        { "block": "Header row space-between align-start", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:69" },
+        { "block": "Left: underlined 'Back to all categories' link in --color-brand", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:71-76" },
+        { "block": "Left: h1 category name, var(--text-2xl)/700", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:77-87" },
+        { "block": "Left: single muted metadata line 'ID: {id} - Sort order: {n} - <Active|Inactive>' with the status word coloured inline", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:88-93" },
+        { "block": "Right: 'Edit Category' .btn.btn-ghost link", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:95-101" },
+        { "block": "Services block: h2 'Services' var(--text-xl)/600 + 'Add Service' .btn.btn-primary, margin-bottom var(--space-3)", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:104-121" },
+        { "block": "<ServiceList>", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:123" }
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "No loading.tsx for this segment; two sequential-awaited no-store fetches (:50-54) block render." },
+        "empty": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:43-45", "quality": "Delegated to ServiceList, which renders a single muted <p> — NOT the shared EmptyState component used on the parent list page. Inconsistent empty-state treatment two clicks apart." },
+        "error": { "present": false, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:22,35", "quality": "handleAdminFetchError throws to the generic dashboard error boundary. A failed services fetch takes down the whole category page even though the category itself loaded." },
+        "success": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:60-126", "quality": "" },
+        "offline": { "present": false, "evidence": null, "quality": "absent" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "absent" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "ID: ", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:89" },
+          { "text": " - Sort order: ", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:89" }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "The metadata line concatenates ASCII hyphens as separators inside a bilingual sentence (:89); with Hindi status words the line becomes a mixed-script run with no bidi/spacing care. Header is a no-wrap space-between row so a long Hindi category name will crowd the 'Edit Category' button.",
+        "currencyFormatting": "n/a on this page; prices render inside ServiceList"
+      },
+      "a11y": {
+        "contentDescriptions": { "value": false, "cite": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:90-92 — active/inactive is conveyed by colour plus a text word inside a run-on sentence; there is no role/status semantics" },
+        "touchTargetRisks": [
+          { "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:71-76", "size": "inline text link, var(--text-sm), no padding", "note": "back link ~17px tall" }
+        ],
+        "contrastRisks": [
+          { "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:88", "note": "Metadata line is var(--text-sm) (14px) in --color-text-muted #9A9082; passes AA on the dark surface (~6.2:1) but this is the only place the category's status is stated and it is rendered as de-emphasised muted copy." }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "Back link -> Edit Category -> Add Service -> per-service toggle/edit. Reasonable."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["Category detail page does not render category.heroImageUrl even though the API returns it and the form requires it"], "cite": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:60-126" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "none" },
+      "density": "Two 24px-gapped blocks with a single 12px gap before the service list (:110). Hierarchy is weak — h1 (24px) and h2 (20px) are only 4px apart in size, and there is no card, rule, or surface separating the category header from the services section.",
+      "observations": [
+        { "severity": "medium", "claim": "Status (Active/Inactive) — the single most operationally important fact on the page — is buried inside a muted run-on metadata sentence alongside a database ID and a sort integer, rather than shown as a badge.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:88-93", "confidence": "observed" },
+        { "severity": "medium", "claim": "Empty-state treatment is inconsistent with the parent route: the list page uses the designed EmptyState component, this page's service list is a bare muted paragraph.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/page.tsx:62-66 vs admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:43-45", "confidence": "observed" },
+        { "severity": "medium", "claim": "A failure of the services endpoint destroys the whole page even though the category fetch succeeded — no per-section degradation (contrast with the compliance page which does use Promise.allSettled).", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:35 vs admin-web/app/[locale]/(dashboard)/compliance/page.tsx:54-57", "confidence": "observed" },
+        { "severity": "low", "claim": "h1 var(--text-2xl)=1.5rem vs h2 var(--text-xl)=1.25rem is a 1.2 ratio — weak typographic hierarchy for a page/section split.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:79,113; admin-web/app/globals.css:139-140", "confidence": "observed" },
+        { "severity": "low", "claim": "ASCII hyphens used as content separators instead of a middot/pipe, mixing awkwardly with Hindi text.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:89", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.catalogue-service-list",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx",
+      "loc": 104,
+      "purpose": "List services within a category with publish/unpublish toggles and an edit link.",
+      "entryPoints": "Rendered by admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:123",
+      "composition": [
+        { "block": "Early return: single muted <p> 'No services in this category yet.' when list is empty", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:43-45" },
+        { "block": "Container: flex column gap var(--space-2)", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:48" },
+        { "block": "Conditional error paragraph, role='alert', --color-danger, var(--text-sm)", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:49-53" },
+        { "block": "Per service: row card — space-between, gap var(--space-4), padding var(--space-3) var(--space-4), 1px border, var(--radius-md), --color-surface background, no shadow", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:57-68" },
+        { "block": "Left: service name (600 weight) over a muted line 'INR {price} - <Published|Unpublished>' with the status word colour-coded", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:70-78" },
+        { "block": "Right: Publish/Unpublish .btn.btn-ghost + underlined 'Edit' text link, gap var(--space-3)", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:79-98" }
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:84-86", "quality": "Per-row: button disabled and label swaps to 'Updating…'. Text-only affordance, no spinner, no row-level dimming." },
+        "empty": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:43-45", "quality": "WEAK: a single muted sentence with no illustration, no eyebrow, no CTA — does not use the shared EmptyState component." },
+        "error": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:49-53", "quality": "Better than the category toggle: a role='alert' paragraph is shown at the top of the list. But the message is interpolated with hardcoded English verbs (see i18n)." },
+        "success": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:37-39", "quality": "Row swaps state in place; no confirmation toast, no animation." },
+        "offline": { "present": false, "evidence": null, "quality": "absent" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "A 403 surfaces as the generic 'Failed to publish X' string." }
+      },
+      "skeletonOrSpinner": "none — text label swap to t('serviceList.updatingButton') at :86",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "'unpublish' / 'publish' — English verbs passed as the {action} placeholder into a translated sentence", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:34" }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "CONFIRMED BREAK: hi.json defines catalogue.serviceList.toggleError as '{name} को {action} करने में विफल।' but ServiceList.tsx:34 injects the literal English word 'publish'/'unpublish', producing 'X को publish करने में विफल।'. Additionally the row is a no-wrap space-between flex (:60-63) with a Hindi button label 'अप्रकाशित करें' (longer than 'Unpublish') plus 'संपादित करें' — on a narrow canvas the service name will be crushed since neither side declares min-width:0 or flex-shrink.",
+        "currencyFormatting": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:16-18 — `INR ${(paise/100).toLocaleString('en-IN')}`. Three separate defects: (1) ASCII 'INR ' prefix instead of the ₹ glyph used elsewhere; (2) locale hardcoded to 'en-IN' so Hindi users never get Devanagari digits or hi-IN grouping even though the app is bilingual; (3) no minimumFractionDigits, so ₹599.00 renders as 'INR 599' and ₹599.50 as 'INR 599.5'. This disagrees with src/api/finance.ts:40 (₹ + 2 fraction digits) and with ComplianceClient.tsx:32-37 ('INR ' + 2 fraction digits) — three different money renderings inside one cluster."
+      },
+      "a11y": {
+        "contentDescriptions": { "value": false, "cite": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:88-97 — every row's link is the bare word 'Edit' with no aria-label naming the service" },
+        "touchTargetRisks": [
+          { "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:88-97", "size": "inline text link, var(--text-sm), no padding", "note": "'Edit' link ~17px tall, sitting 12px from a 44px button — mismatched target sizes side by side." }
+        ],
+        "contrastRisks": [
+          { "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:74", "note": "'Published' rendered in --color-success #5BA38E at var(--text-sm)=14px on --color-surface #0E0B08 — measures ~5.8:1, passes; but the same token fails badly when used as a fill (see CategoryCard). Colour is the sole carrier of status here besides the word." }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "Per row: toggle button then Edit link. The list is a set of divs, not a <ul>/<li> or table — no list semantics announced."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["Service rows show no hero thumbnail although service.heroImageUrl is required by ServiceForm.tsx:135-143"], "cite": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:57-99" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "none; rows appear/disappear and change status with no transition" },
+      "density": "Rows are var(--space-3)=12px vertical / var(--space-4)=16px horizontal padding with only var(--space-2)=8px between rows — the 8px gutter is tighter than the internal padding, so rows visually merge into a striped block rather than reading as discrete cards.",
+      "observations": [
+        { "severity": "high", "claim": "Hindi error copy is broken by design: an English verb is interpolated into a Devanagari sentence template.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:34 with messages/hi.json catalogue.serviceList.toggleError = '{name} को {action} करने में विफल।'", "confidence": "observed" },
+        { "severity": "high", "claim": "Money is rendered as ASCII 'INR 599' with no decimals and a locale hardcoded to en-IN, in a bilingual product — and it is one of three mutually inconsistent money formatters in this cluster.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:16-18; admin-web/src/api/finance.ts:40; admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:32-37", "confidence": "observed" },
+        { "severity": "medium", "claim": "Unpublishing a live service (removes it from the customer app) requires no confirmation — a single click on a ghost button.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:80-87", "confidence": "observed" },
+        { "severity": "medium", "claim": "Empty state is a bare muted sentence with no CTA, while the parent route uses a designed EmptyState — inconsistent within a two-screen flow.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:43-45", "confidence": "observed" },
+        { "severity": "low", "claim": "Row gap (8px) is smaller than row padding (12px), collapsing the card metaphor into a striped block.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:48,64", "confidence": "observed" },
+        { "severity": "low", "claim": "A 44px button and a ~17px text link are placed adjacent as sibling actions — undifferentiated and mismatched action hierarchy.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:79-98", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.catalogue-category-edit-page",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/edit/page.tsx",
+      "loc": 37,
+      "purpose": "Server shell that loads one category and hands it to the edit client.",
+      "entryPoints": "'Edit Category' button on the category detail page (admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:95-101)",
+      "composition": [
+        { "block": "No visual output of its own — fetch + notFound() guard + render <EditCategoryClient>", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/edit/page.tsx:26-37" }
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "No loading.tsx in the segment; blocking no-store fetch at :13-16." },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": false, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/edit/page.tsx:18", "quality": "Non-404 failures throw to the generic dashboard error boundary." },
+        "success": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/edit/page.tsx:36", "quality": "" },
+        "offline": { "present": false, "evidence": null, "quality": "absent" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "absent" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": { "usesSpacingTokens": false, "hardcodedDp": [], "hardcodedColors": [], "unmappedTypographySlots": [], "offScaleRadius": [] },
+      "i18n": { "hardcodedUserFacingStrings": [], "usesStringResource": false, "hindiRisk": "No UI here.", "currencyFormatting": "n/a" },
+      "a11y": { "contentDescriptions": { "value": false, "cite": "no UI" }, "touchTargetRisks": [], "contrastRisks": [], "semanticsHeadings": false, "focusOrder": "n/a" },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": [], "cite": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/edit/page.tsx:36" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "none" },
+      "density": "n/a — no layout of its own.",
+      "observations": [
+        { "severity": "low", "claim": "notFound() renders the framework's default 404 — there is no app-level not-found.tsx in the dashboard segment, so a deleted category yields an unstyled Next.js 404 inside an otherwise branded shell.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/edit/page.tsx:32-34", "confidence": "inferred" }
+      ]
+    },
+    {
+      "id": "admin.catalogue-category-edit-client",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/edit/EditCategoryClient.tsx",
+      "loc": 61,
+      "purpose": "Edit an existing category via the shared CategoryForm and PUT it back.",
+      "entryPoints": "Rendered by admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/edit/page.tsx:36",
+      "composition": [
+        { "block": "Shell: padding var(--space-6), flex column gap var(--space-4)", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/edit/EditCategoryClient.tsx:43-50" },
+        { "block": "h1 'Edit Category' var(--text-2xl)/700 — NO back link (the create page has one)", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/edit/EditCategoryClient.tsx:51-53" },
+        { "block": "<CategoryForm initial={category}>", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/edit/EditCategoryClient.tsx:54-58" }
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "admin-web/src/components/catalogue/CategoryForm.tsx:172-174", "quality": "Submit-button text swap only." },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/edit/EditCategoryClient.tsx:34-37", "quality": "Same raw-exception pattern: `Failed to update category: ${res.status} ${text}` rendered verbatim by CategoryForm.tsx:54." },
+        "success": { "present": false, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/edit/EditCategoryClient.tsx:38-39", "quality": "Silent redirect to the detail page, no toast." },
+        "offline": { "present": false, "evidence": null, "quality": "absent" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "absent" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": { "usesSpacingTokens": true, "hardcodedDp": [], "hardcodedColors": [], "unmappedTypographySlots": [], "offScaleRadius": [] },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Failed to update category: <status> <raw body>", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/edit/EditCategoryClient.tsx:36" },
+          { "text": "Unknown error", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/edit/EditCategoryClient.tsx:35" }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "English raw error string inside a Hindi form.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": { "contentDescriptions": { "value": true, "cite": "admin-web/src/components/catalogue/CategoryForm.tsx:96-106" }, "touchTargetRisks": [], "contrastRisks": [], "semanticsHeadings": true, "focusOrder": "h1 then form fields; no autofocus." },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["The existing heroImageUrl is loaded into a text field (CategoryForm.tsx:135) but never shown as an image, so the operator editing a category cannot see the current hero"], "cite": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/edit/EditCategoryClient.tsx:54-58" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "none" },
+      "density": "Same as the create page — 24px shell padding, 16px gaps, 520px form on an empty canvas.",
+      "observations": [
+        { "severity": "medium", "claim": "The edit page has no back link while the structurally identical create page does — inconsistent escape hatch between two sibling screens.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/edit/EditCategoryClient.tsx:51-53 vs admin-web/app/[locale]/(dashboard)/catalogue/new/page.tsx:46-51", "confidence": "observed" },
+        { "severity": "medium", "claim": "The h1 says only 'Edit Category' — the category being edited is never named on screen, so the operator has no confirmation of what record they are mutating.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/edit/EditCategoryClient.tsx:51-53", "confidence": "observed" },
+        { "severity": "high", "claim": "Raw HTTP status + response body rendered as user-facing error copy on an edit surface.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/edit/EditCategoryClient.tsx:34-37", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.catalogue-service-new",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/new/page.tsx",
+      "loc": 54,
+      "purpose": "Create a new service inside a category.",
+      "entryPoints": "'Add Service' button on the category detail page (admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/page.tsx:114-120)",
+      "composition": [
+        { "block": "Shell: padding var(--space-6), flex column gap var(--space-4)", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/new/page.tsx:43" },
+        { "block": "h1 'Add Service' var(--text-2xl)/700 — no back link, no breadcrumb, no parent-category name", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/new/page.tsx:44-46" },
+        { "block": "<ServiceForm categoryId=...>", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/new/page.tsx:47-51" }
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "admin-web/src/components/catalogue/ServiceForm.tsx:204,217", "quality": "Submit disabled + opacity 0.6 + label swap." },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/new/page.tsx:31-34", "quality": "Raw `Failed to create service: ${res.status} ${text}` rendered by ServiceForm.tsx:77 into a <p> that (unlike CategoryForm) lacks role='alert'." },
+        "success": { "present": false, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/new/page.tsx:35", "quality": "Silent router.push with NO router.refresh() — unlike the category create flow which calls both (new/page.tsx:33-34)." },
+        "offline": { "present": false, "evidence": null, "quality": "absent" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "absent" }
+      },
+      "skeletonOrSpinner": "none — opacity + label swap on the submit button (ServiceForm.tsx:214,217)",
+      "tokenUsage": { "usesSpacingTokens": true, "hardcodedDp": [], "hardcodedColors": [], "unmappedTypographySlots": [], "offScaleRadius": [] },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Failed to create service: <status> <raw body>", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/new/page.tsx:33" },
+          { "text": "Unknown error", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/new/page.tsx:32" }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "Raw English error inside a Hindi form.",
+        "currencyFormatting": "Base price is entered as an integer number of PAISE — the label literally reads 'Base Price (paise — INR 599 = 59900)' (messages/en.json catalogue.serviceForm.priceLabel) and the Hindi label 'आधार मूल्य (पैसे — INR 599 = 59900)'. The operator does unit conversion in their head; no ₹ affix, no formatted preview."
+      },
+      "a11y": { "contentDescriptions": { "value": true, "cite": "admin-web/src/components/catalogue/ServiceForm.tsx:86-97 label/htmlFor pairs" }, "touchTargetRisks": [], "contrastRisks": [], "semanticsHeadings": true, "focusOrder": "h1 then fields; no autofocus, no breadcrumb to escape." },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["Hero Image URL text field with no preview"], "cite": "admin-web/src/components/catalogue/ServiceForm.tsx:131-144" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "none" },
+      "density": "24px padding, 16px gaps, 480px form. Seven stacked fields with no grouping, no fieldset, no progressive disclosure.",
+      "observations": [
+        { "severity": "high", "claim": "The price field asks the operator to enter raw paise ('Base Price (paise — INR 599 = 59900)') — a database unit leaked into the UI, guaranteeing 100x pricing errors.", "evidence": "admin-web/src/components/catalogue/ServiceForm.tsx:147-159 with messages/en.json catalogue.serviceForm.priceLabel", "confidence": "observed" },
+        { "severity": "high", "claim": "The commission field asks for basis points with the conversion crammed into the label ('Commission (basis points — 2250 = 22.5%, range 1500–3500)') — same raw-domain-model leak, and the valid range is documented only inside the label text.", "evidence": "admin-web/src/components/catalogue/ServiceForm.tsx:178-193 with messages/en.json catalogue.serviceForm.commissionLabel", "confidence": "observed" },
+        { "severity": "medium", "claim": "No back link or breadcrumb — after landing on 'Add Service' the only exit is the form's Cancel button.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/new/page.tsx:42-52", "confidence": "observed" },
+        { "severity": "low", "claim": "categoryId silently degrades to an empty string if the route param is not a string, which would POST a service with categoryId:'' rather than erroring.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/new/page.tsx:22", "confidence": "observed" },
+        { "severity": "low", "claim": "Inconsistent post-submit refresh: category create calls router.refresh(), service create does not.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/new/page.tsx:35 vs admin-web/app/[locale]/(dashboard)/catalogue/new/page.tsx:33-34", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.catalogue-service-form",
+      "app": "admin-web",
+      "file": "admin-web/src/components/catalogue/ServiceForm.tsx",
+      "loc": 238,
+      "purpose": "Shared create/edit form for a service (id, name, description, hero URL, price in paise, duration, commission bps).",
+      "entryPoints": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/new/page.tsx:47 and admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/[serviceId]/EditServiceClient.tsx:51",
+      "composition": [
+        { "block": "<form> flex column gap var(--space-4), maxWidth 480px", "line": "admin-web/src/components/catalogue/ServiceForm.tsx:83" },
+        { "block": "Field 1 (create only): 'ID (slug)' text input", "line": "admin-web/src/components/catalogue/ServiceForm.tsx:84-99" },
+        { "block": "Field 2: 'Name' text input", "line": "admin-web/src/components/catalogue/ServiceForm.tsx:101-114" },
+        { "block": "Field 3: 'Short Description' — a single-line <input type=text>, not a textarea", "line": "admin-web/src/components/catalogue/ServiceForm.tsx:116-129" },
+        { "block": "Field 4: 'Hero Image URL' url input", "line": "admin-web/src/components/catalogue/ServiceForm.tsx:131-144" },
+        { "block": "Field 5: 'Base Price (paise — INR 599 = 59900)' number input, min 0", "line": "admin-web/src/components/catalogue/ServiceForm.tsx:146-160" },
+        { "block": "Field 6: 'Duration (minutes)' number input, min 1", "line": "admin-web/src/components/catalogue/ServiceForm.tsx:162-176" },
+        { "block": "Field 7: 'Commission (basis points…)' number input, min 1500 max 3500, defaulted to 2250", "line": "admin-web/src/components/catalogue/ServiceForm.tsx:178-193" },
+        { "block": "Form-level error <p> WITHOUT role='alert'", "line": "admin-web/src/components/catalogue/ServiceForm.tsx:195-199" },
+        { "block": "Action row: hand-rolled inline-styled submit + cancel buttons (not .btn)", "line": "admin-web/src/components/catalogue/ServiceForm.tsx:201-235" }
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "admin-web/src/components/catalogue/ServiceForm.tsx:204,213-214,217", "quality": "Disabled + opacity 0.6 + cursor not-allowed + label swap. Fields remain editable; cancel remains active." },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": true, "evidence": "admin-web/src/components/catalogue/ServiceForm.tsx:195-199", "quality": "Form-level only; NOT announced (no role='alert'), unlike the sibling CategoryForm.tsx:166. Two client rules exist: NaN check (:46-49) and commission range (:51-54)." },
+        "success": { "present": false, "evidence": null, "quality": "Nothing rendered on success; the caller redirects." },
+        "offline": { "present": false, "evidence": null, "quality": "absent" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "absent" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [
+          { "value": "480px", "line": "admin-web/src/components/catalogue/ServiceForm.tsx:83", "context": "form maxWidth; CategoryForm uses 520px for the same visual role" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": [
+          { "value": "var(--radius-md) = 4px on the submit/cancel buttons, while the shared .btn primitive uses var(--radius-sm) = 2px", "line": "admin-web/src/components/catalogue/ServiceForm.tsx:209,226 vs admin-web/app/globals.css:426" }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "Two of the seven labels are long compound strings that stay partly English in Hindi ('कमीशन (basis points — 2250 = 22.5%, सीमा 1500–3500)', 'ID (slug)'), and the description field is a single-line input so any Devanagari description longer than ~40 chars scrolls horizontally inside a 480px box with no visible overflow cue.",
+        "currencyFormatting": "Price is a bare integer input in paise with no ₹ prefix, no thousands grouping, no live rupee preview (ServiceForm.tsx:150-159)."
+      },
+      "a11y": {
+        "contentDescriptions": { "value": true, "cite": "admin-web/src/components/catalogue/ServiceForm.tsx:86,102,117,132,147,163,179 — every input has an explicit label" },
+        "touchTargetRisks": [
+          { "line": "admin-web/src/components/catalogue/ServiceForm.tsx:205-215", "size": "padding var(--space-2)=8px vertical + var(--text-sm)=14px, no min-height", "note": "~36px tall submit button — under 44px, and shorter than the .btn primitive used by the sibling CategoryForm." },
+          { "line": "admin-web/src/components/catalogue/ServiceForm.tsx:222-231", "size": "same ~36px", "note": "cancel button" }
+        ],
+        "contrastRisks": [],
+        "semanticsHeadings": false,
+        "focusOrder": "Natural. On validation failure focus is not moved and the error is not announced (:195 has no role)."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["Hero Image URL is required but never previewed; the operator cannot verify the URL renders"], "cite": "admin-web/src/components/catalogue/ServiceForm.tsx:131-144" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "Hand-rolled buttons declare no transition (:205-215, :222-231), so they have no hover/press feedback at all — unlike .btn which transitions on hover (globals.css:430)." },
+      "density": "Seven undifferentiated fields at a uniform var(--space-4)=16px gap, no fieldset/legend grouping (identity vs pricing vs media), no helper text below fields — all guidance is crammed into parenthetical label suffixes.",
+      "observations": [
+        { "severity": "high", "claim": "The form error message is not announced to assistive tech — the <p> has no role='alert', whereas the sibling CategoryForm's identical element does.", "evidence": "admin-web/src/components/catalogue/ServiceForm.tsx:195-199 vs admin-web/src/components/catalogue/CategoryForm.tsx:165-169", "confidence": "observed" },
+        { "severity": "high", "claim": "Submit and Cancel are hand-rolled inline-styled buttons that duplicate and diverge from the .btn primitive — different height (~36px vs 44px), different radius (4px vs 2px), no uppercase/letter-spacing, no hover transition — so the two catalogue forms look like they were built by different teams.", "evidence": "admin-web/src/components/catalogue/ServiceForm.tsx:202-234 vs admin-web/src/components/catalogue/CategoryForm.tsx:172-177 and admin-web/app/globals.css:413-448", "confidence": "observed" },
+        { "severity": "high", "claim": "No required-field marking despite all seven inputs being `required`, and no unsaved-changes guard on Cancel.", "evidence": "admin-web/src/components/catalogue/ServiceForm.tsx:93,109,124,139,154,170,186 (required) and :219-221 (bare onCancel)", "confidence": "observed" },
+        { "severity": "medium", "claim": "'Short Description' is a single-line text input rather than a textarea, so multi-sentence copy is edited through a 480px-wide horizontal scroll.", "evidence": "admin-web/src/components/catalogue/ServiceForm.tsx:120-128", "confidence": "observed" },
+        { "severity": "medium", "claim": "Validation is submit-time only and collapses three independent numeric fields into one generic message ('Price, duration and commission must be valid numbers') with no indication of which field is wrong.", "evidence": "admin-web/src/components/catalogue/ServiceForm.tsx:42-49", "confidence": "observed" },
+        { "severity": "low", "claim": "The form silently sends empty arrays for includes/faq/addOns/photoStages, so rich service content can never be authored from the admin UI — these are structural gaps the operator cannot see or fill.", "evidence": "admin-web/src/components/catalogue/ServiceForm.tsx:63-66", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.catalogue-service-edit-page",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/[serviceId]/page.tsx",
+      "loc": 40,
+      "purpose": "Server shell that loads one service and hands it to the edit client.",
+      "entryPoints": "'Edit' link on each service row (admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx:88-97)",
+      "composition": [
+        { "block": "No visual output — fetch + notFound() + <EditServiceClient>", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/[serviceId]/page.tsx:27-40" }
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "No loading.tsx in the segment." },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": false, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/[serviceId]/page.tsx:19", "quality": "Throws to the generic dashboard error boundary." },
+        "success": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/[serviceId]/page.tsx:39", "quality": "" },
+        "offline": { "present": false, "evidence": null, "quality": "absent" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "absent" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": { "usesSpacingTokens": false, "hardcodedDp": [], "hardcodedColors": [], "unmappedTypographySlots": [], "offScaleRadius": [] },
+      "i18n": { "hardcodedUserFacingStrings": [], "usesStringResource": false, "hindiRisk": "No UI.", "currencyFormatting": "n/a" },
+      "a11y": { "contentDescriptions": { "value": false, "cite": "no UI" }, "touchTargetRisks": [], "contrastRisks": [], "semanticsHeadings": false, "focusOrder": "n/a" },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": [], "cite": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/[serviceId]/page.tsx:39" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "none" },
+      "density": "n/a",
+      "observations": [
+        { "severity": "low", "claim": "The route fetches the service by id without verifying it belongs to the categoryId in the URL, so a mismatched URL renders an edit form under the wrong parent breadcrumb context.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/[serviceId]/page.tsx:28-33", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.catalogue-service-edit-client",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/[serviceId]/EditServiceClient.tsx",
+      "loc": 59,
+      "purpose": "Edit an existing service via the shared ServiceForm and PUT it back.",
+      "entryPoints": "Rendered by admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/[serviceId]/page.tsx:39",
+      "composition": [
+        { "block": "Shell: padding var(--space-6), flex column gap var(--space-4)", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/[serviceId]/EditServiceClient.tsx:47" },
+        { "block": "h1 'Edit Service' var(--text-2xl)/700 — no back link, no service name, no category context", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/[serviceId]/EditServiceClient.tsx:48-50" },
+        { "block": "<ServiceForm initial={service}>", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/[serviceId]/EditServiceClient.tsx:51-56" }
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "admin-web/src/components/catalogue/ServiceForm.tsx:204,217", "quality": "Submit-button state only." },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/[serviceId]/EditServiceClient.tsx:35-38", "quality": "Raw `Failed to update service: ${res.status} ${text}` rendered by an un-announced <p> (ServiceForm.tsx:195)." },
+        "success": { "present": false, "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/[serviceId]/EditServiceClient.tsx:39", "quality": "Silent redirect, no refresh, no toast." },
+        "offline": { "present": false, "evidence": null, "quality": "absent" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "absent" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": { "usesSpacingTokens": true, "hardcodedDp": [], "hardcodedColors": [], "unmappedTypographySlots": [], "offScaleRadius": [] },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Failed to update service: <status> <raw body>", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/[serviceId]/EditServiceClient.tsx:37" },
+          { "text": "Unknown error", "line": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/[serviceId]/EditServiceClient.tsx:36" }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "English raw error inside a Hindi form.",
+        "currencyFormatting": "Price shown back to the operator as a raw paise integer via ServiceForm.tsx:30,156."
+      },
+      "a11y": { "contentDescriptions": { "value": true, "cite": "admin-web/src/components/catalogue/ServiceForm.tsx:102-113" }, "touchTargetRisks": [], "contrastRisks": [], "semanticsHeadings": true, "focusOrder": "h1 then fields; no autofocus, no escape link." },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["Existing heroImageUrl loaded into a text input (ServiceForm.tsx:140) but never previewed"], "cite": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/[serviceId]/EditServiceClient.tsx:51-56" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "none" },
+      "density": "24px padding, 16px gaps, 480px form on an otherwise empty canvas.",
+      "observations": [
+        { "severity": "medium", "claim": "The screen never names the service being edited — 'Edit Service' is the entire context.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/[serviceId]/EditServiceClient.tsx:48-50", "confidence": "observed" },
+        { "severity": "medium", "claim": "No back link or breadcrumb; the only exit is the form's Cancel button, and Cancel discards edits without warning.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/[serviceId]/EditServiceClient.tsx:42-44,55", "confidence": "observed" },
+        { "severity": "high", "claim": "Raw HTTP status + response body rendered as user-facing error copy, in an element with no role='alert'.", "evidence": "admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/services/[serviceId]/EditServiceClient.tsx:35-38 -> admin-web/src/components/catalogue/ServiceForm.tsx:77,195-199", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.finance-page",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/(dashboard)/finance/page.tsx",
+      "loc": 14,
+      "purpose": "Route shell for the finance dashboard; sets the localized page title.",
+      "entryPoints": "Primary sidebar rail item 'Finance' -> /finance (admin-web/src/admin/capabilities.ts:68, capability finance.read); also deep-linked from the dashboard payout widget (admin-web/src/components/dashboard/PayoutQueue.tsx:101)",
+      "composition": [
+        { "block": "generateMetadata using t('metadata.title') — the only localized metadata in this cluster", "line": "admin-web/app/[locale]/(dashboard)/finance/page.tsx:7-10" },
+        { "block": "Renders <FinanceClient />", "line": "admin-web/app/[locale]/(dashboard)/finance/page.tsx:13" }
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/finance/loading.tsx:1-12", "quality": "GOOD — the only route in this cluster with a loading.tsx. Shimmer skeletons roughly matched to the layout (h-8 title, h-64 chart, h-10 + 6x h-12 table rows). But it uses raw Tailwind `p-6 space-y-4` rather than the --space-* token vars the real page uses, so the skeleton geometry does not exactly match the rendered page." },
+        "empty": { "present": false, "evidence": null, "quality": "Delegated to FinanceClient." },
+        "error": { "present": false, "evidence": null, "quality": "Delegated." },
+        "success": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/finance/page.tsx:13", "quality": "" },
+        "offline": { "present": false, "evidence": null, "quality": "absent" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "Partially handled inside FinanceClient via hasCapability (FinanceClient.tsx:41)." }
+      },
+      "skeletonOrSpinner": "HsSkeletonBlock-equivalent: .skeleton shimmer divs (admin-web/app/[locale]/(dashboard)/finance/loading.tsx:4-10, class defined at admin-web/app/globals.css:639-652 with prefers-reduced-motion guard)",
+      "tokenUsage": { "usesSpacingTokens": false, "hardcodedDp": [], "hardcodedColors": [], "unmappedTypographySlots": [], "offScaleRadius": [] },
+      "i18n": { "hardcodedUserFacingStrings": [], "usesStringResource": true, "hindiRisk": "None — no visible UI.", "currencyFormatting": "n/a" },
+      "a11y": { "contentDescriptions": { "value": false, "cite": "admin-web/app/[locale]/(dashboard)/finance/loading.tsx:3 — skeleton container has no aria-busy or role='status', so screen readers get silence during load" }, "touchTargetRisks": [], "contrastRisks": [], "semanticsHeadings": false, "focusOrder": "n/a" },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": [], "cite": "admin-web/app/[locale]/(dashboard)/finance/page.tsx:13" },
+      "motion": { "animationsUsed": [{ "what": "skeletonShimmer 1400ms infinite", "line": "admin-web/app/globals.css:635-647" }], "usesMotionTokens": true, "transitionsOnNav": "Skeleton shimmer uses var(--ease-in-out); reduced-motion honoured at globals.css:650-652." },
+      "density": "n/a",
+      "observations": [
+        { "severity": "low", "claim": "The loading skeleton is the only one in the cluster and is the correct pattern — but it is not announced (no role='status'/aria-busy).", "evidence": "admin-web/app/[locale]/(dashboard)/finance/loading.tsx:3", "confidence": "observed" },
+        { "severity": "low", "claim": "Finance is the only route here with localized <title>; compliance and admin-users hardcode English metadata.", "evidence": "admin-web/app/[locale]/(dashboard)/finance/page.tsx:7-10 vs admin-web/app/[locale]/(dashboard)/compliance/page.tsx:13-15 and admin-web/app/[locale]/(dashboard)/admin-users/page.tsx:10-12", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.finance-client",
+      "app": "admin-web",
+      "file": "admin-web/src/components/finance/FinanceClient.tsx",
+      "loc": 190,
+      "purpose": "Finance dashboard: date-ranged P&L KPIs + bar chart, plus the weekly technician payout queue and bulk approval.",
+      "entryPoints": "admin-web/app/[locale]/(dashboard)/finance/page.tsx:13",
+      "composition": [
+        { "block": "Shell: p-[var(--space-6)], space-y-[var(--space-8)]", "line": "admin-web/src/components/finance/FinanceClient.tsx:98" },
+        { "block": "Header: h1 'Finance' var(--text-2xl)/bold + muted subtitle 'Daily P&L and weekly payout queue.'", "line": "admin-web/src/components/finance/FinanceClient.tsx:99-102" },
+        { "block": "Toast: full-width tinted paragraph, role='status', bg-green-50 / bg-red-50", "line": "admin-web/src/components/finance/FinanceClient.tsx:104-115" },
+        { "block": "P&L section (h2 is sr-only): From/To date inputs in a wrap flex, gap var(--space-3)", "line": "admin-web/src/components/finance/FinanceClient.tsx:117-138" },
+        { "block": "Loading: plain muted paragraph 'Loading P&L…'", "line": "admin-web/src/components/finance/FinanceClient.tsx:140-142" },
+        { "block": "Three KPI tiles in a fixed grid-cols-3: Gross Revenue / Commission (warn colour) / Net to Owner (success colour), each a bg-surface-alt rounded box with an xs muted caption over an xl bold amount", "line": "admin-web/src/components/finance/FinanceClient.tsx:146-159" },
+        { "block": "<PnLChart> grouped bar chart", "line": "admin-web/src/components/finance/FinanceClient.tsx:160" },
+        { "block": "Payout section (sr-only h2, hardcoded English 'Payout Queue'): loading paragraph then <PayoutQueueTable>", "line": "admin-web/src/components/finance/FinanceClient.tsx:165-178" },
+        { "block": "Conditional <ApproveAllModal>", "line": "admin-web/src/components/finance/FinanceClient.tsx:180-187" }
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "admin-web/src/components/finance/FinanceClient.tsx:140-142,167-169", "quality": "POOR: on refetch (date-range change) the loading affordance is a plain text sentence 'Loading P&L…' / 'Loading payout queue…' that REPLACES the content — layout collapses and jumps. The route-level loading.tsx uses proper skeletons; the in-page refetch does not. Meanwhile the chart's dynamic-import fallback uses a `skeleton h-64 w-full` div (:9). Three different loading treatments on one screen." },
+        "empty": { "present": false, "evidence": "admin-web/src/components/finance/FinanceClient.tsx:144", "quality": "MAJOR: the P&L block renders only when `!summaryLoading && summary`. If summary is null — the exact state after a failed fetch (:57-59 sets a toast but leaves summary null) — the whole P&L section renders NOTHING below the date pickers. No empty state, no error panel, no retry. There is also no zero-data state: an empty dailyPnL array is passed straight to the chart." },
+        "error": { "present": true, "evidence": "admin-web/src/components/finance/FinanceClient.tsx:57-59,68-71,90-92", "quality": "Errors become a transient-looking toast with generic copy and no retry action. Because the toast has no auto-dismiss and no close button, it also never goes away until the next action." },
+        "success": { "present": true, "evidence": "admin-web/src/components/finance/FinanceClient.tsx:144-162", "quality": "" },
+        "offline": { "present": false, "evidence": null, "quality": "absent" },
+        "permissionDenied": { "present": true, "evidence": "admin-web/src/components/finance/FinanceClient.tsx:41,174 -> admin-web/src/components/finance/PayoutQueueTable.tsx:35-39", "quality": "GOOD: capability-gated Approve-All is replaced by an explanatory muted note rather than a disabled button. Best permission treatment in the cluster." }
+      },
+      "skeletonOrSpinner": "Mixed: .skeleton shimmer for the chart's dynamic import (admin-web/src/components/finance/FinanceClient.tsx:9), plain text sentences for the summary and queue refetch (:141, :168). No spinner anywhere.",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [
+          { "value": "px-2 py-1", "line": "admin-web/src/components/finance/FinanceClient.tsx:126", "context": "'From' date input padding — raw Tailwind scale, overrides the global input padding of 0.625rem/0.75rem (globals.css:342), making these inputs shorter than every other input in the app" },
+          { "value": "px-2 py-1", "line": "admin-web/src/components/finance/FinanceClient.tsx:135", "context": "'To' date input — same" },
+          { "value": "gap-1", "line": "admin-web/src/components/finance/FinanceClient.tsx:120", "context": "date label stack — raw Tailwind, not var(--space-1)" }
+        ],
+        "hardcodedColors": [
+          { "value": "bg-green-50", "line": "admin-web/src/components/finance/FinanceClient.tsx:109", "context": "success toast background — Tailwind default palette literal. globals.css:466 explicitly documents the .alert primitive as the replacement for 'ad-hoc bg-{color}-50 toasts', so this is a known anti-pattern still in use." },
+          { "value": "bg-red-50", "line": "admin-web/src/components/finance/FinanceClient.tsx:110", "context": "error toast background — same anti-pattern" }
+        ],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": [
+          { "value": "`rounded` = 0.25rem/4px (Tailwind default) vs --radius-sm 2px / --radius-md 4px tokens", "line": "admin-web/src/components/finance/FinanceClient.tsx:107,147,151,155" }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Payout Queue", "line": "admin-web/src/components/finance/FinanceClient.tsx:166" }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "grid-cols-3 is FIXED (:146) with no responsive breakpoints, so three KPI tiles share the width regardless of viewport. Hindi labels ('सकल राजस्व', 'मालिक को शुद्ध') are longer than English and sit at text-xs inside a third-of-width tile with no truncation strategy — wrapping to two lines will desynchronise the three tiles' amount baselines. The date-range labels are flex-col so they wrap safely.",
+        "currencyFormatting": "formatPaise from admin-web/src/api/finance.ts:40 — `₹${(paise/100).toLocaleString('en-IN', {min/maxFractionDigits: 2})}`. Uses the correct ₹ glyph and Indian lakh/crore grouping, but the locale is hardcoded to 'en-IN' even though `useLocale()` is already in scope at FinanceClient.tsx:39, so Hindi users get Latin numerals from a function that could localize. Every KPI shows two decimal places (':00') which adds noise to lakh-scale figures."
+      },
+      "a11y": {
+        "contentDescriptions": { "value": true, "cite": "admin-web/src/components/finance/FinanceClient.tsx:117-118,165-166 — both sections use aria-labelledby with sr-only h2s" },
+        "touchTargetRisks": [
+          { "line": "admin-web/src/components/finance/FinanceClient.tsx:126,135", "size": "py-1 = 4px vertical padding on a text-sm input", "note": "~26px tall date inputs — well under 44px, and visually inconsistent with every other input in the app which gets 0.625rem padding from globals.css:342." }
+        ],
+        "contrastRisks": [
+          { "line": "admin-web/src/components/finance/FinanceClient.tsx:107-111", "note": "The toast pairs a LIGHT Tailwind background (bg-green-50 ≈ #F0FDF4) with the DARK-theme token --color-success #5BA38E. Measured contrast ≈ 2.9:1 at text-sm — FAILS WCAG AA. The error variant (bg-red-50 with --color-danger #B6385C) measures ≈ 5.3:1 and passes, so the success toast is the broken one." },
+          { "line": "admin-web/src/components/finance/FinanceClient.tsx:148,152,156", "note": "KPI captions are text-xs (12px) in --color-text-muted — legible on dark (~6.2:1) but 12px is small for a primary financial dashboard label." }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "From input -> To input -> chart (non-focusable) -> Approve All -> modal (FocusLock). Reasonable. The modal traps focus correctly (ApproveAllModal.tsx:27)."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No icons on the KPI tiles, no trend sparkline, no delta-vs-previous-period indicator — the tiles are literally a caption and a number in a grey box"], "cite": "admin-web/src/components/finance/FinanceClient.tsx:146-159" },
+      "motion": { "animationsUsed": [{ "what": ".skeleton shimmer on the chart's dynamic-import fallback", "line": "admin-web/src/components/finance/FinanceClient.tsx:9" }], "usesMotionTokens": false, "transitionsOnNav": "No transition when the toast appears/disappears (:104), when the loading text replaces content (:140), or when the modal mounts (:180). Content pops in and out." },
+      "density": "Shell space-y-[var(--space-8)]=32px between sections, var(--space-4)=16px between KPI tiles. The KPI tiles are the textbook flat-gray-card: `rounded p-[var(--space-4)] bg-[var(--color-surface-alt)]` with no border, no shadow, no icon, no accent rule (:147). --color-surface-alt #14110C sits only ~6 RGB points off the page background #0E0B08, so the tiles are nearly invisible against the canvas.",
+      "observations": [
+        { "severity": "high", "claim": "Flat-gray-card syndrome at its purest: the three headline financial KPIs are unbordered, unshadowed, icon-less boxes filled with --color-surface-alt (#14110C) on a --color-surface (#0E0B08) page — a ~6-point luminance difference, so the tiles barely read as tiles.", "evidence": "admin-web/src/components/finance/FinanceClient.tsx:147,151,155; admin-web/app/globals.css:121-122", "confidence": "observed" },
+        { "severity": "high", "claim": "If the summary fetch fails, the entire P&L section (KPIs + chart) silently renders nothing below the date pickers — no error panel, no empty state, no retry, only a toast.", "evidence": "admin-web/src/components/finance/FinanceClient.tsx:57-59,144", "confidence": "observed" },
+        { "severity": "high", "claim": "Success toast fails WCAG AA: light Tailwind bg-green-50 paired with the dark-theme --color-success token (~2.9:1). globals.css:466 documents the .alert primitive as the intended replacement for exactly this pattern, and it is unused here.", "evidence": "admin-web/src/components/finance/FinanceClient.tsx:107-111; admin-web/app/globals.css:129,466-486", "confidence": "observed" },
+        { "severity": "medium", "claim": "Three different loading affordances coexist on one screen: shimmer skeleton (chart import), plain sentence (summary), plain sentence (queue) — and the sentences replace content, collapsing the layout on every date-range change.", "evidence": "admin-web/src/components/finance/FinanceClient.tsx:9,140-142,167-169", "confidence": "observed" },
+        { "severity": "medium", "claim": "grid-cols-3 is hardcoded with no responsive variant, so three financial tiles are crushed side-by-side on narrow viewports.", "evidence": "admin-web/src/components/finance/FinanceClient.tsx:146", "confidence": "observed" },
+        { "severity": "medium", "claim": "The date-range control is two bare native date inputs with px-2/py-1 overrides — no presets (7d/30d/This month), no validation that from<=to, no max=today, and ~26px tall targets inconsistent with every other input in the app.", "evidence": "admin-web/src/components/finance/FinanceClient.tsx:119-138", "confidence": "observed" },
+        { "severity": "medium", "claim": "Toasts have no dismiss control and no auto-timeout — they persist as a full-width block until the next action, permanently shifting the layout.", "evidence": "admin-web/src/components/finance/FinanceClient.tsx:104-115,51", "confidence": "observed" },
+        { "severity": "low", "claim": "The payout section's sr-only heading is hardcoded English while every other string on the page is translated.", "evidence": "admin-web/src/components/finance/FinanceClient.tsx:166", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.finance-chart-shim",
+      "app": "admin-web",
+      "file": "admin-web/src/components/finance/FinanceChart.tsx",
+      "loc": 2,
+      "purpose": "Two-line 'use client' re-export shim so PnLChart can be loaded via next/dynamic with ssr:false.",
+      "entryPoints": "admin-web/src/components/finance/FinanceClient.tsx:7",
+      "composition": [
+        { "block": "'use client' directive + default re-export of PnLChart", "line": "admin-web/src/components/finance/FinanceChart.tsx:1-2" }
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "admin-web/src/components/finance/FinanceClient.tsx:9", "quality": "The dynamic() loading fallback is `<div className=\"skeleton h-64 w-full\" />` — h-64 = 256px, but the actual chart is 320px tall (PnLChart.tsx:31), so the layout jumps 64px when the chart resolves." },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": false, "evidence": null, "quality": "No error boundary around the dynamic import — a chunk-load failure leaves the skeleton forever." },
+        "success": { "present": true, "evidence": "admin-web/src/components/finance/FinanceChart.tsx:2", "quality": "" },
+        "offline": { "present": false, "evidence": null, "quality": "A failed chunk fetch while offline has no fallback." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "n/a" }
+      },
+      "skeletonOrSpinner": ".skeleton shimmer block, h-64 (admin-web/src/components/finance/FinanceClient.tsx:9)",
+      "tokenUsage": { "usesSpacingTokens": false, "hardcodedDp": [{ "value": "h-64 = 16rem = 256px", "line": "admin-web/src/components/finance/FinanceClient.tsx:9", "context": "skeleton height does not match the chart's 320px" }], "hardcodedColors": [], "unmappedTypographySlots": [], "offScaleRadius": [] },
+      "i18n": { "hardcodedUserFacingStrings": [], "usesStringResource": false, "hindiRisk": "None.", "currencyFormatting": "n/a" },
+      "a11y": { "contentDescriptions": { "value": false, "cite": "admin-web/src/components/finance/FinanceClient.tsx:9 — skeleton has no role='status'/aria-busy" }, "touchTargetRisks": [], "contrastRisks": [], "semanticsHeadings": false, "focusOrder": "n/a" },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": [], "cite": "admin-web/src/components/finance/FinanceChart.tsx:2" },
+      "motion": { "animationsUsed": [{ "what": "skeleton shimmer while the chunk loads", "line": "admin-web/src/components/finance/FinanceClient.tsx:9" }], "usesMotionTokens": false, "transitionsOnNav": "No crossfade from skeleton to chart — hard swap plus a 64px height jump." },
+      "density": "n/a",
+      "observations": [
+        { "severity": "low", "claim": "Chart skeleton height (256px) mismatches the rendered chart height (320px), guaranteeing a 64px layout shift on every load.", "evidence": "admin-web/src/components/finance/FinanceClient.tsx:9 vs admin-web/src/components/finance/PnLChart.tsx:31", "confidence": "observed" },
+        { "severity": "low", "claim": "No error boundary or retry around the ssr:false dynamic import — a failed chunk load leaves a shimmering placeholder indefinitely.", "evidence": "admin-web/src/components/finance/FinanceClient.tsx:7-10", "confidence": "inferred" }
+      ]
+    },
+    {
+      "id": "admin.finance-pnl-chart",
+      "app": "admin-web",
+      "file": "admin-web/src/components/finance/PnLChart.tsx",
+      "loc": 44,
+      "purpose": "Grouped bar chart of daily gross revenue, commission and net-to-owner over the selected range.",
+      "entryPoints": "admin-web/src/components/finance/FinanceClient.tsx:160 (via the FinanceChart dynamic shim)",
+      "composition": [
+        { "block": "ResponsiveContainer width 100%, height fixed 320", "line": "admin-web/src/components/finance/PnLChart.tsx:31" },
+        { "block": "BarChart margin {top 8, right 16, left 0, bottom 0}", "line": "admin-web/src/components/finance/PnLChart.tsx:32" },
+        { "block": "CartesianGrid strokeDasharray '3 3', stroke var(--color-border) — both X and Y gridlines, dashed", "line": "admin-web/src/components/finance/PnLChart.tsx:33" },
+        { "block": "XAxis dataKey='date', tick fontSize 12, no tick colour/stroke set, no label, raw ISO date strings", "line": "admin-web/src/components/finance/PnLChart.tsx:34" },
+        { "block": "YAxis with ₹ tickFormatter, tick fontSize 12, no colour set, no axis title", "line": "admin-web/src/components/finance/PnLChart.tsx:35" },
+        { "block": "Tooltip with the same ₹ formatter and NO contentStyle/itemStyle — recharts default light-grey panel", "line": "admin-web/src/components/finance/PnLChart.tsx:36" },
+        { "block": "Legend — recharts default, bottom, no styling", "line": "admin-web/src/components/finance/PnLChart.tsx:37" },
+        { "block": "Three grouped Bars: grossRevenue fill var(--color-brand), commission fill var(--color-warn), netToOwner fill var(--color-success); no radius, no stacking", "line": "admin-web/src/components/finance/PnLChart.tsx:38-40" }
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "Handled by the dynamic import wrapper, not here." },
+        "empty": { "present": false, "evidence": "admin-web/src/components/finance/PnLChart.tsx:32", "quality": "MAJOR: `data` is passed straight to BarChart with no length check. An empty dailyPnL array renders an empty axis frame with a legend and no message — a broken-looking chart rather than a no-data state." },
+        "error": { "present": false, "evidence": null, "quality": "No error path in the component." },
+        "success": { "present": true, "evidence": "admin-web/src/components/finance/PnLChart.tsx:38-40", "quality": "" },
+        "offline": { "present": false, "evidence": null, "quality": "n/a" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "n/a" }
+      },
+      "skeletonOrSpinner": "none inside the component",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "height={320}", "line": "admin-web/src/components/finance/PnLChart.tsx:31", "context": "fixed chart height, no responsive variant" },
+          { "value": "margin {top:8, right:16, left:0, bottom:0}", "line": "admin-web/src/components/finance/PnLChart.tsx:32", "context": "raw pixel margins; left:0 means the ₹ Y-axis labels have no breathing room from the container edge" },
+          { "value": "fontSize: 12", "line": "admin-web/src/components/finance/PnLChart.tsx:34", "context": "X-axis tick size hardcoded, not var(--text-xs)" },
+          { "value": "fontSize: 12", "line": "admin-web/src/components/finance/PnLChart.tsx:35", "context": "Y-axis tick size hardcoded" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "Legend labels are translated (:38-40) and the tick formatter switches to hi-IN (:23,:27) — this is the ONLY money formatter in the cluster that respects locale. However the X-axis renders `dataKey='date'` raw (:34), so ISO date strings like '2026-07-19' appear as-is in both locales — never formatted, never localized. Longer Hindi legend labels ('मालिक को शुद्ध राजस्व') across three series in a default horizontal Legend will wrap and eat chart height.",
+        "currencyFormatting": "admin-web/src/components/finance/PnLChart.tsx:25-28 — correct ₹ glyph, locale-aware (hi-IN/en-IN), maximumFractionDigits 0 on the axis. This disagrees with the KPI tiles above it, which show 2 decimals via src/api/finance.ts:40, so the same figure reads '₹1,20,000' on the axis and '₹1,20,000.00' in the tile."
+      },
+      "a11y": {
+        "contentDescriptions": { "value": false, "cite": "admin-web/src/components/finance/PnLChart.tsx:30-42 — no aria-label, no role='img', no <desc>, no accessible data table alternative. The whole chart is invisible to screen readers; its only heading is sr-only 'Profit & Loss' on the parent section (FinanceClient.tsx:118)." },
+        "touchTargetRisks": [],
+        "contrastRisks": [
+          { "line": "admin-web/src/components/finance/PnLChart.tsx:34-35", "note": "Axis ticks have no `fill`/`stroke` specified, so they inherit recharts' default #666 — on the --color-surface #0E0B08 dark canvas that is roughly 3.4:1, below AA for 12px text." },
+          { "line": "admin-web/src/components/finance/PnLChart.tsx:36", "note": "Tooltip has no contentStyle, so recharts renders its default white/near-white panel with dark text — a bright rectangle punched into a dark editorial dashboard, and it will not follow the light/dark theme toggle." }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "Chart is not keyboard-reachable; tooltips are hover-only, so the data is unavailable to keyboard users entirely."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": [], "cite": "admin-web/src/components/finance/PnLChart.tsx:30-42" },
+      "motion": { "animationsUsed": [{ "what": "recharts default bar grow animation (isAnimationActive not disabled)", "line": "admin-web/src/components/finance/PnLChart.tsx:38-40" }], "usesMotionTokens": false, "transitionsOnNav": "Default recharts easing, not tied to --ease-out/--duration-base, and NOT guarded by prefers-reduced-motion (the globals.css:108-114 guard only covers CSS animations, not SVG-attribute animation)." },
+      "density": "Three grouped bars per day across a 7-day default range (FinanceClient.tsx:28-33) = 21 bars in 320px with dashed gridlines on both axes — visually noisy. Dashed CartesianGrid on both axes is heavier than the dataviz norm of a single light horizontal-only grid.",
+      "observations": [
+        { "severity": "high", "claim": "Categorical colour collision: grossRevenue uses --color-brand #E2A04A and commission uses --color-warn #E9B44C — two near-identical amber/gold values (ΔRGB ≈ 7,20,2). The two most-compared series in the chart are effectively the same colour.", "evidence": "admin-web/src/components/finance/PnLChart.tsx:38-39; admin-web/app/globals.css:119,130", "confidence": "observed" },
+        { "severity": "high", "claim": "Tooltip is unstyled recharts default — a light panel on a dark editorial dashboard that ignores the theme entirely.", "evidence": "admin-web/src/components/finance/PnLChart.tsx:36", "confidence": "observed" },
+        { "severity": "high", "claim": "No no-data state: an empty dailyPnL array renders an empty axis frame with a legend and nothing else.", "evidence": "admin-web/src/components/finance/PnLChart.tsx:31-41", "confidence": "observed" },
+        { "severity": "medium", "claim": "Axis ticks inherit recharts' default #666 fill instead of a token, giving sub-AA contrast on the dark canvas.", "evidence": "admin-web/src/components/finance/PnLChart.tsx:34-35", "confidence": "observed" },
+        { "severity": "medium", "claim": "X axis shows raw ISO date strings from the API with no formatter — unformatted and unlocalized in a bilingual product.", "evidence": "admin-web/src/components/finance/PnLChart.tsx:34", "confidence": "observed" },
+        { "severity": "medium", "claim": "Chart is entirely inaccessible: no role/aria-label/desc, no keyboard access, no tabular alternative, and its only heading is sr-only.", "evidence": "admin-web/src/components/finance/PnLChart.tsx:30-42; admin-web/src/components/finance/FinanceClient.tsx:118", "confidence": "observed" },
+        { "severity": "low", "claim": "Dashed gridlines on both axes plus a default legend plus 21 bars produce a cluttered chart; the axis and the KPI tiles above also disagree on decimal precision (0 vs 2).", "evidence": "admin-web/src/components/finance/PnLChart.tsx:27,33; admin-web/src/api/finance.ts:40", "confidence": "observed" },
+        { "severity": "low", "claim": "Chart height is fixed at 320px with left margin 0, so ₹ Y-axis labels sit flush against the container edge.", "evidence": "admin-web/src/components/finance/PnLChart.tsx:31-32", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.finance-payout-queue-table",
+      "app": "admin-web",
+      "file": "admin-web/src/components/finance/PayoutQueueTable.tsx",
+      "loc": 70,
+      "purpose": "Weekly technician payout queue with per-technician gross/commission/net and a bulk Approve All action.",
+      "entryPoints": "admin-web/src/components/finance/FinanceClient.tsx:171-176",
+      "composition": [
+        { "block": "Header row: h2 'Payout Queue — {total} total' at var(--text-lg)/semibold + right-aligned Approve All button (or a muted permission note)", "line": "admin-web/src/components/finance/PayoutQueueTable.tsx:23-40" },
+        { "block": "Empty branch: single muted <p> 'No payouts due this week.'", "line": "admin-web/src/components/finance/PayoutQueueTable.tsx:42-43" },
+        { "block": "Table w-full text-sm border-collapse", "line": "admin-web/src/components/finance/PayoutQueueTable.tsx:45" },
+        { "block": "thead: 5 muted columns — Technician (left) / Jobs, Gross, Commission, Net Payable (right-aligned), single bottom border", "line": "admin-web/src/components/finance/PayoutQueueTable.tsx:46-54" },
+        { "block": "tbody rows: name, job count, gross, commission in --color-warn, net payable in --color-success semibold; each row a bottom border, py-2", "line": "admin-web/src/components/finance/PayoutQueueTable.tsx:55-65" }
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "Owned by FinanceClient (a plain sentence). The Approve All button has NO loading state of its own — during approval it stays fully enabled-looking; only the modal's confirm button reflects progress (ApproveAllModal.tsx:56)." },
+        "empty": { "present": true, "evidence": "admin-web/src/components/finance/PayoutQueueTable.tsx:42-43", "quality": "WEAK: one muted sentence. For a weekly-cadence finance surface, 'No payouts due this week' with no context (which week? next payout date?) is a dead end. Not the shared EmptyState component." },
+        "error": { "present": false, "evidence": null, "quality": "No error slot; errors surface as a parent toast." },
+        "success": { "present": true, "evidence": "admin-web/src/components/finance/PayoutQueueTable.tsx:45-66", "quality": "" },
+        "offline": { "present": false, "evidence": null, "quality": "absent" },
+        "permissionDenied": { "present": true, "evidence": "admin-web/src/components/finance/PayoutQueueTable.tsx:35-39", "quality": "GOOD: shows an explanatory muted note instead of a disabled button when the role lacks finance.approvePayouts." }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "px-4 py-2", "line": "admin-web/src/components/finance/PayoutQueueTable.tsx:31", "context": "Approve All button padding — raw Tailwind, not the .btn primitive; yields ~36px height vs .btn's 44px (globals.css:418)" },
+          { "value": "pb-2 pr-4", "line": "admin-web/src/components/finance/PayoutQueueTable.tsx:48-52", "context": "header cell padding — raw Tailwind scale, bypasses --space-* tokens" },
+          { "value": "py-2 pr-4", "line": "admin-web/src/components/finance/PayoutQueueTable.tsx:58-62", "context": "body cell padding — 8px vertical rows for financial data" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": [
+          { "value": "`rounded` = 4px Tailwind default on the Approve All button, vs .btn's var(--radius-sm) = 2px", "line": "admin-web/src/components/finance/PayoutQueueTable.tsx:31" }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "The h2 is an interpolated sentence ('Payout Queue — {total} total' / Hindi equivalent) sharing a no-wrap flex row with the Approve All button (:23). Hindi is ~20% longer and the money value is embedded mid-sentence, so on a narrow canvas the heading and button will collide. Column headers ('Net Payable' -> 'शुद्ध देय') in a 5-column table with no min-widths will force wrapping.",
+        "currencyFormatting": "formatPaise from admin-web/src/api/finance.ts:40 — ₹ glyph, hardcoded 'en-IN', always 2 decimals. Four money cells per row all render '.00' noise; no locale switching for Hindi."
+      },
+      "a11y": {
+        "contentDescriptions": { "value": false, "cite": "admin-web/src/components/finance/PayoutQueueTable.tsx:46-54 — <th> elements have no scope='col', and the table has no <caption>" },
+        "touchTargetRisks": [
+          { "line": "admin-web/src/components/finance/PayoutQueueTable.tsx:28-34", "size": "px-4 py-2 on font-medium text — ~36px", "note": "The single most consequential button on the finance screen (bulk-approve all payouts) is under 44px and does not use the .btn primitive." }
+        ],
+        "contrastRisks": [
+          { "line": "admin-web/src/components/finance/PayoutQueueTable.tsx:61", "note": "Commission column rendered in --color-warn #E9B44C — a warning colour applied to a purely informational figure, semantically misleading; every row looks like it carries a warning." }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "Approve All -> (table is not interactive). Rows are inert: no row focus, no per-technician drill-in, no per-row approve."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No technician avatars or initials — a people-centric payout table rendered as pure text"], "cite": "admin-web/src/components/finance/PayoutQueueTable.tsx:55-65" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "No row hover state, no zebra striping, no transition when rows are removed after approval." },
+      "density": "py-2 (8px) rows with text-sm across 5 columns and a hairline bottom border — dense ledger density with no row hover, no zebra, no grouping. Right-aligned numeric columns is correct; everything else is default HTML table.",
+      "observations": [
+        { "severity": "high", "claim": "Bulk-approve-all-payouts — the highest-consequence action in the admin app — is a ~36px raw-Tailwind button that does not use the design system's .btn primitive and carries no visual weight distinguishing it from any other button.", "evidence": "admin-web/src/components/finance/PayoutQueueTable.tsx:28-34 vs admin-web/app/globals.css:413-441", "confidence": "observed" },
+        { "severity": "medium", "claim": "Commission figures are coloured with --color-warn, applying warning semantics to a neutral accounting figure on every single row.", "evidence": "admin-web/src/components/finance/PayoutQueueTable.tsx:61", "confidence": "observed" },
+        { "severity": "medium", "claim": "The table is entirely inert — no per-row approve, no drill-in to the technician, no sort, no pagination, no totals row (the total lives only inside the h2 string).", "evidence": "admin-web/src/components/finance/PayoutQueueTable.tsx:45-66,25", "confidence": "observed" },
+        { "severity": "medium", "claim": "No <th scope='col'> and no <caption> on a data table — screen-reader cell association is left to the browser's heuristic.", "evidence": "admin-web/src/components/finance/PayoutQueueTable.tsx:46-54", "confidence": "observed" },
+        { "severity": "low", "claim": "Empty state is a single muted sentence with no next-payout context and no CTA.", "evidence": "admin-web/src/components/finance/PayoutQueueTable.tsx:42-43", "confidence": "observed" },
+        { "severity": "low", "claim": "No row hover or zebra treatment on a 5-column financial ledger — cross-row scanning is unaided.", "evidence": "admin-web/src/components/finance/PayoutQueueTable.tsx:57", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.finance-approve-all-modal",
+      "app": "admin-web",
+      "file": "admin-web/src/components/finance/ApproveAllModal.tsx",
+      "loc": 63,
+      "purpose": "Confirmation dialog before bulk-approving every pending technician payout.",
+      "entryPoints": "admin-web/src/components/finance/FinanceClient.tsx:180-187, opened by PayoutQueueTable.tsx:29",
+      "composition": [
+        { "block": "FocusLock returnFocus wrapper", "line": "admin-web/src/components/finance/ApproveAllModal.tsx:27" },
+        { "block": "Fixed full-screen overlay, z-50, flex centre, bg-black/50 — no blur, no fade-in", "line": "admin-web/src/components/finance/ApproveAllModal.tsx:28-33" },
+        { "block": "Panel: max-w-sm, rounded-lg, --color-surface, p-[var(--space-6)], shadow-xl", "line": "admin-web/src/components/finance/ApproveAllModal.tsx:34" },
+        { "block": "h2 title at var(--text-lg)/semibold, mb var(--space-3)", "line": "admin-web/src/components/finance/ApproveAllModal.tsx:35-40" },
+        { "block": "Muted description paragraph with the total amount interpolated, mb var(--space-6)", "line": "admin-web/src/components/finance/ApproveAllModal.tsx:41-43" },
+        { "block": "Right-aligned action row: outlined Cancel + solid brand Confirm, gap var(--space-3)", "line": "admin-web/src/components/finance/ApproveAllModal.tsx:44-58" }
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "admin-web/src/components/finance/ApproveAllModal.tsx:53,56", "quality": "Confirm disabled + opacity-50 + label swaps to t('buttons.processing'). No spinner. Cancel stays enabled during processing, so the operator can dismiss the modal mid-transaction." },
+        "empty": { "present": false, "evidence": null, "quality": "n/a" },
+        "error": { "present": false, "evidence": "admin-web/src/components/finance/FinanceClient.tsx:84-92", "quality": "The modal has no error slot; on failure it stays open (setShowModal(false) is only reached on the success path at FinanceClient.tsx:82) while an error toast renders BEHIND the overlay at z-index below z-50 — the operator may never see it." },
+        "success": { "present": false, "evidence": "admin-web/src/components/finance/FinanceClient.tsx:82-88", "quality": "Modal closes and a toast appears on the page behind; no in-modal confirmation." },
+        "offline": { "present": false, "evidence": null, "quality": "absent" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "Gated upstream by PayoutQueueTable.tsx:27." }
+      },
+      "skeletonOrSpinner": "none — label text swap on the confirm button (admin-web/src/components/finance/ApproveAllModal.tsx:56)",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [
+          { "value": "px-4 py-2", "line": "admin-web/src/components/finance/ApproveAllModal.tsx:47", "context": "Cancel button — raw Tailwind, ~36px tall, not the .btn primitive" },
+          { "value": "px-4 py-2", "line": "admin-web/src/components/finance/ApproveAllModal.tsx:54", "context": "Confirm button — same" },
+          { "value": "max-w-sm = 24rem", "line": "admin-web/src/components/finance/ApproveAllModal.tsx:34", "context": "panel width, raw Tailwind" }
+        ],
+        "hardcodedColors": [
+          { "value": "bg-black/50", "line": "admin-web/src/components/finance/ApproveAllModal.tsx:32", "context": "scrim uses a literal black rather than a token; on an already near-black --color-surface #0E0B08 page this produces a very low-separation overlay" }
+        ],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": [
+          { "value": "rounded-lg = 0.5rem/8px (Tailwind default) vs --radius-lg = 6px token", "line": "admin-web/src/components/finance/ApproveAllModal.tsx:34" },
+          { "value": "rounded = 0.25rem/4px on both buttons vs .btn's --radius-sm = 2px", "line": "admin-web/src/components/finance/ApproveAllModal.tsx:47,54" }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "Panel is capped at max-w-sm (384px) and the description interpolates a money value into a sentence (:42); Hindi runs ~20-30% longer so the body will grow to 4-5 lines in a fixed-width box with the buttons pushed down. Button row is justify-end with gap var(--space-3) and no wrap — two longer Hindi labels ('रद्द करें' / 'पुष्टि करें') fit, but 'प्रोसेस हो रहा है…' during loading is much wider and will resize the confirm button mid-transaction.",
+        "currencyFormatting": "formatPaise (src/api/finance.ts:40) — ₹ glyph, en-IN hardcoded, 2 decimals. The total amount is embedded inside prose rather than being displayed as a prominent standalone figure, which for a bulk money transfer is the wrong emphasis."
+      },
+      "a11y": {
+        "contentDescriptions": { "value": true, "cite": "admin-web/src/components/finance/ApproveAllModal.tsx:29-31 — role='dialog', aria-modal='true', aria-labelledby wired to the h2" },
+        "touchTargetRisks": [
+          { "line": "admin-web/src/components/finance/ApproveAllModal.tsx:45-57", "size": "px-4 py-2 ≈ 36px", "note": "Both dialog buttons are under 44px." }
+        ],
+        "contrastRisks": [
+          { "line": "admin-web/src/components/finance/ApproveAllModal.tsx:32,34", "note": "bg-black/50 scrim over a #0E0B08 page, with a panel also filled --color-surface #0E0B08 — the panel and the dimmed background are nearly the same value; separation relies entirely on shadow-xl." }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "GOOD: FocusLock with returnFocus (:27) plus an Escape handler (:18-24). Missing: aria-describedby pointing at the description paragraph, and no body scroll lock."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No warning icon or visual signal for an irreversible bulk money transfer"], "cite": "admin-web/src/components/finance/ApproveAllModal.tsx:34-59" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None — the modal mounts and unmounts instantly with no fade or scale; the scrim appears as a hard cut." },
+      "density": "p-[var(--space-6)]=24px panel padding, 12px title-to-body, 24px body-to-actions. Proportions are fine; the problem is that the panel is styled with Tailwind defaults (rounded-lg, shadow-xl) that contradict the design system's stated 'crisp hairline + ink-shadow, no gauzy blur' elevation intent.",
+      "observations": [
+        { "severity": "high", "claim": "The Confirm button for an irreversible bulk money transfer is styled as a neutral primary (brand marigold), not as a destructive/high-stakes action, and carries no warning icon or amount emphasis.", "evidence": "admin-web/src/components/finance/ApproveAllModal.tsx:51-57,41-43", "confidence": "observed" },
+        { "severity": "high", "claim": "On approval failure the modal stays open while the error toast renders on the page behind a z-50 overlay, so the operator can be left staring at an unchanged dialog with no feedback.", "evidence": "admin-web/src/components/finance/ApproveAllModal.tsx:32 (z-50 overlay) vs admin-web/src/components/finance/FinanceClient.tsx:82,90-92,104-115", "confidence": "observed" },
+        { "severity": "medium", "claim": "Cancel remains enabled while the approval request is in flight, letting the operator dismiss the dialog mid-transaction with no idea whether payouts went through.", "evidence": "admin-web/src/components/finance/ApproveAllModal.tsx:45-50", "confidence": "observed" },
+        { "severity": "medium", "claim": "Panel uses Tailwind default rounded-lg (8px) and shadow-xl (gauzy blur) which directly contradict the token system's --radius-lg (6px) and the documented 'crisp hairline + ink-shadow, no gauzy blur' elevation intent.", "evidence": "admin-web/src/components/finance/ApproveAllModal.tsx:34; admin-web/app/globals.css:162-169", "confidence": "observed" },
+        { "severity": "low", "claim": "No aria-describedby linking the dialog to its description, and no body scroll lock behind the modal.", "evidence": "admin-web/src/components/finance/ApproveAllModal.tsx:28-43", "confidence": "observed" },
+        { "severity": "low", "claim": "Modal has zero entrance motion — hard cut in and out with no fade or scale, which reads as a rendering glitch rather than a deliberate interaction.", "evidence": "admin-web/src/components/finance/ApproveAllModal.tsx:28-34", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.compliance-page",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/(dashboard)/compliance/page.tsx",
+      "loc": 78,
+      "purpose": "Server shell that loads pending DPDP erasure requests and SSC levy records, degrading each section independently.",
+      "entryPoints": "Primary sidebar rail item 'Compliance' -> /compliance (admin-web/src/admin/capabilities.ts:72, capability compliance.manage)",
+      "composition": [
+        { "block": "Static English metadata title", "line": "admin-web/app/[locale]/(dashboard)/compliance/page.tsx:13-15" },
+        { "block": "Promise.allSettled over the two endpoints so one failure does not kill the page", "line": "admin-web/app/[locale]/(dashboard)/compliance/page.tsx:54-57" },
+        { "block": "Per-endpoint error strings extracted and passed down as props", "line": "admin-web/app/[locale]/(dashboard)/compliance/page.tsx:61-68" },
+        { "block": "Renders <ComplianceClient> with data + errors", "line": "admin-web/app/[locale]/(dashboard)/compliance/page.tsx:70-77" }
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "No loading.tsx for the compliance segment; two blocking no-store fetches." },
+        "empty": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/compliance/page.tsx:59-60", "quality": "Falls back to [] which the client renders as a muted sentence." },
+        "error": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/compliance/page.tsx:23-26,37-40,61-68", "quality": "ARCHITECTURALLY GOOD (per-section degradation via allSettled — the best error architecture in the cluster) but COPY-WISE THE WORST: the error message is deliberately constructed as `erasure-requests ${res.status}: ${body.slice(0,200)}` — literally the endpoint slug, the HTTP status, and 200 characters of the raw response body — and the code comment at :49-52 states this is intentional so 'the operator can see exactly which endpoint failed and why (4xx body included)'." },
+        "success": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/compliance/page.tsx:70-77", "quality": "" },
+        "offline": { "present": false, "evidence": null, "quality": "absent" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "A 403 renders as the raw error string including the response body." }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": { "usesSpacingTokens": false, "hardcodedDp": [], "hardcodedColors": [], "unmappedTypographySlots": [], "offScaleRadius": [] },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Compliance - HomeHeroo admin", "line": "admin-web/app/[locale]/(dashboard)/compliance/page.tsx:14" },
+          { "text": "erasure-requests <status>: <raw body slice>", "line": "admin-web/app/[locale]/(dashboard)/compliance/page.tsx:25" },
+          { "text": "ssc-levy <status>: <raw body slice>", "line": "admin-web/app/[locale]/(dashboard)/compliance/page.tsx:39" }
+        ],
+        "usesStringResource": false,
+        "hindiRisk": "The page <title> is English-only in a bilingual product, and both error strings are English/technical regardless of locale.",
+        "currencyFormatting": "n/a here; money is formatted in the client."
+      },
+      "a11y": { "contentDescriptions": { "value": false, "cite": "no UI of its own" }, "touchTargetRisks": [], "contrastRisks": [], "semanticsHeadings": false, "focusOrder": "n/a" },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": [], "cite": "admin-web/app/[locale]/(dashboard)/compliance/page.tsx:70-77" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "none" },
+      "density": "n/a",
+      "observations": [
+        { "severity": "high", "claim": "Error copy is a deliberately-constructed raw technical string (endpoint slug + HTTP status + 200 chars of the response body) surfaced to the operator, with a code comment confirming the intent.", "evidence": "admin-web/app/[locale]/(dashboard)/compliance/page.tsx:23-26,37-40,49-52", "confidence": "observed" },
+        { "severity": "medium", "claim": "Page <title> is hardcoded English on a bilingual route, unlike the finance route which localizes it.", "evidence": "admin-web/app/[locale]/(dashboard)/compliance/page.tsx:13-15 vs admin-web/app/[locale]/(dashboard)/finance/page.tsx:7-10", "confidence": "observed" },
+        { "severity": "low", "claim": "handleAdminFetchError is imported and then explicitly voided at :53 purely to keep the import stable — dead code left in a production route file.", "evidence": "admin-web/app/[locale]/(dashboard)/compliance/page.tsx:6,53", "confidence": "observed" },
+        { "severity": "low", "claim": "No loading.tsx for a route that makes two blocking no-store network calls.", "evidence": "admin-web/app/[locale]/(dashboard)/compliance/page.tsx:1,20-22,33-35", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.compliance-client",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx",
+      "loc": 326,
+      "purpose": "Operate DPDP data-erasure requests (execute or deny with a reason) and approve quarterly SSC levy transfers.",
+      "entryPoints": "admin-web/app/[locale]/(dashboard)/compliance/page.tsx:71",
+      "composition": [
+        { "block": "Shell: p-[var(--space-6)], space-y-[var(--space-8)]", "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:137" },
+        { "block": "Header: .eyebrow label over h1 at var(--text-2xl)/bold — no subtitle", "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:138-143" },
+        { "block": "Toast: full-width tinted paragraph, role='status', bg-green-50 / bg-red-50", "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:145-156" },
+        { "block": "Erasure section: h2 var(--text-lg)/semibold + muted description", "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:158-166" },
+        { "block": "Erasure error: <p role='alert' class='alert alert-danger'> with the raw server string", "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:168-172" },
+        { "block": "Erasure empty: bare muted <p>", "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:174-175" },
+        { "block": "Erasure table (overflow-x-auto): Request (mono id + requested date) / User (role + mono id) / Schedule / Status / Actions", "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:177-254" },
+        { "block": "Per-row actions when PENDING: 'Execute' ghost button, an inline denial-reason <select>, and a 'Deny' ghost button — all three crammed into one right-aligned flex with gap-2", "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:207-242" },
+        { "block": "SSC levy section: h2 + muted description, error alert, empty <p>", "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:258-275" },
+        { "block": "Levy table: Quarter (label + mono id) / GMV / Levy / Status / Action, with a primary 'Approve' button per approvable row", "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:277-322" }
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:63,212,237,305", "quality": "POOR: a single global `pendingKey` disables EVERY action button in BOTH tables while any one request is in flight, and the acting button's label never changes — so the operator sees the whole page go inert with no indication of which action is running or that anything is happening at all. No spinner, no label swap." },
+        "empty": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:174-175,274-275", "quality": "WEAK: one muted sentence per section. For a compliance console, 'no pending erasure requests' is arguably the good news state and deserves an affirmative treatment, not a grey sentence." },
+        "error": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:168-172,268-272", "quality": "Uses the correct .alert .alert-danger primitive (globals.css:469-485) — the only place in the cluster that does — but the CONTENT is the raw `erasure-requests 500: {…}` string from the server. Right container, wrong copy. Action errors are separate and use the bg-red-50 toast." },
+        "success": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:80,103,128", "quality": "Toast + optimistic row patch." },
+        "offline": { "present": false, "evidence": null, "quality": "absent" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "No capability gating in the component: Execute/Deny/Approve render for anyone who can reach the route." }
+      },
+      "skeletonOrSpinner": "none — no spinner, no skeleton, no label swap; only `disabled` on every button (:212,:237,:305)",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [
+          { "value": "gap-2", "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:208", "context": "action cluster gap — raw Tailwind, not var(--space-2)" },
+          { "value": "pb-2 pr-4", "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:181-185", "context": "erasure table header padding" },
+          { "value": "py-3 pr-4", "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:194-206", "context": "erasure table body padding" },
+          { "value": "py-3 pr-4", "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:293-300", "context": "levy table body padding" }
+        ],
+        "hardcodedColors": [
+          { "value": "bg-green-50", "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:150", "context": "success toast — Tailwind literal, the exact anti-pattern globals.css:466 says .alert replaces, in a file that already uses .alert correctly 18 lines later" },
+          { "value": "bg-red-50", "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:151", "context": "error toast — same" }
+        ],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": [
+          { "value": "`rounded` = 4px Tailwind default on the toast", "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:148" }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Raw server error string (e.g. 'erasure-requests 500: {\"error\":…}') rendered verbatim", "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:169" },
+          { "text": "Raw server error string for the levy endpoint", "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:269" },
+          { "text": "razorpayTransferId displayed raw as the 'action' cell content", "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:312" }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "Two 5-column tables inside overflow-x-auto (:177,:277) — Hindi column headers ('अनुरोध', 'निर्धारित समय') plus longer status labels will force horizontal scrolling on a desktop dashboard. The erasure Actions cell packs a button + a <select> + a button into one no-wrap flex (:208): Hindi 'निष्पादित करें' / 'अस्वीकार करें' plus a Devanagari denial-reason option ('कानूनी रोक') will overflow that cell badly. Dates ARE correctly localized via toLocaleString with hi-IN and Asia/Kolkata (:48-56) — the best date handling in the cluster.",
+        "currencyFormatting": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:32-37 — `INR ${(paise/100).toLocaleString('en-IN', {min/maxFractionDigits: 2})}`. ASCII 'INR ' instead of ₹, and the locale is hardcoded to 'en-IN' even though `useLocale()` is in scope at :46 and IS used for dates at :50. So on the same row a date is Hindi-localized while the money next to it is not."
+      },
+      "a11y": {
+        "contentDescriptions": { "value": true, "cite": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:226 — the denial-reason select has a per-row aria-label including the request id. But the Execute and Deny buttons (:209-216, :234-241) have no aria-label, so screen readers hear N identical 'Execute' buttons." },
+        "touchTargetRisks": [
+          { "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:217-233", "size": "native <select> with .input class and global 0.625rem padding ≈ 38px", "note": "select sits inline between two 44px .btn elements, so the action row has three mismatched control heights." }
+        ],
+        "contrastRisks": [
+          { "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:150-152", "note": "Success toast: light bg-green-50 with dark-theme --color-success #5BA38E ≈ 2.9:1 — FAILS AA." },
+          { "line": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:195,202,295", "note": "font-mono text-xs (12px) identifiers in --color-text-muted — technically ~6.2:1 but 12px monospace IDs as primary table content is a debug-console aesthetic." }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "Section-labelled via aria-labelledby (:158,:258). Within a pending row: Execute -> select -> Deny — a destructive irreversible action is the FIRST focusable element in the cell, before the reason selector it does not even use."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No status iconography at all — statuses are plain translated words in a plain cell (:205, :299), so PENDING / EXECUTED / FAILED / DENIED are visually identical"], "cite": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:205,299" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None. Rows change status with no transition; the toast pops in and out; disabled states apply instantly across the page." },
+      "density": "py-3 (12px) rows with text-sm and align-top, 32px between the two sections. Two dense monochrome tables stacked with no visual differentiation — the erasure table and the levy table look identical despite doing completely different things (one deletes user data forever, one moves money).",
+      "observations": [
+        { "severity": "high", "claim": "'Execute' permanently deletes a user's personal data and requires NO confirmation dialog — a single click on a ghost-styled button that is visually identical to 'Deny' beside it.", "evidence": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:209-216,66-86", "confidence": "observed" },
+        { "severity": "high", "claim": "'Approve' initiates a real Razorpay levy transfer with NO confirmation dialog — contrast with the finance screen, which does gate its bulk payout behind ApproveAllModal.", "evidence": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:302-309,111-134 vs admin-web/src/components/finance/ApproveAllModal.tsx:26-62", "confidence": "observed" },
+        { "severity": "high", "claim": "Server error content shown to the operator is the raw `<endpoint> <status>: <200 chars of response body>` string, presented inside an otherwise correct .alert container.", "evidence": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:168-172,268-272", "confidence": "observed" },
+        { "severity": "high", "claim": "A single global pendingKey disables every action button in both tables during any request, and no button changes label or shows a spinner — the entire console goes inert with zero feedback.", "evidence": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:63,212,237,305", "confidence": "observed" },
+        { "severity": "medium", "claim": "The Execute button is silently disabled when the scheduled deletion date is in the future, with no tooltip, helper text, or explanation — the operator sees an unexplained dead button.", "evidence": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:191,212", "confidence": "observed" },
+        { "severity": "medium", "claim": "Success toasts use bg-green-50 with the dark-theme success token (~2.9:1, fails AA) in the same file that correctly uses the .alert primitive 18 lines later — the anti-pattern and its documented replacement coexist.", "evidence": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:150-152,169; admin-web/app/globals.css:466-486", "confidence": "observed" },
+        { "severity": "medium", "claim": "Money is 'INR ' ASCII and hardcoded en-IN while dates on the same row are correctly localized to hi-IN — inconsistent localization within a single table row.", "evidence": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:32-37 vs :48-56", "confidence": "observed" },
+        { "severity": "medium", "claim": "Statuses (PENDING / EXECUTED / DENIED / FAILED, PENDING_APPROVAL / TRANSFERRED / FAILED) render as plain uncoloured text with no badge, chip, or icon — the operator cannot scan state.", "evidence": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:205,299", "confidence": "observed" },
+        { "severity": "low", "claim": "The denial-reason <select> is a persistent inline control in every pending row rather than part of a deny flow, so the row shows a reason picker for a decision that has not been made.", "evidence": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:217-233", "confidence": "observed" },
+        { "severity": "low", "claim": "Raw mono UUIDs are first-class table content in both tables, giving the surface a database-admin aesthetic.", "evidence": "admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx:195,202,295", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.admin-users-page",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/(dashboard)/admin-users/page.tsx",
+      "loc": 30,
+      "purpose": "Server shell that loads the admin user roster.",
+      "entryPoints": "Primary sidebar rail item 'Admin Users' -> /admin-users (admin-web/src/admin/capabilities.ts:71, capability adminUsers.manage)",
+      "composition": [
+        { "block": "Static English metadata title", "line": "admin-web/app/[locale]/(dashboard)/admin-users/page.tsx:10-12" },
+        { "block": "Blocking no-store fetch; failures thrown via handleAdminFetchError", "line": "admin-web/app/[locale]/(dashboard)/admin-users/page.tsx:15-21" },
+        { "block": "Renders <AdminUsersClient>", "line": "admin-web/app/[locale]/(dashboard)/admin-users/page.tsx:29" }
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "No loading.tsx for this segment." },
+        "empty": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:80-81", "quality": "Delegated; a bare muted sentence." },
+        "error": { "present": false, "evidence": "admin-web/app/[locale]/(dashboard)/admin-users/page.tsx:19", "quality": "Whole-page throw to the generic dashboard error boundary — no per-section degradation, unlike the compliance route in the same cluster." },
+        "success": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/admin-users/page.tsx:29", "quality": "" },
+        "offline": { "present": false, "evidence": null, "quality": "absent" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "absent" }
+      },
+      "skeletonOrSpinner": "none",
+      "tokenUsage": { "usesSpacingTokens": false, "hardcodedDp": [], "hardcodedColors": [], "unmappedTypographySlots": [], "offScaleRadius": [] },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Admin Users - HomeHeroo admin", "line": "admin-web/app/[locale]/(dashboard)/admin-users/page.tsx:11" }
+        ],
+        "usesStringResource": false,
+        "hindiRisk": "English-only page title on a bilingual route.",
+        "currencyFormatting": "n/a"
+      },
+      "a11y": { "contentDescriptions": { "value": false, "cite": "no UI of its own" }, "touchTargetRisks": [], "contrastRisks": [], "semanticsHeadings": false, "focusOrder": "n/a" },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": [], "cite": "admin-web/app/[locale]/(dashboard)/admin-users/page.tsx:29" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "none" },
+      "density": "n/a",
+      "observations": [
+        { "severity": "medium", "claim": "Hardcoded English <title> on a locale-scoped route.", "evidence": "admin-web/app/[locale]/(dashboard)/admin-users/page.tsx:10-12", "confidence": "observed" },
+        { "severity": "low", "claim": "No loading.tsx and a hard whole-page throw on fetch failure, whereas the sibling compliance route degrades per-section.", "evidence": "admin-web/app/[locale]/(dashboard)/admin-users/page.tsx:19 vs admin-web/app/[locale]/(dashboard)/compliance/page.tsx:54-57", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "admin.admin-users-client",
+      "app": "admin-web",
+      "file": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx",
+      "loc": 185,
+      "purpose": "Manage admin accounts: rename, change role, and deactivate/reactivate.",
+      "entryPoints": "admin-web/app/[locale]/(dashboard)/admin-users/page.tsx:29",
+      "composition": [
+        { "block": "Shell: p-[var(--space-6)], space-y-[var(--space-5)]", "line": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:56" },
+        { "block": "Header: .eyebrow + h1 var(--text-2xl)/bold + muted subtitle with active/total counts", "line": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:57-65" },
+        { "block": "Toast: full-width tinted paragraph, role='status', bg-green-50 / bg-red-50", "line": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:67-78" },
+        { "block": "Empty: bare muted <p>", "line": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:80-81" },
+        { "block": "Table (overflow-x-auto), 6 columns: Admin / Display Name / Role / TOTP / Status / Actions", "line": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:83-93" },
+        { "block": "Admin cell: email (medium) over mono adminId (xs muted) over an 'updated' timestamp line (xs muted) — three stacked lines", "line": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:101-107" },
+        { "block": "Display Name cell: an always-editable text input plus a per-row 'Save' ghost button", "line": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:108-134" },
+        { "block": "Role cell: a <select> that PATCHes immediately onChange", "line": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:135-151" },
+        { "block": "TOTP cell: plain translated word", "line": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:152" },
+        { "block": "Status cell: coloured text (success/danger), no badge", "line": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:153-161" },
+        { "block": "Actions cell: Deactivate/Reactivate ghost button", "line": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:162-175" }
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:97,124,139,166", "quality": "Per-row `isPending` disables that row's controls — better scoped than ComplianceClient's global lock. But no label swap and no spinner, so a disabled row is the only signal." },
+        "empty": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:80-81", "quality": "WEAK: one muted sentence, no CTA. Notably there is no 'invite admin' action anywhere on this screen, so an empty roster is a true dead end." },
+        "error": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:48-49", "quality": "Generic translated toast ('toastError') with no detail and no retry. Better copy than the catalogue/compliance raw strings, but the optimistic row patch at :40-46 is only applied on success so a failure leaves the select showing the OLD value while the toast says it failed — acceptable." },
+        "success": { "present": true, "evidence": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:40-47", "quality": "Row patched + generic success toast." },
+        "offline": { "present": false, "evidence": null, "quality": "absent" },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "No capability check inside the component; every visitor to the route sees full role-editing controls." }
+      },
+      "skeletonOrSpinner": "none — `disabled` on row controls only (admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:124,139,166)",
+      "tokenUsage": {
+        "usesSpacingTokens": true,
+        "hardcodedDp": [
+          { "value": "gap-2", "line": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:109", "context": "name input + save button gap, raw Tailwind" },
+          { "value": "pb-2 pr-4", "line": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:87-92", "context": "header cell padding" },
+          { "value": "py-3 pr-4", "line": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:101-162", "context": "body cell padding" }
+        ],
+        "hardcodedColors": [
+          { "value": "bg-green-50", "line": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:72", "context": "success toast — Tailwind literal, the pattern globals.css:466 documents .alert as replacing" },
+          { "value": "bg-red-50", "line": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:73", "context": "error toast — same" }
+        ],
+        "unmappedTypographySlots": [],
+        "offScaleRadius": [
+          { "value": "`rounded` = 4px Tailwind default on the toast", "line": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:70" }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "A 6-column table containing a text input and a select, inside overflow-x-auto (:83). Hindi role labels ('सुपर एडमिन', 'ऑपरेशन्स मैनेजर', 'सपोर्ट एजेंट') widen the select, and the Display Name cell holds a full-width `.input` (width:100% from globals.css:390-392) plus a 44px button in a flex — that cell will dominate the table and push the remaining four columns into horizontal scroll on Hindi. Dates use the shared intlFormatDate with the active locale (:105,:158), which is correct.",
+        "currencyFormatting": "n/a — no money on this surface"
+      },
+      "a11y": {
+        "contentDescriptions": { "value": true, "cite": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:119,143 — the name input and role select both carry per-row aria-labels including the email. The Save and Deactivate buttons (:121-132, :163-174) do NOT, so screen readers hear N identical 'Save' / 'Deactivate' buttons." },
+        "touchTargetRisks": [
+          { "line": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:110-120", "size": "global input padding 0.625rem => ~38px", "note": "the inline name input is ~38px next to a 44px .btn in the same flex — mismatched heights inside one cell" }
+        ],
+        "contrastRisks": [
+          { "line": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:72-74", "note": "Success toast: light bg-green-50 with dark-theme --color-success #5BA38E ≈ 2.9:1 — FAILS WCAG AA." },
+          { "line": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:103-106", "note": "Two of the three lines in the Admin cell are 12px muted (mono adminId + updated timestamp) — a lot of 12px text as standing table content." }
+        ],
+        "semanticsHeadings": true,
+        "focusOrder": "Per row: name input -> Save -> role select -> Deactivate. <th> elements lack scope='col' (:87-92) and the table has no caption."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No avatars or initials on a people-management table; status and TOTP state have no icons"], "cite": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:101-161" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None. Toast pops in/out; row status flips instantly with no transition." },
+      "density": "py-3 (12px) rows and align-top with three stacked lines in the first cell and a form control in two more — the row is visually tall and busy while every cell is grey text on grey. No zebra, no hover, no column dividers.",
+      "observations": [
+        { "severity": "high", "claim": "Changing an admin's ROLE (a privilege-escalation action, including granting super-admin) fires the PATCH immediately on select change with no confirmation and no undo.", "evidence": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:136-150", "confidence": "observed" },
+        { "severity": "high", "claim": "Deactivating an admin account requires no confirmation — one click on a ghost button that looks identical to the row's 'Save' button.", "evidence": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:163-174", "confidence": "observed" },
+        { "severity": "high", "claim": "The Display Name input is always editable with a per-row Save button and NO dirty-state indicator — a typed-but-unsaved name looks identical to a saved one, and navigating away silently discards it.", "evidence": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:110-132", "confidence": "observed" },
+        { "severity": "medium", "claim": "Success toast fails WCAG AA (light bg-green-50 + dark-theme success token) — the same anti-pattern repeated in all three table screens of this cluster.", "evidence": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:70-74; admin-web/app/globals.css:129,466", "confidence": "observed" },
+        { "severity": "medium", "claim": "No way to invite or create an admin user from the admin-users screen, so the empty state is unreachable-from and unactionable.", "evidence": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:55-82", "confidence": "observed" },
+        { "severity": "medium", "claim": "TOTP enrolment and Active/Deactivated status are plain words/coloured text rather than badges, so security posture cannot be scanned down the column.", "evidence": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:152-161", "confidence": "observed" },
+        { "severity": "low", "claim": "<th> elements have no scope='col' and the table has no caption.", "evidence": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:86-93", "confidence": "observed" },
+        { "severity": "low", "claim": "Two of the three lines in the identity cell are 12px muted debug data (mono UUID, 'updated' timestamp), competing with the email for the cell's visual weight.", "evidence": "admin-web/app/[locale]/(dashboard)/admin-users/AdminUsersClient.tsx:101-107", "confidence": "observed" }
+      ]
+    }
+  ]
+}

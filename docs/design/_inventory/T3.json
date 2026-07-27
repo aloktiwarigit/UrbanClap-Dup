@@ -1,0 +1,732 @@
+{
+  "cluster": "T3",
+  "surfaces": [
+    {
+      "id": "technician.earnings",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt",
+      "loc": 384,
+      "purpose": "Technician reviews payout totals by period (today/week/month/lifetime), monthly goal progress and a 7-day earnings sparkline.",
+      "entryPoints": "ORPHANED. The `EarningsScreen` composable (EarningsScreen.kt:66) is not referenced anywhere in main source — grep over technician-app returns only tests (technician-app/app/src/test/kotlin/com/homeservices/technician/ui/earnings/EarningsScreenTest.kt:21, EarningsScreenPaparazziTest.kt:43) and Kover exclusions (technician-app/app/build.gradle.kts:479). The live 'Pay' tab is a separate implementation, `EarningsTabScreen` in technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:528, reachable via TechTab.Earnings (TechnicianHomeScreen.kt:213, dispatched at TechnicianHomeScreen.kt:173-174).",
+      "composition": [
+        "TopAppBar with a horizontal brand gradient background (brandPrimaryHover -> colorScheme.primary) and white SemiBold title 'Earnings' — EarningsScreen.kt:75-95",
+        "Body is a `when` over EarningsUiState inside a Surface tinted colorScheme.background — EarningsScreen.kt:117-152",
+        "SUCCESS path: LazyColumn, contentPadding 16.dp, 16.dp item spacing — EarningsScreen.kt:233-237",
+        "1. Screen heading 'Your payout dashboard' (headlineSmall, Bold) — EarningsScreen.kt:238-245",
+        "2. Row of two PeriodCards: Today | This week, 10.dp gap — EarningsScreen.kt:246-251",
+        "3. Row of two PeriodCards: This month | Lifetime, 10.dp gap — EarningsScreen.kt:252-257",
+        "4. GoalProgressCard — HsSectionCard titled 'Monthly goal' containing a LinearProgressIndicator clipped to 4.dp radius plus '<earned> / <goal>' bodySmall caption — EarningsScreen.kt:258, 303-317",
+        "5. SparklineCard — HsSectionCard titled 'Last 7 days' containing either an 84.dp empty message box or a Canvas bar chart with weekday labels — EarningsScreen.kt:259, 320-338, 341-372",
+        "6. Full-width OutlinedButton 'View ratings' — EarningsScreen.kt:260-264",
+        "7. Full-width OutlinedButton 'Payout settings' — EarningsScreen.kt:265-269",
+        "PeriodCard internals: HsSectionCard > labelMedium label, titleLarge Bold rupee amount, bodySmall job count — EarningsScreen.kt:279-299",
+        "EMPTY path: centered 80.dp rounded (24.dp) surfaceVariant tile with a 40.dp AccountBalanceWallet icon, titleLarge Bold title, bodyMedium body, three StepHint rows (36.dp/10.dp radius icon chip + bodyMedium text), full-width OutlinedButton 'Payout settings' — EarningsScreen.kt:156-201, 205-225"
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt:119-126", "quality": "Bare 56.dp centered CircularProgressIndicator on a blank background — no skeleton of the card grid, so the screen collapses to nothing then pops in. VM re-emits Loading on every refresh (EarningsViewModel.kt:35), so an FCM-triggered earnings refresh blanks a populated screen back to the spinner." },
+        "empty": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt:142-143, 156-201", "quality": "Genuinely good: iconed hero, title, body, three onboarding hints and a secondary CTA. Best empty state in this cluster. Gate is `lifetime.count == 0` (line 142) so a technician who ever completed one job never sees it again." },
+        "error": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt:127-140", "quality": "Generic 'Could not load earnings' (values/strings.xml:39) + retry Button. No icon, no cause, no distinction between offline and server error. EarningsUiState.Error is a value-less object (EarningsUiState.kt:33) so no diagnostic can be surfaced." },
+        "success": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt:144-150", "quality": "Four stat cards + goal + sparkline." },
+        "offline": { "present": false, "evidence": null, "quality": "No offline branch anywhere; a network failure is indistinguishable from a server error." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "N/A — screen requires no runtime permission." }
+      },
+      "skeletonOrSpinner": "Bare centered CircularProgressIndicator, 56.dp, strokeWidth 4.dp — technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt:121-125. HsSkeletonBlock is available in the design system but unused here.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "56.dp", "line": 122, "context": "CircularProgressIndicator size — off the 4/8/12/16/24/32/48/64 scale" },
+          { "value": "4.dp", "line": 124, "context": "spinner strokeWidth" },
+          { "value": "12.dp", "line": 135, "context": "Spacer in error state (on-scale value but literal, not LocalHomeservicesSpacing.current.space3)" },
+          { "value": "24.dp", "line": 158, "context": "empty-state Column padding" },
+          { "value": "80.dp", "line": 166, "context": "empty-state icon tile size" },
+          { "value": "40.dp", "line": 173, "context": "empty-state icon size" },
+          { "value": "24.dp / 8.dp / 32.dp / 12.dp", "line": 176, "context": "Spacer stack at lines 176, 184, 191, 193, 195, 197 — all literals" },
+          { "value": "36.dp", "line": 217, "context": "StepHint icon chip size — off-scale" },
+          { "value": "20.dp", "line": 220, "context": "StepHint icon size — off-scale" },
+          { "value": "12.dp", "line": 222, "context": "StepHint Spacer" },
+          { "value": "16.dp", "line": 235, "context": "LazyColumn contentPadding" },
+          { "value": "16.dp", "line": 236, "context": "LazyColumn item spacing" },
+          { "value": "10.dp", "line": 247, "context": "PeriodCard row gap — OFF-SCALE (10 is not on the 4/8/12 scale) and inconsistent with the 16.dp vertical rhythm two lines above" },
+          { "value": "10.dp", "line": 253, "context": "second PeriodCard row gap — same off-scale value" },
+          { "value": "4.dp", "line": 310, "context": "Spacer under progress bar" },
+          { "value": "84.dp", "line": 325, "context": "sparkline empty-box height — off-scale" },
+          { "value": "84.dp", "line": 335, "context": "sparkline canvas height — off-scale" },
+          { "value": "4.dp", "line": 352, "context": "minBarPx in Canvas" },
+          { "value": "24.dp", "line": 377, "context": "CenterState padding" }
+        ],
+        "hardcodedColors": [
+          { "value": "Color.White", "line": 86, "context": "TopAppBar title color — hardcoded white, not onPrimary; will not adapt if the gradient changes" },
+          { "value": "Color.White", "line": 93, "context": "TopAppBarDefaults titleContentColor" },
+          { "value": "Color.Transparent", "line": 91, "context": "containerColor override so the Brush gradient shows through" },
+          { "value": "Color.Transparent", "line": 92, "context": "scrolledContainerColor" }
+        ],
+        "unmappedTypographySlots": [
+          { "slot": "titleMedium", "line": 131 },
+          { "slot": "headlineSmall", "line": 241 },
+          { "slot": "labelMedium", "line": 280 },
+          { "slot": "titleMedium", "line": 304 }
+        ],
+        "offScaleRadius": [
+          { "value": "24.dp", "line": 167 },
+          { "value": "10.dp", "line": 218 },
+          { "value": "4.dp", "line": 307 }
+        ]
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "HIGH (inferred). Four PeriodCards are laid out as two 50/50 weighted Rows (lines 246-257) each holding a labelMedium label + titleLarge amount. Hindi labels from values-hi/strings.xml (e.g. 'कुल' line 53, 'आपका पेआउट डैशबोर्ड' line 49) run longer and taller; 'This week'/'This month' equivalents will wrap inside a half-width card whose amount already uses titleLarge Bold. GoalProgressCard concatenates two rupee strings into one bodySmall line (line 312) with no wrap allowance. The Canvas sparkline weekday labels (line 368) are drawn by SpaceEvenly Row with no maxLines — 7 Devanagari day abbreviations across a phone width will collide.",
+        "currencyFormatting": "`private fun formatRupees(paise: Long): String = \"₹%,.0f\".format(paise / 100.0)` — EarningsScreen.kt:384. Uses the ₹ glyph (good) but: (a) `%,.0f` inherits the JVM default Locale, so lakh/crore grouping is not pinned — grouping style silently varies with device locale rather than being explicitly Indian; (b) `.0f` ROUNDS paise rather than truncating or showing them, so ₹1,234.56 renders as ₹1,235 — a technician reconciling cash will see a number that does not match the ledger; (c) the same helper in the LIVE Pay tab is `\"Rs %,.0f\"` (technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:1350) — two different currency renderings ship in one app."
+      },
+      "a11y": {
+        "contentDescriptions": false,
+        "contentDescriptionsCite": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt:171 and :220 — both Icons pass contentDescription = null (decorative, defensible), but the Canvas sparkline (line 349-359) and its weekday label Row carry NO semantics/contentDescription at all, so the 7-day trend is completely invisible to TalkBack.",
+        "touchTargetRisks": [],
+        "contrastRisks": [
+          { "line": 280, "note": "PeriodCard label uses labelMedium on onSurfaceVariant #5F6C66 over surface #FFFDF8 — small text at the low end of the contrast budget" },
+          { "line": 296, "note": "job-count line is bodySmall on onSurfaceVariant when count==0 (line 297)" },
+          { "line": 314, "note": "goal progress caption bodySmall on onSurfaceVariant" },
+          { "line": 330, "note": "sparkline empty message bodySmall on onSurfaceVariant" },
+          { "line": 368, "note": "weekday labels labelSmall on onSurfaceVariant — smallest text in the app on the lowest-contrast token" }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "Natural LazyColumn order. The heading at line 239 is a plain Text with no `semantics { heading() }`, so TalkBack users get no landmark structure across a 7-item scroll."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No illustration or photography anywhere; the empty state substitutes a Material icon in a gray rounded box — EarningsScreen.kt:162-175"], "cite": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt:1-384 contains no painterResource/Image/AsyncImage call" },
+      "motion": {
+        "animationsUsed": [
+          { "what": "LinearProgressIndicator implicit progress animation (M3 default)", "line": 305 }
+        ],
+        "usesMotionTokens": false,
+        "transitionsOnNav": "None. The state `when` at line 118 swaps Loading/Error/Success with no Crossfade or AnimatedContent, so the spinner-to-content handoff is an instant hard cut. HomeGraph composables (navigation/HomeGraph.kt:47-93) declare no enter/exit transitions."
+      },
+      "density": "Inconsistent. Vertical rhythm is 16.dp (line 236) but the horizontal card gap is 10.dp (lines 247, 253) — cards read visually tighter horizontally than vertically. Empty state is airy (24.dp page padding, 24/32.dp spacers) while the success state is denser (16.dp). HsSectionCard adds its own internal space4=16.dp (design-system HsComponents.kt:119), so a PeriodCard is 16.dp inside a card that is only 10.dp from its sibling.",
+      "observations": [
+        { "severity": "high", "claim": "This entire screen is dead code — the composable EarningsScreen is unreferenced outside tests; the shipping earnings surface is EarningsTabScreen in TechnicianHomeScreen.kt:528, which is a different design with a different card language.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt:66 vs technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:528", "confidence": "observed" },
+        { "severity": "high", "claim": "The cash-commission / receivable model (E21-S01, api/src/cosmos/commission-receivable-repository.ts, api/src/functions/technicians/commission-due.ts) is NOT surfaced anywhere in technician-app — a grep for receivable|commission|cashCollected over technician-app/app/src/main/kotlin returns zero hits. A technician collecting cash has no in-app view of what commission he owes.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/domain/earnings/model/EarningsSummary.kt:26-33 (model has only today/week/month/lifetime/lastSevenDays/pendingHeldPaise — no commission or receivable field)", "confidence": "observed" },
+        { "severity": "high", "claim": "Two different rupee renderings ship in the same app: '₹%,.0f' here vs 'Rs %,.0f' ASCII in the live Pay tab.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt:384 vs technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:1350", "confidence": "observed" },
+        { "severity": "high", "claim": "`pendingHeldPaise` — the only money field that represents un-paid-out balance — exists on the model but is never rendered on this screen.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/domain/earnings/model/EarningsSummary.kt:32 defined; no reference in EarningsScreen.kt:1-384", "confidence": "observed" },
+        { "severity": "medium", "claim": "No period-over-period comparison anywhere — four absolute totals with no delta, no 'vs last week', no trend arrow. The only comparative signal is a 7-bar Canvas with no y-axis, no values, and no tooltip.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt:246-259, 341-372", "confidence": "observed" },
+        { "severity": "medium", "claim": "Money is rounded to whole rupees, so displayed earnings can disagree with the ledger by up to 50 paise per figure.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt:384", "confidence": "observed" },
+        { "severity": "medium", "claim": "GoalProgressCard divides by `month.goalPaise` with no zero guard — if the API returns goalPaise=0 the Float division yields NaN/Infinity before coerceIn.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt:306", "confidence": "inferred" },
+        { "severity": "medium", "claim": "Four unmapped M3 typography slots are used (titleMedium x2, headlineSmall, labelMedium), each of which falls back to Roboto instead of Geist Sans / Noto Devanagari — the screen mixes typefaces including on its own page heading.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt:131, 241, 280, 304", "confidence": "observed" },
+        { "severity": "medium", "claim": "The two bottom actions are both full-width OutlinedButtons stacked identically — no primary action, no visual hierarchy, and they read as a pair of dead gray bars closing the screen.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt:261-268", "confidence": "observed" },
+        { "severity": "medium", "claim": "The Canvas sparkline has zero accessibility semantics and zero interaction — no per-bar value, no press feedback, no contentDescription.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt:349-359", "confidence": "observed" },
+        { "severity": "low", "claim": "TopAppBar applies the gradient via Modifier.background on the TopAppBar itself while forcing transparent container colors — the gradient will not extend under the status bar inset the way a Surface-based header would.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt:76-94", "confidence": "inferred" },
+        { "severity": "low", "claim": "Weekday label falls back to a literal '?' on parse failure, which would render as an untranslated glyph in the chart axis.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt:366", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "technician.payout-cadence",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/payoutsettings/PayoutCadenceScreen.kt",
+      "loc": 170,
+      "purpose": "Technician chooses how often payouts arrive — weekly (free), next-day (₹15) or instant (₹25) — behind a biometric confirmation.",
+      "entryPoints": "route \"payout_settings\" — technician-app/app/src/main/kotlin/com/homeservices/technician/navigation/HomeGraph.kt:62-64; navigated from the home dashboard's onPayoutSettings (HomeGraph.kt:152) and from an EARNINGS_UPDATE pending-action tap (HomeGraph.kt:165-166).",
+      "composition": [
+        "TopAppBar, default colors, title from R.string.payout_settings_title — PayoutCadenceScreen.kt:77. NOTE: no navigationIcon/back arrow despite the screen taking an onBack lambda (line 54).",
+        "SnackbarHost — PayoutCadenceScreen.kt:78",
+        "Body Column, 16.dp padding, 12.dp item spacing — PayoutCadenceScreen.kt:120-123",
+        "1. Question heading 'When do you want payment?' (titleMedium) — PayoutCadenceScreen.kt:124",
+        "2. 4.dp Spacer — PayoutCadenceScreen.kt:125",
+        "3. Three CadenceCards from the const list CADENCE_OPTIONS — PayoutCadenceScreen.kt:127-133, list at 44-49",
+        "   CadenceCard = clickable Card > Row(12.dp padding, 12.dp gap) of [RadioButton | Column(bodyLarge label, bodySmall detail) | labelMedium fee text] — PayoutCadenceScreen.kt:153-169",
+        "4. Spacer(weight 1f) pushing the CTA to the bottom — PayoutCadenceScreen.kt:135",
+        "5. Full-width HsPrimaryButton, label 'सेव करें' (or 'Saving...') , enabled only when dirty — PayoutCadenceScreen.kt:137-142"
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/payoutsettings/PayoutCadenceScreen.kt:82-94", "quality": "Bare 56.dp centered spinner. Dead in practice: the ViewModel's initial state is Ready, never Loading (PayoutCadenceViewModel.kt:23-26), so the loading branch is unreachable." },
+        "empty": { "present": false, "evidence": null, "quality": "N/A — options are a hardcoded const list (PayoutCadenceScreen.kt:44-49)." },
+        "error": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/payoutsettings/PayoutCadenceScreen.kt:68-70", "quality": "POOR. Error is surfaced only as a transient snackbar carrying `state.message`, which is the raw Throwable message (`it.message ?: \"Unknown error\"` — PayoutCadenceViewModel.kt:56). Worse, when uiState is Error the body renders NOTHING (lines 106-108), so the user is left staring at an empty screen under a vanishing snackbar with no way to retry." },
+        "success": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/payoutsettings/PayoutCadenceScreen.kt:64-67", "quality": "Snackbar 'सेटिंग सेव हो गई' then immediate onBack(). The snackbar and the navigation race — the pop likely dismisses the host before the message is read. `nextPayoutAt` returned by the API (PayoutCadenceViewModel.kt:55) is thrown away and never shown." },
+        "offline": { "present": false, "evidence": null, "quality": "None." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "Biometric is required to save (PayoutCadenceViewModel.kt:40-48) but a non-Authenticated result silently `return@launch` with NO user feedback — the Save button just does nothing." }
+      },
+      "skeletonOrSpinner": "Bare centered CircularProgressIndicator, 56.dp — technician-app/app/src/main/kotlin/com/homeservices/technician/ui/payoutsettings/PayoutCadenceScreen.kt:88-92. In-button saving state is text-only ('Saving...' at line 138), no inline spinner.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "56.dp", "line": 89, "context": "spinner size — off-scale" },
+          { "value": "4.dp", "line": 91, "context": "spinner strokeWidth" },
+          { "value": "16.dp", "line": 121, "context": "content padding" },
+          { "value": "12.dp", "line": 122, "context": "vertical item spacing" },
+          { "value": "4.dp", "line": 125, "context": "Spacer under the heading" },
+          { "value": "12.dp", "line": 158, "context": "CadenceCard inner Row padding — tighter than the 16.dp used by HsSectionCard elsewhere" },
+          { "value": "12.dp", "line": 160, "context": "CadenceCard horizontal gap" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [
+          { "slot": "titleMedium", "line": 124 },
+          { "slot": "labelMedium", "line": 167 }
+        ],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "साप्ताहिक (मुफ्त) / हर सोमवार / मुफ्त", "line": 46 },
+          { "text": "अगले दिन (₹15) / सुबह 10 बजे तक / ₹15/पेमेंट", "line": 47 },
+          { "text": "तुरंत (₹25) / जॉब के 30 मिनट में / ₹25/पेमेंट", "line": 48 },
+          { "text": "सेटिंग सेव हो गई", "line": 65 },
+          { "text": "Saving...", "line": 138 },
+          { "text": "सेव करें (as \\u0938\\u0947\\u0935 escapes)", "line": 138 },
+          { "text": "पेमेंट सेटिंग बदलें (biometric prompt title)", "line": 44, "note": "PayoutCadenceViewModel.kt:44" },
+          { "text": "पहचान सत्यापित करें (biometric prompt subtitle)", "line": 45, "note": "PayoutCadenceViewModel.kt:45" }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "SEVERE and inverted: the payment-critical content is HARDCODED IN HINDI, so an English-locale technician sees a screen whose title/heading are English (from R.string) but whose three options, fees and Save button are Devanagari — a broken-looking bilingual mix on the money screen. The Save button additionally mixes 'Saving...' English with 'सेव करें' Hindi in the same control (line 138). values-hi/strings.xml has full parity (163 strings in both files) yet these literals bypass it entirely.",
+        "currencyFormatting": "Rupee amounts are baked into display literals: '₹15', '₹25', '₹15/पेमेंट', '₹25/पेमेंट' — PayoutCadenceScreen.kt:47-48. No formatter, no paise source, no way to change a fee without an app release."
+      },
+      "a11y": {
+        "contentDescriptions": false,
+        "contentDescriptionsCite": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/payoutsettings/PayoutCadenceScreen.kt:1-170 — no Icons and no contentDescription; also no back-navigation affordance at all (TopAppBar at line 77 has no navigationIcon).",
+        "touchTargetRisks": [
+          { "line": 162, "size": "RadioButton default (48.dp min) but nested inside a Card(onClick) — the RadioButton has its own onClick duplicating the Card's, producing two overlapping click targets and a doubled TalkBack announcement", "note": "no Role.RadioButton / selectableGroup semantics; contrast with the design-system LanguagePickerCard which does it correctly (design-system/src/main/kotlin/com/homeservices/designsystem/locale/LanguagePickerCard.kt:53-63 uses .selectable(role = Role.RadioButton) with onClick = null on the RadioButton)" }
+        ],
+        "contrastRisks": [
+          { "line": 165, "note": "CadenceCard `detail` uses bodySmall with NO color override, so it inherits full onSurface — it reads as loud as the label above it and destroys the two-line hierarchy" },
+          { "line": 167, "note": "fee label labelMedium with no color override — the ₹15/₹25 cost is styled no differently from neutral metadata" }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "Linear. No selectableGroup() wrapper around the three options, so TalkBack does not announce '1 of 3'."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No icons at all — three payout speeds differentiated only by a radio dot and text"], "cite": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/payoutsettings/PayoutCadenceScreen.kt:1-170 has no Icon/Image import" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None. Card selection has no animated container-color or border change — the only feedback is the radio dot and the default ripple. No AnimatedContent between Loading/Ready." },
+      "density": "Cramped and flat. 12.dp Card inner padding (line 158) vs the 16.dp HsSectionCard standard, three identical unelevated default M3 Cards stacked 12.dp apart (line 122) — textbook flat-gray-card syndrome for what is the highest-stakes settings choice in the app. Large dead space between the last option and the bottom CTA courtesy of Spacer(weight 1f) at line 135.",
+      "observations": [
+        { "severity": "high", "claim": "All payout option copy, fees and the Save button are hardcoded Devanagari literals, bypassing the fully-populated values-hi resource file — an English-locale technician gets a half-Hindi money screen.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/payoutsettings/PayoutCadenceScreen.kt:44-49, 65, 138", "confidence": "observed" },
+        { "severity": "high", "claim": "When save fails the screen body renders nothing — the `when` branch for SaveSuccess/Error is an empty block with only a comment.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/payoutsettings/PayoutCadenceScreen.kt:106-108", "confidence": "observed" },
+        { "severity": "high", "claim": "The error snackbar shows a raw exception message.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/payoutsettings/PayoutCadenceScreen.kt:69 rendering PayoutCadenceViewModel.kt:56 `it.message ?: \"Unknown error\"`", "confidence": "observed" },
+        { "severity": "high", "claim": "A cancelled or failed biometric prompt produces zero UI feedback — the coroutine returns silently, so the Save button appears to be broken.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/payoutsettings/PayoutCadenceViewModel.kt:47", "confidence": "observed" },
+        { "severity": "medium", "claim": "TopAppBar has no back button even though onBack is available, so the only exits are the system back gesture or a successful save.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/payoutsettings/PayoutCadenceScreen.kt:77 (compare MyRatingsScreen.kt:63-67 which does provide one)", "confidence": "observed" },
+        { "severity": "medium", "claim": "The currently-saved cadence is hardcoded to 'WEEKLY' in the ViewModel's initial state and never fetched from the server, so the screen can display a selection that does not match reality.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/payoutsettings/PayoutCadenceViewModel.kt:23-26", "confidence": "observed" },
+        { "severity": "medium", "claim": "The selected option gets no visual container treatment — no border, no tint, no elevation change; only the radio dot differs. All three cards render as identical flat surfaces.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/payoutsettings/PayoutCadenceScreen.kt:153-156 (Card with no colors/border parameter keyed off isSelected)", "confidence": "observed" },
+        { "severity": "medium", "claim": "Double-tap target: both the Card and the nested RadioButton carry onClick, unlike the design system's own LanguagePickerCard pattern.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/payoutsettings/PayoutCadenceScreen.kt:154 and :162 vs design-system/src/main/kotlin/com/homeservices/designsystem/locale/LanguagePickerCard.kt:53-63", "confidence": "observed" },
+        { "severity": "medium", "claim": "The API returns nextPayoutAt on success and the app discards it — the technician is never told when the next payout will actually land after changing cadence.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/payoutsettings/PayoutCadenceViewModel.kt:55 wrapped into SaveSuccess, which PayoutCadenceScreen.kt:64-67 ignores", "confidence": "observed" },
+        { "severity": "low", "claim": "No explanation of the trade-off beyond a one-line detail string — no comparison of total fee cost, no 'recommended' marker on the free option.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/payoutsettings/PayoutCadenceScreen.kt:44-49", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "technician.my-ratings",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt",
+      "loc": 243,
+      "purpose": "Technician reviews their aggregate customer rating, sub-scores, weekly trend and the individual ratings customers left.",
+      "entryPoints": "route \"ratings_transparency\" — technician-app/app/src/main/kotlin/com/homeservices/technician/navigation/HomeGraph.kt:69-71; reached from home onViewRatings (HomeGraph.kt:151), from the Pay tab 'Ratings impact' card (technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt:570-575), and from a RATING_RECEIVED pending action (HomeGraph.kt:163-164).",
+      "composition": [
+        "TopAppBar with back arrow, default surface colors — MyRatingsScreen.kt:60-68",
+        "SUCCESS: LazyColumn, 16.dp contentPadding, 16.dp spacing — MyRatingsScreen.kt:108-112",
+        "1. Hero HsSectionCard: SpaceBetween Row of [Column(displaySmall Bold average, bodyMedium '<n> customer ratings') | displaySmall '★' in primary] — MyRatingsScreen.kt:113-135",
+        "2. SpaceEvenly Row of three SubScoreColumns: Punctuality | Skill | Behaviour, each titleMedium value over labelSmall label — MyRatingsScreen.kt:136-142, 157-166",
+        "3. Conditional TrendCard — HsSectionCard titled 'Weekly trend' wrapping an 80.dp Canvas bar chart — MyRatingsScreen.kt:143, 169-194",
+        "4a. If no individual ratings: a centered bodyLarge 'No ratings yet' with no padding, icon or CTA — MyRatingsScreen.kt:144-149",
+        "4b. Else one RatingItemCard per rating — MyRatingsScreen.kt:150-152",
+        "RatingItemCard = HsSectionCard > [5-star ★/☆ text row, 2.dp gap] + [two SuggestionChips: Punctuality n, Skill n] + optional bodySmall comment + labelSmall date in `outline` color — MyRatingsScreen.kt:199-225"
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt:84-91", "quality": "Bare 56.dp centered spinner, no skeleton. VM re-emits Loading on every RatingReceivedEventBus push (MyRatingsViewModel.kt:65), so an incoming rating blanks the whole list." },
+        "empty": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt:144-149", "quality": "MINIMAL — a single unpadded bodyLarge line inside a Box. No icon, no explanatory copy, no CTA. And it only covers the list; the hero above still shows '0.0' and '0 customer ratings', so a brand-new technician's first impression of this screen is a giant grey 0.0." },
+        "error": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt:92-100", "quality": "Generic title + hardcoded English 'Try again' button. MyRatingsUiState.Error is a value-less object (MyRatingsUiState.kt:46) so no cause is available." },
+        "success": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt:101, 107-154", "quality": "Reasonable structure; see observations for hierarchy issues." },
+        "offline": { "present": false, "evidence": null, "quality": "None." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "N/A." }
+      },
+      "skeletonOrSpinner": "Bare centered CircularProgressIndicator 56.dp / 4.dp stroke — technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt:86-90.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "56.dp", "line": 87, "context": "spinner size — off-scale" },
+          { "value": "4.dp", "line": 89, "context": "spinner strokeWidth" },
+          { "value": "16.dp", "line": 110, "context": "LazyColumn contentPadding" },
+          { "value": "16.dp", "line": 111, "context": "item spacing" },
+          { "value": "80.dp", "line": 171, "context": "trend chart height — off-scale" },
+          { "value": "4.dp", "line": 186, "context": "minBarPx" },
+          { "value": "2.dp", "line": 201, "context": "star row gap — OFF-SCALE (2 is below the 4dp base unit)" },
+          { "value": "6.dp", "line": 216, "context": "chip row gap — OFF-SCALE" },
+          { "value": "24.dp", "line": 230, "context": "CenterState padding" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [
+          { "slot": "titleMedium", "line": 96 },
+          { "slot": "displaySmall", "line": 123 },
+          { "slot": "displaySmall", "line": 132 },
+          { "slot": "titleMedium", "line": 163 },
+          { "slot": "titleMedium", "line": 211 }
+        ],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Try again", "line": 99 },
+          { "text": "${summary.totalCount} customer ratings", "line": 127 },
+          { "text": "Punctuality", "line": 138 },
+          { "text": "Skill", "line": 139 },
+          { "text": "Behaviour", "line": 140 },
+          { "text": "Weekly trend", "line": 170 }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "HIGH. The three sub-score labels are hardcoded English (lines 138-140) laid out in a SpaceEvenly Row with no width constraint and rendered in labelSmall (line 164) — their Hindi equivalents ('समयबद्धता', 'कौशल', 'व्यवहार') would be both longer and taller and would collide or clip. '${summary.totalCount} customer ratings' at line 127 is string-concatenated, which cannot be pluralised or reordered for Hindi grammar. The date format 'dd MMM yyyy' is hardcoded pattern-based (line 240) rather than a localized DateTimeFormatter, so the month abbreviation will not localize consistently.",
+        "currencyFormatting": "N/A — no currency on this screen."
+      },
+      "a11y": {
+        "contentDescriptions": true,
+        "contentDescriptionsCite": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt:65 — back arrow has R.string.action_back. However the star ratings are rendered as raw ★/☆ TEXT characters (lines 132, 204-213), so TalkBack reads 'black star black star white star' instead of '3 of 5'; the trend Canvas (line 183) has no semantics at all.",
+        "touchTargetRisks": [
+          { "line": 217, "size": "SuggestionChip default height 32.dp", "note": "Below the 48.dp minimum AND both chips pass onClick = {} — non-functional controls that still consume focus and announce as clickable" },
+          { "line": 218, "size": "SuggestionChip default height 32.dp", "note": "same — decorative chip masquerading as a control" }
+        ],
+        "contrastRisks": [
+          { "line": 129, "note": "'n customer ratings' bodyMedium on onSurfaceVariant #5F6C66" },
+          { "line": 164, "note": "sub-score labels labelSmall on onSurfaceVariant — smallest type on the lowest-contrast token" },
+          { "line": 221, "note": "customer comment — the most valuable content on the screen — is bodySmall on onSurfaceVariant, quieter than the decorative chips above it" },
+          { "line": 223, "note": "date uses colorScheme.outline #DED8CD as a TEXT color; outline is a divider token and against surface #FFFDF8 this is very near invisible" }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "Linear list order; no heading semantics on the hero average."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No customer avatars, no service icons, no illustration in the empty state — every rating card is an identical white rectangle"], "cite": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt:199-225" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None — no Crossfade between Loading/Error/Success (line 83), no item animation on the LazyColumn even though ratings arrive live via RatingReceivedEventBus (MyRatingsViewModel.kt:32)." },
+      "density": "Airy at the top (16.dp gaps, a displaySmall hero) then abruptly dense inside rating cards where five elements stack with only HsSectionCard's default column (no verticalArrangement is set on HsSectionCard's inner Column — design-system HsComponents.kt:119 — so stars, chips, comment and date sit flush against each other with zero spacing).",
+      "observations": [
+        { "severity": "high", "claim": "RatingAppealSheet and the entire appeal flow are built but never wired — MyRatingsViewModel exposes appealState/fileRatingAppeal and the sheet composable exists, yet MyRatingsScreen.kt never references either. The Pay tab even advertises 'See score, trend and appeal options' (TechnicianHomeScreen.kt:573) pointing here, where no appeal option exists.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheet.kt:28 (only definition, no call site) and MyRatingsViewModel.kt:27,38 unreferenced by MyRatingsScreen.kt:1-243", "confidence": "observed" },
+        { "severity": "high", "claim": "Rating stars are literal ★/☆ text glyphs rather than icons — they inherit the Roboto fallback, cannot be tinted per-half-star, render at typography sizes that vary by locale, and are unreadable to screen readers.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt:132, 204-213", "confidence": "observed" },
+        { "severity": "high", "claim": "Five unmapped M3 slots are used including both displaySmall hero elements — the single largest number on the screen (the technician's rating) renders in Roboto while the rest of the app is Geist Sans.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt:96, 123, 132, 163, 211", "confidence": "observed" },
+        { "severity": "medium", "claim": "Two SuggestionChips per rating card are interactive controls with empty onClick — dead affordances that look tappable.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt:217-218", "confidence": "observed" },
+        { "severity": "medium", "claim": "The date stamp uses colorScheme.outline as a text color; outline is the divider/border token (#DED8CD light) and will be near-illegible on surface.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt:223", "confidence": "observed" },
+        { "severity": "medium", "claim": "Sub-score labels 'Punctuality'/'Skill'/'Behaviour' are hardcoded English while the screen title next to them comes from values-hi — guaranteed mixed-language rendering in Hindi locale.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt:138-140 vs :62 (R.string.my_ratings_title, translated at values-hi/strings.xml:89)", "confidence": "observed" },
+        { "severity": "medium", "claim": "The empty state covers only the list; the hero above still renders '0.0' with a giant star, so a new technician's ratings screen leads with a zero score.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt:113-135 renders unconditionally before the emptiness check at :144", "confidence": "observed" },
+        { "severity": "medium", "claim": "'Weekly trend' Canvas has no axis, no labels, no values and no accessibility text — it is a decorative bar shape whose meaning cannot be read.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt:169-194", "confidence": "observed" },
+        { "severity": "low", "claim": "The trend chart's bars are scaled to max-of-series rather than to the 1-5 rating domain, so a 4.8 vs 4.9 week renders as a dramatic height difference.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt:181, 189", "confidence": "observed" },
+        { "severity": "low", "claim": "A stray comment at line 196 documents a caching decision for a `formatDate` helper that sits 40 lines away — leftover review-scar noise in the composable file.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt:196", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "technician.rate-customer",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/rating/RatingScreen.kt",
+      "loc": 222,
+      "purpose": "After a job the technician rates the customer (overall / behaviour / communication + comment), then sees a held state until both sides submit, then the revealed double-blind result.",
+      "entryPoints": "RatingRoutes.ROUTE with bookingId arg — technician-app/app/src/main/kotlin/com/homeservices/technician/navigation/HomeGraph.kt:78-85; entered from a RATING_PROMPT_TECHNICIAN pending action (HomeGraph.kt:161-162) and from an FCM rating prompt (values/strings.xml:163).",
+      "composition": [
+        "No Scaffold and no TopAppBar at all — a bare Surface > Column(24.dp padding, 16.dp spacing) — RatingScreen.kt:51-55. There is no back affordance and no title bar on any of the five states.",
+        "EDITING state — RatingScreen.kt:80-113:",
+        "1. HsTrustBadge 'Customer feedback' — RatingScreen.kt:81",
+        "2. headlineSmall Bold 'Rate your customer' — RatingScreen.kt:82-86",
+        "3. bodyMedium supporting sentence in onSurfaceVariant — RatingScreen.kt:87-91",
+        "4. HsSectionCard containing three StarRows (Overall / Behaviour / Communication) separated by 12.dp Spacers — RatingScreen.kt:92-98",
+        "   StarRow = labelLarge label over a Row of five clickable ★/☆ headlineSmall glyphs with 6.dp end padding — RatingScreen.kt:201-222",
+        "5. OutlinedTextField for the comment, minLines 3 — RatingScreen.kt:99-105",
+        "6. Spacer(weight 1f) then full-width HsPrimaryButton 'Submit rating' — RatingScreen.kt:106-112",
+        "LOADING/SUBMITTING: a Box-centered 56.dp spinner nested inside the 24.dp-padded Column — RatingScreen.kt:57-64",
+        "AWAITING PARTNER: HsTrustBadge 'Ratings' + StatusMessage + optional 'Your rating' HsSectionCard + full-width HsSecondaryButton 'Report issue' — RatingScreen.kt:120-140",
+        "REVEALED: HsTrustBadge + StatusMessage + 'Your rating' card + \"Customer's rating\" card + 'Report issue' button — RatingScreen.kt:143-170",
+        "ERROR: StatusMessage('Could not load rating', current.message) only — no retry control — RatingScreen.kt:79"
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/rating/RatingScreen.kt:57-64", "quality": "Bare 56.dp spinner. Loading and Submitting share the same branch, so submitting replaces the whole form with a spinner instead of showing progress in the button." },
+        "empty": { "present": false, "evidence": null, "quality": "N/A — form screen." },
+        "error": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/rating/RatingScreen.kt:79", "quality": "WORST IN CLUSTER. A single line: StatusMessage('Could not load rating', current.message) where current.message is the raw failure string. Hardcoded English, no retry button, no back button (screen has no app bar), so the user is trapped on a dead screen and must use the system back gesture." },
+        "success": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/rating/RatingScreen.kt:65-78", "quality": "Two distinct post-submit states (AwaitingPartner, Revealed) — good product thinking, but both are rendered as plain text blocks with no celebration, no illustration and no visual differentiation from the error state." },
+        "offline": { "present": false, "evidence": null, "quality": "None." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "N/A." }
+      },
+      "skeletonOrSpinner": "Bare centered CircularProgressIndicator 56.dp / 4.dp stroke, shared by Loading and Submitting — technician-app/app/src/main/kotlin/com/homeservices/technician/ui/rating/RatingScreen.kt:58-64.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "24.dp", "line": 53, "context": "root Column padding" },
+          { "value": "16.dp", "line": 54, "context": "root vertical spacing" },
+          { "value": "56.dp", "line": 60, "context": "spinner size — off-scale" },
+          { "value": "4.dp", "line": 62, "context": "spinner strokeWidth" },
+          { "value": "12.dp", "line": 94, "context": "Spacer between StarRows (also 96)" },
+          { "value": "12.dp", "line": 127, "context": "Spacer in AwaitingPartnerBody (also 150, 156)" },
+          { "value": "16.dp", "line": 134, "context": "Spacer before Report issue (also 164)" },
+          { "value": "8.dp", "line": 194, "context": "StatusMessage spacing" },
+          { "value": "4.dp", "line": 206, "context": "StarRow spacing" },
+          { "value": "6.dp", "line": 216, "context": "star end padding — OFF-SCALE" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [
+          { "slot": "headlineSmall", "line": 84 },
+          { "slot": "headlineSmall", "line": 212 }
+        ],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Customer feedback", "line": 81 },
+          { "text": "Rate your customer", "line": 83 },
+          { "text": "Your rating helps owner support keep the service marketplace fair for professionals.", "line": 88 },
+          { "text": "Overall", "line": 93 },
+          { "text": "Behaviour", "line": 95 },
+          { "text": "Communication", "line": 97 },
+          { "text": "Submit rating", "line": 108 },
+          { "text": "Could not load rating", "line": 79 },
+          { "text": "Ratings", "line": 125 },
+          { "text": "Rating submitted", "line": 126 },
+          { "text": "We will reveal both ratings after the customer responds.", "line": 126 },
+          { "text": "Report issue", "line": 136 },
+          { "text": "Ratings", "line": 148 },
+          { "text": "Ratings revealed", "line": 149 },
+          { "text": "Thanks for keeping the service marketplace fair.", "line": 149 },
+          { "text": "Your rating", "line": 130 },
+          { "text": "Your rating", "line": 153 },
+          { "text": "Customer's rating", "line": 160 },
+          { "text": "Report issue", "line": 166 },
+          { "text": "rate $i stars (onClickLabel — read aloud by TalkBack)", "line": 217 }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "CRITICAL. Approximately 19 user-facing strings on this screen are hardcoded English; only the comment field label and the rating value rows use stringResource (lines 102, 174-177). For a Hindi-first Ayodhya technician the entire rate-your-customer flow is effectively untranslated, and the copy that IS translated (rating_overall etc., values-hi/strings.xml) will appear inside English section cards. This is the single largest i18n hole in the cluster.",
+        "currencyFormatting": "N/A — no currency on this screen."
+      },
+      "a11y": {
+        "contentDescriptions": false,
+        "contentDescriptionsCite": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/rating/RatingScreen.kt:217 — the star has an English onClickLabel 'rate $i stars' (hardcoded, string-interpolated, not translatable); otherwise there are no contentDescriptions and no Icons on the screen.",
+        "touchTargetRisks": [
+          { "line": "210-218", "size": "A headlineSmall Text glyph (~24sp box) with only 6.dp end padding as the clickable area", "note": "Each star tap target is roughly 24-30dp — well under 48.dp, on the primary interaction of the screen. Five of them sit side by side, so mis-taps are near-certain on a rural low-end device with a cracked screen." }
+        ],
+        "contrastRisks": [
+          { "line": 90, "note": "supporting sentence bodyMedium on onSurfaceVariant" },
+          { "line": 196, "note": "StatusMessage body bodyMedium on onSurfaceVariant — used for both success and error copy" },
+          { "line": 213, "note": "unselected stars are drawn in onSurfaceVariant, so an unrated row reads as low-contrast decorative text rather than an actionable control" }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "Linear; stars are five independent clickables with no selectableGroup or slider semantics, so TalkBack gives no notion of a 1-5 scale."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No customer name, no avatar, no job context, no service icon — the technician rates an anonymous someone with no reminder of which booking this is"], "cite": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/rating/RatingScreen.kt:80-113 renders no identifying detail; bookingId is only used for the complaint link at line 137" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None. Tapping a star swaps a glyph with no scale/color animation and no haptic — zero micro-interaction feedback on the screen's core gesture. The five-way state `when` at line 56 is a hard cut." },
+      "density": "Airy 24.dp gutters and 16.dp rhythm in the Editing state, but the post-submit states (AwaitingPartner/Revealed) are just left-aligned text stacks with a lone button, leaving a large empty middle. TechRatingDisplay/CustomerRatingDisplay render four unstyled default-typography Text lines with no spacing (lines 173-187) — an undesigned data dump.",
+      "observations": [
+        { "severity": "high", "claim": "~19 user-facing strings are hardcoded English on a screen shown to Hindi-first rural technicians, including the screen title, all three rating dimension labels and the submit button.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/rating/RatingScreen.kt:81, 83, 88, 93, 95, 97, 108, 126, 149", "confidence": "observed" },
+        { "severity": "high", "claim": "The screen has no Scaffold, no TopAppBar and no back control in any state; combined with an Error state that has no retry button, a failed load is a dead end.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/rating/RatingScreen.kt:51-55 (Surface/Column only) and :79 (error with no action)", "confidence": "observed" },
+        { "severity": "high", "claim": "Star tap targets are text glyphs with 6.dp padding — far under the 48.dp minimum on the screen's primary control.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/rating/RatingScreen.kt:210-218", "confidence": "observed" },
+        { "severity": "high", "claim": "The error state renders the raw failure message straight from RatingUiState.Error.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/rating/RatingScreen.kt:79", "confidence": "observed" },
+        { "severity": "medium", "claim": "TechRatingDisplay and CustomerRatingDisplay are four bare Text lines with no typography style, no color and no spacing — the revealed double-blind result, the emotional payoff of the whole feature, is presented as unformatted key:value text.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/rating/RatingScreen.kt:173-187", "confidence": "observed" },
+        { "severity": "medium", "claim": "Submitting replaces the entire form with a full-screen spinner instead of a busy state on the submit button, so the user loses sight of what they entered.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/rating/RatingScreen.kt:57-64", "confidence": "observed" },
+        { "severity": "medium", "claim": "No booking or customer context is displayed — nothing tells the technician which job this rating belongs to.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/rating/RatingScreen.kt:80-113", "confidence": "observed" },
+        { "severity": "medium", "claim": "Star selection has no animation, scale, or haptic feedback — the only change is one Unicode glyph swapping for another.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/rating/RatingScreen.kt:210-218", "confidence": "observed" },
+        { "severity": "low", "claim": "The success and error states are visually identical structures (StatusMessage title+body), so 'Rating submitted' and 'Could not load rating' look the same.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/rating/RatingScreen.kt:79 vs :126, both calling StatusMessage at :190-198", "confidence": "observed" },
+        { "severity": "low", "claim": "The TalkBack onClickLabel is a hardcoded interpolated English string.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/rating/RatingScreen.kt:217", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "technician.complaint",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/complaint/ComplaintScreen.kt",
+      "loc": 224,
+      "purpose": "Technician files a support ticket about a customer, payment or safety issue on a booking, optionally attaching a photo.",
+      "entryPoints": "ComplaintRoutes.ROUTE with bookingId — technician-app/app/src/main/kotlin/com/homeservices/technician/navigation/HomeGraph.kt:86-92; reached only from RatingScreen's 'Report issue' button (HomeGraph.kt:83, RatingScreen.kt:136 / :166).",
+      "composition": [
+        "No Scaffold / no TopAppBar — bare Surface over a `when` — ComplaintScreen.kt:87-88",
+        "IDLE state Column, 24.dp padding, 16.dp spacing — ComplaintScreen.kt:94:",
+        "1. HsTrustBadge 'Partner support' — ComplaintScreen.kt:95",
+        "2. headlineSmall Bold 'Report an issue' (from R.string) — ComplaintScreen.kt:96-100",
+        "3. bodyMedium supporting sentence, hardcoded English — ComplaintScreen.kt:101-105",
+        "4. HsSectionCard containing: ExposedDropdownMenuBox with a read-only OutlinedTextField ('Issue type') — ComplaintScreen.kt:106-127; 14.dp Spacer; multiline OutlinedTextField ('Describe the issue', minLines 4, maxLines 8, char-count supportingText) — ComplaintScreen.kt:128-137; 14.dp Spacer; full-width HsSecondaryButton toggling between 'Attach photo (optional)' and 'Photo attached' — ComplaintScreen.kt:138-143",
+        "5. Spacer(weight 1f) then full-width HsPrimaryButton 'Submit issue' — ComplaintScreen.kt:145-151",
+        "SUCCESS: centered headlineSmall title, bodyMedium status sentence, HsPrimaryButton 'Back to job' — ComplaintScreen.kt:158-178",
+        "LOADING: centered 56.dp spinner + 'Submitting issue' caption — ComplaintScreen.kt:180-195",
+        "ERROR: left-aligned vertically-centred headlineSmall title, raw `message` in colorScheme.error, 'Try again' button — ComplaintScreen.kt:197-209"
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/complaint/ComplaintScreen.kt:180-195", "quality": "Spinner + caption — better than the bare spinners elsewhere, but it replaces the whole form for both PhotoUploading and Submitting (line 90), so attaching a photo blanks everything the user typed from view." },
+        "empty": { "present": false, "evidence": null, "quality": "N/A — form screen." },
+        "error": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/complaint/ComplaintScreen.kt:197-209", "quality": "POOR. Renders `message` raw in error red (line 205) — this is the exception/API message from ComplaintUiState.Error (ComplaintViewModel.kt:34-36). Also destructive: entering Error discards the Idle state, so the typed description and attached photo are lost, and 'Try again' calls onRetry with nothing to resubmit." },
+        "success": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/complaint/ComplaintScreen.kt:158-178", "quality": "Text-only: title, one status sentence, one button. No icon, no ticket ID shown even though complaintId is in state (ComplaintViewModel.kt:29), no acknowledge deadline shown even though acknowledgeDeadlineAt is in state (ComplaintViewModel.kt:30)." },
+        "offline": { "present": false, "evidence": null, "quality": "None — a photo upload over rural 2G has no offline or retry-queue affordance." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "Uses ActivityResultContracts.GetContent (ComplaintScreen.kt:55) which needs no permission, but a null/cancelled pick silently returns (line 56) with no feedback." }
+      },
+      "skeletonOrSpinner": "Centered CircularProgressIndicator 56.dp / 4.dp stroke plus a caption line — technician-app/app/src/main/kotlin/com/homeservices/technician/ui/complaint/ComplaintScreen.kt:187-193.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "24.dp", "line": 94, "context": "Idle content padding" },
+          { "value": "16.dp", "line": 94, "context": "Idle vertical spacing" },
+          { "value": "14.dp", "line": 128, "context": "Spacer between dropdown and description field — OFF-SCALE (14 is not on 4/8/12/16)" },
+          { "value": "14.dp", "line": 138, "context": "Spacer before photo button — OFF-SCALE" },
+          { "value": "24.dp", "line": 164, "context": "Success padding" },
+          { "value": "8.dp / 24.dp", "line": 173, "context": "Success spacers (173, 175)" },
+          { "value": "56.dp", "line": 188, "context": "spinner size — off-scale" },
+          { "value": "4.dp", "line": 190, "context": "spinner strokeWidth" },
+          { "value": "12.dp", "line": 192, "context": "spinner caption spacer" },
+          { "value": "24.dp", "line": 202, "context": "Error padding" },
+          { "value": "8.dp / 16.dp", "line": 204, "context": "Error spacers (204, 206)" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [
+          { "slot": "headlineSmall", "line": 98 },
+          { "slot": "headlineSmall", "line": 171 },
+          { "slot": "headlineSmall", "line": 203 }
+        ],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [
+          { "text": "Partner support", "line": 95 },
+          { "text": "Use this when a customer, payout, or safety issue needs owner support review.", "line": 102 },
+          { "text": "Select reason", "line": 109 },
+          { "text": "Photo attached / Attach photo (optional)", "line": 140 },
+          { "text": "Submit issue", "line": 148 },
+          { "text": "Back to job", "line": 176 },
+          { "text": "Try again", "line": 207 },
+          { "text": "Owner support is reviewing this issue.", "line": 213 },
+          { "text": "This issue has been resolved.", "line": 214 },
+          { "text": "Owner support will respond within 2 hours.", "line": 215 },
+          { "text": "Customer misconduct", "line": 220 },
+          { "text": "Payment not received", "line": 221 },
+          { "text": "Safety concern", "line": 222 },
+          { "text": "Other", "line": 223 }
+        ],
+        "usesStringResource": true,
+        "hindiRisk": "CRITICAL. Every dropdown option label and every status message is a hardcoded English `when` branch (lines 211-224), while the field labels around them come from values-hi. A Hindi technician gets Hindi labels wrapping English option values — the worst possible mix on a safety-reporting screen. Additionally the dropdown's read-only OutlinedTextField (line 108-115) is single-line by default, so a long Hindi reason label would clip rather than wrap.",
+        "currencyFormatting": "N/A."
+      },
+      "a11y": {
+        "contentDescriptions": false,
+        "contentDescriptionsCite": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/complaint/ComplaintScreen.kt:113 — ExposedDropdownMenuDefaults.TrailingIcon supplies its own; no other icons and no explicit contentDescription anywhere in the file.",
+        "touchTargetRisks": [],
+        "contrastRisks": [
+          { "line": 104, "note": "supporting sentence bodyMedium on onSurfaceVariant" },
+          { "line": 174, "note": "success status sentence bodyMedium on onSurfaceVariant" },
+          { "line": 193, "note": "'Submitting issue' caption on onSurfaceVariant with no explicit style, inheriting bodyLarge default size at low contrast" }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "Linear. No focus management after a failed submit — focus is not returned to the description field."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["The attached photo is NEVER shown back to the user — the button label just flips to 'Photo attached' (line 140). No thumbnail, no remove control, no re-pick.", "No icon in the success or error states"], "cite": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/complaint/ComplaintScreen.kt:139-143" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None. The four-way state `when` at line 88 hard-cuts between form, spinner, success and error." },
+      "density": "Consistent 24.dp gutters with a 16.dp rhythm outside the card, but inside HsSectionCard the 14.dp Spacers (lines 128, 138) break the scale and sit inside the card's own 16.dp padding, producing a subtly-off nested rhythm. Big empty gap above the submit button from Spacer(weight 1f) at line 145.",
+      "observations": [
+        { "severity": "high", "claim": "Entering the Error state destroys the user's input — ComplaintUiState.Error carries only a message, so the typed description, selected reason and uploaded photo path are gone and 'Try again' has nothing to resubmit.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/complaint/ComplaintViewModel.kt:34-36 (Error holds only `message`) rendered by ComplaintScreen.kt:91, 197-209", "confidence": "observed" },
+        { "severity": "high", "claim": "The error body prints the raw API/exception message in error red.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/complaint/ComplaintScreen.kt:205", "confidence": "observed" },
+        { "severity": "high", "claim": "All four complaint reason labels and all three status messages are hardcoded English `when` expressions, on a screen whose surrounding labels are translated.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/complaint/ComplaintScreen.kt:211-224", "confidence": "observed" },
+        { "severity": "medium", "claim": "Attaching a photo swaps the entire form for a full-screen spinner (PhotoUploading shares the LoadingState branch), so the user sees their work disappear mid-form.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/complaint/ComplaintScreen.kt:90", "confidence": "observed" },
+        { "severity": "medium", "claim": "The attached photo is never previewed and cannot be removed or replaced.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/complaint/ComplaintScreen.kt:139-143", "confidence": "observed" },
+        { "severity": "medium", "claim": "The success state discards complaintId and acknowledgeDeadlineAt that the state already carries — the technician gets no ticket reference and no SLA time.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/complaint/ComplaintViewModel.kt:28-32 vs ComplaintScreen.kt:158-178", "confidence": "observed" },
+        { "severity": "medium", "claim": "No Scaffold/TopAppBar/back button — the only route out of the Idle form is the system back gesture; onBack is wired solely to the success state's button.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/complaint/ComplaintScreen.kt:87-94 and :176", "confidence": "observed" },
+        { "severity": "medium", "claim": "The character counter says '%d/2000' (values/strings.xml:131) but the field enforces no max length — onDescriptionChanged accepts any input.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/complaint/ComplaintScreen.kt:131-133", "confidence": "inferred" },
+        { "severity": "low", "claim": "The dropdown placeholder 'Select reason' is written into the value field rather than a placeholder slot, so it renders as if the user chose an option called 'Select reason'.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/complaint/ComplaintScreen.kt:109", "confidence": "observed" },
+        { "severity": "low", "claim": "The error state is left-aligned and vertically centred while the success state is centre-aligned — inconsistent terminal-state layout within the same file.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/complaint/ComplaintScreen.kt:165-166 vs :202", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "technician.language-settings",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/settings/LanguageSettingsScreen.kt",
+      "loc": 112,
+      "purpose": "Technician switches the app between English and Hindi.",
+      "entryPoints": "route \"language_settings\" — technician-app/app/src/main/kotlin/com/homeservices/technician/navigation/HomeGraph.kt:65-67; from the home dashboard's onLanguageSettings (HomeGraph.kt:153).",
+      "composition": [
+        "TopAppBar: titleMedium title 'App language' + back arrow, containerColor forced to colorScheme.surface — LanguageSettingsScreen.kt:52-72",
+        "bottomBar: a tonalElevation 2.dp Surface holding a full-width M3 Button 'Save language' with 18.dp/14.dp padding — LanguageSettingsScreen.kt:74-89",
+        "Body Column, innerPadding + 18.dp horizontal / 20.dp vertical padding, 12.dp spacing — LanguageSettingsScreen.kt:92-99",
+        "1. bodyMedium subtitle 'Switch between English and Hindi' in onSurfaceVariant — LanguageSettingsScreen.kt:100-104",
+        "2. Shared LanguagePickerCard (two 16.dp-radius selectable Surfaces: हिन्दी / English, primaryContainer when selected) — LanguageSettingsScreen.kt:105-109, component at design-system/src/main/kotlin/com/homeservices/designsystem/locale/LanguagePickerCard.kt:32-80"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "None — no loading state; selection comes from a local flow (LanguageSettingsViewModel.selectedTag)." },
+        "empty": { "present": false, "evidence": null, "quality": "N/A — fixed two-option list." },
+        "error": { "present": false, "evidence": null, "quality": "MAJOR GAP: there is no error path at all. If persisting the locale fails, onSave (LanguageSettingsScreen.kt:80) gives no feedback; the LaunchedEffect at :44-49 simply navigates back." },
+        "success": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/settings/LanguageSettingsScreen.kt:44-49", "quality": "Silent — saving pops the back stack with no confirmation toast/snackbar. The user's only confirmation is that the previous screen has changed language." },
+        "offline": { "present": false, "evidence": null, "quality": "N/A — local setting." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "N/A." }
+      },
+      "skeletonOrSpinner": "none — technician-app/app/src/main/kotlin/com/homeservices/technician/ui/settings/LanguageSettingsScreen.kt:1-112 contains no progress indicator; the Save button has no busy state.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "2.dp", "line": 76, "context": "bottomBar tonalElevation — matches no HomeservicesElevation value (elev1=1, elev2=4)" },
+          { "value": "18.dp", "line": 84, "context": "Save button horizontal padding — OFF-SCALE" },
+          { "value": "14.dp", "line": 84, "context": "Save button vertical padding — OFF-SCALE" },
+          { "value": "18.dp", "line": 97, "context": "body horizontal padding — OFF-SCALE" },
+          { "value": "20.dp", "line": 97, "context": "body vertical padding — OFF-SCALE" },
+          { "value": "12.dp", "line": 98, "context": "body item spacing" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [
+          { "slot": "titleMedium", "line": 57 }
+        ],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "LOW — this is the cleanest screen in the cluster for i18n. All three strings come from resources (lines 56, 86, 101) and both are translated. Minor risk: the Save button label is a single-line M3 Button; 'भाषा सेव करें' fits, but the 14.dp vertical padding leaves little headroom for the taller Devanagari line box.",
+        "currencyFormatting": "N/A."
+      },
+      "a11y": {
+        "contentDescriptions": true,
+        "contentDescriptionsCite": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/settings/LanguageSettingsScreen.kt:64 — back arrow uses R.string.action_back. The picker itself gets correct Role.RadioButton semantics from the shared component (design-system/src/main/kotlin/com/homeservices/designsystem/locale/LanguagePickerCard.kt:56).",
+        "touchTargetRisks": [],
+        "contrastRisks": [
+          { "line": 103, "note": "subtitle bodyMedium on onSurfaceVariant" }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "TopAppBar → subtitle → two options → bottom Save. Sensible."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["No flag/script preview beyond the native-name text supplied by LanguagePickerCard"], "cite": "design-system/src/main/kotlin/com/homeservices/designsystem/locale/LanguagePickerCard.kt:65-74" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None. Selection changes the Surface color with no animateColorAsState, so the primaryContainer tint snaps." },
+      "density": "Comfortable but off-grid: 18/20/14.dp values throughout (lines 84, 97) sit between the 16 and 24 token steps, so the screen's gutters do not line up with any other screen in the app.",
+      "observations": [
+        { "severity": "high", "claim": "DIVERGENCE FROM CUSTOMER APP — the two apps implement the same feature with completely different chrome. Customer: no Scaffold, a bare Surface + statusBarsPadding + 24.dp padding, an HsTrustBadge 'Settings', an HsScreenTitle at headlineSmall, and an inline HsPrimaryButton. Technician: a Scaffold with a real TopAppBar (titleMedium), a back arrow, an elevated bottomBar, a plain M3 Button (not HsPrimaryButton), a subtitle line, and 18/20.dp gutters. Same product, two unrelated designs.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/settings/LanguageSettingsScreen.kt:51-110 vs customer-app/app/src/main/kotlin/com/homeservices/customer/ui/settings/LanguageSettingsScreen.kt:44-65", "confidence": "observed" },
+        { "severity": "medium", "claim": "The technician Save control is a raw MaterialTheme Button, bypassing the design system's HsPrimaryButton which the customer app uses for the identical action.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/settings/LanguageSettingsScreen.kt:79-87 vs customer-app/.../LanguageSettingsScreen.kt:59-63", "confidence": "observed" },
+        { "severity": "medium", "claim": "No error handling of any kind — a failed locale persist is indistinguishable from success.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/settings/LanguageSettingsScreen.kt:44-49, 80", "confidence": "observed" },
+        { "severity": "medium", "claim": "The Save button is always enabled with no dirty check, so it fires and navigates back even when nothing changed (contrast PayoutCadenceScreen.kt:140 which does gate on isDirty).", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/settings/LanguageSettingsScreen.kt:79-87", "confidence": "observed" },
+        { "severity": "low", "claim": "The TopAppBar title uses the unmapped titleMedium slot, so the screen title renders in Roboto rather than Geist Sans — visible right next to the Devanagari option labels.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/settings/LanguageSettingsScreen.kt:57", "confidence": "observed" },
+        { "severity": "low", "claim": "Four off-scale padding values (18, 20, 14, plus tonalElevation 2) on a 112-line screen.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/settings/LanguageSettingsScreen.kt:76, 84, 97", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "technician.delete-account",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/DeleteAccountScreen.kt",
+      "loc": 200,
+      "purpose": "Technician reviews what account deletion removes and confirms an irreversible erasure request.",
+      "entryPoints": "route \"delete_account\" — technician-app/app/src/main/kotlin/com/homeservices/technician/navigation/HomeGraph.kt:100-110; from the home dashboard's onDeleteAccount (HomeGraph.kt:155).",
+      "composition": [
+        "TopAppBar 'Delete account' with back arrow — DeleteAccountScreen.kt:83-90",
+        "SnackbarHost for errors — DeleteAccountScreen.kt:92",
+        "Conditional full-screen AlertDialog when a job is active — DeleteAccountScreen.kt:68-79",
+        "Body: verticalScroll Column, 16.dp horizontal padding — DeleteAccountScreen.kt:112-118",
+        "1. 16.dp Spacer — DeleteAccountScreen.kt:119",
+        "2. Warning Card in errorContainer with 16.dp inner padding and bodyMedium onErrorContainer text — DeleteAccountScreen.kt:120-133",
+        "3. 24.dp Spacer, then titleMedium 'What gets deleted' — DeleteAccountScreen.kt:134-138",
+        "4. Five bullet Rows (Close icon in error tint + bodyMedium label), 4.dp vertical padding each — DeleteAccountScreen.kt:140-164",
+        "5. bodySmall footnote 'Data deleted within 7 days of confirmation' in onSurfaceVariant — DeleteAccountScreen.kt:165-170",
+        "6. 32.dp Spacer, then full-width Button with containerColor = colorScheme.error, showing a spinner while submitting — DeleteAccountScreen.kt:171-190",
+        "7. Full-width TextButton 'Cancel', then a 24.dp bottom Spacer — DeleteAccountScreen.kt:191-198"
+      ],
+      "states": {
+        "loading": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/DeleteAccountScreen.kt:181-186", "quality": "GOOD relative to the rest of the cluster — an inline in-button spinner rather than a full-screen takeover. But it is sized with Modifier.height(20.dp) only (no width), so the indicator is not square-constrained." },
+        "empty": { "present": false, "evidence": null, "quality": "N/A — static content list." },
+        "error": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/DeleteAccountScreen.kt:59-66", "quality": "BEST IN CLUSTER: errors are string RESOURCE ids (DeleteAccountViewModel.kt:24, 58, 60) not raw exception text, shown in a snackbar and auto-dismissed back to Idle. Still only a transient snackbar for a destructive-action failure." },
+        "success": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/DeleteAccountScreen.kt:53-57", "quality": "Navigates to AccountDeletedScreen with the scheduled date — a proper terminal screen rather than a toast." },
+        "offline": { "present": false, "evidence": null, "quality": "Folded into the generic UnknownError → delete_account_generic_error (DeleteAccountViewModel.kt:59-60)." },
+        "permissionDenied": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/DeleteAccountScreen.kt:68-79", "quality": "The ActiveJobBlocked case is a dedicated AlertDialog with its own title/body/OK — genuinely thought-through. Weakness: the OK button calls onBack, so acknowledging the dialog silently exits the screen." }
+      },
+      "skeletonOrSpinner": "In-button CircularProgressIndicator, height 20.dp, strokeWidth 2.dp, onError tint — technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/DeleteAccountScreen.kt:182-186. The only inline (non-blocking) loading affordance found in cluster T3.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "16.dp", "line": 117, "context": "horizontal page padding — narrower than the 24.dp used by Rating/Complaint" },
+          { "value": "16.dp", "line": 119, "context": "top Spacer" },
+          { "value": "16.dp", "line": 131, "context": "warning card inner padding" },
+          { "value": "24.dp", "line": 134, "context": "Spacer" },
+          { "value": "12.dp", "line": 139, "context": "Spacer (also 165)" },
+          { "value": "4.dp", "line": 151, "context": "bullet row vertical padding" },
+          { "value": "8.dp / 2.dp", "line": 157, "context": "bullet icon end padding 8.dp and top 2.dp — 2.dp is OFF-SCALE" },
+          { "value": "32.dp", "line": 171, "context": "Spacer before the destructive CTA" },
+          { "value": "20.dp", "line": 183, "context": "in-button spinner height — off-scale" },
+          { "value": "2.dp", "line": 184, "context": "spinner strokeWidth — off-scale" },
+          { "value": "8.dp", "line": 191, "context": "Spacer" },
+          { "value": "24.dp", "line": 198, "context": "bottom Spacer" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [
+          { "slot": "titleMedium", "line": 137 }
+        ],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "MEDIUM. Fully resourced (all 12 strings from R.string), and the body scrolls (line 116), so vertical Hindi growth is safe. Risk is horizontal: the five bullet Rows (lines 149-163) put an Icon + text in a Row with no width cap; the longest label 'Earnings history and payout records' (values/strings.xml:78) becomes materially longer in Hindi and will wrap under an icon that is top-aligned with a 2.dp nudge, producing a ragged hanging indent.",
+        "currencyFormatting": "N/A."
+      },
+      "a11y": {
+        "contentDescriptions": true,
+        "contentDescriptionsCite": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/DeleteAccountScreen.kt:87 back arrow uses R.string.action_back; the five bullet Close icons pass null (line 155) which is correct for decoration.",
+        "touchTargetRisks": [],
+        "contrastRisks": [
+          { "line": 169, "note": "footnote bodySmall on onSurfaceVariant — the 7-day retention promise, a legally meaningful line, is the lowest-contrast text on the screen" }
+        ],
+        "semanticsHeadings": false,
+        "focusOrder": "Linear. Destructive Button precedes Cancel in focus order (lines 172, 192) — the irreversible action is reached first."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["Icon-only; no illustration. The five bullets all reuse the SAME Icons.Default.Close glyph (line 154), so profile / KYC / earnings / photos / ratings are visually indistinguishable."], "cite": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/DeleteAccountScreen.kt:153-158" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None; AlertDialog uses M3 defaults." },
+      "density": "Generally well paced (16 → 24 → 32.dp escalation toward the CTA), and the only screen in the cluster that scrolls. Uses 16.dp gutters while sibling screens in the same cluster use 24.dp (RatingScreen.kt:53, ComplaintScreen.kt:94) and 18.dp (LanguageSettingsScreen.kt:97) — three different page gutters across four screens.",
+      "observations": [
+        { "severity": "high", "claim": "There is no typed confirmation, no second-step dialog and no undo affordance on an irreversible destructive action — a single tap on a full-width red Button submits the erasure request.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/DeleteAccountScreen.kt:172-190 calls onConfirm directly, and DeleteAccountViewModel.kt:42-45 fires immediately", "confidence": "observed" },
+        { "severity": "medium", "claim": "The ActiveJobBlocked AlertDialog's only action is 'OK' wired to onBack, so acknowledging an informational message also navigates the user off the screen.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/DeleteAccountScreen.kt:70, 74", "confidence": "observed" },
+        { "severity": "medium", "claim": "All five 'what gets deleted' bullets use the identical Close icon, wasting the strongest scanning cue on the page.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/DeleteAccountScreen.kt:153-158 inside the forEach at :148", "confidence": "observed" },
+        { "severity": "medium", "claim": "Failure of a destructive request surfaces only as a transient snackbar that auto-dismisses; there is no persistent error surface on the screen itself.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/DeleteAccountScreen.kt:59-66", "confidence": "observed" },
+        { "severity": "low", "claim": "Page gutter is 16.dp here versus 24.dp on RatingScreen/ComplaintScreen and 18.dp on LanguageSettingsScreen — no shared page-gutter constant exists in the cluster.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/DeleteAccountScreen.kt:117 vs RatingScreen.kt:53, ComplaintScreen.kt:94, LanguageSettingsScreen.kt:97", "confidence": "observed" },
+        { "severity": "low", "claim": "The in-button spinner sets height only (Modifier.height(20.dp)), leaving width unconstrained.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/DeleteAccountScreen.kt:183", "confidence": "observed" },
+        { "severity": "low", "claim": "This screen uses raw M3 Button/Card/TextButton throughout rather than HsPrimaryButton/HsSecondaryButton/HsSectionCard used by its sibling screens.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/DeleteAccountScreen.kt:120, 172, 192 (no com.homeservices.designsystem import in the file's import block, lines 3-41)", "confidence": "observed" }
+      ]
+    },
+    {
+      "id": "technician.account-deleted",
+      "app": "technician-app",
+      "file": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/AccountDeletedScreen.kt",
+      "loc": 135,
+      "purpose": "Terminal confirmation that an erasure request was accepted, showing the scheduled deletion date and how to revoke it, before signing the user out.",
+      "entryPoints": "route \"account_deleted/{scheduledAt}\" — technician-app/app/src/main/kotlin/com/homeservices/technician/navigation/HomeGraph.kt:111-123; navigated from DeleteAccountScreen's onDeleted (HomeGraph.kt:103-108).",
+      "composition": [
+        "No Scaffold, no TopAppBar — a centred Column with 24.dp horizontal padding, vertically centred — AccountDeletedScreen.kt:67-74",
+        "1. 64.dp DeleteForever icon tinted colorScheme.error — AccountDeletedScreen.kt:75-80",
+        "2. 24.dp Spacer, headlineSmall centred title 'Deletion request submitted' — AccountDeletedScreen.kt:81-86",
+        "3. 12.dp Spacer, bodyLarge centred body with the formatted date — AccountDeletedScreen.kt:87-92",
+        "4. 16.dp Spacer, surfaceVariant Card with 16.dp padding holding a centred bodyMedium revocation hint (email + deadline) — AccountDeletedScreen.kt:93-106",
+        "5. 16.dp Spacer, TextButton 'Lost access to the app? Request deletion here' opening an external browser Intent — AccountDeletedScreen.kt:107-116",
+        "6. 32.dp Spacer, default M3 Button 'Done' which clears the session — AccountDeletedScreen.kt:117-120",
+        "BackHandler intercepts the system back gesture and runs the same sign-out — AccountDeletedScreen.kt:50"
+      ],
+      "states": {
+        "loading": { "present": false, "evidence": null, "quality": "N/A — pure terminal screen, receives its data as a nav arg." },
+        "empty": { "present": false, "evidence": null, "quality": "N/A." },
+        "error": { "present": false, "evidence": null, "quality": "Partial: an unparseable timestamp falls back to echoing the RAW ISO STRING into user-facing copy (line 133-134), so the user can see e.g. '2026-08-03T11:22:00Z' inside a sentence." },
+        "success": { "present": true, "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/AccountDeletedScreen.kt:60-121", "quality": "The best-composed terminal state in the cluster — icon, title, body, boxed revocation instructions and a fallback web link." },
+        "offline": { "present": false, "evidence": null, "quality": "N/A." },
+        "permissionDenied": { "present": false, "evidence": null, "quality": "The TextButton fires an ACTION_VIEW Intent with no try/catch (lines 109-113); a device with no browser would crash with ActivityNotFoundException." }
+      },
+      "skeletonOrSpinner": "none — technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/AccountDeletedScreen.kt:1-135 has no progress indicator. The 'Done' button triggers an async clearSession (line 45) with no busy state.",
+      "tokenUsage": {
+        "usesSpacingTokens": false,
+        "hardcodedDp": [
+          { "value": "24.dp", "line": 71, "context": "page horizontal padding" },
+          { "value": "64.dp", "line": 79, "context": "hero icon size" },
+          { "value": "24.dp", "line": 81, "context": "Spacer under icon" },
+          { "value": "12.dp", "line": 87, "context": "Spacer under title" },
+          { "value": "16.dp", "line": 93, "context": "Spacer (also 107)" },
+          { "value": "16.dp", "line": 103, "context": "card inner padding" },
+          { "value": "32.dp", "line": 117, "context": "Spacer before Done" }
+        ],
+        "hardcodedColors": [],
+        "unmappedTypographySlots": [
+          { "slot": "headlineSmall", "line": 85 }
+        ],
+        "offScaleRadius": []
+      },
+      "i18n": {
+        "hardcodedUserFacingStrings": [],
+        "usesStringResource": true,
+        "hindiRisk": "MEDIUM-HIGH. Fully resourced, but the Column is `fillMaxSize` with Arrangement.Center and NO verticalScroll (lines 67-74) — unlike its sibling DeleteAccountScreen which does scroll (DeleteAccountScreen.kt:116). The screen already stacks icon + title + long body + a boxed multi-sentence revocation hint (values/strings.xml:91 is a two-clause sentence containing an email address and a date) + a long link label + a button. In Hindi this content grows ~15-30% and will overflow off-screen on a small rural handset with no way to scroll to the Done button.",
+        "currencyFormatting": "N/A — but date formatting is relevant: DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG) at lines 128-132 correctly localizes, unlike MyRatingsScreen's hardcoded 'dd MMM yyyy' pattern (MyRatingsScreen.kt:240) — two different date strategies in one app."
+      },
+      "a11y": {
+        "contentDescriptions": false,
+        "contentDescriptionsCite": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/AccountDeletedScreen.kt:77 — the 64.dp hero DeleteForever icon passes contentDescription = null. Defensible as decorative, but it is the screen's primary status symbol.",
+        "touchTargetRisks": [
+          { "line": 108, "size": "TextButton default 48.dp height but the label is a full sentence", "note": "A sentence-length TextButton reads as body copy, not a control; there is no icon or underline to mark it as tappable" }
+        ],
+        "contrastRisks": [],
+        "semanticsHeadings": false,
+        "focusOrder": "Icon → title → body → card → link → Done. Reasonable."
+      },
+      "imagery": { "usesImages": false, "sources": [], "placeholderOrMissing": ["A 64.dp red DeleteForever Material icon stands in for what a designed farewell screen would illustrate"], "cite": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/AccountDeletedScreen.kt:75-80" },
+      "motion": { "animationsUsed": [], "usesMotionTokens": false, "transitionsOnNav": "None." },
+      "density": "Airy and centred, 24.dp gutters with a 24/12/16/16/32.dp spacer ladder — visually the calmest screen in the cluster, at the cost of no scroll safety.",
+      "observations": [
+        { "severity": "high", "claim": "The content Column is fillMaxSize + Arrangement.Center with NO verticalScroll, so on a small screen or in Hindi (or with large font scale) the 'Done' button — the only way to complete sign-out via the UI — can be pushed off-screen.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/AccountDeletedScreen.kt:67-74 (compare DeleteAccountScreen.kt:116 which does add verticalScroll)", "confidence": "observed" },
+        { "severity": "medium", "claim": "An unparseable timestamp is echoed raw into user-facing copy, exposing an ISO-8601 string inside a sentence.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/AccountDeletedScreen.kt:133-134 feeding R.string.account_deleted_body at :89", "confidence": "observed" },
+        { "severity": "medium", "claim": "The external-browser Intent is launched with no ActivityNotFoundException guard.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/AccountDeletedScreen.kt:109-113", "confidence": "observed" },
+        { "severity": "medium", "claim": "The 'Done' button uses the raw M3 Button with default width (not fillMaxWidth, not HsPrimaryButton), so the terminal CTA is a small pill floating under full-width content — a hierarchy failure at the end of a destructive flow.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/AccountDeletedScreen.kt:118-120", "confidence": "observed" },
+        { "severity": "medium", "claim": "Two different date-formatting strategies coexist in the app: localized FormatStyle.LONG here vs a hardcoded 'dd MMM yyyy' pattern on MyRatings.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/AccountDeletedScreen.kt:128-132 vs technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt:240", "confidence": "observed" },
+        { "severity": "low", "claim": "Pressing 'Done' fires an async clearSession with no busy/disabled state, so double-taps are possible.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/AccountDeletedScreen.kt:45, 118", "confidence": "observed" },
+        { "severity": "low", "claim": "The revocation instructions embed a support email address in a non-selectable, non-tappable Text — the user cannot copy or mailto it.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/AccountDeletedScreen.kt:100-105 rendering values/strings.xml:91", "confidence": "observed" },
+        { "severity": "low", "claim": "The design system is not used at all on this screen — no com.homeservices.designsystem import appears in lines 3-36.", "evidence": "technician-app/app/src/main/kotlin/com/homeservices/technician/ui/deleteaccount/AccountDeletedScreen.kt:3-36", "confidence": "observed" }
+      ]
+    }
+  ]
+}
