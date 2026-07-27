@@ -139,7 +139,32 @@ Phase 1 is now usable, but only after repair in this session.
       No `OnBackPressedCallback` anywhere, so back discards a timed offer without declining.
       Fix needs VM observation + finish-on-terminal + back-declines. Per root CLAUDE.md, step one of
       any technician-app story is copying `customer-app/gradle/libs.versions.toml` across.
-- [ ] Codex review gate not yet run on `fix/p0-safety-sos-joboffer`. Nothing pushed; no PR opened.
+- [x] **Codex gate PASSED — 2 rounds.** Round 1: 0 CRITICAL / 3 MAJOR / 0 MINOR. Round 2: all clean.
+      MAJOR-1 (retry had no in-flight guard) and MAJOR-3 (`Unknown` status hid SOS) fixed;
+      MAJOR-2 (no durable evidence recovery) accepted via **ADR-0028**, reasoning explicitly
+      accepted by the reviewer. Marker at `.codex-review-passed` (commit `cc30ce4c`).
+      Note: `codex review --base <branch>` cannot take a custom prompt, and unprompted it tries to
+      *build* — it hung recursively scanning `C:\Alok` for a Gradle dist. Use
+      `codex exec --sandbox read-only -c 'sandbox_permissions=["disk-full-read-access"]'` with the
+      diff written to a file and explicit "STATIC ONLY, do not build" instructions.
+- [x] **BOTH PRs OPEN:**
+      - **#293** — `fix/p0-safety-sos-joboffer` — P0 SOS safety + smoke-gate unblock (4 commits)
+      - **#294** — `docs/uiux-2026-audit` — audit + implementation plan (3 commits, 90 files)
+- [ ] **SAFE-JOB-001/002/003 still outstanding** — scoped as story **S-02** in the implementation
+      plan. Own PR, technician-app, `libs.versions.toml` sync first.
+
+## Worked example — why adversarial verification is not optional
+
+Two independent catches in this session, both of which would have shipped:
+
+1. **My own guard fix was wrong, and my own test caught it.** For MAJOR-1 I set the re-entry flag
+   *inside* the launched coroutine. A second tap arrives before the coroutine is dispatched, still
+   sees `false`, and launches a duplicate upload — the test failed 2-vs-3. The guard must be claimed
+   synchronously before `launch`. A guard on the wrong side of an async boundary looks correct and
+   does nothing.
+2. **I put a refuted finding in the audit.** SAFE-SOS-005 claimed there was no immediate-send path;
+   `onSendNow()` (`SosViewModel.kt:85-90`) has always existed and is the sheet's primary button.
+   Withdrawn and recorded rather than deleted, so nobody adds a second one.
 - [x] **Commit/handoff DONE 2026-07-26.** All audit artifacts committed to branch
       **`docs/uiux-2026-audit`** (this worktree): `docs/design/{SESSION-STATE,design-language,
       phase1-review,screenshot-capture-log,uiux-audit-2026}.md`, `docs/design/_inventory/`,
