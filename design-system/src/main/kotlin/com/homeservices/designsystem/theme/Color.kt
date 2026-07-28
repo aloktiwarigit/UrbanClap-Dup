@@ -87,6 +87,18 @@ public object HomeservicesColors {
          * in the per-surface stories.
          */
         public val primary: Color = BrandAccent
+
+        /**
+         * Retained alias for the pre-D1 hover token, now pointing at [accentSoft].
+         *
+         * Five technician-app screens read this (AuthScreen, EarningsScreen, KycScreen,
+         * PhotoUploadRetryBanner, OnboardingScreen) as a gradient end. Worth recording: the audit's
+         * token census counted `LocalHomeservicesExtendedColors.current.brandPrimaryHover` and
+         * reported the hover role as customer-app-only. It missed these because they reach the same
+         * role through the *object* accessor rather than the CompositionLocal — a second access path
+         * the grep did not cover. Another reason a zero count is not proof of a dead token.
+         */
+        public val primaryHover: Color = BrandAccentSoft
     }
 
     /** Semantic palette — light variants; dark counterparts live in [HomeservicesDarkColorScheme]. */
