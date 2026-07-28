@@ -125,11 +125,15 @@ public fun HsActionButton(
                 }
                 Spacer(modifier = Modifier.width(10.dp))
             }
+            // Codex review MINOR-1: was maxLines = 1 + Ellipsis, which contradicted the rest of the
+            // button family. Ellipsising a Devanagari label truncates mid-word and can destroy the
+            // meaning of the action; the button grows instead, matching HsPrimaryButton and
+            // HsSecondaryButton now that all three use defaultMinSize rather than a fixed height.
             Text(
                 text = text,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }

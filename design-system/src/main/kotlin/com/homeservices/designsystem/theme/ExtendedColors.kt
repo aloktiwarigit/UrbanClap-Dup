@@ -54,6 +54,24 @@ public data class HomeservicesExtendedColors(
      * Added in S-10: D1 defines nine core roles and this was the one with no M3 slot to bind to.
      */
     val textFaint: Color,
+    /**
+     * Focus / selected-boundary indicator. **Do not substitute a border or the accent for this.**
+     *
+     * WCAG 2.2 §1.4.11 requires 3:1 for non-text indicators that identify a component. Measured on
+     * `surface`, neither candidate qualifies in light mode:
+     *
+     *   border-strong  #B0A382  2.14:1 light   1.50:1 dark
+     *   brand accent   #E2A04A  1.93:1 light   8.03:1 dark
+     *
+     * Marigold on warm paper is inherently low-contrast — both are light — so the accent works as a
+     * focus ring in dark mode and fails in light. D1 §Palette defines no focus role, which is a gap
+     * in the contract rather than in this implementation; raised as a finding.
+     *
+     * This binds to the text roles, which clear the bar in both modes (8.59:1 light on surface).
+     * The border tokens remain correct for what they are — decorative hairlines and separators,
+     * which §1.4.11 does not govern.
+     */
+    val focusRing: Color,
 )
 
 /** Light-mode instance of [HomeservicesExtendedColors]. D1 light palette. */
@@ -64,6 +82,7 @@ public val HomeservicesExtendedColorsLight: HomeservicesExtendedColors =
         brandAccent = BrandAccent,
         brandPrimaryHover = BrandAccentSoft,
         textFaint = TextFaintLight,
+        focusRing = TextMutedLight,
     )
 
 /** Dark-mode instance of [HomeservicesExtendedColors]. D1 dark palette. */
@@ -74,6 +93,7 @@ public val HomeservicesExtendedColorsDark: HomeservicesExtendedColors =
         brandAccent = BrandAccent,
         brandPrimaryHover = BrandAccentSoft,
         textFaint = TextFaintDark,
+        focusRing = TextMutedDark,
     )
 
 /**

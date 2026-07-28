@@ -220,6 +220,123 @@ internal class D1TokenCoreTest {
     }
 
     /**
+     * Codex review MAJOR-1/2 — M3 fills any ColorScheme slot left unset with its BASELINE violet
+     * palette. Overriding `tertiary` without `onTertiary` left that pair at ~4.10:1 in dark mode,
+     * below AA; leaving the container roles unset would render default lavender chips inside a
+     * warm-paper product.
+     */
+    @Nested
+    internal inner class NoSlotFallsBackToTheMaterialBaseline {
+        @Test
+        internal fun on_tertiary_is_explicit_and_meets_aa_in_both_modes() {
+            val light =
+                Wcag21Contrast.ratio(
+                    HomeservicesLightColorScheme.onTertiary,
+                    HomeservicesLightColorScheme.tertiary,
+                )
+            val dark =
+                Wcag21Contrast.ratio(
+                    HomeservicesDarkColorScheme.onTertiary,
+                    HomeservicesDarkColorScheme.tertiary,
+                )
+            assertThat(light).`as`("light onTertiary = %.2f:1", light).isGreaterThanOrEqualTo(4.5)
+            assertThat(dark).`as`("dark onTertiary = %.2f:1", dark).isGreaterThanOrEqualTo(4.5)
+        }
+
+        @Test
+        internal fun container_roles_are_warm_not_baseline_violet() {
+            assertThat(HomeservicesLightColorScheme.secondaryContainer).isEqualTo(SURFACE_RAISED_LIGHT)
+            assertThat(HomeservicesLightColorScheme.tertiaryContainer).isEqualTo(SURFACE_RAISED_LIGHT)
+            assertThat(HomeservicesDarkColorScheme.secondaryContainer).isEqualTo(SURFACE_RAISED_DARK)
+            assertThat(HomeservicesDarkColorScheme.tertiaryContainer).isEqualTo(SURFACE_RAISED_DARK)
+        }
+
+        @Test
+        internal fun container_label_pairs_meet_aa() {
+            listOf(
+                "light secondaryContainer" to
+                    Wcag21Contrast.ratio(
+                        HomeservicesLightColorScheme.onSecondaryContainer,
+                        HomeservicesLightColorScheme.secondaryContainer,
+                    ),
+                "dark secondaryContainer" to
+                    Wcag21Contrast.ratio(
+                        HomeservicesDarkColorScheme.onSecondaryContainer,
+                        HomeservicesDarkColorScheme.secondaryContainer,
+                    ),
+                "light errorContainer" to
+                    Wcag21Contrast.ratio(
+                        HomeservicesLightColorScheme.onErrorContainer,
+                        HomeservicesLightColorScheme.errorContainer,
+                    ),
+                "dark errorContainer" to
+                    Wcag21Contrast.ratio(
+                        HomeservicesDarkColorScheme.onErrorContainer,
+                        HomeservicesDarkColorScheme.errorContainer,
+                    ),
+            ).forEach { (name, ratio) ->
+                assertThat(ratio).`as`("%s = %.2f:1", name, ratio).isGreaterThanOrEqualTo(4.5)
+            }
+        }
+    }
+
+    /**
+     * Codex review MAJOR-3 — WCAG 2.2 §1.4.11 wants 3:1 for a non-text indicator that identifies a
+     * component. Neither the border tokens nor the accent reach that in light mode
+     * (border-strong 2.14:1, accent 1.93:1 on surface), because marigold on warm paper is two light
+     * colours. D1 defines no focus role; [HomeservicesExtendedColors.focusRing] fills the gap.
+     */
+    @Nested
+    internal inner class FocusIndicationIsPerceivable {
+        @Test
+        internal fun focus_ring_clears_three_to_one_on_surface_in_both_modes() {
+            val light =
+                Wcag21Contrast.ratio(
+                    HomeservicesExtendedColorsLight.focusRing,
+                    HomeservicesLightColorScheme.surface,
+                )
+            val dark =
+                Wcag21Contrast.ratio(
+                    HomeservicesExtendedColorsDark.focusRing,
+                    HomeservicesDarkColorScheme.surface,
+                )
+            assertThat(light).`as`("light focus ring = %.2f:1 (>= 3)", light).isGreaterThanOrEqualTo(3.0)
+            assertThat(dark).`as`("dark focus ring = %.2f:1 (>= 3)", dark).isGreaterThanOrEqualTo(3.0)
+        }
+
+        @Test
+        internal fun the_accent_alone_is_not_a_valid_light_mode_focus_ring() {
+            val accentOnSurface =
+                Wcag21Contrast.ratio(BRAND_ACCENT, HomeservicesLightColorScheme.surface)
+            assertThat(accentOnSurface)
+                .`as`("documents WHY focusRing exists: accent measures %.2f:1 in light", accentOnSurface)
+                .isLessThan(3.0)
+        }
+    }
+
+    /** Codex review MINOR-2 — the new extended roles were untested and could regress silently. */
+    @Nested
+    internal inner class ExtendedRolesAreBound {
+        @Test
+        internal fun text_faint_is_bound_in_both_modes() {
+            assertThat(HomeservicesExtendedColorsLight.textFaint).isEqualTo(TEXT_FAINT_LIGHT)
+            assertThat(HomeservicesExtendedColorsDark.textFaint).isEqualTo(TEXT_FAINT_DARK)
+        }
+
+        @Test
+        internal fun text_faint_is_metadata_only_but_still_clears_aa() {
+            val light =
+                Wcag21Contrast.ratio(
+                    HomeservicesExtendedColorsLight.textFaint,
+                    HomeservicesLightColorScheme.background,
+                )
+            assertThat(light)
+                .`as`("faint text = %.2f:1 (AA 4.5, below the 7 body target)", light)
+                .isGreaterThanOrEqualTo(4.5)
+        }
+    }
+
+    /**
      * D1 §Spacing canonical steps: 0, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 96.
      * The shipped scale was missing 20 and 40, which is one reason ~44% of `.dp` literals in both
      * apps sit off-scale — the scale simply had no value for those gaps.

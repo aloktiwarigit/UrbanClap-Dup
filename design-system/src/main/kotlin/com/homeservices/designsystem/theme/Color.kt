@@ -147,9 +147,20 @@ public val HomeservicesLightColorScheme: ColorScheme =
         onPrimaryContainer = TextStrongLight,
         secondary = TextMutedLight,
         onSecondary = CanvasLight,
+        // Container roles are set explicitly. M3 fills any slot left unset with its BASELINE
+        // palette, which is violet — so a Chip or FilterChip using secondaryContainer would render
+        // default lavender inside a warm-paper product. Overriding `tertiary` without `onTertiary`
+        // is the same trap: the label keeps the baseline colour and the pair drops below AA.
+        secondaryContainer = SurfaceRaisedLight,
+        onSecondaryContainer = TextStrongLight,
         tertiary = SemanticInfoLight,
+        onTertiary = Color.White,
+        tertiaryContainer = SurfaceRaisedLight,
+        onTertiaryContainer = TextStrongLight,
         error = SemanticDangerLight,
         onError = Color.White,
+        errorContainer = Color(0xFFF7DCDC),
+        onErrorContainer = Color(0xFF4A1010),
         background = CanvasLight,
         onBackground = TextStrongLight,
         surface = SurfaceLight,
@@ -174,9 +185,18 @@ public val HomeservicesDarkColorScheme: ColorScheme =
         onPrimaryContainer = TextStrongDark,
         secondary = TextMutedDark,
         onSecondary = CanvasDark,
+        secondaryContainer = SurfaceRaisedDark,
+        onSecondaryContainer = TextStrongDark,
         tertiary = SemanticInfoDark,
+        // Ink, not the M3 baseline. The default dark onTertiary against #4F90EC measures 4.10:1 —
+        // below AA for body text. Ink measures 6.11:1.
+        onTertiary = CanvasDark,
+        tertiaryContainer = SurfaceRaisedDark,
+        onTertiaryContainer = TextStrongDark,
         error = SemanticDangerDark,
         onError = Color(0xFF3A0A0A),
+        errorContainer = Color(0xFF4A1010),
+        onErrorContainer = Color(0xFFF7DCDC),
         background = CanvasDark,
         onBackground = TextStrongDark,
         surface = SurfaceDark,
