@@ -86,16 +86,23 @@
     <string name="booking_summary_subtitle">Choose online payment or pay cash when the technician reaches your home.</string>
     <string name="booking_summary_slot_label">Slot</string>
     <string name="booking_summary_address_label">Address</string>
-    <string name="booking_payment_method_title">Payment method</string>
-    <string name="booking_payment_online_title">Pay online now</string>
-    <string name="booking_payment_online_body">Use Razorpay with UPI, cards, or wallets.</string>
-    <string name="booking_payment_cash_title">Cash when technician arrives</string>
-    <string name="booking_payment_cash_body">Create the service order now and pay at your doorstep.</string>
-    <string name="booking_payment_secure_title">Secure Razorpay payment</string>
-    <string name="booking_payment_secure_body">You will get live assignment updates after payment confirmation.</string>
+    <!--
+      Dormant during the cash-only pilot: the Razorpay payment-method chooser was hidden in
+      13fa7280, which orphaned these strings and turned lintDebug red on main for every branch.
+      Kept (with their hi translations) rather than deleted because they return verbatim when
+      online payment is re-enabled. Drop the tools:ignore at that point.
+    -->
+    <string name="booking_payment_method_title" tools:ignore="UnusedResources">Payment method</string>
+    <string name="booking_payment_online_title" tools:ignore="UnusedResources">Pay online now</string>
+    <string name="booking_payment_online_body" tools:ignore="UnusedResources">Use Razorpay with UPI, cards, or wallets.</string>
+    <string name="booking_payment_cash_title" tools:ignore="UnusedResources">Cash when technician arrives</string>
+    <string name="booking_payment_cash_body" tools:ignore="UnusedResources">Create the service order now and pay at your doorstep.</string>
+    <string name="booking_payment_secure_title" tools:ignore="UnusedResources">Secure Razorpay payment</string>
+    <string name="booking_payment_secure_body" tools:ignore="UnusedResources">You will get live assignment updates after payment confirmation.</string>
     <string name="booking_payment_cash_note_title">Cash payment selected</string>
     <string name="booking_payment_cash_note_body">We will assign a technician now. Please pay the listed amount when they reach.</string>
-    <string name="booking_summary_pay_now">Pay Now</string>
+    <!-- Dormant during the cash-only pilot — see the booking_payment_* note above. -->
+    <string name="booking_summary_pay_now" tools:ignore="UnusedResources">Pay Now</string>
     <string name="booking_summary_book_cash">Book with Cash</string>
     <string name="booking_error_title">Booking could not continue</string>
     <string name="booking_error_failed">Booking failed</string>
@@ -200,6 +207,9 @@
     <string name="tracking_title">Track service</string>
     <string name="tracking_back_desc">Back</string>
     <string name="tracking_sos_desc">Safety alert</string>
+    <!-- SAFE-SOS-003: visible label on the SOS control. Icon-only is not acceptable for a
+         mixed-literacy audience on a control where guessing wrong has physical consequences. -->
+    <string name="tracking_sos_label">SOS</string>
     <string name="tracking_your_technician">Your technician</string>
     <string name="tracking_eta_chip">ETA %d min</string>
     <string name="tracking_service_progress">Service progress</string>
@@ -241,6 +251,8 @@
     <string name="sos_uploading_evidence">Uploading evidence… %1$d%%</string>
     <string name="sos_evidence_saved">Evidence saved securely</string>
     <string name="sos_evidence_upload_error">Could not save evidence. Help is already on the way.</string>
+    <string name="sos_evidence_retry">Try again</string>
+    <string name="sos_evidence_dismiss">Not now</string>
 
     <!-- SOS consent dialog (E12-S02a) -->
     <string name="sos_consent_title">Record audio with alert?</string>

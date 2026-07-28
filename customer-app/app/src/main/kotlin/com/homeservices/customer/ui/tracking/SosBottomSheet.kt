@@ -9,6 +9,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -20,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.homeservices.customer.R
+import com.homeservices.designsystem.components.HsDangerButton
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSecondaryButton
 
@@ -31,7 +33,15 @@ internal fun SosBottomSheet(
     onConfirmNow: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ModalBottomSheet(onDismissRequest = onCancel, sheetState = sheetState) {
+    // SAFE-SOS-001: an armed SOS must NOT be disarmed by an incidental gesture. Swipe-down, scrim
+    // tap and system back previously all routed to onCancel, so a customer fumbling their phone
+    // during the exact incident SOS exists for would silently cancel it. Dismissal is now inert;
+    // cancelling requires the explicit "Cancel alert" action below.
+    ModalBottomSheet(
+        onDismissRequest = {},
+        sheetState = sheetState,
+        properties = ModalBottomSheetProperties(shouldDismissOnBackPress = false),
+    ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -56,7 +66,8 @@ internal fun SosBottomSheet(
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(24.dp))
-            HsPrimaryButton(
+            // SAFE-SOS-004: emergency dispatch carries danger colour, not brand primary.
+            HsDangerButton(
                 text = stringResource(R.string.sos_send_now),
                 onClick = onConfirmNow,
                 modifier = Modifier.fillMaxWidth(),
@@ -119,11 +130,17 @@ internal fun SosEvidenceSavedSheet(onDismiss: () -> Unit) {
     }
 }
 
+/**
+ * SAFE-SOS-006: the upload failure reason was previously computed, passed in as [message], and then
+ * discarded behind `@Suppress("UnusedParameter")` — the sheet rendered a generic string and offered
+ * dismissal only, so safety evidence tied to a live emergency was lost with no way to recover it.
+ * The reason is now shown, and [onRetry] re-attempts the upload.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-@Suppress("UnusedParameter")
 internal fun SosEvidenceUploadErrorSheet(
     message: String,
+    onRetry: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -137,6 +154,27 @@ internal fun SosEvidenceUploadErrorSheet(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
                 textAlign = TextAlign.Center,
+            )
+            if (message.isNotBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+            HsPrimaryButton(
+                text = stringResource(R.string.sos_evidence_retry),
+                onClick = onRetry,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(8.dp))
+            HsSecondaryButton(
+                text = stringResource(R.string.sos_evidence_dismiss),
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(16.dp))
         }

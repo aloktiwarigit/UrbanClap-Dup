@@ -50,6 +50,15 @@ public class SosViewModel
         /** Set to true only when startRecording() completes successfully in this SOS session. */
         private var freshRecordingCaptured = false
 
+        /** SAFE-SOS-006: in-memory copy of evidence awaiting a successful upload, for retry. */
+        private var pendingEvidence: PendingEvidence? = null
+
+        /**
+         * Re-entry guard for evidence upload (Codex review MAJOR-1). Only mutated from
+         * [uploadEvidence] on the viewModelScope dispatcher, so a plain field is sufficient.
+         */
+        private var evidenceUploadInFlight = false
+
         public fun onSosTapped() {
             viewModelScope.launch {
                 val consent = consentStore.getAudioConsent()
@@ -70,6 +79,8 @@ public class SosViewModel
 
         /** Dismiss the evidence-saved or evidence-error sheet after upload completes. */
         public fun onDismissEvidenceResult() {
+            // Drop the retained copy — the customer declined to retry, so do not hold audio in memory.
+            pendingEvidence = null
             _sosUiState.value = SosUiState.SosConfirmed
         }
 
@@ -176,16 +187,73 @@ public class SosViewModel
             if (customerId == null || !file.exists()) return
 
             val bytes = file.readBytes()
+            // Wipe from disk immediately (unchanged privacy behaviour) but retain in memory so a
+            // failed upload can be retried — SAFE-SOS-006. Previously the bytes were unrecoverable
+            // after the first failure, so safety evidence for a live emergency was simply lost.
             file.delete()
-            audioUploader.upload(customerId, bookingId, bytes).collect { progress ->
-                _sosUiState.value =
-                    when (progress) {
-                        is SosUploadProgress.Progress -> SosUiState.UploadingEvidence(progress.pct)
-                        is SosUploadProgress.Success -> SosUiState.EvidenceSaved
-                        is SosUploadProgress.Failure ->
-                            SosUiState.EvidenceUploadError(progress.cause.message ?: "upload_failed")
-                    }
+            pendingEvidence = PendingEvidence(customerId, bytes)
+            uploadEvidence(customerId, bytes)
+        }
+
+        private suspend fun uploadEvidence(
+            customerId: String,
+            bytes: ByteArray,
+        ) {
+            evidenceUploadInFlight = true
+            try {
+                audioUploader.upload(customerId, bookingId, bytes).collect { progress ->
+                    _sosUiState.value =
+                        when (progress) {
+                            is SosUploadProgress.Progress -> SosUiState.UploadingEvidence(progress.pct)
+                            is SosUploadProgress.Success -> {
+                                pendingEvidence = null
+                                SosUiState.EvidenceSaved
+                            }
+                            is SosUploadProgress.Failure ->
+                                SosUiState.EvidenceUploadError(progress.cause.message ?: "upload_failed")
+                        }
+                }
+            } finally {
+                evidenceUploadInFlight = false
             }
+        }
+
+        /**
+         * SAFE-SOS-006: re-attempt a failed evidence upload from the retained in-memory copy.
+         *
+         * Guarded against re-entry (Codex review MAJOR-1). Without the guard a double-tap on
+         * "Try again" launches two coroutines that both collect the upload flow and both write
+         * [_sosUiState]; a Failure from the slower one can land after a Success from the faster one,
+         * leaving the UI showing an upload error for evidence that was in fact saved — and
+         * submitting the recording twice.
+         */
+        public fun onRetryEvidenceUpload() {
+            val pending = pendingEvidence
+            if (pending == null) {
+                _sosUiState.value = SosUiState.SosConfirmed
+                return
+            }
+            if (evidenceUploadInFlight) return
+            // Claim the guard SYNCHRONOUSLY, before launching. Setting it inside the coroutine is
+            // too late: a second tap arrives before the first coroutine is dispatched, sees the flag
+            // still false, and launches a duplicate upload. Cleared in uploadEvidence's finally.
+            evidenceUploadInFlight = true
+            viewModelScope.launch { uploadEvidence(pending.customerId, pending.bytes) }
+        }
+
+        private data class PendingEvidence(
+            val customerId: String,
+            val bytes: ByteArray,
+        ) {
+            override fun equals(other: Any?): Boolean =
+                this === other ||
+                    (
+                        other is PendingEvidence &&
+                            customerId == other.customerId &&
+                            bytes.contentEquals(other.bytes)
+                    )
+
+            override fun hashCode(): Int = 31 * customerId.hashCode() + bytes.contentHashCode()
         }
 
         private fun wipeStaleSosFile() {
