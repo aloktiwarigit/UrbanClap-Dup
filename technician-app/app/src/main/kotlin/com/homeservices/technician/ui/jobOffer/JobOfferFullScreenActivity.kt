@@ -4,13 +4,19 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.addCallback
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.homeservices.designsystem.theme.HomeservicesTheme
 import com.homeservices.technician.data.jobOffer.JobOfferEventBus
 import com.homeservices.technician.domain.jobOffer.model.JobOffer
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -98,9 +104,47 @@ public class JobOfferFullScreenActivity : ComponentActivity() {
         }
     }
 
+    private val viewModel: JobOfferViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // SAFE-JOB-002: fail closed on a malformed payload. offerFromIntent returns null when any
+        // extra is missing; previously setContent ran anyway, leaving Idle rendered as a dead
+        // full-screen page over the lock screen with no way out.
+        if (!shouldRenderOffer(offerFromIntent(intent))) {
+            finish()
+            return
+        }
         emitIntentOffer(intent)
+
+        // SAFE-JOB-003: system back must resolve the offer, not silently discard it. decline()
+        // no-ops unless the state is Offering, so this cannot double-resolve an already-settled
+        // offer; the state observer below then finishes the Activity.
+        onBackPressedDispatcher.addCallback(this) {
+            viewModel.decline()
+        }
+
+        // SAFE-JOB-001: observe terminal states and finish. The Activity previously called
+        // setContent once and never observed the ViewModel, so Accept / Decline / Expiry all left
+        // the technician stranded on a static message over the lock screen.
+        // JobOfferScreen resolves its ViewModel via hiltViewModel(), which uses this Activity's
+        // ViewModelStore — so `by viewModels()` is the same instance the UI drives.
+        // CREATED, not STARTED (Codex review MAJOR-2). The ViewModel calls scheduleReset(2_000L)
+        // after every terminal state, flipping it back to Idle two seconds later. Collecting only
+        // while STARTED means a terminal state emitted while the Activity is stopped — a call, a
+        // system overlay, a keyguard transition — is missed entirely, and on restart the collector
+        // sees only Idle and never finishes. That would strand the technician over the lock screen
+        // again, which is the exact defect this change exists to fix. CREATED keeps collecting for
+        // the whole lifetime, and finish() from a stopped Activity is legal.
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.CREATED) {
+                viewModel.uiState.collect { state ->
+                    if (shouldFinishForState(state) && !isFinishing) finish()
+                }
+            }
+        }
+
         setContent {
             HomeservicesTheme {
                 JobOfferScreen(modifier = Modifier.navigationBarsPadding())
@@ -118,3 +162,27 @@ public class JobOfferFullScreenActivity : ComponentActivity() {
         intent?.let(::offerFromIntent)?.let(eventBus::tryEmit)
     }
 }
+
+/**
+ * SAFE-JOB-001 — whether [state] is terminal and the lock-screen Activity should finish.
+ *
+ * `Idle` deliberately does NOT finish: the offer may still be arriving over the event bus when the
+ * Activity first composes. Only an offer that has actually resolved closes the screen.
+ */
+internal fun shouldFinishForState(state: JobOfferUiState): Boolean =
+    when (state) {
+        is JobOfferUiState.Accepted,
+        JobOfferUiState.Declined,
+        JobOfferUiState.Expired,
+        -> true
+
+        JobOfferUiState.Idle,
+        is JobOfferUiState.Offering,
+        -> false
+    }
+
+/**
+ * SAFE-JOB-002 — whether there is a usable offer to render. A null offer means the FCM payload was
+ * malformed, and the Activity must fail closed rather than present an empty lock-screen takeover.
+ */
+internal fun shouldRenderOffer(offer: JobOffer?): Boolean = offer != null

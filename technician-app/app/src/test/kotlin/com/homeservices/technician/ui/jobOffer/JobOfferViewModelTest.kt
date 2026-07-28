@@ -6,10 +6,12 @@ import com.homeservices.technician.domain.jobOffer.DeclineJobOfferUseCase
 import com.homeservices.technician.domain.jobOffer.model.JobOffer
 import com.homeservices.technician.domain.jobOffer.model.JobOfferResult
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.TestScope
@@ -102,6 +104,41 @@ public class JobOfferViewModelTest {
             assertThat(viewModel.uiState.value).isInstanceOf(JobOfferUiState.Accepted::class.java)
             val accepted = viewModel.uiState.value as JobOfferUiState.Accepted
             assertThat(accepted.bookingId).isEqualTo(offer.bookingId)
+        }
+
+    /**
+     * Codex review MAJOR-1 — decline must be inert while an accept is in flight.
+     *
+     * `accept()` leaves the state as `Offering(isAccepting = true)` until the use case returns.
+     * `decline()` previously only checked for `Offering`, so a decline arriving in that window —
+     * most easily via system back on the lock-screen Activity, which now declines — would fire a
+     * decline request for a booking the technician had already chosen to accept, and whichever
+     * request resolved last would win.
+     */
+    @Test
+    public fun `decline is ignored while an accept is still in flight`(): Unit =
+        runTest {
+            createViewModel()
+            val offer = aJobOffer()
+            offerFlow.emit(offer)
+
+            // Park the accept use case so the ViewModel stays in Offering(isAccepting = true) —
+            // the window this guard protects. Without the delay the coroutine runs to completion
+            // eagerly and the mid-flight state is never observable.
+            coEvery { acceptUseCase(offer.bookingId) } coAnswers {
+                delay(10_000L)
+                JobOfferResult.Accepted(offer.bookingId)
+            }
+
+            viewModel.accept()
+            val midAccept = viewModel.uiState.value
+            assertThat(midAccept).isInstanceOf(JobOfferUiState.Offering::class.java)
+            assertThat((midAccept as JobOfferUiState.Offering).isAccepting).isTrue()
+
+            viewModel.decline()
+
+            coVerify(exactly = 0) { declineUseCase(any()) }
+            assertThat(viewModel.uiState.value).isNotEqualTo(JobOfferUiState.Declined)
         }
 
     @Test
