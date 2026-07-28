@@ -44,6 +44,7 @@ public fun HomeservicesTheme(
         LocalHomeservicesRadius provides HomeservicesRadius,
         LocalHomeservicesElevation provides HomeservicesElevation,
         LocalHomeservicesMotion provides HomeservicesMotion,
+        LocalHomeservicesSize provides HomeservicesSize,
         LocalHomeservicesExtendedColors provides extendedColors,
     ) {
         MaterialTheme(

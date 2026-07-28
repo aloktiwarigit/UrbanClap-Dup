@@ -6,20 +6,50 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Raw internal constants — UX §5.1 colour palette
-// Not part of the public API; bind to public slots through HomeservicesColors,
-// HomeservicesLightColorScheme, and HomeservicesDarkColorScheme.
+// D1 token core — see docs/design/design-language.md §Palette.
+//
+// One core, three surface expressions (customer light / technician light / admin dark). The accent
+// is a single marigold used sparingly for decisions, active states and selected emphasis.
+//
+// History, because it matters to anyone tempted to "restore" an older palette: this module
+// previously shipped forest #0B3D2E + brass #B68A2C on warm cream, while its own header comments
+// claimed conformance to docs/ux-design.md §5.1 — which specifies deep teal #0E4F47 + coral #EF6F4B.
+// Neither matched admin-web, which had separately rebranded to marigold on warm ink. Three shipped
+// surfaces, no two agreeing on a single token. D1 resolves that; those directions are superseded and
+// must not be reintroduced. See docs/design/uiux-audit-2026.md.
+//
+// Raw constants are internal. Bind through HomeservicesColors, the two ColorSchemes, and
+// HomeservicesExtendedColors.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Brand — light
-internal val BrandPrimaryLight = Color(0xFF0B3D2E)
-internal val BrandPrimaryDark = Color(0xFF7AC7AA)
-internal val BrandPrimaryHoverLight = Color(0xFF062A20)
-internal val BrandPrimaryHoverDark = Color(0xFF94D8C0)
-internal val BrandAccentLight = Color(0xFFB68A2C)
-internal val BrandAccentDark = Color(0xFFD7B760)
+// Brand — one accent, identical in both modes so it cannot drift per-surface.
+internal val BrandAccent = Color(0xFFE2A04A)
+internal val BrandAccentSoft = Color(0xFFF1B86A)
+internal val BrandAccentDim = Color(0xFF6F4818)
 
-// Semantic
+// Neutrals — light (warm paper)
+internal val CanvasLight = Color(0xFFFBF6E9)
+internal val SurfaceLight = Color(0xFFF4EDDF)
+internal val SurfaceRaisedLight = Color(0xFFE9DFC6)
+internal val TextStrongLight = Color(0xFF1A140F)
+internal val TextMutedLight = Color(0xFF4A4135)
+internal val TextFaintLight = Color(0xFF6E665B)
+internal val BorderLight = Color(0xFFD4C9AB)
+internal val BorderStrongLight = Color(0xFFB0A382)
+
+// Neutrals — dark (warm ink)
+internal val CanvasDark = Color(0xFF0E0B08)
+internal val SurfaceDark = Color(0xFF1A1610)
+internal val SurfaceRaisedDark = Color(0xFF221C15)
+internal val TextStrongDark = Color(0xFFF1E9D8)
+internal val TextMutedDark = Color(0xFF9A9082)
+internal val TextFaintDark = Color(0xFF877A6D)
+internal val BorderDark = Color(0xFF2E2719)
+internal val BorderStrongDark = Color(0xFF3E3528)
+
+// Semantic — unchanged by D1, which permits the existing green/warn/danger/info roles.
+// These four were the ONLY tokens that already agreed across the spec and both implementations,
+// so they are deliberately left alone.
 internal val SemanticSuccessLight = Color(0xFF10A85E)
 internal val SemanticSuccessDark = Color(0xFF25C97B)
 internal val SemanticWarningLight = Color(0xFFEBA53A)
@@ -29,71 +59,48 @@ internal val SemanticDangerDark = Color(0xFFEC5252)
 internal val SemanticInfoLight = Color(0xFF2E72D9)
 internal val SemanticInfoDark = Color(0xFF4F90EC)
 
-// Neutral
-internal val Neutral0Light = Color(0xFFFBF7EF)
-internal val Neutral0Dark = Color(0xFF071511)
-internal val Neutral50Light = Color(0xFFFFFDF8)
-internal val Neutral50Dark = Color(0xFF0D1D18)
-internal val Neutral100Light = Color(0xFFE8F1EC)
-internal val Neutral100Dark = Color(0xFF172A24)
-internal val Neutral200Light = Color(0xFFDED8CD)
-internal val Neutral200Dark = Color(0xFF2E423A)
-internal val Neutral500Light = Color(0xFF5F6C66)
-internal val Neutral500Dark = Color(0xFFB7C6BD)
-internal val Neutral900Light = Color(0xFF18231F)
-internal val Neutral900Dark = Color(0xFFF4FBF6)
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Public grouping object — UX §5.1
-//
-// Holds the LIGHT-mode variants of brand and semantic tokens as named constants.
-// Dark-mode variants live in [HomeservicesDarkColorScheme]; use them through
-// the MaterialTheme ColorScheme rather than directly referencing raw constants.
-// ─────────────────────────────────────────────────────────────────────────────
-
 /**
- * Typed grouping of the UX §5.1 brand and semantic colour tokens (light-mode values).
+ * Typed grouping of the D1 brand and semantic tokens.
  *
- * Usage — access via nested objects:
+ * Usage:
  * ```
- * HomeservicesColors.brand.primary    // #0B3D2E
- * HomeservicesColors.semantic.danger  // #D73C3C
+ * HomeservicesColors.brand.accent      // #E2A04A
+ * HomeservicesColors.semantic.danger   // #D73C3C
  * ```
  */
 public object HomeservicesColors {
-    /**
-     * Brand palette — UX §5.1 §Brand.
-     *
-     * These are the LIGHT variants. Corresponding dark values are wired into
-     * [HomeservicesDarkColorScheme].
-     */
+    /** Brand palette — D1 §Palette. One accent, shared across modes. */
     public object Brand {
-        /** Forest primary — light. UX §5.1 Brand.Primary. */
-        public val primary: Color = BrandPrimaryLight
+        /** Marigold accent. Use sparingly: primary decisions, active states, selected emphasis. */
+        public val accent: Color = BrandAccent
 
-        /** Forest primary hover/pressed — light. UX §5.1 Brand.PrimaryHover. */
-        public val primaryHover: Color = BrandPrimaryHoverLight
+        /** Lifted accent for hover/pressed states and gradient ends. */
+        public val accentSoft: Color = BrandAccentSoft
 
-        /** Brass accent — light. UX §5.1 Brand.Accent. */
-        public val accent: Color = BrandAccentLight
+        /** Deep accent for dark-mode containers and dim fills. */
+        public val accentDim: Color = BrandAccentDim
+
+        /**
+         * Retained alias for the pre-D1 name, kept so this change does not break call sites.
+         * Four customer-app sites read the old hover token as a gradient start (AuthScreen,
+         * ServiceDetailScreen, ServiceListScreen, CatalogueHomeScreen); they move to [accentSoft]
+         * in the per-surface stories.
+         */
+        public val primary: Color = BrandAccent
     }
 
-    /**
-     * Semantic palette — UX §5.1 §Semantic.
-     *
-     * Light variants only; dark counterparts live in [HomeservicesDarkColorScheme].
-     */
+    /** Semantic palette — light variants; dark counterparts live in [HomeservicesDarkColorScheme]. */
     public object Semantic {
-        /** Success green — light. UX §5.1 Semantic.Success. */
+        /** Success green. */
         public val success: Color = SemanticSuccessLight
 
-        /** Warning amber — light. UX §5.1 Semantic.Warning. */
+        /** Warning amber. */
         public val warning: Color = SemanticWarningLight
 
-        /** Danger red — light. UX §5.1 Semantic.Danger. */
+        /** Danger red — errors, cancellation, SOS. */
         public val danger: Color = SemanticDangerLight
 
-        /** Info blue — light. UX §5.1 Semantic.Info. */
+        /** Info blue. */
         public val info: Color = SemanticInfoLight
     }
 
@@ -104,76 +111,66 @@ public object HomeservicesColors {
     public val semantic: Semantic = Semantic
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Material 3 ColorScheme instances — UX §5.1 slot mapping
-// ─────────────────────────────────────────────────────────────────────────────
-
 /**
- * Material 3 light colour scheme for Homeservices, derived from UX §5.1.
+ * D1 light scheme — warm paper. Default for the customer and technician apps, because the field
+ * context is outdoor sunlight on low-quality screens (D2).
  *
- * Slot mapping summary:
- * - primary / onPrimary          — forest green / white
- * - primaryContainer             — soft forest tint (#E8F1EC)
- * - secondary / onSecondary      — brass accent / dark warm brown
- * - tertiary                     — info blue
- * - error / onError              — danger red / white (≥4.5:1 AA)
- * - background / onBackground    — Neutral-0 / Neutral-900
- * - surface / onSurface          — Neutral-50 / Neutral-900
- * - surfaceVariant / onSurfaceVariant — Neutral-100 / Neutral-500 (large-text per NFR-A-5)
- * - outline / outlineVariant     — Neutral-200 / Neutral-100
+ * Role mapping:
+ * - primary / onPrimary                — marigold / warm ink (8.39:1)
+ * - primaryContainer                   — soft marigold tint for selected rows and chips
+ * - secondary / onSecondary            — muted ink / canvas; a single-accent system uses a neutral
+ * - tertiary                           — semantic info
+ * - background / onBackground          — canvas / text-strong (16.91:1)
+ * - surface / onSurface                — surface / text-strong
+ * - surfaceVariant / onSurfaceVariant  — raised surface / text-muted (9.27:1 on canvas — body-safe,
+ *                                        unlike the pre-D1 value which was knowingly sub-AA and
+ *                                        annotated "large-text only" while the spec claimed AA)
+ * - outline / outlineVariant           — border-strong / border
  */
 public val HomeservicesLightColorScheme: ColorScheme =
     lightColorScheme(
-        primary = BrandPrimaryLight,
-        onPrimary = Color.White,
-        primaryContainer = Color(0xFFE8F1EC),
-        onPrimaryContainer = BrandPrimaryLight,
-        secondary = BrandAccentLight,
-        onSecondary = Color(0xFF1F1606),
+        primary = BrandAccent,
+        onPrimary = CanvasDark,
+        primaryContainer = Color(0xFFF7E7CB),
+        onPrimaryContainer = TextStrongLight,
+        secondary = TextMutedLight,
+        onSecondary = CanvasLight,
         tertiary = SemanticInfoLight,
         error = SemanticDangerLight,
         onError = Color.White,
-        background = Neutral0Light,
-        onBackground = Neutral900Light,
-        surface = Neutral50Light,
-        onSurface = Neutral900Light,
-        surfaceVariant = Neutral100Light,
-        onSurfaceVariant = Neutral500Light,
-        outline = Neutral200Light,
-        outlineVariant = Neutral100Light,
+        background = CanvasLight,
+        onBackground = TextStrongLight,
+        surface = SurfaceLight,
+        onSurface = TextStrongLight,
+        surfaceVariant = SurfaceRaisedLight,
+        onSurfaceVariant = TextMutedLight,
+        outline = BorderStrongLight,
+        outlineVariant = BorderLight,
     )
 
 /**
- * Material 3 dark colour scheme for Homeservices, derived from UX §5.1.
+ * D1 dark scheme — warm ink. Default for admin web; available on the Android apps as a user choice.
  *
- * Slot mapping summary:
- * - primary / onPrimary          — light forest green / deep green
- * - primaryContainer             — forest green container
- * - secondary / onSecondary      — brass accent / warm dark text
- * - tertiary                     — info blue dark
- * - error / onError              — danger red dark / deeper wine red (≥4.5:1 AA)
- * - background / onBackground    — Neutral-0-dark / Neutral-900-dark
- * - surface / onSurface          — Neutral-50-dark / Neutral-900-dark
- * - surfaceVariant / onSurfaceVariant — Neutral-100-dark / Neutral-500-dark (large-text per NFR-A-5)
- * - outline / outlineVariant     — Neutral-200-dark / Neutral-100-dark
+ * The accent is the same marigold as light mode by design: a per-mode accent shift is exactly how
+ * the previous palettes drifted apart.
  */
 public val HomeservicesDarkColorScheme: ColorScheme =
     darkColorScheme(
-        primary = BrandPrimaryDark,
-        onPrimary = Color(0xFF061D17),
-        primaryContainer = BrandPrimaryLight,
-        onPrimaryContainer = Color(0xFFE8F1EC),
-        secondary = BrandAccentDark,
-        onSecondary = Color(0xFF20190A),
+        primary = BrandAccent,
+        onPrimary = CanvasDark,
+        primaryContainer = BrandAccentDim,
+        onPrimaryContainer = TextStrongDark,
+        secondary = TextMutedDark,
+        onSecondary = CanvasDark,
         tertiary = SemanticInfoDark,
         error = SemanticDangerDark,
         onError = Color(0xFF3A0A0A),
-        background = Neutral0Dark,
-        onBackground = Neutral900Dark,
-        surface = Neutral50Dark,
-        onSurface = Neutral900Dark,
-        surfaceVariant = Neutral100Dark,
-        onSurfaceVariant = Neutral500Dark,
-        outline = Neutral200Dark,
-        outlineVariant = Neutral100Dark,
+        background = CanvasDark,
+        onBackground = TextStrongDark,
+        surface = SurfaceDark,
+        onSurface = TextStrongDark,
+        surfaceVariant = SurfaceRaisedDark,
+        onSurfaceVariant = TextMutedDark,
+        outline = BorderStrongDark,
+        outlineVariant = BorderDark,
     )

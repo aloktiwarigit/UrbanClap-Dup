@@ -46,7 +46,13 @@ Measured contrast pairs:
 | Dark text strong on canvas | 16.25:1 |
 | Dark text muted on canvas | 6.25:1 |
 | Dark text faint on canvas | 4.71:1 |
-| Ink on brand accent | 8.39:1 |
+| Ink on brand accent | 8.75:1 |
+
+> Corrected 2026-07-28 during S-10. This row previously read **8.39:1**, which reproduces for no ink
+> in the palette — canvas-dark `#0E0B08` measures **8.748**, text-strong `#1A140F` 8.134,
+> surface-dark `#1A1610` 8.027. The other six rows reproduce to the decimal, so this was a single
+> stale entry. `onPrimary` binds to canvas-dark, hence 8.75. Verified by
+> `D1TokenCoreTest.ink_on_brand_accent_is_8_75`.
 
 Accessibility floor: WCAG 2.2 AA. Target body contrast is 7:1 where practical because field usage includes sunlight and low-quality screens.
 

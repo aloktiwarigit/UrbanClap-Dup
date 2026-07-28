@@ -22,17 +22,17 @@ internal class ExtendedColorsTest {
 
     @Test
     internal fun extendedLight_neighbourhood_matchesBrandAccentLight() {
-        assertThat(HomeservicesExtendedColorsLight.neighbourhood).isEqualTo(Color(0xFFB68A2C))
+        assertThat(HomeservicesExtendedColorsLight.neighbourhood).isEqualTo(Color(0xFFE2A04A))
     }
 
     @Test
     internal fun extendedLight_brandAccent_matchesBrandAccentLight() {
-        assertThat(HomeservicesExtendedColorsLight.brandAccent).isEqualTo(Color(0xFFB68A2C))
+        assertThat(HomeservicesExtendedColorsLight.brandAccent).isEqualTo(Color(0xFFE2A04A))
     }
 
     @Test
     internal fun extendedLight_brandPrimaryHover_matchesSpec() {
-        assertThat(HomeservicesExtendedColorsLight.brandPrimaryHover).isEqualTo(Color(0xFF062A20))
+        assertThat(HomeservicesExtendedColorsLight.brandPrimaryHover).isEqualTo(Color(0xFFF1B86A))
     }
 
     // ── Dark variant ──────────────────────────────────────────────────────────
@@ -44,17 +44,17 @@ internal class ExtendedColorsTest {
 
     @Test
     internal fun extendedDark_neighbourhood_matchesBrandAccentDark() {
-        assertThat(HomeservicesExtendedColorsDark.neighbourhood).isEqualTo(Color(0xFFD7B760))
+        assertThat(HomeservicesExtendedColorsDark.neighbourhood).isEqualTo(Color(0xFFE2A04A))
     }
 
     @Test
     internal fun extendedDark_brandAccent_matchesBrandAccentDark() {
-        assertThat(HomeservicesExtendedColorsDark.brandAccent).isEqualTo(Color(0xFFD7B760))
+        assertThat(HomeservicesExtendedColorsDark.brandAccent).isEqualTo(Color(0xFFE2A04A))
     }
 
     @Test
     internal fun extendedDark_brandPrimaryHover_matchesSpec() {
-        assertThat(HomeservicesExtendedColorsDark.brandPrimaryHover).isEqualTo(Color(0xFF94D8C0))
+        assertThat(HomeservicesExtendedColorsDark.brandPrimaryHover).isEqualTo(Color(0xFFF1B86A))
     }
 
     // ── CompositionLocal default ──────────────────────────────────────────────
@@ -73,8 +73,8 @@ internal class ExtendedColorsTest {
         // must equal the light variant. We verify the light variant is fully populated as a proxy.
         val expected = HomeservicesExtendedColorsLight
         assertThat(expected.verified).isEqualTo(Color(0xFF10A85E))
-        assertThat(expected.neighbourhood).isEqualTo(Color(0xFFB68A2C))
-        assertThat(expected.brandAccent).isEqualTo(Color(0xFFB68A2C))
-        assertThat(expected.brandPrimaryHover).isEqualTo(Color(0xFF062A20))
+        assertThat(expected.neighbourhood).isEqualTo(Color(0xFFE2A04A))
+        assertThat(expected.brandAccent).isEqualTo(Color(0xFFE2A04A))
+        assertThat(expected.brandPrimaryHover).isEqualTo(Color(0xFFF1B86A))
     }
 }

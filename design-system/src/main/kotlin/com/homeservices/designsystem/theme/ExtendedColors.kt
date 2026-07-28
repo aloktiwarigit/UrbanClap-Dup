@@ -47,28 +47,33 @@ public data class HomeservicesExtendedColors(
     val neighbourhood: Color,
     val brandAccent: Color,
     val brandPrimaryHover: Color,
+    /**
+     * Metadata-only text. D1 §Palette "text faint" — 5.24:1 light / 4.71:1 dark. Clears AA but sits
+     * below the 7:1 field target, so it is for timestamps, counts and captions only. Never body copy.
+     *
+     * Added in S-10: D1 defines nine core roles and this was the one with no M3 slot to bind to.
+     */
+    val textFaint: Color,
 )
 
-/**
- * Light-mode instance of [HomeservicesExtendedColors]. UX §5.1 light palette.
- */
+/** Light-mode instance of [HomeservicesExtendedColors]. D1 light palette. */
 public val HomeservicesExtendedColorsLight: HomeservicesExtendedColors =
     HomeservicesExtendedColors(
         verified = SemanticSuccessLight,
-        neighbourhood = BrandAccentLight,
-        brandAccent = BrandAccentLight,
-        brandPrimaryHover = BrandPrimaryHoverLight,
+        neighbourhood = BrandAccent,
+        brandAccent = BrandAccent,
+        brandPrimaryHover = BrandAccentSoft,
+        textFaint = TextFaintLight,
     )
 
-/**
- * Dark-mode instance of [HomeservicesExtendedColors]. UX §5.1 dark palette.
- */
+/** Dark-mode instance of [HomeservicesExtendedColors]. D1 dark palette. */
 public val HomeservicesExtendedColorsDark: HomeservicesExtendedColors =
     HomeservicesExtendedColors(
         verified = SemanticSuccessDark,
-        neighbourhood = BrandAccentDark,
-        brandAccent = BrandAccentDark,
-        brandPrimaryHover = BrandPrimaryHoverDark,
+        neighbourhood = BrandAccent,
+        brandAccent = BrandAccent,
+        brandPrimaryHover = BrandAccentSoft,
+        textFaint = TextFaintDark,
     )
 
 /**
