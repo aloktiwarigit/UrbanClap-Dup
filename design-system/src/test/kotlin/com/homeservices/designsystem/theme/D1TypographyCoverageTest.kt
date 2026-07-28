@@ -55,8 +55,7 @@ internal class D1TypographyCoverageTest {
             .`as`(
                 "slots falling off the bundled stack (Latin -> Roboto, Devanagari -> platform Noto): %s",
                 unmapped,
-            )
-            .isEmpty()
+            ).isEmpty()
     }
 
     @Test
@@ -99,14 +98,38 @@ internal class D1TypographyCoverageTest {
     @Test
     internal fun core_ramp_matches_the_published_contract() {
         val t = HomeservicesTypography
-        assertThat(t.headlineLarge.fontSize.value.toInt()).`as`("title.xl").isEqualTo(28)
-        assertThat(t.headlineMedium.fontSize.value.toInt()).`as`("title.lg").isEqualTo(22)
-        assertThat(t.titleLarge.fontSize.value.toInt()).`as`("title.md").isEqualTo(18)
-        assertThat(t.bodyLarge.fontSize.value.toInt()).`as`("body.lg").isEqualTo(16)
-        assertThat(t.bodyMedium.fontSize.value.toInt()).`as`("body.md").isEqualTo(14)
-        assertThat(t.bodySmall.fontSize.value.toInt()).`as`("body.sm").isEqualTo(12)
-        assertThat(t.labelLarge.fontSize.value.toInt()).`as`("label.lg").isEqualTo(14)
-        assertThat(t.labelSmall.fontSize.value.toInt()).`as`("label.sm").isEqualTo(11)
+        assertThat(
+            t.headlineLarge.fontSize.value
+                .toInt(),
+        ).`as`("title.xl").isEqualTo(28)
+        assertThat(
+            t.headlineMedium.fontSize.value
+                .toInt(),
+        ).`as`("title.lg").isEqualTo(22)
+        assertThat(
+            t.titleLarge.fontSize.value
+                .toInt(),
+        ).`as`("title.md").isEqualTo(18)
+        assertThat(
+            t.bodyLarge.fontSize.value
+                .toInt(),
+        ).`as`("body.lg").isEqualTo(16)
+        assertThat(
+            t.bodyMedium.fontSize.value
+                .toInt(),
+        ).`as`("body.md").isEqualTo(14)
+        assertThat(
+            t.bodySmall.fontSize.value
+                .toInt(),
+        ).`as`("body.sm").isEqualTo(12)
+        assertThat(
+            t.labelLarge.fontSize.value
+                .toInt(),
+        ).`as`("label.lg").isEqualTo(14)
+        assertThat(
+            t.labelSmall.fontSize.value
+                .toInt(),
+        ).`as`("label.sm").isEqualTo(11)
     }
 
     /**

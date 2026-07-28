@@ -1,4 +1,5 @@
-@file:Suppress("MatchingDeclarationName") // composables + data class = 2 top-level decls; detekt counts only class-like nodes
+// detekt counts only class-like nodes, so the data class reads as the sole top-level declaration.
+@file:Suppress("MatchingDeclarationName")
 
 package com.homeservices.designsystem.locale
 

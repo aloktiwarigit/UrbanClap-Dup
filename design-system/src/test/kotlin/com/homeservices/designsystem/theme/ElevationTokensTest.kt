@@ -1,6 +1,5 @@
 package com.homeservices.designsystem.theme
 
-import androidx.compose.ui.graphics.Color
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

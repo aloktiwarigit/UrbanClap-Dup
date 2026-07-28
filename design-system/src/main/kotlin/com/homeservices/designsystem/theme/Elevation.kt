@@ -1,5 +1,5 @@
 /**
- * UX §5.5 elevation tokens — Dp values and shadow descriptors (light + dark).
+ * D1 elevation tokens — Dp scale. Shadow descriptors were removed in S-10 (no consumers).
  *
  * Dual-exposure pattern:
  * Consumers in @Composable code SHOULD prefer `LocalHomeservicesElevation.current.<token>` over
@@ -7,6 +7,8 @@
  * lands in one place. Outside @Composable code (tests, non-Compose Kotlin), use the object
  * directly.
  */
+@file:Suppress("MatchingDeclarationName") // object + CompositionLocal val = 2 top-level decls
+
 package com.homeservices.designsystem.theme
 
 import androidx.compose.runtime.ProvidableCompositionLocal

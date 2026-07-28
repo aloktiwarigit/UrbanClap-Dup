@@ -210,9 +210,11 @@ internal class D1TokenCoreTest {
                     HomeservicesDarkColorScheme.onSurfaceVariant,
                     HomeservicesDarkColorScheme.surfaceVariant,
                 )
-            assertThat(light).`as`("light muted-on-raised = %.2f:1 (AA body ≥ 4.5)", light)
+            assertThat(light)
+                .`as`("light muted-on-raised = %.2f:1 (AA body ≥ 4.5)", light)
                 .isGreaterThanOrEqualTo(4.5)
-            assertThat(dark).`as`("dark muted-on-raised = %.2f:1 (AA body ≥ 4.5)", dark)
+            assertThat(dark)
+                .`as`("dark muted-on-raised = %.2f:1 (AA body ≥ 4.5)", dark)
                 .isGreaterThanOrEqualTo(4.5)
         }
     }
