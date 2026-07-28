@@ -16,22 +16,54 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/** UX §5.7 corner-radius scale. */
+/** A surface-specific corner-radius scale. */
+public data class HomeservicesRadiusScale(
+    val sm: Dp,
+    val md: Dp,
+    val lg: Dp,
+    val xl: Dp,
+    val full: Dp = 9999.dp,
+)
+
+/** D1 customer corner-radius scale: 8 / 12 / 20. */
+public val HomeservicesCustomerRadius: HomeservicesRadiusScale =
+    HomeservicesRadiusScale(
+        sm = 8.dp,
+        md = 12.dp,
+        lg = 20.dp,
+        xl = 20.dp,
+    )
+
+/** D1 technician corner-radius scale: 4 / 8 / 12. */
+public val HomeservicesTechnicianRadius: HomeservicesRadiusScale =
+    HomeservicesRadiusScale(
+        sm = 4.dp,
+        md = 8.dp,
+        lg = 12.dp,
+        xl = 12.dp,
+    )
+
+/**
+ * Back-compatible customer/default radius object.
+ *
+ * Do not delete this. Existing call sites use `HomeservicesRadius.sm` directly, and MaterialTheme
+ * shape mapping still reaches this contract through [LocalHomeservicesRadius].
+ */
 public object HomeservicesRadius {
-    /** 4 dp — small radius (chips, tags). */
-    public val sm: Dp = 4.dp
+    /** 8 dp — customer small radius. */
+    public val sm: Dp = HomeservicesCustomerRadius.sm
 
-    /** 8 dp — medium radius (cards, inputs). */
-    public val md: Dp = 8.dp
+    /** 12 dp — customer medium radius. */
+    public val md: Dp = HomeservicesCustomerRadius.md
 
-    /** 12 dp — large radius (bottom sheets, modals). */
-    public val lg: Dp = 12.dp
+    /** 20 dp — customer large radius. */
+    public val lg: Dp = HomeservicesCustomerRadius.lg
 
-    /** 20 dp — extra-large radius (FABs, pill buttons). */
-    public val xl: Dp = 20.dp
+    /** 20 dp — customer extra-large radius. */
+    public val xl: Dp = HomeservicesCustomerRadius.xl
 
     /** 9999 dp — fully circular / pill shape. */
-    public val full: Dp = 9999.dp
+    public val full: Dp = HomeservicesCustomerRadius.full
 }
 
 /**
@@ -40,5 +72,5 @@ public object HomeservicesRadius {
  * Provide a custom value via [androidx.compose.runtime.CompositionLocalProvider] to support
  * shape-override themes. Defaults to the singleton [HomeservicesRadius] object.
  */
-public val LocalHomeservicesRadius: ProvidableCompositionLocal<HomeservicesRadius> =
-    staticCompositionLocalOf { HomeservicesRadius }
+public val LocalHomeservicesRadius: ProvidableCompositionLocal<HomeservicesRadiusScale> =
+    staticCompositionLocalOf { HomeservicesCustomerRadius }

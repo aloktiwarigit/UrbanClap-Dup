@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'design-system/**'
+      - 'admin-web/app/globals.css'
       - 'figma/**'
       - 'TOKEN-SYNC.md'
       - 'tools/check-shared-versions.sh'
@@ -15,6 +16,7 @@ on:
     branches: [main]
     paths:
       - 'design-system/**'
+      - 'admin-web/app/globals.css'
       - 'figma/**'
       - 'TOKEN-SYNC.md'
       - 'tools/check-shared-versions.sh'
@@ -57,7 +59,7 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: bash tools/check-shared-versions.sh
 
-      - name: token drift check (Kotlin design-system <-> Figma Variables JSON)
+      - name: token drift check (Kotlin design-system <-> Figma Variables JSON <-> admin CSS)
         working-directory: ${{ github.workspace }}
         run: python3 tools/check-token-drift.py
 
@@ -77,4 +79,3 @@ jobs:
         uses: returntocorp/semgrep-action@v1
         with:
           config: p/kotlin p/owasp-top-ten p/secrets
-

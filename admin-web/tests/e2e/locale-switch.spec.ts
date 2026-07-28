@@ -59,9 +59,9 @@ test.describe('locale routing', () => {
     await page.goto('/hi/login');
     const htmlClass = await page.locator('html').getAttribute('class');
     // next/font generates CSS variable classes like __variable_XXXXXX
-    // We verify there are 4 font variables (fraunces, geist, jetbrains, devanagari)
+    // D1 forbids serif display; variables are geist, jetbrains, devanagari.
     const varClasses = (htmlClass ?? '').split(' ').filter((c) => c.startsWith('__variable_'));
-    expect(varClasses.length).toBe(4);
+    expect(varClasses.length).toBe(3);
   });
 
   test('unknown locale /fr/login redirects to a valid locale login page', async ({ page }) => {

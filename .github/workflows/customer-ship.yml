@@ -9,6 +9,7 @@ on:
       - 'design-system/**'
       - '.github/workflows/customer-ship.yml'
       - 'tools/check-shared-versions.sh'
+      - 'tools/verify-android-design-tokens.py'
   push:
     branches: [main]
     paths:
@@ -16,6 +17,7 @@ on:
       - 'design-system/**'
       - '.github/workflows/customer-ship.yml'
       - 'tools/check-shared-versions.sh'
+      - 'tools/verify-android-design-tokens.py'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -106,4 +108,3 @@ jobs:
         uses: returntocorp/semgrep-action@v1
         with:
           config: p/kotlin p/owasp-top-ten p/secrets
-

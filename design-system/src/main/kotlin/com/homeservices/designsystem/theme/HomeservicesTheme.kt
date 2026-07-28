@@ -7,6 +7,12 @@ import androidx.compose.material3.Shapes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 
+/** Android surface expressions. Admin is a web consumer and does not use this Compose theme. */
+public enum class HsExpression {
+    Customer,
+    Technician,
+}
+
 /**
  * Canonical Compose theme wrapper for the homeservices-mvp Android apps.
  *
@@ -34,17 +40,20 @@ import androidx.compose.runtime.CompositionLocalProvider
 @Composable
 public fun HomeservicesTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    expression: HsExpression = HsExpression.Customer,
     content: @Composable () -> Unit,
 ) {
     val colorScheme = selectColorScheme(darkTheme)
     val extendedColors = selectExtendedColors(darkTheme)
+    val radius = selectRadius(expression)
 
     CompositionLocalProvider(
         LocalHomeservicesSpacing provides HomeservicesSpacing,
-        LocalHomeservicesRadius provides HomeservicesRadius,
+        LocalHomeservicesRadius provides radius,
         LocalHomeservicesElevation provides HomeservicesElevation,
         LocalHomeservicesMotion provides HomeservicesMotion,
         LocalHomeservicesSize provides HomeservicesSize,
+        LocalHomeservicesBorderWidth provides HomeservicesBorderWidth,
         LocalHomeservicesExtendedColors provides extendedColors,
     ) {
         MaterialTheme(
@@ -52,13 +61,43 @@ public fun HomeservicesTheme(
             typography = HomeservicesTypography,
             shapes =
                 Shapes(
-                    extraSmall = RoundedCornerShape(HomeservicesRadius.sm),
-                    small = RoundedCornerShape(HomeservicesRadius.md),
-                    medium = RoundedCornerShape(HomeservicesRadius.lg),
-                    large = RoundedCornerShape(HomeservicesRadius.xl),
-                    extraLarge = RoundedCornerShape(HomeservicesRadius.full),
+                    extraSmall = RoundedCornerShape(radius.sm),
+                    small = RoundedCornerShape(radius.md),
+                    medium = RoundedCornerShape(radius.lg),
+                    large = RoundedCornerShape(radius.xl),
+                    extraLarge = RoundedCornerShape(radius.full),
                 ),
             content = content,
         )
     }
 }
+
+@Composable
+public fun CustomerHomeservicesTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable () -> Unit,
+) {
+    HomeservicesTheme(
+        darkTheme = darkTheme,
+        expression = HsExpression.Customer,
+        content = content,
+    )
+}
+
+@Composable
+public fun TechnicianHomeservicesTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable () -> Unit,
+) {
+    HomeservicesTheme(
+        darkTheme = darkTheme,
+        expression = HsExpression.Technician,
+        content = content,
+    )
+}
+
+private fun selectRadius(expression: HsExpression): HomeservicesRadiusScale =
+    when (expression) {
+        HsExpression.Customer -> HomeservicesCustomerRadius
+        HsExpression.Technician -> HomeservicesTechnicianRadius
+    }

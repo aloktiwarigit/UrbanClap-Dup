@@ -13,13 +13,13 @@
     <path
         android:fillColor="#FFFFFF"
         android:pathData="M24,56 L24,84 L44,84 L44,64 L64,64 L64,84 L84,84 L84,56 Z" />
-    <!-- Door recess (brand green to show depth) -->
+    <!-- Door recess (D1 warm ink to show depth) -->
     <path
-        android:fillColor="#0B3D2E"
+        android:fillColor="#0E0B08"
         android:pathData="M46,66 L46,84 L62,84 L62,66 Z" />
-    <!-- Brass check badge — top right -->
+    <!-- Marigold check badge — top right -->
     <path
-        android:fillColor="#B68A2C"
+        android:fillColor="#F1B86A"
         android:pathData="M78,38 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" />
     <path
         android:strokeColor="#FFFFFF"

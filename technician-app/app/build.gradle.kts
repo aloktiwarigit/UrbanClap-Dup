@@ -801,3 +801,13 @@ sentry {
     autoUploadProguardMapping.set(hasSentryCredentials)
     ignoredBuildTypes.set(setOf("debug"))
 }
+
+tasks.register<Exec>("verifyDesignTokenUsage") {
+    description = "Fail if raw Color or off-scale spacing/radius token debt grows."
+    group = "verification"
+    workingDir = rootProject.projectDir.parentFile
+    commandLine("python", "tools/verify-android-design-tokens.py", "technician-app")
+}
+
+tasks.named("detekt") { dependsOn("verifyDesignTokenUsage") }
+tasks.named("check") { dependsOn("verifyDesignTokenUsage") }

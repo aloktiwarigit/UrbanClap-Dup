@@ -6,6 +6,11 @@ on:
     branches: [main]
     paths:
       - 'admin-web/**'
+      - 'design-system/src/main/kotlin/com/homeservices/designsystem/theme/Color.kt'
+      - 'figma/variables.json'
+      - 'TOKEN-SYNC.md'
+      - 'tools/check-token-drift.py'
+      - 'tools/tests/test_check_token_drift.py'
       - '.github/workflows/admin-ship.yml'
       # The e2e job boots api/ via playwright webServer, so api runtime
       # changes must re-trigger this workflow (story E01-S06).
@@ -19,6 +24,11 @@ on:
     branches: [main]
     paths:
       - 'admin-web/**'
+      - 'design-system/src/main/kotlin/com/homeservices/designsystem/theme/Color.kt'
+      - 'figma/variables.json'
+      - 'TOKEN-SYNC.md'
+      - 'tools/check-token-drift.py'
+      - 'tools/tests/test_check_token_drift.py'
       - '.github/workflows/admin-ship.yml'
       - 'api/openapi.json'
       - 'api/src/**'
@@ -59,6 +69,10 @@ jobs:
           cache-dependency-path: admin-web/pnpm-lock.yaml
 
       - run: pnpm install --frozen-lockfile
+
+      - name: token drift check
+        working-directory: ${{ github.workspace }}
+        run: python3 tools/check-token-drift.py
 
       # Gate split: this step only checks admin-web/src/api/generated/** drift.
       # Spec drift (api/openapi.json vs api/src/schemas/**) is gated by

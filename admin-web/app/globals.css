@@ -8,26 +8,46 @@
 
 :root {
   /* Type — actual fonts loaded via next/font in layout.tsx */
-  --font-display: var(--font-fraunces), "Times New Roman", Georgia, serif;
+  --font-display: var(--font-geist), var(--font-devanagari), -apple-system, "Segoe UI", system-ui, sans-serif;
   --font-body: var(--font-geist), -apple-system, "Segoe UI", system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, Menlo, monospace;
 
+  /* D1 core primitives. Kotlin Color.kt is authoritative; tools/check-token-drift.py verifies these. */
+  --d1-accent-light: #E2A04A;
+  --d1-accent-dark: #E2A04A;
+  --d1-canvas-light: #FBF6E9;
+  --d1-canvas-dark: #0E0B08;
+  --d1-surface-light: #F4EDDF;
+  --d1-surface-dark: #1A1610;
+  --d1-surface-raised-light: #E9DFC6;
+  --d1-surface-raised-dark: #221C15;
+  --d1-text-strong-light: #1A140F;
+  --d1-text-strong-dark: #F1E9D8;
+  --d1-text-muted-light: #4A4135;
+  --d1-text-muted-dark: #9A9082;
+  --d1-text-faint-light: #6E665B;
+  --d1-text-faint-dark: #877A6D;
+  --d1-border-light: #D4C9AB;
+  --d1-border-dark: #2E2719;
+  --d1-border-strong-light: #B0A382;
+  --d1-border-strong-dark: #3E3528;
+
   /* Warm-ink palette — dark default. Existing var names kept so dashboard
      widgets (Rail, CounterStrip, TechMap…) keep working without rewrites. */
-  --ink-0: #0E0B08;   /* canvas */
+  --ink-0: var(--d1-canvas-dark);   /* canvas */
   --ink-1: #14110C;   /* canvas-raised */
-  --ink-2: #1A1610;   /* surface */
-  --ink-3: #221C15;   /* surface-raised */
-  --ink-4: #2E2719;   /* hairline strong */
-  --ink-5: #3E3528;   /* divider */
+  --ink-2: var(--d1-surface-dark);   /* surface */
+  --ink-3: var(--d1-surface-raised-dark);   /* surface-raised */
+  --ink-4: var(--d1-border-dark);   /* hairline */
+  --ink-5: var(--d1-border-strong-dark);   /* divider */
 
-  --fog-0: #877A6D;   /* text-mute — 4.54:1 vs --ink-1, 4.62:1 vs --ink-0 (WCAG AA pass); bumped from #6E665B which was 3.33:1 */
-  --fog-1: #9A9082;   /* text-soft */
+  --fog-0: var(--d1-text-faint-dark);   /* metadata */
+  --fog-1: var(--d1-text-muted-dark);   /* text-soft */
   --fog-2: #C7BCA9;   /* text-default */
-  --fog-3: #F1E9D8;   /* text-strong (vellum) */
+  --fog-3: var(--d1-text-strong-dark);   /* text-strong (vellum) */
 
   /* Single warm accent — saffron / turmeric. Used SPARINGLY. */
-  --marigold: #E2A04A;
+  --marigold: var(--d1-accent-dark);
   --marigold-soft: #F1B86A;
   --marigold-dim: #6F4818;
 
@@ -44,13 +64,13 @@
   --lavender: #8B7DC3;    /* secondary status */
 
   /* Paper palette — light mode override (html.light) */
-  --paper-0: #F4EDDF;
-  --paper-1: #FBF6E9;
-  --paper-2: #E9DFC6;
-  --paper-line: #D4C9AB;
-  --paper-text-0: #1A140F;
-  --paper-text-1: #4A4135;
-  --paper-text-2: #6E665B;
+  --paper-0: var(--d1-surface-light);
+  --paper-1: var(--d1-canvas-light);
+  --paper-2: var(--d1-surface-raised-light);
+  --paper-line: var(--d1-border-light);
+  --paper-text-0: var(--d1-text-strong-light);
+  --paper-text-1: var(--d1-text-muted-light);
+  --paper-text-2: var(--d1-text-faint-light);
 
   /* Rail navigation — separate token namespace so light-mode override is clean.
      --rail-text uses --fog-1 (#9A9082) on --ink-1 (#14110C) = 5.95:1 (WCAG AA pass).
@@ -116,16 +136,17 @@
 /* Tailwind v4 design tokens — DARK by default (no .dark prefix needed) */
 @theme {
   /* Brand & semantic colors */
-  --color-brand: #E2A04A;             /* marigold */
+  --color-brand: var(--d1-accent-dark);             /* marigold */
   --color-brand-fg: #14110C;          /* ink on marigold (high-contrast) */
-  --color-surface: #0E0B08;
+  --color-surface: var(--d1-canvas-dark);
   --color-surface-alt: #14110C;
-  --color-surface-raised: #1A1610;
-  --color-text: #F1E9D8;              /* vellum */
-  --color-text-muted: #9A9082;
-  --color-text-faint: #877A6D;   /* faint text on dark — 4.54:1 vs --color-surface (AA pass); bumped from #6E665B which was 3.33:1 */
-  --color-border: #2E2719;
-  --color-border-strong: #3E3528;
+  --color-surface-raised: var(--d1-surface-dark);
+  --color-text: var(--d1-text-strong-dark);              /* vellum */
+  --color-text-muted: var(--d1-text-muted-dark);
+  --color-text-faint: var(--d1-text-faint-dark);
+  --color-border: var(--d1-border-dark);
+  --color-border-strong: var(--d1-border-strong-dark);
+  --color-focus-ring: var(--d1-text-muted-dark);
   --color-success: #5BA38E;
   --color-warn: #E9B44C;
   --color-danger: #B6385C;
@@ -189,7 +210,8 @@ html[data-theme="light"] {
   --color-text-muted: var(--paper-text-1);
   --color-text-faint: var(--paper-text-2);
   --color-border: var(--paper-line);
-  --color-border-strong: #B0A382;
+  --color-border-strong: var(--d1-border-strong-light);
+  --color-focus-ring: var(--d1-text-muted-light);
   --color-brand-fg: var(--paper-0);
 
   /* re-map ink-* / fog-* used by dashboard widgets so they read on paper */
@@ -264,7 +286,7 @@ body {
   font-feature-settings: "ss01" 1;
   font-optical-sizing: auto;
   font-weight: 380;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   line-height: 0.96;
 }
 
@@ -273,13 +295,13 @@ body {
   font-feature-settings: "tnum" 1, "lnum" 1;
   font-variant-numeric: lining-nums tabular-nums;
   font-weight: 460;
-  letter-spacing: -0.045em;
+  letter-spacing: 0;
   line-height: 0.92;
 }
 
 .tnum { font-variant-numeric: tabular-nums lining-nums; }
 
-.italic-serif {
+.italic-display {
   font-family: var(--font-display);
   font-style: italic;
   font-weight: 380;
@@ -400,7 +422,7 @@ button {
    ───────────────────────────────────────────────────────────────────────── */
 
 :focus-visible {
-  outline: 2px solid var(--marigold);
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 3px;
   border-radius: 2px;
 }

@@ -4,6 +4,61 @@ Last updated: 2026-07-26 | Session: recovery/review + emulator/admin/auth captur
 
 This file is the handoff contract. Trust disk over older conversation history.
 
+## Update 2026-07-28 - S-11 / S-12 / S-20 implementation
+
+Worktree: `C:\Alok\Business Projects\homeservices-s11-expressions`
+Branch: `feat/s11-surface-expressions`
+
+Implemented:
+
+- ADR-0029 added: Kotlin remains the D1 token source of truth; Figma JSON and admin CSS are verified
+  mirrors, not generated outputs.
+- S-11: Android now has two Compose expressions, not three. `CustomerHomeservicesTheme` installs the
+  customer radius expression (8/12/20), `TechnicianHomeservicesTheme` installs the technician
+  expression (4/8/12). `HomeservicesRadius` was kept as the customer/default compatibility object.
+  `MainActivity` in both apps and `JobOfferFullScreenActivity` use the correct wrapper.
+- S-12: `admin-web/app/globals.css` now has machine-readable `--d1-*` core color primitives,
+  editorial `--ink-*` / `--fog-*` / `--paper-*` aliases derive from them, Fraunces was removed, and
+  `admin-web/DESIGN.md` is filled with the local admin contract.
+- S-20: added `HomeservicesBorderWidth` tokens and `tools/verify-android-design-tokens.py`. The
+  scanner is wired into each Android app's `detekt` and `check` tasks. It freezes current pre-sweep
+  raw color / spacing / radius debt by fingerprint, so a new violation fails even if another old one
+  is removed.
+- CI mirror enforcement widened: `admin-ship.yml` and `design-system-ship.yml` now run or trigger the
+  D1 token drift check when either side of the mirror changes.
+
+Corrections / caveats:
+
+- The S-20 prompt carried technician radius debt as 20. The implemented scanner finds 25 under the
+  D1 technician radius set `{4, 8, 12, 9999}`. I kept the scanner's number and budgeted it, rather
+  than forcing code to match the stale count.
+- Codex static review found the first scanner version was too weak: it used net counts, truncated
+  fractional dp values, and ignored XML colors. Fixed after review. The scanner now treats fractional
+  dp as violations, scans resource XML colors, and uses `tools/android-design-token-baseline.json`
+  fingerprints rather than category counts.
+- The single Codex rerun found one remaining major: variant-specific source sets were not scanned.
+  Fixed by scanning every `app/src/*/{kotlin,java,res}` source set, not only `main`.
+- Current frozen baseline: customer 405 findings remain; technician 151 findings remain.
+- `bash tools/pre-codex-smoke-web.sh` could not run in this Windows environment because `/bin/bash`
+  is unavailable. The equivalent web commands were run directly after `pnpm install --frozen-lockfile`.
+- Do not run customer and technician Gradle gates in parallel in this worktree. Shared included-build
+  outputs under `design-system/build` and KSP generated files raced and produced transient file
+  delete/missing-file errors. Sequential reruns passed.
+
+Verification run:
+
+- `python tools/check-token-drift.py` - passed.
+- `python -m pytest tools/tests/test_check_token_drift.py -q` - 5 passed.
+- `python tools/verify-android-design-tokens.py customer-app` and `technician-app` - passed.
+- `python -m pytest tools/tests/test_verify_android_design_tokens.py -q` - 2 passed.
+- `design-system`: `./gradlew ktlintCheck --quiet`, `./gradlew test --quiet --rerun-tasks` - passed.
+- `customer-app`: `assembleDebug`, `ktlintCheck`, `detekt`, `lintDebug`, `testDebugUnitTest
+  -PexcludePaparazzi`, `koverVerify -PexcludePaparazzi` - passed.
+- `technician-app`: `assembleDebug`, `ktlintCheck`, `detekt`, `lintDebug`, `testDebugUnitTest
+  -PexcludePaparazzi`, `koverVerify -PexcludePaparazzi` - passed.
+- `admin-web`: `pnpm typecheck`, `pnpm lint`, `pnpm test` - passed. Local environment warned that
+  Node v24.13.1 is outside the package engine range `>=22 <23`; CI uses Node 22.
+
 > **Parallel work in flight — read before touching customer-app.** The P0 SOS fixes are being done in a
 > **separate worktree**, not here:
 > `C:\Alok\Business Projects\homeservices-safety-p0` on branch **`fix/p0-safety-sos-joboffer`**

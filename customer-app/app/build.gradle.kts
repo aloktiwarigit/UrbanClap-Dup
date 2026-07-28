@@ -877,3 +877,13 @@ tasks.register("verifyNoEnglishTextLiterals") {
 }
 
 tasks.named("check") { dependsOn("verifyNoEnglishTextLiterals") }
+
+tasks.register<Exec>("verifyDesignTokenUsage") {
+    description = "Fail if raw Color or off-scale spacing/radius token debt grows."
+    group = "verification"
+    workingDir = rootProject.projectDir.parentFile
+    commandLine("python", "tools/verify-android-design-tokens.py", "customer-app")
+}
+
+tasks.named("detekt") { dependsOn("verifyDesignTokenUsage") }
+tasks.named("check") { dependsOn("verifyDesignTokenUsage") }

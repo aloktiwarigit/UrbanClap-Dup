@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import com.homeservices.designsystem.theme.HomeservicesTheme
+import com.homeservices.designsystem.theme.TechnicianHomeservicesTheme
 import com.homeservices.technician.data.jobOffer.JobOfferEventBus
 import com.homeservices.technician.domain.jobOffer.model.JobOffer
 import dagger.hilt.android.AndroidEntryPoint
@@ -146,7 +146,7 @@ public class JobOfferFullScreenActivity : ComponentActivity() {
         }
 
         setContent {
-            HomeservicesTheme {
+            TechnicianHomeservicesTheme {
                 JobOfferScreen(modifier = Modifier.navigationBarsPadding())
             }
         }
