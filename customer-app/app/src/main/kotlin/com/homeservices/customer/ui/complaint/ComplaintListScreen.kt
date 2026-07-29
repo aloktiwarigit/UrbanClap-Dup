@@ -39,21 +39,11 @@ import com.homeservices.customer.R
 import com.homeservices.customer.data.complaint.remote.dto.ComplaintResponseDto
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsScreenTitle
+import com.homeservices.designsystem.theme.HomeservicesColors
 
 private const val STATUS_CHIP_CORNER_RADIUS = 50
 private const val STATUS_CHIP_H_PADDING_DP = 10
 private const val STATUS_CHIP_V_PADDING_DP = 4
-
-private val StatusOpen = Color(0xFF1565C0)
-private val StatusOpenBg = Color(0xFFE3F2FD)
-private val StatusAcknowledged = Color(0xFFE65100)
-private val StatusAcknowledgedBg = Color(0xFFFFF3E0)
-private val StatusResolved = Color(0xFF2E7D32)
-private val StatusResolvedBg = Color(0xFFE8F5E9)
-private val StatusReopened = Color(0xFF6A1B9A)
-private val StatusReopenedBg = Color(0xFFF3E5F5)
-private val StatusDefault = Color(0xFF37474F)
-private val StatusDefaultBg = Color(0xFFECEFF1)
 
 @Composable
 public fun ComplaintListScreen(
@@ -221,36 +211,38 @@ private fun ErrorState(
 }
 
 @Composable
-private fun statusTokens(status: String?): Triple<Color, Color, String> =
-    when (status) {
+private fun statusTokens(status: String?): Triple<Color, Color, String> {
+    val colors = MaterialTheme.colorScheme
+    return when (status) {
         "OPEN" ->
             Triple(
-                StatusOpen,
-                StatusOpenBg,
+                colors.onTertiary,
+                colors.tertiary,
                 stringResource(R.string.complaint_list_status_open),
             )
         "ACKNOWLEDGED" ->
             Triple(
-                StatusAcknowledged,
-                StatusAcknowledgedBg,
+                colors.onPrimary,
+                colors.primary,
                 stringResource(R.string.complaint_list_status_acknowledged),
             )
         "RESOLVED" ->
             Triple(
-                StatusResolved,
-                StatusResolvedBg,
+                colors.onPrimary,
+                HomeservicesColors.semantic.success,
                 stringResource(R.string.complaint_list_status_resolved),
             )
         "REOPENED" ->
             Triple(
-                StatusReopened,
-                StatusReopenedBg,
+                colors.onSecondary,
+                colors.secondary,
                 stringResource(R.string.complaint_list_status_reopened),
             )
         else ->
             Triple(
-                StatusDefault,
-                StatusDefaultBg,
+                colors.onSurface,
+                colors.surfaceVariant,
                 status ?: stringResource(R.string.complaint_list_status_open),
             )
     }
+}

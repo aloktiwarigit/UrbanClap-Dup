@@ -4,6 +4,61 @@ Last updated: 2026-07-26 | Session: recovery/review + emulator/admin/auth captur
 
 This file is the handoff contract. Trust disk over older conversation history.
 
+## Update 2026-07-29 - S-32 colour literal sweep
+
+Worktree: `C:\Alok\Business Projects\homeservices-s32-colours`
+Branch: `feat/s32-colour-literals`
+
+Implemented:
+
+- S-32 started first because it has the broadest file overlap and is the highest-conflict sweep.
+- Removed raw `Color(0x...)` debt from the swept customer files:
+  `CatalogueVisualImage.kt`, `DpdpConsentScreen.kt`, `CatalogueHomeScreen.kt`,
+  `PhotoFirstCategoryCard.kt`, and `ComplaintListScreen.kt`.
+- Replaced `admin-web/app/global-error.tsx` inline hex/system font styling with existing CSS token
+  variables, including removing the sub-AA `#6E665B` incident text color.
+- Added verifier unit coverage for the ratchet path: `check_app` reports actual findings not present
+  in the baseline, and `write_baseline` writes both Android app buckets.
+- Regenerated `tools/android-design-token-baseline.json`. Customer actual baseline dropped from 405
+  allowed findings to 310. Technician remains 151.
+- Ratchet was explicitly tested after regeneration by injecting `Color(0xFF123456)` into
+  `CatalogueVisualImage.kt`; `python tools/verify-android-design-tokens.py customer-app` exited 1,
+  then the injected line was reverted and both apps verified cleanly.
+
+Corrections / caveats:
+
+- The prompt path hint for DPDP was wrong: the file is
+  `customer-app/app/src/main/kotlin/com/homeservices/customer/ui/consent/DpdpConsentScreen.kt`, not
+  under `ui/onboarding`.
+- `bash tools/pre-codex-smoke.sh customer-app` still cannot run locally because `/bin/bash` is
+  unavailable in this Windows environment, so the script's Gradle steps were run directly.
+- The first `assembleDebug` failed because the new worktree was also missing
+  `design-system/local.properties`; copying the gitignored local properties from the main checkout
+  unblocked the included build.
+- `admin-web` checks ran under local Node v24.13.1, outside the package engine range `>=22 <23`;
+  the commands passed with the existing warning.
+- Static Codex review was run from `docs/reviews/s32-colour-literals.diff`. Round 1 found four real
+  contrast regressions from using `primary`/`tertiary` directly on their container roles; fixed by
+  using paired `on*Container` roles and restoring a dark DPDP hero gradient without raw literals.
+  The single allowed rerun found two more issues: complaint status chips had become visually
+  indistinguishable because D1 maps several M3 container roles to the same raised surface, and
+  global-error font CSS vars needed fallbacks because the standalone error root does not apply the
+  Next font classes. Both were fixed; no third review was run.
+
+Verification run:
+
+- `python -m pytest tools/tests/test_verify_android_design_tokens.py -q` - 4 passed.
+- `python tools/verify-android-design-tokens.py customer-app` - passed after regeneration
+  (310 baseline findings remain).
+- `python tools/verify-android-design-tokens.py technician-app` - passed after regeneration
+  (151 baseline findings remain).
+- Ratchet trip test with injected `Color(0xFF123456)` - failed with exit 1 as expected; reverted.
+- `customer-app`: `assembleDebug`, `ktlintCheck`, `detekt`, `lintDebug`,
+  `testDebugUnitTest -PexcludePaparazzi`, `koverVerify -PexcludePaparazzi` - passed.
+- `admin-web`: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint`, `pnpm test` - passed.
+- Static Codex review: 2 rounds. Round 1 high/medium contrast findings fixed; round 2 major/minor
+  findings fixed and recorded above.
+
 ## Update 2026-07-28 - S-11 / S-12 / S-20 implementation
 
 Worktree: `C:\Alok\Business Projects\homeservices-s11-expressions`

@@ -50,20 +50,7 @@ import com.homeservices.customer.R
 import com.homeservices.customer.domain.catalogue.model.Category
 import com.homeservices.customer.ui.util.formatInr
 
-// Category style colour tokens
-private val AcRepairIconBg = Color(0xFFEAF4F7)
-private val AcRepairIconTint = Color(0xFF246174)
-private val WaterPumpIconBg = Color(0xFFEAF1F8)
-private val WaterPumpIconTint = Color(0xFF355F8A)
-private val PlumbingIconBg = Color(0xFFEAF4EE)
-private val PlumbingIconTint = Color(0xFF2E6B4F)
-private val ElectricalIconBg = Color(0xFFF5EFE4)
-private val ElectricalIconTint = Color(0xFF80622F)
-private val WaterPurifierIconBg = Color(0xFFEAF4EE)
-private val WaterPurifierIconTint = Color(0xFF2E6B4F)
-
 private val PhotoCardShape = RoundedCornerShape(16.dp)
-private val PhotoCardScrim = Color(0xFF000000)
 
 /**
  * Photo-first category card (E16-S03, AC-1).
@@ -144,7 +131,7 @@ private fun BoxScope.PhotoCardImageContent(
                 .height(80.dp)
                 .align(Alignment.BottomCenter)
                 .background(
-                    Brush.verticalGradient(listOf(Color.Transparent, PhotoCardScrim.copy(alpha = 0.55f))),
+                    Brush.verticalGradient(listOf(Color.Transparent, MaterialTheme.colorScheme.scrim.copy(alpha = 0.55f))),
                 ),
     )
     Column(
@@ -211,32 +198,32 @@ private fun categoryStyle(id: String): CategoryStyleTokens =
     when (id) {
         "ac-repair" ->
             CategoryStyleTokens(
-                iconBackground = AcRepairIconBg,
-                iconTint = AcRepairIconTint,
+                iconBackground = MaterialTheme.colorScheme.tertiaryContainer,
+                iconTint = MaterialTheme.colorScheme.onTertiaryContainer,
                 icon = Icons.Default.AcUnit,
             )
         "water-pump" ->
             CategoryStyleTokens(
-                iconBackground = WaterPumpIconBg,
-                iconTint = WaterPumpIconTint,
+                iconBackground = MaterialTheme.colorScheme.surfaceVariant,
+                iconTint = MaterialTheme.colorScheme.onSurfaceVariant,
                 icon = Icons.Default.Water,
             )
         "plumbing" ->
             CategoryStyleTokens(
-                iconBackground = PlumbingIconBg,
-                iconTint = PlumbingIconTint,
+                iconBackground = MaterialTheme.colorScheme.primaryContainer,
+                iconTint = MaterialTheme.colorScheme.onPrimaryContainer,
                 icon = Icons.Default.Plumbing,
             )
         "electrical" ->
             CategoryStyleTokens(
-                iconBackground = ElectricalIconBg,
-                iconTint = ElectricalIconTint,
+                iconBackground = MaterialTheme.colorScheme.secondaryContainer,
+                iconTint = MaterialTheme.colorScheme.onSecondaryContainer,
                 icon = Icons.Default.ElectricBolt,
             )
         "water-purifier" ->
             CategoryStyleTokens(
-                iconBackground = WaterPurifierIconBg,
-                iconTint = WaterPurifierIconTint,
+                iconBackground = MaterialTheme.colorScheme.primaryContainer,
+                iconTint = MaterialTheme.colorScheme.onPrimaryContainer,
                 icon = Icons.Default.FilterAlt,
             )
         else ->

@@ -62,32 +62,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
+import com.homeservices.designsystem.theme.HomeservicesColors
 import kotlinx.coroutines.flow.collectLatest
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
-private val HeroBg = Color(0xFF0B3D2E)
-private val HeroBgDark = Color(0xFF062A20)
-private val ScreenBgLight = Color(0xFFFBF7EF)
-private val ScreenBgDark = Color(0xFF0D1A16)
-private val CardBgLight = Color.White
-private val CardBgDark = Color(0xFF1A2E24)
-private val DividerLight = Color(0xFFEDE8E3)
-private val DividerDark = Color(0xFF2A3E34)
-private val TextMuted = Color(0xFF5F6C66)
-private val TextOnDarkMuted = Color(0xFF8FA899)
-private val TextOnDark = Color(0xFFE8F1EC)
-private val BrandGreen = Color(0xFF0B3D2E)
-private val SwitchCheckedThumb = Color(0xFF0B3D2E)
-private val SwitchCheckedTrack = Color(0xFFC8E6C9)
-private val SwitchUncheckedTrack = Color(0xFFE0E0E0)
-
-private val AnalyticsBg = Color(0xFFE8F5E8)
-private val AnalyticsTint = Color(0xFF0B3D2E)
-private val CrashBg = Color(0xFFE8EDF5)
-private val CrashTint = Color(0xFF1A4B8C)
-private val MarketingBg = Color(0xFFFFF3E0)
-private val MarketingTint = Color(0xFFE65100)
-
 private const val HERO_FRACTION = 0.40f
 private const val PRIVACY_POLICY_URL = "https://homeservices.app/privacy"
 
@@ -140,8 +118,6 @@ private const val GLOW_CENTER_Y_FRACTION = 0.55f
 private const val GLOW_CENTER_ALPHA = 0.10f
 
 // ── Color values ──────────────────────────────────────────────────────
-private val TEXT_PRIMARY_LIGHT = Color(0xFF18231F)
-private val GLOW_CENTER_COLOR = Color(0xFF4CAF50)
 private const val CTA_DISABLED_TEXT_ALPHA = 0.40f
 
 /**
@@ -189,12 +165,23 @@ internal fun DpdpConsentScreenContent(
     onDeclineAll: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val isDark = MaterialTheme.colorScheme.background.red < HERO_DARK_MODE_THRESHOLD
-    val screenBg = if (isDark) ScreenBgDark else ScreenBgLight
-    val cardBg = if (isDark) CardBgDark else CardBgLight
-    val dividerColor = if (isDark) DividerDark else DividerLight
-    val textPrimary = if (isDark) TextOnDark else TEXT_PRIMARY_LIGHT
-    val textMuted = if (isDark) TextOnDarkMuted else TextMuted
+    val colors = MaterialTheme.colorScheme
+    val isDark = colors.background.red < HERO_DARK_MODE_THRESHOLD
+    val screenBg = colors.background
+    val cardBg = colors.surface
+    val dividerColor = colors.outlineVariant
+    val textPrimary = colors.onSurface
+    val textMuted = colors.onSurfaceVariant
+    val brandColor = colors.primary
+    val heroStart = if (isDark) colors.surfaceVariant else HomeservicesColors.brand.accentDim
+    val heroEnd = if (isDark) HomeservicesColors.brand.accentDim else colors.onSurface
+    val heroTextColor = if (isDark) colors.onSurface else Color.White
+    val analyticsBg = colors.primaryContainer
+    val analyticsTint = colors.onPrimaryContainer
+    val crashBg = colors.tertiaryContainer
+    val crashTint = colors.onTertiaryContainer
+    val marketingBg = colors.secondaryContainer
+    val marketingTint = colors.onSecondaryContainer
 
     Box(
         modifier =
@@ -219,7 +206,7 @@ internal fun DpdpConsentScreenContent(
                         .fillMaxHeight(HERO_FRACTION)
                         .drawBehind {
                             drawRect(
-                                brush = Brush.verticalGradient(listOf(HeroBgDark, HeroBg)),
+                                brush = Brush.verticalGradient(listOf(heroStart, heroEnd)),
                                 size = size,
                             )
                             // Top-right atmospheric glow
@@ -244,7 +231,7 @@ internal fun DpdpConsentScreenContent(
                             )
                             // Center-right mid glow
                             drawCircle(
-                                color = GLOW_CENTER_COLOR.copy(alpha = GLOW_CENTER_ALPHA),
+                                color = brandColor.copy(alpha = GLOW_CENTER_ALPHA),
                                 radius = GLOW_CENTER_RADIUS_DP.dp.toPx(),
                                 center =
                                     Offset(
@@ -270,7 +257,7 @@ internal fun DpdpConsentScreenContent(
                             Icon(
                                 imageVector = Icons.Default.Eco,
                                 contentDescription = null,
-                                tint = BrandGreen,
+                                tint = brandColor,
                                 modifier = Modifier.size(HERO_ICON_INNER_SIZE_DP.dp),
                             )
                         }
@@ -283,14 +270,14 @@ internal fun DpdpConsentScreenContent(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = CONSENT_SECTION_TITLE_FONT_SIZE.sp,
                             ),
-                        color = Color.White,
+                        color = heroTextColor,
                         textAlign = TextAlign.Center,
                     )
 
                     Text(
                         text = stringResource(R.string.dpdp_consent_hero_subtitle),
                         style = MaterialTheme.typography.bodyMedium.copy(fontSize = CONSENT_DESCRIPTION_SIZE_DP.sp),
-                        color = Color.White.copy(alpha = HERO_SUBTITLE_ALPHA),
+                        color = heroTextColor.copy(alpha = HERO_SUBTITLE_ALPHA),
                         textAlign = TextAlign.Center,
                     )
                 }
@@ -335,8 +322,8 @@ internal fun DpdpConsentScreenContent(
                     // Analytics toggle
                     ConsentToggleRow(
                         icon = Icons.Default.BarChart,
-                        iconBg = AnalyticsBg,
-                        iconTint = AnalyticsTint,
+                        iconBg = analyticsBg,
+                        iconTint = analyticsTint,
                         title = stringResource(R.string.dpdp_consent_analytics_title),
                         description = stringResource(R.string.dpdp_consent_analytics_description),
                         checked = uiState.analyticsOptIn,
@@ -352,8 +339,8 @@ internal fun DpdpConsentScreenContent(
                     // Crash toggle
                     ConsentToggleRow(
                         icon = Icons.Default.Security,
-                        iconBg = CrashBg,
-                        iconTint = CrashTint,
+                        iconBg = crashBg,
+                        iconTint = crashTint,
                         title = stringResource(R.string.dpdp_consent_crash_title),
                         description = stringResource(R.string.dpdp_consent_crash_description),
                         checked = uiState.crashOptIn,
@@ -369,8 +356,8 @@ internal fun DpdpConsentScreenContent(
                     // Marketing toggle
                     ConsentToggleRow(
                         icon = Icons.Default.Notifications,
-                        iconBg = MarketingBg,
-                        iconTint = MarketingTint,
+                        iconBg = marketingBg,
+                        iconTint = marketingTint,
                         title = stringResource(R.string.dpdp_consent_marketing_title),
                         description = stringResource(R.string.dpdp_consent_marketing_description),
                         checked = uiState.marketingOptIn,
@@ -412,8 +399,8 @@ internal fun DpdpConsentScreenContent(
                 shape = RoundedCornerShape(CTA_CORNER_RADIUS_DP.dp),
                 colors =
                     ButtonDefaults.buttonColors(
-                        containerColor = BrandGreen,
-                        disabledContainerColor = BrandGreen.copy(alpha = CTA_DISABLED_ALPHA),
+                        containerColor = brandColor,
+                        disabledContainerColor = brandColor.copy(alpha = CTA_DISABLED_ALPHA),
                     ),
             ) {
                 if (uiState.isLoading) {
@@ -444,7 +431,7 @@ internal fun DpdpConsentScreenContent(
                 Text(
                     text = stringResource(R.string.dpdp_consent_reject_all),
                     style = MaterialTheme.typography.bodyMedium.copy(fontSize = CONSENT_DESCRIPTION_SIZE_DP.sp),
-                    color = if (uiState.isLoading) TextMuted.copy(alpha = CTA_DISABLED_TEXT_ALPHA) else TextMuted,
+                    color = if (uiState.isLoading) textMuted.copy(alpha = CTA_DISABLED_TEXT_ALPHA) else textMuted,
                 )
             }
         }
@@ -494,12 +481,12 @@ private fun ConsentToggleRow(
                         fontWeight = FontWeight.SemiBold,
                         fontSize = TOGGLE_TEXT_TITLE_FONT_SIZE.sp,
                     ),
-                color = TEXT_PRIMARY_LIGHT,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = CONSENT_SMALL_TEXT_SIZE_DP.sp),
-                color = TextMuted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
@@ -509,9 +496,9 @@ private fun ConsentToggleRow(
             onCheckedChange = onChecked,
             colors =
                 SwitchDefaults.colors(
-                    checkedThumbColor = SwitchCheckedThumb,
-                    checkedTrackColor = SwitchCheckedTrack,
-                    uncheckedTrackColor = SwitchUncheckedTrack,
+                    checkedThumbColor = MaterialTheme.colorScheme.primary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
                     uncheckedThumbColor = Color.White,
                 ),
         )
@@ -532,7 +519,7 @@ private fun LegalCopyText(textMuted: Color) {
                         TextLinkStyles(
                             style =
                                 SpanStyle(
-                                    color = BrandGreen,
+                                    color = MaterialTheme.colorScheme.primary,
                                     fontSize = CONSENT_SMALL_TEXT_SIZE_DP.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     textDecoration = TextDecoration.Underline,
