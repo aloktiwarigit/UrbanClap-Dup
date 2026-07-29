@@ -1,41 +1,84 @@
-# DESIGN — Client Brand Tokens
+# Admin Web Design Contract
 
-TODO: fill from the client's brand guide during Phase 3 (UX).
-Reference: https://github.com/VoltAgent/awesome-design-md for token structure examples (Stripe, Linear, Apple, etc.) to adapt.
+This file is the local contract for `admin-web`. It derives from D1 in
+`docs/design/design-language.md` and ADR-0029.
 
 ## Voice
-One sentence describing brand tone (e.g. "confident, quiet, expert — never playful or loud").
 
-## Color tokens
+Quiet, exact, operator-first. The admin surface is a command center for one expert user, not a
+marketing site.
+
+## Source Of Truth
+
+Kotlin design-system color constants are canonical. `admin-web/app/globals.css` mirrors the D1 core
+through `--d1-*` CSS custom properties and `tools/check-token-drift.py` fails CI if Kotlin, Figma
+JSON, and CSS diverge.
+
+## Color Tokens
+
+Dark is the default.
+
+```css
+--d1-accent-dark: #E2A04A;
+--d1-canvas-dark: #0E0B08;
+--d1-surface-dark: #1A1610;
+--d1-surface-raised-dark: #221C15;
+--d1-text-strong-dark: #F1E9D8;
+--d1-text-muted-dark: #9A9082;
+--d1-text-faint-dark: #877A6D;
+--d1-border-dark: #2E2719;
+--d1-border-strong-dark: #3E3528;
 ```
---color-surface: #...
---color-text: #...
---color-accent: #...
---color-muted: #...
---color-danger: #...
+
+Light mode exists only as an explicit user preference and mirrors D1 light roles:
+
+```css
+--d1-canvas-light: #FBF6E9;
+--d1-surface-light: #F4EDDF;
+--d1-surface-raised-light: #E9DFC6;
+--d1-text-strong-light: #1A140F;
+--d1-text-muted-light: #4A4135;
+--d1-text-faint-light: #6E665B;
+--d1-border-light: #D4C9AB;
+--d1-border-strong-light: #B0A382;
 ```
 
-## Type tokens
+## Expression
+
+Keep the editorial command-center expression:
+
+- Radii: `2px`, `4px`, `6px`, `999px`.
+- Hairline rules and dense table layouts.
+- Mono chips and tabular numeric alignment.
+- Marigold for active decisions and selected emphasis, not decorative wash.
+- Focus rings use `--color-focus-ring`, not marigold, because marigold fails 3:1 on light surfaces.
+
+## Type
+
+No serif. Display, body, and Devanagari all use Geist/Noto Sans Devanagari; numerals and chips use
+JetBrains Mono.
+
+```css
+--font-display: var(--font-geist), var(--font-devanagari), system-ui, sans-serif;
+--font-body: var(--font-geist), system-ui, sans-serif;
+--font-mono: var(--font-jetbrains-mono), ui-monospace, Menlo, monospace;
 ```
---font-display: <family>
---font-body: <family>
---font-mono: <family>
-```
-Scale: 12, 14, 16, 18, 24, 32, 48, 64.
 
-## Spacing
-4px base grid. Tokens: `--space-1` = 4, `--space-2` = 8, `--space-3` = 12, etc.
+## Spacing And Motion
 
-## Motion
-Default duration: 200ms. Easing: `cubic-bezier(0.4, 0, 0.2, 1)`. Reduce-motion respected.
+Use the D1 4px grid: `0, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 96`.
 
-## Anti-patterns (Impeccable / frontend-design guardrails)
-- No purple gradients unless client brand IS purple
-- No nested cards
-- No generic rounded-card + Inter aesthetic
-- Purposeful motion only — no decorative animation
-- Contrast meets WCAG AA minimum
+Motion stays functional:
 
-## References
-- Client brand guide: <link or TODO>
-- Design system Storybook: `pnpm storybook`
+- `120ms` for press/hover.
+- `220ms` for standard transitions.
+- `420ms` for rare page-level reveal.
+- `prefers-reduced-motion` must be respected.
+
+## Anti-Patterns
+
+- No Fraunces or other serif display face.
+- No separate admin-only color core.
+- No nested cards.
+- No decorative gradients or blurred color blobs.
+- No marigold focus ring on light surfaces.

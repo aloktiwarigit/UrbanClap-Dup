@@ -18,7 +18,7 @@ import com.homeservices.customer.domain.flags.FeatureFlags
 import com.homeservices.customer.domain.locale.IsFirstLaunchUseCase
 import com.homeservices.customer.navigation.AppNavigation
 import com.homeservices.customer.navigation.CustomerRouteResolver
-import com.homeservices.designsystem.theme.HomeservicesTheme
+import com.homeservices.designsystem.theme.CustomerHomeservicesTheme
 import com.razorpay.PaymentData
 import com.razorpay.PaymentResultWithDataListener
 import com.truecaller.android.sdk.legacy.TruecallerSDK
@@ -99,7 +99,7 @@ public class MainActivity :
         deepLinkState.value = coldStartDeepLink
 
         setContent {
-            HomeservicesTheme {
+            CustomerHomeservicesTheme {
                 // Observe deepLinkState so AppNavigation reacts to both cold-start and
                 // warm-tap (onNewIntent) deep links.
                 val currentDeepLink by deepLinkState.collectAsState()

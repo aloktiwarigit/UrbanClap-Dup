@@ -11,7 +11,6 @@ vi.mock('next-intl/server', () => ({
 vi.mock('next/font/google', () => {
   const stub = () => ({ variable: '' });
   return {
-    Fraunces: stub,
     Geist: stub,
     JetBrains_Mono: stub,
     Noto_Sans_Devanagari: stub,

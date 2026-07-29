@@ -33,11 +33,23 @@ public object HomeservicesSpacing {
     /** 16 dp — 4 grid units. */
     public val space4: Dp = 16.dp
 
+    /**
+     * 20 dp — 5 grid units. Added in S-10.
+     *
+     * D1 §Spacing lists 20 and 40 as canonical steps but the shipped scale omitted both, so any
+     * layout needing those gaps had no token to reach for. That is one concrete reason ~44% of
+     * `.dp` literals in each app sit off-scale: the scale had holes.
+     */
+    public val space5: Dp = 20.dp
+
     /** 24 dp — 6 grid units. */
     public val space6: Dp = 24.dp
 
     /** 32 dp — 8 grid units. */
     public val space8: Dp = 32.dp
+
+    /** 40 dp — 10 grid units. Added in S-10; see [space5]. */
+    public val space10: Dp = 40.dp
 
     /** 48 dp — 12 grid units. */
     public val space12: Dp = 48.dp

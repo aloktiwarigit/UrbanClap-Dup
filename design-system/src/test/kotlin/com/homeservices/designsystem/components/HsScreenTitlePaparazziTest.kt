@@ -9,7 +9,6 @@ import org.junit.Test
 
 @Ignore("Record on CI Linux via workflow_dispatch paparazzi-record.yml")
 public class HsScreenTitlePaparazziTest {
-
     @get:Rule
     public val paparazzi: Paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
 

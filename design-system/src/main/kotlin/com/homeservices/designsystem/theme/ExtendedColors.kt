@@ -47,28 +47,53 @@ public data class HomeservicesExtendedColors(
     val neighbourhood: Color,
     val brandAccent: Color,
     val brandPrimaryHover: Color,
+    /**
+     * Metadata-only text. D1 §Palette "text faint" — 5.24:1 light / 4.71:1 dark. Clears AA but sits
+     * below the 7:1 field target, so it is for timestamps, counts and captions only. Never body copy.
+     *
+     * Added in S-10: D1 defines nine core roles and this was the one with no M3 slot to bind to.
+     */
+    val textFaint: Color,
+    /**
+     * Focus / selected-boundary indicator. **Do not substitute a border or the accent for this.**
+     *
+     * WCAG 2.2 §1.4.11 requires 3:1 for non-text indicators that identify a component. Measured on
+     * `surface`, neither candidate qualifies in light mode:
+     *
+     *   border-strong  #B0A382  2.14:1 light   1.50:1 dark
+     *   brand accent   #E2A04A  1.93:1 light   8.03:1 dark
+     *
+     * Marigold on warm paper is inherently low-contrast — both are light — so the accent works as a
+     * focus ring in dark mode and fails in light. D1 §Palette defines no focus role, which is a gap
+     * in the contract rather than in this implementation; raised as a finding.
+     *
+     * This binds to the text roles, which clear the bar in both modes (8.59:1 light on surface).
+     * The border tokens remain correct for what they are — decorative hairlines and separators,
+     * which §1.4.11 does not govern.
+     */
+    val focusRing: Color,
 )
 
-/**
- * Light-mode instance of [HomeservicesExtendedColors]. UX §5.1 light palette.
- */
+/** Light-mode instance of [HomeservicesExtendedColors]. D1 light palette. */
 public val HomeservicesExtendedColorsLight: HomeservicesExtendedColors =
     HomeservicesExtendedColors(
         verified = SemanticSuccessLight,
-        neighbourhood = BrandAccentLight,
-        brandAccent = BrandAccentLight,
-        brandPrimaryHover = BrandPrimaryHoverLight,
+        neighbourhood = BrandAccent,
+        brandAccent = BrandAccent,
+        brandPrimaryHover = BrandAccentSoft,
+        textFaint = TextFaintLight,
+        focusRing = TextMutedLight,
     )
 
-/**
- * Dark-mode instance of [HomeservicesExtendedColors]. UX §5.1 dark palette.
- */
+/** Dark-mode instance of [HomeservicesExtendedColors]. D1 dark palette. */
 public val HomeservicesExtendedColorsDark: HomeservicesExtendedColors =
     HomeservicesExtendedColors(
         verified = SemanticSuccessDark,
-        neighbourhood = BrandAccentDark,
-        brandAccent = BrandAccentDark,
-        brandPrimaryHover = BrandPrimaryHoverDark,
+        neighbourhood = BrandAccent,
+        brandAccent = BrandAccent,
+        brandPrimaryHover = BrandAccentSoft,
+        textFaint = TextFaintDark,
+        focusRing = TextMutedDark,
     )
 
 /**

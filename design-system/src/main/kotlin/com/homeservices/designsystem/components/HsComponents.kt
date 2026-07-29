@@ -7,12 +7,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.homeservices.designsystem.theme.LocalHomeservicesElevation
+import com.homeservices.designsystem.theme.LocalHomeservicesSize
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
 
 @Composable
@@ -41,7 +42,7 @@ public fun HsPrimaryButton(
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(LocalHomeservicesSpacing.current.space16),
+        modifier = modifier.defaultMinSize(minHeight = LocalHomeservicesSize.current.controlLg),
     ) {
         Text(text)
     }
@@ -66,7 +67,7 @@ public fun HsDangerButton(
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(LocalHomeservicesSpacing.current.space16),
+        modifier = modifier.defaultMinSize(minHeight = LocalHomeservicesSize.current.controlLg),
         colors =
             ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.error,
@@ -87,7 +88,7 @@ public fun HsSecondaryButton(
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(LocalHomeservicesSpacing.current.space12),
+        modifier = modifier.defaultMinSize(minHeight = LocalHomeservicesSize.current.controlMd),
     ) {
         Text(text)
     }
@@ -104,8 +105,8 @@ public fun HsActionButton(
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(52.dp),
-        shape = RoundedCornerShape(14.dp),
+        modifier = modifier.defaultMinSize(minHeight = LocalHomeservicesSize.current.controlLg),
+        shape = MaterialTheme.shapes.medium,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         colors =
             ButtonDefaults.outlinedButtonColors(
@@ -124,11 +125,15 @@ public fun HsActionButton(
                 }
                 Spacer(modifier = Modifier.width(10.dp))
             }
+            // Codex review MINOR-1: was maxLines = 1 + Ellipsis, which contradicted the rest of the
+            // button family. Ellipsising a Devanagari label truncates mid-word and can destroy the
+            // meaning of the action; the button grows instead, matching HsPrimaryButton and
+            // HsSecondaryButton now that all three use defaultMinSize rather than a fixed height.
             Text(
                 text = text,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }

@@ -242,9 +242,22 @@ android {
         unitTests {
             isIncludeAndroidResources = true
             all { test: org.gradle.api.tasks.testing.Test ->
-                // Pass -PexcludePaparazzi in smoke gate to skip snapshot tests on Windows
+                // Pass -PexcludePaparazzi in smoke gate to skip snapshot tests on Windows.
+                //
+                // Paparazzi cannot initialise its layoutlib bridge on Windows at all — it throws
+                // "Failed to init Bridge" / UninitializedPropertyAccessException rather than
+                // reporting a golden mismatch — so these must be excluded locally and verified on
+                // CI Linux. See docs/patterns/paparazzi-cross-os-goldens.md.
+                //
+                // The "*PaparazziTest*" pattern alone is not sufficient: it silently misses any
+                // Paparazzi-backed class that does not follow the naming convention, which made the
+                // smoke gate fail on Windows for reasons unrelated to the change under test. The
+                // durable fix is to rename offenders, but renaming a Paparazzi class also renames
+                // every golden it owns (the class name is embedded in the PNG filename), so the
+                // non-conforming names are listed explicitly here instead.
                 if (project.hasProperty("excludePaparazzi")) {
                     test.filter.excludeTestsMatching("*PaparazziTest*")
+                    test.filter.excludeTestsMatching("*CatalogueHomeScreenTest*")
                 }
             }
         }
@@ -864,3 +877,13 @@ tasks.register("verifyNoEnglishTextLiterals") {
 }
 
 tasks.named("check") { dependsOn("verifyNoEnglishTextLiterals") }
+
+tasks.register<Exec>("verifyDesignTokenUsage") {
+    description = "Fail if raw Color or off-scale spacing/radius token debt grows."
+    group = "verification"
+    workingDir = rootProject.projectDir.parentFile
+    commandLine("python", "tools/verify-android-design-tokens.py", "customer-app")
+}
+
+tasks.named("detekt") { dependsOn("verifyDesignTokenUsage") }
+tasks.named("check") { dependsOn("verifyDesignTokenUsage") }

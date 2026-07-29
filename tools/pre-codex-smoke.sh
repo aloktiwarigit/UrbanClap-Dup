@@ -39,7 +39,10 @@ echo "[5/6] testDebugUnitTest — TDD invariant: all unit tests must be green...
 ./gradlew testDebugUnitTest --quiet -PexcludePaparazzi 2>&1 | tail -30
 
 echo "[6/6] koverVerify — coverage must meet >=80% threshold..."
-./gradlew koverVerify --quiet 2>&1 | tail -10
+# -PexcludePaparazzi here too: koverVerify depends on the unit-test tasks (including the RELEASE
+# variant), so without the flag step 6 re-runs the very Paparazzi tests step 5 just excluded, and the
+# gate fails on Windows with "Failed to init Bridge" for reasons unrelated to the change under test.
+./gradlew koverVerify --quiet -PexcludePaparazzi 2>&1 | tail -10
 
 echo ""
 echo "=== Smoke gate PASSED — safe to invoke /codex-review-gate ==="

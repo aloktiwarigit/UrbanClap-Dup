@@ -9,6 +9,7 @@ on:
       - 'design-system/**'
       - '.github/workflows/technician-ship.yml'
       - 'tools/check-shared-versions.sh'
+      - 'tools/verify-android-design-tokens.py'
   push:
     branches: [main]
     paths:
@@ -16,6 +17,7 @@ on:
       - 'design-system/**'
       - '.github/workflows/technician-ship.yml'
       - 'tools/check-shared-versions.sh'
+      - 'tools/verify-android-design-tokens.py'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -115,4 +117,3 @@ jobs:
             p/owasp-top-ten
             p/secrets
             technician-app/.semgrep/
-

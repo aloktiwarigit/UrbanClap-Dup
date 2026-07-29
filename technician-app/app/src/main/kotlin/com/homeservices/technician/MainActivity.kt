@@ -4,7 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.fragment.app.FragmentActivity
-import com.homeservices.designsystem.theme.HomeservicesTheme
+import com.homeservices.designsystem.theme.TechnicianHomeservicesTheme
 import com.homeservices.technician.data.auth.SessionManager
 import com.homeservices.technician.data.fcm.FcmTopicSubscriber
 import com.homeservices.technician.data.kyc.DigiLockerCallbackBus
@@ -37,7 +37,7 @@ public class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         navigateFromExtra(intent.getStringExtra("navigate_to"), ratingReceivedEventBus)
         setContent {
-            HomeservicesTheme {
+            TechnicianHomeservicesTheme {
                 AppNavigation(
                     sessionManager = sessionManager,
                     activity = this,

@@ -246,6 +246,21 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
+            all { test: org.gradle.api.tasks.testing.Test ->
+                // Mirrors customer-app. technician-app had no wiring at all, so
+                // tools/pre-codex-smoke.sh passed -PexcludePaparazzi and it was silently ignored —
+                // the gate only appeared to pass because Paparazzi happened to initialise.
+                // Paparazzi cannot run on Windows ("Failed to init Bridge"); goldens are verified on
+                // CI Linux. See docs/patterns/paparazzi-cross-os-goldens.md.
+                // As in customer-app, "*PaparazziTest*" alone misses Paparazzi-backed classes that
+                // do not follow the naming convention. Listed explicitly rather than renamed,
+                // because a Paparazzi class name is embedded in every golden filename it owns.
+                if (project.hasProperty("excludePaparazzi")) {
+                    test.filter.excludeTestsMatching("*PaparazziTest*")
+                    test.filter.excludeTestsMatching("*EarningsScreenTest*")
+                    test.filter.excludeTestsMatching("*MyRatingsScreenTest*")
+                }
+            }
         }
     }
 }
@@ -786,3 +801,13 @@ sentry {
     autoUploadProguardMapping.set(hasSentryCredentials)
     ignoredBuildTypes.set(setOf("debug"))
 }
+
+tasks.register<Exec>("verifyDesignTokenUsage") {
+    description = "Fail if raw Color or off-scale spacing/radius token debt grows."
+    group = "verification"
+    workingDir = rootProject.projectDir.parentFile
+    commandLine("python", "tools/verify-android-design-tokens.py", "technician-app")
+}
+
+tasks.named("detekt") { dependsOn("verifyDesignTokenUsage") }
+tasks.named("check") { dependsOn("verifyDesignTokenUsage") }
