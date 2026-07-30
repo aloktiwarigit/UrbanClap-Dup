@@ -21,9 +21,9 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
           minHeight: '100dvh',
           display: 'grid',
           placeItems: 'center',
-          background: '#0E0B08',
-          color: '#F1E9D8',
-          fontFamily: 'system-ui, sans-serif',
+          background: 'var(--color-surface)',
+          color: 'var(--color-text)',
+          fontFamily: 'var(--font-body, Arial, sans-serif)',
           padding: '2rem',
         }}
       >
@@ -31,8 +31,8 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
           style={{
             width: '100%',
             maxWidth: '40rem',
-            background: '#14110C',
-            border: '1px solid #2A251E',
+            background: 'var(--color-surface-alt)',
+            border: '1px solid var(--color-border)',
             padding: '2rem',
           }}
         >
@@ -42,7 +42,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
               fontSize: '0.6875rem',
               letterSpacing: '0.12em',
               textTransform: 'uppercase',
-              color: '#9A9082',
+              color: 'var(--color-text-muted)',
             }}
           >
             HomeHeroo admin
@@ -60,7 +60,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
           <p
             style={{
               margin: '1rem 0 0',
-              color: '#9A9082',
+              color: 'var(--color-text-muted)',
               fontSize: '0.875rem',
             }}
           >
@@ -70,9 +70,9 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                 style={{
                   display: 'block',
                   marginTop: '0.5rem',
-                  fontFamily: 'monospace',
+                  fontFamily: 'var(--font-mono, monospace)',
                   fontSize: '0.75rem',
-                  color: '#6E665B',
+                  color: 'var(--color-text-muted)',
                 }}
               >
                 Incident: {error.digest}
@@ -85,8 +85,8 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
             style={{
               marginTop: '2rem',
               padding: '0.75rem 1.5rem',
-              background: '#E2A04A',
-              color: '#14110C',
+              background: 'var(--marigold)',
+              color: 'var(--ink-0)',
               border: 'none',
               fontWeight: 600,
               fontSize: '0.875rem',

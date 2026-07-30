@@ -199,34 +199,42 @@ private data class CataloguePalette(
     val start: Color,
     val end: Color,
     val accent: Color,
-    val text: Color = Color(0xFF18202A),
+    val text: Color,
 )
 
+@Composable
 private fun paletteFor(title: String): CataloguePalette {
+    val colors = MaterialTheme.colorScheme
     val key = title.lowercase()
     return when {
         key.contains("clean") ->
-            CataloguePalette(Color(0xFFE7F4F1), Color(0xFFD3ECE7), Color(0xFF00796B))
+            CataloguePalette(colors.primaryContainer, colors.surfaceVariant, colors.onPrimaryContainer, colors.onSurface)
         key.contains("repair") || key.contains("electric") || key.contains("plumb") ->
-            CataloguePalette(Color(0xFFE8F0FB), Color(0xFFD7E5F7), Color(0xFF2E5EAA))
+            CataloguePalette(colors.tertiaryContainer, colors.surfaceVariant, colors.onTertiaryContainer, colors.onSurface)
         key.contains("beauty") || key.contains("salon") || key.contains("spa") ->
-            CataloguePalette(Color(0xFFF7E8EE), Color(0xFFF0D8E2), Color(0xFF9C3B63))
+            CataloguePalette(colors.errorContainer, colors.surfaceVariant, colors.onErrorContainer, colors.onSurface)
         key.contains("appliance") || key.contains("ac") || key.contains("fridge") ->
-            CataloguePalette(Color(0xFFFFF3DF), Color(0xFFF8E4BC), Color(0xFF9A6500))
+            CataloguePalette(colors.primaryContainer, colors.surfaceVariant, colors.onPrimaryContainer, colors.onSurface)
         key.contains("paint") || key.contains("carpenter") ->
-            CataloguePalette(Color(0xFFEDECF6), Color(0xFFDDD9EF), Color(0xFF5A4E9A))
-        else -> fallbackPalettes[stableIndex(title, fallbackPalettes.size)]
+            CataloguePalette(colors.secondaryContainer, colors.surfaceVariant, colors.onSecondaryContainer, colors.onSurface)
+        else -> {
+            val palettes = fallbackPalettes()
+            palettes[stableIndex(title, palettes.size)]
+        }
     }
 }
 
-private val fallbackPalettes =
-    listOf(
-        CataloguePalette(Color(0xFFE9F2EE), Color(0xFFD9E9E2), Color(0xFF276749)),
-        CataloguePalette(Color(0xFFF2ECE3), Color(0xFFE7DCCB), Color(0xFF7A5A2A)),
-        CataloguePalette(Color(0xFFE9EEF5), Color(0xFFD8E1EC), Color(0xFF415A77)),
-        CataloguePalette(Color(0xFFF4E9E3), Color(0xFFEAD8CD), Color(0xFF8A4F35)),
-        CataloguePalette(Color(0xFFEAF1F2), Color(0xFFD8E5E8), Color(0xFF2F6470)),
+@Composable
+private fun fallbackPalettes(): List<CataloguePalette> {
+    val colors = MaterialTheme.colorScheme
+    return listOf(
+        CataloguePalette(colors.surfaceVariant, colors.primaryContainer, colors.onPrimaryContainer, colors.onSurface),
+        CataloguePalette(colors.surfaceVariant, colors.secondaryContainer, colors.onSecondaryContainer, colors.onSurface),
+        CataloguePalette(colors.surfaceVariant, colors.tertiaryContainer, colors.onTertiaryContainer, colors.onSurface),
+        CataloguePalette(colors.surfaceVariant, colors.errorContainer, colors.onErrorContainer, colors.onSurface),
+        CataloguePalette(colors.surfaceVariant, colors.background, colors.onSurfaceVariant, colors.onSurface),
     )
+}
 
 private fun stableIndex(
     value: String,

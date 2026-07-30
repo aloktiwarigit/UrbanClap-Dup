@@ -104,33 +104,36 @@ private data class PromoBanner(
     @DrawableRes val imageRes: Int? = null,
 )
 
-private val promoBanners =
-    listOf(
+@Composable
+private fun promoBanners(): List<PromoBanner> {
+    val colors = MaterialTheme.colorScheme
+    return listOf(
         PromoBanner(
-            Color(0xFF5A4A2D),
-            Color(0xFF3E3324),
+            colors.primary,
+            colors.primaryContainer,
             R.string.promo_ac_title,
             R.string.promo_ac_subtitle,
             R.string.promo_ac_cta,
             imageRes = com.homeservices.customer.R.drawable.banner_image_1,
         ),
         PromoBanner(
-            Color(0xFF0B3D2E),
-            Color(0xFF062A20),
+            colors.tertiary,
+            colors.tertiaryContainer,
             R.string.promo_pro_title,
             R.string.promo_pro_subtitle,
             R.string.promo_pro_cta,
             imageRes = com.homeservices.customer.R.drawable.banner_image_2,
         ),
         PromoBanner(
-            Color(0xFFB68A2C),
-            Color(0xFF6B4C12),
+            colors.secondary,
+            colors.secondaryContainer,
             R.string.promo_discount_title,
             R.string.promo_discount_subtitle,
             R.string.promo_discount_cta,
             imageRes = com.homeservices.customer.R.drawable.banner_image_3,
         ),
     )
+}
 
 // ── Category styles ───────────────────────────────────────────────────────────
 private data class CategoryStyle(
@@ -139,15 +142,17 @@ private data class CategoryStyle(
     val icon: ImageVector,
 )
 
-@Suppress("MagicNumber") // hardcoded palette entries in a category-style lookup table
+@Composable
 private fun categoryStyle(id: String): CategoryStyle =
-    when (id) {
-        "ac-repair" -> CategoryStyle(Color(0xFFEAF4F7), Color(0xFF246174), Icons.Default.AcUnit)
-        "water-pump" -> CategoryStyle(Color(0xFFEAF1F8), Color(0xFF355F8A), Icons.Default.Water)
-        "plumbing" -> CategoryStyle(Color(0xFFEAF4EE), Color(0xFF2E6B4F), Icons.Default.Plumbing)
-        "electrical" -> CategoryStyle(Color(0xFFF5EFE4), Color(0xFF80622F), Icons.Default.ElectricBolt)
-        "water-purifier" -> CategoryStyle(Color(0xFFEAF4EE), Color(0xFF2E6B4F), Icons.Default.FilterAlt)
-        else -> CategoryStyle(Color(0xFFE8F1EC), Color(0xFF0B3D2E), Icons.Default.Build)
+    MaterialTheme.colorScheme.let { colors ->
+        when (id) {
+            "ac-repair" -> CategoryStyle(colors.tertiaryContainer, colors.onTertiaryContainer, Icons.Default.AcUnit)
+            "water-pump" -> CategoryStyle(colors.surfaceVariant, colors.onSurfaceVariant, Icons.Default.Water)
+            "plumbing" -> CategoryStyle(colors.primaryContainer, colors.onPrimaryContainer, Icons.Default.Plumbing)
+            "electrical" -> CategoryStyle(colors.secondaryContainer, colors.onSecondaryContainer, Icons.Default.ElectricBolt)
+            "water-purifier" -> CategoryStyle(colors.primaryContainer, colors.onPrimaryContainer, Icons.Default.FilterAlt)
+            else -> CategoryStyle(colors.surfaceVariant, colors.onSurfaceVariant, Icons.Default.Build)
+        }
     }
 
 // formatPrice removed — price label is now built at the call site using stringResource
@@ -564,12 +569,13 @@ private fun CompactTabBar(title: String) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PromoSlider() {
-    val pagerState = rememberPagerState(pageCount = { promoBanners.size })
+    val banners = promoBanners()
+    val pagerState = rememberPagerState(pageCount = { banners.size })
     LaunchedEffect(Unit) {
         while (true) {
             delay(4_000)
             pagerState.animateScrollToPage(
-                (pagerState.currentPage + 1) % promoBanners.size,
+                (pagerState.currentPage + 1) % banners.size,
                 animationSpec = tween(600),
             )
         }
@@ -580,7 +586,7 @@ private fun PromoSlider() {
             contentPadding = PaddingValues(horizontal = 16.dp),
             pageSpacing = 12.dp,
         ) { page ->
-            val b = promoBanners[page]
+            val b = banners[page]
             Box(
                 modifier =
                     Modifier
@@ -653,7 +659,7 @@ private fun PromoSlider() {
         }
         // Dot indicators
         Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.Center) {
-            repeat(promoBanners.size) { i ->
+            repeat(banners.size) { i ->
                 val sel = pagerState.currentPage == i
                 Box(
                     modifier =
@@ -661,7 +667,7 @@ private fun PromoSlider() {
                             .padding(horizontal = 3.dp)
                             .size(if (sel) 18.dp else 5.dp, 5.dp)
                             .clip(if (sel) RoundedCornerShape(3.dp) else CircleShape)
-                            .background(if (sel) MaterialTheme.colorScheme.primary else Color(0xFFD1D5DB)),
+                            .background(if (sel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
                 )
             }
         }
@@ -949,8 +955,11 @@ private fun SupportHero() {
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
-                .background(Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primary, Color(0xFF123B32))))
-                .padding(18.dp),
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer),
+                    ),
+                ).padding(20.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(
