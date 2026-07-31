@@ -1,3 +1,6 @@
+// enum + theme composables = 2 top-level decls; detekt counts only class-like nodes.
+@file:Suppress("MatchingDeclarationName")
+
 package com.homeservices.designsystem.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme

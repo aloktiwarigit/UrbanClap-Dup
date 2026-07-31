@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.designsystem.components.HsSectionCard
+import com.homeservices.designsystem.format.formatRupees
 import com.homeservices.designsystem.theme.HomeservicesColors
 import com.homeservices.technician.R
 import com.homeservices.technician.domain.earnings.model.BaseEarningsPeriod
@@ -380,5 +381,3 @@ private fun CenterState(content: @Composable ColumnScope.() -> Unit) {
         content = content,
     )
 }
-
-private fun formatRupees(paise: Long): String = "₹%,.0f".format(paise / 100.0)

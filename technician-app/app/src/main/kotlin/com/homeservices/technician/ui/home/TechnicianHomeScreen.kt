@@ -82,6 +82,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.corenav.PendingAction
+import com.homeservices.designsystem.format.formatRupees
 import com.homeservices.technician.R
 import com.homeservices.technician.domain.auth.model.AuthState
 import com.homeservices.technician.domain.availability.model.TechnicianAvailability
@@ -1346,5 +1347,3 @@ private fun todayIsoDate(): String =
     java.time.LocalDate
         .now(java.time.ZoneId.of("Asia/Kolkata"))
         .toString()
-
-private fun formatRupees(paise: Long): String = "Rs %,.0f".format(paise / 100.0)
