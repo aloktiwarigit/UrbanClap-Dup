@@ -103,6 +103,28 @@ internal class MoneyTest {
         assertThat(formatRupees(45L)).isEqualTo("₹0.45")
     }
 
+    /**
+     * Codex review MAJOR — `Long.MIN_VALUE` has no positive counterpart, so negating it overflows
+     * back to itself. The first implementation negated before splitting, which sent a minus sign
+     * into the grouping routine and produced `-₹-,92,23,37,20,36,85,47,758.-8`.
+     *
+     * Not reachable with real money, but a shared money formatter should have no input that yields
+     * nonsense — a corrupt value or an upstream overflow reaching UI state should still render as
+     * something, not as a malformed string a user might read as an amount.
+     */
+    @Test
+    internal fun `extreme negative input does not overflow`() {
+        val out = formatRupees(Long.MIN_VALUE)
+        assertThat(out).startsWith("-₹")
+        assertThat(out.drop(2)).doesNotContain("-")
+        assertThat(out).isEqualTo("-₹92,23,37,20,36,85,47,758.08")
+    }
+
+    @Test
+    internal fun `extreme positive input formats cleanly`() {
+        assertThat(formatRupees(Long.MAX_VALUE)).isEqualTo("₹92,23,37,20,36,85,47,758.07")
+    }
+
     @Test
     internal fun `Int overload exists for callers holding pricePaise as Int`() {
         // HsPriceText and the catalogue screens hold Int; without this overload they would each

@@ -1,0 +1,649 @@
+diff --git a/customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/ServiceDetailScreen.kt b/customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/ServiceDetailScreen.kt
+index e85fd8b6..e14bd687 100644
+--- a/customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/ServiceDetailScreen.kt
++++ b/customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/ServiceDetailScreen.kt
+@@ -59,6 +59,7 @@ import com.homeservices.customer.ui.shared.TrustDossierCard
+ import com.homeservices.customer.ui.shared.TrustDossierUiState
+ import com.homeservices.customer.ui.shared.TrustDossierViewModel
+ import com.homeservices.designsystem.components.HsScreenTitle
++import com.homeservices.designsystem.format.formatRupees
+ import com.homeservices.designsystem.theme.LocalHomeservicesExtendedColors
+ 
+ // ── Brand tokens (keep only those not in design-system token mapping) ─────────
+@@ -618,4 +619,4 @@ private fun PlaceholderBlock(
+     ) {}
+ }
+ 
+-private fun formatPrice(pricePaise: Int): String = "₹${pricePaise / 100}"
++private fun formatPrice(pricePaise: Int): String = formatRupees(pricePaise)
+diff --git a/customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/ServiceListScreen.kt b/customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/ServiceListScreen.kt
+index afdcaeda..f2176b28 100644
+--- a/customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/ServiceListScreen.kt
++++ b/customer-app/app/src/main/kotlin/com/homeservices/customer/ui/catalogue/ServiceListScreen.kt
+@@ -48,6 +48,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
+ import com.homeservices.customer.R
+ import com.homeservices.customer.domain.catalogue.model.Service
+ import com.homeservices.designsystem.components.HsScreenTitle
++import com.homeservices.designsystem.format.formatRupees
+ import com.homeservices.designsystem.theme.LocalHomeservicesExtendedColors
+ 
+ private val SkeletonLine = Color(0xFFEDE7DD)
+@@ -397,4 +398,4 @@ private fun PlaceholderLine(
+     ) {}
+ }
+ 
+-private fun formatPrice(pricePaise: Int): String = "\u20B9${pricePaise / 100}"
++private fun formatPrice(pricePaise: Int): String = formatRupees(pricePaise)
+diff --git a/design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt b/design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt
+index b0a82be7..65e87d0d 100644
+--- a/design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt
++++ b/design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt
+@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.text.style.TextOverflow
+ import androidx.compose.ui.unit.Dp
+ import androidx.compose.ui.unit.dp
++import com.homeservices.designsystem.format.formatRupees
+ import com.homeservices.designsystem.theme.LocalHomeservicesElevation
+ import com.homeservices.designsystem.theme.LocalHomeservicesSize
+ import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
+@@ -204,7 +205,7 @@ public fun HsPriceText(
+     modifier: Modifier = Modifier,
+ ) {
+     Text(
+-        text = "Rs ${pricePaise / 100}",
++        text = formatRupees(pricePaise),
+         style = MaterialTheme.typography.titleLarge,
+         fontWeight = FontWeight.Bold,
+         color = MaterialTheme.colorScheme.primary,
+diff --git a/design-system/src/main/kotlin/com/homeservices/designsystem/format/Money.kt b/design-system/src/main/kotlin/com/homeservices/designsystem/format/Money.kt
+new file mode 100644
+index 00000000..6e498058
+--- /dev/null
++++ b/design-system/src/main/kotlin/com/homeservices/designsystem/format/Money.kt
+@@ -0,0 +1,111 @@
++package com.homeservices.designsystem.format
++
++/**
++ * The single money formatter for every Android surface. D1 §Content:
++ * "Money must be formatted with locale-aware INR helpers, including Indian digit grouping and paise
++ * handling. Do not render ASCII `Rs` or truncate paise with integer division."
++ *
++ * Before S-31 money was rendered seven different ways across the two apps and the design system,
++ * disagreeing on the glyph, on paise, and on digit grouping. Three defect classes were live:
++ *
++ * 1. ASCII `"Rs"` instead of ₹ (`TechnicianHomeScreen`, `HsPriceText`).
++ * 2. Integer division truncating paise — `₹${paise / 100}` rendered 129999 as "₹1299", silently
++ *    losing ₹0.99. This product collects cash at the door, so a technician reconciles physical notes
++ *    against the on-screen figure; a silent sub-rupee discrepancy is an accounting defect.
++ * 3. `"%,.0f"` inheriting `Locale.getDefault()`, so grouping was Western on any device not set to an
++ *    Indian locale — `1,234,567` where the user expects `12,34,567`.
++ *
++ * ## Why grouping is locale-INDEPENDENT here
++ *
++ * Deliberately not `NumberFormat.getCurrencyInstance(Locale.getDefault())`. Indian digit grouping is
++ * a property of the currency and the market, not of the user's interface language: a Hindi-reading
++ * and an English-reading customer in Ayodhya both expect `12,34,567`. Deriving grouping from the UI
++ * locale is exactly the bug above, one level up. [groupIndian] applies 2,2,3 grouping directly, so it
++ * is identical regardless of device settings; a test asserts that under en-US, en-IN, hi-IN and de-DE.
++ *
++ * ## Why paise are conditional
++ *
++ * Catalogue prices are whole rupees and `₹599.00` adds noise to every card. Ledger and settlement
++ * figures genuinely carry paise. Showing the decimal only when non-zero keeps both honest without
++ * making callers choose — a caller who has to pick a format is a caller who will pick differently
++ * from the next one, which is how seven formatters happened.
++ *
++ * Render with [com.homeservices.designsystem.theme.HomeservicesMonoFontFamily] wherever amounts are
++ * columnar (earnings rows, ledgers, admin tables); proportional digits will not align down a column.
++ */
++private const val PAISE_PER_RUPEE = 100L
++
++/**
++ * Indian 2,2,3 grouping is applied by hand. Two approaches were tried first and both failed:
++ *
++ * 1. **A `DecimalFormat` pattern** (`"##,##,##,##0"`). Java honours only the *rightmost* grouping
++ *    size and repeats it, so the pattern silently yields Western `1,234,567`.
++ * 2. **JDK locale data** (`NumberFormat.getNumberInstance(Locale("en","IN"))`). Measured on the
++ *    JDK 17 that runs these tests: `1,234,567`. Western again.
++ *
++ * That second result matters beyond this function. `customer-app`'s existing
++ * `CurrencyFormat.formatInr` is built on `NumberFormat.getCurrencyInstance(Locale("en","IN"))` and
++ * was treated — by the audit and by this story's brief — as the one *correct* implementation to
++ * converge on. It is not: it renders `₹1,234,567.00`. All seven Android formatters got Indian
++ * grouping wrong; they merely disagreed about how.
++ *
++ * Doing it explicitly also removes a portability hazard: locale data differs between the local JDK
++ * 17 and CI's JDK 21, so anything derived from it could format differently in CI than on a
++ * developer's machine — and differently again on a handset.
++ *
++ * The rule: rightmost group of 3, then groups of 2.
++ */
++private const val FIRST_GROUP_DIGITS = 3
++
++private const val SUBSEQUENT_GROUP_DIGITS = 2
++
++private fun groupIndian(digits: String): String {
++    if (digits.length <= FIRST_GROUP_DIGITS) return digits
++    val head = digits.dropLast(FIRST_GROUP_DIGITS)
++    val tail = digits.takeLast(FIRST_GROUP_DIGITS)
++    val grouped = StringBuilder()
++    var index = head.length
++    while (index > SUBSEQUENT_GROUP_DIGITS) {
++        grouped.insert(0, "," + head.substring(index - SUBSEQUENT_GROUP_DIGITS, index))
++        index -= SUBSEQUENT_GROUP_DIGITS
++    }
++    grouped.insert(0, head.substring(0, index))
++    return "$grouped,$tail"
++}
++
++/**
++ * Formats [paise] as Indian Rupees.
++ *
++ * Whole amounts render without a decimal tail (`₹599`); amounts carrying paise keep both digits
++ * (`₹1,299.99`). Negative amounts place the sign outside the glyph (`-₹500`), which reads correctly
++ * for refunds and adjustments — `₹-500` does not.
++ *
++ * @param paise the amount in paise. Never pass rupees.
++ */
++public fun formatRupees(paise: Long): String {
++    val negative = paise < 0L
++    val magnitude = if (negative) -paise else paise
++
++    val remainder = magnitude % PAISE_PER_RUPEE
++    val body =
++        if (remainder == 0L) {
++            groupIndian((magnitude / PAISE_PER_RUPEE).toString())
++        } else {
++            // Integer arithmetic only. No Double anywhere: a Double cannot represent every paise
++            // value exactly, and rounding error in a money figure is the defect this exists to stop.
++            val rupees = groupIndian((magnitude / PAISE_PER_RUPEE).toString())
++            val paisePart = (magnitude % PAISE_PER_RUPEE).toString().padStart(2, '0')
++            "$rupees.$paisePart"
++        }
++
++    return if (negative) "-₹$body" else "₹$body"
++}
++
++/**
++ * [Int] overload for callers holding `pricePaise` as an `Int` — the catalogue screens and
++ * [com.homeservices.designsystem.components.HsPriceText].
++ *
++ * Provided so those call sites do not each write their own `.toLong()` conversion, which is how the
++ * formatters diverged in the first place.
++ */
++public fun formatRupees(paise: Int): String = formatRupees(paise.toLong())
+diff --git a/design-system/src/main/kotlin/com/homeservices/designsystem/theme/HomeservicesTheme.kt b/design-system/src/main/kotlin/com/homeservices/designsystem/theme/HomeservicesTheme.kt
+index c587f26a..bdbbc9e7 100644
+--- a/design-system/src/main/kotlin/com/homeservices/designsystem/theme/HomeservicesTheme.kt
++++ b/design-system/src/main/kotlin/com/homeservices/designsystem/theme/HomeservicesTheme.kt
+@@ -1,3 +1,6 @@
++// enum + theme composables = 2 top-level decls; detekt counts only class-like nodes.
++@file:Suppress("MatchingDeclarationName")
++
+ package com.homeservices.designsystem.theme
+ 
+ import androidx.compose.foundation.isSystemInDarkTheme
+diff --git a/design-system/src/test/kotlin/com/homeservices/designsystem/format/MoneyTest.kt b/design-system/src/test/kotlin/com/homeservices/designsystem/format/MoneyTest.kt
+new file mode 100644
+index 00000000..80ffdf80
+--- /dev/null
++++ b/design-system/src/test/kotlin/com/homeservices/designsystem/format/MoneyTest.kt
+@@ -0,0 +1,112 @@
++package com.homeservices.designsystem.format
++
++import org.assertj.core.api.Assertions.assertThat
++import org.junit.jupiter.api.Test
++
++/**
++ * S-31 — one money formatter for every Android surface.
++ *
++ * Before this story money was rendered seven different ways, disagreeing on all three of the things
++ * that matter:
++ *
++ * | site                              | glyph | paise      | grouping        |
++ * |-----------------------------------|-------|------------|-----------------|
++ * | customer `CurrencyFormat.formatInr` | ₹   | correct    | en-IN (correct) |
++ * | `ServiceDetailScreen:621`         | ₹     | TRUNCATED  | none            |
++ * | `ServiceListScreen:400`           | ₹     | TRUNCATED  | none            |
++ * | `EarningsScreen:384`              | ₹     | rounded    | DEFAULT locale  |
++ * | `TechnicianHomeScreen:1350`       | "Rs"  | rounded    | DEFAULT locale  |
++ * | `HsComponents.HsPriceText:207`    | "Rs"  | TRUNCATED  | none            |
++ *
++ * Three distinct defect classes, each shipped to real users:
++ *
++ * 1. **ASCII "Rs"** instead of ₹ — flagged in the audit as failing the Hindi-first bar.
++ * 2. **Integer division truncates paise.** `₹${paise / 100}` renders 129999 paise as "₹1299",
++ *    silently losing ₹0.99. On a cash-collection product where the technician counts physical notes
++ *    against an on-screen figure, that is a reconciliation defect, not a formatting nit.
++ * 3. **`"%,.0f"` uses `Locale.getDefault()`**, so grouping is Western on any device not set to an
++ *    Indian locale: `1,234,567` where an Indian user expects `12,34,567`. This is the subtle one —
++ *    it looks correct on a developer's machine and wrong in the field.
++ *
++ * This formatter is deliberately locale-INDEPENDENT for grouping: Indian digit grouping is a
++ * property of the currency and the market, not of the user's UI language. A Hindi user and an
++ * English user in Ayodhya both expect 12,34,567.
++ */
++internal class MoneyTest {
++    @Test
++    internal fun `renders the rupee glyph, never ASCII Rs`() {
++        val out = formatRupees(59900L)
++        assertThat(out).startsWith("₹")
++        assertThat(out).doesNotContain("Rs")
++    }
++
++    @Test
++    internal fun `whole rupees render without a decimal tail`() {
++        assertThat(formatRupees(59900L)).isEqualTo("₹599")
++    }
++
++    @Test
++    internal fun `paise are preserved, not truncated`() {
++        // The old `₹${paise / 100}` rendered this as ₹1299, silently dropping ₹0.99.
++        assertThat(formatRupees(129999L)).isEqualTo("₹1,299.99")
++    }
++
++    @Test
++    internal fun `a single trailing paisa still shows`() {
++        assertThat(formatRupees(59901L)).isEqualTo("₹599.01")
++    }
++
++    @Test
++    internal fun `uses Indian lakh grouping, not Western thousands`() {
++        // Western grouping would give ₹1,234,567 — the bug in every "%,.0f" call site.
++        assertThat(formatRupees(123456700L)).isEqualTo("₹12,34,567")
++    }
++
++    @Test
++    internal fun `uses Indian crore grouping`() {
++        assertThat(formatRupees(1234567800L)).isEqualTo("₹1,23,45,678")
++    }
++
++    @Test
++    internal fun `grouping does not depend on the device locale`() {
++        // Regression guard for the "%,.0f" class of bug: identical output regardless of default
++        // locale. Indian grouping is a property of the currency, not the UI language.
++        val defaults = listOf("en-US", "en-IN", "hi-IN", "de-DE")
++        val outputs =
++            defaults.map { tag ->
++                val previous = java.util.Locale.getDefault()
++                try {
++                    java.util.Locale.setDefault(java.util.Locale.forLanguageTag(tag))
++                    formatRupees(123456700L)
++                } finally {
++                    java.util.Locale.setDefault(previous)
++                }
++            }
++        assertThat(outputs.distinct())
++            .`as`("formatter must not inherit device grouping: %s", outputs)
++            .containsExactly("₹12,34,567")
++    }
++
++    @Test
++    internal fun `zero renders as zero rupees, not blank`() {
++        assertThat(formatRupees(0L)).isEqualTo("₹0")
++    }
++
++    @Test
++    internal fun `negative amounts keep the sign outside the glyph`() {
++        // Refunds and adjustments are negative. "-₹500" reads correctly; "₹-500" does not.
++        assertThat(formatRupees(-50000L)).isEqualTo("-₹500")
++    }
++
++    @Test
++    internal fun `small paise-only amounts do not collapse to zero`() {
++        assertThat(formatRupees(45L)).isEqualTo("₹0.45")
++    }
++
++    @Test
++    internal fun `Int overload exists for callers holding pricePaise as Int`() {
++        // HsPriceText and the catalogue screens hold Int; without this overload they would each
++        // write their own `.toLong()` conversion and drift again.
++        assertThat(formatRupees(59900)).isEqualTo("₹599")
++    }
++}
+diff --git a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/TechnicianDashboardScreen.kt b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/TechnicianDashboardScreen.kt
+deleted file mode 100644
+index 3912f1b3..00000000
+--- a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/TechnicianDashboardScreen.kt
++++ /dev/null
+@@ -1,304 +0,0 @@
+-package com.homeservices.technician.ui.dashboard
+-
+-import androidx.compose.foundation.BorderStroke
+-import androidx.compose.foundation.clickable
+-import androidx.compose.foundation.layout.Arrangement
+-import androidx.compose.foundation.layout.Column
+-import androidx.compose.foundation.layout.PaddingValues
+-import androidx.compose.foundation.layout.Row
+-import androidx.compose.foundation.layout.Spacer
+-import androidx.compose.foundation.layout.fillMaxSize
+-import androidx.compose.foundation.layout.fillMaxWidth
+-import androidx.compose.foundation.layout.height
+-import androidx.compose.foundation.layout.padding
+-import androidx.compose.foundation.lazy.LazyColumn
+-import androidx.compose.foundation.shape.RoundedCornerShape
+-import androidx.compose.material3.ExperimentalMaterial3Api
+-import androidx.compose.material3.HorizontalDivider
+-import androidx.compose.material3.MaterialTheme
+-import androidx.compose.material3.Scaffold
+-import androidx.compose.material3.Surface
+-import androidx.compose.material3.Switch
+-import androidx.compose.material3.Text
+-import androidx.compose.material3.TopAppBar
+-import androidx.compose.runtime.Composable
+-import androidx.compose.runtime.getValue
+-import androidx.compose.ui.Alignment
+-import androidx.compose.ui.Modifier
+-import androidx.compose.ui.text.font.FontWeight
+-import androidx.compose.ui.text.style.TextOverflow
+-import androidx.compose.ui.unit.dp
+-import androidx.hilt.navigation.compose.hiltViewModel
+-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+-import com.homeservices.designsystem.components.HsSectionCard
+-import com.homeservices.designsystem.components.HsTrustBadge
+-import com.homeservices.technician.ui.home.AvailabilityViewModel
+-
+-@OptIn(ExperimentalMaterial3Api::class)
+-@Composable
+-internal fun TechnicianDashboardScreen(
+-    onOpenEarnings: () -> Unit,
+-    onOpenRatings: () -> Unit,
+-    onOpenKyc: () -> Unit,
+-    modifier: Modifier = Modifier,
+-    availabilityViewModel: AvailabilityViewModel = hiltViewModel(),
+-) {
+-    val availabilityUiState by availabilityViewModel.uiState.collectAsStateWithLifecycle()
+-    Scaffold(
+-        modifier = modifier,
+-        topBar = { TopAppBar(title = { Text("Technician home") }) },
+-    ) { padding ->
+-        LazyColumn(
+-            modifier = Modifier.fillMaxSize().padding(padding),
+-            contentPadding = PaddingValues(16.dp),
+-            verticalArrangement = Arrangement.spacedBy(14.dp),
+-        ) {
+-            item { DashboardHeader() }
+-            item {
+-                AvailabilityCard(
+-                    isOnline = availabilityUiState.availability.isOnline,
+-                    onCheckedChange = availabilityViewModel::setAcceptingJobs,
+-                )
+-            }
+-            item { TodaySnapshot() }
+-            item {
+-                WorkflowCard(
+-                    onOpenEarnings = onOpenEarnings,
+-                    onOpenRatings = onOpenRatings,
+-                    onOpenKyc = onOpenKyc,
+-                )
+-            }
+-            item { ActiveAssignmentCard() }
+-            item { JobOffersCard() }
+-            item { SupportCard() }
+-        }
+-    }
+-}
+-
+-@Composable
+-private fun DashboardHeader() {
+-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+-        HsTrustBadge(text = "Live workspace")
+-        Text(
+-            text = "Technician operations",
+-            style = MaterialTheme.typography.headlineMedium,
+-            fontWeight = FontWeight.Bold,
+-            color = MaterialTheme.colorScheme.onSurface,
+-        )
+-        Text(
+-            text = "Track availability, jobs, payouts, ratings, and support from one place.",
+-            style = MaterialTheme.typography.bodyMedium,
+-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+-        )
+-    }
+-}
+-
+-@Composable
+-private fun AvailabilityCard(
+-    isOnline: Boolean,
+-    onCheckedChange: (Boolean) -> Unit,
+-) {
+-    HsSectionCard {
+-        Row(
+-            modifier = Modifier.fillMaxWidth(),
+-            verticalAlignment = Alignment.CenterVertically,
+-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+-        ) {
+-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+-                Text(
+-                    text = if (isOnline) "Available for jobs" else "Paused",
+-                    style = MaterialTheme.typography.titleMedium,
+-                    fontWeight = FontWeight.SemiBold,
+-                )
+-                Text(
+-                    text = "Live requests appear as timed offers when dispatch assigns one.",
+-                    style = MaterialTheme.typography.bodySmall,
+-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+-                )
+-            }
+-            Switch(checked = isOnline, onCheckedChange = onCheckedChange)
+-        }
+-    }
+-}
+-
+-@Composable
+-private fun TodaySnapshot() {
+-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+-        MetricTile(
+-            label = "Today",
+-            value = "Rs 0",
+-            supportingText = "Earnings",
+-            modifier = Modifier.weight(1f),
+-        )
+-        MetricTile(
+-            label = "Queue",
+-            value = "0",
+-            supportingText = "Active jobs",
+-            modifier = Modifier.weight(1f),
+-        )
+-        MetricTile(
+-            label = "Rating",
+-            value = "New",
+-            supportingText = "No reviews",
+-            modifier = Modifier.weight(1f),
+-        )
+-    }
+-}
+-
+-@Composable
+-private fun MetricTile(
+-    label: String,
+-    value: String,
+-    supportingText: String,
+-    modifier: Modifier = Modifier,
+-) {
+-    Surface(
+-        modifier = modifier,
+-        shape = RoundedCornerShape(8.dp),
+-        color = MaterialTheme.colorScheme.surface,
+-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+-    ) {
+-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+-            Text(
+-                text = label,
+-                style = MaterialTheme.typography.labelSmall,
+-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+-                maxLines = 1,
+-                overflow = TextOverflow.Ellipsis,
+-            )
+-            Text(
+-                text = value,
+-                style = MaterialTheme.typography.titleLarge,
+-                fontWeight = FontWeight.Bold,
+-                maxLines = 1,
+-                overflow = TextOverflow.Ellipsis,
+-            )
+-            Text(
+-                text = supportingText,
+-                style = MaterialTheme.typography.labelSmall,
+-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+-                maxLines = 1,
+-                overflow = TextOverflow.Ellipsis,
+-            )
+-        }
+-    }
+-}
+-
+-@Composable
+-private fun WorkflowCard(
+-    onOpenEarnings: () -> Unit,
+-    onOpenRatings: () -> Unit,
+-    onOpenKyc: () -> Unit,
+-) {
+-    HsSectionCard(title = "Core workflow") {
+-        DashboardNavRow(
+-            title = "Earnings",
+-            body = "Payout totals and 7-day activity",
+-            status = "Open",
+-            onClick = onOpenEarnings,
+-        )
+-        HorizontalDivider()
+-        DashboardNavRow(
+-            title = "Ratings",
+-            body = "Customer feedback and score breakdown",
+-            status = "Open",
+-            onClick = onOpenRatings,
+-        )
+-        HorizontalDivider()
+-        DashboardNavRow(
+-            title = "KYC and documents",
+-            body = "Identity and PAN verification flow",
+-            status = "Review",
+-            onClick = onOpenKyc,
+-        )
+-    }
+-}
+-
+-@Composable
+-private fun DashboardNavRow(
+-    title: String,
+-    body: String,
+-    status: String,
+-    onClick: () -> Unit,
+-) {
+-    Row(
+-        modifier =
+-            Modifier
+-                .fillMaxWidth()
+-                .clickable(onClick = onClick)
+-                .padding(vertical = 12.dp),
+-        verticalAlignment = Alignment.CenterVertically,
+-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+-    ) {
+-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+-            Text(text = title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+-            Text(
+-                text = body,
+-                style = MaterialTheme.typography.bodySmall,
+-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+-                maxLines = 2,
+-                overflow = TextOverflow.Ellipsis,
+-            )
+-        }
+-        Text(
+-            text = status,
+-            style = MaterialTheme.typography.labelLarge,
+-            color = MaterialTheme.colorScheme.primary,
+-            fontWeight = FontWeight.SemiBold,
+-        )
+-    }
+-}
+-
+-@Composable
+-private fun ActiveAssignmentCard() {
+-    HsSectionCard(title = "Current assignment") {
+-        StatusPill(text = "No active job")
+-        Spacer(Modifier.height(10.dp))
+-        Text(
+-            text = "Accepted bookings open the live tracker with address, stage updates, navigation, and completion photos.",
+-            style = MaterialTheme.typography.bodyMedium,
+-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+-        )
+-    }
+-}
+-
+-@Composable
+-private fun JobOffersCard() {
+-    HsSectionCard(title = "Job offers") {
+-        StatusPill(text = "Standby")
+-        Spacer(Modifier.height(10.dp))
+-        Text(
+-            text = "New requests are shown as a full-screen offer with earnings, distance, slot, accept, and decline actions.",
+-            style = MaterialTheme.typography.bodyMedium,
+-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+-        )
+-    }
+-}
+-
+-@Composable
+-private fun SupportCard() {
+-    HsSectionCard(title = "Support and complaints") {
+-        StatusPill(text = "No open issues")
+-        Spacer(Modifier.height(10.dp))
+-        Text(
+-            text = "Issue reporting is available from job rating and completion flows when a booking needs support review.",
+-            style = MaterialTheme.typography.bodyMedium,
+-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+-        )
+-    }
+-}
+-
+-@Composable
+-private fun StatusPill(text: String) {
+-    Surface(
+-        shape = MaterialTheme.shapes.extraLarge,
+-        color = MaterialTheme.colorScheme.secondaryContainer,
+-    ) {
+-        Text(
+-            text = text,
+-            style = MaterialTheme.typography.labelMedium,
+-            color = MaterialTheme.colorScheme.onSecondaryContainer,
+-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+-        )
+-    }
+-}
+diff --git a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt
+index 427a6f5f..f6118744 100644
+--- a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt
++++ b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/earnings/EarningsScreen.kt
+@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
+ import androidx.hilt.navigation.compose.hiltViewModel
+ import androidx.lifecycle.compose.collectAsStateWithLifecycle
+ import com.homeservices.designsystem.components.HsSectionCard
++import com.homeservices.designsystem.format.formatRupees
+ import com.homeservices.designsystem.theme.HomeservicesColors
+ import com.homeservices.technician.R
+ import com.homeservices.technician.domain.earnings.model.BaseEarningsPeriod
+@@ -380,5 +381,3 @@ private fun CenterState(content: @Composable ColumnScope.() -> Unit) {
+         content = content,
+     )
+ }
+-
+-private fun formatRupees(paise: Long): String = "₹%,.0f".format(paise / 100.0)
+diff --git a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt
+index c3d47940..d9d8ca3c 100644
+--- a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt
++++ b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/home/TechnicianHomeScreen.kt
+@@ -82,6 +82,7 @@ import androidx.compose.ui.unit.dp
+ import androidx.hilt.navigation.compose.hiltViewModel
+ import androidx.lifecycle.compose.collectAsStateWithLifecycle
+ import com.homeservices.corenav.PendingAction
++import com.homeservices.designsystem.format.formatRupees
+ import com.homeservices.technician.R
+ import com.homeservices.technician.domain.auth.model.AuthState
+ import com.homeservices.technician.domain.availability.model.TechnicianAvailability
+@@ -1346,5 +1347,3 @@ private fun todayIsoDate(): String =
+     java.time.LocalDate
+         .now(java.time.ZoneId.of("Asia/Kolkata"))
+         .toString()
+-
+-private fun formatRupees(paise: Long): String = "Rs %,.0f".format(paise / 100.0)

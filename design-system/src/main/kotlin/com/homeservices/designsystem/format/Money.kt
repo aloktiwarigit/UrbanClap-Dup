@@ -84,19 +84,25 @@ private fun groupIndian(digits: String): String {
  */
 public fun formatRupees(paise: Long): String {
     val negative = paise < 0L
-    val magnitude = if (negative) -paise else paise
 
-    val remainder = magnitude % PAISE_PER_RUPEE
+    // Split BEFORE taking absolute values. Negating first would be the obvious shape and is wrong:
+    // -Long.MIN_VALUE overflows back to Long.MIN_VALUE, so the magnitude stays negative, the minus
+    // sign reaches the grouping routine, and the output is garbage
+    // ("-₹-,92,23,37,20,36,85,47,758.-8"). Dividing first avoids it entirely — Long.MIN_VALUE / 100
+    // is well within range, and the remainder is always under 100 in magnitude. Caught by Codex
+    // review; not reachable with real money, but a shared money formatter should not have an input
+    // that produces nonsense.
+    val rupeesSigned = paise / PAISE_PER_RUPEE
+    val paiseSigned = paise % PAISE_PER_RUPEE
+
+    val rupeesAbs = if (rupeesSigned < 0L) -rupeesSigned else rupeesSigned
+    val paiseAbs = if (paiseSigned < 0L) -paiseSigned else paiseSigned
+
+    // Integer arithmetic only. No Double anywhere: a Double cannot represent every paise value
+    // exactly, and rounding error in a money figure is the defect this exists to stop.
+    val grouped = groupIndian(rupeesAbs.toString())
     val body =
-        if (remainder == 0L) {
-            groupIndian((magnitude / PAISE_PER_RUPEE).toString())
-        } else {
-            // Integer arithmetic only. No Double anywhere: a Double cannot represent every paise
-            // value exactly, and rounding error in a money figure is the defect this exists to stop.
-            val rupees = groupIndian((magnitude / PAISE_PER_RUPEE).toString())
-            val paisePart = (magnitude % PAISE_PER_RUPEE).toString().padStart(2, '0')
-            "$rupees.$paisePart"
-        }
+        if (paiseAbs == 0L) grouped else "$grouped.${paiseAbs.toString().padStart(2, '0')}"
 
     return if (negative) "-₹$body" else "₹$body"
 }
