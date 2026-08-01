@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { makeAccessJwt, makeFakeFirebaseIdToken } from './helpers/make-token';
 
+// Setup e2e is pinned to /en. defaultLocale is 'hi' (src/i18n/config.ts:5), so a bare
+// '/setup' resolves to the Hindi route. These specs assert English copy and only passed before
+// because the setup page was untranslated — it rendered English on every locale, which was the
+// defect S-34 fixed. Pinning the locale keeps the assertions honest about what they verify.
+
 test.describe('Setup flow — HttpOnly cookie path (E12-S07)', () => {
   test('after login, sessionStorage does NOT contain setupToken (cookie path)', async ({ page }) => {
     const firebaseIdToken = await makeFakeFirebaseIdToken('uid123', 'admin@test.com');
@@ -126,7 +131,7 @@ test.describe('Setup flow — HttpOnly cookie path (E12-S07)', () => {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) });
     });
 
-    await page.goto('/setup');
+    await page.goto('/en/setup');
     await expect(page.getByAltText('Microsoft Authenticator setup QR code')).toBeVisible();
     // sessionStorage must still be null — the QR was fetched via exchange endpoint.
     const storedToken = await page.evaluate(() => sessionStorage.getItem('setupToken'));
@@ -143,7 +148,7 @@ test.describe('Setup flow — HttpOnly cookie path (E12-S07)', () => {
       }),
     );
 
-    await page.goto('/setup');
+    await page.goto('/en/setup');
     await expect(page).toHaveURL(/\/login/);
   });
 
@@ -182,7 +187,7 @@ test.describe('Setup flow — HttpOnly cookie path (E12-S07)', () => {
       });
     });
 
-    await page.goto('/setup');
+    await page.goto('/en/setup');
     await expect(page.getByAltText('Microsoft Authenticator setup QR code')).toBeVisible();
     await page.fill('input[inputmode="numeric"]', '123456');
     await page.click('button[type="submit"]');
