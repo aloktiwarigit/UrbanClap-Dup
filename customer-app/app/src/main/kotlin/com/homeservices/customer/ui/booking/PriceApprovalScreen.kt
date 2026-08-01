@@ -33,13 +33,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.booking.model.AddOnDecision
 import com.homeservices.customer.domain.booking.model.PendingAddOn
-import com.homeservices.customer.ui.util.formatInr
 import com.homeservices.designsystem.components.HsPriceText
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsSkeletonBlock
+import com.homeservices.designsystem.format.formatRupees
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -190,7 +190,7 @@ private fun TotalDecisionSummary(
                 modifier = Modifier.weight(1f),
             )
             Text(
-                text = formatInr(approvedTotal),
+                text = formatRupees(approvedTotal),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,

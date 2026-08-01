@@ -49,12 +49,12 @@ import com.homeservices.customer.R
 import com.homeservices.customer.domain.booking.model.BookingPaymentMethod
 import com.homeservices.customer.domain.booking.model.CustomerBooking
 import com.homeservices.customer.domain.booking.model.CustomerBookingStatus
-import com.homeservices.customer.ui.util.formatInr
 import com.homeservices.customer.ui.wallet.NoShowCreditBanner
 import com.homeservices.customer.ui.wallet.NoShowCreditViewModel
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.components.HsSecondaryButton
+import com.homeservices.designsystem.format.formatRupees
 
 private val WarningSoft = Color(0xFFF2E7CF)
 
@@ -196,7 +196,7 @@ private fun BookingCard(
                 )
                 Spacer(Modifier.weight(1f))
                 Text(
-                    text = formatInr(booking.amountPaise),
+                    text = formatRupees(booking.amountPaise),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,

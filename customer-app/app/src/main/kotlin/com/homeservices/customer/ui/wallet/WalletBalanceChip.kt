@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import com.homeservices.customer.R
-import com.homeservices.customer.ui.util.formatInr
+import com.homeservices.designsystem.format.formatRupees
 
 /**
  * A compact wallet-balance chip displayed on HomeScreen.
@@ -30,7 +30,7 @@ public fun WalletBalanceChip(
         onClick = onClick,
         label = {
             Text(
-                text = formatInr(balanceInPaise),
+                text = formatRupees(balanceInPaise),
                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                 color = MaterialTheme.colorScheme.primary,
             )
