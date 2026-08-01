@@ -141,6 +141,7 @@ export default function SetupPage() {
             {qrUri ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
+                data-testid="setup-qr"
                 src={qrUri}
                 alt={t('qrAlt')}
                 className="h-52 w-52 bg-white p-2"

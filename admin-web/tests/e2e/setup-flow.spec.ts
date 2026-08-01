@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { makeAccessJwt, makeFakeFirebaseIdToken } from './helpers/make-token';
 
-// Setup e2e is pinned to /en. defaultLocale is 'hi' (src/i18n/config.ts:5), so a bare
-// '/setup' resolves to the Hindi route. These specs assert English copy and only passed before
-// because the setup page was untranslated — it rendered English on every locale, which was the
-// defect S-34 fixed. Pinning the locale keeps the assertions honest about what they verify.
+// The QR image is selected by data-testid, not by alt text. defaultLocale is 'hi'
+// (src/i18n/config.ts:5), so '/setup' resolves to the Hindi route — and since S-34 made this
+// page translatable, its alt text is now Hindi there. The old English alt selector only worked
+// because the page was untranslated on every locale, which was the defect S-34 fixed.
+// A test id keeps these specs about the setup FLOW rather than about copy.
 
 test.describe('Setup flow — HttpOnly cookie path (E12-S07)', () => {
   test('after login, sessionStorage does NOT contain setupToken (cookie path)', async ({ page }) => {
@@ -131,8 +132,8 @@ test.describe('Setup flow — HttpOnly cookie path (E12-S07)', () => {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) });
     });
 
-    await page.goto('/en/setup');
-    await expect(page.getByAltText('Microsoft Authenticator setup QR code')).toBeVisible();
+    await page.goto('/setup');
+    await expect(page.getByTestId('setup-qr')).toBeVisible();
     // sessionStorage must still be null — the QR was fetched via exchange endpoint.
     const storedToken = await page.evaluate(() => sessionStorage.getItem('setupToken'));
     expect(storedToken).toBeNull();
@@ -148,7 +149,7 @@ test.describe('Setup flow — HttpOnly cookie path (E12-S07)', () => {
       }),
     );
 
-    await page.goto('/en/setup');
+    await page.goto('/setup');
     await expect(page).toHaveURL(/\/login/);
   });
 
@@ -187,8 +188,8 @@ test.describe('Setup flow — HttpOnly cookie path (E12-S07)', () => {
       });
     });
 
-    await page.goto('/en/setup');
-    await expect(page.getByAltText('Microsoft Authenticator setup QR code')).toBeVisible();
+    await page.goto('/setup');
+    await expect(page.getByTestId('setup-qr')).toBeVisible();
     await page.fill('input[inputmode="numeric"]', '123456');
     await page.click('button[type="submit"]');
     await expect(page).toHaveURL(/\/dashboard/);
