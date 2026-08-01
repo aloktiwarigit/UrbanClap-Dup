@@ -48,6 +48,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.catalogue.model.Service
 import com.homeservices.designsystem.components.HsScreenTitle
+import com.homeservices.designsystem.format.formatRupees
 import com.homeservices.designsystem.theme.LocalHomeservicesExtendedColors
 
 private val SkeletonLine = Color(0xFFEDE7DD)
@@ -397,4 +398,4 @@ private fun PlaceholderLine(
     ) {}
 }
 
-private fun formatPrice(pricePaise: Int): String = "\u20B9${pricePaise / 100}"
+private fun formatPrice(pricePaise: Int): String = formatRupees(pricePaise)

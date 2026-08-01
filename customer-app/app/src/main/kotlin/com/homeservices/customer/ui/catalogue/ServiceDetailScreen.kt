@@ -59,6 +59,7 @@ import com.homeservices.customer.ui.shared.TrustDossierCard
 import com.homeservices.customer.ui.shared.TrustDossierUiState
 import com.homeservices.customer.ui.shared.TrustDossierViewModel
 import com.homeservices.designsystem.components.HsScreenTitle
+import com.homeservices.designsystem.format.formatRupees
 import com.homeservices.designsystem.theme.LocalHomeservicesExtendedColors
 
 // ── Brand tokens (keep only those not in design-system token mapping) ─────────
@@ -618,4 +619,4 @@ private fun PlaceholderBlock(
     ) {}
 }
 
-private fun formatPrice(pricePaise: Int): String = "₹${pricePaise / 100}"
+private fun formatPrice(pricePaise: Int): String = formatRupees(pricePaise)

@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.homeservices.designsystem.format.formatRupees
 import com.homeservices.designsystem.theme.LocalHomeservicesElevation
 import com.homeservices.designsystem.theme.LocalHomeservicesSize
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
@@ -204,7 +205,7 @@ public fun HsPriceText(
     modifier: Modifier = Modifier,
 ) {
     Text(
-        text = "Rs ${pricePaise / 100}",
+        text = formatRupees(pricePaise),
         style = MaterialTheme.typography.titleLarge,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.primary,
