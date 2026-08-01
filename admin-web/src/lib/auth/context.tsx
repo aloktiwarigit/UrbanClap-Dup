@@ -45,6 +45,11 @@ export function AdminAuthProvider({
     }
     await fetch(apiUrl('/v1/admin/auth/logout'), { method: 'POST', credentials: 'include' });
     setAuth(null);
+    // Unprefixed '/login' is correct despite localePrefix: 'always'. The middleware resolves the
+    // locale from the NEXT_LOCALE cookie when a path carries no prefix
+    // (src/lib/i18n/helpers.ts:getLocaleFromRequest), and LocaleSwitcher sets that cookie — so a
+    // Hindi admin lands on /hi/login. Prefixing it here by hand was tried and reverted: it adds an
+    // i18n dependency to the auth provider for no behavioural gain.
     router.push('/login');
   }, [router]);
 

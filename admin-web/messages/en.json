@@ -211,15 +211,27 @@
         "clearButton": "Clear all",
         "menuLabel": "Filter by status"
       },
-      "city": { "placeholder": "City" },
-      "phone": { "placeholder": "Phone" },
-      "technicianId": { "placeholder": "Technician ID" },
-      "minAmount": { "placeholder": "Min ₹" },
-      "maxAmount": { "placeholder": "Max ₹" }
+      "city": {
+        "placeholder": "City"
+      },
+      "phone": {
+        "placeholder": "Phone"
+      },
+      "technicianId": {
+        "placeholder": "Technician ID"
+      },
+      "minAmount": {
+        "placeholder": "Min ₹"
+      },
+      "maxAmount": {
+        "placeholder": "Max ₹"
+      }
     },
     "detail": {
       "title": "Order {orderId}",
-      "closeButton": { "ariaLabel": "Close slide-over" },
+      "closeButton": {
+        "ariaLabel": "Close slide-over"
+      },
       "sections": {
         "status": "Status",
         "customer": "Customer",
@@ -235,7 +247,9 @@
           "noPermission": "Your role can review this order but cannot run operational overrides."
         }
       },
-      "toast": { "success": "Action completed successfully." }
+      "toast": {
+        "success": "Action completed successfully."
+      }
     },
     "actions": {
       "reassign": {
@@ -275,8 +289,12 @@
       "error": "Action failed. Please try again."
     },
     "cells": {
-      "customer": { "noName": "No name" },
-      "technician": { "unassigned": "Unassigned" }
+      "customer": {
+        "noName": "No name"
+      },
+      "technician": {
+        "unassigned": "Unassigned"
+      }
     },
     "confirmModal": {
       "reasonLabel": "Reason",
@@ -338,11 +356,15 @@
           "m": "{m}m"
         }
       },
-      "badge": { "escalated": "escalated" }
+      "badge": {
+        "escalated": "escalated"
+      }
     },
     "detail": {
       "title": "Complaint {complaintId}",
-      "closeButton": { "ariaLabel": "Close slide-over" },
+      "closeButton": {
+        "ariaLabel": "Close slide-over"
+      },
       "sections": {
         "description": "Description",
         "status": "Status",
@@ -365,7 +387,9 @@
         "addNoteButton": "Add Note",
         "resolveButton": "Resolve"
       },
-      "toast": { "error": "Operation failed. Please try again." }
+      "toast": {
+        "error": "Operation failed. Please try again."
+      }
     },
     "kanban": {
       "column": {
@@ -392,9 +416,16 @@
   "finance": {
     "title": "Finance",
     "subtitle": "Daily P&L and weekly payout queue.",
-    "metadata": { "title": "Finance — HomeHeroo admin" },
-    "sections": { "pnl": "Profit & Loss" },
-    "dateRange": { "from": "From", "to": "To" },
+    "metadata": {
+      "title": "Finance — HomeHeroo admin"
+    },
+    "sections": {
+      "pnl": "Profit & Loss"
+    },
+    "dateRange": {
+      "from": "From",
+      "to": "To"
+    },
     "loading": {
       "summary": "Loading P&L…",
       "queue": "Loading payout queue…"
@@ -414,7 +445,9 @@
         "netPayable": "Net Payable"
       }
     },
-    "emptyStates": { "noPayouts": "No payouts due this week." },
+    "emptyStates": {
+      "noPayouts": "No payouts due this week."
+    },
     "chart": {
       "legend": {
         "grossRevenue": "Gross Revenue",
@@ -428,7 +461,9 @@
       "confirm": "Confirm",
       "processing": "Processing…"
     },
-    "permissions": { "approvalRestricted": "Approval is restricted to super-admins." },
+    "permissions": {
+      "approvalRestricted": "Approval is restricted to super-admins."
+    },
     "errors": {
       "loadSummaryFailed": "Failed to load P&L summary.",
       "loadQueueFailed": "Failed to load payout queue.",
@@ -446,7 +481,9 @@
   },
   "auditLog": {
     "title": "Audit Log",
-    "metadata": { "title": "Audit Log — HomeHeroo admin" },
+    "metadata": {
+      "title": "Audit Log — HomeHeroo admin"
+    },
     "filters": {
       "adminId": "Admin ID",
       "action": "Action",
@@ -455,7 +492,9 @@
       "dateFrom": "From",
       "dateTo": "To"
     },
-    "buttons": { "clearFilters": "Clear" },
+    "buttons": {
+      "clearFilters": "Clear"
+    },
     "table": {
       "columns": {
         "timestamp": "Timestamp",
@@ -470,8 +509,12 @@
       "next": "Next →"
     },
     "loading": "Loading…",
-    "errors": { "loadFailed": "Failed to load audit log. Please try again." },
-    "emptyStates": { "noEntries": "No entries found." }
+    "errors": {
+      "loadFailed": "Failed to load audit log. Please try again."
+    },
+    "emptyStates": {
+      "noEntries": "No entries found."
+    }
   },
   "catalogue": {
     "list": {
@@ -483,7 +526,9 @@
       "headline": "The catalogue is empty",
       "description": "No categories have been provisioned yet. Create one to get started."
     },
-    "categoryCard": { "viewServices": "View services" },
+    "categoryCard": {
+      "viewServices": "View services"
+    },
     "new": {
       "backLink": "Back to catalogue",
       "title": "New Category"
@@ -496,7 +541,9 @@
       "servicesHeading": "Services",
       "addServiceButton": "Add Service"
     },
-    "edit": { "title": "Edit Category" },
+    "edit": {
+      "title": "Edit Category"
+    },
     "card": {
       "statusActive": "Active",
       "statusInactive": "Inactive",
@@ -529,8 +576,12 @@
       "unpublishButton": "Unpublish",
       "editLink": "Edit"
     },
-    "serviceNew": { "title": "Add Service" },
-    "serviceEdit": { "title": "Edit Service" },
+    "serviceNew": {
+      "title": "Add Service"
+    },
+    "serviceEdit": {
+      "title": "Edit Service"
+    },
     "serviceForm": {
       "idLabel": "ID (slug)",
       "idPlaceholder": "e.g. ac-deep-clean",
@@ -657,5 +708,26 @@
     "title": "Something went wrong",
     "description": "An unexpected error occurred. Please try reloading the page.",
     "reload": "Reload"
+  },
+  "auth": {
+    "signOut": "Sign out",
+    "signingOut": "Signing out..."
+  },
+  "setup": {
+    "eyebrow": "First admin sign-in",
+    "title": "Set up Microsoft Authenticator",
+    "intro": "Admin access requires a 6-digit code from Microsoft Authenticator after Google or password sign-in.",
+    "step1": "Open Microsoft Authenticator on your phone.",
+    "step2": "Add an account and scan this QR code.",
+    "step3": "Enter the 6-digit code shown for HomeHeroo admin.",
+    "formLabel": "Microsoft Authenticator setup",
+    "formEyebrow": "Authenticator setup",
+    "formTitle": "Scan the QR code",
+    "formHint": "Use Microsoft Authenticator, not a Gmail or email OTP screen.",
+    "qrAlt": "Microsoft Authenticator setup QR code",
+    "codeLabel": "Microsoft Authenticator code",
+    "codePlaceholder": "6-digit code",
+    "confirm": "Confirm Microsoft Authenticator",
+    "confirming": "Confirming..."
   }
 }

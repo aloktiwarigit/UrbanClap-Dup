@@ -9,6 +9,7 @@ import { Rail } from '@/components/dashboard/Rail';
 import { Topbar } from '@/components/dashboard/Topbar';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
+import { SignOutButton } from '@/components/auth/SignOutButton';
 import { normalizeAdminRole } from '@/admin/capabilities';
 import { GrowthBookClientProvider } from '@/components/providers/GrowthBookClientProvider';
 import { getValidatedJwtSecret } from '@/lib/env';
@@ -66,7 +67,7 @@ export default async function DashboardLayout({
         >
           <Rail />
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-            <Topbar rightSlot={<><LocaleSwitcher /><ThemeToggle /></>} />
+            <Topbar rightSlot={<><LocaleSwitcher /><ThemeToggle /><SignOutButton /></>} />
             <main style={{ flex: 1, overflow: 'auto' }}>{children}</main>
           </div>
         </div>
