@@ -87,9 +87,9 @@ import com.homeservices.customer.R
 import com.homeservices.customer.domain.catalogue.model.Category
 import com.homeservices.customer.ui.booking.PendingBookingResumeBanner
 import com.homeservices.customer.ui.bookings.CustomerBookingsScreen
-import com.homeservices.customer.ui.util.formatInr
 import com.homeservices.customer.ui.wallet.WalletBalanceChip
 import com.homeservices.designsystem.components.HsScreenTitle
+import com.homeservices.designsystem.format.formatRupees
 import kotlinx.coroutines.delay
 
 // ── Promo banners ─────────────────────────────────────────────────────────────
@@ -784,7 +784,7 @@ private fun CategoryCard(
                     text =
                         stringResource(
                             R.string.catalogue_starting_price,
-                            formatInr(category.minPricePaise.toLong()),
+                            formatRupees(category.minPricePaise.toLong()),
                         ),
                     style =
                         MaterialTheme.typography.labelLarge.copy(

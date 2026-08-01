@@ -26,7 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.homeservices.customer.R
-import com.homeservices.customer.ui.util.formatInr
+import com.homeservices.designsystem.format.formatRupees
 import kotlinx.coroutines.delay
 
 private const val AUTO_DISMISS_MS = 5_000L
@@ -48,7 +48,7 @@ public fun NoShowCreditBanner(
         onDismiss()
     }
 
-    val bannerText = stringResource(R.string.no_show_credit_banner, formatInr(creditAmountPaise))
+    val bannerText = stringResource(R.string.no_show_credit_banner, formatRupees(creditAmountPaise))
     val dismissDesc = stringResource(R.string.no_show_credit_banner_dismiss)
 
     Surface(

@@ -50,8 +50,8 @@ import com.homeservices.customer.R
 import com.homeservices.customer.domain.wallet.model.LedgerEntry
 import com.homeservices.customer.domain.wallet.model.LedgerEntryType
 import com.homeservices.customer.domain.wallet.model.WalletBalance
-import com.homeservices.customer.ui.util.formatInr
 import com.homeservices.designsystem.components.HsScreenTitle
+import com.homeservices.designsystem.format.formatRupees
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -225,7 +225,7 @@ private fun BalanceReadyContent(balance: WalletBalance) {
             )
         }
         Text(
-            text = formatInr(balance.balanceInPaise),
+            text = formatRupees(balance.balanceInPaise),
             style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.ExtraBold),
             color = MaterialTheme.colorScheme.onPrimary,
         )
@@ -275,7 +275,7 @@ internal fun LedgerEntryRow(entry: LedgerEntry) {
             )
         }
         Text(
-            text = "$amountSign${formatInr(entry.amountInPaise)}",
+            text = "$amountSign${formatRupees(entry.amountInPaise)}",
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
             color = amountColor,
         )

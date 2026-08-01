@@ -48,7 +48,7 @@ import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.catalogue.model.Category
-import com.homeservices.customer.ui.util.formatInr
+import com.homeservices.designsystem.format.formatRupees
 
 private val PhotoCardShape = RoundedCornerShape(16.dp)
 
@@ -148,7 +148,7 @@ private fun BoxScope.PhotoCardImageContent(
         )
         if (category.minPricePaise > 0) {
             Text(
-                text = stringResource(R.string.catalogue_starting_price, formatInr(category.minPricePaise.toLong())),
+                text = stringResource(R.string.catalogue_starting_price, formatRupees(category.minPricePaise.toLong())),
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.SemiBold),
                 color = Color.White.copy(alpha = 0.88f),
                 maxLines = 1,
@@ -180,7 +180,7 @@ private fun PhotoCardIconFallback(
         if (category.minPricePaise > 0) {
             Spacer(Modifier.height(3.dp))
             Text(
-                text = stringResource(R.string.catalogue_starting_price, formatInr(category.minPricePaise.toLong())),
+                text = stringResource(R.string.catalogue_starting_price, formatRupees(category.minPricePaise.toLong())),
                 style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.SemiBold),
                 color = MaterialTheme.colorScheme.primary,
                 maxLines = 1,
