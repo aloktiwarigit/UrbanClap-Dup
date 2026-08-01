@@ -1,10 +1,13 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiUrl } from '@/api/base';
 
 export default function SetupPage() {
+  const t = useTranslations('setup');
   const router = useRouter();
   const [setupToken, setSetupToken] = useState('');
   const [qrUri, setQrUri] = useState<string | null>(null);
@@ -95,19 +98,19 @@ export default function SetupPage() {
     <main className="min-h-[100dvh] grid place-items-center bg-[var(--color-surface)] px-[var(--space-5)] py-[var(--space-8)] text-[var(--color-text)]">
       <section className="grid w-full max-w-[58rem] grid-cols-1 overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface-alt)] shadow-[var(--shadow-lg)] md:grid-cols-[1fr_1fr]">
         <aside className="border-b border-[var(--color-border)] bg-[var(--ink-1)] p-[var(--space-6)] md:border-b-0 md:border-r">
-          <p className="eyebrow m-0">First admin sign-in</p>
+          <p className="eyebrow m-0">{t('eyebrow')}</p>
           <h1 className="display m-0 mt-[var(--space-4)] text-[clamp(2rem,4vw,3.3rem)]">
-            Set up Microsoft Authenticator
+            {t('title')}
           </h1>
           <p className="m-0 mt-[var(--space-5)] max-w-[25rem] text-sm text-[var(--color-text-muted)]">
-            Admin access requires a 6-digit code from Microsoft Authenticator after Google or password sign-in.
+            {t('intro')}
           </p>
 
           <ol className="mt-[var(--space-8)] grid gap-[var(--space-3)] pl-0 text-sm">
             {[
-              'Open Microsoft Authenticator on your phone.',
-              'Add an account and scan this QR code.',
-              'Enter the 6-digit code shown for HomeHeroo admin.',
+              t('step1'),
+              t('step2'),
+              t('step3'),
             ].map((item, index) => (
               <li key={item} className="grid grid-cols-[2rem_1fr] gap-[var(--space-3)]">
                 <span className="grid h-8 w-8 place-items-center border border-[var(--marigold)] font-mono text-xs text-[var(--marigold-soft)]">
@@ -122,15 +125,15 @@ export default function SetupPage() {
         <form
           onSubmit={(e) => void handleSubmit(e)}
           className="grid content-start gap-[var(--space-5)] p-[var(--space-6)]"
-          aria-label="Microsoft Authenticator setup"
+          aria-label={t('formLabel')}
         >
           <div className="grid gap-[var(--space-2)]">
-            <p className="eyebrow m-0">Authenticator setup</p>
+            <p className="eyebrow m-0">{t('formEyebrow')}</p>
             <h2 className="m-0 text-[length:var(--text-2xl)] font-semibold">
-              Scan the QR code
+              {t('formTitle')}
             </h2>
             <p className="m-0 text-sm text-[var(--color-text-muted)]">
-              Use Microsoft Authenticator, not a Gmail or email OTP screen.
+              {t('formHint')}
             </p>
           </div>
 
@@ -139,7 +142,7 @@ export default function SetupPage() {
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={qrUri}
-                alt="Microsoft Authenticator setup QR code"
+                alt={t('qrAlt')}
                 className="h-52 w-52 bg-white p-2"
               />
             ) : (
@@ -154,7 +157,7 @@ export default function SetupPage() {
           )}
 
           <label className="grid gap-2 text-sm font-medium text-[var(--color-text)]">
-            Microsoft Authenticator code
+            {t('codeLabel')}
             <input
               type="text"
               inputMode="numeric"
@@ -164,7 +167,7 @@ export default function SetupPage() {
               onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
               required
               autoComplete="one-time-code"
-              placeholder="6-digit code"
+              placeholder={t('codePlaceholder')}
               className="min-h-12 text-center font-mono text-[length:var(--text-lg)] tracking-[0.18em]"
             />
           </label>
@@ -174,7 +177,7 @@ export default function SetupPage() {
             disabled={loading || code.length !== 6}
             className="btn btn-primary min-h-12 w-full"
           >
-            {loading ? 'Confirming...' : 'Confirm Microsoft Authenticator'}
+            {loading ? t('confirming') : t('confirm')}
           </button>
         </form>
       </section>

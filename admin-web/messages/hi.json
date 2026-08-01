@@ -211,15 +211,27 @@
         "clearButton": "सब हटाएँ",
         "menuLabel": "स्थिति के अनुसार फ़िल्टर करें"
       },
-      "city": { "placeholder": "शहर" },
-      "phone": { "placeholder": "फ़ोन" },
-      "technicianId": { "placeholder": "तकनीशियन ID" },
-      "minAmount": { "placeholder": "न्यूनतम ₹" },
-      "maxAmount": { "placeholder": "अधिकतम ₹" }
+      "city": {
+        "placeholder": "शहर"
+      },
+      "phone": {
+        "placeholder": "फ़ोन"
+      },
+      "technicianId": {
+        "placeholder": "तकनीशियन ID"
+      },
+      "minAmount": {
+        "placeholder": "न्यूनतम ₹"
+      },
+      "maxAmount": {
+        "placeholder": "अधिकतम ₹"
+      }
     },
     "detail": {
       "title": "ऑर्डर {orderId}",
-      "closeButton": { "ariaLabel": "पैनल बंद करें" },
+      "closeButton": {
+        "ariaLabel": "पैनल बंद करें"
+      },
       "sections": {
         "status": "स्थिति",
         "customer": "ग्राहक",
@@ -235,7 +247,9 @@
           "noPermission": "आपकी भूमिका इस ऑर्डर की समीक्षा कर सकती है लेकिन परिचालन बदलाव नहीं कर सकती।"
         }
       },
-      "toast": { "success": "कार्रवाई सफलतापूर्वक पूरी हुई।" }
+      "toast": {
+        "success": "कार्रवाई सफलतापूर्वक पूरी हुई।"
+      }
     },
     "actions": {
       "reassign": {
@@ -275,8 +289,12 @@
       "error": "कार्रवाई विफल हुई। कृपया पुनः प्रयास करें।"
     },
     "cells": {
-      "customer": { "noName": "नाम उपलब्ध नहीं" },
-      "technician": { "unassigned": "असाइन नहीं" }
+      "customer": {
+        "noName": "नाम उपलब्ध नहीं"
+      },
+      "technician": {
+        "unassigned": "असाइन नहीं"
+      }
     },
     "confirmModal": {
       "reasonLabel": "कारण",
@@ -338,11 +356,15 @@
           "m": "{m}मि"
         }
       },
-      "badge": { "escalated": "एस्केलेटेड" }
+      "badge": {
+        "escalated": "एस्केलेटेड"
+      }
     },
     "detail": {
       "title": "शिकायत {complaintId}",
-      "closeButton": { "ariaLabel": "पैनल बंद करें" },
+      "closeButton": {
+        "ariaLabel": "पैनल बंद करें"
+      },
       "sections": {
         "description": "विवरण",
         "status": "स्थिति",
@@ -365,7 +387,9 @@
         "addNoteButton": "नोट जोड़ें",
         "resolveButton": "हल करें"
       },
-      "toast": { "error": "कार्रवाई विफल हुई। कृपया पुनः प्रयास करें।" }
+      "toast": {
+        "error": "कार्रवाई विफल हुई। कृपया पुनः प्रयास करें।"
+      }
     },
     "kanban": {
       "column": {
@@ -392,9 +416,16 @@
   "finance": {
     "title": "वित्त",
     "subtitle": "दैनिक P&L और साप्ताहिक भुगतान कतार।",
-    "metadata": { "title": "वित्त — HomeHeroo एडमिन" },
-    "sections": { "pnl": "लाभ और हानि" },
-    "dateRange": { "from": "से", "to": "तक" },
+    "metadata": {
+      "title": "वित्त — HomeHeroo एडमिन"
+    },
+    "sections": {
+      "pnl": "लाभ और हानि"
+    },
+    "dateRange": {
+      "from": "से",
+      "to": "तक"
+    },
     "loading": {
       "summary": "P&L लोड हो रहा है…",
       "queue": "भुगतान कतार लोड हो रही है…"
@@ -414,7 +445,9 @@
         "netPayable": "देय राशि"
       }
     },
-    "emptyStates": { "noPayouts": "इस सप्ताह कोई भुगतान बकाया नहीं।" },
+    "emptyStates": {
+      "noPayouts": "इस सप्ताह कोई भुगतान बकाया नहीं।"
+    },
     "chart": {
       "legend": {
         "grossRevenue": "कुल राजस्व",
@@ -428,7 +461,9 @@
       "confirm": "पुष्टि करें",
       "processing": "प्रक्रिया हो रही है…"
     },
-    "permissions": { "approvalRestricted": "अनुमोदन केवल सुपर-एडमिन के लिए।" },
+    "permissions": {
+      "approvalRestricted": "अनुमोदन केवल सुपर-एडमिन के लिए।"
+    },
     "errors": {
       "loadSummaryFailed": "P&L सारांश लोड नहीं हुआ।",
       "loadQueueFailed": "भुगतान कतार लोड नहीं हुई।",
@@ -446,7 +481,9 @@
   },
   "auditLog": {
     "title": "ऑडिट लॉग",
-    "metadata": { "title": "ऑडिट लॉग — HomeHeroo एडमिन" },
+    "metadata": {
+      "title": "ऑडिट लॉग — HomeHeroo एडमिन"
+    },
     "filters": {
       "adminId": "एडमिन ID",
       "action": "कार्रवाई",
@@ -455,7 +492,9 @@
       "dateFrom": "से",
       "dateTo": "तक"
     },
-    "buttons": { "clearFilters": "साफ़ करें" },
+    "buttons": {
+      "clearFilters": "साफ़ करें"
+    },
     "table": {
       "columns": {
         "timestamp": "समय",
@@ -470,8 +509,12 @@
       "next": "अगला →"
     },
     "loading": "लोड हो रहा है…",
-    "errors": { "loadFailed": "ऑडिट लॉग लोड नहीं हुआ। कृपया पुनः प्रयास करें।" },
-    "emptyStates": { "noEntries": "कोई प्रविष्टि नहीं मिली।" }
+    "errors": {
+      "loadFailed": "ऑडिट लॉग लोड नहीं हुआ। कृपया पुनः प्रयास करें।"
+    },
+    "emptyStates": {
+      "noEntries": "कोई प्रविष्टि नहीं मिली।"
+    }
   },
   "catalogue": {
     "list": {
@@ -483,7 +526,9 @@
       "headline": "कैटलॉग खाली है",
       "description": "अभी तक कोई श्रेणी नहीं बनाई गई। शुरू करने के लिए एक बनाएं।"
     },
-    "categoryCard": { "viewServices": "सेवाएं देखें" },
+    "categoryCard": {
+      "viewServices": "सेवाएं देखें"
+    },
     "new": {
       "backLink": "कैटलॉग पर वापस",
       "title": "नई श्रेणी"
@@ -496,7 +541,9 @@
       "servicesHeading": "सेवाएं",
       "addServiceButton": "सेवा जोड़ें"
     },
-    "edit": { "title": "श्रेणी संपादित करें" },
+    "edit": {
+      "title": "श्रेणी संपादित करें"
+    },
     "card": {
       "statusActive": "सक्रिय",
       "statusInactive": "निष्क्रिय",
@@ -529,8 +576,12 @@
       "unpublishButton": "अप्रकाशित करें",
       "editLink": "संपादित करें"
     },
-    "serviceNew": { "title": "सेवा जोड़ें" },
-    "serviceEdit": { "title": "सेवा संपादित करें" },
+    "serviceNew": {
+      "title": "सेवा जोड़ें"
+    },
+    "serviceEdit": {
+      "title": "सेवा संपादित करें"
+    },
     "serviceForm": {
       "idLabel": "ID (slug)",
       "idPlaceholder": "जैसे: ac-deep-clean",
@@ -657,5 +708,26 @@
     "title": "कुछ गड़बड़ हो गई",
     "description": "एक अनपेक्षित त्रुटि हुई। कृपया पृष्ठ पुनः लोड करें।",
     "reload": "पुनः लोड करें"
+  },
+  "auth": {
+    "signOut": "साइन आउट",
+    "signingOut": "साइन आउट हो रहा है..."
+  },
+  "setup": {
+    "eyebrow": "पहली बार एडमिन साइन-इन",
+    "title": "Microsoft Authenticator सेट करें",
+    "intro": "Google या पासवर्ड से साइन-इन के बाद एडमिन एक्सेस के लिए Microsoft Authenticator का 6 अंकों का कोड ज़रूरी है।",
+    "step1": "अपने फ़ोन पर Microsoft Authenticator खोलें।",
+    "step2": "खाता जोड़ें और यह QR कोड स्कैन करें।",
+    "step3": "HomeHeroo एडमिन के लिए दिख रहा 6 अंकों का कोड डालें।",
+    "formLabel": "Microsoft Authenticator सेटअप",
+    "formEyebrow": "Authenticator सेटअप",
+    "formTitle": "QR कोड स्कैन करें",
+    "formHint": "Microsoft Authenticator का उपयोग करें, Gmail या ईमेल OTP स्क्रीन का नहीं।",
+    "qrAlt": "Microsoft Authenticator सेटअप QR कोड",
+    "codeLabel": "Microsoft Authenticator कोड",
+    "codePlaceholder": "6 अंकों का कोड",
+    "confirm": "Microsoft Authenticator की पुष्टि करें",
+    "confirming": "पुष्टि हो रही है..."
   }
 }
