@@ -1,10 +1,8 @@
-{
-  "timestamp": "2026-07-27T23:01:29-04:00",
-  "reviewed_commit": "cde988497d84290c9d62b5c06366f81a12330b38",
-  "branch": "feat/s10-token-core",
-  "reviewer": "codex",
-  "mode": "static (codex exec, read-only sandbox)",
-  "round_1": { "critical": 0, "major": 4, "minor": 2 },
-  "resolution": "MAJOR-1/2/3 and both MINORs fixed; MAJOR-4 accepted (module is consumed only by the two apps, both compiled against the change)",
-  "smoke_gate": "customer-app and technician-app, all 6 steps"
-}
+S-33 states — Codex static review PASSED
+Round 1: 0 CRITICAL / 0 MAJOR / 1 MINOR (accepted, not fixed).
+MINOR: new Paparazzi tests are class-level @Ignore, same as every existing Paparazzi test
+in this repo (PendingActionCardPaparazziTest, PhotoUploadRetryBannerPaparazziTest, etc.) —
+goldens are recorded via workflow_dispatch on CI Linux, never locally on Windows, per
+docs/patterns/paparazzi-cross-os-goldens.md. Not a regression introduced by this change;
+accepted as consistent with established repo convention. No re-run needed.
+Reviewed: docs/reviews/s33-states.diff
