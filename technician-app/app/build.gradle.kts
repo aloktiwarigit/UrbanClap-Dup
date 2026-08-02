@@ -408,6 +408,13 @@ kover {
                     // JobOfferScreen composable file generates *Kt JVM wrapper with framework branches
                     "*.JobOfferScreenKt",
                     "*.JobOfferScreenKt\$*",
+                    // PendingActionCard's per-second countdown tick (S-33) is a LaunchedEffect +
+                    // recomposition-driven remember, only exercisable via Compose instrumented
+                    // tests; Paparazzi covers rendering. The tested pure math lives in
+                    // PendingActionCountdown.kt (remainingSeconds), a separate facade class, so it
+                    // is NOT excluded and keeps contributing coverage.
+                    "*.PendingActionCardKt",
+                    "*.PendingActionCardKt\$*",
                     // JobOfferApiService is an internal Retrofit interface — its methods are invoked
                     // by the Retrofit runtime (not unit-testable)
                     "*.JobOfferApiService",

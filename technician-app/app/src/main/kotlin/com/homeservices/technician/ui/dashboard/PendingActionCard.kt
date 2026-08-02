@@ -17,6 +17,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,10 +32,11 @@ import androidx.compose.ui.unit.dp
 import com.homeservices.corenav.PendingAction
 import com.homeservices.corenav.PendingActionType
 import com.homeservices.technician.R
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 private const val MUTED_ALPHA = 0.7f
 private const val ICON_BG_ALPHA = 0.12f
-private const val MS_PER_SECOND = 1_000L
 
 private val Amber = Color(0xFFB86B00)
 private val AmberSoft = Color(0xFFFFF3E0)
@@ -90,9 +96,15 @@ internal fun PendingActionCard(
                     color = accent,
                 )
                 action.expiresAt?.let { expiresAt ->
-                    val remaining = ((expiresAt - System.currentTimeMillis()) / MS_PER_SECOND).coerceAtLeast(0)
+                    var now by remember(action.id, expiresAt) { mutableLongStateOf(System.currentTimeMillis()) }
+                    LaunchedEffect(action.id, expiresAt) {
+                        while (isActive && now < expiresAt) {
+                            delay(MS_PER_SECOND)
+                            now = System.currentTimeMillis()
+                        }
+                    }
                     Text(
-                        text = "${remaining}s",
+                        text = "${remainingSeconds(expiresAtMs = expiresAt, nowMs = now)}s",
                         style = MaterialTheme.typography.labelSmall,
                         color = accent.copy(alpha = MUTED_ALPHA),
                     )

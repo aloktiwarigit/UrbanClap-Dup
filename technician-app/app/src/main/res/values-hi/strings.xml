@@ -84,6 +84,11 @@
 
     <!-- Shield report sheet (E06-S02-Codemod) -->
     <string name="shield_description_placeholder">विवरण…</string>
+    <string name="shield_report_title">ग्राहक रिपोर्ट करें</string>
+    <string name="shield_report_subtitle">क्या हुआ बताएं (वैकल्पिक)</string>
+    <string name="shield_report_char_count">%d/500</string>
+    <string name="shield_report_submit">रिपोर्ट सबमिट करें</string>
+    <string name="shield_report_submitting">रिपोर्ट सबमिट हो रही है</string>
 
     <!-- Ratings screens -->
     <string name="my_ratings_title">मेरी रेटिंग</string>
@@ -92,6 +97,11 @@
     <string name="rating_punctuality_chip">समय-पालन %s</string>
     <string name="rating_skill_chip">कौशल %s</string>
     <string name="rating_appeal_reason_placeholder">कारण लिखें…</string>
+    <string name="rating_appeal_title">रेटिंग अपील</string>
+    <string name="rating_appeal_subtitle">क्यों रेटिंग गलत है? (कम से कम 20 अक्षर)</string>
+    <string name="rating_appeal_char_count">%d/500</string>
+    <string name="rating_appeal_submit">अपील सबमिट करें</string>
+    <string name="rating_appeal_submitting">अपील सबमिट हो रही है</string>
     <string name="rating_comment_label">टिप्पणी (वैकल्पिक, ≤500 वर्ण)</string>
     <string name="rating_overall">कुल: %s ★</string>
     <string name="rating_behaviour">व्यवहार: %s ★</string>

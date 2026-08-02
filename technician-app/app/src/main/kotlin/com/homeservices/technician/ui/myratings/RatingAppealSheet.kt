@@ -49,11 +49,11 @@ internal fun RatingAppealSheet(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "रेटिंग अपील",
+                text = stringResource(R.string.rating_appeal_title),
                 style = MaterialTheme.typography.titleLarge,
             )
             Text(
-                text = "क्यों रेटिंग गलत है? (कम से कम 20 अक्षर)",
+                text = stringResource(R.string.rating_appeal_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -71,14 +71,19 @@ internal fun RatingAppealSheet(
                 enabled = !isSubmitting,
             )
             Text(
-                text = "${reason.length}/500",
+                text = stringResource(R.string.rating_appeal_char_count, reason.length),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(8.dp))
             HsPrimaryButton(
-                text = if (isSubmitting) "Submitting..." else "Submit appeal",
+                text =
+                    if (isSubmitting) {
+                        stringResource(R.string.rating_appeal_submitting)
+                    } else {
+                        stringResource(R.string.rating_appeal_submit)
+                    },
                 onClick = { onSubmit(bookingId, reason) },
                 modifier =
                     Modifier
