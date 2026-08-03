@@ -1,0 +1,145 @@
+diff --git a/design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt b/design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt
+index 65e87d0d..bf61dec6 100644
+--- a/design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt
++++ b/design-system/src/main/kotlin/com/homeservices/designsystem/components/HsComponents.kt
+@@ -133,7 +133,6 @@ public fun HsActionButton(
+             Text(
+                 text = text,
+                 style = MaterialTheme.typography.labelLarge,
+-                fontWeight = FontWeight.SemiBold,
+                 maxLines = 2,
+                 overflow = TextOverflow.Ellipsis,
+             )
+@@ -157,7 +156,6 @@ public fun HsSectionCard(
+                 Text(
+                     text = title,
+                     style = MaterialTheme.typography.titleMedium,
+-                    fontWeight = FontWeight.SemiBold,
+                     modifier = Modifier.padding(bottom = LocalHomeservicesSpacing.current.space2),
+                 )
+             }
+@@ -192,9 +190,11 @@ public fun HsInfoRow(
+             color = MaterialTheme.colorScheme.onSurfaceVariant,
+         )
+         Text(
++            // titleMedium (16sp/24sp/SemiBold) is bodyLarge's own size/line-height with SemiBold
++            // weight already built in — reproduces the prior bodyLarge + manual SemiBold override
++            // pixel-for-pixel without layering a raw weight on top of the token.
+             text = value,
+-            style = MaterialTheme.typography.bodyLarge,
+-            fontWeight = FontWeight.SemiBold,
++            style = MaterialTheme.typography.titleMedium,
+         )
+     }
+ }
+@@ -207,6 +207,12 @@ public fun HsPriceText(
+     Text(
+         text = formatRupees(pricePaise),
+         style = MaterialTheme.typography.titleLarge,
++        // S-30: the one intentional fontWeight override left in this file. Money is bolded
++        // regardless of the base slot's own weight, matching the established convention already
++        // used outside the design system (PriceApprovalScreen.kt, ServiceDetailScreen.kt,
++        // ServiceListScreen.kt, EarningsScreen.kt). No M3 slot exists at titleLarge's 18sp/26sp
++        // with a Bold weight, so there is no redundant-token substitute available here without also
++        // changing the rendered size. See HsComponentsTypographyLeakTest.
+         fontWeight = FontWeight.Bold,
+         color = MaterialTheme.colorScheme.primary,
+         modifier = modifier,
+@@ -232,7 +238,6 @@ public fun HsTimelineStep(
+             Text(
+                 text = title,
+                 style = MaterialTheme.typography.titleSmall,
+-                fontWeight = FontWeight.SemiBold,
+             )
+             Text(
+                 text = body,
+diff --git a/design-system/src/test/kotlin/com/homeservices/designsystem/components/HsComponentsTypographyLeakTest.kt b/design-system/src/test/kotlin/com/homeservices/designsystem/components/HsComponentsTypographyLeakTest.kt
+new file mode 100644
+index 00000000..d65df45d
+--- /dev/null
++++ b/design-system/src/test/kotlin/com/homeservices/designsystem/components/HsComponentsTypographyLeakTest.kt
+@@ -0,0 +1,84 @@
++package com.homeservices.designsystem.components
++
++import org.assertj.core.api.Assertions.assertThat
++import org.junit.jupiter.api.Test
++import java.io.File
++
++/**
++ * S-30 — typography leak sites inside the design-system module itself.
++ *
++ * Before this story, five `Text` calls in HsComponents.kt paired a
++ * `style = MaterialTheme.typography.*` reference with a raw `fontWeight = FontWeight.*` override —
++ * exactly the "raw weight instead of referencing the M3 typography token" pattern S-30 exists to
++ * eliminate, even though the `style =` half of each call already pointed at a mapped slot:
++ *
++ *   - `HsActionButton` (labelLarge + SemiBold)  — override was redundant; labelLarge is SemiBold.
++ *   - `HsSectionCard`  (titleMedium + SemiBold) — redundant; titleMedium is SemiBold.
++ *   - `HsInfoRow`      (bodyLarge + SemiBold)   — bodyLarge is Normal, but the rendered result
++ *                                                 (16sp/24sp/SemiBold) is pixel-identical to
++ *                                                 titleMedium, so the fix re-points `style` there
++ *                                                 instead of layering a manual override.
++ *   - `HsTimelineStep` (titleSmall + SemiBold)  — redundant; titleSmall is SemiBold.
++ *   - `HsPriceText`    (titleLarge + Bold)      — kept. Money is bolded regardless of the base
++ *                                                 slot's own weight as an established, consistent
++ *                                                 convention already used outside the design system
++ *                                                 (PriceApprovalScreen.kt, ServiceDetailScreen.kt,
++ *                                                 ServiceListScreen.kt, EarningsScreen.kt). No M3
++ *                                                 slot exists at 18sp/26sp/Bold, so there is no
++ *                                                 redundant-token substitute available here without
++ *                                                 also changing the rendered size.
++ *
++ * This test locks the first four in as fixed and the fifth in as a documented, singular exception —
++ * a regression guard against a sixth raw override quietly reappearing in this file.
++ */
++public class HsComponentsTypographyLeakTest {
++    @Test
++    public fun `only HsPriceText overrides a typography token's own weight`() {
++        val source = locateSource().readText()
++        val overrideOffsets =
++            Regex("fontWeight = FontWeight\\.\\w+")
++                .findAll(source)
++                .map { it.range.first }
++                .toList()
++
++        assertThat(overrideOffsets)
++            .describedAs(
++                "expected exactly one raw fontWeight override in HsComponents.kt (HsPriceText); " +
++                    "found at offsets %s",
++                overrideOffsets,
++            ).hasSize(1)
++
++        val priceTextStart = source.indexOf("public fun HsPriceText")
++        assertThat(priceTextStart).describedAs("HsPriceText not found in HsComponents.kt").isGreaterThan(-1)
++        val priceTextEnd = source.indexOf("public fun HsTimelineStep").let { if (it == -1) source.length else it }
++
++        assertThat(overrideOffsets.single())
++            .describedAs("the sole fontWeight override must live inside HsPriceText")
++            .isGreaterThan(priceTextStart)
++            .isLessThan(priceTextEnd)
++    }
++
++    @Test
++    public fun `LanguagePickerCard has no raw typography at all`() {
++        val source = locateSource("locale/LanguagePickerCard.kt").readText()
++        val rawTypographyPattern = Regex("fontSize\\s*=|fontWeight\\s*=|lineHeight\\s*=|TextStyle\\(")
++
++        assertThat(rawTypographyPattern.containsMatchIn(source))
++            .describedAs("LanguagePickerCard.kt should reference typography tokens only, no raw overrides")
++            .isFalse()
++    }
++
++    private fun locateSource(
++        relativePath: String = "components/HsComponents.kt",
++    ): File {
++        val cwd = File("").absoluteFile
++        val candidates =
++            listOf(
++                // Gradle test cwd = module dir (design-system/)
++                File(cwd, "src/main/kotlin/com/homeservices/designsystem/$relativePath"),
++                File(cwd, "design-system/src/main/kotlin/com/homeservices/designsystem/$relativePath"),
++            )
++        return candidates.firstOrNull { it.isFile }
++            ?: error("Could not locate $relativePath from cwd=$cwd. Tried: ${candidates.map { it.path }}")
++    }
++}
