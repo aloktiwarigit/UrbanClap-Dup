@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useTranslations } from 'next-intl';
+import { formatINR } from '@/lib/format/intl';
 import type { DailyPnLEntry } from '@/api/finance';
 
 interface Props {
@@ -20,11 +21,13 @@ interface Props {
 
 export function PnLChart({ data, locale }: Props) {
   const t = useTranslations('finance');
-  const localeStr = locale === 'hi' ? 'hi-IN' : 'en-IN';
 
   function tickFormatter(value: unknown): string {
     if (typeof value !== 'number') return '';
-    return `₹${(value / 100).toLocaleString(localeStr, { maximumFractionDigits: 0 })}`;
+    // Chart ticks/tooltips stay whole-rupee (no decimals) for axis readability —
+    // same canonical formatter as every other money site, just with a
+    // fraction-digit override.
+    return formatINR(value, locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   }
 
   return (

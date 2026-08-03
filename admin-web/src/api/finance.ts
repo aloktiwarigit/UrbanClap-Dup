@@ -36,10 +36,6 @@ export interface ApprovePayoutsResult {
   errors: Array<{ technicianId: string; reason: string }>;
 }
 
-export function formatPaise(paise: number): string {
-  return `₹${(paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
 export async function fetchFinanceSummary(from: string, to: string): Promise<FinanceSummary> {
   const res = await fetch(
     apiUrl(`/v1/admin/finance/summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),

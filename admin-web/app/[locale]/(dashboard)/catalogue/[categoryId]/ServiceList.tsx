@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import type { components } from '@/api/generated/schema';
+import { formatINR } from '@/lib/format/intl';
 import { toggleServiceAction } from '../actions';
 
 type AdminService = components['schemas']['AdminService'];
@@ -13,12 +14,9 @@ interface ServiceListProps {
   services: AdminService[];
 }
 
-function formatPaise(paise: number): string {
-  return `INR ${(paise / 100).toLocaleString('en-IN')}`;
-}
-
 export function ServiceList({ categoryId, services: initialServices }: ServiceListProps) {
   const t = useTranslations('catalogue');
+  const locale = useLocale();
   const [services, setServices] = useState(initialServices);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +68,7 @@ export function ServiceList({ categoryId, services: initialServices }: ServiceLi
             <div>
               <p style={{ fontWeight: 600, margin: 0 }}>{service.name}</p>
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', margin: 0 }}>
-                {formatPaise(service.basePrice)} -{' '}
+                {formatINR(service.basePrice, locale)} -{' '}
                 <span style={{ color: service.isActive ? 'var(--color-success)' : 'var(--color-danger)' }}>
                   {service.isActive ? t('serviceList.statusPublished') : t('serviceList.statusUnpublished')}
                 </span>

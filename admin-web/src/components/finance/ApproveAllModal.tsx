@@ -3,16 +3,17 @@
 import { useEffect } from 'react';
 import FocusLock from 'react-focus-lock';
 import { useTranslations } from 'next-intl';
-import { formatPaise } from '@/api/finance';
+import { formatINR } from '@/lib/format/intl';
 
 interface Props {
   totalNetPayable: number;
   onConfirm: () => void;
   onCancel: () => void;
   loading: boolean;
+  locale?: string;
 }
 
-export function ApproveAllModal({ totalNetPayable, onConfirm, onCancel, loading }: Props) {
+export function ApproveAllModal({ totalNetPayable, onConfirm, onCancel, loading, locale = 'en' }: Props) {
   const t = useTranslations('finance');
 
   useEffect(() => {
@@ -39,7 +40,7 @@ export function ApproveAllModal({ totalNetPayable, onConfirm, onCancel, loading 
           {t('modal.confirmPayouts.title')}
         </h2>
         <p className="text-sm text-[var(--color-text-muted)] mb-[var(--space-6)]">
-          {t('modal.confirmPayouts.description', { amount: formatPaise(totalNetPayable) })}
+          {t('modal.confirmPayouts.description', { amount: formatINR(totalNetPayable, locale) })}
         </p>
         <div className="flex gap-[var(--space-3)] justify-end">
           <button

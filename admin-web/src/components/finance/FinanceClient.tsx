@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslations, useLocale } from 'next-intl';
+import { formatINR } from '@/lib/format/intl';
 
 const PnLChart = dynamic(() => import('@/components/finance/FinanceChart'), {
   ssr: false,
@@ -14,7 +15,6 @@ import {
   fetchFinanceSummary,
   fetchPayoutQueue,
   approveAllPayouts,
-  formatPaise,
   type FinanceSummary,
   type PayoutQueue,
 } from '@/api/finance';
@@ -146,15 +146,15 @@ export function FinanceClient() {
             <div className="grid grid-cols-3 gap-[var(--space-4)] mb-[var(--space-4)]">
               <div className="rounded p-[var(--space-4)] bg-[var(--color-surface-alt)]">
                 <p className="text-xs text-[var(--color-text-muted)]">{t('summary.grossRevenue')}</p>
-                <p className="text-[length:var(--text-xl)] font-bold text-[var(--color-text)]">{formatPaise(summary.totalGross)}</p>
+                <p className="text-[length:var(--text-xl)] font-bold text-[var(--color-text)]">{formatINR(summary.totalGross, locale)}</p>
               </div>
               <div className="rounded p-[var(--space-4)] bg-[var(--color-surface-alt)]">
                 <p className="text-xs text-[var(--color-text-muted)]">{t('summary.commission')}</p>
-                <p className="text-[length:var(--text-xl)] font-bold text-[var(--color-warn)]">{formatPaise(summary.totalCommission)}</p>
+                <p className="text-[length:var(--text-xl)] font-bold text-[var(--color-warn)]">{formatINR(summary.totalCommission, locale)}</p>
               </div>
               <div className="rounded p-[var(--space-4)] bg-[var(--color-surface-alt)]">
                 <p className="text-xs text-[var(--color-text-muted)]">{t('summary.netToOwner')}</p>
-                <p className="text-[length:var(--text-xl)] font-bold text-[var(--color-success)]">{formatPaise(summary.totalNet)}</p>
+                <p className="text-[length:var(--text-xl)] font-bold text-[var(--color-success)]">{formatINR(summary.totalNet, locale)}</p>
               </div>
             </div>
             <PnLChart data={summary.dailyPnL} locale={locale} />
@@ -173,6 +173,7 @@ export function FinanceClient() {
             totalNetPayable={queue.totalNetPayable}
             canApproveAll={canApprovePayouts}
             onApproveAll={() => setShowModal(true)}
+            locale={locale}
           />
         )}
       </section>
@@ -183,6 +184,7 @@ export function FinanceClient() {
           onConfirm={() => void handleApproveConfirm()}
           onCancel={() => setShowModal(false)}
           loading={approving}
+          locale={locale}
         />
       )}
     </div>
