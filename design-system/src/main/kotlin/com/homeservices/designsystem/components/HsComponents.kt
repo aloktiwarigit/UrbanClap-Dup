@@ -133,7 +133,6 @@ public fun HsActionButton(
             Text(
                 text = text,
                 style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -157,7 +156,6 @@ public fun HsSectionCard(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(bottom = LocalHomeservicesSpacing.current.space2),
                 )
             }
@@ -192,9 +190,11 @@ public fun HsInfoRow(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
+            // titleMedium (16sp/24sp/SemiBold) is bodyLarge's own size/line-height with SemiBold
+            // weight already built in — reproduces the prior bodyLarge + manual SemiBold override
+            // pixel-for-pixel without layering a raw weight on top of the token.
             text = value,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleMedium,
         )
     }
 }
@@ -207,6 +207,12 @@ public fun HsPriceText(
     Text(
         text = formatRupees(pricePaise),
         style = MaterialTheme.typography.titleLarge,
+        // S-30: the one intentional fontWeight override left in this file. Money is bolded
+        // regardless of the base slot's own weight, matching the established convention already
+        // used outside the design system (PriceApprovalScreen.kt, ServiceDetailScreen.kt,
+        // ServiceListScreen.kt, EarningsScreen.kt). No M3 slot exists at titleLarge's 18sp/26sp
+        // with a Bold weight, so there is no redundant-token substitute available here without also
+        // changing the rendered size. See HsComponentsTypographyLeakTest.
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.primary,
         modifier = modifier,
@@ -232,7 +238,6 @@ public fun HsTimelineStep(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
             )
             Text(
                 text = body,
