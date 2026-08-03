@@ -24,7 +24,7 @@ public class RatingAppealSheetHiPaparazziTest {
     public fun ratingAppealSheet_default_hi() {
         paparazzi.snapshot {
             HomeservicesTheme {
-                RatingAppealSheet(bookingId = "bk-1", onDismiss = {}, onSubmit = { _, _ -> }, isSubmitting = false)
+                RatingAppealSheetContent(bookingId = "bk-1", onSubmit = { _, _ -> }, isSubmitting = false)
             }
         }
     }

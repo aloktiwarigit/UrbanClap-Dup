@@ -24,7 +24,7 @@ public class ShieldReportSheetHiPaparazziTest {
     public fun shieldReportSheet_default_hi() {
         paparazzi.snapshot {
             HomeservicesTheme {
-                ShieldReportSheet(onDismiss = {}, onSubmit = {}, isSubmitting = false)
+                ShieldReportSheetContent(onSubmit = {}, isSubmitting = false)
             }
         }
     }

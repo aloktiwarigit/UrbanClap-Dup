@@ -24,7 +24,7 @@ public class RatingAppealSheetPaparazziTest {
     public fun `RatingAppealSheet default en`() {
         paparazzi.snapshot {
             HomeservicesTheme {
-                RatingAppealSheet(bookingId = "bk-1", onDismiss = {}, onSubmit = { _, _ -> }, isSubmitting = false)
+                RatingAppealSheetContent(bookingId = "bk-1", onSubmit = { _, _ -> }, isSubmitting = false)
             }
         }
     }
@@ -33,7 +33,7 @@ public class RatingAppealSheetPaparazziTest {
     public fun `RatingAppealSheet submitting en`() {
         paparazzi.snapshot {
             HomeservicesTheme {
-                RatingAppealSheet(bookingId = "bk-1", onDismiss = {}, onSubmit = { _, _ -> }, isSubmitting = true)
+                RatingAppealSheetContent(bookingId = "bk-1", onSubmit = { _, _ -> }, isSubmitting = true)
             }
         }
     }

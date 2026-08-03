@@ -11,6 +11,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -33,7 +34,6 @@ internal fun ShieldReportSheet(
     isSubmitting: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    var description by rememberSaveable { mutableStateOf("") }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
@@ -41,6 +41,24 @@ internal fun ShieldReportSheet(
         sheetState = sheetState,
         modifier = modifier,
     ) {
+        ShieldReportSheetContent(onSubmit = onSubmit, isSubmitting = isSubmitting)
+    }
+}
+
+/**
+ * Pure content of [ShieldReportSheet], extracted so Paparazzi can snapshot it directly —
+ * ModalBottomSheet's entrance animation never settles within Paparazzi's single-frame
+ * capture, which renders the sheet blank. See docs/patterns/paparazzi-cross-os-goldens.md.
+ */
+@Composable
+internal fun ShieldReportSheetContent(
+    onSubmit: (description: String?) -> Unit,
+    isSubmitting: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    var description by rememberSaveable { mutableStateOf("") }
+
+    Surface(modifier = modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface) {
         Column(
             modifier =
                 Modifier

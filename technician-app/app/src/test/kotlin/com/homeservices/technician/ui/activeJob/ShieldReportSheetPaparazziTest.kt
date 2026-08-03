@@ -24,7 +24,7 @@ public class ShieldReportSheetPaparazziTest {
     public fun `ShieldReportSheet default en`() {
         paparazzi.snapshot {
             HomeservicesTheme {
-                ShieldReportSheet(onDismiss = {}, onSubmit = {}, isSubmitting = false)
+                ShieldReportSheetContent(onSubmit = {}, isSubmitting = false)
             }
         }
     }
@@ -33,7 +33,7 @@ public class ShieldReportSheetPaparazziTest {
     public fun `ShieldReportSheet submitting en`() {
         paparazzi.snapshot {
             HomeservicesTheme {
-                ShieldReportSheet(onDismiss = {}, onSubmit = {}, isSubmitting = true)
+                ShieldReportSheetContent(onSubmit = {}, isSubmitting = true)
             }
         }
     }
