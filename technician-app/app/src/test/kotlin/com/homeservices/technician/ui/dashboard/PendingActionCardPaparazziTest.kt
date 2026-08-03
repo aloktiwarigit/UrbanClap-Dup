@@ -7,18 +7,15 @@ import com.homeservices.corenav.PendingActionPriority
 import com.homeservices.corenav.PendingActionStatus
 import com.homeservices.corenav.PendingActionType
 import com.homeservices.designsystem.theme.HomeservicesTheme
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
 /**
  * Paparazzi screenshot tests for [PendingActionCard].
  *
- * All tests are @Ignored — goldens must be recorded on Linux CI via
- * `workflow_dispatch` on paparazzi-record.yml to avoid cross-OS font drift.
- * See docs/patterns/paparazzi-cross-os-goldens.md.
+ * Goldens recorded on Linux CI via `workflow_dispatch` on paparazzi-record.yml
+ * to avoid cross-OS font drift. See docs/patterns/paparazzi-cross-os-goldens.md.
  */
-@Ignore("Paparazzi goldens recorded on CI Linux only — see paparazzi-cross-os-goldens.md")
 public class PendingActionCardPaparazziTest {
     @get:Rule
     public val paparazzi: Paparazzi =
