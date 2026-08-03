@@ -1,0 +1,612 @@
+diff --git a/admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx b/admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx
+index 18b86158..9fb2a7bf 100644
+--- a/admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx
++++ b/admin-web/app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList.tsx
+@@ -2,8 +2,9 @@
+ 
+ import { useState, useTransition } from 'react';
+ import Link from 'next/link';
+-import { useTranslations } from 'next-intl';
++import { useTranslations, useLocale } from 'next-intl';
+ import type { components } from '@/api/generated/schema';
++import { formatINR } from '@/lib/format/intl';
+ import { toggleServiceAction } from '../actions';
+ 
+ type AdminService = components['schemas']['AdminService'];
+@@ -13,12 +14,9 @@ interface ServiceListProps {
+   services: AdminService[];
+ }
+ 
+-function formatPaise(paise: number): string {
+-  return `INR ${(paise / 100).toLocaleString('en-IN')}`;
+-}
+-
+ export function ServiceList({ categoryId, services: initialServices }: ServiceListProps) {
+   const t = useTranslations('catalogue');
++  const locale = useLocale();
+   const [services, setServices] = useState(initialServices);
+   const [pendingId, setPendingId] = useState<string | null>(null);
+   const [error, setError] = useState<string | null>(null);
+@@ -70,7 +68,7 @@ export function ServiceList({ categoryId, services: initialServices }: ServiceLi
+             <div>
+               <p style={{ fontWeight: 600, margin: 0 }}>{service.name}</p>
+               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', margin: 0 }}>
+-                {formatPaise(service.basePrice)} -{' '}
++                {formatINR(service.basePrice, locale)} -{' '}
+                 <span style={{ color: service.isActive ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                   {service.isActive ? t('serviceList.statusPublished') : t('serviceList.statusUnpublished')}
+                 </span>
+diff --git a/admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx b/admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx
+index 0727ec7d..738f87de 100644
+--- a/admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx
++++ b/admin-web/app/[locale]/(dashboard)/compliance/ComplianceClient.tsx
+@@ -2,6 +2,7 @@
+ 
+ import { useState } from 'react';
+ import { useTranslations, useLocale } from 'next-intl';
++import { formatINR } from '@/lib/format/intl';
+ import {
+   approveSscLevy,
+   denyErasureRequest,
+@@ -29,13 +30,6 @@ interface ComplianceClientProps {
+   sscError?: string | null;
+ }
+ 
+-function formatPaise(paise: number): string {
+-  return `INR ${(paise / 100).toLocaleString('en-IN', {
+-    minimumFractionDigits: 2,
+-    maximumFractionDigits: 2,
+-  })}`;
+-}
+-
+ export function ComplianceClient({
+   initialErasureRequests,
+   initialSscLevies,
+@@ -294,8 +288,8 @@ export function ComplianceClient({
+                         <p className="font-medium m-0">{levy.quarter}</p>
+                         <p className="font-mono text-xs text-[var(--color-text-muted)] m-0">{levy.id}</p>
+                       </td>
+-                      <td className="py-3 pr-4 text-right">{formatPaise(levy.gmv)}</td>
+-                      <td className="py-3 pr-4 text-right">{formatPaise(levy.levyAmount)}</td>
++                      <td className="py-3 pr-4 text-right">{formatINR(levy.gmv, locale)}</td>
++                      <td className="py-3 pr-4 text-right">{formatINR(levy.levyAmount, locale)}</td>
+                       <td className="py-3 pr-4">{t(`sscLevy.statuses.${levy.status}`)}</td>
+                       <td className="py-3 text-right">
+                         {canApprove ? (
+diff --git a/admin-web/src/api/customers.ts b/admin-web/src/api/customers.ts
+index 4b590442..5fa6e22e 100644
+--- a/admin-web/src/api/customers.ts
++++ b/admin-web/src/api/customers.ts
+@@ -30,6 +30,14 @@ export async function addCustomerNote(id: string, text: string): Promise<void> {
+   if (!res.ok) throw new Error(`addCustomerNote: ${res.status}`);
+ }
+ 
++/**
++ * NOTE: `amountRupees` is denominated in whole rupees, NOT paise — the only
++ * money value in admin-web that breaks the paise convention used everywhere
++ * else (see `@/lib/format/intl` for the canonical paise-based formatter).
++ * This matches the `/v1/admin/customers/:id/refund-credit` API contract.
++ * Do not route this value through `formatINR`/`paiseToRupeeNumber` — doing
++ * so would silently divide it by 100 again.
++ */
+ export async function refundCredit(id: string, amountRupees: number, reason: string): Promise<void> {
+   const res = await fetch(`${BASE}/v1/admin/customers/${encodeURIComponent(id)}/refund-credit`, {
+     method: 'POST',
+diff --git a/admin-web/src/api/finance.ts b/admin-web/src/api/finance.ts
+index 724e1a3b..2ff1924e 100644
+--- a/admin-web/src/api/finance.ts
++++ b/admin-web/src/api/finance.ts
+@@ -36,10 +36,6 @@ export interface ApprovePayoutsResult {
+   errors: Array<{ technicianId: string; reason: string }>;
+ }
+ 
+-export function formatPaise(paise: number): string {
+-  return `₹${(paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+-}
+-
+ export async function fetchFinanceSummary(from: string, to: string): Promise<FinanceSummary> {
+   const res = await fetch(
+     apiUrl(`/v1/admin/finance/summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
+diff --git a/admin-web/src/components/dashboard/CounterStrip.tsx b/admin-web/src/components/dashboard/CounterStrip.tsx
+index db5f8a99..d86e5f54 100644
+--- a/admin-web/src/components/dashboard/CounterStrip.tsx
++++ b/admin-web/src/components/dashboard/CounterStrip.tsx
+@@ -1,3 +1,7 @@
++'use client';
++
++import { useLocale } from 'next-intl';
++import { formatINR } from '@/lib/format/intl';
+ import type { components } from '@/api/generated/schema';
+ 
+ type DashboardSummary = components['schemas']['DashboardSummary'];
+@@ -6,10 +10,6 @@ interface CounterStripProps {
+   summary: DashboardSummary;
+ }
+ 
+-function formatPaise(paise: number): string {
+-  return `₹${(paise / 100).toLocaleString('en-IN')}`;
+-}
+-
+ interface TileProps {
+   id: string;
+   label: string;
+@@ -64,6 +64,7 @@ function Tile({ id, label, value, accent }: TileProps) {
+ }
+ 
+ export function CounterStrip({ summary }: CounterStripProps) {
++  const locale = useLocale();
+   const {
+     bookingsToday,
+     gmvToday,
+@@ -82,17 +83,17 @@ export function CounterStrip({ summary }: CounterStripProps) {
+       }}
+     >
+       <Tile id="bookingsToday" label="Bookings · Today" value={bookingsToday} accent="teal" />
+-      <Tile id="gmvToday" label="GMV · Today" value={formatPaise(gmvToday)} accent="teal" />
++      <Tile id="gmvToday" label="GMV · Today" value={formatINR(gmvToday, locale)} accent="teal" />
+       <Tile
+         id="commissionToday"
+         label="Commission"
+-        value={formatPaise(commissionToday)}
++        value={formatINR(commissionToday, locale)}
+         accent="ember"
+       />
+       <Tile
+         id="payoutsPending"
+         label="Payouts · Pending"
+-        value={formatPaise(payoutsPending)}
++        value={formatINR(payoutsPending, locale)}
+         accent="ember"
+       />
+       <Tile id="complaintsOpen" label="Complaints · Open" value={complaintsOpen} accent="coral" />
+diff --git a/admin-web/src/components/dashboard/PayoutQueue.tsx b/admin-web/src/components/dashboard/PayoutQueue.tsx
+index 5212139e..329b4c1f 100644
+--- a/admin-web/src/components/dashboard/PayoutQueue.tsx
++++ b/admin-web/src/components/dashboard/PayoutQueue.tsx
+@@ -1,21 +1,20 @@
+ 'use client';
+ 
+ import Link from 'next/link';
++import { useLocale } from 'next-intl';
+ import { hasCapability } from '@/admin/capabilities';
+ import { FeatureGate } from '@/components/auth/FeatureGate';
+ import { useAdminAuth } from '@/lib/auth/context';
++import { formatINR } from '@/lib/format/intl';
+ 
+ interface PayoutQueueProps {
+   payoutsPending: number;
+   techCount: number;
+ }
+ 
+-function formatPaise(paise: number): string {
+-  return `INR ${(paise / 100).toLocaleString('en-IN')}`;
+-}
+-
+ export function PayoutQueue({ payoutsPending, techCount }: PayoutQueueProps) {
+   const { auth } = useAdminAuth();
++  const locale = useLocale();
+   const canApprove = hasCapability(auth?.role, 'finance.approvePayouts');
+ 
+   return (
+@@ -54,7 +53,7 @@ export function PayoutQueue({ payoutsPending, techCount }: PayoutQueueProps) {
+               color: 'var(--ember)',
+             }}
+           >
+-            {formatPaise(payoutsPending)}
++            {formatINR(payoutsPending, locale)}
+           </span>
+         </div>
+ 
+diff --git a/admin-web/src/components/finance/ApproveAllModal.tsx b/admin-web/src/components/finance/ApproveAllModal.tsx
+index 556c3359..5072049e 100644
+--- a/admin-web/src/components/finance/ApproveAllModal.tsx
++++ b/admin-web/src/components/finance/ApproveAllModal.tsx
+@@ -3,16 +3,17 @@
+ import { useEffect } from 'react';
+ import FocusLock from 'react-focus-lock';
+ import { useTranslations } from 'next-intl';
+-import { formatPaise } from '@/api/finance';
++import { formatINR } from '@/lib/format/intl';
+ 
+ interface Props {
+   totalNetPayable: number;
+   onConfirm: () => void;
+   onCancel: () => void;
+   loading: boolean;
++  locale?: string;
+ }
+ 
+-export function ApproveAllModal({ totalNetPayable, onConfirm, onCancel, loading }: Props) {
++export function ApproveAllModal({ totalNetPayable, onConfirm, onCancel, loading, locale = 'en' }: Props) {
+   const t = useTranslations('finance');
+ 
+   useEffect(() => {
+@@ -39,7 +40,7 @@ export function ApproveAllModal({ totalNetPayable, onConfirm, onCancel, loading
+           {t('modal.confirmPayouts.title')}
+         </h2>
+         <p className="text-sm text-[var(--color-text-muted)] mb-[var(--space-6)]">
+-          {t('modal.confirmPayouts.description', { amount: formatPaise(totalNetPayable) })}
++          {t('modal.confirmPayouts.description', { amount: formatINR(totalNetPayable, locale) })}
+         </p>
+         <div className="flex gap-[var(--space-3)] justify-end">
+           <button
+diff --git a/admin-web/src/components/finance/FinanceClient.tsx b/admin-web/src/components/finance/FinanceClient.tsx
+index 96d5d619..5610dd15 100644
+--- a/admin-web/src/components/finance/FinanceClient.tsx
++++ b/admin-web/src/components/finance/FinanceClient.tsx
+@@ -3,6 +3,7 @@
+ import { useState, useEffect, useCallback } from 'react';
+ import dynamic from 'next/dynamic';
+ import { useTranslations, useLocale } from 'next-intl';
++import { formatINR } from '@/lib/format/intl';
+ 
+ const PnLChart = dynamic(() => import('@/components/finance/FinanceChart'), {
+   ssr: false,
+@@ -14,7 +15,6 @@ import {
+   fetchFinanceSummary,
+   fetchPayoutQueue,
+   approveAllPayouts,
+-  formatPaise,
+   type FinanceSummary,
+   type PayoutQueue,
+ } from '@/api/finance';
+@@ -146,15 +146,15 @@ export function FinanceClient() {
+             <div className="grid grid-cols-3 gap-[var(--space-4)] mb-[var(--space-4)]">
+               <div className="rounded p-[var(--space-4)] bg-[var(--color-surface-alt)]">
+                 <p className="text-xs text-[var(--color-text-muted)]">{t('summary.grossRevenue')}</p>
+-                <p className="text-[length:var(--text-xl)] font-bold text-[var(--color-text)]">{formatPaise(summary.totalGross)}</p>
++                <p className="text-[length:var(--text-xl)] font-bold text-[var(--color-text)]">{formatINR(summary.totalGross, locale)}</p>
+               </div>
+               <div className="rounded p-[var(--space-4)] bg-[var(--color-surface-alt)]">
+                 <p className="text-xs text-[var(--color-text-muted)]">{t('summary.commission')}</p>
+-                <p className="text-[length:var(--text-xl)] font-bold text-[var(--color-warn)]">{formatPaise(summary.totalCommission)}</p>
++                <p className="text-[length:var(--text-xl)] font-bold text-[var(--color-warn)]">{formatINR(summary.totalCommission, locale)}</p>
+               </div>
+               <div className="rounded p-[var(--space-4)] bg-[var(--color-surface-alt)]">
+                 <p className="text-xs text-[var(--color-text-muted)]">{t('summary.netToOwner')}</p>
+-                <p className="text-[length:var(--text-xl)] font-bold text-[var(--color-success)]">{formatPaise(summary.totalNet)}</p>
++                <p className="text-[length:var(--text-xl)] font-bold text-[var(--color-success)]">{formatINR(summary.totalNet, locale)}</p>
+               </div>
+             </div>
+             <PnLChart data={summary.dailyPnL} locale={locale} />
+@@ -173,6 +173,7 @@ export function FinanceClient() {
+             totalNetPayable={queue.totalNetPayable}
+             canApproveAll={canApprovePayouts}
+             onApproveAll={() => setShowModal(true)}
++            locale={locale}
+           />
+         )}
+       </section>
+@@ -183,6 +184,7 @@ export function FinanceClient() {
+           onConfirm={() => void handleApproveConfirm()}
+           onCancel={() => setShowModal(false)}
+           loading={approving}
++          locale={locale}
+         />
+       )}
+     </div>
+diff --git a/admin-web/src/components/finance/PayoutQueueTable.tsx b/admin-web/src/components/finance/PayoutQueueTable.tsx
+index 588e9dc7..fd0f1d41 100644
+--- a/admin-web/src/components/finance/PayoutQueueTable.tsx
++++ b/admin-web/src/components/finance/PayoutQueueTable.tsx
+@@ -1,7 +1,7 @@
+ 'use client';
+ 
+ import { useTranslations } from 'next-intl';
+-import { formatPaise } from '@/api/finance';
++import { formatINR } from '@/lib/format/intl';
+ import type { PayoutQueueEntry } from '@/api/finance';
+ 
+ interface Props {
+@@ -9,6 +9,7 @@ interface Props {
+   totalNetPayable: number;
+   onApproveAll: () => void;
+   canApproveAll?: boolean;
++  locale?: string;
+ }
+ 
+ export function PayoutQueueTable({
+@@ -16,13 +17,14 @@ export function PayoutQueueTable({
+   totalNetPayable,
+   onApproveAll,
+   canApproveAll = true,
++  locale = 'en',
+ }: Props) {
+   const t = useTranslations('finance');
+   return (
+     <div>
+       <div className="flex items-center justify-between mb-[var(--space-3)]">
+         <h2 className="text-[length:var(--text-lg)] font-semibold text-[var(--color-text)]">
+-          {t('payoutQueue.title', { total: formatPaise(totalNetPayable) })}
++          {t('payoutQueue.title', { total: formatINR(totalNetPayable, locale) })}
+         </h2>
+         {canApproveAll ? (
+           <button
+@@ -57,9 +59,9 @@ export function PayoutQueueTable({
+               <tr key={e.technicianId} className="border-b border-[var(--color-border)]">
+                 <td className="py-2 pr-4 text-[var(--color-text)]">{e.technicianName}</td>
+                 <td className="py-2 pr-4 text-right">{e.completedJobsThisWeek}</td>
+-                <td className="py-2 pr-4 text-right">{formatPaise(e.grossEarnings)}</td>
+-                <td className="py-2 pr-4 text-right text-[var(--color-warn)]">{formatPaise(e.commissionDeducted)}</td>
+-                <td className="py-2 text-right font-medium text-[var(--color-success)]">{formatPaise(e.netPayable)}</td>
++                <td className="py-2 pr-4 text-right">{formatINR(e.grossEarnings, locale)}</td>
++                <td className="py-2 pr-4 text-right text-[var(--color-warn)]">{formatINR(e.commissionDeducted, locale)}</td>
++                <td className="py-2 text-right font-medium text-[var(--color-success)]">{formatINR(e.netPayable, locale)}</td>
+               </tr>
+             ))}
+           </tbody>
+diff --git a/admin-web/src/components/finance/PnLChart.tsx b/admin-web/src/components/finance/PnLChart.tsx
+index 61adbfd8..8cbfbef4 100644
+--- a/admin-web/src/components/finance/PnLChart.tsx
++++ b/admin-web/src/components/finance/PnLChart.tsx
+@@ -11,6 +11,7 @@ import {
+   ResponsiveContainer,
+ } from 'recharts';
+ import { useTranslations } from 'next-intl';
++import { formatINR } from '@/lib/format/intl';
+ import type { DailyPnLEntry } from '@/api/finance';
+ 
+ interface Props {
+@@ -20,11 +21,13 @@ interface Props {
+ 
+ export function PnLChart({ data, locale }: Props) {
+   const t = useTranslations('finance');
+-  const localeStr = locale === 'hi' ? 'hi-IN' : 'en-IN';
+ 
+   function tickFormatter(value: unknown): string {
+     if (typeof value !== 'number') return '';
+-    return `₹${(value / 100).toLocaleString(localeStr, { maximumFractionDigits: 0 })}`;
++    // Chart ticks/tooltips stay whole-rupee (no decimals) for axis readability —
++    // same canonical formatter as every other money site, just with a
++    // fraction-digit override.
++    return formatINR(value, locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+   }
+ 
+   return (
+diff --git a/admin-web/src/components/orders/exportCsv.ts b/admin-web/src/components/orders/exportCsv.ts
+index 3b111a41..0e3d8cbf 100644
+--- a/admin-web/src/components/orders/exportCsv.ts
++++ b/admin-web/src/components/orders/exportCsv.ts
+@@ -1,3 +1,4 @@
++import { paiseToRupeeNumber } from '@/lib/format/intl';
+ import type { Order } from '@/types/order';
+ 
+ function escape(val: string | number | null | undefined): string {
+@@ -27,7 +28,7 @@ export function buildOrdersCsv(orders: Order[], t: (key: string) => string): str
+       o.id, o.customerName, o.customerPhone,
+       o.serviceName ?? '', o.technicianName ?? '',
+       o.status, o.city,
+-      o.scheduledAt, String(o.amount / 100), o.createdAt,
++      o.scheduledAt, String(paiseToRupeeNumber(o.amount)), o.createdAt,
+     ].map(escape).join(','));
+   }
+   return rows.join('\n');
+diff --git a/admin-web/src/lib/format/intl.ts b/admin-web/src/lib/format/intl.ts
+index c6ca2c21..916eb15d 100644
+--- a/admin-web/src/lib/format/intl.ts
++++ b/admin-web/src/lib/format/intl.ts
+@@ -1,11 +1,45 @@
+-export function formatINR(paise: number, locale: string): string {
+-  const rupees = paise / 100;
++/**
++ * Canonical INR money formatter for admin-web. All currency amounts in this
++ * app are transported as integer paise (1/100 rupee) — mirrors the Android
++ * `Money.kt` convention from S-31. Every money-rendering call site should
++ * route through this function (or `paiseToRupeeNumber` for unformatted
++ * numeric output, e.g. CSV export) rather than reimplementing paise/100
++ * division inline.
++ *
++ * Defensively rounds the input to the nearest whole paise before dividing,
++ * so an upstream float-serialization artifact (e.g. `59900.00000000001`
++ * from a backend that round-trips amounts through a floating-point type)
++ * cannot introduce visible rounding drift in the formatted output — the
++ * same class of bug S-31 fixed for the Android `formatInr` call sites.
++ *
++ * @param options Optional Intl.NumberFormatOptions overrides, merged over
++ *   the currency-style defaults — e.g. `{ minimumFractionDigits: 0,
++ *   maximumFractionDigits: 0 }` for compact chart-axis ticks.
++ */
++export function formatINR(
++  paise: number,
++  locale: string,
++  options?: Intl.NumberFormatOptions,
++): string {
++  const rupees = paiseToRupeeNumber(paise);
+   return new Intl.NumberFormat(locale === 'hi' ? 'hi-IN' : 'en-IN', {
+     style: 'currency',
+     currency: 'INR',
++    ...options,
+   }).format(rupees);
+ }
+ 
++/**
++ * Converts integer paise to an unformatted rupee number — no currency
++ * symbol, no locale grouping. Use for machine-readable output (CSV export,
++ * API payloads) where `formatINR`'s human-readable string is not
++ * appropriate. Applies the same defensive whole-paise rounding as
++ * `formatINR` before dividing, to avoid float-drift on non-integer input.
++ */
++export function paiseToRupeeNumber(paise: number): number {
++  return Math.round(paise) / 100;
++}
++
+ export function formatDate(date: Date | string, locale: string): string {
+   const d = typeof date === 'string' ? new Date(date) : date;
+   return new Intl.DateTimeFormat(locale === 'hi' ? 'hi-IN' : 'en-IN', {
+diff --git a/admin-web/tests/PnLChart.test.tsx b/admin-web/tests/PnLChart.test.tsx
+index d1a2d1df..3de3b47c 100644
+--- a/admin-web/tests/PnLChart.test.tsx
++++ b/admin-web/tests/PnLChart.test.tsx
+@@ -12,8 +12,12 @@ vi.mock('recharts', () => ({
+   ),
+   Bar: ({ dataKey }: { dataKey: string }) => <div data-testid={`bar-${dataKey}`} />,
+   XAxis: () => <div />,
+-  YAxis: () => <div />,
+-  Tooltip: () => <div />,
++  YAxis: ({ tickFormatter }: { tickFormatter?: (value: unknown) => string }) => (
++    <div data-testid="y-axis-tick">{tickFormatter?.(59900)}</div>
++  ),
++  Tooltip: ({ formatter }: { formatter?: (value: unknown) => string }) => (
++    <div data-testid="tooltip">{formatter?.(150000)}</div>
++  ),
+   Legend: () => <div />,
+   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+   CartesianGrid: () => <div />,
+@@ -41,4 +45,16 @@ describe('PnLChart', () => {
+     render(<PnLChart data={[]} locale="hi" />);
+     expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
+   });
++
++  it('formats Y-axis ticks via the canonical formatter, whole-rupee (0 decimals), with the ₹ symbol', () => {
++    render(<PnLChart data={sampleData} locale="en" />);
++    // 59900 paise -> ₹599, no decimals (chart-tick override), still routed through formatINR.
++    expect(screen.getByTestId('y-axis-tick').textContent).toBe('₹599');
++  });
++
++  it('formats the tooltip via the canonical formatter with the same whole-rupee override', () => {
++    render(<PnLChart data={sampleData} locale="en" />);
++    // 150000 paise -> ₹1,500, no decimals.
++    expect(screen.getByTestId('tooltip').textContent).toBe('₹1,500');
++  });
+ });
+diff --git a/admin-web/tests/components/catalogue/ServiceList.test.tsx b/admin-web/tests/components/catalogue/ServiceList.test.tsx
+new file mode 100644
+index 00000000..a38272e8
+--- /dev/null
++++ b/admin-web/tests/components/catalogue/ServiceList.test.tsx
+@@ -0,0 +1,33 @@
++import { describe, it, expect, vi } from 'vitest';
++import { render, screen } from '@testing-library/react';
++import React from 'react';
++
++vi.mock('next-intl', () => ({
++  useTranslations: (ns: string) => (key: string) => `[${ns}.${key}]`,
++  useLocale: () => 'en',
++}));
++vi.mock('../../../app/[locale]/(dashboard)/catalogue/actions', () => ({
++  toggleServiceAction: vi.fn(),
++}));
++
++import { ServiceList } from '../../../app/[locale]/(dashboard)/catalogue/[categoryId]/ServiceList';
++import type { components } from '../../../src/api/generated/schema';
++
++type AdminService = components['schemas']['AdminService'];
++
++const service: AdminService = {
++  id: 'svc_1',
++  name: 'AC Repair',
++  basePrice: 59900,
++  isActive: true,
++} as AdminService;
++
++describe('ServiceList money formatting', () => {
++  it('renders the base price via the canonical formatINR currency string, not the old ad-hoc "INR 599" format', () => {
++    render(<ServiceList categoryId="ac-repair" services={[service]} />);
++    // Canonical formatter: currency-style, ₹ symbol, 2 decimals.
++    expect(screen.getByText(/₹599\.00/)).toBeInTheDocument();
++    // The old ad-hoc local formatter produced "INR 599" (no decimals, no ₹) — must be gone.
++    expect(screen.queryByText(/INR 599/)).not.toBeInTheDocument();
++  });
++});
+diff --git a/admin-web/tests/components/dashboard/CounterStrip.test.tsx b/admin-web/tests/components/dashboard/CounterStrip.test.tsx
+index 09e1d320..662270a7 100644
+--- a/admin-web/tests/components/dashboard/CounterStrip.test.tsx
++++ b/admin-web/tests/components/dashboard/CounterStrip.test.tsx
+@@ -1,5 +1,10 @@
+-import { describe, it, expect } from 'vitest';
++import { describe, it, expect, vi } from 'vitest';
+ import { render, screen } from '@testing-library/react';
++
++vi.mock('next-intl', () => ({
++  useLocale: () => 'en',
++}));
++
+ import { CounterStrip } from '../../../src/components/dashboard/CounterStrip';
+ import type { components } from '../../../src/api/generated/schema';
+ 
+diff --git a/admin-web/tests/exportCsv.test.ts b/admin-web/tests/exportCsv.test.ts
+index c32119bd..8fb14e58 100644
+--- a/admin-web/tests/exportCsv.test.ts
++++ b/admin-web/tests/exportCsv.test.ts
+@@ -44,4 +44,18 @@ describe('buildOrdersCsv', () => {
+     const csv = buildOrdersCsv([order], tHeaders);
+     expect(csv).toContain('"Rahul, Jr."');
+   });
++
++  it('converts a non-round paise amount to the exact rupee-and-paise value without float drift', () => {
++    const fractionalOrder = { ...order, id: 'ord_2', amount: 1050 }; // 1050 paise = ₹10.50
++    const csv = buildOrdersCsv([fractionalOrder], tHeaders);
++    expect(csv).toContain('10.5');
++  });
++
++  it('defensively rounds a non-integer paise input (upstream float artifact) to a clean rupee value', () => {
++    const driftedOrder = { ...order, id: 'ord_3', amount: 59900.00000000001 };
++    const csv = buildOrdersCsv([driftedOrder], tHeaders);
++    expect(csv).toContain('599');
++    expect(csv).not.toContain('598.99');
++    expect(csv).not.toContain('599.00000000001');
++  });
+ });
+diff --git a/admin-web/tests/i18n/finance.i18n.test.tsx b/admin-web/tests/i18n/finance.i18n.test.tsx
+index 00308666..6d94647c 100644
+--- a/admin-web/tests/i18n/finance.i18n.test.tsx
++++ b/admin-web/tests/i18n/finance.i18n.test.tsx
+@@ -33,7 +33,6 @@ vi.mock('@/api/finance', () => ({
+     totalNetPayable: 0,
+   }),
+   approveAllPayouts: vi.fn(),
+-  formatPaise: (paise: number) => `₹${(paise / 100).toFixed(2)}`,
+ }));
+ 
+ // Mock auth
+diff --git a/admin-web/tests/lib/format/intl.test.ts b/admin-web/tests/lib/format/intl.test.ts
+index 46ee710b..216d0f55 100644
+--- a/admin-web/tests/lib/format/intl.test.ts
++++ b/admin-web/tests/lib/format/intl.test.ts
+@@ -1,5 +1,5 @@
+ import { describe, it, expect } from 'vitest';
+-import { formatINR, formatDate, formatDateTime } from '@/lib/format/intl';
++import { formatINR, formatDate, formatDateTime, paiseToRupeeNumber } from '@/lib/format/intl';
+ 
+ describe('formatINR', () => {
+   it('formats with hi-IN lakh grouping', () => {
+@@ -15,6 +15,39 @@ describe('formatINR', () => {
+     const result = formatINR(59900, 'hi');
+     expect(result).toContain('599');
+   });
++  it('defaults to 2 decimal places for currency display', () => {
++    const result = formatINR(193750, 'en');
++    expect(result).toBe('₹1,937.50');
++  });
++  it('accepts Intl.NumberFormatOptions overrides for callers needing fewer decimals (e.g. chart axis ticks)', () => {
++    const result = formatINR(59900, 'en', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
++    expect(result).toBe('₹599');
++  });
++  it('guards against non-integer paise input (defensive rounding, mirrors the Android Double-drift fix) without producing rounding drift', () => {
++    // Simulates an upstream float-serialization artifact — e.g. 59900.00000000001 —
++    // that must still resolve to a clean ₹599.00, not drift to ₹598.99 / ₹599.01.
++    const result = formatINR(59900.00000000001, 'en');
++    expect(result).toBe('₹599.00');
++  });
++  it('rounds a fractional-paise input to the nearest whole paise before formatting', () => {
++    const result = formatINR(59900.6, 'en');
++    expect(result).toBe('₹599.01');
++  });
++});
++
++describe('paiseToRupeeNumber', () => {
++  it('converts whole-rupee paise to an unformatted number', () => {
++    expect(paiseToRupeeNumber(59900)).toBe(599);
++  });
++  it('converts fractional-rupee paise to an unformatted number', () => {
++    expect(paiseToRupeeNumber(1050)).toBe(10.5);
++  });
++  it('defensively rounds non-integer paise input before dividing (no float drift)', () => {
++    expect(paiseToRupeeNumber(59900.00000000001)).toBe(599);
++  });
++  it('handles zero', () => {
++    expect(paiseToRupeeNumber(0)).toBe(0);
++  });
+ });
+ 
+ describe('formatDate', () => {
