@@ -10,6 +10,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -32,15 +33,33 @@ internal fun RatingAppealSheet(
     isSubmitting: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    var reason by rememberSaveable { mutableStateOf("") }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val canSubmit = reason.length >= 20 && !isSubmitting
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         modifier = modifier,
     ) {
+        RatingAppealSheetContent(bookingId = bookingId, onSubmit = onSubmit, isSubmitting = isSubmitting)
+    }
+}
+
+/**
+ * Pure content of [RatingAppealSheet], extracted so Paparazzi can snapshot it directly —
+ * ModalBottomSheet's entrance animation never settles within Paparazzi's single-frame
+ * capture, which renders the sheet blank. See docs/patterns/paparazzi-cross-os-goldens.md.
+ */
+@Composable
+internal fun RatingAppealSheetContent(
+    bookingId: String,
+    onSubmit: (bookingId: String, reason: String) -> Unit,
+    isSubmitting: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    var reason by rememberSaveable { mutableStateOf("") }
+    val canSubmit = reason.length >= 20 && !isSubmitting
+
+    Surface(modifier = modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface) {
         Column(
             modifier =
                 Modifier
@@ -49,11 +68,11 @@ internal fun RatingAppealSheet(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "रेटिंग अपील",
+                text = stringResource(R.string.rating_appeal_title),
                 style = MaterialTheme.typography.titleLarge,
             )
             Text(
-                text = "क्यों रेटिंग गलत है? (कम से कम 20 अक्षर)",
+                text = stringResource(R.string.rating_appeal_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -71,14 +90,19 @@ internal fun RatingAppealSheet(
                 enabled = !isSubmitting,
             )
             Text(
-                text = "${reason.length}/500",
+                text = stringResource(R.string.rating_appeal_char_count, reason.length),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(8.dp))
             HsPrimaryButton(
-                text = if (isSubmitting) "Submitting..." else "Submit appeal",
+                text =
+                    if (isSubmitting) {
+                        stringResource(R.string.rating_appeal_submitting)
+                    } else {
+                        stringResource(R.string.rating_appeal_submit)
+                    },
                 onClick = { onSubmit(bookingId, reason) },
                 modifier =
                     Modifier

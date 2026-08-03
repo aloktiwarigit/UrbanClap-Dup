@@ -108,6 +108,11 @@
 
     <!-- Shield report sheet (E06-S02-Codemod) -->
     <string name="shield_description_placeholder">Description…</string>
+    <string name="shield_report_title">Report customer</string>
+    <string name="shield_report_subtitle">What happened (optional)</string>
+    <string name="shield_report_char_count">%d/500</string>
+    <string name="shield_report_submit">Submit report</string>
+    <string name="shield_report_submitting">Submitting report</string>
 
     <!-- Ratings screens -->
     <string name="my_ratings_title">My ratings</string>
@@ -116,6 +121,11 @@
     <string name="rating_punctuality_chip">Punctuality %s</string>
     <string name="rating_skill_chip">Skill %s</string>
     <string name="rating_appeal_reason_placeholder">Write reason…</string>
+    <string name="rating_appeal_title">Rating appeal</string>
+    <string name="rating_appeal_subtitle">Why is this rating wrong? (at least 20 characters)</string>
+    <string name="rating_appeal_char_count">%d/500</string>
+    <string name="rating_appeal_submit">Submit appeal</string>
+    <string name="rating_appeal_submitting">Submitting appeal</string>
     <string name="rating_comment_label">Comment (optional, ≤500 chars)</string>
     <string name="rating_overall">Overall: %s ★</string>
     <string name="rating_behaviour">Behaviour: %s ★</string>

@@ -11,6 +11,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -33,7 +34,6 @@ internal fun ShieldReportSheet(
     isSubmitting: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    var description by rememberSaveable { mutableStateOf("") }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
@@ -41,6 +41,24 @@ internal fun ShieldReportSheet(
         sheetState = sheetState,
         modifier = modifier,
     ) {
+        ShieldReportSheetContent(onSubmit = onSubmit, isSubmitting = isSubmitting)
+    }
+}
+
+/**
+ * Pure content of [ShieldReportSheet], extracted so Paparazzi can snapshot it directly —
+ * ModalBottomSheet's entrance animation never settles within Paparazzi's single-frame
+ * capture, which renders the sheet blank. See docs/patterns/paparazzi-cross-os-goldens.md.
+ */
+@Composable
+internal fun ShieldReportSheetContent(
+    onSubmit: (description: String?) -> Unit,
+    isSubmitting: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    var description by rememberSaveable { mutableStateOf("") }
+
+    Surface(modifier = modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface) {
         Column(
             modifier =
                 Modifier
@@ -49,11 +67,11 @@ internal fun ShieldReportSheet(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "ग्राहक रिपोर्ट करें",
+                text = stringResource(R.string.shield_report_title),
                 style = MaterialTheme.typography.titleLarge,
             )
             Text(
-                text = "क्या हुआ बताएं (वैकल्पिक)",
+                text = stringResource(R.string.shield_report_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -71,7 +89,7 @@ internal fun ShieldReportSheet(
                 enabled = !isSubmitting,
             )
             Text(
-                text = "${description.length}/500",
+                text = stringResource(R.string.shield_report_char_count, description.length),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.fillMaxWidth(),
@@ -83,7 +101,12 @@ internal fun ShieldReportSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 HsPrimaryButton(
-                    text = if (isSubmitting) "Submitting..." else "Submit report",
+                    text =
+                        if (isSubmitting) {
+                            stringResource(R.string.shield_report_submitting)
+                        } else {
+                            stringResource(R.string.shield_report_submit)
+                        },
                     onClick = { onSubmit(description.takeIf { it.isNotBlank() }) },
                     modifier =
                         Modifier

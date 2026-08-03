@@ -1,0 +1,525 @@
+diff --git a/technician-app/app/build.gradle.kts b/technician-app/app/build.gradle.kts
+index 5a67d105..f9b3ce69 100644
+--- a/technician-app/app/build.gradle.kts
++++ b/technician-app/app/build.gradle.kts
+@@ -408,6 +408,13 @@ kover {
+                     // JobOfferScreen composable file generates *Kt JVM wrapper with framework branches
+                     "*.JobOfferScreenKt",
+                     "*.JobOfferScreenKt\$*",
++                    // PendingActionCard's per-second countdown tick (S-33) is a LaunchedEffect +
++                    // recomposition-driven remember, only exercisable via Compose instrumented
++                    // tests; Paparazzi covers rendering. The tested pure math lives in
++                    // PendingActionCountdown.kt (remainingSeconds), a separate facade class, so it
++                    // is NOT excluded and keeps contributing coverage.
++                    "*.PendingActionCardKt",
++                    "*.PendingActionCardKt\$*",
+                     // JobOfferApiService is an internal Retrofit interface — its methods are invoked
+                     // by the Retrofit runtime (not unit-testable)
+                     "*.JobOfferApiService",
+diff --git a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheet.kt b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheet.kt
+index 5200133a..d7d6f87e 100644
+--- a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheet.kt
++++ b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheet.kt
+@@ -49,11 +49,11 @@ internal fun ShieldReportSheet(
+             verticalArrangement = Arrangement.spacedBy(12.dp),
+         ) {
+             Text(
+-                text = "ग्राहक रिपोर्ट करें",
++                text = stringResource(R.string.shield_report_title),
+                 style = MaterialTheme.typography.titleLarge,
+             )
+             Text(
+-                text = "क्या हुआ बताएं (वैकल्पिक)",
++                text = stringResource(R.string.shield_report_subtitle),
+                 style = MaterialTheme.typography.bodyMedium,
+                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+             )
+@@ -71,7 +71,7 @@ internal fun ShieldReportSheet(
+                 enabled = !isSubmitting,
+             )
+             Text(
+-                text = "${description.length}/500",
++                text = stringResource(R.string.shield_report_char_count, description.length),
+                 style = MaterialTheme.typography.labelSmall,
+                 color = MaterialTheme.colorScheme.outline,
+                 modifier = Modifier.fillMaxWidth(),
+@@ -83,7 +83,12 @@ internal fun ShieldReportSheet(
+                 verticalAlignment = Alignment.CenterVertically,
+             ) {
+                 HsPrimaryButton(
+-                    text = if (isSubmitting) "Submitting..." else "Submit report",
++                    text =
++                        if (isSubmitting) {
++                            stringResource(R.string.shield_report_submitting)
++                        } else {
++                            stringResource(R.string.shield_report_submit)
++                        },
+                     onClick = { onSubmit(description.takeIf { it.isNotBlank() }) },
+                     modifier =
+                         Modifier
+diff --git a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/PendingActionCard.kt b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/PendingActionCard.kt
+index d5550d51..734ed5c3 100644
+--- a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/PendingActionCard.kt
++++ b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/PendingActionCard.kt
+@@ -17,6 +17,11 @@ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Surface
+ import androidx.compose.material3.Text
+ import androidx.compose.runtime.Composable
++import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableLongStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.setValue
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.graphics.Color
+@@ -27,10 +32,11 @@ import androidx.compose.ui.unit.dp
+ import com.homeservices.corenav.PendingAction
+ import com.homeservices.corenav.PendingActionType
+ import com.homeservices.technician.R
++import kotlinx.coroutines.delay
++import kotlinx.coroutines.isActive
+ 
+ private const val MUTED_ALPHA = 0.7f
+ private const val ICON_BG_ALPHA = 0.12f
+-private const val MS_PER_SECOND = 1_000L
+ 
+ private val Amber = Color(0xFFB86B00)
+ private val AmberSoft = Color(0xFFFFF3E0)
+@@ -90,9 +96,15 @@ internal fun PendingActionCard(
+                     color = accent,
+                 )
+                 action.expiresAt?.let { expiresAt ->
+-                    val remaining = ((expiresAt - System.currentTimeMillis()) / MS_PER_SECOND).coerceAtLeast(0)
++                    var now by remember(action.id, expiresAt) { mutableLongStateOf(System.currentTimeMillis()) }
++                    LaunchedEffect(action.id, expiresAt) {
++                        while (isActive && now < expiresAt) {
++                            delay(MS_PER_SECOND)
++                            now = System.currentTimeMillis()
++                        }
++                    }
+                     Text(
+-                        text = "${remaining}s",
++                        text = "${remainingSeconds(expiresAtMs = expiresAt, nowMs = now)}s",
+                         style = MaterialTheme.typography.labelSmall,
+                         color = accent.copy(alpha = MUTED_ALPHA),
+                     )
+diff --git a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/PendingActionCountdown.kt b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/PendingActionCountdown.kt
+new file mode 100644
+index 00000000..d88ae023
+--- /dev/null
++++ b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/dashboard/PendingActionCountdown.kt
+@@ -0,0 +1,8 @@
++package com.homeservices.technician.ui.dashboard
++
++internal const val MS_PER_SECOND: Long = 1_000L
++
++internal fun remainingSeconds(
++    expiresAtMs: Long,
++    nowMs: Long,
++): Long = ((expiresAtMs - nowMs) / MS_PER_SECOND).coerceAtLeast(0)
+diff --git a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheet.kt b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheet.kt
+index a7aadc3b..6354c88c 100644
+--- a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheet.kt
++++ b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheet.kt
+@@ -49,11 +49,11 @@ internal fun RatingAppealSheet(
+             verticalArrangement = Arrangement.spacedBy(12.dp),
+         ) {
+             Text(
+-                text = "रेटिंग अपील",
++                text = stringResource(R.string.rating_appeal_title),
+                 style = MaterialTheme.typography.titleLarge,
+             )
+             Text(
+-                text = "क्यों रेटिंग गलत है? (कम से कम 20 अक्षर)",
++                text = stringResource(R.string.rating_appeal_subtitle),
+                 style = MaterialTheme.typography.bodyMedium,
+                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+             )
+@@ -71,14 +71,19 @@ internal fun RatingAppealSheet(
+                 enabled = !isSubmitting,
+             )
+             Text(
+-                text = "${reason.length}/500",
++                text = stringResource(R.string.rating_appeal_char_count, reason.length),
+                 style = MaterialTheme.typography.labelSmall,
+                 color = MaterialTheme.colorScheme.outline,
+                 modifier = Modifier.fillMaxWidth(),
+             )
+             Spacer(Modifier.height(8.dp))
+             HsPrimaryButton(
+-                text = if (isSubmitting) "Submitting..." else "Submit appeal",
++                text =
++                    if (isSubmitting) {
++                        stringResource(R.string.rating_appeal_submitting)
++                    } else {
++                        stringResource(R.string.rating_appeal_submit)
++                    },
+                 onClick = { onSubmit(bookingId, reason) },
+                 modifier =
+                     Modifier
+diff --git a/technician-app/app/src/main/res/values-hi/strings.xml b/technician-app/app/src/main/res/values-hi/strings.xml
+index 55d3ed7b..78a575fa 100644
+--- a/technician-app/app/src/main/res/values-hi/strings.xml
++++ b/technician-app/app/src/main/res/values-hi/strings.xml
+@@ -84,6 +84,11 @@
+ 
+     <!-- Shield report sheet (E06-S02-Codemod) -->
+     <string name="shield_description_placeholder">विवरण…</string>
++    <string name="shield_report_title">ग्राहक रिपोर्ट करें</string>
++    <string name="shield_report_subtitle">क्या हुआ बताएं (वैकल्पिक)</string>
++    <string name="shield_report_char_count">%d/500</string>
++    <string name="shield_report_submit">रिपोर्ट सबमिट करें</string>
++    <string name="shield_report_submitting">रिपोर्ट सबमिट हो रही है</string>
+ 
+     <!-- Ratings screens -->
+     <string name="my_ratings_title">मेरी रेटिंग</string>
+@@ -92,6 +97,11 @@
+     <string name="rating_punctuality_chip">समय-पालन %s</string>
+     <string name="rating_skill_chip">कौशल %s</string>
+     <string name="rating_appeal_reason_placeholder">कारण लिखें…</string>
++    <string name="rating_appeal_title">रेटिंग अपील</string>
++    <string name="rating_appeal_subtitle">क्यों रेटिंग गलत है? (कम से कम 20 अक्षर)</string>
++    <string name="rating_appeal_char_count">%d/500</string>
++    <string name="rating_appeal_submit">अपील सबमिट करें</string>
++    <string name="rating_appeal_submitting">अपील सबमिट हो रही है</string>
+     <string name="rating_comment_label">टिप्पणी (वैकल्पिक, ≤500 वर्ण)</string>
+     <string name="rating_overall">कुल: %s ★</string>
+     <string name="rating_behaviour">व्यवहार: %s ★</string>
+diff --git a/technician-app/app/src/main/res/values/strings.xml b/technician-app/app/src/main/res/values/strings.xml
+index 96adc934..c545c9f6 100644
+--- a/technician-app/app/src/main/res/values/strings.xml
++++ b/technician-app/app/src/main/res/values/strings.xml
+@@ -108,6 +108,11 @@
+ 
+     <!-- Shield report sheet (E06-S02-Codemod) -->
+     <string name="shield_description_placeholder">Description…</string>
++    <string name="shield_report_title">Report customer</string>
++    <string name="shield_report_subtitle">What happened (optional)</string>
++    <string name="shield_report_char_count">%d/500</string>
++    <string name="shield_report_submit">Submit report</string>
++    <string name="shield_report_submitting">Submitting report</string>
+ 
+     <!-- Ratings screens -->
+     <string name="my_ratings_title">My ratings</string>
+@@ -116,6 +121,11 @@
+     <string name="rating_punctuality_chip">Punctuality %s</string>
+     <string name="rating_skill_chip">Skill %s</string>
+     <string name="rating_appeal_reason_placeholder">Write reason…</string>
++    <string name="rating_appeal_title">Rating appeal</string>
++    <string name="rating_appeal_subtitle">Why is this rating wrong? (at least 20 characters)</string>
++    <string name="rating_appeal_char_count">%d/500</string>
++    <string name="rating_appeal_submit">Submit appeal</string>
++    <string name="rating_appeal_submitting">Submitting appeal</string>
+     <string name="rating_comment_label">Comment (optional, ≤500 chars)</string>
+     <string name="rating_overall">Overall: %s ★</string>
+     <string name="rating_behaviour">Behaviour: %s ★</string>
+diff --git a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetHiPaparazziTest.kt b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetHiPaparazziTest.kt
+new file mode 100644
+index 00000000..f056f803
+--- /dev/null
++++ b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetHiPaparazziTest.kt
+@@ -0,0 +1,33 @@
++package com.homeservices.technician.ui.activeJob
++
++import app.cash.paparazzi.DeviceConfig
++import app.cash.paparazzi.Paparazzi
++import com.homeservices.designsystem.theme.HomeservicesTheme
++import org.junit.Ignore
++import org.junit.Rule
++import org.junit.Test
++
++/**
++ * Hindi-locale Paparazzi screenshot test for [ShieldReportSheet].
++ *
++ * Goldens are recorded on Linux CI via `workflow_dispatch` on paparazzi-record.yml
++ * to avoid cross-OS font drift. See docs/patterns/paparazzi-cross-os-goldens.md.
++ */
++@Ignore("Paparazzi goldens recorded on CI Linux only — see paparazzi-cross-os-goldens.md")
++public class ShieldReportSheetHiPaparazziTest {
++    @get:Rule
++    public val paparazzi: Paparazzi =
++        Paparazzi(
++            deviceConfig = DeviceConfig.PIXEL_5.copy(locale = "hi"),
++            theme = "android:Theme.Material3.DayNight.NoActionBar",
++        )
++
++    @Test
++    public fun shieldReportSheet_default_hi() {
++        paparazzi.snapshot {
++            HomeservicesTheme {
++                ShieldReportSheet(onDismiss = {}, onSubmit = {}, isSubmitting = false)
++            }
++        }
++    }
++}
+diff --git a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetPaparazziTest.kt b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetPaparazziTest.kt
+new file mode 100644
+index 00000000..e575252e
+--- /dev/null
++++ b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetPaparazziTest.kt
+@@ -0,0 +1,42 @@
++package com.homeservices.technician.ui.activeJob
++
++import app.cash.paparazzi.DeviceConfig
++import app.cash.paparazzi.Paparazzi
++import com.homeservices.designsystem.theme.HomeservicesTheme
++import org.junit.Ignore
++import org.junit.Rule
++import org.junit.Test
++
++/**
++ * Paparazzi screenshot tests for [ShieldReportSheet].
++ *
++ * Goldens are recorded on Linux CI via `workflow_dispatch` on paparazzi-record.yml
++ * to avoid cross-OS font drift. See docs/patterns/paparazzi-cross-os-goldens.md.
++ */
++@Ignore("Paparazzi goldens recorded on CI Linux only — see paparazzi-cross-os-goldens.md")
++public class ShieldReportSheetPaparazziTest {
++    @get:Rule
++    public val paparazzi: Paparazzi =
++        Paparazzi(
++            deviceConfig = DeviceConfig.PIXEL_5,
++            theme = "android:Theme.Material3.DayNight.NoActionBar",
++        )
++
++    @Test
++    public fun `ShieldReportSheet default en`() {
++        paparazzi.snapshot {
++            HomeservicesTheme {
++                ShieldReportSheet(onDismiss = {}, onSubmit = {}, isSubmitting = false)
++            }
++        }
++    }
++
++    @Test
++    public fun `ShieldReportSheet submitting en`() {
++        paparazzi.snapshot {
++            HomeservicesTheme {
++                ShieldReportSheet(onDismiss = {}, onSubmit = {}, isSubmitting = true)
++            }
++        }
++    }
++}
+diff --git a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetStringsTest.kt b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetStringsTest.kt
+new file mode 100644
+index 00000000..7a907597
+--- /dev/null
++++ b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetStringsTest.kt
+@@ -0,0 +1,40 @@
++package com.homeservices.technician.ui.activeJob
++
++import androidx.test.core.app.ApplicationProvider
++import com.homeservices.technician.R
++import org.assertj.core.api.Assertions.assertThat
++import org.junit.Test
++import org.junit.runner.RunWith
++import org.robolectric.RobolectricTestRunner
++import org.robolectric.RuntimeEnvironment
++
++/**
++ * [ShieldReportSheet] hardcoded two Devanagari literals and one English literal directly in the
++ * composable, bypassing string resources entirely (S-33). These tests assert the replacement
++ * resources exist and carry en/hi parity, so the composable can render through stringResource()
++ * instead.
++ */
++@RunWith(RobolectricTestRunner::class)
++public class ShieldReportSheetStringsTest {
++    @Test
++    public fun `shield report strings resolve in english by default`(): Unit {
++        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
++
++        assertThat(context.getString(R.string.shield_report_title)).isEqualTo("Report customer")
++        assertThat(context.getString(R.string.shield_report_subtitle)).isEqualTo("What happened (optional)")
++        assertThat(context.getString(R.string.shield_report_char_count, 0)).isEqualTo("0/500")
++        assertThat(context.getString(R.string.shield_report_submit)).isEqualTo("Submit report")
++        assertThat(context.getString(R.string.shield_report_submitting)).isEqualTo("Submitting report")
++    }
++
++    @Test
++    public fun `shield report strings resolve in hindi`(): Unit {
++        RuntimeEnvironment.setQualifiers("hi")
++        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
++
++        assertThat(context.getString(R.string.shield_report_title)).isEqualTo("ग्राहक रिपोर्ट करें")
++        assertThat(context.getString(R.string.shield_report_subtitle)).isEqualTo("क्या हुआ बताएं (वैकल्पिक)")
++        assertThat(context.getString(R.string.shield_report_submit)).isEqualTo("रिपोर्ट सबमिट करें")
++        assertThat(context.getString(R.string.shield_report_submitting)).isEqualTo("रिपोर्ट सबमिट हो रही है")
++    }
++}
+diff --git a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/dashboard/PendingActionCardTest.kt b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/dashboard/PendingActionCardTest.kt
+new file mode 100644
+index 00000000..390da21a
+--- /dev/null
++++ b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/dashboard/PendingActionCardTest.kt
+@@ -0,0 +1,36 @@
++package com.homeservices.technician.ui.dashboard
++
++import org.assertj.core.api.Assertions.assertThat
++import org.junit.jupiter.api.Test
++
++/**
++ * [PendingActionCard]'s countdown read `System.currentTimeMillis()` once at composition, so a
++ * card reading "28s" kept reading "28s" until something else recomposed the dashboard (S-33).
++ * These tests cover [remainingSeconds], the pure function the composable now recomputes every
++ * second via a ticking LaunchedEffect.
++ */
++public class PendingActionCardTest {
++    @Test
++    public fun `remaining seconds counts down from a future expiry`(): Unit {
++        val now = 1_000_000L
++        assertThat(remainingSeconds(expiresAtMs = now + 28_000L, nowMs = now)).isEqualTo(28L)
++    }
++
++    @Test
++    public fun `remaining seconds is zero at the exact expiry instant`(): Unit {
++        val now = 1_000_000L
++        assertThat(remainingSeconds(expiresAtMs = now, nowMs = now)).isEqualTo(0L)
++    }
++
++    @Test
++    public fun `remaining seconds never goes negative once expiry has passed`(): Unit {
++        val now = 1_000_000L
++        assertThat(remainingSeconds(expiresAtMs = now - 5_000L, nowMs = now)).isEqualTo(0L)
++    }
++
++    @Test
++    public fun `remaining seconds truncates a partial second down`(): Unit {
++        val now = 1_000_000L
++        assertThat(remainingSeconds(expiresAtMs = now + 1_999L, nowMs = now)).isEqualTo(1L)
++    }
++}
+diff --git a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheetHiPaparazziTest.kt b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheetHiPaparazziTest.kt
+new file mode 100644
+index 00000000..abe64997
+--- /dev/null
++++ b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheetHiPaparazziTest.kt
+@@ -0,0 +1,33 @@
++package com.homeservices.technician.ui.myratings
++
++import app.cash.paparazzi.DeviceConfig
++import app.cash.paparazzi.Paparazzi
++import com.homeservices.designsystem.theme.HomeservicesTheme
++import org.junit.Ignore
++import org.junit.Rule
++import org.junit.Test
++
++/**
++ * Hindi-locale Paparazzi screenshot test for [RatingAppealSheet].
++ *
++ * Goldens are recorded on Linux CI via `workflow_dispatch` on paparazzi-record.yml
++ * to avoid cross-OS font drift. See docs/patterns/paparazzi-cross-os-goldens.md.
++ */
++@Ignore("Paparazzi goldens recorded on CI Linux only — see paparazzi-cross-os-goldens.md")
++public class RatingAppealSheetHiPaparazziTest {
++    @get:Rule
++    public val paparazzi: Paparazzi =
++        Paparazzi(
++            deviceConfig = DeviceConfig.PIXEL_5.copy(locale = "hi"),
++            theme = "android:Theme.Material3.DayNight.NoActionBar",
++        )
++
++    @Test
++    public fun ratingAppealSheet_default_hi() {
++        paparazzi.snapshot {
++            HomeservicesTheme {
++                RatingAppealSheet(bookingId = "bk-1", onDismiss = {}, onSubmit = { _, _ -> }, isSubmitting = false)
++            }
++        }
++    }
++}
+diff --git a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheetPaparazziTest.kt b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheetPaparazziTest.kt
+new file mode 100644
+index 00000000..b6c21ca0
+--- /dev/null
++++ b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheetPaparazziTest.kt
+@@ -0,0 +1,42 @@
++package com.homeservices.technician.ui.myratings
++
++import app.cash.paparazzi.DeviceConfig
++import app.cash.paparazzi.Paparazzi
++import com.homeservices.designsystem.theme.HomeservicesTheme
++import org.junit.Ignore
++import org.junit.Rule
++import org.junit.Test
++
++/**
++ * Paparazzi screenshot tests for [RatingAppealSheet].
++ *
++ * Goldens are recorded on Linux CI via `workflow_dispatch` on paparazzi-record.yml
++ * to avoid cross-OS font drift. See docs/patterns/paparazzi-cross-os-goldens.md.
++ */
++@Ignore("Paparazzi goldens recorded on CI Linux only — see paparazzi-cross-os-goldens.md")
++public class RatingAppealSheetPaparazziTest {
++    @get:Rule
++    public val paparazzi: Paparazzi =
++        Paparazzi(
++            deviceConfig = DeviceConfig.PIXEL_5,
++            theme = "android:Theme.Material3.DayNight.NoActionBar",
++        )
++
++    @Test
++    public fun `RatingAppealSheet default en`() {
++        paparazzi.snapshot {
++            HomeservicesTheme {
++                RatingAppealSheet(bookingId = "bk-1", onDismiss = {}, onSubmit = { _, _ -> }, isSubmitting = false)
++            }
++        }
++    }
++
++    @Test
++    public fun `RatingAppealSheet submitting en`() {
++        paparazzi.snapshot {
++            HomeservicesTheme {
++                RatingAppealSheet(bookingId = "bk-1", onDismiss = {}, onSubmit = { _, _ -> }, isSubmitting = true)
++            }
++        }
++    }
++}
+diff --git a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheetStringsTest.kt b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheetStringsTest.kt
+new file mode 100644
+index 00000000..ff2ab158
+--- /dev/null
++++ b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheetStringsTest.kt
+@@ -0,0 +1,41 @@
++package com.homeservices.technician.ui.myratings
++
++import androidx.test.core.app.ApplicationProvider
++import com.homeservices.technician.R
++import org.assertj.core.api.Assertions.assertThat
++import org.junit.Test
++import org.junit.runner.RunWith
++import org.robolectric.RobolectricTestRunner
++import org.robolectric.RuntimeEnvironment
++
++/**
++ * [RatingAppealSheet] mirrors [com.homeservices.technician.ui.activeJob.ShieldReportSheet]
++ * line-for-line: two hardcoded Devanagari literals and one hardcoded English literal (S-33).
++ * These tests assert the replacement resources exist and carry en/hi parity.
++ */
++@RunWith(RobolectricTestRunner::class)
++public class RatingAppealSheetStringsTest {
++    @Test
++    public fun `rating appeal strings resolve in english by default`(): Unit {
++        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
++
++        assertThat(context.getString(R.string.rating_appeal_title)).isEqualTo("Rating appeal")
++        assertThat(context.getString(R.string.rating_appeal_subtitle))
++            .isEqualTo("Why is this rating wrong? (at least 20 characters)")
++        assertThat(context.getString(R.string.rating_appeal_char_count, 0)).isEqualTo("0/500")
++        assertThat(context.getString(R.string.rating_appeal_submit)).isEqualTo("Submit appeal")
++        assertThat(context.getString(R.string.rating_appeal_submitting)).isEqualTo("Submitting appeal")
++    }
++
++    @Test
++    public fun `rating appeal strings resolve in hindi`(): Unit {
++        RuntimeEnvironment.setQualifiers("hi")
++        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
++
++        assertThat(context.getString(R.string.rating_appeal_title)).isEqualTo("रेटिंग अपील")
++        assertThat(context.getString(R.string.rating_appeal_subtitle))
++            .isEqualTo("क्यों रेटिंग गलत है? (कम से कम 20 अक्षर)")
++        assertThat(context.getString(R.string.rating_appeal_submit)).isEqualTo("अपील सबमिट करें")
++        assertThat(context.getString(R.string.rating_appeal_submitting)).isEqualTo("अपील सबमिट हो रही है")
++    }
++}
