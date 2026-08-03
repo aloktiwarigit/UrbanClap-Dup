@@ -1,10 +1,50 @@
 # UI/UX 2026 Session State
 
-Last updated: 2026-08-01 | Session: Phase 3 S-33 states | Phase: 3 of 6 sweeps — S-31/S-32 merged, S-34/S-35 merged (#302), S-33 this session, S-30 and admin-web money still open | Worktree: `C:\Alok\Business Projects\homeservices-s33-states` | Branch: **`feat/s33-states`**
+Last updated: 2026-08-02 | Session: Phase 3 S-33 states — goldens recorded, PR #303 open | Phase: 3 of 6 sweeps — S-31/S-32 merged, S-34/S-35 merged (#302), S-33 this session (not yet merged), S-30 and admin-web money still open | Worktree: `C:\Alok\Business Projects\homeservices-s33-states` | Branch: **`feat/s33-states`**
 
 This file is the handoff contract. Trust disk over older conversation history. This file was
-stale for three PRs (#300, #301, #302) before this update — always cross-check against `git log`,
-not just this file, before trusting "current state" claims here.
+stale for three PRs (#300, #301, #302) before the 2026-08-01 update — always cross-check against
+`git log`, not just this file, before trusting "current state" claims here.
+
+## Update 2026-08-02 - S-33 goldens recorded; found and fixed a real Paparazzi+ModalBottomSheet bug
+
+PR #303 (`feat/s33-states`) is still open, still not merged — reporting per protocol, owner decides.
+
+The prior handoff said "record on CI, then remove `@Ignore`." That sequencing is backwards: JUnit
+never executes a class-level `@Ignore`d test, so `recordPaparazziDebug` cannot produce a golden for
+one. First CI attempt (tests still ignored) confirmed this — the artifact had zero Shield/RatingAppeal
+images. Fixed by removing `@Ignore` *before* recording (commit `d7a53ebe`); local smoke gate stays
+green regardless, since Paparazzi is excluded there via `-PexcludePaparazzi`, not `@Ignore`.
+
+Second recording attempt (tests correctly un-ignored) produced 6 goldens, but all 6 were
+byte-identical blank white images. Root cause: `ShieldReportSheet`/`RatingAppealSheet` wrap
+`ModalBottomSheet`, whose entrance animation from `SheetValue.Hidden` never settles within
+Paparazzi's single-frame `snapshot{}` capture. Checked for a working precedent in this repo first —
+`customer-app`'s `SosBottomSheet` has the identical `ModalBottomSheet` pattern, but its Paparazzi test
+has sat permanently `@Ignore`d since "sprint2a" and was **never actually recorded**, so it wasn't
+proof the pattern works, just the same unresolved problem nobody caught. No working
+ModalBottomSheet+Paparazzi pattern exists anywhere in this repo.
+
+Fixed (commit `245dc741`) by extracting `ShieldReportSheetContent`/`RatingAppealSheetContent` out of
+the `ModalBottomSheet` wrappers — same split already used for `EarningsContent`/`EarningsScreen`.
+Paparazzi now snapshots the content directly, bypassing the sheet's animation. No production behavior
+change to `ShieldReportSheet`/`RatingAppealSheet` themselves.
+
+Third recording attempt (commit `9d801030`) produced 6 distinct, correct goldens — inspected
+individually: correct titles/subtitles/placeholders/char-counts, correct enabled/disabled button
+states, correct English and Hindi text. `verifyPaparazziDebug` green on CI.
+
+Codex follow-up round (commit `7fc001cb`, `docs/reviews/codex-s33-followup-20260802-2055.md`): 0
+CRITICAL / 0 MAJOR in the follow-up diff itself. One MAJOR surfaced but it's about **pre-existing PR
+scope**, not this round's changes — `PendingActionCardPaparazziTest` (the original countdown-fix
+target from 2026-08-01) is still `@Ignore`d and was never in the golden-recording scope this session
+specified. Flagged for the owner rather than silently expanding scope. Two MINOR on test-naming
+clarity (tests now cover `*Content`, not the sheet chrome/insets/dismiss wiring) — left as-is, same
+disposition as the original PR's accepted MINOR.
+
+**If `ShieldReportSheetContent`/`RatingAppealSheetContent` are touched again:** they are the pattern
+to copy for *any* future `ModalBottomSheet` Paparazzi test in this repo — including `SosBottomSheet`,
+which still has the unresolved bug.
 
 ## Update 2026-08-01 - S-33 states
 
@@ -48,9 +88,10 @@ Verification run:
   4 tests, en + hi resource values asserted directly — new, pass.
 - JUnit test for the extracted countdown math (`PendingActionCardTest`): 4 tests covering the
   future/exact-boundary/already-expired/truncation cases — new, pass.
-- Paparazzi goldens added for both sheets (default + hi locale), `@Ignore`d per
-  `docs/patterns/paparazzi-cross-os-goldens.md` — not yet recorded; needs `workflow_dispatch` on
-  `paparazzi-record.yml` before merge, then inspect image-by-image.
+- Paparazzi goldens for both sheets (default + hi locale) — **recorded 2026-08-02, see the update
+  above.** The `@Ignore` approach described here did not work as written; goldens required removing
+  `@Ignore` and extracting `*Content` composables first. 6 images committed, individually inspected,
+  `verifyPaparazziDebug` green on CI.
 - `bash tools/pre-codex-smoke.sh technician-app` — all 6 steps green. First run failed at step 6/6
   (`koverVerify`: 79.96% vs 80% floor) because the new `LaunchedEffect` ticking logic in
   `PendingActionCard.kt` isn't JVM-testable; fixed by excluding `PendingActionCardKt` from Kover
@@ -65,7 +106,10 @@ Not done in this story (by design — see the audit correction above):
 
 - [ ] Wire `ShieldReportSheet` into `ActiveJobScreen` with a real trigger affordance.
 - [ ] Wire `RatingAppealSheet` into `MyRatingsScreen` with a real trigger affordance.
-- [ ] Record the new Paparazzi goldens on CI and inspect them before merge.
+- [x] Record the new Paparazzi goldens on CI and inspect them before merge — **done 2026-08-02**, see
+      the update above. Was not as simple as "record then un-ignore" — see that section for why.
+- [ ] `PendingActionCardPaparazziTest` is still `@Ignore`d — flagged as a MAJOR by the 2026-08-02
+      Codex follow-up round. Owner decision needed: fold into this PR or defer.
 - [ ] S-30 typography (4 design-system leak sites), admin-web money (6 sites), login/setup locale
       switcher (blocked on the next-intl Vitest issue) — all still open per the implementation plan.
 
