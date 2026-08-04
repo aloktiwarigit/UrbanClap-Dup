@@ -40,6 +40,30 @@ export function paiseToRupeeNumber(paise: number): number {
   return Math.round(paise) / 100;
 }
 
+/**
+ * Converts an operator-typed rupee amount (e.g. the orders Min/Max ₹ filter
+ * inputs) into integer paise — the wire format every amount field in this
+ * app uses unless explicitly named otherwise (see `amountRupees` in
+ * `RefundCreditBodySchema` for the one deliberate, documented exception).
+ *
+ * This is the boundary conversion: UI inputs collect rupees because that is
+ * what operators think in, but the API/Cosmos layer only ever operates on
+ * paise, so the conversion must happen here before the value leaves the
+ * client — never on the server, which has no way to know the value arrived
+ * unconverted.
+ *
+ * Uses integer-safe rounding (`Math.round`) rather than raw multiplication
+ * to avoid float artifacts (e.g. `499.99999999999994` from `4999.9999... *
+ * 100` style drift). Returns `undefined` for blank or non-numeric input so
+ * callers can omit the filter entirely instead of sending `NaN`.
+ */
+export function rupeesToPaise(rupees: string | number): number | undefined {
+  if (typeof rupees === 'string' && rupees.trim() === '') return undefined;
+  const value = typeof rupees === 'number' ? rupees : Number(rupees);
+  if (!Number.isFinite(value)) return undefined;
+  return Math.round(value * 100);
+}
+
 export function formatDate(date: Date | string, locale: string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   return new Intl.DateTimeFormat(locale === 'hi' ? 'hi-IN' : 'en-IN', {

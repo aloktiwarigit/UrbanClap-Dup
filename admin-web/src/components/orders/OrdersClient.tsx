@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { Order, OrderListResponse, OrdersQueryParams } from '@/types/order';
 import { fetchOrders, fetchOrderById, fetchAllOrdersForExport } from '@/api/orders';
+import { rupeesToPaise } from '@/lib/format/intl';
 import { OrdersTable } from './OrdersTable';
 import { OrderFilters, type FiltersState } from './OrderFilters';
 import { OrderSlideOver } from './OrderSlideOver';
@@ -42,8 +43,20 @@ function filtersToQueryParams(f: FiltersState): OrdersQueryParams {
   if (f.customerPhone) p.customerPhone = f.customerPhone;
   if (f.dateFrom) p.dateFrom = f.dateFrom;
   if (f.dateTo) p.dateTo = f.dateTo;
-  if (f.minAmount) p.minAmount = f.minAmount;
-  if (f.maxAmount) p.maxAmount = f.maxAmount;
+  // The Min/Max ₹ filter inputs are operator-facing rupees (see
+  // messages/en.json "Min ₹" / "Max ₹"), but the API and Cosmos query
+  // compare against c.amount, which is stored in paise like every other
+  // money value in this app. Convert at this client boundary — the only
+  // place that knows the value just left a rupee-denominated UI input —
+  // rather than passing the raw string through unconverted.
+  if (f.minAmount) {
+    const paise = rupeesToPaise(f.minAmount);
+    if (paise !== undefined) p.minAmount = String(paise);
+  }
+  if (f.maxAmount) {
+    const paise = rupeesToPaise(f.maxAmount);
+    if (paise !== undefined) p.maxAmount = String(paise);
+  }
   return p;
 }
 

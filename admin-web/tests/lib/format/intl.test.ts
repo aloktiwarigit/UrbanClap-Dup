@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatINR, formatDate, formatDateTime, paiseToRupeeNumber } from '@/lib/format/intl';
+import { formatINR, formatDate, formatDateTime, paiseToRupeeNumber, rupeesToPaise } from '@/lib/format/intl';
 
 describe('formatINR', () => {
   it('formats with hi-IN lakh grouping', () => {
@@ -47,6 +47,39 @@ describe('paiseToRupeeNumber', () => {
   });
   it('handles zero', () => {
     expect(paiseToRupeeNumber(0)).toBe(0);
+  });
+});
+
+describe('rupeesToPaise', () => {
+  it('converts a whole-rupee string to paise', () => {
+    expect(rupeesToPaise('500')).toBe(50000);
+  });
+  it('converts a different whole-rupee string to a distinct paise value (regression guard for the orders Min/Max ₹ filter unit-mismatch bug)', () => {
+    // The bug: an operator typing "500" in the Min ₹ box filtered for
+    // orders >= 500 paise (₹5), not >= ₹500, because the raw rupee string
+    // was sent straight through to a paise-denominated API field. This
+    // pins the correct 100x conversion so a regression can't reintroduce
+    // the raw pass-through.
+    expect(rupeesToPaise('600')).toBe(60000);
+    expect(rupeesToPaise('600')).not.toBe(600);
+  });
+  it('converts a fractional-rupee string to paise without float drift', () => {
+    expect(rupeesToPaise('599.99')).toBe(59999);
+  });
+  it('accepts a numeric input directly', () => {
+    expect(rupeesToPaise(120)).toBe(12000);
+  });
+  it('rounds rather than truncates to guard against float multiplication artifacts', () => {
+    expect(rupeesToPaise(19.999999999999996)).toBe(2000);
+  });
+  it('returns undefined for a blank string so callers can omit the filter', () => {
+    expect(rupeesToPaise('')).toBeUndefined();
+  });
+  it('returns undefined for non-numeric input', () => {
+    expect(rupeesToPaise('abc')).toBeUndefined();
+  });
+  it('handles zero', () => {
+    expect(rupeesToPaise('0')).toBe(0);
   });
 });
 
