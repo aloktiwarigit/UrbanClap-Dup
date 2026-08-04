@@ -35,9 +35,11 @@ vi.mock('@/lib/i18n/navigation', () => ({
     React.createElement('a', { href }, children),
 }));
 
-const fetchOrders = vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 50, totalPages: 1 });
+const { fetchOrders } = vi.hoisted(() => ({
+  fetchOrders: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 50, totalPages: 1 }),
+}));
 vi.mock('@/api/orders', () => ({
-  fetchOrders: (...args: unknown[]) => fetchOrders(...args),
+  fetchOrders,
   fetchOrderById: vi.fn(),
   fetchAllOrdersForExport: vi.fn().mockResolvedValue([]),
   reassignOrder: vi.fn(),
