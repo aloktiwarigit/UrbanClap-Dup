@@ -1,0 +1,271 @@
+diff --git a/admin-web/src/components/dashboard/CounterStrip.stories.tsx b/admin-web/src/components/dashboard/CounterStrip.stories.tsx
+index 2c4043ec..22c427ae 100644
+--- a/admin-web/src/components/dashboard/CounterStrip.stories.tsx
++++ b/admin-web/src/components/dashboard/CounterStrip.stories.tsx
+@@ -1,12 +1,26 @@
+ import type { Meta, StoryObj } from '@storybook/react';
++import { NextIntlClientProvider } from 'next-intl';
+ import { CounterStrip } from './CounterStrip';
+ import type { components } from '@/api/generated/schema';
+ 
+ type DashboardSummary = components['schemas']['DashboardSummary'];
+ 
++// CounterStrip is a client component that calls useLocale() (next-intl) to
++// format money via formatINR(). It needs a NextIntlClientProvider ancestor or
++// useLocale() throws with no provider in context. Same pattern as
++// LocaleSwitcher.stories.tsx.
++const messages = {};
++
+ const meta: Meta<typeof CounterStrip> = {
+   title: 'Dashboard/CounterStrip',
+   component: CounterStrip,
++  decorators: [
++    (Story) => (
++      <NextIntlClientProvider locale="en" messages={messages}>
++        <Story />
++      </NextIntlClientProvider>
++    ),
++  ],
+   parameters: {
+     layout: 'padded',
+     backgrounds: {
+diff --git a/admin-web/src/components/orders/OrdersClient.tsx b/admin-web/src/components/orders/OrdersClient.tsx
+index 996bfd1e..0020d0ab 100644
+--- a/admin-web/src/components/orders/OrdersClient.tsx
++++ b/admin-web/src/components/orders/OrdersClient.tsx
+@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
+ import { useTranslations } from 'next-intl';
+ import type { Order, OrderListResponse, OrdersQueryParams } from '@/types/order';
+ import { fetchOrders, fetchOrderById, fetchAllOrdersForExport } from '@/api/orders';
++import { rupeesToPaise } from '@/lib/format/intl';
+ import { OrdersTable } from './OrdersTable';
+ import { OrderFilters, type FiltersState } from './OrderFilters';
+ import { OrderSlideOver } from './OrderSlideOver';
+@@ -42,8 +43,20 @@ function filtersToQueryParams(f: FiltersState): OrdersQueryParams {
+   if (f.customerPhone) p.customerPhone = f.customerPhone;
+   if (f.dateFrom) p.dateFrom = f.dateFrom;
+   if (f.dateTo) p.dateTo = f.dateTo;
+-  if (f.minAmount) p.minAmount = f.minAmount;
+-  if (f.maxAmount) p.maxAmount = f.maxAmount;
++  // The Min/Max ₹ filter inputs are operator-facing rupees (see
++  // messages/en.json "Min ₹" / "Max ₹"), but the API and Cosmos query
++  // compare against c.amount, which is stored in paise like every other
++  // money value in this app. Convert at this client boundary — the only
++  // place that knows the value just left a rupee-denominated UI input —
++  // rather than passing the raw string through unconverted.
++  if (f.minAmount) {
++    const paise = rupeesToPaise(f.minAmount);
++    if (paise !== undefined) p.minAmount = String(paise);
++  }
++  if (f.maxAmount) {
++    const paise = rupeesToPaise(f.maxAmount);
++    if (paise !== undefined) p.maxAmount = String(paise);
++  }
+   return p;
+ }
+ 
+diff --git a/admin-web/src/lib/format/intl.ts b/admin-web/src/lib/format/intl.ts
+index 916eb15d..0015e360 100644
+--- a/admin-web/src/lib/format/intl.ts
++++ b/admin-web/src/lib/format/intl.ts
+@@ -40,6 +40,30 @@ export function paiseToRupeeNumber(paise: number): number {
+   return Math.round(paise) / 100;
+ }
+ 
++/**
++ * Converts an operator-typed rupee amount (e.g. the orders Min/Max ₹ filter
++ * inputs) into integer paise — the wire format every amount field in this
++ * app uses unless explicitly named otherwise (see `amountRupees` in
++ * `RefundCreditBodySchema` for the one deliberate, documented exception).
++ *
++ * This is the boundary conversion: UI inputs collect rupees because that is
++ * what operators think in, but the API/Cosmos layer only ever operates on
++ * paise, so the conversion must happen here before the value leaves the
++ * client — never on the server, which has no way to know the value arrived
++ * unconverted.
++ *
++ * Uses integer-safe rounding (`Math.round`) rather than raw multiplication
++ * to avoid float artifacts (e.g. `499.99999999999994` from `4999.9999... *
++ * 100` style drift). Returns `undefined` for blank or non-numeric input so
++ * callers can omit the filter entirely instead of sending `NaN`.
++ */
++export function rupeesToPaise(rupees: string | number): number | undefined {
++  if (typeof rupees === 'string' && rupees.trim() === '') return undefined;
++  const value = typeof rupees === 'number' ? rupees : Number(rupees);
++  if (!Number.isFinite(value)) return undefined;
++  return Math.round(value * 100);
++}
++
+ export function formatDate(date: Date | string, locale: string): string {
+   const d = typeof date === 'string' ? new Date(date) : date;
+   return new Intl.DateTimeFormat(locale === 'hi' ? 'hi-IN' : 'en-IN', {
+diff --git a/admin-web/tests/components/orders/OrdersClient.money-filter.test.tsx b/admin-web/tests/components/orders/OrdersClient.money-filter.test.tsx
+new file mode 100644
+index 00000000..f3fe6586
+--- /dev/null
++++ b/admin-web/tests/components/orders/OrdersClient.money-filter.test.tsx
+@@ -0,0 +1,113 @@
++import { describe, it, expect, vi, beforeEach } from 'vitest';
++import { render, waitFor } from '@testing-library/react';
++import React from 'react';
++
++// This test guards a live unit-mismatch bug: the orders Min/Max amount
++// filter inputs are operator-facing rupees ("Min ₹" / "Max ₹" per
++// messages/en.json), but c.amount in Cosmos — and every amount field the
++// API accepts — is integer paise, exactly like every other money value in
++// this codebase (see api/src/schemas/order.ts `amount`, contrasted with the
++// deliberately-named `amountRupees` exception in
++// api/src/schemas/admin-customer.ts RefundCreditBodySchema). Before the
++// fix, the raw rupee string typed by the operator was sent straight through
++// as `minAmount`/`maxAmount`, so typing "500" filtered for orders
++// >= 500 paise (₹5), not >= ₹500 — silently over-inclusive by 100x.
++//
++// This test asserts the query params `fetchOrders` receives are already
++// converted to paise, at the exact FiltersState -> OrdersQueryParams
++// boundary (OrdersClient.filtersToQueryParams) where the bug lived.
++
++vi.mock('next-intl', () => ({
++  useTranslations: () => (key: string) => key,
++  useLocale: () => 'en',
++}));
++
++let currentSearchParams = new URLSearchParams();
++vi.mock('next/navigation', () => ({
++  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
++  useSearchParams: () => currentSearchParams,
++  usePathname: () => '/orders',
++}));
++vi.mock('@/lib/i18n/navigation', () => ({
++  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
++  usePathname: () => '/orders',
++  Link: ({ href, children }: { href: string; children: React.ReactNode }) =>
++    React.createElement('a', { href }, children),
++}));
++
++const { fetchOrders } = vi.hoisted(() => ({
++  fetchOrders: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 50, totalPages: 1 }),
++}));
++vi.mock('@/api/orders', () => ({
++  fetchOrders,
++  fetchOrderById: vi.fn(),
++  fetchAllOrdersForExport: vi.fn().mockResolvedValue([]),
++  reassignOrder: vi.fn(),
++  completeOrder: vi.fn(),
++  refundOrder: vi.fn(),
++  waiveFeeOrder: vi.fn(),
++  escalateOrder: vi.fn(),
++  addOrderNote: vi.fn(),
++  fetchTechnicianCandidatesForOrder: vi.fn().mockResolvedValue([]),
++}));
++
++vi.mock('@/lib/auth/context', () => ({
++  useAdminAuth: () => ({ auth: { role: 'super-admin' } }),
++}));
++vi.mock('@/admin/capabilities', () => ({
++  hasCapability: () => true,
++}));
++
++import { OrdersClient } from '../../../src/components/orders/OrdersClient';
++
++describe('OrdersClient money filter — rupee-to-paise conversion', () => {
++  beforeEach(() => {
++    fetchOrders.mockClear();
++  });
++
++  it('converts a Min ₹ "500" URL filter to minAmount=50000 paise, not 500', async () => {
++    currentSearchParams = new URLSearchParams({ minAmount: '500' });
++    render(React.createElement(OrdersClient));
++
++    await waitFor(() => expect(fetchOrders).toHaveBeenCalled());
++    const params = fetchOrders.mock.calls[0]![0] as Record<string, unknown>;
++    expect(params.minAmount).toBe('50000');
++  });
++
++  it('converts a Max ₹ "900" URL filter to maxAmount=90000 paise, not 900', async () => {
++    currentSearchParams = new URLSearchParams({ maxAmount: '900' });
++    render(React.createElement(OrdersClient));
++
++    await waitFor(() => expect(fetchOrders).toHaveBeenCalled());
++    const params = fetchOrders.mock.calls[0]![0] as Record<string, unknown>;
++    expect(params.maxAmount).toBe('90000');
++  });
++
++  it('the paise value it sends correctly discriminates orders around the boundary (this is the actual bug the fix closes)', async () => {
++    // An order priced at exactly ₹500 (50000 paise). An operator filtering
++    // Min ₹500 should INCLUDE it (50000 >= 50000); Min ₹600 should EXCLUDE
++    // it (50000 < 60000). Under the pre-fix bug, minAmount was sent as raw
++    // rupees (500 / 600), and since Cosmos compares against paise, both
++    // "500" and "600" would incorrectly evaluate as `50000 >= 500` and
++    // `50000 >= 600` — both true — silently including the order in the
++    // "600" case as well, which should have excluded it.
++    const orderAmountPaise = 50000;
++
++    currentSearchParams = new URLSearchParams({ minAmount: '500' });
++    render(React.createElement(OrdersClient));
++    await waitFor(() => expect(fetchOrders).toHaveBeenCalled());
++    let sentMinAmount = Number(
++      (fetchOrders.mock.calls[0]![0] as Record<string, unknown>).minAmount,
++    );
++    expect(orderAmountPaise >= sentMinAmount).toBe(true); // ₹500 filter includes a ₹500 order
++
++    fetchOrders.mockClear();
++    currentSearchParams = new URLSearchParams({ minAmount: '600' });
++    render(React.createElement(OrdersClient));
++    await waitFor(() => expect(fetchOrders).toHaveBeenCalled());
++    sentMinAmount = Number(
++      (fetchOrders.mock.calls[0]![0] as Record<string, unknown>).minAmount,
++    );
++    expect(orderAmountPaise >= sentMinAmount).toBe(false); // ₹600 filter excludes a ₹500 order
++  });
++});
+diff --git a/admin-web/tests/lib/format/intl.test.ts b/admin-web/tests/lib/format/intl.test.ts
+index 216d0f55..d006142b 100644
+--- a/admin-web/tests/lib/format/intl.test.ts
++++ b/admin-web/tests/lib/format/intl.test.ts
+@@ -1,5 +1,5 @@
+ import { describe, it, expect } from 'vitest';
+-import { formatINR, formatDate, formatDateTime, paiseToRupeeNumber } from '@/lib/format/intl';
++import { formatINR, formatDate, formatDateTime, paiseToRupeeNumber, rupeesToPaise } from '@/lib/format/intl';
+ 
+ describe('formatINR', () => {
+   it('formats with hi-IN lakh grouping', () => {
+@@ -50,6 +50,39 @@ describe('paiseToRupeeNumber', () => {
+   });
+ });
+ 
++describe('rupeesToPaise', () => {
++  it('converts a whole-rupee string to paise', () => {
++    expect(rupeesToPaise('500')).toBe(50000);
++  });
++  it('converts a different whole-rupee string to a distinct paise value (regression guard for the orders Min/Max ₹ filter unit-mismatch bug)', () => {
++    // The bug: an operator typing "500" in the Min ₹ box filtered for
++    // orders >= 500 paise (₹5), not >= ₹500, because the raw rupee string
++    // was sent straight through to a paise-denominated API field. This
++    // pins the correct 100x conversion so a regression can't reintroduce
++    // the raw pass-through.
++    expect(rupeesToPaise('600')).toBe(60000);
++    expect(rupeesToPaise('600')).not.toBe(600);
++  });
++  it('converts a fractional-rupee string to paise without float drift', () => {
++    expect(rupeesToPaise('599.99')).toBe(59999);
++  });
++  it('accepts a numeric input directly', () => {
++    expect(rupeesToPaise(120)).toBe(12000);
++  });
++  it('rounds rather than truncates to guard against float multiplication artifacts', () => {
++    expect(rupeesToPaise(19.999999999999996)).toBe(2000);
++  });
++  it('returns undefined for a blank string so callers can omit the filter', () => {
++    expect(rupeesToPaise('')).toBeUndefined();
++  });
++  it('returns undefined for non-numeric input', () => {
++    expect(rupeesToPaise('abc')).toBeUndefined();
++  });
++  it('handles zero', () => {
++    expect(rupeesToPaise('0')).toBe(0);
++  });
++});
++
+ describe('formatDate', () => {
+   it('formats hi-IN medium date with Hindi month name', () => {
+     const result = formatDate(new Date('2026-05-05T00:00:00Z'), 'hi');
