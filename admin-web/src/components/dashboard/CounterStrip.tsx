@@ -1,13 +1,13 @@
+'use client';
+
+import { useLocale } from 'next-intl';
+import { formatINR } from '@/lib/format/intl';
 import type { components } from '@/api/generated/schema';
 
 type DashboardSummary = components['schemas']['DashboardSummary'];
 
 interface CounterStripProps {
   summary: DashboardSummary;
-}
-
-function formatPaise(paise: number): string {
-  return `₹${(paise / 100).toLocaleString('en-IN')}`;
 }
 
 interface TileProps {
@@ -64,6 +64,7 @@ function Tile({ id, label, value, accent }: TileProps) {
 }
 
 export function CounterStrip({ summary }: CounterStripProps) {
+  const locale = useLocale();
   const {
     bookingsToday,
     gmvToday,
@@ -82,17 +83,17 @@ export function CounterStrip({ summary }: CounterStripProps) {
       }}
     >
       <Tile id="bookingsToday" label="Bookings · Today" value={bookingsToday} accent="teal" />
-      <Tile id="gmvToday" label="GMV · Today" value={formatPaise(gmvToday)} accent="teal" />
+      <Tile id="gmvToday" label="GMV · Today" value={formatINR(gmvToday, locale)} accent="teal" />
       <Tile
         id="commissionToday"
         label="Commission"
-        value={formatPaise(commissionToday)}
+        value={formatINR(commissionToday, locale)}
         accent="ember"
       />
       <Tile
         id="payoutsPending"
         label="Payouts · Pending"
-        value={formatPaise(payoutsPending)}
+        value={formatINR(payoutsPending, locale)}
         accent="ember"
       />
       <Tile id="complaintsOpen" label="Complaints · Open" value={complaintsOpen} accent="coral" />

@@ -1,21 +1,20 @@
 'use client';
 
 import Link from 'next/link';
+import { useLocale } from 'next-intl';
 import { hasCapability } from '@/admin/capabilities';
 import { FeatureGate } from '@/components/auth/FeatureGate';
 import { useAdminAuth } from '@/lib/auth/context';
+import { formatINR } from '@/lib/format/intl';
 
 interface PayoutQueueProps {
   payoutsPending: number;
   techCount: number;
 }
 
-function formatPaise(paise: number): string {
-  return `INR ${(paise / 100).toLocaleString('en-IN')}`;
-}
-
 export function PayoutQueue({ payoutsPending, techCount }: PayoutQueueProps) {
   const { auth } = useAdminAuth();
+  const locale = useLocale();
   const canApprove = hasCapability(auth?.role, 'finance.approvePayouts');
 
   return (
@@ -54,7 +53,7 @@ export function PayoutQueue({ payoutsPending, techCount }: PayoutQueueProps) {
               color: 'var(--ember)',
             }}
           >
-            {formatPaise(payoutsPending)}
+            {formatINR(payoutsPending, locale)}
           </span>
         </div>
 

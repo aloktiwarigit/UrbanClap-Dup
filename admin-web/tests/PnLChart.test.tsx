@@ -12,8 +12,12 @@ vi.mock('recharts', () => ({
   ),
   Bar: ({ dataKey }: { dataKey: string }) => <div data-testid={`bar-${dataKey}`} />,
   XAxis: () => <div />,
-  YAxis: () => <div />,
-  Tooltip: () => <div />,
+  YAxis: ({ tickFormatter }: { tickFormatter?: (value: unknown) => string }) => (
+    <div data-testid="y-axis-tick">{tickFormatter?.(59900)}</div>
+  ),
+  Tooltip: ({ formatter }: { formatter?: (value: unknown) => string }) => (
+    <div data-testid="tooltip">{formatter?.(150000)}</div>
+  ),
   Legend: () => <div />,
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   CartesianGrid: () => <div />,
@@ -40,5 +44,17 @@ describe('PnLChart', () => {
   it('renders without error when data is empty', () => {
     render(<PnLChart data={[]} locale="hi" />);
     expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
+  });
+
+  it('formats Y-axis ticks via the canonical formatter, whole-rupee (0 decimals), with the ₹ symbol', () => {
+    render(<PnLChart data={sampleData} locale="en" />);
+    // 59900 paise -> ₹599, no decimals (chart-tick override), still routed through formatINR.
+    expect(screen.getByTestId('y-axis-tick').textContent).toBe('₹599');
+  });
+
+  it('formats the tooltip via the canonical formatter with the same whole-rupee override', () => {
+    render(<PnLChart data={sampleData} locale="en" />);
+    // 150000 paise -> ₹1,500, no decimals.
+    expect(screen.getByTestId('tooltip').textContent).toBe('₹1,500');
   });
 });

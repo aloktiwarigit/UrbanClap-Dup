@@ -33,7 +33,6 @@ vi.mock('@/api/finance', () => ({
     totalNetPayable: 0,
   }),
   approveAllPayouts: vi.fn(),
-  formatPaise: (paise: number) => `₹${(paise / 100).toFixed(2)}`,
 }));
 
 // Mock auth

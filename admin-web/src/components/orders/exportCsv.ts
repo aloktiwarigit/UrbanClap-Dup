@@ -1,3 +1,4 @@
+import { paiseToRupeeNumber } from '@/lib/format/intl';
 import type { Order } from '@/types/order';
 
 function escape(val: string | number | null | undefined): string {
@@ -27,7 +28,7 @@ export function buildOrdersCsv(orders: Order[], t: (key: string) => string): str
       o.id, o.customerName, o.customerPhone,
       o.serviceName ?? '', o.technicianName ?? '',
       o.status, o.city,
-      o.scheduledAt, String(o.amount / 100), o.createdAt,
+      o.scheduledAt, String(paiseToRupeeNumber(o.amount)), o.createdAt,
     ].map(escape).join(','));
   }
   return rows.join('\n');

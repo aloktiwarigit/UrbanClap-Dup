@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { formatPaise } from '@/api/finance';
+import { formatINR } from '@/lib/format/intl';
 import type { PayoutQueueEntry } from '@/api/finance';
 
 interface Props {
@@ -9,6 +9,7 @@ interface Props {
   totalNetPayable: number;
   onApproveAll: () => void;
   canApproveAll?: boolean;
+  locale?: string;
 }
 
 export function PayoutQueueTable({
@@ -16,13 +17,14 @@ export function PayoutQueueTable({
   totalNetPayable,
   onApproveAll,
   canApproveAll = true,
+  locale = 'en',
 }: Props) {
   const t = useTranslations('finance');
   return (
     <div>
       <div className="flex items-center justify-between mb-[var(--space-3)]">
         <h2 className="text-[length:var(--text-lg)] font-semibold text-[var(--color-text)]">
-          {t('payoutQueue.title', { total: formatPaise(totalNetPayable) })}
+          {t('payoutQueue.title', { total: formatINR(totalNetPayable, locale) })}
         </h2>
         {canApproveAll ? (
           <button
@@ -57,9 +59,9 @@ export function PayoutQueueTable({
               <tr key={e.technicianId} className="border-b border-[var(--color-border)]">
                 <td className="py-2 pr-4 text-[var(--color-text)]">{e.technicianName}</td>
                 <td className="py-2 pr-4 text-right">{e.completedJobsThisWeek}</td>
-                <td className="py-2 pr-4 text-right">{formatPaise(e.grossEarnings)}</td>
-                <td className="py-2 pr-4 text-right text-[var(--color-warn)]">{formatPaise(e.commissionDeducted)}</td>
-                <td className="py-2 text-right font-medium text-[var(--color-success)]">{formatPaise(e.netPayable)}</td>
+                <td className="py-2 pr-4 text-right">{formatINR(e.grossEarnings, locale)}</td>
+                <td className="py-2 pr-4 text-right text-[var(--color-warn)]">{formatINR(e.commissionDeducted, locale)}</td>
+                <td className="py-2 text-right font-medium text-[var(--color-success)]">{formatINR(e.netPayable, locale)}</td>
               </tr>
             ))}
           </tbody>

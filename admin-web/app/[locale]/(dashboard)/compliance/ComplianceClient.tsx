@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
+import { formatINR } from '@/lib/format/intl';
 import {
   approveSscLevy,
   denyErasureRequest,
@@ -27,13 +28,6 @@ interface ComplianceClientProps {
   erasureError?: string | null;
   /** Server-side fetch error for the ssc-levy endpoint, surfaced inline. */
   sscError?: string | null;
-}
-
-function formatPaise(paise: number): string {
-  return `INR ${(paise / 100).toLocaleString('en-IN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
 }
 
 export function ComplianceClient({
@@ -294,8 +288,8 @@ export function ComplianceClient({
                         <p className="font-medium m-0">{levy.quarter}</p>
                         <p className="font-mono text-xs text-[var(--color-text-muted)] m-0">{levy.id}</p>
                       </td>
-                      <td className="py-3 pr-4 text-right">{formatPaise(levy.gmv)}</td>
-                      <td className="py-3 pr-4 text-right">{formatPaise(levy.levyAmount)}</td>
+                      <td className="py-3 pr-4 text-right">{formatINR(levy.gmv, locale)}</td>
+                      <td className="py-3 pr-4 text-right">{formatINR(levy.levyAmount, locale)}</td>
                       <td className="py-3 pr-4">{t(`sscLevy.statuses.${levy.status}`)}</td>
                       <td className="py-3 text-right">
                         {canApprove ? (

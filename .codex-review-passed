@@ -1,8 +1,6 @@
-S-33 states — Codex static review PASSED
-Round 1: 0 CRITICAL / 0 MAJOR / 1 MINOR (accepted, not fixed).
-MINOR: new Paparazzi tests are class-level @Ignore, same as every existing Paparazzi test
-in this repo (PendingActionCardPaparazziTest, PhotoUploadRetryBannerPaparazziTest, etc.) —
-goldens are recorded via workflow_dispatch on CI Linux, never locally on Windows, per
-docs/patterns/paparazzi-cross-os-goldens.md. Not a regression introduced by this change;
-accepted as consistent with established repo convention. No re-run needed.
-Reviewed: docs/reviews/s33-states.diff
+admin-money-fmt follow-up fixes — Codex static review PASSED
+Round 1: 0 CRITICAL / 0 MAJOR.
+Scope: (1) NextIntlClientProvider wrapper for CounterStrip.stories.tsx,
+(2) rupee-to-paise unit conversion for the orders Min/Max ₹ filter
+(OrdersClient.filtersToQueryParams + new rupeesToPaise() helper).
+Reviewed: docs/reviews/admin-money-followup-2.diff (a45f2b08..HEAD)

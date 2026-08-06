@@ -1,12 +1,26 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import { NextIntlClientProvider } from 'next-intl';
 import { CounterStrip } from './CounterStrip';
 import type { components } from '@/api/generated/schema';
 
 type DashboardSummary = components['schemas']['DashboardSummary'];
 
+// CounterStrip is a client component that calls useLocale() (next-intl) to
+// format money via formatINR(). It needs a NextIntlClientProvider ancestor or
+// useLocale() throws with no provider in context. Same pattern as
+// LocaleSwitcher.stories.tsx.
+const messages = {};
+
 const meta: Meta<typeof CounterStrip> = {
   title: 'Dashboard/CounterStrip',
   component: CounterStrip,
+  decorators: [
+    (Story) => (
+      <NextIntlClientProvider locale="en" messages={messages}>
+        <Story />
+      </NextIntlClientProvider>
+    ),
+  ],
   parameters: {
     layout: 'padded',
     backgrounds: {

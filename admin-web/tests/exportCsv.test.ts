@@ -44,4 +44,18 @@ describe('buildOrdersCsv', () => {
     const csv = buildOrdersCsv([order], tHeaders);
     expect(csv).toContain('"Rahul, Jr."');
   });
+
+  it('converts a non-round paise amount to the exact rupee-and-paise value without float drift', () => {
+    const fractionalOrder = { ...order, id: 'ord_2', amount: 1050 }; // 1050 paise = ₹10.50
+    const csv = buildOrdersCsv([fractionalOrder], tHeaders);
+    expect(csv).toContain('10.5');
+  });
+
+  it('defensively rounds a non-integer paise input (upstream float artifact) to a clean rupee value', () => {
+    const driftedOrder = { ...order, id: 'ord_3', amount: 59900.00000000001 };
+    const csv = buildOrdersCsv([driftedOrder], tHeaders);
+    expect(csv).toContain('599');
+    expect(csv).not.toContain('598.99');
+    expect(csv).not.toContain('599.00000000001');
+  });
 });

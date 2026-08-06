@@ -30,6 +30,14 @@ export async function addCustomerNote(id: string, text: string): Promise<void> {
   if (!res.ok) throw new Error(`addCustomerNote: ${res.status}`);
 }
 
+/**
+ * NOTE: `amountRupees` is denominated in whole rupees, NOT paise — the only
+ * money value in admin-web that breaks the paise convention used everywhere
+ * else (see `@/lib/format/intl` for the canonical paise-based formatter).
+ * This matches the `/v1/admin/customers/:id/refund-credit` API contract.
+ * Do not route this value through `formatINR`/`paiseToRupeeNumber` — doing
+ * so would silently divide it by 100 again.
+ */
 export async function refundCredit(id: string, amountRupees: number, reason: string): Promise<void> {
   const res = await fetch(`${BASE}/v1/admin/customers/${encodeURIComponent(id)}/refund-credit`, {
     method: 'POST',
