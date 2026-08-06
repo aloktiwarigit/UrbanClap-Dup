@@ -101,6 +101,12 @@ jobs:
         env:
           NEXT_PUBLIC_APP_URL: http://localhost:3000
 
+      - name: storybook build (E01-S07 — catches broken JSX runtime / alias wiring)
+        run: pnpm storybook:build
+        env:
+          CI: true
+          STORYBOOK_DISABLE_TELEMETRY: 1
+
       - name: semgrep SAST
         uses: returntocorp/semgrep-action@v1
         with:
