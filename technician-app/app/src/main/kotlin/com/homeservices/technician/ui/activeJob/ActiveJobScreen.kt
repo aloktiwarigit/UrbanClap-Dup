@@ -88,12 +88,12 @@ internal fun ActiveJobScreenContent(
     onCompleteConfirmRequest: () -> Unit,
     onCompleteConfirm: () -> Unit,
     onCompleteCancel: () -> Unit,
+    modifier: Modifier = Modifier,
     onShowShieldSheet: () -> Unit = {},
     onDismissShieldSheet: () -> Unit = {},
     onSubmitShieldReport: (description: String?) -> Unit = {},
     onConsumeShieldSuccess: () -> Unit = {},
     onConsumeShieldError: () -> Unit = {},
-    modifier: Modifier = Modifier,
     onBackToDashboard: () -> Unit = {},
 ): Unit {
     val snackbarHostState = remember { SnackbarHostState() }
