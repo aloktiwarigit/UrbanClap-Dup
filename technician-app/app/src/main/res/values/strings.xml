@@ -113,6 +113,11 @@
     <string name="shield_report_char_count">%d/500</string>
     <string name="shield_report_submit">Submit report</string>
     <string name="shield_report_submitting">Submitting report</string>
+    <string name="shield_report_trigger">Report customer</string>
+    <string name="shield_report_trigger_desc">Report this customer for abusive or unsafe behaviour</string>
+    <string name="shield_report_block_warning">This will block this customer from future bookings with you.</string>
+    <string name="shield_report_snackbar_success">Report submitted.</string>
+    <string name="shield_report_snackbar_error">Could not submit report. Try again.</string>
 
     <!-- Ratings screens -->
     <string name="my_ratings_title">My ratings</string>
