@@ -114,6 +114,11 @@
     <string name="rating_punctuality">समय-पालन: %s ★</string>
     <string name="rating_skill">कौशल: %s ★</string>
     <string name="rating_comment">टिप्पणी: %s</string>
+    <string name="rating_appeal_action">अपील करें</string>
+    <string name="rating_appeal_disputed_badge">विवादित</string>
+    <string name="rating_appeal_success">अपील सबमिट हो गई।</string>
+    <string name="rating_appeal_quota_exceeded">आपकी अपील सीमा समाप्त हो गई है — %s के बाद फिर कोशिश करें।</string>
+    <string name="rating_appeal_error_generic">अपील सबमिट नहीं हो सकी। दोबारा कोशिश करें।</string>
 
     <!-- Complaint screen -->
     <string name="complaint_report_title">कोई समस्या रिपोर्ट करें</string>

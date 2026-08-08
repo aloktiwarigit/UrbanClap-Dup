@@ -138,6 +138,11 @@
     <string name="rating_punctuality">Punctuality: %s ★</string>
     <string name="rating_skill">Skill: %s ★</string>
     <string name="rating_comment">Comment: %s</string>
+    <string name="rating_appeal_action">Appeal</string>
+    <string name="rating_appeal_disputed_badge">Disputed</string>
+    <string name="rating_appeal_success">Appeal submitted.</string>
+    <string name="rating_appeal_quota_exceeded">You\'ve reached your appeal limit — try again after %s.</string>
+    <string name="rating_appeal_error_generic">Could not submit appeal. Try again.</string>
 
     <!-- Complaint screen -->
     <string name="complaint_report_title">Report an issue</string>
