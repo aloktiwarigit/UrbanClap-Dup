@@ -59,8 +59,12 @@ explicit `contentDescription`.
    bookings with you."). Since submission is irreversible and one-shot, the existing "Submit report" tap
    needs to carry informed consent; this is a copy addition, not a new confirmation step.
 4. `shieldReportSuccess`/`shieldReportError` already exist as state but nothing currently consumes them
-   (dead state, same shape of gap as the sheet itself). Add a `SnackbarHost` to `ActiveJobScreenContent`;
-   consume via the existing `consumeShieldReportSuccess`/`consumeShieldReportError` calls.
+   (dead state, same shape of gap as the sheet itself). The new `Scaffold` from step 1 takes a
+   `snackbarHostState` (created via `remember { SnackbarHostState() }` in `ActiveJobScreenContent`,
+   passed to `Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }, ...)`); a `LaunchedEffect`
+   keyed on `uiState.shieldReportSuccess`/`uiState.shieldReportError` shows the message and calls
+   `consumeShieldReportSuccess`/`consumeShieldReportError` — one Scaffold, one snackbar host, no
+   separate composable.
 
 ---
 
@@ -79,7 +83,15 @@ explicit `contentDescription`.
    to that rating's `bookingId`; when non-null, render `RatingAppealSheet(bookingId = appealSheetFor, ...)`.
 3. `isSubmitting` for the sheet = `appealState is AppealState.Loading && appealState.bookingId == appealSheetFor`
    (`AppealState.Loading` already carries `bookingId` — no ViewModel change needed).
-4. **Outcomes:**
+4. **Snackbar hosting:** `MyRatingsScreen`'s existing top-level `Scaffold` (already has `topBar`, no
+   `snackbarHost` today) gains `snackbarHostState` (`remember { SnackbarHostState() }` in
+   `MyRatingsScreen`, passed to `Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }, ...)`).
+   `appealState` (already collected in `MyRatingsScreen`) and `snackbarHostState` are both threaded down
+   through `MyRatingsContent` → `RatingsSuccess` as plain parameters — the `LaunchedEffect(appealState)`
+   that shows the snackbar lives in `RatingsSuccess`, alongside `appealSheetFor`, since it needs to reset
+   that same state on `Success`/`QuotaExceeded`. One Scaffold, one snackbar host, same pattern as
+   Section 2.
+5. **Outcomes** (each drives the `LaunchedEffect(appealState)` in `RatingsSuccess`):
    - **Success:** dismiss sheet (`appealSheetFor = null`), Snackbar (`rating_appeal_success`), call
      `viewModel.refresh()` so the card's `Disputed` badge reflects server truth on next load — avoids a
      second, locally-duplicated source of truth for `appealDisputed`.
