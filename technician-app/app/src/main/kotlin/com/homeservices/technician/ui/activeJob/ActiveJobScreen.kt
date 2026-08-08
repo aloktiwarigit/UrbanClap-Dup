@@ -199,6 +199,7 @@ internal fun ActiveJobScreenContent(
                             onDismiss = onDismissShieldSheet,
                             onSubmit = onSubmitShieldReport,
                             isSubmitting = uiState.shieldReportInProgress,
+                            errorMessage = uiState.shieldReportError,
                         )
                     }
                 }

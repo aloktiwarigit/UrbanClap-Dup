@@ -33,6 +33,7 @@ internal fun ShieldReportSheet(
     onSubmit: (description: String?) -> Unit,
     isSubmitting: Boolean,
     modifier: Modifier = Modifier,
+    errorMessage: String? = null,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -41,7 +42,7 @@ internal fun ShieldReportSheet(
         sheetState = sheetState,
         modifier = modifier,
     ) {
-        ShieldReportSheetContent(onSubmit = onSubmit, isSubmitting = isSubmitting)
+        ShieldReportSheetContent(onSubmit = onSubmit, isSubmitting = isSubmitting, errorMessage = errorMessage)
     }
 }
 
@@ -55,6 +56,7 @@ internal fun ShieldReportSheetContent(
     onSubmit: (description: String?) -> Unit,
     isSubmitting: Boolean,
     modifier: Modifier = Modifier,
+    errorMessage: String? = null,
 ) {
     var description by rememberSaveable { mutableStateOf("") }
 
@@ -100,6 +102,14 @@ internal fun ShieldReportSheetContent(
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.fillMaxWidth(),
             )
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
             Spacer(Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),

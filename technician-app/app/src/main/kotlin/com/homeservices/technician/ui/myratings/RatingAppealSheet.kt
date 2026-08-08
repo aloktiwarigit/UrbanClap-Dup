@@ -32,6 +32,7 @@ internal fun RatingAppealSheet(
     onSubmit: (bookingId: String, reason: String) -> Unit,
     isSubmitting: Boolean,
     modifier: Modifier = Modifier,
+    errorMessage: String? = null,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -40,7 +41,12 @@ internal fun RatingAppealSheet(
         sheetState = sheetState,
         modifier = modifier,
     ) {
-        RatingAppealSheetContent(bookingId = bookingId, onSubmit = onSubmit, isSubmitting = isSubmitting)
+        RatingAppealSheetContent(
+            bookingId = bookingId,
+            onSubmit = onSubmit,
+            isSubmitting = isSubmitting,
+            errorMessage = errorMessage,
+        )
     }
 }
 
@@ -55,6 +61,7 @@ internal fun RatingAppealSheetContent(
     onSubmit: (bookingId: String, reason: String) -> Unit,
     isSubmitting: Boolean,
     modifier: Modifier = Modifier,
+    errorMessage: String? = null,
 ) {
     var reason by rememberSaveable { mutableStateOf("") }
     val canSubmit = reason.length >= 20 && !isSubmitting
@@ -95,6 +102,14 @@ internal fun RatingAppealSheetContent(
                 color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.fillMaxWidth(),
             )
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
             Spacer(Modifier.height(8.dp))
             HsPrimaryButton(
                 text =

@@ -37,4 +37,17 @@ public class ShieldReportSheetPaparazziTest {
             }
         }
     }
+
+    @Test
+    public fun `ShieldReportSheet error en`() {
+        paparazzi.snapshot {
+            HomeservicesTheme {
+                ShieldReportSheetContent(
+                    onSubmit = {},
+                    isSubmitting = false,
+                    errorMessage = "Could not submit report. Try again.",
+                )
+            }
+        }
+    }
 }

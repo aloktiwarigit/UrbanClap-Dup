@@ -223,6 +223,7 @@ private fun RatingsSuccess(
             onDismiss = { appealSheetFor = null },
             onSubmit = onSubmitAppeal,
             isSubmitting = appealState is AppealState.Loading && appealState.bookingId == bookingId,
+            errorMessage = if (appealState is AppealState.Error) errorMsg else null,
         )
     }
 }

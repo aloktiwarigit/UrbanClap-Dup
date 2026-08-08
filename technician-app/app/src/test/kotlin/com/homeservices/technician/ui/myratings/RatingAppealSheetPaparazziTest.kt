@@ -37,4 +37,18 @@ public class RatingAppealSheetPaparazziTest {
             }
         }
     }
+
+    @Test
+    public fun `RatingAppealSheet error en`() {
+        paparazzi.snapshot {
+            HomeservicesTheme {
+                RatingAppealSheetContent(
+                    bookingId = "bk-1",
+                    onSubmit = { _, _ -> },
+                    isSubmitting = false,
+                    errorMessage = "Could not submit appeal. Try again.",
+                )
+            }
+        }
+    }
 }

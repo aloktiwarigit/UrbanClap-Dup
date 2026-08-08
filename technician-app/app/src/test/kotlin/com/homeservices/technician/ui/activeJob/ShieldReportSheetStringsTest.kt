@@ -46,6 +46,6 @@ public class ShieldReportSheetStringsTest {
         assertThat(context.getString(R.string.shield_report_submitting)).isEqualTo("रिपोर्ट सबमिट हो रही है")
         assertThat(context.getString(R.string.shield_report_trigger)).isEqualTo("ग्राहक की रिपोर्ट करें")
         assertThat(context.getString(R.string.shield_report_block_warning))
-            .isEqualTo("इससे यह ग्राहक आपके भविष्य के बुकिंग से ब्लॉक हो जाएगा।")
+            .isEqualTo("इससे यह ग्राहक आपकी भविष्य की बुकिंग से ब्लॉक हो जाएगा।")
     }
 }

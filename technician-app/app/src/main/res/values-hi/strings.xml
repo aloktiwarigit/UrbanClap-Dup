@@ -90,8 +90,8 @@
     <string name="shield_report_submit">रिपोर्ट सबमिट करें</string>
     <string name="shield_report_submitting">रिपोर्ट सबमिट हो रही है</string>
     <string name="shield_report_trigger">ग्राहक की रिपोर्ट करें</string>
-    <string name="shield_report_trigger_desc">इस ग्राहक की गलत व्यवहार के लिए रिपोर्ट करें</string>
-    <string name="shield_report_block_warning">इससे यह ग्राहक आपके भविष्य के बुकिंग से ब्लॉक हो जाएगा।</string>
+    <string name="shield_report_trigger_desc">इस ग्राहक के गलत व्यवहार के लिए रिपोर्ट करें</string>
+    <string name="shield_report_block_warning">इससे यह ग्राहक आपकी भविष्य की बुकिंग से ब्लॉक हो जाएगा।</string>
     <string name="shield_report_snackbar_success">रिपोर्ट सबमिट हो गई।</string>
     <string name="shield_report_snackbar_error">रिपोर्ट सबमिट नहीं हो सकी। दोबारा कोशिश करें।</string>
 
