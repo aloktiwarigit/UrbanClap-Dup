@@ -31,7 +31,20 @@ public class MyRatingsScreenTest {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
                 MyRatingsContent(
-                    uiState = MyRatingsUiState.Success(sampleSummary().let { it.copy(items = it.items.map { r -> r.copy(appealDisputed = r.bookingId == "bk-1") }) }),
+                    uiState =
+                        MyRatingsUiState.Success(
+                            sampleSummary().let {
+                                it.copy(
+                                    items =
+                                        it.items.map { r ->
+                                            r.copy(
+                                                appealDisputed =
+                                                    r.bookingId == "bk-1",
+                                            )
+                                        },
+                                )
+                            },
+                        ),
                     onRetry = {},
                 )
             }
