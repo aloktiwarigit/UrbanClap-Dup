@@ -4,15 +4,29 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -20,6 +34,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -51,11 +67,17 @@ internal fun ActiveJobScreen(
         onCompleteConfirmRequest = viewModel::requestCompletionConfirm,
         onCompleteConfirm = viewModel::confirmCompletion,
         onCompleteCancel = viewModel::cancelCompletionConfirm,
+        onShowShieldSheet = viewModel::onShowShieldSheet,
+        onDismissShieldSheet = viewModel::onDismissShieldSheet,
+        onSubmitShieldReport = viewModel::fileShieldReport,
+        onConsumeShieldSuccess = viewModel::consumeShieldReportSuccess,
+        onConsumeShieldError = viewModel::consumeShieldReportError,
         onBackToDashboard = onBackToDashboard,
         modifier = modifier,
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ActiveJobScreenContent(
     uiState: ActiveJobUiState,
@@ -67,56 +89,119 @@ internal fun ActiveJobScreenContent(
     onCompleteConfirmRequest: () -> Unit,
     onCompleteConfirm: () -> Unit,
     onCompleteCancel: () -> Unit,
+    onShowShieldSheet: () -> Unit = {},
+    onDismissShieldSheet: () -> Unit = {},
+    onSubmitShieldReport: (description: String?) -> Unit = {},
+    onConsumeShieldSuccess: () -> Unit = {},
+    onConsumeShieldError: () -> Unit = {},
     modifier: Modifier = Modifier,
     onBackToDashboard: () -> Unit = {},
 ): Unit {
-    Surface(
-        modifier = modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
-    ) {
-        when (uiState) {
-            is ActiveJobUiState.Loading -> ActiveJobSkeleton()
-            is ActiveJobUiState.Completed ->
-                CenterMessage(
-                    title = stringResource(R.string.active_job_complete_title),
-                    body = stringResource(R.string.active_job_complete_body),
-                    actionLabel = stringResource(R.string.active_job_back_to_dashboard),
-                    onAction = onBackToDashboard,
+    val snackbarHostState = remember { SnackbarHostState() }
+    val shieldSuccessMsg = stringResource(R.string.shield_report_snackbar_success)
+    val shieldErrorMsg = stringResource(R.string.shield_report_snackbar_error)
+    val shieldTriggerDesc = stringResource(R.string.shield_report_trigger_desc)
+
+    if (uiState is ActiveJobUiState.Active) {
+        LaunchedEffect(uiState.shieldReportSuccess, uiState.shieldReportError) {
+            val message =
+                shieldReportSnackbarMessage(
+                    success = uiState.shieldReportSuccess,
+                    error = uiState.shieldReportError,
+                    successMessage = shieldSuccessMsg,
+                    genericErrorMessage = shieldErrorMsg,
                 )
-            is ActiveJobUiState.Error ->
-                CenterMessage(
-                    title = stringResource(R.string.active_job_error_title),
-                    body = uiState.message,
-                    actionLabel = stringResource(R.string.active_job_back_to_dashboard),
-                    onAction = onBackToDashboard,
+            if (message != null) {
+                snackbarHostState.showSnackbar(message)
+                if (uiState.shieldReportSuccess) onConsumeShieldSuccess() else onConsumeShieldError()
+            }
+        }
+    }
+
+    Scaffold(
+        modifier = modifier,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            if (uiState is ActiveJobUiState.Active) {
+                TopAppBar(
+                    title = { Text(uiState.job.serviceName) },
+                    actions = {
+                        TextButton(
+                            onClick = onShowShieldSheet,
+                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            modifier =
+                                Modifier
+                                    .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                                    .semantics { contentDescription = shieldTriggerDesc },
+                        ) {
+                            Icon(Icons.Filled.Warning, contentDescription = null)
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = stringResource(R.string.shield_report_trigger),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    },
                 )
-            is ActiveJobUiState.Active -> {
-                ActiveJobContent(
-                    state = uiState,
-                    onTransitionRequested = onTransitionRequested,
-                    onCompleteConfirmRequest = onCompleteConfirmRequest,
-                    onPhotoRetryRequested = onPhotoRetryRequested,
-                )
-                uiState.pendingPhotoStage?.let { stage ->
-                    var lastCapturedPath by remember { mutableStateOf<String?>(null) }
-                    PhotoCaptureScreen(
-                        stage = stage,
-                        onPhotoTaken = { path ->
-                            lastCapturedPath = path
-                            onPhotoConfirmed(path)
-                        },
-                        onDismiss = onPhotoCancelled,
-                        isUploading = uiState.photoUploadInProgress,
-                        uploadError = uiState.photoUploadError,
-                        onRetry = { lastCapturedPath?.let(onPhotoConfirmed) },
-                        onRetake = onPhotoRetake,
+            }
+        },
+    ) { padding ->
+        Surface(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            color = MaterialTheme.colorScheme.background,
+        ) {
+            when (uiState) {
+                is ActiveJobUiState.Loading -> ActiveJobSkeleton()
+                is ActiveJobUiState.Completed ->
+                    CenterMessage(
+                        title = stringResource(R.string.active_job_complete_title),
+                        body = stringResource(R.string.active_job_complete_body),
+                        actionLabel = stringResource(R.string.active_job_back_to_dashboard),
+                        onAction = onBackToDashboard,
                     )
-                }
-                if (uiState.awaitingCompletionConfirm) {
-                    CompletionConfirmationDialog(
-                        onConfirm = onCompleteConfirm,
-                        onDismiss = onCompleteCancel,
+                is ActiveJobUiState.Error ->
+                    CenterMessage(
+                        title = stringResource(R.string.active_job_error_title),
+                        body = uiState.message,
+                        actionLabel = stringResource(R.string.active_job_back_to_dashboard),
+                        onAction = onBackToDashboard,
                     )
+                is ActiveJobUiState.Active -> {
+                    ActiveJobContent(
+                        state = uiState,
+                        onTransitionRequested = onTransitionRequested,
+                        onCompleteConfirmRequest = onCompleteConfirmRequest,
+                        onPhotoRetryRequested = onPhotoRetryRequested,
+                    )
+                    uiState.pendingPhotoStage?.let { stage ->
+                        var lastCapturedPath by remember { mutableStateOf<String?>(null) }
+                        PhotoCaptureScreen(
+                            stage = stage,
+                            onPhotoTaken = { path ->
+                                lastCapturedPath = path
+                                onPhotoConfirmed(path)
+                            },
+                            onDismiss = onPhotoCancelled,
+                            isUploading = uiState.photoUploadInProgress,
+                            uploadError = uiState.photoUploadError,
+                            onRetry = { lastCapturedPath?.let(onPhotoConfirmed) },
+                            onRetake = onPhotoRetake,
+                        )
+                    }
+                    if (uiState.awaitingCompletionConfirm) {
+                        CompletionConfirmationDialog(
+                            onConfirm = onCompleteConfirm,
+                            onDismiss = onCompleteCancel,
+                        )
+                    }
+                    if (uiState.showShieldSheet) {
+                        ShieldReportSheet(
+                            onDismiss = onDismissShieldSheet,
+                            onSubmit = onSubmitShieldReport,
+                            isSubmitting = uiState.shieldReportInProgress,
+                        )
+                    }
                 }
             }
         }
