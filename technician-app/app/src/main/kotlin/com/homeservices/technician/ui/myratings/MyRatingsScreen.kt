@@ -22,12 +22,19 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -37,8 +44,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.homeservices.designsystem.components.HsActionButton
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSectionCard
+import com.homeservices.designsystem.components.HsTrustBadge
 import com.homeservices.technician.R
 import com.homeservices.technician.domain.rating.model.RatingWeekTrend
 import com.homeservices.technician.domain.rating.model.ReceivedRating
@@ -56,6 +65,8 @@ internal fun MyRatingsScreen(
     onBack: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val appealState by viewModel.appealState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -67,9 +78,18 @@ internal fun MyRatingsScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier,
     ) { padding ->
-        MyRatingsContent(uiState = uiState, onRetry = viewModel::refresh, modifier = Modifier.padding(padding))
+        MyRatingsContent(
+            uiState = uiState,
+            onRetry = viewModel::refresh,
+            appealState = appealState,
+            onSubmitAppeal = viewModel::fileRatingAppeal,
+            onConsumeAppeal = viewModel::consumeAppealState,
+            snackbarHostState = snackbarHostState,
+            modifier = Modifier.padding(padding),
+        )
     }
 }
 
@@ -78,6 +98,10 @@ internal fun MyRatingsContent(
     uiState: MyRatingsUiState,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    appealState: AppealState = AppealState.Idle,
+    onSubmitAppeal: (bookingId: String, reason: String) -> Unit = { _, _ -> },
+    onConsumeAppeal: () -> Unit = {},
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (val state = uiState) {
@@ -98,13 +122,52 @@ internal fun MyRatingsContent(
                     )
                     HsPrimaryButton(text = "Try again", onClick = onRetry)
                 }
-            is MyRatingsUiState.Success -> RatingsSuccess(summary = state.summary)
+            is MyRatingsUiState.Success ->
+                RatingsSuccess(
+                    summary = state.summary,
+                    appealState = appealState,
+                    onSubmitAppeal = onSubmitAppeal,
+                    onConsumeAppeal = onConsumeAppeal,
+                    onRefreshAfterAppeal = onRetry,
+                    snackbarHostState = snackbarHostState,
+                )
         }
     }
 }
 
 @Composable
-private fun RatingsSuccess(summary: TechRatingSummary) {
+private fun RatingsSuccess(
+    summary: TechRatingSummary,
+    appealState: AppealState,
+    onSubmitAppeal: (bookingId: String, reason: String) -> Unit,
+    onConsumeAppeal: () -> Unit,
+    onRefreshAfterAppeal: () -> Unit,
+    snackbarHostState: SnackbarHostState,
+) {
+    var appealSheetFor by rememberSaveable { mutableStateOf<String?>(null) }
+    val successMsg = stringResource(R.string.rating_appeal_success)
+    val quotaTemplate = stringResource(R.string.rating_appeal_quota_exceeded)
+    val errorMsg = stringResource(R.string.rating_appeal_error_generic)
+
+    LaunchedEffect(appealState) {
+        val message =
+            appealOutcomeMessage(
+                state = appealState,
+                successMessage = successMsg,
+                quotaExceededTemplate = quotaTemplate,
+                genericErrorMessage = errorMsg,
+                formatNextAvailable = ::formatDate,
+            )
+        if (message != null) {
+            if (appealState is AppealState.Success || appealState is AppealState.QuotaExceeded) {
+                appealSheetFor = null
+            }
+            snackbarHostState.showSnackbar(message)
+            onConsumeAppeal()
+            if (appealState is AppealState.Success) onRefreshAfterAppeal()
+        }
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -148,8 +211,19 @@ private fun RatingsSuccess(summary: TechRatingSummary) {
                 }
             }
         } else {
-            items(summary.items) { rating -> RatingItemCard(rating = rating) }
+            items(summary.items) { rating ->
+                RatingItemCard(rating = rating, onAppealClick = { bookingId -> appealSheetFor = bookingId })
+            }
         }
+    }
+
+    appealSheetFor?.let { bookingId ->
+        RatingAppealSheet(
+            bookingId = bookingId,
+            onDismiss = { appealSheetFor = null },
+            onSubmit = onSubmitAppeal,
+            isSubmitting = appealState is AppealState.Loading && appealState.bookingId == bookingId,
+        )
     }
 }
 
@@ -196,7 +270,10 @@ private fun RatingTrendChart(
 // Not cached — Locale.getDefault() must be read at format-time to respect runtime locale switches.
 
 @Composable
-private fun RatingItemCard(rating: ReceivedRating) {
+private fun RatingItemCard(
+    rating: ReceivedRating,
+    onAppealClick: (bookingId: String) -> Unit,
+) {
     HsSectionCard {
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             repeat(5) { i ->
@@ -221,6 +298,14 @@ private fun RatingItemCard(rating: ReceivedRating) {
             Text(rating.comment, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Text(formatDate(rating.submittedAt), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+        if (rating.appealDisputed) {
+            HsTrustBadge(text = stringResource(R.string.rating_appeal_disputed_badge))
+        } else {
+            HsActionButton(
+                text = stringResource(R.string.rating_appeal_action),
+                onClick = { onAppealClick(rating.bookingId) },
+            )
+        }
     }
 }
 
