@@ -1,7 +1,10 @@
 shield-rating-appeal-wiring — Codex static review PASSED
-Round 1: 0 CRITICAL / 0 MAJOR.
+Round 1: 0 CRITICAL / 0 MAJOR (docs/reviews/shield-rating-appeal-wiring.diff, origin/main...HEAD@2bb27310).
+Round 2 (final-review fix wave): 0 CRITICAL / 0 MAJOR (docs/reviews/shield-rating-appeal-wiring-fixwave.diff).
+  Fix wave added inline error text to ShieldReportSheet/RatingAppealSheet (the Snackbar-behind-open-
+  ModalBottomSheet finding from this workflow's own final whole-branch review) and corrected two Hindi
+  grammar errors in shield-report consent copy.
 Scope: wires ShieldReportSheet (ActiveJobScreen top-bar trigger) and
 RatingAppealSheet (MyRatingsScreen per-card Appeal/Disputed affordance)
 into technician-app — UI-layer wiring onto pre-existing, pre-tested state
 machines, no ViewModel/use-case/repository/backend changes.
-Reviewed: docs/reviews/shield-rating-appeal-wiring.diff (origin/main...HEAD, 16 commits)

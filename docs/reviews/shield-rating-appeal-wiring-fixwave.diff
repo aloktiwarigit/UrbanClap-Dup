@@ -1,0 +1,215 @@
+diff --git a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt
+index c10cfa84..35a22215 100644
+--- a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt
++++ b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt
+@@ -199,6 +199,7 @@ internal fun ActiveJobScreenContent(
+                             onDismiss = onDismissShieldSheet,
+                             onSubmit = onSubmitShieldReport,
+                             isSubmitting = uiState.shieldReportInProgress,
++                            errorMessage = uiState.shieldReportError,
+                         )
+                     }
+                 }
+diff --git a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheet.kt b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheet.kt
+index dcbab17a..42b83da7 100644
+--- a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheet.kt
++++ b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheet.kt
+@@ -33,6 +33,7 @@ internal fun ShieldReportSheet(
+     onSubmit: (description: String?) -> Unit,
+     isSubmitting: Boolean,
+     modifier: Modifier = Modifier,
++    errorMessage: String? = null,
+ ) {
+     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+ 
+@@ -41,7 +42,7 @@ internal fun ShieldReportSheet(
+         sheetState = sheetState,
+         modifier = modifier,
+     ) {
+-        ShieldReportSheetContent(onSubmit = onSubmit, isSubmitting = isSubmitting)
++        ShieldReportSheetContent(onSubmit = onSubmit, isSubmitting = isSubmitting, errorMessage = errorMessage)
+     }
+ }
+ 
+@@ -55,6 +56,7 @@ internal fun ShieldReportSheetContent(
+     onSubmit: (description: String?) -> Unit,
+     isSubmitting: Boolean,
+     modifier: Modifier = Modifier,
++    errorMessage: String? = null,
+ ) {
+     var description by rememberSaveable { mutableStateOf("") }
+ 
+@@ -100,6 +102,14 @@ internal fun ShieldReportSheetContent(
+                 color = MaterialTheme.colorScheme.error,
+                 modifier = Modifier.fillMaxWidth(),
+             )
++            if (errorMessage != null) {
++                Text(
++                    text = errorMessage,
++                    style = MaterialTheme.typography.labelMedium,
++                    color = MaterialTheme.colorScheme.error,
++                    modifier = Modifier.fillMaxWidth(),
++                )
++            }
+             Spacer(Modifier.height(8.dp))
+             Row(
+                 modifier = Modifier.fillMaxWidth(),
+diff --git a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt
+index 6e89bb7c..bcb58f1a 100644
+--- a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt
++++ b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt
+@@ -223,6 +223,7 @@ private fun RatingsSuccess(
+             onDismiss = { appealSheetFor = null },
+             onSubmit = onSubmitAppeal,
+             isSubmitting = appealState is AppealState.Loading && appealState.bookingId == bookingId,
++            errorMessage = if (appealState is AppealState.Error) errorMsg else null,
+         )
+     }
+ }
+diff --git a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheet.kt b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheet.kt
+index 0bbe2887..4237be86 100644
+--- a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheet.kt
++++ b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheet.kt
+@@ -32,6 +32,7 @@ internal fun RatingAppealSheet(
+     onSubmit: (bookingId: String, reason: String) -> Unit,
+     isSubmitting: Boolean,
+     modifier: Modifier = Modifier,
++    errorMessage: String? = null,
+ ) {
+     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+ 
+@@ -40,7 +41,12 @@ internal fun RatingAppealSheet(
+         sheetState = sheetState,
+         modifier = modifier,
+     ) {
+-        RatingAppealSheetContent(bookingId = bookingId, onSubmit = onSubmit, isSubmitting = isSubmitting)
++        RatingAppealSheetContent(
++            bookingId = bookingId,
++            onSubmit = onSubmit,
++            isSubmitting = isSubmitting,
++            errorMessage = errorMessage,
++        )
+     }
+ }
+ 
+@@ -55,6 +61,7 @@ internal fun RatingAppealSheetContent(
+     onSubmit: (bookingId: String, reason: String) -> Unit,
+     isSubmitting: Boolean,
+     modifier: Modifier = Modifier,
++    errorMessage: String? = null,
+ ) {
+     var reason by rememberSaveable { mutableStateOf("") }
+     val canSubmit = reason.length >= 20 && !isSubmitting
+@@ -95,6 +102,14 @@ internal fun RatingAppealSheetContent(
+                 color = MaterialTheme.colorScheme.outline,
+                 modifier = Modifier.fillMaxWidth(),
+             )
++            if (errorMessage != null) {
++                Text(
++                    text = errorMessage,
++                    style = MaterialTheme.typography.labelMedium,
++                    color = MaterialTheme.colorScheme.error,
++                    modifier = Modifier.fillMaxWidth(),
++                )
++            }
+             Spacer(Modifier.height(8.dp))
+             HsPrimaryButton(
+                 text =
+diff --git a/technician-app/app/src/main/res/values-hi/strings.xml b/technician-app/app/src/main/res/values-hi/strings.xml
+index 798b7ff5..4f8867b2 100644
+--- a/technician-app/app/src/main/res/values-hi/strings.xml
++++ b/technician-app/app/src/main/res/values-hi/strings.xml
+@@ -90,8 +90,8 @@
+     <string name="shield_report_submit">रिपोर्ट सबमिट करें</string>
+     <string name="shield_report_submitting">रिपोर्ट सबमिट हो रही है</string>
+     <string name="shield_report_trigger">ग्राहक की रिपोर्ट करें</string>
+-    <string name="shield_report_trigger_desc">इस ग्राहक की गलत व्यवहार के लिए रिपोर्ट करें</string>
+-    <string name="shield_report_block_warning">इससे यह ग्राहक आपके भविष्य के बुकिंग से ब्लॉक हो जाएगा।</string>
++    <string name="shield_report_trigger_desc">इस ग्राहक के गलत व्यवहार के लिए रिपोर्ट करें</string>
++    <string name="shield_report_block_warning">इससे यह ग्राहक आपकी भविष्य की बुकिंग से ब्लॉक हो जाएगा।</string>
+     <string name="shield_report_snackbar_success">रिपोर्ट सबमिट हो गई।</string>
+     <string name="shield_report_snackbar_error">रिपोर्ट सबमिट नहीं हो सकी। दोबारा कोशिश करें।</string>
+ 
+diff --git a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetPaparazziTest.kt b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetPaparazziTest.kt
+index db3dc8f5..954b6fb7 100644
+--- a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetPaparazziTest.kt
++++ b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetPaparazziTest.kt
+@@ -37,4 +37,17 @@ public class ShieldReportSheetPaparazziTest {
+             }
+         }
+     }
++
++    @Test
++    public fun `ShieldReportSheet error en`() {
++        paparazzi.snapshot {
++            HomeservicesTheme {
++                ShieldReportSheetContent(
++                    onSubmit = {},
++                    isSubmitting = false,
++                    errorMessage = "Could not submit report. Try again.",
++                )
++            }
++        }
++    }
+ }
+diff --git a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetStringsTest.kt b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetStringsTest.kt
+index f89970e6..485d46e8 100644
+--- a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetStringsTest.kt
++++ b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetStringsTest.kt
+@@ -46,6 +46,6 @@ public class ShieldReportSheetStringsTest {
+         assertThat(context.getString(R.string.shield_report_submitting)).isEqualTo("रिपोर्ट सबमिट हो रही है")
+         assertThat(context.getString(R.string.shield_report_trigger)).isEqualTo("ग्राहक की रिपोर्ट करें")
+         assertThat(context.getString(R.string.shield_report_block_warning))
+-            .isEqualTo("इससे यह ग्राहक आपके भविष्य के बुकिंग से ब्लॉक हो जाएगा।")
++            .isEqualTo("इससे यह ग्राहक आपकी भविष्य की बुकिंग से ब्लॉक हो जाएगा।")
+     }
+ }
+diff --git a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreenTest.kt b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreenTest.kt
+index fb4b0ecd..50c1eec5 100644
+--- a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreenTest.kt
++++ b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreenTest.kt
+@@ -31,7 +31,20 @@ public class MyRatingsScreenTest {
+         paparazzi.snapshot {
+             HomeservicesTheme(darkTheme = false) {
+                 MyRatingsContent(
+-                    uiState = MyRatingsUiState.Success(sampleSummary().let { it.copy(items = it.items.map { r -> r.copy(appealDisputed = r.bookingId == "bk-1") }) }),
++                    uiState =
++                        MyRatingsUiState.Success(
++                            sampleSummary().let {
++                                it.copy(
++                                    items =
++                                        it.items.map { r ->
++                                            r.copy(
++                                                appealDisputed =
++                                                    r.bookingId == "bk-1",
++                                            )
++                                        },
++                                )
++                            },
++                        ),
+                     onRetry = {},
+                 )
+             }
+diff --git a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheetPaparazziTest.kt b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheetPaparazziTest.kt
+index 73af5c9d..968e4a3c 100644
+--- a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheetPaparazziTest.kt
++++ b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/RatingAppealSheetPaparazziTest.kt
+@@ -37,4 +37,18 @@ public class RatingAppealSheetPaparazziTest {
+             }
+         }
+     }
++
++    @Test
++    public fun `RatingAppealSheet error en`() {
++        paparazzi.snapshot {
++            HomeservicesTheme {
++                RatingAppealSheetContent(
++                    bookingId = "bk-1",
++                    onSubmit = { _, _ -> },
++                    isSubmitting = false,
++                    errorMessage = "Could not submit appeal. Try again.",
++                )
++            }
++        }
++    }
+ }
