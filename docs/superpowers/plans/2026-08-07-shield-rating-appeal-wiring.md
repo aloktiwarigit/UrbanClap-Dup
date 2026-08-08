@@ -35,16 +35,17 @@ didn't account for two sets of **existing** goldens that this plan's changes aff
 new test: `ActiveJobScreenPaparazziTest`/`ActiveJobScreenHiPaparazziTest` (5 images — the new TopAppBar
 changes every `Active`-state render) and `MyRatingsScreenTest` (1 image — the new "Appeal" button appears
 on every rating card). None of these need source changes (new params all take defaults, see Task 4/9) —
-only their recorded PNGs go stale. Task 5 and Task 10 cover re-recording all of these explicitly.
+only their recorded PNGs go stale. Task 5 and Task 9 cover re-recording all of these explicitly.
 
 ---
 
 ## Parallel execution note
 
-Work Stream A (Tasks 1–5, `ActiveJobScreen`) and Work Stream B (Tasks 6–10, `MyRatingsScreen`) touch
-different files and different ViewModels — fully independent, dispatch in parallel. Within each stream,
-tasks are sequential (string → pure helper → wiring → goldens). Task 11 (smoke gate + Codex) depends on
-both streams.
+Work Stream A (Tasks 1–5, `ActiveJobScreen`) and Work Stream B (Tasks 6–9, `MyRatingsScreen`) touch
+different files and different ViewModels — fully independent in principle (this plan's controller still
+dispatches implementer subagents one at a time; "independent" here means neither stream's tasks block on
+the other's outputs, not that they run concurrently). Within each stream, tasks are sequential (string →
+pure helper → wiring → goldens). Task 10 (smoke gate + Codex) depends on both streams.
 
 ---
 
@@ -633,7 +634,7 @@ git commit -m "feat(technician-app): add rating-appeal action/badge/snackbar str
 
 **Interfaces:**
 - Consumes: `AppealState` (pre-existing, `MyRatingsUiState.kt`).
-- Produces: `appealOutcomeMessage(state: AppealState, successMessage: String, quotaExceededTemplate: String, genericErrorMessage: String, formatNextAvailable: (String) -> String): String?` — consumed by Task 9.
+- Produces: `appealOutcomeMessage(state: AppealState, successMessage: String, quotaExceededTemplate: String, genericErrorMessage: String, formatNextAvailable: (String) -> String): String?` — consumed by Task 8.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -738,7 +739,11 @@ git commit -m "feat(technician-app): add appealOutcomeMessage pure helper"
 
 ---
 
-### Task 8: Appeal/Disputed affordance on RatingItemCard
+### Task 8: RatingItemCard appeal affordance + wire appeal sheet/Snackbar into MyRatingsScreen
+
+*(Originally split into two tasks; merged during pre-flight review — the RatingItemCard signature change
+and its only call site cannot be verified independently of each other, so splitting them left the first
+half uncompilable with no test to run. See plan's ledger for the pre-flight note.)*
 
 **Files:**
 - Modify: `technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt`
@@ -746,19 +751,33 @@ git commit -m "feat(technician-app): add appealOutcomeMessage pure helper"
 **Interfaces:**
 - Consumes: `ReceivedRating.appealDisputed` (pre-existing field, currently unused), `HsActionButton`,
   `HsTrustBadge` (pre-existing design-system components), `R.string.rating_appeal_action`,
-  `R.string.rating_appeal_disputed_badge` (Task 6).
+  `R.string.rating_appeal_disputed_badge` (Task 6), `appealOutcomeMessage` (Task 7),
+  `MyRatingsViewModel.appealState`/`fileRatingAppeal`/`consumeAppealState`/`refresh` (all pre-existing),
+  `RatingAppealSheet` (pre-existing, unchanged signature), the existing private `formatDate` helper at the
+  bottom of this file.
 - Produces: `RatingItemCard(rating: ReceivedRating, onAppealClick: (bookingId: String) -> Unit)` — new
-  required parameter; single call site (inside this same file, updated in this task), no external
-  breakage.
+  required parameter, single call site, updated in this same task (below). `MyRatingsContent` gains 4 new
+  parameters, all defaulted so the existing `MyRatingsContent(uiState = ..., onRetry = {})` call in
+  `MyRatingsScreenTest.kt` keeps compiling unmodified: `appealState: AppealState = AppealState.Idle`,
+  `onSubmitAppeal: (bookingId: String, reason: String) -> Unit = { _, _ -> }`,
+  `onConsumeAppeal: () -> Unit = {}`, `snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }`.
 
-- [ ] **Step 1: Add the two new imports**
+- [ ] **Step 1: Add all new imports**
 
 `MyRatingsScreen.kt` currently imports `HsPrimaryButton` and `HsSectionCard` from the design system, but
-not these two:
+not `HsActionButton`/`HsTrustBadge`. `Scaffold` and `getValue` are already imported — do not re-add them.
+Add:
 
 ```kotlin
 import com.homeservices.designsystem.components.HsActionButton
 import com.homeservices.designsystem.components.HsTrustBadge
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberSaveable
+import androidx.compose.runtime.setValue
 ```
 
 - [ ] **Step 2: Update `RatingItemCard`'s signature and body**
@@ -805,38 +824,6 @@ private fun RatingItemCard(
 }
 ```
 
-- [ ] **Step 3: Update the (single, private) call site inside `RatingsSuccess`**
-
-This call site is fully rewritten in Task 9 (which also adds the sheet/state wiring `RatingsSuccess`
-needs) — this step just confirms Task 8 alone doesn't compile in isolation, which is expected; run the
-full build after Task 9 instead. No separate verification command for this step.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt
-git commit -m "feat(technician-app): add Appeal/Disputed affordance to RatingItemCard"
-```
-
----
-
-### Task 9: Wire appeal sheet + Snackbar into MyRatingsScreen
-
-**Files:**
-- Modify: `technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt`
-
-**Interfaces:**
-- Consumes: `appealOutcomeMessage` (Task 7), `MyRatingsViewModel.appealState`/`fileRatingAppeal`/
-  `consumeAppealState`/`refresh` (all pre-existing), `RatingAppealSheet` (pre-existing, unchanged
-  signature), the existing private `formatDate` helper at the bottom of this file.
-- Produces: `MyRatingsContent` gains 4 new parameters, all defaulted so the existing
-  `MyRatingsContent(uiState = ..., onRetry = {})` call in `MyRatingsScreenTest.kt` keeps compiling
-  unmodified: `appealState: AppealState = AppealState.Idle`,
-  `onSubmitAppeal: (bookingId: String, reason: String) -> Unit = { _, _ -> }`,
-  `onConsumeAppeal: () -> Unit = {}`, `snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }`.
-
-- [ ] **Step 1: Add imports**
-
 `Scaffold` is already imported in this file (used by `MyRatingsScreen`'s existing top-level `Scaffold`) —
 do not re-add it. `getValue` is already imported; nothing else used below is. Add:
 
@@ -850,7 +837,7 @@ import androidx.compose.runtime.rememberSaveable
 import androidx.compose.runtime.setValue
 ```
 
-- [ ] **Step 2: Update `MyRatingsScreen` to own the SnackbarHostState and pass ViewModel wiring down**
+- [ ] **Step 3: Update `MyRatingsScreen` to own the SnackbarHostState and pass ViewModel wiring down**
 
 ```kotlin
 @OptIn(ExperimentalMaterial3Api::class)
@@ -890,7 +877,7 @@ internal fun MyRatingsScreen(
 }
 ```
 
-- [ ] **Step 3: Update `MyRatingsContent` and `RatingsSuccess` signatures + bodies**
+- [ ] **Step 4: Update `MyRatingsContent` and `RatingsSuccess` signatures + bodies (this is the real call site for `RatingItemCard`, wired below)**
 
 ```kotlin
 @Composable
@@ -1028,25 +1015,25 @@ private fun RatingsSuccess(
 }
 ```
 
-- [ ] **Step 4: Compile and run the existing (unmodified) test suite**
+- [ ] **Step 5: Compile and run the existing (unmodified) test suite**
 
 ```bash
 cd technician-app && ./gradlew :app:compileDebugKotlin :app:testDebugUnitTest --tests "*.MyRatings*"
 ```
 
 Expected: BUILD SUCCESSFUL. `MyRatingsViewModelTest` passes unchanged.
-`MyRatingsScreenTest.myRatingsSuccess()` compiles and runs (golden mismatches expected — Task 10).
+`MyRatingsScreenTest.myRatingsSuccess()` compiles and runs (golden mismatches expected — Task 9).
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt
-git commit -m "feat(technician-app): wire RatingAppealSheet into MyRatingsScreen"
+git commit -m "feat(technician-app): wire RatingAppealSheet + Appeal/Disputed affordance into MyRatingsScreen"
 ```
 
 ---
 
-### Task 10: New Disputed-state golden + re-record existing Rating goldens (CI)
+### Task 9: New Disputed-state golden + re-record existing Rating goldens (CI)
 
 **Files:**
 - Modify: `technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreenTest.kt`
@@ -1088,7 +1075,7 @@ git commit -m "test(technician-app): add Disputed-badge golden, re-record MyRati
 
 ---
 
-## Task 11: Smoke gate + Codex review
+## Task 10: Smoke gate + Codex review
 
 **Files:** none — verification only.
 
@@ -1099,7 +1086,7 @@ bash tools/pre-codex-smoke.sh technician-app
 ```
 
 Non-zero exit = stop and fix before continuing. The gate's `koverVerify` step is the one to watch: per
-the Global Constraints correction above, if the new `LaunchedEffect`s in Task 4/Task 9 drop coverage below
+the Global Constraints correction above, if the new `LaunchedEffect`s in Task 4/Task 8 drop coverage below
 the 80% floor, apply the established fix (extract the remaining testable logic, add the Composable's `*Kt`
 wrapper — e.g. `ActiveJobScreenKt`/`MyRatingsScreenKt` — to the Kover exclusion precedent block in
 `build.gradle.kts`) rather than lowering the floor.
