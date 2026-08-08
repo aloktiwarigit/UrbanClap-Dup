@@ -12,7 +12,13 @@ public class ShieldReportSnackbarTest {
 
     @Test
     public fun `error returns the generic error message`(): Unit {
-        val result = shieldReportSnackbarMessage(success = false, error = "network timeout", successMessage = "OK", genericErrorMessage = "ERR")
+        val result =
+            shieldReportSnackbarMessage(
+                success = false,
+                error = "network timeout",
+                successMessage = "OK",
+                genericErrorMessage = "ERR",
+            )
         assertThat(result).isEqualTo("ERR")
     }
 
