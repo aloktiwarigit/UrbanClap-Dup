@@ -26,6 +26,18 @@ public class MyRatingsScreenTest {
         }
     }
 
+    @Test
+    public fun myRatingsSuccess_withDisputedAppeal(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                MyRatingsContent(
+                    uiState = MyRatingsUiState.Success(sampleSummary().let { it.copy(items = it.items.map { r -> r.copy(appealDisputed = r.bookingId == "bk-1") }) }),
+                    onRetry = {},
+                )
+            }
+        }
+    }
+
     private fun sampleSummary(): TechRatingSummary =
         TechRatingSummary(
             totalCount = 128,
