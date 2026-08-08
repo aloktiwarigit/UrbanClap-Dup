@@ -1,6 +1,7 @@
-admin-money-fmt follow-up fixes — Codex static review PASSED
+shield-rating-appeal-wiring — Codex static review PASSED
 Round 1: 0 CRITICAL / 0 MAJOR.
-Scope: (1) NextIntlClientProvider wrapper for CounterStrip.stories.tsx,
-(2) rupee-to-paise unit conversion for the orders Min/Max ₹ filter
-(OrdersClient.filtersToQueryParams + new rupeesToPaise() helper).
-Reviewed: docs/reviews/admin-money-followup-2.diff (a45f2b08..HEAD)
+Scope: wires ShieldReportSheet (ActiveJobScreen top-bar trigger) and
+RatingAppealSheet (MyRatingsScreen per-card Appeal/Disputed affordance)
+into technician-app — UI-layer wiring onto pre-existing, pre-tested state
+machines, no ViewModel/use-case/repository/backend changes.
+Reviewed: docs/reviews/shield-rating-appeal-wiring.diff (origin/main...HEAD, 16 commits)

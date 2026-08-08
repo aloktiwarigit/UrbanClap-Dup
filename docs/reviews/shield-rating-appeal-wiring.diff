@@ -1,0 +1,2044 @@
+diff --git a/docs/superpowers/plans/2026-08-07-shield-rating-appeal-wiring.md b/docs/superpowers/plans/2026-08-07-shield-rating-appeal-wiring.md
+new file mode 100644
+index 00000000..3dc58a0f
+--- /dev/null
++++ b/docs/superpowers/plans/2026-08-07-shield-rating-appeal-wiring.md
+@@ -0,0 +1,1133 @@
++# ShieldReportSheet + RatingAppealSheet Wiring — Implementation Plan
++
++> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
++
++**Goal:** Make `ShieldReportSheet` and `RatingAppealSheet` (technician-app) reachable. Both have complete,
++tested backing logic but no UI trigger. Wire a Shield-report action into `ActiveJobScreen`'s top bar and
++an Appeal action into each `MyRatingsScreen` rating card.
++
++**Architecture:** No ViewModel or backend changes — `ActiveJobViewModel.onShowShieldSheet`/`fileShieldReport`
++and `MyRatingsViewModel.fileRatingAppeal`/`appealState` are already correct and tested. This plan only adds
++Composable-level triggers, feedback (Snackbar), and two small pure helper functions that keep the
++Snackbar-message logic unit-testable (mirrors the `PendingActionCard`/`remainingSeconds` extraction
++pattern from S-33, to stay ahead of the Kover-floor risk that pattern was created to fix).
++
++**Tech Stack:** Kotlin + Compose Material3, Hilt (unchanged), JUnit 5 + AssertJ (pure-function tests),
++JUnit 4 + Robolectric (string-resolution tests), Paparazzi (screenshot tests, CI-recorded only).
++
++## Global Constraints
++
++- No ViewModel, use case, repository, or backend changes — see spec §6 "Explicitly out of scope."
++- Every new user-facing string needs both `values/strings.xml` and `values-hi/strings.xml` entries.
++- Paparazzi goldens are never recorded locally on Windows — new tests are added `@Ignore`d, recorded via
++  the `paparazzi-record.yml` CI workflow_dispatch, inspected image-by-image, then un-`@Ignore`d
++  (`docs/patterns/paparazzi-cross-os-goldens.md`).
++- Kotlin explicit API mode + `-Werror`: every new public/internal declaration needs an explicit visibility
++  modifier.
++- Full source: `docs/superpowers/specs/2026-08-07-shield-rating-appeal-placement-design.md`.
++
++**Correction vs. the approved spec (found while mapping exact file diffs for this plan):** the spec's
++§5 said the 4 existing Shield/RatingAppeal Paparazzi *content* tests "don't change shape." That's true
++for `RatingAppealSheetContent` (untouched) but **not** for `ShieldReportSheetContent` — the new
++block-warning line (§2.3 of the spec) changes its rendered output, so
++`ShieldReportSheetPaparazziTest`/`ShieldReportSheetHiPaparazziTest` need re-recording too. The spec also
++didn't account for two sets of **existing** goldens that this plan's changes affect independently of any
++new test: `ActiveJobScreenPaparazziTest`/`ActiveJobScreenHiPaparazziTest` (5 images — the new TopAppBar
++changes every `Active`-state render) and `MyRatingsScreenTest` (1 image — the new "Appeal" button appears
++on every rating card). None of these need source changes (new params all take defaults, see Task 4/9) —
++only their recorded PNGs go stale. Task 5 and Task 9 cover re-recording all of these explicitly.
++
++---
++
++## Parallel execution note
++
++Work Stream A (Tasks 1–5, `ActiveJobScreen`) and Work Stream B (Tasks 6–9, `MyRatingsScreen`) touch
++different files and different ViewModels — fully independent in principle (this plan's controller still
++dispatches implementer subagents one at a time; "independent" here means neither stream's tasks block on
++the other's outputs, not that they run concurrently). Within each stream, tasks are sequential (string →
++pure helper → wiring → goldens). Task 10 (smoke gate + Codex) depends on both streams.
++
++---
++
++## Work Stream A: Shield report wiring (ActiveJobScreen)
++
++### Task 1: Shield-report strings (EN + HI) — TDD
++
++**Files:**
++- Modify: `technician-app/app/src/main/res/values/strings.xml`
++- Modify: `technician-app/app/src/main/res/values-hi/strings.xml`
++- Modify: `technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetStringsTest.kt`
++
++**Interfaces:**
++- Produces: `R.string.shield_report_trigger`, `R.string.shield_report_trigger_desc`,
++  `R.string.shield_report_block_warning`, `R.string.shield_report_snackbar_success`,
++  `R.string.shield_report_snackbar_error` — consumed by Tasks 2 and 4.
++
++- [ ] **Step 1: Write the failing assertions**
++
++Add to `ShieldReportSheetStringsTest.kt`, inside the existing `` `shield report strings resolve in english by default` `` test (after the existing assertions):
++
++```kotlin
++        assertThat(context.getString(R.string.shield_report_trigger)).isEqualTo("Report customer")
++        assertThat(context.getString(R.string.shield_report_trigger_desc))
++            .isEqualTo("Report this customer for abusive or unsafe behaviour")
++        assertThat(context.getString(R.string.shield_report_block_warning))
++            .isEqualTo("This will block this customer from future bookings with you.")
++        assertThat(context.getString(R.string.shield_report_snackbar_success)).isEqualTo("Report submitted.")
++        assertThat(context.getString(R.string.shield_report_snackbar_error))
++            .isEqualTo("Could not submit report. Try again.")
++```
++
++And inside `` `shield report strings resolve in hindi` ``:
++
++```kotlin
++        assertThat(context.getString(R.string.shield_report_trigger)).isEqualTo("ग्राहक की रिपोर्ट करें")
++        assertThat(context.getString(R.string.shield_report_block_warning))
++            .isEqualTo("इससे यह ग्राहक आपके भविष्य के बुकिंग से ब्लॉक हो जाएगा।")
++```
++
++- [ ] **Step 2: Run test to verify it fails**
++
++```bash
++cd technician-app && ./gradlew :app:testDebugUnitTest --tests "*.ShieldReportSheetStringsTest"
++```
++
++Expected: FAIL — `Resource not found` for the new string names.
++
++- [ ] **Step 3: Add the strings**
++
++In `technician-app/app/src/main/res/values/strings.xml`, inside the existing `<!-- Shield report sheet (E06-S02-Codemod) -->` block (after `shield_report_submitting`):
++
++```xml
++    <string name="shield_report_trigger">Report customer</string>
++    <string name="shield_report_trigger_desc">Report this customer for abusive or unsafe behaviour</string>
++    <string name="shield_report_block_warning">This will block this customer from future bookings with you.</string>
++    <string name="shield_report_snackbar_success">Report submitted.</string>
++    <string name="shield_report_snackbar_error">Could not submit report. Try again.</string>
++```
++
++In `technician-app/app/src/main/res/values-hi/strings.xml`, find the matching `shield_report_*` block and add:
++
++```xml
++    <string name="shield_report_trigger">ग्राहक की रिपोर्ट करें</string>
++    <string name="shield_report_trigger_desc">इस ग्राहक की गलत व्यवहार के लिए रिपोर्ट करें</string>
++    <string name="shield_report_block_warning">इससे यह ग्राहक आपके भविष्य के बुकिंग से ब्लॉक हो जाएगा।</string>
++    <string name="shield_report_snackbar_success">रिपोर्ट सबमिट हो गई।</string>
++    <string name="shield_report_snackbar_error">रिपोर्ट सबमिट नहीं हो सकी। दोबारा कोशिश करें।</string>
++```
++
++- [ ] **Step 4: Run test to verify it passes**
++
++```bash
++cd technician-app && ./gradlew :app:testDebugUnitTest --tests "*.ShieldReportSheetStringsTest"
++```
++
++Expected: PASS
++
++- [ ] **Step 5: Commit**
++
++```bash
++git add technician-app/app/src/main/res/values/strings.xml technician-app/app/src/main/res/values-hi/strings.xml technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetStringsTest.kt
++git commit -m "feat(technician-app): add shield-report trigger/warning/snackbar strings"
++```
++
++---
++
++### Task 2: Block-warning line in ShieldReportSheetContent
++
++**Files:**
++- Modify: `technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheet.kt`
++
++**Interfaces:**
++- Consumes: `R.string.shield_report_block_warning` (Task 1).
++
++- [ ] **Step 1: Add the warning `Text` above the submit button**
++
++In `ShieldReportSheetContent`, insert immediately before the trailing `Spacer(Modifier.height(8.dp))` /
++`Row` that holds the submit button (after the char-count `Text`):
++
++```kotlin
++            Text(
++                text = stringResource(R.string.shield_report_block_warning),
++                style = MaterialTheme.typography.labelMedium,
++                color = MaterialTheme.colorScheme.error,
++                modifier = Modifier.fillMaxWidth(),
++            )
++```
++
++- [ ] **Step 2: Verify it compiles and existing Paparazzi tests still build**
++
++```bash
++cd technician-app && ./gradlew :app:compileDebugKotlin :app:testDebugUnitTest --tests "*.ShieldReportSheet*"
++```
++
++Expected: BUILD SUCCESSFUL. `ShieldReportSheetPaparazziTest`/`ShieldReportSheetHiPaparazziTest` still run
++(their recorded PNGs will now mismatch — that's expected and handled in Task 5, not here).
++
++- [ ] **Step 3: Commit**
++
++```bash
++git add technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheet.kt
++git commit -m "feat(technician-app): add block-consequence warning to ShieldReportSheet"
++```
++
++---
++
++### Task 3: `shieldReportSnackbarMessage` pure helper — TDD
++
++**Files:**
++- Create: `technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSnackbar.kt`
++- Create: `technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSnackbarTest.kt`
++
++**Interfaces:**
++- Produces: `shieldReportSnackbarMessage(success: Boolean, error: String?, successMessage: String, genericErrorMessage: String): String?` — consumed by Task 4.
++
++- [ ] **Step 1: Write the failing test**
++
++```kotlin
++package com.homeservices.technician.ui.activeJob
++
++import org.assertj.core.api.Assertions.assertThat
++import org.junit.jupiter.api.Test
++
++public class ShieldReportSnackbarTest {
++    @Test
++    public fun `success returns the success message`(): Unit {
++        val result = shieldReportSnackbarMessage(success = true, error = null, successMessage = "OK", genericErrorMessage = "ERR")
++        assertThat(result).isEqualTo("OK")
++    }
++
++    @Test
++    public fun `error returns the generic error message`(): Unit {
++        val result = shieldReportSnackbarMessage(success = false, error = "network timeout", successMessage = "OK", genericErrorMessage = "ERR")
++        assertThat(result).isEqualTo("ERR")
++    }
++
++    @Test
++    public fun `neither success nor error returns null`(): Unit {
++        val result = shieldReportSnackbarMessage(success = false, error = null, successMessage = "OK", genericErrorMessage = "ERR")
++        assertThat(result).isNull()
++    }
++
++    @Test
++    public fun `success takes priority when both are somehow set`(): Unit {
++        val result = shieldReportSnackbarMessage(success = true, error = "stale error", successMessage = "OK", genericErrorMessage = "ERR")
++        assertThat(result).isEqualTo("OK")
++    }
++}
++```
++
++- [ ] **Step 2: Run test to verify it fails**
++
++```bash
++cd technician-app && ./gradlew :app:testDebugUnitTest --tests "*.ShieldReportSnackbarTest"
++```
++
++Expected: FAIL — `Unresolved reference: shieldReportSnackbarMessage`.
++
++- [ ] **Step 3: Implement**
++
++```kotlin
++package com.homeservices.technician.ui.activeJob
++
++/**
++ * Pure mapping from [ActiveJobUiState.Active]'s shield-report result flags to the Snackbar text to
++ * show, kept out of the Composable so it stays unit-testable without Robolectric/Compose (S-33's
++ * PendingActionCard/remainingSeconds extraction is the precedent — see docs/patterns for why
++ * LaunchedEffect-only logic risks the Kover floor).
++ */
++public fun shieldReportSnackbarMessage(
++    success: Boolean,
++    error: String?,
++    successMessage: String,
++    genericErrorMessage: String,
++): String? =
++    when {
++        success -> successMessage
++        error != null -> genericErrorMessage
++        else -> null
++    }
++```
++
++- [ ] **Step 4: Run test to verify it passes**
++
++```bash
++cd technician-app && ./gradlew :app:testDebugUnitTest --tests "*.ShieldReportSnackbarTest"
++```
++
++Expected: 4 tests PASS
++
++- [ ] **Step 5: Commit**
++
++```bash
++git add technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSnackbar.kt technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSnackbarTest.kt
++git commit -m "feat(technician-app): add shieldReportSnackbarMessage pure helper"
++```
++
++---
++
++### Task 4: Wire TopAppBar + trigger + Snackbar + sheet into ActiveJobScreen
++
++**Files:**
++- Modify: `technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt`
++
++**Interfaces:**
++- Consumes: `shieldReportSnackbarMessage` (Task 3), `ActiveJobViewModel.onShowShieldSheet`/`onDismissShieldSheet`/`fileShieldReport`/`consumeShieldReportSuccess`/`consumeShieldReportError` (all pre-existing), `ShieldReportSheet` (pre-existing, unchanged signature).
++- Produces: `ActiveJobScreenContent` gains 5 new parameters, all with `= {}`/no-op defaults so the
++  existing Paparazzi tests keep compiling unmodified:
++  `onShowShieldSheet: () -> Unit = {}`, `onDismissShieldSheet: () -> Unit = {}`,
++  `onSubmitShieldReport: (description: String?) -> Unit = {}`, `onConsumeShieldSuccess: () -> Unit = {}`,
++  `onConsumeShieldError: () -> Unit = {}`.
++
++- [ ] **Step 1: Add imports**
++
++At the top of `ActiveJobScreen.kt`, add:
++
++```kotlin
++import androidx.compose.foundation.layout.defaultMinSize
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.filled.Warning
++import androidx.compose.material3.ButtonDefaults
++import androidx.compose.material3.ExperimentalMaterial3Api
++import androidx.compose.material3.Icon
++import androidx.compose.material3.Scaffold
++import androidx.compose.material3.Snackbar
++import androidx.compose.material3.SnackbarHost
++import androidx.compose.material3.SnackbarHostState
++import androidx.compose.material3.TextButton
++import androidx.compose.material3.TopAppBar
++import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.ui.semantics.contentDescription
++import androidx.compose.ui.semantics.semantics
++```
++
++- [ ] **Step 2: Update `ActiveJobScreen` (the hiltViewModel wrapper) to pass the 5 new callbacks**
++
++Replace the body of `ActiveJobScreen`:
++
++```kotlin
++@Composable
++internal fun ActiveJobScreen(
++    modifier: Modifier = Modifier,
++    viewModel: ActiveJobViewModel = hiltViewModel(),
++    onBackToDashboard: () -> Unit = {},
++): Unit {
++    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
++    ActiveJobScreenContent(
++        uiState = uiState,
++        onTransitionRequested = viewModel::onTransitionRequested,
++        onPhotoCancelled = viewModel::onPhotoCancelled,
++        onPhotoConfirmed = viewModel::onPhotoConfirmed,
++        onPhotoRetake = viewModel::onPhotoRetake,
++        onPhotoRetryRequested = viewModel::onPhotoRetryRequested,
++        onCompleteConfirmRequest = viewModel::requestCompletionConfirm,
++        onCompleteConfirm = viewModel::confirmCompletion,
++        onCompleteCancel = viewModel::cancelCompletionConfirm,
++        onShowShieldSheet = viewModel::onShowShieldSheet,
++        onDismissShieldSheet = viewModel::onDismissShieldSheet,
++        onSubmitShieldReport = viewModel::fileShieldReport,
++        onConsumeShieldSuccess = viewModel::consumeShieldReportSuccess,
++        onConsumeShieldError = viewModel::consumeShieldReportError,
++        onBackToDashboard = onBackToDashboard,
++        modifier = modifier,
++    )
++}
++```
++
++- [ ] **Step 3: Rewrite `ActiveJobScreenContent`**
++
++Replace the whole function signature and body:
++
++```kotlin
++@OptIn(ExperimentalMaterial3Api::class)
++@Composable
++internal fun ActiveJobScreenContent(
++    uiState: ActiveJobUiState,
++    onTransitionRequested: (stage: String) -> Unit,
++    onPhotoCancelled: () -> Unit,
++    onPhotoConfirmed: (filePath: String) -> Unit,
++    onPhotoRetake: () -> Unit,
++    onPhotoRetryRequested: () -> Unit,
++    onCompleteConfirmRequest: () -> Unit,
++    onCompleteConfirm: () -> Unit,
++    onCompleteCancel: () -> Unit,
++    onShowShieldSheet: () -> Unit = {},
++    onDismissShieldSheet: () -> Unit = {},
++    onSubmitShieldReport: (description: String?) -> Unit = {},
++    onConsumeShieldSuccess: () -> Unit = {},
++    onConsumeShieldError: () -> Unit = {},
++    modifier: Modifier = Modifier,
++    onBackToDashboard: () -> Unit = {},
++): Unit {
++    val snackbarHostState = remember { SnackbarHostState() }
++    val shieldSuccessMsg = stringResource(R.string.shield_report_snackbar_success)
++    val shieldErrorMsg = stringResource(R.string.shield_report_snackbar_error)
++    val shieldTriggerDesc = stringResource(R.string.shield_report_trigger_desc)
++
++    if (uiState is ActiveJobUiState.Active) {
++        LaunchedEffect(uiState.shieldReportSuccess, uiState.shieldReportError) {
++            val message =
++                shieldReportSnackbarMessage(
++                    success = uiState.shieldReportSuccess,
++                    error = uiState.shieldReportError,
++                    successMessage = shieldSuccessMsg,
++                    genericErrorMessage = shieldErrorMsg,
++                )
++            if (message != null) {
++                snackbarHostState.showSnackbar(message)
++                if (uiState.shieldReportSuccess) onConsumeShieldSuccess() else onConsumeShieldError()
++            }
++        }
++    }
++
++    Scaffold(
++        modifier = modifier,
++        snackbarHost = { SnackbarHost(snackbarHostState) },
++        topBar = {
++            if (uiState is ActiveJobUiState.Active) {
++                TopAppBar(
++                    title = { Text(uiState.job.serviceName) },
++                    actions = {
++                        TextButton(
++                            onClick = onShowShieldSheet,
++                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
++                            modifier =
++                                Modifier
++                                    .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
++                                    .semantics { contentDescription = shieldTriggerDesc },
++                        ) {
++                            Icon(Icons.Filled.Warning, contentDescription = null)
++                            Spacer(Modifier.width(4.dp))
++                            Text(
++                                text = stringResource(R.string.shield_report_trigger),
++                                style = MaterialTheme.typography.labelLarge,
++                                fontWeight = FontWeight.Bold,
++                            )
++                        }
++                    },
++                )
++            }
++        },
++    ) { padding ->
++        Surface(
++            modifier = Modifier.fillMaxSize().padding(padding),
++            color = MaterialTheme.colorScheme.background,
++        ) {
++            when (uiState) {
++                is ActiveJobUiState.Loading -> ActiveJobSkeleton()
++                is ActiveJobUiState.Completed ->
++                    CenterMessage(
++                        title = stringResource(R.string.active_job_complete_title),
++                        body = stringResource(R.string.active_job_complete_body),
++                        actionLabel = stringResource(R.string.active_job_back_to_dashboard),
++                        onAction = onBackToDashboard,
++                    )
++                is ActiveJobUiState.Error ->
++                    CenterMessage(
++                        title = stringResource(R.string.active_job_error_title),
++                        body = uiState.message,
++                        actionLabel = stringResource(R.string.active_job_back_to_dashboard),
++                        onAction = onBackToDashboard,
++                    )
++                is ActiveJobUiState.Active -> {
++                    ActiveJobContent(
++                        state = uiState,
++                        onTransitionRequested = onTransitionRequested,
++                        onCompleteConfirmRequest = onCompleteConfirmRequest,
++                        onPhotoRetryRequested = onPhotoRetryRequested,
++                    )
++                    uiState.pendingPhotoStage?.let { stage ->
++                        var lastCapturedPath by remember { mutableStateOf<String?>(null) }
++                        PhotoCaptureScreen(
++                            stage = stage,
++                            onPhotoTaken = { path ->
++                                lastCapturedPath = path
++                                onPhotoConfirmed(path)
++                            },
++                            onDismiss = onPhotoCancelled,
++                            isUploading = uiState.photoUploadInProgress,
++                            uploadError = uiState.photoUploadError,
++                            onRetry = { lastCapturedPath?.let(onPhotoConfirmed) },
++                            onRetake = onPhotoRetake,
++                        )
++                    }
++                    if (uiState.awaitingCompletionConfirm) {
++                        CompletionConfirmationDialog(
++                            onConfirm = onCompleteConfirm,
++                            onDismiss = onCompleteCancel,
++                        )
++                    }
++                    if (uiState.showShieldSheet) {
++                        ShieldReportSheet(
++                            onDismiss = onDismissShieldSheet,
++                            onSubmit = onSubmitShieldReport,
++                            isSubmitting = uiState.shieldReportInProgress,
++                        )
++                    }
++                }
++            }
++        }
++    }
++}
++```
++
++This is a straight lift of the existing `when` branches (unchanged bodies) into the new `Scaffold`'s
++content slot, plus the new top bar/Snackbar/sheet wiring — no other behavior changes.
++
++- [ ] **Step 4: Compile and run the existing (unmodified) test suite**
++
++```bash
++cd technician-app && ./gradlew :app:compileDebugKotlin :app:testDebugUnitTest --tests "*.ActiveJob*"
++```
++
++Expected: BUILD SUCCESSFUL, all `ActiveJobViewModelTest` cases still pass unchanged. The two Paparazzi
++test classes compile and run (goldens will mismatch — expected, see Task 5).
++
++- [ ] **Step 5: Commit**
++
++```bash
++git add technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt
++git commit -m "feat(technician-app): wire Shield-report trigger into ActiveJobScreen top bar"
++```
++
++---
++
++### Task 5: Re-record Shield-related Paparazzi goldens (CI)
++
++**Files:** none locally — CI-driven artifact refresh.
++
++- [ ] **Step 1: Push the branch, trigger `paparazzi-record.yml` via `workflow_dispatch`**
++
++```bash
++gh workflow run paparazzi-record.yml --ref <branch-name>
++```
++
++- [ ] **Step 2: Download the recorded artifacts, unzip inside the gradle root**
++
++Per `docs/patterns/paparazzi-cross-os-goldens.md`.
++
++- [ ] **Step 3: Inspect every changed image individually — do not trust a green diff**
++
++Confirm: `ShieldReportSheetPaparazziTest`/`ShieldReportSheetHiPaparazziTest` (2 images — new warning line
++visible, correctly wrapped, not clipped). `ActiveJobScreenPaparazziTest`
++(`activeJobScreen_enRoute`/`_reached`/`_inProgress`, 3 images) / `ActiveJobScreenHiPaparazziTest`
++(`activeJobScreen_enRoute_hi`/`_inProgress_hi`, 2 images) — new top bar renders with the service name as
++title and the error-tinted "Report customer" action, correctly positioned, Hindi label not clipped/wrapped
++badly.
++
++- [ ] **Step 4: Commit the updated PNGs**
++
++```bash
++git add technician-app/app/src/test/snapshots/images/
++git commit -m "chore(technician-app): re-record Shield-report goldens (top bar + warning line)"
++```
++
++---
++
++## Work Stream B: Rating appeal wiring (MyRatingsScreen)
++
++### Task 6: Rating-appeal strings (EN + HI) — TDD
++
++**Files:**
++- Modify: `technician-app/app/src/main/res/values/strings.xml`
++- Modify: `technician-app/app/src/main/res/values-hi/strings.xml`
++- Create: `technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/RatingAppealActionStringsTest.kt`
++
++**Interfaces:**
++- Produces: `R.string.rating_appeal_action`, `R.string.rating_appeal_disputed_badge`,
++  `R.string.rating_appeal_success`, `R.string.rating_appeal_quota_exceeded`,
++  `R.string.rating_appeal_error_generic` — consumed by Tasks 7, 8, 9.
++
++- [ ] **Step 1: Write the failing test**
++
++```kotlin
++package com.homeservices.technician.ui.myratings
++
++import androidx.test.core.app.ApplicationProvider
++import com.homeservices.technician.R
++import org.assertj.core.api.Assertions.assertThat
++import org.junit.Test
++import org.junit.runner.RunWith
++import org.robolectric.RobolectricTestRunner
++import org.robolectric.RuntimeEnvironment
++
++@RunWith(RobolectricTestRunner::class)
++public class RatingAppealActionStringsTest {
++    @Test
++    public fun `rating appeal action strings resolve in english by default`(): Unit {
++        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
++
++        assertThat(context.getString(R.string.rating_appeal_action)).isEqualTo("Appeal")
++        assertThat(context.getString(R.string.rating_appeal_disputed_badge)).isEqualTo("Disputed")
++        assertThat(context.getString(R.string.rating_appeal_success)).isEqualTo("Appeal submitted.")
++        assertThat(context.getString(R.string.rating_appeal_quota_exceeded, "12 Aug"))
++            .isEqualTo("You've reached your appeal limit — try again after 12 Aug.")
++        assertThat(context.getString(R.string.rating_appeal_error_generic))
++            .isEqualTo("Could not submit appeal. Try again.")
++    }
++
++    @Test
++    public fun `rating appeal action strings resolve in hindi`(): Unit {
++        RuntimeEnvironment.setQualifiers("hi")
++        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
++
++        assertThat(context.getString(R.string.rating_appeal_action)).isEqualTo("अपील करें")
++        assertThat(context.getString(R.string.rating_appeal_disputed_badge)).isEqualTo("विवादित")
++    }
++}
++```
++
++- [ ] **Step 2: Run test to verify it fails**
++
++```bash
++cd technician-app && ./gradlew :app:testDebugUnitTest --tests "*.RatingAppealActionStringsTest"
++```
++
++Expected: FAIL — `Resource not found`.
++
++- [ ] **Step 3: Add the strings**
++
++In `technician-app/app/src/main/res/values/strings.xml`, inside the existing `<!-- Ratings screens -->`
++block:
++
++```xml
++    <string name="rating_appeal_action">Appeal</string>
++    <string name="rating_appeal_disputed_badge">Disputed</string>
++    <string name="rating_appeal_success">Appeal submitted.</string>
++    <string name="rating_appeal_quota_exceeded">You\'ve reached your appeal limit — try again after %s.</string>
++    <string name="rating_appeal_error_generic">Could not submit appeal. Try again.</string>
++```
++
++In `technician-app/app/src/main/res/values-hi/strings.xml`, find the matching `rating_appeal_*` block and
++add:
++
++```xml
++    <string name="rating_appeal_action">अपील करें</string>
++    <string name="rating_appeal_disputed_badge">विवादित</string>
++    <string name="rating_appeal_success">अपील सबमिट हो गई।</string>
++    <string name="rating_appeal_quota_exceeded">आपकी अपील सीमा समाप्त हो गई है — %s के बाद फिर कोशिश करें।</string>
++    <string name="rating_appeal_error_generic">अपील सबमिट नहीं हो सकी। दोबारा कोशिश करें।</string>
++```
++
++- [ ] **Step 4: Run test to verify it passes**
++
++```bash
++cd technician-app && ./gradlew :app:testDebugUnitTest --tests "*.RatingAppealActionStringsTest"
++```
++
++Expected: PASS
++
++- [ ] **Step 5: Commit**
++
++```bash
++git add technician-app/app/src/main/res/values/strings.xml technician-app/app/src/main/res/values-hi/strings.xml technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/RatingAppealActionStringsTest.kt
++git commit -m "feat(technician-app): add rating-appeal action/badge/snackbar strings"
++```
++
++---
++
++### Task 7: `appealOutcomeMessage` pure helper — TDD
++
++**Files:**
++- Create: `technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/AppealOutcomeMessage.kt`
++- Create: `technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/AppealOutcomeMessageTest.kt`
++
++**Interfaces:**
++- Consumes: `AppealState` (pre-existing, `MyRatingsUiState.kt`).
++- Produces: `appealOutcomeMessage(state: AppealState, successMessage: String, quotaExceededTemplate: String, genericErrorMessage: String, formatNextAvailable: (String) -> String): String?` — consumed by Task 8.
++
++- [ ] **Step 1: Write the failing test**
++
++```kotlin
++package com.homeservices.technician.ui.myratings
++
++import org.assertj.core.api.Assertions.assertThat
++import org.junit.jupiter.api.Test
++
++public class AppealOutcomeMessageTest {
++    private fun message(state: AppealState): String? =
++        appealOutcomeMessage(
++            state = state,
++            successMessage = "Appeal submitted.",
++            quotaExceededTemplate = "Limit reached — try again after %s.",
++            genericErrorMessage = "Could not submit appeal.",
++            formatNextAvailable = { "formatted($it)" },
++        )
++
++    @Test
++    public fun `idle returns null`(): Unit {
++        assertThat(message(AppealState.Idle)).isNull()
++    }
++
++    @Test
++    public fun `loading returns null`(): Unit {
++        assertThat(message(AppealState.Loading(bookingId = "bk-1"))).isNull()
++    }
++
++    @Test
++    public fun `success returns the success message`(): Unit {
++        assertThat(message(AppealState.Success)).isEqualTo("Appeal submitted.")
++    }
++
++    @Test
++    public fun `quota exceeded formats the next-available date into the template`(): Unit {
++        assertThat(message(AppealState.QuotaExceeded(nextAvailableAt = "2026-08-14T00:00:00Z")))
++            .isEqualTo("Limit reached — try again after formatted(2026-08-14T00:00:00Z).")
++    }
++
++    @Test
++    public fun `quota exceeded falls back to a placeholder when nextAvailableAt is null`(): Unit {
++        assertThat(message(AppealState.QuotaExceeded(nextAvailableAt = null)))
++            .isEqualTo("Limit reached — try again after —.")
++    }
++
++    @Test
++    public fun `error returns the generic error message`(): Unit {
++        assertThat(message(AppealState.Error)).isEqualTo("Could not submit appeal.")
++    }
++}
++```
++
++- [ ] **Step 2: Run test to verify it fails**
++
++```bash
++cd technician-app && ./gradlew :app:testDebugUnitTest --tests "*.AppealOutcomeMessageTest"
++```
++
++Expected: FAIL — `Unresolved reference: appealOutcomeMessage`.
++
++- [ ] **Step 3: Implement**
++
++```kotlin
++package com.homeservices.technician.ui.myratings
++
++/**
++ * Pure mapping from [AppealState] to the Snackbar text to show (or null for no snackbar), kept out of
++ * the Composable so it stays unit-testable without Robolectric/Compose — same rationale as
++ * ActiveJobScreen's shieldReportSnackbarMessage.
++ */
++public fun appealOutcomeMessage(
++    state: AppealState,
++    successMessage: String,
++    quotaExceededTemplate: String,
++    genericErrorMessage: String,
++    formatNextAvailable: (String) -> String,
++): String? =
++    when (state) {
++        is AppealState.Success -> successMessage
++        is AppealState.QuotaExceeded ->
++            quotaExceededTemplate.format(state.nextAvailableAt?.let(formatNextAvailable) ?: "—")
++        is AppealState.Error -> genericErrorMessage
++        AppealState.Idle, is AppealState.Loading -> null
++    }
++```
++
++- [ ] **Step 4: Run test to verify it passes**
++
++```bash
++cd technician-app && ./gradlew :app:testDebugUnitTest --tests "*.AppealOutcomeMessageTest"
++```
++
++Expected: 6 tests PASS
++
++- [ ] **Step 5: Commit**
++
++```bash
++git add technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/AppealOutcomeMessage.kt technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/AppealOutcomeMessageTest.kt
++git commit -m "feat(technician-app): add appealOutcomeMessage pure helper"
++```
++
++---
++
++### Task 8: RatingItemCard appeal affordance + wire appeal sheet/Snackbar into MyRatingsScreen
++
++*(Originally split into two tasks; merged during pre-flight review — the RatingItemCard signature change
++and its only call site cannot be verified independently of each other, so splitting them left the first
++half uncompilable with no test to run. See plan's ledger for the pre-flight note.)*
++
++**Files:**
++- Modify: `technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt`
++
++**Interfaces:**
++- Consumes: `ReceivedRating.appealDisputed` (pre-existing field, currently unused), `HsActionButton`,
++  `HsTrustBadge` (pre-existing design-system components), `R.string.rating_appeal_action`,
++  `R.string.rating_appeal_disputed_badge` (Task 6), `appealOutcomeMessage` (Task 7),
++  `MyRatingsViewModel.appealState`/`fileRatingAppeal`/`consumeAppealState`/`refresh` (all pre-existing),
++  `RatingAppealSheet` (pre-existing, unchanged signature), the existing private `formatDate` helper at the
++  bottom of this file.
++- Produces: `RatingItemCard(rating: ReceivedRating, onAppealClick: (bookingId: String) -> Unit)` — new
++  required parameter, single call site, updated in this same task (below). `MyRatingsContent` gains 4 new
++  parameters, all defaulted so the existing `MyRatingsContent(uiState = ..., onRetry = {})` call in
++  `MyRatingsScreenTest.kt` keeps compiling unmodified: `appealState: AppealState = AppealState.Idle`,
++  `onSubmitAppeal: (bookingId: String, reason: String) -> Unit = { _, _ -> }`,
++  `onConsumeAppeal: () -> Unit = {}`, `snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }`.
++
++- [ ] **Step 1: Add all new imports**
++
++`MyRatingsScreen.kt` currently imports `HsPrimaryButton` and `HsSectionCard` from the design system, but
++not `HsActionButton`/`HsTrustBadge`. `Scaffold` and `getValue` are already imported — do not re-add them.
++Add:
++
++```kotlin
++import com.homeservices.designsystem.components.HsActionButton
++import com.homeservices.designsystem.components.HsTrustBadge
++import androidx.compose.material3.SnackbarHost
++import androidx.compose.material3.SnackbarHostState
++import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.rememberSaveable
++import androidx.compose.runtime.setValue
++```
++
++- [ ] **Step 2: Update `RatingItemCard`'s signature and body**
++
++```kotlin
++@Composable
++private fun RatingItemCard(
++    rating: ReceivedRating,
++    onAppealClick: (bookingId: String) -> Unit,
++) {
++    HsSectionCard {
++        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
++            repeat(5) { i ->
++                Text(
++                    if (i <
++                        rating.overall
++                    ) {
++                        "★"
++                    } else {
++                        "☆"
++                    },
++                    style = MaterialTheme.typography.titleMedium,
++                    color = MaterialTheme.colorScheme.primary,
++                )
++            }
++        }
++        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
++            SuggestionChip(onClick = {}, label = { Text(stringResource(R.string.rating_punctuality_chip, rating.punctuality)) })
++            SuggestionChip(onClick = {}, label = { Text(stringResource(R.string.rating_skill_chip, rating.skill)) })
++        }
++        if (!rating.comment.isNullOrBlank()) {
++            Text(rating.comment, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
++        }
++        Text(formatDate(rating.submittedAt), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
++        if (rating.appealDisputed) {
++            HsTrustBadge(text = stringResource(R.string.rating_appeal_disputed_badge))
++        } else {
++            HsActionButton(
++                text = stringResource(R.string.rating_appeal_action),
++                onClick = { onAppealClick(rating.bookingId) },
++            )
++        }
++    }
++}
++```
++
++`Scaffold` is already imported in this file (used by `MyRatingsScreen`'s existing top-level `Scaffold`) —
++do not re-add it. `getValue` is already imported; nothing else used below is. Add:
++
++```kotlin
++import androidx.compose.material3.SnackbarHost
++import androidx.compose.material3.SnackbarHostState
++import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.rememberSaveable
++import androidx.compose.runtime.setValue
++```
++
++- [ ] **Step 3: Update `MyRatingsScreen` to own the SnackbarHostState and pass ViewModel wiring down**
++
++```kotlin
++@OptIn(ExperimentalMaterial3Api::class)
++@Composable
++internal fun MyRatingsScreen(
++    modifier: Modifier = Modifier,
++    viewModel: MyRatingsViewModel = hiltViewModel(),
++    onBack: () -> Unit,
++) {
++    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
++    val appealState by viewModel.appealState.collectAsStateWithLifecycle()
++    val snackbarHostState = remember { SnackbarHostState() }
++    Scaffold(
++        topBar = {
++            TopAppBar(
++                title = { Text(stringResource(R.string.my_ratings_title)) },
++                navigationIcon = {
++                    IconButton(onClick = onBack) {
++                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
++                    }
++                },
++            )
++        },
++        snackbarHost = { SnackbarHost(snackbarHostState) },
++        modifier = modifier,
++    ) { padding ->
++        MyRatingsContent(
++            uiState = uiState,
++            onRetry = viewModel::refresh,
++            appealState = appealState,
++            onSubmitAppeal = viewModel::fileRatingAppeal,
++            onConsumeAppeal = viewModel::consumeAppealState,
++            snackbarHostState = snackbarHostState,
++            modifier = Modifier.padding(padding),
++        )
++    }
++}
++```
++
++- [ ] **Step 4: Update `MyRatingsContent` and `RatingsSuccess` signatures + bodies (this is the real call site for `RatingItemCard`, wired below)**
++
++```kotlin
++@Composable
++internal fun MyRatingsContent(
++    uiState: MyRatingsUiState,
++    onRetry: () -> Unit,
++    modifier: Modifier = Modifier,
++    appealState: AppealState = AppealState.Idle,
++    onSubmitAppeal: (bookingId: String, reason: String) -> Unit = { _, _ -> },
++    onConsumeAppeal: () -> Unit = {},
++    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
++) {
++    Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
++        when (val state = uiState) {
++            is MyRatingsUiState.Loading ->
++                CenterState {
++                    CircularProgressIndicator(
++                        modifier = Modifier.size(56.dp),
++                        color = MaterialTheme.colorScheme.primary,
++                        strokeWidth = 4.dp,
++                    )
++                }
++            is MyRatingsUiState.Error ->
++                CenterState {
++                    Text(
++                        stringResource(R.string.my_ratings_load_error),
++                        style = MaterialTheme.typography.titleMedium,
++                        fontWeight = FontWeight.SemiBold,
++                    )
++                    HsPrimaryButton(text = "Try again", onClick = onRetry)
++                }
++            is MyRatingsUiState.Success ->
++                RatingsSuccess(
++                    summary = state.summary,
++                    appealState = appealState,
++                    onSubmitAppeal = onSubmitAppeal,
++                    onConsumeAppeal = onConsumeAppeal,
++                    onRefreshAfterAppeal = onRetry,
++                    snackbarHostState = snackbarHostState,
++                )
++        }
++    }
++}
++
++@Composable
++private fun RatingsSuccess(
++    summary: TechRatingSummary,
++    appealState: AppealState,
++    onSubmitAppeal: (bookingId: String, reason: String) -> Unit,
++    onConsumeAppeal: () -> Unit,
++    onRefreshAfterAppeal: () -> Unit,
++    snackbarHostState: SnackbarHostState,
++) {
++    var appealSheetFor by rememberSaveable { mutableStateOf<String?>(null) }
++    val successMsg = stringResource(R.string.rating_appeal_success)
++    val quotaTemplate = stringResource(R.string.rating_appeal_quota_exceeded)
++    val errorMsg = stringResource(R.string.rating_appeal_error_generic)
++
++    LaunchedEffect(appealState) {
++        val message =
++            appealOutcomeMessage(
++                state = appealState,
++                successMessage = successMsg,
++                quotaExceededTemplate = quotaTemplate,
++                genericErrorMessage = errorMsg,
++                formatNextAvailable = ::formatDate,
++            )
++        if (message != null) {
++            if (appealState is AppealState.Success || appealState is AppealState.QuotaExceeded) {
++                appealSheetFor = null
++            }
++            snackbarHostState.showSnackbar(message)
++            onConsumeAppeal()
++            if (appealState is AppealState.Success) onRefreshAfterAppeal()
++        }
++    }
++
++    LazyColumn(
++        modifier = Modifier.fillMaxSize(),
++        contentPadding = PaddingValues(16.dp),
++        verticalArrangement = Arrangement.spacedBy(16.dp),
++    ) {
++        item {
++            HsSectionCard {
++                Row(
++                    modifier = Modifier.fillMaxWidth(),
++                    horizontalArrangement = Arrangement.SpaceBetween,
++                    verticalAlignment = Alignment.CenterVertically,
++                ) {
++                    Column {
++                        Text(
++                            "%.1f".format(summary.averageOverall),
++                            style = MaterialTheme.typography.displaySmall,
++                            fontWeight = FontWeight.Bold,
++                        )
++                        Text(
++                            "${summary.totalCount} customer ratings",
++                            style = MaterialTheme.typography.bodyMedium,
++                            color = MaterialTheme.colorScheme.onSurfaceVariant,
++                        )
++                    }
++                    Text("★", style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.primary)
++                }
++            }
++        }
++        item {
++            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
++                SubScoreColumn("Punctuality", summary.averageSubScores.punctuality)
++                SubScoreColumn("Skill", summary.averageSubScores.skill)
++                SubScoreColumn("Behaviour", summary.averageSubScores.behaviour)
++            }
++        }
++        if (summary.trend.isNotEmpty()) item { TrendCard(weeks = summary.trend) }
++        if (summary.items.isEmpty()) {
++            item {
++                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
++                    Text(stringResource(R.string.my_ratings_empty), style = MaterialTheme.typography.bodyLarge)
++                }
++            }
++        } else {
++            items(summary.items) { rating ->
++                RatingItemCard(rating = rating, onAppealClick = { bookingId -> appealSheetFor = bookingId })
++            }
++        }
++    }
++
++    appealSheetFor?.let { bookingId ->
++        RatingAppealSheet(
++            bookingId = bookingId,
++            onDismiss = { appealSheetFor = null },
++            onSubmit = onSubmitAppeal,
++            isSubmitting = appealState is AppealState.Loading && appealState.bookingId == bookingId,
++        )
++    }
++}
++```
++
++- [ ] **Step 5: Compile and run the existing (unmodified) test suite**
++
++```bash
++cd technician-app && ./gradlew :app:compileDebugKotlin :app:testDebugUnitTest --tests "*.MyRatings*"
++```
++
++Expected: BUILD SUCCESSFUL. `MyRatingsViewModelTest` passes unchanged.
++`MyRatingsScreenTest.myRatingsSuccess()` compiles and runs (golden mismatches expected — Task 9).
++
++- [ ] **Step 6: Commit**
++
++```bash
++git add technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt
++git commit -m "feat(technician-app): wire RatingAppealSheet + Appeal/Disputed affordance into MyRatingsScreen"
++```
++
++---
++
++### Task 9: New Disputed-state golden + re-record existing Rating goldens (CI)
++
++**Files:**
++- Modify: `technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreenTest.kt`
++
++- [ ] **Step 1: Add a new golden test covering the Disputed badge**
++
++```kotlin
++    @Test
++    public fun myRatingsSuccess_withDisputedAppeal(): Unit {
++        paparazzi.snapshot {
++            HomeservicesTheme(darkTheme = false) {
++                MyRatingsContent(
++                    uiState = MyRatingsUiState.Success(sampleSummary().let { it.copy(items = it.items.map { r -> r.copy(appealDisputed = r.bookingId == "bk-1") }) }),
++                    onRetry = {},
++                )
++            }
++        }
++    }
++```
++
++- [ ] **Step 2: Push the branch, trigger `paparazzi-record.yml` via `workflow_dispatch`**
++
++```bash
++gh workflow run paparazzi-record.yml --ref <branch-name>
++```
++
++- [ ] **Step 3: Download the recorded artifacts, unzip inside the gradle root, inspect every image**
++
++Confirm: `myRatingsSuccess` (re-recorded — both cards now show an "Appeal" button below the date).
++`myRatingsSuccess_withDisputedAppeal` (new — `bk-1`'s card shows the "Disputed" `HsTrustBadge` instead of
++the button, `bk-2`'s card still shows "Appeal").
++
++- [ ] **Step 4: Commit**
++
++```bash
++git add technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreenTest.kt technician-app/app/src/test/snapshots/images/
++git commit -m "test(technician-app): add Disputed-badge golden, re-record MyRatingsScreen goldens"
++```
++
++---
++
++## Task 10: Smoke gate + Codex review
++
++**Files:** none — verification only.
++
++- [ ] **Step 1: Run the pre-Codex smoke gate**
++
++```bash
++bash tools/pre-codex-smoke.sh technician-app
++```
++
++Non-zero exit = stop and fix before continuing. The gate's `koverVerify` step is the one to watch: per
++the Global Constraints correction above, if the new `LaunchedEffect`s in Task 4/Task 8 drop coverage below
++the 80% floor, apply the established fix (extract the remaining testable logic, add the Composable's `*Kt`
++wrapper — e.g. `ActiveJobScreenKt`/`MyRatingsScreenKt` — to the Kover exclusion precedent block in
++`build.gradle.kts`) rather than lowering the floor.
++
++- [ ] **Step 2: Generate the review diff**
++
++```bash
++git diff origin/main...HEAD > docs/reviews/shield-rating-appeal-wiring.diff
++```
++
++- [ ] **Step 3: Run Codex (static only — do not let it attempt a build)**
++
++```bash
++codex exec --sandbox read-only -c 'sandbox_permissions=["disk-full-read-access"]' "STATIC ONLY, do not build. Review docs/reviews/shield-rating-appeal-wiring.diff. Flag CRITICAL/MAJOR correctness, security, or accessibility issues only."
++```
++
++- [ ] **Step 4: Fix any CRITICAL/MAJOR findings, then re-run Codex once (do not iterate further rounds)**
++
++- [ ] **Step 5: Push, open a PR, do not merge — report and let the owner decide**
++
++```bash
++git push -u origin <branch-name>
++gh pr create --title "feat(technician-app): wire ShieldReportSheet + RatingAppealSheet triggers" --body "$(cat <<'EOF'
++## Summary
++- Wires the previously-unreachable ShieldReportSheet (ActiveJobScreen top-bar trigger) and
++  RatingAppealSheet (per-rating-card Appeal/Disputed affordance on MyRatingsScreen) into the technician
++  app. No ViewModel, use case, repository, or backend changes — both state machines were already correct
++  and tested; this only adds the missing UI trigger + feedback.
++- Design spec: docs/superpowers/specs/2026-08-07-shield-rating-appeal-placement-design.md
++- Re-records 8 existing Paparazzi goldens whose rendered output changed (new top bar / warning line /
++  Appeal button) and adds 1 new golden for the Disputed-badge state — see that commit for the exact list.
++
++## Test plan
++- [x] shieldReportSnackbarMessage / appealOutcomeMessage pure-helper unit tests (TDD, written first)
++- [x] EN/HI string-resolution Robolectric tests for all new strings
++- [x] Existing ActiveJobViewModelTest / MyRatingsViewModelTest suites pass unchanged
++- [x] Pre-Codex smoke gate green (bash tools/pre-codex-smoke.sh technician-app)
++- [x] Codex review round — no CRITICAL/MAJOR findings
++- [ ] CI green on this PR (pending)
++
++🤖 Generated with [Claude Code](https://claude.com/claude-code)
++EOF
++)"
++```
+diff --git a/docs/superpowers/specs/2026-08-07-shield-rating-appeal-placement-design.md b/docs/superpowers/specs/2026-08-07-shield-rating-appeal-placement-design.md
+new file mode 100644
+index 00000000..54aab271
+--- /dev/null
++++ b/docs/superpowers/specs/2026-08-07-shield-rating-appeal-placement-design.md
+@@ -0,0 +1,156 @@
++# ShieldReportSheet + RatingAppealSheet Design Placement — Design Spec
++
++**Date:** 2026-08-07
++**Story:** technician-app, unnumbered backlog item (flagged during Phase 3 handoff — "ShieldReportSheet/RatingAppealSheet wiring")
++**Tier:** Feature (wiring existing, tested backing logic onto existing screens — no new business logic)
++**Status:** Approved — ready for plan
++
++---
++
++## 1. Context and scope
++
++`ShieldReportSheet` and `RatingAppealSheet` (technician-app) have complete, tested backing logic —
++`ActiveJobViewModel`'s `showShieldSheet`/`shieldReportInProgress`/`shieldReportSuccess`/`shieldReportError`
++state → `FileShieldReportUseCase` → `ShieldRepository` → API, and `MyRatingsViewModel`'s `appealState`
++(`Idle`/`Loading`/`Success`/`QuotaExceeded`/`Error`) → `FileRatingAppealUseCase` → `ShieldRepository` → API —
++but neither sheet is reachable from any screen. No trigger exists in `ActiveJobScreen.kt` or
++`MyRatingsScreen.kt`. This spec covers only the missing UI trigger + feedback wiring; no ViewModel or
++backend logic changes.
++
++**Backend confirmation (`api/src/schemas/complaint.ts`, `api/src/functions/shield-report.ts`) — this
++was the open question the brainstorm resolved:** Shield reports (`ABUSIVE_CUSTOMER_SHIELD` complaint
++type) are NOT redundant with the existing "Report issue" button already reachable from `RatingScreen`
++(`STANDARD` complaint type, via `ComplaintScreen`). Filing a shield report **automatically blocks the
++customer from future bookings with this technician** (`addBlockedCustomer`) and fires an urgent FCM
++alert to ops (`sendAbusiveShieldAlert`); it is one-shot per booking (409 on retry), 48h SLA. This is a
++materially heavier action than the general complaint form and needs its own, more prominent entry
++point. `RATING_APPEAL` is likewise its own complaint type, distinct from `STANDARD`, and the
++`ReceivedRating` domain model already carries an unused `appealDisputed: Boolean` field — clear
++evidence the appeal-per-rating-card UI was anticipated but never wired.
++
++**Scope cut:** the backend's shield-report eligibility window spans `ASSIGNED` through
++`COMPLETED → PAID → CLOSED`, but this story only surfaces the trigger while `ActiveJobScreen` is in its
++`Active` state (covers the overwhelming majority of real reports — mid-job or just after). The wider
++post-completion window stays unexposed; no trigger is added to `RatingScreen` or elsewhere for shield
++reports.
++
++---
++
++## 2. Shield report wiring (ActiveJobScreen)
++
++**Files:** `technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt`,
++`ShieldReportSheet.kt` (content copy only)
++
++**Precedent followed:** customer-app's SOS button (`LiveTrackingScreen.kt`) — top-bar `TextButton`,
++error-tinted, icon + label (the existing code comment there: "icon + text, never icon alone — this is
++the one control where guessing wrong has physical consequences"), `defaultMinSize(48.dp, 48.dp)`,
++explicit `contentDescription`.
++
++**Changes:**
++1. `ActiveJobScreenContent` gains a `Scaffold` + `TopAppBar`, rendered only for the `Active` state
++   (`Loading`/`Completed`/`Error` keep their current centered layouts, unchanged). Title =
++   `state.job.serviceName` (existing field, no new data). No navigation icon — `ActiveJobScreen`
++   deliberately has no way to back out mid-job today; this story does not change that.
++2. Top bar `actions`: error-tinted `TextButton` — `Icon(Icons.Filled.Warning)` + `Text(stringResource(R.string.shield_report_trigger))`,
++   min 48dp touch target, explicit `contentDescription`. `onClick = viewModel::onShowShieldSheet`
++   (already exists, no ViewModel change).
++3. `ShieldReportSheetContent`: add one warning line above the submit button —
++   `stringResource(R.string.shield_report_block_warning)` ("This will block this customer from future
++   bookings with you."). Since submission is irreversible and one-shot, the existing "Submit report" tap
++   needs to carry informed consent; this is a copy addition, not a new confirmation step.
++4. `shieldReportSuccess`/`shieldReportError` already exist as state but nothing currently consumes them
++   (dead state, same shape of gap as the sheet itself). The new `Scaffold` from step 1 takes a
++   `snackbarHostState` (created via `remember { SnackbarHostState() }` in `ActiveJobScreenContent`,
++   passed to `Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }, ...)`); a `LaunchedEffect`
++   keyed on `uiState.shieldReportSuccess`/`uiState.shieldReportError` shows the message and calls
++   `consumeShieldReportSuccess`/`consumeShieldReportError` — one Scaffold, one snackbar host, no
++   separate composable.
++
++---
++
++## 3. Rating appeal wiring (MyRatingsScreen)
++
++**Files:** `technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt`
++
++**Changes:**
++1. `RatingItemCard` gains `onAppealClick: (bookingId: String) -> Unit`. Renders
++   `HsActionButton(stringResource(R.string.rating_appeal_action), onClick = { onAppealClick(rating.bookingId) })`
++   when `!rating.appealDisputed`; renders `HsTrustBadge(stringResource(R.string.rating_appeal_disputed_badge))`
++   instead when `true`. Both components already exist in the design system — no new component.
++2. **Sheet-visibility state:** `MyRatingsViewModel` has no "which booking's sheet is open" state today
++   (unlike Shield's `showShieldSheet`). Minimal-diff choice: local Compose state in `RatingsSuccess` —
++   `var appealSheetFor by rememberSaveable { mutableStateOf<String?>(null) }`. Tapping "Appeal" sets it
++   to that rating's `bookingId`; when non-null, render `RatingAppealSheet(bookingId = appealSheetFor, ...)`.
++3. `isSubmitting` for the sheet = `appealState is AppealState.Loading && appealState.bookingId == appealSheetFor`
++   (`AppealState.Loading` already carries `bookingId` — no ViewModel change needed).
++4. **Snackbar hosting:** `MyRatingsScreen`'s existing top-level `Scaffold` (already has `topBar`, no
++   `snackbarHost` today) gains `snackbarHostState` (`remember { SnackbarHostState() }` in
++   `MyRatingsScreen`, passed to `Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }, ...)`).
++   `appealState` (already collected in `MyRatingsScreen`) and `snackbarHostState` are both threaded down
++   through `MyRatingsContent` → `RatingsSuccess` as plain parameters — the `LaunchedEffect(appealState)`
++   that shows the snackbar lives in `RatingsSuccess`, alongside `appealSheetFor`, since it needs to reset
++   that same state on `Success`/`QuotaExceeded`. One Scaffold, one snackbar host, same pattern as
++   Section 2.
++5. **Outcomes** (each drives the `LaunchedEffect(appealState)` in `RatingsSuccess`):
++   - **Success:** dismiss sheet (`appealSheetFor = null`), Snackbar (`rating_appeal_success`), call
++     `viewModel.refresh()` so the card's `Disputed` badge reflects server truth on next load — avoids a
++     second, locally-duplicated source of truth for `appealDisputed`.
++   - **QuotaExceeded:** dismiss sheet, Snackbar with `nextAvailableAt` formatted
++     (`rating_appeal_quota_exceeded`, e.g. "You've reached your appeal limit — try again after {date}").
++     Further edits to `reason` can't help until the window resets.
++   - **Error:** keep sheet open (don't discard the technician's typed reason), Snackbar
++     (`rating_appeal_error_generic`), consumed via the existing `consumeAppealState()`.
++
++---
++
++## 4. i18n
++
++All new strings need both `values/strings.xml` and `values-hi/strings.xml` entries, per this project's
++bilingual-by-default convention:
++
++| Key | English |
++|---|---|
++| `shield_report_trigger` | "Report customer" |
++| `shield_report_trigger_desc` (content description) | "Report this customer for abusive or unsafe behaviour" |
++| `shield_report_block_warning` | "This will block this customer from future bookings with you." |
++| `shield_report_snackbar_success` | "Report submitted." |
++| `shield_report_snackbar_error` | "Could not submit report. Try again." |
++| `rating_appeal_action` | "Appeal" |
++| `rating_appeal_disputed_badge` | "Disputed" |
++| `rating_appeal_success` | "Appeal submitted." |
++| `rating_appeal_quota_exceeded` | "You've reached your appeal limit — try again after %s." |
++| `rating_appeal_error_generic` | "Could not submit appeal. Try again." |
++
++---
++
++## 5. Testing
++
++- Existing 4 Shield/RatingAppeal Paparazzi content tests (`ShieldReportSheetPaparazziTest`,
++  `ShieldReportSheetHiPaparazziTest`, `RatingAppealSheetPaparazziTest`, `RatingAppealSheetHiPaparazziTest`)
++  don't change shape (only trigger surfaces around them change) — no update needed.
++- New Paparazzi coverage: `ActiveJobScreen` `Active` state with the new top bar (default + submitting),
++  `RatingItemCard` in both `Appeal`-visible and `Disputed`-badge states. Added `@Ignore`d, recorded via
++  `paparazzi-record.yml` CI workflow_dispatch, inspected image-by-image, then un-`@Ignore`d — never
++  attempted locally on Windows (`docs/patterns/paparazzi-cross-os-goldens.md`).
++- Unit/Compose tests: `RatingItemCard`'s conditional render (`appealDisputed` true/false), the
++  `appealSheetFor` local-state wiring, and the Snackbar-consumption paths for all four outcomes
++  (`shieldReportSuccess`/`shieldReportError`/`AppealState.QuotaExceeded`/`AppealState.Error`).
++  `ActiveJobViewModel`/`MyRatingsViewModel` need no new tests beyond what already covers their existing,
++  unchanged state machines.
++- **Known risk to watch:** adding a `Snackbar`/`LaunchedEffect` to a previously-static Composable has
++  previously dropped `koverVerify` below its 80% floor on this project (Compose recomposition-guard
++  branches aren't JVM-testable — see S-33's `PendingActionCard` fix). If it recurs here, apply the
++  established fix: extract testable pure logic into its own file, add the Composable's `*Kt` wrapper to
++  the Kover exclusion precedent block in `build.gradle.kts`. Do not lower the 80% floor itself.
++
++---
++
++## 6. Explicitly out of scope
++
++- Shield-report trigger only surfaces during `ActiveJobScreen`'s `Active` state; the backend's wider
++  `COMPLETED → PAID → CLOSED` eligibility window stays unexposed (no trigger added to `RatingScreen`).
++- No changes to `ActiveJobViewModel`/`MyRatingsViewModel` business logic, `FileShieldReportUseCase`,
++  `FileRatingAppealUseCase`, `ShieldRepository`, or any backend endpoint — all already correct and
++  tested.
++- No changes to the existing "Report issue" path on `RatingScreen` (`STANDARD` complaint via
++  `ComplaintScreen`) — confirmed as a deliberately separate, lower-severity channel, not touched here.
+diff --git a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt
+index 2d2ce2e9..c10cfa84 100644
+--- a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt
++++ b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ActiveJobScreen.kt
+@@ -4,15 +4,28 @@ import androidx.compose.foundation.layout.Arrangement
+ import androidx.compose.foundation.layout.Column
+ import androidx.compose.foundation.layout.Row
+ import androidx.compose.foundation.layout.Spacer
++import androidx.compose.foundation.layout.defaultMinSize
+ import androidx.compose.foundation.layout.fillMaxSize
+ import androidx.compose.foundation.layout.fillMaxWidth
+ import androidx.compose.foundation.layout.height
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.layout.size
++import androidx.compose.foundation.layout.width
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.filled.Warning
++import androidx.compose.material3.ButtonDefaults
++import androidx.compose.material3.ExperimentalMaterial3Api
++import androidx.compose.material3.Icon
+ import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Scaffold
++import androidx.compose.material3.SnackbarHost
++import androidx.compose.material3.SnackbarHostState
+ import androidx.compose.material3.Surface
+ import androidx.compose.material3.Text
++import androidx.compose.material3.TextButton
++import androidx.compose.material3.TopAppBar
+ import androidx.compose.runtime.Composable
++import androidx.compose.runtime.LaunchedEffect
+ import androidx.compose.runtime.getValue
+ import androidx.compose.runtime.mutableStateOf
+ import androidx.compose.runtime.remember
+@@ -20,6 +33,8 @@ import androidx.compose.runtime.setValue
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.res.stringResource
++import androidx.compose.ui.semantics.contentDescription
++import androidx.compose.ui.semantics.semantics
+ import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.text.style.TextAlign
+ import androidx.compose.ui.unit.dp
+@@ -51,11 +66,17 @@ internal fun ActiveJobScreen(
+         onCompleteConfirmRequest = viewModel::requestCompletionConfirm,
+         onCompleteConfirm = viewModel::confirmCompletion,
+         onCompleteCancel = viewModel::cancelCompletionConfirm,
++        onShowShieldSheet = viewModel::onShowShieldSheet,
++        onDismissShieldSheet = viewModel::onDismissShieldSheet,
++        onSubmitShieldReport = viewModel::fileShieldReport,
++        onConsumeShieldSuccess = viewModel::consumeShieldReportSuccess,
++        onConsumeShieldError = viewModel::consumeShieldReportError,
+         onBackToDashboard = onBackToDashboard,
+         modifier = modifier,
+     )
+ }
+ 
++@OptIn(ExperimentalMaterial3Api::class)
+ @Composable
+ internal fun ActiveJobScreenContent(
+     uiState: ActiveJobUiState,
+@@ -68,55 +89,118 @@ internal fun ActiveJobScreenContent(
+     onCompleteConfirm: () -> Unit,
+     onCompleteCancel: () -> Unit,
+     modifier: Modifier = Modifier,
++    onShowShieldSheet: () -> Unit = {},
++    onDismissShieldSheet: () -> Unit = {},
++    onSubmitShieldReport: (description: String?) -> Unit = {},
++    onConsumeShieldSuccess: () -> Unit = {},
++    onConsumeShieldError: () -> Unit = {},
+     onBackToDashboard: () -> Unit = {},
+ ): Unit {
+-    Surface(
+-        modifier = modifier.fillMaxSize(),
+-        color = MaterialTheme.colorScheme.background,
+-    ) {
+-        when (uiState) {
+-            is ActiveJobUiState.Loading -> ActiveJobSkeleton()
+-            is ActiveJobUiState.Completed ->
+-                CenterMessage(
+-                    title = stringResource(R.string.active_job_complete_title),
+-                    body = stringResource(R.string.active_job_complete_body),
+-                    actionLabel = stringResource(R.string.active_job_back_to_dashboard),
+-                    onAction = onBackToDashboard,
+-                )
+-            is ActiveJobUiState.Error ->
+-                CenterMessage(
+-                    title = stringResource(R.string.active_job_error_title),
+-                    body = uiState.message,
+-                    actionLabel = stringResource(R.string.active_job_back_to_dashboard),
+-                    onAction = onBackToDashboard,
++    val snackbarHostState = remember { SnackbarHostState() }
++    val shieldSuccessMsg = stringResource(R.string.shield_report_snackbar_success)
++    val shieldErrorMsg = stringResource(R.string.shield_report_snackbar_error)
++    val shieldTriggerDesc = stringResource(R.string.shield_report_trigger_desc)
++
++    if (uiState is ActiveJobUiState.Active) {
++        LaunchedEffect(uiState.shieldReportSuccess, uiState.shieldReportError) {
++            val message =
++                shieldReportSnackbarMessage(
++                    success = uiState.shieldReportSuccess,
++                    error = uiState.shieldReportError,
++                    successMessage = shieldSuccessMsg,
++                    genericErrorMessage = shieldErrorMsg,
+                 )
+-            is ActiveJobUiState.Active -> {
+-                ActiveJobContent(
+-                    state = uiState,
+-                    onTransitionRequested = onTransitionRequested,
+-                    onCompleteConfirmRequest = onCompleteConfirmRequest,
+-                    onPhotoRetryRequested = onPhotoRetryRequested,
++            if (message != null) {
++                snackbarHostState.showSnackbar(message)
++                if (uiState.shieldReportSuccess) onConsumeShieldSuccess() else onConsumeShieldError()
++            }
++        }
++    }
++
++    Scaffold(
++        modifier = modifier,
++        snackbarHost = { SnackbarHost(snackbarHostState) },
++        topBar = {
++            if (uiState is ActiveJobUiState.Active) {
++                TopAppBar(
++                    title = { Text(uiState.job.serviceName) },
++                    actions = {
++                        TextButton(
++                            onClick = onShowShieldSheet,
++                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
++                            modifier =
++                                Modifier
++                                    .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
++                                    .semantics { contentDescription = shieldTriggerDesc },
++                        ) {
++                            Icon(Icons.Filled.Warning, contentDescription = null)
++                            Spacer(Modifier.width(4.dp))
++                            Text(
++                                text = stringResource(R.string.shield_report_trigger),
++                                style = MaterialTheme.typography.labelLarge,
++                                fontWeight = FontWeight.Bold,
++                            )
++                        }
++                    },
+                 )
+-                uiState.pendingPhotoStage?.let { stage ->
+-                    var lastCapturedPath by remember { mutableStateOf<String?>(null) }
+-                    PhotoCaptureScreen(
+-                        stage = stage,
+-                        onPhotoTaken = { path ->
+-                            lastCapturedPath = path
+-                            onPhotoConfirmed(path)
+-                        },
+-                        onDismiss = onPhotoCancelled,
+-                        isUploading = uiState.photoUploadInProgress,
+-                        uploadError = uiState.photoUploadError,
+-                        onRetry = { lastCapturedPath?.let(onPhotoConfirmed) },
+-                        onRetake = onPhotoRetake,
++            }
++        },
++    ) { padding ->
++        Surface(
++            modifier = Modifier.fillMaxSize().padding(padding),
++            color = MaterialTheme.colorScheme.background,
++        ) {
++            when (uiState) {
++                is ActiveJobUiState.Loading -> ActiveJobSkeleton()
++                is ActiveJobUiState.Completed ->
++                    CenterMessage(
++                        title = stringResource(R.string.active_job_complete_title),
++                        body = stringResource(R.string.active_job_complete_body),
++                        actionLabel = stringResource(R.string.active_job_back_to_dashboard),
++                        onAction = onBackToDashboard,
+                     )
+-                }
+-                if (uiState.awaitingCompletionConfirm) {
+-                    CompletionConfirmationDialog(
+-                        onConfirm = onCompleteConfirm,
+-                        onDismiss = onCompleteCancel,
++                is ActiveJobUiState.Error ->
++                    CenterMessage(
++                        title = stringResource(R.string.active_job_error_title),
++                        body = uiState.message,
++                        actionLabel = stringResource(R.string.active_job_back_to_dashboard),
++                        onAction = onBackToDashboard,
++                    )
++                is ActiveJobUiState.Active -> {
++                    ActiveJobContent(
++                        state = uiState,
++                        onTransitionRequested = onTransitionRequested,
++                        onCompleteConfirmRequest = onCompleteConfirmRequest,
++                        onPhotoRetryRequested = onPhotoRetryRequested,
+                     )
++                    uiState.pendingPhotoStage?.let { stage ->
++                        var lastCapturedPath by remember { mutableStateOf<String?>(null) }
++                        PhotoCaptureScreen(
++                            stage = stage,
++                            onPhotoTaken = { path ->
++                                lastCapturedPath = path
++                                onPhotoConfirmed(path)
++                            },
++                            onDismiss = onPhotoCancelled,
++                            isUploading = uiState.photoUploadInProgress,
++                            uploadError = uiState.photoUploadError,
++                            onRetry = { lastCapturedPath?.let(onPhotoConfirmed) },
++                            onRetake = onPhotoRetake,
++                        )
++                    }
++                    if (uiState.awaitingCompletionConfirm) {
++                        CompletionConfirmationDialog(
++                            onConfirm = onCompleteConfirm,
++                            onDismiss = onCompleteCancel,
++                        )
++                    }
++                    if (uiState.showShieldSheet) {
++                        ShieldReportSheet(
++                            onDismiss = onDismissShieldSheet,
++                            onSubmit = onSubmitShieldReport,
++                            isSubmitting = uiState.shieldReportInProgress,
++                        )
++                    }
+                 }
+             }
+         }
+diff --git a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheet.kt b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheet.kt
+index 3d2b23e4..dcbab17a 100644
+--- a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheet.kt
++++ b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheet.kt
+@@ -94,6 +94,12 @@ internal fun ShieldReportSheetContent(
+                 color = MaterialTheme.colorScheme.outline,
+                 modifier = Modifier.fillMaxWidth(),
+             )
++            Text(
++                text = stringResource(R.string.shield_report_block_warning),
++                style = MaterialTheme.typography.labelMedium,
++                color = MaterialTheme.colorScheme.error,
++                modifier = Modifier.fillMaxWidth(),
++            )
+             Spacer(Modifier.height(8.dp))
+             Row(
+                 modifier = Modifier.fillMaxWidth(),
+diff --git a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSnackbar.kt b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSnackbar.kt
+new file mode 100644
+index 00000000..b1bbb0da
+--- /dev/null
++++ b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSnackbar.kt
+@@ -0,0 +1,19 @@
++package com.homeservices.technician.ui.activeJob
++
++/**
++ * Pure mapping from [ActiveJobUiState.Active]'s shield-report result flags to the Snackbar text to
++ * show, kept out of the Composable so it stays unit-testable without Robolectric/Compose (S-33's
++ * PendingActionCard/remainingSeconds extraction is the precedent — see docs/patterns for why
++ * LaunchedEffect-only logic risks the Kover floor).
++ */
++public fun shieldReportSnackbarMessage(
++    success: Boolean,
++    error: String?,
++    successMessage: String,
++    genericErrorMessage: String,
++): String? =
++    when {
++        success -> successMessage
++        error != null -> genericErrorMessage
++        else -> null
++    }
+diff --git a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/AppealOutcomeMessage.kt b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/AppealOutcomeMessage.kt
+new file mode 100644
+index 00000000..e39778ac
+--- /dev/null
++++ b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/AppealOutcomeMessage.kt
+@@ -0,0 +1,21 @@
++package com.homeservices.technician.ui.myratings
++
++/**
++ * Pure mapping from [AppealState] to the Snackbar text to show (or null for no snackbar), kept out of
++ * the Composable so it stays unit-testable without Robolectric/Compose — same rationale as
++ * ActiveJobScreen's shieldReportSnackbarMessage.
++ */
++public fun appealOutcomeMessage(
++    state: AppealState,
++    successMessage: String,
++    quotaExceededTemplate: String,
++    genericErrorMessage: String,
++    formatNextAvailable: (String) -> String,
++): String? =
++    when (state) {
++        is AppealState.Success -> successMessage
++        is AppealState.QuotaExceeded ->
++            quotaExceededTemplate.format(state.nextAvailableAt?.let(formatNextAvailable) ?: "—")
++        is AppealState.Error -> genericErrorMessage
++        AppealState.Idle, is AppealState.Loading -> null
++    }
+diff --git a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt
+index 74ef9e3c..6e89bb7c 100644
+--- a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt
++++ b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt
+@@ -22,12 +22,19 @@ import androidx.compose.material3.Icon
+ import androidx.compose.material3.IconButton
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Scaffold
++import androidx.compose.material3.SnackbarHost
++import androidx.compose.material3.SnackbarHostState
+ import androidx.compose.material3.SuggestionChip
+ import androidx.compose.material3.Surface
+ import androidx.compose.material3.Text
+ import androidx.compose.material3.TopAppBar
+ import androidx.compose.runtime.Composable
++import androidx.compose.runtime.LaunchedEffect
+ import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.saveable.rememberSaveable
++import androidx.compose.runtime.setValue
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.geometry.Offset
+@@ -37,8 +44,10 @@ import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.unit.dp
+ import androidx.hilt.navigation.compose.hiltViewModel
+ import androidx.lifecycle.compose.collectAsStateWithLifecycle
++import com.homeservices.designsystem.components.HsActionButton
+ import com.homeservices.designsystem.components.HsPrimaryButton
+ import com.homeservices.designsystem.components.HsSectionCard
++import com.homeservices.designsystem.components.HsTrustBadge
+ import com.homeservices.technician.R
+ import com.homeservices.technician.domain.rating.model.RatingWeekTrend
+ import com.homeservices.technician.domain.rating.model.ReceivedRating
+@@ -56,6 +65,8 @@ internal fun MyRatingsScreen(
+     onBack: () -> Unit,
+ ) {
+     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
++    val appealState by viewModel.appealState.collectAsStateWithLifecycle()
++    val snackbarHostState = remember { SnackbarHostState() }
+     Scaffold(
+         topBar = {
+             TopAppBar(
+@@ -67,9 +78,18 @@ internal fun MyRatingsScreen(
+                 },
+             )
+         },
++        snackbarHost = { SnackbarHost(snackbarHostState) },
+         modifier = modifier,
+     ) { padding ->
+-        MyRatingsContent(uiState = uiState, onRetry = viewModel::refresh, modifier = Modifier.padding(padding))
++        MyRatingsContent(
++            uiState = uiState,
++            onRetry = viewModel::refresh,
++            appealState = appealState,
++            onSubmitAppeal = viewModel::fileRatingAppeal,
++            onConsumeAppeal = viewModel::consumeAppealState,
++            snackbarHostState = snackbarHostState,
++            modifier = Modifier.padding(padding),
++        )
+     }
+ }
+ 
+@@ -78,6 +98,10 @@ internal fun MyRatingsContent(
+     uiState: MyRatingsUiState,
+     onRetry: () -> Unit,
+     modifier: Modifier = Modifier,
++    appealState: AppealState = AppealState.Idle,
++    onSubmitAppeal: (bookingId: String, reason: String) -> Unit = { _, _ -> },
++    onConsumeAppeal: () -> Unit = {},
++    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+ ) {
+     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+         when (val state = uiState) {
+@@ -98,13 +122,52 @@ internal fun MyRatingsContent(
+                     )
+                     HsPrimaryButton(text = "Try again", onClick = onRetry)
+                 }
+-            is MyRatingsUiState.Success -> RatingsSuccess(summary = state.summary)
++            is MyRatingsUiState.Success ->
++                RatingsSuccess(
++                    summary = state.summary,
++                    appealState = appealState,
++                    onSubmitAppeal = onSubmitAppeal,
++                    onConsumeAppeal = onConsumeAppeal,
++                    onRefreshAfterAppeal = onRetry,
++                    snackbarHostState = snackbarHostState,
++                )
+         }
+     }
+ }
+ 
+ @Composable
+-private fun RatingsSuccess(summary: TechRatingSummary) {
++private fun RatingsSuccess(
++    summary: TechRatingSummary,
++    appealState: AppealState,
++    onSubmitAppeal: (bookingId: String, reason: String) -> Unit,
++    onConsumeAppeal: () -> Unit,
++    onRefreshAfterAppeal: () -> Unit,
++    snackbarHostState: SnackbarHostState,
++) {
++    var appealSheetFor by rememberSaveable { mutableStateOf<String?>(null) }
++    val successMsg = stringResource(R.string.rating_appeal_success)
++    val quotaTemplate = stringResource(R.string.rating_appeal_quota_exceeded)
++    val errorMsg = stringResource(R.string.rating_appeal_error_generic)
++
++    LaunchedEffect(appealState) {
++        val message =
++            appealOutcomeMessage(
++                state = appealState,
++                successMessage = successMsg,
++                quotaExceededTemplate = quotaTemplate,
++                genericErrorMessage = errorMsg,
++                formatNextAvailable = ::formatDate,
++            )
++        if (message != null) {
++            if (appealState is AppealState.Success || appealState is AppealState.QuotaExceeded) {
++                appealSheetFor = null
++            }
++            snackbarHostState.showSnackbar(message)
++            onConsumeAppeal()
++            if (appealState is AppealState.Success) onRefreshAfterAppeal()
++        }
++    }
++
+     LazyColumn(
+         modifier = Modifier.fillMaxSize(),
+         contentPadding = PaddingValues(16.dp),
+@@ -148,9 +211,20 @@ private fun RatingsSuccess(summary: TechRatingSummary) {
+                 }
+             }
+         } else {
+-            items(summary.items) { rating -> RatingItemCard(rating = rating) }
++            items(summary.items) { rating ->
++                RatingItemCard(rating = rating, onAppealClick = { bookingId -> appealSheetFor = bookingId })
++            }
+         }
+     }
++
++    appealSheetFor?.let { bookingId ->
++        RatingAppealSheet(
++            bookingId = bookingId,
++            onDismiss = { appealSheetFor = null },
++            onSubmit = onSubmitAppeal,
++            isSubmitting = appealState is AppealState.Loading && appealState.bookingId == bookingId,
++        )
++    }
+ }
+ 
+ @Composable
+@@ -196,7 +270,10 @@ private fun RatingTrendChart(
+ // Not cached — Locale.getDefault() must be read at format-time to respect runtime locale switches.
+ 
+ @Composable
+-private fun RatingItemCard(rating: ReceivedRating) {
++private fun RatingItemCard(
++    rating: ReceivedRating,
++    onAppealClick: (bookingId: String) -> Unit,
++) {
+     HsSectionCard {
+         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+             repeat(5) { i ->
+@@ -221,6 +298,14 @@ private fun RatingItemCard(rating: ReceivedRating) {
+             Text(rating.comment, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+         }
+         Text(formatDate(rating.submittedAt), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
++        if (rating.appealDisputed) {
++            HsTrustBadge(text = stringResource(R.string.rating_appeal_disputed_badge))
++        } else {
++            HsActionButton(
++                text = stringResource(R.string.rating_appeal_action),
++                onClick = { onAppealClick(rating.bookingId) },
++            )
++        }
+     }
+ }
+ 
+diff --git a/technician-app/app/src/main/res/values-hi/strings.xml b/technician-app/app/src/main/res/values-hi/strings.xml
+index 78a575fa..798b7ff5 100644
+--- a/technician-app/app/src/main/res/values-hi/strings.xml
++++ b/technician-app/app/src/main/res/values-hi/strings.xml
+@@ -89,6 +89,11 @@
+     <string name="shield_report_char_count">%d/500</string>
+     <string name="shield_report_submit">रिपोर्ट सबमिट करें</string>
+     <string name="shield_report_submitting">रिपोर्ट सबमिट हो रही है</string>
++    <string name="shield_report_trigger">ग्राहक की रिपोर्ट करें</string>
++    <string name="shield_report_trigger_desc">इस ग्राहक की गलत व्यवहार के लिए रिपोर्ट करें</string>
++    <string name="shield_report_block_warning">इससे यह ग्राहक आपके भविष्य के बुकिंग से ब्लॉक हो जाएगा।</string>
++    <string name="shield_report_snackbar_success">रिपोर्ट सबमिट हो गई।</string>
++    <string name="shield_report_snackbar_error">रिपोर्ट सबमिट नहीं हो सकी। दोबारा कोशिश करें।</string>
+ 
+     <!-- Ratings screens -->
+     <string name="my_ratings_title">मेरी रेटिंग</string>
+@@ -109,6 +114,11 @@
+     <string name="rating_punctuality">समय-पालन: %s ★</string>
+     <string name="rating_skill">कौशल: %s ★</string>
+     <string name="rating_comment">टिप्पणी: %s</string>
++    <string name="rating_appeal_action">अपील करें</string>
++    <string name="rating_appeal_disputed_badge">विवादित</string>
++    <string name="rating_appeal_success">अपील सबमिट हो गई।</string>
++    <string name="rating_appeal_quota_exceeded">आपकी अपील सीमा समाप्त हो गई है — %s के बाद फिर कोशिश करें।</string>
++    <string name="rating_appeal_error_generic">अपील सबमिट नहीं हो सकी। दोबारा कोशिश करें।</string>
+ 
+     <!-- Complaint screen -->
+     <string name="complaint_report_title">कोई समस्या रिपोर्ट करें</string>
+diff --git a/technician-app/app/src/main/res/values/strings.xml b/technician-app/app/src/main/res/values/strings.xml
+index c545c9f6..6d23533e 100644
+--- a/technician-app/app/src/main/res/values/strings.xml
++++ b/technician-app/app/src/main/res/values/strings.xml
+@@ -113,6 +113,11 @@
+     <string name="shield_report_char_count">%d/500</string>
+     <string name="shield_report_submit">Submit report</string>
+     <string name="shield_report_submitting">Submitting report</string>
++    <string name="shield_report_trigger">Report customer</string>
++    <string name="shield_report_trigger_desc">Report this customer for abusive or unsafe behaviour</string>
++    <string name="shield_report_block_warning">This will block this customer from future bookings with you.</string>
++    <string name="shield_report_snackbar_success">Report submitted.</string>
++    <string name="shield_report_snackbar_error">Could not submit report. Try again.</string>
+ 
+     <!-- Ratings screens -->
+     <string name="my_ratings_title">My ratings</string>
+@@ -133,6 +138,11 @@
+     <string name="rating_punctuality">Punctuality: %s ★</string>
+     <string name="rating_skill">Skill: %s ★</string>
+     <string name="rating_comment">Comment: %s</string>
++    <string name="rating_appeal_action">Appeal</string>
++    <string name="rating_appeal_disputed_badge">Disputed</string>
++    <string name="rating_appeal_success">Appeal submitted.</string>
++    <string name="rating_appeal_quota_exceeded">You\'ve reached your appeal limit — try again after %s.</string>
++    <string name="rating_appeal_error_generic">Could not submit appeal. Try again.</string>
+ 
+     <!-- Complaint screen -->
+     <string name="complaint_report_title">Report an issue</string>
+diff --git a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetStringsTest.kt b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetStringsTest.kt
+index 7a907597..f89970e6 100644
+--- a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetStringsTest.kt
++++ b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSheetStringsTest.kt
+@@ -25,6 +25,14 @@ public class ShieldReportSheetStringsTest {
+         assertThat(context.getString(R.string.shield_report_char_count, 0)).isEqualTo("0/500")
+         assertThat(context.getString(R.string.shield_report_submit)).isEqualTo("Submit report")
+         assertThat(context.getString(R.string.shield_report_submitting)).isEqualTo("Submitting report")
++        assertThat(context.getString(R.string.shield_report_trigger)).isEqualTo("Report customer")
++        assertThat(context.getString(R.string.shield_report_trigger_desc))
++            .isEqualTo("Report this customer for abusive or unsafe behaviour")
++        assertThat(context.getString(R.string.shield_report_block_warning))
++            .isEqualTo("This will block this customer from future bookings with you.")
++        assertThat(context.getString(R.string.shield_report_snackbar_success)).isEqualTo("Report submitted.")
++        assertThat(context.getString(R.string.shield_report_snackbar_error))
++            .isEqualTo("Could not submit report. Try again.")
+     }
+ 
+     @Test
+@@ -36,5 +44,8 @@ public class ShieldReportSheetStringsTest {
+         assertThat(context.getString(R.string.shield_report_subtitle)).isEqualTo("क्या हुआ बताएं (वैकल्पिक)")
+         assertThat(context.getString(R.string.shield_report_submit)).isEqualTo("रिपोर्ट सबमिट करें")
+         assertThat(context.getString(R.string.shield_report_submitting)).isEqualTo("रिपोर्ट सबमिट हो रही है")
++        assertThat(context.getString(R.string.shield_report_trigger)).isEqualTo("ग्राहक की रिपोर्ट करें")
++        assertThat(context.getString(R.string.shield_report_block_warning))
++            .isEqualTo("इससे यह ग्राहक आपके भविष्य के बुकिंग से ब्लॉक हो जाएगा।")
+     }
+ }
+diff --git a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSnackbarTest.kt b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSnackbarTest.kt
+new file mode 100644
+index 00000000..809ec201
+--- /dev/null
++++ b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/activeJob/ShieldReportSnackbarTest.kt
+@@ -0,0 +1,36 @@
++package com.homeservices.technician.ui.activeJob
++
++import org.assertj.core.api.Assertions.assertThat
++import org.junit.jupiter.api.Test
++
++public class ShieldReportSnackbarTest {
++    @Test
++    public fun `success returns the success message`(): Unit {
++        val result = shieldReportSnackbarMessage(success = true, error = null, successMessage = "OK", genericErrorMessage = "ERR")
++        assertThat(result).isEqualTo("OK")
++    }
++
++    @Test
++    public fun `error returns the generic error message`(): Unit {
++        val result =
++            shieldReportSnackbarMessage(
++                success = false,
++                error = "network timeout",
++                successMessage = "OK",
++                genericErrorMessage = "ERR",
++            )
++        assertThat(result).isEqualTo("ERR")
++    }
++
++    @Test
++    public fun `neither success nor error returns null`(): Unit {
++        val result = shieldReportSnackbarMessage(success = false, error = null, successMessage = "OK", genericErrorMessage = "ERR")
++        assertThat(result).isNull()
++    }
++
++    @Test
++    public fun `success takes priority when both are somehow set`(): Unit {
++        val result = shieldReportSnackbarMessage(success = true, error = "stale error", successMessage = "OK", genericErrorMessage = "ERR")
++        assertThat(result).isEqualTo("OK")
++    }
++}
+diff --git a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/AppealOutcomeMessageTest.kt b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/AppealOutcomeMessageTest.kt
+new file mode 100644
+index 00000000..f00335aa
+--- /dev/null
++++ b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/AppealOutcomeMessageTest.kt
+@@ -0,0 +1,47 @@
++package com.homeservices.technician.ui.myratings
++
++import org.assertj.core.api.Assertions.assertThat
++import org.junit.jupiter.api.Test
++
++public class AppealOutcomeMessageTest {
++    private fun message(state: AppealState): String? =
++        appealOutcomeMessage(
++            state = state,
++            successMessage = "Appeal submitted.",
++            quotaExceededTemplate = "Limit reached — try again after %s.",
++            genericErrorMessage = "Could not submit appeal.",
++            formatNextAvailable = { "formatted($it)" },
++        )
++
++    @Test
++    public fun `idle returns null`(): Unit {
++        assertThat(message(AppealState.Idle)).isNull()
++    }
++
++    @Test
++    public fun `loading returns null`(): Unit {
++        assertThat(message(AppealState.Loading(bookingId = "bk-1"))).isNull()
++    }
++
++    @Test
++    public fun `success returns the success message`(): Unit {
++        assertThat(message(AppealState.Success)).isEqualTo("Appeal submitted.")
++    }
++
++    @Test
++    public fun `quota exceeded formats the next-available date into the template`(): Unit {
++        assertThat(message(AppealState.QuotaExceeded(nextAvailableAt = "2026-08-14T00:00:00Z")))
++            .isEqualTo("Limit reached — try again after formatted(2026-08-14T00:00:00Z).")
++    }
++
++    @Test
++    public fun `quota exceeded falls back to a placeholder when nextAvailableAt is null`(): Unit {
++        assertThat(message(AppealState.QuotaExceeded(nextAvailableAt = null)))
++            .isEqualTo("Limit reached — try again after —.")
++    }
++
++    @Test
++    public fun `error returns the generic error message`(): Unit {
++        assertThat(message(AppealState.Error)).isEqualTo("Could not submit appeal.")
++    }
++}
+diff --git a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreenTest.kt b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreenTest.kt
+index 8b5f248a..fb4b0ecd 100644
+--- a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreenTest.kt
++++ b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreenTest.kt
+@@ -26,6 +26,18 @@ public class MyRatingsScreenTest {
+         }
+     }
+ 
++    @Test
++    public fun myRatingsSuccess_withDisputedAppeal(): Unit {
++        paparazzi.snapshot {
++            HomeservicesTheme(darkTheme = false) {
++                MyRatingsContent(
++                    uiState = MyRatingsUiState.Success(sampleSummary().let { it.copy(items = it.items.map { r -> r.copy(appealDisputed = r.bookingId == "bk-1") }) }),
++                    onRetry = {},
++                )
++            }
++        }
++    }
++
+     private fun sampleSummary(): TechRatingSummary =
+         TechRatingSummary(
+             totalCount = 128,
+diff --git a/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/RatingAppealActionStringsTest.kt b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/RatingAppealActionStringsTest.kt
+new file mode 100644
+index 00000000..f44a1227
+--- /dev/null
++++ b/technician-app/app/src/test/kotlin/com/homeservices/technician/ui/myratings/RatingAppealActionStringsTest.kt
+@@ -0,0 +1,34 @@
++package com.homeservices.technician.ui.myratings
++
++import androidx.test.core.app.ApplicationProvider
++import com.homeservices.technician.R
++import org.assertj.core.api.Assertions.assertThat
++import org.junit.Test
++import org.junit.runner.RunWith
++import org.robolectric.RobolectricTestRunner
++import org.robolectric.RuntimeEnvironment
++
++@RunWith(RobolectricTestRunner::class)
++public class RatingAppealActionStringsTest {
++    @Test
++    public fun `rating appeal action strings resolve in english by default`(): Unit {
++        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
++
++        assertThat(context.getString(R.string.rating_appeal_action)).isEqualTo("Appeal")
++        assertThat(context.getString(R.string.rating_appeal_disputed_badge)).isEqualTo("Disputed")
++        assertThat(context.getString(R.string.rating_appeal_success)).isEqualTo("Appeal submitted.")
++        assertThat(context.getString(R.string.rating_appeal_quota_exceeded, "12 Aug"))
++            .isEqualTo("You've reached your appeal limit — try again after 12 Aug.")
++        assertThat(context.getString(R.string.rating_appeal_error_generic))
++            .isEqualTo("Could not submit appeal. Try again.")
++    }
++
++    @Test
++    public fun `rating appeal action strings resolve in hindi`(): Unit {
++        RuntimeEnvironment.setQualifiers("hi")
++        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
++
++        assertThat(context.getString(R.string.rating_appeal_action)).isEqualTo("अपील करें")
++        assertThat(context.getString(R.string.rating_appeal_disputed_badge)).isEqualTo("विवादित")
++    }
++}
+diff --git a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ActiveJobScreenHiPaparazziTest_activeJobScreen_enRoute_hi.png b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ActiveJobScreenHiPaparazziTest_activeJobScreen_enRoute_hi.png
+index 3a5f129a..8bebff98 100644
+Binary files a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ActiveJobScreenHiPaparazziTest_activeJobScreen_enRoute_hi.png and b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ActiveJobScreenHiPaparazziTest_activeJobScreen_enRoute_hi.png differ
+diff --git a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ActiveJobScreenHiPaparazziTest_activeJobScreen_inProgress_hi.png b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ActiveJobScreenHiPaparazziTest_activeJobScreen_inProgress_hi.png
+index 8e6bc7d8..71fb1f04 100644
+Binary files a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ActiveJobScreenHiPaparazziTest_activeJobScreen_inProgress_hi.png and b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ActiveJobScreenHiPaparazziTest_activeJobScreen_inProgress_hi.png differ
+diff --git a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ActiveJobScreenPaparazziTest_activeJobScreen_enRoute.png b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ActiveJobScreenPaparazziTest_activeJobScreen_enRoute.png
+index 7553c679..d9c2f702 100644
+Binary files a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ActiveJobScreenPaparazziTest_activeJobScreen_enRoute.png and b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ActiveJobScreenPaparazziTest_activeJobScreen_enRoute.png differ
+diff --git a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ActiveJobScreenPaparazziTest_activeJobScreen_inProgress.png b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ActiveJobScreenPaparazziTest_activeJobScreen_inProgress.png
+index b0bd0b92..778cf260 100644
+Binary files a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ActiveJobScreenPaparazziTest_activeJobScreen_inProgress.png and b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ActiveJobScreenPaparazziTest_activeJobScreen_inProgress.png differ
+diff --git a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ActiveJobScreenPaparazziTest_activeJobScreen_reached.png b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ActiveJobScreenPaparazziTest_activeJobScreen_reached.png
+index 0ce8e7b9..41102542 100644
+Binary files a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ActiveJobScreenPaparazziTest_activeJobScreen_reached.png and b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ActiveJobScreenPaparazziTest_activeJobScreen_reached.png differ
+diff --git a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ShieldReportSheetHiPaparazziTest_shieldReportSheet_default_hi.png b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ShieldReportSheetHiPaparazziTest_shieldReportSheet_default_hi.png
+index 2252b117..6fe7ba73 100644
+Binary files a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ShieldReportSheetHiPaparazziTest_shieldReportSheet_default_hi.png and b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ShieldReportSheetHiPaparazziTest_shieldReportSheet_default_hi.png differ
+diff --git a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ShieldReportSheetPaparazziTest_ShieldReportSheet_default_en.png b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ShieldReportSheetPaparazziTest_ShieldReportSheet_default_en.png
+index 77358f21..89ba414c 100644
+Binary files a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ShieldReportSheetPaparazziTest_ShieldReportSheet_default_en.png and b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ShieldReportSheetPaparazziTest_ShieldReportSheet_default_en.png differ
+diff --git a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ShieldReportSheetPaparazziTest_ShieldReportSheet_submitting_en.png b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ShieldReportSheetPaparazziTest_ShieldReportSheet_submitting_en.png
+index 58f3db9a..79401f54 100644
+Binary files a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ShieldReportSheetPaparazziTest_ShieldReportSheet_submitting_en.png and b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.activeJob_ShieldReportSheetPaparazziTest_ShieldReportSheet_submitting_en.png differ
+diff --git a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.myratings_MyRatingsScreenTest_myRatingsSuccess.png b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.myratings_MyRatingsScreenTest_myRatingsSuccess.png
+index 3d8beec7..618f9935 100644
+Binary files a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.myratings_MyRatingsScreenTest_myRatingsSuccess.png and b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.myratings_MyRatingsScreenTest_myRatingsSuccess.png differ
+diff --git a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.myratings_MyRatingsScreenTest_myRatingsSuccess_withDisputedAppeal.png b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.myratings_MyRatingsScreenTest_myRatingsSuccess_withDisputedAppeal.png
+new file mode 100644
+index 00000000..a0ee60e9
+Binary files /dev/null and b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.myratings_MyRatingsScreenTest_myRatingsSuccess_withDisputedAppeal.png differ
