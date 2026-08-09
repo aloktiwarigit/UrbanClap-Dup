@@ -68,9 +68,7 @@ public class HsComponentsTypographyLeakTest {
             .isFalse()
     }
 
-    private fun locateSource(
-        relativePath: String = "components/HsComponents.kt",
-    ): File {
+    private fun locateSource(relativePath: String = "components/HsComponents.kt"): File {
         val cwd = File("").absoluteFile
         val candidates =
             listOf(
