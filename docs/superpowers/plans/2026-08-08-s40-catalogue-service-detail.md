@@ -801,10 +801,15 @@ public fun `catalogue home error state`(): Unit {
 }
 ```
 
-- [ ] **Step 3: Run to verify it fails**
+- [ ] **Step 3: Verify the new snapshot cases compile**
 
-Run: `./gradlew :app:testDebugUnitTest --tests "*CatalogueHomeScreenTest*"` (Paparazzi **not** excluded)
-Expected: FAIL — no golden recorded. This is expected; goldens are recorded on CI in Task 14.
+Run: `./gradlew :app:compileDebugUnitTestKotlin -PexcludePaparazzi`
+Expected: BUILD SUCCESSFUL.
+
+**Do not run Paparazzi locally.** These two cases have no golden yet and cannot get one here — goldens
+are Linux-CI-recorded in Task 14, and a Windows-recorded golden diverges 3-5% from CI. Leaving the
+task with a red Paparazzi suite would be a false signal, not a TDD red step. The screen's visual
+gate is Task 14; this step only proves the test code compiles against the changed signatures.
 
 - [ ] **Step 4: Implement the screen changes**
 
@@ -815,7 +820,7 @@ Six changes in one file:
 3. **Empty state**: guard the `Success` branch. When `uiState.categories.isEmpty()`, render an empty state — icon, `catalogue_empty_title`, `catalogue_empty_body` — instead of the heading over blank space. Model it on `ServiceListScreen.kt:166` `EmptyServiceList`.
 4. **Error state**: give `ErrorState` an `onRetry: () -> Unit` parameter and an `HsPrimaryButton` labelled `catalogue_retry`. Keep the existing title and body strings. **Do not render `uiState.message`** — it is a diagnostic.
 5. **Radii onto the D1 scale**: `18.dp`→`20.dp` (search removed, so only the remaining uses), `14.dp`→`12.dp` (trust chip), `16.dp`→`20.dp` (category card), `24.dp`→`20.dp` (promo card, support hero), `28.dp`→`20.dp` (bottom nav), `22.dp`→`20.dp` (nav item), `15.dp`→`12.dp` (support icon tile), `3.dp`→`8.dp` (promo dot). Prefer `MaterialTheme.shapes.large/medium/small` over raw values where the element maps cleanly.
-6. **Accent as foreground → `accentInk`**: `:474` (wordmark), `:481` (location icon), `:506` (settings icon), `:708`+`:713` (trust chip icon and label), `:795` (category price), `:1070` (support icon). Read via `LocalHomeservicesExtendedColors.current.accentInk`. Leave `:880` `CircularProgressIndicator` — it is a graphic, not text, and is being replaced by skeletons anyway.
+6. **Accent as foreground → `accentInk`**: `:474` (wordmark), `:481` (location icon), `:506` (settings icon), `:708`+`:713` (trust chip icon and label), `:795` (category price), `:1070` (support icon). Read via `LocalHomeservicesExtendedColors.current.accentInk`. The `CircularProgressIndicator` at `:880` needs no colour decision — item 9 below deletes it outright.
 7. **Price rail**: the category-card price gets `fontFamily = HomeservicesMonoFontFamily`. `formatRupees` returns a plain `String`; the family is applied at the call site.
 8. **Trust chip sizing** (audit A11Y-004): remove `maxLines = 1` / `TextOverflow.Ellipsis` from `TrustChip` and let the row wrap, so `30-day guarantee` and `30 दिन गारंटी` both fit. Do not shorten the English copy.
 9. Replace `LoadingState`'s `CircularProgressIndicator` with `HsSkeletonBlock` calls mirroring the 2-up grid.
