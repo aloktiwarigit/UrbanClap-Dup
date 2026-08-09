@@ -27,6 +27,17 @@ internal val BrandAccent = Color(0xFFE2A04A)
 internal val BrandAccentSoft = Color(0xFFF1B86A)
 internal val BrandAccentDim = Color(0xFF6F4818)
 
+/**
+ * Accent as a *foreground* on light surfaces. D1 §Palette's `#E2A04A` is a surface/fill colour —
+ * it measures 2.08:1 on canvas and 1.93:1 on surface, so it is not legible as text or as an icon
+ * tint in light mode. `ExtendedColors.focusRing` already documents this for non-text indicators;
+ * this is the same finding applied to text.
+ *
+ * Measured: 7.61:1 on canvas-light, 7.04:1 on surface-light — both clear the D2 target of 7:1.
+ * Dark mode needs no equivalent: the raw accent measures 8.03:1 on canvas-dark.
+ */
+internal val AccentInkLight: Color = Color(0xFF6F4610)
+
 // Neutrals — light (warm paper)
 internal val CanvasLight = Color(0xFFFBF6E9)
 internal val SurfaceLight = Color(0xFFF4EDDF)

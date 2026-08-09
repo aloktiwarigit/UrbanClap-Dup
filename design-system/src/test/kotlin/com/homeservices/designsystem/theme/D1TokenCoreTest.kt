@@ -24,6 +24,7 @@ internal class D1TokenCoreTest {
     private companion object {
         // D1 §Palette — core roles.
         val BRAND_ACCENT = Color(0xFFE2A04A)
+        val ACCENT_INK_LIGHT = Color(0xFF6F4610)
 
         val CANVAS_LIGHT = Color(0xFFFBF6E9)
         val SURFACE_LIGHT = Color(0xFFF4EDDF)
@@ -175,6 +176,27 @@ internal class D1TokenCoreTest {
             assertThat(ratio)
                 .`as`("accent label = %.2f:1 (D2 sunlight target >= 7)", ratio)
                 .isGreaterThanOrEqualTo(7.0)
+        }
+
+        @Test
+        internal fun accent_ink_clears_the_field_target_on_light_canvas() {
+            val ratio = Wcag21Contrast.ratio(ACCENT_INK_LIGHT, CANVAS_LIGHT)
+            assertThat(ratio)
+                .`as`("accent-as-text = %.2f:1 (D2 sunlight target >= 7)", ratio)
+                .isGreaterThanOrEqualTo(7.0)
+        }
+
+        @Test
+        internal fun accent_ink_clears_the_field_target_on_light_surface() {
+            val ratio = Wcag21Contrast.ratio(ACCENT_INK_LIGHT, SURFACE_LIGHT)
+            assertThat(ratio).isGreaterThanOrEqualTo(7.0)
+        }
+
+        /** The regression this token exists to prevent: the raw accent is not a foreground in light mode. */
+        @Test
+        internal fun the_raw_accent_is_not_body_legible_on_light_canvas() {
+            assertThat(Wcag21Contrast.ratio(BRAND_ACCENT, CANVAS_LIGHT))
+                .isCloseTo(2.08, within(TOLERANCE))
         }
     }
 
