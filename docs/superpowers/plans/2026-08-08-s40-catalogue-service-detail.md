@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- **Spec:** `docs/superpowers/specs/2026-08-08-s40-catalogue-service-detail-design.md` **rev 2**. Where plan and spec disagree, stop and ask.
+- **Spec:** `docs/superpowers/specs/2026-08-08-s40-catalogue-service-detail-design.md` **rev 3**. Where plan and spec disagree, stop and ask.
 - **D1 customer radius scale:** `8 / 12 / 20 / 999` dp only. No other corner radius may remain in the three screens.
 - **D1 contrast:** body text ≥ 4.5:1, **target 7:1** (D2 sunlight). Never use `colorScheme.primary` as a foreground on a light surface — it measures 2.08:1 on canvas, 1.93:1 on surface.
 - **Explicit API mode:** every new top-level declaration needs `public`/`internal`. Omitting it fails the build.
@@ -19,6 +19,7 @@
 - **Paparazzi:** never record on Windows; never `git rm -r snapshots/images/`. Use `-PexcludePaparazzi` locally.
 - **Imagery:** nothing under `customer-app/app/src/main/res/drawable*/` may change.
 - **i18n:** every user-facing string is a resource in **both** `values/strings.xml` and `values-hi/strings.xml`.
+- **Gradle roots:** there is NO root build. `design-system`, `customer-app` and `technician-app` are each their own Gradle root; the apps composite-include design-system via `includeBuild("../design-system")`. Always `cd` into the right root first. design-system tasks carry no `:app:` prefix.
 - **Commits:** conventional prefix, end with `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`.
 
 ---
@@ -92,7 +93,7 @@ Add `ACCENT_INK_LIGHT` to the same companion/constants block that already define
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `./gradlew :design-system:testDebugUnitTest --tests "*D1TokenCoreTest*"`
+Run: `cd design-system && ./gradlew testDebugUnitTest --tests "*D1TokenCoreTest*"`
 Expected: FAIL — `ACCENT_INK_LIGHT` unresolved.
 
 - [ ] **Step 3: Add the colour and the token**
@@ -128,7 +129,7 @@ Then `accentInk = AccentInkLight` in `HomeservicesExtendedColorsLight` and `acce
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `./gradlew :design-system:testDebugUnitTest --tests "*D1TokenCoreTest*"`
+Run: `cd design-system && ./gradlew testDebugUnitTest --tests "*D1TokenCoreTest*"`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -193,7 +194,7 @@ internal class ReducedMotionTest {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `./gradlew :design-system:testDebugUnitTest --tests "*ReducedMotionTest*"`
+Run: `cd design-system && ./gradlew testDebugUnitTest --tests "*ReducedMotionTest*"`
 Expected: FAIL — unresolved reference `isReducedMotion`.
 
 - [ ] **Step 3: Write the implementation**
@@ -231,7 +232,7 @@ public fun rememberReducedMotion(): Boolean {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `./gradlew :design-system:testDebugUnitTest --tests "*ReducedMotionTest*"`
+Run: `cd design-system && ./gradlew testDebugUnitTest --tests "*ReducedMotionTest*"`
 Expected: PASS (4 tests).
 
 - [ ] **Step 5: Commit**
@@ -327,7 +328,7 @@ Remove the now-unused `Surface` import only if nothing else in the file uses it.
 
 - [ ] **Step 2: Verify it compiles and nothing regressed**
 
-Run: `./gradlew :design-system:assembleDebug :design-system:testDebugUnitTest -PexcludePaparazzi`
+Run: `cd design-system && ./gradlew assembleDebug testDebugUnitTest -PexcludePaparazzi`
 Expected: BUILD SUCCESSFUL. The two existing callers (`BookingSummaryScreen`, `PriceApprovalScreen`) must compile untouched — if either fails, the `shape` parameter was not defaulted correctly.
 
 - [ ] **Step 3: Commit**
@@ -383,7 +384,7 @@ public fun `retry re-enters Loading then recovers to Success`(): Unit =
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `./gradlew :app:testDebugUnitTest --tests "*CatalogueHomeViewModelTest*" -PexcludePaparazzi` from `customer-app/`
+Run: `cd customer-app && ./gradlew :app:testDebugUnitTest --tests "*CatalogueHomeViewModelTest*" -PexcludePaparazzi` from `customer-app/`
 Expected: FAIL — unresolved reference `retry`.
 
 - [ ] **Step 3: Implement**
@@ -424,7 +425,7 @@ Add imports `kotlinx.coroutines.ExperimentalCoroutinesApi` and `kotlinx.coroutin
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `./gradlew :app:testDebugUnitTest --tests "*CatalogueHomeViewModelTest*" -PexcludePaparazzi`
+Run: `cd customer-app && ./gradlew :app:testDebugUnitTest --tests "*CatalogueHomeViewModelTest*" -PexcludePaparazzi`
 Expected: PASS (3 tests).
 
 - [ ] **Step 5: Commit**
@@ -469,7 +470,7 @@ Match the constructor argument names and mock setup already used in `ServiceList
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `./gradlew :app:testDebugUnitTest --tests "*ServiceListViewModelTest*" -PexcludePaparazzi`
+Run: `cd customer-app && ./gradlew :app:testDebugUnitTest --tests "*ServiceListViewModelTest*" -PexcludePaparazzi`
 Expected: FAIL — unresolved reference `retry`.
 
 - [ ] **Step 3: Implement**
@@ -507,7 +508,7 @@ public fun retry() {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `./gradlew :app:testDebugUnitTest --tests "*ServiceListViewModelTest*" -PexcludePaparazzi`
+Run: `cd customer-app && ./gradlew :app:testDebugUnitTest --tests "*ServiceListViewModelTest*" -PexcludePaparazzi`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -568,7 +569,7 @@ Reuse the existing fixtures in `ServiceDetailViewModelTest.kt` / `ServiceDetailV
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `./gradlew :app:testDebugUnitTest --tests "*ServiceDetailViewModelTest*" -PexcludePaparazzi`
+Run: `cd customer-app && ./gradlew :app:testDebugUnitTest --tests "*ServiceDetailViewModelTest*" -PexcludePaparazzi`
 Expected: FAIL — unresolved reference `retry`.
 
 - [ ] **Step 3: Implement**
@@ -637,7 +638,7 @@ Note `flatMapLatest`'s lambda here is a `suspend` block, so the `resolveGps()` c
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `./gradlew :app:testDebugUnitTest --tests "*ServiceDetailViewModel*" -PexcludePaparazzi`
+Run: `cd customer-app && ./gradlew :app:testDebugUnitTest --tests "*ServiceDetailViewModel*" -PexcludePaparazzi`
 Expected: PASS across all four `ServiceDetailViewModel*` test classes — the GPS and confidence-score suites must not regress.
 
 - [ ] **Step 5: Commit**
@@ -678,7 +679,7 @@ In `build.gradle.kts`, remove the two Kover exclusion lines `"*.CatalogueVisualI
 
 - [ ] **Step 3: Verify the build and coverage still pass**
 
-Run: `./gradlew :app:assembleDebug :app:detekt :app:koverVerify -PexcludePaparazzi`
+Run: `cd customer-app && ./gradlew :app:assembleDebug :app:detekt :app:koverVerify -PexcludePaparazzi`
 Expected: BUILD SUCCESSFUL. A `koverVerify` failure means the deleted file was propping up the ratio — report it rather than re-adding the exclusion.
 
 - [ ] **Step 4: Commit**
@@ -728,7 +729,7 @@ Remove `CategoryStyle` + `categoryStyle` from `CatalogueHomeScreen.kt`, and `Cat
 
 - [ ] **Step 3: Verify**
 
-Run: `./gradlew :app:assembleDebug :app:testDebugUnitTest --tests "*PhotoFirstCardFallbackTest*" -PexcludePaparazzi`
+Run: `cd customer-app && ./gradlew :app:assembleDebug :app:testDebugUnitTest --tests "*PhotoFirstCardFallbackTest*" -PexcludePaparazzi`
 Expected: BUILD SUCCESSFUL, tests PASS.
 
 - [ ] **Step 4: Commit**
@@ -803,7 +804,7 @@ public fun `catalogue home error state`(): Unit {
 
 - [ ] **Step 3: Verify the new snapshot cases compile**
 
-Run: `./gradlew :app:compileDebugUnitTestKotlin -PexcludePaparazzi`
+Run: `cd customer-app && ./gradlew :app:compileDebugUnitTestKotlin -PexcludePaparazzi`
 Expected: BUILD SUCCESSFUL.
 
 **Do not run Paparazzi locally.** These two cases have no golden yet and cannot get one here — goldens
@@ -827,7 +828,7 @@ Six changes in one file:
 
 - [ ] **Step 5: Verify compile and lint**
 
-Run: `./gradlew :app:assembleDebug :app:ktlintCheck :app:detekt -PexcludePaparazzi`
+Run: `cd customer-app && ./gradlew :app:assembleDebug :app:ktlintCheck :app:detekt -PexcludePaparazzi`
 Expected: BUILD SUCCESSFUL.
 
 Then confirm no off-scale radii remain:
@@ -874,7 +875,7 @@ Add a `ServiceListUiState.Error("net err")` case to `ServiceListScreenPaparazziT
 
 - [ ] **Step 3: Verify**
 
-Run: `./gradlew :app:assembleDebug :app:ktlintCheck :app:detekt -PexcludePaparazzi`
+Run: `cd customer-app && ./gradlew :app:assembleDebug :app:ktlintCheck :app:detekt -PexcludePaparazzi`
 Expected: BUILD SUCCESSFUL, and `grep -n "Color(0x" ServiceListScreen.kt` returns nothing.
 
 - [ ] **Step 4: Commit**
@@ -912,7 +913,7 @@ Leave the hero's `Color.White` and `Color.Black.copy(alpha = …)` scrim values 
 
 - [ ] **Step 2: Verify**
 
-Run: `./gradlew :app:assembleDebug :app:ktlintCheck :app:detekt -PexcludePaparazzi`
+Run: `cd customer-app && ./gradlew :app:assembleDebug :app:ktlintCheck :app:detekt -PexcludePaparazzi`
 Expected: BUILD SUCCESSFUL. `grep -n "Color(0xFF" ServiceDetailScreen.kt` returns nothing.
 
 - [ ] **Step 3: Commit**
@@ -951,7 +952,7 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 - [ ] **Step 3: Verify**
 
-Run: `./gradlew :app:assembleDebug :app:testDebugUnitTest --tests "*TrustDossier*" -PexcludePaparazzi`
+Run: `cd customer-app && ./gradlew :app:assembleDebug :app:testDebugUnitTest --tests "*TrustDossier*" -PexcludePaparazzi`
 Expected: BUILD SUCCESSFUL, tests PASS.
 
 - [ ] **Step 4: Commit**
