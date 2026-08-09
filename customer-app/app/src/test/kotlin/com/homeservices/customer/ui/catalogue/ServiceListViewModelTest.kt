@@ -9,7 +9,6 @@ import com.homeservices.customer.domain.catalogue.model.Service
 import com.homeservices.customer.domain.locale.GetCurrentLocaleUseCase
 import io.mockk.every
 import io.mockk.mockk
-import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -20,6 +19,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 public class ServiceListViewModelTest {

@@ -16,13 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AcUnit
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.ElectricBolt
-import androidx.compose.material.icons.filled.FilterAlt
-import androidx.compose.material.icons.filled.Plumbing
-import androidx.compose.material.icons.filled.Water
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -189,4 +182,3 @@ private fun PhotoCardIconFallback(
         }
     }
 }
-
