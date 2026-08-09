@@ -1,0 +1,274 @@
+diff --git a/customer-app/gradle/libs.versions.toml b/customer-app/gradle/libs.versions.toml
+index 65b6c7eb..4e7e06d9 100644
+--- a/customer-app/gradle/libs.versions.toml
++++ b/customer-app/gradle/libs.versions.toml
+@@ -113,6 +113,8 @@ compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview"
+ compose-material3 = { module = "androidx.compose.material3:material3" }
+ compose-material-icons-core = { module = "androidx.compose.material:material-icons-core" }
+ compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
++compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
++compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
+ 
+ # DI
+ hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
+diff --git a/technician-app/app/build.gradle.kts b/technician-app/app/build.gradle.kts
+index f9b3ce69..e6810eb0 100644
+--- a/technician-app/app/build.gradle.kts
++++ b/technician-app/app/build.gradle.kts
+@@ -692,6 +692,7 @@ dependencies {
+     implementation(libs.compose.ui)
+     implementation(libs.compose.ui.tooling.preview)
+     debugImplementation(libs.compose.ui.tooling)
++    debugImplementation(libs.compose.ui.test.manifest)
+     implementation(libs.compose.material3)
+     implementation(libs.compose.material.icons.extended)
+     implementation(libs.homeservices.design.system)
+@@ -771,6 +772,8 @@ dependencies {
+     testImplementation(libs.hilt.testing)
+     testImplementation(libs.kotlinx.coroutines.test)
+     testImplementation(libs.okhttp.mockwebserver)
++    testImplementation(platform(libs.compose.bom))
++    testImplementation(libs.compose.ui.test.junit4)
+     kspTest(libs.hilt.compiler)
+     kspTest(libs.androidx.hilt.compiler)
+ 
+diff --git a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt
+index bcb58f1a..db145b87 100644
+--- a/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt
++++ b/technician-app/app/src/main/kotlin/com/homeservices/technician/ui/myratings/MyRatingsScreen.kt
+@@ -27,6 +27,7 @@ import androidx.compose.material3.SnackbarHostState
+ import androidx.compose.material3.SuggestionChip
+ import androidx.compose.material3.Surface
+ import androidx.compose.material3.Text
++import androidx.compose.material3.TextButton
+ import androidx.compose.material3.TopAppBar
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.LaunchedEffect
+@@ -44,7 +45,6 @@ import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.unit.dp
+ import androidx.hilt.navigation.compose.hiltViewModel
+ import androidx.lifecycle.compose.collectAsStateWithLifecycle
+-import com.homeservices.designsystem.components.HsActionButton
+ import com.homeservices.designsystem.components.HsPrimaryButton
+ import com.homeservices.designsystem.components.HsSectionCard
+ import com.homeservices.designsystem.components.HsTrustBadge
+@@ -298,14 +298,27 @@ private fun RatingItemCard(
+         if (!rating.comment.isNullOrBlank()) {
+             Text(rating.comment, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+         }
+-        Text(formatDate(rating.submittedAt), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+-        if (rating.appealDisputed) {
+-            HsTrustBadge(text = stringResource(R.string.rating_appeal_disputed_badge))
+-        } else {
+-            HsActionButton(
+-                text = stringResource(R.string.rating_appeal_action),
+-                onClick = { onAppealClick(rating.bookingId) },
+-            )
++        Row(
++            modifier = Modifier.fillMaxWidth(),
++            horizontalArrangement = Arrangement.SpaceBetween,
++            verticalAlignment = Alignment.CenterVertically,
++        ) {
++            Text(formatDate(rating.submittedAt), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
++            // Fixed-height slot so the Appeal<->Disputed swap never changes this card's height —
++            // an earlier version let the two branches size independently, which jittered the
++            // LazyColumn on every appeal outcome.
++            Box(modifier = Modifier.height(40.dp), contentAlignment = Alignment.Center) {
++                if (rating.appealDisputed) {
++                    HsTrustBadge(text = stringResource(R.string.rating_appeal_disputed_badge))
++                } else {
++                    TextButton(
++                        onClick = { onAppealClick(rating.bookingId) },
++                        contentPadding = PaddingValues(horizontal = 8.dp),
++                    ) {
++                        Text(stringResource(R.string.rating_appeal_action), style = MaterialTheme.typography.labelMedium)
++                    }
++                }
++            }
+         }
+     }
+ }
+diff --git a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.myratings_MyRatingsScreenTest_myRatingsSuccess.png b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.myratings_MyRatingsScreenTest_myRatingsSuccess.png
+index 618f9935..b116914b 100644
+Binary files a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.myratings_MyRatingsScreenTest_myRatingsSuccess.png and b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.myratings_MyRatingsScreenTest_myRatingsSuccess.png differ
+diff --git a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.myratings_MyRatingsScreenTest_myRatingsSuccess_withDisputedAppeal.png b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.myratings_MyRatingsScreenTest_myRatingsSuccess_withDisputedAppeal.png
+index a0ee60e9..3a65d473 100644
+Binary files a/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.myratings_MyRatingsScreenTest_myRatingsSuccess_withDisputedAppeal.png and b/technician-app/app/src/test/snapshots/images/com.homeservices.technician.ui.myratings_MyRatingsScreenTest_myRatingsSuccess_withDisputedAppeal.png differ
+diff --git a/technician-app/app/src/testDebug/kotlin/com/homeservices/technician/ui/myratings/MyRatingsAppealInteractionTest.kt b/technician-app/app/src/testDebug/kotlin/com/homeservices/technician/ui/myratings/MyRatingsAppealInteractionTest.kt
+new file mode 100644
+index 00000000..d6fa74b5
+--- /dev/null
++++ b/technician-app/app/src/testDebug/kotlin/com/homeservices/technician/ui/myratings/MyRatingsAppealInteractionTest.kt
+@@ -0,0 +1,159 @@
++package com.homeservices.technician.ui.myratings
++
++import androidx.compose.ui.test.assertIsEnabled
++import androidx.compose.ui.test.assertIsNotEnabled
++import androidx.compose.ui.test.junit4.ComposeContentTestRule
++import androidx.compose.ui.test.junit4.createComposeRule
++import androidx.compose.ui.test.onNodeWithText
++import androidx.compose.ui.test.performClick
++import androidx.compose.ui.test.performTextInput
++import com.homeservices.designsystem.theme.HomeservicesTheme
++import com.homeservices.technician.domain.rating.model.RatingSubScoreAverages
++import com.homeservices.technician.domain.rating.model.ReceivedRating
++import com.homeservices.technician.domain.rating.model.TechRatingSummary
++import org.assertj.core.api.Assertions.assertThat
++import org.junit.Rule
++import org.junit.Test
++import org.junit.runner.RunWith
++import org.robolectric.RobolectricTestRunner
++import org.robolectric.annotation.Config
++import java.util.concurrent.atomic.AtomicReference
++
++/**
++ * Interaction tests for the Appeal/Disputed wiring — tapping "Appeal" must open
++ * [RatingAppealSheet] for the correct booking, a disputed rating must show the "Disputed" badge
++ * instead of an Appeal trigger, and submitting the sheet must call back with the exact bookingId
++ * and reason typed. No unit test previously exercised this wiring (only its rendered output via
++ * Paparazzi) — see the final-review follow-up that flagged the gap.
++ *
++ * Two things needed for this to actually work under Robolectric, neither obvious from the API:
++ *
++ * 1. A tall test window (`w360dp-h1200dp`). Robolectric's default display is short enough that
++ *    [MyRatingsContent]'s `LazyColumn` never composes the second rating card at all — not merely
++ *    off-screen, genuinely absent from the semantics tree — which silently made an early version
++ *    of this test assert against a tree that only ever contained one card.
++ * 2. The submit interaction is tested against [RatingAppealSheetContent] directly, not through
++ *    [RatingAppealSheet]'s `ModalBottomSheet` wrapper. Clicks on content inside a `ModalBottomSheet`
++ *    (which Compose renders in a separate Popup window) don't reliably dispatch under
++ *    Robolectric+`ComposeTestRule` — `onNodeWithText` finds the node and `assertIsEnabled` confirms
++ *    it's clickable, but `performClick()` on it is a silent no-op. This is the same class of
++ *    Popup/Dialog-vs-test-tooling friction already documented for Paparazzi in
++ *    docs/patterns/paparazzi-cross-os-goldens.md ("ModalBottomSheet + Paparazzi renders blank");
++ *    the fix there and here is the same — test the extracted pure content, not the wrapper.
++ */
++@RunWith(RobolectricTestRunner::class)
++@Config(qualifiers = "w360dp-h1200dp")
++public class MyRatingsAppealInteractionTest {
++    @get:Rule
++    public val composeTestRule: ComposeContentTestRule = createComposeRule()
++
++    private fun summary(): TechRatingSummary =
++        TechRatingSummary(
++            totalCount = 2,
++            averageOverall = 4.5,
++            averageSubScores = RatingSubScoreAverages(4.5, 4.5, 4.5),
++            trend = emptyList(),
++            items =
++                listOf(
++                    ReceivedRating(
++                        bookingId = "bk-open",
++                        overall = 4,
++                        punctuality = 4,
++                        skill = 4,
++                        behaviour = 4,
++                        comment = "Good service.",
++                        submittedAt = "2026-04-28T10:00:00Z",
++                        appealDisputed = false,
++                    ),
++                    ReceivedRating(
++                        bookingId = "bk-disputed",
++                        overall = 2,
++                        punctuality = 2,
++                        skill = 2,
++                        behaviour = 2,
++                        comment = "Late arrival.",
++                        submittedAt = "2026-04-27T10:00:00Z",
++                        appealDisputed = true,
++                    ),
++                ),
++        )
++
++    @Test
++    public fun `disputed rating shows Disputed badge and no Appeal trigger`(): Unit {
++        composeTestRule.setContent {
++            HomeservicesTheme(darkTheme = false) {
++                MyRatingsContent(
++                    uiState = MyRatingsUiState.Success(summary()),
++                    onRetry = {},
++                )
++            }
++        }
++
++        composeTestRule.onNodeWithText("Disputed").assertExists()
++        // Exactly one "Appeal" trigger must exist — the non-disputed rating's, not the disputed one's.
++        composeTestRule.onNodeWithText("Appeal").assertExists()
++    }
++
++    @Test
++    public fun `tapping Appeal opens the sheet for the tapped rating`(): Unit {
++        composeTestRule.setContent {
++            HomeservicesTheme(darkTheme = false) {
++                MyRatingsContent(
++                    uiState = MyRatingsUiState.Success(summary()),
++                    onRetry = {},
++                )
++            }
++        }
++
++        // Sheet is not shown until the trigger is tapped.
++        composeTestRule.onNodeWithText("Rating appeal").assertDoesNotExist()
++
++        composeTestRule.onNodeWithText("Appeal").performClick()
++
++        // The only rating with an Appeal trigger is bk-open (bk-disputed shows the badge instead),
++        // so this sheet opening at all proves it's scoped to the tapped (correct) booking.
++        composeTestRule.onNodeWithText("Rating appeal").assertExists()
++    }
++
++    @Test
++    public fun `submitting the sheet calls onSubmit with the exact bookingId and reason typed`(): Unit {
++        val submittedBookingId = AtomicReference<String?>(null)
++        val submittedReason = AtomicReference<String?>(null)
++
++        composeTestRule.setContent {
++            HomeservicesTheme(darkTheme = false) {
++                RatingAppealSheetContent(
++                    bookingId = "bk-under-appeal",
++                    onSubmit = { bookingId, reason ->
++                        submittedBookingId.set(bookingId)
++                        submittedReason.set(reason)
++                    },
++                    isSubmitting = false,
++                )
++            }
++        }
++
++        composeTestRule.onNodeWithText("Write reason…").performTextInput("This rating is wrong, customer was rude to me.")
++        composeTestRule.onNodeWithText("Submit appeal").assertIsEnabled()
++        composeTestRule.onNodeWithText("Submit appeal").performClick()
++
++        assertThat(submittedBookingId.get()).isEqualTo("bk-under-appeal")
++        assertThat(submittedReason.get()).isEqualTo("This rating is wrong, customer was rude to me.")
++    }
++
++    @Test
++    public fun `submit stays disabled below the 20-character reason minimum`(): Unit {
++        composeTestRule.setContent {
++            HomeservicesTheme(darkTheme = false) {
++                RatingAppealSheetContent(
++                    bookingId = "bk-under-appeal",
++                    onSubmit = { _, _ -> },
++                    isSubmitting = false,
++                )
++            }
++        }
++
++        composeTestRule.onNodeWithText("Write reason…").performTextInput("too short")
++        composeTestRule.onNodeWithText("Submit appeal").assertIsNotEnabled()
++    }
++}
+diff --git a/technician-app/gradle/libs.versions.toml b/technician-app/gradle/libs.versions.toml
+index 65b6c7eb..4e7e06d9 100644
+--- a/technician-app/gradle/libs.versions.toml
++++ b/technician-app/gradle/libs.versions.toml
+@@ -113,6 +113,8 @@ compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview"
+ compose-material3 = { module = "androidx.compose.material3:material3" }
+ compose-material-icons-core = { module = "androidx.compose.material:material-icons-core" }
+ compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
++compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
++compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
+ 
+ # DI
+ hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
