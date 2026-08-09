@@ -25,6 +25,7 @@
     <string name="service_detail_back_desc">वापस</string>
     <string name="service_detail_eyebrow">होम-रेडी सेवा</string>
     <string name="service_detail_duration_caption">आम विजिट</string>
+    <string name="service_detail_trust_metric">सत्यापित पेशेवर</string>
     <string name="service_detail_quality_title">प्रोफेशनल सेवा, बिना सरप्राइज</string>
     <string name="service_detail_quality_body">स्लॉट चुनते समय आपकी फिक्स्ड कीमत दिखती रहती है। अतिरिक्त काम के लिए पहले आपकी मंजूरी जरूरी है।</string>
     <string name="service_detail_includes_subtitle">हर विजिट इन चेक से शुरू होती है।</string>

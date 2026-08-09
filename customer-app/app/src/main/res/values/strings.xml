@@ -37,6 +37,7 @@
     <string name="service_detail_back_desc">Back</string>
     <string name="service_detail_eyebrow">Home-ready service</string>
     <string name="service_detail_duration_caption">Typical visit</string>
+    <string name="service_detail_trust_metric">Verified pro</string>
     <string name="service_detail_quality_title">Professional service, no surprises</string>
     <string name="service_detail_quality_body">Your fixed price stays visible while you choose a slot. Any extra work needs your approval first.</string>
     <string name="service_detail_includes_subtitle">Every visit starts with these checks.</string>
