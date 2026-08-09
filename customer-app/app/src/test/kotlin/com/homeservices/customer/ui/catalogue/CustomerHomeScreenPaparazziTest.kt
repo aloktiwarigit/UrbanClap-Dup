@@ -22,7 +22,6 @@ import org.junit.Test
  *
  * Once CI goldens are committed, remove [@Ignore] from the tests you want to guard.
  */
-@Ignore("Re-record on CI Linux via workflow_dispatch paparazzi-record.yml after sprint2a merge")
 public class CustomerHomeScreenPaparazziTest {
     @get:Rule
     public val paparazzi: Paparazzi =
@@ -67,7 +66,6 @@ public class CustomerHomeScreenPaparazziTest {
             createdAt = "2026-05-01T10:00:00Z",
         )
 
-    @Ignore("Goldens recorded on CI Linux — run paparazzi-record.yml workflow_dispatch first")
     @Test
     public fun `snapshot_customer_home_empty_state`() {
         paparazzi.snapshot {
@@ -88,7 +86,6 @@ public class CustomerHomeScreenPaparazziTest {
         }
     }
 
-    @Ignore("Goldens recorded on CI Linux — run paparazzi-record.yml workflow_dispatch first")
     @Test
     public fun `snapshot_customer_home_pending_actions_state`() {
         paparazzi.snapshot {
@@ -109,7 +106,6 @@ public class CustomerHomeScreenPaparazziTest {
         }
     }
 
-    @Ignore("Goldens recorded on CI Linux — run paparazzi-record.yml workflow_dispatch first")
     @Test
     public fun `snapshot_customer_home_active_booking_state`() {
         paparazzi.snapshot {

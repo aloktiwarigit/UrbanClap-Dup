@@ -10,7 +10,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
-@Ignore("Re-record on CI Linux via workflow_dispatch paparazzi-record.yml after sprint2a merge")
 @RunWith(JUnit4::class)
 public class TrustDossierCardPaparazziTest {
     @get:Rule
@@ -38,9 +37,6 @@ public class TrustDossierCardPaparazziTest {
         }
     }
 
-    @Ignore(
-        "HandlerDispatcher IllegalStateException — Coil async handler fires after Paparazzi Looper quits on Loaded state; fix with Coil test dispatcher before recording",
-    )
     @Test
     public fun compact_loaded(): Unit {
         paparazzi.snapshot {
@@ -50,9 +46,6 @@ public class TrustDossierCardPaparazziTest {
         }
     }
 
-    @Ignore(
-        "HandlerDispatcher IllegalStateException — Coil async handler fires after Paparazzi Looper quits on Loaded state; fix with Coil test dispatcher before recording",
-    )
     @Test
     public fun expanded_loaded(): Unit {
         paparazzi.snapshot {

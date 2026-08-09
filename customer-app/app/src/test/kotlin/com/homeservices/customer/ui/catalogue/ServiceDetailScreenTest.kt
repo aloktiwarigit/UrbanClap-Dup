@@ -16,7 +16,6 @@ public class ServiceDetailScreenTest {
     @get:Rule
     public val paparazzi: Paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
 
-    @Ignore("CI-only — record via paparazzi-record.yml after E14-S01 TrustDossierCard wiring")
     @Test
     public fun `service detail success state`(): Unit {
         paparazzi.snapshot {
