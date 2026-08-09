@@ -59,4 +59,18 @@ public class CatalogueHomeViewModelTest {
             sut = CatalogueHomeViewModel(useCase, localizer, getCurrentLocale, NoOpAnalyticsFacade())
             assertThat(sut.uiState.value).isInstanceOf(CatalogueHomeUiState.Error::class.java)
         }
+
+    @Test
+    public fun `retry re-enters Loading then recovers to Success`(): Unit =
+        runTest(dispatcher) {
+            every { useCase() } returns flowOf(Result.failure(IOException("net err")))
+            sut = CatalogueHomeViewModel(useCase, localizer, getCurrentLocale, NoOpAnalyticsFacade())
+            assertThat(sut.uiState.value).isInstanceOf(CatalogueHomeUiState.Error::class.java)
+
+            every { useCase() } returns
+                flowOf(Result.success(listOf(Category("1", "Plumbing", "", 3, minPricePaise = 39900))))
+            sut.retry()
+
+            assertThat(sut.uiState.value).isInstanceOf(CatalogueHomeUiState.Success::class.java)
+        }
 }
