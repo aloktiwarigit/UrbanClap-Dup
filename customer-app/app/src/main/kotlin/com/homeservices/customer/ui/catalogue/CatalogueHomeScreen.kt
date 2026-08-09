@@ -135,26 +135,6 @@ private fun promoBanners(): List<PromoBanner> {
     )
 }
 
-// ── Category styles ───────────────────────────────────────────────────────────
-private data class CategoryStyle(
-    val iconBackground: Color,
-    val iconTint: Color,
-    val icon: ImageVector,
-)
-
-@Composable
-private fun categoryStyle(id: String): CategoryStyle =
-    MaterialTheme.colorScheme.let { colors ->
-        when (id) {
-            "ac-repair" -> CategoryStyle(colors.tertiaryContainer, colors.onTertiaryContainer, Icons.Default.AcUnit)
-            "water-pump" -> CategoryStyle(colors.surfaceVariant, colors.onSurfaceVariant, Icons.Default.Water)
-            "plumbing" -> CategoryStyle(colors.primaryContainer, colors.onPrimaryContainer, Icons.Default.Plumbing)
-            "electrical" -> CategoryStyle(colors.secondaryContainer, colors.onSecondaryContainer, Icons.Default.ElectricBolt)
-            "water-purifier" -> CategoryStyle(colors.primaryContainer, colors.onPrimaryContainer, Icons.Default.FilterAlt)
-            else -> CategoryStyle(colors.surfaceVariant, colors.onSurfaceVariant, Icons.Default.Build)
-        }
-    }
-
 // formatPrice removed — price label is now built at the call site using stringResource
 // so the localized "from %s" prefix is included (FIX Codex P2: restore starting-price label).
 
