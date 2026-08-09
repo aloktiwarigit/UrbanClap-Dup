@@ -367,7 +367,7 @@
 
     <!-- Catalogue home screen (E12-S02a) -->
     <string name="catalogue_our_services">Our services</string>
-    <string name="catalogue_search_hint">Search AC, plumber, electrician…</string>
+    <string name="catalogue_search_hint" tools:ignore="UnusedResources">Search AC, plumber, electrician…</string>
     <string name="catalogue_location_display">Ayodhya, Uttar Pradesh</string>
     <string name="catalogue_starting_price">From %1$s</string>
     <string name="catalogue_empty_title">No services here yet</string>
