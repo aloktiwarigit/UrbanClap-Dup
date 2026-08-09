@@ -51,6 +51,7 @@
     <string name="trust_dossier_signal_identity">Identity checked</string>
     <string name="trust_dossier_signal_background">Background status</string>
     <string name="trust_dossier_signal_reviews">Reviewed jobs</string>
+    <string name="trust_dossier_review_rating">Rated %1$s out of 5</string>
 
     <!-- Booking flow -->
     <string name="slot_picker_title">Choose Date &amp; Time</string>

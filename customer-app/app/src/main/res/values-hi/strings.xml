@@ -39,6 +39,7 @@
     <string name="trust_dossier_signal_identity">पहचान चेक की गई</string>
     <string name="trust_dossier_signal_background">बैकग्राउंड स्टेटस</string>
     <string name="trust_dossier_signal_reviews">रिव्यू किए गए जॉब</string>
+    <string name="trust_dossier_review_rating">5 में से %1$s</string>
     <string name="address_screen_title">आपका पता</string>
     <string name="address_heading">तकनीशियन कहां आए?</string>
     <string name="address_subtitle">पूरा सर्विस पता जोड़ें ताकि तकनीशियन बिना कॉल के पहुंच सके।</string>
