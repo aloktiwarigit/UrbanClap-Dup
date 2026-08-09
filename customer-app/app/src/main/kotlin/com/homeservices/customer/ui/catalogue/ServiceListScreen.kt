@@ -47,11 +47,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.catalogue.model.Service
+import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsScreenTitle
+import com.homeservices.designsystem.components.HsSkeletonBlock
 import com.homeservices.designsystem.format.formatRupees
+import com.homeservices.designsystem.theme.HomeservicesMonoFontFamily
 import com.homeservices.designsystem.theme.LocalHomeservicesExtendedColors
 
-private val SkeletonLine = Color(0xFFEDE7DD)
 private val ServiceCardShape = RoundedCornerShape(12.dp)
 private val PillShape = RoundedCornerShape(percent = 50)
 
@@ -104,6 +106,7 @@ internal fun ServiceListScreen(
             onServiceClick = onServiceClick,
             modifier = Modifier.padding(innerPadding),
             photoFirstCatalogueEnabled = photoFirstCatalogueEnabled,
+            onRetry = viewModel::retry,
         )
     }
 }
@@ -114,19 +117,12 @@ internal fun ServiceListContent(
     onServiceClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     photoFirstCatalogueEnabled: Boolean = false,
+    onRetry: () -> Unit = {},
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (uiState) {
             is ServiceListUiState.Loading -> ServiceListSkeleton()
-            is ServiceListUiState.Error -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = stringResource(R.string.catalogue_error),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(24.dp),
-                    )
-                }
-            }
+            is ServiceListUiState.Error -> ErrorServiceList(onRetry = onRetry)
             is ServiceListUiState.Success -> {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -164,6 +160,7 @@ internal fun ServiceListContent(
 
 @Composable
 private fun EmptyServiceList() {
+    val accentInk = LocalHomeservicesExtendedColors.current.accentInk
     Box(
         modifier =
             Modifier
@@ -179,7 +176,7 @@ private fun EmptyServiceList() {
                 Icon(
                     imageVector = Icons.Filled.Build,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = accentInk,
                     modifier = Modifier.padding(14.dp).size(24.dp),
                 )
             }
@@ -197,6 +194,52 @@ private fun EmptyServiceList() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ErrorServiceList(onRetry: () -> Unit) {
+    val accentInk = LocalHomeservicesExtendedColors.current.accentInk
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 96.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Surface(
+                shape = PillShape,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Build,
+                    contentDescription = null,
+                    tint = accentInk,
+                    modifier = Modifier.padding(14.dp).size(24.dp),
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = stringResource(R.string.catalogue_error_title),
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.catalogue_error),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(16.dp))
+            HsPrimaryButton(
+                text = stringResource(R.string.catalogue_retry),
+                onClick = onRetry,
             )
         }
     }
@@ -260,12 +303,14 @@ private fun ServiceActionColumn(
     service: Service,
     onClick: () -> Unit,
 ) {
+    val accentInk = LocalHomeservicesExtendedColors.current.accentInk
     Column(horizontalAlignment = Alignment.End) {
         Text(
             text = formatPrice(service.basePrice),
-            color = MaterialTheme.colorScheme.primary,
-            fontSize = 22.sp,
+            color = accentInk,
+            fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
+            fontFamily = HomeservicesMonoFontFamily,
             maxLines = 1,
         )
         Spacer(Modifier.height(12.dp))
@@ -297,6 +342,7 @@ private fun ServiceActionColumn(
 
 @Composable
 private fun ServiceDurationChip(durationMinutes: Int) {
+    val accentInk = LocalHomeservicesExtendedColors.current.accentInk
     Surface(
         shape = PillShape,
         color = MaterialTheme.colorScheme.surfaceVariant,
@@ -308,13 +354,13 @@ private fun ServiceDurationChip(durationMinutes: Int) {
             Icon(
                 imageVector = Icons.Filled.Build,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = accentInk,
                 modifier = Modifier.size(14.dp),
             )
             Spacer(Modifier.width(4.dp))
             Text(
                 text = stringResource(R.string.service_duration_label, durationMinutes),
-                color = MaterialTheme.colorScheme.primary,
+                color = accentInk,
                 fontSize = 12.sp,
                 maxLines = 1,
             )
@@ -367,35 +413,23 @@ private fun ServiceListSkeleton(modifier: Modifier = Modifier) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
-                        PlaceholderLine(widthFraction = 0.72f, height = 18.dp)
+                        HsSkeletonBlock(widthFraction = 0.72f, height = 18.dp, shape = PillShape)
                         Spacer(Modifier.height(12.dp))
-                        PlaceholderLine(widthFraction = 0.92f, height = 12.dp)
+                        HsSkeletonBlock(widthFraction = 0.92f, height = 12.dp, shape = PillShape)
                         Spacer(Modifier.height(8.dp))
-                        PlaceholderLine(widthFraction = 0.78f, height = 12.dp)
+                        HsSkeletonBlock(widthFraction = 0.78f, height = 12.dp, shape = PillShape)
                         Spacer(Modifier.height(14.dp))
-                        PlaceholderLine(widthFraction = 0.34f, height = 22.dp)
+                        HsSkeletonBlock(widthFraction = 0.34f, height = 22.dp, shape = PillShape)
                     }
                     Column(modifier = Modifier.width(88.dp), horizontalAlignment = Alignment.End) {
-                        PlaceholderLine(widthFraction = 0.78f, height = 24.dp)
+                        HsSkeletonBlock(widthFraction = 0.78f, height = 24.dp, shape = PillShape)
                         Spacer(Modifier.height(14.dp))
-                        PlaceholderLine(widthFraction = 1f, height = 36.dp)
+                        HsSkeletonBlock(widthFraction = 1f, height = 36.dp, shape = PillShape)
                     }
                 }
             }
         }
     }
-}
-
-@Composable
-private fun PlaceholderLine(
-    widthFraction: Float,
-    height: androidx.compose.ui.unit.Dp,
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(widthFraction).height(height),
-        shape = PillShape,
-        color = SkeletonLine,
-    ) {}
 }
 
 private fun formatPrice(pricePaise: Int): String = formatRupees(pricePaise)

@@ -35,6 +35,18 @@ public class ServiceListScreenPaparazziTest {
         }
     }
 
+    @Test
+    public fun `service list error state`(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                ServiceListContent(
+                    uiState = ServiceListUiState.Error("net err"),
+                    onServiceClick = {},
+                )
+            }
+        }
+    }
+
     private fun service(
         id: String,
         name: String,
