@@ -1085,4 +1085,19 @@ Leave the PR open for the owner. Root `CLAUDE.md` forbids direct pushes to `main
 
 **Not covered by any task, by design:** spec §11 (offline/success/destructive state rows, accessibility semantics, dynamic type, fold-inversion telemetry). These were deferred explicitly, not missed.
 
-**Added by this plan beyond spec rev 2:** the `accentInk` token (Task 1). The spec's §3.5 requires shape conformance but does not address the accent-as-foreground problem, which the design-direction pass measured at 2.08:1 across 20 sites. `ExtendedColors.kt:57-74` already documents the same figure and logs it as an open finding. **Flag to the owner before executing Task 1** — it adds a design-system token, which is nominally S-10 territory.
+**`accentInk` (Task 1):** raised by the design-direction pass, **approved by the owner 2026-08-09**,
+and folded back into the spec as §3.6 with acceptance criterion 6b. Plan and spec agree.
+
+## Size-gate override
+
+This plan is **1088 lines** against the Feature-tier "split required above 800" gate in root
+`CLAUDE.md`. **Owner approved proceeding as one PR, 2026-08-09.**
+
+Recorded so the gate is not silently ignored: all four blast-radius criteria the same section
+defines are negative — 3 new files (gate: >20), UI and ViewModel layers only (gate: all four),
+0 external SDK integrations (gate: ≥2), ~7 test files (gate: ≥10). The length comes from verbatim
+code blocks, which the writing-plans skill requires and which reduce implementer risk rather than
+increasing it.
+
+If a future story hits this gate with any blast-radius criterion positive, split it — this override
+is specific to a long plan for a narrow change, not a precedent for large ones.

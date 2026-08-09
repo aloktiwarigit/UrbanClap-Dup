@@ -15,6 +15,9 @@ Baseline: **D2 — Ayodhya / rural UP, Hindi-first.** Contract: `docs/design/des
   (owner, reversing the rev-1 decision). D1 §Shape added to scope (§3.5). Retry extended to
   `ServiceDetailViewModel`'s second coroutine. Un-ignore list corrected from 3 tests to 5.
   Items raised in review but deliberately **not** folded in are listed in §11.
+- rev 3 (2026-08-09) — design-direction pass. Adds §3.6: the accent is used as a *foreground* at
+  20 sites on these screens and measures 2.08:1. Owner approved including the fix in S-40 rather
+  than splitting it into a token story.
 
 ---
 
@@ -210,6 +213,33 @@ This was absent from rev 1 entirely. For the story whose stated purpose is raisi
 leaving D1's shape contract unenforced on its own three screens was the largest omission in the
 document.
 
+### 3.6 Accent legibility (D1 §Palette) — new in rev 3
+
+Marigold `#E2A04A` measures **2.08:1** on canvas `#FBF6E9` and **1.93:1** on surface `#F4EDDF`.
+AA body text needs 4.5:1; the large-text floor is 3:1. D1's palette table never claims otherwise —
+it publishes "ink *on* brand accent, 8.75:1", the inverse relationship. The accent is a **fill**
+colour.
+
+It is nonetheless used as a **foreground** at 20 sites across the S-40 surface: every price
+(`CatalogueHomeScreen.kt:795`, `ServiceListScreen.kt:266`, `ServiceDetailScreen.kt:475,510`), the
+trust-chip label at 10sp (`:713`), the wordmark, the location line, the trust-dossier header and
+bullets. In a fixed-price marketplace the price is the most-scanned content on the screen, and it is
+currently the least legible text on it.
+
+This is not a new discovery. `ExtendedColors.kt:57-74` publishes the same **1.93:1** figure,
+concludes "marigold on warm paper is inherently low-contrast", forbids substituting the accent for a
+focus ring in light mode, and records the general case as "a gap in the contract rather than in this
+implementation; **raised as a finding**." S-10 solved it for the focus-ring role only. The same
+reasoning was never applied to text.
+
+**Fix:** one additive token, `HomeservicesExtendedColors.accentInk`. Light `#6F4610` — measured
+**7.61:1** on canvas and **7.04:1** on surface, both clearing D1's 7:1 D2 target. Dark keeps the raw
+accent, which already measures 8.03:1 on dark canvas. No existing token value changes; no surface
+outside these screens is affected until it opts in.
+
+Owner approved inclusion in S-40 (2026-08-09) rather than splitting it into a separate token story.
+The remaining accent-as-foreground sites elsewhere in the app are **not** swept here.
+
 ---
 
 ## 4. Shared: `HsSkeletonBlock` (design-system)
@@ -366,6 +396,8 @@ in the same pass.
 5. Zero raw `Color(0x…)` literals remain in the three screens; the `@Suppress("MagicNumber")` at
    `ServiceDetailScreen.kt:324` is gone.
 6. **Every corner radius in the three screens is on the D1 customer scale (8/12/20/999).**
+6b. **No `colorScheme.primary` remains as a text or icon foreground on a light surface in the three
+   screens; `accentInk` measures ≥ 7:1 on both canvas and surface, asserted by a token test.**
 7. `CatalogueVisualImage.kt`, its Kover exclusion and its stale detekt baseline entries are gone;
    one `categoryStyle` definition remains.
 8. The guarantee copy does not truncate in either locale, fixed by sizing or wrapping — not by
