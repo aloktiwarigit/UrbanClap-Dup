@@ -689,6 +689,11 @@ private fun TrustChip(
 }
 
 // ── Category card (Codex: 148dp, radius 20dp, icon tile 56dp, 17sp title) ────
+// Height bound to one constant (spec §3.1: 126dp was cramped for a two-line Devanagari name plus
+// price; owner-specified 148dp) — shared with LoadingState's HsSkeletonBlock placeholders below so
+// the skeleton and the real card can never drift apart again.
+private val CategoryCardHeight = 148.dp
+
 @Composable
 private fun CategoryCard(
     category: Category,
@@ -707,7 +712,7 @@ private fun CategoryCard(
     Box(
         modifier =
             modifier
-                .height(126.dp)
+                .height(CategoryCardHeight)
                 .scale(scale)
                 .clip(RoundedCornerShape(20.dp))
                 .background(MaterialTheme.colorScheme.surface)
@@ -855,8 +860,8 @@ private fun LoadingState() {
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                HsSkeletonBlock(modifier = Modifier.weight(1f), height = 126.dp, shape = MaterialTheme.shapes.large)
-                HsSkeletonBlock(modifier = Modifier.weight(1f), height = 126.dp, shape = MaterialTheme.shapes.large)
+                HsSkeletonBlock(modifier = Modifier.weight(1f), height = CategoryCardHeight, shape = MaterialTheme.shapes.large)
+                HsSkeletonBlock(modifier = Modifier.weight(1f), height = CategoryCardHeight, shape = MaterialTheme.shapes.large)
             }
         }
     }
