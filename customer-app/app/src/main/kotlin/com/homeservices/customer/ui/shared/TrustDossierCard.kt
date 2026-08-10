@@ -237,7 +237,7 @@ private fun TrustDossierHeader(showIcon: Boolean = true) {
                 Icon(
                     imageVector = Icons.Default.VerifiedUser,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = accentInk,
                     modifier = Modifier.padding(7.dp).size(16.dp),
                 )
             }
