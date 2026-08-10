@@ -693,6 +693,8 @@ private fun TrustChip(
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.SemiBold),
             color = accentInk,
             textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -832,7 +834,8 @@ private fun GlassNavItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val itemColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    val itemColor =
+        if (selected) LocalHomeservicesExtendedColors.current.accentInk else MaterialTheme.colorScheme.onSurfaceVariant
     val label = stringResource(item.labelRes)
     Column(
         modifier =
