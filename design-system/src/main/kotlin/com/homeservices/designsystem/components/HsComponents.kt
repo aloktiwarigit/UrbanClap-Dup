@@ -28,7 +28,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -191,12 +193,14 @@ public fun HsSkeletonBlock(
     val highlight = MaterialTheme.colorScheme.surface
     val reducedMotion = rememberReducedMotion()
 
-    val progress =
+    // Held as State<Float>, not `by`-delegated: reading `.value` happens inside drawBehind below,
+    // so only the draw phase invalidates on each animation frame — not the whole composable.
+    val progress: State<Float> =
         if (reducedMotion) {
-            0f
+            remember { mutableFloatStateOf(0f) }
         } else {
             val transition = rememberInfiniteTransition(label = "hs_skeleton")
-            val animated by transition.animateFloat(
+            transition.animateFloat(
                 initialValue = 0f,
                 targetValue = 1f,
                 animationSpec =
@@ -206,7 +210,6 @@ public fun HsSkeletonBlock(
                     ),
                 label = "hs_skeleton_progress",
             )
-            animated
         }
 
     Box(
@@ -221,7 +224,7 @@ public fun HsSkeletonBlock(
                     drawRect(color = restingFill)
                     if (!reducedMotion) {
                         val band = size.width * SKELETON_BAND_FRACTION
-                        val startX = -band + progress * (size.width + 2f * band)
+                        val startX = -band + progress.value * (size.width + 2f * band)
                         drawRect(
                             brush =
                                 Brush.horizontalGradient(
