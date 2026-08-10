@@ -324,17 +324,12 @@ private fun ServiceMetricTile(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
-    emphasized: Boolean = false,
 ) {
     Surface(
         modifier = modifier,
         shape = CardShape,
-        color = if (emphasized) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
-        border =
-            BorderStroke(
-                1.dp,
-                if (emphasized) MaterialTheme.colorScheme.primary.copy(alpha = 0.20f) else MaterialTheme.colorScheme.outline,
-            ),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -351,7 +346,7 @@ private fun ServiceMetricTile(
                 text = value,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (emphasized) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
