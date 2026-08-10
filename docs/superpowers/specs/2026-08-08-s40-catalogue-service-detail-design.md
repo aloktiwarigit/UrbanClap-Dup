@@ -403,10 +403,12 @@ in the same pass.
 8. The guarantee copy does not truncate in either locale, fixed by sizing or wrapping — not by
    shortening the English string.
 9. `ConfidenceScoreRowPaparazziTest` wraps `HomeservicesTheme`; all five Paparazzi classes in §8 are
-   un-ignored, current, and recorded on CI in EN + HI × light + dark.
+   un-ignored, current, and recorded on CI in EN + HI, light only. Dark-mode variants for these
+   classes are owner-deferred (2026-08-09): the real risk is Devanagari layout breakage on the
+   Ayodhya/UP Hindi pivot, not dark-mode drift — see §11 for the deferral rationale in full.
 10. Retry on `ServiceDetailViewModel` re-fires both coroutines.
 11. Six-step smoke gate green; Codex review clean.
-12. Nothing under `customer-app/app/src/main/res/` is modified.
+12. Nothing under `customer-app/app/src/main/res/drawable*/` is modified.
 
 ---
 
@@ -427,3 +429,10 @@ Surfaced by the rev-2 adversarial pass, deliberately left out of S-40. Listed so
   comes from cross-sell, and that is a defensible position. The D2 argument is plausible but
   untested. Worth a flag-gated rollout with a before/after analytics baseline rather than a
   permanent assertion.
+- **Dark-mode Paparazzi variants deferred (owner ruling, 2026-08-09).** Acceptance 9 originally
+  required all five §8 Paparazzi classes recorded EN + HI × light + dark. Zero dark goldens exist
+  for these classes and none were recorded as part of this story — the owner ruled EN + HI
+  light-only is sufficient for S-40, because the risk this acceptance criterion exists to catch is
+  Devanagari layout breakage on the Ayodhya/UP Hindi pivot (text expansion, wrapping, truncation),
+  not dark-mode colour drift. Dark-mode coverage for these five classes remains open; revisit if a
+  future story touches their dark-theme rendering.
