@@ -30,6 +30,33 @@ public class ServiceDetailScreenHindiPaparazziTest {
         }
     }
 
+    // I-4: HI-light counterpart of the EN error/loading cases added to ServiceDetailScreenTest.
+    @Test
+    public fun `service detail error state hindiLight`(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                ServiceDetailContent(
+                    uiState = ServiceDetailUiState.Error("net err"),
+                    confidenceScoreState = ConfidenceScoreUiState.Hidden,
+                    onBookNow = { _, _ -> },
+                )
+            }
+        }
+    }
+
+    @Test
+    public fun `service detail loading state hindiLight`(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                ServiceDetailContent(
+                    uiState = ServiceDetailUiState.Loading,
+                    confidenceScoreState = ConfidenceScoreUiState.Hidden,
+                    onBookNow = { _, _ -> },
+                )
+            }
+        }
+    }
+
     private fun sampleService() =
         Service(
             id = "s1",

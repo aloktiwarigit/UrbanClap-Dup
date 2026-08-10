@@ -28,6 +28,36 @@ public class ServiceDetailScreenTest {
         }
     }
 
+    // I-4: acceptance 2/3 claim coverage for the two states this story added to this screen
+    // (ServiceDetailError retry treatment, ServiceDetailSkeleton on HsSkeletonBlock) — previously
+    // resting on code reading alone. Mirrors ServiceListScreenPaparazziTest's error case and
+    // CatalogueHomeScreenTest's loading case.
+    @Test
+    public fun `service detail error state`(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                ServiceDetailContent(
+                    uiState = ServiceDetailUiState.Error("net err"),
+                    confidenceScoreState = ConfidenceScoreUiState.Hidden,
+                    onBookNow = { _, _ -> },
+                )
+            }
+        }
+    }
+
+    @Test
+    public fun `service detail loading state`(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                ServiceDetailContent(
+                    uiState = ServiceDetailUiState.Loading,
+                    confidenceScoreState = ConfidenceScoreUiState.Hidden,
+                    onBookNow = { _, _ -> },
+                )
+            }
+        }
+    }
+
     private fun sampleService() =
         Service(
             id = "s1",
