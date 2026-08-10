@@ -4,7 +4,6 @@ import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.homeservices.customer.domain.catalogue.model.Service
 import com.homeservices.designsystem.theme.HomeservicesTheme
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

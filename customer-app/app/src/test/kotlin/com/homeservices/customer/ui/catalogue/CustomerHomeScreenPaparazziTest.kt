@@ -10,7 +10,6 @@ import com.homeservices.corenav.PendingActionType
 import com.homeservices.customer.domain.booking.model.BookingPaymentMethod
 import com.homeservices.customer.domain.booking.model.CustomerBooking
 import com.homeservices.customer.domain.booking.model.CustomerBookingStatus
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
