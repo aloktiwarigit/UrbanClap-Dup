@@ -37,6 +37,7 @@
     <string name="service_detail_back_desc">Back</string>
     <string name="service_detail_eyebrow">Home-ready service</string>
     <string name="service_detail_duration_caption">Typical visit</string>
+    <string name="service_detail_trust_metric">Verified pro</string>
     <string name="service_detail_quality_title">Professional service, no surprises</string>
     <string name="service_detail_quality_body">Your fixed price stays visible while you choose a slot. Any extra work needs your approval first.</string>
     <string name="service_detail_includes_subtitle">Every visit starts with these checks.</string>
@@ -50,6 +51,7 @@
     <string name="trust_dossier_signal_identity">Identity checked</string>
     <string name="trust_dossier_signal_background">Background status</string>
     <string name="trust_dossier_signal_reviews">Reviewed jobs</string>
+    <string name="trust_dossier_review_rating">Rated %1$s out of 5</string>
 
     <!-- Booking flow -->
     <string name="slot_picker_title">Choose Date &amp; Time</string>
@@ -367,9 +369,12 @@
 
     <!-- Catalogue home screen (E12-S02a) -->
     <string name="catalogue_our_services">Our services</string>
-    <string name="catalogue_search_hint">Search AC, plumber, electrician…</string>
+    <string name="catalogue_search_hint" tools:ignore="UnusedResources">Search AC, plumber, electrician…</string>
     <string name="catalogue_location_display">Ayodhya, Uttar Pradesh</string>
     <string name="catalogue_starting_price">From %1$s</string>
+    <string name="catalogue_empty_title">No services here yet</string>
+    <string name="catalogue_empty_body">We are adding services in your area. Check back soon.</string>
+    <string name="catalogue_retry">Try again</string>
 
     <!-- Confidence score row (E12-S02a) -->
     <string name="confidence_new_area">New in your area &#8212; building track record</string>

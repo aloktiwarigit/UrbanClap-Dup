@@ -6,12 +6,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -29,6 +28,13 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.technician.model.TechnicianProfile
+import com.homeservices.designsystem.components.HsSkeletonBlock
+import com.homeservices.designsystem.theme.LocalHomeservicesExtendedColors
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Locale
 
 @Composable
 public fun TrustDossierCard(
@@ -65,11 +71,11 @@ private fun LoadingContent() {
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
         )
-        PlaceholderLine(widthFraction = 0.86f, height = 14.dp)
-        PlaceholderLine(widthFraction = 0.58f, height = 14.dp)
+        HsSkeletonBlock(widthFraction = 0.86f, height = 14.dp)
+        HsSkeletonBlock(widthFraction = 0.58f, height = 14.dp)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PlaceholderBlock(height = 34.dp, modifier = Modifier.weight(1f))
-            PlaceholderBlock(height = 34.dp, modifier = Modifier.weight(1f))
+            HsSkeletonBlock(height = 34.dp, modifier = Modifier.weight(1f))
+            HsSkeletonBlock(height = 34.dp, modifier = Modifier.weight(1f))
         }
     }
 }
@@ -202,13 +208,13 @@ private fun ExpandedContent(profile: TechnicianProfile) {
                 profile.lastReviews.forEach { review ->
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            text = "Rating ${"%.1f".format(review.rating)}/5",
+                            text = stringResource(R.string.trust_dossier_review_rating, formatRating(review.rating)),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
                         )
                         Text(review.text, style = MaterialTheme.typography.bodySmall)
                         Text(
-                            review.date.take(10),
+                            formatReviewDate(review.date),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -221,6 +227,7 @@ private fun ExpandedContent(profile: TechnicianProfile) {
 
 @Composable
 private fun TrustDossierHeader(showIcon: Boolean = true) {
+    val accentInk = LocalHomeservicesExtendedColors.current.accentInk
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (showIcon) {
             Surface(
@@ -228,9 +235,9 @@ private fun TrustDossierHeader(showIcon: Boolean = true) {
                 color = MaterialTheme.colorScheme.primaryContainer,
             ) {
                 Icon(
-                    imageVector = Icons.Default.Lock,
+                    imageVector = Icons.Default.VerifiedUser,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = accentInk,
                     modifier = Modifier.padding(7.dp).size(16.dp),
                 )
             }
@@ -238,7 +245,7 @@ private fun TrustDossierHeader(showIcon: Boolean = true) {
         Text(
             text = stringResource(R.string.trust_dossier_title),
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
+            color = accentInk,
             fontWeight = FontWeight.SemiBold,
         )
     }
@@ -255,6 +262,7 @@ private fun TrustSignalList() {
 
 @Composable
 private fun TrustSignalRow(label: String) {
+    val accentInk = LocalHomeservicesExtendedColors.current.accentInk
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -263,7 +271,7 @@ private fun TrustSignalRow(label: String) {
         Surface(
             modifier = Modifier.size(7.dp),
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.primary,
+            color = accentInk,
         ) {}
         Text(
             text = label,
@@ -345,26 +353,17 @@ private fun BadgeChip(label: String) {
     }
 }
 
-@Composable
-private fun PlaceholderLine(
-    widthFraction: Float,
-    height: Dp,
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(widthFraction).height(height),
-        shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.surfaceVariant,
-    ) {}
-}
+// Explicit Locale.getDefault() rather than String.format's implicit platform default — this app
+// runs in both English and Hindi locales and decimal separators are not universal.
+private fun formatRating(rating: Float): String = String.format(Locale.getDefault(), "%.1f", rating)
 
-@Composable
-private fun PlaceholderBlock(
-    height: Dp,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth().height(height),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceVariant,
-    ) {}
-}
+// Reviews carry an ISO-8601 timestamp from the API. Malformed or unparseable input must render
+// nothing rather than a raw unparsed string or crash the composition.
+private fun formatReviewDate(isoDate: String): String =
+    try {
+        val instant = Instant.parse(isoDate)
+        val formatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault())
+        formatter.format(instant.atZone(ZoneId.systemDefault()))
+    } catch (_: Exception) {
+        ""
+    }

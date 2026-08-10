@@ -5,7 +5,6 @@ import app.cash.paparazzi.Paparazzi
 import com.homeservices.customer.domain.catalogue.model.AddOn
 import com.homeservices.customer.domain.catalogue.model.Service
 import com.homeservices.designsystem.theme.HomeservicesTheme
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -16,13 +15,42 @@ public class ServiceDetailScreenTest {
     @get:Rule
     public val paparazzi: Paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5)
 
-    @Ignore("CI-only — record via paparazzi-record.yml after E14-S01 TrustDossierCard wiring")
     @Test
     public fun `service detail success state`(): Unit {
         paparazzi.snapshot {
             HomeservicesTheme(darkTheme = false) {
                 ServiceDetailContent(
                     uiState = ServiceDetailUiState.Success(sampleService()),
+                    confidenceScoreState = ConfidenceScoreUiState.Hidden,
+                    onBookNow = { _, _ -> },
+                )
+            }
+        }
+    }
+
+    // I-4: acceptance 2/3 claim coverage for the two states this story added to this screen
+    // (ServiceDetailError retry treatment, ServiceDetailSkeleton on HsSkeletonBlock) — previously
+    // resting on code reading alone. Mirrors ServiceListScreenPaparazziTest's error case and
+    // CatalogueHomeScreenTest's loading case.
+    @Test
+    public fun `service detail error state`(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                ServiceDetailContent(
+                    uiState = ServiceDetailUiState.Error("net err"),
+                    confidenceScoreState = ConfidenceScoreUiState.Hidden,
+                    onBookNow = { _, _ -> },
+                )
+            }
+        }
+    }
+
+    @Test
+    public fun `service detail loading state`(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                ServiceDetailContent(
+                    uiState = ServiceDetailUiState.Loading,
                     confidenceScoreState = ConfidenceScoreUiState.Hidden,
                     onBookNow = { _, _ -> },
                 )

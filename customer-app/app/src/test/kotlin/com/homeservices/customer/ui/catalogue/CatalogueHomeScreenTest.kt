@@ -51,4 +51,34 @@ public class CatalogueHomeScreenTest {
             }
         }
     }
+
+    @Test
+    public fun `catalogue home empty state`(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                CatalogueHomeContent(
+                    uiState = CatalogueHomeUiState.Success(emptyList()),
+                    onCategoryClick = {},
+                    onSettingsClick = {},
+                    onProfileLanguageClick = {},
+                    onTrackBooking = {},
+                )
+            }
+        }
+    }
+
+    @Test
+    public fun `catalogue home error state`(): Unit {
+        paparazzi.snapshot {
+            HomeservicesTheme(darkTheme = false) {
+                CatalogueHomeContent(
+                    uiState = CatalogueHomeUiState.Error("net err"),
+                    onCategoryClick = {},
+                    onSettingsClick = {},
+                    onProfileLanguageClick = {},
+                    onTrackBooking = {},
+                )
+            }
+        }
+    }
 }

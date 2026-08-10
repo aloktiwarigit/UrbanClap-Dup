@@ -72,6 +72,16 @@ public data class HomeservicesExtendedColors(
      * which §1.4.11 does not govern.
      */
     val focusRing: Color,
+    /**
+     * Accent hue as a legible foreground. Use for prices, accent labels and accent icon tints.
+     * **Do not use `colorScheme.primary` for text** — see [AccentInkLight].
+     *
+     * Light: `#6F4610` — 7.60:1 on `background` (canvas), 7.04:1 on `surface`, 6.19:1 on
+     * `surfaceVariant`. All three clear AA (4.5:1); acceptance 6b's ≥7:1 field target names
+     * canvas and surface only, which this clears — `surfaceVariant` usage clears AA but not that
+     * stricter target. Dark: the raw accent, already 8.03:1.
+     */
+    val accentInk: Color,
 )
 
 /** Light-mode instance of [HomeservicesExtendedColors]. D1 light palette. */
@@ -83,6 +93,7 @@ public val HomeservicesExtendedColorsLight: HomeservicesExtendedColors =
         brandPrimaryHover = BrandAccentSoft,
         textFaint = TextFaintLight,
         focusRing = TextMutedLight,
+        accentInk = AccentInkLight,
     )
 
 /** Dark-mode instance of [HomeservicesExtendedColors]. D1 dark palette. */
@@ -94,6 +105,7 @@ public val HomeservicesExtendedColorsDark: HomeservicesExtendedColors =
         brandPrimaryHover = BrandAccentSoft,
         textFaint = TextFaintDark,
         focusRing = TextMutedDark,
+        accentInk = BrandAccent,
     )
 
 /**

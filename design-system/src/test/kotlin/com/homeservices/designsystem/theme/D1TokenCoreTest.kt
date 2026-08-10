@@ -176,6 +176,39 @@ internal class D1TokenCoreTest {
                 .`as`("accent label = %.2f:1 (D2 sunlight target >= 7)", ratio)
                 .isGreaterThanOrEqualTo(7.0)
         }
+
+        @Test
+        internal fun accent_ink_clears_the_field_target_on_light_canvas() {
+            val ratio =
+                Wcag21Contrast.ratio(
+                    HomeservicesExtendedColorsLight.accentInk,
+                    HomeservicesLightColorScheme.background,
+                )
+            assertThat(ratio)
+                .`as`("accent-as-text = %.2f:1 (D2 sunlight target >= 7)", ratio)
+                .isGreaterThanOrEqualTo(7.0)
+        }
+
+        @Test
+        internal fun accent_ink_clears_the_field_target_on_light_surface() {
+            val ratio =
+                Wcag21Contrast.ratio(
+                    HomeservicesExtendedColorsLight.accentInk,
+                    HomeservicesLightColorScheme.surface,
+                )
+            assertThat(ratio).isGreaterThanOrEqualTo(7.0)
+        }
+
+        /** The regression this token exists to prevent: the raw accent is not a foreground in light mode. */
+        @Test
+        internal fun the_raw_accent_is_not_body_legible_on_light_canvas() {
+            assertThat(
+                Wcag21Contrast.ratio(
+                    HomeservicesLightColorScheme.primary,
+                    HomeservicesLightColorScheme.background,
+                ),
+            ).isCloseTo(2.08, within(TOLERANCE))
+        }
     }
 
     /**
@@ -333,6 +366,15 @@ internal class D1TokenCoreTest {
             assertThat(light)
                 .`as`("faint text = %.2f:1 (AA 4.5, below the 7 body target)", light)
                 .isGreaterThanOrEqualTo(4.5)
+        }
+
+        /**
+         * Pins both instances, not just light: the dark variant of accentInk is deliberately
+         * unchanged, because the raw accent is already legible (8.03:1) on dark canvas.
+         */
+        @Test
+        internal fun accent_ink_is_unchanged_in_dark_mode() {
+            assertThat(HomeservicesExtendedColorsDark.accentInk).isEqualTo(BRAND_ACCENT)
         }
     }
 

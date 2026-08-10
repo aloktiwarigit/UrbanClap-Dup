@@ -25,6 +25,7 @@
     <string name="service_detail_back_desc">वापस</string>
     <string name="service_detail_eyebrow">होम-रेडी सेवा</string>
     <string name="service_detail_duration_caption">आम विजिट</string>
+    <string name="service_detail_trust_metric">सत्यापित पेशेवर</string>
     <string name="service_detail_quality_title">प्रोफेशनल सेवा, बिना सरप्राइज</string>
     <string name="service_detail_quality_body">स्लॉट चुनते समय आपकी फिक्स्ड कीमत दिखती रहती है। अतिरिक्त काम के लिए पहले आपकी मंजूरी जरूरी है।</string>
     <string name="service_detail_includes_subtitle">हर विजिट इन चेक से शुरू होती है।</string>
@@ -38,6 +39,7 @@
     <string name="trust_dossier_signal_identity">पहचान चेक की गई</string>
     <string name="trust_dossier_signal_background">बैकग्राउंड स्टेटस</string>
     <string name="trust_dossier_signal_reviews">रिव्यू किए गए जॉब</string>
+    <string name="trust_dossier_review_rating">5 में से %1$s</string>
     <string name="address_screen_title">आपका पता</string>
     <string name="address_heading">तकनीशियन कहां आए?</string>
     <string name="address_subtitle">पूरा सर्विस पता जोड़ें ताकि तकनीशियन बिना कॉल के पहुंच सके।</string>
@@ -337,6 +339,9 @@
     <string name="catalogue_search_hint">AC, प्लंबर, इलेक्ट्रीशियन खोजें&#8230;</string>
     <string name="catalogue_location_display">अयोध्या, उत्तर प्रदेश</string>
     <string name="catalogue_starting_price">%1$s से</string>
+    <string name="catalogue_empty_title">यहाँ अभी कोई सेवा नहीं है</string>
+    <string name="catalogue_empty_body">हम आपके क्षेत्र में सेवाएँ जोड़ रहे हैं। जल्द ही देखें।</string>
+    <string name="catalogue_retry">फिर कोशिश करें</string>
 
     <!-- Confidence score row (E12-S02a) -->
     <string name="confidence_new_area">आपके क्षेत्र में नए हैं &#8212; ट्रैक रिकॉर्ड बना रहे हैं</string>

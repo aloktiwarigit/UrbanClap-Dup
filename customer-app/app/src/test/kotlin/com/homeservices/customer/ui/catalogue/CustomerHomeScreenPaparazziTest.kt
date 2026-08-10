@@ -1,6 +1,5 @@
 package com.homeservices.customer.ui.catalogue
 
-import androidx.compose.ui.graphics.Color
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.homeservices.corenav.PendingAction
@@ -10,7 +9,6 @@ import com.homeservices.corenav.PendingActionType
 import com.homeservices.customer.domain.booking.model.BookingPaymentMethod
 import com.homeservices.customer.domain.booking.model.CustomerBooking
 import com.homeservices.customer.domain.booking.model.CustomerBookingStatus
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -22,7 +20,6 @@ import org.junit.Test
  *
  * Once CI goldens are committed, remove [@Ignore] from the tests you want to guard.
  */
-@Ignore("Re-record on CI Linux via workflow_dispatch paparazzi-record.yml after sprint2a merge")
 public class CustomerHomeScreenPaparazziTest {
     @get:Rule
     public val paparazzi: Paparazzi =
@@ -67,7 +64,6 @@ public class CustomerHomeScreenPaparazziTest {
             createdAt = "2026-05-01T10:00:00Z",
         )
 
-    @Ignore("Goldens recorded on CI Linux — run paparazzi-record.yml workflow_dispatch first")
     @Test
     public fun `snapshot_customer_home_empty_state`() {
         paparazzi.snapshot {
@@ -83,12 +79,10 @@ public class CustomerHomeScreenPaparazziTest {
                 onPriceApproval = {},
                 onRateBooking = {},
                 onComplainBooking = {},
-                backgroundColor = Color(0xFFFBF7EF),
             )
         }
     }
 
-    @Ignore("Goldens recorded on CI Linux — run paparazzi-record.yml workflow_dispatch first")
     @Test
     public fun `snapshot_customer_home_pending_actions_state`() {
         paparazzi.snapshot {
@@ -104,12 +98,10 @@ public class CustomerHomeScreenPaparazziTest {
                 onPriceApproval = {},
                 onRateBooking = {},
                 onComplainBooking = {},
-                backgroundColor = Color(0xFFFBF7EF),
             )
         }
     }
 
-    @Ignore("Goldens recorded on CI Linux — run paparazzi-record.yml workflow_dispatch first")
     @Test
     public fun `snapshot_customer_home_active_booking_state`() {
         paparazzi.snapshot {
@@ -125,7 +117,6 @@ public class CustomerHomeScreenPaparazziTest {
                 onPriceApproval = {},
                 onRateBooking = {},
                 onComplainBooking = {},
-                backgroundColor = Color(0xFFFBF7EF),
             )
         }
     }

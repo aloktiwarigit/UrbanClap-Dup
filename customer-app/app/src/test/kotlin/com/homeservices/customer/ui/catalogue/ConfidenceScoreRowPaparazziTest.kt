@@ -3,6 +3,7 @@ package com.homeservices.customer.ui.catalogue
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.homeservices.customer.domain.technician.model.ConfidenceScore
+import com.homeservices.designsystem.theme.HomeservicesTheme
 import org.junit.Rule
 import org.junit.Test
 
@@ -17,25 +18,29 @@ public class ConfidenceScoreRowPaparazziTest {
     @Test
     public fun loaded_lightTheme() {
         paparazzi.snapshot {
-            ConfidenceScoreRow(
-                uiState =
-                    ConfidenceScoreUiState.Loaded(
-                        ConfidenceScore(
-                            onTimePercent = 94,
-                            areaRating = 4.7,
-                            nearestEtaMinutes = 12,
-                            dataPointCount = 35,
-                            isLimitedData = false,
+            HomeservicesTheme(darkTheme = false) {
+                ConfidenceScoreRow(
+                    uiState =
+                        ConfidenceScoreUiState.Loaded(
+                            ConfidenceScore(
+                                onTimePercent = 94,
+                                areaRating = 4.7,
+                                nearestEtaMinutes = 12,
+                                dataPointCount = 35,
+                                isLimitedData = false,
+                            ),
                         ),
-                    ),
-            )
+                )
+            }
         }
     }
 
     @Test
     public fun limitedData_lightTheme() {
         paparazzi.snapshot {
-            ConfidenceScoreRow(uiState = ConfidenceScoreUiState.Limited)
+            HomeservicesTheme(darkTheme = false) {
+                ConfidenceScoreRow(uiState = ConfidenceScoreUiState.Limited)
+            }
         }
     }
 }

@@ -11,14 +11,17 @@ import com.homeservices.customer.domain.technician.GetConfidenceScoreUseCase
 import com.homeservices.customer.observability.analytics.AnalyticsEvents
 import com.homeservices.customer.observability.analytics.AnalyticsFacade
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
+@OptIn(ExperimentalCoroutinesApi::class)
 @Suppress("LongParameterList")
 internal class ServiceDetailViewModel
     @Inject
@@ -46,41 +49,47 @@ internal class ServiceDetailViewModel
         /** Exposed so the screen can drive [TrustDossierViewModel.loadProfile]. */
         public val recommendedTechnicianId: StateFlow<String?> = MutableStateFlow(technicianId).asStateFlow()
 
+        private val retryTrigger = MutableStateFlow(0)
+
         init {
             viewModelScope.launch {
-                combine(getServiceDetail(serviceId), getCurrentLocale()) { result, locale ->
-                    result.fold(
-                        onSuccess = { service ->
-                            runCatching {
-                                analytics.track(
-                                    AnalyticsEvents.SERVICE_VIEW,
-                                    mapOf("service_id" to serviceId),
-                                )
-                            }
-                            ServiceDetailUiState.Success(localizer.localizeService(service, locale))
-                        },
-                        onFailure = { ServiceDetailUiState.Error(it.message ?: "Unknown error") },
-                    )
-                }.collect { state ->
-                    _uiState.value = state
-                }
+                retryTrigger
+                    .flatMapLatest {
+                        combine(getServiceDetail(serviceId), getCurrentLocale()) { result, locale ->
+                            result.fold(
+                                onSuccess = { service ->
+                                    runCatching {
+                                        analytics.track(
+                                            AnalyticsEvents.SERVICE_VIEW,
+                                            mapOf("service_id" to serviceId),
+                                        )
+                                    }
+                                    ServiceDetailUiState.Success(localizer.localizeService(service, locale))
+                                },
+                                onFailure = { ServiceDetailUiState.Error(it.message ?: "Unknown error") },
+                            )
+                        }
+                    }.collect { state -> _uiState.value = state }
             }
             if (technicianId != null) {
                 viewModelScope.launch {
-                    val (lat, lng) = resolveGps()
-                    getConfidenceScore(technicianId, lat, lng).collect { result ->
-                        _confidenceScoreState.value =
-                            result.fold(
-                                onSuccess = { score ->
-                                    if (score.isLimitedData) {
-                                        ConfidenceScoreUiState.Limited
-                                    } else {
-                                        ConfidenceScoreUiState.Loaded(score)
-                                    }
-                                },
-                                onFailure = { ConfidenceScoreUiState.Hidden },
-                            )
-                    }
+                    retryTrigger
+                        .flatMapLatest {
+                            val (lat, lng) = resolveGps()
+                            getConfidenceScore(technicianId, lat, lng)
+                        }.collect { result ->
+                            _confidenceScoreState.value =
+                                result.fold(
+                                    onSuccess = { score ->
+                                        if (score.isLimitedData) {
+                                            ConfidenceScoreUiState.Limited
+                                        } else {
+                                            ConfidenceScoreUiState.Loaded(score)
+                                        }
+                                    },
+                                    onFailure = { ConfidenceScoreUiState.Hidden },
+                                )
+                        }
                 }
             }
         }
@@ -96,4 +105,17 @@ internal class ServiceDetailViewModel
             } catch (_: Exception) {
                 Pair(0.0, 0.0)
             }
+
+        /**
+         * Re-fetches the service **and** the confidence score. Both coroutines are keyed off the
+         * same trigger — a retry that re-fired only the detail would leave a stale confidence row
+         * behind it.
+         */
+        public fun retry() {
+            _uiState.value = ServiceDetailUiState.Loading
+            if (technicianId != null) {
+                _confidenceScoreState.value = ConfidenceScoreUiState.Loading
+            }
+            retryTrigger.value += 1
+        }
     }

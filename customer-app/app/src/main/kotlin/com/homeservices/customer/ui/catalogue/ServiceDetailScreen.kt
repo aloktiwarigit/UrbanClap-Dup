@@ -8,9 +8,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -41,13 +43,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -58,13 +60,13 @@ import com.homeservices.customer.domain.catalogue.model.Service
 import com.homeservices.customer.ui.shared.TrustDossierCard
 import com.homeservices.customer.ui.shared.TrustDossierUiState
 import com.homeservices.customer.ui.shared.TrustDossierViewModel
+import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsScreenTitle
-import com.homeservices.designsystem.format.formatRupees
+import com.homeservices.designsystem.components.HsSkeletonBlock
+import com.homeservices.designsystem.theme.HomeservicesMonoFontFamily
 import com.homeservices.designsystem.theme.LocalHomeservicesExtendedColors
 
 // ── Brand tokens (keep only those not in design-system token mapping) ─────────
-private val MetricNeutralBg = Color(0xFFF5F4F0)
-private val SkeletonLine = Color(0xFFEDE7DD)
 private val PillShape = RoundedCornerShape(percent = 50)
 private val CardShape = RoundedCornerShape(12.dp)
 
@@ -94,6 +96,7 @@ internal fun ServiceDetailScreen(
             onBookNow = onBookNow,
             onBack = onBack,
             modifier = Modifier.padding(innerPadding),
+            onRetry = viewModel::retry,
         )
     }
 }
@@ -106,11 +109,12 @@ internal fun ServiceDetailContent(
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null,
     trustDossierUiState: TrustDossierUiState = TrustDossierUiState.Unavailable,
+    onRetry: () -> Unit = {},
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (uiState) {
             is ServiceDetailUiState.Loading -> ServiceDetailSkeleton()
-            is ServiceDetailUiState.Error -> ServiceDetailError()
+            is ServiceDetailUiState.Error -> ServiceDetailError(onRetry = onRetry)
             is ServiceDetailUiState.Success -> {
                 ServiceDetailBody(
                     service = uiState.service,
@@ -140,12 +144,12 @@ private fun ServiceDetailBody(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                ServiceMetricRow(service = service)
                 TrustDossierCard(
                     uiState = trustDossierUiState,
                     compact = false,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                ServiceMetricRow(service = service)
                 ConfidenceScoreRow(
                     uiState = confidenceScoreState,
                     modifier = Modifier.fillMaxWidth(),
@@ -304,40 +308,32 @@ private fun serviceHeroImageRes(serviceId: String): Int? =
 @Composable
 private fun ServiceMetricRow(service: Service) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        // IntrinsicSize.Min + fillMaxHeight on both children (M-6): ServiceTrustTile's Hindi label
+        // can wrap to a second line (maxLines = 2 below), so the row must size to its tallest child
+        // and stretch the shorter tile to match, or the two cards go uneven.
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         ServiceMetricTile(
-            label = stringResource(R.string.service_price_label),
-            value = formatPrice(service.basePrice),
-            emphasized = true,
-            modifier = Modifier.weight(1f),
-        )
-        ServiceMetricTile(
             label = stringResource(R.string.service_detail_duration_caption),
             value = stringResource(R.string.service_duration_label, service.durationMinutes),
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
         )
+        ServiceTrustTile(modifier = Modifier.weight(1f).fillMaxHeight())
     }
 }
 
-@Suppress("MagicNumber") // palette literals for fixed-light MetricNeutralBg dark-mode foreground
 @Composable
 private fun ServiceMetricTile(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
-    emphasized: Boolean = false,
 ) {
     Surface(
         modifier = modifier,
         shape = CardShape,
-        color = if (emphasized) MaterialTheme.colorScheme.surfaceVariant else MetricNeutralBg,
-        border =
-            BorderStroke(
-                1.dp,
-                if (emphasized) MaterialTheme.colorScheme.primary.copy(alpha = 0.20f) else MaterialTheme.colorScheme.outline,
-            ),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -346,9 +342,7 @@ private fun ServiceMetricTile(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                // Non-emphasized tile uses fixed MetricNeutralBg (light) — use dark foreground
-                // so text stays readable in dark mode (onSurfaceVariant is near-white in dark theme).
-                color = if (emphasized) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF5F6C66),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -356,8 +350,48 @@ private fun ServiceMetricTile(
                 text = value,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (emphasized) MaterialTheme.colorScheme.primary else Color(0xFF18231F),
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+// One-authoritative-price follow-up: the price tile that used to live in ServiceMetricRow was
+// removed (the sticky ServiceBookingBar is now the single price source). Its slot goes to a
+// trust signal instead, styled to match ServiceMetricTile's card family (same shape/padding/text
+// scale) but with an accentInk check mark standing in for ServiceMetricTile's caption line.
+@Composable
+private fun ServiceTrustTile(modifier: Modifier = Modifier) {
+    val accentInk = LocalHomeservicesExtendedColors.current.accentInk
+    Surface(
+        modifier = modifier,
+        shape = CardShape,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.CheckCircle,
+                contentDescription = null,
+                tint = accentInk,
+                modifier = Modifier.size(16.dp),
+            )
+            Text(
+                text = stringResource(R.string.service_detail_trust_metric),
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                // M-6: was maxLines = 1 + Ellipsis. HsComponents.kt:142-145 records the same Codex
+                // finding for this exact pattern — ellipsising a Devanagari label truncates
+                // mid-word and can destroy the meaning ("सत्यापित पेशेवर" clips to "सत्यापि…" past
+                // fontScale 1.1 on a Pixel 5 tile). maxLines = 2 lets it wrap instead; the parent
+                // Row's IntrinsicSize.Min keeps this tile level with ServiceMetricTile when it does.
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }
@@ -427,6 +461,7 @@ private fun ServiceSection(
 
 @Composable
 private fun ServiceCheckRow(text: String) {
+    val accentInk = LocalHomeservicesExtendedColors.current.accentInk
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top,
@@ -435,7 +470,7 @@ private fun ServiceCheckRow(text: String) {
         Icon(
             imageVector = Icons.Filled.CheckCircle,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
+            tint = accentInk,
             modifier = Modifier.padding(top = 2.dp).size(16.dp),
         )
         Text(
@@ -452,6 +487,7 @@ private fun AddOnRow(
     name: String,
     price: String,
 ) {
+    val accentInk = LocalHomeservicesExtendedColors.current.accentInk
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -472,7 +508,7 @@ private fun AddOnRow(
                 text = "+$price",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
+                color = accentInk,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
             )
         }
@@ -484,6 +520,7 @@ private fun ServiceBookingBar(
     service: Service,
     onBookNow: () -> Unit,
 ) {
+    val accentInk = LocalHomeservicesExtendedColors.current.accentInk
     Surface(
         shadowElevation = 12.dp,
         color = MaterialTheme.colorScheme.surface,
@@ -507,7 +544,8 @@ private fun ServiceBookingBar(
                     text = formatPrice(service.basePrice),
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
+                    fontFamily = HomeservicesMonoFontFamily,
+                    color = accentInk,
                 )
                 Text(
                     text = stringResource(R.string.service_detail_cta_support),
@@ -541,7 +579,7 @@ private fun ServiceBookingBar(
 }
 
 @Composable
-private fun ServiceDetailError() {
+private fun ServiceDetailError(onRetry: () -> Unit = {}) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Surface(
             modifier = Modifier.padding(24.dp),
@@ -567,6 +605,11 @@ private fun ServiceDetailError() {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
+                Spacer(Modifier.height(8.dp))
+                HsPrimaryButton(
+                    text = stringResource(R.string.catalogue_retry),
+                    onClick = onRetry,
+                )
             }
         }
     }
@@ -575,48 +618,26 @@ private fun ServiceDetailError() {
 @Composable
 private fun ServiceDetailSkeleton(modifier: Modifier = Modifier) {
     Column(modifier = modifier.fillMaxSize()) {
-        Surface(
-            modifier = Modifier.fillMaxWidth().aspectRatio(1.18f),
-            color = SkeletonLine,
-        ) {}
+        HsSkeletonBlock(
+            modifier = Modifier.fillMaxWidth(),
+            height = 280.dp,
+            shape = RectangleShape,
+        )
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            PlaceholderLine(widthFraction = 0.36f, height = 14.dp)
-            PlaceholderLine(widthFraction = 0.78f, height = 30.dp)
-            PlaceholderLine(widthFraction = 0.94f, height = 16.dp)
+            HsSkeletonBlock(widthFraction = 0.36f, height = 14.dp, shape = PillShape)
+            HsSkeletonBlock(widthFraction = 0.78f, height = 30.dp, shape = PillShape)
+            HsSkeletonBlock(widthFraction = 0.94f, height = 16.dp, shape = PillShape)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                PlaceholderBlock(height = 72.dp, modifier = Modifier.weight(1f))
-                PlaceholderBlock(height = 72.dp, modifier = Modifier.weight(1f))
+                HsSkeletonBlock(modifier = Modifier.weight(1f), height = 72.dp, shape = CardShape)
+                HsSkeletonBlock(modifier = Modifier.weight(1f), height = 72.dp, shape = CardShape)
             }
-            repeat(3) { PlaceholderBlock(height = 112.dp) }
+            repeat(3) { HsSkeletonBlock(height = 112.dp, shape = CardShape) }
         }
     }
 }
 
-@Composable
-private fun PlaceholderLine(
-    widthFraction: Float,
-    height: Dp,
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(widthFraction).height(height),
-        shape = PillShape,
-        color = SkeletonLine,
-    ) {}
-}
-
-@Composable
-private fun PlaceholderBlock(
-    height: Dp,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth().height(height),
-        shape = CardShape,
-        color = SkeletonLine,
-    ) {}
-}
-
-private fun formatPrice(pricePaise: Int): String = formatRupees(pricePaise)
+// M-9: formatPrice moved to CataloguePriceFormat.kt, shared with ServiceListScreen.kt (was an
+// identical private duplicate here). Same package, no import needed.

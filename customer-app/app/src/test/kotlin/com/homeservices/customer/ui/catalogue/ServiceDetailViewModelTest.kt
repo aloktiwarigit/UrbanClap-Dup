@@ -11,9 +11,11 @@ import com.homeservices.customer.domain.locale.GetCurrentLocaleUseCase
 import com.homeservices.customer.domain.technician.GetConfidenceScoreUseCase
 import com.homeservices.customer.domain.technician.model.ConfidenceScore
 import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
+import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -24,6 +26,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 public class ServiceDetailViewModelTest {
@@ -59,6 +62,25 @@ public class ServiceDetailViewModelTest {
 
     @After public fun tearDown(): Unit {
         Dispatchers.resetMain()
+    }
+
+    /** Reuses the constructor shape already exercised by every test below. */
+    private fun buildViewModel(techId: String? = null): ServiceDetailViewModel {
+        val handleMap =
+            if (techId != null) {
+                mapOf("serviceId" to "svc1", "techId" to techId)
+            } else {
+                mapOf("serviceId" to "svc1")
+            }
+        return ServiceDetailViewModel(
+            SavedStateHandle(handleMap),
+            serviceDetailUseCase,
+            confidenceScoreUseCase,
+            locationProvider,
+            localizer,
+            getCurrentLocale,
+            NoOpAnalyticsFacade(),
+        )
     }
 
     @Test
@@ -151,5 +173,34 @@ public class ServiceDetailViewModelTest {
                     NoOpAnalyticsFacade(),
                 )
             assertThat(vm.confidenceScoreState.value).isInstanceOf(ConfidenceScoreUiState.Limited::class.java)
+        }
+
+    @Test
+    public fun `retry recovers the service detail`(): Unit =
+        runTest(dispatcher) {
+            every { serviceDetailUseCase("svc1") } returns flowOf(Result.failure(IOException("net err")))
+            val sut = buildViewModel()
+            assertThat(sut.uiState.value).isInstanceOf(ServiceDetailUiState.Error::class.java)
+
+            every { serviceDetailUseCase("svc1") } returns flowOf(Result.success(testService))
+            sut.retry()
+
+            assertThat(sut.uiState.value).isInstanceOf(ServiceDetailUiState.Success::class.java)
+        }
+
+    /** Guards the rev-2 correction: retry must re-fire the second coroutine too. */
+    @Test
+    public fun `retry re-requests the confidence score when a technician is present`(): Unit =
+        runTest(dispatcher) {
+            every { serviceDetailUseCase("svc1") } returns flowOf(Result.success(testService))
+            val score = ConfidenceScore(94, 4.7, 12, 35, false)
+            every { confidenceScoreUseCase("tech-1", 0.0, 0.0) } returns flowOf(Result.success(score))
+            val sut = buildViewModel(techId = "tech-1")
+            clearMocks(confidenceScoreUseCase, answers = false)
+            every { confidenceScoreUseCase("tech-1", 0.0, 0.0) } returns flowOf(Result.success(score))
+
+            sut.retry()
+
+            verify(atLeast = 1) { confidenceScoreUseCase(any(), any(), any()) }
         }
 }

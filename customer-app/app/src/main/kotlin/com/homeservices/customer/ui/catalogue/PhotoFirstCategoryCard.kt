@@ -16,13 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AcUnit
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.ElectricBolt
-import androidx.compose.material.icons.filled.FilterAlt
-import androidx.compose.material.icons.filled.Plumbing
-import androidx.compose.material.icons.filled.Water
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -160,7 +153,7 @@ private fun BoxScope.PhotoCardImageContent(
 @Composable
 private fun PhotoCardIconFallback(
     category: Category,
-    style: CategoryStyleTokens,
+    style: CategoryStyle,
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
         Box(
@@ -189,53 +182,3 @@ private fun PhotoCardIconFallback(
         }
     }
 }
-
-// Re-export so the CatalogueHomeScreen can call categoryStyle() internally.
-// categoryStyle() is private in CatalogueHomeScreen.kt but we need it here too.
-// Defined inline to avoid exposing it from the home screen.
-@Composable
-private fun categoryStyle(id: String): CategoryStyleTokens =
-    when (id) {
-        "ac-repair" ->
-            CategoryStyleTokens(
-                iconBackground = MaterialTheme.colorScheme.tertiaryContainer,
-                iconTint = MaterialTheme.colorScheme.onTertiaryContainer,
-                icon = Icons.Default.AcUnit,
-            )
-        "water-pump" ->
-            CategoryStyleTokens(
-                iconBackground = MaterialTheme.colorScheme.surfaceVariant,
-                iconTint = MaterialTheme.colorScheme.onSurfaceVariant,
-                icon = Icons.Default.Water,
-            )
-        "plumbing" ->
-            CategoryStyleTokens(
-                iconBackground = MaterialTheme.colorScheme.primaryContainer,
-                iconTint = MaterialTheme.colorScheme.onPrimaryContainer,
-                icon = Icons.Default.Plumbing,
-            )
-        "electrical" ->
-            CategoryStyleTokens(
-                iconBackground = MaterialTheme.colorScheme.secondaryContainer,
-                iconTint = MaterialTheme.colorScheme.onSecondaryContainer,
-                icon = Icons.Default.ElectricBolt,
-            )
-        "water-purifier" ->
-            CategoryStyleTokens(
-                iconBackground = MaterialTheme.colorScheme.primaryContainer,
-                iconTint = MaterialTheme.colorScheme.onPrimaryContainer,
-                icon = Icons.Default.FilterAlt,
-            )
-        else ->
-            CategoryStyleTokens(
-                iconBackground = MaterialTheme.colorScheme.surfaceVariant,
-                iconTint = MaterialTheme.colorScheme.primary,
-                icon = Icons.Default.Build,
-            )
-    }
-
-private data class CategoryStyleTokens(
-    val iconBackground: androidx.compose.ui.graphics.Color,
-    val iconTint: androidx.compose.ui.graphics.Color,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector,
-)

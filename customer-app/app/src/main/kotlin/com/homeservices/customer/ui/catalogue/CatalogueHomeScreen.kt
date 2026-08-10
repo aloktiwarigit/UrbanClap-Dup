@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -27,6 +28,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -34,30 +36,21 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.ElectricBolt
-import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Plumbing
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SupportAgent
 import androidx.compose.material.icons.filled.VerifiedUser
-import androidx.compose.material.icons.filled.Water
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -79,6 +72,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -88,8 +82,13 @@ import com.homeservices.customer.domain.catalogue.model.Category
 import com.homeservices.customer.ui.booking.PendingBookingResumeBanner
 import com.homeservices.customer.ui.bookings.CustomerBookingsScreen
 import com.homeservices.customer.ui.wallet.WalletBalanceChip
+import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsScreenTitle
+import com.homeservices.designsystem.components.HsSkeletonBlock
 import com.homeservices.designsystem.format.formatRupees
+import com.homeservices.designsystem.motion.rememberReducedMotion
+import com.homeservices.designsystem.theme.HomeservicesMonoFontFamily
+import com.homeservices.designsystem.theme.LocalHomeservicesExtendedColors
 import kotlinx.coroutines.delay
 
 // ── Promo banners ─────────────────────────────────────────────────────────────
@@ -134,26 +133,6 @@ private fun promoBanners(): List<PromoBanner> {
         ),
     )
 }
-
-// ── Category styles ───────────────────────────────────────────────────────────
-private data class CategoryStyle(
-    val iconBackground: Color,
-    val iconTint: Color,
-    val icon: ImageVector,
-)
-
-@Composable
-private fun categoryStyle(id: String): CategoryStyle =
-    MaterialTheme.colorScheme.let { colors ->
-        when (id) {
-            "ac-repair" -> CategoryStyle(colors.tertiaryContainer, colors.onTertiaryContainer, Icons.Default.AcUnit)
-            "water-pump" -> CategoryStyle(colors.surfaceVariant, colors.onSurfaceVariant, Icons.Default.Water)
-            "plumbing" -> CategoryStyle(colors.primaryContainer, colors.onPrimaryContainer, Icons.Default.Plumbing)
-            "electrical" -> CategoryStyle(colors.secondaryContainer, colors.onSecondaryContainer, Icons.Default.ElectricBolt)
-            "water-purifier" -> CategoryStyle(colors.primaryContainer, colors.onPrimaryContainer, Icons.Default.FilterAlt)
-            else -> CategoryStyle(colors.surfaceVariant, colors.onSurfaceVariant, Icons.Default.Build)
-        }
-    }
 
 // formatPrice removed — price label is now built at the call site using stringResource
 // so the localized "from %s" prefix is included (FIX Codex P2: restore starting-price label).
@@ -218,6 +197,7 @@ internal fun CatalogueHomeScreen(
             onCancelPendingBooking(id)
         },
         onPrivacyAndDataClick = onPrivacyAndDataClick,
+        onRetry = viewModel::retry,
     )
 }
 
@@ -241,6 +221,7 @@ internal fun CatalogueHomeContent(
     onResumePayment: (bookingId: String, orderId: String, amount: Int) -> Unit = { _, _, _ -> },
     onCancelPendingBooking: (bookingId: String) -> Unit = {},
     onPrivacyAndDataClick: () -> Unit = {},
+    onRetry: () -> Unit = {},
 ) {
     var selectedNav by remember { mutableIntStateOf(0) }
 
@@ -279,6 +260,7 @@ internal fun CatalogueHomeContent(
             onResumePayment = onResumePayment,
             onCancelPendingBooking = onCancelPendingBooking,
             onPrivacyAndDataClick = onPrivacyAndDataClick,
+            onRetry = onRetry,
         )
     }
 }
@@ -302,6 +284,7 @@ private fun HomeTabs(
     onResumePayment: (bookingId: String, orderId: String, amount: Int) -> Unit = { _, _, _ -> },
     onCancelPendingBooking: (bookingId: String) -> Unit = {},
     onPrivacyAndDataClick: () -> Unit = {},
+    onRetry: () -> Unit = {},
 ) {
     when (selectedNav) {
         0 ->
@@ -318,6 +301,7 @@ private fun HomeTabs(
                 onComplainBooking = onComplainBooking,
                 onResumePayment = onResumePayment,
                 onCancelPendingBooking = onCancelPendingBooking,
+                onRetry = onRetry,
             )
         1 ->
             CustomerBookingsScreen(
@@ -357,6 +341,7 @@ private fun CatalogueTab(
     onComplainBooking: (String) -> Unit = {},
     onResumePayment: (bookingId: String, orderId: String, amount: Int) -> Unit = { _, _, _ -> },
     onCancelPendingBooking: (bookingId: String) -> Unit = {},
+    onRetry: () -> Unit = {},
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
@@ -372,62 +357,86 @@ private fun CatalogueTab(
                 onComplainBooking = onComplainBooking,
             )
         }
-        val pendingPaymentBooking = (homeUiState as? CustomerHomeUiState.Ready)?.pendingPaymentBooking
-        if (pendingPaymentBooking != null) {
-            item {
-                val orderId = pendingPaymentBooking.razorpayOrderId
-                if (orderId != null) {
-                    PendingBookingResumeBanner(
-                        serviceName = pendingPaymentBooking.serviceName,
-                        amountPaise = pendingPaymentBooking.amountPaise,
-                        onResumePayment = {
-                            onResumePayment(
-                                pendingPaymentBooking.bookingId,
-                                orderId,
-                                pendingPaymentBooking.amountPaise.toInt(),
-                            )
-                        },
-                        onCancel = { onCancelPendingBooking(pendingPaymentBooking.bookingId) },
-                    )
-                }
-            }
+        pendingPaymentBannerItem(
+            homeUiState = homeUiState,
+            onResumePayment = onResumePayment,
+            onCancelPendingBooking = onCancelPendingBooking,
+        )
+        when (uiState) {
+            is CatalogueHomeUiState.Loading -> item { LoadingState() }
+            is CatalogueHomeUiState.Error -> item { ErrorState(onRetry = onRetry) }
+            is CatalogueHomeUiState.Success ->
+                categorySuccessItems(
+                    categories = uiState.categories,
+                    photoFirstCatalogueEnabled = photoFirstCatalogueEnabled,
+                    onCategoryClick = onCategoryClick,
+                )
         }
         item { PromoSlider() }
         item { TrustStrip() }
-        when (uiState) {
-            is CatalogueHomeUiState.Loading -> item { LoadingState() }
-            is CatalogueHomeUiState.Error -> item { ErrorState() }
-            is CatalogueHomeUiState.Success -> {
-                item {
-                    Text(
-                        text = stringResource(R.string.catalogue_our_services),
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, fontSize = 19.sp),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-                    )
-                }
-                val rows = uiState.categories.chunked(2)
-                items(rows) { row ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        row.forEach { cat ->
-                            if (photoFirstCatalogueEnabled) {
-                                PhotoFirstCategoryCard(
-                                    category = cat,
-                                    onClick = { onCategoryClick(cat.id) },
-                                    modifier = Modifier.weight(1f),
-                                )
-                            } else {
-                                CategoryCard(category = cat, onClick = { onCategoryClick(cat.id) }, modifier = Modifier.weight(1f))
-                            }
-                        }
-                        if (row.size == 1) Spacer(Modifier.weight(1f))
-                    }
-                }
+    }
+}
+
+private fun LazyListScope.pendingPaymentBannerItem(
+    homeUiState: CustomerHomeUiState,
+    onResumePayment: (bookingId: String, orderId: String, amount: Int) -> Unit,
+    onCancelPendingBooking: (bookingId: String) -> Unit,
+) {
+    val pendingPaymentBooking = (homeUiState as? CustomerHomeUiState.Ready)?.pendingPaymentBooking ?: return
+    val orderId = pendingPaymentBooking.razorpayOrderId ?: return
+    item {
+        PendingBookingResumeBanner(
+            serviceName = pendingPaymentBooking.serviceName,
+            amountPaise = pendingPaymentBooking.amountPaise,
+            onResumePayment = {
+                onResumePayment(pendingPaymentBooking.bookingId, orderId, pendingPaymentBooking.amountPaise.toInt())
+            },
+            onCancel = { onCancelPendingBooking(pendingPaymentBooking.bookingId) },
+        )
+    }
+}
+
+private fun LazyListScope.categorySuccessItems(
+    categories: List<Category>,
+    photoFirstCatalogueEnabled: Boolean,
+    onCategoryClick: (String) -> Unit,
+) {
+    if (categories.isEmpty()) {
+        item { EmptyCatalogueState() }
+        return
+    }
+    item {
+        Text(
+            text = stringResource(R.string.catalogue_our_services),
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, fontSize = 19.sp),
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+        )
+    }
+    val rows = categories.chunked(2)
+    items(rows) { row ->
+        CategoryGridRow(row = row, photoFirstCatalogueEnabled = photoFirstCatalogueEnabled, onCategoryClick = onCategoryClick)
+    }
+}
+
+@Composable
+private fun CategoryGridRow(
+    row: List<Category>,
+    photoFirstCatalogueEnabled: Boolean,
+    onCategoryClick: (String) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        row.forEach { cat ->
+            if (photoFirstCatalogueEnabled) {
+                PhotoFirstCategoryCard(category = cat, onClick = { onCategoryClick(cat.id) }, modifier = Modifier.weight(1f))
+            } else {
+                CategoryCard(category = cat, onClick = { onCategoryClick(cat.id) }, modifier = Modifier.weight(1f))
             }
         }
+        if (row.size == 1) Spacer(Modifier.weight(1f))
     }
 }
 
@@ -448,10 +457,8 @@ private fun StickyHero(
                 .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 10.dp),
     ) {
         HeroTopRow(onSettingsClick = onSettingsClick)
-        Spacer(Modifier.height(10.dp))
-        HeroSearchBar()
         if (showWalletChip && walletBalanceInPaise > 0L) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
             WalletBalanceChip(
                 balanceInPaise = walletBalanceInPaise,
                 onClick = onWalletClick,
@@ -462,6 +469,7 @@ private fun StickyHero(
 
 @Composable
 private fun HeroTopRow(onSettingsClick: () -> Unit) {
+    val accentInk = LocalHomeservicesExtendedColors.current.accentInk
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -471,14 +479,14 @@ private fun HeroTopRow(onSettingsClick: () -> Unit) {
             HsScreenTitle(
                 text = "HomeHeroo",
                 style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold, fontSize = 22.sp),
-                color = MaterialTheme.colorScheme.primary,
+                color = accentInk,
             )
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Default.LocationOn,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = accentInk,
                     modifier = Modifier.size(15.dp),
                 )
                 Spacer(Modifier.width(4.dp))
@@ -503,47 +511,11 @@ private fun HeroTopRow(onSettingsClick: () -> Unit) {
             Icon(
                 Icons.Default.Settings,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = accentInk,
                 modifier = Modifier.size(21.dp),
             )
         }
     }
-}
-
-@Composable
-private fun HeroSearchBar() {
-    var query by remember { mutableStateOf("") }
-    TextField(
-        value = query,
-        onValueChange = { query = it },
-        placeholder = {
-            Text(
-                stringResource(R.string.catalogue_search_hint),
-                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        },
-        leadingIcon = {
-            Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(23.dp))
-        },
-        singleLine = true,
-        shape = RoundedCornerShape(18.dp),
-        colors =
-            TextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent,
-                focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-            ),
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(18.dp)),
-    )
 }
 
 @Composable
@@ -571,13 +543,21 @@ private fun CompactTabBar(title: String) {
 private fun PromoSlider() {
     val banners = promoBanners()
     val pagerState = rememberPagerState(pageCount = { banners.size })
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(4_000)
-            pagerState.animateScrollToPage(
-                (pagerState.currentPage + 1) % banners.size,
-                animationSpec = tween(600),
-            )
+    val reducedMotion = rememberReducedMotion()
+    // Gated on reduced-motion (spec §3.1 row 5): the effect must not merely no-op inside its loop,
+    // it must not be running at all when reduced motion is active — and must (re)start if the
+    // value changes. Scoping the LaunchedEffect inside this `if` achieves both: leaving the branch
+    // cancels the coroutine via structured concurrency, re-entering it restarts the loop. Manual
+    // swipe on the pager is unaffected either way.
+    if (!reducedMotion) {
+        LaunchedEffect(Unit) {
+            while (true) {
+                delay(4_000)
+                pagerState.animateScrollToPage(
+                    (pagerState.currentPage + 1) % banners.size,
+                    animationSpec = tween(600),
+                )
+            }
         }
     }
     Column(modifier = Modifier.padding(top = 6.dp, bottom = 12.dp)) {
@@ -592,8 +572,8 @@ private fun PromoSlider() {
                     Modifier
                         .fillMaxWidth()
                         .height(196.dp)
-                        .shadow(10.dp, RoundedCornerShape(24.dp), clip = false)
-                        .clip(RoundedCornerShape(24.dp)),
+                        .shadow(10.dp, RoundedCornerShape(20.dp), clip = false)
+                        .clip(RoundedCornerShape(20.dp)),
             ) {
                 if (b.imageRes != null) {
                     Image(
@@ -666,7 +646,7 @@ private fun PromoSlider() {
                         Modifier
                             .padding(horizontal = 3.dp)
                             .size(if (sel) 18.dp else 5.dp, 5.dp)
-                            .clip(if (sel) RoundedCornerShape(3.dp) else CircleShape)
+                            .clip(if (sel) RoundedCornerShape(8.dp) else CircleShape)
                             .background(if (sel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
                 )
             }
@@ -694,23 +674,25 @@ private fun TrustChip(
     label: String,
     modifier: Modifier = Modifier,
 ) {
+    val accentInk = LocalHomeservicesExtendedColors.current.accentInk
     Row(
         modifier =
             modifier
-                .height(44.dp)
-                .clip(RoundedCornerShape(14.dp))
+                .defaultMinSize(minHeight = 44.dp)
+                .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surface)
-                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
-                .padding(horizontal = 8.dp),
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
+                .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+        Icon(icon, contentDescription = null, tint = accentInk, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(4.dp))
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.SemiBold),
-            color = MaterialTheme.colorScheme.primary,
+            color = accentInk,
+            textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -718,6 +700,11 @@ private fun TrustChip(
 }
 
 // ── Category card (Codex: 148dp, radius 20dp, icon tile 56dp, 17sp title) ────
+// Height bound to one constant (spec §3.1: 126dp was cramped for a two-line Devanagari name plus
+// price; owner-specified 148dp) — shared with LoadingState's HsSkeletonBlock placeholders below so
+// the skeleton and the real card can never drift apart again.
+private val CategoryCardHeight = 148.dp
+
 @Composable
 private fun CategoryCard(
     category: Category,
@@ -732,14 +719,15 @@ private fun CategoryCard(
         label = "card_scale",
     )
 
+    val accentInk = LocalHomeservicesExtendedColors.current.accentInk
     Box(
         modifier =
             modifier
-                .height(126.dp)
+                .height(CategoryCardHeight)
                 .scale(scale)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(20.dp))
                 .background(MaterialTheme.colorScheme.surface)
-                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp))
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onPress = {
@@ -791,8 +779,9 @@ private fun CategoryCard(
                             fontSize = 13.sp,
                             lineHeight = 16.sp,
                             fontWeight = FontWeight.SemiBold,
+                            fontFamily = HomeservicesMonoFontFamily,
                         ),
-                    color = MaterialTheme.colorScheme.primary,
+                    color = accentInk,
                 )
             }
         }
@@ -818,10 +807,10 @@ private fun HomeBottomNav(
                 Modifier
                     .fillMaxWidth()
                     .height(68.dp)
-                    .shadow(24.dp, RoundedCornerShape(28.dp), clip = false)
-                    .clip(RoundedCornerShape(28.dp))
+                    .shadow(24.dp, RoundedCornerShape(20.dp), clip = false)
+                    .clip(RoundedCornerShape(20.dp))
                     .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.74f))
-                    .border(1.dp, MaterialTheme.colorScheme.surface.copy(alpha = 0.86f), RoundedCornerShape(28.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.surface.copy(alpha = 0.86f), RoundedCornerShape(20.dp))
                     .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -845,13 +834,14 @@ private fun GlassNavItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val itemColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    val itemColor =
+        if (selected) LocalHomeservicesExtendedColors.current.accentInk else MaterialTheme.colorScheme.onSurfaceVariant
     val label = stringResource(item.labelRes)
     Column(
         modifier =
             modifier
                 .height(52.dp)
-                .clip(RoundedCornerShape(22.dp))
+                .clip(RoundedCornerShape(20.dp))
                 .background(if (selected) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f) else Color.Transparent)
                 .clickable(onClick = onClick)
                 .padding(vertical = 6.dp),
@@ -873,16 +863,65 @@ private fun GlassNavItem(
     }
 }
 
-// ── Loading / Error ────────────────────────────────────────────────────────────
+// ── Loading / Empty / Error ───────────────────────────────────────────────────
 @Composable
 private fun LoadingState() {
-    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        repeat(3) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                HsSkeletonBlock(modifier = Modifier.weight(1f), height = CategoryCardHeight, shape = MaterialTheme.shapes.large)
+                HsSkeletonBlock(modifier = Modifier.weight(1f), height = CategoryCardHeight, shape = MaterialTheme.shapes.large)
+            }
+        }
     }
 }
 
 @Composable
-private fun ErrorState() {
+private fun EmptyCatalogueState() {
+    Box(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 64.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier =
+                    Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+            ) {
+                Icon(
+                    Icons.Default.Build,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(26.dp),
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+            Text(
+                stringResource(R.string.catalogue_empty_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                stringResource(R.string.catalogue_empty_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ErrorState(onRetry: () -> Unit) {
     Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
@@ -896,6 +935,11 @@ private fun ErrorState() {
                 stringResource(R.string.catalogue_error),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(16.dp))
+            HsPrimaryButton(
+                text = stringResource(R.string.catalogue_retry),
+                onClick = onRetry,
             )
         }
     }
@@ -954,7 +998,7 @@ private fun SupportHero() {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(20.dp))
                 .background(
                     Brush.horizontalGradient(
                         listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer),
@@ -968,7 +1012,7 @@ private fun SupportHero() {
                     Modifier
                         .size(
                             46.dp,
-                        ).background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.16f), RoundedCornerShape(16.dp)),
+                        ).background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.16f), RoundedCornerShape(12.dp)),
             ) {
                 Icon(
                     Icons.Default.SupportAgent,
@@ -1042,9 +1086,9 @@ private fun SupportCardFrame(
         modifier =
             modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(18.dp))
+                .clip(RoundedCornerShape(20.dp))
                 .background(MaterialTheme.colorScheme.surface)
-                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(18.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp))
                 .padding(16.dp),
     ) {
         content()
@@ -1058,6 +1102,7 @@ private fun SupportCardContent(
     subtitle: String,
     trailing: Boolean,
 ) {
+    val accentInk = LocalHomeservicesExtendedColors.current.accentInk
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -1065,9 +1110,9 @@ private fun SupportCardContent(
     ) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(44.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(15.dp)),
+            modifier = Modifier.size(44.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp)),
         ) {
-            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+            Icon(icon, contentDescription = null, tint = accentInk, modifier = Modifier.size(24.dp))
         }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(

@@ -660,10 +660,6 @@ kover {
                     // CustomerHomeUiState — sealed class data holders, no logic branches
                     "*.CustomerHomeUiState",
                     "*.CustomerHomeUiState\$*",
-                    // CatalogueVisualImage — Compose UI composables (image placeholder, bar meter),
-                    // same rationale as other *Kt screen classes; palette when-branches are data, not logic.
-                    "*.CatalogueVisualImageKt",
-                    "*.CatalogueVisualImageKt\$*",
                     // E16-S04: PlacesModule + WaitlistModule — Hilt @Provides/@Binds wiring, same
                     // rationale as data.auth.di.* and other DI modules excluded above.
                     "*.di.PlacesModule",

@@ -19,6 +19,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 public class ServiceListViewModelTest {
@@ -67,5 +68,19 @@ public class ServiceListViewModelTest {
             val handle = SavedStateHandle(mapOf("categoryId" to "cat1"))
             val vm = ServiceListViewModel(handle, useCase, localizer, getCurrentLocale)
             assertThat(vm.uiState.value).isInstanceOf(ServiceListUiState.Error::class.java)
+        }
+
+    @Test
+    public fun `retry re-enters Loading then recovers to Success`(): Unit =
+        runTest(dispatcher) {
+            every { useCase(any<String>()) } returns flowOf(Result.failure(IOException("net err")))
+            val handle = SavedStateHandle(mapOf("categoryId" to "cat1"))
+            val sut = ServiceListViewModel(handle, useCase, localizer, getCurrentLocale)
+            assertThat(sut.uiState.value).isInstanceOf(ServiceListUiState.Error::class.java)
+
+            every { useCase(any<String>()) } returns flowOf(Result.success(emptyList()))
+            sut.retry()
+
+            assertThat(sut.uiState.value).isInstanceOf(ServiceListUiState.Success::class.java)
         }
 }

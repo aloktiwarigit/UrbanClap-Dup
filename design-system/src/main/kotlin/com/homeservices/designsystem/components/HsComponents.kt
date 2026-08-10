@@ -1,5 +1,11 @@
 package com.homeservices.designsystem.components
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,13 +28,22 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.homeservices.designsystem.format.formatRupees
+import com.homeservices.designsystem.motion.rememberReducedMotion
 import com.homeservices.designsystem.theme.LocalHomeservicesElevation
 import com.homeservices.designsystem.theme.LocalHomeservicesSize
 import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
@@ -164,17 +179,63 @@ public fun HsSectionCard(
     }
 }
 
+private const val SKELETON_BAND_FRACTION = 0.4f
+private const val SKELETON_SWEEP_MILLIS = 1_200
+
 @Composable
 public fun HsSkeletonBlock(
     modifier: Modifier = Modifier,
     widthFraction: Float = 1f,
     height: Dp,
+    shape: Shape = MaterialTheme.shapes.small,
 ) {
-    Surface(
-        modifier = modifier.fillMaxWidth(widthFraction).height(height),
-        shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.surfaceVariant,
-    ) {}
+    val restingFill = MaterialTheme.colorScheme.surfaceVariant
+    val highlight = MaterialTheme.colorScheme.surface
+    val reducedMotion = rememberReducedMotion()
+
+    // Held as State<Float>, not `by`-delegated: reading `.value` happens inside drawBehind below,
+    // so only the draw phase invalidates on each animation frame — not the whole composable.
+    val progress: State<Float> =
+        if (reducedMotion) {
+            remember { mutableFloatStateOf(0f) }
+        } else {
+            val transition = rememberInfiniteTransition(label = "hs_skeleton")
+            transition.animateFloat(
+                initialValue = 0f,
+                targetValue = 1f,
+                animationSpec =
+                    infiniteRepeatable(
+                        animation = tween(SKELETON_SWEEP_MILLIS, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart,
+                    ),
+                label = "hs_skeleton_progress",
+            )
+        }
+
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth(widthFraction)
+                .height(height)
+                .clip(shape)
+                .drawBehind {
+                    // Resting fill first — this is what makes the block visible on frame one and
+                    // between sweeps. The previous implementation had none.
+                    drawRect(color = restingFill)
+                    if (!reducedMotion) {
+                        val band = size.width * SKELETON_BAND_FRACTION
+                        val startX = -band + progress.value * (size.width + 2f * band)
+                        drawRect(
+                            brush =
+                                Brush.horizontalGradient(
+                                    colors = listOf(Color.Transparent, highlight, Color.Transparent),
+                                    startX = startX,
+                                    endX = startX + band,
+                                ),
+                        )
+                    }
+                },
+    )
 }
 
 @Composable
