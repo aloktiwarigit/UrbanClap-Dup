@@ -27,6 +27,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -44,7 +45,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.homeservices.designsystem.components.HsActionButton
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTrustBadge
@@ -298,14 +298,27 @@ private fun RatingItemCard(
         if (!rating.comment.isNullOrBlank()) {
             Text(rating.comment, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Text(formatDate(rating.submittedAt), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
-        if (rating.appealDisputed) {
-            HsTrustBadge(text = stringResource(R.string.rating_appeal_disputed_badge))
-        } else {
-            HsActionButton(
-                text = stringResource(R.string.rating_appeal_action),
-                onClick = { onAppealClick(rating.bookingId) },
-            )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(formatDate(rating.submittedAt), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+            // Fixed-height slot so the Appeal<->Disputed swap never changes this card's height —
+            // an earlier version let the two branches size independently, which jittered the
+            // LazyColumn on every appeal outcome.
+            Box(modifier = Modifier.height(40.dp), contentAlignment = Alignment.Center) {
+                if (rating.appealDisputed) {
+                    HsTrustBadge(text = stringResource(R.string.rating_appeal_disputed_badge))
+                } else {
+                    TextButton(
+                        onClick = { onAppealClick(rating.bookingId) },
+                        contentPadding = PaddingValues(horizontal = 8.dp),
+                    ) {
+                        Text(stringResource(R.string.rating_appeal_action), style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+            }
         }
     }
 }
