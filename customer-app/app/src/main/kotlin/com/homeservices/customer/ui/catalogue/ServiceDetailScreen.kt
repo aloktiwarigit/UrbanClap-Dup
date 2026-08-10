@@ -8,9 +8,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -61,7 +63,6 @@ import com.homeservices.customer.ui.shared.TrustDossierViewModel
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.components.HsSkeletonBlock
-import com.homeservices.designsystem.format.formatRupees
 import com.homeservices.designsystem.theme.HomeservicesMonoFontFamily
 import com.homeservices.designsystem.theme.LocalHomeservicesExtendedColors
 
@@ -307,15 +308,18 @@ private fun serviceHeroImageRes(serviceId: String): Int? =
 @Composable
 private fun ServiceMetricRow(service: Service) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        // IntrinsicSize.Min + fillMaxHeight on both children (M-6): ServiceTrustTile's Hindi label
+        // can wrap to a second line (maxLines = 2 below), so the row must size to its tallest child
+        // and stretch the shorter tile to match, or the two cards go uneven.
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         ServiceMetricTile(
             label = stringResource(R.string.service_detail_duration_caption),
             value = stringResource(R.string.service_duration_label, service.durationMinutes),
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
         )
-        ServiceTrustTile(modifier = Modifier.weight(1f))
+        ServiceTrustTile(modifier = Modifier.weight(1f).fillMaxHeight())
     }
 }
 
@@ -382,7 +386,12 @@ private fun ServiceTrustTile(modifier: Modifier = Modifier) {
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
+                // M-6: was maxLines = 1 + Ellipsis. HsComponents.kt:142-145 records the same Codex
+                // finding for this exact pattern — ellipsising a Devanagari label truncates
+                // mid-word and can destroy the meaning ("सत्यापित पेशेवर" clips to "सत्यापि…" past
+                // fontScale 1.1 on a Pixel 5 tile). maxLines = 2 lets it wrap instead; the parent
+                // Row's IntrinsicSize.Min keeps this tile level with ServiceMetricTile when it does.
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }
@@ -630,4 +639,5 @@ private fun ServiceDetailSkeleton(modifier: Modifier = Modifier) {
     }
 }
 
-private fun formatPrice(pricePaise: Int): String = formatRupees(pricePaise)
+// M-9: formatPrice moved to CataloguePriceFormat.kt, shared with ServiceListScreen.kt (was an
+// identical private duplicate here). Same package, no import needed.

@@ -50,7 +50,6 @@ import com.homeservices.customer.domain.catalogue.model.Service
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.components.HsSkeletonBlock
-import com.homeservices.designsystem.format.formatRupees
 import com.homeservices.designsystem.theme.HomeservicesMonoFontFamily
 import com.homeservices.designsystem.theme.LocalHomeservicesExtendedColors
 
@@ -369,27 +368,6 @@ private fun ServiceDurationChip(durationMinutes: Int) {
 }
 
 @Composable
-private fun ServiceImageFallback(
-    name: String,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier,
-        color = MaterialTheme.colorScheme.primaryContainer,
-    ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize().padding(12.dp)) {
-            Text(
-                text = name.take(2).uppercase(),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                textAlign = TextAlign.Center,
-            )
-        }
-    }
-}
-
-@Composable
 private fun ServiceListSkeleton(modifier: Modifier = Modifier) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -432,4 +410,5 @@ private fun ServiceListSkeleton(modifier: Modifier = Modifier) {
     }
 }
 
-private fun formatPrice(pricePaise: Int): String = formatRupees(pricePaise)
+// M-9: formatPrice moved to CataloguePriceFormat.kt, shared with ServiceDetailScreen.kt (was an
+// identical private duplicate here). Same package, no import needed.
