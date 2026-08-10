@@ -1,6 +1,5 @@
 package com.homeservices.customer.ui.catalogue
 
-import androidx.compose.ui.graphics.Color
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.homeservices.corenav.PendingAction
@@ -80,7 +79,6 @@ public class CustomerHomeScreenPaparazziTest {
                 onPriceApproval = {},
                 onRateBooking = {},
                 onComplainBooking = {},
-                backgroundColor = Color(0xFFFBF7EF),
             )
         }
     }
@@ -100,7 +98,6 @@ public class CustomerHomeScreenPaparazziTest {
                 onPriceApproval = {},
                 onRateBooking = {},
                 onComplainBooking = {},
-                backgroundColor = Color(0xFFFBF7EF),
             )
         }
     }
@@ -120,7 +117,6 @@ public class CustomerHomeScreenPaparazziTest {
                 onPriceApproval = {},
                 onRateBooking = {},
                 onComplainBooking = {},
-                backgroundColor = Color(0xFFFBF7EF),
             )
         }
     }

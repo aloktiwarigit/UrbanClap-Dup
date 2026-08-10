@@ -1,11 +1,5 @@
 package com.homeservices.customer.ui.catalogue
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,12 +23,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -47,13 +38,12 @@ import com.homeservices.corenav.PendingActionType
 import com.homeservices.customer.R
 import com.homeservices.customer.domain.booking.model.CustomerBooking
 import com.homeservices.customer.domain.booking.model.CustomerBookingStatus
+import com.homeservices.designsystem.components.HsSkeletonBlock
 
 // ── Colour tokens (non-design-system — keep as raw values) ───────────────────
 private val ActiveAccentSoft = Color(0xFFF5EFE4)
 private val HighPriorityRed = Color(0xFFB5271B)
 private val HighPriorityRedSoft = Color(0xFFFAECEB)
-
-private const val SHIMMER_WIDTH_PX = 400f
 
 /**
  * The three durable-hook sections rendered inside [CatalogueHomeScreen]'s tab-0 LazyColumn,
@@ -72,7 +62,6 @@ private const val SHIMMER_WIDTH_PX = 400f
  * @param onPriceApproval Called with [CustomerBooking.bookingId] to navigate to PriceApproval.
  * @param onRateBooking   Called with [CustomerBooking.bookingId] to navigate to Rating.
  * @param onComplainBooking Called with [CustomerBooking.bookingId] to navigate to Complaint.
- * @param backgroundColor Background colour of the surrounding screen (used by shimmer gradient).
  */
 @Composable
 public fun CustomerHomeTabContent(
@@ -83,12 +72,10 @@ public fun CustomerHomeTabContent(
     onRateBooking: (bookingId: String) -> Unit,
     onComplainBooking: (bookingId: String) -> Unit,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = Color.Unspecified,
 ) {
-    val resolvedBg = if (backgroundColor == Color.Unspecified) MaterialTheme.colorScheme.background else backgroundColor
     when (homeState) {
         is CustomerHomeUiState.Loading ->
-            DurableHooksSkeleton(modifier = modifier, backgroundColor = resolvedBg)
+            DurableHooksSkeleton(modifier = modifier)
 
         is CustomerHomeUiState.Ready ->
             DurableHooksReady(
@@ -483,68 +470,21 @@ private fun SectionLabel(text: String) {
 
 // ── Skeleton loading ───────────────────────────────────────────────────────────
 
+// Codex F1: the inline shimmer brush this used to build had no resting fill — only a moving
+// highlight band over a transparent-ish background — so the strip was invisible on frame one,
+// between sweeps, and entirely under reduced-motion. HsSkeletonBlock (design-system) always
+// paints a resting fill first; the shimmer is decoration on top. Same heights/spacing/count as
+// before — only the fill primitive changed.
 @Composable
-private fun DurableHooksSkeleton(
-    modifier: Modifier = Modifier,
-    backgroundColor: Color = Color.Unspecified,
-) {
-    val resolvedBg = if (backgroundColor == Color.Unspecified) MaterialTheme.colorScheme.background else backgroundColor
-    val transition = rememberInfiniteTransition(label = "shimmer")
-    val shimmerOffset by transition.animateFloat(
-        initialValue = -1f,
-        targetValue = 2f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = 1_200, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart,
-            ),
-        label = "shimmer_offset",
-    )
-
-    @Composable
-    fun shimmerBrush(): Brush {
-        val shimmerColors =
-            listOf(
-                resolvedBg,
-                MaterialTheme.colorScheme.outline.copy(alpha = 0.55f),
-                resolvedBg,
-            )
-        return Brush.linearGradient(
-            colors = shimmerColors,
-            start = Offset(shimmerOffset * SHIMMER_WIDTH_PX, 0f),
-            end = Offset((shimmerOffset + 1f) * SHIMMER_WIDTH_PX, 0f),
-        )
-    }
-
+private fun DurableHooksSkeleton(modifier: Modifier = Modifier) {
     Column(modifier = modifier.padding(horizontal = 16.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // Skeleton pending action strip
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(shimmerBrush()),
-        )
+        HsSkeletonBlock(height = 60.dp, shape = MaterialTheme.shapes.medium)
         // Skeleton active booking strip
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(76.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(shimmerBrush()),
-        )
+        HsSkeletonBlock(height = 76.dp, shape = MaterialTheme.shapes.medium)
         // Skeleton recent booking strip × 2
         repeat(2) {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(shimmerBrush()),
-            )
+            HsSkeletonBlock(height = 56.dp, shape = MaterialTheme.shapes.medium)
         }
         Spacer(Modifier.height(4.dp))
     }
