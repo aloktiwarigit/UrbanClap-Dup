@@ -86,6 +86,7 @@ import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.components.HsSkeletonBlock
 import com.homeservices.designsystem.format.formatRupees
+import com.homeservices.designsystem.motion.rememberReducedMotion
 import com.homeservices.designsystem.theme.HomeservicesMonoFontFamily
 import com.homeservices.designsystem.theme.LocalHomeservicesExtendedColors
 import kotlinx.coroutines.delay
@@ -542,13 +543,21 @@ private fun CompactTabBar(title: String) {
 private fun PromoSlider() {
     val banners = promoBanners()
     val pagerState = rememberPagerState(pageCount = { banners.size })
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(4_000)
-            pagerState.animateScrollToPage(
-                (pagerState.currentPage + 1) % banners.size,
-                animationSpec = tween(600),
-            )
+    val reducedMotion = rememberReducedMotion()
+    // Gated on reduced-motion (spec §3.1 row 5): the effect must not merely no-op inside its loop,
+    // it must not be running at all when reduced motion is active — and must (re)start if the
+    // value changes. Scoping the LaunchedEffect inside this `if` achieves both: leaving the branch
+    // cancels the coroutine via structured concurrency, re-entering it restarts the loop. Manual
+    // swipe on the pager is unaffected either way.
+    if (!reducedMotion) {
+        LaunchedEffect(Unit) {
+            while (true) {
+                delay(4_000)
+                pagerState.animateScrollToPage(
+                    (pagerState.currentPage + 1) % banners.size,
+                    animationSpec = tween(600),
+                )
+            }
         }
     }
     Column(modifier = Modifier.padding(top = 6.dp, bottom = 12.dp)) {
