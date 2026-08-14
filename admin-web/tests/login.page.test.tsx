@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { signInWithPopup } from 'firebase/auth';
+import { getRedirectResult, signInWithPopup } from 'firebase/auth';
 import LoginPage from '../app/[locale]/login/page';
 
 const pushMock = vi.fn();
@@ -73,6 +73,8 @@ vi.mock('firebase/auth', () => ({
   GoogleAuthProvider: vi.fn(() => ({ setCustomParameters: vi.fn() })),
   signInWithEmailAndPassword: vi.fn(),
   signInWithPopup: vi.fn(),
+  signInWithRedirect: vi.fn(),
+  getRedirectResult: vi.fn().mockResolvedValue(null),
 }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock, replace: replaceMock }),
@@ -83,6 +85,7 @@ describe('LoginPage', () => {
   beforeEach(() => {
     pushMock.mockReset();
     replaceMock.mockReset();
+    vi.mocked(getRedirectResult).mockReset().mockResolvedValue(null);
     vi.unstubAllGlobals();
     window.history.replaceState({}, '', '/login');
   });
@@ -156,5 +159,50 @@ describe('LoginPage', () => {
     ) as { challengeToken: string; totpCode: string };
     expect(secondBody).toEqual({ challengeToken: 'mfa-challenge-token', totpCode: '123456' });
     expect(signInWithPopup).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-checks the Google redirect result when the page is restored from the back-forward cache', async () => {
+    // Mobile browsers often restore this page from bfcache when Google redirects
+    // back after sign-in, instead of a fresh navigation — the mount effect's
+    // getRedirectResult() call (below, resolving null) never re-runs in that case.
+    const getIdToken = vi.fn().mockResolvedValue('firebase-id-token');
+    vi.mocked(getRedirectResult)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ user: { getIdToken } } as never);
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ adminId: 'admin-1', role: 'super-admin', email: 'admin@test.com' }),
+            { status: 200 },
+          ),
+        ),
+    );
+
+    render(<LoginPage />);
+
+    await waitFor(() => expect(getRedirectResult).toHaveBeenCalledTimes(1));
+    expect(pushMock).not.toHaveBeenCalled();
+
+    const pageshowEvent = new Event('pageshow');
+    Object.defineProperty(pageshowEvent, 'persisted', { value: true });
+    window.dispatchEvent(pageshowEvent);
+
+    await waitFor(() => expect(getRedirectResult).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/hi/dashboard'));
+  });
+
+  it('does not re-check the redirect result on a normal (non-bfcache) pageshow', async () => {
+    render(<LoginPage />);
+    await waitFor(() => expect(getRedirectResult).toHaveBeenCalledTimes(1));
+
+    const pageshowEvent = new Event('pageshow');
+    Object.defineProperty(pageshowEvent, 'persisted', { value: false });
+    window.dispatchEvent(pageshowEvent);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(getRedirectResult).toHaveBeenCalledTimes(1);
   });
 });

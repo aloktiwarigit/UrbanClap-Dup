@@ -147,8 +147,22 @@ export default function LoginPage() {
       }
     }
     void handleGoogleRedirectResult();
+
+    // Mobile browsers frequently restore this page from the back-forward cache
+    // when Google redirects back after sign-in, instead of doing a fresh
+    // navigation. A bfcache restore does not re-run this effect, so without this
+    // listener getRedirectResult() would only ever have been called before the
+    // redirect completed (resolving null) and the finished sign-in would be
+    // silently lost. `pageshow` with `persisted: true` is the only signal for
+    // a bfcache restore, so re-run the check when it fires.
+    function handlePageShow(event: PageTransitionEvent) {
+      if (event.persisted) void handleGoogleRedirectResult();
+    }
+    window.addEventListener('pageshow', handlePageShow);
+
     return () => {
       cancelled = true;
+      window.removeEventListener('pageshow', handlePageShow);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
