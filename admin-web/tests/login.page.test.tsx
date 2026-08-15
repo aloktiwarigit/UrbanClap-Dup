@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { getRedirectResult, signInWithPopup } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect } from 'firebase/auth';
 import LoginPage from '../app/[locale]/login/page';
 
 const pushMock = vi.fn();
@@ -73,8 +73,10 @@ vi.mock('firebase/auth', () => ({
   GoogleAuthProvider: vi.fn(() => ({ setCustomParameters: vi.fn() })),
   signInWithEmailAndPassword: vi.fn(),
   signInWithPopup: vi.fn(),
+  // Kept mocked (but not imported by the component) so tests can assert the
+  // redirect flow — removed after the Chrome M115+ storage-partitioning bug —
+  // is never reintroduced.
   signInWithRedirect: vi.fn(),
-  getRedirectResult: vi.fn().mockResolvedValue(null),
 }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock, replace: replaceMock }),
@@ -85,7 +87,8 @@ describe('LoginPage', () => {
   beforeEach(() => {
     pushMock.mockReset();
     replaceMock.mockReset();
-    vi.mocked(getRedirectResult).mockReset().mockResolvedValue(null);
+    vi.mocked(signInWithPopup).mockReset();
+    vi.mocked(signInWithRedirect).mockReset();
     vi.unstubAllGlobals();
     window.history.replaceState({}, '', '/login');
   });
@@ -161,48 +164,34 @@ describe('LoginPage', () => {
     expect(signInWithPopup).toHaveBeenCalledTimes(1);
   });
 
-  it('re-checks the Google redirect result when the page is restored from the back-forward cache', async () => {
-    // Mobile browsers often restore this page from bfcache when Google redirects
-    // back after sign-in, instead of a fresh navigation — the mount effect's
-    // getRedirectResult() call (below, resolving null) never re-runs in that case.
+  it('uses the Google popup flow on mobile browsers too, never the redirect flow', async () => {
+    // signInWithRedirect() was removed: Chrome M115+ storage partitioning
+    // silently breaks getRedirectResult() for apps not hosted on Firebase's
+    // authDomain origin (this app is hosted on Azure Container Apps), so the
+    // completed sign-in was lost with no error. Popup works on both desktop
+    // and mobile and isn't affected by that partitioning behavior.
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      userAgent:
+        'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36',
+    });
     const getIdToken = vi.fn().mockResolvedValue('firebase-id-token');
-    vi.mocked(getRedirectResult)
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ user: { getIdToken } } as never);
+    vi.mocked(signInWithPopup).mockResolvedValue({ user: { getIdToken } } as never);
     vi.stubGlobal(
       'fetch',
-      vi
-        .fn()
-        .mockResolvedValueOnce(
-          new Response(
-            JSON.stringify({ adminId: 'admin-1', role: 'super-admin', email: 'admin@test.com' }),
-            { status: 200 },
-          ),
+      vi.fn().mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ adminId: 'admin-1', role: 'super-admin', email: 'admin@test.com' }),
+          { status: 200 },
         ),
+      ),
     );
 
     render(<LoginPage />);
+    fireEvent.click(screen.getByRole('button', { name: /continue with google/i }));
 
-    await waitFor(() => expect(getRedirectResult).toHaveBeenCalledTimes(1));
-    expect(pushMock).not.toHaveBeenCalled();
-
-    const pageshowEvent = new Event('pageshow');
-    Object.defineProperty(pageshowEvent, 'persisted', { value: true });
-    window.dispatchEvent(pageshowEvent);
-
-    await waitFor(() => expect(getRedirectResult).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/hi/dashboard'));
-  });
-
-  it('does not re-check the redirect result on a normal (non-bfcache) pageshow', async () => {
-    render(<LoginPage />);
-    await waitFor(() => expect(getRedirectResult).toHaveBeenCalledTimes(1));
-
-    const pageshowEvent = new Event('pageshow');
-    Object.defineProperty(pageshowEvent, 'persisted', { value: false });
-    window.dispatchEvent(pageshowEvent);
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(getRedirectResult).toHaveBeenCalledTimes(1);
+    expect(signInWithPopup).toHaveBeenCalledTimes(1);
+    expect(signInWithRedirect).not.toHaveBeenCalled();
   });
 });
