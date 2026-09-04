@@ -25,6 +25,7 @@ export function CategoryForm({ initial, onSubmit, onCancel }: CategoryFormProps)
   const isEdit = initial !== undefined;
   const [id, setId] = useState(initial?.id ?? '');
   const [name, setName] = useState(initial?.name ?? '');
+  const [nameHi, setNameHi] = useState(initial?.nameHi ?? '');
   const [heroImageUrl, setHeroImageUrl] = useState(initial?.heroImageUrl ?? '');
   const [sortOrder, setSortOrder] = useState(String(initial?.sortOrder ?? ''));
   const [submitting, setSubmitting] = useState(false);
@@ -44,6 +45,9 @@ export function CategoryForm({ initial, onSubmit, onCancel }: CategoryFormProps)
       name,
       heroImageUrl,
       sortOrder: sortOrderNum,
+      // nameHi is `.min(1)` server-side. An empty string is omitted rather than
+      // sent, so a blank Hindi field neither wipes nor rejects.
+      ...(nameHi.trim() !== '' ? { nameHi } : {}),
     };
     const data: CreateCategoryBody | UpdateCategoryBody = isEdit ? common : { ...common, id };
 
@@ -112,6 +116,29 @@ export function CategoryForm({ initial, onSubmit, onCancel }: CategoryFormProps)
           value={name}
           onChange={(event) => setName(event.target.value)}
           placeholder={t('form.namePlaceholder')}
+        />
+      </div>
+
+      <div>
+        <label
+          htmlFor="category-name-hi"
+          style={{
+            display: 'block',
+            fontSize: 'var(--text-sm)',
+            fontWeight: 600,
+            marginBottom: 'var(--space-1)',
+          }}
+        >
+          {t('form.nameHiLabel')}
+        </label>
+        <input
+          id="category-name-hi"
+          className="input"
+          type="text"
+          lang="hi"
+          value={nameHi}
+          onChange={(event) => setNameHi(event.target.value)}
+          placeholder={t('form.nameHiPlaceholder')}
         />
       </div>
 

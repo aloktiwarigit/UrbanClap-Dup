@@ -674,7 +674,9 @@ export interface components {
             id: string;
             categoryId: string;
             name: string;
+            nameHi?: string;
             shortDescription: string;
+            shortDescriptionHi?: string;
             /** Format: uri */
             heroImageUrl: string;
             /** @description Price in paise (₹599 = 59900) */
@@ -686,7 +688,9 @@ export interface components {
             id: string;
             categoryId: string;
             name: string;
+            nameHi?: string;
             shortDescription: string;
+            shortDescriptionHi?: string;
             /** Format: uri */
             heroImageUrl: string;
             /** @description Price in paise (₹599 = 59900) */
@@ -715,6 +719,8 @@ export interface components {
         CategoryWithServices: {
             id: string;
             name: string;
+            /** @example एसी मरम्मत */
+            nameHi?: string;
             heroImageUrl: string;
             sortOrder: number;
             services: components["schemas"]["ServiceCard"][];
@@ -724,6 +730,8 @@ export interface components {
             id: string;
             /** @example AC Repair */
             name: string;
+            /** @example एसी मरम्मत */
+            nameHi?: string;
             /** Format: uri */
             heroImageUrl: string;
             sortOrder: number;
@@ -741,7 +749,9 @@ export interface components {
             id: string;
             categoryId: string;
             name: string;
+            nameHi?: string;
             shortDescription: string;
+            shortDescriptionHi?: string;
             /** Format: uri */
             heroImageUrl: string;
             /** @description Price in paise (₹599 = 59900) */
@@ -1369,6 +1379,8 @@ export interface operations {
                     id: string;
                     /** @example AC Repair */
                     name: string;
+                    /** @example एसी मरम्मत */
+                    nameHi?: string;
                     /** Format: uri */
                     heroImageUrl: string;
                     sortOrder: number;
@@ -1460,6 +1472,8 @@ export interface operations {
                 "application/json": {
                     /** @example AC Repair */
                     name?: string;
+                    /** @example एसी मरम्मत */
+                    nameHi?: string;
                     /** Format: uri */
                     heroImageUrl?: string;
                     sortOrder?: number;
@@ -1554,7 +1568,9 @@ export interface operations {
                     id: string;
                     categoryId: string;
                     name: string;
+                    nameHi?: string;
                     shortDescription: string;
+                    shortDescriptionHi?: string;
                     /** Format: uri */
                     heroImageUrl: string;
                     /** @description Price in paise (₹599 = 59900) */
@@ -1665,7 +1681,9 @@ export interface operations {
             content: {
                 "application/json": {
                     name?: string;
+                    nameHi?: string;
                     shortDescription?: string;
+                    shortDescriptionHi?: string;
                     /** Format: uri */
                     heroImageUrl?: string;
                     /** @description Price in paise (₹599 = 59900) */
