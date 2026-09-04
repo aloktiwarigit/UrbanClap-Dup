@@ -72,8 +72,8 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
       durationMinutes: durationNum,
       // nameHi / shortDescriptionHi are `.min(1)` server-side. An empty string is
       // omitted rather than sent, so a blank Hindi field neither wipes nor rejects.
-      ...(nameHi.trim() !== '' ? { nameHi } : {}),
-      ...(shortDescriptionHi.trim() !== '' ? { shortDescriptionHi } : {}),
+      ...(nameHi.trim() !== '' ? { nameHi: nameHi.trim() } : {}),
+      ...(shortDescriptionHi.trim() !== '' ? { shortDescriptionHi: shortDescriptionHi.trim() } : {}),
     };
 
     const data: CreateServiceBody | UpdateServiceBody = isEdit

@@ -47,7 +47,7 @@ export function CategoryForm({ initial, onSubmit, onCancel }: CategoryFormProps)
       sortOrder: sortOrderNum,
       // nameHi is `.min(1)` server-side. An empty string is omitted rather than
       // sent, so a blank Hindi field neither wipes nor rejects.
-      ...(nameHi.trim() !== '' ? { nameHi } : {}),
+      ...(nameHi.trim() !== '' ? { nameHi: nameHi.trim() } : {}),
     };
     const data: CreateCategoryBody | UpdateCategoryBody = isEdit ? common : { ...common, id };
 

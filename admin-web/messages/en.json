@@ -556,7 +556,7 @@
       "nameLabel": "Name",
       "namePlaceholder": "e.g. AC Repair",
       "nameHiLabel": "Name (Hindi)",
-      "nameHiPlaceholder": "जैसे: AC रिपेयर",
+      "nameHiPlaceholder": "एसी मरम्मत",
       "heroImageLabel": "Hero Image URL",
       "heroImagePlaceholder": "https://…",
       "sortOrderLabel": "Sort Order",
