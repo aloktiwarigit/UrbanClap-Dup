@@ -5,6 +5,13 @@ export default defineConfig({
     globals: false,
     environment: 'node',
     include: ['tests/**/*.test.ts'],
+    // Several suites re-import a heavy module graph inside beforeEach
+    // (`vi.resetModules()` + `await import('../../src/functions/bookings.js')`,
+    // which pulls in Cosmos, Razorpay and FCM). Under parallel load that
+    // re-transform exceeds vitest's 10s default and the suite fails
+    // intermittently with "Hook timed out in 10000ms" — files that pass in
+    // isolation. Raised, not removed: a genuinely hung hook still fails.
+    hookTimeout: 30_000,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
