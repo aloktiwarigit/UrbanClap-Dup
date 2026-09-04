@@ -26,7 +26,17 @@ export const ServiceSchema = z
     id: z.string().min(1).regex(/^[a-z0-9-]+$/).openapi({ example: 'ac-deep-clean' }),
     categoryId: z.string().min(1),
     name: z.string().min(1).max(100),
+    /**
+     * E22-S01: Hindi display name. The customer app is Hindi-default (ADR-0018) and
+     * previously read Hindi from a compiled-in Kotlin map, so anything added through
+     * the admin dashboard showed in English until a new APK shipped. Optional so
+     * existing documents keep parsing; the parity guard in tools/ fails CI if a
+     * seeded service is missing one.
+     */
+    nameHi: z.string().min(1).max(100).optional(),
     shortDescription: z.string().min(1).max(200),
+    /** E22-S01: Hindi short description. Must never contain a price — see Task 3. */
+    shortDescriptionHi: z.string().min(1).max(200).optional(),
     heroImageUrl: z.string().url(),
     basePrice: z.number().int().nonnegative().openapi({ description: 'Price in paise (₹599 = 59900)' }),
     commissionBps: z.number().int().min(1500).max(3500).optional().openapi({ description: 'Commission override in basis points (2250 = 22.5%). Optional (E21-S01): when absent, the booking falls through to the category override, then the global default.' }),
@@ -49,7 +59,9 @@ export const ServiceCardSchema = ServiceSchema.pick({
   id: true,
   categoryId: true,
   name: true,
+  nameHi: true,
   shortDescription: true,
+  shortDescriptionHi: true,
   heroImageUrl: true,
   basePrice: true,
   durationMinutes: true,

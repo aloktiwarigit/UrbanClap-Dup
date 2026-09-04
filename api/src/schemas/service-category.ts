@@ -7,6 +7,8 @@ export const ServiceCategorySchema = z
   .object({
     id: z.string().min(1).regex(/^[a-z0-9-]+$/).openapi({ example: 'ac-repair' }),
     name: z.string().min(1).max(100).openapi({ example: 'AC Repair' }),
+    /** E22-S01: Hindi display name — see the note on ServiceSchema.nameHi. */
+    nameHi: z.string().min(1).max(100).optional().openapi({ example: 'एसी मरम्मत' }),
     heroImageUrl: z.string().url(),
     sortOrder: z.number().int().nonnegative(),
     /** PRD-08: When true, this category's services should trigger the women-safe filter by default. */
