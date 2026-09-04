@@ -9,6 +9,7 @@ import {
 import { getTechnicianPayoutCadence } from '../../../cosmos/technician-repository.js';
 import { RazorpayRouteService } from '../../../services/razorpayRoute.service.js';
 import { auditLog } from '../../../services/auditLog.service.js';
+import { arePayoutsEnabled } from '../../../shared/payouts-enabled.js';
 
 function priorWeekBounds(): { weekStart: string; weekEnd: string } {
   const weekEnd = new Date();
@@ -26,6 +27,20 @@ export const adminApprovePayoutsHandler: AdminHttpHandler = async (
 ): Promise<HttpResponseInit> => {
   if (admin.role !== 'super-admin') {
     return { status: 403, jsonBody: { code: 'FORBIDDEN', requiredRoles: ['super-admin'] } };
+  }
+
+  // P0-0: checked AFTER the role gate so the switch cannot be used as an
+  // authorisation oracle by a non-super-admin.
+  if (!arePayoutsEnabled()) {
+    return {
+      status: 503,
+      jsonBody: {
+        code: 'PAYOUTS_DISABLED',
+        message:
+          'Prepaid payouts are disabled for the cash pilot. Technicians remit commission '
+          + 'instead; see the commission receivables console.',
+      },
+    };
   }
 
   const { weekStart, weekEnd } = priorWeekBounds();

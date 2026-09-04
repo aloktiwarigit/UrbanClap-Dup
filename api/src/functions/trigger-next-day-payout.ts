@@ -7,6 +7,7 @@ import { walletLedgerRepo } from '../cosmos/wallet-ledger-repository.js';
 import { getTechnicianForSettlement } from '../cosmos/technician-repository.js';
 import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
 import { RazorpayRouteService } from '../services/razorpayRoute.service.js';
+import { arePayoutsEnabled } from '../shared/payouts-enabled.js';
 
 const IST_OFFSET_MS = 5.5 * 3600000;
 
@@ -21,6 +22,13 @@ function todayIstMidnightUtc(): string {
 }
 
 export async function processNextDayPayouts(ctx: InvocationContext): Promise<void> {
+  // P0-0: cash pilot pays no one out. Bail before reading the ledger or
+  // constructing the Razorpay client — see shared/payouts-enabled.ts.
+  if (!arePayoutsEnabled()) {
+    ctx.log('processNextDayPayouts: PAYOUTS_DISABLED_SKIP');
+    return;
+  }
+
   const cutoff = todayIstMidnightUtc();
   ctx.log(`processNextDayPayouts: cutoff=${cutoff}`);
 

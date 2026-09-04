@@ -8,6 +8,7 @@ import { getTechnicianForSettlement, incrementCompletedJobCount } from '../cosmo
 import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
 import { RazorpayRouteService } from '../services/razorpayRoute.service.js';
 import { sendTechEarningsUpdate, sendOwnerRouteAlert } from '../services/fcm.service.js';
+import { arePayoutsEnabled } from '../shared/payouts-enabled.js';
 
 function systemAuditEntry(action: string, payload: Record<string, unknown>) {
   const timestamp = new Date().toISOString();
@@ -25,6 +26,13 @@ function systemAuditEntry(action: string, payload: Record<string, unknown>) {
 }
 
 export async function reconcilePayouts(ctx: InvocationContext): Promise<void> {
+  // P0-0: reconciliation retries transfers. Nothing to reconcile while payouts
+  // are disabled, and retrying would move money — see shared/payouts-enabled.ts.
+  if (!arePayoutsEnabled()) {
+    ctx.log('reconcilePayouts: PAYOUTS_DISABLED_SKIP');
+    return;
+  }
+
   const cutoff = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
 
   const [pendingStale, failedEntries] = await Promise.all([
