@@ -16,7 +16,7 @@ export const TECHNICIANS: TechnicianProfile[] = [
     id: 'tech-ayd-001',
     technicianId: 'tech-ayd-001',
     location: { type: 'Point', coordinates: [82.1968, 26.7913] }, // Ram Janmabhoomi area
-    skills: ['ac-deep-clean', 'ac-gas-refill', 'ac-installation'], // catalogue: ac-repair
+    skills: ['ac-deep-clean', 'ac-deep-clean-window', 'ac-gas-refill', 'ac-installation'], // catalogue: ac-repair
     availabilityWindows: [
       { dayOfWeek: 1, startHour: 8, endHour: 18 },
       { dayOfWeek: 2, startHour: 8, endHour: 18 },
@@ -49,7 +49,7 @@ export const TECHNICIANS: TechnicianProfile[] = [
     id: 'tech-ayd-003',
     technicianId: 'tech-ayd-003',
     location: { type: 'Point', coordinates: [82.1815, 26.8019] }, // Faizabad Cantt
-    skills: ['electrical-switchboard-fix', 'electrical-fan-install', 'electrical-wiring', 'ac-deep-clean'], // catalogue: electrical + ac-repair
+    skills: ['electrical-switchboard-fix', 'electrical-fan-install', 'electrical-wiring', 'ac-deep-clean', 'ac-deep-clean-window'], // catalogue: electrical + ac-repair
     availabilityWindows: [
       { dayOfWeek: 0, startHour: 10, endHour: 17 },
       { dayOfWeek: 2, startHour: 8, endHour: 18 },
@@ -67,7 +67,7 @@ export const TECHNICIANS: TechnicianProfile[] = [
     location: { type: 'Point', coordinates: [82.2238, 26.7905] }, // Saket College area
     // Multi-skill tech keeps eligible coverage >=2 for ro-* + plumbing-tap-install
     // even though tech-ayd-009 (also covering these) is intentionally offline (dispatch fixture).
-    skills: ['ac-deep-clean', 'ac-gas-refill', 'ro-installation', 'ro-service-amc', 'plumbing-tap-install'], // catalogue: ac-repair + water-purifier + plumbing
+    skills: ['ac-deep-clean', 'ac-deep-clean-window', 'ac-gas-refill', 'ro-installation', 'ro-service-amc', 'plumbing-tap-install'], // catalogue: ac-repair + water-purifier + plumbing
     availabilityWindows: [
       { dayOfWeek: 1, startHour: 8, endHour: 17 },
       { dayOfWeek: 2, startHour: 8, endHour: 17 },
@@ -162,7 +162,7 @@ export const TECHNICIANS: TechnicianProfile[] = [
     id: 'tech-ayd-010',
     technicianId: 'tech-ayd-010',
     location: { type: 'Point', coordinates: [82.2151, 26.7617] }, // Bareta
-    skills: ['ac-installation', 'ac-deep-clean', 'plumbing-pipe-repair', 'electrical-wiring'], // catalogue: ac-repair + plumbing + electrical
+    skills: ['ac-installation', 'ac-deep-clean', 'ac-deep-clean-window', 'plumbing-pipe-repair', 'electrical-wiring'], // catalogue: ac-repair + plumbing + electrical
     availabilityWindows: [
       { dayOfWeek: 1, startHour: 9, endHour: 18 },
       { dayOfWeek: 3, startHour: 9, endHour: 18 },
