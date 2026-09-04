@@ -99,6 +99,11 @@ const BASE_SVC = {
   isActive: true, updatedBy: 'u', createdAt: '2026-04-19T00:00:00.000Z', updatedAt: '2026-04-19T00:00:00.000Z',
 };
 
+const BASE_CAT = {
+  id: 'ac-repair', name: 'AC Repair', heroImageUrl: 'https://example.com/c.jpg',
+  sortOrder: 1, isActive: true, updatedBy: 'u', createdAt: '2026-04-19T00:00:00.000Z', updatedAt: '2026-04-19T00:00:00.000Z',
+};
+
 describe('E22-S01 — bilingual fields reach the wire', () => {
   it('includes Hindi copy on the embedded service cards', async () => {
     vi.mocked(catalogueRepo.listAllActiveServices).mockResolvedValueOnce([
@@ -137,5 +142,29 @@ describe('E22-S01 — bilingual fields reach the wire', () => {
     );
 
     expect((res.jsonBody as { nameHi?: string }).nameHi).toBe('एसी डीप क्लीन');
+  });
+
+  it('includes Hindi copy on the category object', async () => {
+    vi.mocked(catalogueRepo.listActiveCategories).mockResolvedValueOnce([
+      { ...BASE_CAT, nameHi: 'एसी मरम्मत' },
+    ] as never);
+    vi.mocked(catalogueRepo.listAllActiveServices).mockResolvedValueOnce([BASE_SVC] as never);
+
+    const res = await getCategoriesHandler(makeReq('http://localhost:7071/api/v1/categories'), {} as never);
+    const body = res.jsonBody as { categories: Array<Record<string, unknown>> };
+    const cat = body.categories[0];
+
+    expect(cat?.nameHi).toBe('एसी मरम्मत');
+  });
+
+  it('omits the Hindi key entirely for an English-only category', async () => {
+    vi.mocked(catalogueRepo.listActiveCategories).mockResolvedValueOnce([BASE_CAT] as never);
+    vi.mocked(catalogueRepo.listAllActiveServices).mockResolvedValueOnce([BASE_SVC] as never);
+
+    const res = await getCategoriesHandler(makeReq('http://localhost:7071/api/v1/categories'), {} as never);
+    const body = res.jsonBody as { categories: Array<Record<string, unknown>> };
+    const cat = body.categories[0] ?? {};
+
+    expect('nameHi' in cat).toBe(false);
   });
 });

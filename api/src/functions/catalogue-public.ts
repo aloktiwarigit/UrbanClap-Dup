@@ -35,6 +35,7 @@ export async function getCategoriesHandler(
     .map((cat) => ({
       id: cat.id,
       name: cat.name,
+      ...(cat.nameHi !== undefined ? { nameHi: cat.nameHi } : {}),
       heroImageUrl: cat.heroImageUrl,
       sortOrder: cat.sortOrder,
       safetyTag: cat.safetyTag ?? false,

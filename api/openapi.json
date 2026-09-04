@@ -503,6 +503,12 @@
           "name": {
             "type": "string"
           },
+          "nameHi": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "example": "एसी मरम्मत"
+          },
           "heroImageUrl": {
             "type": "string"
           },

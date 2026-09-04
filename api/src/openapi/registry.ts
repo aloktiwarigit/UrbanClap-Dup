@@ -179,6 +179,7 @@ const ServiceDetailResponse = ServiceDetailSchema.openapi('ServiceDetail');
 const CategoryWithServicesSchema = z.object({
   id: z.string(),
   name: z.string(),
+  nameHi: z.string().min(1).max(100).optional().openapi({ example: 'एसी मरम्मत' }),
   heroImageUrl: z.string(),
   sortOrder: z.number(),
   services: z.array(ServiceCardResponse),
