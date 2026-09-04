@@ -115,6 +115,24 @@ export const commissionReceivableRepo = {
     return resources;
   },
 
+  /**
+   * P0-1: every receivable for a technician, regardless of remittance status.
+   * Single-partition (pk = /technicianId), so this is cheap and safe to call per
+   * request — unlike getAllTechnicianOutstandingSummaries below, which fans out.
+   *
+   * Earnings need ALL of them, not just DUE: a job whose commission was later
+   * remitted or waived was still a job the technician did and got paid for.
+   */
+  async getAllByTechnician(technicianId: string): Promise<CommissionReceivableEntry[]> {
+    const { resources } = await getCommissionReceivablesContainer()
+      .items.query<CommissionReceivableEntry>(
+        { query: 'SELECT * FROM c' },
+        { partitionKey: technicianId },
+      )
+      .fetchAll();
+    return resources;
+  },
+
   async getAllTechnicianOutstandingSummaries(): Promise<
     Array<{
       technicianId: string;

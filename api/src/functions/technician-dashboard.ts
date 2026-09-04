@@ -15,6 +15,9 @@ import { getActivePendingActions } from '../cosmos/pending-action-repository.js'
 import { getKycByTechnicianId } from '../cosmos/technician-repository.js';
 import { bookingRepo } from '../cosmos/booking-repository.js';
 import { getCosmosClient, DB_NAME } from '../cosmos/client.js';
+import { walletLedgerRepo } from '../cosmos/wallet-ledger-repository.js';
+import { commissionReceivableRepo } from '../cosmos/commission-receivable-repository.js';
+import { buildEarningEvents, sumNetForIstDate, IST_OFFSET_MS } from '../services/earnings.service.js';
 
 // ── Response schema ───────────────────────────────────────────────────────────
 
@@ -43,7 +46,8 @@ const ACTIVE_STATUSES = new Set([
   'ASSIGNED', 'EN_ROUTE', 'REACHED', 'IN_PROGRESS', 'AWAITING_PRICE_APPROVAL',
 ]);
 
-const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // UTC+5:30 in milliseconds
+// P0-1: IST_OFFSET_MS now comes from services/earnings.service.ts — one definition,
+// shared with the earnings endpoint.
 
 function getIndiaToday(): string {
   const shifted = new Date(Date.now() + IST_OFFSET_MS);
@@ -93,20 +97,28 @@ async function getTechnicianDashboardHandler(
     const todayDate = getIndiaToday();
 
     // Fan out all reads in parallel
-    const [kyc, bookings, pendingActions, todayRatings] = await Promise.all([
+    const [kyc, bookings, pendingActions, todayRatings, ledgerEntries, receivables] = await Promise.all([
       getKycByTechnicianId(uid).catch(() => null),
       bookingRepo.getByTechnicianId(uid).catch(() => []),
       getActivePendingActions(uid, new Date().toISOString(), 'technician').catch(() => []),
       fetchTodayRatings(uid, todayDate, ctx),
+      walletLedgerRepo.getAllByTechnicianId(uid).catch(() => []),
+      commissionReceivableRepo.getAllByTechnician(uid).catch(() => []),
     ]);
 
     // Active job: first booking in an active status
     const activeBooking = bookings.find((b) => ACTIVE_STATUSES.has(b.status)) ?? null;
 
-    // Today's earnings: sum of finalAmount/amount for COMPLETED/PAID bookings with slotDate=today
-    const todayEarnings = bookings
-      .filter((b) => (b.status === 'COMPLETED' || b.status === 'PAID') && b.slotDate === todayDate)
-      .reduce((sum, b) => sum + (b.finalAmount ?? b.amount), 0);
+    // P0-1: today's earnings are what the technician KEEPS, from the same shared
+    // builder the earnings endpoint uses — so the dashboard and the earnings screen
+    // cannot report different numbers for the same job.
+    //
+    // This previously summed `finalAmount ?? amount` for bookings with
+    // slotDate === today, i.e. GROSS with no commission subtracted, while the
+    // earnings screen reported ₹0. Basis is now the settlement timestamp rather
+    // than the booked slot date, which is also the more honest reading of
+    // "earned today" — a job settled after midnight belongs to the day it settled.
+    const todayEarnings = sumNetForIstDate(buildEarningEvents(ledgerEntries, receivables), todayDate);
 
     // Pending offer count from pending actions
     const pendingOfferCount = pendingActions.filter(

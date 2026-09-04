@@ -4,13 +4,15 @@ import type { HttpHandler, HttpRequest, InvocationContext } from '@azure/functio
 import * as Sentry from '@sentry/node';
 import { verifyTechnicianToken } from '../middleware/verifyTechnicianToken.js';
 import { walletLedgerRepo } from '../cosmos/wallet-ledger-repository.js';
-import type { EarningsResponse, EarningsPeriod, DailyEarnings, WalletLedgerEntry } from '../schemas/wallet-ledger.js';
+import { commissionReceivableRepo } from '../cosmos/commission-receivable-repository.js';
+import { buildEarningEvents, toIstDateStr, IST_OFFSET_MS, type EarningEvent } from '../services/earnings.service.js';
+import type { EarningsResponse, EarningsPeriod, DailyEarnings } from '../schemas/wallet-ledger.js';
 
 const MONTH_GOAL_PAISE = 3_500_000;
 
-function aggregate(entries: WalletLedgerEntry[], predicate: (e: WalletLedgerEntry) => boolean): EarningsPeriod {
-  const subset = entries.filter(predicate);
-  return { amountPaise: subset.reduce((s, e) => s + e.techAmount, 0), jobs: subset.length };
+function aggregate(events: EarningEvent[], predicate: (e: EarningEvent) => boolean): EarningsPeriod {
+  const subset = events.filter(predicate);
+  return { amountPaise: subset.reduce((s, e) => s + e.netPaise, 0), jobs: subset.length };
 }
 
 export const getEarningsHandler: HttpHandler = async (req: HttpRequest, ctx: InvocationContext) => {
@@ -23,16 +25,17 @@ export const getEarningsHandler: HttpHandler = async (req: HttpRequest, ctx: Inv
   }
 
   try {
-    const [entries, heldEntries] = await Promise.all([
+    const [entries, heldEntries, receivables] = await Promise.all([
       walletLedgerRepo.getAllByTechnicianId(uid),
       walletLedgerRepo.getPendingHeldByTechnicianId(uid),
+      commissionReceivableRepo.getAllByTechnician(uid),
     ]);
-    const settled = entries.filter(e => e.payoutStatus !== 'FAILED');
     const pendingHeld = heldEntries.reduce((s, e) => s + e.techAmount, 0);
+
+    const settled: EarningEvent[] = buildEarningEvents(entries, receivables);
 
     // All period boundaries are computed in IST (+05:30) because technicians work in India.
     // Entries in Cosmos are stored in UTC; we shift for date comparisons.
-    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
     const now = new Date();
     const istNow = new Date(now.getTime() + IST_OFFSET_MS);
 
@@ -45,10 +48,6 @@ export const getEarningsHandler: HttpHandler = async (req: HttpRequest, ctx: Inv
     const weekStartIstDateStr = weekStartIst.toISOString().slice(0, 10);
     const weekStartUtc = new Date(new Date(`${weekStartIstDateStr}T00:00:00.000Z`).getTime() - IST_OFFSET_MS);
 
-    // Helper: IST calendar date string from a UTC ISO entry timestamp.
-    const toIstDateStr = (utcIso: string): string =>
-      new Date(new Date(utcIso).getTime() + IST_OFFSET_MS).toISOString().slice(0, 10);
-
     const dailyLast7: DailyEarnings[] = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(istNow);
@@ -57,7 +56,7 @@ export const getEarningsHandler: HttpHandler = async (req: HttpRequest, ctx: Inv
       const dayEntries = settled.filter(e => toIstDateStr(e.createdAt) === dateStr);
       dailyLast7.push({
         date: dateStr,
-        amountPaise: dayEntries.reduce((s, e) => s + e.techAmount, 0),
+        amountPaise: dayEntries.reduce((s, e) => s + e.netPaise, 0),
         jobs: dayEntries.length,
       });
     }
