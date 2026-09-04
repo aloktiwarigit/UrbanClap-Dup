@@ -69,6 +69,19 @@ export const CreateServiceBodySchema = ServiceSchema.omit({
   updatedAt: true,
 });
 
+/**
+ * P0-3: PATCH semantics. Every field is optional — the repository merges the supplied
+ * keys over the stored document and leaves the rest untouched.
+ *
+ * This was previously a non-partial `.omit()`, which made `includes`, `faq`, `addOns`
+ * and `photoStages` REQUIRED on every update. The admin form satisfied that by sending
+ * `[]` for all four, so saving a price change silently wiped the add-ons, FAQ,
+ * "includes" bullets and — worst — `photoStages`, which drives the technician
+ * guided-photo flow (E06-S02).
+ *
+ * The route is still PUT for client compatibility, but the body is a partial patch.
+ * Sending an explicit `[]` still clears a field: omission and clearing are distinct.
+ */
 export const UpdateServiceBodySchema = ServiceSchema.omit({
   id: true,
   categoryId: true,
@@ -76,7 +89,7 @@ export const UpdateServiceBodySchema = ServiceSchema.omit({
   updatedBy: true,
   createdAt: true,
   updatedAt: true,
-});
+}).partial();
 
 export type Service = z.infer<typeof ServiceSchema>;
 export type ServiceCard = z.infer<typeof ServiceCardSchema>;

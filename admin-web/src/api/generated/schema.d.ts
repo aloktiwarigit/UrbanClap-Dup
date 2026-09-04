@@ -1459,10 +1459,10 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @example AC Repair */
-                    name: string;
+                    name?: string;
                     /** Format: uri */
-                    heroImageUrl: string;
-                    sortOrder: number;
+                    heroImageUrl?: string;
+                    sortOrder?: number;
                     safetyTag?: boolean;
                     commissionBps?: number;
                 };
@@ -1664,27 +1664,27 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
-                    name: string;
-                    shortDescription: string;
+                    name?: string;
+                    shortDescription?: string;
                     /** Format: uri */
-                    heroImageUrl: string;
+                    heroImageUrl?: string;
                     /** @description Price in paise (₹599 = 59900) */
-                    basePrice: number;
+                    basePrice?: number;
                     /** @description Commission override in basis points (2250 = 22.5%). Optional (E21-S01): when absent, the booking falls through to the category override, then the global default. */
                     commissionBps?: number;
-                    durationMinutes: number;
-                    includes: string[];
-                    faq: {
+                    durationMinutes?: number;
+                    includes?: string[];
+                    faq?: {
                         question: string;
                         answer: string;
                     }[];
-                    addOns: {
+                    addOns?: {
                         id: string;
                         name: string;
                         price: number;
                         triggerCondition: string;
                     }[];
-                    photoStages: {
+                    photoStages?: {
                         id: string;
                         label: string;
                         required: boolean;
