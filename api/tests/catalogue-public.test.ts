@@ -90,3 +90,52 @@ describe('GET /v1/services/{id}', () => {
     expect(res.status).toBe(404);
   });
 });
+
+const BASE_SVC = {
+  id: 'ac-deep-clean', categoryId: 'ac-repair', name: 'AC Deep Clean',
+  shortDescription: 'Chemical wash.', heroImageUrl: 'https://example.com/s.jpg',
+  basePrice: 99900, commissionBps: 2250, durationMinutes: 90,
+  includes: [], faq: [], addOns: [], photoStages: [],
+  isActive: true, updatedBy: 'u', createdAt: '2026-04-19T00:00:00.000Z', updatedAt: '2026-04-19T00:00:00.000Z',
+};
+
+describe('E22-S01 — bilingual fields reach the wire', () => {
+  it('includes Hindi copy on the embedded service cards', async () => {
+    vi.mocked(catalogueRepo.listAllActiveServices).mockResolvedValueOnce([
+      { ...BASE_SVC, nameHi: 'एसी डीप क्लीन', shortDescriptionHi: 'केमिकल वॉश।' },
+    ] as never);
+
+    const res = await getCategoriesHandler(makeReq('http://localhost:7071/api/v1/categories'), {} as never);
+    const body = res.jsonBody as { categories: Array<{ services: Array<Record<string, unknown>> }> };
+    const card = body.categories[0]?.services[0];
+
+    expect(card?.nameHi).toBe('एसी डीप क्लीन');
+    expect(card?.shortDescriptionHi).toBe('केमिकल वॉश।');
+  });
+
+  it('omits the Hindi keys entirely for an English-only service', async () => {
+    // Absence means "fall back" on the client. Emitting nameHi: null would
+    // deserialize into a blank label instead of the English name.
+    vi.mocked(catalogueRepo.listAllActiveServices).mockResolvedValueOnce([BASE_SVC] as never);
+
+    const res = await getCategoriesHandler(makeReq('http://localhost:7071/api/v1/categories'), {} as never);
+    const body = res.jsonBody as { categories: Array<{ services: Array<Record<string, unknown>> }> };
+    const card = body.categories[0]?.services[0] ?? {};
+
+    expect('nameHi' in card).toBe(false);
+    expect('shortDescriptionHi' in card).toBe(false);
+  });
+
+  it('returns Hindi on the service detail endpoint too', async () => {
+    vi.mocked(catalogueRepo.getServiceByIdCrossPartition).mockResolvedValueOnce(
+      { ...BASE_SVC, nameHi: 'एसी डीप क्लीन' } as never,
+    );
+
+    const res = await getServiceByIdHandler(
+      makeReq('http://localhost:7071/api/v1/services/ac-deep-clean', { id: 'ac-deep-clean' }),
+      {} as never,
+    );
+
+    expect((res.jsonBody as { nameHi?: string }).nameHi).toBe('एसी डीप क्लीन');
+  });
+});
