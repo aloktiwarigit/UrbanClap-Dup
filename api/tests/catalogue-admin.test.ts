@@ -14,6 +14,7 @@ import {
   toggleServiceHandler,
 } from '../src/functions/catalogue-admin.js';
 import { catalogueAuditEntry } from '../src/services/catalogueAudit.service.js';
+import { catalogueRepo } from '../src/cosmos/catalogue-repository.js';
 
 const mockAdmin: AdminContext = { adminId: 'dev-user', role: 'super-admin', sessionId: 'test-session' };
 
@@ -218,5 +219,58 @@ describe('PATCH /v1/admin/catalogue/services/{id}/toggle', () => {
     expect(vi.mocked(catalogueAuditEntry)).toHaveBeenCalledWith(
       'dev-user', 'super-admin', 'CATALOGUE_SERVICE_TOGGLED', 'service', 'leak-fix', expect.any(Object),
     );
+  });
+});
+
+// P0-3 regression: the update bodies became partial patches, which means `{}` now
+// satisfies the schema. Without these guards a dropped payload or malformed JSON
+// would rewrite `updatedAt` and emit a success audit entry for a request the server
+// never actually read.
+describe('P0-3 — update guards against empty and unreadable bodies', () => {
+  function rawReq(raw: string, params: Record<string, string>) {
+    const req = new HttpRequest({
+      url: 'http://localhost/api/v1/admin/catalogue/services/leak-fix',
+      method: 'PUT',
+      body: { string: raw },
+    });
+    Object.assign(req, { params });
+    return req;
+  }
+
+  it('rejects an empty service patch with 400 EmptyPatch', async () => {
+    const res = await updateServiceHandler(rawReq('{}', { id: 'leak-fix' }), {} as never, mockAdmin);
+
+    expect(res.status).toBe(400);
+    expect((res.jsonBody as { error: string }).error).toBe('EmptyPatch');
+    expect(catalogueRepo.updateService).not.toHaveBeenCalled();
+    expect(vi.mocked(catalogueAuditEntry)).not.toHaveBeenCalled();
+  });
+
+  it('rejects an empty category patch with 400 EmptyPatch', async () => {
+    const res = await updateCategoryHandler(rawReq('{}', { id: 'plumbing' }), {} as never, mockAdmin);
+
+    expect(res.status).toBe(400);
+    expect((res.jsonBody as { error: string }).error).toBe('EmptyPatch');
+    expect(catalogueRepo.updateCategory).not.toHaveBeenCalled();
+  });
+
+  it('rejects malformed JSON with 400 InvalidJson rather than treating it as {}', async () => {
+    const res = await updateServiceHandler(rawReq('{ not json', { id: 'leak-fix' }), {} as never, mockAdmin);
+
+    expect(res.status).toBe(400);
+    expect((res.jsonBody as { error: string }).error).toBe('InvalidJson');
+    expect(catalogueRepo.updateService).not.toHaveBeenCalled();
+    expect(vi.mocked(catalogueAuditEntry)).not.toHaveBeenCalled();
+  });
+
+  it('still accepts a single-field patch', async () => {
+    const res = await updateServiceHandler(
+      rawReq(JSON.stringify({ basePrice: 99900 }), { id: 'leak-fix' }),
+      {} as never,
+      mockAdmin,
+    );
+
+    expect(res.status).toBe(200);
+    expect(catalogueRepo.updateService).toHaveBeenCalledWith('leak-fix', { basePrice: 99900 }, mockAdmin.adminId);
   });
 });
