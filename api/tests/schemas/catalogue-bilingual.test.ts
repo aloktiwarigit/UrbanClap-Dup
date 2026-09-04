@@ -75,4 +75,44 @@ describe('bilingual catalogue fields', () => {
   it('rejects a blank Hindi string rather than storing an empty label', () => {
     expect(() => ServiceSchema.parse({ ...service, nameHi: '' })).toThrow();
   });
+
+  // Codex finding: the admin form writes through this schema, so an owner can
+  // reintroduce the stale-price defect the story removes unless prose fields
+  // reject a price literal outright.
+  it('ServiceSchema rejects a Hindi description that embeds a price', () => {
+    expect(() =>
+      ServiceSchema.parse({ ...service, shortDescriptionHi: 'सब कुछ ₹599 में' }),
+    ).toThrow();
+  });
+
+  it('ServiceSchema rejects an English description that embeds a price', () => {
+    expect(() =>
+      ServiceSchema.parse({ ...service, shortDescription: 'All for Rs. 599' }),
+    ).toThrow();
+  });
+
+  it('UpdateServiceBodySchema rejects a Hindi-only price-in-prose edit', () => {
+    expect(() => UpdateServiceBodySchema.parse({ shortDescriptionHi: '₹699' })).toThrow();
+  });
+
+  it('ServiceCategorySchema rejects a Hindi name that embeds a price', () => {
+    const category = {
+      id: 'ac-repair',
+      name: 'AC Repair',
+      nameHi: 'एसी ₹',
+      heroImageUrl: 'https://example.com/c.jpg',
+      sortOrder: 1,
+      isActive: true,
+      updatedBy: 'seed',
+      createdAt: NOW,
+      updatedAt: NOW,
+    };
+    expect(() => ServiceCategorySchema.parse(category)).toThrow();
+  });
+
+  it('a clean Hindi description with no price still parses', () => {
+    expect(ServiceSchema.parse({ ...service, shortDescriptionHi: 'सब कुछ शामिल है' }).shortDescriptionHi).toBe(
+      'सब कुछ शामिल है',
+    );
+  });
 });

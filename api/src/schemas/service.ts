@@ -3,6 +3,16 @@ import { extendZodWithOpenApi } from '@asteasolutions/zod-to-openapi';
 
 extendZodWithOpenApi(z);
 
+/**
+ * E22-S01 Codex finding: catalogue prose (names, descriptions) must never carry a
+ * price literal. Prices are rendered from `basePrice` at read time; a price typed
+ * into free text goes stale the instant the owner edits the price and reintroduces
+ * the exact defect this story removes. Shared with service-category.ts.
+ */
+export const PRICE_IN_PROSE = /[₹]|\bRs\.?\b|\bINR\b/;
+const noPriceInProse = (s: string) => !PRICE_IN_PROSE.test(s);
+const PRICE_IN_PROSE_MESSAGE = 'Prices must not appear in text; they are rendered from basePrice';
+
 const AddOnSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -25,7 +35,7 @@ export const ServiceSchema = z
   .object({
     id: z.string().min(1).regex(/^[a-z0-9-]+$/).openapi({ example: 'ac-deep-clean' }),
     categoryId: z.string().min(1),
-    name: z.string().min(1).max(100),
+    name: z.string().min(1).max(100).refine(noPriceInProse, { message: PRICE_IN_PROSE_MESSAGE }),
     /**
      * E22-S01: Hindi display name. The customer app is Hindi-default (ADR-0018) and
      * previously read Hindi from a compiled-in Kotlin map, so anything added through
@@ -33,10 +43,24 @@ export const ServiceSchema = z
      * existing documents keep parsing; the parity guard in tools/ fails CI if a
      * seeded service is missing one.
      */
-    nameHi: z.string().min(1).max(100).optional(),
-    shortDescription: z.string().min(1).max(200),
+    nameHi: z
+      .string()
+      .min(1)
+      .max(100)
+      .refine(noPriceInProse, { message: PRICE_IN_PROSE_MESSAGE })
+      .optional(),
+    shortDescription: z
+      .string()
+      .min(1)
+      .max(200)
+      .refine(noPriceInProse, { message: PRICE_IN_PROSE_MESSAGE }),
     /** E22-S01: Hindi short description. Must never contain a price — see Task 3. */
-    shortDescriptionHi: z.string().min(1).max(200).optional(),
+    shortDescriptionHi: z
+      .string()
+      .min(1)
+      .max(200)
+      .refine(noPriceInProse, { message: PRICE_IN_PROSE_MESSAGE })
+      .optional(),
     heroImageUrl: z.string().url(),
     basePrice: z.number().int().nonnegative().openapi({ description: 'Price in paise (₹599 = 59900)' }),
     commissionBps: z.number().int().min(1500).max(3500).optional().openapi({ description: 'Commission override in basis points (2250 = 22.5%). Optional (E21-S01): when absent, the booking falls through to the category override, then the global default.' }),
