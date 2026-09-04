@@ -46,29 +46,36 @@ describe('getDailyPnL', () => {
     expect(result.totalNet).toBe(0);
   });
 
-  it('aggregates bookings by date and applies commissionBps', async () => {
+  // P0-4: this case previously put `commissionBps: 2250` ON THE BOOKING and asserted
+  // 59900 * 2250 / 10000. That field is not on BookingDocSchema and is never written
+  // to a booking — the fixture invented it, so the test passed while production always
+  // fell through to the 2200 default. Commission now comes from the recorded ledger.
+  it('aggregates bookings by date using the commission recorded at settlement', async () => {
     const booking = {
       id: 'b1',
       serviceId: 'ac-deep-clean',
       amount: 59900,
-      commissionBps: 2250,
       technicianId: 'tech-1',
       technicianName: 'Ravi',
       completedAt: '2026-04-14T10:00:00.000Z',
       status: 'COMPLETED',
     };
-    vi.mocked(getCosmosClient).mockReturnValue(makeClient({ bookings: makeContainer([booking]) }) as any);
+    // A service on a 2250 bps override, as actually charged and stored.
+    const recordedCommission = Math.round(59900 * 2250 / 10000);
+    vi.mocked(getCosmosClient).mockReturnValue(makeClient({
+      bookings: makeContainer([booking]),
+      commission_receivables: makeContainer([{ bookingId: 'b1', commissionDue: recordedCommission }]),
+    }) as any);
     const result = await getDailyPnL('2026-04-14', '2026-04-14');
     expect(result.dailyPnL).toHaveLength(1);
     const day = result.dailyPnL[0]!;
     expect(day.date).toBe('2026-04-14');
     expect(day.grossRevenue).toBe(59900);
-    const expectedCommission = Math.round(59900 * 2250 / 10000);
-    expect(day.commission).toBe(expectedCommission);
-    expect(day.netToOwner).toBe(59900 - expectedCommission);
+    expect(day.commission).toBe(recordedCommission);
+    expect(day.netToOwner).toBe(59900 - recordedCommission);
   });
 
-  it('uses default commissionBps when field is missing on booking', async () => {
+  it('falls back to the default only when no commission was ever recorded', async () => {
     const booking = {
       id: 'b2',
       amount: 10000,
