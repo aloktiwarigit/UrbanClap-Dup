@@ -10,6 +10,7 @@ internal object ServiceCatalogue {
     val items: List<ServiceCatalogueItem> =
         listOf(
             ServiceCatalogueItem("ac-deep-clean", "AC Deep Clean", "AC"),
+            ServiceCatalogueItem("ac-deep-clean-window", "AC Deep Clean (Window)", "AC"),
             ServiceCatalogueItem("ac-gas-refill", "AC Gas Refill", "AC"),
             ServiceCatalogueItem("ac-installation", "AC Installation", "AC"),
             ServiceCatalogueItem("plumbing-leak-fix", "Leak Fix", "Plumbing"),

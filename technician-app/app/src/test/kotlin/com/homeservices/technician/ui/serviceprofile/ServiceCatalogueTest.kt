@@ -11,6 +11,7 @@ public class ServiceCatalogueTest {
         assertThat(ids)
             .containsExactly(
                 "ac-deep-clean",
+                "ac-deep-clean-window",
                 "ac-gas-refill",
                 "ac-installation",
                 "plumbing-leak-fix",
