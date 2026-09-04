@@ -35,7 +35,7 @@ describe('bilingual catalogue fields', () => {
   });
 
   it('Hindi fields are optional — existing documents still parse', () => {
-    const { nameHi, shortDescriptionHi, ...withoutHindi } = service;
+    const { nameHi: _n, shortDescriptionHi: _d, ...withoutHindi } = service;
     expect(() => ServiceSchema.parse(withoutHindi)).not.toThrow();
   });
 
@@ -68,7 +68,7 @@ describe('bilingual catalogue fields', () => {
       updatedAt: NOW,
     };
     expect(ServiceCategorySchema.parse(category).nameHi).toBe('एसी मरम्मत');
-    const { nameHi, ...withoutHindi } = category;
+    const { nameHi: _n, ...withoutHindi } = category;
     expect(() => ServiceCategorySchema.parse(withoutHindi)).not.toThrow();
   });
 
