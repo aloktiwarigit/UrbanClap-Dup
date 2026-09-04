@@ -1052,26 +1052,37 @@ The PR description must state plainly that this changes live customer prices, an
 
 **Do not run this as part of execution.** Bring it to the owner.
 
-- [ ] **Step 1: Deploy the API first**
+- [ ] **Step 1: Deploy the API first, then admin-web, then seed**
 
-The seed writes documents carrying `nameHi`; the deployed API must already accept and serve those fields, or the strict schemas will reject reads. Merge, let `api-ship.yml` deploy, confirm `/api/v1/health` reports the new commit.
+The seed writes documents carrying `nameHi`; the deployed API must already accept and serve those fields, or the strict schemas will reject reads. Merge, let `api-ship.yml` deploy, confirm `/api/v1/health` reports the new commit. admin-web must not ship before the API because its create/update request bodies are `.strict()` and would 400 on `nameHi` against the old API; the customer-app release is independent of this deploy order and can ship on its own schedule.
 
 - [ ] **Step 2: Dry-run against a non-production database if one exists**
 
 Otherwise read the seed diff aloud with the owner, price by price, against the handwritten notes.
 
-- [ ] **Step 3: Capture the current prices before overwriting them**
+- [ ] **Step 3: Capture the current prices — and everything else the seed will reset — before overwriting them**
 
 ```bash
-# Record what production currently charges, so the change is reversible.
+# Record what production currently charges (and every other field the seed
+# does not preserve), so the change is reversible.
 npx tsx -e "
 import { CosmosClient } from '@azure/cosmos';
 const c = new CosmosClient({ endpoint: process.env.COSMOS_ENDPOINT, key: process.env.COSMOS_KEY });
 const { resources } = await c.database('homeservices').container('services')
-  .items.query('SELECT c.id, c.basePrice, c.isActive FROM c').fetchAll();
+  .items.query('SELECT c.id, c.basePrice, c.commissionBps, c.isActive, c.safetyTag, c.workStart, c.workEnd FROM c').fetchAll();
 console.log(JSON.stringify(resources, null, 2));
-" > /tmp/prices-before-e22-s01.json
+" > /tmp/services-before-e22-s01.json
+
+npx tsx -e "
+import { CosmosClient } from '@azure/cosmos';
+const c = new CosmosClient({ endpoint: process.env.COSMOS_ENDPOINT, key: process.env.COSMOS_KEY });
+const { resources } = await c.database('homeservices').container('categories')
+  .items.query('SELECT c.id, c.commissionBps, c.isActive, c.safetyTag FROM c').fetchAll();
+console.log(JSON.stringify(resources, null, 2));
+" > /tmp/categories-before-e22-s01.json
 ```
+
+**Callout — the seed resets these fields on every run.** `mergeSeedDoc` (`api/src/cosmos/seed-merge.ts`) preserves only `isActive` and `createdAt`; every other field is overwritten from the seed's hardcoded values. That means the seed run silently resets: service `commissionBps`, category `commissionBps` (the seed has none for categories, so this is deleted), category `safetyTag`, and service `workStart`/`workEnd`. These two capture files must be read aloud to the owner alongside the price table before the seed runs, so any owner-set value in these fields is either accepted as lost or re-applied by hand afterward.
 
 - [ ] **Step 4: Run the seed**
 
@@ -1089,6 +1100,10 @@ cd api && npx tsx src/cosmos/seeds/catalogue.ts
 - [ ] **Step 6: Watch the first bookings**
 
 Confirm the first booking after the reprice records the intended `amount`, and that its commission receivable is raised against the new figure.
+
+- [ ] **Step 7: Operational notes**
+
+The seed's two loops (categories, then services) are sequential read-then-upsert with no ETag / optimistic-concurrency check. A failure partway through — network blip, a 429, the process being killed — leaves a mixed catalogue: some documents already on the new content, others still on the old. The seed is idempotent, so the fix is simply to re-run it, then verify all 14 prices against the price table again. Run this during a quiet window with the owner off the admin dashboard, so a concurrent dashboard edit (price, activation) does not race the seed's read-then-upsert and get silently overwritten.
 
 ---
 
@@ -1111,3 +1126,4 @@ Confirm the first booking after the reprice records the intended `amount`, and t
 3. **`ServiceCardSchema` is a `.pick()`.** Forgetting Task 1 Step 4 produces a build where Hindi works on the detail screen and silently fails on the home screen — the most-viewed surface.
 4. **`nameHi` is `.min(1)`.** An empty string from the admin form is a 400, not a no-op. Omit blank keys.
 5. **Hero image for the window AC does not exist yet.** Intentional; the card degrades to text. Do not block on it, and do not invent a URL that 404s to something else.
+6. **A Hindi field cannot be cleared from the dashboard once set (blank = omit = preserve).** Deferred to E22-S02.
