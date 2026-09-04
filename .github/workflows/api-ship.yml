@@ -54,6 +54,9 @@ jobs:
       - name: lint
         run: pnpm lint --max-warnings 0
 
+      - name: Hindi catalogue parity
+        run: node ../tools/check-hindi-catalogue-parity.mjs
+
       - name: unit + integration tests (with coverage gate)
         run: pnpm test:coverage
         env:
