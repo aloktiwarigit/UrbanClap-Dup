@@ -50,7 +50,7 @@ for (const id of serviceIds) {
 
 // A price in prose goes stale the instant the owner edits the price.
 // Extended regex: also check question, answer, triggerCondition, label, name.
-for (const [, text] of seed.matchAll(/(?:shortDescription(?:Hi)?|question|answer|triggerCondition|label|name): '([^']*)'/g)) {
+for (const [, text] of seed.matchAll(/(?:shortDescription(?:Hi)?|question|answer|triggerCondition|label|name|nameHi): '([^']*)'/g)) {
   if (/[₹]|\bRs\.?\b|\bINR\b/.test(text)) {
     failures.push(`price found in a description: "${text}" — render it from basePrice instead`);
   }
