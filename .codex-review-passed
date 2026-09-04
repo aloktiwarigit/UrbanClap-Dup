@@ -1,1 +1,15 @@
-{"timestamp":"2026-08-22T23:35:12Z","commit":"fe07db5fb490ee3d169824b7d7a0703c4df1a4c5","reviewer":"codex","summary":"No actionable correctness issues in changed files. Codex independently verified the otpauth URI carries no digits param (6-digit TOTP). admin-web suite 465/465 green."}
+story: P0-3 — catalogue update must not destroy service content
+branch: fix/p0-3-catalogue-patch-semantics
+base: main (d3942d0c)
+reviewer: codex-cli 0.147.0
+rounds: 2
+
+round 1: P2 — .partial() made `{}` a valid body, and parseJson() swallowed
+         malformed JSON into `{}`, so an unreadable request rewrote updatedAt
+         and emitted a success audit entry. Fixed in 6fd5c701.
+round 2: clean — "correctly switch catalogue updates to partial patch semantics,
+         preserve omitted fields during repository merges, and add guards for
+         malformed or empty update bodies."
+
+gates: tools/pre-codex-smoke-api.sh  PASSED (typecheck + lint + 1549 tests / 187 files)
+       tools/pre-codex-smoke-web.sh  PASSED (typecheck + lint 0 warnings + 470 tests / 71 files)
