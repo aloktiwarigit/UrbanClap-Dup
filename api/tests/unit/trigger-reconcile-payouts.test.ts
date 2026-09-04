@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { InvocationContext } from '@azure/functions';
 
+// P0-0: this suite exercises the payout path itself, so it must opt into the
+// kill switch explicitly. Production defaults to disabled.
+process.env.PAYOUTS_ENABLED = 'true';
+
 vi.mock('../../src/cosmos/wallet-ledger-repository.js');
 vi.mock('../../src/cosmos/technician-repository.js');
 vi.mock('../../src/cosmos/audit-log-repository.js');

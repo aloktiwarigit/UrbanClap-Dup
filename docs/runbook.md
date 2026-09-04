@@ -1295,3 +1295,62 @@ Expected result: `0`.
 ## Privacy policy
 
 Hosted at **aloktiwarigit/homeheroo-privacy** (GitHub Pages). Source of truth for all privacy-policy content; the UrbanClap-Dup repo no longer contains policy markdown files.
+
+---
+
+## Prepaid payouts kill switch (`PAYOUTS_ENABLED`)
+
+**Default: disabled. Leave it that way for the cash pilot.**
+
+The pilot is cash-only: the technician collects cash at the door and *owes* the platform a
+commission, tracked in `commission_receivables`. The prepaid-era code moves money the other way —
+it pays technicians out via Razorpay Route. Those paths are still in the codebase for a future
+re-enablement.
+
+They are gated by `arePayoutsEnabled()` (`api/src/shared/payouts-enabled.ts`), which returns true
+**only** when `PAYOUTS_ENABLED` is exactly the string `true`. Four entry points are guarded:
+
+| Entry point | Schedule / route | Behaviour while disabled |
+|---|---|---|
+| `trigger-next-day-payout.ts` | timer, 04:30 UTC daily | logs `PAYOUTS_DISABLED_SKIP`, returns |
+| `trigger-reconcile-payouts.ts` | timer, 20:30 UTC daily | logs `PAYOUTS_DISABLED_SKIP`, returns |
+| `admin/finance/approve-payouts.ts` | `POST /v1/admin/finance/payouts/approve-all` | `503 PAYOUTS_DISABLED` (after the super-admin role check) |
+| `trigger-booking-completed.ts` (RAZORPAY branch) | Cosmos change feed on `bookings` | logs `PAYOUTS_DISABLED_SKIP`, returns before the ledger write |
+
+The fourth is easy to miss and was: on a `RAZORPAY` booking with the technician on `INSTANT`
+cadence, the settlement trigger transfers to the technician the moment the booking completes. It
+was previously guarded *only* by `hasRazorpayCredentials()`. The cash branch of that trigger is
+untouched — commission receivables are still recorded normally.
+
+### Why credential absence is not a guard
+
+`RazorpayRouteService` throws when `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` are missing, which is
+why these paths were previously inert. That is an accident of configuration, not a decision — and
+it means the two timers were throwing into Sentry once a day rather than cleanly skipping. Setting
+those two app settings for *any* reason (a test, a partial re-enablement) would have immediately
+armed daily transfers to technicians who owe the platform money. The explicit switch removes that
+coupling.
+
+### To re-enable (deliberate act — do not do this casually)
+
+1. Confirm the commission model has actually changed. Under the cash model the money arrow points
+   **from** the technician **to** the platform; enabling payouts alongside commission receivables
+   would double-count in both directions.
+2. Verify `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` are set and belong to the intended account.
+3. Confirm technicians have `razorpayLinkedAccountId` populated — entries without one are marked
+   `FAILED`, not skipped.
+4. Set the switch:
+   ```bash
+   az functionapp config appsettings set \
+     --name func-homeservices-prod \
+     --resource-group rg-homeservices-prod \
+     --settings PAYOUTS_ENABLED=true \
+     --output none
+   ```
+5. Watch the next 04:30 UTC run before trusting it. Roll back by setting `PAYOUTS_ENABLED=false`
+   (or deleting the setting) — it takes effect on the next invocation, no redeploy needed.
+
+**Regression protection:** `api/tests/unit/payouts-kill-switch.test.ts` asserts both that no money
+moves while disabled and that the guard is still lexically present ahead of every
+`RazorpayRouteService` construction. It is a static scan rather than a Semgrep rule, deliberately —
+see the E19-S03 note in `api/.semgrep.yml` on findings blocking deploys.

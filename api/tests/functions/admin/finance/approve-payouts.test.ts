@@ -3,6 +3,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 process.env.JWT_SECRET = 'test-secret-that-is-long-enough-for-hs256-minimum-32-chars!!';
 process.env.RAZORPAY_KEY_ID = 'rzp_test_key';
 process.env.RAZORPAY_KEY_SECRET = 'rzp_test_secret';
+// P0-0: this suite exercises the payout path itself, so it must opt into the
+// kill switch explicitly. Production defaults to disabled.
+process.env.PAYOUTS_ENABLED = 'true';
 
 vi.mock('../../../../src/cosmos/finance-repository.js', () => ({
   getPayoutQueue: vi.fn(),

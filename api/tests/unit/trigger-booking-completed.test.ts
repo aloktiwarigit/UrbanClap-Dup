@@ -226,6 +226,9 @@ describe('settleBooking — RAZORPAY path (guarded, dead in cash pilot)', () => 
   beforeEach(() => {
     vi.stubEnv('RAZORPAY_KEY_ID', 'test-key-id');
     vi.stubEnv('RAZORPAY_KEY_SECRET', 'test-key-secret');
+    // P0-0: this block exercises the payout path, so it opts into the kill
+    // switch explicitly. Production defaults to disabled.
+    vi.stubEnv('PAYOUTS_ENABLED', 'true');
   });
 
   afterEach(() => {
@@ -241,6 +244,19 @@ describe('settleBooking — RAZORPAY path (guarded, dead in cash pilot)', () => 
 
     expect(walletLedgerRepo.createPendingEntry).not.toHaveBeenCalled();
     expect(mockTransfer).not.toHaveBeenCalled();
+  });
+
+  // P0-0 regression: credentials alone must never arm a transfer. Before the kill
+  // switch this exact input — RAZORPAY booking, credentials present, INSTANT
+  // cadence — moved money while the runbook claimed payouts were disabled.
+  it('does NOT transfer when payouts are disabled, even with credentials present', async () => {
+    vi.stubEnv('PAYOUTS_ENABLED', '');
+
+    await settleBooking(razorpayBooking, mockCtx);
+
+    expect(mockTransfer).not.toHaveBeenCalled();
+    expect(RazorpayRouteService).not.toHaveBeenCalled();
+    expect(walletLedgerRepo.createPendingEntry).not.toHaveBeenCalled();
   });
 
   it('does NOT create commission receivable — uses wallet ledger instead', async () => {
