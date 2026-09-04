@@ -1308,13 +1308,19 @@ it pays technicians out via Razorpay Route. Those paths are still in the codebas
 re-enablement.
 
 They are gated by `arePayoutsEnabled()` (`api/src/shared/payouts-enabled.ts`), which returns true
-**only** when `PAYOUTS_ENABLED` is exactly the string `true`. Three entry points are guarded:
+**only** when `PAYOUTS_ENABLED` is exactly the string `true`. Four entry points are guarded:
 
 | Entry point | Schedule / route | Behaviour while disabled |
 |---|---|---|
 | `trigger-next-day-payout.ts` | timer, 04:30 UTC daily | logs `PAYOUTS_DISABLED_SKIP`, returns |
 | `trigger-reconcile-payouts.ts` | timer, 20:30 UTC daily | logs `PAYOUTS_DISABLED_SKIP`, returns |
 | `admin/finance/approve-payouts.ts` | `POST /v1/admin/finance/payouts/approve-all` | `503 PAYOUTS_DISABLED` (after the super-admin role check) |
+| `trigger-booking-completed.ts` (RAZORPAY branch) | Cosmos change feed on `bookings` | logs `PAYOUTS_DISABLED_SKIP`, returns before the ledger write |
+
+The fourth is easy to miss and was: on a `RAZORPAY` booking with the technician on `INSTANT`
+cadence, the settlement trigger transfers to the technician the moment the booking completes. It
+was previously guarded *only* by `hasRazorpayCredentials()`. The cash branch of that trigger is
+untouched — commission receivables are still recorded normally.
 
 ### Why credential absence is not a guard
 

@@ -126,6 +126,9 @@ describe('payout kill-switch guard presence (static scan)', () => {
     'src/functions/trigger-next-day-payout.ts',
     'src/functions/trigger-reconcile-payouts.ts',
     'src/functions/admin/finance/approve-payouts.ts',
+    // The settlement trigger's RAZORPAY/INSTANT branch also transfers to the
+    // technician. It was previously guarded only by credential presence.
+    'src/functions/trigger-booking-completed.ts',
   ] as const;
 
   it.each(GUARDED_ENTRY_POINTS)('%s imports and calls arePayoutsEnabled', (relPath) => {

@@ -7,6 +7,7 @@ import { BookingDocSchema } from '../schemas/booking.js';
 import { catalogueRepo } from '../cosmos/catalogue-repository.js';
 import { commissionReceivableRepo } from '../cosmos/commission-receivable-repository.js';
 import { walletLedgerRepo } from '../cosmos/wallet-ledger-repository.js';
+import { arePayoutsEnabled } from '../shared/payouts-enabled.js';
 import { getTechnicianForSettlement, incrementCompletedJobCount } from '../cosmos/technician-repository.js';
 import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
 import { calculateCommission } from '../services/commission.service.js';
@@ -115,6 +116,14 @@ export async function settleBooking(bookingRaw: unknown, ctx: InvocationContext)
   }
 
   // ── RAZORPAY path (guarded — dead in cash pilot, preserved for re-enablement) ─
+  // P0-0: credential presence is NOT a guard. This branch transfers money to the
+  // technician on INSTANT cadence; it must respect the same explicit kill switch as
+  // the payout timers. See shared/payouts-enabled.ts.
+  if (!arePayoutsEnabled()) {
+    ctx.log(`settleBooking: RAZORPAY booking ${bookingId} but PAYOUTS_DISABLED_SKIP`);
+    return;
+  }
+
   if (!hasRazorpayCredentials()) {
     ctx.log(`settleBooking: RAZORPAY booking ${bookingId} but no Razorpay credentials configured — skipping`);
     return;
