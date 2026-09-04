@@ -6,6 +6,22 @@ function now(): string {
   return new Date().toISOString();
 }
 
+/**
+ * P0-3: drop keys whose value is `undefined` before merging a patch body over a
+ * stored document. Zod's `.partial()` omits absent keys rather than setting them to
+ * `undefined`, so this is belt-and-braces — but a body assembled dynamically by a
+ * future caller could carry explicit `undefined`, and a blind spread would then
+ * overwrite stored content with nothing. That is exactly the failure mode this
+ * story exists to remove.
+ */
+type Defined<T> = { [K in keyof T]?: Exclude<T[K], undefined> };
+
+function definedOnly<T extends object>(patch: T): Defined<T> {
+  return Object.fromEntries(
+    Object.entries(patch).filter(([, value]) => value !== undefined),
+  ) as Defined<T>;
+}
+
 export class CatalogueRepository {
   private get cats() { return getCatalogueContainers().categories; }
   private get svcs() { return getCatalogueContainers().services; }
@@ -45,7 +61,7 @@ export class CatalogueRepository {
   async updateCategory(id: string, body: UpdateCategoryBody, uid: string): Promise<ServiceCategory | null> {
     const existing = await this.getCategoryById(id);
     if (!existing) return null;
-    const updated: ServiceCategory = { ...existing, ...body, id, updatedBy: uid, updatedAt: now() };
+    const updated: ServiceCategory = { ...existing, ...definedOnly(body), id, updatedBy: uid, updatedAt: now() };
     const { resource } = await this.cats.items.upsert<ServiceCategory>(updated);
     return resource!;
   }
@@ -95,7 +111,7 @@ export class CatalogueRepository {
   async updateService(id: string, body: UpdateServiceBody, uid: string): Promise<Service | null> {
     const existing = await this.getServiceByIdCrossPartition(id);
     if (!existing) return null;
-    const updated: Service = { ...existing, ...body, id, categoryId: existing.categoryId, updatedBy: uid, updatedAt: now() };
+    const updated: Service = { ...existing, ...definedOnly(body), id, categoryId: existing.categoryId, updatedBy: uid, updatedAt: now() };
     const { resource } = await this.svcs.item(id, existing.categoryId).replace<Service>(updated);
     return resource!;
   }

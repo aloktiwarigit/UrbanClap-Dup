@@ -2417,11 +2417,6 @@
                     "maximum": 3500
                   }
                 },
-                "required": [
-                  "name",
-                  "heroImageUrl",
-                  "sortOrder"
-                ],
                 "additionalProperties": false
               }
             }
@@ -2883,17 +2878,6 @@
                     "pattern": "^\\d{2}:\\d{2}$"
                   }
                 },
-                "required": [
-                  "name",
-                  "shortDescription",
-                  "heroImageUrl",
-                  "basePrice",
-                  "durationMinutes",
-                  "includes",
-                  "faq",
-                  "addOns",
-                  "photoStages"
-                ],
                 "additionalProperties": false
               }
             }

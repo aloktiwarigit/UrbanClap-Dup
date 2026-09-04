@@ -31,13 +31,14 @@ export const CreateCategoryBodySchema = ServiceCategorySchema.omit({
   updatedAt: true,
 });
 
+/** P0-3: PATCH semantics — see the note on `UpdateServiceBodySchema`. */
 export const UpdateCategoryBodySchema = ServiceCategorySchema.omit({
   id: true,
   isActive: true,
   updatedBy: true,
   createdAt: true,
   updatedAt: true,
-});
+}).partial();
 
 export type ServiceCategory = z.infer<typeof ServiceCategorySchema>;
 export type CreateCategoryBody = z.infer<typeof CreateCategoryBodySchema>;

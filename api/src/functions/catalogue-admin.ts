@@ -15,10 +15,35 @@ import { catalogueAuditEntry } from '../services/catalogueAudit.service.js';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' };
 
+/**
+ * P0-3: malformed JSON used to be swallowed into `{}`. That was harmless while every
+ * update body had required fields (Zod rejected `{}` with a 400), but the update
+ * bodies are now partial patches, so `{}` would validate — rewriting the document
+ * with a fresh `updatedAt` and writing a success audit entry for a request that was
+ * never readable. Distinguish "unparseable" from "empty".
+ */
+class InvalidJsonError extends Error {}
+
 async function parseJson(req: HttpRequest): Promise<unknown> {
   const text = await req.text();
-  try { return JSON.parse(text); } catch { return {}; }
+  if (text.trim() === '') return {};
+  try { return JSON.parse(text); } catch { throw new InvalidJsonError(); }
 }
+
+function badRequest(error: string, message: string): HttpResponseInit {
+  return { status: 400, headers: JSON_HEADERS, jsonBody: { error, message } };
+}
+
+/**
+ * A patch with no fields is a no-op the caller almost certainly did not intend
+ * (empty body, dropped payload). Rewriting `updatedAt` and emitting a CATALOGUE_*
+ * audit entry for it would be misleading, so reject it.
+ */
+function assertNonEmptyPatch(patch: object): void {
+  if (Object.keys(patch).length === 0) throw new EmptyPatchError();
+}
+
+class EmptyPatchError extends Error {}
 
 function zodErr(err: ZodError): HttpResponseInit {
   return {
@@ -52,6 +77,8 @@ export async function createCategoryHandler(req: HttpRequest, _ctx: InvocationCo
     return { status: 201, headers: JSON_HEADERS, jsonBody: created };
   } catch (err) {
     if (err instanceof ZodError) return zodErr(err);
+    if (err instanceof InvalidJsonError) return badRequest('InvalidJson', 'Request body is not valid JSON.');
+    if (err instanceof EmptyPatchError) return badRequest('EmptyPatch', 'Update body must contain at least one field.');
     throw err;
   }
 }
@@ -60,12 +87,15 @@ export async function updateCategoryHandler(req: HttpRequest, _ctx: InvocationCo
   try {
     const id = req.params['id']!;
     const body = UpdateCategoryBodySchema.parse(await parseJson(req));
+    assertNonEmptyPatch(body);
     const updated = await catalogueRepo.updateCategory(id, body, admin.adminId);
     if (!updated) return { status: 404, headers: JSON_HEADERS, jsonBody: { error: 'Category not found' } };
     await catalogueAuditEntry(admin.adminId, admin.role, 'CATALOGUE_CATEGORY_UPDATED', 'category', id, { changes: body });
     return { status: 200, headers: JSON_HEADERS, jsonBody: updated };
   } catch (err) {
     if (err instanceof ZodError) return zodErr(err);
+    if (err instanceof InvalidJsonError) return badRequest('InvalidJson', 'Request body is not valid JSON.');
+    if (err instanceof EmptyPatchError) return badRequest('EmptyPatch', 'Update body must contain at least one field.');
     throw err;
   }
 }
@@ -105,6 +135,8 @@ export async function createServiceHandler(req: HttpRequest, _ctx: InvocationCon
     return { status: 201, headers: JSON_HEADERS, jsonBody: created };
   } catch (err) {
     if (err instanceof ZodError) return zodErr(err);
+    if (err instanceof InvalidJsonError) return badRequest('InvalidJson', 'Request body is not valid JSON.');
+    if (err instanceof EmptyPatchError) return badRequest('EmptyPatch', 'Update body must contain at least one field.');
     throw err;
   }
 }
@@ -113,12 +145,15 @@ export async function updateServiceHandler(req: HttpRequest, _ctx: InvocationCon
   try {
     const id = req.params['id']!;
     const body = UpdateServiceBodySchema.parse(await parseJson(req));
+    assertNonEmptyPatch(body);
     const updated = await catalogueRepo.updateService(id, body, admin.adminId);
     if (!updated) return { status: 404, headers: JSON_HEADERS, jsonBody: { error: 'Service not found' } };
     await catalogueAuditEntry(admin.adminId, admin.role, 'CATALOGUE_SERVICE_UPDATED', 'service', id, { changes: body });
     return { status: 200, headers: JSON_HEADERS, jsonBody: updated };
   } catch (err) {
     if (err instanceof ZodError) return zodErr(err);
+    if (err instanceof InvalidJsonError) return badRequest('InvalidJson', 'Request body is not valid JSON.');
+    if (err instanceof EmptyPatchError) return badRequest('EmptyPatch', 'Update body must contain at least one field.');
     throw err;
   }
 }

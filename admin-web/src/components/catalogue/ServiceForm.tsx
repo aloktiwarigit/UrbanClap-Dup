@@ -53,22 +53,36 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
       return;
     }
 
-    const common = {
+    // P0-3: this form owns exactly these six fields.
+    //
+    // On EDIT it must send only them. The update body is a partial patch, so every
+    // field omitted here is preserved server-side. Previously this sent `includes`,
+    // `faq`, `addOns` and `photoStages` as empty arrays — because the schema wrongly
+    // required them — and the server merged those in, wiping the service's content on
+    // every price change. `photoStages` drives the technician guided-photo flow
+    // (E06-S02), so a completed job silently lost its evidence chain.
+    const edited = {
       name,
       shortDescription,
       heroImageUrl,
       basePrice: basePriceNum,
       commissionBps: commissionNum,
       durationMinutes: durationNum,
-      includes: [] as string[],
-      faq: [] as { question: string; answer: string }[],
-      addOns: [] as { id: string; name: string; price: number; triggerCondition: string }[],
-      photoStages: [] as { id: string; label: string; required: boolean }[],
     };
 
     const data: CreateServiceBody | UpdateServiceBody = isEdit
-      ? common
-      : { ...common, id, categoryId };
+      ? edited
+      : {
+          ...edited,
+          id,
+          categoryId,
+          // CREATE still requires the content arrays — a brand-new service genuinely
+          // has none yet. Editors for them land with the rate-editor completion story.
+          includes: [] as string[],
+          faq: [] as { question: string; answer: string }[],
+          addOns: [] as { id: string; name: string; price: number; triggerCondition: string }[],
+          photoStages: [] as { id: string; label: string; required: boolean }[],
+        };
 
     setSubmitting(true);
     try {
