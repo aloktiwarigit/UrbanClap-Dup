@@ -15,8 +15,16 @@ public class CatalogueLocalizer
             locale: String,
         ): Category =
             if (locale.startsWith("hi")) {
-                val hindiName = HindiLocaleNames.categoryHindiNames[category.id]
-                if (hindiName != null) category.copy(name = hindiName) else category
+                // E22-S01 three-level fallback:
+                //   1. server nameHi        — reaches customers with no app release
+                //   2. compiled-in map      — keeps APKs in the field working
+                //   3. English              — better than a blank label
+                category.copy(
+                    name =
+                        category.nameHi
+                            ?: HindiLocaleNames.categoryHindiNames[category.id]
+                            ?: category.name,
+                )
             } else {
                 category
             }
@@ -26,11 +34,19 @@ public class CatalogueLocalizer
             locale: String,
         ): Service =
             if (locale.startsWith("hi")) {
-                val hindiName = HindiLocaleNames.serviceHindiNames[service.id]
-                val hindiDesc = HindiLocaleNames.serviceShortDescriptionsHindi[service.id]
+                // E22-S01 three-level fallback:
+                //   1. server nameHi        — reaches customers with no app release
+                //   2. compiled-in map      — keeps APKs in the field working
+                //   3. English              — better than a blank label
                 service.copy(
-                    name = hindiName ?: service.name,
-                    description = hindiDesc ?: service.description,
+                    name =
+                        service.nameHi
+                            ?: HindiLocaleNames.serviceHindiNames[service.id]
+                            ?: service.name,
+                    description =
+                        service.descriptionHi
+                            ?: HindiLocaleNames.serviceShortDescriptionsHindi[service.id]
+                            ?: service.description,
                 )
             } else {
                 service

@@ -55,7 +55,7 @@ public class CatalogueLocalizerTest {
     public fun `service name and description are substituted on hi`() {
         val result = localizer.localizeService(acService, locale = "hi")
         assertThat(result.name).isEqualTo("एसी डीप क्लीन")
-        assertThat(result.description).isEqualTo("केमिकल वॉश, गैस चेक, फिल्टर सफाई — पूरी तरह से ₹599 में।")
+        assertThat(result.description).isEqualTo("केमिकल वॉश, गैस चेक, फिल्टर सफाई — सब कुछ शामिल।")
     }
 
     @Test

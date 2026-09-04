@@ -7,4 +7,5 @@ public data class Category(
     public val serviceCount: Int,
     public val minPricePaise: Int,
     public val safetyTag: Boolean = false,
+    public val nameHi: String? = null,
 )
