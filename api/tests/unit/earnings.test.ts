@@ -7,11 +7,18 @@ vi.mock('../../src/middleware/verifyTechnicianToken.js', () => ({
 vi.mock('../../src/cosmos/wallet-ledger-repository.js', () => ({
   walletLedgerRepo: { getAllByTechnicianId: vi.fn(), getPendingHeldByTechnicianId: vi.fn() },
 }));
+// P0-1: earnings now unions the cash commission ledger with the Razorpay-era
+// wallet ledger. These cases cover the wallet-ledger side; the cash side lives in
+// earnings-cash.test.ts.
+vi.mock('../../src/cosmos/commission-receivable-repository.js', () => ({
+  commissionReceivableRepo: { getAllByTechnician: vi.fn() },
+}));
 vi.mock('@sentry/node', () => ({ captureException: vi.fn() }));
 
 import { getEarningsHandler } from '../../src/functions/earnings.js';
 import { verifyTechnicianToken } from '../../src/middleware/verifyTechnicianToken.js';
 import { walletLedgerRepo } from '../../src/cosmos/wallet-ledger-repository.js';
+import { commissionReceivableRepo } from '../../src/cosmos/commission-receivable-repository.js';
 import type { WalletLedgerEntry } from '../../src/schemas/wallet-ledger.js';
 
 const ctx = { log: vi.fn(), error: vi.fn() } as unknown as InvocationContext;
@@ -23,9 +30,15 @@ function makeReq(auth?: string): HttpRequest {
   } as unknown as HttpRequest;
 }
 
+let entrySeq = 0;
+
 function makeEntry(createdAt: string, techAmount: number, payoutStatus: 'PENDING' | 'PAID' | 'FAILED' = 'PAID'): WalletLedgerEntry {
   return {
-    id: 'e1', bookingId: 'bk-1', technicianId: 'tech-1', partitionKey: 'tech-1',
+    // P0-1: bookingId must be unique per entry. wallet-ledger-repository sets
+    // `id: input.bookingId`, so one document per booking — the old shared 'bk-1'
+    // could not occur in real data, and earnings now dedupes by bookingId to make
+    // double-counting a technician's money impossible.
+    id: `e${++entrySeq}`, bookingId: `bk-${entrySeq}`, technicianId: 'tech-1', partitionKey: 'tech-1',
     bookingAmount: techAmount + 10000, completedJobCountAtSettlement: 1,
     commissionBps: 1000, commissionAmount: 1000, techAmount, payoutStatus, createdAt,
   };
@@ -42,6 +55,7 @@ beforeEach(() => {
   vi.mocked(verifyTechnicianToken).mockResolvedValue({ uid: 'tech-1' });
   vi.mocked(walletLedgerRepo.getAllByTechnicianId).mockResolvedValue([]);
   vi.mocked(walletLedgerRepo.getPendingHeldByTechnicianId).mockResolvedValue([]);
+  vi.mocked(commissionReceivableRepo.getAllByTechnician).mockResolvedValue([]);
 });
 
 afterEach(() => {
