@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { argv } from 'node:process';
 import { getCosmosClient, DB_NAME } from '../client.js';
+import { mergeSeedDoc } from '../seed-merge.js';
 import type { ServiceCategory } from '../../schemas/service-category.js';
 import type { Service } from '../../schemas/service.js';
 
@@ -343,11 +344,7 @@ async function seed(): Promise<void> {
         throw err;
       });
 
-    await catContainer.items.upsert({
-      ...cat,
-      isActive: existing?.isActive ?? cat.isActive,
-      createdAt: existing?.createdAt ?? cat.createdAt,
-    });
+    await catContainer.items.upsert(mergeSeedDoc(cat, existing));
     console.log(`  upserted: ${cat.id}${existing ? '' : ' (new)'}`);
   }
 
@@ -378,11 +375,7 @@ async function seed(): Promise<void> {
         throw err;
       });
 
-    await svcContainer.items.upsert({
-      ...svc,
-      isActive: existing?.isActive ?? svc.isActive,
-      createdAt: existing?.createdAt ?? svc.createdAt,
-    });
+    await svcContainer.items.upsert(mergeSeedDoc(svc, existing));
     console.log(`  upserted: ${svc.id}${existing ? '' : ' (new)'}`);
   }
 
