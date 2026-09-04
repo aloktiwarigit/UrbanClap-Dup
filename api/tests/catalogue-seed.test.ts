@@ -99,6 +99,25 @@ describe('E22-S01 — no price may appear in prose', () => {
       expect(RUPEE.test(c.nameHi ?? '')).toBe(false);
     }
   });
+
+  it('no service faq, addOn, includes, or photoStage text carries a price', () => {
+    for (const s of SERVICES) {
+      for (const [i, f] of s.faq.entries()) {
+        expect(RUPEE.test(f.question), `${s.id} faq[${i}].question`).toBe(false);
+        expect(RUPEE.test(f.answer), `${s.id} faq[${i}].answer`).toBe(false);
+      }
+      for (const [i, a] of s.addOns.entries()) {
+        expect(RUPEE.test(a.name), `${s.id} addOns[${i}].name`).toBe(false);
+        expect(RUPEE.test(a.triggerCondition), `${s.id} addOns[${i}].triggerCondition`).toBe(false);
+      }
+      for (const [i, inc] of s.includes.entries()) {
+        expect(RUPEE.test(inc), `${s.id} includes[${i}]`).toBe(false);
+      }
+      for (const [i, stage] of s.photoStages.entries()) {
+        expect(RUPEE.test(stage.label), `${s.id} photoStages[${i}].label`).toBe(false);
+      }
+    }
+  });
 });
 
 describe('E22-S01 — Hindi coverage', () => {

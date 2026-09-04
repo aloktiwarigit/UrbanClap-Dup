@@ -92,7 +92,7 @@ export const SERVICES: Service[] = [
     commissionBps: 2000,
     durationMinutes: 180,
     includes: ['Indoor + outdoor unit mounting', 'Copper pipe (up to 3 m)', 'Electrical connection', 'Test run + cooling verification'],
-    faq: [{ question: 'Is copper pipe beyond 3m extra?', answer: 'Yes — ₹250/m beyond 3 m.' }],
+    faq: [{ question: 'Is copper pipe beyond 3m extra?', answer: 'Yes — extra copper pipe beyond 3 m is charged per metre as an add-on; the rate is shown before you confirm.' }],
     addOns: [{ id: 'extra-pipe', name: 'Extra copper pipe', price: 25000, triggerCondition: 'per metre beyond 3 m' }],
     photoStages: [{ id: 'before-wall', label: 'Wall before drilling', required: true }, { id: 'after-install', label: 'Completed installation', required: true }],
     isActive: true,
