@@ -70,11 +70,28 @@ export function buildEarningEvents(
   }
 
   for (const receivable of receivables) {
+    // Prefer what the technician actually collected over what was booked. The two
+    // can differ (a short collection at the door), and reporting money they never
+    // took would be wrong in the direction that matters. `cashCollectedAmount` is
+    // absent until the technician app starts sending it (P0-2), so this reads as
+    // `bookingAmount` today.
+    //
+    // Commission is still owed on the BOOKED amount regardless of what was
+    // collected — under-collecting does not reduce the debt.
+    const collected = receivable.cashCollectedAmount ?? receivable.bookingAmount;
+
+    // Clamp: a collection smaller than the commission owed yields a negative net.
+    // That is an anomaly worth investigating (see scripts/reconcile-earnings-p0-1.ts,
+    // which reports it) but it must not produce a negative earnings figure —
+    // TechnicianDashboardResponseSchema declares todayEarningsInPaise nonnegative
+    // and is parsed, so an unclamped negative would 500 the technician's dashboard.
+    const net = Math.max(0, collected - receivable.commissionDue);
+
     // The cash model is the live one, so it wins any (unexpected) collision.
     byBooking.set(receivable.bookingId, {
       bookingId: receivable.bookingId,
       createdAt: receivable.createdAt,
-      netPaise: receivable.bookingAmount - receivable.commissionDue,
+      netPaise: net,
     });
   }
 

@@ -131,6 +131,41 @@ describe('buildEarningEvents', () => {
   it('returns an empty list for a technician with no history', () => {
     expect(buildEarningEvents([], [])).toEqual([]);
   });
+
+  // cashCollectedAmount is absent in production until the technician app starts
+  // sending it (P0-2), but the schema allows it to differ from the booked amount.
+  it('prefers what was actually collected over what was booked', () => {
+    const short = { ...receivable('bk-1', T, 99900, 21978), cashCollectedAmount: 80000 };
+    const events = buildEarningEvents([], [short as CommissionReceivableEntry]);
+
+    expect(events[0]?.netPaise).toBe(80000 - 21978);
+  });
+
+  it('falls back to the booked amount when nothing was recorded', () => {
+    const events = buildEarningEvents([], [receivable('bk-1', T, 99900, 21978)]);
+
+    expect(events[0]?.netPaise).toBe(99900 - 21978);
+  });
+
+  it('clamps at zero when the collection is smaller than the commission owed', () => {
+    // Would otherwise be negative, and TechnicianDashboardResponseSchema declares
+    // todayEarningsInPaise nonnegative AND parses it — an unclamped negative would
+    // 500 the technician's dashboard rather than merely look wrong.
+    const barely = { ...receivable('bk-1', T, 99900, 21978), cashCollectedAmount: 1000 };
+    const events = buildEarningEvents([], [barely as CommissionReceivableEntry]);
+
+    expect(events[0]?.netPaise).toBe(0);
+  });
+
+  it('clamping never turns a whole period negative', () => {
+    const bad = { ...receivable('bk-bad', T, 99900, 21978), cashCollectedAmount: 0 };
+    const good = receivable('bk-good', T, 50000, 11000);
+    const total = buildEarningEvents([], [bad as CommissionReceivableEntry, good])
+      .reduce((sum, e) => sum + e.netPaise, 0);
+
+    expect(total).toBe(39000);
+    expect(total).toBeGreaterThanOrEqual(0);
+  });
 });
 
 describe('sumNetForIstDate', () => {

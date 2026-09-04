@@ -35,6 +35,7 @@ interface ReceivableRow {
   bookingId: string;
   technicianId: string;
   bookingAmount: number;
+  cashCollectedAmount?: number;
   commissionDue: number;
   remittanceStatus: string;
 }
@@ -77,7 +78,8 @@ async function main(): Promise<void> {
     }
     for (const r of receivables) {
       if (r.technicianId !== tech) continue;
-      byBooking.set(r.bookingId, r.bookingAmount - r.commissionDue);
+      const collected = r.cashCollectedAmount ?? r.bookingAmount;
+      byBooking.set(r.bookingId, Math.max(0, collected - r.commissionDue));
     }
     const after = [...byBooking.values()].reduce((sum, v) => sum + v, 0);
 
@@ -106,7 +108,7 @@ async function main(): Promise<void> {
   );
 
   // Sanity checks worth seeing before this ships.
-  const negatives = receivables.filter((r) => r.bookingAmount - r.commissionDue < 0);
+  const negatives = receivables.filter((r) => (r.cashCollectedAmount ?? r.bookingAmount) - r.commissionDue < 0);
   if (negatives.length > 0) {
     console.log(`\n⚠  ${negatives.length} receivable(s) where commissionDue exceeds bookingAmount:`);
     for (const r of negatives.slice(0, 20)) {
