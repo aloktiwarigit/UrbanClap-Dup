@@ -9,6 +9,7 @@
  */
 export const CATALOGUE_SERVICE_IDS: readonly string[] = [
   'ac-deep-clean',
+  'ac-deep-clean-window',
   'ac-gas-refill',
   'ac-installation',
   'water-pump-repair',

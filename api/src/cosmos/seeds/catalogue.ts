@@ -8,11 +8,11 @@ const NOW = new Date().toISOString();
 const SYSTEM = 'seed-script';
 
 export const CATEGORIES: ServiceCategory[] = [
-  { id: 'ac-repair', name: 'AC Repair', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/categories%2Fac-repair.jpg', sortOrder: 1, isActive: true, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
-  { id: 'water-pump', name: 'Water Pump / Borewell', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/categories%2Fwater-pump.jpg', sortOrder: 2, isActive: true, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
-  { id: 'plumbing', name: 'Plumbing', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/categories%2Fplumbing.jpg', sortOrder: 3, isActive: true, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
-  { id: 'electrical', name: 'Electrical', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/categories%2Felectrical.jpg', sortOrder: 4, isActive: true, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
-  { id: 'water-purifier', name: 'RO / Water Purifier', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/categories%2Fwater-purifier.jpg', sortOrder: 5, isActive: true, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
+  { id: 'ac-repair', name: 'AC Repair', nameHi: 'एसी मरम्मत', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/categories%2Fac-repair.jpg', sortOrder: 1, isActive: true, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
+  { id: 'water-pump', name: 'Water Pump / Borewell', nameHi: 'वाटर पंप / बोरवेल', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/categories%2Fwater-pump.jpg', sortOrder: 2, isActive: true, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
+  { id: 'plumbing', name: 'Plumbing', nameHi: 'प्लंबिंग', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/categories%2Fplumbing.jpg', sortOrder: 3, isActive: true, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
+  { id: 'electrical', name: 'Electrical', nameHi: 'इलेक्ट्रिकल', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/categories%2Felectrical.jpg', sortOrder: 4, isActive: true, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
+  { id: 'water-purifier', name: 'RO / Water Purifier', nameHi: 'आरओ / वाटर प्यूरीफायर', heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/categories%2Fwater-purifier.jpg', sortOrder: 5, isActive: true, updatedBy: SYSTEM, createdAt: NOW, updatedAt: NOW },
 ];
 
 export const SERVICES: Service[] = [
@@ -21,9 +21,11 @@ export const SERVICES: Service[] = [
     id: 'ac-deep-clean',
     categoryId: 'ac-repair',
     name: 'AC Deep Clean',
-    shortDescription: 'Chemical wash, gas check, filter clean — fully covered at ₹599.',
+    nameHi: 'एसी डीप क्लीन',
+    shortDescription: 'Chemical wash, gas check, filter clean — everything included.',
+    shortDescriptionHi: 'केमिकल वॉश, गैस चेक, फिल्टर सफाई — सब कुछ शामिल।',
     heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fac-deep-clean.jpg',
-    basePrice: 59900,
+    basePrice: 99900,
     commissionBps: 2250,
     durationMinutes: 90,
     includes: ['Chemical wash of coils and filter', 'Gas pressure check', 'Full function test run', 'Drain pipe cleaning'],
@@ -36,10 +38,35 @@ export const SERVICES: Service[] = [
     updatedAt: NOW,
   },
   {
+    id: 'ac-deep-clean-window',
+    categoryId: 'ac-repair',
+    name: 'AC Deep Clean (Window)',
+    nameHi: 'विंडो एसी डीप क्लीन',
+    shortDescription: 'Chemical wash and full service for window air conditioners.',
+    shortDescriptionHi: 'विंडो एसी की केमिकल वॉश और पूरी सर्विस।',
+    heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fac-deep-clean-window.jpg',
+    basePrice: 69900,
+    commissionBps: 2250,
+    durationMinutes: 60,
+    includes: ['Chemical wash of coils and filter', 'Drain cleaning', 'Cooling performance check'],
+    faq: [{ question: 'Is this different from split AC service?', answer: 'Yes — window units are serviced in place and take less time.' }],
+    addOns: [],
+    photoStages: [
+      { id: 'before-unit', label: 'Window AC before service', required: true },
+      { id: 'after-unit', label: 'Window AC after service', required: true },
+    ],
+    isActive: true,
+    updatedBy: SYSTEM,
+    createdAt: NOW,
+    updatedAt: NOW,
+  },
+  {
     id: 'ac-gas-refill',
     categoryId: 'ac-repair',
     name: 'AC Gas Refill',
+    nameHi: 'एसी गैस रीफिल',
     shortDescription: 'Full gas recharge when cooling performance drops.',
+    shortDescriptionHi: 'जब कूलिंग कमजोर हो, तब फुल गैस रीचार्ज।',
     heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fac-gas-refill.jpg',
     basePrice: 149900,
     commissionBps: 2250,
@@ -57,9 +84,11 @@ export const SERVICES: Service[] = [
     id: 'ac-installation',
     categoryId: 'ac-repair',
     name: 'AC Installation',
+    nameHi: 'एसी इंस्टॉलेशन',
     shortDescription: 'Professional split AC installation with copper piping.',
+    shortDescriptionHi: 'तांबे की पाइप के साथ प्रोफेशनल स्प्लिट एसी इंस्टॉलेशन।',
     heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fac-installation.jpg',
-    basePrice: 299900,
+    basePrice: 149900,
     commissionBps: 2000,
     durationMinutes: 180,
     includes: ['Indoor + outdoor unit mounting', 'Copper pipe (up to 3 m)', 'Electrical connection', 'Test run + cooling verification'],
@@ -76,9 +105,11 @@ export const SERVICES: Service[] = [
     id: 'water-pump-repair',
     categoryId: 'water-pump',
     name: 'Water Pump Repair',
-    shortDescription: 'Surface + submersible pump troubleshooting and repair — fully covered at ₹699.',
+    nameHi: 'वाटर पंप मरम्मत',
+    shortDescription: 'Surface + submersible pump troubleshooting and repair — everything included.',
+    shortDescriptionHi: 'सरफेस + सबमर्सिबल पंप की जाँच और मरम्मत — सब कुछ शामिल।',
     heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fwater-pump-repair.jpg',
-    basePrice: 69900,
+    basePrice: 49900,
     commissionBps: 2250,
     durationMinutes: 90,
     includes: ['On-site diagnosis', 'Capacitor / starter / impeller replacement (parts extra)', 'Test run + flow verification'],
@@ -94,9 +125,11 @@ export const SERVICES: Service[] = [
     id: 'borewell-servicing',
     categoryId: 'water-pump',
     name: 'Borewell Servicing',
+    nameHi: 'बोरवेल सर्विसिंग',
     shortDescription: 'Borewell flushing, pump retrieval, and servicing.',
+    shortDescriptionHi: 'बोरवेल पंप सर्विसिंग और रिप्लेसमेंट।',
     heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fborewell-servicing.jpg',
-    basePrice: 199900,
+    basePrice: 99900,
     commissionBps: 2250,
     durationMinutes: 240,
     includes: ['Pump retrieval', 'Borewell flushing', 'Pump cleaning', 'Re-installation', 'Flow + pressure test'],
@@ -113,7 +146,9 @@ export const SERVICES: Service[] = [
     id: 'plumbing-leak-fix',
     categoryId: 'plumbing',
     name: 'Leak Fix',
+    nameHi: 'लीक मरम्मत',
     shortDescription: 'Stop leaking pipes, taps, or joints — fast.',
+    shortDescriptionHi: 'लीक का सटीक पता लगाकर रिपेयर।',
     heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fplumbing-leak-fix.jpg',
     basePrice: 39900,
     commissionBps: 2250,
@@ -131,7 +166,9 @@ export const SERVICES: Service[] = [
     id: 'plumbing-tap-install',
     categoryId: 'plumbing',
     name: 'Tap / Faucet Installation',
+    nameHi: 'नल / फॉसेट इंस्टॉलेशन',
     shortDescription: 'Install or replace any tap or faucet.',
+    shortDescriptionHi: 'ब्रांडेड नल / फॉसेट का इंस्टॉलेशन।',
     heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fplumbing-tap-install.jpg',
     basePrice: 59900,
     commissionBps: 2250,
@@ -149,7 +186,9 @@ export const SERVICES: Service[] = [
     id: 'plumbing-pipe-repair',
     categoryId: 'plumbing',
     name: 'Pipe Repair',
+    nameHi: 'पाइप मरम्मत',
     shortDescription: 'Cracked or burst pipe repair — wall break-open if needed.',
+    shortDescriptionHi: 'टूटी या लीक पाइप की मरम्मत।',
     heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fplumbing-pipe-repair.jpg',
     basePrice: 79900,
     commissionBps: 2250,
@@ -168,9 +207,11 @@ export const SERVICES: Service[] = [
     id: 'electrical-fan-install',
     categoryId: 'electrical',
     name: 'Ceiling Fan Installation',
+    nameHi: 'सीलिंग फैन इंस्टॉलेशन',
     shortDescription: 'Safe, secure ceiling fan installation by a licensed electrician.',
+    shortDescriptionHi: 'नया सीलिंग फैन इंस्टॉल या रिप्लेसमेंट।',
     heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Felectrical-fan-install.jpg',
-    basePrice: 29900,
+    basePrice: 24900,
     commissionBps: 2250,
     durationMinutes: 45,
     includes: ['Fan mounting on hook / canopy', 'Wiring to existing point', 'Test run'],
@@ -186,9 +227,11 @@ export const SERVICES: Service[] = [
     id: 'electrical-switchboard-fix',
     categoryId: 'electrical',
     name: 'Switchboard Repair',
+    nameHi: 'स्विचबोर्ड मरम्मत',
     shortDescription: 'Fix faulty switches, sockets, or MCBs.',
+    shortDescriptionHi: 'स्विचबोर्ड और सॉकेट की मरम्मत।',
     heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Felectrical-switchboard-fix.jpg',
-    basePrice: 39900,
+    basePrice: 29900,
     commissionBps: 2250,
     durationMinutes: 60,
     includes: ['Fault diagnosis', 'Switch / socket replacement (up to 3 points)', 'Earthing check'],
@@ -204,7 +247,9 @@ export const SERVICES: Service[] = [
     id: 'electrical-wiring',
     categoryId: 'electrical',
     name: 'New Point Wiring',
+    nameHi: 'नई पॉइंट वायरिंग',
     shortDescription: 'Add a new electrical point — socket, switch, or light.',
+    shortDescriptionHi: 'नए लाइट / पंखा पॉइंट के लिए वायरिंग।',
     heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Felectrical-wiring.jpg',
     basePrice: 99900,
     commissionBps: 2250,
@@ -223,9 +268,11 @@ export const SERVICES: Service[] = [
     id: 'ro-installation',
     categoryId: 'water-purifier',
     name: 'RO Installation',
+    nameHi: 'आरओ इंस्टॉलेशन',
     shortDescription: 'New RO water purifier installation with TDS check.',
+    shortDescriptionHi: 'आरओ / वाटर प्यूरीफायर का सेटअप।',
     heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fro-installation.jpg',
-    basePrice: 89900,
+    basePrice: 39900,
     commissionBps: 2250,
     durationMinutes: 90,
     includes: ['Wall mounting', 'Inlet + outlet plumbing', 'TDS measurement before/after', 'Test run + flow verification'],
@@ -241,9 +288,11 @@ export const SERVICES: Service[] = [
     id: 'ro-service-amc',
     categoryId: 'water-purifier',
     name: 'RO Service / Filter Change',
+    nameHi: 'आरओ सर्विस / फिल्टर बदलाव',
     shortDescription: 'Quarterly RO service — filter change, sanitisation, TDS check.',
+    shortDescriptionHi: 'फिल्टर बदलाव और मेंबरेन रिप्लेसमेंट।',
     heroImageUrl: 'https://firebasestorage.googleapis.com/v0/b/homeservices-mvp/o/services%2Fro-service-amc.jpg',
-    basePrice: 49900,
+    basePrice: 39900,
     commissionBps: 2250,
     durationMinutes: 45,
     includes: ['Sediment filter change', 'Carbon filter change', 'RO membrane cleaning (if not due for replacement)', 'Sanitisation', 'TDS measurement before/after'],
@@ -283,8 +332,23 @@ async function seed(): Promise<void> {
 
   console.log('Seeding service_categories...');
   for (const cat of CATEGORIES) {
-    await catContainer.items.upsert(cat);
-    console.log(`  upserted: ${cat.id}`);
+    // E22-S01: the seed owns catalogue CONTENT (names, copy, hero image, sort
+    // order). It does not own activation — the owner toggles that from the
+    // dashboard, and a blind upsert of `isActive` would silently switch a
+    // category the owner had turned off back on at every deploy.
+    const existing = await catContainer.item(cat.id, cat.id).read<ServiceCategory>()
+      .then((r) => r.resource)
+      .catch((err: unknown) => {
+        if ((err as { code?: number }).code === 404) return undefined;
+        throw err;
+      });
+
+    await catContainer.items.upsert({
+      ...cat,
+      isActive: existing?.isActive ?? cat.isActive,
+      createdAt: existing?.createdAt ?? cat.createdAt,
+    });
+    console.log(`  upserted: ${cat.id}${existing ? '' : ' (new)'}`);
   }
 
   console.log('Deactivating dropped categories (if present)...');
@@ -303,8 +367,23 @@ async function seed(): Promise<void> {
 
   console.log('Seeding services...');
   for (const svc of SERVICES) {
-    await svcContainer.items.upsert(svc);
-    console.log(`  upserted: ${svc.id}`);
+    // E22-S01: the seed owns catalogue CONTENT (names, copy, price, includes,
+    // photoStages). It does not own activation — the owner toggles that from the
+    // dashboard, and a blind upsert of `isActive` would silently switch a service
+    // the owner had turned off back on at every deploy.
+    const existing = await svcContainer.item(svc.id, svc.categoryId).read<Service>()
+      .then((r) => r.resource)
+      .catch((err: unknown) => {
+        if ((err as { code?: number }).code === 404) return undefined;
+        throw err;
+      });
+
+    await svcContainer.items.upsert({
+      ...svc,
+      isActive: existing?.isActive ?? svc.isActive,
+      createdAt: existing?.createdAt ?? svc.createdAt,
+    });
+    console.log(`  upserted: ${svc.id}${existing ? '' : ' (new)'}`);
   }
 
   console.log('Deactivating dropped services (if present)...');

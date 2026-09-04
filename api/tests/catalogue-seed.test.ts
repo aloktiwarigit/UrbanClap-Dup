@@ -43,3 +43,75 @@ describe('catalogue seed canonical 5-category set (Ayodhya pilot)', () => {
     expect(ids.has('ro-service-amc')).toBe(true);
   });
 });
+
+describe('E22-S01 — reprice', () => {
+  const priceOf = (id: string) => SERVICES.find((s) => s.id === id)?.basePrice;
+
+  it.each([
+    ['ac-deep-clean', 99900],
+    ['ac-gas-refill', 149900],
+    ['ac-installation', 149900],
+    ['ac-deep-clean-window', 69900],
+    ['water-pump-repair', 49900],
+    ['borewell-servicing', 99900],
+    ['electrical-fan-install', 24900],
+    ['electrical-switchboard-fix', 29900],
+    ['ro-installation', 39900],
+    ['ro-service-amc', 39900],
+    ['plumbing-leak-fix', 39900],
+    ['plumbing-tap-install', 59900],
+    ['plumbing-pipe-repair', 79900],
+    ['electrical-wiring', 99900],
+  ])('%s is priced at %i paise', (id, expected) => {
+    expect(priceOf(id)).toBe(expected);
+  });
+
+  it('adds the window AC deep clean to the AC category', () => {
+    const svc = SERVICES.find((s) => s.id === 'ac-deep-clean-window');
+    expect(svc?.categoryId).toBe('ac-repair');
+    expect(svc?.isActive).toBe(true);
+  });
+});
+
+describe('E22-S01 — no price may appear in prose', () => {
+  // A price in a sentence goes stale the moment the owner edits the price, and
+  // then the app states a figure it does not charge. In a Hindi-default app that
+  // is a false price claim to every customer.
+  const RUPEE = /[₹]|\bRs\.?\b|\bINR\b/;
+
+  it.each(SERVICES.map((s) => [s.id, s.shortDescription] as const))(
+    '%s English description contains no price',
+    (_id, text) => {
+      expect(RUPEE.test(text)).toBe(false);
+    },
+  );
+
+  it.each(SERVICES.map((s) => [s.id, s.shortDescriptionHi ?? ''] as const))(
+    '%s Hindi description contains no price',
+    (_id, text) => {
+      expect(RUPEE.test(text)).toBe(false);
+    },
+  );
+
+  it('no category name carries a price either', () => {
+    for (const c of CATEGORIES) {
+      expect(RUPEE.test(c.name)).toBe(false);
+      expect(RUPEE.test(c.nameHi ?? '')).toBe(false);
+    }
+  });
+});
+
+describe('E22-S01 — Hindi coverage', () => {
+  it('every seeded service has a Hindi name and description', () => {
+    for (const s of SERVICES) {
+      expect(s.nameHi, `${s.id} is missing nameHi`).toBeTruthy();
+      expect(s.shortDescriptionHi, `${s.id} is missing shortDescriptionHi`).toBeTruthy();
+    }
+  });
+
+  it('every seeded category has a Hindi name', () => {
+    for (const c of CATEGORIES) {
+      expect(c.nameHi, `${c.id} is missing nameHi`).toBeTruthy();
+    }
+  });
+});
