@@ -6,8 +6,12 @@ import com.homeservices.customer.data.rating.remote.dto.EscalateRatingResponseDt
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import retrofit2.HttpException
+import retrofit2.Response
 import java.time.Instant
 
 public class EscalateRatingUseCaseTest {
@@ -43,13 +47,34 @@ public class EscalateRatingUseCaseTest {
         }
 
     @Test
-    public fun `wraps network error in failure Result`(): Unit =
+    public fun `wraps network error in a mapped failure that keeps the cause`(): Unit =
         runTest {
             coEvery { apiService.escalate(any(), any()) } throws RuntimeException("timeout")
 
             val result = useCase.invoke("bk-1", 2, null)
 
             assertThat(result.isFailure).isTrue()
-            assertThat(result.exceptionOrNull()?.message).contains("timeout")
+            val error = result.exceptionOrNull()
+            assertThat(error).isInstanceOf(RatingSubmitException::class.java)
+            assertThat((error as RatingSubmitException).failure).isEqualTo(RatingSubmitFailure.Unknown)
+            assertThat(error.cause?.message).contains("timeout")
+        }
+
+    @Test
+    public fun `maps an API rejection to its specific reason so the sheet can name it`(): Unit =
+        runTest {
+            coEvery { apiService.escalate(any(), any()) } throws
+                HttpException(
+                    Response.error<Unit>(
+                        409,
+                        """{"code":"NO_TECHNICIAN"}""".toResponseBody("application/json".toMediaType()),
+                    ),
+                )
+
+            val result = useCase.invoke("bk-1", 2, null)
+
+            val error = result.exceptionOrNull() as RatingSubmitException
+            assertThat(error.failure).isEqualTo(RatingSubmitFailure.NoTechnician)
+            assertThat(error.failure.retryable).isFalse()
         }
 }

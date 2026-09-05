@@ -291,6 +291,11 @@ public class RatingViewModel
                 _uiState.value = RatingUiState.AwaitingPartner(lastSnapshot)
                 return
             }
+            // The shield is over by the time a submit can fail (onPostAnyway / onSkipShield both
+            // set Idle first), so the captured draft must go too. Keeping it would make doSubmit()
+            // resend the old draft and silently discard whatever the customer edits before
+            // retrying — the owner has already seen the draft, so the retry is theirs to change.
+            cancelShieldState()
             _submitError.value = failure
             _uiState.value = RatingUiState.Editing(lastSnapshot)
         }

@@ -1,15 +1,18 @@
 package com.homeservices.customer.ui.rating
 
 import androidx.lifecycle.SavedStateHandle
+import com.homeservices.customer.domain.rating.EscalateRatingResult
 import com.homeservices.customer.domain.rating.EscalateRatingUseCase
 import com.homeservices.customer.domain.rating.GetRatingUseCase
 import com.homeservices.customer.domain.rating.RatingSubmitException
 import com.homeservices.customer.domain.rating.RatingSubmitFailure
 import com.homeservices.customer.domain.rating.SubmitRatingUseCase
+import com.homeservices.customer.domain.rating.model.CustomerSubScores
 import com.homeservices.customer.domain.rating.model.RatingSnapshot
 import com.homeservices.customer.domain.rating.model.SideState
 import com.homeservices.customer.observability.analytics.NoOpAnalyticsFacade
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -160,5 +163,48 @@ public class RatingViewModelSubmitErrorTest {
 
             assertThat(vm.uiState.value).isInstanceOf(RatingUiState.Error::class.java)
             assertThat(vm.submitError.value).isNull()
+        }
+
+    @Test
+    public fun `after a failed post-anyway, a retry sends the edited rating and not the shield draft`(): Unit =
+        runTest {
+            val vm = viewModel()
+            vm.setOverall(1)
+            vm.setPunctuality(1)
+            vm.setSkill(1)
+            vm.setBehaviour(1)
+            coEvery { escalate.invoke("bk-1", 1, null) } returns
+                Result.success(EscalateRatingResult("c-1", System.currentTimeMillis() + 60_000))
+            vm.submit() // low rating → shield dialog
+            vm.onEscalate() // captures the 1-star draft
+            failWith(RatingSubmitFailure.Network)
+            vm.onPostAnyway() // fails, form comes back
+
+            // Customer reconsiders and raises every score before retrying.
+            vm.setOverall(5)
+            vm.setPunctuality(5)
+            vm.setSkill(5)
+            vm.setBehaviour(5)
+            coEvery { submit.invoke(any(), any(), any(), any()) } returns flowOf(Result.success(Unit))
+            vm.submit()
+
+            coVerify { submit.invoke("bk-1", 5, CustomerSubScores(5, 5, 5), null) }
+        }
+
+    @Test
+    public fun `a mapped escalation failure keeps its specific reason`(): Unit =
+        runTest {
+            val vm = viewModel()
+            vm.setOverall(2)
+            vm.setPunctuality(5)
+            vm.setSkill(5)
+            vm.setBehaviour(5)
+            coEvery { escalate.invoke("bk-1", 2, null) } returns
+                Result.failure(RatingSubmitException(RatingSubmitFailure.NoTechnician))
+            vm.submit()
+            vm.onEscalate()
+
+            assertThat(vm.submitError.value).isEqualTo(RatingSubmitFailure.NoTechnician)
+            assertThat(vm.uiState.value).isNotInstanceOf(RatingUiState.Error::class.java)
         }
 }
