@@ -9,26 +9,32 @@ extendZodWithOpenApi(z);
  * into free text goes stale the instant the owner edits the price and reintroduces
  * the exact defect this story removes. Shared with service-category.ts.
  */
-export const PRICE_IN_PROSE = /[₹]|\bRs\.?\b|\bINR\b/;
+export const PRICE_IN_PROSE = /[₹]|\bRs\.?\b|\bINR\b|रुपये|रुपए|रुपया|रु\./;
 const noPriceInProse = (s: string) => !PRICE_IN_PROSE.test(s);
 const PRICE_IN_PROSE_MESSAGE = 'Prices must not appear in text; they are rendered from basePrice';
 
+/** A non-empty prose string that may not carry a price figure — see PRICE_IN_PROSE. */
+const proseString = (max?: number) => {
+  const base = max === undefined ? z.string().min(1) : z.string().min(1).max(max);
+  return base.refine(noPriceInProse, { message: PRICE_IN_PROSE_MESSAGE });
+};
+
 const AddOnSchema = z.object({
   id: z.string().min(1),
-  name: z.string().min(1),
+  name: proseString(),
   price: z.number().int().nonnegative(),
-  triggerCondition: z.string().min(1),
+  triggerCondition: proseString(),
 });
 
 const PhotoStageSchema = z.object({
   id: z.string().min(1),
-  label: z.string().min(1),
+  label: proseString(),
   required: z.boolean(),
 });
 
 const FaqItemSchema = z.object({
-  question: z.string().min(1),
-  answer: z.string().min(1),
+  question: proseString(),
+  answer: proseString(),
 });
 
 export const ServiceSchema = z
@@ -65,7 +71,7 @@ export const ServiceSchema = z
     basePrice: z.number().int().nonnegative().openapi({ description: 'Price in paise (₹599 = 59900)' }),
     commissionBps: z.number().int().min(1500).max(3500).optional().openapi({ description: 'Commission override in basis points (2250 = 22.5%). Optional (E21-S01): when absent, the booking falls through to the category override, then the global default.' }),
     durationMinutes: z.number().int().positive(),
-    includes: z.array(z.string().min(1)),
+    includes: z.array(proseString()),
     faq: z.array(FaqItemSchema),
     addOns: z.array(AddOnSchema),
     photoStages: z.array(PhotoStageSchema),

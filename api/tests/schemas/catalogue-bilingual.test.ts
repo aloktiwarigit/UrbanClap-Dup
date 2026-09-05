@@ -116,3 +116,61 @@ describe('bilingual catalogue fields', () => {
     );
   });
 });
+
+describe('E22-S01 — price text is rejected everywhere it could be shown', () => {
+  it('rejects shortDescriptionHi with रुपये', () => {
+    expect(() =>
+      ServiceSchema.parse({ ...service, shortDescriptionHi: 'सिर्फ 599 रुपये में' }),
+    ).toThrow();
+  });
+
+  it('rejects shortDescriptionHi with रु.', () => {
+    expect(() =>
+      ServiceSchema.parse({ ...service, shortDescriptionHi: '599 रु. में' }),
+    ).toThrow();
+  });
+
+  it('rejects includes array with ₹', () => {
+    expect(() =>
+      ServiceSchema.parse({ ...service, includes: ['Gas top-up ₹250'] }),
+    ).toThrow();
+  });
+
+  it('rejects faq with price in answer', () => {
+    expect(() =>
+      ServiceSchema.parse({
+        ...service,
+        faq: [{ question: 'Extra?', answer: 'Yes — Rs 250 per metre' }],
+      }),
+    ).toThrow();
+  });
+
+  it('rejects addOns with price in name', () => {
+    expect(() =>
+      ServiceSchema.parse({
+        ...service,
+        addOns: [{ id: 'x', name: 'Pipe (₹250/m)', price: 25000, triggerCondition: 'per metre' }],
+      }),
+    ).toThrow();
+  });
+
+  it('rejects photoStages with price in label', () => {
+    expect(() =>
+      ServiceSchema.parse({
+        ...service,
+        photoStages: [{ id: 'p', label: 'Bill showing INR 599', required: true }],
+      }),
+    ).toThrow();
+  });
+
+  it('parses a service with clean nested prose', () => {
+    const clean = {
+      ...service,
+      includes: ['Chemical wash', 'Gas refill'],
+      faq: [{ question: 'How long?', answer: '2 hours max' }],
+      addOns: [{ id: 'x', name: 'Extra service', price: 25000, triggerCondition: 'per metre' }],
+      photoStages: [{ id: 'p', label: 'Final bill', required: true }],
+    };
+    expect(ServiceSchema.parse(clean)).toBeDefined();
+  });
+});

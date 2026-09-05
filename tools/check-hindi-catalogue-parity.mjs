@@ -33,7 +33,8 @@ const kotlinPath = resolve(
 const seed = readFileSync(seedPath, 'utf8');
 const kotlin = readFileSync(kotlinPath, 'utf8');
 
-const PRICE_IN_PROSE = /[₹]|\bRs\.?\b|\bINR\b/;
+// keep in sync with api/src/schemas/service.ts PRICE_IN_PROSE
+const PRICE_IN_PROSE = /[₹]|\bRs\.?\b|\bINR\b|रुपये|रुपए|रुपया|रु\./;
 
 const failures = [];
 
