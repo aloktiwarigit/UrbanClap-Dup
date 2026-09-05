@@ -56,6 +56,9 @@ describe('CreateCategoryBodySchema', () => {
   });
 
   it('rejects if isActive is present (it is omitted)', () => {
-    expect(CreateCategoryBodySchema.shape).not.toHaveProperty('isActive');
+    // The body schema is wrapped in a superRefine (price-in-prose guard), so it has no
+    // `.shape`; assert the behaviour instead — the strict object rejects the extra key.
+    const body = { id: 'ac-repair', name: 'AC Repair', heroImageUrl: 'https://example.com/c.jpg', sortOrder: 1 };
+    expect(() => CreateCategoryBodySchema.parse({ ...body, isActive: true })).toThrow();
   });
 });

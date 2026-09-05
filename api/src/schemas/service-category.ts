@@ -1,29 +1,17 @@
 import { z } from 'zod';
 import { extendZodWithOpenApi } from '@asteasolutions/zod-to-openapi';
-import { PRICE_IN_PROSE } from './service.js';
+import { rejectPriceInProse } from './service.js';
 
 extendZodWithOpenApi(z);
-
-const noPriceInProse = (s: string) => !PRICE_IN_PROSE.test(s);
-const PRICE_IN_PROSE_MESSAGE = 'Prices must not appear in text; they are rendered from basePrice';
 
 export const ServiceCategorySchema = z
   .object({
     id: z.string().min(1).regex(/^[a-z0-9-]+$/).openapi({ example: 'ac-repair' }),
-    name: z
-      .string()
-      .min(1)
-      .max(100)
-      .refine(noPriceInProse, { message: PRICE_IN_PROSE_MESSAGE })
-      .openapi({ example: 'AC Repair' }),
+    // No price-in-prose refine here: stored-document schemas must parse legacy data.
+    // The rule is enforced on the write bodies below (see PRICE_IN_PROSE in service.ts).
+    name: z.string().min(1).max(100).openapi({ example: 'AC Repair' }),
     /** E22-S01: Hindi display name — see the note on ServiceSchema.nameHi. */
-    nameHi: z
-      .string()
-      .min(1)
-      .max(100)
-      .refine(noPriceInProse, { message: PRICE_IN_PROSE_MESSAGE })
-      .optional()
-      .openapi({ example: 'एसी मरम्मत' }),
+    nameHi: z.string().min(1).max(100).optional().openapi({ example: 'एसी मरम्मत' }),
     heroImageUrl: z.string().url(),
     sortOrder: z.number().int().nonnegative(),
     /** PRD-08: When true, this category's services should trigger the women-safe filter by default. */
@@ -41,21 +29,25 @@ export const ServiceCategorySchema = z
   })
   .strict();
 
-export const CreateCategoryBodySchema = ServiceCategorySchema.omit({
-  isActive: true,
-  updatedBy: true,
-  createdAt: true,
-  updatedAt: true,
-});
+export const CreateCategoryBodySchema = rejectPriceInProse(
+  ServiceCategorySchema.omit({
+    isActive: true,
+    updatedBy: true,
+    createdAt: true,
+    updatedAt: true,
+  }),
+);
 
 /** P0-3: PATCH semantics — see the note on `UpdateServiceBodySchema`. */
-export const UpdateCategoryBodySchema = ServiceCategorySchema.omit({
-  id: true,
-  isActive: true,
-  updatedBy: true,
-  createdAt: true,
-  updatedAt: true,
-}).partial();
+export const UpdateCategoryBodySchema = rejectPriceInProse(
+  ServiceCategorySchema.omit({
+    id: true,
+    isActive: true,
+    updatedBy: true,
+    createdAt: true,
+    updatedAt: true,
+  }).partial(),
+);
 
 export type ServiceCategory = z.infer<typeof ServiceCategorySchema>;
 export type CreateCategoryBody = z.infer<typeof CreateCategoryBodySchema>;
