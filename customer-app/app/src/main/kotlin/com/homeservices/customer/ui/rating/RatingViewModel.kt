@@ -87,6 +87,14 @@ public class RatingViewModel
         /** Last snapshot the API gave us, so the form can be restored after a failed submit. */
         private var lastSnapshot: RatingSnapshot? = null
 
+        /**
+         * True once the customer has answered the shield for this booking — by posting now, by
+         * escalating, or by letting the countdown run out. The offer is made once: re-asking after
+         * a failed send would turn the "Send again" button into a dialog the customer already
+         * dismissed, and the owner has had their heads-up either way.
+         */
+        private var shieldAnswered = false
+
         private val _overall = MutableStateFlow(0)
         public val overall: StateFlow<Int> = _overall.asStateFlow()
 
@@ -210,7 +218,7 @@ public class RatingViewModel
 
         public fun submit() {
             if (!_canSubmit.value) return
-            if (overall.value <= 2 && _shieldState.value == RatingShieldState.Idle) {
+            if (overall.value <= 2 && !shieldAnswered && _shieldState.value == RatingShieldState.Idle) {
                 _shieldState.value = RatingShieldState.ShowDialog
                 return
             }
@@ -226,6 +234,7 @@ public class RatingViewModel
         public fun onSkipShield() {
             countdownJob?.cancel()
             countdownJob = null
+            shieldAnswered = true
             _shieldState.value = RatingShieldState.Idle
             doSubmit()
         }
@@ -233,6 +242,7 @@ public class RatingViewModel
         public fun onPostAnyway() {
             countdownJob?.cancel()
             countdownJob = null
+            shieldAnswered = true
             _shieldState.value = RatingShieldState.Idle
             doSubmit()
         }
@@ -265,10 +275,16 @@ public class RatingViewModel
                         _shieldState.value = RatingShieldState.Escalated(r.expiresAtMs)
                         startCountdown(r.expiresAtMs)
                     }.onFailure {
-                        _shieldState.value = RatingShieldState.ShowDialog // allow retry
-                        // Same rule as a failed submit: report it, keep the form and the dialog.
-                        _submitError.value =
-                            (it as? RatingSubmitException)?.failure ?: RatingSubmitFailure.Unknown
+                        val failure = (it as? RatingSubmitException)?.failure ?: RatingSubmitFailure.Unknown
+                        if (failure == RatingSubmitFailure.AlreadySubmitted) {
+                            // Posted from another device or a stale session — there is nothing left
+                            // to escalate, so catch the screen up instead of offering a retry.
+                            moveToAwaitingPartner()
+                        } else {
+                            _shieldState.value = RatingShieldState.ShowDialog // allow retry
+                            // Same rule as a failed submit: report it, keep the form and the dialog.
+                            _submitError.value = failure
+                        }
                     }
             }
         }
@@ -289,9 +305,7 @@ public class RatingViewModel
         private fun onSubmitFailed(throwable: Throwable) {
             val failure = (throwable as? RatingSubmitException)?.failure ?: RatingSubmitFailure.Unknown
             if (failure == RatingSubmitFailure.AlreadySubmitted) {
-                cancelShieldState()
-                _submitError.value = null
-                _uiState.value = RatingUiState.AwaitingPartner(lastSnapshot)
+                moveToAwaitingPartner()
                 return
             }
             // The shield is over by the time a submit can fail (onPostAnyway / onSkipShield both
@@ -301,6 +315,13 @@ public class RatingViewModel
             cancelShieldState()
             _submitError.value = failure
             _uiState.value = RatingUiState.Editing(lastSnapshot)
+        }
+
+        /** The rating is already recorded server-side, so the screen catches up. */
+        private fun moveToAwaitingPartner() {
+            cancelShieldState()
+            _submitError.value = null
+            _uiState.value = RatingUiState.AwaitingPartner(lastSnapshot)
         }
 
         public fun consumeSubmitError() {

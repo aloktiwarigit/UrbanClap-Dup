@@ -232,4 +232,43 @@ public class RatingViewModelSubmitErrorTest {
             assertThat(vm.submitError.value).isNull()
             assertThat(vm.shieldState.value).isInstanceOf(RatingShieldState.Escalated::class.java)
         }
+
+    @Test
+    public fun `retrying a bypassed low rating sends it instead of reopening the shield`(): Unit =
+        runTest {
+            val vm = viewModel()
+            vm.setOverall(2)
+            vm.setPunctuality(2)
+            vm.setSkill(2)
+            vm.setBehaviour(2)
+            vm.submit() // low rating → shield dialog
+            failWith(RatingSubmitFailure.Network)
+            vm.onSkipShield() // "Post rating now" → send fails
+
+            assertThat(vm.submitError.value).isEqualTo(RatingSubmitFailure.Network)
+            coEvery { submit.invoke(any(), any(), any(), any()) } returns flowOf(Result.success(Unit))
+            vm.submit() // the "Send again" button
+
+            assertThat(vm.shieldState.value).isEqualTo(RatingShieldState.Idle)
+            assertThat(vm.uiState.value).isInstanceOf(RatingUiState.AwaitingPartner::class.java)
+            coVerify(exactly = 2) { submit.invoke("bk-1", 2, CustomerSubScores(2, 2, 2), null) }
+        }
+
+    @Test
+    public fun `an escalation refused because the rating already exists moves the screen on`(): Unit =
+        runTest {
+            val vm = viewModel()
+            vm.setOverall(2)
+            vm.setPunctuality(5)
+            vm.setSkill(5)
+            vm.setBehaviour(5)
+            coEvery { escalate.invoke("bk-1", 2, null) } returns
+                Result.failure(RatingSubmitException(RatingSubmitFailure.AlreadySubmitted))
+            vm.submit()
+            vm.onEscalate()
+
+            assertThat(vm.uiState.value).isInstanceOf(RatingUiState.AwaitingPartner::class.java)
+            assertThat(vm.shieldState.value).isEqualTo(RatingShieldState.Idle)
+            assertThat(vm.submitError.value).isNull()
+        }
 }
