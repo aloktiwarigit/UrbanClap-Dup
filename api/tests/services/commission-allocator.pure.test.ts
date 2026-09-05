@@ -27,6 +27,10 @@ describe('allocateOldestFirst', () => {
     expect(r.allocations).toHaveLength(98);
     expect(r.leftoverPaise).toBe(20);
   });
+  it('tie-breaks by bookingId when createdAt is equal', () => {
+    const r = allocateOldestFirst([mk('b2', 300, '2026-09-01'), mk('b1', 200, '2026-09-01')], 100);
+    expect(r.allocations).toEqual([{ bookingId: 'b1', paise: 100 }]);
+  });
 });
 
 describe('mergeAllocation / deriveStatus', () => {
@@ -40,6 +44,13 @@ describe('mergeAllocation / deriveStatus', () => {
     const done = mergeAllocation(twice, { ...alloc, id: 'rem:k2:b1', refId: 'rem:k2', paise: 50 });
     expect(done.remittedAmount).toBe(200);
     expect(deriveStatus(done)).toBe('REMITTED');
+  });
+  it('is identity on duplicate alloc.id, even with different appliedAt', () => {
+    const entry = mk('b1', 200, '2026-09-01').entry;
+    const first = mergeAllocation(entry, alloc);
+    const second = mergeAllocation(first, { ...alloc, appliedAt: 'later' });
+    expect(second).toEqual(first);
+    expect(second.updatedAt).toBe(first.updatedAt);
   });
   it('WAIVER allocation makes the row WAIVED regardless of amount', () => {
     const w = mergeAllocation(mk('b1', 200, '2026-09-01').entry, { ...alloc, id: 'w:b1', source: 'WAIVER', paise: 200 });

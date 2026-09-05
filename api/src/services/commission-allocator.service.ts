@@ -30,7 +30,10 @@ export function deriveStatus(e: Pick<CommissionReceivableEntry, 'commissionDue' 
 /** Idempotent merge: same allocation id twice is a no-op. All derived fields recomputed absolutely. */
 export function mergeAllocation(entry: CommissionReceivableEntry, alloc: Allocation): CommissionReceivableEntry {
   const existing = entry.allocations ?? [];
-  const allocations = existing.some((a) => a.id === alloc.id) ? existing : [...existing, alloc];
+  // Early return if this allocation is already present (replay safety)
+  if (existing.some((a) => a.id === alloc.id)) return entry;
+
+  const allocations = [...existing, alloc];
   const remittedAmount = allocations.filter((a) => a.source !== 'WAIVER').reduce((s, a) => s + a.paise, 0);
   const next: CommissionReceivableEntry = { ...entry, allocations, remittedAmount, updatedAt: alloc.appliedAt };
   const status = deriveStatus(next);
