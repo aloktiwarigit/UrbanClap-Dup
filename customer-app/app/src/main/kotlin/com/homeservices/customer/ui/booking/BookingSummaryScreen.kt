@@ -73,15 +73,21 @@ internal fun BookingSummaryScreen(
     val activity = LocalContext.current as? Activity
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Debug-only guard: warn developer if RAZORPAY_KEY_ID is blank.
-    // Release builds are protected at assemble time via the Gradle guard in build.gradle.kts.
-    if (BuildConfig.DEBUG) {
-        LaunchedEffect(Unit) {
-            if (BuildConfig.RAZORPAY_KEY_ID.isBlank()) {
-                snackbarHostState.showSnackbar(
-                    "RAZORPAY_KEY_ID env var is blank — payment will fail. Set it in local.properties or env.",
-                )
-            }
+    // Developer diagnostic, debug builds only. Kept in its own LaunchedEffect so it never
+    // blocks the checkout effect below, and scoped to AwaitingPayment so it fires only when a
+    // blank key is actually about to reach the Checkout SDK. During the cash-only pilot the key
+    // is blank by design (see "Razorpay disabled for pilot" in build.gradle.kts), payment is
+    // never attempted, and a customer must never see this.
+    LaunchedEffect(uiState) {
+        if (shouldWarnBlankRazorpayKey(
+                isDebugBuild = BuildConfig.DEBUG,
+                isAwaitingPayment = uiState is BookingUiState.AwaitingPayment,
+                keyId = BuildConfig.RAZORPAY_KEY_ID,
+            )
+        ) {
+            snackbarHostState.showSnackbar(
+                "[dev] RAZORPAY_KEY_ID is blank — payment will fail. Set it in local.properties or env.",
+            )
         }
     }
 
@@ -471,3 +477,16 @@ private fun NetworkErrorCard(
         )
     }
 }
+
+/**
+ * Whether to surface the blank-Razorpay-key developer warning.
+ *
+ * Debug builds only, and only at the moment a blank key would actually be handed to the
+ * Checkout SDK. The cash-only pilot ships with a deliberately blank key and never reaches
+ * payment, so this stays silent there rather than alarming testers on every booking.
+ */
+internal fun shouldWarnBlankRazorpayKey(
+    isDebugBuild: Boolean,
+    isAwaitingPayment: Boolean,
+    keyId: String,
+): Boolean = isDebugBuild && isAwaitingPayment && keyId.isBlank()
