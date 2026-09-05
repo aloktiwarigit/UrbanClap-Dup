@@ -80,3 +80,12 @@ private fun SidePayloadDto.toTechSide(): SideState =
     } else {
         SideState.Pending
     }
+
+/**
+ * Shape of every error body the API returns (`api/src/functions/ratings.ts`): a stable
+ * machine-readable `code`, plus fields that vary by code and are not needed here.
+ */
+@JsonClass(generateAdapter = true)
+public data class ApiErrorDto(
+    val code: String? = null,
+)

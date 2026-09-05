@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.homeservices.customer.domain.rating.EscalateRatingUseCase
 import com.homeservices.customer.domain.rating.GetRatingUseCase
+import com.homeservices.customer.domain.rating.RatingSubmitException
+import com.homeservices.customer.domain.rating.RatingSubmitFailure
 import com.homeservices.customer.domain.rating.SubmitRatingUseCase
 import com.homeservices.customer.domain.rating.model.CustomerSubScores
 import com.homeservices.customer.domain.rating.model.RatingSnapshot
@@ -74,6 +76,34 @@ public class RatingViewModel
         private val _shieldState = MutableStateFlow<RatingShieldState>(RatingShieldState.Idle)
         public val shieldState: StateFlow<RatingShieldState> = _shieldState.asStateFlow()
 
+        /**
+         * Why the last submit was rejected, or null. Kept apart from [uiState] on purpose: a submit
+         * that fails must leave the form — and everything the customer typed into it — on screen,
+         * whereas [RatingUiState.Error] replaces the screen and is only for a failed load.
+         */
+        private val _submitError = MutableStateFlow<RatingSubmitFailure?>(null)
+        public val submitError: StateFlow<RatingSubmitFailure?> = _submitError.asStateFlow()
+
+        /**
+         * Why the last escalation was rejected, or null. Deliberately separate from [submitError]:
+         * the two endpoints do not accept the same bookings — `/escalate` requires a CLOSED booking
+         * while `POST /v1/ratings` also takes COMPLETED and PAID — so a refused escalation says
+         * nothing about whether the rating itself can be posted, and must never disable the form.
+         */
+        private val _escalateError = MutableStateFlow<RatingSubmitFailure?>(null)
+        public val escalateError: StateFlow<RatingSubmitFailure?> = _escalateError.asStateFlow()
+
+        /** Last snapshot the API gave us, so the form can be restored after a failed submit. */
+        private var lastSnapshot: RatingSnapshot? = null
+
+        /**
+         * True once the customer has answered the shield for this booking — by posting now, by
+         * escalating, or by letting the countdown run out. The offer is made once: re-asking after
+         * a failed send would turn the "Send again" button into a dialog the customer already
+         * dismissed, and the owner has had their heads-up either way.
+         */
+        private var shieldAnswered = false
+
         private val _overall = MutableStateFlow(0)
         public val overall: StateFlow<Int> = _overall.asStateFlow()
 
@@ -133,6 +163,7 @@ public class RatingViewModel
                 getUseCase.invoke(bookingId).collect { result ->
                     result
                         .onSuccess { snap ->
+                            lastSnapshot = snap
                             // Cancel shield countdown if rating was already submitted elsewhere
                             // (e.g. from another device, or restored countdown for a stale session).
                             if (snap.customerSide is SideState.Submitted && _shieldState.value is RatingShieldState.Escalated) {
@@ -196,7 +227,7 @@ public class RatingViewModel
 
         public fun submit() {
             if (!_canSubmit.value) return
-            if (overall.value <= 2 && _shieldState.value == RatingShieldState.Idle) {
+            if (overall.value <= 2 && !shieldAnswered && _shieldState.value == RatingShieldState.Idle) {
                 _shieldState.value = RatingShieldState.ShowDialog
                 return
             }
@@ -205,6 +236,7 @@ public class RatingViewModel
 
         public fun onDismissShieldDialog() {
             if (_shieldState.value == RatingShieldState.Escalating) return // ignore dismiss during in-flight call
+            _escalateError.value = null
             _shieldState.value = RatingShieldState.Idle
             // Intentionally does NOT submit — scrim tap / back gesture is not an opt-out.
         }
@@ -212,6 +244,8 @@ public class RatingViewModel
         public fun onSkipShield() {
             countdownJob?.cancel()
             countdownJob = null
+            shieldAnswered = true
+            _escalateError.value = null
             _shieldState.value = RatingShieldState.Idle
             doSubmit()
         }
@@ -219,6 +253,8 @@ public class RatingViewModel
         public fun onPostAnyway() {
             countdownJob?.cancel()
             countdownJob = null
+            shieldAnswered = true
+            _escalateError.value = null
             _shieldState.value = RatingShieldState.Idle
             doSubmit()
         }
@@ -226,6 +262,9 @@ public class RatingViewModel
         public fun onEscalate() {
             if (_shieldState.value != RatingShieldState.ShowDialog) return // guard re-entrant / double-tap
             _shieldState.value = RatingShieldState.Escalating
+            // Same as doSubmit: a fresh attempt clears the last attempt's message, so a retry that
+            // succeeds does not leave the old failure sitting in the sheet.
+            _escalateError.value = null
             val capturedOverall = overall.value
             val capturedSubScores = CustomerSubScores(punctuality.value, skill.value, behaviour.value)
             val capturedComment = comment.value.ifBlank { null }
@@ -248,8 +287,18 @@ public class RatingViewModel
                         _shieldState.value = RatingShieldState.Escalated(r.expiresAtMs)
                         startCountdown(r.expiresAtMs)
                     }.onFailure {
-                        _shieldState.value = RatingShieldState.ShowDialog // allow retry
-                        _uiState.value = RatingUiState.Error(it.message ?: "escalation failed")
+                        val failure = (it as? RatingSubmitException)?.failure ?: RatingSubmitFailure.Unknown
+                        if (failure == RatingSubmitFailure.AlreadySubmitted) {
+                            // Posted from another device or a stale session — there is nothing left
+                            // to escalate, so catch the screen up instead of offering a retry.
+                            moveToAwaitingPartner()
+                        } else {
+                            _shieldState.value = RatingShieldState.ShowDialog // allow retry
+                            // Reported in the sheet, where the customer just tapped. It must not
+                            // reach submitError — a booking /escalate rejects is often one the
+                            // rating endpoint accepts.
+                            _escalateError.value = failure
+                        }
                     }
             }
         }
@@ -263,12 +312,44 @@ public class RatingViewModel
                 }
         }
 
+        /**
+         * A rejected submit keeps the customer where they are. The one exception is a rating the
+         * server already holds, which is not a failure at all — the screen simply catches up.
+         */
+        private fun onSubmitFailed(throwable: Throwable) {
+            val failure = (throwable as? RatingSubmitException)?.failure ?: RatingSubmitFailure.Unknown
+            if (failure == RatingSubmitFailure.AlreadySubmitted) {
+                moveToAwaitingPartner()
+                return
+            }
+            // The shield is over by the time a submit can fail (onPostAnyway / onSkipShield both
+            // set Idle first), so the captured draft must go too. Keeping it would make doSubmit()
+            // resend the old draft and silently discard whatever the customer edits before
+            // retrying — the owner has already seen the draft, so the retry is theirs to change.
+            cancelShieldState()
+            _submitError.value = failure
+            _uiState.value = RatingUiState.Editing(lastSnapshot)
+        }
+
+        /** The rating is already recorded server-side, so the screen catches up. */
+        private fun moveToAwaitingPartner() {
+            cancelShieldState()
+            _escalateError.value = null
+            _submitError.value = null
+            _uiState.value = RatingUiState.AwaitingPartner(lastSnapshot)
+        }
+
+        public fun consumeSubmitError() {
+            _submitError.value = null
+        }
+
         private fun doSubmit() {
             val draft = escalatedDraft
             val submitOverall = draft?.overall ?: overall.value
             val submitSubScores = draft?.subScores ?: CustomerSubScores(punctuality.value, skill.value, behaviour.value)
             val submitComment = draft?.comment ?: comment.value.ifBlank { null }
             _uiState.value = RatingUiState.Submitting
+            _submitError.value = null
             viewModelScope.launch {
                 submitUseCase
                     .invoke(
@@ -289,7 +370,7 @@ public class RatingViewModel
                                     )
                                 }
                                 _uiState.value = RatingUiState.AwaitingPartner(null)
-                            }.onFailure { _uiState.value = RatingUiState.Error(it.message ?: "submit failed") }
+                            }.onFailure { onSubmitFailed(it) }
                     }
             }
         }

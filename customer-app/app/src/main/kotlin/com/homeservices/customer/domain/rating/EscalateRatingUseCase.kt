@@ -2,6 +2,7 @@ package com.homeservices.customer.domain.rating
 
 import com.homeservices.customer.data.rating.remote.RatingApiService
 import com.homeservices.customer.data.rating.remote.dto.EscalateRatingRequestDto
+import com.homeservices.customer.data.rating.toRatingSubmitFailure
 import java.time.Instant
 import javax.inject.Inject
 
@@ -26,5 +27,9 @@ public class EscalateRatingUseCase
                     complaintId = dto.complaintId,
                     expiresAtMs = Instant.parse(dto.expiresAt).toEpochMilli(),
                 )
+            }.recoverCatching {
+                // The escalate endpoint answers with the same code vocabulary as submit, so the
+                // sheet can name the real reason instead of a generic "try again".
+                throw RatingSubmitException(it.toRatingSubmitFailure(), it)
             }
     }

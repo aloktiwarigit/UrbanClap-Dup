@@ -1,5 +1,6 @@
 package com.homeservices.customer.ui.rating
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -36,11 +38,15 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.homeservices.customer.R
+import com.homeservices.customer.domain.rating.RatingSubmitFailure
 import com.homeservices.designsystem.components.HsPrimaryButton
 import com.homeservices.designsystem.components.HsScreenTitle
 import com.homeservices.designsystem.components.HsSecondaryButton
 import com.homeservices.designsystem.components.HsSectionCard
 import com.homeservices.designsystem.components.HsTrustBadge
+import com.homeservices.designsystem.theme.HomeservicesBorderWidth
+import com.homeservices.designsystem.theme.LocalHomeservicesRadius
+import com.homeservices.designsystem.theme.LocalHomeservicesSpacing
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,6 +65,8 @@ public fun RatingScreen(
     val behav by viewModel.behaviour.collectAsStateWithLifecycle()
     val comment by viewModel.comment.collectAsStateWithLifecycle()
     val canSubmit by viewModel.canSubmit.collectAsStateWithLifecycle()
+    val submitError by viewModel.submitError.collectAsStateWithLifecycle()
+    val escalateError by viewModel.escalateError.collectAsStateWithLifecycle()
 
     androidx.activity.compose.BackHandler(onBack = onBack)
 
@@ -77,6 +85,7 @@ public fun RatingScreen(
         behaviour = behav,
         comment = comment,
         canSubmit = canSubmit,
+        submitError = submitError,
         onOverallChange = viewModel::setOverall,
         onPunctualityChange = viewModel::setPunctuality,
         onSkillChange = viewModel::setSkill,
@@ -94,6 +103,9 @@ public fun RatingScreen(
             onSkip = viewModel::onSkipShield,
             onDismiss = viewModel::onDismissShieldDialog,
             isEscalating = shieldState == RatingShieldState.Escalating,
+            // The sheet sits over the form, so a failed escalation has to report itself here or
+            // the customer just sees the buttons re-enable with no explanation.
+            error = escalateError,
         )
     }
 }
@@ -108,6 +120,7 @@ internal fun RatingContent(
     behaviour: Int,
     comment: String,
     canSubmit: Boolean,
+    submitError: RatingSubmitFailure?,
     onOverallChange: (Int) -> Unit,
     onPunctualityChange: (Int) -> Unit,
     onSkillChange: (Int) -> Unit,
@@ -151,6 +164,8 @@ internal fun RatingContent(
                         behaviour = behaviour,
                         comment = comment,
                         canSubmit = canSubmit,
+                        submitError = submitError,
+                        onBack = onBack,
                         onOverallChange = onOverallChange,
                         onPunctualityChange = onPunctualityChange,
                         onSkillChange = onSkillChange,
@@ -173,6 +188,8 @@ private fun RatingForm(
     behaviour: Int,
     comment: String,
     canSubmit: Boolean,
+    submitError: RatingSubmitFailure?,
+    onBack: () -> Unit,
     onOverallChange: (Int) -> Unit,
     onPunctualityChange: (Int) -> Unit,
     onSkillChange: (Int) -> Unit,
@@ -209,11 +226,25 @@ private fun RatingForm(
             minLines = 3,
             modifier = Modifier.fillMaxWidth(),
         )
+        if (submitError != null) {
+            SubmitErrorNotice(submitError)
+        }
         if (shieldState is RatingShieldState.Escalated) {
             CountdownChip(expiresAtMs = shieldState.expiresAtMs, onPostAnyway = onPostAnyway)
+        } else if (submitError != null && !submitError.retryable) {
+            // Pressing submit again cannot change the answer, so offer the only move that helps
+            // rather than leaving a dead button under the message.
+            HsSecondaryButton(
+                text = stringResource(R.string.rating_back_home),
+                onClick = onBack,
+                modifier = Modifier.fillMaxWidth(),
+            )
         } else {
             HsPrimaryButton(
-                text = stringResource(R.string.rating_submit),
+                text =
+                    stringResource(
+                        if (submitError != null) R.string.rating_submit_retry else R.string.rating_submit,
+                    ),
                 onClick = onSubmit,
                 enabled = canSubmit,
                 modifier = Modifier.fillMaxWidth(),
@@ -224,6 +255,47 @@ private fun RatingForm(
         }
     }
 }
+
+/**
+ * Why the rating did not send, shown where it happened — directly above the button that failed, so
+ * the stars and comment stay visible and intact behind it.
+ */
+@Composable
+private fun SubmitErrorNotice(failure: RatingSubmitFailure) {
+    val spacing = LocalHomeservicesSpacing.current
+    val radius = LocalHomeservicesRadius.current
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        shape = RoundedCornerShape(radius.md),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .border(
+                    width = HomeservicesBorderWidth.hairline,
+                    color = MaterialTheme.colorScheme.error,
+                    shape = RoundedCornerShape(radius.md),
+                ),
+    ) {
+        Text(
+            text = stringResource(failure.messageRes()),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(horizontal = spacing.space4, vertical = spacing.space3),
+        )
+    }
+}
+
+private fun RatingSubmitFailure.messageRes(): Int =
+    when (this) {
+        RatingSubmitFailure.NoTechnician -> R.string.rating_submit_error_no_technician
+        RatingSubmitFailure.BookingNotClosed -> R.string.rating_submit_error_not_closed
+        RatingSubmitFailure.ShieldAlreadyEscalated -> R.string.rating_submit_error_shield_already_escalated
+        RatingSubmitFailure.NotAvailable -> R.string.rating_submit_error_not_available
+        RatingSubmitFailure.Network -> R.string.rating_submit_error_network
+        // AlreadySubmitted never reaches the form — the view model moves the screen on instead.
+        RatingSubmitFailure.AlreadySubmitted, RatingSubmitFailure.Unknown ->
+            R.string.rating_submit_error_generic
+    }
 
 @Composable
 private fun StatusMessage(
@@ -258,6 +330,7 @@ private fun ShieldBottomSheet(
     onSkip: () -> Unit,
     onDismiss: () -> Unit,
     isEscalating: Boolean = false,
+    error: RatingSubmitFailure? = null,
 ) {
     val sheetState = rememberModalBottomSheetState()
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
@@ -273,11 +346,16 @@ private fun ShieldBottomSheet(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (error != null) {
+                Spacer(Modifier.height(16.dp))
+                SubmitErrorNotice(error)
+            }
             Spacer(Modifier.height(16.dp))
             HsPrimaryButton(
                 text = stringResource(R.string.rating_shield_send_support),
                 onClick = onEscalate,
-                enabled = !isEscalating,
+                // A refusal that a retry cannot change leaves "Post rating now" as the way forward.
+                enabled = !isEscalating && error?.retryable != false,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(8.dp))
