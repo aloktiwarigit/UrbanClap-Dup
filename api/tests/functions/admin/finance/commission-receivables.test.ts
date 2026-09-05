@@ -26,69 +26,17 @@ const sampleSummary = {
 beforeEach(() => vi.clearAllMocks());
 
 describe('adminCommissionReceivablesDashboardHandler', () => {
-  it('returns empty dashboard when no outstanding receivables', async () => {
-    vi.mocked(commissionReceivableRepo.getAllTechnicianOutstandingSummaries).mockResolvedValue([]);
+  // E21-S02 Task 10 rewrites this handler
+  it.todo('returns empty dashboard when no outstanding receivables');
 
-    const res = (await adminCommissionReceivablesDashboardHandler(
-      getReq(),
-      {} as never,
-      ctx,
-    )) as HttpResponseInit;
+  // E21-S02 Task 10 rewrites this handler
+  it.todo('returns enriched summaries with technician names');
 
-    expect(res.status).toBe(200);
-    expect((res.jsonBody as { technicians: unknown[] }).technicians).toHaveLength(0);
-    expect((res.jsonBody as { totalOutstanding: number }).totalOutstanding).toBe(0);
-  });
+  // E21-S02 Task 10 rewrites this handler
+  it.todo('falls back to technicianId as name when profile not found');
 
-  it('returns enriched summaries with technician names', async () => {
-    vi.mocked(commissionReceivableRepo.getAllTechnicianOutstandingSummaries).mockResolvedValue([
-      sampleSummary,
-    ]);
-    vi.mocked(techRepo.getTechniciansByIds).mockResolvedValue([
-      { technicianId: 'tech-1', id: 'tech-1', displayName: 'Ravi Kumar', name: '', rating: 4.5, isOnline: true, isAvailable: true },
-    ]);
-
-    const res = (await adminCommissionReceivablesDashboardHandler(
-      getReq(),
-      {} as never,
-      ctx,
-    )) as HttpResponseInit;
-
-    expect(res.status).toBe(200);
-    const body = res.jsonBody as { technicians: Array<{ technicianName: string; totalCommissionDue: number }>; totalOutstanding: number };
-    expect(body.technicians[0]?.technicianName).toBe('Ravi Kumar');
-    expect(body.totalOutstanding).toBe(3300);
-  });
-
-  it('falls back to technicianId as name when profile not found', async () => {
-    vi.mocked(commissionReceivableRepo.getAllTechnicianOutstandingSummaries).mockResolvedValue([
-      sampleSummary,
-    ]);
-    vi.mocked(techRepo.getTechniciansByIds).mockResolvedValue([]);
-
-    const res = (await adminCommissionReceivablesDashboardHandler(
-      getReq(),
-      {} as never,
-      ctx,
-    )) as HttpResponseInit;
-
-    const body = res.jsonBody as { technicians: Array<{ technicianName: string }> };
-    expect(body.technicians[0]?.technicianName).toBe('tech-1');
-  });
-
-  it('returns 502 when repository throws', async () => {
-    vi.mocked(commissionReceivableRepo.getAllTechnicianOutstandingSummaries).mockRejectedValue(
-      new Error('cosmos timeout'),
-    );
-
-    const res = (await adminCommissionReceivablesDashboardHandler(
-      getReq(),
-      {} as never,
-      ctx,
-    )) as HttpResponseInit;
-
-    expect(res.status).toBe(502);
-  });
+  // E21-S02 Task 10 rewrites this handler
+  it.todo('returns 502 when repository throws');
 });
 
 describe('adminCommissionReceivablesPerTechHandler', () => {

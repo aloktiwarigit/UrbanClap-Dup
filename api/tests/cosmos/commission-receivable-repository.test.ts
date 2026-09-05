@@ -3,15 +3,15 @@ import type { CommissionReceivableEntry } from '../../src/schemas/commission-rec
 
 // --- Mocks ---
 const mockCreate = vi.fn();
-const mockReplace = vi.fn();
 const mockRead = vi.fn();
-const mockItem = vi.fn(() => ({ read: mockRead, replace: mockReplace }));
+const mockBatch = vi.fn();
+const mockItem = vi.fn(() => ({ read: mockRead }));
 const mockFetchAll = vi.fn();
 const mockQuery = vi.fn(() => ({ fetchAll: mockFetchAll }));
 
 vi.mock('../../src/cosmos/client.js', () => ({
   getCommissionReceivablesContainer: () => ({
-    items: { create: mockCreate, query: mockQuery },
+    items: { create: mockCreate, query: mockQuery, batch: mockBatch },
     item: mockItem,
   }),
   getCosmosClient: vi.fn(),
@@ -76,6 +76,27 @@ describe('commissionReceivableRepo.createDueEntry', () => {
     expect(doc.cashCollectedAmount).toBe(59900);
   });
 
+  it('includes serviceName, slotDate, collectionMethod when provided', async () => {
+    mockCreate.mockResolvedValue({});
+    await commissionReceivableRepo.createDueEntry({
+      bookingId: 'bk-003',
+      technicianId: 'tech-1',
+      serviceId: 'svc-ac',
+      categoryId: 'cat-hvac',
+      bookingAmount: 59900,
+      commissionBps: 2000,
+      commissionDue: 11980,
+      commissionResolvedFrom: 'SERVICE',
+      serviceName: 'AC Repair',
+      slotDate: '2026-05-01',
+      collectionMethod: 'CASH',
+    });
+    const doc = (mockCreate.mock.calls as unknown[][])[0]![0] as CommissionReceivableEntry;
+    expect(doc.serviceName).toBe('AC Repair');
+    expect(doc.slotDate).toBe('2026-05-01');
+    expect(doc.collectionMethod).toBe('CASH');
+  });
+
   it('returns false on 409 conflict (duplicate create)', async () => {
     mockCreate.mockRejectedValue({ code: 409 });
     const result = await commissionReceivableRepo.createDueEntry({
@@ -125,209 +146,69 @@ describe('commissionReceivableRepo.getByBookingId', () => {
   });
 });
 
-describe('commissionReceivableRepo.markRemitted', () => {
+describe('runLedgerBatch', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('transitions DUE → REMITTED, returns { wasApplied: true, entry }', async () => {
-    mockRead.mockResolvedValue({ resource: { ...baseDueEntry } });
-    mockReplace.mockResolvedValue({});
-    const result = await commissionReceivableRepo.markRemitted('bk-001', 'tech-1', {
-      remittedAmount: 11980,
-      remittanceMethod: 'UPI',
-      remittanceRef: 'upi-txn-42',
-      markedByAdminId: 'admin-7',
-    });
-    expect(result).not.toBeNull();
-    expect(result!.wasApplied).toBe(true);
-    expect(result!.entry.remittanceStatus).toBe('REMITTED');
-    expect(result!.entry.remittedAmount).toBe(11980);
-    expect(result!.entry.remittanceMethod).toBe('UPI');
-    expect(result!.entry.remittanceRef).toBe('upi-txn-42');
-    expect(result!.entry.markedByAdminId).toBe('admin-7');
-    expect(result!.entry.remittedAt).toBeDefined();
-    expect(result!.entry.updatedAt).toBeDefined();
-    expect(mockReplace).toHaveBeenCalledOnce();
+  it('returns ok when every op succeeded', async () => {
+    mockBatch.mockResolvedValue({ result: [{ statusCode: 201 }, { statusCode: 200 }] });
+    expect(await commissionReceivableRepo.runLedgerBatch('tech-1', [])).toEqual({ ok: true });
   });
 
-  it('rejects when remittedAmount < commissionDue', async () => {
-    mockRead.mockResolvedValue({ resource: { ...baseDueEntry } }); // commissionDue = 11980
-    await expect(
-      commissionReceivableRepo.markRemitted('bk-001', 'tech-1', {
-        remittedAmount: 5000,
-        remittanceMethod: 'UPI',
-        remittanceRef: 'ref-low',
-        markedByAdminId: 'admin-1',
-      }),
-    ).rejects.toMatchObject({ code: 'AMOUNT_BELOW_DUE' });
-    expect(mockReplace).not.toHaveBeenCalled();
+  it('maps 409 to CONFLICT and 412 to PRECONDITION (others 424)', async () => {
+    mockBatch.mockResolvedValue({ result: [{ statusCode: 409 }, { statusCode: 424 }] });
+    expect(await commissionReceivableRepo.runLedgerBatch('tech-1', [])).toEqual({ ok: false, reason: 'CONFLICT' });
+    mockBatch.mockResolvedValue({ result: [{ statusCode: 424 }, { statusCode: 412 }] });
+    expect(await commissionReceivableRepo.runLedgerBatch('tech-1', [])).toEqual({ ok: false, reason: 'PRECONDITION' });
   });
 
-  it('is no-op: returns { wasApplied: false } when already REMITTED', async () => {
-    const alreadyRemitted: CommissionReceivableEntry = {
-      ...baseDueEntry,
-      remittanceStatus: 'REMITTED',
-      remittedAmount: 11980,
-      remittanceMethod: 'UPI',
-      remittanceRef: 'upi-txn-42',
-    };
-    mockRead.mockResolvedValue({ resource: alreadyRemitted });
-    const result = await commissionReceivableRepo.markRemitted('bk-001', 'tech-1', {
-      remittedAmount: 11980,
-      remittanceMethod: 'CASH_DEPOSIT',
-      remittanceRef: 'different-ref',
-      markedByAdminId: 'admin-9',
-    });
-    expect(result!.wasApplied).toBe(false);
-    expect(result!.entry).toEqual(alreadyRemitted);
-    expect(mockReplace).not.toHaveBeenCalled();
+  it('rethrows batch-level errors', async () => {
+    mockBatch.mockRejectedValue(new Error('Batch request error: 429'));
+    await expect(commissionReceivableRepo.runLedgerBatch('tech-1', [])).rejects.toThrow(/429/);
+  });
+});
+
+describe('docType-aware reads', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('getOutstandingByTechnician filters RECEIVABLE+DUE and returns etag + outstanding', async () => {
+    mockFetchAll.mockResolvedValue({ resources: [{ ...baseDueEntry, _etag: '"e1"', remittedAmount: 1000 }] });
+    const rows = await commissionReceivableRepo.getOutstandingByTechnician('tech-1');
+    const q = (mockQuery.mock.calls as unknown[][])[0]![0] as { query: string };
+    expect(q.query).toMatch(/docType/);
+    expect(rows[0]).toMatchObject({ etag: '"e1"', outstandingPaise: 10980 });
   });
 
-  it('is no-op: returns { wasApplied: false } when already WAIVED', async () => {
-    const waived: CommissionReceivableEntry = {
-      ...baseDueEntry,
-      remittanceStatus: 'WAIVED',
-      waivedReason: 'goodwill',
-    };
-    mockRead.mockResolvedValue({ resource: waived });
-    const result = await commissionReceivableRepo.markRemitted('bk-001', 'tech-1', {
-      remittedAmount: 11980,
-      remittanceMethod: 'ADJUSTMENT',
-      remittanceRef: 'adj-1',
-      markedByAdminId: 'admin-1',
-    });
-    expect(result!.wasApplied).toBe(false);
-    expect(result!.entry).toEqual(waived);
-    expect(mockReplace).not.toHaveBeenCalled();
+  it('getAllByTechnician excludes non-receivable docs in the query', async () => {
+    mockFetchAll.mockResolvedValue({ resources: [] });
+    await commissionReceivableRepo.getAllByTechnician('tech-1');
+    expect(((mockQuery.mock.calls as unknown[][])[0]![0] as { query: string }).query).toMatch(/NOT IS_DEFINED\(c\.docType\) OR c\.docType = 'RECEIVABLE'/);
+  });
+});
+
+describe('markWaived (batch)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('replaces the row with a WAIVER allocation under ifMatch', async () => {
+    mockRead.mockResolvedValue({ resource: baseDueEntry, etag: '"e1"' });
+    mockBatch.mockResolvedValue({ result: [{ statusCode: 200 }] });
+    const r = await commissionReceivableRepo.markWaived('bk-001', 'tech-1', { waivedReason: 'dispute', markedByAdminId: 'a1' });
+    expect(r?.wasApplied).toBe(true);
+    const ops = (mockBatch.mock.calls as unknown[][])[0]![0] as Array<{ operationType: string; ifMatch?: string; resourceBody: { remittanceStatus: string } }>;
+    expect(ops[0]).toMatchObject({ operationType: 'Replace', ifMatch: '"e1"' });
+    expect(ops[0]!.resourceBody.remittanceStatus).toBe('WAIVED');
+  });
+
+  it('is a no-op when already settled', async () => {
+    mockRead.mockResolvedValue({ resource: { ...baseDueEntry, remittanceStatus: 'REMITTED' }, etag: '"e1"' });
+    const r = await commissionReceivableRepo.markWaived('bk-001', 'tech-1', { waivedReason: 'x', markedByAdminId: 'a1' });
+    expect(r?.wasApplied).toBe(false);
+    expect(mockBatch).not.toHaveBeenCalled();
   });
 
   it('returns null when entry is missing', async () => {
     mockRead.mockResolvedValue({ resource: undefined });
-    const result = await commissionReceivableRepo.markRemitted('bk-none', 'tech-1', {
-      remittedAmount: 100,
-      remittanceMethod: 'UPI',
-      remittanceRef: 'ref-1',
-      markedByAdminId: 'admin-1',
-    });
-    expect(result).toBeNull();
-    expect(mockReplace).not.toHaveBeenCalled();
-  });
-});
-
-describe('commissionReceivableRepo.markWaived', () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it('transitions DUE → WAIVED, returns { wasApplied: true, entry }', async () => {
-    mockRead.mockResolvedValue({ resource: { ...baseDueEntry } });
-    mockReplace.mockResolvedValue({});
-    const result = await commissionReceivableRepo.markWaived('bk-001', 'tech-1', {
-      waivedReason: 'first-time goodwill',
-      markedByAdminId: 'admin-7',
-    });
-    expect(result).not.toBeNull();
-    expect(result!.wasApplied).toBe(true);
-    expect(result!.entry.remittanceStatus).toBe('WAIVED');
-    expect(result!.entry.waivedReason).toBe('first-time goodwill');
-    expect(result!.entry.markedByAdminId).toBe('admin-7');
-    expect(result!.entry.updatedAt).toBeDefined();
-    expect(mockReplace).toHaveBeenCalledOnce();
-  });
-
-  it('is no-op: returns { wasApplied: false } when already WAIVED', async () => {
-    const alreadyWaived: CommissionReceivableEntry = {
-      ...baseDueEntry,
-      remittanceStatus: 'WAIVED',
-      waivedReason: 'original',
-    };
-    mockRead.mockResolvedValue({ resource: alreadyWaived });
-    const result = await commissionReceivableRepo.markWaived('bk-001', 'tech-1', {
-      waivedReason: 'new reason',
-      markedByAdminId: 'admin-5',
-    });
-    expect(result!.wasApplied).toBe(false);
-    expect(result!.entry).toEqual(alreadyWaived);
-    expect(mockReplace).not.toHaveBeenCalled();
-  });
-
-  it('returns null when entry is missing', async () => {
-    mockRead.mockResolvedValue({ resource: undefined });
-    const result = await commissionReceivableRepo.markWaived('bk-none', 'tech-1', {
-      waivedReason: 'n/a',
-      markedByAdminId: 'admin-1',
-    });
-    expect(result).toBeNull();
-  });
-});
-
-describe('commissionReceivableRepo.getOutstandingByTechnician', () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it('queries only DUE entries within the technician partition', async () => {
-    const dueEntry = { ...baseDueEntry };
-    mockFetchAll.mockResolvedValue({ resources: [dueEntry] });
-
-    const results = await commissionReceivableRepo.getOutstandingByTechnician('tech-1');
-
-    expect(results).toHaveLength(1);
-    expect(results[0]).toEqual(dueEntry);
-    expect(mockQuery).toHaveBeenCalledWith(
-      expect.objectContaining({ query: expect.stringContaining("remittanceStatus = 'DUE'") }),
-      { partitionKey: 'tech-1' },
-    );
-  });
-
-  it('returns empty array when no DUE entries', async () => {
-    mockFetchAll.mockResolvedValue({ resources: [] });
-    const results = await commissionReceivableRepo.getOutstandingByTechnician('tech-2');
-    expect(results).toHaveLength(0);
-  });
-});
-
-describe('commissionReceivableRepo.getAllTechnicianOutstandingSummaries', () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it('groups entries by technicianId with correct sums and oldestDueAt', async () => {
-    const entries: CommissionReceivableEntry[] = [
-      { ...baseDueEntry, bookingId: 'bk-001', id: 'bk-001', technicianId: 'tech-A', partitionKey: 'tech-A', commissionDue: 5000, createdAt: '2026-05-01T08:00:00.000Z' },
-      { ...baseDueEntry, bookingId: 'bk-002', id: 'bk-002', technicianId: 'tech-A', partitionKey: 'tech-A', commissionDue: 3000, createdAt: '2026-05-03T08:00:00.000Z' },
-      { ...baseDueEntry, bookingId: 'bk-003', id: 'bk-003', technicianId: 'tech-B', partitionKey: 'tech-B', commissionDue: 7000, createdAt: '2026-05-02T08:00:00.000Z' },
-    ];
-    mockFetchAll.mockResolvedValue({ resources: entries });
-
-    const summaries = await commissionReceivableRepo.getAllTechnicianOutstandingSummaries();
-
-    expect(summaries).toHaveLength(2);
-
-    const techA = summaries.find((s) => s.technicianId === 'tech-A');
-    expect(techA).toBeDefined();
-    expect(techA!.dueCount).toBe(2);
-    expect(techA!.totalCommissionDue).toBe(8000);
-    expect(techA!.oldestDueAt).toBe('2026-05-01T08:00:00.000Z');
-
-    const techB = summaries.find((s) => s.technicianId === 'tech-B');
-    expect(techB).toBeDefined();
-    expect(techB!.dueCount).toBe(1);
-    expect(techB!.totalCommissionDue).toBe(7000);
-    expect(techB!.oldestDueAt).toBe('2026-05-02T08:00:00.000Z');
-  });
-
-  it('returns empty array when no DUE entries exist', async () => {
-    mockFetchAll.mockResolvedValue({ resources: [] });
-    const summaries = await commissionReceivableRepo.getAllTechnicianOutstandingSummaries();
-    expect(summaries).toHaveLength(0);
-  });
-
-  it('correctly picks oldestDueAt (min createdAt) across multiple entries', async () => {
-    const entries: CommissionReceivableEntry[] = [
-      { ...baseDueEntry, bookingId: 'bk-10', id: 'bk-10', technicianId: 'tech-C', partitionKey: 'tech-C', commissionDue: 1000, createdAt: '2026-05-10T00:00:00.000Z' },
-      { ...baseDueEntry, bookingId: 'bk-11', id: 'bk-11', technicianId: 'tech-C', partitionKey: 'tech-C', commissionDue: 2000, createdAt: '2026-04-01T00:00:00.000Z' },
-      { ...baseDueEntry, bookingId: 'bk-12', id: 'bk-12', technicianId: 'tech-C', partitionKey: 'tech-C', commissionDue: 500, createdAt: '2026-05-20T00:00:00.000Z' },
-    ];
-    mockFetchAll.mockResolvedValue({ resources: entries });
-
-    const summaries = await commissionReceivableRepo.getAllTechnicianOutstandingSummaries();
-    expect(summaries).toHaveLength(1);
-    expect(summaries[0]!.oldestDueAt).toBe('2026-04-01T00:00:00.000Z');
-    expect(summaries[0]!.totalCommissionDue).toBe(3500);
-    expect(summaries[0]!.dueCount).toBe(3);
+    const r = await commissionReceivableRepo.markWaived('bk-none', 'tech-1', { waivedReason: 'n/a', markedByAdminId: 'a1' });
+    expect(r).toBeNull();
+    expect(mockBatch).not.toHaveBeenCalled();
   });
 });

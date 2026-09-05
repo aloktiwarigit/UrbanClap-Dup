@@ -1,9 +1,16 @@
+import type { OperationInput } from '@azure/cosmos';
 import { getCommissionReceivablesContainer } from './client.js';
-import type {
-  CommissionReceivableEntry,
-  CommissionReceivableCreateInput,
-  RemittanceMethod,
+import {
+  outstandingOf,
+  type CommissionReceivableEntry,
+  type CommissionReceivableCreateInput,
 } from '../schemas/commission-receivable.js';
+import type { RemittanceDoc, CreditDoc } from '../schemas/commission-ledger.js';
+import { mergeAllocation, type OutstandingRow } from '../services/commission-allocator.service.js';
+
+const RECEIVABLE_FILTER = `(NOT IS_DEFINED(c.docType) OR c.docType = 'RECEIVABLE')`;
+
+export type LedgerBatchResult = { ok: true } | { ok: false; reason: 'CONFLICT' | 'PRECONDITION' };
 
 export const commissionReceivableRepo = {
   async getByBookingId(
@@ -34,6 +41,11 @@ export const commissionReceivableRepo = {
         ...(input.cashCollectedAmount !== undefined
           ? { cashCollectedAmount: input.cashCollectedAmount }
           : {}),
+        ...(input.serviceName !== undefined ? { serviceName: input.serviceName } : {}),
+        ...(input.slotDate !== undefined ? { slotDate: input.slotDate } : {}),
+        ...(input.collectionMethod !== undefined
+          ? { collectionMethod: input.collectionMethod }
+          : {}),
       });
       return true;
     } catch (err: unknown) {
@@ -43,43 +55,88 @@ export const commissionReceivableRepo = {
     }
   },
 
-  async markRemitted(
-    bookingId: string,
-    technicianId: string,
-    opts: {
-      remittedAmount: number;
-      remittanceMethod: RemittanceMethod;
-      remittanceRef: string;
-      markedByAdminId: string;
-    },
-  ): Promise<{ entry: CommissionReceivableEntry; wasApplied: boolean } | null> {
-    const { resource } = await getCommissionReceivablesContainer()
-      .item(bookingId, technicianId)
-      .read<CommissionReceivableEntry>();
-    if (!resource) return null;
-    if (resource.remittanceStatus !== 'DUE') return { entry: resource, wasApplied: false };
-    // Reject partial payment — remitting less than due silently drops the remaining balance
-    if (opts.remittedAmount < resource.commissionDue) {
-      const err = Object.assign(new Error('AMOUNT_BELOW_DUE'), {
-        code: 'AMOUNT_BELOW_DUE',
-        commissionDue: resource.commissionDue,
-      });
-      throw err;
+  /**
+   * Batch primitive: every money-moving write on this container goes through this
+   * single-partition `items.batch()` call. A failed batch does NOT throw — the failing
+   * op carries 409/412 and the others 424; batch-level errors (400/429) DO throw.
+   */
+  async runLedgerBatch(technicianId: string, ops: OperationInput[]): Promise<LedgerBatchResult> {
+    const res = await getCommissionReceivablesContainer().items.batch(ops, technicianId);
+    const codes = (res.result ?? []).map((r) => r.statusCode);
+    if (codes.every((c) => c >= 200 && c < 300)) return { ok: true };
+    if (codes.includes(409)) return { ok: false, reason: 'CONFLICT' };
+    if (codes.includes(412)) return { ok: false, reason: 'PRECONDITION' };
+    throw new Error(`ledger batch failed: [${codes.join(',')}]`);
+  },
+
+  async getOutstandingByTechnician(technicianId: string): Promise<OutstandingRow[]> {
+    const { resources } = await getCommissionReceivablesContainer()
+      .items.query<CommissionReceivableEntry & { _etag: string }>(
+        { query: `SELECT * FROM c WHERE ${RECEIVABLE_FILTER} AND c.remittanceStatus = 'DUE'` },
+        { partitionKey: technicianId },
+      )
+      .fetchAll();
+    return resources.map(({ _etag, ...entry }) => ({
+      entry,
+      etag: _etag,
+      outstandingPaise: outstandingOf(entry),
+    }));
+  },
+
+  /**
+   * P0-1: every RECEIVABLE for a technician, regardless of remittance status.
+   * Single-partition (pk = /technicianId), so this is cheap and safe to call per
+   * request. Earnings need ALL of them, not just DUE: a job whose commission was
+   * later remitted or waived was still a job the technician did and got paid for.
+   */
+  async getAllByTechnician(technicianId: string): Promise<CommissionReceivableEntry[]> {
+    const { resources } = await getCommissionReceivablesContainer()
+      .items.query<CommissionReceivableEntry>(
+        { query: `SELECT * FROM c WHERE ${RECEIVABLE_FILTER}` },
+        { partitionKey: technicianId },
+      )
+      .fetchAll();
+    return resources;
+  },
+
+  async listLedger(technicianId: string): Promise<{
+    receivables: CommissionReceivableEntry[];
+    remittances: RemittanceDoc[];
+    credits: CreditDoc[];
+  }> {
+    const { resources } = await getCommissionReceivablesContainer()
+      .items.query<Record<string, unknown>>(
+        { query: 'SELECT * FROM c' },
+        { partitionKey: technicianId },
+      )
+      .fetchAll();
+    const receivables: CommissionReceivableEntry[] = [];
+    const remittances: RemittanceDoc[] = [];
+    const credits: CreditDoc[] = [];
+    for (const d of resources) {
+      const t = (d['docType'] as string | undefined) ?? 'RECEIVABLE';
+      if (t === 'RECEIVABLE') receivables.push(d as unknown as CommissionReceivableEntry);
+      else if (t === 'REMITTANCE') remittances.push(d as unknown as RemittanceDoc);
+      else if (t === 'CREDIT') credits.push(d as unknown as CreditDoc);
     }
-    const updated: CommissionReceivableEntry = {
-      ...resource,
-      remittanceStatus: 'REMITTED',
-      remittedAmount: opts.remittedAmount,
-      remittanceMethod: opts.remittanceMethod,
-      remittanceRef: opts.remittanceRef,
-      markedByAdminId: opts.markedByAdminId,
-      remittedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    await getCommissionReceivablesContainer()
-      .item(bookingId, technicianId)
-      .replace<CommissionReceivableEntry>(updated);
-    return { entry: updated, wasApplied: true };
+    return { receivables, remittances, credits };
+  },
+
+  async getRemittance(technicianId: string, id: string): Promise<RemittanceDoc | null> {
+    const { resource } = await getCommissionReceivablesContainer()
+      .item(id, technicianId)
+      .read<RemittanceDoc>();
+    return resource ?? null;
+  },
+
+  async getOpenCredits(technicianId: string): Promise<Array<{ doc: CreditDoc; etag: string }>> {
+    const { resources } = await getCommissionReceivablesContainer()
+      .items.query<CreditDoc & { _etag: string }>(
+        { query: `SELECT * FROM c WHERE c.docType = 'CREDIT' AND c.remainingPaise > 0` },
+        { partitionKey: technicianId },
+      )
+      .fetchAll();
+    return resources.map(({ _etag, ...doc }) => ({ doc, etag: _etag }));
   },
 
   async markWaived(
@@ -87,91 +144,51 @@ export const commissionReceivableRepo = {
     technicianId: string,
     opts: { waivedReason: string; markedByAdminId: string },
   ): Promise<{ entry: CommissionReceivableEntry; wasApplied: boolean } | null> {
-    const { resource } = await getCommissionReceivablesContainer()
+    const { resource, etag } = await getCommissionReceivablesContainer()
       .item(bookingId, technicianId)
       .read<CommissionReceivableEntry>();
     if (!resource) return null;
     if (resource.remittanceStatus !== 'DUE') return { entry: resource, wasApplied: false };
-    const updated: CommissionReceivableEntry = {
-      ...resource,
-      remittanceStatus: 'WAIVED',
-      waivedReason: opts.waivedReason,
-      markedByAdminId: opts.markedByAdminId,
-      updatedAt: new Date().toISOString(),
-    };
-    await getCommissionReceivablesContainer()
-      .item(bookingId, technicianId)
-      .replace<CommissionReceivableEntry>(updated);
-    return { entry: updated, wasApplied: true };
+    const now = new Date().toISOString();
+    const entry = mergeAllocation(
+      { ...resource, waivedReason: opts.waivedReason },
+      {
+        id: `waive:${bookingId}`,
+        source: 'WAIVER',
+        refId: opts.waivedReason,
+        paise: outstandingOf(resource) || 1,
+        appliedAt: now,
+        byId: opts.markedByAdminId,
+      },
+    );
+    const r = await this.runLedgerBatch(technicianId, [
+      { operationType: 'Replace', id: bookingId, ifMatch: etag ?? '', resourceBody: entry as never },
+    ]);
+    if (!r.ok) throw Object.assign(new Error(r.reason), { code: r.reason });
+    return { entry, wasApplied: true };
   },
 
-  async getOutstandingByTechnician(technicianId: string): Promise<CommissionReceivableEntry[]> {
-    const { resources } = await getCommissionReceivablesContainer()
-      .items.query<CommissionReceivableEntry>(
-        { query: `SELECT * FROM c WHERE c.remittanceStatus = 'DUE'` },
-        { partitionKey: technicianId },
-      )
-      .fetchAll();
-    return resources;
-  },
-
-  /**
-   * P0-1: every receivable for a technician, regardless of remittance status.
-   * Single-partition (pk = /technicianId), so this is cheap and safe to call per
-   * request — unlike getAllTechnicianOutstandingSummaries below, which fans out.
-   *
-   * Earnings need ALL of them, not just DUE: a job whose commission was later
-   * remitted or waived was still a job the technician did and got paid for.
-   */
-  async getAllByTechnician(technicianId: string): Promise<CommissionReceivableEntry[]> {
-    const { resources } = await getCommissionReceivablesContainer()
-      .items.query<CommissionReceivableEntry>(
-        { query: 'SELECT * FROM c' },
-        { partitionKey: technicianId },
-      )
-      .fetchAll();
-    return resources;
-  },
-
-  async getAllTechnicianOutstandingSummaries(): Promise<
-    Array<{
+  async sumDueGroupedByTechnician(continuationToken?: string): Promise<{
+    groups: Array<{
       technicianId: string;
+      outstandingPaise: number;
       dueCount: number;
-      totalCommissionDue: number;
       oldestDueAt: string;
-    }>
-  > {
-    const { resources } = await getCommissionReceivablesContainer()
-      .items.query<CommissionReceivableEntry>({
-        query: `SELECT * FROM c WHERE c.remittanceStatus = 'DUE'`,
-      })
-      .fetchAll();
-
-    const byTech = new Map<
-      string,
-      { dueCount: number; totalCommissionDue: number; oldestDueAt: string }
-    >();
-
-    for (const entry of resources) {
-      const existing = byTech.get(entry.technicianId);
-      if (!existing) {
-        byTech.set(entry.technicianId, {
-          dueCount: 1,
-          totalCommissionDue: entry.commissionDue,
-          oldestDueAt: entry.createdAt,
-        });
-      } else {
-        existing.dueCount += 1;
-        existing.totalCommissionDue += entry.commissionDue;
-        if (entry.createdAt < existing.oldestDueAt) {
-          existing.oldestDueAt = entry.createdAt;
-        }
-      }
-    }
-
-    return Array.from(byTech.entries()).map(([technicianId, summary]) => ({
-      technicianId,
-      ...summary,
-    }));
+    }>;
+    continuationToken?: string;
+  }> {
+    const iterator = getCommissionReceivablesContainer().items.query<{
+      technicianId: string;
+      outstandingPaise: number;
+      dueCount: number;
+      oldestDueAt: string;
+    }>(
+      {
+        query: `SELECT c.technicianId, SUM(c.commissionDue - (IS_DEFINED(c.remittedAmount) ? c.remittedAmount : 0)) AS outstandingPaise, COUNT(1) AS dueCount, MIN(c.createdAt) AS oldestDueAt FROM c WHERE ${RECEIVABLE_FILTER} AND c.remittanceStatus = 'DUE' GROUP BY c.technicianId`,
+      },
+      { maxItemCount: 100, ...(continuationToken ? { continuationToken } : {}) },
+    );
+    const page = await iterator.fetchNext();
+    return { groups: page.resources, ...(page.continuationToken ? { continuationToken: page.continuationToken } : {}) };
   },
 };
