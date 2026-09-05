@@ -619,6 +619,27 @@ Required env vars before enabling `soft_launch_enabled`:
 
 See `docs/launch-checklist.md` for the full pre-launch checklist.
 
+### Android build-time keys (customer-app and technician-app)
+
+These are compiled into the APK/AAB, so they must be present **at build time** — setting them
+in Azure later has no effect. Each resolves from the environment first, then the app's own
+`local.properties` (git-ignored).
+
+| Key | Consequence if blank |
+|---|---|
+| `SENTRY_DSN` | `SentryInitializer` returns early — no crash or error reporting at all |
+| `POSTHOG_API_KEY` | `PostHogAnalyticsFacade` returns early — no product analytics |
+| `GROWTHBOOK_CLIENT_KEY` | flags never fetch; every flag silently falls back to its default |
+
+Every consumer treats a blank key as "feature switched off" and returns without logging, so a
+release built without them looks completely healthy while reporting nothing. `bundleRelease` and
+`assembleRelease` therefore run `verifyReleaseObservabilityKeys` first and fail if any is blank.
+To ship without one deliberately, set `ALLOW_BLANK_OBSERVABILITY_KEYS=true` — the build then warns
+instead of failing.
+
+`RAZORPAY_KEY_ID` is deliberately blank for the cash-only pilot and is not covered by that gate.
+
+
 ---
 
 ## Disaster Recovery Drill
