@@ -324,6 +324,12 @@
     <string name="rating_behaviour">Behaviour</string>
     <string name="rating_comment_label">Comment (optional)</string>
     <string name="rating_submit">Submit rating</string>
+    <string name="rating_submit_error_no_technician">No technician was assigned to this booking, so there is nothing to rate.</string>
+    <string name="rating_submit_error_not_closed">This job is not finished yet. Rate it once the technician marks it complete.</string>
+    <string name="rating_submit_error_not_available">This booking is not available to rate.</string>
+    <string name="rating_submit_error_network">Your rating did not reach us. Check your connection and send it again.</string>
+    <string name="rating_submit_error_generic">Your rating did not go through. Send it again.</string>
+    <string name="rating_submit_retry">Send again</string>
     <plurals name="rating_star_label">
         <item quantity="one">rate %d star</item>
         <item quantity="other">rate %d stars</item>

@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import com.homeservices.customer.domain.rating.EscalateRatingResult
 import com.homeservices.customer.domain.rating.EscalateRatingUseCase
 import com.homeservices.customer.domain.rating.GetRatingUseCase
+import com.homeservices.customer.domain.rating.RatingSubmitFailure
 import com.homeservices.customer.domain.rating.SubmitRatingUseCase
 import com.homeservices.customer.domain.rating.model.CustomerSubScores
 import com.homeservices.customer.domain.rating.model.RatingSnapshot
@@ -125,7 +126,7 @@ public class RatingViewModelShieldTest {
         }
 
     @Test
-    public fun `onEscalate failure resets to Idle and sets Error uiState`(): Unit =
+    public fun `onEscalate failure reopens the dialog and reports why, without losing the form`(): Unit =
         runTest {
             coEvery { escalate.invoke("bk-1", 2, null) } returns Result.failure(RuntimeException("network"))
             val v = vm()
@@ -137,7 +138,9 @@ public class RatingViewModelShieldTest {
             v.onEscalate()
             runCurrent()
             assertThat(v.shieldState.value).isEqualTo(RatingShieldState.ShowDialog) // allows retry
-            assertThat(v.uiState.value).isInstanceOf(RatingUiState.Error::class.java)
+            assertThat(v.uiState.value).isNotInstanceOf(RatingUiState.Error::class.java)
+            assertThat(v.submitError.value).isEqualTo(RatingSubmitFailure.Unknown)
+            assertThat(v.overall.value).isEqualTo(2)
         }
 
     @Test

@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.homeservices.customer.domain.rating.EscalateRatingUseCase
 import com.homeservices.customer.domain.rating.GetRatingUseCase
+import com.homeservices.customer.domain.rating.RatingSubmitException
+import com.homeservices.customer.domain.rating.RatingSubmitFailure
 import com.homeservices.customer.domain.rating.SubmitRatingUseCase
 import com.homeservices.customer.domain.rating.model.CustomerSubScores
 import com.homeservices.customer.domain.rating.model.RatingSnapshot
@@ -74,6 +76,17 @@ public class RatingViewModel
         private val _shieldState = MutableStateFlow<RatingShieldState>(RatingShieldState.Idle)
         public val shieldState: StateFlow<RatingShieldState> = _shieldState.asStateFlow()
 
+        /**
+         * Why the last submit was rejected, or null. Kept apart from [uiState] on purpose: a submit
+         * that fails must leave the form — and everything the customer typed into it — on screen,
+         * whereas [RatingUiState.Error] replaces the screen and is only for a failed load.
+         */
+        private val _submitError = MutableStateFlow<RatingSubmitFailure?>(null)
+        public val submitError: StateFlow<RatingSubmitFailure?> = _submitError.asStateFlow()
+
+        /** Last snapshot the API gave us, so the form can be restored after a failed submit. */
+        private var lastSnapshot: RatingSnapshot? = null
+
         private val _overall = MutableStateFlow(0)
         public val overall: StateFlow<Int> = _overall.asStateFlow()
 
@@ -133,6 +146,7 @@ public class RatingViewModel
                 getUseCase.invoke(bookingId).collect { result ->
                     result
                         .onSuccess { snap ->
+                            lastSnapshot = snap
                             // Cancel shield countdown if rating was already submitted elsewhere
                             // (e.g. from another device, or restored countdown for a stale session).
                             if (snap.customerSide is SideState.Submitted && _shieldState.value is RatingShieldState.Escalated) {
@@ -249,7 +263,9 @@ public class RatingViewModel
                         startCountdown(r.expiresAtMs)
                     }.onFailure {
                         _shieldState.value = RatingShieldState.ShowDialog // allow retry
-                        _uiState.value = RatingUiState.Error(it.message ?: "escalation failed")
+                        // Same rule as a failed submit: report it, keep the form and the dialog.
+                        _submitError.value =
+                            (it as? RatingSubmitException)?.failure ?: RatingSubmitFailure.Unknown
                     }
             }
         }
@@ -263,12 +279,33 @@ public class RatingViewModel
                 }
         }
 
+        /**
+         * A rejected submit keeps the customer where they are. The one exception is a rating the
+         * server already holds, which is not a failure at all — the screen simply catches up.
+         */
+        private fun onSubmitFailed(throwable: Throwable) {
+            val failure = (throwable as? RatingSubmitException)?.failure ?: RatingSubmitFailure.Unknown
+            if (failure == RatingSubmitFailure.AlreadySubmitted) {
+                cancelShieldState()
+                _submitError.value = null
+                _uiState.value = RatingUiState.AwaitingPartner(lastSnapshot)
+                return
+            }
+            _submitError.value = failure
+            _uiState.value = RatingUiState.Editing(lastSnapshot)
+        }
+
+        public fun consumeSubmitError() {
+            _submitError.value = null
+        }
+
         private fun doSubmit() {
             val draft = escalatedDraft
             val submitOverall = draft?.overall ?: overall.value
             val submitSubScores = draft?.subScores ?: CustomerSubScores(punctuality.value, skill.value, behaviour.value)
             val submitComment = draft?.comment ?: comment.value.ifBlank { null }
             _uiState.value = RatingUiState.Submitting
+            _submitError.value = null
             viewModelScope.launch {
                 submitUseCase
                     .invoke(
@@ -289,7 +326,7 @@ public class RatingViewModel
                                     )
                                 }
                                 _uiState.value = RatingUiState.AwaitingPartner(null)
-                            }.onFailure { _uiState.value = RatingUiState.Error(it.message ?: "submit failed") }
+                            }.onFailure { onSubmitFailed(it) }
                     }
             }
         }

@@ -3,6 +3,7 @@ package com.homeservices.customer.ui.rating
 import androidx.lifecycle.SavedStateHandle
 import com.homeservices.customer.domain.rating.EscalateRatingUseCase
 import com.homeservices.customer.domain.rating.GetRatingUseCase
+import com.homeservices.customer.domain.rating.RatingSubmitFailure
 import com.homeservices.customer.domain.rating.SubmitRatingUseCase
 import com.homeservices.customer.domain.rating.model.CustomerSubScores
 import com.homeservices.customer.domain.rating.model.RatingSnapshot
@@ -165,7 +166,7 @@ public class RatingViewModelTest {
         }
 
     @Test
-    public fun `failed submit transitions to Error state`(): Unit =
+    public fun `failed submit keeps the form and reports why`(): Unit =
         runTest {
             coEvery { get.invoke("bk-1") } returns
                 flowOf(
@@ -184,7 +185,11 @@ public class RatingViewModelTest {
             vm.setBehaviour(5)
             vm.submit()
 
-            assertThat(vm.uiState.value).isInstanceOf(RatingUiState.Error::class.java)
+            // The screen-level Error state is reserved for a failed *load*; a failed submit must
+            // leave the customer's answers on screen with a reason they can act on.
+            assertThat(vm.uiState.value).isInstanceOf(RatingUiState.Editing::class.java)
+            assertThat(vm.submitError.value).isEqualTo(RatingSubmitFailure.Unknown)
+            assertThat(vm.overall.value).isEqualTo(5)
         }
 
     @Test

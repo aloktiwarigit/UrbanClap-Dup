@@ -33,6 +33,7 @@ public class RatingShieldHindiPaparazziTest {
                     behaviour = 2,
                     comment = "",
                     canSubmit = true,
+                    submitError = null,
                     onOverallChange = {},
                     onPunctualityChange = {},
                     onSkillChange = {},

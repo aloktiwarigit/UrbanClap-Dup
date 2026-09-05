@@ -25,6 +25,7 @@ public class RatingScreenPaparazziTest {
                     behaviour = 5,
                     comment = "Professional and quick.",
                     canSubmit = true,
+                    submitError = null,
                     onOverallChange = {},
                     onPunctualityChange = {},
                     onSkillChange = {},
