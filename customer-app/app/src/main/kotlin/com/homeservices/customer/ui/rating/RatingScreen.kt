@@ -66,6 +66,7 @@ public fun RatingScreen(
     val comment by viewModel.comment.collectAsStateWithLifecycle()
     val canSubmit by viewModel.canSubmit.collectAsStateWithLifecycle()
     val submitError by viewModel.submitError.collectAsStateWithLifecycle()
+    val escalateError by viewModel.escalateError.collectAsStateWithLifecycle()
 
     androidx.activity.compose.BackHandler(onBack = onBack)
 
@@ -104,7 +105,7 @@ public fun RatingScreen(
             isEscalating = shieldState == RatingShieldState.Escalating,
             // The sheet sits over the form, so a failed escalation has to report itself here or
             // the customer just sees the buttons re-enable with no explanation.
-            error = submitError,
+            error = escalateError,
         )
     }
 }

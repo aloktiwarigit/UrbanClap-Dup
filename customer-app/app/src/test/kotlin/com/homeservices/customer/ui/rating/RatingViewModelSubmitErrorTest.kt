@@ -204,7 +204,8 @@ public class RatingViewModelSubmitErrorTest {
             vm.submit()
             vm.onEscalate()
 
-            assertThat(vm.submitError.value).isEqualTo(RatingSubmitFailure.NoTechnician)
+            assertThat(vm.escalateError.value).isEqualTo(RatingSubmitFailure.NoTechnician)
+            assertThat(vm.submitError.value).isNull()
             assertThat(vm.uiState.value).isNotInstanceOf(RatingUiState.Error::class.java)
         }
 
@@ -220,7 +221,7 @@ public class RatingViewModelSubmitErrorTest {
                 Result.failure(RatingSubmitException(RatingSubmitFailure.Network))
             vm.submit()
             vm.onEscalate()
-            assertThat(vm.submitError.value).isEqualTo(RatingSubmitFailure.Network)
+            assertThat(vm.escalateError.value).isEqualTo(RatingSubmitFailure.Network)
 
             coEvery { escalate.invoke("bk-1", 2, null) } returns
                 Result.success(EscalateRatingResult("c-1", System.currentTimeMillis() + 60_000))
@@ -229,7 +230,7 @@ public class RatingViewModelSubmitErrorTest {
             coEvery { submit.invoke(any(), any(), any(), any()) } returns flowOf(Result.success(Unit))
             vm.onEscalate()
 
-            assertThat(vm.submitError.value).isNull()
+            assertThat(vm.escalateError.value).isNull()
             assertThat(vm.shieldState.value).isInstanceOf(RatingShieldState.Escalated::class.java)
         }
 
@@ -270,5 +271,49 @@ public class RatingViewModelSubmitErrorTest {
             assertThat(vm.uiState.value).isInstanceOf(RatingUiState.AwaitingPartner::class.java)
             assertThat(vm.shieldState.value).isEqualTo(RatingShieldState.Idle)
             assertThat(vm.submitError.value).isNull()
+        }
+
+    @Test
+    public fun `an escalation the endpoint refuses still leaves the rating postable`(): Unit =
+        runTest {
+            // /escalate requires a CLOSED booking; POST /v1/ratings also accepts COMPLETED, so a
+            // refused escalation must not disable the form for a booking the rating endpoint takes.
+            val vm = viewModel()
+            vm.setOverall(2)
+            vm.setPunctuality(2)
+            vm.setSkill(2)
+            vm.setBehaviour(2)
+            coEvery { escalate.invoke("bk-1", 2, null) } returns
+                Result.failure(RatingSubmitException(RatingSubmitFailure.BookingNotClosed))
+            vm.submit()
+            vm.onEscalate()
+
+            assertThat(vm.escalateError.value).isEqualTo(RatingSubmitFailure.BookingNotClosed)
+            assertThat(vm.submitError.value).isNull()
+
+            coEvery { submit.invoke(any(), any(), any(), any()) } returns flowOf(Result.success(Unit))
+            vm.onSkipShield() // "Post rating now" still works
+
+            assertThat(vm.uiState.value).isInstanceOf(RatingUiState.AwaitingPartner::class.java)
+            coVerify { submit.invoke("bk-1", 2, CustomerSubScores(2, 2, 2), null) }
+        }
+
+    @Test
+    public fun `dismissing the shield sheet clears its message`(): Unit =
+        runTest {
+            val vm = viewModel()
+            vm.setOverall(2)
+            vm.setPunctuality(2)
+            vm.setSkill(2)
+            vm.setBehaviour(2)
+            coEvery { escalate.invoke("bk-1", 2, null) } returns
+                Result.failure(RatingSubmitException(RatingSubmitFailure.Network))
+            vm.submit()
+            vm.onEscalate()
+            assertThat(vm.escalateError.value).isEqualTo(RatingSubmitFailure.Network)
+
+            vm.onDismissShieldDialog()
+
+            assertThat(vm.escalateError.value).isNull()
         }
 }

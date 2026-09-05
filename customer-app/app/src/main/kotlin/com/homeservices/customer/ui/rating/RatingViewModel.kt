@@ -84,6 +84,15 @@ public class RatingViewModel
         private val _submitError = MutableStateFlow<RatingSubmitFailure?>(null)
         public val submitError: StateFlow<RatingSubmitFailure?> = _submitError.asStateFlow()
 
+        /**
+         * Why the last escalation was rejected, or null. Deliberately separate from [submitError]:
+         * the two endpoints do not accept the same bookings — `/escalate` requires a CLOSED booking
+         * while `POST /v1/ratings` also takes COMPLETED and PAID — so a refused escalation says
+         * nothing about whether the rating itself can be posted, and must never disable the form.
+         */
+        private val _escalateError = MutableStateFlow<RatingSubmitFailure?>(null)
+        public val escalateError: StateFlow<RatingSubmitFailure?> = _escalateError.asStateFlow()
+
         /** Last snapshot the API gave us, so the form can be restored after a failed submit. */
         private var lastSnapshot: RatingSnapshot? = null
 
@@ -227,6 +236,7 @@ public class RatingViewModel
 
         public fun onDismissShieldDialog() {
             if (_shieldState.value == RatingShieldState.Escalating) return // ignore dismiss during in-flight call
+            _escalateError.value = null
             _shieldState.value = RatingShieldState.Idle
             // Intentionally does NOT submit — scrim tap / back gesture is not an opt-out.
         }
@@ -235,6 +245,7 @@ public class RatingViewModel
             countdownJob?.cancel()
             countdownJob = null
             shieldAnswered = true
+            _escalateError.value = null
             _shieldState.value = RatingShieldState.Idle
             doSubmit()
         }
@@ -243,6 +254,7 @@ public class RatingViewModel
             countdownJob?.cancel()
             countdownJob = null
             shieldAnswered = true
+            _escalateError.value = null
             _shieldState.value = RatingShieldState.Idle
             doSubmit()
         }
@@ -251,8 +263,8 @@ public class RatingViewModel
             if (_shieldState.value != RatingShieldState.ShowDialog) return // guard re-entrant / double-tap
             _shieldState.value = RatingShieldState.Escalating
             // Same as doSubmit: a fresh attempt clears the last attempt's message, so a retry that
-            // succeeds does not leave the old failure sitting under the countdown.
-            _submitError.value = null
+            // succeeds does not leave the old failure sitting in the sheet.
+            _escalateError.value = null
             val capturedOverall = overall.value
             val capturedSubScores = CustomerSubScores(punctuality.value, skill.value, behaviour.value)
             val capturedComment = comment.value.ifBlank { null }
@@ -282,8 +294,10 @@ public class RatingViewModel
                             moveToAwaitingPartner()
                         } else {
                             _shieldState.value = RatingShieldState.ShowDialog // allow retry
-                            // Same rule as a failed submit: report it, keep the form and the dialog.
-                            _submitError.value = failure
+                            // Reported in the sheet, where the customer just tapped. It must not
+                            // reach submitError — a booking /escalate rejects is often one the
+                            // rating endpoint accepts.
+                            _escalateError.value = failure
                         }
                     }
             }
@@ -320,6 +334,7 @@ public class RatingViewModel
         /** The rating is already recorded server-side, so the screen catches up. */
         private fun moveToAwaitingPartner() {
             cancelShieldState()
+            _escalateError.value = null
             _submitError.value = null
             _uiState.value = RatingUiState.AwaitingPartner(lastSnapshot)
         }
