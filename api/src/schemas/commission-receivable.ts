@@ -11,6 +11,22 @@ export type RemittanceStatus = z.infer<typeof RemittanceStatusSchema>;
 export const RemittanceMethodSchema = z.enum(['UPI', 'CASH_DEPOSIT', 'ADJUSTMENT']);
 export type RemittanceMethod = z.infer<typeof RemittanceMethodSchema>;
 
+/** E24: how the money changed hands at the door (completion-time). Distinct from booking.paymentMethod. */
+export const CollectionMethodSchema = z.enum(['CASH', 'UPI_QR']);
+export type CollectionMethod = z.infer<typeof CollectionMethodSchema>;
+
+export const AllocationSourceSchema = z.enum(['REMITTANCE', 'INCENTIVE', 'WAIVER']);
+/** One credit applied to a receivable. id = `${refId}:${bookingId}` so a replay is detectable. */
+export const AllocationSchema = z.object({
+  id: z.string().min(1),
+  source: AllocationSourceSchema,
+  refId: z.string().min(1),
+  paise: z.number().int().positive(),
+  appliedAt: z.string(),
+  byId: z.string().min(1),
+});
+export type Allocation = z.infer<typeof AllocationSchema>;
+
 /**
  * E21-S01: One document per completed cash booking in the `commission_receivables` container
  * (pk /technicianId). id === bookingId for idempotent point reads. Records the commission the
@@ -39,6 +55,11 @@ export const CommissionReceivableEntrySchema = z.object({
   waivedReason: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string().optional(),
+  docType: z.literal('RECEIVABLE').optional(),
+  allocations: z.array(AllocationSchema).optional(),
+  serviceName: z.string().optional(),
+  slotDate: z.string().optional(),
+  collectionMethod: CollectionMethodSchema.optional(),
 });
 export type CommissionReceivableEntry = z.infer<typeof CommissionReceivableEntrySchema>;
 
@@ -52,6 +73,9 @@ export type CommissionReceivableCreateInput = {
   commissionDue: number;
   commissionResolvedFrom: CommissionResolvedFrom;
   cashCollectedAmount?: number;
+  serviceName?: string;
+  slotDate?: string;
+  collectionMethod?: CollectionMethod;
 };
 
 /** Per-technician roll-up for the admin commission-collection dashboard. */
@@ -103,3 +127,8 @@ export const TechnicianCommissionDueSchema = z.object({
   ),
 });
 export type TechnicianCommissionDue = z.infer<typeof TechnicianCommissionDueSchema>;
+
+/** Derived, never stored. */
+export function outstandingOf(e: Pick<CommissionReceivableEntry, 'commissionDue' | 'remittedAmount'>): number {
+  return Math.max(0, e.commissionDue - (e.remittedAmount ?? 0));
+}

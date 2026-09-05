@@ -13,6 +13,20 @@ export const AvailabilityWindowSchema = z.object({
 
 export const TechnicianKycStatusSchema = z.enum(['APPROVED', 'PENDING', 'REJECTED']);
 
+export const HoldStateSchema = z.enum(['CLEAR', 'WARN', 'BLOCKED']);
+export type HoldState = z.infer<typeof HoldStateSchema>;
+export const CommissionHoldSchema = z.object({
+  outstandingPaise: z.number().int().nonnegative(),
+  dueCount: z.number().int().nonnegative(),
+  oldestDueAt: z.string().optional(),
+  state: HoldStateSchema,
+  evaluatedAt: z.string(),
+  override: z.object({ until: z.string(), byAdminId: z.string(), reason: z.string() }).optional(),
+});
+export type CommissionHold = z.infer<typeof CommissionHoldSchema>;
+export const PaymentProfileSchema = z.object({ upiVpa: z.string(), upiUpdatedAt: z.string() });
+export type PaymentProfile = z.infer<typeof PaymentProfileSchema>;
+
 export const TechnicianProfileSchema = z.object({
   id: z.string().min(1),
   technicianId: z.string().min(1),
@@ -29,6 +43,8 @@ export const TechnicianProfileSchema = z.object({
   blockedCustomerIds: z.array(z.string()).optional(),
   payoutCadence: z.enum(['WEEKLY', 'NEXT_DAY', 'INSTANT']).optional(),
   payoutCadenceUpdatedAt: z.string().optional(),
+  commissionHold: CommissionHoldSchema.optional(),
+  paymentProfile: PaymentProfileSchema.optional(),
 });
 
 export type GeoPoint = z.infer<typeof GeoPointSchema>;
