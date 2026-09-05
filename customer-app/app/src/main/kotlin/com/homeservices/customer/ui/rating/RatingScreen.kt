@@ -102,6 +102,9 @@ public fun RatingScreen(
             onSkip = viewModel::onSkipShield,
             onDismiss = viewModel::onDismissShieldDialog,
             isEscalating = shieldState == RatingShieldState.Escalating,
+            // The sheet sits over the form, so a failed escalation has to report itself here or
+            // the customer just sees the buttons re-enable with no explanation.
+            error = submitError,
         )
     }
 }
@@ -325,6 +328,7 @@ private fun ShieldBottomSheet(
     onSkip: () -> Unit,
     onDismiss: () -> Unit,
     isEscalating: Boolean = false,
+    error: RatingSubmitFailure? = null,
 ) {
     val sheetState = rememberModalBottomSheetState()
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
@@ -340,6 +344,10 @@ private fun ShieldBottomSheet(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (error != null) {
+                Spacer(Modifier.height(16.dp))
+                SubmitErrorNotice(error)
+            }
             Spacer(Modifier.height(16.dp))
             HsPrimaryButton(
                 text = stringResource(R.string.rating_shield_send_support),
