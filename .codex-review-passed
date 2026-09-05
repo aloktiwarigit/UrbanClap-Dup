@@ -1,11 +1,1 @@
-story: P0-4 — owner P&L must use recorded commission, not a phantom field
-branch: fix/p0-4-pnl-commission-source
-base: main (a1a508c4, post #315/#316/#317)
-reviewer: codex-cli 0.147.0
-rounds: 1
-
-round 1: clean — "consistently switch finance calculations to recorded ledger
-         commission and final booking amount, with relevant tests added...
-         no introduced blocking correctness issues were found."
-
-gate: tools/pre-codex-smoke-api.sh PASSED (typecheck + lint + 1604 tests / 191 files)
+{"timestamp":"2026-09-05T00:25:10Z","commit":"f8564623236962147555c7cce30b7ef6460cf12e","reviewer":"codex","rounds":[{"round":1,"head":"ed885dd8","findings":"2xP2 (schema accepts price text; guard checks id presence only)","fixed_in":"792d22e9,ab06223c"},{"round":2,"head":"ab06223c","findings":"2xP2 (Hindi currency words; nested prose fields)","fixed_in":"f8564623","note":"round-1 findings not re-raised; round-2 P2s fixed without a third Codex round per the two-round cap — owner informed in PR"}],"summary":"E22-S01 bilingual catalogue + reprice: no P0/P1 in either round; all P2s fixed; api/web/customer-app/technician-app gates + parity guard green"}

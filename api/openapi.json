@@ -301,7 +301,17 @@
             "minLength": 1,
             "maxLength": 100
           },
+          "nameHi": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
           "shortDescription": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "shortDescriptionHi": {
             "type": "string",
             "minLength": 1,
             "maxLength": 200
@@ -348,7 +358,17 @@
             "minLength": 1,
             "maxLength": 100
           },
+          "nameHi": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
           "shortDescription": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "shortDescriptionHi": {
             "type": "string",
             "minLength": 1,
             "maxLength": 200
@@ -483,6 +503,12 @@
           "name": {
             "type": "string"
           },
+          "nameHi": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "example": "एसी मरम्मत"
+          },
           "heroImageUrl": {
             "type": "string"
           },
@@ -518,6 +544,12 @@
             "minLength": 1,
             "maxLength": 100,
             "example": "AC Repair"
+          },
+          "nameHi": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "example": "एसी मरम्मत"
           },
           "heroImageUrl": {
             "type": "string",
@@ -581,7 +613,17 @@
             "minLength": 1,
             "maxLength": 100
           },
+          "nameHi": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
           "shortDescription": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "shortDescriptionHi": {
             "type": "string",
             "minLength": 1,
             "maxLength": 200
@@ -2280,6 +2322,12 @@
                     "maxLength": 100,
                     "example": "AC Repair"
                   },
+                  "nameHi": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "example": "एसी मरम्मत"
+                  },
                   "heroImageUrl": {
                     "type": "string",
                     "format": "uri"
@@ -2399,6 +2447,12 @@
                     "minLength": 1,
                     "maxLength": 100,
                     "example": "AC Repair"
+                  },
+                  "nameHi": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "example": "एसी मरम्मत"
                   },
                   "heroImageUrl": {
                     "type": "string",
@@ -2541,7 +2595,17 @@
                     "minLength": 1,
                     "maxLength": 100
                   },
+                  "nameHi": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
                   "shortDescription": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "shortDescriptionHi": {
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 200
@@ -2764,7 +2828,17 @@
                     "minLength": 1,
                     "maxLength": 100
                   },
+                  "nameHi": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
                   "shortDescription": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "shortDescriptionHi": {
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 200

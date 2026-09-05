@@ -10,4 +10,6 @@ public data class Service(
     public val imageUrl: String,
     public val includes: List<String>,
     public val addOns: List<AddOn>,
+    public val nameHi: String? = null,
+    public val descriptionHi: String? = null,
 )

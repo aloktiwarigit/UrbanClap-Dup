@@ -184,3 +184,32 @@ describe('ServiceForm — create payload (P0-3)', () => {
     }
   });
 });
+
+describe('ServiceForm — bilingual fields (E22-S01)', () => {
+  it('round-trips Hindi copy on edit', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const withHindi = { ...existingService, nameHi: 'एसी डीप क्लीन', shortDescriptionHi: 'केमिकल वॉश।' } as AdminService;
+
+    render(<ServiceForm categoryId="ac-repair" initial={withHindi} onSubmit={onSubmit} onCancel={vi.fn()} />);
+    submitForm();
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const payload = onSubmit.mock.calls[0]?.[0] as Record<string, unknown>;
+
+    expect(payload.nameHi).toBe('एसी डीप क्लीन');
+    expect(payload.shortDescriptionHi).toBe('केमिकल वॉश।');
+  });
+
+  it('still omits the content arrays — P0-3 must not regress', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<ServiceForm categoryId="ac-repair" initial={existingService} onSubmit={onSubmit} onCancel={vi.fn()} />);
+    submitForm();
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const payload = onSubmit.mock.calls[0]?.[0] as Record<string, unknown>;
+
+    for (const field of CONTENT_FIELDS) {
+      expect(field in payload).toBe(false);
+    }
+  });
+});

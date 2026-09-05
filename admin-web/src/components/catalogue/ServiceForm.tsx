@@ -25,7 +25,9 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
   const t = useTranslations('catalogue');
   const [id, setId] = useState(initial?.id ?? '');
   const [name, setName] = useState(initial?.name ?? '');
+  const [nameHi, setNameHi] = useState(initial?.nameHi ?? '');
   const [shortDescription, setShortDescription] = useState(initial?.shortDescription ?? '');
+  const [shortDescriptionHi, setShortDescriptionHi] = useState(initial?.shortDescriptionHi ?? '');
   const [heroImageUrl, setHeroImageUrl] = useState(initial?.heroImageUrl ?? '');
   const [basePrice, setBasePrice] = useState(String(initial?.basePrice ?? ''));
   const [durationMinutes, setDurationMinutes] = useState(String(initial?.durationMinutes ?? ''));
@@ -68,6 +70,10 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
       basePrice: basePriceNum,
       commissionBps: commissionNum,
       durationMinutes: durationNum,
+      // nameHi / shortDescriptionHi are `.min(1)` server-side. An empty string is
+      // omitted rather than sent, so a blank Hindi field neither wipes nor rejects.
+      ...(nameHi.trim() !== '' ? { nameHi: nameHi.trim() } : {}),
+      ...(shortDescriptionHi.trim() !== '' ? { shortDescriptionHi: shortDescriptionHi.trim() } : {}),
     };
 
     const data: CreateServiceBody | UpdateServiceBody = isEdit
@@ -128,6 +134,21 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
       </div>
 
       <div>
+        <label htmlFor="svc-name-hi" style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
+          {t('serviceForm.nameHiLabel')}
+        </label>
+        <input
+          id="svc-name-hi"
+          className="input"
+          type="text"
+          lang="hi"
+          value={nameHi}
+          onChange={(e) => setNameHi(e.target.value)}
+          placeholder={t('serviceForm.nameHiPlaceholder')}
+        />
+      </div>
+
+      <div>
         <label htmlFor="svc-desc" style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
           {t('serviceForm.descriptionLabel')}
         </label>
@@ -139,6 +160,21 @@ export function ServiceForm({ categoryId, initial, onSubmit, onCancel }: Service
           value={shortDescription}
           onChange={(e) => setShortDescription(e.target.value)}
           placeholder={t('serviceForm.descriptionPlaceholder')}
+        />
+      </div>
+
+      <div>
+        <label htmlFor="svc-desc-hi" style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
+          {t('serviceForm.descriptionHiLabel')}
+        </label>
+        <input
+          id="svc-desc-hi"
+          className="input"
+          type="text"
+          lang="hi"
+          value={shortDescriptionHi}
+          onChange={(e) => setShortDescriptionHi(e.target.value)}
+          placeholder={t('serviceForm.descriptionHiPlaceholder')}
         />
       </div>
 

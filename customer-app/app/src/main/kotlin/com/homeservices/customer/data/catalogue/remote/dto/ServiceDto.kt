@@ -31,6 +31,8 @@ public data class ServiceCardDto(
     @Json(name = "heroImageUrl") public val heroImageUrl: String,
     @Json(name = "basePrice") public val basePrice: Int,
     @Json(name = "durationMinutes") public val durationMinutes: Int,
+    @Json(name = "nameHi") public val nameHi: String? = null,
+    @Json(name = "shortDescriptionHi") public val shortDescriptionHi: String? = null,
 )
 
 public fun ServiceCardDto.toDomain(): com.homeservices.customer.domain.catalogue.model.Service =
@@ -39,6 +41,8 @@ public fun ServiceCardDto.toDomain(): com.homeservices.customer.domain.catalogue
         categoryId = categoryId,
         name = name,
         description = shortDescription,
+        nameHi = nameHi,
+        descriptionHi = shortDescriptionHi,
         basePrice = basePrice,
         durationMinutes = durationMinutes,
         imageUrl = heroImageUrl,
@@ -67,6 +71,8 @@ public data class ServiceDto(
     @Json(name = "includes") public val includes: List<String>,
     @Json(name = "addOns") public val addOns: List<AddOnDto>,
     @Json(name = "isActive") public val isActive: Boolean = true,
+    @Json(name = "nameHi") public val nameHi: String? = null,
+    @Json(name = "shortDescriptionHi") public val shortDescriptionHi: String? = null,
 )
 
 public fun ServiceDto.toDomain(): com.homeservices.customer.domain.catalogue.model.Service =
@@ -75,6 +81,8 @@ public fun ServiceDto.toDomain(): com.homeservices.customer.domain.catalogue.mod
         categoryId = categoryId,
         name = name,
         description = shortDescription,
+        nameHi = nameHi,
+        descriptionHi = shortDescriptionHi,
         basePrice = basePrice,
         durationMinutes = durationMinutes,
         imageUrl = heroImageUrl,

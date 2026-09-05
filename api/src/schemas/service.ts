@@ -3,35 +3,75 @@ import { extendZodWithOpenApi } from '@asteasolutions/zod-to-openapi';
 
 extendZodWithOpenApi(z);
 
+/**
+ * E22-S01 Codex finding: catalogue prose (names, descriptions) must never carry a
+ * price literal. Prices are rendered from `basePrice` at read time; a price typed
+ * into free text goes stale the instant the owner edits the price and reintroduces
+ * the exact defect this story removes. Shared with service-category.ts.
+ */
+export const PRICE_IN_PROSE = /[₹]|\bRs\.?\b|\bINR\b|रुपये|रुपए|रुपया|रु\./;
+const noPriceInProse = (s: string) => !PRICE_IN_PROSE.test(s);
+const PRICE_IN_PROSE_MESSAGE = 'Prices must not appear in text; they are rendered from basePrice';
+
+/** A non-empty prose string that may not carry a price figure — see PRICE_IN_PROSE. */
+const proseString = (max?: number) => {
+  const base = max === undefined ? z.string().min(1) : z.string().min(1).max(max);
+  return base.refine(noPriceInProse, { message: PRICE_IN_PROSE_MESSAGE });
+};
+
 const AddOnSchema = z.object({
   id: z.string().min(1),
-  name: z.string().min(1),
+  name: proseString(),
   price: z.number().int().nonnegative(),
-  triggerCondition: z.string().min(1),
+  triggerCondition: proseString(),
 });
 
 const PhotoStageSchema = z.object({
   id: z.string().min(1),
-  label: z.string().min(1),
+  label: proseString(),
   required: z.boolean(),
 });
 
 const FaqItemSchema = z.object({
-  question: z.string().min(1),
-  answer: z.string().min(1),
+  question: proseString(),
+  answer: proseString(),
 });
 
 export const ServiceSchema = z
   .object({
     id: z.string().min(1).regex(/^[a-z0-9-]+$/).openapi({ example: 'ac-deep-clean' }),
     categoryId: z.string().min(1),
-    name: z.string().min(1).max(100),
-    shortDescription: z.string().min(1).max(200),
+    name: z.string().min(1).max(100).refine(noPriceInProse, { message: PRICE_IN_PROSE_MESSAGE }),
+    /**
+     * E22-S01: Hindi display name. The customer app is Hindi-default (ADR-0018) and
+     * previously read Hindi from a compiled-in Kotlin map, so anything added through
+     * the admin dashboard showed in English until a new APK shipped. Optional so
+     * existing documents keep parsing; the parity guard in tools/ fails CI if a
+     * seeded service is missing one.
+     */
+    nameHi: z
+      .string()
+      .min(1)
+      .max(100)
+      .refine(noPriceInProse, { message: PRICE_IN_PROSE_MESSAGE })
+      .optional(),
+    shortDescription: z
+      .string()
+      .min(1)
+      .max(200)
+      .refine(noPriceInProse, { message: PRICE_IN_PROSE_MESSAGE }),
+    /** E22-S01: Hindi short description. Must never contain a price — see Task 3. */
+    shortDescriptionHi: z
+      .string()
+      .min(1)
+      .max(200)
+      .refine(noPriceInProse, { message: PRICE_IN_PROSE_MESSAGE })
+      .optional(),
     heroImageUrl: z.string().url(),
     basePrice: z.number().int().nonnegative().openapi({ description: 'Price in paise (₹599 = 59900)' }),
     commissionBps: z.number().int().min(1500).max(3500).optional().openapi({ description: 'Commission override in basis points (2250 = 22.5%). Optional (E21-S01): when absent, the booking falls through to the category override, then the global default.' }),
     durationMinutes: z.number().int().positive(),
-    includes: z.array(z.string().min(1)),
+    includes: z.array(proseString()),
     faq: z.array(FaqItemSchema),
     addOns: z.array(AddOnSchema),
     photoStages: z.array(PhotoStageSchema),
@@ -49,7 +89,9 @@ export const ServiceCardSchema = ServiceSchema.pick({
   id: true,
   categoryId: true,
   name: true,
+  nameHi: true,
   shortDescription: true,
+  shortDescriptionHi: true,
   heroImageUrl: true,
   basePrice: true,
   durationMinutes: true,

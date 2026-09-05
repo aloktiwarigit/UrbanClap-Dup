@@ -19,6 +19,7 @@ public object HindiLocaleNames {
     public val serviceHindiNames: Map<String, String> =
         mapOf(
             "ac-deep-clean" to "एसी डीप क्लीन",
+            "ac-deep-clean-window" to "विंडो एसी डीप क्लीन",
             "ac-gas-refill" to "एसी गैस रीफिल",
             "ac-installation" to "एसी इंस्टॉलेशन",
             "water-pump-repair" to "वाटर पंप मरम्मत",
@@ -35,10 +36,11 @@ public object HindiLocaleNames {
 
     public val serviceShortDescriptionsHindi: Map<String, String> =
         mapOf(
-            "ac-deep-clean" to "केमिकल वॉश, गैस चेक, फिल्टर सफाई — पूरी तरह से ₹599 में।",
+            "ac-deep-clean" to "केमिकल वॉश, गैस चेक, फिल्टर सफाई — सब कुछ शामिल।",
+            "ac-deep-clean-window" to "विंडो एसी की केमिकल वॉश और पूरी सर्विस।",
             "ac-gas-refill" to "जब कूलिंग कमजोर हो, तब फुल गैस रीचार्ज।",
             "ac-installation" to "तांबे की पाइप के साथ प्रोफेशनल स्प्लिट एसी इंस्टॉलेशन।",
-            "water-pump-repair" to "सरफेस + सबमर्सिबल पंप समस्या निवारण और मरम्मत — पूरी तरह से ₹699 में।",
+            "water-pump-repair" to "सरफेस + सबमर्सिबल पंप की जाँच और मरम्मत — सब कुछ शामिल।",
             "borewell-servicing" to "बोरवेल पंप सर्विसिंग और रिप्लेसमेंट।",
             "plumbing-leak-fix" to "लीक का सटीक पता लगाकर रिपेयर।",
             "plumbing-tap-install" to "ब्रांडेड नल / फॉसेट का इंस्टॉलेशन।",
