@@ -36,6 +36,7 @@ private fun HttpException.toSubmitFailure(): RatingSubmitFailure =
                 "NO_TECHNICIAN" -> RatingSubmitFailure.NoTechnician
                 "RATING_ALREADY_SUBMITTED" -> RatingSubmitFailure.AlreadySubmitted
                 "BOOKING_NOT_CLOSED" -> RatingSubmitFailure.BookingNotClosed
+                "SHIELD_ALREADY_ESCALATED" -> RatingSubmitFailure.ShieldAlreadyEscalated
                 "BOOKING_NOT_FOUND", "FORBIDDEN" -> RatingSubmitFailure.NotAvailable
                 else -> RatingSubmitFailure.Unknown
             }

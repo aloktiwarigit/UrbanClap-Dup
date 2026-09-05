@@ -293,6 +293,7 @@
     <string name="rating_submit">रेटिंग सबमिट करें</string>
     <string name="rating_submit_error_no_technician">इस बुकिंग पर कोई तकनीशियन नहीं आया, इसलिए रेटिंग नहीं दी जा सकती।</string>
     <string name="rating_submit_error_not_closed">यह काम अभी पूरा नहीं हुआ है। तकनीशियन के पूरा करने के बाद रेटिंग दें।</string>
+    <string name="rating_submit_error_shield_already_escalated">सपोर्ट के पास यह रेटिंग पहले से निजी समीक्षा में है। आप इसे अभी पोस्ट कर सकते हैं।</string>
     <string name="rating_submit_error_not_available">यह बुकिंग रेटिंग के लिए उपलब्ध नहीं है।</string>
     <string name="rating_submit_error_network">आपकी रेटिंग हम तक नहीं पहुंची। कनेक्शन जांचें और दोबारा भेजें।</string>
     <string name="rating_submit_error_generic">आपकी रेटिंग नहीं भेजी जा सकी। दोबारा भेजें।</string>

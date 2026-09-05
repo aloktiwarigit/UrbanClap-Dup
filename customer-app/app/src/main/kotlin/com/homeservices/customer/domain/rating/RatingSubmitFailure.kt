@@ -24,6 +24,12 @@ public enum class RatingSubmitFailure(
     /** Job is not finished yet, so it cannot be rated. */
     BookingNotClosed(retryable = false),
 
+    /**
+     * A private review is already open for this booking — usually the first escalate request
+     * committed and its response was lost. Sending it again can only conflict.
+     */
+    ShieldAlreadyEscalated(retryable = false),
+
     /** Booking is missing, or belongs to somebody else. */
     NotAvailable(retryable = false),
 

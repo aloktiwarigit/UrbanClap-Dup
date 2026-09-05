@@ -120,4 +120,12 @@ public class RatingSubmitErrorMappingTest {
         assertThat(RatingSubmitFailure.BookingNotClosed.retryable).isFalse()
         assertThat(RatingSubmitFailure.NotAvailable.retryable).isFalse()
     }
+
+    @Test
+    public fun `409 SHIELD_ALREADY_ESCALATED is terminal, not a retry invitation`(): Unit =
+        runTest {
+            val failure = submitFailure(httpError(409, """{"code":"SHIELD_ALREADY_ESCALATED"}"""))
+            assertThat(failure).isEqualTo(RatingSubmitFailure.ShieldAlreadyEscalated)
+            assertThat(failure.retryable).isFalse()
+        }
 }

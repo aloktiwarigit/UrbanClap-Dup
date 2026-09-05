@@ -289,6 +289,7 @@ private fun RatingSubmitFailure.messageRes(): Int =
     when (this) {
         RatingSubmitFailure.NoTechnician -> R.string.rating_submit_error_no_technician
         RatingSubmitFailure.BookingNotClosed -> R.string.rating_submit_error_not_closed
+        RatingSubmitFailure.ShieldAlreadyEscalated -> R.string.rating_submit_error_shield_already_escalated
         RatingSubmitFailure.NotAvailable -> R.string.rating_submit_error_not_available
         RatingSubmitFailure.Network -> R.string.rating_submit_error_network
         // AlreadySubmitted never reaches the form — the view model moves the screen on instead.
@@ -353,7 +354,8 @@ private fun ShieldBottomSheet(
             HsPrimaryButton(
                 text = stringResource(R.string.rating_shield_send_support),
                 onClick = onEscalate,
-                enabled = !isEscalating,
+                // A refusal that a retry cannot change leaves "Post rating now" as the way forward.
+                enabled = !isEscalating && error?.retryable != false,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(8.dp))
