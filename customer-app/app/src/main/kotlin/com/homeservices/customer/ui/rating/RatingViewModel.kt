@@ -240,6 +240,9 @@ public class RatingViewModel
         public fun onEscalate() {
             if (_shieldState.value != RatingShieldState.ShowDialog) return // guard re-entrant / double-tap
             _shieldState.value = RatingShieldState.Escalating
+            // Same as doSubmit: a fresh attempt clears the last attempt's message, so a retry that
+            // succeeds does not leave the old failure sitting under the countdown.
+            _submitError.value = null
             val capturedOverall = overall.value
             val capturedSubScores = CustomerSubScores(punctuality.value, skill.value, behaviour.value)
             val capturedComment = comment.value.ifBlank { null }

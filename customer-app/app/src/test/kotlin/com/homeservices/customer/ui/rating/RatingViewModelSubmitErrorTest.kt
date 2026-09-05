@@ -207,4 +207,29 @@ public class RatingViewModelSubmitErrorTest {
             assertThat(vm.submitError.value).isEqualTo(RatingSubmitFailure.NoTechnician)
             assertThat(vm.uiState.value).isNotInstanceOf(RatingUiState.Error::class.java)
         }
+
+    @Test
+    public fun `a successful escalation retry clears the earlier failure message`(): Unit =
+        runTest {
+            val vm = viewModel()
+            vm.setOverall(2)
+            vm.setPunctuality(5)
+            vm.setSkill(5)
+            vm.setBehaviour(5)
+            coEvery { escalate.invoke("bk-1", 2, null) } returns
+                Result.failure(RatingSubmitException(RatingSubmitFailure.Network))
+            vm.submit()
+            vm.onEscalate()
+            assertThat(vm.submitError.value).isEqualTo(RatingSubmitFailure.Network)
+
+            coEvery { escalate.invoke("bk-1", 2, null) } returns
+                Result.success(EscalateRatingResult("c-1", System.currentTimeMillis() + 60_000))
+            // The countdown auto-posts once runTest drains its virtual clock; stub it so this test
+            // only observes the state right after escalation succeeds.
+            coEvery { submit.invoke(any(), any(), any(), any()) } returns flowOf(Result.success(Unit))
+            vm.onEscalate()
+
+            assertThat(vm.submitError.value).isNull()
+            assertThat(vm.shieldState.value).isInstanceOf(RatingShieldState.Escalated::class.java)
+        }
 }
