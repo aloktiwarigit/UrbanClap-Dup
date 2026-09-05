@@ -7,7 +7,8 @@ const mockRead = vi.fn();
 const mockBatch = vi.fn();
 const mockItem = vi.fn(() => ({ read: mockRead }));
 const mockFetchAll = vi.fn();
-const mockQuery = vi.fn(() => ({ fetchAll: mockFetchAll }));
+const mockFetchNext = vi.fn();
+const mockQuery = vi.fn(() => ({ fetchAll: mockFetchAll, fetchNext: mockFetchNext }));
 
 vi.mock('../../src/cosmos/client.js', () => ({
   getCommissionReceivablesContainer: () => ({
@@ -210,5 +211,130 @@ describe('markWaived (batch)', () => {
     const r = await commissionReceivableRepo.markWaived('bk-none', 'tech-1', { waivedReason: 'n/a', markedByAdminId: 'a1' });
     expect(r).toBeNull();
     expect(mockBatch).not.toHaveBeenCalled();
+  });
+});
+
+describe('sumDueGroupedByTechnician', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('groups DUE receivables by technician with the RECEIVABLE filter and correct query options', async () => {
+    const groups = [
+      { technicianId: 'tech-1', outstandingPaise: 5000, dueCount: 2, oldestDueAt: '2026-05-01T00:00:00.000Z' },
+    ];
+    mockFetchNext.mockResolvedValue({ resources: groups });
+
+    const result = await commissionReceivableRepo.sumDueGroupedByTechnician();
+
+    const [spec, options] = (mockQuery.mock.calls as unknown[][])[0] as [
+      { query: string },
+      { maxItemCount: number; continuationToken?: string },
+    ];
+    expect(spec.query).toMatch(/NOT IS_DEFINED\(c\.docType\) OR c\.docType = 'RECEIVABLE'/);
+    expect(spec.query).toMatch(/c\.remittanceStatus = 'DUE'/);
+    expect(spec.query).toMatch(/GROUP BY c\.technicianId/);
+    expect(options.maxItemCount).toBe(100);
+    expect(options.continuationToken).toBeUndefined();
+    expect(result).toEqual({ groups });
+  });
+
+  it('passes an incoming continuationToken through to the query options and the outgoing one through to the result', async () => {
+    mockFetchNext.mockResolvedValue({ resources: [], continuationToken: 'next-token' });
+
+    const result = await commissionReceivableRepo.sumDueGroupedByTechnician('prev-token');
+
+    const [, options] = (mockQuery.mock.calls as unknown[][])[0] as [unknown, { continuationToken?: string }];
+    expect(options.continuationToken).toBe('prev-token');
+    expect(result).toEqual({ groups: [], continuationToken: 'next-token' });
+  });
+
+  it('omits continuationToken from the result when the page has none', async () => {
+    mockFetchNext.mockResolvedValue({ resources: [] });
+
+    const result = await commissionReceivableRepo.sumDueGroupedByTechnician();
+
+    expect(result).toEqual({ groups: [] });
+    expect('continuationToken' in result).toBe(false);
+  });
+});
+
+describe('getOpenCredits', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('queries CREDIT docs with remainingPaise > 0 and maps _etag to etag, stripped from doc', async () => {
+    const creditDoc = {
+      id: 'cr:ref-1',
+      docType: 'CREDIT' as const,
+      technicianId: 'tech-1',
+      partitionKey: 'tech-1',
+      source: 'OVERPAYMENT' as const,
+      refId: 'ref-1',
+      originalPaise: 5000,
+      remainingPaise: 3000,
+      consumedBy: [],
+      createdAt: '2026-05-01T00:00:00.000Z',
+      _etag: '"e9"',
+    };
+    mockFetchAll.mockResolvedValue({ resources: [creditDoc] });
+
+    const rows = await commissionReceivableRepo.getOpenCredits('tech-1');
+
+    const q = (mockQuery.mock.calls as unknown[][])[0]![0] as { query: string };
+    expect(q.query).toMatch(/c\.docType = 'CREDIT'/);
+    expect(q.query).toMatch(/c\.remainingPaise > 0/);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.etag).toBe('"e9"');
+    expect(rows[0]!.doc).not.toHaveProperty('_etag');
+    expect(rows[0]!.doc.remainingPaise).toBe(3000);
+  });
+
+  it('returns empty array when no open credits', async () => {
+    mockFetchAll.mockResolvedValue({ resources: [] });
+    const rows = await commissionReceivableRepo.getOpenCredits('tech-1');
+    expect(rows).toEqual([]);
+  });
+});
+
+describe('listLedger', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('partitions resources by docType — absent docType is RECEIVABLE, unknown types are ignored', async () => {
+    const receivable = { ...baseDueEntry }; // no docType => RECEIVABLE
+    const remittance = {
+      id: 'rem:idem-1',
+      docType: 'REMITTANCE',
+      technicianId: 'tech-1',
+      partitionKey: 'tech-1',
+      amountPaise: 10000,
+      method: 'UPI',
+      ref: 'ref-1',
+      allocations: [],
+      creditCreatedPaise: 0,
+      recordedByAdminId: 'admin-1',
+      idempotencyKey: 'idem-1',
+      createdAt: '2026-05-01T00:00:00.000Z',
+    };
+    const credit = {
+      id: 'cr:ref-2',
+      docType: 'CREDIT',
+      technicianId: 'tech-1',
+      partitionKey: 'tech-1',
+      source: 'OVERPAYMENT',
+      refId: 'ref-2',
+      originalPaise: 2000,
+      remainingPaise: 2000,
+      consumedBy: [],
+      createdAt: '2026-05-01T00:00:00.000Z',
+    };
+    const award = { id: 'award-1', docType: 'INCENTIVE_AWARD', technicianId: 'tech-1', partitionKey: 'tech-1' };
+    mockFetchAll.mockResolvedValue({ resources: [receivable, remittance, credit, award] });
+
+    const result = await commissionReceivableRepo.listLedger('tech-1');
+
+    expect(result.receivables).toEqual([receivable]);
+    expect(result.remittances).toEqual([remittance]);
+    expect(result.credits).toEqual([credit]);
+    const allReturned = [...result.receivables, ...result.remittances, ...result.credits];
+    expect(allReturned).toHaveLength(3);
+    expect(allReturned).not.toContainEqual(award);
   });
 });
