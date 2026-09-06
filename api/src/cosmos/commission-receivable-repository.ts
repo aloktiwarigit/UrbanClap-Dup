@@ -129,6 +129,22 @@ export const commissionReceivableRepo = {
     return resource ?? null;
   },
 
+  /**
+   * Point read of any doc in this container (anchor, credit, receivable, ...) by id, scoped to
+   * the technician partition. Used to validate a replayed anchor: a 409 on `runLedgerBatch`'s
+   * Create op tells us *something* collided, not *what* — this confirms it was the anchor itself
+   * (vs., e.g., the credit doc racing) before trusting the replay as idempotent.
+   */
+  async readLedgerDoc<T = Record<string, unknown>>(
+    technicianId: string,
+    id: string,
+  ): Promise<T | null> {
+    // Not passed as .read<T>()'s type param: T here is a caller-side cast (e.g. Record<string,
+    // unknown>), not necessarily an ItemDefinition, so we take the SDK's untyped default instead.
+    const { resource } = await getCommissionReceivablesContainer().item(id, technicianId).read();
+    return (resource as T | undefined) ?? null;
+  },
+
   async getOpenCredits(technicianId: string): Promise<Array<{ doc: CreditDoc; etag: string }>> {
     const { resources } = await getCommissionReceivablesContainer()
       .items.query<CreditDoc & { _etag: string }>(

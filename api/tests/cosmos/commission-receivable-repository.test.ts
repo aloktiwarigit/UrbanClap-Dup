@@ -168,6 +168,23 @@ describe('runLedgerBatch', () => {
   });
 });
 
+describe('readLedgerDoc', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('point-reads by id scoped to the technician partition', async () => {
+    mockRead.mockResolvedValue({ resource: { id: 'rem:k1', docType: 'REMITTANCE', amountPaise: 500 } });
+    const doc = await commissionReceivableRepo.readLedgerDoc('tech-1', 'rem:k1');
+    expect(mockItem).toHaveBeenCalledWith('rem:k1', 'tech-1');
+    expect(doc).toEqual({ id: 'rem:k1', docType: 'REMITTANCE', amountPaise: 500 });
+  });
+
+  it('returns null when the doc does not exist', async () => {
+    mockRead.mockResolvedValue({ resource: undefined });
+    const doc = await commissionReceivableRepo.readLedgerDoc('tech-1', 'rem:missing');
+    expect(doc).toBeNull();
+  });
+});
+
 describe('docType-aware reads', () => {
   beforeEach(() => vi.clearAllMocks());
 
