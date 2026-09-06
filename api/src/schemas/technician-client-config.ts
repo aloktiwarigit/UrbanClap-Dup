@@ -21,6 +21,7 @@ export const UpdateTechnicianClientConfigBodySchema = z.object({
   features: TechnicianFeatureFlagsSchema.partial().optional(),
   minSupportedVersionCode: z.number().int().nonnegative().optional(),
 }).strict().refine((b) => Object.keys(b).length > 0, { message: 'empty patch' });
+export type UpdateTechnicianClientConfigBody = z.infer<typeof UpdateTechnicianClientConfigBodySchema>;
 
 export const TechnicianConfigResponseSchema = z.object({
   features: TechnicianFeatureFlagsSchema,
