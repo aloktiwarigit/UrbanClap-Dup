@@ -9,8 +9,9 @@ import { appendAuditEntry } from '../cosmos/audit-log-repository.js';
 import { RazorpayRouteService } from '../services/razorpayRoute.service.js';
 import { sendTechEarningsUpdate, sendOwnerRouteAlert } from '../services/fcm.service.js';
 import { arePayoutsEnabled } from '../shared/payouts-enabled.js';
+import type { AuditAction } from '../types/admin.js';
 
-function systemAuditEntry(action: string, payload: Record<string, unknown>) {
+function systemAuditEntry(action: AuditAction, payload: Record<string, unknown>) {
   const timestamp = new Date().toISOString();
   return appendAuditEntry({
     id: randomUUID(),

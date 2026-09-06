@@ -69,9 +69,12 @@ describe('ledger-batch-only constraints', () => {
       const lines = content.split('\n');
 
       lines.forEach((line, idx) => {
-        // Pattern: remittedAmount +=/-=, remainingPaise -=, outstandingPaise +=
+        // Patterns for incremental mutations on derived ledger figures (spec §3.2):
+        // remittedAmount +=/-=, or += 1 pattern with remittedAmount,
+        // remainingPaise -=, outstandingPaise +=
         const patterns = [
           /\w+\.remittedAmount\s*(\+=|-=)/,
+          /\+\s*1\b.*remittedAmount/, // Alternative: + 1 ... remittedAmount
           /\w+\.remittedAmount\s*=\s*\w+\.remittedAmount\s*\+\s*\w+/,
           /\w+\.remainingPaise\s*-=/,
           /\w+\.outstandingPaise\s*\+=/,

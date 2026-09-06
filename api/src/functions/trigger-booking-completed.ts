@@ -14,10 +14,11 @@ import { getGlobalCommissionBps, resolveCommissionBps } from '../services/commis
 import { RazorpayRouteService } from '../services/razorpayRoute.service.js';
 import { sendTechEarningsUpdate } from '../services/fcm.service.js';
 import { recordCommissionDue, finalizeLedgerForTechnician } from '../services/commission-settlement.service.js';
+import type { AuditAction } from '../types/admin.js';
 
 const DB_NAME = process.env['COSMOS_DATABASE'] ?? 'homeservices';
 
-function systemAuditEntry(action: string, resourceId: string, payload: Record<string, unknown>) {
+function systemAuditEntry(action: AuditAction, resourceId: string, payload: Record<string, unknown>) {
   const timestamp = new Date().toISOString();
   return appendAuditEntry({
     id: randomUUID(),
