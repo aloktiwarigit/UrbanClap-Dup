@@ -134,6 +134,21 @@ describe('systemDocsRepo.enqueueHoldRepair', () => {
   });
 });
 
+describe('systemDocsRepo.getIncentiveConfig', () => {
+  it('returns null when the doc does not exist', async () => {
+    mockRead.mockResolvedValue({ resource: undefined, etag: undefined });
+    const result = await systemDocsRepo.getIncentiveConfig();
+    expect(result).toBeNull();
+  });
+
+  it('returns the raw doc when it exists, without parsing', async () => {
+    const doc = { enabled: true, milestones: [{ jobs: 10, bonusPaise: 5000 }], capFractionBps: 6000 };
+    mockRead.mockResolvedValue({ resource: doc, etag: '"1"' });
+    const result = await systemDocsRepo.getIncentiveConfig();
+    expect(result).toEqual(doc);
+  });
+});
+
 describe('systemDocsRepo.drainHoldRepair', () => {
   it('returns the drained ids/all and clears the doc under IfMatch', async () => {
     mockRead.mockResolvedValue({

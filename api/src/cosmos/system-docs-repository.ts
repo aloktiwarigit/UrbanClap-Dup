@@ -8,6 +8,14 @@ import {
 
 const HOLD_REPAIR_DOC_ID = 'hold-repair';
 const HOLD_REPAIR_MAX_IDS = 5000;
+const INCENTIVE_CONFIG_DOC_ID = 'incentive-config';
+
+/** Raw shape of the `system/incentive-config` doc. E23 owns writing it; not yet parsed with zod. */
+export interface IncentiveConfigDoc {
+  enabled: boolean;
+  milestones: Array<{ jobs: number; bonusPaise: number }>;
+  capFractionBps: number;
+}
 
 export interface HoldRepairDoc {
   id: typeof HOLD_REPAIR_DOC_ID;
@@ -73,6 +81,18 @@ export const systemDocsRepo = {
         };
       },
     );
+  },
+
+  /**
+   * Raw point read of `system/incentive-config` — no zod parse. E23 (incentives) owns writing
+   * this doc; the technician-config endpoint only needs to pass its fields through untouched,
+   * with a null fallback when the doc doesn't exist yet (incentives are dark-launched off).
+   */
+  async getIncentiveConfig(): Promise<IncentiveConfigDoc | null> {
+    const { resource } = await getSystemContainer()
+      .item(INCENTIVE_CONFIG_DOC_ID, INCENTIVE_CONFIG_DOC_ID)
+      .read<IncentiveConfigDoc>();
+    return resource ?? null;
   },
 
   async enqueueHoldRepair(ids: string[] | 'ALL'): Promise<void> {

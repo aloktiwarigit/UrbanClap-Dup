@@ -3,6 +3,9 @@ import { app } from '@azure/functions';
 import type { HttpRequest, InvocationContext, HttpResponseInit } from '@azure/functions';
 import { verifyTechnicianToken } from '../../middleware/verifyTechnicianToken.js';
 import { commissionReceivableRepo } from '../../cosmos/commission-receivable-repository.js';
+import { readCommissionHold } from '../../cosmos/technician-repository.js';
+import { getCommissionConfig } from '../../services/commission-config.service.js';
+import { buildCommissionDueResponse } from '../../services/commission-view.service.js';
 
 export const techCommissionDueHandler = async (
   req: HttpRequest,
@@ -16,21 +19,15 @@ export const techCommissionDueHandler = async (
   }
 
   try {
-    const entries = await commissionReceivableRepo.getOutstandingByTechnician(uid);
-    const totalOutstandingPaise = entries.reduce((acc, e) => acc + e.commissionDue, 0);
-    return {
-      status: 200,
-      jsonBody: {
-        totalOutstandingPaise,
-        dueCount: entries.length,
-        entries: entries.map((e) => ({
-          bookingId: e.bookingId,
-          bookingAmount: e.bookingAmount,
-          commissionDue: e.commissionDue,
-          createdAt: e.createdAt,
-        })),
-      },
-    };
+    const [ledger, { hold }, cfg] = await Promise.all([
+      commissionReceivableRepo.listLedger(uid),
+      readCommissionHold(uid),
+      getCommissionConfig(),
+    ]);
+
+    const body = buildCommissionDueResponse({ ledger, hold, cfg, now: new Date() });
+
+    return { status: 200, jsonBody: body };
   } catch {
     return { status: 502, jsonBody: { code: 'UPSTREAM_ERROR' } };
   }

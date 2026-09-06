@@ -7,6 +7,7 @@ export const TechnicianFeatureFlagsSchema = z.object({
   wallet: z.boolean(), duesBanner: z.boolean(), upiQr: z.boolean(), incentives: z.boolean(), addOnRequests: z.boolean(),
 });
 export const DEFAULT_TECHNICIAN_FEATURES = { wallet: false, duesBanner: false, upiQr: false, incentives: false, addOnRequests: false } as const;
+export type TechnicianFeatureFlags = z.infer<typeof TechnicianFeatureFlagsSchema>;
 
 export const TechnicianClientConfigDocSchema = z.object({
   id: z.literal(TECHNICIAN_CLIENT_CONFIG_DOC_ID),

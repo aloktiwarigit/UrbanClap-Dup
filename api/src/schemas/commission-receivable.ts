@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { extendZodWithOpenApi } from '@asteasolutions/zod-to-openapi';
 import { CommissionBpsSchema, CommissionResolvedFromSchema, type CommissionResolvedFrom } from './commission-config.js';
+import { HoldStateSchema } from './technician.js';
 
 extendZodWithOpenApi(z);
 
@@ -132,3 +133,63 @@ export type TechnicianCommissionDue = z.infer<typeof TechnicianCommissionDueSche
 export function outstandingOf(e: Pick<CommissionReceivableEntry, 'commissionDue' | 'remittedAmount'>): number {
   return Math.max(0, e.commissionDue - (e.remittedAmount ?? 0));
 }
+
+/**
+ * E21-S02: Tech-facing GET /v1/technicians/me/commission-due response, v2. Field names of
+ * `TechnicianCommissionDueSchema` (v1) are preserved (`totalOutstandingPaise`, `dueCount`,
+ * `entries[].bookingId/bookingAmount/commissionDue/createdAt`) so old APKs keep parsing what
+ * they already read — but `totalOutstandingPaise` is now NET of partial remittances/credits,
+ * not gross `commissionDue`. `TechnicianCommissionDueSchema` (v1) stays registered in the
+ * OpenAPI registry until Task 13 swaps it for this one.
+ */
+export const TechnicianCommissionDueV2Schema = z.object({
+  totalOutstandingPaise: z.number().int().nonnegative(),
+  dueCount: z.number().int().nonnegative(),
+  hold: z.object({
+    state: HoldStateSchema,
+    warnPaise: z.number().int().nonnegative(),
+    blockPaise: z.number().int().nonnegative(),
+    enforcementEnabled: z.boolean(),
+    override: z.object({ until: z.string(), reason: z.string() }).optional(),
+  }),
+  entries: z.array(
+    z.object({
+      bookingId: z.string(),
+      serviceName: z.string().optional(),
+      slotDate: z.string().optional(),
+      bookingAmount: z.number().int().nonnegative(),
+      cashCollectedAmount: z.number().int().nonnegative().optional(),
+      commissionDue: z.number().int().nonnegative(),
+      remittedAmount: z.number().int().nonnegative(),
+      outstandingPaise: z.number().int().nonnegative(),
+      collectionMethod: CollectionMethodSchema.optional(),
+      remittanceStatus: RemittanceStatusSchema,
+      createdAt: z.string(),
+    }),
+  ),
+  remittances: z.array(
+    z.object({
+      id: z.string(),
+      amountPaise: z.number().int().nonnegative(),
+      method: RemittanceMethodSchema,
+      ref: z.string(),
+      createdAt: z.string(),
+    }),
+  ),
+  credits: z.array(
+    z.object({
+      id: z.string(),
+      source: z.enum(['OVERPAYMENT', 'INCENTIVE']),
+      remainingPaise: z.number().int().nonnegative(),
+      createdAt: z.string(),
+    }),
+  ),
+  weekSummary: z.object({
+    weekStart: z.string(),
+    jobs: z.number().int().nonnegative(),
+    cashCollectedPaise: z.number().int().nonnegative(),
+    commissionPaise: z.number().int().nonnegative(),
+    netPaise: z.number().int().nonnegative(),
+  }),
+});
+export type TechnicianCommissionDueV2 = z.infer<typeof TechnicianCommissionDueV2Schema>;
