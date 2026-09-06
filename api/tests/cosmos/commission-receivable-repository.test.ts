@@ -8,7 +8,8 @@ const mockBatch = vi.fn();
 const mockItem = vi.fn(() => ({ read: mockRead }));
 const mockFetchAll = vi.fn();
 const mockFetchNext = vi.fn();
-const mockQuery = vi.fn(() => ({ fetchAll: mockFetchAll, fetchNext: mockFetchNext }));
+const mockHasMoreResults = vi.fn(() => false);
+const mockQuery = vi.fn(() => ({ fetchAll: mockFetchAll, fetchNext: mockFetchNext, hasMoreResults: mockHasMoreResults }));
 
 vi.mock('../../src/cosmos/client.js', () => ({
   getCommissionReceivablesContainer: () => ({
@@ -238,39 +239,47 @@ describe('sumDueGroupedByTechnician', () => {
     const groups = [
       { technicianId: 'tech-1', outstandingPaise: 5000, dueCount: 2, oldestDueAt: '2026-05-01T00:00:00.000Z' },
     ];
-    mockFetchNext.mockResolvedValue({ resources: groups });
+    mockHasMoreResults.mockReturnValueOnce(true).mockReturnValueOnce(false);
+    mockFetchNext.mockResolvedValueOnce({ resources: groups });
 
     const result = await commissionReceivableRepo.sumDueGroupedByTechnician();
 
     const [spec, options] = (mockQuery.mock.calls as unknown[][])[0] as [
       { query: string },
-      { maxItemCount: number; continuationToken?: string },
+      { maxItemCount: number },
     ];
     expect(spec.query).toMatch(/NOT IS_DEFINED\(c\.docType\) OR c\.docType = 'RECEIVABLE'/);
     expect(spec.query).toMatch(/c\.remittanceStatus = 'DUE'/);
     expect(spec.query).toMatch(/GROUP BY c\.technicianId/);
     expect(options.maxItemCount).toBe(100);
-    expect(options.continuationToken).toBeUndefined();
-    expect(result).toEqual({ groups });
+    expect('continuationToken' in options).toBe(false);
+    expect(result).toEqual(groups);
   });
 
-  it('passes an incoming continuationToken through to the query options and the outgoing one through to the result', async () => {
-    mockFetchNext.mockResolvedValue({ resources: [], continuationToken: 'next-token' });
-
-    const result = await commissionReceivableRepo.sumDueGroupedByTechnician('prev-token');
-
-    const [, options] = (mockQuery.mock.calls as unknown[][])[0] as [unknown, { continuationToken?: string }];
-    expect(options.continuationToken).toBe('prev-token');
-    expect(result).toEqual({ groups: [], continuationToken: 'next-token' });
-  });
-
-  it('omits continuationToken from the result when the page has none', async () => {
-    mockFetchNext.mockResolvedValue({ resources: [] });
+  it('drains every page via hasMoreResults() — Cosmos cannot page a cross-partition GROUP BY with a continuation token', async () => {
+    const page1 = [{ technicianId: 'tech-1', outstandingPaise: 5000, dueCount: 2, oldestDueAt: '2026-05-01T00:00:00.000Z' }];
+    const page2 = [{ technicianId: 'tech-2', outstandingPaise: 1000, dueCount: 1, oldestDueAt: '2026-05-02T00:00:00.000Z' }];
+    mockHasMoreResults
+      .mockReturnValueOnce(true)
+      .mockReturnValueOnce(true)
+      .mockReturnValueOnce(false);
+    mockFetchNext
+      .mockResolvedValueOnce({ resources: page1 })
+      .mockResolvedValueOnce({ resources: page2 });
 
     const result = await commissionReceivableRepo.sumDueGroupedByTechnician();
 
-    expect(result).toEqual({ groups: [] });
-    expect('continuationToken' in result).toBe(false);
+    expect(mockFetchNext).toHaveBeenCalledTimes(2);
+    expect(result).toEqual([...page1, ...page2]);
+  });
+
+  it('returns an empty array when there are no DUE receivables', async () => {
+    mockHasMoreResults.mockReturnValueOnce(false);
+
+    const result = await commissionReceivableRepo.sumDueGroupedByTechnician();
+
+    expect(result).toEqual([]);
+    expect(mockFetchNext).not.toHaveBeenCalled();
   });
 });
 

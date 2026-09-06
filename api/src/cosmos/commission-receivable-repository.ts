@@ -184,15 +184,21 @@ export const commissionReceivableRepo = {
     return { entry, wasApplied: true };
   },
 
-  async sumDueGroupedByTechnician(continuationToken?: string): Promise<{
-    groups: Array<{
+  /**
+   * Cosmos cannot page a cross-partition GROUP BY aggregate with continuation tokens the way a
+   * plain SELECT can (the aggregate is recomputed per page, not carried across pages), so this
+   * drains the iterator fully via `hasMoreResults()` rather than exposing a `continuationToken`
+   * to the caller. Safe at pilot scale (bounded number of technicians); revisit if the technician
+   * roster grows large enough that a full drain becomes expensive.
+   */
+  async sumDueGroupedByTechnician(): Promise<
+    Array<{
       technicianId: string;
       outstandingPaise: number;
       dueCount: number;
       oldestDueAt: string;
-    }>;
-    continuationToken?: string;
-  }> {
+    }>
+  > {
     const iterator = getCommissionReceivablesContainer().items.query<{
       technicianId: string;
       outstandingPaise: number;
@@ -202,9 +208,18 @@ export const commissionReceivableRepo = {
       {
         query: `SELECT c.technicianId, SUM(c.commissionDue - (IS_DEFINED(c.remittedAmount) ? c.remittedAmount : 0)) AS outstandingPaise, COUNT(1) AS dueCount, MIN(c.createdAt) AS oldestDueAt FROM c WHERE ${RECEIVABLE_FILTER} AND c.remittanceStatus = 'DUE' GROUP BY c.technicianId`,
       },
-      { maxItemCount: 100, ...(continuationToken ? { continuationToken } : {}) },
+      { maxItemCount: 100 },
     );
-    const page = await iterator.fetchNext();
-    return { groups: page.resources, ...(page.continuationToken ? { continuationToken: page.continuationToken } : {}) };
+    const groups: Array<{
+      technicianId: string;
+      outstandingPaise: number;
+      dueCount: number;
+      oldestDueAt: string;
+    }> = [];
+    while (iterator.hasMoreResults()) {
+      const page = await iterator.fetchNext();
+      groups.push(...page.resources);
+    }
+    return groups;
   },
 };

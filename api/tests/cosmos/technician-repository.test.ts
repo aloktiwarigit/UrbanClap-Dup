@@ -9,6 +9,8 @@ import { getCosmosClient } from '../../src/cosmos/client.js';
 import {
   getKycByTechnicianId,
   getTechnicianServiceProfile,
+  listAllTechniciansWithHold,
+  listTechniciansWithExpiredOverride,
   listTechniciansWithHold,
   patchCommissionHold,
   patchPaymentProfile,
@@ -275,7 +277,9 @@ describe('patchCommissionHold', () => {
     expect(mockPatch).toHaveBeenCalledTimes(1);
     const call = mockPatch.mock.calls[0]![0] as { operations: Array<{ op: string; path: string; value: unknown }>; condition: string };
     expect(call.operations).toEqual([{ op: 'set', path: '/commissionHold', value: hold }]);
-    expect(call.condition).toContain(readStartedAt);
+    expect(call.condition).toBe(
+      `FROM c WHERE NOT IS_DEFINED(c.commissionHold) OR NOT IS_DEFINED(c.commissionHold.evaluatedAt) OR c.commissionHold.evaluatedAt < "${readStartedAt}"`,
+    );
   });
 
   it('maps a 412 precondition failure to STALE', async () => {
@@ -363,6 +367,78 @@ describe('listTechniciansWithHold', () => {
 
     expect(result.items[0]).toMatchObject({ id: 't1', name: 'Legacy Name' });
     expect(result.items[1]).not.toHaveProperty('name');
+  });
+});
+
+describe('listAllTechniciansWithHold', () => {
+  it('drains every page via hasMoreResults() and maps rows the same as the paged variant', async () => {
+    const mockHasMoreResults = vi.fn().mockReturnValueOnce(true).mockReturnValueOnce(true).mockReturnValueOnce(false);
+    const mockFetchNext = vi.fn()
+      .mockResolvedValueOnce({ resources: [{ id: 't1', displayName: 'Low', commissionHold: { outstandingPaise: 100, dueCount: 1, state: 'WARN', evaluatedAt: 'x' } }] })
+      .mockResolvedValueOnce({ resources: [{ id: 't2', commissionHold: { outstandingPaise: 900000, dueCount: 3, state: 'BLOCKED', evaluatedAt: 'x' } }] });
+    const mockQuery = vi.fn().mockReturnValue({ fetchNext: mockFetchNext, hasMoreResults: mockHasMoreResults });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ items: { query: mockQuery } }) }),
+    });
+
+    const result = await listAllTechniciansWithHold();
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      { query: 'SELECT c.id, c.displayName, c.name, c.commissionHold FROM c WHERE IS_DEFINED(c.commissionHold)' },
+      { maxItemCount: 50 },
+    );
+    expect(mockFetchNext).toHaveBeenCalledTimes(2);
+    expect(result).toEqual([
+      { id: 't1', name: 'Low', commissionHold: { outstandingPaise: 100, dueCount: 1, state: 'WARN', evaluatedAt: 'x' } },
+      { id: 't2', commissionHold: { outstandingPaise: 900000, dueCount: 3, state: 'BLOCKED', evaluatedAt: 'x' } },
+    ]);
+  });
+
+  it('returns an empty array when no technician has a commissionHold', async () => {
+    const mockHasMoreResults = vi.fn().mockReturnValue(false);
+    const mockFetchNext = vi.fn();
+    const mockQuery = vi.fn().mockReturnValue({ fetchNext: mockFetchNext, hasMoreResults: mockHasMoreResults });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ items: { query: mockQuery } }) }),
+    });
+
+    expect(await listAllTechniciansWithHold()).toEqual([]);
+    expect(mockFetchNext).not.toHaveBeenCalled();
+  });
+});
+
+describe('listTechniciansWithExpiredOverride', () => {
+  it('queries with a parameterised @now and drains every page', async () => {
+    const mockHasMoreResults = vi.fn().mockReturnValueOnce(true).mockReturnValueOnce(false);
+    const mockFetchNext = vi.fn().mockResolvedValueOnce({ resources: [{ id: 't1' }, { id: 't2' }] });
+    const mockQuery = vi.fn().mockReturnValue({ fetchNext: mockFetchNext, hasMoreResults: mockHasMoreResults });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ items: { query: mockQuery } }) }),
+    });
+    const nowIso = '2026-09-05T00:00:00.000Z';
+
+    const result = await listTechniciansWithExpiredOverride(nowIso);
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      {
+        query: 'SELECT c.id FROM c WHERE IS_DEFINED(c.commissionHold.override) AND c.commissionHold.override.until <= @now',
+        parameters: [{ name: '@now', value: nowIso }],
+      },
+      { maxItemCount: 100 },
+    );
+    expect(result).toEqual(['t1', 't2']);
+  });
+
+  it('returns an empty array when no technician has an expired override', async () => {
+    const mockHasMoreResults = vi.fn().mockReturnValue(false);
+    const mockFetchNext = vi.fn();
+    const mockQuery = vi.fn().mockReturnValue({ fetchNext: mockFetchNext, hasMoreResults: mockHasMoreResults });
+    (getCosmosClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      database: () => ({ container: () => ({ items: { query: mockQuery } }) }),
+    });
+
+    expect(await listTechniciansWithExpiredOverride('2026-09-05T00:00:00.000Z')).toEqual([]);
+    expect(mockFetchNext).not.toHaveBeenCalled();
   });
 });
 

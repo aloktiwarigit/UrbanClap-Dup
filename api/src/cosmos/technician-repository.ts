@@ -523,35 +523,84 @@ export async function patchCommissionHold(
   }
 }
 
+const LIST_WITH_HOLD_QUERY = 'SELECT c.id, c.displayName, c.name, c.commissionHold FROM c WHERE IS_DEFINED(c.commissionHold)';
+
+interface TechnicianWithHoldRow {
+  id: string;
+  displayName?: string;
+  name?: string;
+  commissionHold: CommissionHold;
+}
+
+function toHoldItem(r: TechnicianWithHoldRow): { id: string; name?: string; commissionHold: CommissionHold } {
+  return {
+    id: r.id,
+    ...(r.displayName ?? r.name ? { name: (r.displayName ?? r.name) as string } : {}),
+    commissionHold: r.commissionHold,
+  };
+}
+
 /**
- * Pages through every technician doc that currently carries a commissionHold. Used by the sweep
- * to catch technicians whose balance has dropped to zero (they've fallen out of the DUE-side
- * query but still need a recompute down to CLEAR/0). Sorted by outstandingPaise desc within the
- * page only — no composite index required; ordering across pages is not guaranteed.
+ * Pages through every technician doc that currently carries a commissionHold, one page at a
+ * time. Used by the admin dashboard (Task 10), which needs a stable page size rather than the
+ * whole roster at once. Sorted by outstandingPaise desc within the page only — no composite
+ * index required; ordering across pages is not guaranteed.
  */
 export async function listTechniciansWithHold(continuationToken?: string): Promise<{
   items: Array<{ id: string; name?: string; commissionHold: CommissionHold }>;
   continuationToken?: string;
 }> {
   const container = getCosmosClient().database(DB_NAME).container(CONTAINER);
-  const iterator = container.items.query<{
-    id: string;
-    displayName?: string;
-    name?: string;
-    commissionHold: CommissionHold;
-  }>(
-    { query: 'SELECT c.id, c.displayName, c.name, c.commissionHold FROM c WHERE IS_DEFINED(c.commissionHold)' },
+  const iterator = container.items.query<TechnicianWithHoldRow>(
+    { query: LIST_WITH_HOLD_QUERY },
     { maxItemCount: 50, ...(continuationToken ? { continuationToken } : {}) },
   );
   const page = await iterator.fetchNext();
-  const items = page.resources
-    .map((r) => ({
-      id: r.id,
-      ...(r.displayName ?? r.name ? { name: (r.displayName ?? r.name) as string } : {}),
-      commissionHold: r.commissionHold,
-    }))
-    .sort((a, b) => b.commissionHold.outstandingPaise - a.commissionHold.outstandingPaise);
+  const items = page.resources.map(toHoldItem).sort((a, b) => b.commissionHold.outstandingPaise - a.commissionHold.outstandingPaise);
   return { items, ...(page.continuationToken ? { continuationToken: page.continuationToken } : {}) };
+}
+
+/**
+ * Drains every technician doc that currently carries a commissionHold in one call. Used by
+ * `sweepAllHolds`, which needs the full set (unioned with the DUE-side aggregate) rather than a
+ * single page — a technician whose balance just dropped to zero must still be found here so it
+ * can be recomputed down to CLEAR/0.
+ */
+export async function listAllTechniciansWithHold(): Promise<
+  Array<{ id: string; name?: string; commissionHold: CommissionHold }>
+> {
+  const container = getCosmosClient().database(DB_NAME).container(CONTAINER);
+  const iterator = container.items.query<TechnicianWithHoldRow>({ query: LIST_WITH_HOLD_QUERY }, { maxItemCount: 50 });
+  const items: Array<{ id: string; name?: string; commissionHold: CommissionHold }> = [];
+  while (iterator.hasMoreResults()) {
+    const page = await iterator.fetchNext();
+    items.push(...page.resources.map(toHoldItem));
+  }
+  return items;
+}
+
+/**
+ * Ids of technicians whose commissionHold.override has expired as of `nowIso` (inclusive: `<=`
+ * matches an override that expires at exactly `nowIso`). Drives the E21-S04 reconciler's
+ * EXPIRED_OVERRIDES sweep scope — an expired override otherwise sits inert until *something else*
+ * touches that technician's receivables and triggers a recompute, silently under-enforcing a hold
+ * that should have resumed.
+ */
+export async function listTechniciansWithExpiredOverride(nowIso: string): Promise<string[]> {
+  const container = getCosmosClient().database(DB_NAME).container(CONTAINER);
+  const iterator = container.items.query<{ id: string }>(
+    {
+      query: 'SELECT c.id FROM c WHERE IS_DEFINED(c.commissionHold.override) AND c.commissionHold.override.until <= @now',
+      parameters: [{ name: '@now', value: nowIso }],
+    },
+    { maxItemCount: 100 },
+  );
+  const ids: string[] = [];
+  while (iterator.hasMoreResults()) {
+    const page = await iterator.fetchNext();
+    ids.push(...page.resources.map((r) => r.id));
+  }
+  return ids;
 }
 
 /** Writes /paymentProfile via PATCH. Throws TECHNICIAN_NOT_FOUND (code) when the doc is absent. */
